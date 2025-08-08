@@ -43,7 +43,8 @@ export const GENERAL = {
   table: (title: string) => `[data-test-table="${title}"]`,
   tableRow: (idx?: number) => (idx ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]'),
   tableData: (idx?: number, key?: string) => `[data-test-table-row="${idx}"] [data-test-table-data="${key}"]`,
-  tableColumnHeader: (col: number) => `th:nth-child(${col})`, // number is not 0-indexed, first column header is 1
+  tableColumnHeader: (col: number, { isAdvanced = false } = {}) =>
+    `${isAdvanced ? '.hds-advanced-table__th' : 'hds-table__th'}:nth-child(${col})`, // number is not 0-indexed, first column header is 1
 
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,

@@ -4,7 +4,7 @@
 }}
 
 {{#if @data}}
-  <Hds::Table
+  <Hds::AdvancedTable
     @model={{this.paginatedTableData}}
     @columns={{@columns}}
     {{! @sortBy and @sortOrder args presets column icon direction but do not handle sorting. 
@@ -27,7 +27,7 @@
         {{/each}}
       </B.Tr>
     </:body>
-  </Hds::Table>
+  </Hds::AdvancedTable>
 
   <Hds::Pagination::Numbered
     @currentPage={{this.currentPage}}

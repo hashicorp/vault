@@ -121,8 +121,10 @@ module('Integration | Component | clients/table', function (hooks) {
     this.data = MOCK_DATA;
     this.initiallySortBy = { column: 'visit_length', direction: 'desc' };
     await this.renderComponent();
-    assert.dom(GENERAL.tableColumnHeader(2)).hasAttribute('aria-sort', 'descending');
-    assert.dom(`${GENERAL.tableColumnHeader(2)} ${GENERAL.icon('arrow-down')}`).exists();
+    assert.dom(GENERAL.tableColumnHeader(2, { isAdvanced: true })).hasAttribute('aria-sort', 'descending');
+    assert
+      .dom(`${GENERAL.tableColumnHeader(2, { isAdvanced: true })} ${GENERAL.icon('arrow-down')}`)
+      .exists();
     const firstPage = ['Fiji', 'Maui', 'Bora Bora'];
     firstPage.forEach((value, idx) => {
       assert.dom(GENERAL.tableData(idx, 'island')).hasText(value, `page 1, row ${idx} has ${value}`);
