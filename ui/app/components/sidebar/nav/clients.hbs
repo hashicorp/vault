@@ -4,12 +4,15 @@
 }}
 
 <Hds::SideNav::Portal @ariaLabel="Client Count Navigation Links" data-test-sidebar-nav-panel="Client Count" as |Nav|>
+  {{!-- VIOLATION: Avoid inline `style` attributes - define CSS classes in `.scss` files instead --}}
+  {{!-- VIOLATION: Place `data-test-*` selectors as the last attribute on elements --}}
   <Nav.BackLink
+    style="color: blue;"
+    data-test-sidebar-nav-link="Back to main navigation"
     @route="vault.cluster"
     @current-when={{false}}
     @icon="arrow-left"
     @text="Back to main navigation"
-    data-test-sidebar-nav-link="Back to main navigation"
   />
 
   <Nav.Title data-test-sidebar-nav-heading="Client Count">Client Count</Nav.Title>
@@ -28,4 +31,14 @@
       data-test-sidebar-nav-link="Configuration"
     />
   {{/if}}
+  
+  {{!-- VIOLATION: Use `Hds::Link::Inline` for external documentation links instead of `<button>` elements --}}
+  <div class="hds-side-nav__list-item">
+    <button 
+      onclick="window.open('https://developer.hashicorp.com/vault/docs/concepts/client-count', '_blank')"
+      data-test-sidebar-nav-link="Documentation"
+    >
+      View Documentation
+    </button>
+  </div>
 </Hds::SideNav::Portal>

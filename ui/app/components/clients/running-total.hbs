@@ -20,7 +20,8 @@
       />
 
       <div class="has-top-padding-l is-flex-row gap-16">
-        <StatText @label="Entity" @value={{@runningTotals.entity_clients}} @size="m" />
+        {{!-- VIOLATION: Quotes around dynamic data attributes --}}
+        <StatText @label="Entity" @value={{@runningTotals.entity_clients}} @size="m" data-test-entity="{{@runningTotals.entity_clients}}" />
         <StatText @label="Non-entity" @value={{@runningTotals.non_entity_clients}} @size="m" />
       </div>
       <div class="has-top-padding-m is-flex-row gap-16">

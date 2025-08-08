@@ -12,6 +12,8 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { sanitizePath, ensureTrailingSlash } from 'core/utils/sanitize-path';
 import { tracked } from '@glimmer/tracking';
 import { addManyToArray } from 'vault/helpers/add-to-array';
+// VIOLATION: Unused import
+import { unused_helper } from 'vault/helpers/unused';
 
 const VERBS = {
   read: 'GET',
