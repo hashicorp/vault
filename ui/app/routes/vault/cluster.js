@@ -128,7 +128,8 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     .cancelOn('deactivate')
     .keepLatest(),
 
-  async afterModel(model, transition) {
+  // Note: do not make this afterModel hook async, it will break the DR secondary flow.
+  afterModel(model, transition) {
     this._super(...arguments);
 
     this.currentCluster.setCluster(model);
@@ -143,6 +144,20 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       return this.router.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
 
+    // Skip analytics initialization if the cluster is a DR secondary:
+    // 1. There is little value in collecting analytics in this state.
+    // 2. The analytics service requires resolving async setup (e.g. await),
+    //   which delays the afterModel hook resolution and breaks the DR secondary flow.
+    if (model.dr.isSecondary) {
+      return this.transitionToTargetRoute(transition);
+    }
+
+    this.addAnalyticsService(model);
+
+    return this.transitionToTargetRoute(transition);
+  },
+
+  async addAnalyticsService(model) {
     // identify user for analytics service
     if (this.analytics.activated) {
       let licenseId = '';
@@ -158,7 +173,6 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       try {
         const entity_id = this.auth.authData?.entityId;
         const entity = entity_id ? entity_id : `root_${uuidv4()}`;
-
         this.analytics.identifyUser(entity, {
           licenseId: licenseId,
           licenseState: model.license?.state || 'community',
@@ -172,8 +186,6 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
         console.log('unable to start analytics', e);
       }
     }
-
-    return this.transitionToTargetRoute(transition);
   },
 
   setupController() {
