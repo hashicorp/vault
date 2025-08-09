@@ -56,6 +56,10 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 				caPrivateKeyStoragePath,
 				keysStoragePrefix,
 			},
+
+			AllowSnapshotRead: []string{
+				"config/ca",
+			},
 		},
 
 		Paths: []*framework.Path{
