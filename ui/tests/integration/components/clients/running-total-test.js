@@ -62,7 +62,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await this.renderComponent();
 
     assert
-      .dom(CHARTS.container('Client usage trends for selected billing period'))
+      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
       .exists('running total component renders');
     assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
     assert.dom(CHARTS.legend).hasText('New clients');
@@ -105,7 +105,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await click(GENERAL.inputByAttr('toggle view'));
 
     assert
-      .dom(CHARTS.container('Client usage trends for selected billing period'))
+      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
       .exists('running total component renders');
     assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
     assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Secret sync clients Acme clients');
@@ -174,7 +174,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await this.renderComponent();
 
     assert
-      .dom(CHARTS.container('Client usage trends for selected billing period'))
+      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
       .exists('running total component renders');
     assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
     assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists();

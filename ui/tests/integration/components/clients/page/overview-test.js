@@ -64,9 +64,9 @@ module('Integration | Component | clients/page/overview', function (hooks) {
 
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
 
-    assert.dom(CLIENT_COUNT.attribution.card).exists('shows card for table state');
     assert
-      .dom(CLIENT_COUNT.attribution.card)
+      .dom(CLIENT_COUNT.card('table empty state'))
+      .exists('shows card for table state')
       .hasText(
         'Select a month to view client attribution View the namespace mount breakdown of clients by selecting a month. Client count documentation',
         'Show initial table state message'
@@ -80,7 +80,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     await fillIn(GENERAL.selectByAttr('attribution-month'), '6/23');
 
     assert
-      .dom(CLIENT_COUNT.attribution.card)
+      .dom(CLIENT_COUNT.card('table empty state'))
       .hasText(
         'No data is available for the selected month View the namespace mount breakdown of clients by selecting another month. Client count documentation',
         'Shows correct message for a month selection with no data'
@@ -93,9 +93,9 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
     await fillIn(GENERAL.selectByAttr('attribution-month'), '9/23');
 
-    assert.dom(CLIENT_COUNT.attribution.card).doesNotExist('does not show card when table has data');
-    assert.dom(CLIENT_COUNT.attribution.table).exists('shows table');
-    assert.dom(CLIENT_COUNT.attribution.paginationInfo).hasText('1–3 of 6', 'shows correct pagination info');
+    assert.dom(CLIENT_COUNT.card('table empty state')).doesNotExist('does not show card when table has data');
+    assert.dom(GENERAL.table('attribution')).exists('shows table');
+    assert.dom(GENERAL.paginationInfo).hasText('1–3 of 6', 'shows correct pagination info');
   });
 
   test('it filters the table when a namespace filter is applied', async function (assert) {
@@ -107,9 +107,9 @@ module('Integration | Component | clients/page/overview', function (hooks) {
 
     await fillIn(GENERAL.selectByAttr('attribution-month'), '9/23');
 
-    assert.dom(CLIENT_COUNT.attribution.card).doesNotExist('does not show card when table has data');
-    assert.dom(CLIENT_COUNT.attribution.table).exists();
-    assert.dom(CLIENT_COUNT.attribution.paginationInfo).hasText('1–3 of 3', 'shows correct pagination info');
+    assert.dom(CLIENT_COUNT.card('table empty state')).doesNotExist('does not show card when table has data');
+    assert.dom(GENERAL.table('attribution')).exists();
+    assert.dom(GENERAL.paginationInfo).hasText('1–3 of 3', 'shows correct pagination info');
   });
 
   test('it hides the table when a mount filter is applied', async function (assert) {
@@ -122,9 +122,9 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     await render(
       hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace={{this.namespace}} @mountPath={{this.mountPath}}/>`
     );
-    assert.dom(CLIENT_COUNT.attribution.card).doesNotExist('does not show card when table has data');
+    assert.dom(CLIENT_COUNT.card('table empty state')).doesNotExist('does not show card when table has data');
     assert
-      .dom(CLIENT_COUNT.attribution.table)
+      .dom(GENERAL.table('attribution'))
       .doesNotExist('does not show table when a mount filter is applied');
   });
 
@@ -134,16 +134,16 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     await fillIn(GENERAL.selectByAttr('attribution-month'), '9/23');
 
     assert
-      .dom(CLIENT_COUNT.attribution.row)
+      .dom(GENERAL.tableRow())
       .exists({ count: 3 }, 'Correct number of table rows render based on page size');
-    assert.dom(CLIENT_COUNT.attribution.counts(0)).hasText('96', 'First page shows data');
-    assert.dom(CLIENT_COUNT.attribution.pagination).exists('shows pagination');
-    assert.dom(CLIENT_COUNT.attribution.paginationInfo).hasText('1–3 of 6', 'shows correct pagination info');
+    assert.dom(GENERAL.tableData(0, 'clients')).hasText('96', 'First page shows data');
+    assert.dom(GENERAL.pagination).exists('shows pagination');
+    assert.dom(GENERAL.paginationInfo).hasText('1–3 of 6', 'shows correct pagination info');
 
-    await click(GENERAL.pagination.next);
+    await click(GENERAL.nextPage);
 
-    assert.dom(CLIENT_COUNT.attribution.counts(0)).hasText('53', 'Second page shows new data');
-    assert.dom(CLIENT_COUNT.attribution.paginationInfo).hasText('4–6 of 6', 'shows correct pagination info');
+    assert.dom(GENERAL.tableData(0, 'clients')).hasText('53', 'Second page shows new data');
+    assert.dom(GENERAL.paginationInfo).hasText('4–6 of 6', 'shows correct pagination info');
   });
 
   test('it shows correct month options for billing period', async function (assert) {
