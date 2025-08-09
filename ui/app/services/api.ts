@@ -126,6 +126,25 @@ export default class ApiService extends Service {
   secrets = new SecretsApi(this.configuration);
   sys = new SystemApi(this.configuration);
 
+  // Custom method to fetch plugin catalog
+  // This method fetches the plugin catalog from the /sys/plugins/catalog endpoint
+  async getPluginCatalog() {
+    const url = `/v1/sys/plugins/catalog`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-Vault-Token': this.authService.currentToken || '',
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Plugin catalog API call failed: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  }
+
   // convenience method for overriding headers for given requests to ensure consistency
   // eg. this.api.sys.wrap(data, { headers: { 'X-Vault-Wrap-TTL': wrap } });
   // -> this.api.sys.wrap(data, this.api.buildHeaders({ wrap }));

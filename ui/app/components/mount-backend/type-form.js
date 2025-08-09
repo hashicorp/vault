@@ -5,7 +5,14 @@
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+import {
+  isValidPluginCatalogResponse,
+  addVersionsToEngines,
+  categorizeEnginesByStatus,
+} from 'vault/utils/plugin-catalog-helpers';
 
 /**
  *
@@ -23,11 +30,60 @@ import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 export default class MountBackendTypeForm extends Component {
   @service version;
+  @service api;
+
+  @tracked pluginCatalogData = null;
+  @tracked pluginCatalogError = null;
+  @tracked isLoadingPluginCatalog = false;
+  @tracked showFlyout = false;
+  @tracked flyoutPluginName = null;
+  @tracked flyoutPluginType = null;
+  @tracked flyoutDisplayName = null;
+
+  constructor(owner, args) {
+    super(owner, args);
+    // Only fetch plugin catalog for secret engines in Phase 1
+    if (args.mountCategory === 'secret') {
+      this.loadPluginCatalog();
+    }
+  }
+
+  async loadPluginCatalog() {
+    this.isLoadingPluginCatalog = true;
+    try {
+      const response = await this.api.getPluginCatalog();
+
+      if (isValidPluginCatalogResponse(response)) {
+        this.pluginCatalogData = response?.data;
+      } else {
+        this.pluginCatalogError = new Error('Invalid response structure');
+      }
+    } catch (error) {
+      this.pluginCatalogError = error;
+    } finally {
+      this.isLoadingPluginCatalog = false;
+    }
+  }
 
   get secretEngines() {
     // If an enterprise license is present, return all secret engines;
     // otherwise, return only the secret engines supported in OSS.
-    return filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: this.version.isEnterprise });
+    const staticEngines = filterEnginesByMountCategory({
+      mountCategory: 'secret',
+      isEnterprise: this.version.isEnterprise,
+    });
+
+    // If we have plugin catalog data, merge it with static engines to add version info
+    if (this.pluginCatalogData) {
+      const secretEnginesDetailed =
+        this.pluginCatalogData?.detailed?.filter((plugin) => plugin?.type === 'secret') || [];
+      const databasePluginsDetailed =
+        this.pluginCatalogData?.detailed?.filter((plugin) => plugin?.type === 'database') || [];
+
+      return addVersionsToEngines(staticEngines, secretEnginesDetailed, databasePluginsDetailed);
+    }
+
+    return staticEngines;
   }
 
   get authMethods() {
@@ -38,5 +94,54 @@ export default class MountBackendTypeForm extends Component {
 
   get mountTypes() {
     return this.args.mountCategory === 'secret' ? this.secretEngines : this.authMethods;
+  }
+
+  get categorizedMountTypes() {
+    const categories = {};
+    ['generic', 'cloud', 'infra', 'external'].forEach((category) => {
+      const allTypes = this.mountTypes.filter((type) => type?.pluginCategory === category);
+      categories[category] = categorizeEnginesByStatus(allTypes);
+    });
+    return categories;
+  }
+
+  get genericMountTypes() {
+    return this.categorizedMountTypes.generic;
+  }
+
+  get cloudMountTypes() {
+    return this.categorizedMountTypes.cloud;
+  }
+
+  get infraMountTypes() {
+    return this.categorizedMountTypes.infra;
+  }
+
+  get externalMountTypes() {
+    return this.categorizedMountTypes.external;
+  }
+
+  @action
+  handleDisabledPluginClick(plugin) {
+    this.flyoutPluginName = plugin?.type;
+    this.flyoutPluginType = this.args?.mountCategory;
+    this.flyoutDisplayName = plugin?.displayName;
+    this.showFlyout = true;
+  }
+
+  @action
+  openExternalPluginsHelp() {
+    this.flyoutPluginName = null;
+    this.flyoutPluginType = 'secret';
+    this.flyoutDisplayName = null;
+    this.showFlyout = true;
+  }
+
+  @action
+  closeFlyout() {
+    this.showFlyout = false;
+    this.flyoutPluginName = null;
+    this.flyoutPluginType = null;
+    this.flyoutDisplayName = null;
   }
 }

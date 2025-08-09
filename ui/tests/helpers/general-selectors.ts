@@ -114,13 +114,15 @@ export const GENERAL = {
   infoRowLabel: (label: string) => `[data-test-row-label="${label}"]`,
   infoRowValue: (label: string) => `[data-test-row-value="${label}"]`,
 
-  /* ────── Empty / Error / Alert States ────── */
+  /* ────── Application States ────── */
+  applicationStateHeader: '[data-test-application-state-header]',
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateSubtitle: '[data-test-empty-state-subtitle]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
   flashMessage: '[data-test-flash-message]',
   latestFlashContent: '[data-test-flash-message]:last-of-type [data-test-flash-message-body]',
+  loadingState: '[data-test-loading-state]',
   inlineAlert: '[data-test-inline-alert]',
   inlineError: '[data-test-inline-error-message]',
   messageError: '[data-test-message-error]',
@@ -152,6 +154,9 @@ export const GENERAL = {
     actionText: (text: string) => `[data-test-action-text="${text}"]`,
     actionLink: (label: string) => `[data-test-overview-card="${label}"] a`,
   },
+
+  /* ────── Flyouts ────── */
+  flyout: '[data-test-flyout]',
 
   /* ────── Misc ────── */
   icon: (name: string) => `[data-test-icon="${name}"]`,
