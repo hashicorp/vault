@@ -35,7 +35,7 @@ export default class Index extends Component<Args> {
       title: 'Secrets Recovery is an enterprise feature',
       icon: 'sync-reverse',
       message:
-        'Secrets recovery allows you to restore accidentally deleted or lost secrets from a snapshot. The snapshots can be provided via upload or loaded from external storage.',
+        'Secrets Recovery allows you to restore accidentally deleted or lost secrets from a snapshot. The snapshots can be provided via upload or loaded from external storage.',
       buttonText: 'Learn more about upgrading',
       buttonHref: '/vault/docs/enterprise',
       buttonIcon: 'docs-link',
@@ -65,7 +65,7 @@ export default class Index extends Component<Args> {
       title: 'Upload a snapshot to get started',
       icon: 'sync-reverse',
       message:
-        'Secrets recovery allows you to restore accidentally deleted or lost secrets from a snapshot. The snapshots can be provided via upload or loaded from external storage.',
+        'Secrets Recovery allows you to restore accidentally deleted or lost secrets from a snapshot. The snapshots can be provided via upload or loaded from external storage.',
       buttonText: 'Upload snapshot',
       buttonColor: 'primary',
     },
