@@ -112,6 +112,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     while (true) {
       // when testing, the polling loop causes promises to never settle so acceptance tests hang
       // to get around that, we just disable the poll in tests
+      // if you rely on the cluster status changing, e.g. replication modes, you will need to manually poll the cluster, using pollCluster from 'vault/tests/helpers/poll-cluster'
       if (Ember.testing) {
         return;
       }

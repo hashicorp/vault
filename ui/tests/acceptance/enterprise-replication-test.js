@@ -6,15 +6,13 @@
 import { click, fillIn, findAll, currentURL, visit, settled, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { addSecondary, disableReplication, enableReplication } from 'vault/tests/helpers/replication';
-import { addDays } from 'date-fns';
-import formatRFC3339 from 'date-fns/formatRFC3339';
-import timestamp from 'core/utils/timestamp';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
 
+// note: dr secondary tests are done in ./replication-dr-secondaries-test.js
 module('Acceptance | Enterprise | replication', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -107,6 +105,26 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       );
   });
 
+  test('DR primary: runs analytics service when enabled', async function (assert) {
+    // Spy on the route's addAnalyticsService method if needed
+    const clusterRoute = this.owner.lookup('route:vault.cluster');
+    const addAnalyticsSpy = sinon.spy(clusterRoute, 'addAnalyticsService');
+
+    // Set up DR replication as primary
+    await enableReplication('dr', 'primary');
+    await pollCluster(this.owner);
+    await settled();
+
+    // Visit the route that triggers analytics
+    await visit('/vault/replication/replication/dr'); // or the correct route for your app
+
+    // Verify that analytics service was called
+    assert.true(addAnalyticsSpy.called, 'addAnalyticsService should be called on DR primary');
+
+    // Clean up spy
+    addAnalyticsSpy.restore();
+  });
+
   test('DR secondary: shows empty state when replication is not enabled', async function (assert) {
     await visit('/vault/replication-dr-promote/details');
 
@@ -190,7 +208,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await fillIn('[data-test-input="Secondary ID"]', secondaryNameSecond);
     await click(GENERAL.toggleInput('Time to Live (TTL) for generated secondary token'));
     await fillIn('[data-test-ttl-value]', 3);
-    await click('[data-test-secondary-add]');
+    await click(GENERAL.submitButton);
 
     await pollCluster(this.owner);
     await settled();
@@ -275,51 +293,5 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .dom('[data-test-selectable-card-container="primary"]')
       .exists('shows the correct card on the details dashboard');
     assert.strictEqual(currentURL(), '/vault/replication/dr');
-  });
-
-  module('DR Secondary Mirage-only test meep', function () {
-    setupMirage(hooks);
-    // nested module to avoid running the beforeEach and afterEach hooks. QUnit will not apply the out hook unless specifically reused.
-    test('does not run analytics service in DR secondary state', async function (assert) {
-      // Override analytics tracking
-      const analyticsService = this.owner.lookup('service:analytics');
-      analyticsService.trackEvent = () => {
-        throw new Error(
-          'Analytics should not be called in DR secondary mode. Documenting this behavior for clarity as the analytics service requests a promise to resolve and that breaks the DR secondary flow.'
-        );
-      };
-
-      // Override sys/health to be DR secondary
-      this.server.get('/sys/health', () => {
-        return new Response(
-          200,
-          {},
-          {
-            enterprise: true,
-            initialized: true,
-            sealed: false,
-            standby: false,
-            license: {
-              expiry_time: formatRFC3339(addDays(timestamp.now(), 33)),
-              state: 'stored',
-            },
-            performance_standby: false,
-            replication_performance_mode: 'disabled',
-            replication_dr_mode: 'secondary',
-            server_time_utc: 1753289940,
-            version: '1.21.0+ent',
-            cluster_name: 'vault-cluster-e779cd7c',
-            cluster_id: 'f877cae2-7a56-159a-7a53-73d273738256',
-            last_wal: 121,
-          }
-        );
-      });
-
-      await visit('/vault/replication-dr-promote');
-
-      assert
-        .dom('[data-test-dr-secondary-banner]')
-        .exists('Displays DR secondary banner or read-only UI element');
-    });
   });
 });

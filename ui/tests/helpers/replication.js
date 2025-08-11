@@ -38,7 +38,7 @@ export async function addSecondary(secondaryName, mountFilterMode = null) {
     await searchSelect.options.objectAt(0).click();
   }
 
-  await click('[data-test-secondary-add]');
+  await click(GENERAL.submitButton);
 }
 
 export const disableReplication = async (type, assert) => {
