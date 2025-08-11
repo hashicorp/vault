@@ -40,8 +40,6 @@
   <div class="loaded-snapshot">
     {{#each this.loadedSnapshots as |s index|}}
       {{#if (eq index 0)}}
-        {{log s}}
-
         <Hds::Card::Container class="snapshot-card-container" @level="mid" @hasBorder={{true}}>
           <div class="flex-row">
             <Hds::Text::Display @tag="h2">Snapshot</Hds::Text::Display>

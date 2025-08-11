@@ -92,7 +92,6 @@ export default class Index extends Component<Args> {
 
   @action
   uploadSnapshot() {
-    console.log('clicked');
     // TODO this will be completed in further feature work for single item recovery in the 1.21 release
   }
 }
