@@ -61,3 +61,11 @@ export const CHARTS = {
   xAxisLabel: '[data-test-x-axis] text',
   plotPoint: '[data-test-plot-point]',
 };
+
+export const FILTERS = {
+  dropdownToggle: (name: string) => `[data-test-dropdown="${name}"] button`,
+  dropdownItem: (name: string) => `[data-test-dropdown-item="${name}"]`,
+  tag: (filter?: string, value?: string) =>
+    filter && value ? `[data-test-filter-tag="${filter} ${value}"]` : '[data-test-filter-tag]',
+  clearTag: (value: string) => `[aria-label="Dismiss ${value}"]`,
+};
