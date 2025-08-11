@@ -416,7 +416,6 @@ scenario "autopilot" {
       hosts                  = step.create_vault_cluster.hosts
       ip_version             = matrix.ip_version
       integration_host_state = step.set_up_external_integration_target.state
-      ldap_enabled           = true
       leader_host            = step.get_vault_cluster_ips.leader_host
       ports                  = global.ports
       ipv4_cidr              = step.create_vpc.ipv4_cidr
@@ -641,7 +640,6 @@ scenario "autopilot" {
       create_state      = step.verify_secrets_engines_create.state
       hosts             = step.get_updated_vault_cluster_ips.follower_hosts
       ip_version        = matrix.ip_version
-      ldap_enabled      = true
       vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_edition     = matrix.edition
       vault_install_dir = local.vault_install_dir
