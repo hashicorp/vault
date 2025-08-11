@@ -22,6 +22,20 @@ variable "create_aws_secrets_engine" {
   default     = false
 }
 
+variable "ipv4_cidr" {
+  type        = string
+  description = "The CIDR block for the VPC when using IPv4 mode"
+}
+
+variable "ports" {
+  type = map(object({
+    description = string
+    port        = number
+    protocol    = string
+  }))
+  description = "The ports to use for the Vault cluster instances"
+}
+
 variable "integration_host_state" {
   description = "The state of the test server from the 'backend_test_servers' module"
 }
@@ -41,15 +55,6 @@ variable "ip_version" {
   default     = "4"
 }
 
-variable "ports" {
-  description = "Port configuration for services"
-  type = map(object({
-    port        = string
-    description = string
-  }))
-}
-
-
 variable "leader_host" {
   type = object({
     ipv6       = string
@@ -65,11 +70,6 @@ variable "vault_addr" {
   description = "The local vault API listen address"
 }
 
-variable "vault_edition" {
-  type        = string
-  description = "The Vault product edition"
-}
-
 variable "vault_install_dir" {
   type        = string
   description = "The directory where the Vault binary will be installed"
@@ -81,12 +81,18 @@ variable "vault_root_token" {
   default     = null
 }
 
+variable "vault_edition" {
+  description = "The Vault binary edition (e.g., 'ce', 'ent', 'ent.fips1403', etc.)"
+  type        = string
+}
+
 output "state" {
   value = {
     auth     = local.auth_output
     identity = local.identity_output
     kv       = local.kv_output
     pki      = local.pki_output
+    ssh      = local.ssh_output
     aws      = local.aws_state
     ldap     = local.ldap_output
     kmip     = local.kmip_output
