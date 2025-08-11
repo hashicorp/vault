@@ -28,10 +28,7 @@ export default class RecoverySnapshotsRoute extends Route {
       );
 
       const snapshots = await Promise.all(
-        (keys ?? []).map(async (key: string) => {
-          const details = await this.api.sys.systemReadStorageRaftSnapshotLoadId(key);
-          return details;
-        })
+        (keys ?? []).map((key: string) => this.api.sys.systemReadStorageRaftSnapshotLoadId(key))
       );
 
       return hash({
