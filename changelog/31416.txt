@@ -1,0 +1,5 @@
+```
+release-note:bug
+database/postgres: Handle multiline statements in Postgres user updates. [GH-31369]
+```
+

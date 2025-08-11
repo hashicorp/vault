@@ -1063,6 +1063,12 @@ func TestUpdateUser_Password(t *testing.T) {
 			expectErr:      false,
 			credsAssertion: assertCredsExist,
 		},
+		// https://github.com/hashicorp/vault/issues/31369
+		"multiline statement containing semicolons": {
+			statements:     []string{`DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='{{name}}') THEN CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}'; ELSE ALTER ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}'; END IF; END $$;`},
+			expectErr:      false,
+			credsAssertion: assertCredsExist,
+		},
 		"bad statements": {
 			statements:     []string{`asdofyas8uf77asoiajv`},
 			expectErr:      true,
