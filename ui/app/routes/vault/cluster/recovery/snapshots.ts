@@ -7,6 +7,8 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
 
+import { SystemListStorageRaftSnapshotLoadListEnum } from '@hashicorp/vault-client-typescript';
+
 import type ApiService from 'vault/services/api';
 import type Capabilities from 'vault/services/capabilities';
 
@@ -21,7 +23,9 @@ export default class RecoverySnapshotsRoute extends Route {
     const canLoadSnapshot = capabilities[path]?.canUpdate;
 
     try {
-      const { keys } = await this.api.sys.systemListStorageRaftSnapshotLoad(true);
+      const { keys } = await this.api.sys.systemListStorageRaftSnapshotLoad(
+        SystemListStorageRaftSnapshotLoadListEnum.TRUE
+      );
 
       const snapshots = await Promise.all(
         (keys ?? []).map(async (key: string) => {
