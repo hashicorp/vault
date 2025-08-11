@@ -1063,6 +1063,17 @@ func TestUpdateUser_Password(t *testing.T) {
 			expectErr:      false,
 			credsAssertion: assertCredsExist,
 		},
+		"multi-line statements": {
+			statements: []string{
+				`DO $$ BEGIN
+				IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='{{name}}')
+				THEN CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}';
+				ELSE ALTER ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}';
+				END IF; END $$`,
+			},
+			expectErr:      false,
+			credsAssertion: assertCredsExist,
+		},
 		"bad statements": {
 			statements:     []string{`asdofyas8uf77asoiajv`},
 			expectErr:      true,
@@ -1204,6 +1215,17 @@ func TestUpdateUser_Expiration(t *testing.T) {
 			expectedExpiration: now.Add(5 * time.Minute),
 			statements:         []string{`ALTER ROLE "{{username}}" VALID UNTIL '{{expiration}}';`},
 			expectErr:          false,
+		},
+		"multi-line statements": {
+			initialExpiration:  now.Add(1 * time.Minute),
+			newExpiration:      now.Add(5 * time.Minute),
+			expectedExpiration: now.Add(5 * time.Minute),
+			statements: []string{
+				`DO $$ BEGIN
+				ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
+				END $$`,
+			},
+			expectErr: false,
 		},
 		"bad statements": {
 			initialExpiration:  now.Add(1 * time.Minute),
