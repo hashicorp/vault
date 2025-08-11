@@ -5,6 +5,7 @@
 
 // TODO: separate nested into distinct exported consts
 export const CLIENT_COUNT = {
+  card: (name: string) => `[data-test-card="${name}"]`,
   counts: {
     description: '[data-test-counts-description]',
     configDisabled: '[data-test-counts-disabled]',
@@ -26,14 +27,6 @@ export const CLIENT_COUNT = {
   statTextValue: (label: string) =>
     label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
   usageStats: (title: string) => `[data-test-usage-stats="${title}"]`,
-  attribution: {
-    card: '[data-test-card="attribution"]',
-    table: '[data-test-clients-attribution-table]',
-    row: '[data-test-attribution-table-row',
-    counts: (index: number) => `[data-test-attribution-table-counts="${index}"]`,
-    pagination: '[data-test-pagination',
-    paginationInfo: '.hds-pagination-info',
-  },
   filterBar: '[data-test-clients-filter-bar]',
   nsFilter: '#namespace-search-select',
   mountFilter: '#mounts-search-select',
@@ -45,8 +38,6 @@ export const CLIENT_COUNT = {
 
 export const CHARTS = {
   // container
-  container: (title: string) => `[data-test-counts-card="${title}"]`,
-  timestamp: '[data-test-counts-card-timestamp]',
   legend: '[data-test-counts-card-legend]',
   legendDot: (nth: number) => `.legend-item:nth-child(${nth}) > span`,
 

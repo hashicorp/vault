@@ -37,6 +37,15 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
     return formatTableData(this.byMonthNewClients, this.selectedMonth);
   }
 
+  get tableColumns() {
+    return [
+      { key: 'namespace_path', label: 'Namespace', isSortable: true },
+      { key: 'label', label: 'Mount path', isSortable: true },
+      { key: 'mount_type', label: 'Mount type', isSortable: true },
+      { key: 'clients', label: 'Counts', isSortable: true },
+    ];
+  }
+
   @action
   selectMonth(e: HTMLElementEvent<HTMLInputElement>) {
     this.selectedMonth = e.target.value;
