@@ -42,6 +42,8 @@ export default class ClientsFilterToolbar extends Component<Args> {
       this.mountPath = '';
       this.mountType = '';
     }
+    // Fire callback so URL query params update when filters are cleared
+    this.applyFilters();
   }
 
   @action

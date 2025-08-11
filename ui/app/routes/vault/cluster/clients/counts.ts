@@ -22,6 +22,7 @@ export interface ClientsCountsRouteParams {
   end_time?: string | number | undefined;
   ns?: string | undefined;
   mountPath?: string | undefined;
+  mountType?: string | undefined;
 }
 
 interface ActivityAdapterQuery {

@@ -27,7 +27,7 @@ export const CLIENT_TYPES = [
 
 export type ClientTypes = (typeof CLIENT_TYPES)[number];
 
-// map to keys in the activity response
+// map to dropdowns for filtering client count tables
 export enum ClientFilters {
   NAMESPACE = 'nsLabel',
   MOUNT_PATH = 'mountPath',
