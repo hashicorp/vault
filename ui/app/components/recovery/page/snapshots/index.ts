@@ -6,9 +6,7 @@
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
-import type CapabilitiesService from 'vault/services/capabilities';
 import type NamespaceService from 'vault/services/namespace';
-import type PermissionsService from 'vault/services/permissions';
 import type VersionService from 'vault/services/version';
 
 enum State {
@@ -25,8 +23,6 @@ interface Args {
 export default class Index extends Component<Args> {
   @service declare readonly version: VersionService;
   @service declare readonly namespace: NamespaceService;
-  @service declare readonly permissions: PermissionsService;
-  @service declare readonly capabilities: CapabilitiesService;
 
   viewState = State;
 
