@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
 	"os"
 	"strings"
 	"testing"
@@ -22,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/vault"
 )
@@ -115,7 +115,7 @@ func GenerateRootWithError(t testing.TB, cluster *vault.TestCluster, kind Genera
 // RandomWithPrefix is used to generate a unique name with a prefix, for
 // randomizing names in acceptance tests
 func RandomWithPrefix(name string) string {
-	return fmt.Sprintf("%s-%d", name, rand.New(rand.NewSource(time.Now().UnixNano())).Int())
+	return testhelpers.RandomWithPrefix(name)
 }
 
 func EnsureCoresSealed(t testing.TB, c *vault.TestCluster) {
@@ -722,26 +722,14 @@ func SetNonRootToken(client *api.Client) error {
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
 func RetryUntilAtCadence(t testing.TB, timeout, sleepTime time.Duration, f func() error) {
 	t.Helper()
-	fail := func(err error) {
-		t.Helper()
-		t.Fatalf("did not complete before deadline, err: %v", err)
-	}
-	RetryUntilAtCadenceWithHandler(t, timeout, sleepTime, fail, f)
+	testhelpers.RetryUntilAtCadence(t, timeout, sleepTime, f)
 }
 
 // RetryUntilAtCadenceWithHandler runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, onFailure is called.
 func RetryUntilAtCadenceWithHandler(t testing.TB, timeout, sleepTime time.Duration, onFailure func(error), f func() error) {
 	t.Helper()
-	deadline := time.Now().Add(timeout)
-	var err error
-	for time.Now().Before(deadline) {
-		if err = f(); err == nil {
-			return
-		}
-		time.Sleep(sleepTime)
-	}
-	onFailure(err)
+	testhelpers.RetryUntil(t, timeout, f)
 }
 
 // RetryUntil runs f with a 100ms pause between calls, until f returns a nil result
@@ -751,7 +739,7 @@ func RetryUntilAtCadenceWithHandler(t testing.TB, timeout, sleepTime time.Durati
 // duration between calls.
 func RetryUntil(t testing.TB, timeout time.Duration, f func() error) {
 	t.Helper()
-	RetryUntilAtCadence(t, timeout, 100*time.Millisecond, f)
+	testhelpers.RetryUntil(t, timeout, f)
 }
 
 // CreateEntityAndAlias clones an existing client and creates an entity/alias, uses userpass mount path

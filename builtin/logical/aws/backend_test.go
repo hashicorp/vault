@@ -28,13 +28,23 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/helper/testhelpers"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	stepwise "github.com/hashicorp/vault-testing-stepwise"
+	dockerEnvironment "github.com/hashicorp/vault-testing-stepwise/environments/docker"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
-var initSetup sync.Once
+var (
+	initSetup  sync.Once
+	envOptions = &stepwise.MountOptions{
+		RegistryName:    "aws-sec",
+		PluginType:      api.PluginTypeSecrets,
+		PluginName:      "aws",
+		MountPathPrefix: "aws-sec",
+	}
+)
 
 // This looks a bit curious. The policy document and the role document act
 // as a logical intersection of policies. The role allows ec2:Describe*
@@ -61,6 +71,23 @@ func (m *mockIAMClient) CreateUserWithContext(_ aws.Context, input *iam.CreateUs
 	return nil, awserr.New("Throttling", "", nil)
 }
 
+// roleData is a shared struct used by test functions to parse role roleData from Vault responses
+type roleData struct {
+	PolicyArns             []string          `mapstructure:"policy_arns"`
+	RoleArns               []string          `mapstructure:"role_arns"`
+	PolicyDocument         string            `mapstructure:"policy_document"`
+	CredentialType         string            `mapstructure:"credential_type"`
+	DefaultStsTtl          int64             `mapstructure:"default_sts_ttl"`
+	MaxStsTtl              int64             `mapstructure:"max_sts_ttl"`
+	UserPath               string            `mapstructure:"user_path"`
+	PermissionsBoundaryArn string            `mapstructure:"permissions_boundary_arn"`
+	IamGroups              []string          `mapstructure:"iam_groups"`
+	IamTags                map[string]string `mapstructure:"iam_tags"`
+	MfaSerialNumber        string            `mapstructure:"mfa_serial_number"`
+	SessionTags            map[string]string `mapstructure:"session_tags"`
+	ExternalID             string            `mapstructure:"external_id"`
+}
+
 func getBackend(t *testing.T) logical.Backend {
 	cfg := logical.TestBackendConfig()
 	cfg.System = &testSystemView{}
@@ -70,11 +97,10 @@ func getBackend(t *testing.T) logical.Backend {
 
 func TestAcceptanceBackend_basic(t *testing.T) {
 	t.Parallel()
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+	stepwise.Run(t, stepwise.Case{
+		Precheck:    func() { testAccPreCheck(t) },
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testDynamoPolicy),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest}),
@@ -89,11 +115,10 @@ func TestAcceptanceBackend_IamUserWithPermissionsBoundary(t *testing.T) {
 		"policy_arns":              adminAccessPolicyArn,
 		"permissions_boundary_arn": iamPolicyArn,
 	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+	stepwise.Run(t, stepwise.Case{
+		Precheck:    func() { testAccPreCheck(t) },
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{listIamUsersTest, describeAzsTestUnauthorized}),
@@ -111,9 +136,17 @@ func TestAcceptanceBackend_basicSTS(t *testing.T) {
 	roleName := generateUniqueRoleName(t.Name())
 	userName := generateUniqueUserName(t.Name())
 	accessKey := &awsAccessKey{}
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck: func() {
+
+	// Teardown
+	defer func() error {
+		if err := deleteTestRole(roleName); err != nil {
+			return err
+		}
+		return deleteTestUser(accessKey, userName)
+	}()
+
+	stepwise.Run(t, stepwise.Case{
+		Precheck: func() {
 			testAccPreCheck(t)
 			createUser(t, userName, accessKey)
 			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, nil)
@@ -122,8 +155,8 @@ func TestAcceptanceBackend_basicSTS(t *testing.T) {
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfigWithCreds(t, accessKey),
 			testAccStepRotateRoot(accessKey),
 			testAccStepWritePolicy(t, "test", testDynamoPolicy),
@@ -132,12 +165,6 @@ func TestAcceptanceBackend_basicSTS(t *testing.T) {
 			testAccStepReadSTSWithArnPolicy(t, "test"),
 			testAccStepWriteArnRoleRef(t, "test2", roleName, awsAccountID),
 			testAccStepRead(t, "sts", "test2", []credentialTestFunc{describeInstancesTest}),
-		},
-		Teardown: func() error {
-			if err := deleteTestRole(roleName); err != nil {
-				return err
-			}
-			return deleteTestUser(accessKey, userName)
 		},
 	})
 }
@@ -150,10 +177,9 @@ func TestBackend_policyCRUD(t *testing.T) {
 		t.Fatalf("bad: %s", err)
 	}
 
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: false,
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+	stepwise.Run(t, stepwise.Case{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testDynamoPolicy),
 			testAccStepReadPolicy(t, "test", compacted),
@@ -616,8 +642,8 @@ func deleteTestGroup(groupName string) error {
 	return nil
 }
 
-func testAccStepConfig(t *testing.T) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepConfig(t *testing.T) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.UpdateOperation,
 		Path:      "config/root",
 		Data: map[string]interface{}{
@@ -626,30 +652,37 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-func testAccStepConfigWithCreds(t *testing.T, accessKey *awsAccessKey) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepConfigWithCreds(t *testing.T, accessKey *awsAccessKey) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.UpdateOperation,
 		Path:      "config/root",
 		Data: map[string]interface{}{
 			"region": os.Getenv("AWS_DEFAULT_REGION"),
+
+			// TODO: See if still need some of the PreFlight logic below and support in vault-testing-stepwise
+			"access_key": accessKey.AccessKeyID,
+			"secret_key": accessKey.SecretAccessKey,
 		},
-		PreFlight: func(req *logical.Request) error {
-			// Values in Data above get eagerly evaluated due to the testing framework.
-			// In particular, they get evaluated before accessKey gets set by CreateUser
-			// and thus would fail. By moving to a closure in a PreFlight, we ensure that
-			// the creds get evaluated lazily after they've been properly set
-			req.Data["access_key"] = accessKey.AccessKeyID
-			req.Data["secret_key"] = accessKey.SecretAccessKey
-			return nil
-		},
+		// PreFlight: func(req *logical.Request) error {
+		// 	// Values in Data above get eagerly evaluated due to the testing framework.
+		// 	// In particular, they get evaluated before accessKey gets set by CreateUser
+		// 	// and thus would fail. By moving to a closure in a PreFlight, we ensure that
+		// 	// the creds get evaluated lazily after they've been properly set
+		// 	req.Data["access_key"] = accessKey.AccessKeyID
+		// 	req.Data["secret_key"] = accessKey.SecretAccessKey
+		// 	return nil
+		// },
 	}
 }
 
-func testAccStepRotateRoot(oldAccessKey *awsAccessKey) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepRotateRoot(oldAccessKey *awsAccessKey) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.UpdateOperation,
 		Path:      "config/rotate-root",
-		Check: func(resp *logical.Response) error {
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
 			if resp == nil {
 				return fmt.Errorf("received nil response from config/rotate-root")
 			}
@@ -686,11 +719,14 @@ func testAccStepRotateRoot(oldAccessKey *awsAccessKey) logicaltest.TestStep {
 	}
 }
 
-func testAccStepRead(_ *testing.T, path, name string, credentialTests []credentialTestFunc) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepRead(_ *testing.T, path, name string, credentialTests []credentialTestFunc) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.ReadOperation,
 		Path:      path + "/" + name,
-		Check: func(resp *logical.Response) error {
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
 			var d struct {
 				AccessKey string `mapstructure:"access_key"`
 				SecretKey string `mapstructure:"secret_key"`
@@ -711,7 +747,7 @@ func testAccStepRead(_ *testing.T, path, name string, credentialTests []credenti
 	}
 }
 
-func testAccStepReadWithMFA(t *testing.T, path, name, mfaCode string, credentialTests []credentialTestFunc) logicaltest.TestStep {
+func testAccStepReadWithMFA(t *testing.T, path, name, mfaCode string, credentialTests []credentialTestFunc) stepwise.Step {
 	step := testAccStepRead(t, path, name, credentialTests)
 	step.Data = map[string]interface{}{
 		"mfa_code": mfaCode,
@@ -720,15 +756,21 @@ func testAccStepReadWithMFA(t *testing.T, path, name, mfaCode string, credential
 	return step
 }
 
-func testAccStepReadSTSResponse(name string, maximumTTL time.Duration) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepReadSTSResponse(name string, maximumTTL time.Duration) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
-		Check: func(resp *logical.Response) error {
-			if resp.Secret == nil {
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
+			if resp == nil {
 				return fmt.Errorf("bad: nil Secret returned")
 			}
-			ttl := resp.Secret.TTL
+			ttl, err := resp.TokenTTL()
+			if err != nil {
+				return err
+			}
 			if ttl > maximumTTL {
 				return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl/time.Second, maximumTTL/time.Second)
 			}
@@ -881,12 +923,14 @@ func retryUntilSuccess(op func() error) error {
 	return err
 }
 
-func testAccStepReadSTSWithArnPolicy(t *testing.T, name string) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepReadSTSWithArnPolicy(t *testing.T, name string) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.ReadOperation,
 		Path:      "sts/" + name,
-		ErrorOk:   true,
-		Check: func(resp *logical.Response) error {
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
 			if resp.Data["error"] !=
 				"attempted to retrieve iam_user credentials through the sts path; this is not allowed for legacy roles" {
 				t.Fatalf("bad: %v", resp)
@@ -896,8 +940,8 @@ func testAccStepReadSTSWithArnPolicy(t *testing.T, name string) logicaltest.Test
 	}
 }
 
-func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepWritePolicy(t *testing.T, name string, policy string) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
@@ -906,18 +950,21 @@ func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltes
 	}
 }
 
-func testAccStepDeletePolicy(t *testing.T, n string) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepDeletePolicy(t *testing.T, n string) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.DeleteOperation,
 		Path:      "roles/" + n,
 	}
 }
 
-func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepReadPolicy(t *testing.T, name string, value string) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + name,
-		Check: func(resp *logical.Response) error {
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
 			if resp == nil {
 				if value == "" {
 					return nil
@@ -926,23 +973,29 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
-			expected := map[string]interface{}{
-				"policy_arns":              []string(nil),
-				"role_arns":                []string(nil),
-				"policy_document":          value,
-				"credential_type":          strings.Join([]string{iamUserCred, federationTokenCred}, ","),
-				"default_sts_ttl":          int64(0),
-				"max_sts_ttl":              int64(0),
-				"user_path":                "",
-				"permissions_boundary_arn": "",
-				"iam_groups":               []string(nil),
-				"iam_tags":                 map[string]string(nil),
-				"mfa_serial_number":        "",
-				"session_tags":             map[string]string(nil),
-				"external_id":              "",
+			var d roleData
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
 			}
-			if !reflect.DeepEqual(resp.Data, expected) {
-				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
+
+			expected := roleData{
+				PolicyArns:             []string(nil),
+				RoleArns:               []string(nil),
+				PolicyDocument:         value,
+				CredentialType:         strings.Join([]string{iamUserCred, federationTokenCred}, ","),
+				DefaultStsTtl:          int64(0),
+				MaxStsTtl:              int64(0),
+				UserPath:               "",
+				PermissionsBoundaryArn: "",
+				IamGroups:              []string(nil),
+				IamTags:                map[string]string(nil),
+				MfaSerialNumber:        "",
+				SessionTags:            map[string]string(nil),
+				ExternalID:             "",
+			}
+
+			if !reflect.DeepEqual(d, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", d, expected)
 			}
 			return nil
 		},
@@ -987,19 +1040,22 @@ const (
 	dynamoPolicyArn      = "arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess"
 )
 
-func testAccStepWriteRole(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepWriteRole(t *testing.T, name string, data map[string]interface{}) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data:      data,
 	}
 }
 
-func testAccStepReadRole(t *testing.T, name string, expected map[string]interface{}) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepReadRole(t *testing.T, name string, expected map[string]interface{}) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + name,
-		Check: func(resp *logical.Response) error {
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
 			if resp == nil {
 				if expected == nil {
 					return nil
@@ -1014,8 +1070,8 @@ func testAccStepReadRole(t *testing.T, name string, expected map[string]interfac
 	}
 }
 
-func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
@@ -1026,11 +1082,10 @@ func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) logical
 
 func TestAcceptanceBackend_basicPolicyArnRef(t *testing.T) {
 	t.Parallel()
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+	stepwise.Run(t, stepwise.Case{
+		Precheck:    func() { testAccPreCheck(t) },
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest}),
@@ -1066,22 +1121,23 @@ func TestAcceptanceBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 		"mfa_serial_number":        "",
 	}
 
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck: func() {
+	// Teardown
+	defer func() error {
+		return deleteTestGroup(groupName)
+	}()
+
+	stepwise.Run(t, stepwise.Case{
+		Precheck: func() {
 			testAccPreCheck(t)
 			createGroup(t, groupName, testS3Policy, []string{})
 		},
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepReadRole(t, "test", expectedRoleData),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest, assertCreatedIAMUser, listS3BucketsTest}),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest, listS3BucketsTest}),
-		},
-		Teardown: func() error {
-			return deleteTestGroup(groupName)
 		},
 	})
 }
@@ -1111,26 +1167,27 @@ func TestAcceptanceBackend_iamUserGroups(t *testing.T) {
 		"mfa_serial_number":        "",
 	}
 
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck: func() {
+	// Teardown
+	defer func() error {
+		if err := deleteTestGroup(group1Name); err != nil {
+			return err
+		}
+		return deleteTestGroup(group2Name)
+	}()
+
+	stepwise.Run(t, stepwise.Case{
+		Precheck: func() {
 			testAccPreCheck(t)
 			createGroup(t, group1Name, testS3Policy, []string{ec2PolicyArn, iamPolicyArn})
 			createGroup(t, group2Name, testDynamoPolicy, []string{})
 		},
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepReadRole(t, "test", expectedRoleData),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest, assertCreatedIAMUser, listS3BucketsTest}),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest, listS3BucketsTest}),
-		},
-		Teardown: func() error {
-			if err := deleteTestGroup(group1Name); err != nil {
-				return err
-			}
-			return deleteTestGroup(group2Name)
 		},
 	})
 }
@@ -1149,24 +1206,26 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
 		"credential_type": assumedRoleCred,
 	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck: func() {
+
+	// Teardown
+	defer func() error {
+		return deleteTestRole(roleName)
+	}()
+
+	stepwise.Run(t, stepwise.Case{
+		Precheck: func() {
 			testAccPreCheck(t)
 			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, nil)
 			// Sleep sometime because AWS is eventually consistent
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
-		},
-		Teardown: func() error {
-			return deleteTestRole(roleName)
 		},
 	})
 }
@@ -1185,23 +1244,25 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
 		"credential_type": assumedRoleCred,
 	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck: func() {
+
+	// Teardown
+	defer func() error {
+		return deleteTestRole(roleName)
+	}()
+
+	stepwise.Run(t, stepwise.Case{
+		Precheck: func() {
 			testAccPreCheck(t)
 			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn, iamPolicyArn}, nil)
 			log.Printf("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{listIamUsersTest, describeAzsTestUnauthorized}),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{listIamUsersTest, describeAzsTestUnauthorized}),
-		},
-		Teardown: func() error {
-			return deleteTestRole(roleName)
 		},
 	})
 }
@@ -1222,9 +1283,17 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
 		"credential_type": assumedRoleCred,
 	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck: func() {
+
+	// Teardown
+	defer func() error {
+		if err := deleteTestGroup(groupName); err != nil {
+			return err
+		}
+		return deleteTestRole(roleName)
+	}()
+
+	stepwise.Run(t, stepwise.Case{
+		Precheck: func() {
 			testAccPreCheck(t)
 			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, nil)
 			createGroup(t, groupName, allowAllButDescribeAzs, []string{})
@@ -1232,18 +1301,12 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
-		},
-		Teardown: func() error {
-			if err := deleteTestGroup(groupName); err != nil {
-				return err
-			}
-			return deleteTestRole(roleName)
 		},
 	})
 }
@@ -1283,23 +1346,24 @@ func TestAcceptanceBackend_AssumedRoleWithSessionTags(t *testing.T) {
 		}
 `, awsAccountID)
 
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck: func() {
+	// Teardown
+	defer func() error {
+		return deleteTestRole(roleName)
+	}()
+
+	stepwise.Run(t, stepwise.Case{
+		Precheck: func() {
 			testAccPreCheck(t)
 			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, []string{allowSessionTagsPolicy})
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
-		},
-		Teardown: func() error {
-			return deleteTestRole(roleName)
 		},
 	})
 }
@@ -1313,24 +1377,26 @@ func TestAcceptanceBackend_FederationTokenWithPolicyARN(t *testing.T) {
 		"policy_arns":     dynamoPolicyArn,
 		"credential_type": federationTokenCred,
 	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck: func() {
+
+	// Teardown
+	defer func() error {
+		return deleteTestUser(accessKey, userName)
+	}()
+
+	stepwise.Run(t, stepwise.Case{
+		Precheck: func() {
 			testAccPreCheck(t)
 			createUser(t, userName, accessKey)
 			// Sleep sometime because AWS is eventually consistent
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfigWithCreds(t, accessKey),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized}),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized}),
-		},
-		Teardown: func() error {
-			return deleteTestUser(accessKey, userName)
 		},
 	})
 }
@@ -1359,9 +1425,17 @@ func TestAcceptanceBackend_FederationTokenWithGroups(t *testing.T) {
 		"policy_document": iamSingleStatementPolicy,
 		"credential_type": federationTokenCred,
 	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck: func() {
+
+	// Teardown
+	defer func() error {
+		if err := deleteTestGroup(groupName); err != nil {
+			return err
+		}
+		return deleteTestUser(accessKey, userName)
+	}()
+
+	stepwise.Run(t, stepwise.Case{
+		Precheck: func() {
 			testAccPreCheck(t)
 			createUser(t, userName, accessKey)
 			createGroup(t, groupName, "", []string{dynamoPolicyArn})
@@ -1369,18 +1443,12 @@ func TestAcceptanceBackend_FederationTokenWithGroups(t *testing.T) {
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfigWithCreds(t, accessKey),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized, listS3BucketsTest}),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized, listS3BucketsTest}),
-		},
-		Teardown: func() error {
-			if err := deleteTestGroup(groupName); err != nil {
-				return err
-			}
-			return deleteTestUser(accessKey, userName)
 		},
 	})
 }
@@ -1394,24 +1462,26 @@ func TestAcceptanceBackend_SessionToken(t *testing.T) {
 	roleData := map[string]interface{}{
 		"credential_type": sessionTokenCred,
 	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck: func() {
+
+	// Teardown
+	defer func() error {
+		return deleteTestUser(accessKey, userName)
+	}()
+
+	stepwise.Run(t, stepwise.Case{
+		Precheck: func() {
 			testAccPreCheck(t)
 			createUser(t, userName, accessKey)
 			// Sleep sometime because AWS is eventually consistent
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfigWithCreds(t, accessKey),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest}),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest}),
-		},
-		Teardown: func() error {
-			return deleteTestUser(accessKey, userName)
 		},
 	})
 }
@@ -1448,16 +1518,15 @@ func TestAcceptanceBackend_SessionTokenWithMFA(t *testing.T) {
 		"credential_type":   sessionTokenCred,
 		"mfa_serial_number": serial,
 	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck: func() {
+	stepwise.Run(t, stepwise.Case{
+		Precheck: func() {
 			testAccPreCheck(t)
 			// Sleep sometime because AWS is eventually consistent
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfigWithCreds(t, accessKey),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepReadWithMFA(t, "sts", "test", code, []credentialTestFunc{listDynamoTablesTest}),
@@ -1481,22 +1550,24 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 		"default_sts_ttl": minAwsAssumeRoleDuration,
 		"max_sts_ttl":     minAwsAssumeRoleDuration,
 	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck: func() {
+
+	// Teardown
+	defer func() error {
+		return deleteTestRole(roleName)
+	}()
+
+	stepwise.Run(t, stepwise.Case{
+		Precheck: func() {
 			testAccPreCheck(t)
 			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, nil)
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepReadSTSResponse("test", time.Duration(minAwsAssumeRoleDuration)*time.Second), // allow a little slack
-		},
-		Teardown: func() error {
-			return deleteTestRole(roleName)
 		},
 	})
 }
@@ -1504,10 +1575,9 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 // TestBackend_policyArnCRUD test the CRUD operations for policy ARNs.
 func TestBackend_policyArnCRUD(t *testing.T) {
 	t.Parallel()
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: false,
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+	stepwise.Run(t, stepwise.Case{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
 			testAccStepReadArnPolicy(t, "test", ec2PolicyArn),
@@ -1517,11 +1587,14 @@ func TestBackend_policyArnCRUD(t *testing.T) {
 	})
 }
 
-func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepReadArnPolicy(t *testing.T, name string, value string) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + name,
-		Check: func(resp *logical.Response) error {
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
 			if resp == nil {
 				if value == "" {
 					return nil
@@ -1530,23 +1603,29 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
-			expected := map[string]interface{}{
-				"policy_arns":              []string{value},
-				"role_arns":                []string(nil),
-				"policy_document":          "",
-				"credential_type":          iamUserCred,
-				"default_sts_ttl":          int64(0),
-				"max_sts_ttl":              int64(0),
-				"user_path":                "",
-				"permissions_boundary_arn": "",
-				"iam_groups":               []string(nil),
-				"iam_tags":                 map[string]string(nil),
-				"mfa_serial_number":        "",
-				"session_tags":             map[string]string(nil),
-				"external_id":              "",
+			var d roleData
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
 			}
-			if !reflect.DeepEqual(resp.Data, expected) {
-				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
+
+			expected := roleData{
+				PolicyArns:             []string{value},
+				RoleArns:               []string(nil),
+				PolicyDocument:         "",
+				CredentialType:         iamUserCred,
+				DefaultStsTtl:          int64(0),
+				MaxStsTtl:              int64(0),
+				UserPath:               "",
+				PermissionsBoundaryArn: "",
+				IamGroups:              []string(nil),
+				IamTags:                map[string]string(nil),
+				MfaSerialNumber:        "",
+				SessionTags:            map[string]string(nil),
+				ExternalID:             "",
+			}
+
+			if !reflect.DeepEqual(d, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", d, expected)
 			}
 
 			return nil
@@ -1554,8 +1633,8 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 	}
 }
 
-func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAccountID string) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAccountID string) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + vaultRoleName,
 		Data: map[string]interface{}{
@@ -1567,10 +1646,9 @@ func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAcc
 // TestBackend_iamGroupsCRUD tests CRUD operations for IAM groups.
 func TestBackend_iamGroupsCRUD(t *testing.T) {
 	t.Parallel()
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: false,
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+	stepwise.Run(t, stepwise.Case{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWriteIamGroups(t, "test", []string{"group1", "group2"}),
 			testAccStepReadIamGroups(t, "test", []string{"group1", "group2"}),
@@ -1580,8 +1658,8 @@ func TestBackend_iamGroupsCRUD(t *testing.T) {
 	})
 }
 
-func testAccStepWriteIamGroups(t *testing.T, name string, groups []string) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepWriteIamGroups(t *testing.T, name string, groups []string) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
@@ -1591,11 +1669,14 @@ func testAccStepWriteIamGroups(t *testing.T, name string, groups []string) logic
 	}
 }
 
-func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepReadIamGroups(t *testing.T, name string, groups []string) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + name,
-		Check: func(resp *logical.Response) error {
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
 			if resp == nil {
 				if len(groups) == 0 {
 					return nil
@@ -1604,23 +1685,29 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
-			expected := map[string]interface{}{
-				"policy_arns":              []string(nil),
-				"role_arns":                []string(nil),
-				"policy_document":          "",
-				"credential_type":          iamUserCred,
-				"default_sts_ttl":          int64(0),
-				"max_sts_ttl":              int64(0),
-				"user_path":                "",
-				"permissions_boundary_arn": "",
-				"iam_groups":               groups,
-				"iam_tags":                 map[string]string(nil),
-				"mfa_serial_number":        "",
-				"session_tags":             map[string]string(nil),
-				"external_id":              "",
+			var d roleData
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
 			}
-			if !reflect.DeepEqual(resp.Data, expected) {
-				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
+
+			expected := roleData{
+				PolicyArns:             []string(nil),
+				RoleArns:               []string(nil),
+				PolicyDocument:         "",
+				CredentialType:         iamUserCred,
+				DefaultStsTtl:          int64(0),
+				MaxStsTtl:              int64(0),
+				UserPath:               "",
+				PermissionsBoundaryArn: "",
+				IamGroups:              groups,
+				IamTags:                map[string]string(nil),
+				MfaSerialNumber:        "",
+				SessionTags:            map[string]string(nil),
+				ExternalID:             "",
+			}
+
+			if !reflect.DeepEqual(d, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", d, expected)
 			}
 
 			return nil
@@ -1630,10 +1717,9 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 
 // TestBackend_iamTagsCRUD tests the CRUD operations for IAM tags.
 func TestBackend_iamTagsCRUD(t *testing.T) {
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: false,
-		LogicalBackend: getBackend(t),
-		Steps: []logicaltest.TestStep{
+	stepwise.Run(t, stepwise.Case{
+		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+		Steps: []stepwise.Step{
 			testAccStepConfig(t),
 			testAccStepWriteIamTags(t, "test", map[string]string{"key1": "value1", "key2": "value2"}),
 			testAccStepReadIamTags(t, "test", map[string]string{"key1": "value1", "key2": "value2"}),
@@ -1643,8 +1729,8 @@ func TestBackend_iamTagsCRUD(t *testing.T) {
 	})
 }
 
-func testAccStepWriteIamTags(t *testing.T, name string, tags map[string]string) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepWriteIamTags(t *testing.T, name string, tags map[string]string) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
@@ -1654,11 +1740,14 @@ func testAccStepWriteIamTags(t *testing.T, name string, tags map[string]string) 
 	}
 }
 
-func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) logicaltest.TestStep {
-	return logicaltest.TestStep{
+func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) stepwise.Step {
+	return stepwise.Step{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + name,
-		Check: func(resp *logical.Response) error {
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
 			if resp == nil {
 				if len(tags) == 0 {
 					return nil
@@ -1667,23 +1756,29 @@ func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) l
 				return fmt.Errorf("vault response not received")
 			}
 
-			expected := map[string]interface{}{
-				"policy_arns":              []string(nil),
-				"role_arns":                []string(nil),
-				"policy_document":          "",
-				"credential_type":          iamUserCred,
-				"default_sts_ttl":          int64(0),
-				"max_sts_ttl":              int64(0),
-				"user_path":                "",
-				"permissions_boundary_arn": "",
-				"iam_groups":               []string(nil),
-				"iam_tags":                 tags,
-				"mfa_serial_number":        "",
-				"session_tags":             map[string]string(nil),
-				"external_id":              "",
+			var d roleData
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
 			}
-			if !reflect.DeepEqual(resp.Data, expected) {
-				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
+
+			expected := roleData{
+				PolicyArns:             []string(nil),
+				RoleArns:               []string(nil),
+				PolicyDocument:         "",
+				CredentialType:         iamUserCred,
+				DefaultStsTtl:          int64(0),
+				MaxStsTtl:              int64(0),
+				UserPath:               "",
+				PermissionsBoundaryArn: "",
+				IamGroups:              []string(nil),
+				IamTags:                tags,
+				MfaSerialNumber:        "",
+				SessionTags:            map[string]string(nil),
+				ExternalID:             "",
+			}
+
+			if !reflect.DeepEqual(d, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", d, expected)
 			}
 
 			return nil
@@ -1767,7 +1862,7 @@ func TestBackend_stsSessionTagsCRUD(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			steps := []logicaltest.TestStep{
+			steps := []stepwise.Step{
 				testAccStepConfig(t),
 			}
 
@@ -1795,16 +1890,15 @@ func TestBackend_stsSessionTagsCRUD(t *testing.T) {
 				testAccStepDeletePolicy(t, tt.name),
 				testAccStepReadSTSSessionTags(t, tt.name, nil, "", true),
 			)
-			logicaltest.Test(t, logicaltest.TestCase{
-				AcceptanceTest: false,
-				LogicalBackend: getBackend(t),
-				Steps:          steps,
+			stepwise.Run(t, stepwise.Case{
+				Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
+				Steps:       steps,
 			})
 		})
 	}
 }
 
-func testAccStepWriteSTSSessionTags(t *testing.T, name string, tags any, externalID string) logicaltest.TestStep {
+func testAccStepWriteSTSSessionTags(t *testing.T, name string, tags any, externalID string) stepwise.Step {
 	t.Helper()
 
 	data := map[string]interface{}{
@@ -1814,20 +1908,23 @@ func testAccStepWriteSTSSessionTags(t *testing.T, name string, tags any, externa
 	if externalID != "" {
 		data["external_id"] = externalID
 	}
-	return logicaltest.TestStep{
+	return stepwise.Step{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data:      data,
 	}
 }
 
-func testAccStepReadSTSSessionTags(t *testing.T, name string, tags any, externalID string, expectNilResp bool) logicaltest.TestStep {
+func testAccStepReadSTSSessionTags(t *testing.T, name string, tags map[string]string, externalID string, expectNilResp bool) stepwise.Step {
 	t.Helper()
 
-	return logicaltest.TestStep{
+	return stepwise.Step{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + name,
-		Check: func(resp *logical.Response) error {
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
 			if resp == nil {
 				if expectNilResp {
 					return nil
@@ -1835,22 +1932,28 @@ func testAccStepReadSTSSessionTags(t *testing.T, name string, tags any, external
 				return fmt.Errorf("vault response not received")
 			}
 
-			expected := map[string]interface{}{
-				"policy_arns":              []string(nil),
-				"role_arns":                []string(nil),
-				"policy_document":          "",
-				"credential_type":          assumedRoleCred,
-				"default_sts_ttl":          int64(0),
-				"max_sts_ttl":              int64(0),
-				"user_path":                "",
-				"permissions_boundary_arn": "",
-				"iam_groups":               []string(nil),
-				"iam_tags":                 map[string]string(nil),
-				"mfa_serial_number":        "",
-				"session_tags":             tags,
-				"external_id":              externalID,
+			var d roleData
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
 			}
-			if !reflect.DeepEqual(resp.Data, expected) {
+
+			expected := roleData{
+				PolicyArns:             []string(nil),
+				RoleArns:               []string(nil),
+				PolicyDocument:         "",
+				CredentialType:         assumedRoleCred,
+				DefaultStsTtl:          int64(0),
+				MaxStsTtl:              int64(0),
+				UserPath:               "",
+				PermissionsBoundaryArn: "",
+				IamGroups:              []string(nil),
+				IamTags:                map[string]string(nil),
+				MfaSerialNumber:        "",
+				SessionTags:            tags,
+				ExternalID:             externalID,
+			}
+
+			if !reflect.DeepEqual(d, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
 			}
 

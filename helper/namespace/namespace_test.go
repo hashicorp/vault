@@ -4,6 +4,7 @@
 package namespace
 
 import (
+	"context"
 	"testing"
 )
 
@@ -170,5 +171,132 @@ func TestHasParent(t *testing.T) {
 		if actual != test.expected {
 			t.Fatalf("bad ancestor calculation; name: %q, actual: %t, expected: %t", test.name, actual, test.expected)
 		}
+	}
+}
+
+func TestContextWithNamespace(t *testing.T) {
+	ns1 := &Namespace{
+		ID:   "id1",
+		Path: "ns1/path/",
+		CustomMetadata: map[string]string{
+			"key1": "value1",
+		},
+	}
+
+	ns2 := &Namespace{
+		ID:   "id2",
+		Path: "ns2/path/",
+	}
+
+	tests := map[string]struct {
+		inputCtx          context.Context
+		inputNamespace    *Namespace
+		expectedNamespace *Namespace
+		expectedErrorMsg  string
+	}{
+		"nil namespace": {
+			inputCtx:         context.Background(),
+			inputNamespace:   nil,
+			expectedErrorMsg: ErrNoNamespace.Error(),
+		},
+		"valid context with custom namespace": {
+			inputCtx:          context.Background(),
+			inputNamespace:    ns1,
+			expectedNamespace: ns1,
+		},
+		"valid context with root namespace": {
+			inputCtx:          context.Background(),
+			inputNamespace:    RootNamespace,
+			expectedNamespace: RootNamespace,
+		},
+		"override existing namespace": {
+			inputCtx:          ContextWithNamespace(context.Background(), RootNamespace),
+			inputNamespace:    ns2,
+			expectedNamespace: ns2,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			resultCtx := ContextWithNamespace(tc.inputCtx, tc.inputNamespace)
+			if resultCtx == nil {
+				t.Fatal("ContextWithNamespace should not return nil context")
+			}
+
+			ns, err := FromContext(resultCtx)
+
+			if tc.expectedErrorMsg != "" {
+				if err == nil {
+					t.Fatalf("expected error but got nil")
+				} else if err.Error() != tc.expectedErrorMsg {
+					t.Fatalf("expected error message %q, got %q", tc.expectedErrorMsg, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			}
+
+			if ns != tc.expectedNamespace {
+				t.Fatalf("namespace does not match expected namespace: expected %v, got %v", tc.expectedNamespace, ns)
+			}
+		})
+	}
+}
+
+func TestFromContext(t *testing.T) {
+	ns1 := &Namespace{
+		ID:             "id1",
+		Path:           "ns1/path/",
+		CustomMetadata: map[string]string{"key1": "value1"},
+	}
+
+	tests := map[string]struct {
+		inputCtx          context.Context
+		expectedNamespace *Namespace
+		expectedErrorMsg  string
+	}{
+		"nil context": {
+			inputCtx:         nil,
+			expectedErrorMsg: "context was nil",
+		},
+		"context without namespace": {
+			inputCtx:         context.Background(),
+			expectedErrorMsg: ErrNoNamespace.Error(),
+		},
+		"context with nil namespace value": {
+			inputCtx:         context.WithValue(context.Background(), contextNamespace, (*Namespace)(nil)),
+			expectedErrorMsg: ErrNoNamespace.Error(),
+		},
+		"context with custom namespace": {
+			inputCtx:          ContextWithNamespace(context.Background(), ns1),
+			expectedNamespace: ns1,
+		},
+		"context with root namespace": {
+			inputCtx:          ContextWithNamespace(context.Background(), RootNamespace),
+			expectedNamespace: RootNamespace,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ns, err := FromContext(tc.inputCtx)
+
+			if tc.expectedErrorMsg != "" {
+				if err == nil {
+					t.Fatalf("expected error but got nil")
+				} else if err.Error() != tc.expectedErrorMsg {
+					t.Fatalf("expected error message %q, got %q", tc.expectedErrorMsg, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			}
+
+			if ns != tc.expectedNamespace {
+				t.Fatalf("namespace does not match expected namespace: expected %v, got %v", tc.expectedNamespace, ns)
+			}
+		})
 	}
 }

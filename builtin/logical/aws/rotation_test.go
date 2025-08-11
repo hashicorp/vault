@@ -16,12 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/testhelpers"
-	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
-	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 )
 
@@ -504,105 +500,109 @@ func (m *mockIAM) CreateAccessKey(input *iam.CreateAccessKeyInput) (*iam.CreateA
 	}, nil
 }
 
-// Test_RotationQueueInitialized creates a 2 node cluster and sets up the AWS
-// credentials backend. The test creates 3 sets of static credentials. Two of
-// those have a low rotation period and should get rotated during the test. The
-// third has a high rotation period and should not be rotated. The test verifies
-// that the correct secrets are rotated, then transfers leadership to the other
-// node. The test verifies that credentials are once again rotated on the new
-// active node.
-func Test_RotationQueueInitialized(t *testing.T) {
-	mockClient := &mockIAM{
-		newKeys: make(map[string]int),
-	}
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"aws": func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-				b := Backend(config)
-				b.iamClient = mockClient
-				b.minAllowableRotationPeriod = 1 * time.Second
+// TODO: Move to external_tests in vault repo once plugin is externalized
+// https://github.com/hashicorp/vault/tree/e2273dbd77f3473c94b0ae3f298811d149018acd/vault/external_tests/plugin
+// https://hashicorp.slack.com/archives/G014PNTE3FA/p1754441457254849?thread_ts=1754439881.160869&cid=G014PNTE3FA
+//
+// // Test_RotationQueueInitialized creates a 2 node cluster and sets up the AWS
+// // credentials backend. The test creates 3 sets of static credentials. Two of
+// // those have a low rotation period and should get rotated during the test. The
+// // third has a high rotation period and should not be rotated. The test verifies
+// // that the correct secrets are rotated, then transfers leadership to the other
+// // node. The test verifies that credentials are once again rotated on the new
+// // active node.
+// func Test_RotationQueueInitialized(t *testing.T) {
+// 	mockClient := &mockIAM{
+// 		newKeys: make(map[string]int),
+// 	}
+// 	coreConfig := &vault.CoreConfig{
+// 		LogicalBackends: map[string]logical.Factory{
+// 			"aws": func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+// 				b := Backend(config)
+// 				b.iamClient = mockClient
+// 				b.minAllowableRotationPeriod = 1 * time.Second
 
-				// Used to override the IAM real client creation to return the mocked client
-				b.nonCachedClientIAMFunc = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
-					return mockClient, nil
-				}
+// 				// Used to override the IAM real client creation to return the mocked client
+// 				b.nonCachedClientIAMFunc = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+// 					return mockClient, nil
+// 				}
 
-				err := b.Setup(ctx, config)
-				return b, err
-			},
-		},
-		RollbackPeriod: 1 * time.Second,
-	}
+// 				err := b.Setup(ctx, config)
+// 				return b, err
+// 			},
+// 		},
+// 		RollbackPeriod: 1 * time.Second,
+// 	}
 
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    2,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+// 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+// 		HandlerFunc: vaulthttp.Handler,
+// 		NumCores:    2,
+// 	})
+// 	cluster.Start()
+// 	defer cluster.Cleanup()
 
-	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
-	client := cores[0].Client
-	err := client.Sys().Mount("aws", &api.MountInput{
-		Type: "aws",
-	})
-	require.NoError(t, err)
+// 	cores := cluster.Cores
+// 	vault.TestWaitActive(t, cores[0].Core)
+// 	client := cores[0].Client
+// 	err := client.Sys().Mount("aws", &api.MountInput{
+// 		Type: "aws",
+// 	})
+// 	require.NoError(t, err)
 
-	// create 3 static roles with different rotation periods
-	_, err = client.Logical().Write("aws/static-roles/role1", map[string]interface{}{
-		"username":        "user1",
-		"rotation_period": "2s",
-	})
-	require.NoError(t, err)
-	_, err = client.Logical().Write("aws/static-roles/role2", map[string]interface{}{
-		"username":        "user2",
-		"rotation_period": "1s",
-	})
-	require.NoError(t, err)
-	_, err = client.Logical().Write("aws/static-roles/role3", map[string]interface{}{
-		"username":        "user3",
-		"rotation_period": "5m",
-	})
-	require.NoError(t, err)
+// 	// create 3 static roles with different rotation periods
+// 	_, err = client.Logical().Write("aws/static-roles/role1", map[string]interface{}{
+// 		"username":        "user1",
+// 		"rotation_period": "2s",
+// 	})
+// 	require.NoError(t, err)
+// 	_, err = client.Logical().Write("aws/static-roles/role2", map[string]interface{}{
+// 		"username":        "user2",
+// 		"rotation_period": "1s",
+// 	})
+// 	require.NoError(t, err)
+// 	_, err = client.Logical().Write("aws/static-roles/role3", map[string]interface{}{
+// 		"username":        "user3",
+// 		"rotation_period": "5m",
+// 	})
+// 	require.NoError(t, err)
 
-	getSecret := func(c *api.Client, role string) string {
-		r, err := c.Logical().Read("aws/static-creds/" + role)
-		require.NoError(t, err)
-		return r.Data["secret_key"].(string)
-	}
+// 	getSecret := func(c *api.Client, role string) string {
+// 		r, err := c.Logical().Read("aws/static-creds/" + role)
+// 		require.NoError(t, err)
+// 		return r.Data["secret_key"].(string)
+// 	}
 
-	role1Secret := getSecret(client, "role1")
-	role2Secret := getSecret(client, "role2")
-	role3Secret := getSecret(client, "role3")
+// 	role1Secret := getSecret(client, "role1")
+// 	role2Secret := getSecret(client, "role2")
+// 	role3Secret := getSecret(client, "role3")
 
-	verifySecretsRotated := func(c *api.Client, originalRole1Secret, originalRole2Secret, originalRole3Secret string) (updatedRole1Secret, updatedRole2Secret string) {
-		testhelpers.RetryUntil(t, 5*time.Second, func() error {
-			// verify that both secrets with a low rotation period get rotated
-			updatedRole1Secret = getSecret(c, "role1")
-			updatedRole2Secret = getSecret(c, "role2")
+// 	verifySecretsRotated := func(c *api.Client, originalRole1Secret, originalRole2Secret, originalRole3Secret string) (updatedRole1Secret, updatedRole2Secret string) {
+// 		testhelpers.RetryUntil(t, 5*time.Second, func() error {
+// 			// verify that both secrets with a low rotation period get rotated
+// 			updatedRole1Secret = getSecret(c, "role1")
+// 			updatedRole2Secret = getSecret(c, "role2")
 
-			if originalRole1Secret == updatedRole1Secret && originalRole2Secret == updatedRole2Secret {
-				return fmt.Errorf("secrets haven't been rotated")
-			}
+// 			if originalRole1Secret == updatedRole1Secret && originalRole2Secret == updatedRole2Secret {
+// 				return fmt.Errorf("secrets haven't been rotated")
+// 			}
 
-			// verify that the secret with a high rotation period doesn't get
-			// rotated
-			updatedRole3Secret := getSecret(c, "role3")
-			if updatedRole3Secret != role3Secret {
-				return fmt.Errorf("secret has been rotated but should not have been")
-			}
-			return nil
-		})
-		return
-	}
+// 			// verify that the secret with a high rotation period doesn't get
+// 			// rotated
+// 			updatedRole3Secret := getSecret(c, "role3")
+// 			if updatedRole3Secret != role3Secret {
+// 				return fmt.Errorf("secret has been rotated but should not have been")
+// 			}
+// 			return nil
+// 		})
+// 		return
+// 	}
 
-	role1Secret, role2Secret = verifySecretsRotated(client, role1Secret, role2Secret, role3Secret)
+// 	role1Secret, role2Secret = verifySecretsRotated(client, role1Secret, role2Secret, role3Secret)
 
-	// seal to make to core 1 the active node
-	cores[0].Seal(t)
+// 	// seal to make to core 1 the active node
+// 	cores[0].Seal(t)
 
-	// verify that the correct secrets get rotated again
-	vault.TestWaitActive(t, cores[1].Core)
-	verifySecretsRotated(cores[1].Client, role1Secret, role2Secret, role3Secret)
-}
+// 	// verify that the correct secrets get rotated again
+// 	vault.TestWaitActive(t, cores[1].Core)
+// 	verifySecretsRotated(cores[1].Client, role1Secret, role2Secret, role3Secret)
+// }
