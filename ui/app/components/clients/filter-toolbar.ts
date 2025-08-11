@@ -6,23 +6,18 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { ClientFilters, ClientFilterTypes } from 'core/utils/client-count-utils';
 
 interface Args {
   onFilter: CallableFunction;
 }
 
-enum SupportedFilterTypes {
-  NAMESPACE = 'namespace_path',
-  MOUNT_PATH = 'mount_path',
-  MOUNT_TYPE = 'mount_type',
-}
-
 export default class ClientsFilterToolbar extends Component<Args> {
-  filterTypes = SupportedFilterTypes;
+  filterTypes = ClientFilters;
 
-  @tracked namespace_path = '';
-  @tracked mount_path = '';
-  @tracked mount_type = '';
+  @tracked nsLabel = '';
+  @tracked mountPath = '';
+  @tracked mountType = '';
 
   get filters() {
     return Object.values(this.filterTypes);
@@ -33,19 +28,19 @@ export default class ClientsFilterToolbar extends Component<Args> {
   }
 
   @action
-  updateFilter(prop: SupportedFilterTypes, value: string, close: CallableFunction) {
+  updateFilter(prop: ClientFilterTypes, value: string, close: CallableFunction) {
     this[prop] = value;
     close();
   }
 
   @action
-  clearFilters(filterKey: SupportedFilterTypes | '') {
+  clearFilters(filterKey: ClientFilterTypes | '') {
     if (filterKey) {
       this[filterKey] = '';
     } else {
-      this.namespace_path = '';
-      this.mount_path = '';
-      this.mount_type = '';
+      this.nsLabel = '';
+      this.mountPath = '';
+      this.mountType = '';
     }
   }
 
@@ -58,7 +53,7 @@ export default class ClientsFilterToolbar extends Component<Args> {
         obj[filterName] = value;
         return obj;
       },
-      {} as Record<SupportedFilterTypes, string>
+      {} as Record<ClientFilterTypes, string>
     );
     this.args.onFilter(filterObject);
   }

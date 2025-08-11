@@ -27,6 +27,15 @@ export const CLIENT_TYPES = [
 
 export type ClientTypes = (typeof CLIENT_TYPES)[number];
 
+// map to keys in the activity response
+export enum ClientFilters {
+  NAMESPACE = 'nsLabel',
+  MOUNT_PATH = 'mountPath',
+  MOUNT_TYPE = 'mountType',
+}
+
+export type ClientFilterTypes = (typeof ClientFilters)[keyof typeof ClientFilters];
+
 // generates a block of total clients with 0's for use as defaults
 function emptyCounts() {
   return CLIENT_TYPES.reduce((prev, type) => {
@@ -199,7 +208,7 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByN
   if (!Array.isArray(namespaceArray)) return [];
   return namespaceArray.map((ns) => {
     // i.e. 'namespace_path' is an empty string for 'root', so use namespace_id
-    const label = ns.namespace_path === '' ? ns.namespace_id : ns.namespace_path;
+    const nsLabel = ns.namespace_path === '' ? ns.namespace_id : ns.namespace_path;
     // data prior to adding mount granularity will still have a mounts array,
     // but the mount_path value will be "no mount accessor (pre-1.10 upgrade?)" (ref: vault/activity_log_util_common.go)
     // transform to an empty array for type consistency
@@ -207,12 +216,13 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByN
     if (Array.isArray(ns.mounts)) {
       mounts = ns.mounts.map((m) => ({
         label: m.mount_path,
+        namespace_path: nsLabel,
         mount_type: m.mount_type,
         ...destructureClientCounts(m.counts),
       }));
     }
     return {
-      label,
+      label: nsLabel,
       ...destructureClientCounts(ns.counts),
       mounts,
     };
