@@ -52,13 +52,13 @@ jobs:
           git config user.name hc-github-team-secure-vault-ecosystem
           git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
 
-      - if: steps.metadata.outputs.is-ent-branch != 'true'
+      - if: ! contains(inputs.branch, '+ent')
         name: Update plugin
         run: |
           go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}"
           go mod tidy
 
-      - if: steps.metadata.outputs.is-ent-branch == 'true'
+      - if: contains(inputs.branch, '+ent')
         name: Update Enterprise-only plugin
         run: |
           (cd vault_ent && go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}" && go mod tidy)
