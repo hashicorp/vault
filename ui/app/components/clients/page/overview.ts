@@ -39,7 +39,7 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
 
   get tableColumns() {
     return [
-      { key: 'namespace', label: 'Namespace', isSortable: true },
+      { key: 'namespace_path', label: 'Namespace', isSortable: true },
       { key: 'label', label: 'Mount path', isSortable: true },
       { key: 'mount_type', label: 'Mount type', isSortable: true },
       { key: 'clients', label: 'Counts', isSortable: true },

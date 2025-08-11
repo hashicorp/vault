@@ -228,7 +228,7 @@ export const formatTableData = (byMonthNewClients: ByMonthNewClients[], month: s
   namespaces?.forEach((n) => {
     const mounts: TableData[] = n.mounts.map((m) => {
       // add namespace to mount block
-      return { ...m, namespace: n.label };
+      return { ...m, namespace_path: n.label };
     });
     data = [...data, ...mounts];
   });
@@ -345,7 +345,7 @@ export interface MountNewClients extends TotalClientsSometimes {
 }
 
 export interface TableData extends MountClients {
-  namespace: string;
+  namespace_path: string;
 }
 
 // API RESPONSE SHAPE (prior to serialization)
