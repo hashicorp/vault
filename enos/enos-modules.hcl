@@ -323,16 +323,16 @@ module "vault_verify_removed_node_shim" {
 module "vault_verify_secrets_engines_create" {
   source = "./modules/verify_secrets_engines/modules/create"
 
-  aws_enabled       = var.aws_enabled
-  ldap_enabled      = var.ldap_enabled
+  aws_enabled       = var.verify_aws_secrets_engine
+  ldap_enabled      = var.verify_ldap_secrets_engine
   vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_secrets_engines_read" {
   source = "./modules/verify_secrets_engines/modules/read"
 
-  aws_enabled       = var.aws_enabled
-  ldap_enabled      = var.ldap_enabled
+  aws_enabled       = var.verify_aws_secrets_engine
+  ldap_enabled      = var.verify_ldap_secrets_engine
   vault_install_dir = var.vault_install_dir
 }
 

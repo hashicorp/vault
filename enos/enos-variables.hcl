@@ -20,7 +20,7 @@ variable "artifactory_repo" {
   default     = "hashicorp-crt-stable-local*"
 }
 
-variable "aws_enabled" {
+variable "verify_aws_secrets_engine" {
   description = "If true we'll verify AWS secrets engines behavior. Because of user creation restrictions in Doormat AWS accounts, only turn this on for CI, as it depends on resources that exist only in those accounts"
   type        = bool
   default     = false
@@ -98,7 +98,7 @@ variable "distro_version_ubuntu" {
   default     = "24.04" // or "22.04"
 }
 
-variable "ldap_enabled" {
+variable "verify_ldap_secrets_engine" {
   description = "If true we'll verify LDAP secrets engines behavior"
   type        = bool
   default     = false
