@@ -157,15 +157,14 @@ module('Integration | Util | client count utils', function (hooks) {
     const original = [...RESPONSE.by_namespace];
     const expectedNs1 = SERIALIZED_ACTIVITY_RESPONSE.by_namespace.find((ns) => ns.label === 'ns1');
     const formattedNs1 = formatByNamespace(RESPONSE.by_namespace).find((ns) => ns.label === 'ns1');
-    assert.expect(2 + expectedNs1.mounts.length * 2);
+    assert.expect(2 + formattedNs1.mounts.length);
 
     assert.propEqual(formattedNs1, expectedNs1, 'it formats ns1/ namespace');
     assert.propEqual(RESPONSE.by_namespace, original, 'it does not modify original by_namespace array');
 
     formattedNs1.mounts.forEach((mount) => {
       const expectedMount = expectedNs1.mounts.find((m) => m.label === mount.label);
-      assert.propEqual(Object.keys(mount), Object.keys(expectedMount), `${mount} as expected keys`);
-      assert.propEqual(Object.values(mount), Object.values(expectedMount), `${mount} as expected values`);
+      assert.propEqual(mount, expectedMount, `${mount.label} has expected key/value pairs`);
     });
   });
 
@@ -235,6 +234,7 @@ module('Integration | Util | client count utils', function (hooks) {
             entity_clients: 10,
             label: 'no mount accessor (pre-1.10 upgrade?)',
             mount_type: '',
+            namespace_path: 'root',
             non_entity_clients: 20,
             secret_syncs: 0,
           },
@@ -267,6 +267,7 @@ module('Integration | Util | client count utils', function (hooks) {
               entity_clients: 2,
               label: 'no mount accessor (pre-1.10 upgrade?)',
               mount_type: 'no mount path (pre-1.10 upgrade?)',
+              namespace_path: 'root',
               non_entity_clients: 0,
               secret_syncs: 0,
             },
@@ -276,6 +277,7 @@ module('Integration | Util | client count utils', function (hooks) {
               entity_clients: 1,
               label: 'auth/userpass-0',
               mount_type: 'userpass',
+              namespace_path: 'root',
               non_entity_clients: 0,
               secret_syncs: 0,
             },
@@ -306,6 +308,7 @@ module('Integration | Util | client count utils', function (hooks) {
                 entity_clients: 2,
                 label: 'no mount accessor (pre-1.10 upgrade?)',
                 mount_type: 'no mount path (pre-1.10 upgrade?)',
+                namespace_path: 'root',
                 non_entity_clients: 0,
                 secret_syncs: 0,
               },
@@ -315,6 +318,7 @@ module('Integration | Util | client count utils', function (hooks) {
                 entity_clients: 1,
                 label: 'auth/userpass-0',
                 mount_type: 'userpass',
+                namespace_path: 'root',
                 non_entity_clients: 0,
                 secret_syncs: 0,
               },
@@ -533,6 +537,7 @@ module('Integration | Util | client count utils', function (hooks) {
         expected: {
           label: 'auth/userpass-0',
           mount_type: 'userpass',
+          namespace_path: 'ns1',
           acme_clients: 0,
           clients: 8394,
           entity_clients: 4256,
@@ -548,6 +553,7 @@ module('Integration | Util | client count utils', function (hooks) {
         expected: {
           label: 'kvv2-engine-0',
           mount_type: 'kv',
+          namespace_path: 'root',
           acme_clients: 0,
           clients: 4290,
           entity_clients: 0,
