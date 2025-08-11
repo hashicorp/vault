@@ -13,7 +13,7 @@ import {
   setupOnerror,
   typeIn,
   visit,
-  triggerKeyEvent,
+  waitFor,
 } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
@@ -35,7 +35,7 @@ import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/hel
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import codemirror from 'vault/tests/helpers/codemirror';
+import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -96,7 +96,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         .dom(PAGE.list.overviewButton)
         .hasText('View list', 'shows list and not secret because search is a directory');
       await click(PAGE.list.overviewButton);
-      assert.dom(PAGE.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
+      assert.dom(GENERAL.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/`); // add slash because this is a directory
@@ -147,8 +147,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       await visit(`vault/secrets/${backend}/kv/${encodeURIComponent(this.fullSecretPath)}/details?version=1`);
       // navigate back through crumbs
-      let previousCrumb = findAll('[data-test-breadcrumbs] li').length - 2;
-      await click(PAGE.breadcrumbAtIdx(previousCrumb));
+      let previousCrumb = findAll(GENERAL.breadcrumb).length - 2;
+      await click(GENERAL.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/list/${root}/${subdirectory}/`,
@@ -158,8 +158,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(PAGE.list.item(secret)).exists('renders linked block for child secret');
 
       // back again
-      previousCrumb = findAll('[data-test-breadcrumbs] li').length - 2;
-      await click(PAGE.breadcrumbAtIdx(previousCrumb));
+      previousCrumb = findAll(GENERAL.breadcrumb).length - 2;
+      await click(GENERAL.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/list/${root}/`,
@@ -168,8 +168,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(PAGE.list.item(`${subdirectory}/`)).exists('renders linked block for subdirectory');
 
       // and back to the engine list view
-      previousCrumb = findAll('[data-test-breadcrumbs] li').length - 2;
-      await click(PAGE.breadcrumbAtIdx(previousCrumb));
+      previousCrumb = findAll(GENERAL.breadcrumb).length - 2;
+      await click(GENERAL.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/list`,
@@ -193,8 +193,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
           `Sorry, we were unable to find any content at /v1/${backend}/metadata/${root}/${subdirectory}.`
         );
 
-      assert.dom(PAGE.breadcrumbAtIdx(0)).hasText('Secrets');
-      assert.dom(PAGE.breadcrumbAtIdx(1)).hasText(backend);
+      assert.dom(GENERAL.breadcrumbAtIdx(0)).hasText('Secrets');
+      assert.dom(GENERAL.breadcrumbAtIdx(1)).hasText(backend);
       assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('is-active');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('is-active');
     });
@@ -311,7 +311,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await fillIn(FORM.keyInput(), 'foo');
     await fillIn(FORM.valueInput(), 'bar');
     await click(FORM.saveBtn);
-    await click(PAGE.breadcrumbAtIdx(2));
+    await click(GENERAL.breadcrumbAtIdx(2));
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
   });
 
@@ -321,14 +321,17 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     await click(FORM.toggleJson);
 
+    await waitFor('.cm-editor');
+    const view = codemirror();
+
     assert.strictEqual(
-      codemirror().getValue(),
+      getCodeEditorValue(view),
       `{
   \"\": \"\"
 }`,
       'JSON editor displays correct empty object'
     );
-    codemirror().setValue('{ "foo3": { "name": "bar3" } }');
+    setCodeEditorValue(view, '{ "foo3": { "name": "bar3" } }');
     await click(FORM.saveBtn);
 
     // Details view
@@ -345,27 +348,10 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isChecked();
     assert.deepEqual(
-      codemirror().getValue(),
-      `{
-  "foo3": {
-    "name": "bar3"
-  }
-}`,
+      getCodeEditorValue(view),
+      '{ "foo3": { "name": "bar3" } }',
       'Values are displayed in the new version view'
     );
-  });
-
-  test('on enter the JSON editor cursor goes to the next line', async function (assert) {
-    // see issue here: https://github.com/hashicorp/vault/issues/27524
-    const predictedCursorPosition = JSON.stringify({ line: 3, ch: 0, sticky: null });
-    await visit(`/vault/secrets/${this.backend}/kv/create`);
-    await fillIn(FORM.inputByAttr('path'), 'json jump');
-
-    await click(FORM.toggleJson);
-    codemirror().setCursor({ line: 2, ch: 1 });
-    await triggerKeyEvent(GENERAL.codemirrorTextarea, 'keydown', 'Enter');
-    const actualCursorPosition = JSON.stringify(codemirror().getCursor());
-    assert.strictEqual(actualCursorPosition, predictedCursorPosition, 'the cursor stayed on the next line');
   });
 
   test('viewing advanced secret data versions displays the correct version data', async function (assert) {
@@ -381,16 +367,22 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   }
 }`;
 
+    let view;
+
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
 
-    await click(FORM.toggleJson);
-    codemirror().setValue('{ "foo1": { "name": "bar1" } }');
+    await click(GENERAL.toggleInput('json'));
+    await waitFor('.cm-editor');
+    view = codemirror();
+    setCodeEditorValue(view, '{ "foo1": { "name": "bar1" } }');
     await click(FORM.saveBtn);
 
     // Create another version
     await click(GENERAL.overviewCard.actionText('Create new'));
-    codemirror().setValue('{ "foo2": { "name": "bar2" } }');
+    await waitFor('.cm-editor');
+    view = codemirror();
+    setCodeEditorValue(view, '{ "foo2": { "name": "bar2" } }');
     await click(FORM.saveBtn);
 
     // View the first version and make sure the secret data is correct
@@ -519,7 +511,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
   setupApplicationTest(hooks);
 
   const navToEngine = async (backend) => {
-    await click('[data-test-sidebar-nav-link="Secrets Engines"]');
+    await click(GENERAL.navLink('Secrets Engines'));
     return await click(SES.secretsBackendLink(backend));
   };
 
@@ -541,7 +533,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
     });
     // also asserts destroyed icon
     deleted.forEach((num) => {
-      assert.dom(`${PAGE.detail.version(num)} [data-test-icon="x-square"]`);
+      assert.dom(`${PAGE.detail.version(num)} ${GENERAL.icon('x-square')}`);
     });
   };
 
@@ -623,7 +615,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       );
       await assertVersionDropdown(assert);
       assert
-        .dom(`${PAGE.detail.version(2)} [data-test-icon="check-circle"]`)
+        .dom(`${PAGE.detail.version(2)} ${GENERAL.icon('check-circle')}`)
         .exists('renders current version icon');
       assert.dom(PAGE.infoRowValue('foo-two')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('foo-two'));
@@ -663,7 +655,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       // check empty state and toolbar
       assertDeleteActions(assert, ['undelete', 'destroy']);
       assert
-        .dom(PAGE.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 deleted');
       await assertVersionDropdown(assert, [2]); // important to test dropdown versions are accurate
@@ -675,7 +667,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       // back to secret tab to confirm deleted state
       await click(PAGE.secretTab('Secret'));
       // if this assertion fails, the view is rendering a stale model
-      assert.dom(PAGE.emptyStateTitle).exists('still renders empty state!!');
+      assert.dom(GENERAL.emptyStateTitle).exists('still renders empty state!!');
       await assertVersionDropdown(assert, [2]);
 
       // undelete flow
@@ -695,7 +687,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await click(PAGE.secretTab('Secret'));
       assertDeleteActions(assert, []);
       assert
-        .dom(PAGE.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been permanently destroyed', 'Shows destroyed message');
 
       // navigate to sibling route to make sure empty state remains for details tab
@@ -705,7 +697,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       // back to secret tab to confirm destroyed state
       await click(PAGE.secretTab('Secret'));
       // if this assertion fails, the view is rendering a stale model
-      assert.dom(PAGE.emptyStateTitle).exists('still renders empty state!!');
+      assert.dom(GENERAL.emptyStateTitle).exists('still renders empty state!!');
       await assertVersionDropdown(assert, [2]);
     });
   });
