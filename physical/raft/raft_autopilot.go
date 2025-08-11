@@ -31,6 +31,7 @@ const (
 	CleanupDeadServersFalse    CleanupDeadServersValue = 2
 	AutopilotUpgradeVersionTag string                  = "upgrade_version"
 	AutopilotRedundancyZoneTag string                  = "redundancy_zone"
+	emptyRedundancyZone                                = ""
 )
 
 func (c CleanupDeadServersValue) Value() bool {
@@ -211,6 +212,14 @@ type FollowerState struct {
 	RedundancyZone  string
 }
 
+func (f *FollowerState) neverSentHeartbeat() bool {
+	// We can't use LastHeartbeat to determine if the node has been contacted,
+	// since we set it for every node in the cluster during post-unseal.
+	// Instead, check if the node has reported any applied index or term.
+	// These will both be 0 if the node has never sent an echo.
+	return f.LastTerm == 0 && f.AppliedIndex == 0
+}
+
 // partialCopy returns a partial copy of the follower state.
 // This copy uses the same pointer to the IsDead
 // atomic field. We need to do this to ensure that
@@ -231,8 +240,9 @@ func (f *FollowerState) partialCopy() *FollowerState {
 
 // PersistedFollowerState holds the information that gets persisted to storage
 type PersistedFollowerState struct {
-	Version        string `json:"version"`
-	UpgradeVersion string `json:"upgrade_version"`
+	Version        string  `json:"version"`
+	UpgradeVersion string  `json:"upgrade_version"`
+	RedundancyZone *string `json:"redundancy_zone"`
 }
 
 type PersistedFollowerStates struct {
@@ -257,7 +267,9 @@ func (p *PersistedFollowerStates) shouldUpdate(state *autopilot.State, grabLock 
 			return true
 		}
 		if server.Server.Version != persistedServer.Version ||
-			server.Server.Meta[AutopilotUpgradeVersionTag] != persistedServer.UpgradeVersion {
+			server.Server.Meta[AutopilotUpgradeVersionTag] != persistedServer.UpgradeVersion ||
+			persistedServer.RedundancyZone == nil ||
+			server.Server.Meta[AutopilotRedundancyZoneTag] != *persistedServer.RedundancyZone {
 			return true
 		}
 	}
@@ -272,9 +284,11 @@ func (d *Delegate) updatePersistedState(state *autopilot.State) error {
 	}
 	newStates := make(map[string]PersistedFollowerState)
 	for id, server := range state.Servers {
+		redundancyZone := server.Server.Meta[AutopilotRedundancyZoneTag]
 		newStates[string(id)] = PersistedFollowerState{
 			Version:        server.Server.Version,
 			UpgradeVersion: server.Server.Meta[AutopilotUpgradeVersionTag],
+			RedundancyZone: &redundancyZone,
 		}
 	}
 	d.persistedState.l.Lock()
@@ -524,11 +538,13 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 
 		currentServerID := raft.ServerID(id)
 		followerVersion, upgradeVersion := d.determineFollowerVersions(id, state)
-		if state.UpgradeVersion != upgradeVersion {
-			// we only have a read lock on state, so we can't modify it
+		redundancyZone := d.determineRedundancyZone(id, state)
+		if state.UpgradeVersion != upgradeVersion || state.RedundancyZone != redundancyZone {
+			// We only have a read lock on state, so we can't modify it
 			// safely. Instead, copy it to override the upgrade version
 			state = state.partialCopy()
 			state.UpgradeVersion = upgradeVersion
+			state.RedundancyZone = redundancyZone
 		}
 
 		server := &autopilot.Server{
@@ -581,6 +597,39 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	}
 
 	return ret
+}
+
+// determineRedundancyZone will return the correct redundancy zone to report for
+// the given follower
+func (d *Delegate) determineRedundancyZone(id string, state *FollowerState) string {
+	// If the follower has a non-empty redundancy zone, use that
+	if state.RedundancyZone != emptyRedundancyZone {
+		return state.RedundancyZone
+	}
+
+	// If we don't have any persisted states (which can happen on an upgrade to
+	// 1.18) we don't have any other option; return an empty zone (which is the
+	// same as the follower's reported state)
+	if len(d.persistedState.States) == 0 {
+		return emptyRedundancyZone
+	}
+
+	// If we've ever gotten a heartbeat from this follower, then trust that
+	// it reported its empty zone correctly
+	if !state.neverSentHeartbeat() {
+		return emptyRedundancyZone
+	}
+
+	// Check if we have any persisted state for this follower, and if that
+	// state includes a redundancy zone. If either of these doesn't exist, we
+	// can't know the follower's zone. Assume it's empty.
+	persistedState, ok := d.persistedState.States[id]
+	if !ok || persistedState.RedundancyZone == nil {
+		return emptyRedundancyZone
+	}
+
+	d.logger.Debug("using redundancy zone from persisted states", "id", id, "redundancy_zone", *persistedState.RedundancyZone)
+	return *persistedState.RedundancyZone
 }
 
 // determineFollowerVersions uses the following logic:
