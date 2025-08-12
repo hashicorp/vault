@@ -28,12 +28,15 @@
         <Icon @name={{type.glyph}} @size="24" class="has-bottom-margin-xs" />
         <Hds::Text::Body @tag="h3" @size="300">
           {{type.displayName}}
-          {{#if type.version}}
-            <span class="has-text-grey has-text-weight-normal" style="font-size: 0.875rem; display: block; margin-top: 4px;">
-              {{type.version}}
-            </span>
-          {{/if}}
         </Hds::Text::Body>
+        {{#if (or type.version type.builtin)}}
+          <PluginStatusIndicator
+            @version={{type.version}}
+            @builtin={{type.builtin}}
+            @deprecationStatus={{type.deprecation_status}}
+            @size="small"
+          />
+        {{/if}}
         {{#if (and type.requiredFeature (not (has-feature type.requiredFeature)))}}
           <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
         {{/if}}
