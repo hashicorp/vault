@@ -232,7 +232,7 @@ func Test_EnosDynamicConfigReq_Run(t *testing.T) {
 							DistroVersionLeap:     []string{"15.6"},
 							DistroVersionRhel:     []string{"8.10", "9.5"},
 							DistroVersionSles:     []string{"15.6"},
-							DistroVersionUbuntu:   []string{"20.04", "24.04"},
+							DistroVersionUbuntu:   []string{"22.04", "24.04"},
 							UpgradeInitialVersion: versions,
 						},
 					},
@@ -254,7 +254,7 @@ globals {
     distro_version_leap     = ["15.6"]
     distro_version_rhel     = ["8.10", "9.5"]
     distro_version_sles     = ["15.6"]
-    distro_version_ubuntu   = ["20.04", "24.04"]
+    distro_version_ubuntu   = ["22.04", "24.04"]
     upgrade_initial_version = ["1.16.6", "1.16.7", "1.16.8", "1.16.9", "1.16.10", "1.17.3", "1.17.4", "1.17.6", "1.18.0-rc1"]
   }
 }
