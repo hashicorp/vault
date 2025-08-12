@@ -47,7 +47,6 @@ locals {
       "9.5"  = ["softhsm", "opensc"]
     }
     ubuntu = {
-      "20.04" = ["softhsm", "opensc"]
       "22.04" = ["softhsm", "opensc"]
       "24.04" = ["softhsm2", "opensc"]
     }
@@ -60,7 +59,6 @@ locals {
       "9.5"  = ["softhsm"]
     }
     ubuntu = {
-      "20.04" = ["softhsm"]
       "22.04" = ["softhsm"]
       "24.04" = ["softhsm2"]
     }
