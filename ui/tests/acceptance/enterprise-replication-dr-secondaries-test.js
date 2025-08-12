@@ -32,14 +32,12 @@ module('Acceptance | Enterprise | replication-secondaries', function (hooks) {
   hooks.afterEach(async function () {
     // For the tests following this, return to a good state.
     // We've reset mirage with this.server.shutdown() but re-poll the cluster to get the latest state.
-    this.owner.lookup('service:store').unloadAll();
     this.server.shutdown();
     await pollCluster(this.owner);
     await disableReplication('dr');
     await settled();
     await pollCluster(this.owner);
     await logout();
-    await visit('/vault/auth');
   });
 
   test('DR secondary: manage tab, details tab, and analytics are not run', async function (assert) {

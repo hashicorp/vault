@@ -149,7 +149,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     // 1. There is little value in collecting analytics in this state.
     // 2. The analytics service requires resolving async setup (e.g. await),
     //   which delays the afterModel hook resolution and breaks the DR secondary flow.
-    if (model.dr.isSecondary) {
+    if (model.dr?.isSecondary) {
       return this.transitionToTargetRoute(transition);
     }
 
