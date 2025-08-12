@@ -22,7 +22,7 @@ export default class RecoverySnapshotsRoute extends Route {
   async model() {
     const path = 'sys/storage/raft/snapshot/snapshot-load';
     const capabilities = await this.capabilities.fetch([path]);
-    const canLoadSnapshot = capabilities[path]?.canUpdate;
+    const canLoadSnapshot = capabilities[path]?.canUpdate ?? false;
     const snapshots = await this.fetchSnapshots();
 
     return {
@@ -44,7 +44,7 @@ export default class RecoverySnapshotsRoute extends Route {
       const { keys } = await this.api.sys.systemListStorageRaftSnapshotLoad(
         SystemListStorageRaftSnapshotLoadListEnum.TRUE
       );
-      return keys;
+      return keys as string[];
     } catch (e) {
       const { message, status } = await this.api.parseError(e);
       if (status === 404) {
