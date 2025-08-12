@@ -20,9 +20,10 @@ export default class ClientsCountsController extends Controller {
   start_time: string | number | undefined = undefined;
   end_time: string | number | undefined = undefined;
   ns: string | undefined = undefined; // TODO delete when filter toolbar is removed
-  nsLabel = '';
-  mountPath = '';
-  mountType = '';
+  mountPath: string | undefined = undefined; // TODO delete when filter toolbar is removed
+  namespace_path = '';
+  mount_path = '';
+  mount_type = '';
 
   // using router.transitionTo to update the query params results in the model hook firing each time
   // this happens when the queryParams object is not added to the route or refreshModel is explicitly set to false

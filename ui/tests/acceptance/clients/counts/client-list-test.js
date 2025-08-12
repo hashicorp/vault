@@ -45,7 +45,7 @@ module('Acceptance | clients | counts | client list', function (hooks) {
     const mPath = 'auth/userpass-0';
     const mType = 'userpass';
     await visit(
-      `vault/clients/counts/client-list?nsLabel=${ns}&mountPath=${mPath}&mountType=${mType}&&start_time=1717113600`
+      `vault/clients/counts/client-list?namespace_path=${ns}&mount_path=${mPath}&mount_type=${mType}&&start_time=1717113600`
     );
     assert.dom(FILTERS.tag()).exists({ count: 3 }, '3 filter tags render');
     assert.dom(FILTERS.tag(ClientFilters.NAMESPACE, ns)).exists();
@@ -73,7 +73,7 @@ module('Acceptance | clients | counts | client list', function (hooks) {
     await click(GENERAL.button('Apply filters'));
     assert.strictEqual(
       currentURL(),
-      `${url}?mountPath=${encodeURIComponent(mPath)}&mountType=${mType}&nsLabel=${ns}`,
+      `${url}?mount_path=${encodeURIComponent(mPath)}&mount_type=${mType}&namespace_path=${ns}`,
       'url query params match filters'
     );
     await click(GENERAL.button('Clear filters'));

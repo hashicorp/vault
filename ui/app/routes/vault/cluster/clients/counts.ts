@@ -20,15 +20,17 @@ import type ClientsActivityModel from 'vault/vault/models/clients/activity';
 export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
   end_time?: string | number | undefined;
-  ns?: string | undefined;
-  mountPath?: string;
-  mountType?: string;
+  ns?: string | undefined; // TODO DELETE
+  mountPath?: string; // TODO DELETE
+  namespace_path?: string;
+  mount_path?: string;
+  mount_type?: string;
 }
 
 interface ActivityAdapterQuery {
   start_time: { timestamp: number } | undefined;
   end_time: { timestamp: number } | undefined;
-  namespace?: string;
+  namespace?: string; // TODO DELETE
 }
 
 export type ClientsCountsRouteModel = ModelFrom<ClientsCountsRoute>;
@@ -42,8 +44,11 @@ export default class ClientsCountsRoute extends Route {
   queryParams = {
     start_time: { refreshModel: true, replace: true },
     end_time: { refreshModel: true, replace: true },
-    ns: { refreshModel: true, replace: true },
-    mountPath: { refreshModel: false, replace: true },
+    ns: { refreshModel: true, replace: true }, // TODO DELETE
+    mountPath: { refreshModel: false, replace: true }, // TODO DELETE
+    namespace_path: { refreshModel: false, replace: true },
+    mount_path: { refreshModel: false, replace: true },
+    mount_type: { refreshModel: false, replace: true },
   };
 
   beforeModel() {
@@ -126,13 +131,14 @@ export default class ClientsCountsRoute extends Route {
     };
   }
 
+  // TODO UPDATE query params
   resetController(controller: ClientsCountsController, isExiting: boolean) {
     if (isExiting) {
       controller.setProperties({
         start_time: undefined,
         end_time: undefined,
         ns: undefined,
-        mountPath: '',
+        mountPath: undefined,
       });
     }
   }

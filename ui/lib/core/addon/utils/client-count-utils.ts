@@ -29,9 +29,9 @@ export type ClientTypes = (typeof CLIENT_TYPES)[number];
 
 // map to dropdowns for filtering client count tables
 export enum ClientFilters {
-  NAMESPACE = 'nsLabel',
-  MOUNT_PATH = 'mountPath',
-  MOUNT_TYPE = 'mountType',
+  NAMESPACE = 'namespace_path',
+  MOUNT_PATH = 'mount_path',
+  MOUNT_TYPE = 'mount_type',
 }
 
 export type ClientFilterTypes = (typeof ClientFilters)[keyof typeof ClientFilters];
