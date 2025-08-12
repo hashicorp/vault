@@ -158,7 +158,6 @@ locals {
       "15.6" = "RHEL/9/${local.release_sub_path_rpm}"
     }
     ubuntu = {
-      "20.04" = local.release_path_deb,
       "22.04" = local.release_path_deb,
       "24.04" = local.release_path_deb,
     }
