@@ -687,6 +687,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         {
           label: 'auth/userpass-0',
           mount_type: 'userpass',
+          namespace_path: 'ns1',
           acme_clients: 0,
           clients: 8394,
           entity_clients: 4256,
@@ -696,6 +697,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         {
           label: 'kvv2-engine-0',
           mount_type: 'kv',
+          namespace_path: 'ns1',
           acme_clients: 0,
           clients: 4810,
           entity_clients: 0,
@@ -705,6 +707,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         {
           label: 'pki-engine-0',
           mount_type: 'pki',
+          namespace_path: 'ns1',
           acme_clients: 5699,
           clients: 5699,
           entity_clients: 0,
@@ -724,6 +727,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         {
           label: 'auth/userpass-0',
           mount_type: 'userpass',
+          namespace_path: 'root',
           acme_clients: 0,
           clients: 8091,
           entity_clients: 4002,
@@ -733,6 +737,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         {
           label: 'kvv2-engine-0',
           mount_type: 'kv',
+          namespace_path: 'root',
           acme_clients: 0,
           clients: 4290,
           entity_clients: 0,
@@ -742,6 +747,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         {
           label: 'pki-engine-0',
           mount_type: 'pki',
+          namespace_path: 'root',
           acme_clients: 4003,
           clients: 4003,
           entity_clients: 0,
@@ -781,6 +787,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           mounts: [
             {
               label: 'pki-engine-0',
+              namespace_path: 'root',
               mount_type: 'pki',
               acme_clients: 100,
               clients: 100,
@@ -790,6 +797,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             },
             {
               label: 'auth/userpass-0',
+              namespace_path: 'root',
               mount_type: 'userpass',
               acme_clients: 0,
               clients: 200,
@@ -799,6 +807,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             },
             {
               label: 'kvv2-engine-0',
+              namespace_path: 'root',
               mount_type: 'kv',
               acme_clients: 0,
               clients: 100,
@@ -828,6 +837,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             mounts: [
               {
                 label: 'pki-engine-0',
+                namespace_path: 'root',
                 mount_type: 'pki',
                 acme_clients: 100,
                 clients: 100,
@@ -838,6 +848,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               {
                 label: 'auth/userpass-0',
                 mount_type: 'userpass',
+                namespace_path: 'root',
                 acme_clients: 0,
                 clients: 200,
                 entity_clients: 100,
@@ -847,6 +858,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               {
                 label: 'kvv2-engine-0',
                 mount_type: 'kv',
+                namespace_path: 'root',
                 acme_clients: 0,
                 clients: 100,
                 entity_clients: 0,
@@ -877,6 +889,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           mounts: [
             {
               label: 'pki-engine-0',
+              namespace_path: 'root',
               mount_type: 'pki',
               acme_clients: 100,
               clients: 100,
@@ -886,6 +899,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             },
             {
               label: 'auth/userpass-0',
+              namespace_path: 'root',
               mount_type: 'userpass',
               acme_clients: 0,
               clients: 200,
@@ -895,6 +909,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             },
             {
               label: 'kvv2-engine-0',
+              namespace_path: 'root',
               mount_type: 'kv',
               acme_clients: 0,
               clients: 100,
