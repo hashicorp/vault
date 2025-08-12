@@ -9,9 +9,9 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, currentURL, settled, visit, waitFor } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { STATUS_DISABLED_RESPONSE, mockReplicationBlock } from 'vault/tests/helpers/replication';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const s = {
-  navLink: (title) => `[data-test-sidebar-nav-link="${title}"]`,
   title: (t) => `[data-test-replication-title="${t}"]`,
   detailLink: (mode) => `[data-test-replication-details-link="${mode}"]`,
   summaryCard: '[data-test-replication-summary-card]',
@@ -53,8 +53,8 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     await assertTitle(assert, 'Replication unsupported');
 
     // Nav links
-    assert.dom(s.navLink('Performance')).doesNotExist('hides performance link');
-    assert.dom(s.navLink('Disaster Recovery')).doesNotExist('hides dr link');
+    assert.dom(GENERAL.navLink('Performance')).doesNotExist('hides performance link');
+    assert.dom(GENERAL.navLink('Disaster Recovery')).doesNotExist('hides dr link');
   });
 
   test('replication page when disabled', async function (assert) {
@@ -64,15 +64,15 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     await assertTitle(assert, 'Enable Replication');
 
     // Nav links
-    assert.dom(s.navLink('Performance')).exists('shows performance link');
-    assert.dom(s.navLink('Disaster Recovery')).exists('shows dr link');
+    assert.dom(GENERAL.navLink('Performance')).exists('shows performance link');
+    assert.dom(GENERAL.navLink('Disaster Recovery')).exists('shows dr link');
 
-    await click(s.navLink('Performance'));
+    await click(GENERAL.navLink('Performance'));
     assert.strictEqual(currentURL(), '/vault/replication/performance', 'it navigates to the correct page');
     await settled();
     assert.dom(s.enableForm).exists();
 
-    await click(s.navLink('Disaster Recovery'));
+    await click(GENERAL.navLink('Disaster Recovery'));
 
     await assertTitle(assert, 'Enable Disaster Recovery Replication', 'dr');
   });
@@ -90,15 +90,15 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
       assert.dom(s.detailLink('dr')).hasText('Enable', 'CTA to enable dr');
 
       // Nav links
-      assert.dom(s.navLink('Performance')).exists('shows performance link');
-      assert.dom(s.navLink('Disaster Recovery')).exists('shows dr link');
+      assert.dom(GENERAL.navLink('Performance')).exists('shows performance link');
+      assert.dom(GENERAL.navLink('Disaster Recovery')).exists('shows dr link');
 
-      await click(s.navLink('Performance'));
+      await click(GENERAL.navLink('Performance'));
       assert.strictEqual(currentURL(), `/vault/replication/performance`, `goes to correct URL`);
       await waitFor(s.dashboard);
       assert.dom(s.dashboard).exists(`it shows the replication dashboard`);
 
-      await click(s.navLink('Disaster Recovery'));
+      await click(GENERAL.navLink('Disaster Recovery'));
       await assertTitle(assert, 'Enable Disaster Recovery Replication', 'dr');
       assert.dom(s.enableForm).exists('it shows the enable view for dr');
     });
@@ -115,15 +115,15 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     assert.dom(s.detailLink('dr')).hasText('Details', 'CTA to see dr details');
 
     // Nav links
-    assert.dom(s.navLink('Performance')).exists('shows performance link');
-    assert.dom(s.navLink('Disaster Recovery')).exists('shows dr link');
+    assert.dom(GENERAL.navLink('Performance')).exists('shows performance link');
+    assert.dom(GENERAL.navLink('Disaster Recovery')).exists('shows dr link');
 
-    await click(s.navLink('Performance'));
+    await click(GENERAL.navLink('Performance'));
     assert.strictEqual(currentURL(), `/vault/replication/performance`, `goes to correct URL`);
     await waitFor(s.enableForm);
     assert.dom(s.enableForm).exists('it shows the enable view for performance');
 
-    await click(s.navLink('Disaster Recovery'));
+    await click(GENERAL.navLink('Disaster Recovery'));
     await assertTitle(assert, 'Disaster Recovery primary', 'Disaster Recovery');
     assert.dom(s.dashboard).exists(`it shows the replication dashboard`);
   });
@@ -137,11 +137,11 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     await assertTitle(assert, 'Disaster Recovery & Performance primary', 'Disaster Recovery & Performance');
     assert.dom(s.summaryCard).exists({ count: 2 }, 'shows 2 summary cards');
 
-    await click(s.navLink('Performance'));
+    await click(GENERAL.navLink('Performance'));
     await assertTitle(assert, 'Performance primary', 'Performance');
     assert.dom(s.enableForm).doesNotExist();
 
-    await click(s.navLink('Disaster Recovery'));
+    await click(GENERAL.navLink('Disaster Recovery'));
     await assertTitle(assert, 'Disaster Recovery primary', 'Disaster Recovery');
     assert.dom(s.enableForm).doesNotExist();
   });
