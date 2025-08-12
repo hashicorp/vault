@@ -3,6 +3,15 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
+{{#if (and (eq @mountCategory "secret") this.isLoadingPluginCatalog)}}
+  <div class="has-bottom-padding-m">
+    <Hds::ApplicationState as |A|>
+      <A.Header @title="Loading plugin information..." />
+      <A.Body @text="Fetching available secret engines and their versions..." />
+    </Hds::ApplicationState>
+  </div>
+{{/if}}
+
 {{#each (array "generic" "cloud" "infra") as |category|}}
   <Hds::Text::Display class="has-top-padding-m has-bottom-padding-s" @tag="h2" size="400">
     {{capitalize category}}
@@ -19,6 +28,11 @@
         <Icon @name={{type.glyph}} @size="24" class="has-bottom-margin-xs" />
         <Hds::Text::Body @tag="h3" @size="300">
           {{type.displayName}}
+          {{#if type.version}}
+            <span class="has-text-grey has-text-weight-normal" style="font-size: 0.875rem; display: block; margin-top: 4px;">
+              {{type.version}}
+            </span>
+          {{/if}}
         </Hds::Text::Body>
         {{#if (and type.requiredFeature (not (has-feature type.requiredFeature)))}}
           <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />

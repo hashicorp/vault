@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
-import { isValidPluginCatalogResponse } from 'vault/utils/plugin-catalog-helpers';
+import { isValidPluginCatalogResponse, addVersionsToEngines } from 'vault/utils/plugin-catalog-helpers';
 
 /**
  *
@@ -29,6 +29,7 @@ export default class MountBackendTypeForm extends Component {
 
   @tracked pluginCatalogData = null;
   @tracked pluginCatalogError = null;
+  @tracked isLoadingPluginCatalog = false;
 
   constructor(owner, args) {
     super(owner, args);
@@ -39,31 +40,36 @@ export default class MountBackendTypeForm extends Component {
   }
 
   async loadPluginCatalog() {
+    this.isLoadingPluginCatalog = true;
     try {
       const response = await this.api.getPluginCatalog('secret');
 
       if (isValidPluginCatalogResponse(response)) {
         this.pluginCatalogData = response.data.detailed;
-        console.log('Plugin catalog loaded successfully:', {
-          pluginCount: this.pluginCatalogData.length,
-          plugins: this.pluginCatalogData.map((p) => ({
-            name: p.name,
-            version: p.version,
-            builtin: p.builtin,
-          })),
-        });
       } else {
         this.pluginCatalogError = new Error('Invalid response structure');
       }
     } catch (error) {
       this.pluginCatalogError = error;
+    } finally {
+      this.isLoadingPluginCatalog = false;
     }
   }
 
   get secretEngines() {
     // If an enterprise license is present, return all secret engines;
     // otherwise, return only the secret engines supported in OSS.
-    return filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: this.version.isEnterprise });
+    const staticEngines = filterEnginesByMountCategory({
+      mountCategory: 'secret',
+      isEnterprise: this.version.isEnterprise,
+    });
+
+    // If we have plugin catalog data, merge it with static engines to add version info
+    if (this.pluginCatalogData) {
+      return addVersionsToEngines(staticEngines, this.pluginCatalogData);
+    }
+
+    return staticEngines;
   }
 
   get authMethods() {

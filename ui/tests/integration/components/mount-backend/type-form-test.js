@@ -86,4 +86,87 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
       }
     });
   });
+
+  module('Plugin Catalog Integration', function (hooks) {
+    hooks.beforeEach(function () {
+      this.apiService = this.owner.lookup('service:api');
+      this.mockPluginCatalogResponse = {
+        data: {
+          detailed: [
+            {
+              name: 'aws',
+              type: 'secret',
+              builtin: true,
+              version: 'v1.12.0+builtin.vault',
+              deprecation_status: 'supported',
+            },
+            {
+              name: 'kv',
+              type: 'secret',
+              builtin: true,
+              version: 'v0.13.0+builtin',
+              deprecation_status: 'supported',
+            },
+          ],
+          secret: ['aws', 'kv'],
+        },
+      };
+    });
+
+    test('it displays loading state while fetching plugin catalog', async function (assert) {
+      // Mock a slow API response
+      const slowPromise = new Promise((resolve) => {
+        setTimeout(() => resolve(this.mockPluginCatalogResponse), 100);
+      });
+      sinon.stub(this.apiService, 'getPluginCatalog').returns(slowPromise);
+
+      render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
+
+      // Check for loading state
+      assert.dom('[data-test-application-state-header]').hasText('Loading plugin information...');
+
+      // Wait for the API call to complete
+      await slowPromise;
+    });
+
+    test('it displays version information when plugin catalog is loaded', async function (assert) {
+      sinon.stub(this.apiService, 'getPluginCatalog').resolves(this.mockPluginCatalogResponse);
+
+      await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
+
+      // Check that version information is displayed for engines with plugin data
+      const awsCard = assert.dom(MOUNT_BACKEND_FORM.mountType('aws'));
+      awsCard.exists('AWS engine card exists');
+      awsCard.includesText('v1.12.0+builtin.vault', 'AWS version is displayed');
+
+      const kvCard = assert.dom(MOUNT_BACKEND_FORM.mountType('kv'));
+      kvCard.exists('KV engine card exists');
+      kvCard.includesText('v0.13.0+builtin', 'KV version is displayed');
+    });
+
+    test('it falls back gracefully when plugin catalog API fails', async function (assert) {
+      sinon.stub(this.apiService, 'getPluginCatalog').rejects(new Error('API Error'));
+
+      await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
+
+      // Should still render engines without version info
+      for (const type of secretTypes) {
+        assert.dom(MOUNT_BACKEND_FORM.mountType(type)).exists(`Renders ${type} mountable secret engine`);
+      }
+
+      // Loading state should not be visible after failure
+      assert
+        .dom('[data-test-application-state-header]')
+        .doesNotExist('Loading state is hidden after API failure');
+    });
+
+    test('it does not fetch plugin catalog for auth methods', async function (assert) {
+      const getPluginCatalogSpy = sinon.spy(this.apiService, 'getPluginCatalog');
+
+      await render(hbs`<MountBackend::TypeForm @mountCategory="auth" @setMountType={{this.setType}} />`);
+
+      // Should not call plugin catalog API for auth methods
+      assert.ok(getPluginCatalogSpy.notCalled, 'Plugin catalog API not called for auth methods');
+    });
+  });
 });
