@@ -54,7 +54,7 @@
     <Hds::Text::Body @color="faint">Filters applied:</Hds::Text::Body>
     {{! render tags based on applied @filters and not the internally tracked properties }}
     {{#each-in @appliedFilters as |filter value|}}
-      {{#if (and (this.supportedFilter filter) value)}}
+      {{#if value}}
         <div>
           <Hds::Tag
             @text={{value}}

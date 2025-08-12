@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { ClientFilters, ClientFilterTypes } from 'core/utils/client-count-utils';
+import { ClientFilters, ClientFilterTypes, filterIsSupported } from 'core/utils/client-count-utils';
 
 interface Args {
   onFilter: CallableFunction;
@@ -30,7 +30,7 @@ export default class ClientsFilterToolbar extends Component<Args> {
 
   get anyFilters() {
     return (
-      Object.keys(this.args.appliedFilters).every((f) => this.supportedFilter(f)) &&
+      Object.keys(this.args.appliedFilters).every((f) => filterIsSupported(f)) &&
       Object.values(this.args.appliedFilters).some((v) => !!v)
     );
   }
@@ -62,8 +62,4 @@ export default class ClientsFilterToolbar extends Component<Args> {
       mount_type: this.mount_type,
     });
   }
-
-  // Helper function
-  supportedFilter = (f: string): f is ClientFilterTypes =>
-    Object.values(this.filterTypes).includes(f as ClientFilterTypes);
 }

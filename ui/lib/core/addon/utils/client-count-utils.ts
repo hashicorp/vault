@@ -266,13 +266,17 @@ export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[]) => {
   );
 };
 
-// type guards for conditionals
+// TYPE GUARDS FOR CONDITIONALS
 function monthIsEmpty(month: ActivityMonthBlock): month is ActivityMonthEmpty {
   return !month || month?.counts === null;
 }
 
 function monthWithAllCounts(month: ActivityMonthBlock): month is ActivityMonthStandard {
   return month?.counts !== null && month?.new_clients?.counts !== null;
+}
+
+export function filterIsSupported(f: string): f is ClientFilterTypes {
+  return Object.values(ClientFilters).includes(f as ClientFilterTypes);
 }
 
 export function hasMountsKey(
