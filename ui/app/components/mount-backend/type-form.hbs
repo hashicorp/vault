@@ -17,190 +17,22 @@
     {{capitalize category}}
   </Hds::Text::Display>
   <div class="flex row-wrap row-gap-8 column-gap-16 has-bottom-padding-m">
-    {{#if (eq category "generic")}}
-      {{#let this.genericMountTypes as |categorized|}}
-        {{! Display enabled plugins first }}
-        {{#each categorized.enabled as |type|}}
-          <Hds::Card::Container
-            tabindex={{unless (if type.requiredFeature (not (has-feature type.requiredFeature)) false) "0"}}
-            class="selectable-engine-card {{if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) 'disabled'}} has-top-padding-l has-text-centered small-card"
-            @level={{if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) "base" "mid"}}
-            @background={{if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) "neutral-secondary" "neutral-primary"}}
-            @hasBorder={{true}}
-            {{on "click" (if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) (noop) (fn @setMountType type.type))}}
-            {{on "keypress" (if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) (noop) (fn @setMountType type.type))}}
-            data-test-mount-type={{type.type}}
-          >
-            <Icon @name={{type.glyph}} @size="24" class="has-bottom-margin-xs" />
-            <Hds::Text::Body @tag="h3" @size="300">
-              {{type.displayName}}
-            </Hds::Text::Body>
-            {{#if (or type.version type.builtin)}}
-              <PluginStatusIndicator
-                @version={{type.version}}
-                @builtin={{type.builtin}}
-                @deprecationStatus={{type.deprecation_status}}
-                @size="small"
-              />
-            {{/if}}
-            {{#if (and type.requiredFeature (not (has-feature type.requiredFeature)))}}
-              <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
-            {{/if}}
-          </Hds::Card::Container>
-        {{/each}}
+    {{#let (get this (concat category "MountTypes")) as |categorized|}}
+      {{! Display enabled plugins first }}
+      {{#each categorized.enabled as |type|}}
+        <EnabledPluginCard @type={{type}} @setMountType={{@setMountType}} />
+      {{/each}}
 
-        {{! Display vertical separator if both enabled and disabled plugins exist }}
-        {{#if (and categorized.enabled.length categorized.disabled.length)}}
-          <div class="vertical-divider"></div>
-        {{/if}}
+      {{! Display vertical separator if both enabled and disabled plugins exist }}
+      {{#if (and categorized.enabled.length categorized.disabled.length)}}
+        <div class="vertical-divider"></div>
+      {{/if}}
 
-        {{! Display disabled plugins at the end }}
-        {{#each categorized.disabled as |type|}}
-          <Hds::Card::Container
-            tabindex="0"
-            class="selectable-engine-card has-top-padding-l has-text-centered small-card"
-            @level="base"
-            @background="neutral-secondary"
-            @hasBorder={{false}}
-            {{on "click" (fn this.handleDisabledPluginClick type)}}
-            {{on "keypress" (fn this.handleDisabledPluginClick type)}}
-            data-test-mount-type={{type.type}}
-            data-test-disabled-plugin
-          >
-            <Icon @name={{type.glyph}} @size="24" class="has-bottom-margin-xs disabled-icon" />
-            <Hds::Text::Body @tag="h3" @size="300" class="disabled-text">
-              {{type.displayName}}
-            </Hds::Text::Body>
-            <Hds::Badge @text="Not available" @color="neutral" @size="small" />
-            {{#if type.demoDisabled}}
-              <Hds::Badge @text="Demo" @color="warning" @size="small" class="has-top-margin-xs" />
-            {{/if}}
-          </Hds::Card::Container>
-        {{/each}}
-      {{/let}}
-    {{else if (eq category "cloud")}}
-      {{#let this.cloudMountTypes as |categorized|}}
-        {{! Display enabled plugins first }}
-        {{#each categorized.enabled as |type|}}
-          <Hds::Card::Container
-            tabindex={{unless (if type.requiredFeature (not (has-feature type.requiredFeature)) false) "0"}}
-            class="selectable-engine-card {{if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) 'disabled'}} has-top-padding-l has-text-centered small-card"
-            @level={{if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) "base" "mid"}}
-            @background={{if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) "neutral-secondary" "neutral-primary"}}
-            @hasBorder={{true}}
-            {{on "click" (if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) (noop) (fn @setMountType type.type))}}
-            {{on "keypress" (if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) (noop) (fn @setMountType type.type))}}
-            data-test-mount-type={{type.type}}
-          >
-            <Icon @name={{type.glyph}} @size="24" class="has-bottom-margin-xs" />
-            <Hds::Text::Body @tag="h3" @size="300">
-              {{type.displayName}}
-            </Hds::Text::Body>
-            {{#if (or type.version type.builtin)}}
-              <PluginStatusIndicator
-                @version={{type.version}}
-                @builtin={{type.builtin}}
-                @deprecationStatus={{type.deprecation_status}}
-                @size="small"
-              />
-            {{/if}}
-            {{#if (and type.requiredFeature (not (has-feature type.requiredFeature)))}}
-              <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
-            {{/if}}
-          </Hds::Card::Container>
-        {{/each}}
-
-        {{! Display vertical separator if both enabled and disabled plugins exist }}
-        {{#if (and categorized.enabled.length categorized.disabled.length)}}
-          <div class="vertical-divider"></div>
-        {{/if}}
-
-        {{! Display disabled plugins at the end }}
-        {{#each categorized.disabled as |type|}}
-          <Hds::Card::Container
-            tabindex="0"
-            class="selectable-engine-card has-top-padding-l has-text-centered small-card"
-            @level="base"
-            @background="neutral-secondary"
-            @hasBorder={{false}}
-            {{on "click" (fn this.handleDisabledPluginClick type)}}
-            {{on "keypress" (fn this.handleDisabledPluginClick type)}}
-            data-test-mount-type={{type.type}}
-            data-test-disabled-plugin
-          >
-            <Icon @name={{type.glyph}} @size="24" class="has-bottom-margin-xs disabled-icon" />
-            <Hds::Text::Body @tag="h3" @size="300" class="disabled-text">
-              {{type.displayName}}
-            </Hds::Text::Body>
-            <Hds::Badge @text="Not available" @color="neutral" @size="small" />
-            {{#if type.demoDisabled}}
-              <Hds::Badge @text="Demo" @color="warning" @size="small" class="has-top-margin-xs" />
-            {{/if}}
-          </Hds::Card::Container>
-        {{/each}}
-      {{/let}}
-    {{else if (eq category "infra")}}
-      {{#let this.infraMountTypes as |categorized|}}
-        {{! Display enabled plugins first }}
-        {{#each categorized.enabled as |type|}}
-          <Hds::Card::Container
-            tabindex={{unless (if type.requiredFeature (not (has-feature type.requiredFeature)) false) "0"}}
-            class="selectable-engine-card {{if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) 'disabled'}} has-top-padding-l has-text-centered small-card"
-            @level={{if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) "base" "mid"}}
-            @background={{if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) "neutral-secondary" "neutral-primary"}}
-            @hasBorder={{true}}
-            {{on "click" (if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) (noop) (fn @setMountType type.type))}}
-            {{on "keypress" (if (if type.requiredFeature (not (has-feature type.requiredFeature)) false) (noop) (fn @setMountType type.type))}}
-            data-test-mount-type={{type.type}}
-          >
-            <Icon @name={{type.glyph}} @size="24" class="has-bottom-margin-xs" />
-            <Hds::Text::Body @tag="h3" @size="300">
-              {{type.displayName}}
-            </Hds::Text::Body>
-            {{#if (or type.version type.builtin)}}
-              <PluginStatusIndicator
-                @version={{type.version}}
-                @builtin={{type.builtin}}
-                @deprecationStatus={{type.deprecation_status}}
-                @size="small"
-              />
-            {{/if}}
-            {{#if (and type.requiredFeature (not (has-feature type.requiredFeature)))}}
-              <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
-            {{/if}}
-          </Hds::Card::Container>
-        {{/each}}
-
-        {{! Display vertical separator if both enabled and disabled plugins exist }}
-        {{#if (and categorized.enabled.length categorized.disabled.length)}}
-          <div class="vertical-divider"></div>
-        {{/if}}
-
-        {{! Display disabled plugins at the end }}
-        {{#each categorized.disabled as |type|}}
-          <Hds::Card::Container
-            tabindex="0"
-            class="selectable-engine-card has-top-padding-l has-text-centered small-card"
-            @level="base"
-            @background="neutral-secondary"
-            @hasBorder={{false}}
-            {{on "click" (fn this.handleDisabledPluginClick type)}}
-            {{on "keypress" (fn this.handleDisabledPluginClick type)}}
-            data-test-mount-type={{type.type}}
-            data-test-disabled-plugin
-          >
-            <Icon @name={{type.glyph}} @size="24" class="has-bottom-margin-xs disabled-icon" />
-            <Hds::Text::Body @tag="h3" @size="300" class="disabled-text">
-              {{type.displayName}}
-            </Hds::Text::Body>
-            <Hds::Badge @text="Not available" @color="neutral" @size="small" />
-            {{#if type.demoDisabled}}
-              <Hds::Badge @text="Demo" @color="warning" @size="small" class="has-top-margin-xs" />
-            {{/if}}
-          </Hds::Card::Container>
-        {{/each}}
-      {{/let}}
-    {{/if}}
+      {{! Display disabled plugins at the end }}
+      {{#each categorized.disabled as |type|}}
+        <DisabledPluginCard @type={{type}} @handleDisabledPluginClick={{this.handleDisabledPluginClick}} />
+      {{/each}}
+    {{/let}}
   </div>
 {{/each}}
 

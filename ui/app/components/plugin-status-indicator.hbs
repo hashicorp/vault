@@ -6,9 +6,10 @@
 <div class="plugin-status-indicator" data-test-plugin-status-indicator>
   {{#if this.displayVersion}}
     <div class="plugin-version" data-test-plugin-version>
-      <span class="has-text-grey has-text-weight-normal" style="font-size: 0.875rem;">
-        {{this.displayVersion}}
-      </span>
+      <Hds::Badge
+        @text={{this.displayVersion}}
+        data-test-plugin-version
+      />
     </div>
   {{/if}}
 

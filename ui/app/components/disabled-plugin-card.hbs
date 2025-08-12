@@ -1,0 +1,25 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container
+  tabindex="0"
+  class="selectable-engine-card has-top-padding-l has-text-centered small-card"
+  @level="base"
+  @background="neutral-secondary"
+  @hasBorder={{false}}
+  {{on "click" (fn @handleDisabledPluginClick @type)}}
+  {{on "keypress" (fn @handleDisabledPluginClick @type)}}
+  data-test-mount-type={{@type.type}}
+  data-test-disabled-plugin
+>
+  <Icon @name={{@type.glyph}} @size="24" class="has-bottom-margin-xs disabled-icon" />
+  <Hds::Text::Body @tag="h3" @size="300" class="disabled-text">
+    {{@type.displayName}}
+  </Hds::Text::Body>
+  <Hds::Badge @text="Not available" @color="neutral" @size="small" />
+  {{#if @type.demoDisabled}}
+    <Hds::Badge @text="Demo" @color="warning" @size="small" class="has-top-margin-xs" />
+  {{/if}}
+</Hds::Card::Container>
