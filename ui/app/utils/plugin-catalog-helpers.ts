@@ -35,6 +35,7 @@ export interface EnhancedEngineDisplayData extends EngineDisplayData {
   deprecation_status?: string;
   isAvailable?: boolean;
   pluginData?: PluginCatalogPlugin;
+  demoDisabled?: boolean; // Flag for demo disabled plugins
 }
 
 /**
@@ -53,7 +54,42 @@ export function addVersionsToEngines(
     return staticEngines;
   }
 
-  return staticEngines.map((engine) => {
+  // DEMO: Force some plugins to be disabled for testing purposes
+  // You can delete this section later - it's just for demonstration
+  const demoDisabledPlugins = ['consul', 'nomad', 'terraform', 'alicloud', 'mongodbatlas', 'venafi'];
+
+  // DEMO: Add some fake plugins for testing disabled plugin UI
+  const demoFakePlugins: EnhancedEngineDisplayData[] = [
+    {
+      displayName: 'Demo Plugin Alpha',
+      type: 'demo-alpha',
+      glyph: 'file-text',
+      pluginCategory: 'generic',
+      mountCategory: ['secret'],
+      isAvailable: false,
+      demoDisabled: true,
+    },
+    {
+      displayName: 'Example Cloud Service',
+      type: 'example-cloud',
+      glyph: 'cloud',
+      pluginCategory: 'cloud',
+      mountCategory: ['secret'],
+      isAvailable: false,
+      demoDisabled: true,
+    },
+    {
+      displayName: 'Test Infrastructure Tool',
+      type: 'test-infra',
+      glyph: 'server',
+      pluginCategory: 'infra',
+      mountCategory: ['secret'],
+      isAvailable: false,
+      demoDisabled: true,
+    },
+  ];
+
+  const enhancedEngines = staticEngines.map((engine) => {
     const pluginData = pluginCatalogData.find((plugin) => plugin.name === engine.type);
 
     if (pluginData) {
@@ -67,11 +103,23 @@ export function addVersionsToEngines(
       };
     }
 
+    // DEMO: Mark certain plugins as disabled for testing ONLY if they're not in the real catalog
+    if (demoDisabledPlugins.includes(engine.type)) {
+      return {
+        ...engine,
+        isAvailable: false,
+        demoDisabled: true, // Flag to indicate this is a demo disabled plugin
+      };
+    }
+
     return {
       ...engine,
       isAvailable: false,
     };
   });
+
+  // DEMO: Add fake plugins to the list
+  return [...enhancedEngines, ...demoFakePlugins];
 }
 
 /**
@@ -107,4 +155,31 @@ export function isValidPluginCatalogResponse(response: unknown): response is Plu
       typeof typedResponse['data'] === 'object' &&
       Array.isArray((typedResponse['data'] as Record<string, unknown>)['detailed'])
   );
+}
+
+/**
+ * Categorizes engines by their availability status
+ * Used in Phase 4 to separate enabled and disabled plugins
+ *
+ * @param engines - Array of enhanced engine data
+ * @returns Object with enabled and disabled engine arrays
+ */
+export interface CategorizedEngines {
+  enabled: EnhancedEngineDisplayData[];
+  disabled: EnhancedEngineDisplayData[];
+}
+
+export function categorizeEnginesByStatus(engines: EnhancedEngineDisplayData[]): CategorizedEngines {
+  const enabled: EnhancedEngineDisplayData[] = [];
+  const disabled: EnhancedEngineDisplayData[] = [];
+
+  engines.forEach((engine) => {
+    if (engine.isAvailable !== false) {
+      enabled.push(engine);
+    } else {
+      disabled.push(engine);
+    }
+  });
+
+  return { enabled, disabled };
 }

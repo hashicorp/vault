@@ -1,0 +1,70 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if @isOpen}}
+  <Hds::Flyout @onClose={{this.close}} data-test-flyout as |F|>
+    <F.Header @icon="info">
+      {{this.displayName}} Plugin Information
+    </F.Header>
+  
+    <F.Body>
+      <div class="has-bottom-margin-m">
+        <Hds::Text::Body>
+          The <strong>{{this.displayName}}</strong> {{this.pluginTypeDisplay}} is not currently enabled in this Vault instance.
+          To use this plugin, it needs to be enabled by a Vault administrator.
+        </Hds::Text::Body>
+        {{#if @pluginName}}
+          {{#if (or (eq @pluginName "demo-alpha") (eq @pluginName "example-cloud") (eq @pluginName "test-infra"))}}
+            <Hds::Alert @type="highlight" @color="neutral" class="has-top-margin-s" as |A|>
+              <A.Title>Demo Plugin</A.Title>
+              <A.Description>This is a demonstration plugin created for testing the disabled plugin UI. You can delete the demo code in plugin-catalog-helpers.ts when you're done testing.</A.Description>
+            </Hds::Alert>
+          {{/if}}
+        {{/if}}
+      </div>
+
+      <div class="has-bottom-margin-m">
+        <Hds::Text::Display @tag="h3" @size="300" class="has-bottom-margin-xs">
+          Enable via CLI
+        </Hds::Text::Display>
+        <Hds::CodeBlock @value={{this.enableCommand}} @language="bash" data-test-code-block />
+      </div>
+
+      <div class="has-bottom-margin-m">
+        <Hds::Text::Display @tag="h3" @size="300" class="has-bottom-margin-xs">
+          Enable via API
+        </Hds::Text::Display>
+        <Hds::CodeBlock @value={{this.apiEndpoint}} @language="http" data-test-api-endpoint />
+      </div>
+
+      <div>
+        <Hds::Text::Display @tag="h3" @size="300" class="has-bottom-margin-xs">
+          Documentation
+        </Hds::Text::Display>
+        <Hds::Text::Body>
+          For more information about configuring and using the {{this.displayName}} {{this.pluginTypeDisplay}}, 
+          visit the official documentation:
+        </Hds::Text::Body>
+        <div class="has-top-margin-xs">
+          <Hds::Link::Standalone 
+            @text="{{this.displayName}} Documentation"
+            @href={{this.documentationUrl}} 
+            @icon="external-link" 
+            @iconPosition="trailing"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-test-documentation-link
+          />
+        </div>
+      </div>
+    </F.Body>
+
+    <F.Footer>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Close" @color="primary" {{on "click" this.close}} data-test-flyout-close />
+      </Hds::ButtonSet>
+    </F.Footer>
+  </Hds::Flyout>
+{{/if}}

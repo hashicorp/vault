@@ -6,8 +6,13 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
-import { isValidPluginCatalogResponse, addVersionsToEngines } from 'vault/utils/plugin-catalog-helpers';
+import {
+  isValidPluginCatalogResponse,
+  addVersionsToEngines,
+  categorizeEnginesByStatus,
+} from 'vault/utils/plugin-catalog-helpers';
 
 /**
  *
@@ -30,6 +35,10 @@ export default class MountBackendTypeForm extends Component {
   @tracked pluginCatalogData = null;
   @tracked pluginCatalogError = null;
   @tracked isLoadingPluginCatalog = false;
+  @tracked showFlyout = false;
+  @tracked flyoutPluginName = null;
+  @tracked flyoutPluginType = null;
+  @tracked flyoutDisplayName = null;
 
   constructor(owner, args) {
     super(owner, args);
@@ -42,7 +51,7 @@ export default class MountBackendTypeForm extends Component {
   async loadPluginCatalog() {
     this.isLoadingPluginCatalog = true;
     try {
-      const response = await this.api.getPluginCatalog('secret');
+      const response = await this.api.getPluginCatalog();
 
       if (isValidPluginCatalogResponse(response)) {
         this.pluginCatalogData = response.data.detailed;
@@ -80,5 +89,36 @@ export default class MountBackendTypeForm extends Component {
 
   get mountTypes() {
     return this.args.mountCategory === 'secret' ? this.secretEngines : this.authMethods;
+  }
+
+  get genericMountTypes() {
+    const allTypes = this.mountTypes.filter((type) => type.pluginCategory === 'generic');
+    return categorizeEnginesByStatus(allTypes);
+  }
+
+  get cloudMountTypes() {
+    const allTypes = this.mountTypes.filter((type) => type.pluginCategory === 'cloud');
+    return categorizeEnginesByStatus(allTypes);
+  }
+
+  get infraMountTypes() {
+    const allTypes = this.mountTypes.filter((type) => type.pluginCategory === 'infra');
+    return categorizeEnginesByStatus(allTypes);
+  }
+
+  @action
+  handleDisabledPluginClick(plugin) {
+    this.flyoutPluginName = plugin.name;
+    this.flyoutPluginType = plugin.type;
+    this.flyoutDisplayName = plugin.displayName;
+    this.showFlyout = true;
+  }
+
+  @action
+  closeFlyout() {
+    this.showFlyout = false;
+    this.flyoutPluginName = null;
+    this.flyoutPluginType = null;
+    this.flyoutDisplayName = null;
   }
 }
