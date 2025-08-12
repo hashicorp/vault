@@ -7,7 +7,6 @@
 // contains getters that filter and extract data from activity model for use in charts
 
 import Component from '@glimmer/component';
-import { cached } from '@glimmer/tracking';
 import { isSameMonth } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import {
@@ -20,7 +19,7 @@ import { sanitizePath } from 'core/utils/sanitize-path';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
-import type { MountClients, TotalClients } from 'core/utils/client-count-utils';
+import type { TotalClients } from 'core/utils/client-count-utils';
 import type NamespaceService from 'vault/services/namespace';
 
 interface Args {
@@ -36,26 +35,6 @@ interface Args {
 
 export default class ClientsActivityComponent extends Component<Args> {
   @service declare readonly namespace: NamespaceService;
-
-  @cached
-  get namespaceLabels() {
-    return this.args.activity.byNamespace.map((n) => n.label);
-  }
-
-  @cached
-  get mounts() {
-    return this.args.activity.byNamespace.map((n) => n.mounts).flat();
-  }
-
-  @cached
-  get mountPaths() {
-    return [...new Set(this.mounts.map((m: MountClients) => m.label))];
-  }
-
-  @cached
-  get mountTypes() {
-    return [...new Set(this.mounts.map((m: MountClients) => m.mount_type))];
-  }
 
   // path of the filtered namespace OR current one, for filtering relevant data
   get namespacePathForFilter() {
