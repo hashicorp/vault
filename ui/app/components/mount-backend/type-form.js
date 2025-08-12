@@ -91,19 +91,25 @@ export default class MountBackendTypeForm extends Component {
     return this.args.mountCategory === 'secret' ? this.secretEngines : this.authMethods;
   }
 
+  get categorizedMountTypes() {
+    const categories = {};
+    ['generic', 'cloud', 'infra'].forEach((category) => {
+      const allTypes = this.mountTypes.filter((type) => type.pluginCategory === category);
+      categories[category] = categorizeEnginesByStatus(allTypes);
+    });
+    return categories;
+  }
+
   get genericMountTypes() {
-    const allTypes = this.mountTypes.filter((type) => type.pluginCategory === 'generic');
-    return categorizeEnginesByStatus(allTypes);
+    return this.categorizedMountTypes.generic;
   }
 
   get cloudMountTypes() {
-    const allTypes = this.mountTypes.filter((type) => type.pluginCategory === 'cloud');
-    return categorizeEnginesByStatus(allTypes);
+    return this.categorizedMountTypes.cloud;
   }
 
   get infraMountTypes() {
-    const allTypes = this.mountTypes.filter((type) => type.pluginCategory === 'infra');
-    return categorizeEnginesByStatus(allTypes);
+    return this.categorizedMountTypes.infra;
   }
 
   @action
