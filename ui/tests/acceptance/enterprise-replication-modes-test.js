@@ -103,8 +103,8 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
       assert.dom(s.enableForm).exists('it shows the enable view for dr');
     });
   });
-  // DR secondary mode is a whole other thing, test primary only here
-  test(`replication page when dr primary only`, async function (assert) {
+
+  test('replication page when dr primary only', async function (assert) {
     await this.setupMocks({
       dr: mockReplicationBlock('primary'),
       performance: mockReplicationBlock(),
@@ -128,7 +128,7 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     assert.dom(s.dashboard).exists(`it shows the replication dashboard`);
   });
 
-  test(`replication page both primary`, async function (assert) {
+  test('replication page both primary', async function (assert) {
     await this.setupMocks({
       dr: mockReplicationBlock('primary'),
       performance: mockReplicationBlock('primary'),

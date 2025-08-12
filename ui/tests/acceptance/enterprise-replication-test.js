@@ -46,6 +46,9 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .includesText('primary', 'it displays the cluster mode correctly');
 
     await addSecondary(secondaryName);
+    // modal for copying the token appears
+    await click(GENERAL.button('Copy token')); // must copy token before escaping the modal.
+    await click(GENERAL.cancelButton);
     await pollCluster(this.owner);
     await settled();
 

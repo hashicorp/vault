@@ -6,11 +6,11 @@
 import { click, visit, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
-import { enableReplication } from 'vault/tests/helpers/replication';
+import { disableReplication, enableReplication } from 'vault/tests/helpers/replication';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 
 // To allow a user to login and create a secondary dr cluster we demote a primary dr cluster.
@@ -20,8 +20,26 @@ module('Acceptance | Enterprise | replication-secondaries', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.afterEach(function () {
+  hooks.beforeEach(async function () {
+    await login();
+    await settled();
+    await disableReplication('dr');
+    await settled();
+    await disableReplication('performance');
+    await settled();
+  });
+
+  hooks.afterEach(async function () {
+    // For the tests following this, return to a good state.
+    // We've reset mirage with this.server.shutdown() but re-poll the cluster to get the latest state.
+    this.owner.lookup('service:store').unloadAll();
     this.server.shutdown();
+    await pollCluster(this.owner);
+    await disableReplication('dr');
+    await settled();
+    await pollCluster(this.owner);
+    await logout();
+    await visit('/vault/auth');
   });
 
   test('DR secondary: manage tab, details tab, and analytics are not run', async function (assert) {
@@ -110,9 +128,9 @@ module('Acceptance | Enterprise | replication-secondaries', function (hooks) {
       storage_type: 'raft',
       removed_from_cluster: false,
     }));
+
     await click(GENERAL.button('demote'));
-    // We must poll the cluster to stimulate a cluster reload. This is skipped in ember testing so must be forced.
-    await pollCluster(this.owner);
+    await pollCluster(this.owner); // We must poll the cluster to stimulate a cluster reload. This is skipped in ember testing so must be forced.
 
     // Spy on the route's addAnalyticsService method
     const clusterRoute = this.owner.lookup('route:vault.cluster');
@@ -128,6 +146,7 @@ module('Acceptance | Enterprise | replication-secondaries', function (hooks) {
         'shows the correct description for a DR secondary'
       );
     assert.dom('[data-test-mode]').includesText('secondary', 'shows the DR secondary mode badge');
+
     await click(GENERAL.linkTo('Details'));
     assert
       .dom('[data-test-replication-secondary-card]')
