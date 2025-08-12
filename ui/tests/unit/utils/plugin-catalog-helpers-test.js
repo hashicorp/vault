@@ -7,7 +7,6 @@ import { module, test } from 'qunit';
 import {
   addVersionsToEngines,
   isValidPluginCatalogResponse,
-  formatPluginVersion,
 } from 'vault/utils/plugin-catalog-helpers';
 
 module('Unit | Utility | plugin-catalog-helpers', function () {
@@ -80,39 +79,5 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
       isValidPluginCatalogResponse({ data: { detailed: 'not-array' } }),
       'Should reject non-array detailed'
     );
-  });
-
-  test('formatPluginVersion removes builtin suffix correctly', function (assert) {
-    assert.strictEqual(
-      formatPluginVersion('v1.12.0+builtin.vault'),
-      'v1.12.0',
-      'Should remove +builtin.vault suffix from version'
-    );
-
-    assert.strictEqual(
-      formatPluginVersion('v0.24.1+builtin'),
-      'v0.24.1',
-      'Should remove +builtin suffix from version'
-    );
-
-    assert.strictEqual(
-      formatPluginVersion('v0.17.1-0.20250602215256-b7ca60e05b2a+builtin'),
-      'v0.17.1-0.20250602215256-b7ca60e05b2a',
-      'Should remove +builtin suffix from complex version'
-    );
-
-    assert.strictEqual(
-      formatPluginVersion('v1.0.0'),
-      'v1.0.0',
-      'Should leave external plugin version unchanged'
-    );
-
-    assert.strictEqual(
-      formatPluginVersion(undefined),
-      undefined,
-      'Should return undefined for undefined input'
-    );
-
-    assert.strictEqual(formatPluginVersion(''), undefined, 'Should return undefined for empty string');
   });
 });

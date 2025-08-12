@@ -35,7 +35,6 @@ export interface EnhancedEngineDisplayData extends EngineDisplayData {
   deprecation_status?: string;
   isAvailable?: boolean;
   pluginData?: PluginCatalogPlugin;
-  demoDisabled?: boolean; // Flag for demo disabled plugins
 }
 
 /**
@@ -67,7 +66,6 @@ export function addVersionsToEngines(
       pluginCategory: 'generic',
       mountCategory: ['secret'],
       isAvailable: false,
-      demoDisabled: true,
     },
     {
       displayName: 'Example Cloud Service',
@@ -76,7 +74,6 @@ export function addVersionsToEngines(
       pluginCategory: 'cloud',
       mountCategory: ['secret'],
       isAvailable: false,
-      demoDisabled: true,
     },
     {
       displayName: 'Test Infrastructure Tool',
@@ -85,7 +82,6 @@ export function addVersionsToEngines(
       pluginCategory: 'infra',
       mountCategory: ['secret'],
       isAvailable: false,
-      demoDisabled: true,
     },
   ];
 
@@ -95,7 +91,6 @@ export function addVersionsToEngines(
     if (pluginData) {
       return {
         ...engine,
-        version: formatPluginVersion(pluginData.version),
         builtin: pluginData.builtin,
         deprecation_status: pluginData.deprecation_status,
         isAvailable: true,
@@ -108,7 +103,6 @@ export function addVersionsToEngines(
       return {
         ...engine,
         isAvailable: false,
-        demoDisabled: true, // Flag to indicate this is a demo disabled plugin
       };
     }
 
@@ -120,21 +114,6 @@ export function addVersionsToEngines(
 
   // DEMO: Add fake plugins to the list
   return [...enhancedEngines, ...demoFakePlugins];
-}
-
-/**
- * Formats a plugin version string for display
- * Removes builtin suffixes ('+builtin', '+builtin.vault') for cleaner presentation
- *
- * @param version - Raw version string from plugin catalog
- * @returns Formatted version string or undefined if no version
- */
-export function formatPluginVersion(version?: string): string | undefined {
-  if (!version) return undefined;
-
-  // Remove any '+builtin' suffix variations for cleaner display
-  // Handles: +builtin.vault, +builtin, and any other +builtin.* patterns
-  return version.replace(/\+builtin(\.[^+]*)?$/, '');
 }
 
 /**

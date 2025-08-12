@@ -6,7 +6,7 @@
 {{#let (if @type.requiredFeature (not (has-feature @type.requiredFeature)) false) as |isDisabled|}}
   <Hds::Card::Container
     tabindex={{unless isDisabled "0"}}
-    class="selectable-engine-card {{if isDisabled 'disabled'}} has-top-padding-l has-text-centered small-card"
+    class="selectable-engine-card {{if isDisabled 'disabled'}} has-top-padding-l has-bottom-padding-l has-text-centered small-card"
     @level={{if isDisabled "base" "mid"}}
     @background={{if isDisabled "neutral-secondary" "neutral-primary"}}
     @hasBorder={{true}}
@@ -18,14 +18,6 @@
     <Hds::Text::Body @tag="h3" @size="300">
       {{@type.displayName}}
     </Hds::Text::Body>
-    {{#if (or @type.version @type.builtin)}}
-      <PluginStatusIndicator
-        @version={{@type.version}}
-        @builtin={{@type.builtin}}
-        @deprecationStatus={{@type.deprecation_status}}
-        @size="small"
-      />
-    {{/if}}
     {{#if (and @type.requiredFeature (not (has-feature @type.requiredFeature)))}}
       <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
     {{/if}}
