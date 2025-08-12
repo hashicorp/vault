@@ -19,7 +19,7 @@ export default class ClientsCountsController extends Controller {
 
   start_time: string | number | undefined = undefined;
   end_time: string | number | undefined = undefined;
-  ns = '';
+  ns: string | undefined = undefined; // TODO delete when filter toolbar is removed
   nsLabel = '';
   mountPath = '';
   mountType = '';
