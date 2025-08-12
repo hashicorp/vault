@@ -1,0 +1,23 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div class="loaded-snapshot">
+  {{#let @model as |snapshot|}}
+    <Hds::Card::Container class="snapshot-card-container" @level="mid" @hasBorder={{true}}>
+      <div class="flex-row">
+        <Hds::Text::Display @tag="h2">Snapshot</Hds::Text::Display>
+        <Hds::Badge @text={{snapshot.status}} @color="success" data-test-badge="status" />
+      </div>
+      <Hds::Text::Body @tag="p">Expiring at {{snapshot.expires_at}}</Hds::Text::Body>
+      <Hds::Link::Standalone
+        @iconPosition="trailing"
+        @icon="arrow-right"
+        @text="View details"
+        @route="vault.cluster.recovery.snapshots.snapshot"
+        @model={{snapshot.snapshot_id}}
+      />
+    </Hds::Card::Container>
+  {{/let}}
+</div>

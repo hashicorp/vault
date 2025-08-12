@@ -66,11 +66,6 @@ export default class Index extends Component<Args> {
       buttonColor: 'primary',
     },
   };
-  get loadedSnapshots() {
-    const { snapshots } = this.args.model;
-
-    return snapshots;
-  }
 
   get state() {
     const { canLoadSnapshot } = this.args.model;

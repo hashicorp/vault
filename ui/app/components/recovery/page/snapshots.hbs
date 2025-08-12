@@ -16,7 +16,7 @@
   </PH.Subtitle>
 </Hds::PageHeader>
 
-{{#if (eq this.loadedSnapshots.length 0)}}
+{{#if (eq @model.snapshots.length 0)}}
   {{#let (get this.emptyStateDetails this.state) as |d|}}
     <EmptyState @title={{d.title}} @icon={{d.icon}} @message={{d.message}}>
 
@@ -35,26 +35,4 @@
       {{/if}}
     </EmptyState>
   {{/let}}
-{{else}}
-
-  <div class="loaded-snapshot">
-    {{#each this.loadedSnapshots as |s index|}}
-      {{#if (eq index 0)}}
-        <Hds::Card::Container class="snapshot-card-container" @level="mid" @hasBorder={{true}}>
-          <div class="flex-row">
-            <Hds::Text::Display @tag="h2">Snapshot</Hds::Text::Display>
-            <Hds::Badge @text={{s.status}} @color="success" data-test-badge="status" />
-          </div>
-          <Hds::Text::Body @tag="p">Expiring at {{s.expires_at}}</Hds::Text::Body>
-          <Hds::Link::Standalone
-            @iconPosition="trailing"
-            @icon="arrow-right"
-            @text="View details"
-            @route="vault.cluster.recovery.snapshots.snapshot"
-            @model={{s.snapshot_id}}
-          />
-        </Hds::Card::Container>
-      {{/if}}
-    {{/each}}
-  </div>
 {{/if}}
