@@ -10,7 +10,7 @@ import type ApiService from 'vault/services/api';
 
 export default class RecoverySnapshotsSnapshotRoute extends Route {
   @service declare readonly api: ApiService;
-  model(params: any) {
+  model(params: { snapshot_id: string }) {
     return this.api.sys.systemReadStorageRaftSnapshotLoadId(params.snapshot_id);
   }
 }
