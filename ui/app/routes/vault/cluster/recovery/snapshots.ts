@@ -20,14 +20,15 @@ export default class RecoverySnapshotsRoute extends Route {
   @service declare readonly router: RouterService;
 
   async model() {
-    const path = 'sys/storage/raft/snapshot/snapshot-load';
-    const capabilities = await this.capabilities.fetch([path]);
-    const canLoadSnapshot = capabilities[path]?.canUpdate ?? false;
+    const { canUpdate } = await this.capabilities.fetchPathCapabilities(
+      'sys/storage/raft/snapshot/snapshot-load'
+    );
+
     const snapshots = await this.fetchSnapshots();
 
     return {
       snapshots,
-      canLoadSnapshot,
+      canLoadSnapshot: canUpdate,
     };
   }
 
