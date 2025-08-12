@@ -31,7 +31,7 @@ module('Acceptance | recovery snapshots', function (hooks) {
     assert.dom(GENERAL.emptyStateActions).hasText('Upload snapshot');
   });
 
-  test.only('it redirects to snapshot route when a snapshot is loaded', async function (assert) {
+  test('it redirects to snapshot route when a snapshot is loaded', async function (assert) {
     this.server.get('/sys/storage/raft/snapshot-load', () =>
       overrideResponse(null, {
         data: {
