@@ -1,0 +1,13 @@
+<Hds::PageHeader class="has-top-padding-l has-bottom-padding-m" as |PH|>
+  <PH.Title>
+    Secrets Recovery
+    {{#if this.version.isCommunity}}
+      <Hds::Badge @text="Enterprise" @color="highlight" data-test-badge="enterprise" />
+    {{/if}}
+  </PH.Title>
+
+  <PH.Subtitle>
+    Recover lost or deleted secrets from a raft snapshot. Supported types include KV v1 and Cubbyhole.
+  </PH.Subtitle>
+</Hds::PageHeader>
+{{! TODO if in snapshot load form, will show breadcrumbs instead }}
