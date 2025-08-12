@@ -154,8 +154,11 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     // confirm that the details dashboard shows
     await waitFor('[data-test-replication-dashboard]', 2000);
     await addSecondary(secondaryName, mode);
+    await click(GENERAL.button('Copy token')); // must copy token before escaping the modal.
+    await click(GENERAL.cancelButton);
     await pollCluster(this.owner);
     await settled();
+
     await click('[data-test-replication-link="secondaries"]');
     await click(GENERAL.menuTrigger);
     await click('[data-test-replication-path-filter-link]');
