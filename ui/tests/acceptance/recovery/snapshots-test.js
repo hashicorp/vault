@@ -28,9 +28,9 @@ module('Acceptance | recovery snapshots', function (hooks) {
       return new Response(404, { 'Content-Type': 'application/json' }, JSON.stringify({ errors: [] }));
     });
 
-    await visit('vault/recovery/snapshots');
+    await visit('/vault/recovery/snapshots');
 
-    assert.strictEqual(currentURL(), 'vault/recovery/snapshots');
+    assert.strictEqual(currentURL(), '/vault/recovery/snapshots');
 
     assert.dom(GENERAL.emptyStateTitle).hasText('Upload a snapshot to get started');
     assert.dom(GENERAL.emptyStateActions).hasText('Upload snapshot');
