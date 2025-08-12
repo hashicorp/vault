@@ -3,10 +3,10 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<div class="loaded-snapshot">
+<div class="has-top-padding-s">
   {{#let @model as |snapshot|}}
-    <Hds::Card::Container class="snapshot-card-container" @level="mid" @hasBorder={{true}}>
-      <div class="flex-row">
+    <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-m">
+      <div class="flex space-between">
         <Hds::Text::Display @tag="h2">Snapshot</Hds::Text::Display>
         <Hds::Badge @text={{snapshot.status}} @color="success" data-test-badge="status" />
       </div>

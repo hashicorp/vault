@@ -54,7 +54,5 @@ module('Acceptance | recovery snapshots', function (hooks) {
 
     assert.strictEqual(currentURL(), '/vault/recovery/snapshots/1234/manage');
     assert.strictEqual(currentRouteName(), 'vault.cluster.recovery.snapshots.snapshot.manage');
-
-    await this.pauseTest();
   });
 });
