@@ -52,20 +52,19 @@
 <Hds::Layout::Flex class="has-top-margin-s" @gap="8" @align="center">
   {{#if this.anyFilters}}
     <Hds::Text::Body @color="faint">Filters applied:</Hds::Text::Body>
-    {{#each this.filters as |filter|}}
-      {{#let (get this filter) as |value|}}
-        {{#if value}}
-          <div>
-            <Hds::Tag
-              @text={{value}}
-              @tooltipPlacement="bottom"
-              @onDismiss={{fn this.clearFilters filter}}
-              data-test-filter-tag="{{filter}} {{value}}"
-            />
-          </div>
-        {{/if}}
-      {{/let}}
-    {{/each}}
+    {{! render tags based on applied @filters and not the internally tracked properties }}
+    {{#each-in @appliedFilters as |filter value|}}
+      {{#if (and (this.supportedFilter filter) value)}}
+        <div>
+          <Hds::Tag
+            @text={{value}}
+            @tooltipPlacement="bottom"
+            @onDismiss={{fn this.clearFilters filter}}
+            data-test-filter-tag="{{filter}} {{value}}"
+          />
+        </div>
+      {{/if}}
+    {{/each-in}}
     <Hds::Button
       @icon="x-circle"
       @text="Clear filters"

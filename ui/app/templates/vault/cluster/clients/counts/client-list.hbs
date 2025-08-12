@@ -5,8 +5,10 @@
 
 <Clients::Page::ClientList
   @activity={{this.model.activity}}
-  @mountPath={{this.countsController.mountPath}}
-  @mountType={{this.countsController.mountType}}
-  @nsLabel={{this.countsController.nsLabel}}
   @onFilterChange={{this.countsController.updateQueryParams}}
+  @filterQueryParams={{hash
+    nsLabel=this.countsController.nsLabel
+    mountPath=this.countsController.mountPath
+    mountType=this.countsController.mountType
+  }}
 />

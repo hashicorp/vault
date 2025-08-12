@@ -20,6 +20,8 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     this.mountPaths = ['auth/token/', 'auth/auto/eng/core/auth/core-gh-auth/', 'auth/userpass-root/'];
     this.mountTypes = ['token/', 'userpass/', 'ns_token/'];
     this.onFilter = sinon.spy();
+    this.appliedFilters = { nsLabel: '', mountPath: '', mountType: '' };
+
     this.renderComponent = async () => {
       await render(hbs`
     <Clients::FilterToolbar
@@ -27,19 +29,24 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
       @mountPaths={{this.mountPaths}}
       @mountTypes={{this.mountTypes}}
       @onFilter={{this.onFilter}}
+      @appliedFilters={{this.appliedFilters}}
     />`);
+    };
 
-      this.selectFilters = async () => {
-        // select namespace
-        await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
-        await click(FILTERS.dropdownItem('admin/'));
-        // select mount path
-        await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
-        await click(FILTERS.dropdownItem('auth/userpass-root/'));
-        // select mount type
-        await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
-        await click(FILTERS.dropdownItem('token/'));
-      };
+    this.presetFilters = () => {
+      this.appliedFilters = { nsLabel: 'admin/', mountPath: 'auth/userpass-root/', mountType: 'token/' };
+    };
+
+    this.selectFilters = async () => {
+      // select namespace
+      await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+      await click(FILTERS.dropdownItem('admin/'));
+      // select mount path
+      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+      await click(FILTERS.dropdownItem('auth/userpass-root/'));
+      // select mount type
+      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+      await click(FILTERS.dropdownItem('token/'));
     };
   });
 
@@ -52,7 +59,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     assert.dom(GENERAL.button('Apply filters')).exists();
     assert
       .dom(GENERAL.button('Clear filters'))
-      .doesNotExist('"Clear filters" button does not render by default');
+      .doesNotExist('"Clear filters" button does not render when filters are unset');
   });
 
   test('it renders dropdown items', async function (assert) {
@@ -72,7 +79,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     });
   });
 
-  test('it selects filters and renders a tag for each', async function (assert) {
+  test('it selects dropdown items', async function (assert) {
     await this.renderComponent();
     await this.selectFilters();
 
@@ -88,56 +95,9 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
     assert.dom(FILTERS.dropdownItem('token/')).hasAttribute('aria-selected', 'true');
     assert.dom(`${FILTERS.dropdownItem('token/')} ${GENERAL.icon('check')}`).exists();
-    // Confirm filter tags render for each item
-    assert.dom(FILTERS.tag()).exists({ count: 3 }, '3 filter tags render');
-    assert.dom(FILTERS.tag(ClientFilters.NAMESPACE, 'admin/')).exists();
-    assert.dom(FILTERS.tag(ClientFilters.MOUNT_PATH, 'auth/userpass-root/')).exists();
-    assert.dom(FILTERS.tag(ClientFilters.MOUNT_TYPE, 'token/')).exists();
-    assert
-      .dom(GENERAL.button('Clear filters'))
-      .exists('"Clear filters" button renders when filters are present');
   });
 
-  test('it resets all filters', async function (assert) {
-    await this.renderComponent();
-    await this.selectFilters();
-
-    assert.dom(FILTERS.tag()).exists({ count: 3 }, '3 filter tags render');
-    await click(GENERAL.button('Clear filters'));
-    assert.dom(FILTERS.tag()).doesNotExist('tag filters disappear when "Clear filters" is clicked');
-    assert
-      .dom(GENERAL.button('Clear filters'))
-      .doesNotExist('"Clear filters" button disappears when all filters are cleared');
-    await click(GENERAL.button('Apply filters'));
-    const [obj] = this.onFilter.lastCall.args;
-    assert.propEqual(
-      obj,
-      { mountPath: '', mountType: '', nsLabel: '' },
-      'onFilter callback has empty values when filters are cleared'
-    );
-  });
-
-  test('it clears individual filters', async function (assert) {
-    await this.renderComponent();
-    await this.selectFilters();
-
-    assert.dom(FILTERS.tag()).exists({ count: 3 }, '3 filter tags render');
-    // Remove two of the filters
-    await click(FILTERS.clearTag('admin/'));
-    assert.dom(FILTERS.tag(ClientFilters.NAMESPACE, 'admin/')).doesNotExist();
-    await click(FILTERS.clearTag('auth/userpass-root/'));
-    assert.dom(FILTERS.tag(ClientFilters.MOUNT_PATH, 'auth/userpass-root/')).doesNotExist();
-    assert.dom(FILTERS.tag()).exists({ count: 1 }, '1 filter tags render');
-    await click(GENERAL.button('Apply filters'));
-    const [obj] = this.onFilter.lastCall.args;
-    assert.propEqual(
-      obj,
-      { mountPath: '', mountType: 'token/', nsLabel: '' },
-      'onFilter callback has empty values for cleared filters'
-    );
-  });
-
-  test('it applies filters', async function (assert) {
+  test('it applies filters when no filters are set', async function (assert) {
     await this.renderComponent();
     await this.selectFilters();
 
@@ -160,23 +120,84 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     );
   });
 
-  test('it updates filters', async function (assert) {
+  test('it applies updated filters when filters are preset', async function (assert) {
+    this.appliedFilters = { mountPath: 'auth/token/', mountType: 'ns_token/', nsLabel: 'ns1' };
     await this.renderComponent();
-    await this.selectFilters();
-    assert.dom(FILTERS.tag(ClientFilters.MOUNT_PATH, 'auth/userpass-root/')).exists();
-    // selected a different mount path
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
-    await click(FILTERS.dropdownItem('auth/token/'));
-    assert
-      .dom(FILTERS.tag(ClientFilters.MOUNT_PATH, 'auth/userpass-root/'))
-      .doesNotExist('"auth/userpass-root/" tag no longer exists');
-    assert.dom(FILTERS.tag(ClientFilters.MOUNT_PATH, 'auth/token/')).exists('"auth/token/" tag renders');
+    // Check initial filters
     await click(GENERAL.button('Apply filters'));
-    const [obj] = this.onFilter.lastCall.args;
-    assert.strictEqual(
-      obj[ClientFilters.MOUNT_PATH],
-      'auth/token/',
-      `onFilter callback has expected "${ClientFilters.MOUNT_PATH}"`
+    const [beforeUpdate] = this.onFilter.lastCall.args;
+    assert.propEqual(beforeUpdate, this.appliedFilters, 'callback fires with preset filters');
+    // Change filters and confirm callback has updated values
+    await this.selectFilters();
+    await click(GENERAL.button('Apply filters'));
+    const [afterUpdate] = this.onFilter.lastCall.args;
+    assert.propEqual(
+      afterUpdate,
+      { mountPath: 'auth/userpass-root/', mountType: 'token/', nsLabel: 'admin/' },
+      'callback fires with updated selection'
     );
+  });
+
+  test('it renders a tag for each filter', async function (assert) {
+    this.presetFilters();
+    await this.renderComponent();
+
+    assert.dom(FILTERS.tag()).exists({ count: 3 }, '3 filter tags render');
+    assert.dom(FILTERS.tag(ClientFilters.NAMESPACE, 'admin/')).exists();
+    assert.dom(FILTERS.tag(ClientFilters.MOUNT_PATH, 'auth/userpass-root/')).exists();
+    assert.dom(FILTERS.tag(ClientFilters.MOUNT_TYPE, 'token/')).exists();
+    assert
+      .dom(GENERAL.button('Clear filters'))
+      .exists('"Clear filters" button renders when filters are present');
+  });
+
+  test('it resets all filters', async function (assert) {
+    this.presetFilters();
+    await this.renderComponent();
+    // first check that filters have preset values
+    await click(GENERAL.button('Apply filters'));
+    const [beforeClear] = this.onFilter.lastCall.args;
+    assert.propEqual(
+      beforeClear,
+      { mountPath: 'auth/userpass-root/', mountType: 'token/', nsLabel: 'admin/' },
+      'callback fires with preset filters'
+    );
+    // now clear filters and confirm values are cleared
+    await click(GENERAL.button('Clear filters'));
+    const [afterClear] = this.onFilter.lastCall.args;
+    assert.propEqual(
+      afterClear,
+      { mountPath: '', mountType: '', nsLabel: '' },
+      'onFilter callback has empty values when "Clear filters" is clicked'
+    );
+  });
+
+  test('it clears individual filters', async function (assert) {
+    this.presetFilters();
+    await this.renderComponent();
+    // first check that filters have preset values
+    await click(GENERAL.button('Apply filters'));
+    const [beforeClear] = this.onFilter.lastCall.args;
+    assert.propEqual(
+      beforeClear,
+      { mountPath: 'auth/userpass-root/', mountType: 'token/', nsLabel: 'admin/' },
+      'callback fires with preset filters'
+    );
+    await click(FILTERS.clearTag('admin/'));
+    const afterClear = this.onFilter.lastCall.args[0];
+    assert.propEqual(
+      afterClear,
+      { mountPath: 'auth/userpass-root/', mountType: 'token/', nsLabel: '' },
+      'onFilter callback fires with empty nsLabel'
+    );
+  });
+
+  test('it only renders tags for supported filters', async function (assert) {
+    this.appliedFilters = { start_time: '2025-08-31T23:59:59Z' };
+    await this.renderComponent();
+    assert
+      .dom(GENERAL.button('Clear filters'))
+      .doesNotExist('"Clear filters" button does not render when filters are unset');
+    assert.dom(FILTERS.tag()).doesNotExist();
   });
 });

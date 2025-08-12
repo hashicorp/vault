@@ -10,6 +10,7 @@ import { ClientFilters, ClientFilterTypes } from 'core/utils/client-count-utils'
 
 interface Args {
   onFilter: CallableFunction;
+  appliedFilters: Record<ClientFilterTypes, string>;
 }
 
 export default class ClientsFilterToolbar extends Component<Args> {
@@ -19,12 +20,19 @@ export default class ClientsFilterToolbar extends Component<Args> {
   @tracked mountPath = '';
   @tracked mountType = '';
 
-  get filters() {
-    return Object.values(this.filterTypes);
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    const { nsLabel, mountPath, mountType } = this.args.appliedFilters;
+    this.nsLabel = nsLabel;
+    this.mountPath = mountPath;
+    this.mountType = mountType;
   }
 
   get anyFilters() {
-    return this.filters.some((f) => this[f]);
+    return (
+      Object.keys(this.args.appliedFilters).every((f) => this.supportedFilter(f)) &&
+      Object.values(this.args.appliedFilters).some((v) => !!v)
+    );
   }
 
   @action
@@ -48,15 +56,14 @@ export default class ClientsFilterToolbar extends Component<Args> {
 
   @action
   applyFilters() {
-    // Send key/value pairs of filters to parent
-    const filterObject = this.filters.reduce(
-      (obj, filterName) => {
-        const value = this[filterName];
-        obj[filterName] = value;
-        return obj;
-      },
-      {} as Record<ClientFilterTypes, string>
-    );
-    this.args.onFilter(filterObject);
+    this.args.onFilter({
+      nsLabel: this.nsLabel,
+      mountPath: this.mountPath,
+      mountType: this.mountType,
+    });
   }
+
+  // Helper function
+  supportedFilter = (f: string): f is ClientFilterTypes =>
+    Object.values(this.filterTypes).includes(f as ClientFilterTypes);
 }
