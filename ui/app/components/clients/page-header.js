@@ -26,7 +26,6 @@ import { task } from 'ember-concurrency';
  * @param {string} [startTimestamp] - ISO timestamp of start time, to be passed to export request
  * @param {string} [endTimestamp] - ISO timestamp of end time, to be passed to export request
  * @param {number} [retentionMonths = 48] - number of months for historical billing, to be passed to date picker
- * @param {string} [namespace] - namespace filter. Will be appended to the current namespace in the export request.
  * @param {string} [upgradesDuringActivity] - array of objects containing version history upgrade data
  * @param {boolean} [noData = false] - when true, export button will hide regardless of capabilities
  * @param {function} [onChange] - callback when a new date range is saved, to be passed to date picker
@@ -45,7 +44,7 @@ export default class ClientsPageHeaderComponent extends Component {
 
   constructor() {
     super(...arguments);
-    this.getExportCapabilities(this.args.namespace);
+    this.getExportCapabilities();
   }
 
   get showExportButton() {
@@ -54,7 +53,8 @@ export default class ClientsPageHeaderComponent extends Component {
   }
 
   @waitFor
-  async getExportCapabilities(ns = '') {
+  async getExportCapabilities() {
+    const ns = this.namespace.path;
     try {
       // selected namespace usually ends in /
       const url = ns
@@ -86,19 +86,6 @@ export default class ClientsPageHeaderComponent extends Component {
     return !isSameMonth(startDateObject, endDateObject);
   }
 
-  get formattedCsvFileName() {
-    const endRange = this.showEndDate ? `-${this.formattedEndDate}` : '';
-    const csvDateRange = this.formattedStartDate ? `_${this.formattedStartDate + endRange}` : '';
-    const ns = this.namespaceFilter ? `_${this.namespaceFilter}` : '';
-    return `clients_export${ns}${csvDateRange}`;
-  }
-
-  get namespaceFilter() {
-    const currentNs = this.namespace.path;
-    const { namespace } = this.args;
-    return namespace ? sanitizePath(`${currentNs}/${namespace}`) : sanitizePath(currentNs);
-  }
-
   get showCommunity() {
     return this.version.isCommunity && !!this.formattedStartDate && !!this.formattedEndDate;
   }
@@ -111,17 +98,21 @@ export default class ClientsPageHeaderComponent extends Component {
       format: this.exportFormat === 'jsonl' ? 'json' : 'csv',
       start_time: startTimestamp,
       end_time: endTimestamp,
-      namespace: this.namespaceFilter,
+      namespace: this.namespace.path,
     });
   }
 
-  parseAPITimestamp = (timestamp, format) => {
-    return parseAPITimestamp(timestamp, format);
-  };
+  formatFilename() {
+    const endRange = this.showEndDate ? `-${this.formattedEndDate}` : '';
+    const dateRange = this.formattedStartDate ? `_${this.formattedStartDate + endRange}` : '';
+    const ns = this.namespace.path ? `_${this.namespace.path}` : '';
+    return `clients_export${ns}${dateRange}`;
+  }
 
-  exportChartData = task({ drop: true }, async (filename) => {
+  exportChartData = task({ drop: true }, async () => {
     try {
       const contents = await this.getExportData();
+      const filename = this.formatFilename();
       this.download.download(filename, contents, this.exportFormat);
       this.showExportModal = false;
     } catch (e) {
@@ -145,4 +136,9 @@ export default class ClientsPageHeaderComponent extends Component {
   setEditModalVisible(visible) {
     this.showEditModal = visible;
   }
+
+  // LOCAL TEMPLATE HELPERS
+  parseAPITimestamp = (timestamp, format) => {
+    return parseAPITimestamp(timestamp, format);
+  };
 }
