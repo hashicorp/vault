@@ -24,13 +24,6 @@
             is not currently enabled in this Vault instance. To use this plugin, it needs to be enabled by a Vault
             administrator.
           </Hds::Text::Body>
-          {{#if (or (eq @pluginName "demo-alpha") (eq @pluginName "example-cloud") (eq @pluginName "test-infra"))}}
-            <Hds::Alert @type="highlight" @color="neutral" class="has-top-margin-s" as |A|>
-              <A.Title>Demo Plugin</A.Title>
-              <A.Description>This is a demonstration plugin created for testing the disabled plugin UI. You can delete the
-                demo code in plugin-catalog-helpers.ts when you're done testing.</A.Description>
-            </Hds::Alert>
-          {{/if}}
         {{else}}
           <Hds::Text::Body>
             External plugins are plugins found in the plugin catalog that are not part of Vault's built-in engines. These may

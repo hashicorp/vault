@@ -131,8 +131,8 @@ export default class MountBackendTypeForm extends Component {
 
   @action
   handleDisabledPluginClick(plugin) {
-    this.flyoutPluginName = plugin.name;
-    this.flyoutPluginType = plugin.type;
+    this.flyoutPluginName = plugin.type;
+    this.flyoutPluginType = this.args.mountCategory;
     this.flyoutDisplayName = plugin.displayName;
     this.showFlyout = true;
   }
