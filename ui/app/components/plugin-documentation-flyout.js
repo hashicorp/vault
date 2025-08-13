@@ -10,7 +10,7 @@ import { action } from '@ember/object';
  * Plugin Documentation Flyout Component
  *
  * Modal/flyout that opens when disabled plugin is clicked.
- * Contains link to Vault plugin documentation and explains how to enable the plugin.
+ * Displays information about plugins and links to general Vault plugin documentation.
  *
  * @example
  * ```js
@@ -41,50 +41,6 @@ export default class PluginDocumentationFlyoutComponent extends Component {
    */
   get pluginTypeDisplay() {
     return this.args.pluginType === 'secret' ? 'secrets engine' : 'auth method';
-  }
-
-  /**
-   * Get the documentation URL for the plugin
-   */
-  get documentationUrl() {
-    const baseUrl = 'https://developer.hashicorp.com/vault/docs';
-    const pluginName = this.args.pluginName;
-
-    if (this.args.pluginType === 'secret') {
-      // Most secret engines follow this pattern
-      return `${baseUrl}/secrets/${pluginName}`;
-    } else {
-      // Auth methods follow this pattern
-      return `${baseUrl}/auth/${pluginName}`;
-    }
-  }
-
-  /**
-   * Get CLI command for enabling the plugin
-   */
-  get enableCommand() {
-    const pluginName = this.args.pluginName;
-    const pluginType = this.args.pluginType;
-
-    if (pluginType === 'secret') {
-      return `vault secrets enable ${pluginName}`;
-    } else {
-      return `vault auth enable ${pluginName}`;
-    }
-  }
-
-  /**
-   * Get API endpoint for enabling the plugin
-   */
-  get apiEndpoint() {
-    const pluginName = this.args.pluginName;
-    const pluginType = this.args.pluginType;
-
-    if (pluginType === 'secret') {
-      return `POST /v1/sys/mounts/${pluginName}`;
-    } else {
-      return `POST /v1/sys/auth/${pluginName}`;
-    }
   }
 
   @action
