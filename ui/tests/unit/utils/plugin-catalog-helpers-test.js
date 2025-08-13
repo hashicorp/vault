@@ -4,13 +4,106 @@
  */
 
 import { module, test } from 'qunit';
-import {
-  addVersionsToEngines,
-  isValidPluginCatalogResponse,
-  categorizeEnginesByStatus,
-} from 'vault/utils/plugin-catalog-helpers';
+import { addVersionsToEngines, categorizeEnginesByStatus } from 'vault/utils/plugin-catalog-helpers';
 
 module('Unit | Utility | plugin-catalog-helpers', function () {
+  test('addVersionsToEngines handles full plugin catalog response structure', function (assert) {
+    const staticEngines = [
+      { type: 'aws', displayName: 'AWS', mountCategory: ['secret'], glyph: 'aws-color' },
+      { type: 'kv', displayName: 'KV', mountCategory: ['secret'], glyph: 'key-values' },
+    ];
+
+    // Full plugin catalog response structure
+    const pluginCatalogResponse = {
+      data: {
+        secret: [
+          'aws',
+          'kv',
+          'consul',
+          'external-custom-plugin', // Plugin in secret list but not in detailed
+          'my-custom-aws-variant', // External plugin with AWS-like name
+        ],
+        auth: ['approle', 'userpass'],
+        detailed: [
+          {
+            name: 'aws',
+            type: 'secret',
+            builtin: true,
+            version: 'v1.12.0+builtin.vault',
+            deprecation_status: 'supported',
+          },
+          {
+            name: 'kv',
+            type: 'secret',
+            builtin: true,
+            version: 'v0.24.1+builtin',
+            deprecation_status: 'supported',
+          },
+          {
+            name: 'consul',
+            type: 'secret',
+            builtin: true,
+            version: 'v1.21.0+builtin.vault',
+            deprecation_status: 'supported',
+          },
+          {
+            name: 'my-custom-aws-variant',
+            type: 'secret',
+            builtin: false,
+            version: 'v2.0.0',
+            deprecation_status: 'supported',
+          },
+          // Note: external-custom-plugin is in secret list but missing from detailed
+        ],
+      },
+    };
+
+    const result = addVersionsToEngines(
+      staticEngines, 
+      pluginCatalogResponse.data.secret, 
+      pluginCatalogResponse.data.detailed.filter(plugin => plugin.type === 'secret')
+    );
+    const realEngines = result.filter(
+      (e) => !e.type.startsWith('demo-') && !e.type.startsWith('example-') && !e.type.startsWith('test-')
+    );
+
+    // Should have: 2 static + 3 external plugins (consul, external-custom-plugin, my-custom-aws-variant)
+    assert.strictEqual(realEngines.length, 5, 'Should include all engines from secret list');
+
+    // Check static engines are enhanced
+    const awsEngine = realEngines.find((e) => e.type === 'aws');
+    assert.ok(awsEngine, 'AWS engine should be included');
+    assert.true(awsEngine.isAvailable, 'AWS should be available');
+    assert.strictEqual(awsEngine.version, 'v1.12.0', 'AWS should have cleaned version');
+    assert.false(awsEngine.isExternalPlugin, 'AWS should not be marked as external');
+
+    // Check external plugin with detailed info
+    const customAwsVariant = realEngines.find((e) => e.type === 'my-custom-aws-variant');
+    assert.ok(customAwsVariant, 'Custom AWS variant should be included');
+    assert.strictEqual(customAwsVariant.pluginCategory, 'external', 'Should be marked as external');
+    assert.strictEqual(customAwsVariant.glyph, 'aws-color', 'Should inherit AWS glyph');
+    assert.strictEqual(customAwsVariant.version, 'v2.0.0', 'Should have version from detailed info');
+    assert.true(customAwsVariant.isExternalPlugin, 'Should be marked as external plugin');
+
+    // Check external plugin in secret list but missing from detailed
+    const externalCustomPlugin = realEngines.find((e) => e.type === 'external-custom-plugin');
+    assert.ok(externalCustomPlugin, 'External custom plugin should be included');
+    assert.strictEqual(externalCustomPlugin.pluginCategory, 'external', 'Should be marked as external');
+    assert.strictEqual(externalCustomPlugin.glyph, 'file-text', 'Should use default glyph');
+    assert.strictEqual(externalCustomPlugin.version, 'unknown', 'Should have unknown version');
+    assert.false(externalCustomPlugin.builtin, 'Should not be marked as builtin');
+
+    // Check external plugin that matches known type (consul)
+    const consulEngine = realEngines.find((e) => e.type === 'consul');
+    assert.ok(consulEngine, 'Consul engine should be included');
+    assert.strictEqual(
+      consulEngine.pluginCategory,
+      'external',
+      'Should be marked as external since not in static metadata'
+    );
+    assert.strictEqual(consulEngine.version, 'v1.21.0', 'Should have cleaned version');
+  });
+
   test('addVersionsToEngines merges plugin data with static engines', function (assert) {
     const staticEngines = [
       { type: 'aws', displayName: 'AWS', mountCategory: ['secret'] },
@@ -23,7 +116,11 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
       { name: 'kv', type: 'secret', builtin: true, version: 'v0.24.1+builtin' },
     ];
 
-    const result = addVersionsToEngines(staticEngines, pluginCatalogData);
+    const result = addVersionsToEngines(
+      staticEngines,
+      ['aws', 'kv'], // secret engines list
+      pluginCatalogData // detailed data (already filtered for secret)
+    );
 
     assert.strictEqual(result.length, 3, 'Should return same number of engines');
 
@@ -281,5 +378,136 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
 
     assert.strictEqual(result.enabled.length, 2, 'Should treat undefined isAvailable as enabled');
     assert.strictEqual(result.disabled.length, 0, 'Should have no disabled engines');
+  });
+
+  test('addVersionsToEngines dynamically discovers plugins not in static metadata', function (assert) {
+    const staticEngines = [
+      { type: 'aws', displayName: 'AWS', mountCategory: ['secret'] },
+      { type: 'kv', displayName: 'KV Version 2', mountCategory: ['secret'] },
+    ];
+
+    const pluginCatalogData = [
+      { name: 'aws', type: 'secret', builtin: true, version: 'v1.12.0+builtin.vault' },
+      { name: 'kv', type: 'secret', builtin: true, version: 'v0.24.1+builtin' },
+      // Dynamic plugin not in static metadata
+      { name: 'custom-plugin', type: 'secret', builtin: false, version: 'v2.0.0' },
+      { name: 'another-external-plugin', type: 'secret', builtin: false, version: 'v1.5.2' },
+      // Auth plugin should be ignored for now
+      { name: 'custom-auth', type: 'auth', builtin: false, version: 'v1.0.0' },
+    ];
+
+    const result = addVersionsToEngines(staticEngines, pluginCatalogData);
+
+    // Should have original 2 static engines + 2 dynamic secret engines (auth plugin ignored)
+    const realEngines = result.filter(
+      (e) => !e.type.startsWith('demo-') && !e.type.startsWith('example-') && !e.type.startsWith('test-')
+    );
+    assert.strictEqual(realEngines.length, 4, 'Should include static engines plus dynamic secret engines');
+
+    // Check static engines are still enhanced
+    const awsEngine = realEngines.find((e) => e.type === 'aws');
+    assert.true(awsEngine.isAvailable, 'AWS should be available');
+    assert.false(awsEngine.isExternalPlugin, 'AWS should not be marked as dynamically discovered');
+
+    // Check dynamic plugins
+    const customPlugin = realEngines.find((e) => e.type === 'custom-plugin');
+    assert.ok(customPlugin, 'Custom plugin should be included');
+    assert.strictEqual(customPlugin.displayName, 'Custom Plugin', 'Should convert kebab-case to Title Case');
+    assert.strictEqual(customPlugin.pluginCategory, 'external', 'Should be marked as external category');
+    assert.strictEqual(customPlugin.glyph, 'file-text', 'Should default to file-text icon');
+    assert.true(customPlugin.isAvailable, 'Dynamic plugin should be available');
+    assert.true(customPlugin.isExternalPlugin, 'Should be marked as dynamically discovered');
+    assert.false(customPlugin.builtin, 'Custom plugin should not be builtin');
+
+    const anotherPlugin = realEngines.find((e) => e.type === 'another-external-plugin');
+    assert.ok(anotherPlugin, 'Another external plugin should be included');
+    assert.strictEqual(
+      anotherPlugin.displayName,
+      'Another External Plugin',
+      'Should handle multiple hyphens'
+    );
+
+    // Auth plugin should not be included
+    const authPlugin = realEngines.find((e) => e.type === 'custom-auth');
+    assert.notOk(authPlugin, 'Auth plugin should not be included in secret engine discovery');
+  });
+
+  test('addVersionsToEngines uses glyph from matching static engine type', function (assert) {
+    const staticEngines = [
+      { type: 'aws', displayName: 'AWS', mountCategory: ['secret'], glyph: 'aws-color' },
+      { type: 'kv', displayName: 'KV', mountCategory: ['secret'], glyph: 'key-values' },
+    ];
+
+    const pluginCatalogData = [
+      // Static engines that exist in metadata
+      { name: 'aws', type: 'secret', builtin: true, version: 'v1.12.0+builtin.vault' },
+
+      // External plugins with names that contain known engine types
+      { name: 'my-custom-aws-plugin', type: 'secret', builtin: false, version: 'v2.0.0' },
+      { name: 'external-kv-store', type: 'secret', builtin: false, version: 'v1.5.0' },
+
+      // External plugin with unknown type
+      { name: 'completely-unknown-plugin', type: 'secret', builtin: false, version: 'v1.0.0' },
+    ];
+
+    const result = addVersionsToEngines(staticEngines, pluginCatalogData);
+    const realEngines = result.filter(
+      (e) => !e.type.startsWith('demo-') && !e.type.startsWith('example-') && !e.type.startsWith('test-')
+    );
+
+    // Should have 2 static + 3 external plugins
+    assert.strictEqual(realEngines.length, 5, 'Should include static engines plus external plugins');
+
+    // Check that external AWS plugin inherited the AWS glyph
+    const externalAwsPlugin = realEngines.find((e) => e.type === 'my-custom-aws-plugin');
+    assert.ok(externalAwsPlugin, 'External AWS plugin should be included');
+    assert.strictEqual(externalAwsPlugin.glyph, 'aws-color', 'Should inherit glyph from AWS static engine');
+    assert.strictEqual(externalAwsPlugin.pluginCategory, 'external', 'Should be marked as external');
+    assert.true(externalAwsPlugin.isExternalPlugin, 'Should be marked as dynamically discovered');
+
+    // Check that external KV plugin inherited the KV glyph
+    const externalKvPlugin = realEngines.find((e) => e.type === 'external-kv-store');
+    assert.ok(externalKvPlugin, 'External KV plugin should be included');
+    assert.strictEqual(externalKvPlugin.glyph, 'key-values', 'Should inherit glyph from KV static engine');
+    assert.strictEqual(externalKvPlugin.pluginCategory, 'external', 'Should be marked as external');
+
+    // Check that unknown plugin uses default glyph
+    const unknownPlugin = realEngines.find((e) => e.type === 'completely-unknown-plugin');
+    assert.ok(unknownPlugin, 'Unknown plugin should be included');
+    assert.strictEqual(unknownPlugin.glyph, 'file-text', 'Should use default glyph for unknown type');
+
+    // Static engines should still work normally
+    const staticAwsEngine = realEngines.find((e) => e.type === 'aws');
+    assert.ok(staticAwsEngine, 'Static AWS engine should be included');
+    assert.false(
+      staticAwsEngine.isExternalPlugin,
+      'Static engine should not be marked as dynamically discovered'
+    );
+  });
+
+  test('addVersionsToEngines handles complex plugin names correctly', function (assert) {
+    const staticEngines = [];
+
+    const pluginCatalogData = [
+      { name: 'my-custom-vault-plugin', type: 'secret', builtin: false, version: 'v1.0.0' },
+      { name: 'simple', type: 'secret', builtin: false, version: 'v2.0.0' },
+      { name: 'multi-word-plugin-name', type: 'secret', builtin: false, version: 'v3.0.0' },
+    ];
+
+    const result = addVersionsToEngines(staticEngines, pluginCatalogData);
+    const realEngines = result.filter(
+      (e) => !e.type.startsWith('demo-') && !e.type.startsWith('example-') && !e.type.startsWith('test-')
+    );
+
+    assert.strictEqual(realEngines.length, 3, 'Should create engines for all secret plugins');
+
+    const plugin1 = realEngines.find((e) => e.type === 'my-custom-vault-plugin');
+    assert.strictEqual(plugin1.displayName, 'My Custom Vault Plugin', 'Should handle complex names');
+
+    const plugin2 = realEngines.find((e) => e.type === 'simple');
+    assert.strictEqual(plugin2.displayName, 'Simple', 'Should handle single word names');
+
+    const plugin3 = realEngines.find((e) => e.type === 'multi-word-plugin-name');
+    assert.strictEqual(plugin3.displayName, 'Multi Word Plugin Name', 'Should handle many words');
   });
 });

@@ -6,16 +6,30 @@
 {{#if (and (eq @mountCategory "secret") this.isLoadingPluginCatalog)}}
   <div class="has-bottom-padding-m">
     <Hds::ApplicationState as |A|>
-      <A.Header @title="Loading plugin information..." />
+      <A.Header @title="Loading plugin information..." @icon="loading" />
       <A.Body @text="Fetching available secret engines and their versions..." />
     </Hds::ApplicationState>
   </div>
 {{/if}}
 
-{{#each (array "generic" "cloud" "infra") as |category|}}
-  <Hds::Text::Display class="has-top-padding-m has-bottom-padding-s" @tag="h2" size="400">
-    {{capitalize category}}
-  </Hds::Text::Display>
+{{#each (array "generic" "cloud" "infra" "external") as |category|}}
+  <div class="has-top-padding-m has-bottom-padding-s">
+    <Hds::Text::Display @tag="h2" size="400" class="is-flex align-items-center">
+      {{capitalize category}}
+      {{#if (eq category "external")}}
+        <Hds::Button
+          @text=""
+          @color="tertiary"
+          @icon="info"
+          @size="small"
+          @isIconOnly={{true}}
+          aria-label="Information about external plugins"
+          class="has-left-margin-xs"
+          {{on "click" this.openExternalPluginsHelp}}
+        />
+      {{/if}}
+    </Hds::Text::Display>
+  </div>
   <div class="flex row-wrap row-gap-8 column-gap-16 has-bottom-padding-m">
     {{#let (get this (concat category "MountTypes")) as |categorized|}}
       {{! Display enabled plugins first }}

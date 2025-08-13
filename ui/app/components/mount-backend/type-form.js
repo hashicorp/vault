@@ -54,7 +54,7 @@ export default class MountBackendTypeForm extends Component {
       const response = await this.api.getPluginCatalog();
 
       if (isValidPluginCatalogResponse(response)) {
-        this.pluginCatalogData = response.data.detailed;
+        this.pluginCatalogData = response; // Store full response instead of just detailed array
       } else {
         this.pluginCatalogError = new Error('Invalid response structure');
       }
@@ -75,7 +75,10 @@ export default class MountBackendTypeForm extends Component {
 
     // If we have plugin catalog data, merge it with static engines to add version info
     if (this.pluginCatalogData) {
-      return addVersionsToEngines(staticEngines, this.pluginCatalogData);
+      const secretEnginesList = this.pluginCatalogData.data?.secret || [];
+      const secretEnginesDetailed =
+        this.pluginCatalogData.data?.detailed?.filter((plugin) => plugin.type === 'secret') || [];
+      return addVersionsToEngines(staticEngines, secretEnginesList, secretEnginesDetailed);
     }
 
     return staticEngines;
@@ -93,7 +96,7 @@ export default class MountBackendTypeForm extends Component {
 
   get categorizedMountTypes() {
     const categories = {};
-    ['generic', 'cloud', 'infra'].forEach((category) => {
+    ['generic', 'cloud', 'infra', 'external'].forEach((category) => {
       const allTypes = this.mountTypes.filter((type) => type.pluginCategory === category);
       categories[category] = categorizeEnginesByStatus(allTypes);
     });
@@ -112,11 +115,23 @@ export default class MountBackendTypeForm extends Component {
     return this.categorizedMountTypes.infra;
   }
 
+  get externalMountTypes() {
+    return this.categorizedMountTypes.external;
+  }
+
   @action
   handleDisabledPluginClick(plugin) {
     this.flyoutPluginName = plugin.name;
     this.flyoutPluginType = plugin.type;
     this.flyoutDisplayName = plugin.displayName;
+    this.showFlyout = true;
+  }
+
+  @action
+  openExternalPluginsHelp() {
+    this.flyoutPluginName = null;
+    this.flyoutPluginType = 'secret';
+    this.flyoutDisplayName = null;
     this.showFlyout = true;
   }
 
