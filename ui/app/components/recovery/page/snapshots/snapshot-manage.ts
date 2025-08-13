@@ -23,7 +23,7 @@ export default class SnapshotManage extends Component<Args> {
 
   @tracked selectedNamespace = '';
   @tracked selectedMount = '';
-  @tracked mountOptions: string[] = [];
+  @tracked mountOptions: SecretsEngineResource[] = [];
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -48,7 +48,7 @@ export default class SnapshotManage extends Component<Args> {
         .responseObjectToArray(secret, 'path')
         // Filter for support engines
         .map((e) => new SecretsEngineResource(e));
-      this.mountOptions = secretEngines.filter((e) => e.supportsRecovery).map((e) => e.path);
+      this.mountOptions = secretEngines.filter((e) => e.supportsRecovery);
     } catch (error) {
       // Render basic input to manually input path
       this.mountOptions = [];

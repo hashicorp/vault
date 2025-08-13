@@ -49,7 +49,14 @@
     as |F|
   >
     <F.Label>Secret mount</F.Label>
-    <F.Options>{{F.options}}</F.Options>
+    <F.Options>
+      {{#let F.options as |option|}}
+        <Hds::Text::Body @size="200">
+          {{option.path}}
+        </Hds::Text::Body>
+      {{/let}}
+
+    </F.Options>
   </Hds::Form::SuperSelect::Single::Field>
   {{! Namespace dropdown }}
   {{! Mount dropdown }}
