@@ -66,7 +66,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   {
     pluginCategory: 'generic',
     displayName: 'Shannon Demo',
-    glyph: 'lock',
+    glyph: 'kubernetes-color',
     isOldEngine: true,
     mountCategory: ['secret'],
     type: 'shannontest',
@@ -74,7 +74,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   {
     pluginCategory: 'cloud',
     displayName: 'Shannon Demo',
-    glyph: 'lock',
+    glyph: 'alibaba-color',
     isOldEngine: true,
     mountCategory: ['secret'],
     type: 'shannontest',
@@ -92,7 +92,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   {
     pluginCategory: 'infra',
     displayName: 'Shannon Demo',
-    glyph: 'lock',
+    glyph: 'consul-color',
     isOldEngine: true,
     mountCategory: ['secret'],
     type: 'shannontest',
