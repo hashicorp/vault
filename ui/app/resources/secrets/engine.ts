@@ -75,4 +75,17 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
   get localDisplay() {
     return this.local ? 'local' : 'replicated';
   }
+
+  get supportsRecovery() {
+    // Add "database" when that's a thing
+    const supportedEngineTypes = ['cubbyhole', 'kv'];
+    const isSupported = supportedEngineTypes.includes(this.engineType);
+    if (isSupported) {
+      if (this.engineType === 'kv') {
+        return this.isV2KV ? false : true;
+      }
+      return true;
+    }
+    return false;
+  }
 }

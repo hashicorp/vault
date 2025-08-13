@@ -6,13 +6,14 @@
 <Recovery::Page::Header @title="Secrets Recovery" />
 
 <div class="has-top-padding-s">
-  {{#let @model as |snapshot|}}
+  {{#let @model.snapshot as |snapshot|}}
     <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-m">
       <div class="flex space-between">
         <Hds::Text::Display @tag="h2">Snapshot</Hds::Text::Display>
         <Hds::Badge @text={{snapshot.status}} @color="success" data-test-badge="status" />
       </div>
-      <Hds::Text::Body @tag="p">Expiring at {{snapshot.expires_at}}</Hds::Text::Body>
+      <Hds::Text::Body @tag="p">Expiring at
+        {{date-format snapshot.expires_at "MMM d, yyyy, h:mm:ss aaa" withTimeZone=true}}</Hds::Text::Body>
       <Hds::Link::Standalone
         @iconPosition="trailing"
         @icon="arrow-right"
@@ -23,3 +24,34 @@
     </Hds::Card::Container>
   {{/let}}
 </div>
+
+<hr class="has-background-gray-300" />
+
+<Hds::Text::Display @tag="h3">Recovery or read data</Hds::Text::Display>
+
+<Hds::Layout::Flex @gap="24">
+  <Hds::Form::SuperSelect::Single::Field
+    @onChange={{fn this.handleSelect "selectedNamespace"}}
+    @selected={{this.selectedNamespace}}
+    @options={{@model.namespaces}}
+    @searchEnabled={{true}}
+    as |F|
+  >
+    <F.Label>Namespace</F.Label>
+    <F.Options>{{F.options}}</F.Options>
+  </Hds::Form::SuperSelect::Single::Field>
+
+  <Hds::Form::SuperSelect::Single::Field
+    @onChange={{fn this.handleSelect "selectedMount"}}
+    @selected={{this.selectedMount}}
+    @options={{this.mountOptions}}
+    @searchEnabled={{true}}
+    as |F|
+  >
+    <F.Label>Secret mount</F.Label>
+    <F.Options>{{F.options}}</F.Options>
+  </Hds::Form::SuperSelect::Single::Field>
+  {{! Namespace dropdown }}
+  {{! Mount dropdown }}
+  {{! Secrets/resource }}
+</Hds::Layout::Flex>
