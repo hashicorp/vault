@@ -45,7 +45,7 @@ export interface EnhancedEngineDisplayData extends EngineDisplayData {
 }
 
 /**
- * Function to merge plugin versions with static engine data and add dynamic plugin discovery
+ * Function to merge plugin versions with static engine data and add external plugin discovery
  * Enhanced to support plugins from catalog that don't exist in static metadata
  *
  * @param staticEngines - Array of static engine metadata
@@ -53,7 +53,7 @@ export interface EnhancedEngineDisplayData extends EngineDisplayData {
  * @param secretEnginesDetailed - Array of detailed secret engine info from catalog
  * @param databasePluginsList - Array of database plugin names from catalog
  * @param databasePluginsDetailed - Array of detailed database plugin info from catalog
- * @returns Enhanced engines with version information and dynamically discovered plugins
+ * @returns Enhanced engines with version information and dynamically discovered external plugins
  */
 export function addVersionsToEngines(
   allEngines: EngineDisplayData[],
@@ -118,7 +118,7 @@ export function addVersionsToEngines(
 
   // Find plugins in catalog that don't exist in static metadata
   const staticEngineTypes = new Set(allEngines.map((engine) => engine.type));
-  const dynamicPlugins: EnhancedEngineDisplayData[] = [];
+  const externalPlugins: EnhancedEngineDisplayData[] = [];
 
   // Create a map of detailed plugin information for quick lookup
   const detailedPluginMap = new Map<string, PluginCatalogPlugin>();
@@ -137,8 +137,8 @@ export function addVersionsToEngines(
       // Look up detailed information for this secret engine
       const detailedInfo = detailedPluginMap.get(secretEngineName);
 
-      // Create dynamic engine metadata with defaults
-      const dynamicEngine: EnhancedEngineDisplayData = {
+      // Create external engine metadata with defaults
+      const externalEngine: EnhancedEngineDisplayData = {
         type: secretEngineName,
         displayName: secretEngineName
           .split('-')
@@ -161,7 +161,7 @@ export function addVersionsToEngines(
         isExternalPlugin: true,
       };
 
-      dynamicPlugins.push(dynamicEngine);
+      externalPlugins.push(externalEngine);
     });
   } else {
     // Fallback: process plugins from detailed list if no categorized list available
@@ -180,8 +180,8 @@ export function addVersionsToEngines(
         }
         // Pattern match (e.g., plugin.name = "my-custom-aws-plugin" contains "aws")
         return plugin.name.includes(engine.type) || plugin.name.includes(engine.type.replace('-', ''));
-      }); // Create dynamic engine metadata with defaults
-      const dynamicEngine: EnhancedEngineDisplayData = {
+      }); // Create external engine metadata with defaults
+      const externalEngine: EnhancedEngineDisplayData = {
         type: plugin.name,
         displayName: plugin.name
           .split('-')
@@ -198,11 +198,11 @@ export function addVersionsToEngines(
         isExternalPlugin: true,
       };
 
-      dynamicPlugins.push(dynamicEngine);
+      externalPlugins.push(externalEngine);
     });
   }
 
-  return [...enhancedEngines, ...dynamicPlugins];
+  return [...enhancedEngines, ...externalPlugins];
 }
 
 /**
