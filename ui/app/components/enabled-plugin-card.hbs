@@ -15,10 +15,15 @@
     {{on "keypress" (if isDisabled (noop) (fn @setMountType @type.type))}}
     data-test-mount-type={{@type.type}}
   >
-    <Icon @name={{@type.glyph}} @size="24" class="has-bottom-margin-xs" />
+    {{#if @type.glyph}}
+      <Icon @name={{@type.glyph}} @size="24" class="has-bottom-margin-xs" />
+    {{/if}}
     <Hds::Text::Body @tag="h3" @size="300">
       {{@type.displayName}}
     </Hds::Text::Body>
+    {{#if (and @type.deprecation_status (not (eq @type.deprecation_status "supported")))}}
+      <Hds::Badge @text={{capitalize @type.deprecation_status}} @color="warning" @size="small" />
+    {{/if}}
     {{#if (and @type.requiredFeature (not (has-feature @type.requiredFeature)))}}
       <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
     {{/if}}

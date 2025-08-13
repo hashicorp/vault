@@ -8,7 +8,7 @@ import type { EngineDisplayData } from './all-engines-metadata';
 /**
  * Constants for plugin catalog functionality
  */
-const DEFAULT_EXTERNAL_PLUGIN_GLYPH = 'file-text';
+const DEFAULT_EXTERNAL_PLUGIN_GLYPH = '';
 
 /**
  * Plugin catalog response structure from Vault API
@@ -66,38 +66,6 @@ export function addVersionsToEngines(
     return allEngines;
   }
 
-  // DEMO: Force some plugins to be disabled for testing purposes
-  // You can delete this section later - it's just for demonstration
-  const demoDisabledPlugins = ['consul', 'nomad', 'terraform', 'alicloud', 'mongodbatlas', 'venafi'];
-
-  // DEMO: Add some fake plugins for testing disabled plugin UI
-  const demoFakePlugins: EnhancedEngineDisplayData[] = [
-    {
-      displayName: 'Demo Plugin Alpha',
-      type: 'demo-alpha',
-      glyph: DEFAULT_EXTERNAL_PLUGIN_GLYPH,
-      pluginCategory: 'generic',
-      mountCategory: ['secret'],
-      isAvailable: false,
-    },
-    {
-      displayName: 'Example Cloud Service',
-      type: 'example-cloud',
-      glyph: 'cloud',
-      pluginCategory: 'cloud',
-      mountCategory: ['secret'],
-      isAvailable: false,
-    },
-    {
-      displayName: 'Test Infrastructure Tool',
-      type: 'test-infra',
-      glyph: 'server',
-      pluginCategory: 'infra',
-      mountCategory: ['secret'],
-      isAvailable: false,
-    },
-  ];
-
   // First, enhance existing static engines with catalog data
   const enhancedEngines = allEngines.map((engine) => {
     // Special handling for Database engine
@@ -141,14 +109,6 @@ export function addVersionsToEngines(
       };
     }
 
-    // DEMO: Mark certain plugins as disabled for testing ONLY if they're not in the real catalog
-    if (demoDisabledPlugins.includes(engine.type)) {
-      return {
-        ...engine,
-        isAvailable: false,
-      };
-    }
-
     return {
       ...engine,
       isAvailable: false,
@@ -177,19 +137,6 @@ export function addVersionsToEngines(
       // Look up detailed information for this secret engine
       const detailedInfo = detailedPluginMap.get(secretEngineName);
 
-      // Look for a static engine type that this plugin name contains or matches
-      // This handles cases like "my-custom-aws-plugin" matching the "aws" static engine
-      const matchingStaticEngine = allEngines.find((engine) => {
-        // Direct type match (e.g., secretEngineName = "aws" matches engine.type = "aws")
-        if (secretEngineName === engine.type) {
-          return true;
-        }
-        // Pattern match (e.g., secretEngineName = "my-custom-aws-plugin" contains "aws")
-        return (
-          secretEngineName.includes(engine.type) || secretEngineName.includes(engine.type.replace('-', ''))
-        );
-      });
-
       // Create dynamic engine metadata with defaults
       const dynamicEngine: EnhancedEngineDisplayData = {
         type: secretEngineName,
@@ -199,7 +146,7 @@ export function addVersionsToEngines(
           .join(' '), // Convert kebab-case to Title Case
         mountCategory: ['secret'],
         pluginCategory: 'external', // Mark as external since it's not in static metadata
-        glyph: matchingStaticEngine?.glyph || DEFAULT_EXTERNAL_PLUGIN_GLYPH, // Use glyph from matching type or default
+        glyph: DEFAULT_EXTERNAL_PLUGIN_GLYPH,
         isAvailable: true,
         // Use detailed info if available, otherwise create minimal plugin data
         builtin: detailedInfo?.builtin ?? false,
@@ -253,17 +200,6 @@ export function addVersionsToEngines(
 
       dynamicPlugins.push(dynamicEngine);
     });
-  }
-
-  // Only add demo plugins if we have engines with data (not in tests with empty arrays)
-  const shouldAddDemoPlugins =
-    secretEnginesList.length > 0 ||
-    secretEnginesDetailed.length > 0 ||
-    databasePluginsList.length > 0 ||
-    databasePluginsDetailed.length > 0;
-
-  if (shouldAddDemoPlugins) {
-    return [...enhancedEngines, ...dynamicPlugins, ...demoFakePlugins];
   }
 
   return [...enhancedEngines, ...dynamicPlugins];
