@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#let (if @type.requiredFeature (not (has-feature @type.requiredFeature)) false) as |isDisabled|}}
+{{#let this.isDisabled as |isDisabled|}}
   <Hds::Card::Container
     class="selectable-engine-card
       {{if isDisabled 'disabled'}}
@@ -21,10 +21,10 @@
     <Hds::Text::Body @tag="h3" @size="300">
       {{@type.displayName}}
     </Hds::Text::Body>
-    {{#if (and @type.deprecation_status (not (eq @type.deprecation_status "supported")))}}
+    {{#if this.showDeprecationBadge}}
       <Hds::Badge @text={{capitalize @type.deprecation_status}} @color="warning" @size="small" />
     {{/if}}
-    {{#if (and @type.requiredFeature (not (has-feature @type.requiredFeature)))}}
+    {{#if this.showEnterpriseBadge}}
       <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
     {{/if}}
   </Hds::Card::Container>
