@@ -64,8 +64,8 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
 
     const result = addVersionsToEngines(
       staticEngines,
-      pluginCatalogResponse.data.secret,
-      pluginCatalogResponse.data.detailed.filter((plugin) => plugin.type === 'secret')
+      pluginCatalogResponse.data.detailed.filter((plugin) => plugin.type === 'secret'),
+      []
     );
     const realEngines = result.filter(
       (e) => !e.type.startsWith('demo-') && !e.type.startsWith('example-') && !e.type.startsWith('test-')
@@ -79,7 +79,6 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
     assert.ok(awsEngine, 'AWS engine should be included');
     assert.true(awsEngine.isAvailable, 'AWS should be available');
     assert.strictEqual(awsEngine.version, 'v1.12.0', 'AWS should have cleaned version');
-    assert.false(awsEngine.isExternalPlugin, 'AWS should not be marked as external');
 
     // Check external plugin with detailed info
     const customAwsVariant = realEngines.find((e) => e.type === 'my-custom-aws-variant');
@@ -87,7 +86,6 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
     assert.strictEqual(customAwsVariant.pluginCategory, 'external', 'Should be marked as external');
     assert.strictEqual(customAwsVariant.glyph, 'aws-color', 'Should inherit AWS glyph');
     assert.strictEqual(customAwsVariant.version, 'v2.0.0', 'Should have version from detailed info');
-    assert.true(customAwsVariant.isExternalPlugin, 'Should be marked as external plugin');
 
     // Check external plugin in secret list but missing from detailed
     const externalCustomPlugin = realEngines.find((e) => e.type === 'external-custom-plugin');
@@ -149,15 +147,15 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
     const staticEngines = [{ type: 'aws', displayName: 'AWS', mountCategory: ['secret'] }];
 
     // Test with null
-    let result = addVersionsToEngines(staticEngines, null);
+    let result = addVersionsToEngines(staticEngines, null, []);
     assert.deepEqual(result, staticEngines, 'Should return original engines with null data');
 
     // Test with undefined
-    result = addVersionsToEngines(staticEngines, undefined);
+    result = addVersionsToEngines(staticEngines, undefined, []);
     assert.deepEqual(result, staticEngines, 'Should return original engines with undefined data');
 
     // Test with empty array
-    result = addVersionsToEngines(staticEngines, []);
+    result = addVersionsToEngines(staticEngines, [], []);
     assert.strictEqual(result.length, 1, 'Should return engines with empty catalog');
     assert.false(result[0].isAvailable, 'Engine should be marked unavailable');
   });
@@ -194,7 +192,7 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
       { name: 'aws', type: 'secret', builtin: true, version: 'v1.12.0+builtin.vault' },
     ];
 
-    const result = addVersionsToEngines(staticEngines, pluginCatalogData);
+    const result = addVersionsToEngines(staticEngines, pluginCatalogData, []);
 
     // Custom external plugin
     const customPlugin = result.find((e) => e.type === 'custom-plugin');
@@ -231,7 +229,7 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
       },
     ];
 
-    const result = addVersionsToEngines(staticEngines, pluginCatalogData);
+    const result = addVersionsToEngines(staticEngines, pluginCatalogData, []);
 
     const deprecatedPlugin = result.find((e) => e.type === 'deprecated-plugin');
     assert.strictEqual(
@@ -411,7 +409,6 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
     // Check static engines are still enhanced
     const awsEngine = realEngines.find((e) => e.type === 'aws');
     assert.true(awsEngine.isAvailable, 'AWS should be available');
-    assert.false(awsEngine.isExternalPlugin, 'AWS should not be marked as dynamically discovered');
 
     // Check dynamic plugins
     const customPlugin = realEngines.find((e) => e.type === 'custom-plugin');
@@ -420,7 +417,6 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
     assert.strictEqual(customPlugin.pluginCategory, 'external', 'Should be marked as external category');
     assert.strictEqual(customPlugin.glyph, 'file-text', 'Should default to file-text icon');
     assert.true(customPlugin.isAvailable, 'Dynamic plugin should be available');
-    assert.true(customPlugin.isExternalPlugin, 'Should be marked as dynamically discovered');
     assert.false(customPlugin.builtin, 'Custom plugin should not be builtin');
 
     const anotherPlugin = realEngines.find((e) => e.type === 'another-external-plugin');
@@ -467,7 +463,6 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
     assert.ok(externalAwsPlugin, 'External AWS plugin should be included');
     assert.strictEqual(externalAwsPlugin.glyph, 'aws-color', 'Should inherit glyph from AWS static engine');
     assert.strictEqual(externalAwsPlugin.pluginCategory, 'external', 'Should be marked as external');
-    assert.true(externalAwsPlugin.isExternalPlugin, 'Should be marked as dynamically discovered');
 
     // Check that external KV plugin inherited the KV glyph
     const externalKvPlugin = realEngines.find((e) => e.type === 'external-kv-store');
@@ -483,10 +478,6 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
     // Static engines should still work normally
     const staticAwsEngine = realEngines.find((e) => e.type === 'aws');
     assert.ok(staticAwsEngine, 'Static AWS engine should be included');
-    assert.false(
-      staticAwsEngine.isExternalPlugin,
-      'Static engine should not be marked as dynamically discovered'
-    );
   });
 
   test('addVersionsToEngines handles complex plugin names correctly', function (assert) {

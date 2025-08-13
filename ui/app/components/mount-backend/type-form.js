@@ -75,20 +75,12 @@ export default class MountBackendTypeForm extends Component {
 
     // If we have plugin catalog data, merge it with static engines to add version info
     if (this.pluginCatalogData) {
-      const secretEnginesList = this.pluginCatalogData?.secret || [];
       const secretEnginesDetailed =
         this.pluginCatalogData?.detailed?.filter((plugin) => plugin?.type === 'secret') || [];
-      const databasePluginsList = this.pluginCatalogData?.database || [];
       const databasePluginsDetailed =
         this.pluginCatalogData?.detailed?.filter((plugin) => plugin?.type === 'database') || [];
 
-      return addVersionsToEngines(
-        staticEngines,
-        secretEnginesList,
-        secretEnginesDetailed,
-        databasePluginsList,
-        databasePluginsDetailed
-      );
+      return addVersionsToEngines(staticEngines, secretEnginesDetailed, databasePluginsDetailed);
     }
 
     return staticEngines;

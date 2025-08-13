@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{!-- TODO: utilize plugin catalog for auth engines (currently only implemented for secret engines) --}}
+{{! TODO: utilize plugin catalog for auth engines (currently only implemented for secret engines) }}
 {{#if (and (eq @mountCategory "secret") this.isLoadingPluginCatalog)}}
   <div class="has-bottom-padding-m">
     <Hds::ApplicationState as |A|>
@@ -13,7 +13,7 @@
   </div>
 {{/if}}
 
-{{!-- TODO: utilize plugin catalog for auth engines (currently only implemented for secret engines) --}}
+{{! TODO: utilize plugin catalog for auth engines (currently only implemented for secret engines) }}
 {{#if (and this.pluginCatalogError (not this.isLoadingPluginCatalog) (eq @mountCategory "secret"))}}
   <div class="has-bottom-padding-m">
     <Hds::Alert @type="inline" @color="warning" as |A|>

@@ -13,7 +13,6 @@ module('Unit | Utility | plugin-catalog-helpers | basic functionality', function
       { type: 'kv', displayName: 'KV', mountCategory: ['secret'], glyph: 'key-values' },
     ];
 
-    const secretEnginesList = ['aws', 'kv', 'external-plugin'];
     const secretEnginesDetailed = [
       {
         name: 'aws',
@@ -38,7 +37,7 @@ module('Unit | Utility | plugin-catalog-helpers | basic functionality', function
       },
     ];
 
-    const result = addVersionsToEngines(staticEngines, secretEnginesList, secretEnginesDetailed, [], []);
+    const result = addVersionsToEngines(staticEngines, secretEnginesDetailed, []);
     const realEngines = result.filter(
       (e) => !e.type.startsWith('demo-') && !e.type.startsWith('example-') && !e.type.startsWith('test-')
     );
@@ -51,7 +50,6 @@ module('Unit | Utility | plugin-catalog-helpers | basic functionality', function
     assert.ok(awsEngine, 'AWS engine should be included');
     assert.true(awsEngine.isAvailable, 'AWS should be available');
     assert.strictEqual(awsEngine.version, 'v1.12.0', 'AWS should have cleaned version');
-    assert.false(awsEngine.isExternalPlugin, 'AWS should not be marked as external');
 
     const kvEngine = realEngines.find((e) => e.type === 'kv');
     assert.ok(kvEngine, 'KV engine should be included');
@@ -63,13 +61,12 @@ module('Unit | Utility | plugin-catalog-helpers | basic functionality', function
     assert.ok(externalPlugin, 'External plugin should be included');
     assert.strictEqual(externalPlugin.pluginCategory, 'external', 'Should be marked as external');
     assert.strictEqual(externalPlugin.version, 'v2.0.0', 'Should have version from detailed info');
-    assert.true(externalPlugin.isExternalPlugin, 'Should be marked as external plugin');
   });
 
   test('addVersionsToEngines handles empty lists', function (assert) {
     const staticEngines = [{ type: 'aws', displayName: 'AWS', mountCategory: ['secret'] }];
 
-    const result = addVersionsToEngines(staticEngines, [], [], [], []);
+    const result = addVersionsToEngines(staticEngines, [], []);
 
     // Should return the same number of engines with the same types
     assert.strictEqual(result.length, staticEngines.length, 'Should return same number of engines');
@@ -86,7 +83,6 @@ module('Unit | Utility | plugin-catalog-helpers | basic functionality', function
       { type: 'kv', displayName: 'KV', mountCategory: ['secret'], glyph: 'key-values' },
     ];
 
-    const secretEnginesList = ['kv'];
     const secretEnginesDetailed = [
       {
         name: 'kv',
@@ -97,7 +93,6 @@ module('Unit | Utility | plugin-catalog-helpers | basic functionality', function
       },
     ];
 
-    const databasePluginsList = ['mysql-database-plugin', 'postgresql-database-plugin'];
     const databasePluginsDetailed = [
       {
         name: 'mysql-database-plugin',
@@ -115,13 +110,7 @@ module('Unit | Utility | plugin-catalog-helpers | basic functionality', function
       },
     ];
 
-    const result = addVersionsToEngines(
-      staticEngines,
-      secretEnginesList,
-      secretEnginesDetailed,
-      databasePluginsList,
-      databasePluginsDetailed
-    );
+    const result = addVersionsToEngines(staticEngines, secretEnginesDetailed, databasePluginsDetailed);
 
     const realEngines = result.filter(
       (e) => !e.type.startsWith('demo-') && !e.type.startsWith('example-') && !e.type.startsWith('test-')
@@ -139,7 +128,6 @@ module('Unit | Utility | plugin-catalog-helpers | basic functionality', function
       'v1.21.0',
       'Database should have cleaned version from first plugin'
     );
-    assert.false(databaseEngine.isExternalPlugin, 'Database should not be marked as external');
     assert.true(databaseEngine.builtin, 'Database should be marked as builtin');
 
     // Check KV engine still works normally
@@ -154,11 +142,10 @@ module('Unit | Utility | plugin-catalog-helpers | basic functionality', function
       { type: 'database', displayName: 'Databases', mountCategory: ['secret'], glyph: 'database' },
     ];
 
-    const result = addVersionsToEngines(staticEngines, [], [], [], []);
+    const result = addVersionsToEngines(staticEngines, [], []);
 
     const databaseEngine = result.find((e) => e.type === 'database');
     assert.ok(databaseEngine, 'Database engine should be present');
     assert.false(databaseEngine.isAvailable, 'Database should be unavailable when no database plugins');
-    assert.false(databaseEngine.isExternalPlugin, 'Database should not be marked as external');
   });
 });
