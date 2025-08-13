@@ -29,10 +29,13 @@ export const GENERAL = {
   confirmButton: '[data-test-confirm-button]',
   confirmMessage: '[data-test-confirm-action-message]',
   confirmTrigger: '[data-test-confirm-action-trigger]',
-  emptyStateTitle: '[data-test-empty-state-title]',
-  emptyStateSubtitle: '[data-test-empty-state-subtitle]',
-  emptyStateMessage: '[data-test-empty-state-message]',
-  emptyStateActions: '[data-test-empty-state-actions]',
+  copyButton: '[data-test-copy-button]',
+  // there should only be one submit button per view (e.g. one per form) so this does not need to be dynamic
+  // this button should be used for any kind of "submit" on a form or "save" action.
+  submitButton: '[data-test-submit]',
+  button: (label: string) => (label ? `[data-test-button="${label}"]` : '[data-test-button]'),
+
+  /* ────── Menus & Lists ────── */
   menuTrigger: '[data-test-popup-menu-trigger]',
   menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
   listItem: '[data-test-list-item-link]',
