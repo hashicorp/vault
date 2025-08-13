@@ -12,42 +12,56 @@
   </div>
 {{/if}}
 
+{{#if (and this.pluginCatalogError (not this.isLoadingPluginCatalog) (eq @mountCategory "secret"))}}
+  <div class="has-bottom-padding-m">
+    <Hds::Alert @type="inline" @color="warning" as |A|>
+      <A.Title>Plugin information unavailable</A.Title>
+      <A.Description>
+        Using cached plugin information. Some plugins may not show current version details.
+      </A.Description>
+    </Hds::Alert>
+  </div>
+{{/if}}
+
 {{#each (array "generic" "cloud" "infra" "external") as |category|}}
-  <div class="has-top-padding-m has-bottom-padding-s">
-    <Hds::Text::Display @tag="h2" size="400" class="is-flex align-items-center">
-      {{capitalize category}}
-      {{#if (eq category "external")}}
-        <Hds::Button
-          @text=""
-          @color="tertiary"
-          @icon="info"
-          @size="small"
-          @isIconOnly={{true}}
-          aria-label="Information about external plugins"
-          class="has-left-margin-xs"
-          {{on "click" this.openExternalPluginsHelp}}
-        />
-      {{/if}}
-    </Hds::Text::Display>
-  </div>
-  <div class="flex row-wrap row-gap-8 column-gap-16 has-bottom-padding-m">
-    {{#let (get this (concat category "MountTypes")) as |categorized|}}
-      {{! Display enabled plugins first }}
-      {{#each categorized.enabled as |type|}}
-        <EnabledPluginCard @type={{type}} @setMountType={{@setMountType}} />
-      {{/each}}
+  {{#let (get this (concat category "MountTypes")) as |categorized|}}
+    {{! Only display the category if it has any enabled or disabled plugins }}
+    {{#if (or categorized.enabled.length categorized.disabled.length)}}
+      <div class="has-top-padding-m has-bottom-padding-s">
+        <Hds::Text::Display @tag="h2" size="400" class="is-flex align-items-center">
+          {{capitalize category}}
+          {{#if (eq category "external")}}
+            <Hds::Button
+              @text=""
+              @color="tertiary"
+              @icon="info"
+              @size="small"
+              @isIconOnly={{true}}
+              aria-label="Information about external plugins"
+              class="has-left-margin-xs"
+              {{on "click" this.openExternalPluginsHelp}}
+            />
+          {{/if}}
+        </Hds::Text::Display>
+      </div>
+      <div class="flex row-wrap row-gap-8 column-gap-16 has-bottom-padding-m">
+        {{! Display enabled plugins first }}
+        {{#each categorized.enabled as |type|}}
+          <EnabledPluginCard @type={{type}} @setMountType={{@setMountType}} />
+        {{/each}}
 
-      {{! Display vertical separator if both enabled and disabled plugins exist }}
-      {{#if (and categorized.enabled.length categorized.disabled.length)}}
-        <div class="vertical-divider"></div>
-      {{/if}}
+        {{! Display vertical separator if both enabled and disabled plugins exist }}
+        {{#if (and categorized.enabled.length categorized.disabled.length)}}
+          <div class="vertical-divider"></div>
+        {{/if}}
 
-      {{! Display disabled plugins at the end }}
-      {{#each categorized.disabled as |type|}}
-        <DisabledPluginCard @type={{type}} @handleDisabledPluginClick={{this.handleDisabledPluginClick}} />
-      {{/each}}
-    {{/let}}
-  </div>
+        {{! Display disabled plugins at the end }}
+        {{#each categorized.disabled as |type|}}
+          <DisabledPluginCard @type={{type}} @handleDisabledPluginClick={{this.handleDisabledPluginClick}} />
+        {{/each}}
+      </div>
+    {{/if}}
+  {{/let}}
 {{/each}}
 
 <div class="field is-grouped box is-fullwidth is-bottomless">

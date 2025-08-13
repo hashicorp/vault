@@ -6,6 +6,11 @@
 import type { EngineDisplayData } from './all-engines-metadata';
 
 /**
+ * Constants for plugin catalog functionality
+ */
+const DEFAULT_EXTERNAL_PLUGIN_GLYPH = 'file-text';
+
+/**
  * Plugin catalog response structure from Vault API
  */
 export interface PluginCatalogPlugin {
@@ -23,6 +28,7 @@ export interface PluginCatalogResponse {
     detailed: PluginCatalogPlugin[];
     secret?: string[];
     auth?: string[];
+    database?: string[];
   };
 }
 
@@ -69,7 +75,7 @@ export function addVersionsToEngines(
     {
       displayName: 'Demo Plugin Alpha',
       type: 'demo-alpha',
-      glyph: 'file-text',
+      glyph: DEFAULT_EXTERNAL_PLUGIN_GLYPH,
       pluginCategory: 'generic',
       mountCategory: ['secret'],
       isAvailable: false,
@@ -102,14 +108,12 @@ export function addVersionsToEngines(
       if (isDatabaseAvailable) {
         // Find a representative database plugin for version info (prefer first available)
         const representativePlugin = databasePluginsDetailed[0];
-        const cleanedVersion =
-          representativePlugin?.version?.replace(/\+builtin.*$/, '') || representativePlugin?.version;
 
         return {
           ...engine,
           builtin: representativePlugin?.builtin ?? true, // Database engine is typically builtin
           deprecation_status: representativePlugin?.deprecation_status || 'supported',
-          version: cleanedVersion,
+          version: representativePlugin?.version,
           isAvailable: true,
           isExternalPlugin: false,
           pluginData: representativePlugin,
@@ -126,14 +130,11 @@ export function addVersionsToEngines(
     const pluginData = secretEnginesDetailed.find((plugin) => plugin.name === engine.type);
 
     if (pluginData) {
-      // Clean version string by removing +builtin suffixes
-      const cleanedVersion = pluginData.version?.replace(/\+builtin.*$/, '') || pluginData.version;
-
       return {
         ...engine,
         builtin: pluginData.builtin,
         deprecation_status: pluginData.deprecation_status,
-        version: cleanedVersion,
+        version: pluginData.version,
         isAvailable: true,
         isExternalPlugin: false, // Static engines are not external
         pluginData,
@@ -198,12 +199,12 @@ export function addVersionsToEngines(
           .join(' '), // Convert kebab-case to Title Case
         mountCategory: ['secret'],
         pluginCategory: 'external', // Mark as external since it's not in static metadata
-        glyph: matchingStaticEngine?.glyph || 'file-text', // Use glyph from matching type or default
+        glyph: matchingStaticEngine?.glyph || DEFAULT_EXTERNAL_PLUGIN_GLYPH, // Use glyph from matching type or default
         isAvailable: true,
         // Use detailed info if available, otherwise create minimal plugin data
         builtin: detailedInfo?.builtin ?? false,
         deprecation_status: detailedInfo?.deprecation_status,
-        version: detailedInfo?.version?.replace(/\+builtin.*$/, '') || detailedInfo?.version,
+        version: detailedInfo?.version,
         pluginData: detailedInfo || {
           name: secretEngineName,
           type: 'secret',
@@ -241,11 +242,11 @@ export function addVersionsToEngines(
           .join(' '), // Convert kebab-case to Title Case
         mountCategory: ['secret'],
         pluginCategory: 'external', // Mark as external since it's not in static metadata
-        glyph: matchingStaticEngine?.glyph || 'file-text', // Use glyph from matching type or default
+        glyph: matchingStaticEngine?.glyph || DEFAULT_EXTERNAL_PLUGIN_GLYPH, // Use glyph from matching type or default
         isAvailable: true,
         builtin: plugin.builtin,
         deprecation_status: plugin.deprecation_status,
-        version: plugin.version?.replace(/\+builtin.*$/, '') || plugin.version,
+        version: plugin.version,
         pluginData: plugin,
         isExternalPlugin: true,
       };
@@ -269,10 +270,20 @@ export function addVersionsToEngines(
 }
 
 /**
- * Validates plugin catalog response structure
+ * Validates plugin catalog response structure to ensure it contains the expected data format.
+ * Checks for the presence of the required `data.detailed` array which contains plugin information.
  *
- * @param response - Raw response from plugin catalog API
- * @returns boolean indicating if response is valid
+ * @param response - Raw response from plugin catalog API endpoint
+ * @returns boolean indicating if response has valid structure for plugin catalog data
+ *
+ * @example
+ * ```typescript
+ * const response = await api.getPluginCatalog();
+ * if (isValidPluginCatalogResponse(response)) {
+ *   // Safe to access response.data.detailed, response.data.secret, etc.
+ *   const plugins = response.data.detailed;
+ * }
+ * ```
  */
 export function isValidPluginCatalogResponse(response: unknown): response is PluginCatalogResponse {
   if (!response || typeof response !== 'object') {
@@ -289,11 +300,22 @@ export function isValidPluginCatalogResponse(response: unknown): response is Plu
 }
 
 /**
- * Categorizes engines by their availability status
- * Used in Phase 4 to separate enabled and disabled plugins
+ * Categorizes engines by their availability status for display purposes.
+ * Used in Phase 4 to separate enabled and disabled plugins in the UI.
+ * Engines with isAvailable === false are considered disabled.
  *
- * @param engines - Array of enhanced engine data
- * @returns Object with enabled and disabled engine arrays
+ * @param engines - Array of enhanced engine data with availability information
+ * @returns Object containing separate arrays for enabled and disabled engines
+ *
+ * @example
+ * ```typescript
+ * const engines = addVersionsToEngines(staticEngines, catalogData);
+ * const { enabled, disabled } = categorizeEnginesByStatus(engines);
+ *
+ * // Render enabled plugins first, then disabled plugins with different styling
+ * enabled.forEach(engine => renderEnabledPlugin(engine));
+ * disabled.forEach(engine => renderDisabledPlugin(engine));
+ * ```
  */
 export interface CategorizedEngines {
   enabled: EnhancedEngineDisplayData[];
