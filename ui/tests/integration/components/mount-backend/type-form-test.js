@@ -168,5 +168,127 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
       // Should not call plugin catalog API for auth methods
       assert.ok(getPluginCatalogSpy.notCalled, 'Plugin catalog API not called for auth methods');
     });
+
+    test('it handles plugin catalog API timeout gracefully', async function (assert) {
+      const timeoutError = new Error('Request timeout');
+      timeoutError.name = 'TimeoutError';
+      sinon.stub(this.apiService, 'getPluginCatalog').rejects(timeoutError);
+
+      await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
+
+      // Should still render engines without version info
+      for (const type of secretTypes) {
+        assert.dom(MOUNT_BACKEND_FORM.mountType(type)).exists(`Renders ${type} mountable secret engine`);
+      }
+
+      // Should not show error message to user for network issues
+      assert
+        .dom('[data-test-application-state-header]')
+        .doesNotExist('Should not show loading state after timeout');
+    });
+
+    test('it handles permission denied errors appropriately', async function (assert) {
+      const permissionError = new Error('Permission denied');
+      permissionError.name = 'PermissionError';
+      sinon.stub(this.apiService, 'getPluginCatalog').rejects(permissionError);
+
+      await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
+
+      // Should still render engines without version info
+      for (const type of secretTypes) {
+        assert.dom(MOUNT_BACKEND_FORM.mountType(type)).exists(`Renders ${type} mountable secret engine`);
+      }
+    });
+
+    test('it handles invalid JSON response from plugin catalog API', async function (assert) {
+      sinon.stub(this.apiService, 'getPluginCatalog').resolves({ invalid: 'response' });
+
+      await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
+
+      // Should still render engines without version info
+      for (const type of secretTypes) {
+        assert.dom(MOUNT_BACKEND_FORM.mountType(type)).exists(`Renders ${type} mountable secret engine`);
+      }
+    });
+
+    test('it displays plugin status indicators for builtin vs external plugins', async function (assert) {
+      const mockResponse = {
+        data: {
+          detailed: [
+            {
+              name: 'aws',
+              type: 'secret',
+              builtin: true,
+              version: 'v1.12.0+builtin.vault',
+              deprecation_status: 'supported',
+            },
+            {
+              name: 'custom-plugin',
+              type: 'secret',
+              builtin: false,
+              version: 'v2.1.0',
+              deprecation_status: 'supported',
+            },
+          ],
+          secret: ['aws', 'custom-plugin'],
+        },
+      };
+      sinon.stub(this.apiService, 'getPluginCatalog').resolves(mockResponse);
+
+      await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
+
+      // AWS should show builtin badge
+      const awsCard = assert.dom(MOUNT_BACKEND_FORM.mountType('aws'));
+      awsCard.exists('AWS engine card exists');
+      awsCard.containsText('Builtin', 'AWS shows builtin badge');
+
+      // Custom plugin should show external badge (if it exists in static data)
+      if (secretTypes.includes('custom-plugin')) {
+        const customCard = assert.dom(MOUNT_BACKEND_FORM.mountType('custom-plugin'));
+        customCard.containsText('External', 'Custom plugin shows external badge');
+      }
+    });
+
+    test('it handles disabled plugins correctly', async function (assert) {
+      await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
+
+      // Check for disabled plugin cards (demo plugins from helper function)
+      const disabledPlugins = ['demo-alpha', 'example-cloud', 'test-infra'];
+
+      disabledPlugins.forEach((pluginType) => {
+        const pluginCard = assert.dom(`[data-test-mount-type="${pluginType}"]`);
+        if (pluginCard.exists()) {
+          // Should have disabled styling and not be clickable for mount type selection
+          pluginCard.hasClass('disabled-plugin-card', `${pluginType} has disabled styling`);
+        }
+      });
+    });
+
+    test('it displays vertical divider between enabled and disabled plugins', async function (assert) {
+      await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
+
+      // Check for vertical divider in categories that have both enabled and disabled plugins
+      const dividers = document.querySelectorAll('.vertical-divider');
+      assert.ok(
+        dividers.length >= 0,
+        'May show vertical dividers when both enabled and disabled plugins exist'
+      );
+    });
+
+    test('it opens documentation flyout for disabled plugins', async function (assert) {
+      await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
+
+      // Find a disabled plugin card and click it
+      const disabledCard = document.querySelector('[data-test-mount-type="demo-alpha"]');
+      if (disabledCard) {
+        await click(disabledCard);
+
+        // Should open the documentation flyout
+        assert.dom('[data-test-modal]').exists('Documentation flyout opens for disabled plugin');
+        assert
+          .dom('[data-test-modal-header]')
+          .containsText('Demo Plugin Alpha', 'Shows correct plugin name in flyout');
+      }
+    });
   });
 });

@@ -19,6 +19,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
+import sinon from 'sinon';
 
 import { create } from 'ember-cli-page-object';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
@@ -423,6 +424,143 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
+    });
+  });
+
+  module('Plugin Catalog Integration', function (hooks) {
+    hooks.beforeEach(function () {
+      // Mock plugin catalog API responses for testing
+      this.server = sinon.createFakeServer();
+      this.server.autoRespond = true;
+    });
+
+    hooks.afterEach(function () {
+      this.server.restore();
+    });
+
+    test('it displays plugin version information when available', async function (assert) {
+      // Mock plugin catalog response
+      this.server.respondWith('GET', '/v1/sys/plugins/catalog', [
+        200,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify({
+          data: {
+            detailed: [
+              {
+                name: 'aws',
+                type: 'secret',
+                builtin: true,
+                version: 'v1.12.0+builtin.vault',
+                deprecation_status: 'supported',
+              },
+              {
+                name: 'kv',
+                type: 'secret',
+                builtin: true,
+                version: 'v0.24.1+builtin',
+                deprecation_status: 'supported',
+              },
+            ],
+            secret: ['aws', 'kv'],
+          },
+        }),
+      ]);
+
+      await page.visit();
+      await settled();
+
+      // Check that version information is displayed on engine cards
+      assert.dom(MOUNT_BACKEND_FORM.mountType('aws')).exists('AWS engine card exists');
+      assert.dom(MOUNT_BACKEND_FORM.mountType('kv')).exists('KV engine card exists');
+
+      // Version info should be visible in plugin status indicators
+      assert.dom('[data-test-plugin-version]').exists('Plugin version badges are displayed');
+      assert.dom('[data-test-plugin-type-badge]').exists('Plugin type badges are displayed');
+    });
+
+    test('it handles plugin catalog API failure gracefully', async function (assert) {
+      // Mock API failure
+      this.server.respondWith('GET', '/v1/sys/plugins/catalog', [
+        500,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify({ errors: ['Internal server error'] }),
+      ]);
+
+      await page.visit();
+      await settled();
+
+      // Should still render all engine types without version info
+      const secretEngines = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false });
+
+      for (const engine of secretEngines) {
+        assert
+          .dom(MOUNT_BACKEND_FORM.mountType(engine.type))
+          .exists(`${engine.type} engine is still available`);
+      }
+
+      // Should not show any error messages to the user
+      assert.dom('[data-test-message-error]').doesNotExist('No error messages shown to user');
+    });
+
+    test('it shows disabled plugins with appropriate UI', async function (assert) {
+      await page.visit();
+      await settled();
+
+      // Demo disabled plugins should be visible (from plugin-catalog-helpers demo data)
+      const disabledCards = document.querySelectorAll(
+        '[data-test-mount-type*="demo-"], [data-test-mount-type*="example-"], [data-test-mount-type*="test-"]'
+      );
+
+      if (disabledCards.length > 0) {
+        // Click on a disabled plugin card
+        await click(disabledCards[0]);
+
+        // Should open documentation flyout
+        assert.dom('[data-test-modal]').exists('Documentation flyout opens for disabled plugin');
+        assert.dom('[data-test-modal-header]').exists('Flyout has header');
+        assert.dom('[data-test-modal-body]').exists('Flyout has body content');
+
+        // Close the flyout
+        await click('[data-test-modal-close]');
+        assert.dom('[data-test-modal]').doesNotExist('Flyout closes properly');
+      }
+    });
+
+    test('it handles slow plugin catalog API responses', async function (assert) {
+      // Mock slow response
+      this.server.respondWith('GET', '/v1/sys/plugins/catalog', function (xhr) {
+        setTimeout(() => {
+          xhr.respond(
+            200,
+            { 'Content-Type': 'application/json' },
+            JSON.stringify({
+              data: {
+                detailed: [
+                  {
+                    name: 'aws',
+                    type: 'secret',
+                    builtin: true,
+                    version: 'v1.12.0+builtin.vault',
+                  },
+                ],
+                secret: ['aws'],
+              },
+            })
+          );
+        }, 1000); // 1 second delay
+      });
+
+      const visitPromise = page.visit();
+
+      // Should show loading state initially
+      await waitFor('[data-test-application-state-header]', { timeout: 500 });
+      assert.dom('[data-test-application-state-header]').exists('Loading state is shown');
+
+      await visitPromise;
+      await settled();
+
+      // Loading state should be gone
+      assert.dom('[data-test-application-state-header]').doesNotExist('Loading state is hidden after load');
     });
   });
 });

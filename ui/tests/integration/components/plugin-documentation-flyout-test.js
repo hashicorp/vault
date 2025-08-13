@@ -85,6 +85,16 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
         'https://developer.hashicorp.com/vault/docs/secrets/aws',
         'Documentation link points to correct URL'
       );
+    assert
+      .dom('[data-test-register-plugins-link]')
+      .hasAttribute(
+        'href',
+        'https://developer.hashicorp.com/vault/docs/plugins/plugin-development',
+        'Plugin development link points to correct URL'
+      );
+    assert
+      .dom('[data-test-register-plugins-link]')
+      .containsText('Plugin Development Guide', 'Plugin development link has correct text');
   });
 
   test('it calls onClose when close button is clicked', async function (assert) {
