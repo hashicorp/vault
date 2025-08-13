@@ -79,8 +79,8 @@ export function addVersionsToEngines(
 
         return {
           ...engine,
-          builtin: representativePlugin?.builtin ?? true, // Database engine is typically builtin
-          deprecationStatus: representativePlugin?.deprecation_status || 'supported',
+          builtin: representativePlugin?.builtin,
+          deprecationStatus: representativePlugin?.deprecation_status,
           version: representativePlugin?.version,
           isAvailable: true,
           isExternalPlugin: false,
