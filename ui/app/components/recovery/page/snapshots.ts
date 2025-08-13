@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
-import Component from '@glimmer/component';
+
 import type NamespaceService from 'vault/services/namespace';
 import type VersionService from 'vault/services/version';
 

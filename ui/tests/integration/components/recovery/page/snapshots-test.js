@@ -45,6 +45,8 @@ module('Integration | Component | recovery/snapshots', function (hooks) {
     assert
       .dom(GENERAL.emptyStateActions)
       .hasText('Learn more about upgrading', 'CE empty state action renders');
+
+    assert.dom(SELECTORS.badge('enterprise')).exists();
   });
 
   test('it displays empty state in non root namespace', async function (assert) {
