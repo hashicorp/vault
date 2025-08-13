@@ -1,0 +1,14 @@
+<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-s has-top-bottom-margin-12">
+  <Hds::Form::Toggle::Group as |G|>
+    {{! Title doesn't come from anywhere, so hardcoded? }}
+    <G.Legend>Security Card</G.Legend>
+    <G.ToggleField name="local" @id="local" as |F|>
+      <F.Label>Local</F.Label>
+      <F.HelperText>Secrets stay in one cluster and are not replicated.</F.HelperText>
+    </G.ToggleField>
+    <G.ToggleField name="seal-wrap" @id="seal-wrap" as |F|>
+      <F.Label>Seal wrap</F.Label>
+      <F.HelperText>Wrap secrets with an additional encryption layer using a seal.</F.HelperText>
+    </G.ToggleField>
+  </Hds::Form::Toggle::Group>
+</Hds::Card::Container>
