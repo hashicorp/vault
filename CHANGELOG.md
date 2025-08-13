@@ -20,7 +20,7 @@ BUG FIXES:
 
 SECURITY:
 
-* audit: privileged vault operator may execute code on the underlying host (CVE-2025-6000). Add additional verifications to the target of file audit sinks. [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
+* audit: **breaking change** privileged vault operator may execute code on the underlying host (CVE-2025-6000). Vault will not unseal if file audit devices have executable permissions (e.g., 0777, 0755) [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
 * auth/userpass: timing side-channel in vault's userpass auth method (CVE-2025-6011)[HCSEC-2025-15](https://discuss.hashicorp.com/t/hcsec-2025-15-timing-side-channel-in-vault-s-userpass-auth-method/76034)
 * core/login: vault userpass and ldap user lockout bypass (CVE-2025-6004). update alias lookahead to respect username case for LDAP and username/password. [[GH-31352](https://github.com/hashicorp/vault/pull/31352),[HCSEC-2025-16](https://discuss.hashicorp.com/t/hcsec-2025-16-vault-userpass-and-ldap-user-lockout-bypass/76035)]
 * secrets/totp: vault totp secrets engine code reuse (CVE-2025-6014) [[GH-31246](https://github.com/hashicorp/vault/pull/31246),[HCSEC-2025-17](https://discuss.hashicorp.com/t/hcsec-2025-17-vault-totp-secrets-engine-code-reuse/76036)]
@@ -261,7 +261,7 @@ BUG FIXES:
 
 SECURITY: 
 
-* audit: privileged vault operator may execute code on the underlying host (CVE-2025-6000). Add additional verifications to the target of file audit sinks. [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
+* audit: **breaking change** privileged vault operator may execute code on the underlying host (CVE-2025-6000). Vault will not unseal if file audit devices have executable permissions (e.g., 0777, 0755) [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
 * auth/userpass: timing side-channel in vault's userpass auth method (CVE-2025-6011)[HCSEC-2025-15](https://discuss.hashicorp.com/t/hcsec-2025-15-timing-side-channel-in-vault-s-userpass-auth-method/76034)
 * core/login: vault userpass and ldap user lockout bypass (CVE-2025-6004). update alias lookahead to respect username case for LDAP and username/password. [[GH-31352](https://github.com/hashicorp/vault/pull/31352),[HCSEC-2025-16](https://discuss.hashicorp.com/t/hcsec-2025-16-vault-userpass-and-ldap-user-lockout-bypass/76035)]
 * secrets/totp: vault totp secrets engine code reuse (CVE-2025-6014) [[GH-31246](https://github.com/hashicorp/vault/pull/31246),[HCSEC-2025-17](https://discuss.hashicorp.com/t/hcsec-2025-17-vault-totp-secrets-engine-code-reuse/76036)]
@@ -698,7 +698,7 @@ BUG FIXES:
 
 SECURITY:
 
-* audit: privileged vault operator may execute code on the underlying host (CVE-2025-6000). Add additional verifications to the target of file audit sinks. [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
+* audit: **breaking change** privileged vault operator may execute code on the underlying host (CVE-2025-6000). Vault will not unseal if file audit devices have executable permissions (e.g., 0777, 0755) [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
 * auth/userpass: timing side-channel in vault's userpass auth method (CVE-2025-6011)[HCSEC-2025-15](https://discuss.hashicorp.com/t/hcsec-2025-15-timing-side-channel-in-vault-s-userpass-auth-method/76034)
 * core/login: vault userpass and ldap user lockout bypass (CVE-2025-6004). update alias lookahead to respect username case for LDAP and username/password. [[GH-31352](https://github.com/hashicorp/vault/pull/31352),[HCSEC-2025-16](https://discuss.hashicorp.com/t/hcsec-2025-16-vault-userpass-and-ldap-user-lockout-bypass/76035)]
 * secrets/totp: vault totp secrets engine code reuse (CVE-2025-6014) [[GH-31246](https://github.com/hashicorp/vault/pull/31246),[HCSEC-2025-17](https://discuss.hashicorp.com/t/hcsec-2025-17-vault-totp-secrets-engine-code-reuse/76036)]
@@ -1866,7 +1866,7 @@ BUG FIXES:
 
 SECURITY:
 
-* audit: privileged vault operator may execute code on the underlying host (CVE-2025-6000). Add additional verifications to the target of file audit sinks. [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
+* audit: **breaking change** privileged vault operator may execute code on the underlying host (CVE-2025-6000). Vault will not unseal if file audit devices have executable permissions (e.g., 0777, 0755) [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
 * auth/userpass: timing side-channel in vault's userpass auth method (CVE-2025-6011)[HCSEC-2025-15](https://discuss.hashicorp.com/t/hcsec-2025-15-timing-side-channel-in-vault-s-userpass-auth-method/76034)
 * core/login: vault userpass and ldap user lockout bypass (CVE-2025-6004). update alias lookahead to respect username case for LDAP and username/password. [[GH-31352](https://github.com/hashicorp/vault/pull/31352),[HCSEC-2025-16](https://discuss.hashicorp.com/t/hcsec-2025-16-vault-userpass-and-ldap-user-lockout-bypass/76035)]
 * secrets/totp: vault totp secrets engine code reuse (CVE-2025-6014) [[GH-31246](https://github.com/hashicorp/vault/pull/31246),[HCSEC-2025-17](https://discuss.hashicorp.com/t/hcsec-2025-17-vault-totp-secrets-engine-code-reuse/76036)]
