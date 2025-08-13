@@ -47,11 +47,14 @@ export default class RecoverySnapshotsRoute extends Route {
       );
       return keys as string[];
     } catch (e) {
-      const { message, status } = await this.api.parseError(e);
-      if (status === 404) {
+      const error = await this.api.parseError(e);
+      if (error.status === 404) {
         return [];
       }
-      throw message;
+      throw {
+        httpStatus: error.status,
+        ...error,
+      };
     }
   }
 }
