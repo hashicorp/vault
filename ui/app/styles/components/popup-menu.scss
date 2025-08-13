@@ -37,8 +37,8 @@
 
   button.link,
   a,
-  .search-select .ember-power-select-option,
-  .search-select .ember-power-select-option[aria-current='true'],
+  .ember-power-select-option,
+  .ember-power-select-option[aria-current='true'],
   .menu-item {
     background: transparent;
     box-shadow: none;
@@ -68,8 +68,8 @@
   }
 
   button.link,
-  .search-select .ember-power-select-option,
-  .search-select .ember-power-select-option[aria-current='true'],
+  .ember-power-select-option,
+  .ember-power-select-option[aria-current='true'],
   a {
     background-color: hsl(0, 0%, 100%);
     color: var(--token-color-palette-neutral-600);
