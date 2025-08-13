@@ -4,7 +4,6 @@
  */
 
 import Component from '@glimmer/component';
-import Ember from 'ember';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { paginate } from 'core/utils/paginate-list';
@@ -49,7 +48,7 @@ interface Args {
 
 export default class ClientsTable extends Component<Args> {
   @tracked currentPage = 1;
-  @tracked pageSize = Ember.testing ? 3 : 10; // lower in tests to test pagination without seeding more data
+  @tracked pageSize = 5; // Can be overridden by @setPageSize
   @tracked sortColumn = '';
   @tracked sortDirection: SortDirection;
 

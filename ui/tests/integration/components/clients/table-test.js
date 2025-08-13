@@ -14,8 +14,9 @@ const MOCK_DATA = [
   { island: 'Maldives', visit_length: 5, is_booked: false, trip_date: '2025-06-22T00:00:00.000Z' },
   { island: 'Bora Bora', visit_length: 7, is_booked: true, trip_date: '2025-03-15T00:00:00.000Z' },
   { island: 'Fiji', visit_length: 10, is_booked: true, trip_date: '2025-09-08T00:00:00.000Z' },
-  { island: 'Seychelles', visit_length: 6, is_booked: false, trip_date: '2025-12-03T00:00:00.000Z' },
+  { island: 'Santorini', visit_length: 4, is_booked: false, trip_date: '2026-04-10T00:00:00.000Z' },
   { island: 'Maui', visit_length: 8, is_booked: true, trip_date: '2026-01-18T00:00:00.000Z' },
+  { island: 'Seychelles', visit_length: 6, is_booked: false, trip_date: '2025-12-03T00:00:00.000Z' },
 ];
 module('Integration | Component | clients/table', function (hooks) {
   setupRenderingTest(hooks);
@@ -70,7 +71,7 @@ module('Integration | Component | clients/table', function (hooks) {
     this.data = MOCK_DATA;
     await this.renderComponent();
     assert.dom(CLIENT_COUNT.card('table empty state')).doesNotExist();
-    assert.dom(GENERAL.paginationInfo).hasText(`1–3 of ${this.data.length}`);
+    assert.dom(GENERAL.paginationInfo).hasText(`1–5 of ${this.data.length}`);
     await click(GENERAL.nextPage);
     assert.dom(GENERAL.tableData(0, 'island')).hasText('Seychelles', 'it paginates the data');
   });
@@ -88,30 +89,39 @@ module('Integration | Component | clients/table', function (hooks) {
     await this.renderComponent();
     const [firstColumn, secondColumn, thirdColumn, fourthColumn] = findAll(GENERAL.icon('swap-vertical'));
     await click(firstColumn);
-    assertSortOrder(['Bora Bora', 'Fiji', 'Maldives'], { column: 'island', page: 1 });
+    assertSortOrder(['Bora Bora', 'Fiji', 'Maldives', 'Maui', 'Santorini'], { column: 'island', page: 1 });
     await click(GENERAL.nextPage);
-    assertSortOrder(['Maui', 'Seychelles'], { column: 'island', page: 2 });
+    assertSortOrder(['Seychelles'], { column: 'island', page: 2 });
 
     await click(GENERAL.prevPage);
     await click(secondColumn);
-    assertSortOrder(['5', '6', '7'], { column: 'visit_length', page: 1 });
+    assertSortOrder(['4', '5', '6', '7', '8'], { column: 'visit_length', page: 1 });
     await click(GENERAL.nextPage);
-    assertSortOrder(['8', '10'], { column: 'visit_length', page: 2 });
+    assertSortOrder(['10'], { column: 'visit_length', page: 2 });
 
     await click(GENERAL.prevPage);
     await click(thirdColumn);
-    assertSortOrder(['false', 'false', 'true'], { column: 'is_booked', page: 1 });
+    assertSortOrder(['false', 'false', 'false', 'true', 'true'], { column: 'is_booked', page: 1 });
     await click(GENERAL.nextPage);
-    assertSortOrder(['true', 'true'], { column: 'is_booked', page: 2 });
+    assertSortOrder(['true'], { column: 'is_booked', page: 2 });
 
     await click(GENERAL.prevPage);
     await click(fourthColumn);
-    assertSortOrder(['2025-03-15T00:00:00.000Z', '2025-06-22T00:00:00.000Z', '2025-09-08T00:00:00.000Z'], {
-      column: 'trip_date',
-      page: 1,
-    });
+    assertSortOrder(
+      [
+        '2025-03-15T00:00:00.000Z',
+        '2025-06-22T00:00:00.000Z',
+        '2025-09-08T00:00:00.000Z',
+        '2025-12-03T00:00:00.000Z',
+        '2026-01-18T00:00:00.000Z',
+      ],
+      {
+        column: 'trip_date',
+        page: 1,
+      }
+    );
     await click(GENERAL.nextPage);
-    assertSortOrder(['2025-12-03T00:00:00.000Z', '2026-01-18T00:00:00.000Z'], {
+    assertSortOrder(['2026-04-10T00:00:00.000Z'], {
       column: 'trip_date',
       page: 2,
     });
@@ -125,12 +135,12 @@ module('Integration | Component | clients/table', function (hooks) {
     assert
       .dom(`${GENERAL.tableColumnHeader(2, { isAdvanced: true })} ${GENERAL.icon('arrow-down')}`)
       .exists();
-    const firstPage = ['Fiji', 'Maui', 'Bora Bora'];
+    const firstPage = ['Fiji', 'Maui', 'Bora Bora', 'Seychelles', 'Maldives'];
     firstPage.forEach((value, idx) => {
       assert.dom(GENERAL.tableData(idx, 'island')).hasText(value, `page 1, row ${idx} has ${value}`);
     });
     await click(GENERAL.nextPage);
-    const secondPage = ['Seychelles', 'Maldives'];
+    const secondPage = ['Santorini'];
     secondPage.forEach((value, idx) => {
       assert.dom(GENERAL.tableData(idx, 'island')).hasText(value, `page 2, row ${idx} has ${value}`);
     });
