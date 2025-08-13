@@ -22,7 +22,10 @@ Router.map(function () {
         this.route('recovery', function () {
           this.route('snapshots', function () {
             this.route('load');
-            this.route('snapshot', { path: '/:snapshot_id' });
+            this.route('snapshot', { path: '/:snapshot_id' }, function () {
+              this.route('manage');
+              this.route('details');
+            });
           });
         });
       }
