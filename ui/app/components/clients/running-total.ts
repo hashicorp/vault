@@ -15,9 +15,7 @@ interface Args {
   isHistoricalMonth: boolean;
   isCurrentMonth: boolean;
   runningTotals: TotalClients;
-  upgradesDuringActivity: ClientsVersionHistoryModel[];
-  responseTimestamp: string;
-  mountPath: string;
+  upgradeData: ClientsVersionHistoryModel[];
 }
 
 export default class RunningTotal extends Component<Args> {

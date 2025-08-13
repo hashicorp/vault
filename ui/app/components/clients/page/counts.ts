@@ -23,7 +23,6 @@ interface Args {
   activityError?: AdapterError;
   config: ClientsConfigModel;
   endTimestamp: string; // ISO format
-  mountPath: string;
   onFilterChange: CallableFunction;
   startTimestamp: string; // ISO format
   versionHistory: ClientsVersionHistoryModel[];
