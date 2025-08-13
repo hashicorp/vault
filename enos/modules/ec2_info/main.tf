@@ -33,7 +33,6 @@ locals {
         "15.6" = data.aws_ami.sles_15["arm64"].id
       }
       "ubuntu" = {
-        "20.04" = data.aws_ami.ubuntu_2004["arm64"].id
         "22.04" = data.aws_ami.ubuntu_2204["arm64"].id
         "24.04" = data.aws_ami.ubuntu_2404["arm64"].id
       }
@@ -54,7 +53,6 @@ locals {
         "15.6" = data.aws_ami.sles_15["x86_64"].id
       }
       "ubuntu" = {
-        "20.04" = data.aws_ami.ubuntu_2004["x86_64"].id
         "22.04" = data.aws_ami.ubuntu_2204["x86_64"].id
         "24.04" = data.aws_ami.ubuntu_2404["x86_64"].id
       }
@@ -172,28 +170,6 @@ data "aws_ami" "sles_15" {
   }
 
   owners = [local.suse_owner_id]
-}
-
-data "aws_ami" "ubuntu_2004" {
-  most_recent = true
-  for_each    = local.architectures
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-*-20.04-*-server-*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  filter {
-    name   = "architecture"
-    values = [each.value]
-  }
-
-  owners = [local.canonical_owner_id]
 }
 
 data "aws_ami" "ubuntu_2204" {
