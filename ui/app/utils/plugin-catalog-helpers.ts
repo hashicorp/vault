@@ -45,12 +45,16 @@ export interface EnhancedEngineDisplayData extends EngineDisplayData {
  * @param staticEngines - Array of static engine metadata
  * @param secretEnginesList - Array of secret engine names from catalog
  * @param secretEnginesDetailed - Array of detailed secret engine info from catalog
+ * @param databasePluginsList - Array of database plugin names from catalog
+ * @param databasePluginsDetailed - Array of detailed database plugin info from catalog
  * @returns Enhanced engines with version information and dynamically discovered plugins
  */
 export function addVersionsToEngines(
   allEngines: EngineDisplayData[],
   secretEnginesList: string[] = [],
-  secretEnginesDetailed: PluginCatalogPlugin[] = []
+  secretEnginesDetailed: PluginCatalogPlugin[] = [],
+  databasePluginsList: string[] = [],
+  databasePluginsDetailed: PluginCatalogPlugin[] = []
 ): EnhancedEngineDisplayData[] {
   if (!secretEnginesDetailed || !Array.isArray(secretEnginesDetailed)) {
     return allEngines;
@@ -90,12 +94,41 @@ export function addVersionsToEngines(
 
   // First, enhance existing static engines with catalog data
   const enhancedEngines = allEngines.map((engine) => {
+    // Special handling for Database engine
+    if (engine.type === 'database') {
+      // Database engine is available if there are any database plugins
+      const isDatabaseAvailable = databasePluginsList.length > 0 || databasePluginsDetailed.length > 0;
+
+      if (isDatabaseAvailable) {
+        // Find a representative database plugin for version info (prefer first available)
+        const representativePlugin = databasePluginsDetailed[0];
+        const cleanedVersion =
+          representativePlugin?.version?.replace(/\+builtin.*$/, '') || representativePlugin?.version;
+
+        return {
+          ...engine,
+          builtin: representativePlugin?.builtin ?? true, // Database engine is typically builtin
+          deprecation_status: representativePlugin?.deprecation_status || 'supported',
+          version: cleanedVersion,
+          isAvailable: true,
+          isExternalPlugin: false,
+          pluginData: representativePlugin,
+        };
+      } else {
+        return {
+          ...engine,
+          isAvailable: false,
+          isExternalPlugin: false,
+        };
+      }
+    }
+
     const pluginData = secretEnginesDetailed.find((plugin) => plugin.name === engine.type);
 
     if (pluginData) {
       // Clean version string by removing +builtin suffixes
       const cleanedVersion = pluginData.version?.replace(/\+builtin.*$/, '') || pluginData.version;
-      
+
       return {
         ...engine,
         builtin: pluginData.builtin,
@@ -223,7 +256,10 @@ export function addVersionsToEngines(
 
   // Only add demo plugins if we have engines with data (not in tests with empty arrays)
   const shouldAddDemoPlugins =
-    secretEnginesList.length > 0 || secretEnginesDetailed.length > 0;
+    secretEnginesList.length > 0 ||
+    secretEnginesDetailed.length > 0 ||
+    databasePluginsList.length > 0 ||
+    databasePluginsDetailed.length > 0;
 
   if (shouldAddDemoPlugins) {
     return [...enhancedEngines, ...dynamicPlugins, ...demoFakePlugins];
