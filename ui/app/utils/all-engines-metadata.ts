@@ -64,6 +64,40 @@ export function isAddonEngine(type: string, version: number) {
 
 export const ALL_ENGINES: EngineDisplayData[] = [
   {
+    pluginCategory: 'generic',
+    displayName: 'Shannon Demo',
+    glyph: 'lock',
+    isOldEngine: true,
+    mountCategory: ['secret'],
+    type: 'shannontest',
+  },
+  {
+    pluginCategory: 'cloud',
+    displayName: 'Shannon Demo',
+    glyph: 'lock',
+    isOldEngine: true,
+    mountCategory: ['secret'],
+    type: 'shannontest',
+  },
+  {
+    pluginCategory: 'cloud',
+    displayName: 'Shannon AWS',
+    glyph: 'aws-color',
+    isConfigurable: true,
+    isOldEngine: true,
+    isWIF: true,
+    mountCategory: ['secret'],
+    type: 'aws',
+  },
+  {
+    pluginCategory: 'infra',
+    displayName: 'Shannon Demo',
+    glyph: 'lock',
+    isOldEngine: true,
+    mountCategory: ['secret'],
+    type: 'shannontest',
+  },
+  {
     pluginCategory: 'cloud',
     displayName: 'AliCloud',
     glyph: 'alibaba-color',
