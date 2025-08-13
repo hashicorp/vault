@@ -39,7 +39,7 @@ export default class EnabledPluginCard extends Component {
 
   get showDeprecationBadge() {
     const { type } = this.args;
-    return type.deprecation_status && type.deprecation_status !== 'supported';
+    return type.deprecationStatus && type.deprecationStatus !== 'supported';
   }
 
   hasFeature(featureName) {

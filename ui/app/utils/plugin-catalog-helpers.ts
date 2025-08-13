@@ -38,7 +38,7 @@ export interface PluginCatalogResponse {
 export interface EnhancedEngineDisplayData extends EngineDisplayData {
   version?: string;
   builtin?: boolean;
-  deprecation_status?: string;
+  deprecationStatus?: string;
   isAvailable?: boolean;
   pluginData?: PluginCatalogPlugin;
   isExternalPlugin?: boolean; // Flag to indicate this engine was discovered from catalog, not static metadata
@@ -80,7 +80,7 @@ export function addVersionsToEngines(
         return {
           ...engine,
           builtin: representativePlugin?.builtin ?? true, // Database engine is typically builtin
-          deprecation_status: representativePlugin?.deprecation_status || 'supported',
+          deprecationStatus: representativePlugin?.deprecation_status || 'supported',
           version: representativePlugin?.version,
           isAvailable: true,
           isExternalPlugin: false,
@@ -101,7 +101,7 @@ export function addVersionsToEngines(
       return {
         ...engine,
         builtin: pluginData.builtin,
-        deprecation_status: pluginData.deprecation_status,
+        deprecationStatus: pluginData.deprecation_status,
         version: pluginData.version,
         isAvailable: true,
         isExternalPlugin: false, // Static engines are not external
@@ -150,7 +150,7 @@ export function addVersionsToEngines(
         isAvailable: true,
         // Use detailed info if available, otherwise create minimal plugin data
         builtin: detailedInfo?.builtin ?? false,
-        deprecation_status: detailedInfo?.deprecation_status,
+        deprecationStatus: detailedInfo?.deprecation_status,
         version: detailedInfo?.version,
         pluginData: detailedInfo || {
           name: secretEngineName,
@@ -192,7 +192,7 @@ export function addVersionsToEngines(
         glyph: matchingStaticEngine?.glyph || DEFAULT_EXTERNAL_PLUGIN_GLYPH, // Use glyph from matching type or default
         isAvailable: true,
         builtin: plugin.builtin,
-        deprecation_status: plugin.deprecation_status,
+        deprecationStatus: plugin.deprecation_status,
         version: plugin.version,
         pluginData: plugin,
         isExternalPlugin: true,

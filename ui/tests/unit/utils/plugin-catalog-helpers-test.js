@@ -235,14 +235,14 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
 
     const deprecatedPlugin = result.find((e) => e.type === 'deprecated-plugin');
     assert.strictEqual(
-      deprecatedPlugin.deprecation_status,
+      deprecatedPlugin.deprecationStatus,
       'deprecated',
       'Should preserve deprecation status'
     );
 
     const pendingRemovalPlugin = result.find((e) => e.type === 'pending-removal');
     assert.strictEqual(
-      pendingRemovalPlugin.deprecation_status,
+      pendingRemovalPlugin.deprecationStatus,
       'pending-removal',
       'Should preserve pending removal status'
     );

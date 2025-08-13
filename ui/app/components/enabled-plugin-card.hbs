@@ -22,7 +22,7 @@
       {{@type.displayName}}
     </Hds::Text::Body>
     {{#if this.showDeprecationBadge}}
-      <Hds::Badge @text={{capitalize @type.deprecation_status}} @color="warning" @size="small" />
+      <Hds::Badge @text={{capitalize @type.deprecationStatus}} @color="warning" @size="small" />
     {{/if}}
     {{#if this.showEnterpriseBadge}}
       <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
