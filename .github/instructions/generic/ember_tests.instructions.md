@@ -47,26 +47,27 @@ assert.ok(component.isVisible);
 - Ensure test isolation by resetting state between tests
 
 ## Mirage Server Setup
+- **Use `setupMirage(hooks)`** to automatically manage server lifecycle - no manual shutdown required
 - Place `this.server` setup at the top of test blocks when using ember-cli-mirage
 - Configure mock data that reflects realistic API responses
 - Use mirage factories for generating test data consistently
 - Reset server state between tests to ensure test isolation
 
-Example mirage setup:
+**Recommended approach** - use `setupMirage()`:
 ```javascript
+import { setupMirage } from 'ember-cli-mirage/test-support';
+
 module('Integration | Component | my-component', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks); // Automatically handles server setup and shutdown
 
   hooks.beforeEach(function () {
-    this.server = new Server();
     this.server.create('model', { id: 1, name: 'Test Item' });
-  });
-
-  hooks.afterEach(function () {
-    this.server.shutdown();
   });
 });
 ```
+
+> **Note**: Avoid manual server setup and shutdown. Use `setupMirage(hooks)` instead to prevent memory leaks and reduce boilerplate code.
 
 ## DOM Testing Best Practices
 - Use `data-test-*` selectors for DOM interactions to decouple from styling
@@ -87,11 +88,65 @@ assert.ok(find('.alert-success'));
 ```
 
 ## Test Organization
-- Group related tests in logical modules
+- **Use modules primarily for shared test setup and context**, not just organizational grouping
+- Nest modules only when tests benefit from the same `beforeEach` context or setup logic
+- Avoid excessive nesting that can make test structure confusing to navigate
 - Use descriptive test names that explain the scenario being tested
 - Include both positive and negative test cases
 - Test error handling and edge cases
 - Keep tests focused on a single behavior or outcome
+
+**Good module usage** - shared setup benefits multiple tests:
+```javascript
+module('Integration | Component | secret-form', function (hooks) {
+  setupRenderingTest(hooks);
+  setupMirage(hooks);
+
+  module('with authentication', function (hooks) {
+    hooks.beforeEach(function () {
+      // Shared setup that multiple tests need
+      this.server.create('user', { authenticated: true });
+      this.store = this.owner.lookup('service:store');
+      this.currentUser = this.store.createRecord('user', { id: 1 });
+    });
+
+    test('shows user-specific options when authenticated', function (assert) {
+      // Test that benefits from the shared authentication setup
+    });
+
+    test('allows advanced actions when authenticated', function (assert) {
+      // Another test that needs the same authentication context
+    });
+  });
+
+  module('without authentication', function (hooks) {
+    hooks.beforeEach(function () {
+      // Different shared setup for unauthenticated state
+      this.server.create('user', { authenticated: false });
+    });
+
+    test('hides sensitive options when not authenticated', function (assert) {
+      // Test that benefits from unauthenticated setup
+    });
+  });
+});
+```
+
+**Avoid** - unnecessary nesting for organization only:
+```javascript
+// Don't do this - no shared setup benefit
+module('Integration | Component | secret-form', function (hooks) {
+  module('input validation', function (hooks) {
+    test('validates required fields', function (assert) { /* ... */ });
+    test('validates field format', function (assert) { /* ... */ });
+  });
+
+  module('form submission', function (hooks) {
+    test('submits valid data', function (assert) { /* ... */ });
+    test('handles submission errors', function (assert) { /* ... */ });
+  });
+});
+```
 
 Example test structure:
 ```javascript

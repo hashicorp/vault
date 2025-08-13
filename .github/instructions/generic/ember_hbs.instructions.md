@@ -16,7 +16,7 @@ This document provides Handlebars template coding standards for HashiCorp Ember.
 - Use `Hds::Link::Inline` for external documentation links instead of `<button>` elements
 - Make `selected` attributes dynamic rather than static values - warn if static values are used
 - Refactor conditionals to wrap content rather than entire elements when possible
-- Avoid inline `style` attributes - define CSS classes in `.scss` files instead
+- Avoid inline `style` attributes and `{{style ...}}` helpers - define CSS classes in `.scss` files instead
 - Place `data-test-*` selectors as the last attribute on elements
 - Remove quotes around dynamic data attributes: `data-test-id={{value}}` not `data-test-id="{{value}}"`
 
@@ -49,6 +49,9 @@ Examples:
 
 {{!-- Bad: inline style attribute --}}
 <Hds::Button @text="Save" style="margin-top: 10px;" data-test-save />
+
+{{!-- Bad: style helper --}}
+<Hds::Button @text="Save" style={{style margin-top="10px"}} data-test-save />
 
 {{!-- Good: data-test selector at the end --}}
 <Hds::Button @text="Save" @icon="loading" disabled={{this.isLoading}} data-test-save />
