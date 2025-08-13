@@ -54,7 +54,7 @@ export default class MountBackendTypeForm extends Component {
       const response = await this.api.getPluginCatalog();
 
       if (isValidPluginCatalogResponse(response)) {
-        this.pluginCatalogData = response; // Store full response instead of just detailed array
+        this.pluginCatalogData = response?.data;
       } else {
         this.pluginCatalogError = new Error('Invalid response structure');
       }
@@ -75,12 +75,12 @@ export default class MountBackendTypeForm extends Component {
 
     // If we have plugin catalog data, merge it with static engines to add version info
     if (this.pluginCatalogData) {
-      const secretEnginesList = this.pluginCatalogData.data?.secret || [];
+      const secretEnginesList = this.pluginCatalogData?.secret || [];
       const secretEnginesDetailed =
-        this.pluginCatalogData.data?.detailed?.filter((plugin) => plugin.type === 'secret') || [];
-      const databasePluginsList = this.pluginCatalogData.data?.database || [];
+        this.pluginCatalogData?.detailed?.filter((plugin) => plugin?.type === 'secret') || [];
+      const databasePluginsList = this.pluginCatalogData?.database || [];
       const databasePluginsDetailed =
-        this.pluginCatalogData.data?.detailed?.filter((plugin) => plugin.type === 'database') || [];
+        this.pluginCatalogData?.detailed?.filter((plugin) => plugin?.type === 'database') || [];
 
       return addVersionsToEngines(
         staticEngines,
@@ -107,7 +107,7 @@ export default class MountBackendTypeForm extends Component {
   get categorizedMountTypes() {
     const categories = {};
     ['generic', 'cloud', 'infra', 'external'].forEach((category) => {
-      const allTypes = this.mountTypes.filter((type) => type.pluginCategory === category);
+      const allTypes = this.mountTypes.filter((type) => type?.pluginCategory === category);
       categories[category] = categorizeEnginesByStatus(allTypes);
     });
     return categories;
@@ -131,9 +131,9 @@ export default class MountBackendTypeForm extends Component {
 
   @action
   handleDisabledPluginClick(plugin) {
-    this.flyoutPluginName = plugin.type;
-    this.flyoutPluginType = this.args.mountCategory;
-    this.flyoutDisplayName = plugin.displayName;
+    this.flyoutPluginName = plugin?.type;
+    this.flyoutPluginType = this.args?.mountCategory;
+    this.flyoutDisplayName = plugin?.displayName;
     this.showFlyout = true;
   }
 
