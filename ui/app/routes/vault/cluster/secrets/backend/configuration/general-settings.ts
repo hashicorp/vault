@@ -16,17 +16,19 @@ interface RouteModel {
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: RouteModel;
-  typeDisplay: string;
+  typeDisplay: string | undefined;
   isConfigurable: boolean;
   modelId: string;
+  glyph: string | undefined;
 }
 
 export default class SecretsBackendConfigurationGeneralSettingsRoute extends Route {
   setupController(controller: RouteController, resolvedModel: RouteModel) {
     super.setupController(controller, resolvedModel);
     const engine = engineDisplayData(resolvedModel.secretsEngine.type);
-    controller.typeDisplay = engine.displayName;
-    controller.isConfigurable = engine.isConfigurable ?? false;
+    controller.typeDisplay = engine?.displayName;
+    controller.isConfigurable = engine?.isConfigurable ?? false;
+    controller.glyph = engine?.glyph;
     controller.modelId = resolvedModel.secretsEngine.id;
   }
 }
