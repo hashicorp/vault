@@ -50,11 +50,8 @@ module('Integration | Component | recovery/snapshots', function (hooks) {
   });
 
   test('it displays empty state in non root namespace', async function (assert) {
-    this.nsService = this.owner.lookup('service:namespace');
-    this.nsService.path = 'parent1/child1';
-    this.server.get('/sys/internal/ui/namespaces', () => {
-      return { data: { keys: ['parent1/', 'parent1/child1/'] } };
-    });
+    const nsService = this.owner.lookup('service:namespace');
+    nsService.setNamespace('test-ns');
 
     await render(hbs`<Recovery::Page::Snapshots @model={{this.model}}/>`);
 
@@ -70,8 +67,6 @@ module('Integration | Component | recovery/snapshots', function (hooks) {
     assert
       .dom(GENERAL.emptyStateActions)
       .hasText('Take me to root namespace', 'non root empty state action renders');
-
-    this.nsService.path = '';
   });
 
   test('it displays empty state when user cannot load snapshot', async function (assert) {
@@ -103,6 +98,7 @@ module('Integration | Component | recovery/snapshots', function (hooks) {
     assert.dom(GENERAL.emptyStateActions).hasText('Upload snapshot', 'empty state action renders');
   });
 
+  // TODO will move over to separate test file with further feature work
   test('it displays loaded snapshot card', async function (assert) {
     const expiryDate = dateFormat(
       [new Date('2023-09-20T10:51:53.961861096-04:00'), 'MMMM do yyyy, h:mm:ss a'],
