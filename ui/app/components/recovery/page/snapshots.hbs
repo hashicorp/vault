@@ -5,7 +5,7 @@
 
 {{! Currently, only a single snapshot is supported. In the future, this may change to support multiple loaded snapshots
 and a LIST view will be used then. }}
-{{#if (not @model.snapshots)}}
+{{#unless @model.snapshots}}
   {{#let (get this.emptyStateDetails this.state) as |d|}}
     <EmptyState @title={{d.title}} @icon={{d.icon}} @message={{d.message}}>
 
@@ -24,4 +24,4 @@ and a LIST view will be used then. }}
       {{/if}}
     </EmptyState>
   {{/let}}
-{{/if}}
+{{/unless}}
