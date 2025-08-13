@@ -3,15 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
+{{!-- TODO: utilize plugin catalog for auth engines (currently only implemented for secret engines) --}}
 {{#if (and (eq @mountCategory "secret") this.isLoadingPluginCatalog)}}
   <div class="has-bottom-padding-m">
     <Hds::ApplicationState as |A|>
-      <A.Header @title="Loading plugin information..." @icon="loading" />
+      <A.Header @title="Loading plugin catalog information..." @icon="loading" />
       <A.Body @text="Fetching available secret engines and their versions..." />
     </Hds::ApplicationState>
   </div>
 {{/if}}
 
+{{!-- TODO: utilize plugin catalog for auth engines (currently only implemented for secret engines) --}}
 {{#if (and this.pluginCatalogError (not this.isLoadingPluginCatalog) (eq @mountCategory "secret"))}}
   <div class="has-bottom-padding-m">
     <Hds::Alert @type="inline" @color="warning" as |A|>
