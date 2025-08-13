@@ -46,7 +46,7 @@
           {{/if}}
         </Hds::Text::Display>
       </div>
-      <div class="flex row-wrap row-gap-8 column-gap-16 has-bottom-padding-m">
+      <div class="flex row-wrap row-gap-16 column-gap-16 has-bottom-padding-m">
         {{! Display enabled plugins first }}
         {{#each categorized.enabled as |type|}}
           <EnabledPluginCard @type={{type}} @setMountType={{@setMountType}} />
@@ -54,7 +54,7 @@
 
         {{! Display vertical separator if both enabled and disabled plugins exist }}
         {{#if (and categorized.enabled.length categorized.disabled.length)}}
-          <div class="vertical-divider"></div>
+          <div class="vertical-divider has-top-bottom-margin-12"></div>
         {{/if}}
 
         {{! Display disabled plugins at the end }}
