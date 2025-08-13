@@ -4,7 +4,11 @@
  */
 
 import { module, test } from 'qunit';
-import { addVersionsToEngines, categorizeEnginesByStatus } from 'vault/utils/plugin-catalog-helpers';
+import {
+  addVersionsToEngines,
+  categorizeEnginesByStatus,
+  isValidPluginCatalogResponse,
+} from 'vault/utils/plugin-catalog-helpers';
 
 module('Unit | Utility | plugin-catalog-helpers', function () {
   test('addVersionsToEngines handles full plugin catalog response structure', function (assert) {
@@ -59,9 +63,9 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
     };
 
     const result = addVersionsToEngines(
-      staticEngines, 
-      pluginCatalogResponse.data.secret, 
-      pluginCatalogResponse.data.detailed.filter(plugin => plugin.type === 'secret')
+      staticEngines,
+      pluginCatalogResponse.data.secret,
+      pluginCatalogResponse.data.detailed.filter((plugin) => plugin.type === 'secret')
     );
     const realEngines = result.filter(
       (e) => !e.type.startsWith('demo-') && !e.type.startsWith('example-') && !e.type.startsWith('test-')

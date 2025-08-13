@@ -81,7 +81,7 @@ export default class MountBackendTypeForm extends Component {
       const databasePluginsList = this.pluginCatalogData.data?.database || [];
       const databasePluginsDetailed =
         this.pluginCatalogData.data?.detailed?.filter((plugin) => plugin.type === 'database') || [];
-      
+
       return addVersionsToEngines(
         staticEngines,
         secretEnginesList,
