@@ -22,7 +22,6 @@
 @use 'core/box';
 @use 'core/buttons';
 @use 'core/charts';
-@use 'core/charts-lineal';
 @use 'core/checkbox-and-radio';
 @use 'core/columns';
 @use 'core/containers';
@@ -55,7 +54,7 @@
 @use 'components/b64-toggle';
 @use 'components/box-label';
 @use 'components/calendar-widget';
-@use 'components/chart-container';
+@use 'components/clients-counts-card.scss';
 @use 'components/clients-date-range';
 @use 'components/cluster-banners';
 @use 'components/console-ui-panel';

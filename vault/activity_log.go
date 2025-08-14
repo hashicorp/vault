@@ -288,8 +288,11 @@ type ActivityLogExportRecord struct {
 	// MountPath is the path of the auth mount associated with the token used
 	MountPath string `json:"mount_path" mapstructure:"mount_path"`
 
-	// TokenCreationTime denotes the time at which the activity occurred formatted using RFC3339
+	// TokenCreationTime denotes the token creation timestamp formatted using RFC3339
 	TokenCreationTime string `json:"token_creation_time" mapstructure:"token_creation_time"`
+
+	// ClientFirstUsedTime denotes the timestamp at which the activity first occurred in the query period formatted using RFC3339
+	ClientFirstUsedTime string `json:"client_first_used_time,omitempty" mapstructure:"client_first_used_time"`
 
 	// Policies are the list of policy names attached to the token used
 	Policies []string `json:"policies" mapstructure:"policies"`
@@ -3209,6 +3212,13 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 				EntityGroupIDs:            []string{},
 			}
 
+			// if a client does not have usage time (clients used before upgrade to 1.21 and not seen yet after the upgrade),
+			// do not include first used time in response.
+			if e.UsageTime != 0 {
+				clientFirstUsedTimeStamp := time.Unix(e.UsageTime, 0)
+				record.ClientFirstUsedTime = clientFirstUsedTimeStamp.UTC().Format(time.RFC3339)
+			}
+
 			if e.MountAccessor != "" {
 				cacheKey := e.NamespaceID + mountPathIdentity
 
@@ -3484,6 +3494,7 @@ func baseActivityExportCSVHeader() []string {
 		"mount_path",
 		"mount_type",
 		"token_creation_time",
+		"client_first_used_time",
 	}
 }
 

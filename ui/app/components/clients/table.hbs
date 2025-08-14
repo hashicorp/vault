@@ -4,56 +4,50 @@
 }}
 
 {{#if @data}}
-  <Hds::Table
+  <Hds::AdvancedTable
     @model={{this.paginatedTableData}}
-    @columns={{array
-      (hash key="namespace" label="Namespace" isSortable=true)
-      (hash key="label" label="Mount path" isSortable=true)
-      (hash key="mount_type" label="Mount type" isSortable=true)
-      (hash key="clients" label="Counts" isSortable=true)
-    }}
-    @sortBy="clients"
-    @sortOrder="desc"
+    @columns={{@columns}}
+    {{! @sortBy and @sortOrder args presets column icon direction but do not handle sorting. 
+    Sorting happens manually because the table is paginated. }}
+    @sortBy={{this.sortColumn}}
+    @sortOrder={{this.sortDirection}}
     @onSort={{this.updateSort}}
-    data-test-clients-attribution-table
+    ...attributes
   >
     <:body as |B|>
-      <B.Tr data-test-attribution-table-row>
-        <B.Td>{{B.data.namespace}}</B.Td>
-        <B.Td>{{B.data.label}}</B.Td>
-        {{#if (eq B.data.mount_type "deleted mount")}}
-          <B.Td><Hds::Badge @text="Deleted" @type="outlined" /></B.Td>
-        {{else}}
-          <B.Td>{{B.data.mount_type}}</B.Td>
-        {{/if}}
-        <B.Td data-test-attribution-table-counts={{B.rowIndex}}>{{B.data.clients}}</B.Td>
+      <B.Tr data-test-table-row={{B.rowIndex}}>
+        {{#each this.columnKeys as |key|}}
+          {{#let (get B.data key) as |value|}}
+            {{#if (and (eq key "mount_type") (eq value "deleted mount"))}}
+              <B.Td data-test-table-data={{key}}><Hds::Badge @text="Deleted" @type="outlined" /></B.Td>
+            {{else}}
+              <B.Td data-test-table-data={{key}}>{{value}}</B.Td>
+            {{/if}}
+          {{/let}}
+        {{/each}}
       </B.Tr>
     </:body>
-  </Hds::Table>
+  </Hds::AdvancedTable>
 
   <Hds::Pagination::Numbered
-    @showSizeSelector={{false}}
-    @totalItems={{@data.length}}
     @currentPage={{this.currentPage}}
-    @pageSize={{this.pageSize}}
     @currentPageSize={{this.pageSize}}
-    @onPageChange={{this.onPageChange}}
+    @onPageChange={{fn this.handlePaginationChange "currentPage"}}
+    @onPageSizeChange={{fn this.handlePaginationChange "pageSize"}}
+    @pageSizes={{array 5 10 50 100}}
+    @showSizeSelector={{or @showPaginationSizeSelector false}}
+    @totalItems={{@data.length}}
     data-test-pagination
     class="has-top-margin-m"
   />
 {{else}}
-  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l" data-test-card="attribution">
-    <Hds::ApplicationState as |A|>
-      <A.Header @title={{this.tableHeaderMessage}} />
-      <A.Body @text={{this.tableBodyMessage}} />
-      <A.Footer as |F|>
-        <F.LinkStandalone
-          @icon="file-text"
-          @text="Client count documentation"
-          @href="https://developer.hashicorp.com/vault/docs/concepts/client-count"
-          @iconPosition="trailing"
-        />
-      </A.Footer>
-    </Hds::ApplicationState>
+  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l" data-test-card="table empty state">
+    {{#if (has-block "emptyState")}}
+      {{yield to="emptyState"}}
+    {{else}}
+      <Hds::ApplicationState as |A|>
+        <A.Header @title="No data to display" />
+      </Hds::ApplicationState>
+    {{/if}}
   </Hds::Card::Container>
 {{/if}}
