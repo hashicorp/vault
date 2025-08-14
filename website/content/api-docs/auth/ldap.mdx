@@ -111,8 +111,6 @@ This endpoint configures the LDAP auth method.
 - `enable_samaccountname_login` `(bool: false)` - (Optional) Lets Active Directory
   LDAP users log in using `sAMAccountName` or `userPrincipalName` when the
   `upndomain` parameter is set.
-- `rotation_url` `(string: "")` – <EnterpriseAlert product="vault" inline /> The LDAP server to connect to for password rotation if it is different from `url` parameter. Examples: `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`.
-
 
 @include 'rotationfields.mdx'
 
