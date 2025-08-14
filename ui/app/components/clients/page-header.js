@@ -86,6 +86,13 @@ export default class ClientsPageHeaderComponent extends Component {
     return !isSameMonth(startDateObject, endDateObject);
   }
 
+  get formattedCsvFileName() {
+    const endRange = this.showEndDate ? `-${this.formattedEndDate}` : '';
+    const csvDateRange = this.formattedStartDate ? `_${this.formattedStartDate + endRange}` : '';
+    const ns = this.namespace.path ? `_${this.namespace.path}` : '';
+    return `clients_export${ns}${csvDateRange}`;
+  }
+
   get showCommunity() {
     return this.version.isCommunity && !!this.formattedStartDate && !!this.formattedEndDate;
   }
@@ -102,17 +109,9 @@ export default class ClientsPageHeaderComponent extends Component {
     });
   }
 
-  formatFilename() {
-    const endRange = this.showEndDate ? `-${this.formattedEndDate}` : '';
-    const dateRange = this.formattedStartDate ? `_${this.formattedStartDate + endRange}` : '';
-    const ns = this.namespace.path ? `_${this.namespace.path}` : '';
-    return `clients_export${ns}${dateRange}`;
-  }
-
-  exportChartData = task({ drop: true }, async () => {
+  exportChartData = task({ drop: true }, async (filename) => {
     try {
       const contents = await this.getExportData();
-      const filename = this.formatFilename();
       this.download.download(filename, contents, this.exportFormat);
       this.showExportModal = false;
     } catch (e) {
