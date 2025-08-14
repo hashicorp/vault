@@ -65,6 +65,10 @@ func TestRotateRoot(t *testing.T) {
 	}
 }
 
+// This test relies on a docker ldap server with a suitable person object (cn=admin,dc=planetexpress,dc=com)
+// with bindpassword "admin". `PrepareTestContainer` does this for us. - see the backend_test for more details
+// It checks that rotation url is being used instead of the main URL and assures that setting rotation url does't
+// replace main URL
 func TestRotateRootWithRotationUrl(t *testing.T) {
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
 		t.Skip("skipping rotate root tests because VAULT_ACC is unset")
