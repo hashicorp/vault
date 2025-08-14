@@ -66,7 +66,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       .exists('running total component renders');
     assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
     assert.dom(CHARTS.legend).hasText('New clients');
-    const expectedColor = 'rgb(66, 105, 208)';
+    const expectedColor = 'rgb(28, 52, 95)';
     const color = getComputedStyle(find(CHARTS.legendDot(1))).backgroundColor;
     assert.strictEqual(color, expectedColor, `actual color: ${color}, expected color: ${expectedColor}`);
 
