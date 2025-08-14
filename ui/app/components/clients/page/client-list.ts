@@ -3,33 +3,38 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { tracked } from '@glimmer/tracking';
 import ActivityComponent from '../activity';
 import { action } from '@ember/object';
+import { cached } from '@glimmer/tracking';
+
+import type { ClientFilterTypes, MountClients } from 'core/utils/client-count-utils';
 
 export default class ClientsClientListPageComponent extends ActivityComponent {
-  @tracked selectedNamespace = '';
-  @tracked selectedMountPath = '';
-
-  // TODO stubbing this action here now, but it might end up being a callback in the parent to set URL query params
-  @action
-  setFilter(prop: 'selectedNamespace' | 'selectedMountPath', value: string) {
-    this[prop] = value;
+  @cached
+  get namespaceLabels() {
+    // TODO namespace list will be updated to come from the export data, not by_namespace from sys/internal/counters/activity
+    return this.args.activity.byNamespace.map((n) => n.label);
   }
 
-  @action
-  resetFilters() {
-    this.selectedNamespace = '';
-    this.selectedMountPath = '';
+  @cached
+  get mounts() {
+    // TODO same comment here
+    return this.args.activity.byNamespace.map((n) => n.mounts).flat();
   }
 
-  get namespaces() {
-    // TODO map over exported activity data for list of namespaces
-    return ['root'];
-  }
-
+  @cached
   get mountPaths() {
-    // TODO map over exported activity data for list of mountPaths
-    return [];
+    return [...new Set(this.mounts.map((m: MountClients) => m.label))];
+  }
+
+  @cached
+  get mountTypes() {
+    return [...new Set(this.mounts.map((m: MountClients) => m.mount_type))];
+  }
+
+  @action
+  handleFilter(filters: Record<ClientFilterTypes, string>) {
+    const { nsLabel, mountPath, mountType } = filters;
+    this.args.onFilterChange({ nsLabel, mountPath, mountType });
   }
 }

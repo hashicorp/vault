@@ -19,7 +19,7 @@ import { dateFormat } from 'core/helpers/date-format';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { listDestinationsTransform } from 'sync/utils/api-transforms';
 
-const { title, tab, overviewCard, cta, overview, pagination, emptyStateTitle, emptyStateMessage } = PAGE;
+const { title, tab, overviewCard, cta, overview, emptyStateTitle, emptyStateMessage } = PAGE;
 
 module('Integration | Component | sync | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -324,7 +324,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(row).exists({ count: 3 }, 'Correct number of table rows render based on page size');
     assert.dom(name(0)).hasText('destination-aws', 'First destination renders on page 1');
 
-    await click(pagination.next);
+    await click(PAGE.nextPage);
     await settled();
     assert.dom(overview.table.row).exists({ count: 3 }, 'New items are fetched and rendered on page change');
     assert.dom(name(0)).hasText('destination-gcp', 'First destination renders on page 2');

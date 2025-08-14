@@ -27,7 +27,7 @@ export const GENERAL = {
   confirmButton: '[data-test-confirm-button]', // used most often on modal or confirm popups
   confirmTrigger: '[data-test-confirm-action-trigger]',
   copyButton: '[data-test-copy-button]',
-  // there should only be one save button per view (e.g. one per form) so this does not need to be dynamic
+  // there should only be one submit button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
   button: (label: string) => (label ? `[data-test-button="${label}"]` : '[data-test-button]'),
@@ -38,6 +38,13 @@ export const GENERAL = {
   listItem: (label: string) => `[data-test-list-item="${label}"]`,
   listItemLink: '[data-test-list-item-link]',
   linkedBlock: (item: string) => `[data-test-linked-block="${item}"]`,
+
+  /* ────── Tables ────── */
+  table: (title: string) => `[data-test-table="${title}"]`,
+  tableRow: (idx?: number) => (idx ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]'),
+  tableData: (idx?: number, key?: string) => `[data-test-table-row="${idx}"] [data-test-table-data="${key}"]`,
+  tableColumnHeader: (col: number, { isAdvanced = false } = {}) =>
+    `${isAdvanced ? '.hds-advanced-table__th' : 'hds-table__th'}:nth-child(${col})`, // number is not 0-indexed, first column header is 1
 
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
@@ -130,10 +137,11 @@ export const GENERAL = {
   },
 
   /* ────── Pagination ────── */
-  pagination: {
-    next: '.hds-pagination-nav__arrow--direction-next',
-    prev: '.hds-pagination-nav__arrow--direction-prev',
-  },
+  pagination: '[data-test-pagination]',
+  paginationInfo: '.hds-pagination-info',
+  paginationSizeSelector: '.hds-pagination-size-selector select',
+  nextPage: '.hds-pagination-nav__arrow--direction-next',
+  prevPage: '.hds-pagination-nav__arrow--direction-prev',
 
   /* ────── Overview Cards ────── */
   overviewCard: {

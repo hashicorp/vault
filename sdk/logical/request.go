@@ -267,6 +267,12 @@ type Request struct {
 	// RequiresSnapshotID holds a loaded snapshot ID that the request will use,
 	// for either a read, list, or recover operation
 	RequiresSnapshotID string `json:"snapshot_id,omitempty"`
+
+	// RecoverSourcePath is the path where a recover request should read the data
+	// from. This can be empty if the request is not a recover request, or if the
+	// request is a recover request where the source path is the same as the
+	// destination path
+	RecoverSourcePath string `json:"recover_source_path,omitempty"`
 }
 
 // Clone returns a deep copy (almost) of the request.

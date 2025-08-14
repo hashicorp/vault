@@ -2058,7 +2058,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember/test-waiters@npm:^3.1.0":
+"@ember/test-waiters@npm:^3.0.0, @ember/test-waiters@npm:^3.1.0":
   version: 3.1.0
   resolution: "@ember/test-waiters@npm:3.1.0"
   dependencies:
@@ -2653,7 +2653,62 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:4.18.2, @hashicorp/design-system-components@npm:~4.18.0":
+"@hashicorp/design-system-components@npm:4.20.1":
+  version: 4.20.1
+  resolution: "@hashicorp/design-system-components@npm:4.20.1"
+  dependencies:
+    "@codemirror/commands": ^6.8.0
+    "@codemirror/lang-go": ^6.0.1
+    "@codemirror/lang-javascript": ^6.2.2
+    "@codemirror/lang-json": ^6.0.1
+    "@codemirror/lang-markdown": ^6.3.2
+    "@codemirror/lang-sql": ^6.8.0
+    "@codemirror/lang-yaml": ^6.1.2
+    "@codemirror/language": ^6.10.3
+    "@codemirror/legacy-modes": ^6.4.2
+    "@codemirror/lint": ^6.8.4
+    "@codemirror/state": ^6.5.0
+    "@codemirror/view": ^6.36.2
+    "@ember/render-modifiers": ^2.1.0
+    "@ember/string": ^3.1.1
+    "@ember/test-waiters": ^3.1.0
+    "@embroider/addon-shim": ^1.9.0
+    "@embroider/macros": ^1.16.12
+    "@embroider/util": ^1.13.2
+    "@floating-ui/dom": ^1.6.12
+    "@hashicorp/design-system-tokens": ^2.3.0
+    "@hashicorp/flight-icons": ^3.11.0
+    "@lezer/highlight": ^1.2.1
+    "@nullvoxpopuli/ember-composable-helpers": ^5.2.9
+    clipboard-polyfill: ^4.1.1
+    codemirror-lang-hcl: ^0.0.0-beta.2
+    decorator-transforms: ^2.3.0
+    ember-a11y-refocus: ^4.1.4
+    ember-cli-sass: ^11.0.1
+    ember-concurrency: ^4.0.2
+    ember-element-helper: ^0.8.6
+    ember-focus-trap: ^1.1.1
+    ember-get-config: ^2.1.1
+    ember-modifier: ^4.2.0
+    ember-power-select: ^8.6.2
+    ember-stargate: ^0.5.0
+    ember-style-modifier: ^4.4.0
+    ember-truth-helpers: ^4.0.3
+    luxon: ^3.4.2
+    prismjs: ^1.30.0
+    sass: ^1.83.0
+    tabbable: ^6.2.0
+    tippy.js: ^6.3.7
+  peerDependencies:
+    ember-engines: ">= 0.11.0"
+  peerDependenciesMeta:
+    ember-engines:
+      optional: true
+  checksum: 1b8d77f255aaf4db2c5601403bb9a63704ebfdd23333d465fc4104866e2669021ab631c74c11ca0af696894f5b2fa3aac66043cfbed5d11c6fffb7c423126847
+  languageName: node
+  linkType: hard
+
+"@hashicorp/design-system-components@npm:~4.18.0":
   version: 4.18.2
   resolution: "@hashicorp/design-system-components@npm:4.18.2"
   dependencies:
@@ -2716,6 +2771,13 @@ __metadata:
   version: 3.10.0
   resolution: "@hashicorp/flight-icons@npm:3.10.0"
   checksum: 757545760ca599aa3880a9680054dbcd2d9f7ceaac1ded4110152afed6b2ccf7a2d08940cbeb3fea2d64db77b9a75d99d7b4ef5056eb9541ee5f0a5f0002120d
+  languageName: node
+  linkType: hard
+
+"@hashicorp/flight-icons@npm:^3.11.0":
+  version: 3.12.0
+  resolution: "@hashicorp/flight-icons@npm:3.12.0"
+  checksum: 2a64c1498df3f3f20da467f3b861d41727d5d422c097b51c5a486bd2de172e24730e0ef85892c199ada74325b7adecc2f583949792f6da59d68aa053396102de
   languageName: node
   linkType: hard
 
@@ -7871,6 +7933,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ember-async-data@npm:^1.0.1":
+  version: 1.0.3
+  resolution: "ember-async-data@npm:1.0.3"
+  dependencies:
+    "@ember/test-waiters": ^3.0.0
+    "@embroider/addon-shim": ^1.8.6
+  peerDependencies:
+    ember-source: ">=4.8.4"
+  checksum: 0484ce4fd539700e48dd04adefdead83d058aec4facfb79b30dbee4206b7eab650eea1e657b5172d391ee16e522d9e96b5a76137465e31385841c31b3a6a52e6
+  languageName: node
+  linkType: hard
+
 "ember-auto-import@npm:2.10.0, ember-auto-import@npm:^2.2.4, ember-auto-import@npm:^2.4.1, ember-auto-import@npm:^2.6.3, ember-auto-import@npm:^2.7.0":
   version: 2.10.0
   resolution: "ember-auto-import@npm:2.10.0"
@@ -8888,6 +8962,32 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ember-resources@npm:^6.0.0":
+  version: 6.5.2
+  resolution: "ember-resources@npm:6.5.2"
+  dependencies:
+    "@babel/runtime": ^7.17.8
+    "@embroider/addon-shim": ^1.2.0
+    "@embroider/macros": ^1.12.3
+    ember-async-data: ^1.0.1
+  peerDependencies:
+    "@ember/test-waiters": ">= 3.0.0"
+    "@glimmer/component": ">= 1.1.2"
+    "@glimmer/tracking": ">= 1.1.2"
+    "@glint/template": ^1.0.0-beta.3 || >= 1.0.0
+    ember-concurrency: ^2.0.0 || >= 3.0.0
+    ember-source: ^3.28.0 || ^4.0.0 || >= 5.0.0
+  peerDependenciesMeta:
+    "@ember/test-waiters":
+      optional: true
+    "@glimmer/component":
+      optional: true
+    ember-concurrency:
+      optional: true
+  checksum: 77e85a7951a3ce6785d7355161366c3a2f680a72cfc68c543215c57ae826dc4125059da355d56be4a4c1c8469c37c0e35c10e8034703f3f020401716de252c54
+  languageName: node
+  linkType: hard
+
 "ember-responsive@npm:5.0.0":
   version: 5.0.0
   resolution: "ember-responsive@npm:5.0.0"
@@ -9016,6 +9116,19 @@ __metadata:
     ember-resources: ^5.0.1
     tracked-maps-and-sets: ^3.0.1
   checksum: b41c0dd65c59e298d0a9f9b31fd5035b7824d8ebc0a92b47d52dc559b553ade3e9126bc4f647521138f09b34f80ed297300b6d428583b9a294de5071d5890bf6
+  languageName: node
+  linkType: hard
+
+"ember-stargate@npm:^0.5.0":
+  version: 0.5.0
+  resolution: "ember-stargate@npm:0.5.0"
+  dependencies:
+    "@ember/render-modifiers": ^2.0.0
+    "@embroider/addon-shim": ^1.0.0
+    "@glimmer/component": ^1.1.2
+    ember-resources: ^6.0.0
+    tracked-maps-and-sets: ^3.0.1
+  checksum: 0eff70822205580a5aad41e185dd726c45c9f3308de6f7cb16a5c333b690cdc6bb5b707520c9df258331194d0c66b3d4292d845fda91d62eac4ff1c9af1efe17
   languageName: node
   linkType: hard
 
@@ -13253,6 +13366,13 @@ __metadata:
   version: 3.6.1
   resolution: "luxon@npm:3.6.1"
   checksum: bc6c24dde90f4263f548cc5a4ea3328e9c9511bee0b2255bd319639712862f1eb14a39c1b2dcbff8a8bf6686996d28f45b8fc902994a72dd05a29cef1269a6a4
+  languageName: node
+  linkType: hard
+
+"luxon@npm:^3.4.2":
+  version: 3.7.1
+  resolution: "luxon@npm:3.7.1"
+  checksum: 19e5b20304f2e558b1e5e1f4f04f227419642d373f7c10ccf8f0e7d63c05828187a6aa39d70caf87d18a4834800dcbf29cf5f5d81d03c7d2471cd0b61cee97f6
   languageName: node
   linkType: hard
 
@@ -18455,7 +18575,7 @@ __metadata:
     "@ember/test-waiters": ~4.1.0
     "@glimmer/component": ~1.1.2
     "@glimmer/tracking": ~1.1.2
-    "@hashicorp/design-system-components": 4.18.2
+    "@hashicorp/design-system-components": 4.20.1
     "@hashicorp/vault-client-typescript": hashicorp/vault-client-typescript
     "@hashicorp/vault-reporting": "portal:./vault-reporting"
     "@icholy/duration": ~5.1.0

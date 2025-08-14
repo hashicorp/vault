@@ -3,8 +3,15 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if this.isBase64}}
-  Decode from base64
-{{else}}
-  Encode to base64
-{{/if}}
+<button
+  type="button"
+  class="button b64-toggle {{if @isInput 'is-input' 'is-textarea'}}"
+  {{on "click" this.handleClick}}
+  ...attributes
+>
+  {{#if this.isBase64}}
+    Decode from base64
+  {{else}}
+    Encode to base64
+  {{/if}}
+</button>

@@ -171,7 +171,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     this.mountPath = 'auth/authid0';
 
     let assertion = (params) =>
-      assert.deepEqual(params, { ns: undefined, mountPath: undefined }, 'Auth mount cleared with namespace');
+      assert.deepEqual(params, { ns: undefined, mountPath: '' }, 'Auth mount cleared with namespace');
     this.onFilterChange = (params) => {
       if (assertion) {
         assertion(params);

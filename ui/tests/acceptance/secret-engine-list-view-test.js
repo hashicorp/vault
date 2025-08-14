@@ -176,7 +176,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     }
 
     // navigate and check that details view is shown from non-nested secrets
-    await click(GENERAL.pagination.next);
+    await click(GENERAL.nextPage);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${enginePath1}/list?page=2`,
@@ -217,7 +217,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       'After clicking a nested secret it navigates to the children list view.'
     );
 
-    await click(GENERAL.pagination.next);
+    await click(GENERAL.nextPage);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${enginePath1}/list/${parentPath}/?page=2`,
