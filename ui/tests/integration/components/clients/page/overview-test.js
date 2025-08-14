@@ -5,15 +5,15 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { fillIn, findAll, render, triggerEvent } from '@ember/test-helpers';
+import { click, fillIn, findAll, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients/client-count-helpers';
 import { filterActivityResponse } from 'vault/mirage/handlers/clients';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
-import { flattenMounts } from 'core/utils/client-count-utils';
+import { ClientFilters, flattenMounts } from 'core/utils/client-count-utils';
 
 module('Integration | Component | clients/page/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -108,11 +108,46 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     assert.dom(GENERAL.tableData(0, 'clients')).hasText(`${topMount.clients}`);
   });
 
+  test('it renders dropdown lists from activity response to filter table data', async function (assert) {
+    const expectedNamespaces = this.activity.byNamespace.map((n) => n.label);
+    const mounts = flattenMounts(this.mostRecentMonth.new_clients.namespaces);
+    const expectedMountPaths = [...new Set(mounts.map((m) => m.mount_path))];
+    const expectedMountTypes = [...new Set(mounts.map((m) => m.mount_type))];
+    await this.renderComponent();
+    // Assert filters do not exist until month is selected
+    assert.dom(FILTERS.dropdownToggle(ClientFilters.NAMESPACE)).doesNotExist();
+    assert.dom(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH)).doesNotExist();
+    assert.dom(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE)).doesNotExist();
+    // Select month
+    await fillIn(GENERAL.selectByAttr('attribution-month'), this.mostRecentMonth.timestamp);
+    // Select each filter
+    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    findAll(`${FILTERS.dropdown(ClientFilters.NAMESPACE)} li button`).forEach((item, idx) => {
+      const expected = expectedNamespaces[idx];
+      assert.dom(item).hasText(expected, `namespace dropdown renders: ${expected}`);
+    });
+
+    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    findAll(`${FILTERS.dropdown(ClientFilters.MOUNT_PATH)} li button`).forEach((item, idx) => {
+      const expected = expectedMountPaths[idx];
+      assert.dom(item).hasText(expected, `mount_path dropdown renders: ${expected}`);
+    });
+
+    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    findAll(`${FILTERS.dropdown(ClientFilters.MOUNT_TYPE)} li button`).forEach((item, idx) => {
+      const expected = expectedMountTypes[idx];
+      assert.dom(item).hasText(expected, `mount_type dropdown renders: ${expected}`);
+    });
+  });
+
+  // * FILTERING ASSERTIONS
+  // Filtering tests are split between integration and acceptance tests
+  // because changing filters updates the URL query params/
   test('it filters attribution table by month', async function (assert) {
     await this.renderComponent();
     const mostRecentMonth = this.mostRecentMonth;
     await fillIn(GENERAL.selectByAttr('attribution-month'), mostRecentMonth.timestamp);
-    // Drill down to new_clients then grab the first namespace
+    // Drill down to new_clients then grab the first mount
     const sortedMounts = flattenMounts(mostRecentMonth.new_clients.namespaces).sort(
       (a, b) => b.clients - a.clients
     );

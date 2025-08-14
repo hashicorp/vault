@@ -168,40 +168,12 @@ module('Acceptance | clients | overview', function (hooks) {
           'warning banner displays that date queried was prior to count start date'
         );
     });
-
-    test('it renders dropdowns to filter table data', async function (assert) {
-      const expectedNamespaces = this.activity.byNamespace.map((n) => n.label);
-      const mounts = flattenMounts(this.mostRecentMonth.new_clients.namespaces);
-      const expectedMountPaths = [...new Set(mounts.map((m) => m.mount_path))];
-      const expectedMountTypes = [...new Set(mounts.map((m) => m.mount_type))];
-      // Assert filters do not exist until month is selected
-      assert.dom(FILTERS.dropdownToggle(ClientFilters.NAMESPACE)).doesNotExist();
-      assert.dom(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH)).doesNotExist();
-      assert.dom(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE)).doesNotExist();
-      // Select month
-      await fillIn(GENERAL.selectByAttr('attribution-month'), this.mostRecentMonth.timestamp);
-      // Select each filter
-      await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
-      findAll(`${FILTERS.dropdown(ClientFilters.NAMESPACE)} li button`).forEach((item, idx) => {
-        const expected = expectedNamespaces[idx];
-        assert.dom(item).hasText(expected, `namespace dropdown renders: ${expected}`);
-      });
-
-      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
-      findAll(`${FILTERS.dropdown(ClientFilters.MOUNT_PATH)} li button`).forEach((item, idx) => {
-        const expected = expectedMountPaths[idx];
-        assert.dom(item).hasText(expected, `mount_path dropdown renders: ${expected}`);
-      });
-
-      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
-      findAll(`${FILTERS.dropdown(ClientFilters.MOUNT_TYPE)} li button`).forEach((item, idx) => {
-        const expected = expectedMountTypes[idx];
-        assert.dom(item).hasText(expected, `mount_type dropdown renders: ${expected}`);
-      });
-    });
   });
 
+  // * FILTERING ASSERTIONS
   // These tests use the static data from the ACTIVITY_RESPONSE_STUB to assert filtering
+  // Filtering tests are split between integration and acceptance tests
+  // because changing filters updates the URL query params.
   module('static data', function (hooks) {
     hooks.beforeEach(async function () {
       this.server.get('sys/internal/counters/activity', () => {

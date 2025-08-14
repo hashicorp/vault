@@ -12,6 +12,7 @@
     @sortBy={{this.sortColumn}}
     @sortOrder={{this.sortDirection}}
     @onSort={{this.updateSort}}
+    {{did-update this.resetPagination @data}}
     ...attributes
   >
     <:body as |B|>
