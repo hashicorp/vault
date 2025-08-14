@@ -43,7 +43,7 @@
         @options={{this.dropdownOptions}}
         @onChange={{this.selectOrCreate}}
         @placeholderComponent={{component "search-select-placeholder"}}
-        @renderInPlace={{@renderInPlace}}
+        @renderInPlace={{true}}
         @verticalPosition="below"
         @disabled={{@disabled}}
         @ariaLabel={{or @ariaLabel @label (humanize @id)}}
