@@ -128,12 +128,10 @@ export const filterByMonthDataForMount = (
           nsNew?.mounts.find((mount) => sanitizePath(mount.label) === sanitizePath(mountPath)) ||
           emptyCounts();
         return {
-          month: m.month,
           timestamp: m.timestamp,
           ...mountData,
           namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
           new_clients: {
-            month: m.month,
             timestamp: m.timestamp,
             label: mountPath,
             namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
@@ -143,14 +141,12 @@ export const filterByMonthDataForMount = (
       }
       // if the month has data but none for this mount, return mocked zeros
       return {
-        month: m.month,
         timestamp: m.timestamp,
         label: mountPath,
         namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
         ...emptyCounts(),
         new_clients: {
           timestamp: m.timestamp,
-          month: m.month,
           label: mountPath,
           namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
           ...emptyCounts(),
@@ -173,29 +169,25 @@ export const formatDateObject = (dateObj: { monthIdx: number; year: number }, is
 export const formatByMonths = (monthsArray: ActivityMonthBlock[]): ByMonthNewClients[] => {
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
   return sortedPayload?.map((m) => {
-    const month = parseAPITimestamp(m.timestamp, 'M/yy') as string;
     const { timestamp } = m;
     if (monthIsEmpty(m)) {
       // empty month
       return {
-        month,
         timestamp,
         namespaces: [],
-        new_clients: { month, timestamp, namespaces: [] },
+        new_clients: { timestamp, namespaces: [] },
       };
     }
 
-    let newClients: ByMonthNewClients = { month, timestamp, namespaces: [] };
+    let newClients: ByMonthNewClients = { timestamp, namespaces: [] };
     if (monthWithAllCounts(m)) {
       newClients = {
-        month,
         timestamp,
         ...destructureClientCounts(m?.new_clients.counts),
         namespaces: formatByNamespace(m.new_clients.namespaces),
       };
     }
     return {
-      month,
       timestamp,
       ...destructureClientCounts(m.counts),
       namespaces: formatByNamespace(m.namespaces),
@@ -217,6 +209,7 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByN
       mounts = ns.mounts.map((m) => ({
         label: m.mount_path,
         namespace_path: nsLabel,
+        mount_path: m.mount_path,
         mount_type: m.mount_type,
         ...destructureClientCounts(m.counts),
       }));
@@ -227,23 +220,6 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByN
       mounts,
     };
   });
-};
-
-export const formatTableData = (byMonthNewClients: ByMonthNewClients[], month: string): TableData[] => {
-  const monthData = byMonthNewClients.find((m) => m.month === month);
-  const namespaces = monthData?.namespaces;
-
-  let data: TableData[] = [];
-  // iterate over namespaces to add "namespace" to each mount object
-  namespaces?.forEach((n) => {
-    const mounts: TableData[] = n.mounts.map((m) => {
-      // add namespace to mount block
-      return { ...m, namespace_path: n.label };
-    });
-    data = [...data, ...mounts];
-  });
-
-  return data;
 };
 
 // This method returns only client types from the passed object, excluding other keys such as "label".
@@ -265,6 +241,29 @@ export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[]) => {
     compareAsc(parseAPITimestamp(a.timestamp) as Date, parseAPITimestamp(b.timestamp) as Date)
   );
 };
+
+export const filterTableData = (
+  data: MountClients[],
+  filters: Record<ClientFilterTypes, string>
+): MountClients[] => {
+  // Return original data if no filters are specified
+  if (!filters || Object.values(filters).every((v) => !v)) {
+    return data;
+  }
+
+  return data.filter((datum) => {
+    // Datum must satisfy every filter
+    return Object.entries(filters).every(([filterKey, filterValue]) => {
+      // If no filter is specified for that key, return true
+      if (!filterValue) return true;
+      // Otherwise only return true if the datum matches the filter
+      return datum[filterKey as ClientFilterTypes] === filterValue;
+    });
+  });
+};
+
+export const flattenMounts = (namespaceArray: ByNamespaceClients[]) =>
+  namespaceArray.map((n) => n.mounts).flat();
 
 // TYPE GUARDS FOR CONDITIONALS
 function monthIsEmpty(month: ActivityMonthBlock): month is ActivityMonthEmpty {
@@ -316,50 +315,42 @@ export interface ByNamespaceClients extends TotalClients {
 
 export interface MountClients extends TotalClients {
   label: string;
+  mount_path: string;
   mount_type: string;
+  namespace_path: string;
 }
 
 export interface ByMonthClients extends TotalClients {
-  month: string;
   timestamp: string;
   namespaces: ByNamespaceClients[];
   new_clients: ByMonthNewClients;
 }
 
 export interface ByMonthNewClients extends TotalClientsSometimes {
-  month: string;
   timestamp: string;
   namespaces: ByNamespaceClients[];
 }
 
 export interface NamespaceByKey extends TotalClients {
-  month: string;
   timestamp: string;
   new_clients: NamespaceNewClients;
 }
 
 export interface NamespaceNewClients extends TotalClientsSometimes {
-  month: string;
   timestamp: string;
   label: string;
   mounts: MountClients[];
 }
 
 export interface MountByKey extends TotalClients {
-  month: string;
   timestamp: string;
   label: string;
   new_clients: MountNewClients;
 }
 
 export interface MountNewClients extends TotalClientsSometimes {
-  month: string;
   timestamp: string;
   label: string;
-}
-
-export interface TableData extends MountClients {
-  namespace_path: string;
 }
 
 // API RESPONSE SHAPE (prior to serialization)

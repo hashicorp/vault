@@ -42,10 +42,10 @@ module('Acceptance | clients | counts | client list', function (hooks) {
   test('filters are preset if URL includes query params', async function (assert) {
     assert.expect(4);
     const ns = 'ns1';
-    const mPath = 'auth/userpass-0';
+    const mPath = 'auth/userpass/0';
     const mType = 'userpass';
     await visit(
-      `vault/clients/counts/client-list?namespace_path=${ns}&mount_path=${mPath}&mount_type=${mType}&&start_time=1717113600`
+      `vault/clients/counts/client-list?namespace_path=${ns}&mount_path=${mPath}&mount_type=${mType}&start_time=1717113600`
     );
     assert.dom(FILTERS.tag()).exists({ count: 3 }, '3 filter tags render');
     assert.dom(FILTERS.tag(ClientFilters.NAMESPACE, ns)).exists();
@@ -56,7 +56,7 @@ module('Acceptance | clients | counts | client list', function (hooks) {
   test('selecting filters update URL query params', async function (assert) {
     assert.expect(3);
     const ns = 'ns1';
-    const mPath = 'auth/userpass-0';
+    const mPath = 'auth/userpass/0';
     const mType = 'userpass';
     const url = '/vault/clients/counts/client-list';
     await visit(url);

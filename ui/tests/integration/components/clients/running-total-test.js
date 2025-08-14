@@ -17,6 +17,7 @@ import timestamp from 'core/utils/timestamp';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 const START_TIME = getUnixTime(LICENSE_START);
 
@@ -45,7 +46,6 @@ module('Integration | Component | clients/running-total', function (hooks) {
         @isSecretsSyncActivated={{this.isSecretsSyncActivated}}
         @byMonthNewClients={{this.byMonthNewClients}}
         @runningTotals={{this.totalUsageCounts}}
-        @upgradeData={{this.upgradesDuringActivity}}
         @isHistoricalMonth={{this.isHistoricalMonth}}
       />
     `);
@@ -88,12 +88,9 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     // assert bar chart is correct
     findAll(CHARTS.xAxisLabel).forEach((e, i) => {
-      assert
-        .dom(e)
-        .hasText(
-          `${this.byMonthNewClients[i].month}`,
-          `renders x-axis labels for bar chart: ${this.byMonthNewClients[i].month}`
-        );
+      const timestamp = this.byMonthNewClients[i].timestamp;
+      const displayMonth = parseAPITimestamp(timestamp, 'M/yy');
+      assert.dom(e).hasText(displayMonth, `renders x-axis labels for bar chart: ${displayMonth}`);
     });
     assert
       .dom(CHARTS.verticalBar)
