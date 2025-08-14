@@ -102,23 +102,41 @@ func (p *AutomatedRotationParams) HasNonzeroRotationValues() bool {
 
 // AddAutomatedRotationFields adds plugin identity token fields to the given
 // field schema map.
-func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
+func AddAutomatedRotationFields(m map[string]*framework.FieldSchema, group ...string) {
+	// Set default value
+	groupName := "default"
+	if len(group) > 0 && group[0] != "" {
+		groupName = group[0]
+	}
+
 	fields := map[string]*framework.FieldSchema{
 		"rotation_schedule": {
 			Type:        framework.TypeString,
 			Description: "CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with rotation_period",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Group: groupName,
+			},
 		},
 		"rotation_window": {
 			Type:        framework.TypeDurationSecond,
 			Description: "Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Group: groupName,
+			},
 		},
 		"rotation_period": {
 			Type:        framework.TypeDurationSecond,
 			Description: "TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Group: groupName,
+			},
 		},
 		"disable_automated_rotation": {
 			Type:        framework.TypeBool,
 			Description: "If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Group: groupName,
+			},
 		},
 	}
 
