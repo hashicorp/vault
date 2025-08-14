@@ -96,7 +96,7 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
   async modelForConfiguration(section: string) {
     const { id: path, type } = this.configRouteModel;
 
-    let formOptions = { isNew: false };
+    const formOptions = { isNew: false };
     let formData;
     // make request to fetch configuration data for method
     try {
