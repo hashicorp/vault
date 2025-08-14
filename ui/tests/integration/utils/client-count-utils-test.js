@@ -233,6 +233,7 @@ module('Integration | Util | client count utils', function (hooks) {
             clients: 30,
             entity_clients: 10,
             label: 'no mount accessor (pre-1.10 upgrade?)',
+            mount_path: 'no mount accessor (pre-1.10 upgrade?)',
             mount_type: '',
             namespace_path: 'root',
             non_entity_clients: 20,
@@ -266,6 +267,7 @@ module('Integration | Util | client count utils', function (hooks) {
               clients: 2,
               entity_clients: 2,
               label: 'no mount accessor (pre-1.10 upgrade?)',
+              mount_path: 'no mount accessor (pre-1.10 upgrade?)',
               mount_type: 'no mount path (pre-1.10 upgrade?)',
               namespace_path: 'root',
               non_entity_clients: 0,
@@ -275,7 +277,8 @@ module('Integration | Util | client count utils', function (hooks) {
               acme_clients: 0,
               clients: 1,
               entity_clients: 1,
-              label: 'auth/userpass-0',
+              label: 'auth/userpass/0',
+              mount_path: 'auth/userpass/0',
               mount_type: 'userpass',
               namespace_path: 'root',
               non_entity_clients: 0,
@@ -294,7 +297,7 @@ module('Integration | Util | client count utils', function (hooks) {
         acme_clients: 0,
         clients: 3,
         entity_clients: 3,
-        month: '4/24',
+
         namespaces: [
           {
             acme_clients: 0,
@@ -307,6 +310,7 @@ module('Integration | Util | client count utils', function (hooks) {
                 clients: 2,
                 entity_clients: 2,
                 label: 'no mount accessor (pre-1.10 upgrade?)',
+                mount_path: 'no mount accessor (pre-1.10 upgrade?)',
                 mount_type: 'no mount path (pre-1.10 upgrade?)',
                 namespace_path: 'root',
                 non_entity_clients: 0,
@@ -316,7 +320,8 @@ module('Integration | Util | client count utils', function (hooks) {
                 acme_clients: 0,
                 clients: 1,
                 entity_clients: 1,
-                label: 'auth/userpass-0',
+                label: 'auth/userpass/0',
+                mount_path: 'auth/userpass/0',
                 mount_type: 'userpass',
                 namespace_path: 'root',
                 non_entity_clients: 0,
@@ -339,7 +344,6 @@ module('Integration | Util | client count utils', function (hooks) {
     hooks.beforeEach(function () {
       this.getExpected = (label, count = 0, newCount = 0) => {
         return {
-          month: '6/23',
           namespaces: [],
           label,
           timestamp: '2023-06-01T00:00:00Z',
@@ -349,7 +353,6 @@ module('Integration | Util | client count utils', function (hooks) {
           non_entity_clients: 0,
           secret_syncs: 0,
           new_clients: {
-            month: '6/23',
             timestamp: '2023-06-01T00:00:00Z',
             namespaces: [],
             label,
@@ -366,11 +369,9 @@ module('Integration | Util | client count utils', function (hooks) {
     test('it works when month has no data', async function (assert) {
       const months = [
         {
-          month: '6/23',
           timestamp: '2023-06-01T00:00:00Z',
           namespaces: [],
           new_clients: {
-            month: '6/23',
             timestamp: '2023-06-01T00:00:00Z',
             namespaces: [],
           },
@@ -385,7 +386,6 @@ module('Integration | Util | client count utils', function (hooks) {
     test('it works when month has no new clients', async function (assert) {
       const months = [
         {
-          month: '6/23',
           timestamp: '2023-06-01T00:00:00Z',
           acme_clients: 11,
           clients: 11,
@@ -413,7 +413,6 @@ module('Integration | Util | client count utils', function (hooks) {
             },
           ],
           new_clients: {
-            month: '6/23',
             timestamp: '2023-06-01T00:00:00Z',
             namespaces: [],
           },
@@ -431,7 +430,6 @@ module('Integration | Util | client count utils', function (hooks) {
     test('it works when month has new clients', async function (assert) {
       const months = [
         {
-          month: '6/23',
           timestamp: '2023-06-01T00:00:00Z',
           acme_clients: 22,
           clients: 22,
@@ -459,7 +457,6 @@ module('Integration | Util | client count utils', function (hooks) {
             },
           ],
           new_clients: {
-            month: '6/23',
             timestamp: '2023-06-01T00:00:00Z',
             namespaces: [
               {
@@ -512,7 +509,7 @@ module('Integration | Util | client count utils', function (hooks) {
         when: 'no namespace filter passed',
         result: 'it returns empty counts',
         ns: '',
-        mount: 'auth/userpass-0',
+        mount: 'auth/userpass/0',
         expected: emptyCounts,
       },
       {
@@ -526,16 +523,17 @@ module('Integration | Util | client count utils', function (hooks) {
         when: 'no matching ns/mount exists',
         result: 'it returns empty counts',
         ns: 'ns1',
-        mount: 'auth/userpass-1',
+        mount: 'auth/userpass/1',
         expected: emptyCounts,
       },
       {
         when: 'mount and label have extra slashes',
         result: 'it returns the data sanitized',
         ns: 'ns1/',
-        mount: 'auth/userpass-0',
+        mount: 'auth/userpass/0',
         expected: {
-          label: 'auth/userpass-0',
+          label: 'auth/userpass/0',
+          mount_path: 'auth/userpass/0',
           mount_type: 'userpass',
           namespace_path: 'ns1',
           acme_clients: 0,
@@ -549,9 +547,10 @@ module('Integration | Util | client count utils', function (hooks) {
         when: 'mount within root',
         result: 'it returns the data',
         ns: 'root',
-        mount: 'kvv2-engine-0',
+        mount: 'secrets/kv/0',
         expected: {
-          label: 'kvv2-engine-0',
+          label: 'secrets/kv/0',
+          mount_path: 'secrets/kv/0',
           mount_type: 'kv',
           namespace_path: 'root',
           acme_clients: 0,
