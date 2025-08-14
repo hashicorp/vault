@@ -11,6 +11,7 @@ import sinon from 'sinon';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const secretTypes = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false })
   .filter((engine) => engine.type !== 'cubbyhole')
@@ -123,7 +124,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
       render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
 
       // Check for loading state
-      assert.dom('[data-test-application-state-header]').hasText('Loading plugin information...');
+      assert.dom(GENERAL.applicationStateHeader).hasText('Loading plugin information...');
 
       // Wait for the API call to complete
       await slowPromise;
@@ -155,9 +156,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
       }
 
       // Loading state should not be visible after failure
-      assert
-        .dom('[data-test-application-state-header]')
-        .doesNotExist('Loading state is hidden after API failure');
+      assert.dom(GENERAL.applicationStateHeader).doesNotExist('Loading state is hidden after API failure');
     });
 
     test('it does not fetch plugin catalog for auth methods', async function (assert) {
@@ -182,9 +181,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
       }
 
       // Should not show error message to user for network issues
-      assert
-        .dom('[data-test-application-state-header]')
-        .doesNotExist('Should not show loading state after timeout');
+      assert.dom(GENERAL.applicationStateHeader).doesNotExist('Should not show loading state after timeout');
     });
 
     test('it handles permission denied errors appropriately', async function (assert) {
@@ -284,9 +281,9 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
         await click(disabledCard);
 
         // Should open the documentation flyout
-        assert.dom('[data-test-modal]').exists('Documentation flyout opens for disabled plugin');
+        assert.dom(GENERAL.flyout).exists('Documentation flyout opens for disabled plugin');
         assert
-          .dom('[data-test-modal-header]')
+          .dom(`${GENERAL.flyout} .hds-flyout__header`)
           .containsText('Demo Plugin Alpha', 'Shows correct plugin name in flyout');
       }
     });

@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | plugin-documentation-flyout', function (hooks) {
   setupRenderingTest(hooks);
@@ -28,14 +29,14 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
       />
     `);
 
-    assert.dom('[data-test-modal]').exists('Modal is rendered');
+    assert.dom(GENERAL.flyout).exists('Flyout is rendered');
     assert
-      .dom('[data-test-modal-header]')
+      .dom(`${GENERAL.flyout} .hds-flyout__header`)
       .containsText('AWS Secrets Engine Plugin Information', 'Header shows plugin name');
     assert
-      .dom('[data-test-modal-body]')
+      .dom(`${GENERAL.flyout} .hds-flyout__body`)
       .containsText('secrets engine is not currently enabled', 'Body explains plugin status');
-    assert.dom('[data-test-code-block]').containsText('vault secrets enable aws', 'CLI command is shown');
+    assert.dom(GENERAL.codeBlock('')).containsText('vault secrets enable aws', 'CLI command is shown');
   });
 
   test('it renders documentation flyout for auth method', async function (assert) {
@@ -56,11 +57,9 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
     `);
 
     assert
-      .dom('[data-test-modal-body]')
+      .dom(`${GENERAL.flyout} .hds-flyout__body`)
       .containsText('auth method is not currently enabled', 'Body explains auth method status');
-    assert
-      .dom('[data-test-code-block]')
-      .containsText('vault auth enable github', 'Auth CLI command is shown');
+    assert.dom(GENERAL.codeBlock('')).containsText('vault auth enable github', 'Auth CLI command is shown');
   });
 
   test('it generates correct documentation URL', async function (assert) {
@@ -79,22 +78,22 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
     `);
 
     assert
-      .dom('[data-test-documentation-link]')
+      .dom('[data-test-register-plugins-link]')
       .hasAttribute(
         'href',
-        'https://developer.hashicorp.com/vault/docs/secrets/aws',
-        'Documentation link points to correct URL'
+        'https://developer.hashicorp.com/vault/docs/plugins/register',
+        'Register plugins link points to correct URL'
       );
     assert
-      .dom('[data-test-register-plugins-link]')
+      .dom('[data-test-plugin-development-link]')
       .hasAttribute(
         'href',
         'https://developer.hashicorp.com/vault/docs/plugins/plugin-development',
         'Plugin development link points to correct URL'
       );
     assert
-      .dom('[data-test-register-plugins-link]')
-      .containsText('Plugin Development Guide', 'Plugin development link has correct text');
+      .dom('[data-test-plugin-development-link]')
+      .containsText('Plugin development guide', 'Plugin development link has correct text');
   });
 
   test('it calls onClose when close button is clicked', async function (assert) {
@@ -116,7 +115,7 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
       />
     `);
 
-    await click('[data-test-modal-close]');
+    await click('[data-test-flyout-close]');
   });
 
   test('it uses pluginName as displayName when displayName is not provided', async function (assert) {
@@ -135,7 +134,7 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
     `);
 
     assert
-      .dom('[data-test-modal-header]')
+      .dom(`${GENERAL.flyout} .hds-flyout__header`)
       .containsText('aws Plugin Information', 'Uses plugin name when display name not provided');
   });
 });

@@ -499,7 +499,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       }
 
       // Should not show any error messages to the user
-      assert.dom('[data-test-message-error]').doesNotExist('No error messages shown to user');
+      assert.dom(GENERAL.messageError).doesNotExist('No error messages shown to user');
     });
 
     test('it shows disabled plugins with appropriate UI', async function (assert) {
@@ -516,8 +516,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         await click(disabledCards[0]);
 
         // Should open documentation flyout
-        assert.dom('[data-test-modal]').exists('Documentation flyout opens for disabled plugin');
-        assert.dom('[data-test-modal-header]').exists('Flyout has header');
+        assert.dom(GENERAL.flyout).exists('Documentation flyout opens for disabled plugin');
+        assert.dom(`${GENERAL.flyout} .hds-flyout__header`).exists('Flyout has header');
         assert.dom('[data-test-modal-body]').exists('Flyout has body content');
 
         // Close the flyout
