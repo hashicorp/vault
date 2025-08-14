@@ -769,7 +769,6 @@ scenario "pr_replication" {
       hosts                  = step.create_primary_cluster_targets.hosts
       ip_version             = matrix.ip_version
       integration_host_state = step.set_up_external_integration_target.state
-      ldap_enabled           = false
       leader_host            = step.get_primary_cluster_ips.leader_host
       ports                  = global.ports
       ipv4_cidr              = step.create_vpc.ipv4_cidr
@@ -987,7 +986,6 @@ scenario "pr_replication" {
       create_state            = step.verify_secrets_engines_on_primary.state
       hosts                   = step.get_secondary_cluster_ips.follower_hosts
       ip_version              = matrix.ip_version
-      ldap_enabled            = false
       vault_addr              = step.create_secondary_cluster.api_addr_localhost
       vault_edition           = matrix.edition
       vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
