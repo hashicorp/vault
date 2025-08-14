@@ -137,7 +137,7 @@ func (e *EnosDynamicConfigReq) getSampleAttrs(ctx context.Context) (*SampleAttrs
 		DistroVersionLeap:   []string{"15.6"},
 		DistroVersionRhel:   []string{"8.10", "9.5"},
 		DistroVersionSles:   []string{"15.6"},
-		DistroVersionUbuntu: []string{"20.04", "24.04"},
+		DistroVersionUbuntu: []string{"22.04", "24.04"},
 	}
 
 	// Create our initial upgrade version list. We'll find all released versions between N-3 -> Current

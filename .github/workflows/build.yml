@@ -186,6 +186,7 @@ jobs:
         needs.setup.outputs.is-draft == 'false' &&
         (
           contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
           contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
           contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
           contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app')
@@ -240,6 +241,7 @@ jobs:
       needs.setup.outputs.is-ent-branch != 'true' && (
         needs.setup.outputs.workflow-trigger == 'schedule' ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
         contains(fromJSON(needs.setup.outputs.labels), 'build/all')
@@ -265,6 +267,7 @@ jobs:
       needs.setup.outputs.is-ent-branch == 'true' && (
         needs.setup.outputs.workflow-trigger == 'schedule' ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
         contains(fromJSON(needs.setup.outputs.labels), 'build/all')

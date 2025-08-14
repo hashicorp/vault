@@ -95,7 +95,7 @@ variable "distro_version_sles" {
 variable "distro_version_ubuntu" {
   description = "The version of ubuntu to use"
   type        = string
-  default     = "24.04" // or "20.04", "22.04"
+  default     = "24.04" // or "22.04"
 }
 
 variable "tags" {
