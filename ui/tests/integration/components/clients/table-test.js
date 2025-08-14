@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, findAll, render } from '@ember/test-helpers';
+import { click, fillIn, findAll, render, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
@@ -195,5 +195,37 @@ module('Integration | Component | clients/table', function (hooks) {
       .dom(`${GENERAL.tableData(0, 'mount_type')} .hds-badge`)
       .exists('it renders a badge for the deleted mount')
       .hasText('Deleted');
+  });
+
+  test('it resets pagination when data changes', async function (assert) {
+    // We need more than 5 rows, so here's more mock data!
+    const moreData = [
+      { island: 'Tahiti', visit_length: 12, is_booked: true, trip_date: '2025-05-10T00:00:00.000Z' },
+      { island: 'Barbados', visit_length: 6, is_booked: false, trip_date: '2025-08-25T00:00:00.000Z' },
+      { island: 'Cyprus', visit_length: 9, is_booked: true, trip_date: '2026-03-12T00:00:00.000Z' },
+      { island: 'Jamaica', visit_length: 7, is_booked: false, trip_date: '2025-11-05T00:00:00.000Z' },
+      { island: 'Crete', visit_length: 11, is_booked: true, trip_date: '2026-06-18T00:00:00.000Z' },
+      { island: 'Aruba', visit_length: 5, is_booked: false, trip_date: '2025-10-14T00:00:00.000Z' },
+    ];
+    this.data = [...MOCK_DATA, ...moreData];
+    this.showPaginationSizeSelector = true;
+    await this.renderComponent();
+    await fillIn(GENERAL.paginationSizeSelector, '10'); // Default is 5, so change to something else
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.paginationInfo).hasText(`11–12 of ${this.data.length}`, 'it navigates to next page');
+    assert.dom(GENERAL.tableRow()).exists({ count: 2 }, '2 row renders');
+    // Changing the @data arg should trigger an update and reset pagination
+    // We have to use `this.set` to trigger did-update
+    this.set('data', [
+      { island: 'Palawan', visit_length: 9, is_booked: true, trip_date: '2025-11-14T00:00:00.000Z' },
+      { island: 'Mykonos', visit_length: 3, is_booked: false, trip_date: '2026-02-28T00:00:00.000Z' },
+    ]);
+
+    // There's a workaround using next() from @ember/runloop because the Hds::Pagination::Numbered component
+    // doesn't re-render when @currentPage updates. When that's fixed at the source we should be able to remove waitFor
+    await waitFor(GENERAL.paginationInfo);
+    assert.dom(GENERAL.paginationInfo).hasText(`1–2 of ${this.data.length}`);
+    assert.dom(GENERAL.tableRow()).exists({ count: 2 }, '2 rows render');
+    assert.dom(GENERAL.paginationSizeSelector).hasValue('10', 'page selector is unchanged when data updates');
   });
 });

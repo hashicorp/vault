@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { cached, tracked } from '@glimmer/tracking';
 import { paginate } from 'core/utils/paginate-list';
+import { next } from '@ember/runloop';
 
 /**
  * @module ClientsTable
@@ -51,6 +52,9 @@ export default class ClientsTable extends Component<Args> {
   @tracked pageSize = 5; // Can be overridden by @setPageSize
   @tracked sortColumn = '';
   @tracked sortDirection: SortDirection = 'asc'; // default is 'asc' for consistency with HDS defaults
+
+  //  WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage
+  @tracked renderPagination = true;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -108,10 +112,15 @@ export default class ClientsTable extends Component<Args> {
   }
 
   @action
-  resetPagination() {
+  async resetPagination() {
     // setPageSize is intentionally NOT reset here so user changes to page size
     // are preserved regardless of whether or not the table data updates.
+    this.renderPagination = false;
     this.currentPage = 1;
+    //  WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage
+    next(() => {
+      this.renderPagination = true;
+    });
   }
 
   @action

@@ -30,17 +30,21 @@
     </:body>
   </Hds::AdvancedTable>
 
-  <Hds::Pagination::Numbered
-    @currentPage={{this.currentPage}}
-    @currentPageSize={{this.pageSize}}
-    @onPageChange={{fn this.handlePaginationChange "currentPage"}}
-    @onPageSizeChange={{fn this.handlePaginationChange "pageSize"}}
-    @pageSizes={{array 5 10 50 100}}
-    @showSizeSelector={{or @showPaginationSizeSelector false}}
-    @totalItems={{@data.length}}
-    data-test-pagination
-    class="has-top-margin-m"
-  />
+  {{! WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage }}
+  {{#if this.renderPagination}}
+    <Hds::Pagination::Numbered
+      @currentPage={{this.currentPage}}
+      @currentPageSize={{this.pageSize}}
+      @onPageChange={{fn this.handlePaginationChange "currentPage"}}
+      @onPageSizeChange={{fn this.handlePaginationChange "pageSize"}}
+      @pageSizes={{array 5 10 50 100}}
+      @showSizeSelector={{or @showPaginationSizeSelector false}}
+      @totalItems={{@data.length}}
+      data-test-pagination
+      class="has-top-margin-m"
+    />
+  {{/if}}
+
 {{else}}
   <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l" data-test-card="table empty state">
     {{#if (has-block "emptyState")}}

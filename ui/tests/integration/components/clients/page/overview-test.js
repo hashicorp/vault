@@ -156,4 +156,24 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     assert.dom(GENERAL.tableData(0, 'clients')).hasText(`${topMount.clients}`);
     assert.dom(GENERAL.tableData(0, 'mount_path')).hasText(topMount.mount_path);
   });
+
+  test('it resets pagination when a month is selected change', async function (assert) {
+    const attributionByMount = flattenMounts(this.activity.byNamespace);
+    await this.renderComponent();
+    // Decrease page size for test so we don't have to seed more data
+    await fillIn(GENERAL.paginationSizeSelector, '5');
+    assert.dom(GENERAL.paginationInfo).hasText(`1–5 of ${attributionByMount.length}`);
+    // Change pages because we should go back to page 1 when a month is selected
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.tableRow()).exists({ count: 1 }, '1 row render');
+    assert.dom(GENERAL.paginationInfo).hasText(`6–6 of ${attributionByMount.length}`);
+    // Select a month and assert table resets to page 1
+    await fillIn(GENERAL.selectByAttr('attribution-month'), this.mostRecentMonth.timestamp);
+    const monthMounts = flattenMounts(this.mostRecentMonth.new_clients.namespaces);
+    assert
+      .dom(GENERAL.paginationInfo)
+      .hasText(`1–5 of ${monthMounts.length}`, 'pagination resets to page one');
+    assert.dom(GENERAL.tableRow()).exists({ count: 5 }, '5 rows render');
+    assert.dom(GENERAL.paginationSizeSelector).hasValue('5', 'size selector does not reset to 10');
+  });
 });
