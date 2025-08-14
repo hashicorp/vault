@@ -20,12 +20,6 @@ variable "artifactory_repo" {
   default     = "hashicorp-crt-stable-local*"
 }
 
-variable "verify_aws_secrets_engine" {
-  description = "If true we'll verify AWS secrets engines behavior. Because of user creation restrictions in Doormat AWS accounts, only turn this on for CI, as it depends on resources that exist only in those accounts"
-  type        = bool
-  default     = false
-}
-
 variable "aws_region" {
   description = "The AWS region where we'll create infrastructure"
   type        = string
@@ -96,12 +90,6 @@ variable "distro_version_ubuntu" {
   description = "The version of ubuntu to use"
   type        = string
   default     = "24.04" // or "22.04"
-}
-
-variable "verify_ldap_secrets_engine" {
-  description = "If true we'll verify LDAP secrets engines behavior"
-  type        = bool
-  default     = false
 }
 
 variable "project_name" {
@@ -209,6 +197,18 @@ variable "vault_upgrade_initial_version" {
   description = "The Vault release to deploy before upgrading"
   type        = string
   default     = "1.13.13"
+}
+
+variable "verify_aws_secrets_engine" {
+  description = "If true we'll verify AWS secrets engines behavior. Because of user creation restrictions in Doormat AWS accounts, only turn this on for CI, as it depends on resources that exist only in those accounts"
+  type        = bool
+  default     = false
+}
+
+variable "verify_ldap_secrets_engine" {
+  description = "If true we'll verify LDAP secrets engines behavior"
+  type        = bool
+  default     = false
 }
 
 variable "verify_log_secrets" {
