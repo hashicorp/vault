@@ -459,7 +459,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.strictEqual(currentURL(), '/vault/replication');
       await click('[data-test-replication-type-select="performance"]');
       await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-      await click('[data-test-replication-enable]');
+      await click(GENERAL.saveButton);
       await pollCluster(this.owner);
       assert.ok(
         await waitUntil(() => find('[data-test-replication-dashboard]')),

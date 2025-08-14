@@ -127,7 +127,7 @@ module('Acceptance | Enterprise | replication-secondaries', function (hooks) {
       removed_from_cluster: false,
     }));
 
-    await click(GENERAL.button('demote'));
+    await click('[data-test-replication-action-trigger="demote"]');
     await pollCluster(this.owner); // We must poll the cluster to stimulate a cluster reload. This is skipped in ember testing so must be forced.
 
     // Spy on the route's addAnalyticsService method

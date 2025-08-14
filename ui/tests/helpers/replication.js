@@ -19,7 +19,7 @@ export async function enableReplication(type, mode) {
   await visit('/vault/replication');
   await click(`[data-test-replication-type-select="${type}"]`);
   await fillIn('[data-test-replication-cluster-mode-select]', mode);
-  await click(GENERAL.submitButton);
+  await click(GENERAL.saveButton);
 }
 
 /**
