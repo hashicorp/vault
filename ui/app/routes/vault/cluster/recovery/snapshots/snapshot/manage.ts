@@ -5,4 +5,4 @@
 
 import Route from '@ember/routing/route';
 
-export default class RecoverySnapshotsRoute extends Route {}
+export default class RecoverySnapshotsSnapshotManageRoute extends Route {}
