@@ -28,6 +28,7 @@ locals {
       "rhel" = {
         "8.10" = data.aws_ami.rhel_8["arm64"].id
         "9.6"  = data.aws_ami.rhel_9["arm64"].id
+        "10.0" = data.aws_ami.rhel_10["arm64"].id
       }
       "sles" = {
         "15.6" = data.aws_ami.sles_15["arm64"].id
@@ -48,6 +49,7 @@ locals {
       "rhel" = {
         "8.10" = data.aws_ami.rhel_8["x86_64"].id
         "9.6"  = data.aws_ami.rhel_9["x86_64"].id
+        "10.0" = data.aws_ami.rhel_10["x86_64"].id
       }
       "sles" = {
         "15.6" = data.aws_ami.sles_15["x86_64"].id
@@ -140,6 +142,28 @@ data "aws_ami" "rhel_9" {
   filter {
     name   = "name"
     values = ["RHEL-9.6*HVM-20*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.redhat_owner_id]
+}
+
+data "aws_ami" "rhel_10" {
+  most_recent = true
+  for_each    = local.architectures
+
+  filter {
+    name   = "name"
+    values = ["RHEL-10.0*HVM-20*"]
   }
 
   filter {

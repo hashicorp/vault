@@ -45,6 +45,7 @@ locals {
     rhel = {
       "8.10" = ["softhsm", "opensc"]
       "9.6"  = ["softhsm", "opensc"]
+      "10.0" = ["softhsm", "opensc"]
     }
     ubuntu = {
       "22.04" = ["softhsm", "opensc"]
@@ -57,6 +58,7 @@ locals {
     rhel = {
       "8.10" = ["softhsm"]
       "9.6"  = ["softhsm"]
+      "10.0" = ["softhsm"]
     }
     ubuntu = {
       "22.04" = ["softhsm"]
