@@ -54,4 +54,31 @@ export default class SnapshotManage extends Component<Args> {
       this.mountOptions = [];
     }
   }
+
+  // TODO will need to poll for status updates
+  get badge() {
+    const { status } = this.args.model.snapshot as { status: string };
+    switch (status) {
+      case 'error':
+        return {
+          status: 'Error',
+          color: 'critical',
+        };
+      case 'loading':
+        return {
+          status: 'Loading',
+          color: 'highlight',
+        };
+      case 'ready':
+        return {
+          status: 'Ready',
+          color: 'success',
+        };
+      default:
+        return {
+          status,
+          color: 'warning',
+        };
+    }
+  }
 }

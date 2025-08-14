@@ -12,6 +12,11 @@ export default class RecoverySnapshotsSnapshotRoute extends Route {
   @service declare readonly api: ApiService;
 
   model(params: { snapshot_id: string }) {
-    return this.api.sys.systemReadStorageRaftSnapshotLoadId(params.snapshot_id);
+    // this request needs to be made within the root namespace context to grab loaded snapshot keys
+    // as it is unsupported in any other namespace. Snapshot operations do not have this constraint.
+    return this.api.sys.systemReadStorageRaftSnapshotLoadId(
+      params.snapshot_id,
+      this.api.buildHeaders({ namespace: '' })
+    );
   }
 }

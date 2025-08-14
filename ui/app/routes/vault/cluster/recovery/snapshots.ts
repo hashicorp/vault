@@ -42,8 +42,11 @@ export default class RecoverySnapshotsRoute extends Route {
   // todo: If this req fails bc user cannot list snapshots, they cannot use the UI (confirm with product)
   async fetchSnapshots() {
     try {
+      // this request needs to be made within the root namespace context to grab loaded snapshot keys
+      // as it is unsupported in any other namespace. Snapshot operations do not have this constraint.
       const { keys } = await this.api.sys.systemListStorageRaftSnapshotLoad(
-        SystemListStorageRaftSnapshotLoadListEnum.TRUE
+        SystemListStorageRaftSnapshotLoadListEnum.TRUE,
+        this.api.buildHeaders({ namespace: '' })
       );
       return keys as string[];
     } catch (e) {
