@@ -11,67 +11,70 @@
   @runningTotals={{@activity.total}}
 />
 
-<Clients::CountsCard
-  @title="Client attribution"
-  @description="Select a month to view the client count per mount for that month."
->
-  <:subheader>
-    <Hds::Form::Select::Base
-      class="has-top-margin-m"
-      aria-label="Month"
-      name="month"
-      {{on "input" this.selectMonth}}
-      @width="200px"
-      data-test-select="attribution-month"
-      as |S|
-    >
-      <S.Options>
-        <option value="">Select month</option>
-        {{#each this.months as |m|}}
-          <option value={{m.timestamp}} selected={{eq m.timestamp this.selectedMonth}}>{{m.display}}</option>
-        {{/each}}
-      </S.Options>
-    </Hds::Form::Select::Base>
+{{! by_namespace is an empty array when there is no client count activity data }}
+{{#if @activity.byNamespace}}
+  <Clients::CountsCard
+    @title="Client attribution"
+    @description="Select a month to view the client count per mount for that month."
+  >
+    <:subheader>
+      <Hds::Form::Select::Base
+        class="has-top-margin-m"
+        aria-label="Month"
+        name="month"
+        {{on "input" this.selectMonth}}
+        @width="200px"
+        data-test-select="attribution-month"
+        as |S|
+      >
+        <S.Options>
+          <option value="">Select month</option>
+          {{#each this.months as |m|}}
+            <option value={{m.timestamp}} selected={{eq m.timestamp this.selectedMonth}}>{{m.display}}</option>
+          {{/each}}
+        </S.Options>
+      </Hds::Form::Select::Base>
 
-    {{#if this.selectedMonth}}
-      <div>
-        <Hds::Text::Body class="has-top-margin-l has-bottom-margin-m" @tag="p" @size="100" @color="faint">Use the filters to
-          view the clients attributed by path.
-        </Hds::Text::Body>
-        <Clients::FilterToolbar
-          @namespaces={{this.namespaceLabels}}
-          @mountPaths={{this.mountPaths}}
-          @mountTypes={{this.mountTypes}}
-          @onFilter={{this.handleFilter}}
-          @appliedFilters={{@filterQueryParams}}
-        />
-      </div>
-    {{/if}}
-  </:subheader>
+      {{#if this.selectedMonth}}
+        <div>
+          <Hds::Text::Body class="has-top-margin-l has-bottom-margin-m" @tag="p" @size="100" @color="faint">Use the filters
+            to view the clients attributed by path.
+          </Hds::Text::Body>
+          <Clients::FilterToolbar
+            @namespaces={{this.namespaceLabels}}
+            @mountPaths={{this.mountPaths}}
+            @mountTypes={{this.mountTypes}}
+            @onFilter={{this.handleFilter}}
+            @appliedFilters={{@filterQueryParams}}
+          />
+        </div>
+      {{/if}}
+    </:subheader>
 
-  <:table>
-    <Clients::Table
-      data-test-table="attribution"
-      @data={{this.tableData}}
-      @columns={{this.tableColumns}}
-      @initiallySortBy={{hash column="clients" direction="desc"}}
-      @setPageSize={{10}}
-      @showPaginationSizeSelector={{true}}
-    >
-      <:emptyState>
-        <Hds::ApplicationState as |A|>
-          <A.Header @title="No data found" />
-          <A.Body @text="Clear or update filters to view client count data." />
-          <A.Footer as |F|>
-            <F.LinkStandalone
-              @icon="file-text"
-              @text="Client count documentation"
-              @href="https://developer.hashicorp.com/vault/docs/concepts/client-count"
-              @iconPosition="trailing"
-            />
-          </A.Footer>
-        </Hds::ApplicationState>
-      </:emptyState>
-    </Clients::Table>
-  </:table>
-</Clients::CountsCard>
+    <:table>
+      <Clients::Table
+        data-test-table="attribution"
+        @data={{this.tableData}}
+        @columns={{this.tableColumns}}
+        @initiallySortBy={{hash column="clients" direction="desc"}}
+        @setPageSize={{10}}
+        @showPaginationSizeSelector={{true}}
+      >
+        <:emptyState>
+          <Hds::ApplicationState as |A|>
+            <A.Header @title="No data found" />
+            <A.Body @text="Clear or change filters to view client count data." />
+            <A.Footer as |F|>
+              <F.LinkStandalone
+                @icon="file-text"
+                @text="Client count documentation"
+                @href="https://developer.hashicorp.com/vault/docs/concepts/client-count"
+                @iconPosition="trailing"
+              />
+            </A.Footer>
+          </Hds::ApplicationState>
+        </:emptyState>
+      </Clients::Table>
+    </:table>
+  </Clients::CountsCard>
+{{/if}}

@@ -9,7 +9,6 @@ import { click, fillIn, findAll, render, triggerEvent } from '@ember/test-helper
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients/client-count-helpers';
-import { filterActivityResponse } from 'vault/mirage/handlers/clients';
 import { CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
@@ -20,35 +19,15 @@ module('Integration | Component | clients/page/overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.server.get('sys/internal/counters/activity', (_, req) => {
-      const namespace = req.requestHeaders['X-Vault-Namespace'];
-      if (namespace === 'no-data') {
-        return {
-          request_id: 'some-activity-id',
-          data: {
-            by_namespace: [],
-            end_time: '2024-08-31T23:59:59Z',
-            months: [],
-            start_time: '2024-01-01T00:00:00Z',
-            total: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 0,
-              secret_syncs: 0,
-            },
-          },
-        };
-      }
+    this.server.get('sys/internal/counters/activity', () => {
       return {
         request_id: 'some-activity-id',
-        data: filterActivityResponse(ACTIVITY_RESPONSE_STUB, namespace),
+        data: ACTIVITY_RESPONSE_STUB,
       };
     });
 
-    const store = this.owner.lookup('service:store');
-    this.activity = await store.queryRecord('clients/activity', {});
+    this.store = this.owner.lookup('service:store');
+    this.activity = await this.store.queryRecord('clients/activity', {});
     this.mostRecentMonth = this.activity.byMonth[this.activity.byMonth.length - 1];
     this.onFilterChange = sinon.spy();
     this.filterQueryParams = { namespace_path: '', mount_path: '', mount_type: '' };
@@ -61,14 +40,41 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       />`);
   });
 
-  test('it shows correct state message when month selection has no data', async function (assert) {
+  test('it hides attribution when there is no data', async function (assert) {
+    // Stub activity response when there's no activity data
+    this.server.get('sys/internal/counters/activity', () => {
+      return {
+        request_id: 'some-activity-id',
+        data: {
+          by_namespace: [],
+          end_time: '2024-08-31T23:59:59Z',
+          months: [],
+          start_time: '2024-01-01T00:00:00Z',
+          total: {
+            distinct_entities: 0,
+            entity_clients: 0,
+            non_entity_tokens: 0,
+            non_entity_clients: 0,
+            clients: 0,
+            secret_syncs: 0,
+          },
+        },
+      };
+    });
+    this.activity = await this.store.queryRecord('clients/activity', {});
+    await this.renderComponent();
+    assert.dom(CLIENT_COUNT.card('Client attribution')).doesNotExist('it does not render attribution card');
+    assert.dom(GENERAL.selectByAttr('attribution-month')).doesNotExist('it hides months dropdown');
+  });
+
+  test('it shows correct state message when selected month has no data', async function (assert) {
     await this.renderComponent();
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
     await fillIn(GENERAL.selectByAttr('attribution-month'), '2023-06-01T00:00:00Z');
 
     assert
       .dom(CLIENT_COUNT.card('table empty state'))
-      .hasText('No data found Clear or update filters to view client count data. Client count documentation');
+      .hasText('No data found Clear or change filters to view client count data. Client count documentation');
   });
 
   test('it shows table when month selection has data', async function (assert) {
