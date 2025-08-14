@@ -6,13 +6,15 @@
 {{#if @model.groupIds}}
   {{#each @model.directGroupIds as |gid|}}
     <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="list-item-row">
-      <Icon @name="folder" class="has-text-grey-light" />{{gid}}
+      <Icon @name="folder" class="has-text-grey-light" />
+      <Identity::GroupName @groupId={{gid}} />
     </LinkTo>
   {{/each}}
   {{#each @model.inheritedGroupIds as |gid|}}
     <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid "details"}} class="list-item-row">
       <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="has-text-black">
-        <Icon @name="folder" class="has-text-grey-light" />{{gid}}
+        <Icon @name="folder" class="has-text-grey-light" />
+        <Identity::GroupName @groupId={{gid}} />
       </LinkTo>
       <Hds::Badge @text="inherited" />
     </LinkedBlock>
