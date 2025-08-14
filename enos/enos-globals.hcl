@@ -30,7 +30,7 @@ globals {
     }
     rhel = {
       "8.10" = ["nc", "openldap-clients"]
-      "9.5"  = ["nc", "openldap-clients"]
+      "9.6"  = ["nc", "openldap-clients"]
     }
     sles = {
       // When installing Vault RPM packages on a SLES AMI, the openssl package provided
