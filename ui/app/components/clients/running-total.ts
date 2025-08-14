@@ -7,7 +7,6 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 
 import type { ByMonthNewClients, TotalClients } from 'core/utils/client-count-utils';
-import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 
 interface Args {
   isSecretsSyncActivated: boolean;
@@ -15,7 +14,6 @@ interface Args {
   isHistoricalMonth: boolean;
   isCurrentMonth: boolean;
   runningTotals: TotalClients;
-  upgradeData: ClientsVersionHistoryModel[];
 }
 
 export default class RunningTotal extends Component<Args> {

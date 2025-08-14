@@ -10,7 +10,7 @@ import { ClientFilters } from 'core/utils/client-count-utils';
 import type { ClientsCountsRouteParams } from 'vault/routes/vault/cluster/clients/counts';
 
 // these params refire the request to /sys/internal/counters/activity
-const ACTIVITY_QUERY_PARAMS = ['start_time', 'end_time', 'ns'];
+const ACTIVITY_QUERY_PARAMS = ['start_time', 'end_time'];
 // these params client-side filter table data
 const DROPDOWN_FILTERS = Object.values(ClientFilters);
 const queryParamKeys = [...ACTIVITY_QUERY_PARAMS, ...DROPDOWN_FILTERS];
@@ -19,8 +19,6 @@ export default class ClientsCountsController extends Controller {
 
   start_time: string | number | undefined = undefined;
   end_time: string | number | undefined = undefined;
-  ns: string | undefined = undefined; // TODO delete when filter toolbar is removed
-  mountPath: string | undefined = undefined; // TODO delete when filter toolbar is removed
   namespace_path = '';
   mount_path = '';
   mount_type = '';
