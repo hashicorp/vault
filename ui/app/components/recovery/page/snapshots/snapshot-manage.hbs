@@ -30,16 +30,18 @@
 <Hds::Text::Display @tag="h3" class="has-top-padding-m">Recovery or read data</Hds::Text::Display>
 
 <Hds::Layout::Flex @gap="24" class="has-bottom-padding-m">
-  <Hds::Form::SuperSelect::Single::Field
-    @onChange={{fn this.handleSelect "selectedNamespace"}}
-    @selected={{this.selectedNamespace}}
-    @options={{@model.namespaces}}
-    @searchEnabled={{true}}
-    as |F|
-  >
-    <F.Label>Namespace</F.Label>
-    <F.Options>{{F.options}}</F.Options>
-  </Hds::Form::SuperSelect::Single::Field>
+  {{#if this.namespace.inRootNamespace}}
+    <Hds::Form::SuperSelect::Single::Field
+      @onChange={{fn this.handleSelect "selectedNamespace"}}
+      @selected={{this.selectedNamespace}}
+      @options={{@model.namespaces}}
+      @searchEnabled={{true}}
+      as |F|
+    >
+      <F.Label>Namespace</F.Label>
+      <F.Options>{{F.options}}</F.Options>
+    </Hds::Form::SuperSelect::Single::Field>
+  {{/if}}
 
   <Hds::Form::SuperSelect::Single::Field
     @onChange={{fn this.handleSelect "selectedMount"}}
@@ -49,29 +51,31 @@
     as |F|
   >
     <F.Label>Secret mount</F.Label>
-    <F.Options>
+    {{!-- <F.Options>
       {{#let F.options as |option|}}
         <Hds::Text::Body @size="200">
           {{option.path}}
         </Hds::Text::Body>
       {{/let}}
 
-    </F.Options>
+    </F.Options> --}}
+    <F.Options>{{F.options}}</F.Options>
   </Hds::Form::SuperSelect::Single::Field>
 
-  <Hds::Form::TextInput::Field as |F|>
+  <Hds::Form::TextInput::Field @value={{this.resourcePath}} {{on "input" this.updateResourcePath}} as |F|>
     <F.Label>Resource Path</F.Label>
   </Hds::Form::TextInput::Field>
 
-  <Hds::Button @text="Clear" @icon="trash" @color="secondary" />
-  {{! Namespace dropdown }}
-  {{! Mount dropdown }}
-  {{! Secrets/resource }}
+  <Hds::Button @text="Clear" @icon="trash" @color="secondary" {{on "click" this.clearSelections}} />
 </Hds::Layout::Flex>
 
+{{#if this.secretData}}
+  {{! Todo add toggle for json view }}
+  <SecretFormShow @showAdvancedMode={{false}} @modelForData={{this.modelForData}} />
+{{/if}}
 <hr class="has-background-gray-300" />
 
 <Hds::ButtonSet class="has-top-padding-m">
   <Hds::Button @text="Recover" type="submit" />
-  <Hds::Button @text="Read" @color="secondary" />
+  <Hds::Button @text="Read" @color="secondary" {{on "click" this.readResource}} />
 </Hds::ButtonSet>

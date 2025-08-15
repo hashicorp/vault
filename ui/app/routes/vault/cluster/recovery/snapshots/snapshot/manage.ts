@@ -8,10 +8,12 @@ import { service } from '@ember/service';
 import type { ModelFrom } from 'vault/vault/route';
 
 import type NamespaceService from 'vault/services/namespace';
+import ApiService from 'vault/services/api';
 
 export type SnapshotManageModel = ModelFrom<RecoverySnapshotsSnapshotManageRoute>;
 
 export default class RecoverySnapshotsSnapshotManageRoute extends Route {
+  @service declare readonly api: ApiService;
   @service declare readonly namespace: NamespaceService;
 
   async model() {
@@ -25,9 +27,10 @@ export default class RecoverySnapshotsSnapshotManageRoute extends Route {
 
   async fetchNamespaces() {
     try {
-      // TODO update with api service to request sys/internal/ui/namespaces
-      await this.namespace?.findNamespacesForUser?.perform();
-      return this.namespace.accessibleNamespaces;
+      const { keys } = await this.api.sys.internalUiListNamespaces();
+
+      // Add the root namespace because `sys/internal/ui/namespaces` does not include it.
+      return ['root', ...(keys ?? [])];
     } catch {
       return [];
     }
