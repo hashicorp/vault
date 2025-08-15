@@ -701,7 +701,6 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           non_entity_clients: 4138,
           secret_syncs: 0,
         },
-
         {
           label: 'acme/pki/0',
           mount_path: 'acme/pki/0',

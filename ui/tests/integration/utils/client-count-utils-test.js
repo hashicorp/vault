@@ -12,6 +12,8 @@ import {
   formatByNamespace,
   destructureClientCounts,
   sortMonthsByTimestamp,
+  flattenMounts,
+  filterTableData,
 } from 'core/utils/client-count-utils';
 import clientsHandler from 'vault/mirage/handlers/clients';
 import {
@@ -121,6 +123,23 @@ module('Integration | Util | client count utils', function (hooks) {
         'it does not return subsequent patch versions of the same notable upgrade version'
       );
     });
+  });
+
+  test('flattenMounts: it flattens mount data', async function (assert) {
+    assert.expect(2);
+    const original = [...SERIALIZED_ACTIVITY_RESPONSE.by_namespace];
+    const expected = [
+      ...SERIALIZED_ACTIVITY_RESPONSE.by_namespace[0].mounts,
+      ...SERIALIZED_ACTIVITY_RESPONSE.by_namespace[1].mounts,
+    ];
+    const actual = flattenMounts(SERIALIZED_ACTIVITY_RESPONSE.by_namespace);
+
+    assert.propEqual(actual, expected, 'it returns mounts from each namespace object into a single array');
+    assert.propEqual(
+      SERIALIZED_ACTIVITY_RESPONSE.by_namespace,
+      original,
+      'it does not modify original by_namespace array'
+    );
   });
 
   test('formatByMonths: it formats the months array', async function (assert) {
@@ -336,5 +355,113 @@ module('Integration | Util | client count utils', function (hooks) {
       },
       'it formats combined data for monthly new_clients spanning upgrade to 1.10'
     );
+  });
+
+  module('filterTableData', function (hooks) {
+    hooks.beforeEach(async function () {
+      const activityByMount = flattenMounts(SERIALIZED_ACTIVITY_RESPONSE.by_namespace);
+      this.mockMountData = [...activityByMount];
+      // copy mock data before using the filterTableData function to assert filtering doesn't modify the original array
+      const original = [...this.mockMountData];
+      this.assertOriginal = (assert) =>
+        assert.propEqual(this.mockMountData, original, 'filtering does not mutate dataset');
+    });
+
+    test('it returns original data if no filters are passed', async function (assert) {
+      const emptyObject = filterTableData(this.mockMountData, {});
+      assert.propEqual(emptyObject, this.mockMountData, 'when filters arg is an empty object');
+      this.assertOriginal(assert);
+
+      const emptyValues = filterTableData(this.mockMountData, {
+        namespace_path: '',
+        mount_path: '',
+        mount_type: '',
+      });
+      assert.propEqual(emptyValues, this.mockMountData, 'when filters have are empty strings');
+      this.assertOriginal(assert);
+
+      const nullFilter = filterTableData(this.mockMountData, null);
+      assert.propEqual(nullFilter, this.mockMountData, 'returns all data when no filters are null');
+      this.assertOriginal(assert);
+    });
+
+    test('it filters data for a single filter', async function (assert) {
+      const namespaceFilter = filterTableData(this.mockMountData, {
+        namespace_path: 'root',
+        mount_path: '',
+        mount_type: '',
+      });
+      const expectedNamespaceFilter = this.mockMountData.filter((m) => m.namespace_path === 'root');
+      assert.propEqual(namespaceFilter, expectedNamespaceFilter, 'it filters by namespace_path');
+      this.assertOriginal(assert);
+
+      const mountPathFilter = filterTableData(this.mockMountData, {
+        namespace_path: '',
+        mount_path: 'acme/pki/0',
+        mount_type: '',
+      });
+      const expectedMountPathFilter = this.mockMountData.filter((m) => m.mount_path === 'acme/pki/0');
+      assert.propEqual(mountPathFilter, expectedMountPathFilter, 'it filters by mount_path');
+      this.assertOriginal(assert);
+
+      const mountTypeFilter = filterTableData(this.mockMountData, {
+        namespace_path: '',
+        mount_path: '',
+        mount_type: 'userpass',
+      });
+      const expectedMountTypeFilter = this.mockMountData.filter((m) => m.mount_type === 'userpass');
+      assert.propEqual(mountTypeFilter, expectedMountTypeFilter, 'it filters by mount_type');
+      this.assertOriginal(assert);
+    });
+
+    test('it filters data for a multiple filters', async function (assert) {
+      const twoFilters = filterTableData(this.mockMountData, {
+        namespace_path: 'root',
+        mount_path: '',
+        mount_type: 'userpass',
+      });
+      const expectedTwoFilters = this.mockMountData.filter(
+        (m) => m.namespace_path === 'root' && m.mount_type === 'userpass'
+      );
+      assert.propEqual(twoFilters, expectedTwoFilters, 'it filters by namespace_path and mount_type');
+      this.assertOriginal(assert);
+
+      const allFilters = filterTableData(this.mockMountData, {
+        namespace_path: 'root',
+        mount_path: 'auth/userpass/0',
+        mount_type: 'userpass',
+      });
+      const expectedAllFilters = [
+        {
+          label: 'auth/userpass/0',
+          mount_path: 'auth/userpass/0',
+          mount_type: 'userpass',
+          namespace_path: 'root',
+          acme_clients: 0,
+          clients: 8091,
+          entity_clients: 4002,
+          non_entity_clients: 4089,
+          secret_syncs: 0,
+        },
+      ];
+      assert.propEqual(allFilters, expectedAllFilters, 'it filters by all filters');
+      this.assertOriginal(assert);
+    });
+
+    test('it returns an empty array when there are no matches', async function (assert) {
+      const noMatches = filterTableData(this.mockMountData, {
+        namespace_path: 'does not exist',
+        mount_path: '',
+        mount_type: '',
+      });
+      assert.propEqual(noMatches, [], 'returns an empty array when no data matches filters');
+      this.assertOriginal(assert);
+    });
+
+    test('it returns an empty array when filter includes keys the dataset does not contain', async function (assert) {
+      const noMatches = filterTableData(this.mockMountData, { foo: 'root', bar: '' });
+      assert.propEqual(noMatches, [], 'returns an empty array when no keys match dataset');
+      this.assertOriginal(assert);
+    });
   });
 });
