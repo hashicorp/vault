@@ -4,10 +4,25 @@
  */
 
 import Controller from '@ember/controller';
+import { action } from '@ember/object';
+
 import { toLabel } from 'core/helpers/to-label';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
 export default class SecretsBackendConfigurationController extends Controller {
+  @action
+  setAndBroadcastTtl(value) {
+    const alwaysSendValue = this.valuePath === 'expiry' || this.valuePath === 'safetyBuffer';
+    const attrOptions = this.args.attr.options || {};
+    let valueToSet = 0;
+    if (value.enabled || alwaysSendValue) {
+      valueToSet = `${value.seconds}s`;
+    } else if (Object.keys(attrOptions).includes('ttlOffValue')) {
+      valueToSet = attrOptions.ttlOffValue;
+    }
+    this.setAndBroadcast(`${valueToSet}`);
+  }
+
   get displayFields() {
     const { engineType } = this.model.secretsEngine;
     const fields = ['type', 'path', 'description', 'accessor', 'local', 'seal_wrap'];
