@@ -954,10 +954,10 @@ github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSV
 github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f/go.mod h1:E3G3o1h8I7cfcXa63jLwjI0eiQQMgzzUDFVpN/nH/eA=
 github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf h1:GOPo6vn/vTN+3IwZBvXX0y5doJfSC7My0cdzelyOCsQ=
 github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf/go.mod h1:E3G3o1h8I7cfcXa63jLwjI0eiQQMgzzUDFVpN/nH/eA=
-github.com/couchbase/gocb/v2 v2.10.0 h1:NNxZ4okToU1Ylqp6F8tE41CEJQPhb2WjufryAkeubOk=
-github.com/couchbase/gocb/v2 v2.10.0/go.mod h1:OSbMfQkP7ltbKiDZhsT2mGDhkQNmvGXxptKcxAUJQ2Y=
-github.com/couchbase/gocbcore/v10 v10.7.0 h1:lAEi0PNeEGKOu8pWrPUdtLOT2oGr1J/UTdGHVPC3r/0=
-github.com/couchbase/gocbcore/v10 v10.7.0/go.mod h1:Q8JWVenMCEOuRgrDQKApHbzzPif38HzefGgRVe9apAI=
+github.com/couchbase/gocb/v2 v2.10.1 h1:5r1jngGxw3dTZdtq6Xmjq3pdU6hOwRvynvbVIp58T64=
+github.com/couchbase/gocb/v2 v2.10.1/go.mod h1:GGEJuYjrfnPHCQLcxTcIco+Puy63PS2p8QQd8FRw66I=
+github.com/couchbase/gocbcore/v10 v10.7.1 h1:6jsNDtqyfoQ8Xg6kv99rzccc3CrHbp7FjeY+ahWXTF4=
+github.com/couchbase/gocbcore/v10 v10.7.1/go.mod h1:Q8JWVenMCEOuRgrDQKApHbzzPif38HzefGgRVe9apAI=
 github.com/couchbase/gocbcoreps v0.1.3 h1:fILaKGCjxFIeCgAUG8FGmRDSpdrRggohOMKEgO9CUpg=
 github.com/couchbase/gocbcoreps v0.1.3/go.mod h1:hBFpDNPnRno6HH5cRXExhqXYRmTsFJlFHQx7vztcXPk=
 github.com/couchbase/goprotostellar v1.0.2 h1:yoPbAL9sCtcyZ5e/DcU5PRMOEFaJrF9awXYu3VPfGls=
@@ -1564,8 +1564,8 @@ github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.2 h1:uiAXyeQp5c+EbRcs+RV
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.2/go.mod h1:JGq6yIefnr3eXJ4OA8LqJCMK19asETJaTLYHlm80YqY=
 github.com/hashicorp/vault-plugin-auth-oci v0.19.0 h1:S0ZyVhcgxe8tCVTCXKvs5B5/RPzsLC9RAadeloAHyOw=
 github.com/hashicorp/vault-plugin-auth-oci v0.19.0/go.mod h1:O09a7mLRDEJpSsg+ECiQ7+Lb3VYkCoIqEet6YDWytDg=
-github.com/hashicorp/vault-plugin-database-couchbase v0.14.0 h1:0uy7F3QbkXzabSaZqNJwZDi+L+C8c2yBLtj5T0UDa/s=
-github.com/hashicorp/vault-plugin-database-couchbase v0.14.0/go.mod h1:lfOkkAPl6uFpnMBj8DgoAaBgSKLaYu1+F4wfdnxNeao=
+github.com/hashicorp/vault-plugin-database-couchbase v0.14.1-0.20250801004210-2bbceea8c8fb h1:ww0+VoNHEKSJeUMtS1p6NsA+15G87J2Xvbr09t96AA0=
+github.com/hashicorp/vault-plugin-database-couchbase v0.14.1-0.20250801004210-2bbceea8c8fb/go.mod h1:d5dNL2cON3txgNx+I5cLovK1RG8QZ4iM3Wp2W9JGg2c=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0 h1:INg3iO7VYnV4XE/nYYifEWEsqUUi/zRykFyublY6NqE=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0/go.mod h1:OjFVO/ACKW2tzNxbYjvkwucWlRzSP/f8khBeoBNVdUk=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.15.0 h1:jT3Ukxvp/ntdnn+0LtEW9YNh1TtDk0N8DxyuZJiz53c=

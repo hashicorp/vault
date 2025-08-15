@@ -146,7 +146,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.15.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.2
 	github.com/hashicorp/vault-plugin-auth-oci v0.19.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.14.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.14.1-0.20250801004210-2bbceea8c8fb
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.15.0
 	github.com/hashicorp/vault-plugin-database-redis v0.6.0
@@ -329,8 +329,8 @@ require (
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf // indirect
-	github.com/couchbase/gocb/v2 v2.10.0 // indirect
-	github.com/couchbase/gocbcore/v10 v10.7.0 // indirect
+	github.com/couchbase/gocb/v2 v2.10.1 // indirect
+	github.com/couchbase/gocbcore/v10 v10.7.1 // indirect
 	github.com/couchbase/gocbcoreps v0.1.3 // indirect
 	github.com/couchbase/goprotostellar v1.0.2 // indirect
 	github.com/couchbaselabs/gocbconnstr/v2 v2.0.0-20240607131231-fb385523de28 // indirect
