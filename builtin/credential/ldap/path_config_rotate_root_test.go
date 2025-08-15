@@ -78,13 +78,14 @@ func TestRotateRootWithRotationUrl(t *testing.T) {
 	b, store := createBackendWithStorage(t)
 	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
+	const mainDummyUrl = "ldap://rotation.example.com:389"
 	// set up auth config
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Storage:   store,
 		Data: map[string]interface{}{
-			"url":          "ldap://rotation.example.com:389",
+			"url":          mainDummyUrl,
 			"binddn":       cfg.BindDN,
 			"bindpass":     cfg.BindPassword,
 			"userdn":       cfg.UserDN,
@@ -118,7 +119,8 @@ func TestRotateRootWithRotationUrl(t *testing.T) {
 	if newCFG.BindPassword == cfg.BindPassword {
 		t.Fatalf("the password should have changed, but it didn't")
 	}
-	if newCFG.Url != "ldap://rotation.example.com:389" {
+	// expecting the newCFG url to be "ldap://rotation.example.com:389"
+	if newCFG.Url != mainDummyUrl {
 		t.Fatalf("the LDAP URL should not have changed, but it did: %s", newCFG.Url)
 	}
 }
