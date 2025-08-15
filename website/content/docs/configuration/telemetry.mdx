@@ -215,7 +215,7 @@ will return Prometheus formatted results. Most Prometheus servers automatically
 query scrape targets with these headers by default.
 
 A Vault token is required with `capabilities = ["read", "list"]` to
-/v1/sys/metrics. The Prometheus `bearer_token` or `bearer_token_file` options
+`/v1/sys/metrics`. The Prometheus `bearer_token` or `bearer_token_file` options
 must be added to the scrape job.
 
 Vault does not use the default Prometheus path, so Prometheus must be configured
