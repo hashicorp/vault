@@ -83,7 +83,7 @@ variable "distro_version_leap" {
 variable "distro_version_rhel" {
   description = "The version of RHEL to use"
   type        = string
-  default     = "9.5" // or "8.10"
+  default     = "10.0" // or "8.10", "9.6"
 }
 
 variable "distro_version_sles" {
