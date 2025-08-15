@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import isEmpty from '@ember/utils/lib/is_empty';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { sanitizePath } from 'core/utils/sanitize-path';
 import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
 import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 
@@ -35,15 +33,6 @@ export enum ClientFilters {
 }
 
 export type ClientFilterTypes = (typeof ClientFilters)[keyof typeof ClientFilters];
-
-// generates a block of total clients with 0's for use as defaults
-function emptyCounts() {
-  return CLIENT_TYPES.reduce((prev, type) => {
-    const key = type;
-    prev[key as ClientTypes] = 0;
-    return prev;
-  }, {} as TotalClientsSometimes) as TotalClients;
-}
 
 // returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
 // that occurred between timestamps (i.e. queried activity data)
@@ -82,79 +71,6 @@ export const filterVersionHistory = (
     }
   }
   return [];
-};
-
-// This method is used to return totals relevant only to the specified
-// mount path within the specified namespace.
-export const filteredTotalForMount = (
-  byNamespace: ByNamespaceClients[],
-  nsPath: string,
-  mountPath: string
-): TotalClients => {
-  if (!nsPath || !mountPath || isEmpty(byNamespace)) return emptyCounts();
-  return (
-    byNamespace
-      .find((namespace) => sanitizePath(namespace.label) === sanitizePath(nsPath))
-      ?.mounts.find((mount: MountClients) => sanitizePath(mount.label) === sanitizePath(mountPath)) ||
-    emptyCounts()
-  );
-};
-
-// This method is used to filter byMonth data and return data for only
-// the specified mount within the specified namespace. If data exists
-// for the month but not the mount, it should return zero'd data. If
-// no data exists for the month is returns the month as-is.
-export const filterByMonthDataForMount = (
-  byMonth: ByMonthClients[],
-  namespacePath: string,
-  mountPath: string
-): ByMonthClients[] => {
-  if (byMonth && namespacePath && mountPath) {
-    const months: ByMonthClients[] = JSON.parse(JSON.stringify(byMonth));
-    return [...months].map((m) => {
-      if (m?.clients === undefined) {
-        // if the month doesn't have data we can just return the block
-        return m;
-      }
-
-      const nsData = m.namespaces?.find((ns) => sanitizePath(ns.label) === sanitizePath(namespacePath));
-      const mountData = nsData?.mounts.find((mount) => sanitizePath(mount.label) === sanitizePath(mountPath));
-      if (mountData) {
-        // if we do have mount data, we need to add in new_client namespace information
-        const nsNew = m.new_clients?.namespaces?.find(
-          (ns) => sanitizePath(ns.label) === sanitizePath(namespacePath)
-        );
-        const mountNew =
-          nsNew?.mounts.find((mount) => sanitizePath(mount.label) === sanitizePath(mountPath)) ||
-          emptyCounts();
-        return {
-          timestamp: m.timestamp,
-          ...mountData,
-          namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
-          new_clients: {
-            timestamp: m.timestamp,
-            label: mountPath,
-            namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
-            ...mountNew,
-          },
-        } as ByMonthClients;
-      }
-      // if the month has data but none for this mount, return mocked zeros
-      return {
-        timestamp: m.timestamp,
-        label: mountPath,
-        namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
-        ...emptyCounts(),
-        new_clients: {
-          timestamp: m.timestamp,
-          label: mountPath,
-          namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
-          ...emptyCounts(),
-        },
-      } as ByMonthClients;
-    });
-  }
-  return byMonth;
 };
 
 // METHODS FOR SERIALIZING ACTIVITY RESPONSE
