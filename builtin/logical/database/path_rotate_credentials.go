@@ -77,7 +77,13 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
 		name := data.Get("name").(string)
-		return b.rotateRootCredentials(ctx, req, name)
+		resp, err = b.rotateRootCredentials(ctx, req, name)
+		if err != nil {
+			b.Logger().Error("failed to rotate root credential on user request", "path", req.Path, "error", err.Error())
+		} else {
+			b.Logger().Info("succesfully rotated root credential on user request", "path", req.Path)
+		}
+		return resp, err
 	}
 }
 
@@ -236,7 +242,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 		// this item back on the queue. The err should still be returned at the end
 		// of this method.
 		if err != nil {
-			b.logger.Warn("unable to rotate credentials in rotate-role", "error", err)
+			b.logger.Error("unable to rotate credentials in rotate-role on user request", "path", req.Path, "error", err.Error())
 			// Update the priority to re-try this rotation and re-add the item to
 			// the queue
 			item.Priority = time.Now().Add(10 * time.Second).Unix()
@@ -247,6 +253,8 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			}
 		} else {
 			item.Priority = role.StaticAccount.NextRotationTimeFromInput(resp.RotationTime).Unix()
+			ttl := role.StaticAccount.CredentialTTL().Seconds()
+			b.Logger().Info("rotated credential in rotate-role on user request", "path", req.Path, "TTL", ttl)
 			// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
 			item.Value = ""
 			modified = true

@@ -360,6 +360,44 @@ func (c *Core) CheckTokenWithLock(ctx context.Context, req *logical.Request, una
 	return c.CheckToken(ctx, req, unauth)
 }
 
+func (c *Core) existenceCheck(ctx context.Context, req *logical.Request) (*logical.Operation, error) {
+	existsResp, checkExists, resourceExists, err := c.router.RouteExistenceCheck(ctx, req)
+	switch err {
+	case logical.ErrUnsupportedPath:
+		// fail later via bad path to avoid confusing items in the log
+		checkExists = false
+	case logical.ErrRelativePath:
+		return nil, errutil.UserError{Err: err.Error()}
+	case nil:
+		if existsResp != nil && existsResp.IsError() {
+			return nil, existsResp.Error()
+		}
+		// Otherwise, continue on
+	default:
+		c.logger.Error("failed to run existence check", "error", err)
+		if _, ok := err.(errutil.UserError); ok {
+			return nil, err
+		} else {
+			return nil, ErrInternalError
+		}
+	}
+	var existenceCheckOp logical.Operation
+	switch {
+	case !checkExists:
+		// No existence check, so always treat it as an update operation, which is how it is pre 0.5
+		existenceCheckOp = logical.UpdateOperation
+	case resourceExists:
+		// It exists, so force an update operation
+		existenceCheckOp = logical.UpdateOperation
+	case !resourceExists:
+		// It doesn't exist, force a create operation
+		existenceCheckOp = logical.CreateOperation
+	default:
+		panic("unreachable code")
+	}
+	return &existenceCheckOp, nil
+}
+
 func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
@@ -425,41 +463,13 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	// whether a particular resource exists. Then we can mark it as an update
 	// or creation as appropriate.
 	if req.Operation == logical.CreateOperation || req.Operation == logical.UpdateOperation {
-		existsResp, checkExists, resourceExists, err := c.router.RouteExistenceCheck(ctx, req)
-		switch err {
-		case logical.ErrUnsupportedPath:
-			// fail later via bad path to avoid confusing items in the log
-			checkExists = false
-		case logical.ErrRelativePath:
-			return nil, te, errutil.UserError{Err: err.Error()}
-		case nil:
-			if existsResp != nil && existsResp.IsError() {
-				return nil, te, existsResp.Error()
-			}
-			// Otherwise, continue on
-		default:
-			c.logger.Error("failed to run existence check", "error", err)
-			if _, ok := err.(errutil.UserError); ok {
-				return nil, te, err
-			} else {
-				return nil, te, ErrInternalError
-			}
+		op, err := c.existenceCheck(ctx, req)
+		if err != nil {
+			return nil, te, err
 		}
-
-		switch {
-		case !checkExists:
-			// No existence check, so always treat it as an update operation, which is how it is pre 0.5
-			req.Operation = logical.UpdateOperation
-		case resourceExists:
-			// It exists, so force an update operation
-			req.Operation = logical.UpdateOperation
-		case !resourceExists:
-			// It doesn't exist, force a create operation
-			req.Operation = logical.CreateOperation
-		default:
-			panic("unreachable code")
-		}
+		req.Operation = *op
 	}
+
 	// Create the auth response
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
@@ -488,11 +498,28 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		req.ClientID = clientID
 	}
 
+	twoStepRecover := req.Operation == logical.RecoverOperation && req.RecoverSourcePath != "" && req.RecoverSourcePath != req.Path
+	var alternateRecoverCapability *logical.Operation
+	if twoStepRecover {
+		// An existence check call requires the operation to be set to either
+		// create or update. We set it to create here, then switch it back once
+		// the existence check is done.
+		req.Operation = logical.CreateOperation
+		op, err := c.existenceCheck(ctx, req)
+		req.Operation = logical.RecoverOperation
+		if err != nil {
+			return nil, te, err
+		}
+		alternateRecoverCapability = op
+	}
+
 	// Check the standard non-root ACLs. Return the token entry if it's not
 	// allowed so we can decrement the use count.
 	authResults := c.performPolicyChecks(ctx, acl, te, req, entity, &PolicyCheckOpts{
-		Unauth:            unauth,
-		RootPrivsRequired: rootPath,
+		Unauth:                     unauth,
+		RootPrivsRequired:          rootPath,
+		CheckSourcePath:            twoStepRecover,
+		RecoverAlternateCapability: alternateRecoverCapability,
 	})
 
 	// Assign the sudo path priority if the request is issued against a sudo path.

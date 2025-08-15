@@ -323,15 +323,23 @@ module "vault_verify_removed_node_shim" {
 module "vault_verify_secrets_engines_create" {
   source = "./modules/verify_secrets_engines/modules/create"
 
-  create_aws_secrets_engine = var.verify_aws_secrets_engine
-  vault_install_dir         = var.vault_install_dir
+  aws_enabled       = var.verify_aws_secrets_engine
+  ldap_enabled      = var.verify_ldap_secrets_engine
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_secrets_engines_read" {
   source = "./modules/verify_secrets_engines/modules/read"
 
-  verify_aws_secrets_engine = var.verify_aws_secrets_engine
-  vault_install_dir         = var.vault_install_dir
+  aws_enabled       = var.verify_aws_secrets_engine
+  ldap_enabled      = var.verify_ldap_secrets_engine
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_secrets_engines_delete" {
+  source = "./modules/verify_secrets_engines/modules/delete"
+
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_default_lcq" {

@@ -12,6 +12,7 @@ import {
   fillIn,
   visit,
   typeIn,
+  waitFor,
 } from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { module, test } from 'qunit';
@@ -136,7 +137,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await settled();
     await page.enableEngine();
     await mountBackend('kv', path);
-
+    await waitFor('[data-test-message-error-description]');
     assert.dom('[data-test-message-error-description]').containsText(`path is already in use at ${path}`);
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
 

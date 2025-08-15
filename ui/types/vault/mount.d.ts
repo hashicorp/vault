@@ -6,8 +6,8 @@
 export type MountConfig = {
   force_no_cache?: boolean;
   listing_visibility?: string | boolean;
-  default_lease_ttl?: number;
-  max_lease_ttl?: number;
+  default_lease_ttl?: number | string;
+  max_lease_ttl?: number | string;
   allowed_managed_keys?: string[];
   audit_non_hmac_request_keys?: string[];
   audit_non_hmac_response_keys?: string[];

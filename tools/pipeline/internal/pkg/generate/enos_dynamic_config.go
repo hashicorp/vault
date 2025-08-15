@@ -129,15 +129,16 @@ func (e *EnosDynamicConfigReq) getGlobals(ctx context.Context) (*Globals, error)
 
 func (e *EnosDynamicConfigReq) getSampleAttrs(ctx context.Context) (*SampleAttrs, error) {
 	// Create our HCL body
+	// TODO: Move this to pipeline config
 	attrs := &SampleAttrs{
 		// Use the cheapest regions
 		AWSRegion: []string{"us-east-1", "us-west-2"},
 		// Current distro defaults
 		DistroVersionAmzn:   []string{"2023"},
 		DistroVersionLeap:   []string{"15.6"},
-		DistroVersionRhel:   []string{"8.10", "9.5"},
+		DistroVersionRhel:   []string{"8.10", "9.6", "10.0"},
 		DistroVersionSles:   []string{"15.6"},
-		DistroVersionUbuntu: []string{"20.04", "24.04"},
+		DistroVersionUbuntu: []string{"22.04", "24.04"},
 	}
 
 	// Create our initial upgrade version list. We'll find all released versions between N-3 -> Current

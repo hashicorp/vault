@@ -1,0 +1,20 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Clients::CountsCard @title="Client counts by path">
+  <:subheader>
+    <Clients::FilterToolbar
+      @namespaces={{this.namespaceLabels}}
+      @mountPaths={{this.mountPaths}}
+      @mountTypes={{this.mountTypes}}
+      @onFilter={{this.handleFilter}}
+      @appliedFilters={{@filterQueryParams}}
+    />
+  </:subheader>
+
+  <:table>
+    {{! table }}
+  </:table>
+</Clients::CountsCard>

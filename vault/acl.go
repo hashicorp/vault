@@ -40,8 +40,10 @@ type ACL struct {
 }
 
 type PolicyCheckOpts struct {
-	RootPrivsRequired bool
-	Unauth            bool
+	RootPrivsRequired          bool
+	Unauth                     bool
+	CheckSourcePath            bool
+	RecoverAlternateCapability *logical.Operation
 }
 
 type AuthResults struct {
@@ -777,7 +779,7 @@ func (c *Core) recordPolicyEvaluationObservation(ctx context.Context, te *logica
 	}
 }
 
-func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) *AuthResults {
+func (c *Core) performPolicyChecksSinglePath(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) *AuthResults {
 	ret := new(AuthResults)
 
 	// First, perform normal ACL checks if requested. The only time no ACL
