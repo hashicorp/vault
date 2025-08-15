@@ -12,8 +12,8 @@ import {
   formatByNamespace,
   destructureClientCounts,
   sortMonthsByTimestamp,
-  filterByMonthDataForMount,
-  filteredTotalForMount,
+  flattenMounts,
+  filterTableData,
 } from 'core/utils/client-count-utils';
 import clientsHandler from 'vault/mirage/handlers/clients';
 import {
@@ -125,6 +125,23 @@ module('Integration | Util | client count utils', function (hooks) {
     });
   });
 
+  test('flattenMounts: it flattens mount data', async function (assert) {
+    assert.expect(2);
+    const original = [...SERIALIZED_ACTIVITY_RESPONSE.by_namespace];
+    const expected = [
+      ...SERIALIZED_ACTIVITY_RESPONSE.by_namespace[0].mounts,
+      ...SERIALIZED_ACTIVITY_RESPONSE.by_namespace[1].mounts,
+    ];
+    const actual = flattenMounts(SERIALIZED_ACTIVITY_RESPONSE.by_namespace);
+
+    assert.propEqual(actual, expected, 'it returns mounts from each namespace object into a single array');
+    assert.propEqual(
+      SERIALIZED_ACTIVITY_RESPONSE.by_namespace,
+      original,
+      'it does not modify original by_namespace array'
+    );
+  });
+
   test('formatByMonths: it formats the months array', async function (assert) {
     assert.expect(7);
     const original = [...RESPONSE.months];
@@ -233,6 +250,7 @@ module('Integration | Util | client count utils', function (hooks) {
             clients: 30,
             entity_clients: 10,
             label: 'no mount accessor (pre-1.10 upgrade?)',
+            mount_path: 'no mount accessor (pre-1.10 upgrade?)',
             mount_type: '',
             namespace_path: 'root',
             non_entity_clients: 20,
@@ -266,6 +284,7 @@ module('Integration | Util | client count utils', function (hooks) {
               clients: 2,
               entity_clients: 2,
               label: 'no mount accessor (pre-1.10 upgrade?)',
+              mount_path: 'no mount accessor (pre-1.10 upgrade?)',
               mount_type: 'no mount path (pre-1.10 upgrade?)',
               namespace_path: 'root',
               non_entity_clients: 0,
@@ -275,7 +294,8 @@ module('Integration | Util | client count utils', function (hooks) {
               acme_clients: 0,
               clients: 1,
               entity_clients: 1,
-              label: 'auth/userpass-0',
+              label: 'auth/userpass/0',
+              mount_path: 'auth/userpass/0',
               mount_type: 'userpass',
               namespace_path: 'root',
               non_entity_clients: 0,
@@ -294,7 +314,7 @@ module('Integration | Util | client count utils', function (hooks) {
         acme_clients: 0,
         clients: 3,
         entity_clients: 3,
-        month: '4/24',
+
         namespaces: [
           {
             acme_clients: 0,
@@ -307,6 +327,7 @@ module('Integration | Util | client count utils', function (hooks) {
                 clients: 2,
                 entity_clients: 2,
                 label: 'no mount accessor (pre-1.10 upgrade?)',
+                mount_path: 'no mount accessor (pre-1.10 upgrade?)',
                 mount_type: 'no mount path (pre-1.10 upgrade?)',
                 namespace_path: 'root',
                 non_entity_clients: 0,
@@ -316,7 +337,8 @@ module('Integration | Util | client count utils', function (hooks) {
                 acme_clients: 0,
                 clients: 1,
                 entity_clients: 1,
-                label: 'auth/userpass-0',
+                label: 'auth/userpass/0',
+                mount_path: 'auth/userpass/0',
                 mount_type: 'userpass',
                 namespace_path: 'root',
                 non_entity_clients: 0,
@@ -335,237 +357,111 @@ module('Integration | Util | client count utils', function (hooks) {
     );
   });
 
-  module('filterByMonthDataForMount', function (hooks) {
-    hooks.beforeEach(function () {
-      this.getExpected = (label, count = 0, newCount = 0) => {
-        return {
-          month: '6/23',
-          namespaces: [],
-          label,
-          timestamp: '2023-06-01T00:00:00Z',
-          acme_clients: count,
-          clients: count,
-          entity_clients: 0,
-          non_entity_clients: 0,
-          secret_syncs: 0,
-          new_clients: {
-            month: '6/23',
-            timestamp: '2023-06-01T00:00:00Z',
-            namespaces: [],
-            label,
-            acme_clients: newCount,
-            clients: newCount,
-            entity_clients: 0,
-            non_entity_clients: 0,
-            secret_syncs: 0,
-          },
-        };
-      };
+  module('filterTableData', function (hooks) {
+    hooks.beforeEach(async function () {
+      const activityByMount = flattenMounts(SERIALIZED_ACTIVITY_RESPONSE.by_namespace);
+      this.mockMountData = [...activityByMount];
+      // copy mock data before using the filterTableData function to assert filtering doesn't modify the original array
+      const original = [...this.mockMountData];
+      this.assertOriginal = (assert) =>
+        assert.propEqual(this.mockMountData, original, 'filtering does not mutate dataset');
     });
 
-    test('it works when month has no data', async function (assert) {
-      const months = [
+    test('it returns original data if no filters are passed', async function (assert) {
+      const emptyObject = filterTableData(this.mockMountData, {});
+      assert.propEqual(emptyObject, this.mockMountData, 'when filters arg is an empty object');
+      this.assertOriginal(assert);
+
+      const emptyValues = filterTableData(this.mockMountData, {
+        namespace_path: '',
+        mount_path: '',
+        mount_type: '',
+      });
+      assert.propEqual(emptyValues, this.mockMountData, 'when filters have are empty strings');
+      this.assertOriginal(assert);
+
+      const nullFilter = filterTableData(this.mockMountData, null);
+      assert.propEqual(nullFilter, this.mockMountData, 'returns all data when no filters are null');
+      this.assertOriginal(assert);
+    });
+
+    test('it filters data for a single filter', async function (assert) {
+      const namespaceFilter = filterTableData(this.mockMountData, {
+        namespace_path: 'root',
+        mount_path: '',
+        mount_type: '',
+      });
+      const expectedNamespaceFilter = this.mockMountData.filter((m) => m.namespace_path === 'root');
+      assert.propEqual(namespaceFilter, expectedNamespaceFilter, 'it filters by namespace_path');
+      this.assertOriginal(assert);
+
+      const mountPathFilter = filterTableData(this.mockMountData, {
+        namespace_path: '',
+        mount_path: 'acme/pki/0',
+        mount_type: '',
+      });
+      const expectedMountPathFilter = this.mockMountData.filter((m) => m.mount_path === 'acme/pki/0');
+      assert.propEqual(mountPathFilter, expectedMountPathFilter, 'it filters by mount_path');
+      this.assertOriginal(assert);
+
+      const mountTypeFilter = filterTableData(this.mockMountData, {
+        namespace_path: '',
+        mount_path: '',
+        mount_type: 'userpass',
+      });
+      const expectedMountTypeFilter = this.mockMountData.filter((m) => m.mount_type === 'userpass');
+      assert.propEqual(mountTypeFilter, expectedMountTypeFilter, 'it filters by mount_type');
+      this.assertOriginal(assert);
+    });
+
+    test('it filters data for a multiple filters', async function (assert) {
+      const twoFilters = filterTableData(this.mockMountData, {
+        namespace_path: 'root',
+        mount_path: '',
+        mount_type: 'userpass',
+      });
+      const expectedTwoFilters = this.mockMountData.filter(
+        (m) => m.namespace_path === 'root' && m.mount_type === 'userpass'
+      );
+      assert.propEqual(twoFilters, expectedTwoFilters, 'it filters by namespace_path and mount_type');
+      this.assertOriginal(assert);
+
+      const allFilters = filterTableData(this.mockMountData, {
+        namespace_path: 'root',
+        mount_path: 'auth/userpass/0',
+        mount_type: 'userpass',
+      });
+      const expectedAllFilters = [
         {
-          month: '6/23',
-          timestamp: '2023-06-01T00:00:00Z',
-          namespaces: [],
-          new_clients: {
-            month: '6/23',
-            timestamp: '2023-06-01T00:00:00Z',
-            namespaces: [],
-          },
-        },
-      ];
-      const result = filterByMonthDataForMount(months, 'root', 'some-mount');
-      // no data is different than zero, it implies no data was being saved at that time
-      // so we don't fill in missing data with zeros to differentiate those two states
-      assert.deepEqual(result[0], months[0], 'does not change month when no data');
-    });
-
-    test('it works when month has no new clients', async function (assert) {
-      const months = [
-        {
-          month: '6/23',
-          timestamp: '2023-06-01T00:00:00Z',
-          acme_clients: 11,
-          clients: 11,
-          entity_clients: 0,
-          non_entity_clients: 0,
-          secret_syncs: 0,
-          namespaces: [
-            {
-              label: 'root',
-              acme_clients: 11,
-              clients: 11,
-              entity_clients: 0,
-              non_entity_clients: 0,
-              secret_syncs: 0,
-              mounts: [
-                {
-                  label: 'some-mount',
-                  acme_clients: 11,
-                  clients: 11,
-                  entity_clients: 0,
-                  non_entity_clients: 0,
-                  secret_syncs: 0,
-                },
-              ],
-            },
-          ],
-          new_clients: {
-            month: '6/23',
-            timestamp: '2023-06-01T00:00:00Z',
-            namespaces: [],
-          },
-        },
-      ];
-
-      let result = filterByMonthDataForMount(months, 'root', 'some-mount');
-      assert.propEqual(result[0], this.getExpected('some-mount', 11), 'works when mount is found');
-      result = filterByMonthDataForMount(months, 'root', 'another-mount');
-      assert.deepEqual(result[0], this.getExpected('another-mount', 0), 'works when mount is not found');
-      result = filterByMonthDataForMount(months, 'unknown-child', 'some-mount');
-      assert.deepEqual(result[0], this.getExpected('some-mount', 0), 'works when namespace is not found');
-    });
-
-    test('it works when month has new clients', async function (assert) {
-      const months = [
-        {
-          month: '6/23',
-          timestamp: '2023-06-01T00:00:00Z',
-          acme_clients: 22,
-          clients: 22,
-          entity_clients: 0,
-          non_entity_clients: 0,
-          secret_syncs: 0,
-          namespaces: [
-            {
-              label: 'root',
-              acme_clients: 22,
-              clients: 22,
-              entity_clients: 0,
-              non_entity_clients: 0,
-              secret_syncs: 0,
-              mounts: [
-                {
-                  label: 'some-mount',
-                  acme_clients: 22,
-                  clients: 22,
-                  entity_clients: 0,
-                  non_entity_clients: 0,
-                  secret_syncs: 0,
-                },
-              ],
-            },
-          ],
-          new_clients: {
-            month: '6/23',
-            timestamp: '2023-06-01T00:00:00Z',
-            namespaces: [
-              {
-                label: 'root',
-                acme_clients: 11,
-                clients: 11,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 0,
-                mounts: [
-                  {
-                    label: 'some-mount',
-                    acme_clients: 11,
-                    clients: 11,
-                    entity_clients: 0,
-                    non_entity_clients: 0,
-                    secret_syncs: 0,
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      ];
-      let result = filterByMonthDataForMount(months, 'root', 'some-mount');
-      assert.propEqual(result[0], this.getExpected('some-mount', 22, 11), 'works when mount is found');
-      result = filterByMonthDataForMount(months, 'root', 'another-mount');
-      assert.deepEqual(result[0], this.getExpected('another-mount', 0), 'works when mount is not found');
-      result = filterByMonthDataForMount(months, 'unknown-child', 'some-mount');
-      assert.deepEqual(result[0], this.getExpected('some-mount', 0), 'works when namespace is not found');
-    });
-  });
-
-  module('filteredTotalForMount', function (hooks) {
-    hooks.beforeEach(function () {
-      this.byNamespace = SERIALIZED_ACTIVITY_RESPONSE.by_namespace;
-      this.byMonth = SERIALIZED_ACTIVITY_RESPONSE.by_month;
-    });
-
-    const emptyCounts = {
-      acme_clients: 0,
-      clients: 0,
-      entity_clients: 0,
-      non_entity_clients: 0,
-      secret_syncs: 0,
-    };
-
-    [
-      {
-        when: 'no namespace filter passed',
-        result: 'it returns empty counts',
-        ns: '',
-        mount: 'auth/userpass-0',
-        expected: emptyCounts,
-      },
-      {
-        when: 'no mount filter passed',
-        result: 'it returns empty counts',
-        ns: 'ns1',
-        mount: '',
-        expected: emptyCounts,
-      },
-      {
-        when: 'no matching ns/mount exists',
-        result: 'it returns empty counts',
-        ns: 'ns1',
-        mount: 'auth/userpass-1',
-        expected: emptyCounts,
-      },
-      {
-        when: 'mount and label have extra slashes',
-        result: 'it returns the data sanitized',
-        ns: 'ns1/',
-        mount: 'auth/userpass-0',
-        expected: {
-          label: 'auth/userpass-0',
+          label: 'auth/userpass/0',
+          mount_path: 'auth/userpass/0',
           mount_type: 'userpass',
-          namespace_path: 'ns1',
-          acme_clients: 0,
-          clients: 8394,
-          entity_clients: 4256,
-          non_entity_clients: 4138,
-          secret_syncs: 0,
-        },
-      },
-      {
-        when: 'mount within root',
-        result: 'it returns the data',
-        ns: 'root',
-        mount: 'kvv2-engine-0',
-        expected: {
-          label: 'kvv2-engine-0',
-          mount_type: 'kv',
           namespace_path: 'root',
           acme_clients: 0,
-          clients: 4290,
-          entity_clients: 0,
-          non_entity_clients: 0,
-          secret_syncs: 4290,
+          clients: 8091,
+          entity_clients: 4002,
+          non_entity_clients: 4089,
+          secret_syncs: 0,
         },
-      },
-    ].forEach((testCase) => {
-      test(`it returns correct values when ${testCase.when}`, async function (assert) {
-        const actual = filteredTotalForMount(this.byNamespace, testCase.ns, testCase.mount);
-        assert.deepEqual(actual, testCase.expected);
+      ];
+      assert.propEqual(allFilters, expectedAllFilters, 'it filters by all filters');
+      this.assertOriginal(assert);
+    });
+
+    test('it returns an empty array when there are no matches', async function (assert) {
+      const noMatches = filterTableData(this.mockMountData, {
+        namespace_path: 'does not exist',
+        mount_path: '',
+        mount_type: '',
       });
+      assert.propEqual(noMatches, [], 'returns an empty array when no data matches filters');
+      this.assertOriginal(assert);
+    });
+
+    test('it returns an empty array when filter includes keys the dataset does not contain', async function (assert) {
+      const noMatches = filterTableData(this.mockMountData, { foo: 'root', bar: '' });
+      assert.propEqual(noMatches, [], 'returns an empty array when no keys match dataset');
+      this.assertOriginal(assert);
     });
   });
 });

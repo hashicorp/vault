@@ -17,6 +17,7 @@ import timestamp from 'core/utils/timestamp';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 const START_TIME = getUnixTime(LICENSE_START);
 
@@ -45,7 +46,6 @@ module('Integration | Component | clients/running-total', function (hooks) {
         @isSecretsSyncActivated={{this.isSecretsSyncActivated}}
         @byMonthNewClients={{this.byMonthNewClients}}
         @runningTotals={{this.totalUsageCounts}}
-        @upgradeData={{this.upgradesDuringActivity}}
         @isHistoricalMonth={{this.isHistoricalMonth}}
       />
     `);
@@ -88,12 +88,9 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     // assert bar chart is correct
     findAll(CHARTS.xAxisLabel).forEach((e, i) => {
-      assert
-        .dom(e)
-        .hasText(
-          `${this.byMonthNewClients[i].month}`,
-          `renders x-axis labels for bar chart: ${this.byMonthNewClients[i].month}`
-        );
+      const timestamp = this.byMonthNewClients[i].timestamp;
+      const displayMonth = parseAPITimestamp(timestamp, 'M/yy');
+      assert.dom(e).hasText(displayMonth, `renders x-axis labels for bar chart: ${displayMonth}`);
     });
     assert
       .dom(CHARTS.verticalBar)
@@ -112,27 +109,24 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     // assert each legend item is correct
     const expectedLegend = [
-      { label: 'Entity clients', color: 'rgb(28, 52, 95)' },
-      { label: 'Non-entity clients', color: 'rgb(6, 208, 146)' },
-      { label: 'Secret sync clients', color: 'rgb(145, 28, 237)' },
-      { label: 'Acme clients', color: 'rgb(2, 168, 239)' },
+      { label: 'Entity clients', color: 'rgb(66, 105, 208)' },
+      { label: 'Non-entity clients', color: 'rgb(239, 177, 23)' },
+      { label: 'Secret sync clients', color: 'rgb(108, 197, 176)' },
+      { label: 'Acme clients', color: 'rgb(255, 114, 92)' },
     ];
 
     findAll('.legend-item').forEach((e, i) => {
       const { label, color } = expectedLegend[i];
       assert.dom(e).hasText(label, `legend renders label: ${label}`);
       const dotColor = getComputedStyle(find(CHARTS.legendDot(i + 1))).backgroundColor;
-      assert.strictEqual(dotColor, color, `actual color: ${dotColor}, expected color: ${color}`);
+      assert.strictEqual(dotColor, color, `${label} - actual color: ${dotColor}, expected: ${color}`);
     });
 
     // assert bar chart is correct
     findAll(CHARTS.xAxisLabel).forEach((e, i) => {
-      assert
-        .dom(e)
-        .hasText(
-          `${this.byMonthNewClients[i].month}`,
-          `renders x-axis labels for bar chart: ${this.byMonthNewClients[i].month}`
-        );
+      const timestamp = this.byMonthNewClients[i].timestamp;
+      const displayMonth = parseAPITimestamp(timestamp, 'M/yy');
+      assert.dom(e).hasText(`${displayMonth}`, `renders x-axis labels for bar chart: ${displayMonth}`);
     });
 
     const months = this.byMonthNewClients.length;
@@ -189,16 +183,16 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     // assert each legend item is correct
     const expectedLegend = [
-      { label: 'Entity clients', color: 'rgb(28, 52, 95)' },
-      { label: 'Non-entity clients', color: 'rgb(6, 208, 146)' },
-      { label: 'Acme clients', color: 'rgb(2, 168, 239)' },
+      { label: 'Entity clients', color: 'rgb(66, 105, 208)' },
+      { label: 'Non-entity clients', color: 'rgb(239, 177, 23)' },
+      { label: 'Acme clients', color: 'rgb(255, 114, 92)' },
     ];
 
     findAll('.legend-item').forEach((e, i) => {
       const { label, color } = expectedLegend[i];
       assert.dom(e).hasText(label, `legend renders label: ${label}`);
       const dotColor = getComputedStyle(find(CHARTS.legendDot(i + 1))).backgroundColor;
-      assert.strictEqual(dotColor, color, `actual color: ${dotColor}, expected color: ${color}`);
+      assert.strictEqual(dotColor, color, `${label} - actual color: ${dotColor}, expected: ${color}`);
     });
 
     const months = this.byMonthNewClients.length;

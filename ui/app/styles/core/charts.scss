@@ -7,10 +7,11 @@
  */
 
 // LEGEND STYLING (positioning is in chart-container.scss)
-$green-cyan: #06d092;
-$cerulean: #02a8ef;
-$blue-500: var(--token-color-palette-blue-500);
-$purple-300: var(--token-color-palette-purple-300);
+$blue-500: #1c345f;
+$secret_syncs: #6cc5b0;
+$acme_clients: #ff725c;
+$entity_clients: #4269d0;
+$non_entity_clients: #efb117;
 
 .legend-container {
   .dots {
@@ -23,16 +24,16 @@ $purple-300: var(--token-color-palette-purple-300);
     background-color: $blue-500;
   }
   .legend-entity_clients {
-    background-color: $blue-500;
+    background-color: $entity_clients;
   }
   .legend-non_entity_clients {
-    background-color: $green-cyan;
+    background-color: $non_entity_clients;
   }
   .legend-secret_syncs {
-    background-color: $purple-300;
+    background-color: $secret_syncs;
   }
   .legend-acme_clients {
-    background-color: $cerulean;
+    background-color: $acme_clients;
   }
 }
 
@@ -99,18 +100,18 @@ $purple-300: var(--token-color-palette-purple-300);
 
 // @colorScale arg for Lineal::VBars is "stacked-bar", indices are added by lineal
 .stacked-bar-1 {
-  color: $blue-500;
-  fill: $blue-500;
+  color: $entity_clients;
+  fill: $entity_clients;
 }
 .stacked-bar-2 {
-  color: $green-cyan;
-  fill: $green-cyan;
+  color: $non_entity_clients;
+  fill: $non_entity_clients;
 }
 .stacked-bar-3 {
-  color: $purple-300;
-  fill: $purple-300;
+  color: $secret_syncs;
+  fill: $secret_syncs;
 }
 .stacked-bar-4 {
-  color: $cerulean;
-  fill: $cerulean;
+  color: $acme_clients;
+  fill: $acme_clients;
 }

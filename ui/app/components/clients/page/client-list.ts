@@ -34,7 +34,7 @@ export default class ClientsClientListPageComponent extends ActivityComponent {
 
   @action
   handleFilter(filters: Record<ClientFilterTypes, string>) {
-    const { nsLabel, mountPath, mountType } = filters;
-    this.args.onFilterChange({ nsLabel, mountPath, mountType });
+    const { namespace_path, mount_path, mount_type } = filters;
+    this.args.onFilterChange({ namespace_path, mount_path, mount_type });
   }
 }

@@ -10,7 +10,7 @@
       {{#each @namespaces as |namespace|}}
         <D.Checkmark
           {{on "click" (fn this.updateFilter this.filterTypes.NAMESPACE namespace D.close)}}
-          @selected={{eq namespace this.nsLabel}}
+          @selected={{eq namespace this.namespace_path}}
           data-test-dropdown-item={{namespace}}
         >{{namespace}}</D.Checkmark>
       {{/each}}
@@ -22,7 +22,7 @@
       {{#each @mountPaths as |mountPath|}}
         <D.Checkmark
           {{on "click" (fn this.updateFilter this.filterTypes.MOUNT_PATH mountPath D.close)}}
-          @selected={{eq mountPath this.mountPath}}
+          @selected={{eq mountPath this.mount_path}}
           data-test-dropdown-item={{mountPath}}
         >{{mountPath}}</D.Checkmark>
       {{/each}}
@@ -34,7 +34,7 @@
       {{#each @mountTypes as |mountType|}}
         <D.Checkmark
           {{on "click" (fn this.updateFilter this.filterTypes.MOUNT_TYPE mountType D.close)}}
-          @selected={{eq mountType this.mountType}}
+          @selected={{eq mountType this.mount_type}}
           data-test-dropdown-item={{mountType}}
         >{{mountType}}</D.Checkmark>
       {{/each}}
@@ -54,7 +54,7 @@
     <Hds::Text::Body @color="faint">Filters applied:</Hds::Text::Body>
     {{! render tags based on applied @filters and not the internally tracked properties }}
     {{#each-in @appliedFilters as |filter value|}}
-      {{#if (and (this.supportedFilter filter) value)}}
+      {{#if value}}
         <div>
           <Hds::Tag
             @text={{value}}

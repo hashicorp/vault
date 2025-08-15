@@ -7,53 +7,35 @@
 // contains getters that filter and extract data from activity model for use in charts
 
 import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { cached } from '@glimmer/tracking';
 import { isSameMonth } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import {
-  filterByMonthDataForMount,
-  filteredTotalForMount,
-  filterVersionHistory,
-} from 'core/utils/client-count-utils';
 import { service } from '@ember/service';
-import { sanitizePath } from 'core/utils/sanitize-path';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
-import type { TotalClients } from 'core/utils/client-count-utils';
+import type { ClientFilterTypes } from 'core/utils/client-count-utils';
 import type NamespaceService from 'vault/services/namespace';
 
+/* This component does not actually render and is the base class to house
+ shared computations between the Clients::Page::Overview and Clients::Page::List components */
 interface Args {
   activity: ClientsActivityModel;
   versionHistory: ClientsVersionHistoryModel[];
-  startTimestamp: string;
-  endTimestamp: string;
-  namespace: string;
-  mountPath: string;
-  mountType: string;
   onFilterChange: CallableFunction;
+  filterQueryParams: Record<ClientFilterTypes, string>;
 }
 
 export default class ClientsActivityComponent extends Component<Args> {
   @service declare readonly namespace: NamespaceService;
 
-  // path of the filtered namespace OR current one, for filtering relevant data
-  get namespacePathForFilter() {
-    const { namespace } = this.args;
-    const currentNs = this.namespace.currentNamespace;
-    return sanitizePath(namespace || currentNs || 'root');
-  }
-
+  @cached
   get byMonthNewClients() {
-    const { activity, mountPath } = this.args;
-    const nsPath = this.namespacePathForFilter;
-
-    const data = mountPath
-      ? filterByMonthDataForMount(activity.byMonth, nsPath, mountPath)
-      : activity.byMonth;
-
-    return data ? data?.map((m) => m?.new_clients) : [];
+    return this.args.activity.byMonth?.map((m) => m?.new_clients) || [];
   }
 
+  @cached
   get isCurrentMonth() {
     const { activity } = this.args;
     const current = parseAPITimestamp(activity.responseTimestamp) as Date;
@@ -62,6 +44,7 @@ export default class ClientsActivityComponent extends Component<Args> {
     return isSameMonth(start, current) && isSameMonth(end, current);
   }
 
+  @cached
   get isDateRange() {
     const { activity } = this.args;
     return !isSameMonth(
@@ -70,19 +53,14 @@ export default class ClientsActivityComponent extends Component<Args> {
     );
   }
 
-  // (object) top level TOTAL client counts for given date range
-  get totalUsageCounts(): TotalClients {
-    const { namespace, activity, mountPath } = this.args;
-    // only do this if we have a mountPath filter.
-    // namespace is filtered on API layer
-    if (activity?.byNamespace && namespace && mountPath) {
-      return filteredTotalForMount(activity.byNamespace, namespace, mountPath);
-    }
-    return activity?.total;
+  @action
+  handleFilter(filters: Record<ClientFilterTypes, string>) {
+    const { namespace_path, mount_path, mount_type } = filters;
+    this.args.onFilterChange({ namespace_path, mount_path, mount_type });
   }
 
-  get upgradesDuringActivity() {
-    const { versionHistory, activity } = this.args;
-    return filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
+  @action
+  resetFilters() {
+    this.handleFilter({ namespace_path: '', mount_path: '', mount_type: '' });
   }
 }

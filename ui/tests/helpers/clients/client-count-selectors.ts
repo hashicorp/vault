@@ -54,6 +54,7 @@ export const CHARTS = {
 };
 
 export const FILTERS = {
+  dropdown: (name: string) => `[data-test-dropdown="${name}"]`,
   dropdownToggle: (name: string) => `[data-test-dropdown="${name}"] button`,
   dropdownItem: (name: string) => `[data-test-dropdown-item="${name}"]`,
   tag: (filter?: string, value?: string) =>

@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { ClientFilters, ClientFilterTypes } from 'core/utils/client-count-utils';
+import { ClientFilters, ClientFilterTypes, filterIsSupported } from 'core/utils/client-count-utils';
 
 interface Args {
   onFilter: CallableFunction;
@@ -16,21 +16,21 @@ interface Args {
 export default class ClientsFilterToolbar extends Component<Args> {
   filterTypes = ClientFilters;
 
-  @tracked nsLabel = '';
-  @tracked mountPath = '';
-  @tracked mountType = '';
+  @tracked namespace_path = '';
+  @tracked mount_path = '';
+  @tracked mount_type = '';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    const { nsLabel, mountPath, mountType } = this.args.appliedFilters;
-    this.nsLabel = nsLabel;
-    this.mountPath = mountPath;
-    this.mountType = mountType;
+    const { namespace_path, mount_path, mount_type } = this.args.appliedFilters;
+    this.namespace_path = namespace_path;
+    this.mount_path = mount_path;
+    this.mount_type = mount_type;
   }
 
   get anyFilters() {
     return (
-      Object.keys(this.args.appliedFilters).every((f) => this.supportedFilter(f)) &&
+      Object.keys(this.args.appliedFilters).every((f) => filterIsSupported(f)) &&
       Object.values(this.args.appliedFilters).some((v) => !!v)
     );
   }
@@ -46,9 +46,9 @@ export default class ClientsFilterToolbar extends Component<Args> {
     if (filterKey) {
       this[filterKey] = '';
     } else {
-      this.nsLabel = '';
-      this.mountPath = '';
-      this.mountType = '';
+      this.namespace_path = '';
+      this.mount_path = '';
+      this.mount_type = '';
     }
     // Fire callback so URL query params update when filters are cleared
     this.applyFilters();
@@ -57,13 +57,9 @@ export default class ClientsFilterToolbar extends Component<Args> {
   @action
   applyFilters() {
     this.args.onFilter({
-      nsLabel: this.nsLabel,
-      mountPath: this.mountPath,
-      mountType: this.mountType,
+      namespace_path: this.namespace_path,
+      mount_path: this.mount_path,
+      mount_type: this.mount_type,
     });
   }
-
-  // Helper function
-  supportedFilter = (f: string): f is ClientFilterTypes =>
-    Object.values(this.filterTypes).includes(f as ClientFilterTypes);
 }
