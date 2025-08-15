@@ -334,6 +334,87 @@ func TestHandler_XForwardedFor(t *testing.T) {
 			t.Fatalf("bad body: %v vs %v", buf.String(), testcertificate)
 		}
 	})
+
+	// Test RFC 9440/8941 Structured Headers "byte sequence" format
+	t.Run("pass_cert_rfc9440_format", func(t *testing.T) {
+		t.Parallel()
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
+			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(base64.StdEncoding.EncodeToString(r.TLS.PeerCertificates[0].Raw)))
+			})
+			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
+			listenerConfig.XForwardedForClientCertHeader = "X-Forwarded-Tls-Client-Cert"
+			listenerConfig.XForwardedForClientCertHeaderDecoders = "BASE64"
+			return WrapForwardedForHandler(origHandler, listenerConfig)
+		}
+
+		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+			HandlerFunc: HandlerFunc(testHandler),
+		})
+		cluster.Start()
+		defer cluster.Cleanup()
+		client := cluster.Cores[0].Client
+
+		req := client.NewRequest("GET", "/")
+		req.Headers = make(http.Header)
+		req.Headers.Set("x-forwarded-for", "5.6.7.8")
+		// Test certificate in RFC 9440/8941 format with leading and trailing colons
+		testcertificate := `:MIIDtTCCAp2gAwIBAgIUf+jhKTFBnqSs34II0WS1L4QsbbAwDQYJKoZIhvcNAQELBQAwFjEUMBIGA1UEAxMLZXhhbXBsZS5jb20wHhcNMTYwMjI5MDIyNzQxWhcNMjUwMTA1MTAyODExWjAbMRkwFwYDVQQDExBjZXJ0LmV4YW1wbGUuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsZx0Svr82YJpFpIy4fJNW5fKA6B8mhxSTRAVnygAftetT8puHflY0ss7Y6X2OXjsU0PRn+1PswtivhKi+eLtgWkUF9cFYFGnSgMld6ZWRhNheZhA6ZfQmeM/BF2pa5HK2SDF36ljgjL9T+nWrru2Uv0BCoHzLAmiYYMiIWplidMmMO5NTRG3k+3AN0TkfakB6JVzjLGhTcXdOcVEMXkeQVqJMAuGouU5donyqtnaHuIJGuUdy54YDnX86txhOQhAv6r7dHXzZxS4pmLvw8UI1rsSf/GLcUVGB+5+AAGF5iuHC3N2DTl4xz3FcN4Cb4w9pbaQ7+mCzz+anqiJfyr2nwIDAQABo4H1MIHyMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAdBgNVHQ4EFgQUm++eHpyM3p708bgZJuRYEdX1o+UwHwYDVR0jBBgwFoAUncSzT/6HMexyuiU9/7EgHu+ok5swOwYIKwYBBQUHAQEELzAtMCsGCCsGAQUFBzAChh9odHRwOi8vMTI3LjAuMC4xOjgyMDAvdjEvcGtpL2NhMCEGA1UdEQQaMBiCEGNlcnQuZXhhbXBsZS5jb22HBH8AAAEwMQYDVR0fBCowKDAmoCSgIoYgaHR0cDovLzEyNy4wLjAuMTo4MjAwL3YxL3BraS9jcmwwDQYJKoZIhvcNAQELBQADggEBABsuvmPSNjjKTVN6itWzdQy+SgMIrwfsX1Yb9Lefkkwmp9ovKFNQxa4DucuCuzXcQrbKwWTfHGgR8ct4rf30xCRoA7dbQWq4aYqNKFWrRaBRAaaYZ/O1ApRTOrXqRx9Eqr0H1BXLsoAq+mWassL8sf6siae+CpwAKqBko5G0dNXq5T4i2LQbmoQSVetIrCJEeMrU+idkuqfV2h1BQKgSEhFDABjFdTCNQDAHsEHsi2M4/jRW9fqEuhHSDfl2n7tkFUI8wTHUUCl7gXwweJ4qtaSXIwKXYzNjxqKHA8Purc1Yfybz4iE1JCROi9fInKlzr5xABq8nb9Qc/J9DIQM+Xmk=:`
+		req.Headers.Set("x-forwarded-tls-client-cert", testcertificate)
+		resp, err := client.RawRequest(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		buf := bytes.NewBuffer(nil)
+		buf.ReadFrom(resp.Body)
+		// Strip the colons for comparison
+		expectedCert := testcertificate[1 : len(testcertificate)-1]
+		if !strings.Contains(buf.String(), expectedCert) {
+			t.Fatalf("bad body: %v vs %v", buf.String(), expectedCert)
+		}
+	})
+
+	// Test that regular base64 without colons still works for compatibility
+	t.Run("pass_cert_regular_base64", func(t *testing.T) {
+		t.Parallel()
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
+			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(base64.StdEncoding.EncodeToString(r.TLS.PeerCertificates[0].Raw)))
+			})
+			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
+			listenerConfig.XForwardedForClientCertHeader = "X-Forwarded-Tls-Client-Cert"
+			listenerConfig.XForwardedForClientCertHeaderDecoders = "BASE64"
+			return WrapForwardedForHandler(origHandler, listenerConfig)
+		}
+
+		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+			HandlerFunc: HandlerFunc(testHandler),
+		})
+		cluster.Start()
+		defer cluster.Cleanup()
+		client := cluster.Cores[0].Client
+
+		req := client.NewRequest("GET", "/")
+		req.Headers = make(http.Header)
+		req.Headers.Set("x-forwarded-for", "5.6.7.8")
+		// Regular base64 without URL encoding and without colons
+		testcertificate := `MIIDtTCCAp2gAwIBAgIUf+jhKTFBnqSs34II0WS1L4QsbbAwDQYJKoZIhvcNAQELBQAwFjEUMBIGA1UEAxMLZXhhbXBsZS5jb20wHhcNMTYwMjI5MDIyNzQxWhcNMjUwMTA1MTAyODExWjAbMRkwFwYDVQQDExBjZXJ0LmV4YW1wbGUuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsZx0Svr82YJpFpIy4fJNW5fKA6B8mhxSTRAVnygAftetT8puHflY0ss7Y6X2OXjsU0PRn+1PswtivhKi+eLtgWkUF9cFYFGnSgMld6ZWRhNheZhA6ZfQmeM/BF2pa5HK2SDF36ljgjL9T+nWrru2Uv0BCoHzLAmiYYMiIWplidMmMO5NTRG3k+3AN0TkfakB6JVzjLGhTcXdOcVEMXkeQVqJMAuGouU5donyqtnaHuIJGuUdy54YDnX86txhOQhAv6r7dHXzZxS4pmLvw8UI1rsSf/GLcUVGB+5+AAGF5iuHC3N2DTl4xz3FcN4Cb4w9pbaQ7+mCzz+anqiJfyr2nwIDAQABo4H1MIHyMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAdBgNVHQ4EFgQUm++eHpyM3p708bgZJuRYEdX1o+UwHwYDVR0jBBgwFoAUncSzT/6HMexyuiU9/7EgHu+ok5swOwYIKwYBBQUHAQEELzAtMCsGCCsGAQUFBzAChh9odHRwOi8vMTI3LjAuMC4xOjgyMDAvdjEvcGtpL2NhMCEGA1UdEQQaMBiCEGNlcnQuZXhhbXBsZS5jb22HBH8AAAEwMQYDVR0fBCowKDAmoCSgIoYgaHR0cDovLzEyNy4wLjAuMTo4MjAwL3YxL3BraS9jcmwwDQYJKoZIhvcNAQELBQADggEBABsuvmPSNjjKTVN6itWzdQy+SgMIrwfsX1Yb9Lefkkwmp9ovKFNQxa4DucuCuzXcQrbKwWTfHGgR8ct4rf30xCRoA7dbQWq4aYqNKFWrRaBRAaaYZ/O1ApRTOrXqRx9Eqr0H1BXLsoAq+mWassL8sf6siae+CpwAKqBko5G0dNXq5T4i2LQbmoQSVetIrCJEeMrU+idkuqfV2h1BQKgSEhFDABjFdTCNQDAHsEHsi2M4/jRW9fqEuhHSDfl2n7tkFUI8wTHUUCl7gXwweJ4qtaSXIwKXYzNjxqKHA8Purc1Yfybz4iE1JCROi9fInKlzr5xABq8nb9Qc/J9DIQM+Xmk=`
+		req.Headers.Set("x-forwarded-tls-client-cert", testcertificate)
+		resp, err := client.RawRequest(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		buf := bytes.NewBuffer(nil)
+		buf.ReadFrom(resp.Body)
+		if !strings.Contains(buf.String(), testcertificate) {
+			t.Fatalf("bad body: %v vs %v", buf.String(), testcertificate)
+		}
+	})
+
 	t.Run("reject invalid IP", func(t *testing.T) {
 		t.Parallel()
 		testHandler := func(props *vault.HandlerProperties) http.Handler {
