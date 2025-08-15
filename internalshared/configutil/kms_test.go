@@ -459,3 +459,86 @@ func TestMergeKMSEnvConfigAddrConformance(t *testing.T) {
 		})
 	}
 }
+
+func TestMergeKMSEnvConfig_ConfigPrecedence(t *testing.T) {
+	tests := []struct {
+		name           string
+		kmsType        string
+		configValues   map[string]string
+		envVars        map[string]string
+		expectedConfig map[string]string
+	}{
+		{
+			name:    "AWS KMS - config file takes precedence over env vars",
+			kmsType: "awskms",
+			configValues: map[string]string{
+				"region": "us-east-1", // This should NOT be overridden by env var
+			},
+			envVars: map[string]string{
+				"AWS_REGION": "us-west-2", // This should be ignored
+			},
+			expectedConfig: map[string]string{
+				"region": "us-east-1", // Config file value should be preserved
+			},
+		},
+		{
+			name:    "AWS KMS - env var used when config not set",
+			kmsType: "awskms",
+			configValues: map[string]string{
+				"kms_key_id": "some-key-id",
+				// region is not set in config
+			},
+			envVars: map[string]string{
+				"AWS_REGION": "us-west-2", // This should be used
+			},
+			expectedConfig: map[string]string{
+				"kms_key_id": "some-key-id",
+				"region":     "us-west-2", // Env var should be used
+			},
+		},
+		{
+			name:    "AWS KMS - empty config value allows env var override",
+			kmsType: "awskms",
+			configValues: map[string]string{
+				"region": "", // Empty value should allow env var
+			},
+			envVars: map[string]string{
+				"AWS_REGION": "us-west-2",
+			},
+			expectedConfig: map[string]string{
+				"region": "us-west-2", // Env var should be used
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up environment variables
+			for envVar, value := range tt.envVars {
+				t.Setenv(envVar, value)
+			}
+
+			// Create KMS config
+			kms := &KMS{
+				Type:   tt.kmsType,
+				Config: make(map[string]string),
+			}
+
+			// Set initial config values
+			for key, value := range tt.configValues {
+				kms.Config[key] = value
+			}
+
+			// Merge environment config
+			err := mergeKMSEnvConfig(kms)
+			require.NoError(t, err)
+
+			// Verify final config matches expected
+			for key, expectedValue := range tt.expectedConfig {
+				actualValue, exists := kms.Config[key]
+				require.True(t, exists, "Expected config key %s to exist", key)
+				require.Equal(t, expectedValue, actualValue, "Config key %s has wrong value", key)
+			}
+		})
+	}
+}
