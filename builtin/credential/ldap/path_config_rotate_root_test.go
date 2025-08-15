@@ -84,11 +84,11 @@ func TestRotateRootWithRotationUrl(t *testing.T) {
 		Path:      "config",
 		Storage:   store,
 		Data: map[string]interface{}{
-			"url":          cfg.Url,
+			"url":          "ldap://rotation.example.com:389",
 			"binddn":       cfg.BindDN,
 			"bindpass":     cfg.BindPassword,
 			"userdn":       cfg.UserDN,
-			"rotation_url": "ldap://rotation.example.com:389",
+			"rotation_url": cfg.Url,
 		},
 	}
 
@@ -106,17 +106,19 @@ func TestRotateRootWithRotationUrl(t *testing.T) {
 		Storage:   store,
 	}
 
-	// this should error because the rotation URL is not pointing to anything, which validate the rotation URL is used
 	_, err = b.HandleRequest(ctx, req)
-	if err == nil {
-		t.Fatalf("expected an error when rotating root with a rotation URL that does not point to a valid LDAP server")
-	}
-	// validate that rotationURL doesnt affect LDAP URL in the config
-	newCFG, err := b.Config(ctx, req)
 	if err != nil {
-		t.Fatalf("failed to get config after rotation: %s", err)
+		t.Fatalf("failed to rotate password: %s", err)
 	}
-	if newCFG.Url != cfg.Url {
+
+	newCFG, err := b.Config(ctx, req)
+	if newCFG.BindDN != cfg.BindDN {
+		t.Fatalf("a value in config that should have stayed the same changed: %s", cfg.BindDN)
+	}
+	if newCFG.BindPassword == cfg.BindPassword {
+		t.Fatalf("the password should have changed, but it didn't")
+	}
+	if newCFG.Url != "ldap://rotation.example.com:389" {
 		t.Fatalf("the LDAP URL should not have changed, but it did: %s", newCFG.Url)
 	}
 }
