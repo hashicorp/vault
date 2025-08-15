@@ -36,6 +36,29 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       'config.allowed_response_headers',
       'config.plugin_version',
     ];
+    this.tokensGroup = {
+      Tokens: [
+        'token_bound_cidrs',
+        'token_explicit_max_ttl',
+        'token_max_ttl',
+        'token_no_default_policy',
+        'token_num_uses',
+        'token_period',
+        'token_policies',
+        'token_ttl',
+        'token_type',
+      ],
+    };
+    this.oidcJwtGroup = {
+      'OIDC/JWT Options': [
+        'oidc_client_id',
+        'oidc_client_secret',
+        'oidc_discovery_ca_pem',
+        'jwt_validation_pubkeys',
+        'jwt_supported_algs',
+        'bound_issuer',
+      ],
+    };
   });
 
   module('azure', function (hooks) {
@@ -44,16 +67,16 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       this.path = `${this.type}-${uuidv4()}`;
       this.tuneFields = [
         'environment',
-        'identityTokenAudience',
-        'identityTokenTtl',
-        'maxRetries',
-        'maxRetryDelay',
+        'identity_token_audience',
+        'identity_token_ttl',
+        'max_retries',
+        'max_retry_delay',
         'resource',
-        'retryDelay',
-        'rootPasswordTtl',
-        'tenantId',
+        'retry_delay',
+        'root_password_ttl',
+        'tenant_id',
       ];
-      this.tuneToggles = { 'Azure Options': ['clientId', 'clientSecret'] };
+      this.tuneToggles = { 'Azure Options': ['client_id', 'client_secret'] };
       await login();
       return visit('/vault/settings/auth/enable');
     });
@@ -68,29 +91,20 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       this.type = 'jwt';
       this.path = `${this.type}-${uuidv4()}`;
       this.customSelectors = {
-        providerConfig: `${GENERAL.fieldByAttr('providerConfig')} .cm-editor`,
+        provider_config: `${GENERAL.fieldByAttr('provider_config')} .cm-editor`,
       };
       this.tuneFields = [
-        'defaultRole',
-        'jwksCaPem',
-        'jwksUrl',
-        'namespaceInState',
-        'oidcDiscoveryUrl',
-        'oidcResponseMode',
-        'oidcResponseTypes',
-        'providerConfig',
-        'unsupportedCriticalCertExtensions',
+        'default_role',
+        'jwks_ca_pem',
+        'jwks_url',
+        'namespace_in_state',
+        'oidc_discovery_url',
+        'oidc_response_mode',
+        'oidc_response_types',
+        'provider_config',
+        'unsupported_critical_cert_extensions',
       ];
-      this.tuneToggles = {
-        'JWT Options': [
-          'oidcClientId',
-          'oidcClientSecret',
-          'oidcDiscoveryCaPem',
-          'jwtValidationPubkeys',
-          'jwtSupportedAlgs',
-          'boundIssuer',
-        ],
-      };
+      this.tuneToggles = this.oidcJwtGroup;
       await login();
       return visit('/vault/settings/auth/enable');
     });
@@ -106,41 +120,33 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       this.path = `${this.type}-${uuidv4()}`;
       this.tuneFields = [
         'url',
-        'caseSensitiveNames',
-        'connectionTimeout',
-        'dereferenceAliases',
-        'maxPageSize',
-        'passwordPolicy',
-        'requestTimeout',
-        'tokenBoundCidrs',
-        'tokenExplicitMaxTtl',
-        'tokenMaxTtl',
-        'tokenNoDefaultPolicy',
-        'tokenNumUses',
-        'tokenPeriod',
-        'tokenPolicies',
-        'tokenTtl',
-        'tokenType',
-        'usePre111GroupCnBehavior',
-        'usernameAsAlias',
+        'case_sensitive_names',
+        'connection_timeout',
+        'dereference_aliases',
+        'max_page_size',
+        'password_policy',
+        'request_timeout',
+        'use_pre111_group_cn_behavior',
+        'username_as_alias',
       ];
       this.tuneToggles = {
         'LDAP Options': [
           'starttls',
-          'insecureTls',
+          'insecure_tls',
           'discoverdn',
-          'denyNullBind',
-          'tlsMinVersion',
-          'tlsMaxVersion',
+          'deny_null_bind',
+          'tls_min_version',
+          'tls_max_version',
           'certificate',
-          'clientTlsCert',
-          'clientTlsKey',
+          'client_tls_cert',
+          'client_tls_key',
           'userattr',
           'upndomain',
-          'anonymousGroupSearch',
+          'anonymous_group_search',
         ],
         'Customize User Search': ['binddn', 'userdn', 'bindpass', 'userfilter'],
-        'Customize Group Membership Search': ['groupfilter', 'groupattr', 'groupdn', 'useTokenGroups'],
+        'Customize Group Membership Search': ['groupfilter', 'groupattr', 'groupdn', 'use_token_groups'],
+        ...this.tokensGroup,
       };
       await login();
       return visit('/vault/settings/auth/enable');
@@ -156,29 +162,20 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       this.type = 'oidc';
       this.path = `${this.type}-${uuidv4()}`;
       this.customSelectors = {
-        providerConfig: `${GENERAL.fieldByAttr('providerConfig')} .cm-editor`,
+        provider_config: `${GENERAL.fieldByAttr('provider_config')} .cm-editor`,
       };
       this.tuneFields = [
-        'oidcDiscoveryUrl',
-        'defaultRole',
-        'jwksCaPem',
-        'jwksUrl',
-        'oidcResponseMode',
-        'oidcResponseTypes',
-        'namespaceInState',
-        'providerConfig',
-        'unsupportedCriticalCertExtensions',
+        'oidc_discovery_url',
+        'default_role',
+        'jwks_ca_pem',
+        'jwks_url',
+        'oidc_response_mode',
+        'oidc_response_types',
+        'namespace_in_state',
+        'provider_config',
+        'unsupported_critical_cert_extensions',
       ];
-      this.tuneToggles = {
-        'OIDC Options': [
-          'oidcClientId',
-          'oidcClientSecret',
-          'oidcDiscoveryCaPem',
-          'jwtValidationPubkeys',
-          'jwtSupportedAlgs',
-          'boundIssuer',
-        ],
-      };
+      this.tuneToggles = this.oidcJwtGroup;
       await login();
       return visit('/vault/settings/auth/enable');
     });
@@ -192,19 +189,8 @@ module('Acceptance | auth enable tune form test', function (hooks) {
     hooks.beforeEach(async function () {
       this.type = 'okta';
       this.path = `${this.type}-${uuidv4()}`;
-      this.tuneFields = [
-        'orgName',
-        'tokenBoundCidrs',
-        'tokenExplicitMaxTtl',
-        'tokenMaxTtl',
-        'tokenNoDefaultPolicy',
-        'tokenNumUses',
-        'tokenPeriod',
-        'tokenPolicies',
-        'tokenTtl',
-        'tokenType',
-      ];
-      this.tuneToggles = { Options: ['apiToken', 'baseUrl', 'bypassOktaMfa'] };
+      this.tuneFields = ['org_name', 'api_token', 'base_url', 'bypass_okta_mfa'];
+      this.tuneToggles = this.tokensGroup;
       await login();
       return visit('/vault/settings/auth/enable');
     });
