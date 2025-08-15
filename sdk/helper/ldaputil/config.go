@@ -35,8 +35,7 @@ func ConfigFields() map[string]*framework.FieldSchema {
 			Default:     false,
 			Description: "Use anonymous binds when performing LDAP group searches (if true the initial credentials will still be used for the initial connection test).",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Anonymous group search",
-				Group: "LDAP Options",
+				Name: "Anonymous group search",
 			},
 		},
 		"url": {
@@ -44,8 +43,7 @@ func ConfigFields() map[string]*framework.FieldSchema {
 			Default:     "ldap://127.0.0.1",
 			Description: "LDAP URL to connect to (default: ldap://127.0.0.1). Multiple URLs can be specified by concatenating them with commas; they will be tried in-order.",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:       "URL",
-				Identifier: true,
+				Name: "URL",
 			},
 		},
 
@@ -53,8 +51,7 @@ func ConfigFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeString,
 			Description: "LDAP domain to use for users (eg: ou=People,dc=example,dc=org)",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "User DN",
-				Group: "Customize User Search",
+				Name: "User DN",
 			},
 		},
 
@@ -62,8 +59,7 @@ func ConfigFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeString,
 			Description: "LDAP DN for searching for the user DN (optional)",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Name of Object to bind (binddn)",
-				Group: "Customize User Search",
+				Name: "Name of Object to bind (binddn)",
 			},
 		},
 
@@ -72,7 +68,6 @@ func ConfigFields() map[string]*framework.FieldSchema {
 			Description: "LDAP password for searching for the user DN (optional)",
 			DisplayAttrs: &framework.DisplayAttributes{
 				Sensitive: true,
-				Group:     "Customize User Search",
 			},
 		},
 
@@ -80,8 +75,7 @@ func ConfigFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeString,
 			Description: "LDAP search base to use for group membership search (eg: ou=Groups,dc=example,dc=org)",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Group DN",
-				Group: "Customize Group Membership Search",
+				Name: "Group DN",
 			},
 		},
 
@@ -93,8 +87,7 @@ The template can access the following context variables: UserDN, Username
 Example: (&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))
 Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`,
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Group Filter",
-				Group: "Customize Group Membership Search",
+				Name: "Group Filter",
 			},
 		},
 
@@ -108,7 +101,6 @@ Default: cn`,
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name:  "Group Attribute",
 				Value: "cn",
-				Group: "Customize Group Membership Search",
 			},
 		},
 
@@ -119,8 +111,7 @@ Default: cn`,
 The template can access the following context variables: UserAttr, Username
 Default: ({{.UserAttr}}={{.Username}})`,
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "User Search Filter",
-				Group: "Customize User Search",
+				Name: "User Search Filter",
 			},
 		},
 
@@ -128,8 +119,7 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Type:        framework.TypeString,
 			Description: "Enables userPrincipalDomain login with [username]@UPNDomain (optional)",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "User Principal (UPN) Domain",
-				Group: "LDAP Options",
+				Name: "User Principal (UPN) Domain",
 			},
 		},
 
@@ -146,7 +136,6 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name:  "User Attribute",
 				Value: "cn",
-				Group: "LDAP Options",
 			},
 		},
 
@@ -156,7 +145,6 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name:     "CA certificate",
 				EditType: "file",
-				Group:    "LDAP Options",
 			},
 		},
 
@@ -166,7 +154,6 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name:     "Client certificate",
 				EditType: "file",
-				Group:    "LDAP Options",
 			},
 		},
 
@@ -176,7 +163,6 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name:     "Client key",
 				EditType: "file",
-				Group:    "LDAP Options",
 			},
 		},
 
@@ -184,8 +170,7 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Type:        framework.TypeBool,
 			Description: "Use anonymous bind to discover the bind DN of a user (optional)",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Discover DN",
-				Group: "LDAP Options",
+				Name: "Discover DN",
 			},
 		},
 
@@ -193,8 +178,7 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Type:        framework.TypeBool,
 			Description: "Skip LDAP server SSL Certificate verification - VERY insecure (optional)",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Insecure TLS",
-				Group: "LDAP Options",
+				Name: "Insecure TLS",
 			},
 		},
 
@@ -202,8 +186,7 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Type:        framework.TypeBool,
 			Description: "Issue a StartTLS command after establishing unencrypted connection (optional)",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Issue StartTLS",
-				Group: "LDAP Options",
+				Name: "Issue StartTLS",
 			},
 		},
 
@@ -212,8 +195,7 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Default:     "tls12",
 			Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Defaults to 'tls12'",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Minimum TLS Version",
-				Group: "LDAP Options",
+				Name: "Minimum TLS Version",
 			},
 			AllowedValues: []interface{}{"tls10", "tls11", "tls12", "tls13"},
 		},
@@ -223,8 +205,7 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Default:     "tls12",
 			Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Defaults to 'tls12'",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Maximum TLS Version",
-				Group: "LDAP Options",
+				Name: "Maximum TLS Version",
 			},
 			AllowedValues: []interface{}{"tls10", "tls11", "tls12", "tls13"},
 		},
@@ -233,9 +214,6 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Type:        framework.TypeBool,
 			Default:     true,
 			Description: "Denies an unauthenticated LDAP bind request if the user's password is empty; defaults to true",
-			DisplayAttrs: &framework.DisplayAttributes{
-				Group: "LDAP Options",
-			},
 		},
 
 		"case_sensitive_names": {
@@ -247,9 +225,6 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Type:        framework.TypeBool,
 			Default:     false,
 			Description: "If true, use the Active Directory tokenGroups constructed attribute of the user to find the group memberships. This will find all security groups including nested ones.",
-			DisplayAttrs: &framework.DisplayAttributes{
-				Group: "Customize Group Membership Search",
-			},
 		},
 
 		"use_pre111_group_cn_behavior": {

@@ -40,30 +40,17 @@ func (p *PluginIdentityTokenParams) PopulatePluginIdentityTokenData(m map[string
 
 // AddPluginIdentityTokenFields adds plugin identity token fields to the given
 // field schema map.
-func AddPluginIdentityTokenFields(m map[string]*framework.FieldSchema, group ...string) {
-	// Set default value
-	groupName := "default"
-	if len(group) > 0 && group[0] != "" {
-		groupName = group[0]
-	}
-
+func AddPluginIdentityTokenFields(m map[string]*framework.FieldSchema) {
 	fields := map[string]*framework.FieldSchema{
 		"identity_token_audience": {
 			Type:        framework.TypeString,
 			Description: "Audience of plugin identity tokens",
 			Default:     "",
-			DisplayAttrs: &framework.DisplayAttributes{
-				Group: groupName,
-			},
 		},
 		"identity_token_ttl": {
 			Type:        framework.TypeDurationSecond,
 			Description: "Time-to-live of plugin identity tokens",
 			Default:     3600,
-			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Identity token TTL",
-				Group: groupName,
-			},
 		},
 	}
 
