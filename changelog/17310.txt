@@ -1,0 +1,3 @@
+```release-note:bug
+core/seal: Unset CORS configuration when manually sealing Vault to prevent CORS access.
+```
