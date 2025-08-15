@@ -118,6 +118,16 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
       true
     )) as unknown as OpenApiHelpResponse;
     const form = new OpenApiForm(helpResponse, formData, formOptions);
+    // for jwt and oidc types, the jwks_pairs field is not deprecated but we do not render it in the UI
+    // remove the field from the group before rendering the form
+    if (['jwt', 'oidc'].includes(type)) {
+      const defaultGroup = form.formFieldGroups[0]?.['default'] || [];
+      const index = defaultGroup.findIndex((field) => field.name === 'jwks_pairs');
+      if (index !== undefined && index >= 0) {
+        defaultGroup.splice(index, 1);
+      }
+    }
+
     return {
       form,
       section: 'configuration',
