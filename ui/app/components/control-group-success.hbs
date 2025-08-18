@@ -62,7 +62,6 @@
         <div class="field is-grouped box is-fullwidth is-bottomless">
           <Hds::Button
             @text="Access"
-            @icon={{if this.unwrapTask.isRunning "loading"}}
             disabled={{or (not this.token) this.unwrapTask.isRunning}}
             {{on "click" (fn (perform this.unwrapTask) this.token)}}
             data-test-submit
