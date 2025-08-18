@@ -7,59 +7,59 @@
   <p.top>
     <Hds::Breadcrumb>
       <Hds::Breadcrumb::Item
-        @text={{pluralize this.itemType}}
+        @text={{pluralize @itemType}}
         @route="vault.cluster.access.method.item.list"
-        @models={{array this.mountPath this.itemType}}
+        @models={{array @mountPath @itemType}}
       />
-      <Hds::Breadcrumb::Item @text={{if (eq this.mode "show") this.model.id (capitalize this.mode)}} @current={{true}} />
+      <Hds::Breadcrumb::Item @text={{if (eq @mode "show") @model.id (capitalize @mode)}} @current={{true}} />
     </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
-    {{#if (eq this.mode "show")}}
+    {{#if (eq @mode "show")}}
       <h1 class="title is-3">
-        {{this.model.id}}
+        {{@model.id}}
       </h1>
     {{else}}
       <h1 class="title is-3">
-        {{capitalize this.mode}}
-        {{singularize this.itemType}}
-        {{#if (eq this.mode "edit")}}
-          {{this.model.id}}
+        {{capitalize @mode}}
+        {{singularize @itemType}}
+        {{#if (eq @mode "edit")}}
+          {{@model.id}}
         {{/if}}
       </h1>
     {{/if}}
   </p.levelLeft>
 </PageHeader>
-{{#if (eq this.mode "show")}}
+{{#if (eq @mode "show")}}
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction
-        @buttonText="Delete {{this.itemType}}"
+        @buttonText="Delete {{@itemType}}"
         class="toolbar-button"
         @buttonColor="secondary"
-        @onConfirmAction={{action "deleteItem"}}
-        @confirmMessage="Are you sure you want to delete {{this.itemType}} {{this.model.id}}?"
+        @onConfirmAction={{this.deleteItem}}
+        @confirmMessage="Are you sure you want to delete {{@itemType}} {{@model.id}}?"
       />
       <div class="toolbar-separator"></div>
       <ToolbarLink
         @route="vault.cluster.access.method.item.edit"
-        @models={{array this.mountPath this.itemType this.model.id}}
+        @models={{array @mountPath @itemType @model.id}}
         data-test-configure-link="true"
       >
         Edit
-        {{singularize this.itemType}}
+        {{singularize @itemType}}
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
 {{/if}}
-{{#if (eq this.mode "show")}}
-  <FieldGroupShow @model={{this.model}} @showAllFields={{true}} />
+{{#if (eq @mode "show")}}
+  <FieldGroupShow @model={{@model}} @showAllFields={{true}} />
 {{else}}
-  <form {{action (perform this.saveModel) on="submit"}}>
+  <form {{on "submit" (perform this.saveModel)}}>
     <div class="box is-sideless is-fullwidth is-marginless">
-      <NamespaceReminder @mode="save" @noun={{this.itemType}} />
-      <MessageError @model={{this.model}} />
-      <FormFieldGroups @model={{this.model}} @mode={{this.mode}} @modelValidations={{this.modelValidations}} />
+      <NamespaceReminder @mode="save" @noun={{@itemType}} />
+      <MessageError @model={{@model}} />
+      <FormFieldGroups @model={{@model}} @mode={{@mode}} @modelValidations={{this.modelValidations}} />
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <Hds::ButtonSet>
@@ -70,12 +70,12 @@
           disabled={{this.saveModel.isRunning}}
           data-test-submit
         />
-        {{#if (eq this.mode "create")}}
+        {{#if (eq @mode "create")}}
           <Hds::Button
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.access.method.item.list"
-            @models={{array this.mountPath this.itemType}}
+            @models={{array @mountPath @itemType}}
             data-test-cancel-link={{true}}
           />
         {{else}}
@@ -83,7 +83,7 @@
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.access.method.item.show"
-            @models={{array this.mountPath this.itemType this.model.id}}
+            @models={{array @mountPath @itemType @model.id}}
             data-test-cancel-link={{true}}
           />
         {{/if}}
