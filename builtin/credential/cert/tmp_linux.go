@@ -11,11 +11,8 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
-	"strings"
 
 	tpmkeyfiles "github.com/foxboron/go-tpm-keyfiles"
-	"github.com/google/go-tpm/tpm2"
-	"github.com/google/go-tpm/tpm2/transport"
 	"github.com/google/go-tpm/tpm2/transport/linuxtpm"
 )
 
