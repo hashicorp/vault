@@ -8,6 +8,8 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import SecretsEngineResource from 'vault/resources/secrets/engine';
+import { sanitizePath } from 'core/utils/sanitize-path';
+import errorMessage from 'vault/utils/error-message';
 
 import type ApiService from 'vault/services/api';
 import type NamespaceService from 'vault/services/namespace';
@@ -26,10 +28,13 @@ export default class SnapshotManage extends Component<Args> {
   @tracked resourcePath = '';
   @tracked mountOptions: string[] = [];
   @tracked secretData: { [key: string]: string } | undefined;
+  @tracked showRecoveryBanner = false;
+  @tracked mountError = '';
+  @tracked resourcePathError = '';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    this.selectedNamespace = this.namespace.path;
+    this.selectedNamespace = this.namespace.path === '' ? 'root' : null;
     this.fetchMounts();
   }
 
@@ -38,13 +43,14 @@ export default class SnapshotManage extends Component<Args> {
     if (item === 'selectedNamespace') {
       this.selectedMount = '';
       this[item] = selection;
+      this.fetchMounts();
     }
     this[item] = selection;
-  }
 
-  @action
-  updateResourcePath({ target }: { target: HTMLInputElement }) {
-    this.resourcePath = target.value;
+    // Clear errors when user makes selections
+    if (item === 'selectedMount') {
+      this.mountError = '';
+    }
   }
 
   @action
@@ -52,6 +58,9 @@ export default class SnapshotManage extends Component<Args> {
     this.selectedNamespace = this.namespace.inRootNamespace ? '' : null;
     this.selectedMount = '';
     this.resourcePath = '';
+    this.mountError = '';
+    this.resourcePathError = '';
+    this.secretData = undefined;
     // Refetch mounts after clearing
     if (this.namespace.inRootNamespace) {
       this.fetchMounts();
@@ -79,14 +88,43 @@ export default class SnapshotManage extends Component<Args> {
   }
 
   @action
-  async readResource() {
-    // TODO validate required fields
+  async recover() {
+    // Validate fields before attempting recovery
+    const isValid = await this.validateFields(true);
+    if (!isValid) {
+      return;
+    }
 
     try {
       const { snapshot_id } = this.args.model.snapshot as { snapshot_id: string };
-      console.log(snapshot_id);
 
-      // TODO pass in snapshot_id, does the api spec need to be regenerated? why does swagger have a different version?
+      // TODO pass in snapshot_id once spec is updated
+      if (this.selectedMount === 'kv/') {
+        // TODO: Implement actual recovery logic for KV
+      }
+      if (this.selectedMount === 'cubbyhole/') {
+        // TODO: Implement actual recovery logic for cubbyhole
+      }
+
+      this.showRecoveryBanner = true;
+    } catch (e) {
+      const error = await this.api.parseError(e);
+      console.error('Failed to recover resource:', error);
+    }
+  }
+
+  @action
+  async readResource() {
+    // Validate fields before attempting to read
+    const isValid = await this.validateFields(false);
+    if (!isValid) {
+      return;
+    }
+
+    try {
+      const { snapshot_id } = this.args.model.snapshot as { snapshot_id: string };
+
+      // TODO pass in snapshot_id once spec is updated
       if (this.selectedMount === 'kv/') {
         const { data } = await this.api.secrets.kvV1Read(this.resourcePath, 'kv');
         this.secretData = data as any;
@@ -100,6 +138,78 @@ export default class SnapshotManage extends Component<Args> {
       const error = await this.api.parseError(e);
       console.error('Failed to read resource:', error);
     }
+  }
+
+  @action
+  updateResourcePath({ target }: { target: HTMLInputElement }) {
+    this.resourcePath = target.value;
+    // Clear error when user starts typing
+    this.resourcePathError = '';
+  }
+
+  @action
+  async validateFields(isRecovery = false): Promise<boolean> {
+    this.mountError = '';
+    this.resourcePathError = '';
+    let hasErrors = false;
+
+    if (!this.selectedMount) {
+      this.mountError = 'Please select a secret mount';
+      hasErrors = true;
+    }
+
+    if (!this.resourcePath.trim()) {
+      this.resourcePathError = 'Please enter a resource path';
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
+      return false;
+    }
+
+    try {
+      await this.checkResourceExists();
+
+      return true;
+    } catch (e) {
+      const error = await this.api.parseError(e);
+
+      if (error.status === 404) {
+        this.resourcePathError = 'Resource does not exist at this path';
+      } else if (error.status === 403) {
+        if (isRecovery) {
+          this.resourcePathError = 'You do not have permission to recover secrets to this path';
+        } else {
+          this.resourcePathError = 'You do not have permission to read from this path';
+        }
+      } else {
+        this.resourcePathError = errorMessage(error) || 'Failed to validate resource path';
+      }
+
+      return false;
+    }
+  }
+
+  async checkResourceExists(): Promise<void> {
+    if (this.selectedMount === 'kv/') {
+      await this.api.secrets.kvV1Read(this.resourcePath, 'kv');
+    } else if (this.selectedMount === 'cubbyhole/') {
+      await this.api.secrets.cubbyholeRead(this.resourcePath);
+    }
+  }
+
+  // async checkReadPermission(): Promise<void> {}
+
+  get hasValidationErrors() {
+    return !!(this.mountError || this.resourcePathError);
+  }
+
+  get isFormValid() {
+    return this.selectedMount && this.resourcePath.trim() && !this.hasValidationErrors;
+  }
+
+  get mountWithoutSlash() {
+    return sanitizePath(this.selectedMount);
   }
 
   // format secret data for display
@@ -148,10 +258,3 @@ export default class SnapshotManage extends Component<Args> {
     }
   }
 }
-
-// TODO
-// 1. show read secrets in kv view
-// 2. set up recover flow (probably same signature issues though)
-// 3. clean up
-// 4. reach out around that discrepancy
-// 5. tests

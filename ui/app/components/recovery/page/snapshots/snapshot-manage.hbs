@@ -29,6 +29,20 @@
 
 <Hds::Text::Display @tag="h3" class="has-top-padding-m">Recovery or read data</Hds::Text::Display>
 
+{{#if this.showRecoveryBanner}}
+  <Hds::Alert @type="inline" @color="success" as |A|>
+    <A.Title>Success</A.Title>
+    <A.Description>Secret at
+      <Hds::Link::Inline
+        @route="vault.cluster.secrets.backend.show"
+        @models={{array this.mountWithoutSlash this.resourcePath}}
+      >
+        {{this.resourcePath}}
+      </Hds::Link::Inline>
+      has been successfully recovered.</A.Description>
+  </Hds::Alert>
+{{/if}}
+
 <Hds::Layout::Flex @gap="24" class="has-bottom-padding-m">
   {{#if this.namespace.inRootNamespace}}
     <Hds::Form::SuperSelect::Single::Field
@@ -48,22 +62,26 @@
     @selected={{this.selectedMount}}
     @options={{this.mountOptions}}
     @searchEnabled={{true}}
+    @isInvalid={{if this.mountError true false}}
     as |F|
   >
     <F.Label>Secret mount</F.Label>
-    {{!-- <F.Options>
-      {{#let F.options as |option|}}
-        <Hds::Text::Body @size="200">
-          {{option.path}}
-        </Hds::Text::Body>
-      {{/let}}
-
-    </F.Options> --}}
     <F.Options>{{F.options}}</F.Options>
+    {{#if this.mountError}}
+      <F.Error>{{this.mountError}}</F.Error>
+    {{/if}}
   </Hds::Form::SuperSelect::Single::Field>
 
-  <Hds::Form::TextInput::Field @value={{this.resourcePath}} {{on "input" this.updateResourcePath}} as |F|>
+  <Hds::Form::TextInput::Field
+    @value={{this.resourcePath}}
+    @isInvalid={{if this.resourcePathError true false}}
+    {{on "input" this.updateResourcePath}}
+    as |F|
+  >
     <F.Label>Resource Path</F.Label>
+    {{#if this.resourcePathError}}
+      <F.Error>{{this.resourcePathError}}</F.Error>
+    {{/if}}
   </Hds::Form::TextInput::Field>
 
   <Hds::Button @text="Clear" @icon="trash" @color="secondary" {{on "click" this.clearSelections}} />
@@ -76,6 +94,6 @@
 <hr class="has-background-gray-300" />
 
 <Hds::ButtonSet class="has-top-padding-m">
-  <Hds::Button @text="Recover" type="submit" />
+  <Hds::Button @text="Recover" type="submit" {{on "click" this.recover}} />
   <Hds::Button @text="Read" @color="secondary" {{on "click" this.readResource}} />
 </Hds::ButtonSet>
