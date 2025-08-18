@@ -69,6 +69,8 @@ on:
 concurrency:
   group: ${{ github.head_ref || github.run_id }}-build
   cancel-in-progress: true
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
   setup:
@@ -103,6 +105,10 @@ jobs:
       vault-version-metadata: ${{ steps.metadata.outputs.vault-version-metadata }}
       vault-version-package: ${{ steps.metadata.outputs.vault-version-package }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
+  build:
+    name: Build and analyze
+    runs-on: windows-latest
+
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       # Make sure we check out correct ref based on PR labels and such
@@ -136,6 +142,7 @@ jobs:
       # Determine the changed files
       - uses: ./.github/actions/changed-files
         id: changed-files
+      - uses: actions/checkout@v4
         with:
           github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       # Ensure that we have not changed any enterprise files on pull requests against ce/* branches.
@@ -421,6 +428,8 @@ jobs:
           steps.status.outputs.result != 'success' &&
           (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
         uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0 # v1.27.0
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - uses: SonarSource/sonarqube-scan-action@v5
         env:
           SLACK_BOT_TOKEN: ${{ steps.slackbot-token.outputs.slackbot-token }}
         with:
@@ -477,3 +486,13 @@ jobs:
         run: |
           echo "One or more required build workflows failed: ${{ steps.status.outputs.results }}"
           exit 1
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      # If you wish to fail your job when the Quality Gate is red, uncomment the
+      # following lines. This would typically be used to fail a deployment.
+      # We do not recommend to use this in a pull request. Prefer using pull request
+      # decoration instead.
+      # - uses: SonarSource/sonarqube-quality-gate-action@v1
+      #   timeout-minutes: 5
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
