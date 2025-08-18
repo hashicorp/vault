@@ -24,6 +24,7 @@ import (
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
 	proxyConfig "github.com/hashicorp/vault/command/proxy/config"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -313,6 +314,7 @@ auto_auth {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
+		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
 		cmd.Run([]string{"-config", configPath})
 		wg.Done()
 	}()
@@ -324,7 +326,7 @@ auto_auth {
 	}
 
 	// TODO (HCL_DUP_KEYS_DEPRECATION): Eventually remove this check together with the duplicate attribute in this
-	// test's configuration, create separate test ensuring such a config is not valid
+	// test's configuration
 	require.Contains(t, ui.ErrorWriter.String(),
 		"WARNING: Duplicate keys found")
 

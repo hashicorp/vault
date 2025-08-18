@@ -68,7 +68,7 @@ func runCopyGithubPullRequestCmd(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Println(string(b))
 	default:
-		fmt.Println(res.ToTable(err))
+		fmt.Println(res.ToTable(err).Render())
 	}
 
 	return err

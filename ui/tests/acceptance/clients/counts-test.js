@@ -56,10 +56,10 @@ module('Acceptance | clients | counts', function (hooks) {
       'Start and end times added as query params'
     );
 
-    await click(GENERAL.tab('token'));
+    await click(GENERAL.tab('client list'));
     assert.strictEqual(
       currentURL(),
-      '/vault/clients/counts/token?end_time=1698710400&start_time=1677628800',
+      '/vault/clients/counts/client-list?end_time=1698710400&start_time=1677628800',
       'Start and end times persist through child route change'
     );
 

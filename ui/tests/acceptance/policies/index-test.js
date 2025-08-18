@@ -19,7 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
-import codemirror from 'vault/tests/helpers/codemirror';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECT = {
@@ -27,7 +27,6 @@ const SELECT = {
   filterBar: '[data-test-component="navigate-input"]',
   createPolicy: '[data-test-policy-create-link]',
   nameInput: '[data-test-policy-input="name"]',
-  createError: '[data-test-message-error]',
   policyTitle: '[data-test-policy-name]',
   listBreadcrumb: '[data-test-policy-list-link] a',
 };
@@ -85,7 +84,11 @@ module('Acceptance | policies/acl', function (hooks) {
     await click(SELECT.createPolicy);
 
     await fillIn(SELECT.nameInput, policyName);
-    codemirror().setValue(policyString);
+
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, policyString);
+
     await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
@@ -107,9 +110,13 @@ module('Acceptance | policies/acl', function (hooks) {
     await fillIn(SELECT.nameInput, policyName);
     await click(GENERAL.submitButton);
     assert
-      .dom(SELECT.createError)
+      .dom(GENERAL.messageError)
       .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
-    codemirror().setValue(policyString);
+
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, policyString);
+
     await click(GENERAL.submitButton);
 
     await waitUntil(() => currentURL() === `/vault/policy/acl/${encodeURIComponent(policyLower)}`);

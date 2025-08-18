@@ -166,6 +166,12 @@ message Request {
   // RequiresSnapshotID will be present when the request is a list, read, or
   // recover from snapshot operation
   string requires_snapshot_id = 21;
+
+  // RecoverSourcePath is the path where a recover request should read the data
+  // from. This can be empty if the request is not a recover request, or if the
+  // request is a recover request where the source path is the same as the
+  // destination path
+  string recover_source_path = 22;
 }
 
 message Auth {
@@ -617,6 +623,16 @@ message GenerateIdentityTokenResponse {
   int64 ttl = 2;
 }
 
+message RotationInfoRequest {
+  string mount_path = 1;
+}
+
+message RotationInfoReply {
+  int64 issue_time = 1;
+  int64 expire_time = 2;
+  int64 ttl = 3;
+}
+
 message RegisterRotationJobRequest {
   RotationJobInput job = 1;
 }
@@ -702,6 +718,9 @@ service SystemView {
 
   // GenerateIdentityToken returns an identity token for the requesting plugin.
   rpc GenerateIdentityToken(GenerateIdentityTokenRequest) returns (GenerateIdentityTokenResponse);
+
+  // GetRotationInformation returns the time remaining in a rotation job for the requested credential.
+  rpc GetRotationInformation(RotationInfoRequest) returns (RotationInfoReply);
 
   // RegisterRotationJob returns a rotation ID for the requested plugin credential.
   rpc RegisterRotationJob(RegisterRotationJobRequest) returns (RegisterRotationJobResponse);

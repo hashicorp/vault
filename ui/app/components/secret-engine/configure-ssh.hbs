@@ -47,9 +47,9 @@
       </label>
       <div class="control">
         <MaskedInput
-          @name="publickey"
+          @name="publicKey"
           @id="publicKey"
-          @value={{@configForm.publicKey}}
+          @value={{@configForm.public_key}}
           @displayOnly={{true}}
           @allowCopy={{true}}
           data-test-input="public-key"
@@ -59,7 +59,7 @@
     <Hds::ButtonSet>
       <Hds::Copy::Button
         @text="Copy"
-        @textToCopy={{@configForm.publicKey}}
+        @textToCopy={{@configForm.public_key}}
         @onError={{fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")}}
         class="primary"
       />

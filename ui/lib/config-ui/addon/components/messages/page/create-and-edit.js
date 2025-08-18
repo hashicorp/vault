@@ -46,8 +46,8 @@ export default class MessagesList extends Component {
   get hasExpiredModalMessages() {
     const modalMessages = this.args.messages?.filter((message) => message.type === 'modal') || [];
     return modalMessages.every((message) => {
-      if (!message.endTime) return false;
-      return isAfter(timestamp.now(), new Date(message.endTime));
+      if (!message.end_time) return false;
+      return isAfter(timestamp.now(), new Date(message.end_time));
     });
   }
 

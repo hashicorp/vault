@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/ldap: add explicit logging to rotations in ldap
+```

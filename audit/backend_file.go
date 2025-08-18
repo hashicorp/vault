@@ -6,6 +6,7 @@ package audit
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/eventlogger"
@@ -78,6 +79,15 @@ func newFileBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*fileBa
 
 	sinkOpts := []event.Option{event.WithLogger(conf.Logger)}
 	if mode, ok := conf.Config[optionMode]; ok {
+		if strings.TrimSpace(mode) != "" {
+			m, err := strconv.ParseUint(mode, 8, 32)
+			if err != nil {
+				return nil, fmt.Errorf("invalid mode: %s", mode)
+			}
+			if m&0o111 != 0 {
+				return nil, fmt.Errorf("file mode may not be executable: %s", mode)
+			}
+		}
 		sinkOpts = append(sinkOpts, event.WithFileMode(mode))
 	}
 

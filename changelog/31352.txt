@@ -1,0 +1,3 @@
+```release-note:bug
+auth: update alias lookahead to respect username case for LDAP and username/password
+```

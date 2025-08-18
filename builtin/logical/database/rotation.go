@@ -268,13 +268,14 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 
 	// send an event indicating if the rotation was a success or failure
 	rotated := false
-	defer func() {
+	defer func(s *staticAccount) {
 		if rotated {
+			b.Logger().Info("succesfully rotated static role", "name", roleName, "ttl", s.CredentialTTL().Seconds())
 			b.dbEvent(ctx, "rotate", "", roleName, true)
 		} else {
 			b.dbEvent(ctx, "rotate-fail", "", roleName, false)
 		}
-	}()
+	}(role.StaticAccount) // argument is evaluated now, but since it's a pointer should refer correctly to updated values
 
 	// If there is a WAL entry related to this Role, the corresponding WAL ID
 	// should be stored in the Item's Value field.
@@ -284,7 +285,7 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 
 	resp, err := b.setStaticAccount(ctx, s, input)
 	if err != nil {
-		logger.Error("unable to rotate credentials in periodic function", "error", err)
+		logger.Error("unable to rotate credentials in periodic function", "name", roleName, "error", err.Error())
 
 		// Increment the priority enough so that the next call to this method
 		// likely will not attempt to rotate it, as a back-off of sorts

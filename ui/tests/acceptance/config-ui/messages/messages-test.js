@@ -107,13 +107,13 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
         'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
       );
       await fillIn(
-        CUSTOM_MESSAGES.input('startTime'),
+        CUSTOM_MESSAGES.input('start_time'),
         format(addDays(startOfDay(new Date('2023-12-12')), 1), datetimeLocalStringFormat)
       );
       if (end_time) {
         await click('#specificDate');
         await fillIn(
-          CUSTOM_MESSAGES.input('endTime'),
+          CUSTOM_MESSAGES.input('end_time'),
           format(addDays(startOfDay(new Date('2023-12-12')), 10), datetimeLocalStringFormat)
         );
       }
@@ -245,7 +245,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     assert
       .dom(CUSTOM_MESSAGES.modal('preview image'))
       .doesNotExist('preview image does not show because you have a missing title');
-    assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border', 'error around title shows');
+    assert.dom(GENERAL.validationErrorByAttr('title')).exists();
   });
 
   // unauthenticated messages
@@ -340,7 +340,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
     await click(GENERAL.button('preview'));
     assert.dom(CUSTOM_MESSAGES.modal('preview image')).doesNotExist('preview image does not show');
-    assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border', 'error around title shows');
+    assert.dom(GENERAL.validationErrorByAttr('title')).exists();
   });
 
   test('cleanup message pollution', async function (assert) {

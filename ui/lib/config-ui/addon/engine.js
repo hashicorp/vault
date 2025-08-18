@@ -25,7 +25,6 @@ export default class ConfigUiEngine extends Engine {
       'version',
       'custom-messages',
       'api',
-      'store',
       'capabilities',
     ],
   };

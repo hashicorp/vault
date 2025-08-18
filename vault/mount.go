@@ -83,6 +83,7 @@ const (
 	mountTypeNSCubbyhole = "ns_cubbyhole"
 	mountTypeToken       = "token"
 	mountTypeNSToken     = "ns_token"
+	mountTypeDatabase    = "database"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
@@ -1788,13 +1789,18 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		return nil, err
 	}
 
+	pluginRunningVersion := pluginVersion
+	if pluginRunningVersion == "" && runningSha == "" {
+		pluginRunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
+	}
+
 	pluginObservationRecorder, err := c.observations.WithPlugin(entry.namespace, &logical.ObservationPluginInfo{
 		MountClass:           consts.PluginTypeSecrets.String(),
 		MountAccessor:        entry.Accessor,
 		MountPath:            entry.Path,
 		Plugin:               entry.Type,
 		PluginVersion:        pluginVersion,
-		RunningPluginVersion: entry.RunningVersion,
+		RunningPluginVersion: pluginRunningVersion,
 		Version:              entry.Options["version"],
 		Local:                entry.Local,
 	})
@@ -1822,11 +1828,8 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		return nil, fmt.Errorf("nil backend of type %q returned from factory", t)
 	}
 
-	entry.RunningVersion = pluginVersion
+	entry.RunningVersion = pluginRunningVersion
 	entry.RunningSha256 = runningSha
-	if entry.RunningVersion == "" && entry.RunningSha256 == "" {
-		entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
-	}
 	addLicenseCallback(c, backend)
 
 	return backend, nil

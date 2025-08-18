@@ -6,6 +6,9 @@ description: |-
   credentials.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # LDAP auth method
 
 @include 'tips/custom-authn.mdx'
@@ -149,6 +152,14 @@ For anonymous search, `discoverdn` must be set to `true`, and `deny_null_bind` m
 - `enable_samaccountname_login` `(bool: false)` - (Optional) Lets Active Directory
   LDAP users log in using `sAMAccountName` or `userPrincipalName` when the
   `upndomain` parameter is set.
+
+### Certificates
+
+At startup, Vault can read LDAP certificates from the operating systems (OS)
+certificate trust store instead of reading CA certificates from the
+certificate parameter. After startup, you need to restart Vault to read in
+new certificates before the LDAP plugin can use the information to establish new
+LDAP connections to the configured server address.
 
 ### Group membership resolution
 

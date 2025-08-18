@@ -14,7 +14,7 @@ export const commonFields = {
     editDisabled: true,
   }),
 
-  secretNameTemplate: new FormField('secretNameTemplate', 'string', {
+  secretNameTemplate: new FormField('secret_name_template', 'string', {
     subText:
       'Go-template string that indicates how to format the secret name at the destination. The default template varies by destination type but is generally in the form of "vault-{{ .MountAccessor }}-{{ .SecretPath }}" e.g. "vault-kv_9a8f68ad-my-secret-1". Optional.',
   }),
@@ -38,7 +38,7 @@ export const commonFields = {
     ],
   }),
 
-  customTags: new FormField('customTags', 'object', {
+  customTags: new FormField('custom_tags', 'object', {
     subText:
       'An optional set of informational key-value pairs added as additional metadata on secrets synced to this destination. Custom tags are merged with built-in tags.',
     editType: 'kv',

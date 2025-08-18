@@ -47,11 +47,7 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
   test('it falls back error template if no permission', async function (assert) {
     this.server.get('/sys/config/ui/login/default-auth', () => overrideResponse(403));
     await visit('vault/config-ui/login-settings');
-    assert
-      .dom(GENERAL.pageError.error)
-      .hasText(
-        'Not authorized You are not authorized to access content at /v1/sys/config/ui/login/default-auth.'
-      );
+    assert.dom(GENERAL.pageError.error).hasText('Error permission denied');
   });
 
   module('list, read and delete', function (hooks) {

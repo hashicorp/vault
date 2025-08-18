@@ -149,6 +149,24 @@ type Listener struct {
 	// DisableRequestLimiter allows per-listener disabling of the Request Limiter.
 	DisableRequestLimiterRaw any  `hcl:"disable_request_limiter"`
 	DisableRequestLimiter    bool `hcl:"-"`
+
+	// JSON-specific limits
+
+	// CustomMaxJSONDepth specifies the maximum nesting depth of a JSON object.
+	CustomMaxJSONDepthRaw interface{} `hcl:"max_json_depth"`
+	CustomMaxJSONDepth    int64       `hcl:"-"`
+
+	// CustomMaxJSONStringValueLength defines the maximum allowed length for a string in a JSON payload.
+	CustomMaxJSONStringValueLengthRaw interface{} `hcl:"max_json_string_value_length"`
+	CustomMaxJSONStringValueLength    int64       `hcl:"-"`
+
+	// CustomMaxJSONObjectEntryCount sets the maximum number of key-value pairs in a JSON object.
+	CustomMaxJSONObjectEntryCountRaw interface{} `hcl:"max_json_object_entry_count"`
+	CustomMaxJSONObjectEntryCount    int64       `hcl:"-"`
+
+	// CustomMaxJSONArrayElementCount determines the maximum number of elements in a JSON array.
+	CustomMaxJSONArrayElementCountRaw interface{} `hcl:"max_json_array_element_count"`
+	CustomMaxJSONArrayElementCount    int64       `hcl:"-"`
 }
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
@@ -468,6 +486,10 @@ func (l *Listener) parseRequestSettings() error {
 		return fmt.Errorf("invalid value for disable_request_limiter: %w", err)
 	}
 
+	if err := l.parseJSONLimitsSettings(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -707,6 +729,38 @@ func (l *Listener) parseRedactionSettings() error {
 	l.RedactAddressesRaw = nil
 	l.RedactClusterNameRaw = nil
 	l.RedactVersionRaw = nil
+
+	return nil
+}
+
+func (l *Listener) parseJSONLimitsSettings() error {
+	if err := parseAndClearInt(&l.CustomMaxJSONDepthRaw, &l.CustomMaxJSONDepth); err != nil {
+		return fmt.Errorf("error parsing max_json_depth: %w", err)
+	}
+	if l.CustomMaxJSONDepth < 0 {
+		return fmt.Errorf("max_json_depth cannot be negative")
+	}
+
+	if err := parseAndClearInt(&l.CustomMaxJSONStringValueLengthRaw, &l.CustomMaxJSONStringValueLength); err != nil {
+		return fmt.Errorf("error parsing max_json_string_value_length: %w", err)
+	}
+	if l.CustomMaxJSONStringValueLength < 0 {
+		return fmt.Errorf("max_json_string_value_length cannot be negative")
+	}
+
+	if err := parseAndClearInt(&l.CustomMaxJSONObjectEntryCountRaw, &l.CustomMaxJSONObjectEntryCount); err != nil {
+		return fmt.Errorf("error parsing max_json_object_entry_count: %w", err)
+	}
+	if l.CustomMaxJSONObjectEntryCount < 0 {
+		return fmt.Errorf("max_json_object_entry_count cannot be negative")
+	}
+
+	if err := parseAndClearInt(&l.CustomMaxJSONArrayElementCountRaw, &l.CustomMaxJSONArrayElementCount); err != nil {
+		return fmt.Errorf("error parsing max_json_array_element_count: %w", err)
+	}
+	if l.CustomMaxJSONArrayElementCount < 0 {
+		return fmt.Errorf("max_json_array_element_count cannot be negative")
+	}
 
 	return nil
 }

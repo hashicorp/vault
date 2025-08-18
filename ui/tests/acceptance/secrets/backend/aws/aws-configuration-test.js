@@ -173,17 +173,17 @@ module('Acceptance | aws | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it should show identityTokenTtl or maxRetries even if they have not been set', async function (assert) {
+    test('it should show identity_token_ttl or maxRetries even if they have not been set', async function (assert) {
       // documenting the intention that we show fields that have not been set but are returned by the api due to defaults
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
 
       await click(SES.configTab);
       await click(SES.configure);
-      // manually fill in attrs without using helper so we can exclude identityTokenTtl and maxRetries.
+      // manually fill in attrs without using helper so we can exclude identity_token_ttl and max_retries.
       await click(SES.wif.accessType('wif')); // toggle to wif
-      await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
-      await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
+      await fillIn(GENERAL.inputByAttr('role_arn'), 'foo-role');
+      await fillIn(GENERAL.inputByAttr('identity_token_audience'), 'foo-audience');
       // manually fill in non-access type specific fields on root config so we can exclude Max Retries.
       await click(GENERAL.button('Root config options'));
       await fillIn(GENERAL.inputByAttr('region'), 'eu-central-1');
@@ -231,7 +231,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       const path = `aws-${this.uid}`;
       const type = 'aws';
       await enablePage.enable(type, path);
-      // create accessKey with value foo and confirm it shows up in the details page.
+      // create access_key with value foo and confirm it shows up in the details page.
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withAccess');
@@ -243,7 +243,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       // edit root config details and lease config details and confirm the configuration.index page is updated.
       await click(SES.configure);
       // edit root config details
-      await fillIn(GENERAL.inputByAttr('accessKey'), 'not-foo');
+      await fillIn(GENERAL.inputByAttr('access_key'), 'not-foo');
       await click(GENERAL.button('Root config options'));
       await fillIn(GENERAL.inputByAttr('region'), 'ap-southeast-2');
       // add lease config details

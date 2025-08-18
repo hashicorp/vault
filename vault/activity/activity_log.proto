@@ -25,6 +25,11 @@ message EntityRecord {
   // client_type identifies the source of the entity record (entity,
   // non-entity, acme, etc.)
   string client_type = 6;
+  // usage_time is the timestamp when the client performed the activity.
+  // using the Timestamp type would cost us an extra
+  // 4 bytes per record to store nanoseconds.
+  // adds extra 10 bytes to the record
+  int64 usage_time = 7;
 }
 
 message LogFragment {

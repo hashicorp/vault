@@ -18,8 +18,8 @@ const allFields = [
   { label: 'Authenticated', key: 'authenticated' },
   { label: 'Title', key: 'title' },
   { label: 'Message', key: 'message' },
-  { label: 'Start time', key: 'startTime' },
-  { label: 'End time', key: 'endTime' },
+  { label: 'Start time', key: 'start_time' },
+  { label: 'End time', key: 'end_time' },
   { label: 'Link', key: 'link' },
 ];
 
@@ -45,9 +45,8 @@ module('Integration | Component | messages/page/details', function (hooks) {
       title: 'Message title 1',
       message: 'Some long long long message',
       link: { here: 'www.example.com' },
-      startTime: new Date('2021-08-01T00:00:00Z'),
-      endTime: undefined,
-      canEditCustomMessages: true,
+      start_time: new Date('2021-08-01T00:00:00Z'),
+      end_time: undefined,
     };
     this.capabilities = { canDelete: true, canUpdate: true };
   });
@@ -64,7 +63,7 @@ module('Integration | Component | messages/page/details', function (hooks) {
 
     allFields.forEach((field) => {
       assert.dom(GENERAL.infoRowLabel(field.label)).hasText(field.label, `${field.label} label renders`);
-      if (field.key === 'startTime' || field.key === 'endTime') {
+      if (field.key === 'start_time' || field.key === 'end_time') {
         const formattedDate = dateFormat([this.message[field.key], 'MMM d, yyyy hh:mm aaa'], {
           withTimeZone: true,
         });

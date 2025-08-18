@@ -14,30 +14,30 @@ export type ListDestination = {
   name: string;
   type: DestinationType;
   icon?: string;
-  typeDisplayName?: string;
+  type_display_name?: string;
 };
 
 export type AssociatedSecret = {
   mount: string;
-  secretName: string;
-  syncStatus: string;
-  updatedAt: Date;
-  destinationType: DestinationType;
-  destinationName: string;
+  secret_name: string;
+  sync_status: string;
+  updated_at: Date;
+  destination_type: DestinationType;
+  destination_name: string;
 };
 
 export type AssociatedDestination = {
   type: string;
   name: string;
-  syncStatus: string;
-  updatedAt: Date;
+  sync_status: string;
+  updated_at: Date;
 };
 
 export type SyncStatus = {
-  destinationType: string;
-  destinationName: string;
-  syncStatus: string;
-  updatedAt: string;
+  destination_type: string;
+  destination_name: string;
+  sync_status: string;
+  updated_at: string;
 };
 
 export type DestinationMetrics = {
@@ -50,8 +50,8 @@ export type DestinationMetrics = {
 };
 
 export type AssociationMetrics = {
-  totalAssociations: number;
-  totalSecrets: number;
+  total_associations: number;
+  total_secrets: number;
 };
 
 export type DestinationType = 'aws-sm' | 'azure-kv' | 'gcp-sm' | 'gh' | 'vercel-project';
@@ -66,42 +66,42 @@ export type DestinationName =
 export type Destination = {
   name: string;
   type: DestinationType;
-  connectionDetails: DestinationConnectionDetails;
+  connection_details: DestinationConnectionDetails;
   options: DestinationOptions;
   // only present if delete action has been initiated
-  purgeInitiatedAt?: string;
-  purgeError?: string;
+  purge_initiated_at?: string;
+  purge_error?: string;
 };
 
 export type DestinationConnectionDetails = {
   // aws-sm
-  accessKeyId?: string;
-  secretAccessKey?: string;
+  access_key_id?: string;
+  secret_access_key?: string;
   region?: string;
   // azure-kv
-  keyVaultUri?: string;
-  clientId?: string;
-  clientSecret?: string;
-  tenantId?: string;
+  key_vault_uri?: string;
+  client_id?: string;
+  client_secret?: string;
+  tenant_id?: string;
   cloud?: string;
   // gcp
   credentials?: string;
   // gh
-  accessToken?: string;
-  repositoryOwner?: string;
-  repositoryName?: string;
+  access_token?: string;
+  repository_owner?: string;
+  repository_name?: string;
   // vercel project
-  accessToken?: string;
-  projectId?: string;
-  teamId?: string;
-  deploymentEnvironments?: array;
+  access_token?: string;
+  project_id?: string;
+  team_id?: string;
+  deployment_environments?: array;
 };
 
 export type DestinationOptions = {
   granularity?: string; // expected as granularity in request
-  granularityLevel?: string; // returned as granularityLevel from response
-  secretNameTemplate: string;
-  customTags?: Record<string, string>;
+  granularity_level?: string; // returned as granularity_level from response
+  secret_name_template: string;
+  custom_tags?: Record<string, string>;
 };
 
 export type DestinationForm = AwsSmForm | AzureKvForm | GcpSmForm | GhForm | VercelProjectForm;

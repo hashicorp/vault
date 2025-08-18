@@ -8,15 +8,16 @@ import { setupRenderingTest } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
 import { click, fillIn, find, render, settled, waitUntil } from '@ember/test-helpers';
 import { _cancelTimers as cancelTimers } from '@ember/runloop';
-import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { callbackData } from 'vault/tests/helpers/oidc-window-stub';
-import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import * as parseURL from 'core/utils/parse-url';
 import sinon from 'sinon';
-import testHelper from './auth-form-test-helper';
+import authFormTestHelper from './auth-form-test-helper';
+import { RESPONSE_STUBS } from 'vault/tests/helpers/auth/response-stubs';
+import { DOMAIN_PROVIDER_MAP, ERROR_JWT_LOGIN } from 'vault/utils/auth-form-helpers';
+import { dasherize } from '@ember/string';
 
 /* 
 The OIDC and JWT mounts call the same endpoint (see docs https://developer.hashicorp.com/vault/docs/auth/jwt )
@@ -82,36 +83,6 @@ const jwtLoginTests = (test) => {
     assert.dom(GENERAL.submitButton).hasText('Sign in');
   });
 
-  test('it submits form data with defaults', async function (assert) {
-    await this.renderComponent();
-
-    await fillIn(GENERAL.inputByAttr('role'), 'some-dev');
-    await fillIn(GENERAL.inputByAttr('jwt'), 'some-jwt-token');
-
-    await click(GENERAL.submitButton);
-    const [actual] = this.authenticateStub.lastCall.args;
-    assert.propEqual(
-      actual.data,
-      this.expectedSubmit.default,
-      'auth service "authenticate" method is called with form data'
-    );
-  });
-
-  test('it submits form data from yielded inputs', async function (assert) {
-    await this.renderComponent({ yieldBlock: true });
-    await fillIn(GENERAL.inputByAttr('role'), 'some-dev');
-    await fillIn(GENERAL.inputByAttr('jwt'), 'some-jwt-token');
-    await fillIn(GENERAL.inputByAttr('path'), `custom-${this.authType}`);
-
-    await click(GENERAL.submitButton);
-    const [actual] = this.authenticateStub.lastCall.args;
-    assert.propEqual(
-      actual.data,
-      this.expectedSubmit.custom,
-      'auth service "authenticate" method is called with yielded form data'
-    );
-  });
-
   test('it does NOT re-request the auth_url when jwt token changes', async function (assert) {
     assert.expect(1); // the assertion in the stubbed request should not be hit
     await this.renderComponent();
@@ -126,26 +97,6 @@ const jwtLoginTests = (test) => {
 };
 
 const oidcLoginTests = (test) => {
-  test('it renders fields', async function (assert) {
-    await this.renderComponent();
-    assert.dom(AUTH_FORM.authForm(this.authType)).exists(`${this.authType}: it renders form component`);
-    assert.dom(GENERAL.submitButton).hasText('Sign in with OIDC Provider');
-    this.expectedFields.forEach((field) => {
-      assert.dom(GENERAL.inputByAttr(field)).exists(`${this.authType}: it renders ${field}`);
-    });
-  });
-
-  test('it renders provider icon and name', async function (assert) {
-    const parseURLStub = sinon.stub(parseURL, 'default').returns({ hostname: 'auth0.com' });
-    this.server.post(`/auth/${this.authType}/oidc/auth_url`, () => {
-      return { data: { auth_url: '123.auth0.com' } };
-    });
-    await this.renderComponent();
-    assert.dom(GENERAL.submitButton).hasText('Sign in with Auth0');
-    assert.dom(GENERAL.icon('auth0')).exists();
-    parseURLStub.restore();
-  });
-
   // true success has to be asserted in acceptance tests because it's not possible to mock a trusted message event
   test('it opens the popup window on submit', async function (assert) {
     this.server.post(`/auth/${this.authType}/oidc/auth_url`, () => {
@@ -171,7 +122,7 @@ const oidcLoginTests = (test) => {
     sinon.restore();
   });
 
-  // auth_url error handling on submit
+  /* Tests for auth_url error handling on submit */
   test('it fires onError callback on submit when auth_url request fails with 400', async function (assert) {
     this.server.post('/auth/:path/oidc/auth_url', () => overrideResponse(400));
     await this.renderComponent();
@@ -190,8 +141,8 @@ const oidcLoginTests = (test) => {
     assert.strictEqual(actual, 'Authentication failed: Error fetching role: permission denied');
   });
 
-  test('it fires onError callback on submit when auth_url request is successful but missing auth_url key', async function (assert) {
-    this.server.post('/auth/:path/oidc/auth_url', () => ({ data: {} }));
+  test('it fires onError callback on submit when auth_url request is successful but missing auth_url', async function (assert) {
+    this.server.post('/auth/:path/oidc/auth_url', () => ({ data: { auth_url: '' } }));
     await this.renderComponent();
     await click(GENERAL.submitButton);
 
@@ -202,9 +153,9 @@ const oidcLoginTests = (test) => {
       'it calls onError'
     );
   });
-  // end auth_url error handling
+  /* END auth_url error handling */
 
-  // prepareForOIDC logic tests
+  /* test for prepareForOIDC logic */
   test('fails silently when event is not trusted', async function (assert) {
     assert.expect(2);
     this.server.post(`/auth/${this.authType}/oidc/auth_url`, () => {
@@ -267,6 +218,7 @@ const oidcLoginTests = (test) => {
     // Cleanup
     window.removeEventListener('message', assertEvent);
   });
+  /* end of tests for prepareForOIDC logic */
 };
 
 module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
@@ -274,14 +226,42 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.authenticateStub = sinon.stub(this.owner.lookup('service:auth'), 'authenticate');
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
     this.onSuccess = sinon.spy();
-
-    // additional test setup for oidc/jwt business
-    this.store = this.owner.lookup('service:store');
     this.routerStub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
+    const api = this.owner.lookup('service:api');
+
+    this.oidcLoginSetup = () => {
+      // authentication request called on submit for oidc login
+      this.authenticateStub = sinon.stub(api.auth, 'jwtOidcCallback');
+      this.authResponse = RESPONSE_STUBS.oidc['oidc/callback'];
+      this.windowStub = sinon.stub(window, 'open');
+    };
+
+    this.jwtLoginSetup = () => {
+      // stubbing this request shows JWT token input and does not perform OIDC
+      this.server.post(`/auth/:path/oidc/auth_url`, () => {
+        return overrideResponse(400, { errors: [ERROR_JWT_LOGIN] });
+      });
+      // authentication request called on submit for jwt tokens
+      this.authenticateStub = sinon.stub(api.auth, 'jwtLogin');
+      this.authResponse = RESPONSE_STUBS.jwt.login;
+    };
+
+    this.assertSubmit = (assert, loginRequestArgs, loginData) => {
+      const [path, payload] = loginRequestArgs;
+      // if path is included in loginData, a custom path was submitted
+      const expectedPath = loginData?.path || this.authType;
+      assert.strictEqual(path, expectedPath, `auth request made with path: ${expectedPath}`);
+
+      // iterate through each item in the payload and check its value
+      for (const field in payload) {
+        const actualValue = payload[field];
+        const expectedValue = loginData[field];
+        assert.strictEqual(actualValue, expectedValue, `payload includes field: ${field}`);
+      }
+    };
 
     this.renderComponent = ({ yieldBlock = false } = {}) => {
       if (yieldBlock) {
@@ -310,10 +290,14 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
   });
 
   hooks.afterEach(function () {
-    this.authenticateStub.restore();
     this.routerStub.restore();
   });
 
+  /* TESTS FOR BASE COMPONENT FUNCTIONALITY
+   These tests intentionally do not set authType as they are asserting type agnostic functionality.
+   This means the /auth_url request is missing the :path param and the console will output this request error:
+   403 http://localhost:7357/v1/auth//oidc/auth_url
+   */
   test('it renders helper text', async function (assert) {
     await this.renderComponent();
     const id = find(GENERAL.inputByAttr('role')).id;
@@ -322,10 +306,43 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
       .hasText('Vault will use the default role to sign in if this field is left blank.');
   });
 
-  module('oidc', function (hooks) {
+  for (const domain in DOMAIN_PROVIDER_MAP) {
+    const provider = DOMAIN_PROVIDER_MAP[domain];
+
+    test(`${provider}: it renders provider icon and name`, async function (assert) {
+      // parseUrl uses the actual window origin, so stub the util's return instead of authUrl
+      const parseURLStub = sinon.stub(parseURL, 'default').returns({ hostname: domain });
+      await this.renderComponent();
+      assert.dom(GENERAL.submitButton).hasText(`Sign in with ${provider}`);
+
+      // Right now there is a bug in HDS where the ping-identity icon name has a trailing whitespace.
+      // This test should fail when upgrading to an HDS version with the corrected icon name and then we can remove this conditional.
+      const iconName = domain === 'ping.com' ? 'ping-identity ' : dasherize(provider.toLowerCase());
+      // convenience message for HDS upgrade failure, can be removed when we upgrade
+      const message =
+        iconName === 'ping-identity '
+          ? `If you are attempting to upgrade @hashicorp/design-system-components and this test is failing, please remove the icon override for Ping Identity in oidc-jwt.ts`
+          : `it renders icon for ${domain}`;
+      assert.dom(GENERAL.icon(iconName)).exists(message);
+      parseURLStub.restore();
+    });
+  }
+
+  test('it does not return provider unless domain matches completely', async function (assert) {
+    assert.expect(2);
+    // parseUrl uses the actual window origin, so stub the return
+    const parseURLStub = sinon
+      .stub(parseURL, 'default')
+      .returns({ hostname: `http://custom-auth0-provider.com` });
+    await this.renderComponent();
+    assert.dom(GENERAL.submitButton).hasText('Sign in with OIDC Provider');
+    assert.dom(GENERAL.icon()).doesNotExist();
+    parseURLStub.restore();
+  });
+
+  module('@authType: oidc', function (hooks) {
     hooks.beforeEach(function () {
       this.authType = 'oidc';
-      this.expectedFields = ['role'];
     });
 
     // base component functionality so outside login workflow modules
@@ -333,29 +350,27 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
 
     module('login workflow: jwt token', function (hooks) {
       hooks.beforeEach(function () {
-        // stubbing this request shows JWT token input and does not perform OIDC
-        this.server.post(`/auth/:path/oidc/auth_url`, () => {
-          return overrideResponse(400, { errors: [ERROR_JWT_LOGIN] });
-        });
-        this.expectedFields = ['role', 'jwt'];
-        this.expectedSubmit = {
-          default: { path: 'oidc', role: 'some-dev', jwt: 'some-jwt-token' },
-          custom: { path: 'custom-oidc', role: 'some-dev', jwt: 'some-jwt-token' },
-        };
+        this.jwtLoginSetup();
+        this.loginData = { role: 'some-dev', jwt: 'some-jwt-token' };
       });
 
-      testHelper(test, { standardSubmit: false });
+      hooks.afterEach(function () {
+        this.authenticateStub.restore();
+      });
+
+      authFormTestHelper(test);
 
       jwtLoginTests(test);
     });
 
     module('login workflow: oidc', function (hooks) {
       hooks.beforeEach(function () {
-        // for oidc login workflow only
-        this.windowStub = sinon.stub(window, 'open');
+        this.oidcLoginSetup();
+        this.loginData = { role: 'some-dev' };
       });
 
       hooks.afterEach(function () {
+        this.authenticateStub.restore();
         this.windowStub.restore();
       });
 
@@ -363,10 +378,9 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
     });
   });
 
-  module('jwt', function (hooks) {
+  module('@authType: jwt', function (hooks) {
     hooks.beforeEach(function () {
       this.authType = 'jwt';
-      this.expectedFields = ['role'];
     });
 
     // base component functionality so outside login workflow modules
@@ -374,29 +388,27 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
 
     module('login workflow: jwt token', function (hooks) {
       hooks.beforeEach(function () {
-        // stubbing this request shows JWT token input and does not perform OIDC
-        this.server.post(`/auth/:path/oidc/auth_url`, () => {
-          return overrideResponse(400, { errors: [ERROR_JWT_LOGIN] });
-        });
-        this.expectedFields = ['role', 'jwt'];
-        this.expectedSubmit = {
-          default: { path: 'jwt', role: 'some-dev', jwt: 'some-jwt-token' },
-          custom: { path: 'custom-jwt', role: 'some-dev', jwt: 'some-jwt-token' },
-        };
+        this.jwtLoginSetup();
+        this.loginData = { role: 'some-dev', jwt: 'some-jwt-token' };
       });
 
-      testHelper(test, { standardSubmit: false });
+      hooks.afterEach(function () {
+        this.authenticateStub.restore();
+      });
+
+      authFormTestHelper(test);
 
       jwtLoginTests(test);
     });
 
     module('login workflow: oidc', function (hooks) {
       hooks.beforeEach(function () {
-        // for oidc login workflow only
-        this.windowStub = sinon.stub(window, 'open');
+        this.oidcLoginSetup();
+        this.loginData = { role: 'some-dev' };
       });
 
       hooks.afterEach(function () {
+        this.authenticateStub.restore();
         this.windowStub.restore();
       });
 

@@ -225,6 +225,7 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 			NonEntity:     isNonEntity,
 			ClientType:    c.ClientType,
 			Timestamp:     ts.Unix(),
+			UsageTime:     ts.Unix(),
 		}
 		if record.ClientID == "" {
 			var err error
@@ -330,12 +331,12 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 
 func (m *multipleMonthsActivityClients) addClientToMonth(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int, now time.Time) error {
 	if c.Repeated || c.RepeatedFromMonth > 0 {
-		return m.addRepeatedClients(monthsAgo, c, mountAccessor, segmentIndex)
+		return m.addRepeatedClients(monthsAgo, c, mountAccessor, segmentIndex, now)
 	}
 	return m.months[monthsAgo].addNewClients(c, mountAccessor, segmentIndex, monthsAgo, now)
 }
 
-func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int) error {
+func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int, now time.Time) error {
 	addingTo := m.months[monthsAgo]
 	repeatedFromMonth := monthsAgo + 1
 	if c.RepeatedFromMonth > 0 {
@@ -346,9 +347,19 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 	if c.Count > 0 {
 		numClients = int(c.Count)
 	}
+
+	// usage time of the client in the month that the client is being added to
+	// this is a random time in the usage month
+	usageTime, err := timeutil.GetRandomTimeInMonth(timeutil.MonthsPreviousTo(int(monthsAgo), now))
+	if err != nil {
+		return err
+	}
+
 	for _, client := range repeatedFrom.clients {
 		if c.ClientType == client.ClientType && mountAccessor == client.MountAccessor && c.Namespace == client.NamespaceID {
-			addingTo.addEntityRecord(client, segmentIndex)
+			repeatedClient := *client
+			repeatedClient.UsageTime = usageTime.Unix()
+			addingTo.addEntityRecord(&repeatedClient, segmentIndex)
 			numClients--
 			if numClients == 0 {
 				break

@@ -12,7 +12,7 @@ import lazyCapabilities from 'vault/macros/lazy-capabilities';
 import { action } from '@ember/object';
 import { camelize } from '@ember/string';
 import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
-import { supportedTypes } from 'vault/utils/supported-login-methods';
+import { supportedTypes } from 'vault/utils/auth-form-helpers';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const validations = {

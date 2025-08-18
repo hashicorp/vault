@@ -1,0 +1,3 @@
+```release-note:change
+http: Add JSON configurable limits to HTTP handling for JSON payloads: `max_json_depth`, `max_json_string_value_length`, `max_json_object_entry_count`, `max_json_array_element_count`.
+```

@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/ldap: Introduces an option to connect to an alternative LDAP URL for root credential rotation, in cases where it differs from the configured LDAP URL.
+```

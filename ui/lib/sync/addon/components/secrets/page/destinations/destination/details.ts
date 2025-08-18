@@ -17,45 +17,50 @@ interface Args {
 
 export default class DestinationDetailsPage extends Component<Args> {
   connectionDetailsMap = {
-    'aws-sm': ['region', 'accessKeyId', 'secretAccessKey', 'roleArn', 'externalId'],
-    'azure-kv': ['keyVaultUri', 'tenantId', 'cloud', 'clientId', 'clientSecret'],
-    'gcp-sm': ['projectId', 'credentials'],
-    gh: ['repositoryOwner', 'repositoryName', 'accessToken'],
-    'vercel-project': ['accessToken', 'projectId', 'teamId', 'deploymentEnvironments'],
+    'aws-sm': ['region', 'access_key_id', 'secret_access_key', 'role_arn', 'external_id'],
+    'azure-kv': ['key_vault_uri', 'tenant_id', 'cloud', 'client_id', 'client_secret'],
+    'gcp-sm': ['project_id', 'credentials'],
+    gh: ['repository_owner', 'repository_name', 'access_token'],
+    'vercel-project': ['access_token', 'project_id', 'team_id', 'deployment_environments'],
   };
 
   get displayFields() {
     const { destination } = this.args;
     const type = destination.type as keyof typeof this.connectionDetailsMap;
-    const connectionDetails = this.connectionDetailsMap[type].map((field) => `connectionDetails.${field}`);
-    const fields = ['name', ...connectionDetails, 'options.granularityLevel', 'options.secretNameTemplate'];
+    const connectionDetails = this.connectionDetailsMap[type].map((field) => `connection_details.${field}`);
+    const fields = [
+      'name',
+      ...connectionDetails,
+      'options.granularity_level',
+      'options.secret_name_template',
+    ];
 
     if (!['gh', 'vercel-project'].includes(type)) {
-      fields.push('options.customTags');
+      fields.push('options.custom_tags');
     }
 
     return fields;
   }
 
-  // remove connectionDetails or options from the field name
+  // remove connection_details or options from the field name
   fieldName(field: string) {
-    return field.replace(/(connectionDetails|options)\./, '');
+    return field.replace(/(connection_details|options)\./, '');
   }
 
   fieldLabel = (field: string) => {
     const fieldName = this.fieldName(field);
     // some fields have a specific label that cannot be converted from key name
     const customLabel = {
-      granularityLevel: 'Secret sync granularity',
-      accessKeyId: 'Access key ID',
-      roleArn: 'Role ARN',
-      externalId: 'External ID',
-      keyVaultUri: 'Key Vault URI',
-      clientId: 'Client ID',
-      tenantId: 'Tenant ID',
-      projectId: 'Project ID',
+      granularity_level: 'Secret sync granularity',
+      access_key_id: 'Access key ID',
+      role_arn: 'Role ARN',
+      external_id: 'External ID',
+      key_vault_uri: 'Key Vault URI',
+      client_id: 'Client ID',
+      tenant_id: 'Tenant ID',
+      project_id: 'Project ID',
       credentials: 'JSON credentials',
-      teamId: 'Team ID',
+      team_id: 'Team ID',
     }[fieldName];
 
     return customLabel || toLabel([fieldName]);

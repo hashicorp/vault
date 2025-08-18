@@ -81,8 +81,9 @@ func verifySignatureAtTime(p7 *PKCS7, signer signerInfo, truststore *x509.CertPo
 		computed := h.Sum(nil)
 		if subtle.ConstantTimeCompare(digest, computed) != 1 {
 			return &MessageDigestMismatchError{
-				ExpectedDigest: digest,
-				ActualDigest:   computed,
+				DigestAlgorithm: signer.DigestAlgorithm.Algorithm,
+				ExpectedDigest:  digest,
+				ActualDigest:    computed,
 			}
 		}
 		signedData, err = marshalAttributes(signer.AuthenticatedAttributes)
@@ -184,8 +185,9 @@ func verifySignature(p7 *PKCS7, signer signerInfo, truststore *x509.CertPool) (e
 		computed := h.Sum(nil)
 		if subtle.ConstantTimeCompare(digest, computed) != 1 {
 			return &MessageDigestMismatchError{
-				ExpectedDigest: digest,
-				ActualDigest:   computed,
+				DigestAlgorithm: signer.DigestAlgorithm.Algorithm,
+				ExpectedDigest:  digest,
+				ActualDigest:    computed,
 			}
 		}
 		signedData, err = marshalAttributes(signer.AuthenticatedAttributes)
@@ -311,12 +313,17 @@ func verifyCertChain(ee *x509.Certificate, certs []*x509.Certificate, truststore
 // MessageDigestMismatchError is returned when the signer data digest does not
 // match the computed digest for the contained content
 type MessageDigestMismatchError struct {
-	ExpectedDigest []byte
-	ActualDigest   []byte
+	ExpectedDigest  []byte
+	ActualDigest    []byte
+	DigestAlgorithm asn1.ObjectIdentifier
 }
 
 func (err *MessageDigestMismatchError) Error() string {
-	return fmt.Sprintf("pkcs7: Message digest mismatch\n\tExpected: %X\n\tActual  : %X", err.ExpectedDigest, err.ActualDigest)
+	digestAlgo := "unknown"
+	if len(err.DigestAlgorithm) > 0 {
+		digestAlgo = err.DigestAlgorithm.String()
+	}
+	return fmt.Sprintf("pkcs7: Message digest mismatch for algo: %s\n\tExpected: %X\n\tActual: %X", digestAlgo, err.ExpectedDigest, err.ActualDigest)
 }
 
 func getSignatureAlgorithm(digestEncryption, digest pkix.AlgorithmIdentifier) (x509.SignatureAlgorithm, error) {

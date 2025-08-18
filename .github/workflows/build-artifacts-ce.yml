@@ -120,22 +120,22 @@ jobs:
         [
           {
             "sample": "ce_default_linux_amd64_ent_docker",
-            "artifact": "${{ github.event.repository.name }}_default_linux_amd64_${{ inputs.vault-version }}_${{ inputs.vault-revision }}.docker.tar",
+            "artifact": "vault_default_linux_amd64_${{ inputs.vault-version }}_${{ inputs.vault-revision }}.docker.tar",
             "edition": "ce"
           },
           {
             "sample": "ce_default_linux_arm64_ce_docker",
-            "artifact": "${{ github.event.repository.name }}_default_linux_arm64_${{ inputs.vault-version }}_${{ inputs.vault-revision }}.docker.tar",
+            "artifact": "vault_default_linux_arm64_${{ inputs.vault-version }}_${{ inputs.vault-revision }}.docker.tar",
             "edition": "ce"
           },
           {
             "sample": "ce_ubi_linux_amd64_ce_redhat",
-            "artifact": "${{ github.event.repository.name}}_ubi_linux_amd64_${{ inputs.vault-version}}_${{ inputs.vault-revision }}.docker.redhat.tar",
+            "artifact": "vault_ubi_linux_amd64_${{ inputs.vault-version}}_${{ inputs.vault-revision }}.docker.redhat.tar",
             "edition": "ce"
           },
           {
             "sample": "ce_ubi_linux_arm64_ce_redhat",
-            "artifact": "${{ github.event.repository.name}}_ubi_linux_arm64_${{ inputs.vault-version}}_${{ inputs.vault-revision }}.docker.redhat.tar",
+            "artifact": "vault_ubi_linux_arm64_${{ inputs.vault-version}}_${{ inputs.vault-revision }}.docker.redhat.tar",
             "edition": "ce"
           }
         ]

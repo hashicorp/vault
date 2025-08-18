@@ -78,17 +78,9 @@ func (r *CopyPullRequestReq) Run(
 			res = &CopyPullRequestRes{Request: r}
 		}
 
-		// Figure out the comment body. Worst case it ought to be whatever error
-		// we've returned.
-		var body string
-		if err != nil {
-			body = err.Error()
-		}
-
 		// Set any known errors on the response before we create a comment, as the
 		// error will be used in the comment body if present.
 		err = errors.Join(err, os.Chdir(initialDir))
-		body = res.CommentBody(err)
 		var err1 error
 		res.Comment, err1 = createPullRequestComment(
 			ctx,
@@ -96,7 +88,7 @@ func (r *CopyPullRequestReq) Run(
 			r.FromOwner,
 			r.FromRepo,
 			int(r.PullNumber),
-			body,
+			res.CommentBody(err),
 		)
 
 		// Set our finalized error on our response and also update our returned error
@@ -118,7 +110,7 @@ func (r *CopyPullRequestReq) Run(
 		return res, err
 	}
 	if tmpDir {
-		// defer os.RemoveAll(r.RepoDir)
+		defer os.RemoveAll(r.RepoDir)
 	}
 
 	// Get our pull request details
@@ -332,7 +324,7 @@ func (r *CopyPullRequestReq) Validate(ctx context.Context) error {
 	}
 
 	if r.FromRepo == "" {
-		return errors.New("no github repository has been provided")
+		return errors.New("no github from repository has been provided")
 	}
 
 	if r.ToOrigin == "" {

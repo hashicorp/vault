@@ -174,8 +174,10 @@ func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]m
 type databaseBackend struct {
 	// connections holds configured database connections by config name
 	createConnectionLock sync.Mutex
-	connections          *syncmap.SyncMap[string, *dbPluginInstance]
-	logger               log.Logger
+
+	// Connections are loaded lazily, when a connection to a specific database plugin is needed.
+	connections *syncmap.SyncMap[string, *dbPluginInstance]
+	logger      log.Logger
 
 	*framework.Backend
 	// credRotationQueue is an in-memory priority queue used to track Static Roles
@@ -503,6 +505,26 @@ func (b *databaseBackend) getDatabaseConfigNameFromRotationID(path string) (stri
 		return "", fmt.Errorf("unexpected number of matches (%d) for name in rotation ID", len(res))
 	}
 	return res[1], nil
+}
+
+// GetConnectionMetrics returns a count of the active Database connections.
+// The returned count depends on the database connections map which is not
+// guaranteed to be an exhaustive list of all configured connections.
+func (b *databaseBackend) GetConnectionMetrics() (map[string]int, error) {
+	// Access the private b.connections field here
+	counts := make(map[string]int)
+	connectionsCopy := b.connections.Values()
+
+	for _, v := range connectionsCopy {
+		dbType, err := v.database.Type()
+		if err != nil {
+			continue
+		}
+
+		counts[dbType]++
+	}
+
+	return counts, nil
 }
 
 const backendHelp = `

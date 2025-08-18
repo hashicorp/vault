@@ -4,24 +4,20 @@
  */
 
 import Route from '@ember/routing/route';
-import { service } from '@ember/service';
 import SecretsEngineForm from 'vault/forms/secrets/engine';
 
 import type { ModelFrom } from 'vault/vault/route';
-import type Store from '@ember-data/store';
 
 export type MountSecretBackendModel = ModelFrom<VaultClusterSettingsMountSecretBackendRoute>;
 
 export default class VaultClusterSettingsMountSecretBackendRoute extends Route {
-  @service declare readonly store: Store;
-
   model() {
     const defaults = {
-      config: { listingVisibility: false },
-      kvConfig: {
-        maxVersions: 0,
-        casRequired: false,
-        deleteVersionAfter: undefined,
+      config: { listing_visibility: false },
+      kv_config: {
+        max_versions: 0,
+        cas_required: false,
+        delete_version_after: undefined,
       },
       options: { version: 2 },
     };

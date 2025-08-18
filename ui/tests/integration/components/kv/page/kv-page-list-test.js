@@ -78,8 +78,8 @@ module('Integration | Component | kv | Page::List', function (hooks) {
       }
     );
 
-    assert.dom(PAGE.list.pagination).exists('shows hds pagination component');
-    assert.dom(PAGE.list.paginationInfo).hasText('1–15 of 16', 'shows correct page of pages');
+    assert.dom(GENERAL.pagination).exists('shows hds pagination component');
+    assert.dom(GENERAL.paginationInfo).hasText('1–15 of 16', 'shows correct page of pages');
     assert.dom(PAGE.title).includesText(this.backend, 'shows backend as title');
 
     this.model.forEach((record) => {

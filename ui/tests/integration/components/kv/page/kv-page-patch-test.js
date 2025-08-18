@@ -13,7 +13,7 @@ import sinon from 'sinon';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
-import codemirror from 'vault/tests/helpers/codemirror';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 
@@ -175,8 +175,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       });
       await this.renderComponent();
       await click(GENERAL.inputByAttr('JSON'));
-      await waitUntil(() => find('.CodeMirror'));
-      await codemirror().setValue('{ "foo": "foovalue", "bar":null, "number":1 }');
+      await waitUntil(() => find('.cm-editor'));
+      const editor = codemirror();
+      setCodeEditorValue(editor, '{ "foo": "foovalue", "bar":null, "number":1 }');
       await click(FORM.saveBtn);
       const [route] = this.transitionStub.lastCall.args;
       assert.strictEqual(
@@ -240,8 +241,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
 
       await this.renderComponent();
       await click(GENERAL.inputByAttr('JSON'));
-      await waitUntil(() => find('.CodeMirror'));
-      await codemirror().setValue('{ "foo": "" }');
+      await waitUntil(() => find('.cm-editor'));
+      const editor = codemirror();
+      setCodeEditorValue(editor, '{ "foo": "" }');
       await click(FORM.saveBtn);
     });
 
@@ -313,7 +315,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       );
       await this.renderComponent();
       await click(GENERAL.inputByAttr('JSON'));
-      await waitUntil(() => find('.CodeMirror'));
+      await waitUntil(() => find('.cm-editor'));
       await click(FORM.saveBtn);
       assert.dom(GENERAL.messageError).doesNotExist('PATCH request is not made');
       const route = this.transitionStub.lastCall?.args[0] || '';
@@ -363,8 +365,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       assert.expect(2);
       await this.renderComponent();
       await click(GENERAL.inputByAttr('JSON'));
-      await waitUntil(() => find('.CodeMirror'));
-      await codemirror().setValue('{ "foo": "foovalue", "bar":null, "number":1 }');
+      await waitUntil(() => find('.cm-editor'));
+      const editor = codemirror();
+      setCodeEditorValue(editor, '{ "foo": "foovalue", "bar":null, "number":1 }');
       await click(FORM.saveBtn);
       await click(FORM.saveBtn);
       assert.dom(GENERAL.messageError).hasText('Error permission denied');

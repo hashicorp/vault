@@ -8,14 +8,14 @@ import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends
 import { isAddonEngine } from 'vault/utils/all-engines-metadata';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
-import type { SecretsEngine } from 'vault/secrets/engine';
+import type { Mount } from 'vault/mount';
 
-export default class SecretsEngineResource extends baseResourceFactory<SecretsEngine>() {
+export default class SecretsEngineResource extends baseResourceFactory<Mount>() {
   id: string;
 
   #LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
-  constructor(data: SecretsEngine) {
+  constructor(data: Mount) {
     super(data);
     // strip trailing slash from path for id since it is used in routing
     this.id = data.path.replace(/\/$/, '');

@@ -9,7 +9,6 @@
 import Component from '@glimmer/component';
 import { isSameMonth } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { calculateAverage } from 'vault/utils/chart-helpers';
 import {
   filterByMonthDataForMount,
   filteredTotalForMount,
@@ -20,13 +19,7 @@ import { sanitizePath } from 'core/utils/sanitize-path';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
-import type {
-  ByMonthNewClients,
-  MountNewClients,
-  NamespaceByKey,
-  NamespaceNewClients,
-  TotalClients,
-} from 'core/utils/client-count-utils';
+import type { TotalClients } from 'core/utils/client-count-utils';
 import type NamespaceService from 'vault/services/namespace';
 
 interface Args {
@@ -36,19 +29,12 @@ interface Args {
   endTimestamp: string;
   namespace: string;
   mountPath: string;
+  mountType: string;
+  onFilterChange: CallableFunction;
 }
 
 export default class ClientsActivityComponent extends Component<Args> {
   @service declare readonly namespace: NamespaceService;
-
-  average = (
-    data:
-      | (ByMonthNewClients | NamespaceNewClients | MountNewClients | undefined)[]
-      | (NamespaceByKey | undefined)[],
-    key: string
-  ) => {
-    return calculateAverage(data, key);
-  };
 
   // path of the filtered namespace OR current one, for filtering relevant data
   get namespacePathForFilter() {

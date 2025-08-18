@@ -62,10 +62,6 @@ export const PAGE = {
     listMenuDelete: `[data-test-popup-metadata-delete]`,
     overviewCard: '[data-test-overview-card-container="View secret"]',
     overviewInput: '[data-test-view-secret] input',
-    pagination: '[data-test-pagination]',
-    paginationInfo: '.hds-pagination-info',
-    paginationNext: '.hds-pagination-nav__arrow--direction-next',
-    paginationSelected: '.hds-pagination-nav__number--is-selected',
   },
   versions: {
     icon: (version) => `[data-test-icon-holder="${version}"]`,
@@ -117,6 +113,7 @@ export const FORM = {
   inlineAlert: '[data-test-inline-alert]',
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
   messageError: '[data-test-message-error]',
+  validationError: (attr) => `[data-test-validation-error="${attr}"]`,
   validationWarning: '[data-test-validation-warning]',
   invalidFormAlert: '[data-test-invalid-form-alert]',
   versionAlert: '[data-test-secret-version-alert]',

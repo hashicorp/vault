@@ -5,11 +5,16 @@ on:
     # for our needs, since we're skipping stuff on PRs in draft mode.By adding the ready_for_review
     # type, when a draft pr is marked ready, we run everything, including the stuff we'd have
     # skipped up until now.
-    types: [ opened, synchronize, reopened, ready_for_review ]
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
   push:
     branches:
       - main
       - release/**
+      # TODO: VAULT-34830: - ce/**
   workflow_dispatch:
 
 concurrency:
@@ -18,7 +23,7 @@ concurrency:
 
 jobs:
   setup:
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     permissions: write-all # vault-auth
     outputs:
       changed-files: ${{ steps.changed-files.outputs.changed-files }}
@@ -28,7 +33,8 @@ jobs:
       compute-test-ui: ${{ steps.metadata.outputs.compute-test-ui }}
       go-tags: ${{ steps.metadata.outputs.go-tags }}
       is-draft: ${{ steps.metadata.outputs.is-draft }}
-      is-enterprise: ${{ steps.metadata.outputs.is-enterprise }}
+      is-ent-branch: ${{ steps.metadata.outputs.is-ent-branch }}
+      is-ent-repo: ${{ steps.metadata.outputs.is-ent-repo }}
       is-fork: ${{ steps.metadata.outputs.is-fork }}
       labels: ${{ steps.metadata.outputs.labels }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
@@ -40,11 +46,11 @@ jobs:
       - uses: ./.github/actions/metadata
         id: metadata
       # Get the elevated github token
-      - if: steps.metadata.outputs.is-enterprise == 'true'
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
         id: vault-auth
         name: Vault Authenticate
         run: vault-auth
-      - if: steps.metadata.outputs.is-enterprise == 'true'
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
         id: vault-secrets
         name: Fetch Vault Secrets
         uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
@@ -58,18 +64,18 @@ jobs:
       - uses: ./.github/actions/changed-files
         id: changed-files
         with:
-          github-token: ${{ steps.metadata.outputs.is-enterprise != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - name: Ensure Go modules are cached
         uses: ./.github/actions/set-up-go
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
 
   test-autopilot-upgrade:
     name: Run Autopilot upgrade tool
     # Run the Autopilot upgrade tests if:
     # - The Autopilot code has changed.
-    # - We're in the context of the vault enterprise repository.
+    # - We're in the context of the vault enterprise repository and enterprise branch.
     # - The workflow was triggered by a push to main or a PR targeting main.
     #
     # The reason for the main branch restriction, is that the logic for automatically determining the source versions
@@ -78,7 +84,7 @@ jobs:
     # you can manually trigger the workflow, see the .github/workflows/run-apupgrade-tests-ent.yml file in the ENT repo.
     if: |
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'autopilot') &&
-      needs.setup.outputs.is-enterprise == 'true' &&
+      needs.setup.outputs.is-ent-branch == 'true' &&
       (github.base_ref == 'main' || github.ref == 'refs/heads/main')
     needs: setup
     permissions:
@@ -156,7 +162,7 @@ jobs:
       name: standard
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
-      test-timing-cache-key: go-test-timing-standard
+      test-timing-cache-key: go-test-timing-standard-${{ needs.setup.outputs.is-ent-branch && 'ent' || 'ce' }}
       total-runners: 16
     secrets: inherit
 
@@ -176,7 +182,8 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
       testonly: true
-      test-timing-cache-enabled: false
+      test-timing-cache-restore: false
+      test-timing-cache-save: false
       total-runners: 2 # test runners cannot be less than 2
     secrets: inherit
 
@@ -204,7 +211,7 @@ jobs:
       go-tags: ${{ needs.setup.outputs.go-tags }}
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
-      test-timing-cache-key: go-test-timing-race
+      test-timing-cache-key: go-test-timing-race-${{ needs.setup.outputs.is-ent-branch && 'ent' || 'ce' }}
       total-runners: 16
     secrets: inherit
 
@@ -214,7 +221,7 @@ jobs:
     # and our trigger is a merge to main or releases/* or if the 'fips' label is present on a PR.
     if: |
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') &&
-      needs.setup.outputs.is-enterprise == 'true' &&
+      needs.setup.outputs.is-ent-branch == 'true' &&
         (
           needs.setup.outputs.workflow-trigger == 'push' || contains(needs.setup.outputs.labels, 'fips')
         )
@@ -242,7 +249,7 @@ jobs:
     if: |
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui') ||
       needs.setup.outputs.workflow-trigger == 'push' ||
-      contains(github.event.pull_request.labels.*.name, 'ui')
+      contains(needs.setup.outputs.labels, 'ui')
     needs: setup
     permissions:
       id-token: write
@@ -276,17 +283,17 @@ jobs:
         run: |
           yarn install --frozen-lockfile
           npm rebuild node-sass
-      - if: needs.setup.outputs.is-enterprise != 'true'
+      - if: needs.setup.outputs.is-ent-repo != 'true'
         name: Rebuild font cache on Github hosted runner
         # Fix `Fontconfig error: No writable cache directories` error on Github hosted runners
         # This seems to have been introduced with this runner image: https://github.com/actions/runner-images/releases/tag/ubuntu22%2F20240818.1
         # Hopefully this will resolve itself at some point with a newer image and we can remove it
         run: fc-cache -f -v
-      - if: needs.setup.outputs.is-enterprise == 'true'
+      - if: needs.setup.outputs.is-ent-repo == 'true'
         id: vault-auth
         name: Authenticate to Vault
         run: vault-auth
-      - if: needs.setup.outputs.is-enterprise == 'true'
+      - if: needs.setup.outputs.is-ent-repo == 'true'
         id: secrets
         name: Fetch secrets
         uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
@@ -298,7 +305,7 @@ jobs:
             kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
             kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
             kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
-      - if: needs.setup.outputs.is-enterprise == 'true'
+      - if: needs.setup.outputs.is-ent-repo == 'true'
         name: Set up Git
         run: git config --global url."https://${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/install-external-tools
@@ -315,7 +322,7 @@ jobs:
           # Run Ember tests
           cd ui
           mkdir -p test-results/qunit
-          yarn ${{ needs.setup.outputs.is-enterprise == 'true' && 'test' || 'test:oss' }}
+          yarn ${{ needs.setup.outputs.is-ent-branch == 'true' && 'test' || 'test:oss' }}
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -363,7 +370,7 @@ jobs:
       - test-go-fips
       - test-ui
     if: always()
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     permissions: write-all # Ensure we have id-token:write access for vault-auth.
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -401,11 +408,11 @@ jobs:
             echo "result=${result}"
             echo "results<<EOFRESULTS"$'\n'"${results}"$'\n'EOFRESULTS
           } | tee -a "$GITHUB_OUTPUT"
-      - if: needs.setup.outputs.is-enterprise == 'true'
+      - if: needs.setup.outputs.is-ent-repo == 'true'
         id: vault-auth
         name: Vault Authenticate
         run: vault-auth
-      - if: needs.setup.outputs.is-enterprise == 'true'
+      - if: needs.setup.outputs.is-ent-repo == 'true'
         id: secrets
         name: Fetch Vault Secrets
         uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
@@ -417,7 +424,7 @@ jobs:
             kv/data/github/${{ github.repository }}/github_actions_notifications_bot token | SLACK_BOT_TOKEN;
       - id: slackbot-token
         run:
-          echo "slackbot-token=${{ needs.setup.outputs.is-enterprise != 'true' && secrets.SLACK_BOT_TOKEN || steps.secrets.outputs.SLACK_BOT_TOKEN }}" >> "$GITHUB_OUTPUT"
+          echo "slackbot-token=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.SLACK_BOT_TOKEN || steps.secrets.outputs.SLACK_BOT_TOKEN }}" >> "$GITHUB_OUTPUT"
       - if: |
           always() &&
           needs.setup.outputs.workflow-trigger == 'push' &&
@@ -437,13 +444,13 @@ jobs:
           payload: |
             {
               "text": "CE test failures on ${{ github.ref_name }}",
-              "text": "${{ github.repository }} build failures on ${{ github.ref_name }}",
+              "text": "${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} build failures on ${{ github.ref_name }}",
               "blocks": [
                 {
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": ":rotating_light: ${{ github.repository }} test failures on ${{ github.ref_name }} :rotating_light:",
+                    "text": ":rotating_light: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} test failures on ${{ github.ref_name }} :rotating_light:",
                     "emoji": true
                   }
                 },

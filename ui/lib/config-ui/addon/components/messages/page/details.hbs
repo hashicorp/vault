@@ -32,12 +32,12 @@
 </Toolbar>
 
 {{#each this.displayFields as |field|}}
-  {{#if (or (eq field "endTime") (eq field "startTime"))}}
-    {{! if the attr is an endTime and is falsy, we want to show a 'Never' text value }}
+  {{#if (or (eq field "end_time") (eq field "start_time"))}}
+    {{! if the attr is an end_time and is falsy, we want to show a 'Never' text value }}
     <InfoTableRow
       @label={{capitalize (humanize (dasherize field))}}
       @value={{if
-        (and (eq field "endTime") (not (get @message field)))
+        (and (eq field "end_time") (not (get @message field)))
         "Never"
         (date-format (get @message field) "MMM d, yyyy hh:mm aaa" withTimeZone=true)
       }}

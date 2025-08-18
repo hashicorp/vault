@@ -45,11 +45,22 @@ type ListActiveVersionsReq struct {
 	ReleaseVersionConfigPath string
 	// The depth to recursively search backwards for a .release/versions.hcl file
 	Recurse uint
+	// Write the active versions to $GITHUB_OUTPUT
+	WriteToGithubOutput bool
 }
 
 // ListActiveVersionsRes are the active versions and associated metadata for the repo
 type ListActiveVersionsRes struct {
 	VersionsConfig *VersionsConfig `json:"versions_config,omitempty"`
+}
+
+// ListActiveVersionsGithubOutput is our GITHUB_OUTPUT type. While ListActiveVersionsReq is designed to match the schema of the releases source file, this type
+// is designed for maximal utility in Github Actions workflows and their associated built-in functions.
+type ListActiveVersionsGithubOutput struct {
+	VersionsConfig   *VersionsConfig `json:"versions_config,omitempty"`
+	Versions         []string        `json:"versions,omitempty"`
+	CEActiveVersions []string        `json:"ce_active_versions,omitempty"`
+	LTSVersions      []string        `json:"lts_versions,omitempty"`
 }
 
 var v1Schema = hcldec.ObjectSpec{
@@ -282,4 +293,34 @@ func (l *ListActiveVersionsReq) openReleaseVersions(ctx context.Context) (*os.Fi
 	err = errors.New("unable to locate .release/versions.hcl")
 
 	return nil, err
+}
+
+// ToGithubOutput writes a JSON encoded versions of ListActiveVersionsRes to
+// $GITHUB_OUTPUT. We use an intermediate type to structure the data in a more
+// suitable fashion to make usage within Github Actions easier.
+func (r ListActiveVersionsRes) ToGithubOutput() ([]byte, error) {
+	res := &ListActiveVersionsGithubOutput{
+		VersionsConfig:   r.VersionsConfig,
+		Versions:         slices.Sorted(maps.Keys(r.VersionsConfig.ActiveVersion.Versions)),
+		CEActiveVersions: []string{},
+		LTSVersions:      []string{},
+	}
+
+	for version, cfg := range r.VersionsConfig.ActiveVersion.Versions {
+		if cfg.CEActive {
+			res.CEActiveVersions = append(res.CEActiveVersions, version)
+		}
+		if cfg.LTS {
+			res.LTSVersions = append(res.LTSVersions, version)
+		}
+	}
+	slices.Sort(res.CEActiveVersions)
+	slices.Sort(res.LTSVersions)
+
+	b, err := json.Marshal(res)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling list active versions GITHUB_OUTPUT to JSON: %w", err)
+	}
+
+	return b, nil
 }

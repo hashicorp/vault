@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -123,6 +124,36 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	}
 	entry.NamespaceID = ns.ID
 	entry.namespace = ns
+
+	if entry.Type == "file" {
+		if prefix, ok := entry.Options[audit.OptionPrefix]; ok && prefix != "" && !c.allowAuditLogPrefixing {
+			return errors.New("audit prefixing is not enabled in configuration, audit prefixing may not be configured for file sinks")
+		}
+
+		if c.pluginDirectory != "" {
+			// Validate that the audit log file is not in the plugin directory
+			auditDir := filepath.Dir(entry.Options["file_path"])
+			auditDir, err = filepath.Abs(auditDir)
+			if err != nil {
+				return fmt.Errorf("error getting absolute path of audit dir for audit validation: %w", err)
+			}
+			pluginDir, err := filepath.Abs(c.pluginDirectory)
+			if err != nil {
+				return fmt.Errorf("error getting absolute path of plugin dir for audit validation: %w", err)
+			}
+			// Walk the audit path up checking that none of them are the plugin dir
+			for len(auditDir) > 1 || auditDir[0] != filepath.Separator {
+				rp, err := filepath.Rel(pluginDir, auditDir)
+				if err != nil {
+					return fmt.Errorf("error checking relative path for audit validation: %w", err)
+				}
+				if rp == "." {
+					return errors.New("audit file target may not be in the plugin directory")
+				}
+				auditDir = filepath.Dir(auditDir)
+			}
+		}
+	}
 
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
@@ -624,17 +655,23 @@ type basicAuditor struct {
 }
 
 func (b *basicAuditor) AuditRequest(ctx context.Context, input *logical.LogInput) error {
-	if b.c.auditBroker == nil {
+	b.c.auditLock.RLock()
+	auditBroker := b.c.auditBroker
+	b.c.auditLock.RUnlock()
+	if auditBroker == nil {
 		return consts.ErrSealed
 	}
-	return b.c.auditBroker.LogRequest(ctx, input)
+	return auditBroker.LogRequest(ctx, input)
 }
 
 func (b *basicAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
-	if b.c.auditBroker == nil {
+	b.c.auditLock.RLock()
+	auditBroker := b.c.auditBroker
+	b.c.auditLock.RUnlock()
+	if auditBroker == nil {
 		return consts.ErrSealed
 	}
-	return b.c.auditBroker.LogResponse(ctx, input)
+	return auditBroker.LogResponse(ctx, input)
 }
 
 type genericAuditor struct {
@@ -647,12 +684,24 @@ func (g genericAuditor) AuditRequest(ctx context.Context, input *logical.LogInpu
 	ctx = namespace.ContextWithNamespace(ctx, g.namespace)
 	logInput := *input
 	logInput.Type = g.mountType + "-request"
-	return g.c.auditBroker.LogRequest(ctx, &logInput)
+	g.c.auditLock.RLock()
+	auditBroker := g.c.auditBroker
+	g.c.auditLock.RUnlock()
+	if auditBroker == nil {
+		return consts.ErrSealed
+	}
+	return auditBroker.LogRequest(ctx, &logInput)
 }
 
 func (g genericAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
 	ctx = namespace.ContextWithNamespace(ctx, g.namespace)
 	logInput := *input
 	logInput.Type = g.mountType + "-response"
-	return g.c.auditBroker.LogResponse(ctx, &logInput)
+	g.c.auditLock.RLock()
+	auditBroker := g.c.auditBroker
+	g.c.auditLock.RUnlock()
+	if auditBroker == nil {
+		return consts.ErrSealed
+	}
+	return auditBroker.LogResponse(ctx, &logInput)
 }

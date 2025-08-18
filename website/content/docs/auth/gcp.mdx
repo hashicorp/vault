@@ -6,6 +6,9 @@ description: |-
   Google Cloud service accounts.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Google Cloud auth method
 
 The `gcp` auth method allows Google Cloud Platform entities to authenticate to
@@ -122,13 +125,13 @@ management tool.
    [federated access token](https://cloud.google.com/docs/authentication/token-types#access).
 
    To configure a trusted relationship between Vault and GCP:
-       - You must configure the [identity token issuer backend](/vault/api-docs/secret/identity/tokens#configure-the-identity-tokens-backend)
-         for Vault.
-       - GCP must have a
-         [workload identity pool and provider](https://cloud.google.com/iam/docs/manage-workload-identity-pools-providers)
-         configured with information about the fully qualified and network-reachable
-         issuer URL for the Vault plugin's
-         [identity token provider](/vault/api-docs/secret/identity/tokens#read-plugin-identity-well-known-configurations).
+   - You must configure the [identity token issuer backend](/vault/api-docs/secret/identity/tokens#configure-the-identity-tokens-backend)
+   for Vault.
+   - GCP must have a
+   [workload identity pool and provider](https://cloud.google.com/iam/docs/manage-workload-identity-pools-providers)
+   configured with information about the fully qualified and network-reachable
+   issuer URL for the Vault plugin's
+   [identity token provider](/vault/api-docs/secret/identity/tokens#read-plugin-identity-well-known-configurations).
 
    Establishing a trusted relationship between Vault and GCP ensures that GCP
    can fetch JWKS

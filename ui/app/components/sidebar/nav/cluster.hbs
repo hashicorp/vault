@@ -21,6 +21,14 @@
       data-test-sidebar-nav-link="Secrets Sync"
     />
   {{/if}}
+  {{#if this.isNotProduction}}
+    <Nav.Link
+      @route="vault.cluster.recovery.snapshots"
+      @text="Secrets Recovery"
+      @badge={{if this.version.isCommunity "Enterprise" ""}}
+      data-test-sidebar-nav-link="Secrets Recovery"
+    />
+  {{/if}}
   {{#if (has-permission "access")}}
     <Nav.Link
       @route={{get (route-params-for "access") "route"}}

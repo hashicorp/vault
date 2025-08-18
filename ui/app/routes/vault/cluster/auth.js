@@ -7,7 +7,7 @@ import { service } from '@ember/service';
 import ClusterRouteBase from './cluster-route-base';
 import config from 'vault/config/environment';
 import { isEmptyValue } from 'core/helpers/is-empty-value';
-import { supportedTypes } from 'vault/utils/supported-login-methods';
+import { supportedTypes } from 'vault/utils/auth-form-helpers';
 import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default class AuthRoute extends ClusterRouteBase {
@@ -22,10 +22,6 @@ export default class AuthRoute extends ClusterRouteBase {
   @service namespace;
   @service store;
   @service version;
-
-  get adapter() {
-    return this.store.adapterFor('application');
-  }
 
   beforeModel() {
     return super.beforeModel().then(() => {
@@ -80,12 +76,8 @@ export default class AuthRoute extends ClusterRouteBase {
   async unwrapToken(token, clusterId) {
     try {
       const { auth } = await this.api.sys.unwrap({}, this.api.buildHeaders({ token }));
-      return await this.auth.authenticate({
-        clusterId,
-        backend: 'token',
-        data: { token: auth.clientToken },
-        selectedAuth: 'token',
-      });
+      const authData = this.auth.normalizeAuthData(auth, { authMethodType: 'token', authMountPath: '' });
+      return await this.auth.authSuccess(clusterId, authData);
     } catch (e) {
       const { message } = await this.api.parseError(e);
       this.controllerFor('vault.cluster.auth').unwrapTokenError = message;
@@ -94,8 +86,8 @@ export default class AuthRoute extends ClusterRouteBase {
 
   async fetchLoginSettings() {
     try {
-      // TODO update with api service when api-client is updated
-      const response = await this.adapter.ajax(
+      const adapter = this.store.adapterFor('application');
+      const response = await adapter.ajax(
         '/v1/sys/internal/ui/default-auth-methods',
         'GET',
         this.api.buildHeaders({ token: '' })
@@ -117,13 +109,11 @@ export default class AuthRoute extends ClusterRouteBase {
 
   async fetchMounts() {
     try {
-      const { data } = await this.adapter.ajax(
-        '/v1/sys/internal/ui/mounts',
-        'GET',
+      const resp = await this.api.sys.internalUiListEnabledVisibleMounts(
         this.api.buildHeaders({ token: '' })
       );
       // return a falsy value if the object is empty
-      return isEmptyValue(data.auth) ? null : data.auth;
+      return isEmptyValue(resp.auth) ? null : resp.auth;
     } catch {
       // catch error if there's a problem fetching mount data (i.e. invalid namespace)
       return null;

@@ -19,7 +19,7 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     type: 'aws-sm',
     icon: 'aws-color',
     category: 'cloud',
-    maskedParams: ['accessKeyId', 'secretAccessKey'],
+    maskedParams: ['access_key_id', 'secret_access_key'],
     readonlyParams: ['name', 'region'],
     defaultValues: {
       granularity: 'secret-path',
@@ -30,8 +30,8 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     type: 'azure-kv',
     icon: 'azure-color',
     category: 'cloud',
-    maskedParams: ['clientSecret'],
-    readonlyParams: ['name', 'keyVaultUri', 'tenantId', 'cloud'],
+    maskedParams: ['client_secret'],
+    readonlyParams: ['name', 'key_vault_uri', 'tenant_id', 'cloud'],
     defaultValues: {
       granularity: 'secret-path',
     },
@@ -52,8 +52,8 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     type: 'gh',
     icon: 'github-color',
     category: 'dev-tools',
-    maskedParams: ['accessToken'],
-    readonlyParams: ['name', 'repositoryOwner', 'repositoryName'],
+    maskedParams: ['access_token'],
+    readonlyParams: ['name', 'repository_owner', 'repository_name'],
     defaultValues: {
       granularity: 'secret-key',
     },
@@ -63,11 +63,11 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     type: 'vercel-project',
     icon: 'vercel-color',
     category: 'dev-tools',
-    maskedParams: ['accessToken'],
-    readonlyParams: ['name', 'projectId'],
+    maskedParams: ['access_token'],
+    readonlyParams: ['name', 'project_id'],
     defaultValues: {
       granularity: 'secret-key',
-      deploymentEnvironments: [],
+      deployment_environments: [],
     },
   },
 ];

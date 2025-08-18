@@ -66,8 +66,8 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     const pemBundle = clipboardSpy.secondCall.args[0].replace(/,/, '\n');
     await visit(`vault/secrets/${this.intMountPath}/pki/configuration/create`);
     await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
-    await click('[data-test-text-toggle]');
-    await fillIn('[data-test-text-file-textarea]', pemBundle);
+    await click(GENERAL.textToggle);
+    await fillIn(GENERAL.maskedInput, pemBundle);
     await click(PKI_CONFIGURE_CREATE.importSubmit);
     await visit(`vault/secrets/${this.intMountPath}/pki/issuers`);
     await click('[data-test-is-default]');

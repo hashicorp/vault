@@ -6,6 +6,7 @@ package totp
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -86,7 +87,7 @@ func (b *backend) pathReadCode(ctx context.Context, req *logical.Request, data *
 
 func (b *backend) pathValidateCode(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
-	code := data.Get("code").(string)
+	code := strings.TrimSpace(data.Get("code").(string))
 
 	// Enforce input value requirements
 	if code == "" {

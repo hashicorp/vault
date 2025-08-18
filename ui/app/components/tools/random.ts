@@ -47,8 +47,8 @@ export default class ToolsRandom extends Component {
     evt.preventDefault();
     const data = { bytes: Number(this.bytes), format: this.format };
     try {
-      const { randomBytes } = await this.api.sys.generateRandom(data);
-      this.randomBytes = randomBytes || '';
+      const { random_bytes } = await this.api.sys.generateRandom(data);
+      this.randomBytes = random_bytes || '';
       this.flashMessages.success('Generated random bytes successfully.');
     } catch (error) {
       const { message } = await this.api.parseError(error);

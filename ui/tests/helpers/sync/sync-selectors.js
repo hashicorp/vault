@@ -91,15 +91,15 @@ export const PAGE = {
         case 'granularity':
           return await click(`${GENERAL.radioByAttr('secret-key')}`);
         case 'credentials':
-          await click('[data-test-text-toggle]');
-          return fillIn('[data-test-text-file-textarea]', value);
-        case 'customTags':
+          await click(GENERAL.textToggle);
+          return fillIn(GENERAL.maskedInput, value);
+        case 'custom_tags':
           await fillIn('[data-test-kv-key="0"]', 'foo');
           return fillIn('[data-test-kv-value="0"]', value);
-        case 'deploymentEnvironments':
-          await click(`${GENERAL.inputGroupByAttr('deploymentEnvironments')} input#development`);
-          await click(`${GENERAL.inputGroupByAttr('deploymentEnvironments')} input#preview`);
-          return await click(`${GENERAL.inputGroupByAttr('deploymentEnvironments')} input#production`);
+        case 'deployment_environments':
+          await click(`${GENERAL.inputGroupByAttr('deployment_environments')} input#development`);
+          await click(`${GENERAL.inputGroupByAttr('deployment_environments')} input#preview`);
+          return await click(`${GENERAL.inputGroupByAttr('deployment_environments')} input#production`);
         default:
           return fillIn(`[data-test-input="${attr}"]`, value);
       }

@@ -8,7 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { click, visit, fillIn, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
-import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
+import { ERROR_JWT_LOGIN } from 'vault/utils/auth-form-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { overrideResponse } from 'vault/tests/helpers/stubs';

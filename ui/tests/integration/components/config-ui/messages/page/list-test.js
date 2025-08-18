@@ -38,8 +38,8 @@ module('Integration | Component | messages/page/list', function (hooks) {
         title: 'Message title 1',
         message: 'Some long long long message',
         link: { title: 'here', href: 'www.example.com' },
-        startTime: new Date('2021-08-01T00:00:00Z'),
-        endTime: undefined,
+        start_time: new Date('2021-08-01T00:00:00Z'),
+        end_time: undefined,
       },
       {
         id: '1',
@@ -49,8 +49,8 @@ module('Integration | Component | messages/page/list', function (hooks) {
         title: 'Message title 2',
         message: 'Some long long long message blah blah blah',
         link: { title: 'here', href: 'www.example2.com' },
-        startTime: new Date('2023-07-01T00:00:00Z'),
-        endTime: new Date('2023-08-01T00:00:00Z'),
+        start_time: new Date('2023-07-01T00:00:00Z'),
+        end_time: new Date('2023-08-01T00:00:00Z'),
       },
       {
         id: '2',
@@ -111,7 +111,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
         title: `Message title ${i}`,
         message: 'Some long long long message',
         link: { title: 'here', href: 'www.example.com' },
-        startTime: new Date('2021-08-01T00:00:00Z'),
+        start_time: new Date('2021-08-01T00:00:00Z'),
       });
     }
     this.messages.meta.total = this.messages.length;

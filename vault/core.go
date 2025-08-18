@@ -692,6 +692,9 @@ type Core struct {
 	// disableAutopilot is used to disable the autopilot subsystem in raft storage
 	disableAutopilot bool
 
+	// allowAuditLogPrefixing must be enabled for audit devices to use a prefix (more secure without)
+	allowAuditLogPrefixing bool
+
 	// enable/disable identifying response headers
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
@@ -906,6 +909,9 @@ type CoreConfig struct {
 	// DisableAutopilot is used to disable autopilot subsystem in raft storage
 	DisableAutopilot bool
 
+	// AllowAuditLogPrefixing must be enabled for audit devices to use a prefix (more secure without)
+	AllowAuditLogPrefixing bool
+
 	// Whether to send headers in the HTTP response showing hostname or raft node ID
 	EnableResponseHeaderHostname   bool
 	EnableResponseHeaderRaftNodeID bool
@@ -1098,6 +1104,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		numExpirationWorkers:           conf.NumExpirationWorkers,
 		raftFollowerStates:             raft.NewFollowerStates(),
 		disableAutopilot:               conf.DisableAutopilot,
+		allowAuditLogPrefixing:         conf.AllowAuditLogPrefixing,
 		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
 		mountMigrationTracker:          &sync.Map{},
@@ -1387,17 +1394,39 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 				LocalNodeId:             nodeID,
 				Logger:                  observationsLogger,
 			}
-			observations, err := observations.NewObservationSystem(config)
+			err = c.AddObservationSystemToCore(config)
 			if err != nil {
 				return nil, err
 			}
-			c.observations = observations
-			c.observations.Start()
 		}
 	}
 
 	c.clusterAddrBridge = conf.ClusterAddrBridge
 	return c, nil
+}
+
+func (c *Core) AddObservationSystemToCore(config *observations.NewObservationSystemConfig) error {
+	observations, err := observations.NewObservationSystem(config)
+	if err != nil {
+		return err
+	}
+	c.observations = observations
+
+	c.reloadFuncsLock.Lock()
+
+	// While it's only possible to configure one observation system now, making the key
+	// include the path future-proofs us going forward.
+	key := "observations|" + config.LedgerPath
+	c.reloadFuncs[key] = append(c.reloadFuncs[key], func() error {
+		config.Logger.Info("reloading observation system", "path", config.LedgerPath)
+		return observations.Reload()
+	})
+
+	c.reloadFuncsLock.Unlock()
+
+	c.observations.Start()
+
+	return nil
 }
 
 // configureListeners configures the Core with the listeners from the CoreConfig.
@@ -2558,7 +2587,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err != nil {
 			return err
 		}
+		c.auditLock.Lock()
 		c.auditBroker = broker
+		c.auditLock.Unlock()
 	}
 
 	if c.isPrimary() {

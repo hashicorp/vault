@@ -11,12 +11,12 @@ import type { SshConfigureCaRequest } from '@hashicorp/vault-client-typescript';
 
 export default class SshConfigForm extends Form<SshConfigureCaRequest> {
   validations: Validations = {
-    generateSigningKey: [
+    generate_signing_key: [
       {
         validator(data: SshConfigForm['data']) {
-          const { publicKey, privateKey, generateSigningKey } = data;
+          const { public_key, private_key, generate_signing_key } = data;
           // if generateSigningKey is false, both public and private keys are required
-          if (!generateSigningKey && (!publicKey || !privateKey)) {
+          if (!generate_signing_key && (!public_key || !private_key)) {
             return false;
           }
           return true;
@@ -24,12 +24,12 @@ export default class SshConfigForm extends Form<SshConfigureCaRequest> {
         message: 'Provide a Public and Private key or set "Generate Signing Key" to true.',
       },
     ],
-    publicKey: [
+    public_key: [
       {
         validator(data: SshConfigForm['data']) {
-          const { publicKey, privateKey } = data;
+          const { public_key, private_key } = data;
           // regardless of generateSigningKey, if one key is set they both need to be set.
-          return publicKey || privateKey ? !!(publicKey && privateKey) : true;
+          return public_key || private_key ? !!(public_key && private_key) : true;
         },
         message: 'You must provide a Public and Private keys or leave both unset.',
       },
@@ -37,8 +37,8 @@ export default class SshConfigForm extends Form<SshConfigureCaRequest> {
   };
 
   formFields = [
-    new FormField('privateKey', 'string', { sensitive: true }),
-    new FormField('publicKey', 'string', { sensitive: true }),
-    new FormField('generateSigningKey', 'boolean'),
+    new FormField('private_key', 'string', { sensitive: true }),
+    new FormField('public_key', 'string', { sensitive: true }),
+    new FormField('generate_signing_key', 'boolean'),
   ];
 }

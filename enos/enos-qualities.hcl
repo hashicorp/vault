@@ -147,6 +147,10 @@ quality "vault_api_sys_auth_userpass_user_write" {
   description = "The v1/sys/auth/userpass/users/<user> Vault API associates a superuser policy with a user"
 }
 
+quality "vault_api_ssh_role_delete" {
+  description = "The v1/ssh/role Vault API deletes an SSH role associated with a key and clients"
+}
+
 quality "vault_api_sys_config_read" {
   description = <<-EOF
     The v1/sys/config/sanitized Vault API returns sanitized configuration which matches our given
@@ -594,6 +598,10 @@ quality "vault_seal_pkcs11" {
   description = "Vault auto-unseals with the pkcs11 seal"
 }
 
+quality "vault_secrets_kmip_write_config" {
+  description = "The Vault KMIP secrets engine is configured with the correct settings"
+}
+
 quality "vault_secrets_kv_read" {
   description = "Vault kv secrets engine data is readable"
 }
@@ -601,7 +609,6 @@ quality "vault_secrets_kv_read" {
 quality "vault_secrets_kv_write" {
   description = "Vault kv secrets engine data is writable"
 }
-
 
 quality "vault_secrets_ldap_write_config" {
   description = "The Vault LDAP secrets engine is configured with the correct settings"

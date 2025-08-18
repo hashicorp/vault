@@ -4,6 +4,9 @@ page_title: Vault Agent Injector annotations
 description: Learn about the configurable annotations for the Vault Agent Injector.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Vault Agent Injector annotations
 
 The following are the available annotations for the injector. These annotations
@@ -28,7 +31,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the injector and is usually
-  not needed. Defaults to `hashicorp/vault:1.18.5`.
+  not needed. Defaults to `hashicorp/vault:1.19.5`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -127,6 +130,11 @@ them, optional commands to run, etc.
   the total number of connections that the Vault Agent templating engine can use
   for a particular Vault host. The connection limit includes all connections in the dialing,
   active, and idle states. See [Vault Agent Template Config](/vault/docs/agent-and-proxy/agent/template#global-configurations)
+  for more details.
+
+- `vault.hashicorp.com/template-lease-renewal-threshold` - If specified, configures how long Vault Agent's template
+  engine should wait to refresh dynamic, non-renewable leases, measured as a fraction of the lease
+  duration (e.g. `0.9`). See [Vault Agent Template Config](/vault/docs/agent-and-proxy/agent/template#global-configurations)
   for more details.
 
 - `vault.hashicorp.com/agent-extra-secret` - mounts Kubernetes secret as a volume at

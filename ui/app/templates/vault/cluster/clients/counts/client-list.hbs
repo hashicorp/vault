@@ -1,0 +1,14 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Clients::Page::ClientList
+  @activity={{this.model.activity}}
+  @onFilterChange={{this.countsController.updateQueryParams}}
+  @filterQueryParams={{hash
+    nsLabel=this.countsController.nsLabel
+    mountPath=this.countsController.mountPath
+    mountType=this.countsController.mountType
+  }}
+/>

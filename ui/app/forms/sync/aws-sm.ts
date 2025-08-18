@@ -23,26 +23,26 @@ export default class AwsSmForm extends Form<AwsSmFormData> {
           'For AWS secrets manager, the name of the region must be supplied, something like “us-west-1.” If empty, Vault will use the AWS_REGION environment variable if configured.',
         editDisabled: true,
       }),
-      new FormField('roleArn', 'string', {
+      new FormField('role_arn', 'string', {
         label: 'Role ARN',
         subText:
           'Specifies a role to assume when connecting to AWS. When assuming a role, Vault uses temporary STS credentials to authenticate.',
       }),
-      new FormField('externalId', 'string', {
+      new FormField('external_id', 'string', {
         label: 'External ID',
         subText:
           'Optional extra protection that must match the trust policy granting access to the AWS IAM role ARN. We recommend using a different random UUID per destination.',
       }),
     ]),
     new FormFieldGroup('Credentials', [
-      new FormField('accessKeyId', 'string', {
+      new FormField('access_key_id', 'string', {
         label: 'Access key ID',
         subText:
           'Access key ID to authenticate against the secrets manager. If empty, Vault will use the AWS_ACCESS_KEY_ID environment variable if configured.',
         sensitive: true,
         noCopy: true,
       }),
-      new FormField('secretAccessKey', 'string', {
+      new FormField('secret_access_key', 'string', {
         label: 'Secret access key',
         subText:
           'Secret access key to authenticate against the secrets manager. If empty, Vault will use the AWS_SECRET_ACCESS_KEY environment variable if configured.',

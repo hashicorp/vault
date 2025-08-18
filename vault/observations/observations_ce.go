@@ -34,3 +34,7 @@ func (observations *ObservationSystem) RecordObservationToLedger(_ context.Conte
 func NewObservationSystem(_ *NewObservationSystemConfig) (*ObservationSystem, error) {
 	return &ObservationSystem{}, nil
 }
+
+func (observations *ObservationSystem) Reload() error {
+	return nil
+}

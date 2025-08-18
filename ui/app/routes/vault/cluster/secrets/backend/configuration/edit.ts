@@ -43,7 +43,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
     }[type];
 
     const defaults = {
-      ssh: { generateSigningKey: true, issuer: '' },
+      ssh: { generate_signing_key: true, issuer: '' },
     }[type] || { issuer: '' };
 
     // if the engine type is not configurable or a form class does not exist for the type return a 404.

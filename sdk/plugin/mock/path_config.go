@@ -16,7 +16,11 @@ import (
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "config",
-		Fields:  map[string]*framework.FieldSchema{},
+		Fields: map[string]*framework.FieldSchema{
+			"fail_rotate": {
+				Type: framework.TypeBool,
+			},
+		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.CreateOperation: b.pathConfigUpdate,
 			logical.UpdateOperation: b.pathConfigUpdate,
@@ -35,6 +39,10 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 	}
 	if conf == nil {
 		conf = &config{}
+	}
+
+	if failRotateRaw, ok := data.GetOk("fail_rotate"); ok {
+		conf.FailRotate = failRotateRaw.(bool)
 	}
 
 	if err := conf.ParseAutomatedRotationFields(data); err != nil {
@@ -89,6 +97,18 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 	configData := map[string]interface{}{}
 	conf.PopulateAutomatedRotationData(configData)
 
+	if conf.HasNonzeroRotationValues() {
+		resp, err := b.System().GetRotationInformation(ctx, &rotation.RotationInfoRequest{ReqPath: req.Path})
+		if err != nil {
+			return nil, err
+		}
+		if resp != nil {
+			configData["expire_time"] = resp.NextVaultRotation.Unix()
+			configData["creation_time"] = resp.LastVaultRotation.Unix()
+			configData["ttl"] = int64(resp.TTL)
+		}
+	}
+
 	return &logical.Response{
 		Data: configData,
 	}, nil
@@ -127,5 +147,6 @@ func (b *backend) configEntry(ctx context.Context, s logical.Storage) (*config, 
 }
 
 type config struct {
+	FailRotate bool
 	automatedrotationutil.AutomatedRotationParams
 }

@@ -5,7 +5,7 @@
 
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { click, fillIn, waitUntil } from '@ember/test-helpers';
-import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
+import { ERROR_JWT_LOGIN } from 'vault/utils/auth-form-helpers';
 import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { module, test } from 'qunit';
@@ -150,7 +150,7 @@ module('Integration | Component | auth | page | method authentication', function
       this.loginData = { role: 'some-dev' };
       this.path = this.authType;
       this.response = RESPONSE_STUBS.oidc['oidc/callback'];
-      this.tokenName = 'vault-token☃1';
+      this.tokenName = 'vault-oidc☃1';
       // Requests are stubbed in the order they are hit
       this.stubRequests = () => {
         this.server.post(`/auth/${this.path}/oidc/auth_url`, () => {
@@ -216,7 +216,7 @@ module('Integration | Component | auth | page | method authentication', function
       await fillIn(AUTH_FORM.selectMethod, this.authType);
       await fillInLoginFields({ token: 'mysupersecuretoken' });
       await click(GENERAL.submitButton);
-
+      await waitUntil(() => this.onAuthSuccess.calledOnce);
       const [actual] = this.onAuthSuccess.lastCall.args;
       const expected = { namespace: '', token: this.tokenName, isRoot: false };
       assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
@@ -265,16 +265,16 @@ module('Integration | Component | auth | page | method authentication', function
       this.path = this.authType;
       this.loginData = { role: 'some-dev' };
       this.response = RESPONSE_STUBS.saml['saml/token'];
-      this.tokenName = 'vault-token☃1';
+      this.tokenName = 'vault-saml☃1';
       // Requests are stubbed in the order they are hit
       this.stubRequests = () => {
-        this.server.put(`/auth/${this.path}/sso_service_url`, () => ({
+        this.server.post(`/auth/${this.path}/sso_service_url`, () => ({
           data: {
             sso_service_url: 'test/fake/sso/route',
             token_poll_id: '1234',
           },
         }));
-        this.server.put(`/auth/${this.path}/token`, () => this.response);
+        this.server.post(`/auth/${this.path}/token`, () => this.response);
         this.server.get(`/auth/token/lookup-self`, () => RESPONSE_STUBS.saml['lookup-self']);
       };
       this.windowStub = windowStub();

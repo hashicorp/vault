@@ -5,6 +5,9 @@ description: >-
   Learn about the behavior and syntax for filtering audit data in Vault Enterprise.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Filter syntax for audit data
 
 @include 'alerts/enterprise-only.mdx'
@@ -168,3 +171,20 @@ The `/var/kv-audit.log` now includes four entries in total:
 
 The fallback device captured entries for the other commands. And the
  original audit file, `vault-audit.log`, continues to capture all audit events.
+
+
+<Tabs>
+
+  <Tab heading="Related concepts">
+    
+    - [Filtering](/vault/docs/concepts/filtering)
+
+  </Tab>
+
+  <Tab heading="Related API docs">
+
+    - [Audit API](/vault/api-docs/system/audit#common-configuration-options)
+
+  </Tab>
+
+</Tabs>

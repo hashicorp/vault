@@ -2,7 +2,6 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-import camelizeKeys from 'vault/utils/camelize-object-keys';
 
 // creates destination and association model for use in sync integration tests
 // ensure that setupMirage is used prior to setupModels since this.server is used
@@ -26,14 +25,14 @@ export function setupDataStubs(hooks) {
       this.destination = {
         name,
         type,
-        connectionDetails: camelizeKeys(connection_details),
+        connection_details,
         options: {
-          granularityLevel: granularity,
-          secretNameTemplate: secret_name_template,
-          customTags: custom_tags,
+          granularity_level: granularity,
+          secret_name_template,
+          custom_tags,
         },
-        purgeInitiatedAt: purge_initiated_at,
-        purgeError: purge_error,
+        purge_initiated_at,
+        purge_error,
       };
 
       this.destinations = [this.destination];
@@ -52,9 +51,9 @@ export function setupDataStubs(hooks) {
         updated_at: '2023-09-20T10:51:53.961861096', // removed tz offset so time is consistently displayed
       });
       this.association = {
-        ...camelizeKeys(association),
-        destinationType: this.destination.type,
-        destinationName: this.destination.name,
+        ...association,
+        destination_type: this.destination.type,
+        destination_name: this.destination.name,
       };
       this.associations = [this.association];
       this.associations.meta = {

@@ -47,6 +47,9 @@ type TokenParams struct {
 
 	// The TTL to user for the token
 	TokenTTL time.Duration `json:"token_ttl" mapstructure:"token_ttl"`
+
+	// The metadata to attach to the authentication information.
+	TokenAuthMetadata map[string]string `json:"token_auth_metadata" mapstructure:"token_auth_metadata"`
 }
 
 // AddTokenFields adds fields to an existing role. It panics if it would
@@ -73,7 +76,7 @@ func AddTokenFieldsWithAllowList(m map[string]*framework.FieldSchema, allowed []
 
 // TokenFields provides a set of field schemas for the parameters
 func TokenFields() map[string]*framework.FieldSchema {
-	return map[string]*framework.FieldSchema{
+	return entTokenFields(map[string]*framework.FieldSchema{
 		"token_bound_cidrs": {
 			Type:        framework.TypeCommaStringSlice,
 			Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
@@ -157,7 +160,7 @@ func TokenFields() map[string]*framework.FieldSchema {
 				Group: "Tokens",
 			},
 		},
-	}
+	})
 }
 
 // ParseTokenFields provides common field parsing functionality into a TokenFields struct
@@ -238,6 +241,8 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		return errors.New("'token_ttl' cannot be greater than 'token_max_ttl'")
 	}
 
+	t.entParseTokenFields(d)
+
 	return nil
 }
 
@@ -260,6 +265,8 @@ func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 	if len(t.TokenBoundCIDRs) == 0 {
 		m["token_bound_cidrs"] = []string{}
 	}
+
+	t.entPopulateTokenData(m)
 }
 
 // PopulateTokenAuth populates Auth with parameters
@@ -274,6 +281,8 @@ func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 	auth.TokenType = t.TokenType
 	auth.TTL = t.TokenTTL
 	auth.NumUses = t.TokenNumUses
+
+	t.entPopulateTokenAuth(auth)
 }
 
 func DeprecationText(param string) string {

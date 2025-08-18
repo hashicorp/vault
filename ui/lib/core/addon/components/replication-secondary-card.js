@@ -6,7 +6,6 @@
 import { equal, reads } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import layout from '../templates/components/replication-secondary-card';
 import { clusterStates } from 'core/helpers/cluster-states';
 
 /**
@@ -25,24 +24,28 @@ import { clusterStates } from 'core/helpers/cluster-states';
  */
 
 export default Component.extend({
-  layout,
   tagName: '',
   title: null,
   replicationDetails: null,
+
   state: computed('replicationDetails.state', function () {
     return this.replicationDetails && this.replicationDetails.state
       ? this.replicationDetails.state
       : 'unknown';
   }),
+
   connection: computed('replicationDetails.connection_state', function () {
     return this.replicationDetails.connection_state ? this.replicationDetails.connection_state : 'unknown';
   }),
+
   lastRemoteWAL: computed('replicationDetails.lastRemoteWAL', function () {
     return this.replicationDetails && this.replicationDetails.lastRemoteWAL
       ? this.replicationDetails.lastRemoteWAL
       : 0;
   }),
+
   inSyncState: equal('state', 'stream-wals'),
+
   hasErrorClass: computed('replicationDetails', 'title', 'state', 'connection', function () {
     const { title, state, connection } = this;
 
@@ -54,7 +57,9 @@ export default Component.extend({
     }
     return false;
   }),
+
   knownPrimaryClusterAddrs: reads('replicationDetails.knownPrimaryClusterAddrs'),
+
   primaryUiUrl: computed('replicationDetails.{primaries,knownPrimaryClusterAddrs}', function () {
     const { replicationDetails } = this;
     if (replicationDetails.primaries && replicationDetails.primaries.length) {

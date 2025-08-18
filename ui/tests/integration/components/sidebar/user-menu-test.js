@@ -56,7 +56,7 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
     const revokeStub = sinon.stub(this.auth, 'revokeCurrentToken').resolves();
     const date = new Date();
     sinon.stub(this.auth, 'tokenExpirationDate').value(date.setDate(date.getDate() + 1));
-    sinon.stub(this.auth, 'authData').value({ displayName: 'token', renewable: true, entity_id: 'foo' });
+    sinon.stub(this.auth, 'authData').value({ displayName: 'token', renewable: true, entityId: 'foo' });
     this.auth.set('allowExpiration', true);
 
     await render(hbs`<Sidebar::UserMenu />`);

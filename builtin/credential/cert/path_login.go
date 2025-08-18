@@ -4,7 +4,6 @@
 package cert
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -339,17 +338,15 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 		for _, trustedNonCA := range trustedNonCAs {
 			tCert := trustedNonCA.Certificates[0]
 			// Check for client cert being explicitly listed in the config (and matching other constraints)
-			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 &&
-				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) {
-				pkMatch, err := certutil.ComparePublicKeysAndType(tCert.PublicKey, clientCert.PublicKey)
-				if err != nil {
-					return nil, nil, err
-				}
-				if !pkMatch {
-					// Someone may be trying to pass off a forged certificate as the trusted non-CA cert.  Reject early.
-					return nil, logical.ErrorResponse("public key mismatch of a trusted leaf certificate"), nil
-				}
+			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 {
 				matches, err := b.matchesConstraints(ctx, clientCert, trustedNonCA.Certificates, trustedNonCA, verifyConf)
+
+				if matches {
+					if !tCert.Equal(clientCert) {
+						// Someone may be trying to pass off a forged certificate as the trusted non-CA cert.  Reject early.
+						return nil, logical.ErrorResponse("certificate mismatch of a trusted leaf certificate"), nil
+					}
+				}
 
 				// matchesConstraints returns an error when OCSP verification fails,
 				// but some other path might still give us success. Add to the

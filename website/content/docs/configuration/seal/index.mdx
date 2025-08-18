@@ -5,6 +5,9 @@ description: >-
   Configure the seal stanza to customize the sealing behavior for Vault.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # `seal` stanza
 
 The `seal` stanza configures the seal type to use for additional data
@@ -54,5 +57,9 @@ from the environment or a file.  Two URL style forms are supported:
 * `file://path`: The final value will be the contents of the file at
   `path`.  Path may be absolute or relative, and if relative, is relative to
   the working directory of the Vault process.
+
+Note that indirect value references are not whitespace pruned, so in
+particular with the file method care to eliminate trailing newlines is
+required.
 
 [sealwrap]: /vault/docs/enterprise/sealwrap

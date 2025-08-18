@@ -5,6 +5,9 @@ description: >-
   Learn how the Vault CSI provider allows pods to consume Vault secrets using CSI volumes.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Vault CSI provider
 
 The Vault CSI Provider allows pods to consume Vault secrets using
@@ -37,6 +40,16 @@ The following features are supported by the Vault CSI Provider:
 - Dynamic lease caching and renewal performed by Agent.
 - Syncing secrets to Kubernetes secrets to be used as environment variables.
 - Installation via [Vault Helm](/vault/docs/platform/k8s/helm)
+
+<Note>
+
+  Installing with Helm runs the Vault CSI provider alongside
+  [Vault Agent](/vault/docs/deploy/kubernetes/csi) within the same pod. Vault
+  Agent cannot renew tokens created before a restart. As a result, if the Vault
+  Agent container stops or restarts, when a preexisting token expires, Vault
+  Agent revokes the associated lease.
+
+</Note>
 
 @include 'kubernetes-supported-versions.mdx'
 

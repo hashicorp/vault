@@ -192,11 +192,11 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   @action
-  setFilterValue(type: 'ns' | 'mountPath', [value]: [string | undefined]) {
+  setFilterValue(type: 'ns' | 'mountPath', [value]: [string]) {
     const params = { [type]: value };
     if (type === 'ns' && !value) {
       // unset mountPath value when namespace is cleared
-      params['mountPath'] = undefined;
+      params['mountPath'] = '';
     } else if (type === 'mountPath' && !this.args.namespace) {
       // set namespace when mountPath set without namespace already set
       params['ns'] = this.namespacePathForFilter;
@@ -209,8 +209,8 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     this.args.onFilterChange({
       start_time: undefined,
       end_time: undefined,
-      ns: undefined,
-      mountPath: undefined,
+      ns: '',
+      mountPath: '',
     });
   }
 }

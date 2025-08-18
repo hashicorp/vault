@@ -1,9 +1,6 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-// artifactory_username is the username to use when testing an artifact stored in artfactory.
-// artifactory_username = "yourname@hashicorp.com"
-
 // artifactory_token is the token to use when authenticating to artifactory.
 // artifactory_token = "yourtoken"
 
@@ -50,7 +47,7 @@
 // distro_version_sles = "v15_sp5_standard"
 
 // distro_version_ubuntu is the version of ubuntu to use for "distro:ubuntu" variants
-// distro_version_ubuntu = "22.04" // or "20.04"
+// distro_version_ubuntu = "22.04" // or "24.04"
 
 // tags are a map of tags that will be applied to infrastructure resources that
 // support tagging.

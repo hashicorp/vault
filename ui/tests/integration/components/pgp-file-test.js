@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn, triggerEvent, waitUntil, find } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 let file;
 const fileEvent = () => {
@@ -87,7 +88,7 @@ module('Integration | Component | pgp file', function (hooks) {
         @onChange={{action this.change}}
       />
     `);
-    await click('[data-test-text-toggle]');
+    await click(GENERAL.textToggle);
     assert.dom('[data-test-pgp-file-textarea]').exists({ count: 1 }, 'renders the textarea on toggle');
 
     fillIn('[data-test-pgp-file-textarea]', text);
@@ -112,7 +113,7 @@ module('Integration | Component | pgp file', function (hooks) {
     `);
     await triggerEvent('[data-test-pgp-file-input]', ...event);
     await waitUntil(() => find('[data-test-pgp-file-input-label]').innerText === 'file.json');
-    await click('[data-test-text-toggle]');
+    await click(GENERAL.textToggle);
     assert.dom('[data-test-pgp-file-textarea]').exists({ count: 1 }, 'renders the textarea on toggle');
     assert
       .dom('[data-test-pgp-file-textarea]')

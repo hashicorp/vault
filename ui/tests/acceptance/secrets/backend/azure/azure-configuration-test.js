@@ -176,8 +176,8 @@ module('Acceptance | Azure | configuration', function (hooks) {
             'subscription_id is included with updated value in the payload'
           );
         });
-        await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id-updated');
-        await click(GENERAL.enableField('clientSecret'));
+        await fillIn(GENERAL.inputByAttr('subscription_id'), 'subscription-id-updated');
+        await click(GENERAL.enableField('client_secret'));
         await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
@@ -201,10 +201,10 @@ module('Acceptance | Azure | configuration', function (hooks) {
             'subscription_id is included with updated value in the payload'
           );
         });
-        await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id-updated-again');
-        await click(GENERAL.enableField('clientSecret'));
+        await fillIn(GENERAL.inputByAttr('subscription_id'), 'subscription-id-updated-again');
+        await click(GENERAL.enableField('client_secret'));
         await click(GENERAL.button('toggle-masked'));
-        await fillIn(GENERAL.inputByAttr('clientSecret'), 'client-secret-updated');
+        await fillIn(GENERAL.inputByAttr('client_secret'), 'client-secret-updated');
         await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
@@ -449,7 +449,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           .dom(GENERAL.infoRowValue('Identity token audience'))
           .hasText('azure-audience', `value for identity token audience shows on the config details view.`);
         await click(SES.configure);
-        await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'new-audience');
+        await fillIn(GENERAL.inputByAttr('identity_token_audience'), 'new-audience');
         await click(GENERAL.submitButton);
         assert
           .dom(GENERAL.infoRowValue('Identity token audience'))

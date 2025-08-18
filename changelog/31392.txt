@@ -1,0 +1,3 @@
+```release-note:bug
+agent/template: Fixed issue where templates would not render correctly if namespaces was provided by config, and the namespace and mount path of the secret were the same.
+```

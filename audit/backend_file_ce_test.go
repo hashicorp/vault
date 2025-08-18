@@ -84,7 +84,7 @@ func TestFileBackend_newFileBackend_FilterFormatterSink(t *testing.T) {
 
 	cfg := map[string]string{
 		"file_path": "/tmp/foo",
-		"mode":      "0777",
+		"mode":      "0666",
 		"format":    "json",
 		"filter":    "mount_type == \"kv\"",
 	}

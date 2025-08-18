@@ -6,6 +6,7 @@ package ldap
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -50,6 +51,16 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 		return nil, fmt.Errorf("missing username")
 	}
 
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	caseSensitive := cfg != nil && cfg.CaseSensitiveNames != nil && *cfg.CaseSensitiveNames
+	// if the username is not configured to be case-sensitive, we normalize it to lower case.
+	if !caseSensitive {
+		username = strings.ToLower(username)
+	}
 	return &logical.Response{
 		Auth: &logical.Auth{
 			Alias: &logical.Alias{
@@ -83,8 +94,16 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	password := d.Get("password").(string)
 
 	effectiveUsername, policies, resp, groupNames, err := b.Login(ctx, req, username, password, cfg.UsernameAsAlias)
-	if err != nil || (resp != nil && resp.IsError()) {
-		return resp, err
+	if err != nil {
+		return nil, err
+	}
+
+	if resp != nil {
+		if resp.IsError() {
+			return nil, resp.Error()
+		}
+	} else {
+		return nil, fmt.Errorf("login response is nil, this should not happen")
 	}
 
 	auth := &logical.Auth{
@@ -98,7 +117,16 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		Alias: &logical.Alias{
 			Name: effectiveUsername,
 			Metadata: map[string]string{
+				// Should be the same as raw username, but we store it here for posterity.
 				"name": username,
+				// We store the original username in the metadata so that we can
+				// reference it later if needed, such as in the alias lookahead.
+				// This is useful for cases where the username is transformed or
+				// normalized (e.g., lowercased) for authentication purposes.
+				"rawUsername": username,
+				// The effective username is the one that will be used for policies and aliases.
+				// This may differ from the raw username if transformations are applied.
+				"effectiveUsername": effectiveUsername,
 			},
 		},
 	}

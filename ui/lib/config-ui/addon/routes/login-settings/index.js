@@ -8,23 +8,20 @@ import { service } from '@ember/service';
 
 export default class LoginSettingsRoute extends Route {
   @service api;
-  @service store;
 
   async model() {
-    const adapter = this.store.adapterFor('application');
     try {
-      const { data } = await adapter.ajax('/v1/sys/config/ui/login/default-auth', 'GET', {
-        data: { list: true },
-      });
-      const loginRules = this.api.keyInfoToArray({ keyInfo: data.key_info, keys: data.keys });
+      const data = await this.api.sys.uiLoginDefaultAuthList(true);
+      const loginRules = this.api.keyInfoToArray(data);
       return { loginRules };
     } catch (e) {
-      if (e.httpStatus === 404) {
-        // If no login settings exist, return an empty array to render the empty state
+      // If no login settings exist, return an empty array to render the empty state
+      const error = await this.api.parseError(e);
+      if (error.status === 404) {
         return { loginRules: [] };
       }
       // Otherwise fallback to the standard error template
-      throw e;
+      throw error;
     }
   }
 }

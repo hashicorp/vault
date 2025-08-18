@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/transit: add logging on both success and failure of key rotation
+```

@@ -35,7 +35,7 @@ export default class MessagesList extends Component {
   @tracked messageToDelete = null;
 
   isStartTimeAfterToday = (message) => {
-    return isAfter(message.startTime, timestamp.now());
+    return isAfter(message.start_time, timestamp.now());
   };
 
   get formattedMessages() {
@@ -44,8 +44,8 @@ export default class MessagesList extends Component {
       let badgeColor = 'neutral';
 
       if (message.active) {
-        if (message.endTime) {
-          badgeDisplayText = `Active until ${dateFormat([message.endTime, 'MMM d, yyyy hh:mm aaa'], {
+        if (message.end_time) {
+          badgeDisplayText = `Active until ${dateFormat([message.end_time, 'MMM d, yyyy hh:mm aaa'], {
             withTimeZone: true,
           })}`;
         } else {
@@ -54,12 +54,12 @@ export default class MessagesList extends Component {
         badgeColor = 'success';
       } else {
         if (this.isStartTimeAfterToday(message)) {
-          badgeDisplayText = `Scheduled: ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
+          badgeDisplayText = `Scheduled: ${dateFormat([message.start_time, 'MMM d, yyyy hh:mm aaa'], {
             withTimeZone: true,
           })}`;
           badgeColor = 'highlight';
         } else {
-          badgeDisplayText = `Inactive:  ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
+          badgeDisplayText = `Inactive:  ${dateFormat([message.start_time, 'MMM d, yyyy hh:mm aaa'], {
             withTimeZone: true,
           })}`;
           badgeColor = 'neutral';

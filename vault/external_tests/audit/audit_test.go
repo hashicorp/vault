@@ -7,14 +7,22 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/userpass"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 )
 
@@ -297,4 +305,67 @@ func TestAudit_Headers(t *testing.T) {
 
 	// This count includes the initial test probe upon creation of the audit device
 	require.Equal(t, 4, len(entries))
+}
+
+type testAuditStartupPlugin struct {
+	*framework.Backend
+}
+
+func testAuditStartupBackend(t testing.TB, panic *atomic.Bool) logical.Factory {
+	return func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		be := &testAuditStartupPlugin{Backend: &framework.Backend{BackendType: logical.TypeLogical}}
+		if err := be.Setup(ctx, config); err != nil {
+			return nil, err
+		}
+		extendedSys, ok := be.System().(logical.ExtendedSystemView)
+		if !ok {
+			return nil, fmt.Errorf("expected ExtendedSystemView, got %T", be.System())
+		}
+
+		wait := make(chan struct{})
+		// run in a goroutine to more closely mimic the behavior of a plugin where this causes a
+		// problem.
+		go func() {
+			defer close(wait)
+			defer func() {
+				if r := recover(); r != nil {
+					be.Logger().Error("panic during setup", "error", r)
+					panic.Store(true)
+				}
+			}()
+			// try to audit a request before the auditBroker has been created
+			if err := extendedSys.Auditor().AuditRequest(ctx, &logical.LogInput{}); err != nil && !errors.Is(err, consts.ErrSealed) {
+				be.Logger().Error("error auditing request", "error", err)
+			}
+		}()
+		<-wait
+		return be, nil
+	}
+}
+
+// TestAudit_BeforePostUnseal verifies that an audit request can be made before unseal without causing a panic. The test
+// mounts a backend that will attempt to audit a request in a goroutine during its setup. The seals and unseals the
+// cluster to force the backend to be re-created and perform an audit before the audit broker has been created.
+func TestAudit_BeforePostUnseal(t *testing.T) {
+	didPanic := new(atomic.Bool)
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"test": testAuditStartupBackend(t, didPanic),
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	})
+	defer cluster.Cleanup()
+
+	testhelpers.WaitForActiveNode(t, cluster)
+	err := cluster.Cores[0].Client.Sys().Mount("test", &api.MountInput{
+		Type: "test",
+	})
+	require.NoError(t, err)
+	// Seal and unseal to trigger a re-creation of all the mounts
+	cluster.Cores[0].Seal(t)
+	cluster.UnsealCores(t)
+	testhelpers.WaitForActiveNode(t, cluster)
+	require.False(t, didPanic.Load())
 }

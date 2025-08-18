@@ -21,7 +21,8 @@ export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
   end_time?: string | number | undefined;
   ns?: string | undefined;
-  mountPath?: string | undefined;
+  mountPath?: string;
+  mountType?: string;
 }
 
 interface ActivityAdapterQuery {
@@ -131,7 +132,7 @@ export default class ClientsCountsRoute extends Route {
         start_time: undefined,
         end_time: undefined,
         ns: undefined,
-        mountPath: undefined,
+        mountPath: '',
       });
     }
   }

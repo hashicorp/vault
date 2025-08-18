@@ -91,10 +91,10 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           await click(toggleGroup);
 
           for (const key of expectedConfigKeys(type, true)) {
-            if (key === 'configTtl' || key === 'maxTtl') {
+            if (key === 'config_ttl' || key === 'maxTtl') {
               // because toggle.hbs passes in the name rather than the camelized attr, we have a difference of data-test=attrName vs data-test="Item name" being passed into the data-test selectors. Long-term solution we should match toggle.hbs selectors to formField.hbs selectors syntax
               assert
-                .dom(GENERAL.ttl.toggle(key === 'configTtl' ? 'Config TTL' : 'Max TTL'))
+                .dom(GENERAL.ttl.toggle(key === 'config_ttl' ? 'Config TTL' : 'Max TTL'))
                 .exists(
                   `${key} shows for ${type} configuration create section when wif is not the access type.`
                 );
@@ -268,8 +268,8 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             .dom(GENERAL.toggleInput('Root password TTL'))
             .isChecked('rootPasswordTtl is not cleared after toggling accessType');
           assert
-            .dom(GENERAL.inputByAttr('clientSecret'))
-            .hasValue('', 'clientSecret is cleared after toggling accessType');
+            .dom(GENERAL.inputByAttr('client_secret'))
+            .hasValue('', 'client_secret is cleared after toggling accessType');
 
           await click(SES.wif.accessType('wif'));
           assert
@@ -283,7 +283,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
               'issuer shows no value after toggling accessType'
             );
           assert
-            .dom(GENERAL.inputByAttr('identityTokenAudience'))
+            .dom(GENERAL.inputByAttr('identity_token_audience'))
             .hasValue('', 'idTokenAudience is cleared after toggling accessType');
           assert
             .dom(GENERAL.toggleInput('Identity token TTL'))
@@ -325,8 +325,8 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           await click(SES.wif.accessType('aws'));
 
           assert
-            .dom(GENERAL.inputByAttr('accessKey'))
-            .hasValue('', 'accessKey is cleared after toggling accessType');
+            .dom(GENERAL.inputByAttr('access_key'))
+            .hasValue('', 'access_key is cleared after toggling accessType');
 
           await click(SES.wif.accessType('wif'));
           assert
@@ -340,7 +340,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
               'issuer shows no value after toggling accessType'
             );
           assert
-            .dom(GENERAL.inputByAttr('identityTokenAudience'))
+            .dom(GENERAL.inputByAttr('identity_token_audience'))
             .hasValue('', 'idTokenAudience is cleared after toggling accessType');
           assert
             .dom(GENERAL.toggleInput('Identity token TTL'))
@@ -550,7 +550,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('');
 
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://foo.bar');
-          await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'some-value');
+          await fillIn(GENERAL.inputByAttr('identity_token_audience'), 'some-value');
           await click(GENERAL.submitButton);
           assert.dom(SES.wif.issuerWarningMessage).exists('issuer warning modal exists');
           await click(SES.wif.issuerWarningSave);
@@ -616,9 +616,9 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           // check all the form fields are present
           for (const key of expectedConfigKeys(type, true)) {
-            if (key === 'configTtl' || key === 'maxTtl') {
+            if (key === 'config_ttl' || key === 'maxTtl') {
               assert
-                .dom(GENERAL.ttl.toggle(key === 'configTtl' ? 'Config TTL' : 'Max TTL'))
+                .dom(GENERAL.ttl.toggle(key === 'config_ttl' ? 'Config TTL' : 'Max TTL'))
                 .exists(`${key} shows for ${type} account access section.`);
             } else {
               assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for ${type} account access section.`);
@@ -648,7 +648,9 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           assert.dom(SES.wif.accessType('wif')).isDisabled('WIF accessType is disabled');
           assert.dom(SES.wif.accessType(type)).isNotChecked(`${type} accessType is not checked`);
           assert.dom(SES.wif.accessType(type)).isDisabled(`${type} accessType is disabled`);
-          assert.dom(GENERAL.inputByAttr('identityTokenAudience')).hasValue(this.form.identityTokenAudience);
+          assert
+            .dom(GENERAL.inputByAttr('identity_token_audience'))
+            .hasValue(this.form.identity_token_audience);
           assert
             .dom(SES.wif.accessTypeSubtext)
             .hasText('You cannot edit Access Type if you have already saved access credentials.');
@@ -676,7 +678,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       }
 
       module('Azure specific', function (hooks) {
-        // "clientSecret" is the only mutually exclusive Azure account attr and it's never returned from the API. Thus, we can only check for the presence of configured wif fields to determine if the accessType should be preselected to wif and disabled.
+        // "client_secret" is the only mutually exclusive Azure account attr and it's never returned from the API. Thus, we can only check for the presence of configured wif fields to determine if the accessType should be preselected to wif and disabled.
         hooks.beforeEach(function () {
           this.id = `azure-${this.uid}`;
           this.displayName = 'Azure';
@@ -725,12 +727,12 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           this.form = this.getForm('azure', config);
 
           await this.renderComponent();
-          assert.dom(GENERAL.inputByAttr('subscriptionId')).hasValue(this.form.subscriptionId);
-          assert.dom(GENERAL.inputByAttr('clientId')).hasValue(this.form.clientId);
-          assert.dom(GENERAL.inputByAttr('tenantId')).hasValue(this.form.tenantId);
+          assert.dom(GENERAL.inputByAttr('subscription_id')).hasValue(this.form.subscription_id);
+          assert.dom(GENERAL.inputByAttr('client_id')).hasValue(this.form.client_id);
+          assert.dom(GENERAL.inputByAttr('tenant_id')).hasValue(this.form.tenant_id);
           assert
-            .dom(GENERAL.inputByAttr('clientSecret'))
-            .hasValue('**********', 'clientSecret is masked on edit the value');
+            .dom(GENERAL.inputByAttr('client_secret'))
+            .hasValue('**********', 'client_secret is masked on edit the value');
         });
 
         test('it requires a double click to change the client secret', async function (assert) {
@@ -746,9 +748,9 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             );
           });
 
-          await click(GENERAL.enableField('clientSecret'));
+          await click(GENERAL.enableField('client_secret'));
           await click(GENERAL.button('toggle-masked'));
-          await fillIn(GENERAL.inputByAttr('clientSecret'), 'new-secret');
+          await fillIn(GENERAL.inputByAttr('client_secret'), 'new-secret');
           await click(GENERAL.submitButton);
         });
       });
@@ -788,16 +790,16 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           await this.renderComponent();
 
-          assert.dom(GENERAL.inputByAttr('accessKey')).hasValue(this.form.accessKey);
+          assert.dom(GENERAL.inputByAttr('access_key')).hasValue(this.form.access_key);
           assert
-            .dom(GENERAL.inputByAttr('secretKey'))
-            .hasValue('**********', 'secretKey is masked on edit the value');
+            .dom(GENERAL.inputByAttr('secret_key'))
+            .hasValue('**********', 'secret_key is masked on edit the value');
 
           await click(GENERAL.button('Root config options'));
           assert.dom(GENERAL.inputByAttr('region')).hasValue(this.form.region);
-          assert.dom(GENERAL.inputByAttr('iamEndpoint')).hasValue(this.form.iamEndpoint);
-          assert.dom(GENERAL.inputByAttr('stsEndpoint')).hasValue(this.form.stsEndpoint);
-          assert.dom(GENERAL.inputByAttr('maxRetries')).hasValue('1');
+          assert.dom(GENERAL.inputByAttr('iam_endpoint')).hasValue(this.form.iam_endpoint);
+          assert.dom(GENERAL.inputByAttr('sts_endpoint')).hasValue(this.form.sts_endpoint);
+          assert.dom(GENERAL.inputByAttr('max_retries')).hasValue('1');
           // Check lease config values
           assert.dom(GENERAL.ttl.input('Default Lease TTL')).hasValue('50');
           assert.dom(GENERAL.ttl.input('Max Lease TTL')).hasValue('55');
@@ -814,9 +816,9 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           });
 
           await this.renderComponent();
-          await click(GENERAL.enableField('secretKey'));
+          await click(GENERAL.enableField('secret_key'));
           await click(GENERAL.button('toggle-masked'));
-          await fillIn(GENERAL.inputByAttr('secretKey'), 'new-secret');
+          await fillIn(GENERAL.inputByAttr('secret_key'), 'new-secret');
           await click(GENERAL.submitButton);
         });
       });
@@ -899,17 +901,17 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           await click(toggleGroup);
 
           for (const key of expectedConfigKeys(type, true)) {
-            if (key === 'secretKey' || key === 'clientSecret' || key === 'credentials') return; // these keys are not returned by the API
+            if (key === 'secret_key' || key === 'client_secret' || key === 'credentials') return; // these keys are not returned by the API
             // same issues noted in wif enterprise tests with how toggle.hbs passes in name vs how formField input passes in attr to data test selector
-            if (key === 'configTtl') {
+            if (key === 'config_ttl') {
               assert
                 .dom(GENERAL.ttl.input('Config TTL'))
                 .hasValue('100', `${key} for ${type}: has the expected value set on the config`);
-            } else if (key === 'maxTtl') {
+            } else if (key === 'max_ttl') {
               assert
                 .dom(GENERAL.ttl.input('Max TTL'))
                 .hasValue('101', `${key} for ${type}: has the expected value set on the config`);
-            } else if (key === 'rootPasswordTtl') {
+            } else if (key === 'root_password_ttl') {
               assert
                 .dom(GENERAL.ttl.input('Root password TTL'))
                 .hasValue('500', `${key} for ${type}: has the expected value set on the config`);

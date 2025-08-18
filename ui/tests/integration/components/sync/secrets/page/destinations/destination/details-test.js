@@ -49,10 +49,10 @@ module(
         hooks.beforeEach(function () {
           this.setupStubsForType(type);
 
-          const { name, connectionDetails, options } = this.destination;
-          this.details = { name, ...connectionDetails, ...options };
+          const { name, connection_details, options } = this.destination;
+          this.details = { name, ...connection_details, ...options };
           this.fields = Object.keys(this.details).reduce((arr, key) => {
-            const noCustomTags = ['gh', 'vercel-project'].includes(type) && key === 'customTags';
+            const noCustomTags = ['gh', 'vercel-project'].includes(type) && key === 'custom_tags';
             return noCustomTags ? arr : [...arr, key];
           }, []);
 
@@ -61,16 +61,16 @@ module(
 
           this.getLabel = (field) => {
             const customLabel = {
-              granularityLevel: 'Secret sync granularity',
-              accessKeyId: 'Access key ID',
-              roleArn: 'Role ARN',
-              externalId: 'External ID',
-              keyVaultUri: 'Key Vault URI',
-              clientId: 'Client ID',
-              tenantId: 'Tenant ID',
-              projectId: 'Project ID',
+              granularity_level: 'Secret sync granularity',
+              access_key_id: 'Access key ID',
+              role_arn: 'Role ARN',
+              external_id: 'External ID',
+              key_vault_uri: 'Key Vault URI',
+              client_id: 'Client ID',
+              tenant_id: 'Tenant ID',
+              project_id: 'Project ID',
               credentials: 'JSON credentials',
-              teamId: 'Team ID',
+              team_id: 'Team ID',
             }[field];
 
             return customLabel || toLabel([field]);
@@ -91,7 +91,7 @@ module(
               // assert the remaining model attributes render
               const fieldValue = this.details[field];
               let label, value;
-              if (field === 'customTags') {
+              if (field === 'custom_tags') {
                 [label] = Object.keys(fieldValue);
                 [value] = Object.values(fieldValue);
               } else {
@@ -108,11 +108,11 @@ module(
 
           this.maskedParams.forEach((param) => {
             // these values are undefined when environment variables are set
-            this.destination.connectionDetails[param] = undefined;
+            this.destination.connection_details[param] = undefined;
           });
 
           // assert custom tags section header does not render
-          this.destination.options.customTags = undefined;
+          this.destination.options.custom_tags = undefined;
 
           await this.renderComponent();
 

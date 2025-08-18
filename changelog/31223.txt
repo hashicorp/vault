@@ -1,0 +1,3 @@
+```release-note:bug
+activity (enterprise): Fix `development_cluster` setting being overwritten on performance secondaries upon cluster reload.
+```

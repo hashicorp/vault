@@ -1,0 +1,3 @@
+```release-note:change
+ui/client-counts: removes tabs for each client count type and adds split view for counts per type in overview stacked bar chart 
+```

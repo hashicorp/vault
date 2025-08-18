@@ -1,0 +1,76 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::SegmentedGroup as |SG|>
+  {{#if @namespaces}}
+    <SG.Dropdown data-test-dropdown={{this.filterTypes.NAMESPACE}} as |D|>
+      <D.ToggleButton @color="secondary" @text="Namespace" />
+      {{#each @namespaces as |namespace|}}
+        <D.Checkmark
+          {{on "click" (fn this.updateFilter this.filterTypes.NAMESPACE namespace D.close)}}
+          @selected={{eq namespace this.nsLabel}}
+          data-test-dropdown-item={{namespace}}
+        >{{namespace}}</D.Checkmark>
+      {{/each}}
+    </SG.Dropdown>
+  {{/if}}
+  {{#if @mountPaths}}
+    <SG.Dropdown data-test-dropdown={{this.filterTypes.MOUNT_PATH}} as |D|>
+      <D.ToggleButton @color="secondary" @text="Mount path" />
+      {{#each @mountPaths as |mountPath|}}
+        <D.Checkmark
+          {{on "click" (fn this.updateFilter this.filterTypes.MOUNT_PATH mountPath D.close)}}
+          @selected={{eq mountPath this.mountPath}}
+          data-test-dropdown-item={{mountPath}}
+        >{{mountPath}}</D.Checkmark>
+      {{/each}}
+    </SG.Dropdown>
+  {{/if}}
+  {{#if @mountTypes}}
+    <SG.Dropdown data-test-dropdown={{this.filterTypes.MOUNT_TYPE}} as |D|>
+      <D.ToggleButton @color="secondary" @text="Mount type" />
+      {{#each @mountTypes as |mountType|}}
+        <D.Checkmark
+          {{on "click" (fn this.updateFilter this.filterTypes.MOUNT_TYPE mountType D.close)}}
+          @selected={{eq mountType this.mountType}}
+          data-test-dropdown-item={{mountType}}
+        >{{mountType}}</D.Checkmark>
+      {{/each}}
+    </SG.Dropdown>
+  {{/if}}
+  <Hds::Button
+    @icon="filter"
+    @text="Apply filters"
+    @color="primary"
+    {{on "click" this.applyFilters}}
+    data-test-button="Apply filters"
+  />
+</Hds::SegmentedGroup>
+
+<Hds::Layout::Flex class="has-top-margin-s" @gap="8" @align="center">
+  {{#if this.anyFilters}}
+    <Hds::Text::Body @color="faint">Filters applied:</Hds::Text::Body>
+    {{! render tags based on applied @filters and not the internally tracked properties }}
+    {{#each-in @appliedFilters as |filter value|}}
+      {{#if (and (this.supportedFilter filter) value)}}
+        <div>
+          <Hds::Tag
+            @text={{value}}
+            @tooltipPlacement="bottom"
+            @onDismiss={{fn this.clearFilters filter}}
+            data-test-filter-tag="{{filter}} {{value}}"
+          />
+        </div>
+      {{/if}}
+    {{/each-in}}
+    <Hds::Button
+      @icon="x-circle"
+      @text="Clear filters"
+      @color="tertiary"
+      {{on "click" (fn this.clearFilters "")}}
+      data-test-button="Clear filters"
+    />
+  {{/if}}
+</Hds::Layout::Flex>

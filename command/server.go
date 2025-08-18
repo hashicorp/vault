@@ -899,6 +899,26 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		}
 		props["max_request_size"] = fmt.Sprintf("%d", lnConfig.MaxRequestSize)
 
+		if lnConfig.CustomMaxJSONDepth == 0 {
+			lnConfig.CustomMaxJSONDepth = vaulthttp.CustomMaxJSONDepth
+		}
+		props["max_json_depth"] = fmt.Sprintf("%d", lnConfig.CustomMaxJSONDepth)
+
+		if lnConfig.CustomMaxJSONStringValueLength == 0 {
+			lnConfig.CustomMaxJSONStringValueLength = vaulthttp.CustomMaxJSONStringValueLength
+		}
+		props["max_json_string_value_length"] = fmt.Sprintf("%d", lnConfig.CustomMaxJSONStringValueLength)
+
+		if lnConfig.CustomMaxJSONObjectEntryCount == 0 {
+			lnConfig.CustomMaxJSONObjectEntryCount = vaulthttp.CustomMaxJSONObjectEntryCount
+		}
+		props["max_json_object_entry_count"] = fmt.Sprintf("%d", lnConfig.CustomMaxJSONObjectEntryCount)
+
+		if lnConfig.CustomMaxJSONArrayElementCount == 0 {
+			lnConfig.CustomMaxJSONArrayElementCount = vaulthttp.CustomMaxJSONArrayElementCount
+		}
+		props["max_json_array_element_count"] = fmt.Sprintf("%d", lnConfig.CustomMaxJSONArrayElementCount)
+
 		if lnConfig.MaxRequestDuration == 0 {
 			lnConfig.MaxRequestDuration = vault.DefaultMaxRequestDuration
 		}
@@ -2304,6 +2324,15 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 					}
 				}
 			}
+
+		case strings.HasPrefix(k, "observations|"):
+			for _, relFunc := range relFuncs {
+				if relFunc != nil {
+					if err := relFunc(); err != nil {
+						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("error encountered reloading observation system with ledger at path %q: %w", strings.TrimPrefix(k, "observations|"), err))
+					}
+				}
+			}
 		}
 	}
 
@@ -2945,6 +2974,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSealWrap:                config.DisableSealWrap,
 		DisablePerformanceStandby:      config.DisablePerformanceStandby,
 		DisableIndexing:                config.DisableIndexing,
+		AllowAuditLogPrefixing:         config.AllowAuditLogPrefixing,
 		AllLoggers:                     c.allLoggers,
 		BuiltinRegistry:                builtinplugins.Registry,
 		DisableKeyEncodingChecks:       config.DisablePrintableCheck,
