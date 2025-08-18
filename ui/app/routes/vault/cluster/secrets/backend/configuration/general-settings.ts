@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import engineDisplayData from 'vault/helpers/engines-display-data';
+import SecretsGeneralSettingsForm from 'vault/forms/secrets/general-settings';
 
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
@@ -16,6 +17,7 @@ export default class SecretsBackendConfigurationGeneralSettingsRoute extends Rou
     return {
       secretsEngine,
       engineData,
+      generalSettingsForm: new SecretsGeneralSettingsForm(),
     };
   }
 }
