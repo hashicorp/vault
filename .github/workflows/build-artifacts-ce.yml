@@ -110,6 +110,7 @@ jobs:
           goarch: ${{ matrix.goarch }}
           goos: ${{ matrix.goos }}
           go-tags: ui
+          package-name: vault
           vault-binary-name: vault
           vault-edition: ce
           vault-version: ${{ inputs.vault-version }}
