@@ -28,9 +28,9 @@ echo "Waiting for LDAP server to be reachable..."
 MAX_RETRIES=15
 RETRY_DELAY=2
 RETRIES=0
-until ldapsearch -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=com" >/dev/null 2>&1; do
+until ldapsearch -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=com" > /dev/null 2>&1; do
   sleep $RETRY_DELAY
-  RETRIES=$((RETRIES+1))
+  RETRIES=$((RETRIES + 1))
   echo "  Retry $RETRIES..."
   if [ $RETRIES -ge $MAX_RETRIES ]; then
     echo "LDAP server did not start in time."
