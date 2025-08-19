@@ -9,7 +9,7 @@
 
 // Popup menu no longer exists, but these styles are still used in some places
 .popup-menu-content,
-.ember-power-select-options {
+.search-select .ember-power-select-options {
   border-radius: size_variables.$radius;
   margin: -2px 0 0 0;
 
@@ -154,30 +154,32 @@
   }
 }
 
-.ember-basic-dropdown-content {
-  background-color: transparent;
+.search-select {
+  .ember-basic-dropdown-content {
+    background-color: transparent;
 
-  &--left.popup-menu {
-    margin: 0px 0 0 -8px;
-  }
-
-  &--below {
-    &.ember-basic-dropdown--transitioning-in {
-      animation: drop-fade-above 0.15s;
+    &--left.popup-menu {
+      margin: 0px 0 0 -8px;
     }
 
-    &.ember-basic-dropdown--transitioning-out {
-      animation: drop-fade-above 0.15s reverse;
-    }
-  }
+    &--below {
+      &.ember-basic-dropdown--transitioning-in {
+        animation: drop-fade-above 0.15s;
+      }
 
-  &--above {
-    &.ember-basic-dropdown--transitioning-in {
-      animation: drop-fade-below 0.15s;
+      &.ember-basic-dropdown--transitioning-out {
+        animation: drop-fade-above 0.15s reverse;
+      }
     }
 
-    &.ember-basic-dropdown--transitioning-out {
-      animation: drop-fade-below 0.15s reverse;
+    &--above {
+      &.ember-basic-dropdown--transitioning-in {
+        animation: drop-fade-below 0.15s;
+      }
+
+      &.ember-basic-dropdown--transitioning-out {
+        animation: drop-fade-below 0.15s reverse;
+      }
     }
   }
 }

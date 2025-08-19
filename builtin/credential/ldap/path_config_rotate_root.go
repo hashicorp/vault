@@ -89,7 +89,12 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 		LDAP:   ldaputil.NewLDAP(),
 	}
 
-	conn, err := client.DialLDAP(cfg.ConfigEntry)
+	// Create a copy of the config to modify for rotation
+	rotateConfig := *cfg.ConfigEntry
+	if cfg.RotationUrl != "" {
+		rotateConfig.Url = cfg.RotationUrl
+	}
+	conn, err := client.DialLDAP(&rotateConfig)
 	if err != nil {
 		return err
 	}
