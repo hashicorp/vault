@@ -14,7 +14,7 @@ on:
     branches:
       - main
       - release/**
-      # TODO: VAULT-34830: - ce/**
+      - ce/**
   workflow_dispatch:
 
 concurrency:
