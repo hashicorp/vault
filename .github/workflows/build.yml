@@ -62,7 +62,7 @@ on:
     branches:
       - main
       - release/**
-      # TODO: VAULT-34830: - ce/**
+      - ce/**
   schedule:
     - cron: '05 02 * * *' # * is a special character in YAML so you have to quote this string
 
@@ -370,6 +370,19 @@ jobs:
       - test-containers
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - id: disallow-merge-on-ce
+        if: |
+          needs.setup.outputs.workflow-trigger == 'pull_request' &&
+          github.repository == 'hashicorp/vault' &&
+          ! contains(fromJSON(needs.setup.outputs.labels), 'build/all') &&
+          ( github.event.pull_request.base.ref == 'main' || startsWith(github.event.pull_request.base.ref, 'release/') )
+        run: |
+          echo '::error::Merging into main and release/* branches in hashicorp/vault is disallowed. Use the copy-external-contributor workflow to copy and merge the change via hashicorp/vault-enterprise'
+          {
+            echo "result=failed"
+            echo "results=failed"
+          } | tee -a "$GITHUB_OUTPUT"
+          exit 1
       - id: status
         name: Determine status
         run: |

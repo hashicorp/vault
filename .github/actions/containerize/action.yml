@@ -104,20 +104,22 @@ runs:
         [[ ! -d "$dest_dir" ]] && mkdir -p "$dest_dir"
         [[ ! -f "$dest_path" ]] && cp ${{ inputs.vault-binary-path }} "${dest_path}"
     - if: inputs.docker == 'true'
-      uses: hashicorp/actions-docker-build@v2.1.0
+      uses: hashicorp/actions-docker-build@ryan/VAULT-34830-allow-repo-configuration
       with:
         arch: ${{ inputs.goarch }}
         do_zip_extract_step: 'false' # Don't download and extract an already present binary
-        target: ${{ steps.vars.outputs.docker-container-target }}
-        tags: ${{ steps.vars.outputs.docker-container-tags }}
+        repo_name: ${{ inputs.vault-edition == 'ce' && 'vault' || 'vault-enterprise' }}
         revision: ${{ steps.vars.outputs.revision }}
+        tags: ${{ steps.vars.outputs.docker-container-tags }}
+        target: ${{ steps.vars.outputs.docker-container-target }}
         version: ${{ steps.vars.outputs.container-version }}
     - if: inputs.redhat == 'true'
-      uses: hashicorp/actions-docker-build@v2.1.0
+      uses: hashicorp/actions-docker-build@ryan/VAULT-34830-allow-repo-configuration
       with:
         arch: ${{ inputs.goarch }}
         do_zip_extract_step: 'false' # Don't download and extract an already present binary
         redhat_tag: ${{ steps.vars.outputs.redhat-container-tags }}
-        target: ${{ steps.vars.outputs.redhat-container-target }}
+        repo_name: ${{ inputs.vault-edition == 'ce' && 'vault' || 'vault-enterprise' }}
         revision: ${{ steps.vars.outputs.revision }}
+        target: ${{ steps.vars.outputs.redhat-container-target }}
         version: ${{ steps.vars.outputs.container-version }}

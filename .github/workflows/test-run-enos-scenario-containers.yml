@@ -37,6 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build-date: ${{ steps.metadata.outputs.build-date }}
+      is-ent-repo: ${{ steps.global-metadata.outputs.is-ent-repo }}
       sample: ${{ steps.metadata.outputs.sample }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
     steps:
@@ -46,6 +47,8 @@ jobs:
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - uses: ./.github/actions/metadata
+        id: global-metadata
       - id: metadata
         run: |
           build_date=$(make ci-get-date)
@@ -70,7 +73,7 @@ jobs:
   run:
     needs: metadata
     name: run ${{ matrix.scenario.id.filter }}
-    runs-on: ${{ fromJSON(contains(inputs.build-artifact-name, 'vault-enterprise') && (contains(inputs.build-artifact-name, 'arm64') && '["self-hosted","ondemand","os=ubuntu-arm","type=c6g.xlarge"]' || '["self-hosted","ubuntu-latest-x64"]') || (contains(inputs.build-artifact-name, 'arm64') && '"ubuntu-22.04-arm"' || '"ubuntu-latest"')) }}
+    runs-on: ${{ fromJSON(needs.metadata.outputs.is-ent-repo == 'true' && (contains(inputs.build-artifact-name, 'arm64') && '["self-hosted","ondemand","os=ubuntu-arm","type=c6g.xlarge"]' || '["self-hosted","ubuntu-latest-x64"]') || (contains(inputs.build-artifact-name, 'arm64') && '"ubuntu-22.04-arm"' || '"ubuntu-latest"')) }}
     strategy:
       fail-fast: false # don't fail as that can skip required cleanup steps for jobs
       matrix:
