@@ -76,6 +76,7 @@ const (
 	KeyType_HYBRID
 	KeyType_AES192_CMAC
 	KeyType_SLH_DSA
+	KeyType_Kyber768
 	// If adding to this list please update allTestKeyTypes in policy_test.go
 )
 
@@ -188,7 +189,7 @@ type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
+	case KeyType_Kyber768, KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	}
 	return false
@@ -196,7 +197,7 @@ func (kt KeyType) EncryptionSupported() bool {
 
 func (kt KeyType) DecryptionSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
+	case KeyType_Kyber768, KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	}
 	return false
@@ -256,7 +257,7 @@ func (kt KeyType) HMACSupported() bool {
 
 func (kt KeyType) IsPQC() bool {
 	switch kt {
-	case KeyType_ML_DSA, KeyType_HYBRID, KeyType_SLH_DSA:
+	case KeyType_Kyber768, KeyType_ML_DSA, KeyType_HYBRID, KeyType_SLH_DSA:
 		return true
 	default:
 		return false
@@ -318,6 +319,8 @@ func (kt KeyType) String() string {
 		return "aes192-cmac"
 	case KeyType_SLH_DSA:
 		return "slh-dsa"
+	case KeyType_Kyber768:
+		return "kyber768"
 	}
 
 	return "[unknown]"
@@ -1182,7 +1185,86 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 		if err != nil {
 			return "", err
 		}
+	case KeyType_Kyber768:
+		kyber := newKyberBox()
 
+		tpl := p.getVersionPrefix(ver)
+		if !strings.HasPrefix(value, tpl) {
+			return "", errutil.UserError{Err: "invalid ciphertext: version prefix missing"}
+		}
+		b64 := strings.TrimPrefix(value, tpl)
+		combined, err := base64.StdEncoding.DecodeString(b64)
+		if err != nil {
+			return "", errutil.UserError{Err: "invalid ciphertext: base64 decode failed"}
+		}
+
+		// Frame: combined = capsule || nonce || ct
+		capsuleLen := kyber.s.CiphertextSize()
+		if len(combined) < capsuleLen+1 { // must have at least some nonce/ct bytes
+			return "", errutil.InternalError{Err: "invalid ciphertext: too short"}
+		}
+		capsule := combined[:capsuleLen]
+		rest := combined[capsuleLen:]
+
+		// Load private key for this version
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+		sk, err := kyber.s.UnmarshalBinaryPrivateKey(keyEntry.Key)
+		if err != nil {
+			return "", errutil.InternalError{Err: fmt.Sprintf("failed to unmarshal Kyber private key: %v", err)}
+		}
+
+		// KEM decapsulation -> shared secret
+		ss, err := kyber.s.Decapsulate(sk, capsule)
+		if err != nil {
+			return "", errutil.InternalError{Err: fmt.Sprintf("Kyber decapsulation failed: %v", err)}
+		}
+
+		// HKDF -> AES-256 key
+		key, err := deriveAES256Key(ss)
+		if err != nil {
+			// zeroize ss before returning
+			for i := range ss {
+				ss[i] = 0
+			}
+			return "", errutil.InternalError{Err: fmt.Sprintf("HKDF extract failed: %v", err)}
+		}
+		// zeroize shared secret ASAP
+		for i := range ss {
+			ss[i] = 0
+		}
+
+		block := mustAES(key)
+		aead, err := cipher.NewGCM(block)
+		if err != nil {
+			for i := range key {
+				key[i] = 0
+			}
+			return "", errutil.InternalError{Err: fmt.Sprintf("failed to create AEAD: %v", err)}
+		}
+
+		nonceLen := aead.NonceSize()
+		if len(rest) < nonceLen+1 { // require at least 1 byte of ciphertext
+			for i := range key {
+				key[i] = 0
+			}
+			return "", errutil.InternalError{Err: "invalid ciphertext: too short"}
+		}
+		nonce := rest[:nonceLen]
+		ct := rest[nonceLen:]
+
+		pt, err := aead.Open(nil, nonce, ct, nil)
+		// wipe key regardless of outcome
+		for i := range key {
+			key[i] = 0
+		}
+		if err != nil {
+			return "", errutil.UserError{Err: "Kyber decryption failed: invalid ciphertext"}
+		}
+
+		return string(pt), nil
 	default:
 		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
@@ -1851,6 +1933,31 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		}
 
 		entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
+	case KeyType_Kyber768:
+		kyber := newKyberBox()
+
+		// Use Vault’s central RNG (HSM/DRBG if configured; crypto/rand otherwise)
+		seed := make([]byte, kyber.s.SeedSize())
+		if _, err := io.ReadFull(randReader, seed); err != nil {
+			return fmt.Errorf("kyber seed read failed: %w", err)
+		}
+		pk, sk := kyber.s.DeriveKeyPair(seed)
+		// wipe seed defensively
+		for i := range seed {
+			seed[i] = 0
+		}
+
+		privBytes, err := sk.MarshalBinary()
+		if err != nil {
+			return fmt.Errorf("marshal Kyber private key: %w", err)
+		}
+		pubBytes, err := pk.MarshalBinary()
+		if err != nil {
+			return fmt.Errorf("marshal Kyber public key: %w", err)
+		}
+
+		entry.Key = privBytes
+		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pubBytes)
 
 	default:
 		if err := entRotateInMemory(p, &entry, randReader); err != nil {
@@ -2301,6 +2408,37 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		if err != nil {
 			return "", err
 		}
+	case KeyType_Kyber768:
+		// Initialize Kyber KEM
+		kyber := newKyberBox()
+		// Fetch the stored key entry
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+		// Decode the PEM‐style public key (base64 of raw bytes)
+		pkBytes, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
+		if err != nil {
+			return "", errutil.InternalError{Err: "failed to base64-decode Kyber public key"}
+		}
+		// Unmarshal raw public key
+		pk, err := kyber.s.UnmarshalBinaryPublicKey(pkBytes)
+		if err != nil {
+			return "", errutil.InternalError{Err: fmt.Sprintf("failed to unmarshal Kyber public key: %v", err)}
+		}
+		// Encrypt: get capsule, nonce, ciphertext
+		capsule, nonce, ct, err := kyber.Encrypt(pk, plaintext, nil)
+		if err != nil {
+			return "", errutil.InternalError{Err: fmt.Sprintf("Kyber encryption failed: %v", err)}
+		}
+		// Combine components: capsule || nonce || ciphertext
+		combined := make([]byte, 0, len(capsule)+len(nonce)+len(ct))
+		combined = append(combined, capsule...)
+		combined = append(combined, nonce...)
+		combined = append(combined, ct...)
+		// Base64-encode and prefix with version
+		encoded := base64.StdEncoding.EncodeToString(combined)
+		return p.getVersionPrefix(ver) + encoded, nil
 
 	default:
 		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}

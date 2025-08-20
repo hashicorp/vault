@@ -59,6 +59,8 @@ require (
 	google.golang.org/protobuf v1.36.5
 )
 
+require github.com/cloudflare/circl v1.6.1 // indirect
+
 require (
 	cloud.google.com/go/auth v0.14.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.7 // indirect
