@@ -657,7 +657,7 @@ func (r *CreateBackportReq) backportRef(
 			Commit:   commitSHA,
 			Strategy: libgit.MergeStrategyORT,
 			StrategyOptions: []libgit.MergeStrategyOption{
-				libgit.MergeStrategyOptionOurs,
+				libgit.MergeStrategyOptionTheirs,
 				libgit.MergeStrategyOptionIgnoreSpaceChange,
 			},
 		})
