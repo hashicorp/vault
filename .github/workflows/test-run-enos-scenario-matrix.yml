@@ -92,8 +92,6 @@ jobs:
             # shellcheck disable=2001
             vault_version="$(sed 's/+ent/+${{ inputs.vault-edition }}/g' <<< '${{ inputs.vault-version }}')"
           fi
-          sample_seed=$(date +%s)
-          sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements")
           {
             echo "build-date=${build_date}"
             echo 'is-ent-repo=${{ github.repository == 'hashicorp/vault-enterprise' }}'
