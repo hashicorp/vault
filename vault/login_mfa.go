@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -336,7 +337,7 @@ func (i *IdentityStore) handleMFAMethodWriteCommon(ctx context.Context, req *log
 
 	switch methodType {
 	case mfaMethodTypeTOTP:
-		err = parseTOTPConfig(mConfig, d)
+		err = parseTOTPConfig(mConfig, d, constants.IsEnterprise, true)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -1272,7 +1273,7 @@ func (b *LoginMFABackend) mfaConfigReadByMethodID(id string) (map[string]interfa
 		return nil, nil
 	}
 
-	return b.mfaConfigToMap(mConfig)
+	return b.mfaConfigToMap(mConfig, true)
 }
 
 func (b *LoginMFABackend) mfaMethodList(ctx context.Context, methodType string) ([]string, map[string]interface{}, error) {
@@ -1332,7 +1333,7 @@ func (b *LoginMFABackend) mfaMethodList(ctx context.Context, methodType string) 
 		}
 
 		keys = append(keys, config.ID)
-		configInfoEntry, err := b.mfaConfigToMap(config)
+		configInfoEntry, err := b.mfaConfigToMap(config, true)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to convert config to map: %w", err)
 		}
@@ -1418,7 +1419,11 @@ func (b *LoginMFABackend) mfaLoginEnforcementConfigToMap(eConfig *mfa.MFAEnforce
 	return resp, nil
 }
 
-func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config) (map[string]interface{}, error) {
+// mfaConfigToMap converts a mfa.Config to a map used for responses to MFA
+// method endpoints. The `isLoginMFA` parameter indicates whether the
+// configuration is for login MFA, which includes additional fields on the
+// shared mfa.Config object for the TOTP type MFA method.
+func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config, isLoginMFA bool) (map[string]interface{}, error) {
 	respData := make(map[string]interface{})
 
 	switch mConfig.Config.(type) {
@@ -1432,6 +1437,11 @@ func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config) (map[string]interface{}
 		respData["qr_size"] = totpConfig.QRSize
 		respData["algorithm"] = otplib.Algorithm(totpConfig.Algorithm).String()
 		respData["max_validation_attempts"] = totpConfig.MaxValidationAttempts
+		if isLoginMFA {
+			// Login MFA and policy (i.e. enterprise step-up) MFA share the same protobuf message for TOTPConfig,
+			// but the login MFA has an additional field for self-enrollment.
+			respData["enable_self_enrollment"] = totpConfig.GetEnableSelfEnrollment()
+		}
 	case *mfa.Config_OktaConfig:
 		oktaConfig := mConfig.GetOktaConfig()
 		respData["org_name"] = oktaConfig.OrgName
@@ -1475,7 +1485,12 @@ func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config) (map[string]interface{}
 	return respData, nil
 }
 
-func parseTOTPConfig(mConfig *mfa.Config, d *framework.FieldData) error {
+// parseTOTPConfig parses the TOTP configuration from the field data and updates the mConfig.
+// The `isEnterprise` parameter indicates whether the configuration is for an enterprise setup,
+// which affects the validation of certain fields like `enable_self_enrollment`.
+// The `isLoginMfa` parameter indicates whether the configuration is for login MFA,
+// which allows for self-enrollment and includes an additional field in the TOTPConfig.
+func parseTOTPConfig(mConfig *mfa.Config, d *framework.FieldData, isEnterprise, isLoginMfa bool) error {
 	if mConfig == nil {
 		return fmt.Errorf("config is nil")
 	}
@@ -1539,6 +1554,17 @@ func parseTOTPConfig(mConfig *mfa.Config, d *framework.FieldData) error {
 		maxValidationAttempt = defaultMaxTOTPValidateAttempts
 	}
 
+	enableSelfEnrollment := false
+	if isLoginMfa {
+		enableSelfEnrollmentRaw, ok := d.GetOk("enable_self_enrollment")
+		if ok {
+			enableSelfEnrollment = enableSelfEnrollmentRaw.(bool)
+		}
+		if !isEnterprise && enableSelfEnrollment {
+			return fmt.Errorf("enable_self_enrollment is an enterprise only feature")
+		}
+
+	}
 	config := &mfa.TOTPConfig{
 		Issuer:                issuer,
 		Period:                uint32(period),
@@ -1548,6 +1574,7 @@ func parseTOTPConfig(mConfig *mfa.Config, d *framework.FieldData) error {
 		KeySize:               uint32(keySize),
 		QRSize:                int32(d.Get("qr_size").(int)),
 		MaxValidationAttempts: uint32(maxValidationAttempt),
+		EnableSelfEnrollment:  enableSelfEnrollment,
 	}
 	mConfig.Config = &mfa.Config_TOTPConfig{
 		TOTPConfig: config,
