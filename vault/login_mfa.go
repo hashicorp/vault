@@ -1273,7 +1273,7 @@ func (b *LoginMFABackend) mfaConfigReadByMethodID(id string) (map[string]interfa
 		return nil, nil
 	}
 
-	return b.mfaConfigToMap(mConfig, true)
+	return b.mfaConfigToMap(mConfig, constants.IsEnterprise, true)
 }
 
 func (b *LoginMFABackend) mfaMethodList(ctx context.Context, methodType string) ([]string, map[string]interface{}, error) {
@@ -1333,7 +1333,7 @@ func (b *LoginMFABackend) mfaMethodList(ctx context.Context, methodType string) 
 		}
 
 		keys = append(keys, config.ID)
-		configInfoEntry, err := b.mfaConfigToMap(config, true)
+		configInfoEntry, err := b.mfaConfigToMap(config, constants.IsEnterprise, true)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to convert config to map: %w", err)
 		}
@@ -1423,7 +1423,7 @@ func (b *LoginMFABackend) mfaLoginEnforcementConfigToMap(eConfig *mfa.MFAEnforce
 // method endpoints. The `isLoginMFA` parameter indicates whether the
 // configuration is for login MFA, which includes additional fields on the
 // shared mfa.Config object for the TOTP type MFA method.
-func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config, isLoginMFA bool) (map[string]interface{}, error) {
+func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config, isEnterprise, isLoginMFA bool) (map[string]interface{}, error) {
 	respData := make(map[string]interface{})
 
 	switch mConfig.Config.(type) {
@@ -1437,9 +1437,9 @@ func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config, isLoginMFA bool) (map[s
 		respData["qr_size"] = totpConfig.QRSize
 		respData["algorithm"] = otplib.Algorithm(totpConfig.Algorithm).String()
 		respData["max_validation_attempts"] = totpConfig.MaxValidationAttempts
-		if isLoginMFA {
+		if isEnterprise && isLoginMFA {
 			// Login MFA and policy (i.e. enterprise step-up) MFA share the same protobuf message for TOTPConfig,
-			// but the login MFA has an additional field for self-enrollment.
+			// but the login MFA has an additional field for self-enrollment, which is an enterprise feature.
 			respData["enable_self_enrollment"] = totpConfig.GetEnableSelfEnrollment()
 		}
 	case *mfa.Config_OktaConfig:

@@ -79,6 +79,7 @@ func TestMFAConfigToMap(t *testing.T) {
 	testCases := map[string]struct {
 		config         *mfa.Config
 		expectedResult map[string]any
+		isEnterprise   bool
 		isLoginMFA     bool
 	}{
 		"totp-with-login-mfa": {
@@ -114,7 +115,43 @@ func TestMFAConfigToMap(t *testing.T) {
 				"skew":                    uint32(1),
 				"type":                    "totp",
 			},
-			isLoginMFA: true,
+			isEnterprise: true,
+			isLoginMFA:   true,
+		},
+		"totp-with-login-mfa-non-ent": {
+			config: &mfa.Config{
+				Type: mfaMethodTypeTOTP,
+				Config: &mfa.Config_TOTPConfig{
+					TOTPConfig: &mfa.TOTPConfig{
+						Issuer:                "TestIssuer",
+						Period:                30,
+						Digits:                6,
+						Skew:                  1,
+						KeySize:               20,
+						QRSize:                200,
+						Algorithm:             int32(otplib.AlgorithmSHA1),
+						MaxValidationAttempts: 5,
+						EnableSelfEnrollment:  true,
+					},
+				},
+			},
+			expectedResult: map[string]interface{}{
+				"algorithm":               "SHA1",
+				"digits":                  int32(6),
+				"id":                      "",
+				"issuer":                  "TestIssuer",
+				"key_size":                uint32(20),
+				"max_validation_attempts": uint32(5),
+				"name":                    "",
+				"namespace_id":            "",
+				"namespace_path":          "/",
+				"period":                  uint32(30),
+				"qr_size":                 int32(200),
+				"skew":                    uint32(1),
+				"type":                    "totp",
+			},
+			isEnterprise: false,
+			isLoginMFA:   true,
 		},
 		"totp-ent-step-up-mfa-self-enrollment-false": {
 			config: &mfa.Config{
@@ -148,7 +185,8 @@ func TestMFAConfigToMap(t *testing.T) {
 				"skew":                    uint32(1),
 				"type":                    "totp",
 			},
-			isLoginMFA: false,
+			isEnterprise: true,
+			isLoginMFA:   false,
 		},
 		"totp-ent-step-up-mfa-self-enrollment-true": {
 			config: &mfa.Config{
@@ -182,7 +220,8 @@ func TestMFAConfigToMap(t *testing.T) {
 				"skew":                    uint32(1),
 				"type":                    "totp",
 			},
-			isLoginMFA: false,
+			isEnterprise: true,
+			isLoginMFA:   false,
 		},
 		"okta-prod": {
 			config: &mfa.Config{
@@ -257,9 +296,8 @@ func TestMFAConfigToMap(t *testing.T) {
 				"namespace_id":    "",
 				"namespace_path":  "/",
 			},
-			isLoginMFA: false,
 		},
-		"pingid": {
+		"ping-id": {
 			config: &mfa.Config{
 				Type: mfaMethodTypePingID,
 				Config: &mfa.Config_PingIDConfig{
@@ -284,7 +322,6 @@ func TestMFAConfigToMap(t *testing.T) {
 				"namespace_id":      "",
 				"namespace_path":    "/",
 			},
-			isLoginMFA: false,
 		},
 	}
 	backend := &MFABackend{}
@@ -292,7 +329,7 @@ func TestMFAConfigToMap(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			actualResult, err := backend.mfaConfigToMap(tc.config, tc.isLoginMFA)
+			actualResult, err := backend.mfaConfigToMap(tc.config, tc.isEnterprise, tc.isLoginMFA)
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedResult, actualResult)
 		})
@@ -308,7 +345,7 @@ func TestMfaConfigToMap_InvalidType(t *testing.T) {
 		Config: nil,
 	}
 
-	_, err := backend.mfaConfigToMap(mConfig, true)
+	_, err := backend.mfaConfigToMap(mConfig, true, true)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid method type")
 }
