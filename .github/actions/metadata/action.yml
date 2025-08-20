@@ -181,7 +181,7 @@ runs:
           is_ce_in_enterprise='false'
           is_ent_branch='false'
           is_ent_repo='false'
-          vault_version_metadata='${{ inputs.vault-version }}'
+          version_metadata='${{ inputs.vault-version }}'
         fi
         {
           echo "compute-build=${compute_build}"
