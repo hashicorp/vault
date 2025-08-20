@@ -10,7 +10,7 @@ scenario "dev_pr_replication" {
     non-dev scenario.
 
     For a full tutorial for this scenario, see here:
-    https://hashicorp.atlassian.net/wiki/spaces/VAULT/pages/4163403807/Enos+Documentation
+    https://hashicorp.atlassian.net/wiki/spaces/VAULT/pages/4163469313/Enos+Tutorial
   EOF
 
   // The matrix is where we define all the baseline combinations that enos can utilize to customize
