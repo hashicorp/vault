@@ -9,7 +9,7 @@ interface Args {
   model: SecretsEngineResource;
 }
 
-export default class MetadataCard extends Component<Args> {
+export default class Metadata extends Component<Args> {
   constructor(owner: unknown, args: Args) {
     super(owner, args);
   }
