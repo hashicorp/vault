@@ -1241,7 +1241,11 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	if req.Operation == logical.RecoverOperation {
 		// first do a read operation
 		// this will use the snapshot's storage
+		originalPath := req.Path
 		req.Operation = logical.ReadOperation
+		if req.RecoverSourcePath != "" {
+			req.Path = req.RecoverSourcePath
+		}
 		resp, err := c.doRouting(ctx, req)
 		if err != nil {
 			return nil, auth, err
@@ -1256,6 +1260,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// set the snapshot ID context value to the empty string to ensure that
 		// the write goes to the real storage
 		req.Operation = logical.RecoverOperation
+		req.Path = originalPath
 		req.Data = resp.Data
 		ctx = logical.CreateContextWithSnapshotID(ctx, "")
 	}
