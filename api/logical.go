@@ -247,9 +247,16 @@ func (c *Logical) WriteRawWithContext(ctx context.Context, path string, data []b
 // Recover recovers the data at the given Vault path from a loaded snapshot.
 // The snapshotID parameter is the ID of the loaded snapshot
 func (c *Logical) Recover(ctx context.Context, path string, snapshotID string) (*Secret, error) {
-	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
+	return c.RecoverFromPath(ctx, path, snapshotID, "")
+}
+
+func (c *Logical) RecoverFromPath(ctx context.Context, newPath string, snapshotID string, originalPath string) (*Secret, error) {
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+newPath)
 	r.Params.Set("recover_snapshot_id", snapshotID)
-	return c.write(ctx, path, r)
+	if originalPath != "" && originalPath != newPath {
+		r.Params.Set("recover_source_path", url.QueryEscape(originalPath))
+	}
+	return c.write(ctx, originalPath, r)
 }
 
 func (c *Logical) JSONMergePatch(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {

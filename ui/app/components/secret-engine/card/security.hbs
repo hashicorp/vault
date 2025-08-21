@@ -1,0 +1,21 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-s has-top-bottom-margin-12">
+  <Hds::Form::Toggle::Group as |G|>
+    <G.Legend>
+      <Hds::Text::Display @size="300">Security</Hds::Text::Display>
+    </G.Legend>
+
+    {{! TODO: Toggle fields here are currently hardcoded, will be replaced with actual data from model once wired into parent component }}
+    <G.ToggleField name="local" {{on "click" this.toggleLocal}} as |F|>
+      <F.Label>Local</F.Label>
+      <F.HelperText>Secrets stay in one cluster and are not replicated.</F.HelperText>
+    </G.ToggleField>
+    <G.ToggleField name="seal-wrap" {{on "click" this.toggleSealWrap}} as |F|>
+      <F.Label>Seal wrap</F.Label>
+      <F.HelperText>Wrap secrets with an additional encryption layer using a seal.</F.HelperText>
+    </G.ToggleField>
+  </Hds::Form::Toggle::Group>
+</Hds::Card::Container>

@@ -62,7 +62,7 @@ on:
     branches:
       - main
       - release/**
-      # TODO: VAULT-34830: - ce/**
+      - ce/**
   schedule:
     - cron: '05 02 * * *' # * is a special character in YAML so you have to quote this string
 
@@ -186,6 +186,7 @@ jobs:
         needs.setup.outputs.is-draft == 'false' &&
         (
           contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
           contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
           contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
           contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app')
@@ -240,6 +241,7 @@ jobs:
       needs.setup.outputs.is-ent-branch != 'true' && (
         needs.setup.outputs.workflow-trigger == 'schedule' ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
         contains(fromJSON(needs.setup.outputs.labels), 'build/all')
@@ -265,6 +267,7 @@ jobs:
       needs.setup.outputs.is-ent-branch == 'true' && (
         needs.setup.outputs.workflow-trigger == 'schedule' ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
         contains(fromJSON(needs.setup.outputs.labels), 'build/all')
@@ -367,6 +370,19 @@ jobs:
       - test-containers
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - id: disallow-merge-on-ce
+        if: |
+          needs.setup.outputs.workflow-trigger == 'pull_request' &&
+          github.repository == 'hashicorp/vault' &&
+          ! contains(fromJSON(needs.setup.outputs.labels), 'build/all') &&
+          ( github.event.pull_request.base.ref == 'main' || startsWith(github.event.pull_request.base.ref, 'release/') )
+        run: |
+          echo '::error::Merging into main and release/* branches in hashicorp/vault is disallowed. Use the copy-external-contributor workflow to copy and merge the change via hashicorp/vault-enterprise'
+          {
+            echo "result=failed"
+            echo "results=failed"
+          } | tee -a "$GITHUB_OUTPUT"
+          exit 1
       - id: status
         name: Determine status
         run: |
@@ -442,7 +458,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "${{ needs.setup.result != 'failure' && ':white_check_mark:' || ':x:' }} Setup\n${{ needs.ui.result != 'failure' && ':white_check_mark:' || ':x:' }} Build UI\n${{ (needs.setup.outputs.is-ent-branch == 'true' && needs.artifacts-ent.result != 'failure' || needs.artifacts-ce.result != 'failure' ) && ':white_check_mark:' || ':x:' }} Build Vault Artifacts\n${{ needs.test.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos package test scenarios\n${{ needs.test-containers.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos container test scenarios"
+                    "text": "${{ needs.setup.result != 'failure' && ':white_check_mark:' || ':x:' }} Setup\n${{ needs.ui.result != 'failure' && ':white_check_mark:' || ':x:' }} Build UI\n${{ (needs.artifacts-ent.result != 'failure' && needs.artifacts-ce.result != 'failure') && ':white_check_mark:' || ':x:' }} Build Vault Artifacts\n${{ needs.test.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos package test scenarios\n${{ needs.test-containers.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos container test scenarios"
                   },
                   "accessory": {
                     "type": "button",

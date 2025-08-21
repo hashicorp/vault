@@ -20,6 +20,8 @@
       @ciphertext={{this.props.ciphertext}}
       @doSubmit={{perform this.doSubmit}}
       @isModalActive={{this.isModalActive}}
+      @updateContext={{this.updateContext}}
+      @updateNonce={{this.updateNonce}}
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "decrypt")}}
@@ -32,6 +34,8 @@
       @isModalActive={{this.isModalActive}}
       @plaintext={{this.props.plaintext}}
       @doSubmit={{perform this.doSubmit}}
+      @updateContext={{this.updateContext}}
+      @updateNonce={{this.updateNonce}}
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "datakey")}}
@@ -46,6 +50,8 @@
       @ciphertext={{this.props.ciphertext}}
       @doSubmit={{perform this.doSubmit}}
       @isModalActive={{this.isModalActive}}
+      @updateContext={{this.updateContext}}
+      @updateNonce={{this.updateNonce}}
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "rewrap")}}
@@ -60,6 +66,8 @@
       @decrypt_padding_scheme={{this.props.decrypt_padding_scheme}}
       @encrypt_padding_scheme={{this.props.encrypt_padding_scheme}}
       @doSubmit={{perform this.doSubmit}}
+      @updateContext={{this.updateContext}}
+      @updateNonce={{this.updateNonce}}
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "hmac")}}
@@ -94,6 +102,7 @@
       @doSubmit={{perform this.doSubmit}}
       @submitIsRunning={{this.doSubmit.isRunning}}
       @clearSpecificProps={{this.clearSpecificProps}}
+      @updateContext={{this.updateContext}}
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "sign")}}
@@ -111,6 +120,7 @@
       @isModalActive={{this.isModalActive}}
       @doSubmit={{perform this.doSubmit}}
       @submitIsRunning={{this.doSubmit.isRunning}}
+      @updateContext={{this.updateContext}}
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (or (eq @selectedAction "export") (eq (get @key.supportedActions 0) "export"))}}

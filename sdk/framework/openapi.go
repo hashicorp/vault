@@ -405,6 +405,16 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 						In:          "query",
 						Schema:      &OASSchema{Type: "string"},
 					})
+					// If there are path fields, it will also be possible to recover from a path with
+					// different path field values than the request path.
+					if len(pathFields) > 0 {
+						op.Parameters = append(op.Parameters, OASParameter{
+							Name:        "recover_source_path",
+							Description: "The source path to recover from. Only used if recover_snapshot_id parameter is also supplied. If not specified, the source path is assumed to be the same as the request path.",
+							In:          "query",
+							Schema:      &OASSchema{Type: "string"},
+						})
+					}
 				}
 
 				// Make the ordering deterministic, so that the generated OpenAPI spec document, observed over several
