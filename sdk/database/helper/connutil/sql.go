@@ -340,6 +340,7 @@ func (c *SQLConnectionProducer) Close() error {
 	defer c.Unlock()
 	if c.db != nil {
 		simplelog.Printf("[ORACLE-CONN-TEST] Close() invoked for entire database config; closing and deleting existing connection pool")
+		c.db.Close()
 
 		// cleanup IAM dialer if it exists
 		if c.AuthType == AuthTypeGCPIAM {
