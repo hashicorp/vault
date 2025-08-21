@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/stdlib"
 	"github.com/mitchellh/mapstructure"
+	simplelog "log"
 )
 
 const (
@@ -77,9 +78,6 @@ type SQLConnectionProducer struct {
 	db                    *sql.DB
 	staticAccountsCache   *cacheutil.Cache
 	sync.Mutex
-
-	// Adding logger to struct to assist in debugging
-	logger log.Logger
 }
 
 func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
@@ -92,13 +90,6 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 	defer c.Unlock()
 
 	c.RawConfig = conf
-
-	// Add logger to connection producer
-	traceLogger := log.New(&log.LoggerOptions{
-		Name:  "SQLConnectionProducer",
-		Level: log.Trace,
-	})
-	c.logger = traceLogger
 
 	err := mapstructure.WeakDecode(conf, &c)
 	if err != nil {
@@ -256,24 +247,13 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 
 	// If we already have a DB, test it and return
 	if c.db != nil {
-		connectionStats := c.db.Stats()
-		c.logger.Trace(fmt.Sprintf("[ORACLE-CONN-TEST] connection in pool exists: MaxOpenConnections=%d, OpenConnections=%d, InUse=%d, Idle=%d, WaitCount=%d, WaitDuration=%s, MaxIdleClosed=%d, MaxIdleTimeClosed=%d, MaxLifetimeClosed=%d",
-			connectionStats.MaxOpenConnections,
-			connectionStats.OpenConnections,
-			connectionStats.InUse,
-			connectionStats.Idle,
-			connectionStats.WaitCount,
-			connectionStats.WaitDuration.String(),
-			connectionStats.MaxIdleClosed,
-			connectionStats.MaxIdleTimeClosed,
-			connectionStats.MaxLifetimeClosed))
 		if err := c.db.PingContext(ctx); err == nil {
-			c.logger.Trace("[ORACLE-CONN-TEST] connection exists in pool, ping successful; using existing connection")
+			simplelog.Printf("[ORACLE-CONN-TEST] connection exists in pool, ping successful; using existing connection")
 			return c.db, nil
 		}
 		// If the ping was unsuccessful, close it and ignore errors as we'll be
 		// reestablishing anyways
-		c.logger.Trace("[ORACLE-CONN-TEST] ping to existing connection unsuccessful; closing and re-establishing connection")
+		simplelog.Printf("[ORACLE-CONN-TEST] ping to existing connection unsuccessful; closing and re-establishing connection")
 		c.db.Close()
 
 		// if IAM authentication is enabled
@@ -331,22 +311,11 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		}
 	} else {
 		var err error
-		c.logger.Trace(fmt.Sprintf("[ORACLE-CONN-TEST] opening database connection using: driver=%s, conn=%s", driverName, conn))
+		simplelog.Printf(fmt.Sprintf("[ORACLE-CONN-TEST] opening database connection using: driver=%s, conn=%s", driverName, conn))
 		c.db, err = sql.Open(driverName, conn)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open connection: %w", err)
 		}
-		connectionStats := c.db.Stats()
-		c.logger.Trace(fmt.Sprintf("[ORACLE-CONN-TEST] opened database connection: MaxOpenConnections=%d, OpenConnections=%d, InUse=%d, Idle=%d, WaitCount=%d, WaitDuration=%s, MaxIdleClosed=%d, MaxIdleTimeClosed=%d, MaxLifetimeClosed=%d",
-			connectionStats.MaxOpenConnections,
-			connectionStats.OpenConnections,
-			connectionStats.InUse,
-			connectionStats.Idle,
-			connectionStats.WaitCount,
-			connectionStats.WaitDuration.String(),
-			connectionStats.MaxIdleClosed,
-			connectionStats.MaxIdleTimeClosed,
-			connectionStats.MaxLifetimeClosed))
 	}
 
 	// Set some connection pool settings. We don't need much of this,
@@ -369,20 +338,8 @@ func (c *SQLConnectionProducer) Close() error {
 	// Grab the write lock
 	c.Lock()
 	defer c.Unlock()
-	c.logger.Trace("[ORACLE-CONN-TEST] Close() invoked for entire database config; closing and deleting connection pool")
 	if c.db != nil {
-		connectionStats := c.db.Stats()
-		c.logger.Trace(fmt.Sprintf("[ORACLE-CONN-TEST] closing database connection: MaxOpenConnections=%d, OpenConnections=%d, InUse=%d, Idle=%d, WaitCount=%d, WaitDuration=%s, MaxIdleClosed=%d, MaxIdleTimeClosed=%d, MaxLifetimeClosed=%d",
-			connectionStats.MaxOpenConnections,
-			connectionStats.OpenConnections,
-			connectionStats.InUse,
-			connectionStats.Idle,
-			connectionStats.WaitCount,
-			connectionStats.WaitDuration.String(),
-			connectionStats.MaxIdleClosed,
-			connectionStats.MaxIdleTimeClosed,
-			connectionStats.MaxLifetimeClosed))
-		c.db.Close()
+		simplelog.Printf("[ORACLE-CONN-TEST] Close() invoked for entire database config; closing and deleting existing connection pool")
 
 		// cleanup IAM dialer if it exists
 		if c.AuthType == AuthTypeGCPIAM {
