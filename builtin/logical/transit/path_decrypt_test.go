@@ -279,3 +279,304 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		})
 	}
 }
+
+func TestTransit_BatchDecryption_Kyber768_HappyPath(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	// 1) Create a Kyber-768 key (explicitly typed)
+	createReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/kyber_dec_happy",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"type": "kyber768",
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), createReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// 2) Encrypt a small batch with references (same test structure as existing batch decrypt test)
+	plaintexts := []struct {
+		ptB64, ref string
+	}{
+		{ptB64: "dGhlIHF1aWNrIGJyb3duIGZveA==", ref: "r1"},     // "the quick brown fox"
+		{ptB64: "anVtcGVkIG92ZXIgdGhlIGxhenkgZG9n", ref: "r2"}, // "jumped over the lazy dog"
+	}
+	batchEncInput := make([]interface{}, 0, len(plaintexts))
+	for _, it := range plaintexts {
+		batchEncInput = append(batchEncInput, map[string]interface{}{
+			"plaintext": it.ptB64,
+			"reference": it.ref,
+		})
+	}
+	encReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/kyber_dec_happy",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"batch_input": batchEncInput,
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), encReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// 3) Build batch decrypt input from returned ciphertexts (preserve references)
+	encItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
+	batchDecInput := make([]interface{}, len(encItems))
+	for i, item := range encItems {
+		batchDecInput[i] = map[string]interface{}{
+			"ciphertext": item.Ciphertext,
+			"reference":  item.Reference,
+		}
+	}
+
+	decReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "decrypt/kyber_dec_happy",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"batch_input": batchDecInput,
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), decReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// 4) Decode and compare results (uses the same decode+DeepEqual pattern as other decrypt tests)
+	var got []DecryptBatchResponseItem
+	if err := mapstructure.Decode(resp.Data["batch_results"], &got); err != nil {
+		t.Fatalf("problem decoding response items: err:%v, resp:%#v", err, resp)
+	}
+
+	want := []DecryptBatchResponseItem{
+		{Plaintext: plaintexts[0].ptB64, Reference: plaintexts[0].ref},
+		{Plaintext: plaintexts[1].ptB64, Reference: plaintexts[1].ref},
+	}
+	if !reflect.DeepEqual(want, got) {
+		t.Fatalf("response items mismatch, want:%#v, got:%#v", want, got)
+	}
+}
+
+func TestTransit_DecryptKyber768_HappyPath_NonBatch(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	// Create a Kyber-768 key.
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/kyber_nb_key",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"type": "kyber768",
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Encrypt a single plaintext (non-batch) with that key.
+	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
+	encReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/kyber_nb_key",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"plaintext": plaintext,
+		},
+	}
+	encResp, err := b.HandleRequest(context.Background(), encReq)
+	if err != nil || (encResp != nil && encResp.IsError()) {
+		t.Fatalf("encrypt err:%v resp:%#v", err, encResp)
+	}
+	ciphertext := encResp.Data["ciphertext"].(string)
+
+	// Decrypt the ciphertext (non-batch) and verify plaintext round-trips.
+	decReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "decrypt/kyber_nb_key",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"ciphertext": ciphertext,
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), decReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("decrypt err:%v resp:%#v", err, resp)
+	}
+
+	if resp.Data["plaintext"] != plaintext {
+		t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, resp.Data["plaintext"])
+	}
+}
+
+func TestTransit_Decrypt_DerivedKey_NonBatch_MissingContext(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	// Create a derived key.
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/derived_nb_missing",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"derived": true,
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Encrypt non-batch with required context.
+	encReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/derived_nb_missing",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", // "the quick brown fox"
+			"context":   "dGVzdGNvbnRleHQ=",             // "testcontext"
+		},
+	}
+	encResp, err := b.HandleRequest(context.Background(), encReq)
+	if err != nil || (encResp != nil && encResp.IsError()) {
+		t.Fatalf("encrypt err:%v resp:%#v", err, encResp)
+	}
+	ct := encResp.Data["ciphertext"].(string)
+
+	// Decrypt WITHOUT context (should fail for derived keys).
+	decReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "decrypt/derived_nb_missing",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"ciphertext": ct,
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), decReq)
+	if err == nil {
+		if resp == nil || !resp.IsError() {
+			t.Fatal("expected request error")
+		}
+	}
+}
+
+func TestTransit_Decrypt_DerivedKey_NonBatch_InvalidContext(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	// Create a derived key.
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/derived_nb_invalid_ctx",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"derived": true,
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Encrypt with valid context.
+	encReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/derived_nb_invalid_ctx",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==",
+			"context":   "dGVzdGNvbnRleHQ=",
+		},
+	}
+	encResp, err := b.HandleRequest(context.Background(), encReq)
+	if err != nil || (encResp != nil && encResp.IsError()) {
+		t.Fatalf("encrypt err:%v resp:%#v", err, encResp)
+	}
+	ct := encResp.Data["ciphertext"].(string)
+
+	// Decrypt with INVALID (non-base64) context (should fail).
+	decReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "decrypt/derived_nb_invalid_ctx",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"ciphertext": ct,
+			"context":    "xxx", // not base64
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), decReq)
+	if err == nil {
+		if resp == nil || !resp.IsError() {
+			t.Fatal("expected request error")
+		}
+	}
+}
+
+func TestTransit_Decrypt_DerivedKey_NonBatch_WrongContext(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	// Create a derived key.
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/derived_nb_wrong_ctx",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"derived": true,
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Encrypt with context A.
+	encReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/derived_nb_wrong_ctx",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==",
+			"context":   "dGVzdGNvbnRleHQ=", // "testcontext"
+		},
+	}
+	encResp, err := b.HandleRequest(context.Background(), encReq)
+	if err != nil || (encResp != nil && encResp.IsError()) {
+		t.Fatalf("encrypt err:%v resp:%#v", err, encResp)
+	}
+	ct := encResp.Data["ciphertext"].(string)
+
+	// Decrypt with WRONG context B (should fail: AAD mismatch).
+	decReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "decrypt/derived_nb_wrong_ctx",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"ciphertext": ct,
+			"context":    "dGVzdGNvbnRleHQy", // different base64 ("testcontext2")
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), decReq)
+	if err == nil {
+		if resp == nil || !resp.IsError() {
+			t.Fatal("expected request error")
+		}
+	}
+}

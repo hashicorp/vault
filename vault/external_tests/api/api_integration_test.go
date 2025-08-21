@@ -78,3 +78,49 @@ func testVaultServerCoreConfig(t testing.TB, coreConfig *vault.CoreConfig) (*api
 
 	return client, unsealKeys, func() { defer cluster.Cleanup() }
 }
+
+func TestTransit_Kyber768_EncryptDecrypt_RoundTrip(t *testing.T) {
+	t.Parallel()
+
+	client, _, closer := testVaultServerUnseal(t)
+	defer closer()
+
+	if err := client.Sys().Mount("transit", &api.MountInput{Type: "transit"}); err != nil {
+		t.Fatalf("mount transit: %v", err)
+	}
+
+	if _, err := client.Logical().Write("transit/keys/test-kyber", map[string]any{
+		"type": "kyber768",
+	}); err != nil {
+		t.Fatalf("create kyber key: %v", err)
+	}
+
+	const msg = "hello kyber768"
+	enc, err := client.Logical().Write("transit/encrypt/test-kyber", map[string]any{
+		"plaintext": base64.StdEncoding.EncodeToString([]byte(msg)),
+	})
+	if err != nil {
+		t.Fatalf("encrypt: %v", err)
+	}
+	ct, _ := enc.Data["ciphertext"].(string)
+	if ct == "" {
+		t.Fatalf("encrypt returned empty ciphertext")
+	}
+
+	dec, err := client.Logical().Write("transit/decrypt/test-kyber", map[string]any{
+		"ciphertext": ct,
+	})
+	if err != nil {
+		t.Fatalf("decrypt: %v", err)
+	}
+
+	gotB64, _ := dec.Data["plaintext"].(string)
+	got, err := base64.StdEncoding.DecodeString(gotB64)
+	if err != nil {
+		t.Fatalf("decode plaintext: %v", err)
+	}
+
+	if string(got) != msg {
+		t.Fatalf("round-trip mismatch: got %q, want %q", got, msg)
+	}
+}

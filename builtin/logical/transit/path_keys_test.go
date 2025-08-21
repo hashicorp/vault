@@ -343,6 +343,9 @@ func TestTransit_CreateKey(t *testing.T) {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256F},
 			entOnly:        true,
 		},
+		"CRYSTAL-KYBER-768": {
+			creationParams: map[string]interface{}{"type": "kyber768"},
+		},
 		"bad key type": {
 			creationParams: map[string]interface{}{"type": "fake-key-type"},
 			shouldError:    true,

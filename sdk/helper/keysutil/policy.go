@@ -257,7 +257,7 @@ func (kt KeyType) HMACSupported() bool {
 
 func (kt KeyType) IsPQC() bool {
 	switch kt {
-	case KeyType_Kyber768, KeyType_ML_DSA, KeyType_HYBRID, KeyType_SLH_DSA:
+	case KeyType_ML_DSA, KeyType_HYBRID, KeyType_SLH_DSA:
 		return true
 	default:
 		return false
@@ -1192,6 +1192,7 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 		if !strings.HasPrefix(value, tpl) {
 			return "", errutil.UserError{Err: "invalid ciphertext: version prefix missing"}
 		}
+
 		b64 := strings.TrimPrefix(value, tpl)
 		combined, err := base64.StdEncoding.DecodeString(b64)
 		if err != nil {
@@ -1200,7 +1201,7 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 
 		// Frame: combined = capsule || nonce || ct
 		capsuleLen := kyber.s.CiphertextSize()
-		if len(combined) < capsuleLen+1 { // must have at least some nonce/ct bytes
+		if len(combined) < capsuleLen+1 { // need at least some nonce/ct bytes
 			return "", errutil.InternalError{Err: "invalid ciphertext: too short"}
 		}
 		capsule := combined[:capsuleLen]
@@ -1222,49 +1223,36 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 			return "", errutil.InternalError{Err: fmt.Sprintf("Kyber decapsulation failed: %v", err)}
 		}
 
-		// HKDF -> AES-256 key
-		key, err := deriveAES256Key(ss)
+		// Derive AES-256 key bound to transcript (capsule + AD)
+		const kdfLabel = "kyber768-aes256-gcm-v1"
+		var ad []byte // set if you have external associated data
+		key, err := deriveAES256Key(ss, capsule, ad, kdfLabel)
 		if err != nil {
-			// zeroize ss before returning
-			for i := range ss {
-				ss[i] = 0
-			}
-			return "", errutil.InternalError{Err: fmt.Sprintf("HKDF extract failed: %v", err)}
-		}
-		// zeroize shared secret ASAP
-		for i := range ss {
-			ss[i] = 0
+			return "", errutil.InternalError{Err: fmt.Sprintf("HKDF derive failed: %v", err)}
 		}
 
-		block := mustAES(key)
-		aead, err := cipher.NewGCM(block)
+		// Init AEAD
+		aead, err := newGCM(key)
 		if err != nil {
-			for i := range key {
-				key[i] = 0
-			}
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to create AEAD: %v", err)}
 		}
 
+		// Split nonce and ciphertext
 		nonceLen := aead.NonceSize()
 		if len(rest) < nonceLen+1 { // require at least 1 byte of ciphertext
-			for i := range key {
-				key[i] = 0
-			}
 			return "", errutil.InternalError{Err: "invalid ciphertext: too short"}
 		}
 		nonce := rest[:nonceLen]
 		ct := rest[nonceLen:]
 
-		pt, err := aead.Open(nil, nonce, ct, nil)
-		// wipe key regardless of outcome
-		for i := range key {
-			key[i] = 0
-		}
+		pt, err := aead.Open(nil, nonce, ct, ad)
 		if err != nil {
-			return "", errutil.UserError{Err: "Kyber decryption failed: invalid ciphertext"}
+			// Opaque failure to avoid oracles
+			return "", errutil.UserError{Err: "decryption failed: invalid ciphertext"}
 		}
 
-		return string(pt), nil
+		plain = pt
+
 	default:
 		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
@@ -2437,8 +2425,7 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		combined = append(combined, nonce...)
 		combined = append(combined, ct...)
 		// Base64-encode and prefix with version
-		encoded := base64.StdEncoding.EncodeToString(combined)
-		return p.getVersionPrefix(ver) + encoded, nil
+		ciphertext = combined
 
 	default:
 		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}

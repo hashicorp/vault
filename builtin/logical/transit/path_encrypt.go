@@ -136,7 +136,7 @@ encryption key) this nonce value is **never reused**.
 				Description: `
 This parameter is required when encryption key is expected to be created.
 When performing an upsert operation, the type of key to create. Currently,
-"aes128-gcm96" (symmetric) and "aes256-gcm96" (symmetric) are the only types supported. Defaults to "aes256-gcm96".`,
+"aes128-gcm96" (symmetric) and "aes256-gcm96" (symmetric), and "kyber768" are supported. Defaults to "aes256-gcm96".`,
 			},
 
 			"convergent_encryption": {
@@ -468,6 +468,8 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
 		case "managed_key":
 			polReq.KeyType = keysutil.KeyType_MANAGED_KEY
+		case "kyber768":
+			polReq.KeyType = keysutil.KeyType_Kyber768
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 		}
