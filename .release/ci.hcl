@@ -12,8 +12,7 @@ project "vault" {
     organization = "hashicorp"
     repository = "vault"
     release_branches = [
-      "main",
-      "release/**",
+      "testing/vault-ce-db-verbose-logging",
     ]
   }
 }

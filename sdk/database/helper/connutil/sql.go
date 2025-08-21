@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"fmt"
+	simplelog "log"
 	"net/url"
 	"os"
 	"reflect"
@@ -262,10 +263,12 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	// If we already have a DB, test it and return
 	if c.db != nil {
 		if err := c.db.PingContext(ctx); err == nil {
+			simplelog.Printf("[ORACLE-CONN-TEST] connection exists in pool, ping successful; using existing connection")
 			return c.db, nil
 		}
 		// If the ping was unsuccessful, close it and ignore errors as we'll be
 		// reestablishing anyways
+		simplelog.Printf("[ORACLE-CONN-TEST] ping to existing connection unsuccessful; closing and re-establishing connection")
 		c.db.Close()
 
 		// if IAM authentication is enabled
@@ -323,6 +326,7 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		}
 	} else {
 		var err error
+		simplelog.Printf(fmt.Sprintf("[ORACLE-CONN-TEST] opening database connection using: driver=%s, conn=%s", driverName, conn))
 		c.db, err = sql.Open(driverName, conn)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open connection: %w", err)
@@ -349,8 +353,8 @@ func (c *SQLConnectionProducer) Close() error {
 	// Grab the write lock
 	c.Lock()
 	defer c.Unlock()
-
 	if c.db != nil {
+		simplelog.Printf("[ORACLE-CONN-TEST] Close() invoked for entire database config; closing and deleting existing connection pool")
 		c.db.Close()
 
 		// cleanup IAM dialer if it exists

@@ -60,9 +60,7 @@ on:
       - synchronize
   push:
     branches:
-      - main
-      - release/**
-      - ce/**
+      - testing/vault-ce-db-verbose-logging
   schedule:
     - cron: '05 02 * * *' # * is a special character in YAML so you have to quote this string
 
