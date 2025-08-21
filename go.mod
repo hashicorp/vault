@@ -58,7 +58,7 @@ require (
 	github.com/coder/websocket v1.8.12
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.12.3
-	github.com/docker/docker v28.0.1+incompatible
+	github.com/docker/docker v28.3.3+incompatible
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.18.0
@@ -160,7 +160,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.11.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.24.2
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.15.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.16.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.12.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
 	github.com/hashicorp/vault/api v1.20.0
@@ -174,7 +174,7 @@ require (
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
 	github.com/jefferai/jsonx v1.0.1
 	github.com/joyent/triton-go v1.7.1-0.20200416154420-6801d15b779f
-	github.com/klauspost/compress v1.17.11
+	github.com/klauspost/compress v1.18.0
 	github.com/kr/pretty v0.3.1
 	github.com/kr/text v0.2.0
 	github.com/mattn/go-colorable v0.1.14
@@ -234,6 +234,12 @@ require (
 	k8s.io/apimachinery v0.33.1
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
+)
+
+require (
+	github.com/containerd/errdefs v1.0.0 // indirect
+	github.com/containerd/errdefs/pkg v0.3.0 // indirect
+	github.com/moby/go-archive v0.1.0 // indirect
 )
 
 require (
@@ -467,8 +473,8 @@ require (
 	github.com/mitchellh/pointerstructure v1.2.1 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
-	github.com/moby/sys/sequential v0.5.0 // indirect
-	github.com/moby/sys/user v0.3.0 // indirect
+	github.com/moby/sys/sequential v0.6.0 // indirect
+	github.com/moby/sys/user v0.4.0 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
