@@ -2,7 +2,7 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
-<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-s has-top-bottom-margin-12">
+<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-s has-top-bottom-margin-12" ...attributes>
   <Hds::Text::Display @size="300">Metadata</Hds::Text::Display>
 
   <div class="flex gap-16 is-flex-column has-top-padding-s">
@@ -12,14 +12,12 @@
       <F.Control>
         <div class="flex column-gap-8">
           <Hds::Form::TextInput::Field
-            @value={{@model.path}}
+            @value={{@model.secretsEngine.path}}
             autocomplete="off"
-            disabled={{@disabled}}
+            disabled
             class="path-input-text"
             name="Path"
             data-test-input="path"
-            {{! TODO: Update onchange handler, maybe match form-field.hbs }}
-            {{on "input" this.updatePath}}
           />
           <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @targetToCopy=".path-input-text" />
         </div>
@@ -32,23 +30,21 @@
       <F.Control>
         <div class="flex column-gap-8">
           <Hds::Form::TextInput::Field
-            @value={{@model.accessor}}
+            @value={{@model.secretsEngine.accessor}}
             autocomplete="off"
-            disabled={{@disabled}}
+            disabled
             name="Accessor"
             class="accessor-input-text"
             data-test-input="accessor"
-            {{! TODO: update onchange accordingly }}
-            {{on "input" this.updateAccessor}}
           />
           <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @targetToCopy=".accessor-input-text" />
         </div>
       </F.Control>
     </Hds::Form::Fieldset>
 
-    <Hds::Form::Textarea::Field name="demo-description" @value={{@model.description}} as |F|>
+    <Hds::Form::Textarea::Field name="description" @value={{@model.secretsEngine.description}} as |F|>
       <F.Label>Description</F.Label>
-      <F.HelperText>A short description of the secrets engine’s purpose.</F.HelperText>
+      <F.HelperText>A short description of the secrets engine's purpose.</F.HelperText>
       {{! TODO: Confirm with Design - Is there a length limit for descriptions? Design has it around 765 characters, but not sure theres a backend limit? }}
       <F.CharacterCount @maxLength={{500}} />
     </Hds::Form::Textarea::Field>
