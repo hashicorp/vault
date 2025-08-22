@@ -128,8 +128,6 @@ func NewCreateBackportReq(opts ...NewCreateBackportReqOpt) *CreateBackportReq {
 		CEBranchPrefix:      "ce",
 		CEAllowInactiveGroups: changed.FileGroups{
 			changed.FileGroupChangelog,
-			changed.FileGroupDocs,
-			changed.FileGroupPipeline,
 		},
 		BaseOrigin:          "origin",
 		BackportLabelPrefix: "backport",
