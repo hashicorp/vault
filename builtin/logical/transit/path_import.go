@@ -222,12 +222,16 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_AES256_CMAC
 	case "aes192-cmac":
 		polReq.KeyType = keysutil.KeyType_AES192_CMAC
+	case "aes128-cbc":
+		polReq.KeyType = keysutil.KeyType_AES128_CBC
+	case "aes256-cbc":
+		polReq.KeyType = keysutil.KeyType_AES256_CBC
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type: %v", keyType)), logical.ErrInvalidRequest
 	}
 
-	if polReq.KeyType.CMACSupported() && !constants.IsEnterprise {
-		return logical.ErrorResponse(ErrCmacEntOnly.Error()), logical.ErrInvalidRequest
+	if polReq.KeyType.IsEnterpriseOnly() && !constants.IsEnterprise {
+		return logical.ErrorResponse(ErrKeyTypeEntOnly, polReq.KeyType), logical.ErrInvalidRequest
 	}
 
 	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())

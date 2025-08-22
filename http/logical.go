@@ -12,6 +12,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -205,7 +206,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		return nil, nil, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err)
 	}
 
-	var requiredSnapshotID string
+	var requiredSnapshotID, recoverSourcePath string
 
 	// check for a read, list, or recover from snapshot request
 	switch op {
@@ -227,6 +228,18 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 				op = logical.RecoverOperation
 			}
 		}
+		if op == logical.RecoverOperation {
+			if queryVals.Has(VaultRecoverSourcePathParam) {
+				sourcePath := queryVals.Get(VaultRecoverSourcePathParam)
+				if sourcePath != "" {
+					unescapedPath, err := url.QueryUnescape(sourcePath)
+					if err != nil {
+						return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to unescape %s query parameter: %w", VaultRecoverSourcePathParam, err)
+					}
+					recoverSourcePath = trimPath(ns, unescapedPath)
+				}
+			}
+		}
 	}
 
 	req := &logical.Request{
@@ -237,6 +250,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		Connection:         getConnection(r),
 		Headers:            r.Header,
 		RequiresSnapshotID: requiredSnapshotID,
+		RecoverSourcePath:  recoverSourcePath,
 	}
 
 	if ra != nil && ra.IsLimitedPath(r.Context(), path) {

@@ -1,0 +1,65 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<SecretEngine::PageHeader @model={{@model}} />
+
+{{#if this.saveGeneralSettings.isRunning}}
+  {{! TODO: Fix loading state styles }}
+  <Hds::Layout::Flex @gap="24" @direction="column" @justify="center" @align="center">
+    <div class="one-fourth-width">
+      <Hds::Icon @name="loading-static" @size="24" @stretched={{true}} />
+    </div>
+    <Hds::Text::Display @tag="h2">Saving configuration...</Hds::Text::Display>
+  </Hds::Layout::Flex>
+{{else}}
+  <form method="POST" {{on "submit" (perform this.saveGeneralSettings)}} aria-label="general settings form">
+    <Hds::Text::Body class="has-top-bottom-margin-xxs">
+      Mount parameters that you can tune to fit required engine behavior.
+    </Hds::Text::Body>
+
+    <Hds::Layout::Flex @gap="24">
+      <SecretEngine::Card::Version @model={{@model}} class="is-fullwidth" />
+      {{! TODO: Lease duration component }}
+    </Hds::Layout::Flex>
+
+    <Hds::Layout::Flex @gap="24">
+      <SecretEngine::Card::Metadata @model={{@model}} class="is-fullwidth" />
+      <SecretEngine::Card::Security @model={{@model}} class="is-fullwidth" />
+    </Hds::Layout::Flex>
+
+    <div class="field is-grouped has-top-bottom-margin-12">
+      <Hds::ButtonSet>
+        <Hds::Button @text="Save changes" type="submit" disabled={{this.saveGeneralSettings.isRunning}} data-test-submit />
+        <Hds::Button
+          @text="Discard"
+          @color="secondary"
+          data-test-cancel
+          {{on "click" (fn (mut this.showUnsavedChangesModal))}}
+        />
+      </Hds::ButtonSet>
+    </div>
+  </form>
+{{/if}}
+
+{{#if this.showUnsavedChangesModal}}
+  <Hds::Modal id="unsavedChangesModal" @onClose={{(fn (mut this.showUnsavedChangesModal))}} as |M|>
+    <M.Header>
+      Unsaved changes
+    </M.Header>
+    <M.Body>
+      <p class="hds-typography-body-300 hds-foreground-primary">You've made changes to the following
+        <Hds::Text::Display>{{@model.secretsEngine.id}}</Hds::Text::Display>
+        settings:</p>
+      {{! TODO: display what fields were changed  }}
+      <br />
+      Would you like to apply them?
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button type="button" @text="Save changes" {{on "click" (action (perform this.saveGeneralSettings))}} />
+      {{! TODO: confirm with design where we want to transition to if Discard changes is clicked }}
+      <Hds::Button type="button" @text="Discard changes" @color="secondary" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}
