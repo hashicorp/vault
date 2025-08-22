@@ -10,7 +10,7 @@
       <F.Legend>Path</F.Legend>
       <F.HelperText>The mount path where this secrets engine is accessible.</F.HelperText>
       <F.Control>
-        <div class="flex column-gap-8">
+        <Hds::Layout::Flex @gap="8">
           <Hds::Form::TextInput::Field
             @value={{@model.secretsEngine.path}}
             autocomplete="off"
@@ -20,7 +20,7 @@
             data-test-input="path"
           />
           <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @targetToCopy=".path-input-text" />
-        </div>
+        </Hds::Layout::Flex>
       </F.Control>
     </Hds::Form::Fieldset>
 
@@ -28,7 +28,7 @@
       <F.Legend>Accessor</F.Legend>
       <F.HelperText>Internal identifier used by Vault to reference this engine.</F.HelperText>
       <F.Control>
-        <div class="flex column-gap-8">
+        <Hds::Layout::Flex @gap="8">
           <Hds::Form::TextInput::Field
             @value={{@model.secretsEngine.accessor}}
             autocomplete="off"
@@ -38,7 +38,7 @@
             data-test-input="accessor"
           />
           <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @targetToCopy=".accessor-input-text" />
-        </div>
+        </Hds::Layout::Flex>
       </F.Control>
     </Hds::Form::Fieldset>
 
