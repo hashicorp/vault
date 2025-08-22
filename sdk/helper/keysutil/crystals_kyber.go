@@ -45,12 +45,12 @@ func (k kyberBox) Encrypt(pk kem.PublicKey, plaintext, ad []byte) (capsule, nonc
 		return nil, nil, nil, fmt.Errorf("encapsulate: %w", err)
 	}
 
-	key, err := deriveAES256Key(ss, capsule, ad, k.label)
+	key, err := k.deriveAES256Key(ss, capsule, ad)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("derive key: %w", err)
 	}
 
-	aead, n, err := newGCMWithNonce(key)
+	aead, n, err := k.newGCMWithNonce(key)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("gcm init: %w", err)
 	}
@@ -70,12 +70,12 @@ func (k kyberBox) Decrypt(sk kem.PrivateKey, capsule, nonce, ciphertext, ad []by
 		return nil, fmt.Errorf("decapsulate: %w", err)
 	}
 
-	key, err := deriveAES256Key(ss, capsule, ad, k.label)
+	key, err := k.deriveAES256Key(ss, capsule, ad)
 	if err != nil {
 		return nil, fmt.Errorf("derive key: %w", err)
 	}
 
-	aead, err := newGCM(key)
+	aead, err := k.newGCM(key)
 	if err != nil {
 		return nil, fmt.Errorf("gcm init: %w", err)
 	}
@@ -91,11 +91,11 @@ func (k kyberBox) Decrypt(sk kem.PrivateKey, capsule, nonce, ciphertext, ad []by
 	return plain, nil
 }
 
-func deriveAES256Key(secret, capsule, ad []byte, label string) ([]byte, error) {
+func (k kyberBox) deriveAES256Key(secret, capsule, ad []byte) ([]byte, error) {
 	// Bind KDF to transcript: label || H(capsule) || H(ad)
 	hc := sha256.Sum256(capsule)
 	ha := sha256.Sum256(ad)
-	info := append(append([]byte(label), hc[:]...), ha[:]...)
+	info := append(append([]byte(k.label), hc[:]...), ha[:]...)
 
 	h := hkdf.New(sha256.New, secret, nil, info)
 	key := make([]byte, 32)
@@ -103,8 +103,8 @@ func deriveAES256Key(secret, capsule, ad []byte, label string) ([]byte, error) {
 	return key, err
 }
 
-func newGCMWithNonce(key []byte) (cipher.AEAD, []byte, error) {
-	aead, err := newGCM(key)
+func (k kyberBox) newGCMWithNonce(key []byte) (cipher.AEAD, []byte, error) {
+	aead, err := k.newGCM(key)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -115,7 +115,7 @@ func newGCMWithNonce(key []byte) (cipher.AEAD, []byte, error) {
 	return aead, nonce, nil
 }
 
-func newGCM(key []byte) (cipher.AEAD, error) {
+func (k kyberBox) newGCM(key []byte) (cipher.AEAD, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf("aes: %w", err)

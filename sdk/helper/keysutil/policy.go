@@ -1233,13 +1233,13 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 
 		// Derive AES-256 key bound to transcript (capsule + AD)
 		var ad []byte // set if you have external associated data
-		key, err := deriveAES256Key(ss, capsule, ad, kyber.label)
+		key, err := kyber.deriveAES256Key(ss, capsule, ad)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("HKDF derive failed: %v", err)}
 		}
 
 		// Init AEAD
-		aead, err := newGCM(key)
+		aead, err := kyber.newGCM(key)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to create AEAD: %v", err)}
 		}
