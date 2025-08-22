@@ -76,7 +76,9 @@ const (
 	KeyType_HYBRID
 	KeyType_AES192_CMAC
 	KeyType_SLH_DSA
+	KeyType_Kyber512
 	KeyType_Kyber768
+	KeyType_Kyber1024
 	// If adding to this list please update allTestKeyTypes in policy_test.go
 )
 
@@ -189,7 +191,7 @@ type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {
 	switch kt {
-	case KeyType_Kyber768, KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
+	case KeyType_Kyber512, KeyType_Kyber768, KeyType_Kyber1024, KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	}
 	return false
@@ -197,7 +199,7 @@ func (kt KeyType) EncryptionSupported() bool {
 
 func (kt KeyType) DecryptionSupported() bool {
 	switch kt {
-	case KeyType_Kyber768, KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
+	case KeyType_Kyber512, KeyType_Kyber768, KeyType_Kyber1024, KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	}
 	return false
@@ -319,8 +321,12 @@ func (kt KeyType) String() string {
 		return "aes192-cmac"
 	case KeyType_SLH_DSA:
 		return "slh-dsa"
+	case KeyType_Kyber512:
+		return "kyber512"
 	case KeyType_Kyber768:
 		return "kyber768"
+	case KeyType_Kyber1024:
+		return "kyber1024"
 	}
 
 	return "[unknown]"
@@ -1185,9 +1191,11 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 		if err != nil {
 			return "", err
 		}
-	case KeyType_Kyber768:
-		kyber := newKyberBox()
-
+	case KeyType_Kyber512, KeyType_Kyber768, KeyType_Kyber1024:
+		kyber, err := newKyberBox(p.Type)
+		if err != nil {
+			return "", err
+		}
 		tpl := p.getVersionPrefix(ver)
 		if !strings.HasPrefix(value, tpl) {
 			return "", errutil.UserError{Err: "invalid ciphertext: version prefix missing"}
@@ -1224,9 +1232,8 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 		}
 
 		// Derive AES-256 key bound to transcript (capsule + AD)
-		const kdfLabel = "kyber768-aes256-gcm-v1"
 		var ad []byte // set if you have external associated data
-		key, err := deriveAES256Key(ss, capsule, ad, kdfLabel)
+		key, err := deriveAES256Key(ss, capsule, ad, kyber.label)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("HKDF derive failed: %v", err)}
 		}
@@ -1921,9 +1928,12 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		}
 
 		entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
-	case KeyType_Kyber768:
-		kyber := newKyberBox()
-
+	case KeyType_Kyber512, KeyType_Kyber768, KeyType_Kyber1024:
+		// Initialize Kyber KEM
+		kyber, err := newKyberBox(p.Type)
+		if err != nil {
+			return err
+		}
 		// Use Vault’s central RNG (HSM/DRBG if configured; crypto/rand otherwise)
 		seed := make([]byte, kyber.s.SeedSize())
 		if _, err := io.ReadFull(randReader, seed); err != nil {
@@ -2396,9 +2406,12 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		if err != nil {
 			return "", err
 		}
-	case KeyType_Kyber768:
+	case KeyType_Kyber512, KeyType_Kyber768, KeyType_Kyber1024:
 		// Initialize Kyber KEM
-		kyber := newKyberBox()
+		kyber, err := newKyberBox(p.Type)
+		if err != nil {
+			return "", err
+		}
 		// Fetch the stored key entry
 		keyEntry, err := p.safeGetKeyEntry(ver)
 		if err != nil {

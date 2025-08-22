@@ -37,7 +37,7 @@ var allTestKeyTypes = []KeyType{
 	KeyType_AES256_GCM96, KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048,
 	KeyType_RSA4096, KeyType_ChaCha20_Poly1305, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_AES128_GCM96,
 	KeyType_RSA3072, KeyType_MANAGED_KEY, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_ML_DSA,
-	KeyType_HYBRID, KeyType_AES192_CMAC, KeyType_SLH_DSA, KeyType_Kyber768,
+	KeyType_HYBRID, KeyType_AES192_CMAC, KeyType_SLH_DSA, KeyType_Kyber512, KeyType_Kyber768, KeyType_Kyber1024,
 }
 
 func TestPolicy_KeyTypes(t *testing.T) {
@@ -85,255 +85,257 @@ func TestPolicy_HmacCmacSupported(t *testing.T) {
 	}
 }
 
-func TestPolicy_Kyber768_SupportedFeatures(t *testing.T) {
-	kyberKey := [...]KeyType{KeyType_Kyber768}[0]
-	// String mapping
-	if got := kyberKey.String(); got != "kyber768" {
-		t.Fatalf("unexpected String() for kyber768: %q", got)
+func TestPolicy_Kyber_SupportedFeatures(t *testing.T) {
+	cases := []struct {
+		name string
+		kt   KeyType
+		str  string
+	}{
+		{"kyber512", KeyType_Kyber512, "kyber512"},
+		{"kyber768", KeyType_Kyber768, "kyber768"},
+		{"kyber1024", KeyType_Kyber1024, "kyber1024"},
 	}
-
-	// Encrypt/Decrypt are supported for Kyber768
-	if !kyberKey.EncryptionSupported() {
-		t.Fatalf("kyber768 should support encryption")
-	}
-	if !kyberKey.DecryptionSupported() {
-		t.Fatalf("kyber768 should support decryption")
-	}
-
-	// Not a signing key
-	if kyberKey.SigningSupported() {
-		t.Fatalf("kyber768 should not support signing")
-	}
-
-	// No key-derivation / associated data features (per policy plumbing)
-	if kyberKey.DerivationSupported() {
-		t.Fatalf("kyber768 should not support derivation")
-	}
-	if kyberKey.AssociatedDataSupported() {
-		t.Fatalf("kyber768 should not support associated data")
-	}
-
-	// Not an RSA key; no padding schemes
-	if kyberKey.PaddingSchemesSupported() {
-		t.Fatalf("kyber768 should not support RSA padding")
-	}
-
-	// Public key import isn’t a thing for this type here
-	if kyberKey.ImportPublicKeySupported() {
-		t.Fatalf("kyber768 should not support public key import")
-	}
-
-	// Policy’s IsPQC() currently covers ML-DSA/SLH-DSA/Hybrid only (not Kyber)
-	if kyberKey.IsPQC() {
-		t.Fatalf("kyber768 IsPQC() should be false per current policy logic")
-	}
-
-	// HMACSupported() is true for non-CMAC/non-managed (matches other AEAD types)
-	if !kyberKey.HMACSupported() {
-		t.Fatalf("kyber768 should support HMAC usage in policy")
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			if got := c.kt.String(); got != c.str {
+				t.Fatalf("unexpected String(): %q", got)
+			}
+			if !c.kt.EncryptionSupported() {
+				t.Fatalf("encryption should be supported")
+			}
+			if !c.kt.DecryptionSupported() {
+				t.Fatalf("decryption should be supported")
+			}
+			if c.kt.SigningSupported() {
+				t.Fatalf("signing should not be supported")
+			}
+			if c.kt.DerivationSupported() {
+				t.Fatalf("derivation should not be supported")
+			}
+			if c.kt.AssociatedDataSupported() {
+				t.Fatalf("associated data should not be supported")
+			}
+			if c.kt.PaddingSchemesSupported() {
+				t.Fatalf("RSA padding should not be supported")
+			}
+			if c.kt.ImportPublicKeySupported() {
+				t.Fatalf("public key import should not be supported")
+			}
+			if c.kt.IsPQC() {
+				t.Fatalf("IsPQC should be false per current policy logic")
+			}
+			if !c.kt.HMACSupported() {
+				t.Fatalf("HMAC should be supported")
+			}
+		})
 	}
 }
 
-func TestPolicy_Kyber768_DecryptWithFactory_RoundTrip(t *testing.T) {
-	p := &Policy{
-		Name: "kyber768-roundtrip",
-		Type: KeyType_Kyber768,
+func TestPolicy_Kyber_DecryptWithFactory_RoundTrip(t *testing.T) {
+	cases := []struct {
+		name string
+		kt   KeyType
+	}{
+		{"kyber512", KeyType_Kyber512},
+		{"kyber768", KeyType_Kyber768},
+		{"kyber1024", KeyType_Kyber1024},
 	}
-
-	// Generate version 1 keypair in-memory (no storage needed for this test).
-	if err := p.RotateInMemory(rand.Reader); err != nil {
-		t.Fatalf("RotateInMemory failed: %v", err)
-	}
-	if p.LatestVersion != 1 {
-		t.Fatalf("expected latest version 1, got %d", p.LatestVersion)
-	}
-
-	// Base64-encode a sample plaintext (DecryptWithFactory returns base64 too).
-	plain := []byte("the quick brown fox")
-	plainB64 := base64.StdEncoding.EncodeToString(plain)
-
-	// Encrypt using current version (ver=0 resolves to LatestVersion).
-	ct, err := p.EncryptWithFactory(0, nil, nil, plainB64)
-	if err != nil {
-		t.Fatalf("EncryptWithFactory failed: %v", err)
-	}
-
-	// Basic sanity: ciphertext should carry the v1 prefix.
-	if wantPrefix := p.getVersionPrefix(1); !strings.HasPrefix(ct, wantPrefix) {
-		t.Fatalf("ciphertext missing version prefix: want %q, got %q", wantPrefix, ct)
-	}
-
-	// Decrypt and compare round-trip.
-	ptB64, err := p.DecryptWithFactory(nil, nil, ct)
-	if err != nil {
-		t.Fatalf("DecryptWithFactory failed: %v", err)
-	}
-	pt, err := base64.StdEncoding.DecodeString(ptB64)
-	if err != nil {
-		t.Fatalf("failed to base64-decode decrypted plaintext: %v", err)
-	}
-
-	if string(pt) != string(plain) {
-		t.Fatalf("round-trip mismatch: got %q want %q", string(pt), string(plain))
-	}
-}
-
-func TestPolicy_Kyber768_DecryptWithFactory_TamperedCapsule(t *testing.T) {
-	p := &Policy{
-		Name: "kyber768-neg",
-		Type: KeyType_Kyber768,
-	}
-	// Generate v1 in-memory
-	if err := p.RotateInMemory(rand.Reader); err != nil {
-		t.Fatalf("RotateInMemory failed: %v", err)
-	}
-	if p.LatestVersion != 1 {
-		t.Fatalf("expected latest version 1, got %d", p.LatestVersion)
-	}
-
-	// Encrypt a small plaintext
-	plain := []byte("attack at dawn")
-	plainB64 := base64.StdEncoding.EncodeToString(plain)
-
-	ct, err := p.EncryptWithFactory(0, nil, nil, plainB64)
-	if err != nil {
-		t.Fatalf("EncryptWithFactory failed: %v", err)
-	}
-
-	// Tamper: decode combined (capsule||nonce||ct), flip first byte (capsule), re-encode
-	prefix := p.getVersionPrefix(1) // "vault:v1:"
-	if !strings.HasPrefix(ct, prefix) {
-		t.Fatalf("ciphertext missing version prefix: got %q", ct)
-	}
-	b64 := strings.TrimPrefix(ct, prefix)
-	combined, err := base64.StdEncoding.DecodeString(b64)
-	if err != nil {
-		t.Fatalf("base64 decode failed: %v", err)
-	}
-	if len(combined) == 0 {
-		t.Fatal("empty combined frame")
-	}
-	combined[0] ^= 0x01 // flip 1st byte of capsule
-	badCT := prefix + base64.StdEncoding.EncodeToString(combined)
-
-	// Decrypt must fail (decapsulation should fail in Kyber path)
-	if _, err := p.DecryptWithFactory(nil, nil, badCT); err == nil {
-		t.Fatal("expected error on tampered Kyber ciphertext")
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			p := &Policy{Name: c.name + "-roundtrip", Type: c.kt}
+			if err := p.RotateInMemory(rand.Reader); err != nil {
+				t.Fatalf("RotateInMemory: %v", err)
+			}
+			if p.LatestVersion != 1 {
+				t.Fatalf("LatestVersion=%d", p.LatestVersion)
+			}
+			plain := []byte("the quick brown fox")
+			plainB64 := base64.StdEncoding.EncodeToString(plain)
+			ct, err := p.EncryptWithFactory(0, nil, nil, plainB64)
+			if err != nil {
+				t.Fatalf("EncryptWithFactory: %v", err)
+			}
+			prefix := p.getVersionPrefix(1)
+			if !strings.HasPrefix(ct, prefix) {
+				t.Fatalf("missing v1 prefix: %q", ct)
+			}
+			ptB64, err := p.DecryptWithFactory(nil, nil, ct)
+			if err != nil {
+				t.Fatalf("DecryptWithFactory: %v", err)
+			}
+			pt, err := base64.StdEncoding.DecodeString(ptB64)
+			if err != nil {
+				t.Fatalf("b64 decode: %v", err)
+			}
+			if string(pt) != string(plain) {
+				t.Fatalf("round-trip mismatch: %q vs %q", string(pt), string(plain))
+			}
+		})
 	}
 }
 
-func TestPolicy_Kyber768_DecryptWithFactory_TamperedCiphertext(t *testing.T) {
-	p := &Policy{
-		Name: "kyber768-neg-ct",
-		Type: KeyType_Kyber768,
+func TestPolicy_Kyber_DecryptWithFactory_TamperedCapsule(t *testing.T) {
+	cases := []struct {
+		name string
+		kt   KeyType
+	}{
+		{"kyber512", KeyType_Kyber512},
+		{"kyber768", KeyType_Kyber768},
+		{"kyber1024", KeyType_Kyber1024},
 	}
-	// Generate v1 in-memory
-	if err := p.RotateInMemory(rand.Reader); err != nil {
-		t.Fatalf("RotateInMemory failed: %v", err)
-	}
-	if p.LatestVersion != 1 {
-		t.Fatalf("expected latest version 1, got %d", p.LatestVersion)
-	}
-
-	// Encrypt a small plaintext
-	plain := []byte("lorem ipsum")
-	plainB64 := base64.StdEncoding.EncodeToString(plain)
-
-	ct, err := p.EncryptWithFactory(0, nil, nil, plainB64)
-	if err != nil {
-		t.Fatalf("EncryptWithFactory failed: %v", err)
-	}
-
-	// Tamper: flip the last byte of the combined frame (capsule||nonce||ct)
-	prefix := p.getVersionPrefix(1) // "vault:v1:"
-	if !strings.HasPrefix(ct, prefix) {
-		t.Fatalf("ciphertext missing version prefix: got %q", ct)
-	}
-	b64 := strings.TrimPrefix(ct, prefix)
-	combined, err := base64.StdEncoding.DecodeString(b64)
-	if err != nil {
-		t.Fatalf("base64 decode failed: %v", err)
-	}
-	if len(combined) == 0 {
-		t.Fatal("empty combined frame")
-	}
-	combined[len(combined)-1] ^= 0x01 // flip last byte (ciphertext)
-	badCT := prefix + base64.StdEncoding.EncodeToString(combined)
-
-	// Decrypt must fail (AEAD auth failure inside Kyber branch)
-	if _, err := p.DecryptWithFactory(nil, nil, badCT); err == nil {
-		t.Fatal("expected error on tampered Kyber ciphertext (AEAD failure)")
-	}
-}
-
-func TestPolicy_Kyber768_DecryptWithFactory_VersionTooNew(t *testing.T) {
-	p := &Policy{
-		Name: "kyber768-neg-version",
-		Type: KeyType_Kyber768,
-	}
-	// Create v1 in-memory
-	if err := p.RotateInMemory(rand.Reader); err != nil {
-		t.Fatalf("RotateInMemory failed: %v", err)
-	}
-	if p.LatestVersion != 1 {
-		t.Fatalf("expected latest version 1, got %d", p.LatestVersion)
-	}
-
-	// Encrypt a small plaintext
-	plain := []byte("version test")
-	plainB64 := base64.StdEncoding.EncodeToString(plain)
-
-	ct, err := p.EncryptWithFactory(0, nil, nil, plainB64)
-	if err != nil {
-		t.Fatalf("EncryptWithFactory failed: %v", err)
-	}
-
-	// Forge the version in the prefix from v1 -> v2 (without changing payload)
-	v1 := p.getVersionPrefix(1) // "vault:v1:"
-	v2 := p.getVersionPrefix(2) // "vault:v2:"
-	if !strings.HasPrefix(ct, v1) {
-		t.Fatalf("ciphertext missing v1 prefix: got %q", ct)
-	}
-	badCT := strings.Replace(ct, v1, v2, 1)
-
-	// Decrypt must fail because ver (2) > LatestVersion (1)
-	if _, err := p.DecryptWithFactory(nil, nil, badCT); err == nil {
-		t.Fatal("expected error on ciphertext with too-new version prefix (v2)")
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			p := &Policy{Name: c.name + "-neg", Type: c.kt}
+			if err := p.RotateInMemory(rand.Reader); err != nil {
+				t.Fatalf("RotateInMemory: %v", err)
+			}
+			if p.LatestVersion != 1 {
+				t.Fatalf("LatestVersion=%d", p.LatestVersion)
+			}
+			plainB64 := base64.StdEncoding.EncodeToString([]byte("attack at dawn"))
+			ct, err := p.EncryptWithFactory(0, nil, nil, plainB64)
+			if err != nil {
+				t.Fatalf("EncryptWithFactory: %v", err)
+			}
+			prefix := p.getVersionPrefix(1)
+			if !strings.HasPrefix(ct, prefix) {
+				t.Fatalf("missing v1 prefix: %q", ct)
+			}
+			b64 := strings.TrimPrefix(ct, prefix)
+			combined, err := base64.StdEncoding.DecodeString(b64)
+			if err != nil {
+				t.Fatalf("b64: %v", err)
+			}
+			if len(combined) == 0 {
+				t.Fatal("empty combined")
+			}
+			combined[0] ^= 0x01
+			badCT := prefix + base64.StdEncoding.EncodeToString(combined)
+			if _, err := p.DecryptWithFactory(nil, nil, badCT); err == nil {
+				t.Fatal("expected error on tampered capsule")
+			}
+		})
 	}
 }
 
-func TestPolicy_Kyber768_DecryptWithFactory_WrongNumberOfFields(t *testing.T) {
-	p := &Policy{
-		Name: "kyber768-neg-fields",
-		Type: KeyType_Kyber768,
+func TestPolicy_Kyber_DecryptWithFactory_TamperedCiphertext(t *testing.T) {
+	cases := []struct {
+		name string
+		kt   KeyType
+	}{
+		{"kyber512", KeyType_Kyber512},
+		{"kyber768", KeyType_Kyber768},
+		{"kyber1024", KeyType_Kyber1024},
 	}
-	// Create v1 key in-memory
-	if err := p.RotateInMemory(rand.Reader); err != nil {
-		t.Fatalf("RotateInMemory failed: %v", err)
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			p := &Policy{Name: c.name + "-neg-ct", Type: c.kt}
+			if err := p.RotateInMemory(rand.Reader); err != nil {
+				t.Fatalf("RotateInMemory: %v", err)
+			}
+			if p.LatestVersion != 1 {
+				t.Fatalf("LatestVersion=%d", p.LatestVersion)
+			}
+			plainB64 := base64.StdEncoding.EncodeToString([]byte("lorem ipsum"))
+			ct, err := p.EncryptWithFactory(0, nil, nil, plainB64)
+			if err != nil {
+				t.Fatalf("EncryptWithFactory: %v", err)
+			}
+			prefix := p.getVersionPrefix(1)
+			if !strings.HasPrefix(ct, prefix) {
+				t.Fatalf("missing v1 prefix: %q", ct)
+			}
+			b64 := strings.TrimPrefix(ct, prefix)
+			combined, err := base64.StdEncoding.DecodeString(b64)
+			if err != nil {
+				t.Fatalf("b64: %v", err)
+			}
+			if len(combined) == 0 {
+				t.Fatal("empty combined")
+			}
+			combined[len(combined)-1] ^= 0x01
+			badCT := prefix + base64.StdEncoding.EncodeToString(combined)
+			if _, err := p.DecryptWithFactory(nil, nil, badCT); err == nil {
+				t.Fatal("expected error on tampered ciphertext")
+			}
+		})
 	}
-	if p.LatestVersion != 1 {
-		t.Fatalf("expected latest version 1, got %d", p.LatestVersion)
-	}
+}
 
-	// Encrypt a small plaintext
-	plain := []byte("field count test")
-	plainB64 := base64.StdEncoding.EncodeToString(plain)
-
-	ct, err := p.EncryptWithFactory(0, nil, nil, plainB64)
-	if err != nil {
-		t.Fatalf("EncryptWithFactory failed: %v", err)
+func TestPolicy_Kyber_DecryptWithFactory_VersionTooNew(t *testing.T) {
+	cases := []struct {
+		name string
+		kt   KeyType
+	}{
+		{"kyber512", KeyType_Kyber512},
+		{"kyber768", KeyType_Kyber768},
+		{"kyber1024", KeyType_Kyber1024},
 	}
-
-	// Forge: remove the colon after version => "vault:v1<b64>" (no ":" separator)
-	v1Prefix := p.getVersionPrefix(1) // e.g. "vault:v1:"
-	if !strings.HasPrefix(ct, v1Prefix) {
-		t.Fatalf("ciphertext missing v1 prefix: got %q", ct)
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			p := &Policy{Name: c.name + "-neg-version", Type: c.kt}
+			if err := p.RotateInMemory(rand.Reader); err != nil {
+				t.Fatalf("RotateInMemory: %v", err)
+			}
+			if p.LatestVersion != 1 {
+				t.Fatalf("LatestVersion=%d", p.LatestVersion)
+			}
+			plainB64 := base64.StdEncoding.EncodeToString([]byte("version test"))
+			ct, err := p.EncryptWithFactory(0, nil, nil, plainB64)
+			if err != nil {
+				t.Fatalf("EncryptWithFactory: %v", err)
+			}
+			v1 := p.getVersionPrefix(1)
+			v2 := p.getVersionPrefix(2)
+			if !strings.HasPrefix(ct, v1) {
+				t.Fatalf("missing v1 prefix: %q", ct)
+			}
+			badCT := strings.Replace(ct, v1, v2, 1)
+			if _, err := p.DecryptWithFactory(nil, nil, badCT); err == nil {
+				t.Fatal("expected error for too-new version")
+			}
+		})
 	}
-	badCT := strings.Replace(ct, v1Prefix, "vault:v1", 1)
+}
 
-	// Decrypt must fail with parser error ("wrong number of fields")
-	if _, err := p.DecryptWithFactory(nil, nil, badCT); err == nil {
-		t.Fatal("expected error on ciphertext with wrong number of fields")
+func TestPolicy_Kyber_DecryptWithFactory_WrongNumberOfFields(t *testing.T) {
+	cases := []struct {
+		name string
+		kt   KeyType
+	}{
+		{"kyber512", KeyType_Kyber512},
+		{"kyber768", KeyType_Kyber768},
+		{"kyber1024", KeyType_Kyber1024},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			p := &Policy{Name: c.name + "-neg-fields", Type: c.kt}
+			if err := p.RotateInMemory(rand.Reader); err != nil {
+				t.Fatalf("RotateInMemory: %v", err)
+			}
+			if p.LatestVersion != 1 {
+				t.Fatalf("LatestVersion=%d", p.LatestVersion)
+			}
+			plainB64 := base64.StdEncoding.EncodeToString([]byte("field count test"))
+			ct, err := p.EncryptWithFactory(0, nil, nil, plainB64)
+			if err != nil {
+				t.Fatalf("EncryptWithFactory: %v", err)
+			}
+			v1 := p.getVersionPrefix(1)
+			if !strings.HasPrefix(ct, v1) {
+				t.Fatalf("missing v1 prefix: %q", ct)
+			}
+			badCT := strings.Replace(ct, v1, "vault:v1", 1)
+			if _, err := p.DecryptWithFactory(nil, nil, badCT); err == nil {
+				t.Fatal("expected error for wrong number of fields")
+			}
+		})
 	}
 }
 

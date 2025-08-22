@@ -10,13 +10,34 @@ import (
 	"io"
 
 	"github.com/cloudflare/circl/kem"
+	"github.com/cloudflare/circl/kem/kyber/kyber1024"
+	"github.com/cloudflare/circl/kem/kyber/kyber512"
 	"github.com/cloudflare/circl/kem/kyber/kyber768"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"golang.org/x/crypto/hkdf"
 )
 
-type kyberBox struct{ s kem.Scheme }
+type kyberBox struct {
+	s     kem.Scheme
+	label string
+}
 
-func newKyberBox() kyberBox { return kyberBox{s: kyber768.Scheme()} }
+func labelFor(kt KeyType) string {
+	return kt.String() + "-aes256-gcm-v1" // "kyber512-aes256-gcm-v1", etc.
+}
+
+func newKyberBox(t KeyType) (kyberBox, error) {
+	switch t {
+	case KeyType_Kyber512:
+		return kyberBox{s: kyber512.Scheme(), label: labelFor(t)}, nil
+	case KeyType_Kyber768:
+		return kyberBox{s: kyber768.Scheme(), label: labelFor(t)}, nil
+	case KeyType_Kyber1024:
+		return kyberBox{s: kyber1024.Scheme(), label: labelFor(t)}, nil
+	default:
+		return kyberBox{}, errutil.InternalError{Err: "failed to base64-decode Kyber public key"}
+	}
+}
 
 func (k kyberBox) Encrypt(pk kem.PublicKey, plaintext, ad []byte) (capsule, nonce, ciphertext []byte, err error) {
 	capsule, ss, err := k.s.Encapsulate(pk)
@@ -24,7 +45,7 @@ func (k kyberBox) Encrypt(pk kem.PublicKey, plaintext, ad []byte) (capsule, nonc
 		return nil, nil, nil, fmt.Errorf("encapsulate: %w", err)
 	}
 
-	key, err := deriveAES256Key(ss, capsule, ad, "kyber768-aes256-gcm-v1")
+	key, err := deriveAES256Key(ss, capsule, ad, k.label)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("derive key: %w", err)
 	}
@@ -49,7 +70,7 @@ func (k kyberBox) Decrypt(sk kem.PrivateKey, capsule, nonce, ciphertext, ad []by
 		return nil, fmt.Errorf("decapsulate: %w", err)
 	}
 
-	key, err := deriveAES256Key(ss, capsule, ad, "kyber768-aes256-gcm-v1")
+	key, err := deriveAES256Key(ss, capsule, ad, k.label)
 	if err != nil {
 		return nil, fmt.Errorf("derive key: %w", err)
 	}
