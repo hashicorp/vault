@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/stdlib"
+	"github.com/jackc/pgx/v5"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -83,8 +84,7 @@ type SQLConnectionProducer struct {
 
 // This provides the field names for SQLConnectionProducer for field validation in the framework handler.
 func SQLConnectionProducerFieldNames() map[string]any {
-	scp := &SQLConnectionProducer{}
-	rType := reflect.TypeOf(scp).Elem()
+	rType := reflect.TypeFor[SQLConnectionProducer]()
 
 	fieldNames := make(map[string]any, rType.NumField())
 	for i := range rType.NumField() {
