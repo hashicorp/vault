@@ -18,6 +18,11 @@ export default class Form<T extends object> {
   declare validations: Validations;
   declare isNew: boolean;
 
+  // used by proxy to determine if the property being accessed is a form field
+  // override these in subclasses to define additional/different fields defined on the class
+  fieldProps = ['formFields'];
+  fieldGroupProps = ['formFieldGroups'];
+
   constructor(data: Partial<T> = {}, options: FormOptions = {}, validations?: Validations) {
     this.data = { ...data } as T;
     this.isNew = options.isNew || false;
@@ -31,18 +36,25 @@ export default class Form<T extends object> {
     const proxyTarget = (target: this, prop: string) => {
       try {
         // check if the property that is being accessed is a form field
-        const { formFields, formFieldGroups } = target as {
-          formFields?: FormField[];
-          formFieldGroups?: FormFieldGroup[];
-        };
-        const fields = Array.isArray(formFields) ? formFields : [];
+        const fields = this.fieldProps.reduce((fields: FormField[], prop) => {
+          const formFields = target[prop as keyof this];
+          if (Array.isArray(formFields)) {
+            fields.push(...formFields);
+          }
+          return fields;
+        }, []);
         // in the case of formFieldGroups we need extract the fields out into a flat array
-        const groupFields = Array.isArray(formFieldGroups)
-          ? formFieldGroups.reduce((arr: FormField[], group) => {
+        const groupFields = this.fieldGroupProps.reduce((groupFields: FormField[], prop) => {
+          const formFieldGroups = target[prop as keyof this];
+          if (Array.isArray(formFieldGroups)) {
+            const fields = formFieldGroups.reduce((arr: FormField[], group: FormFieldGroup) => {
               const values = Object.values(group)[0] || [];
               return [...arr, ...values];
-            }, [])
-          : [];
+            }, []);
+            groupFields.push(...fields);
+          }
+          return groupFields;
+        }, []);
         // combine the formFields and formGroupFields into a single array
         const allFields = [...fields, ...groupFields];
         const formDataKeys = allFields.map((field) => field.name) || [];
