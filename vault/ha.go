@@ -56,15 +56,15 @@ func init() {
 	// telemetry reference docs so if updated should probably stay in sync.
 	metricregistry.RegisterSummaries([]metricregistry.SummaryDefinition{
 		{
-			Name: []string{"core", "step_down"},
+			Name: []string{"vault", "core", "step_down"},
 			Help: "Time required to step down cluster leadership",
 		},
 		{
-			Name: []string{"core", "leadership_setup_failed"},
+			Name: []string{"vault", "core", "leadership_setup_failed"},
 			Help: "Time taken by the most recent leadership setup failure",
 		},
 		{
-			Name: []string{"core", "leadership_lost"},
+			Name: []string{"vault", "core", "leadership_lost"},
 			Help: "Total time that a high-availability cluster node last maintained leadership",
 		},
 	})
