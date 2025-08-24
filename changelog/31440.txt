@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/cert: Allow authentication via certificates with specific organization (`O=`) values.
+```
