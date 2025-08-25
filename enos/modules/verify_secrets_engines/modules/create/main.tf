@@ -9,7 +9,7 @@ terraform {
   }
 }
 
-variable "create_aws_secrets_engine" {
+variable "aws_enabled" {
   type        = bool
   description = <<-EOF
     Whether or not we'll verify the AWS secrets engine. Due to the various security requirements in
@@ -19,6 +19,12 @@ variable "create_aws_secrets_engine" {
     it's disabled by default.
     See: https://github.com/hashicorp/honeybee-templates/blob/main/templates/iam_policy/DemoUser.yaml
   EOF
+  default     = false
+}
+
+variable "ldap_enabled" {
+  type        = bool
+  description = "Whether or not we'll verify the LDAP secrets engine"
   default     = false
 }
 

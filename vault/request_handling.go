@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -1240,7 +1241,11 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	if req.Operation == logical.RecoverOperation {
 		// first do a read operation
 		// this will use the snapshot's storage
+		originalPath := req.Path
 		req.Operation = logical.ReadOperation
+		if req.RecoverSourcePath != "" {
+			req.Path = req.RecoverSourcePath
+		}
 		resp, err := c.doRouting(ctx, req)
 		if err != nil {
 			return nil, auth, err
@@ -1255,6 +1260,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// set the snapshot ID context value to the empty string to ensure that
 		// the write goes to the real storage
 		req.Operation = logical.RecoverOperation
+		req.Path = originalPath
 		req.Data = resp.Data
 		ctx = logical.CreateContextWithSnapshotID(ctx, "")
 	}
@@ -1874,7 +1880,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					MFAConstraints: make(map[string]*logical.MFAConstraintAny),
 				}
 				for _, eConfig := range matchedMfaEnforcementList {
-					mfaAny, err := c.buildMfaEnforcementResponse(eConfig)
+					mfaAny, err := c.buildMfaEnforcementResponse(eConfig, entity)
 					if err != nil {
 						return nil, nil, err
 					}
@@ -2456,7 +2462,13 @@ func (c *Core) getUserLockoutFromConfig(mountType string) UserLockoutConfig {
 	return defaultUserLockoutConfig
 }
 
-func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*logical.MFAConstraintAny, error) {
+func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig, entity *identity.Entity) (*logical.MFAConstraintAny, error) {
+	if eConfig == nil {
+		return nil, fmt.Errorf("MFA enforcement config is nil")
+	}
+	if entity == nil {
+		return nil, fmt.Errorf("entity is nil")
+	}
 	mfaAny := &logical.MFAConstraintAny{
 		Any: []*logical.MFAMethodID{},
 	}
@@ -2469,15 +2481,35 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*
 		if mConfig.Type == mfaMethodTypeDuo {
 			duoConf, ok := mConfig.Config.(*mfa.Config_DuoConfig)
 			if !ok {
-				return nil, fmt.Errorf("invalid MFA configuration type")
+				return nil, fmt.Errorf("invalid MFA configuration type, expected DuoConfig")
 			}
 			duoUsePasscode = duoConf.DuoConfig.UsePasscode
 		}
+
+		allowSelfEnrollment := false
+		if mConfig.Type == mfaMethodTypeTOTP && constants.IsEnterprise {
+			totpConf, ok := mConfig.Config.(*mfa.Config_TOTPConfig)
+			if !ok {
+				return nil, fmt.Errorf("invalid MFA configuration type, expected TOTPConfig")
+			}
+			enrollmentEnabled := totpConf.TOTPConfig.GetEnableSelfEnrollment()
+			_, entityHasMFASecretForMethodID := entity.MFASecrets[methodID]
+			if enrollmentEnabled && !entityHasMFASecretForMethodID {
+				// If enable_self_enrollment setting on the TOTP MFA method config is set to
+				// true and the entity does not have an MFA secret yet, we will allow
+				// self-service enrollment.
+				allowSelfEnrollment = true
+			}
+		}
+
 		mfaMethod := &logical.MFAMethodID{
 			Type:         mConfig.Type,
 			ID:           methodID,
 			UsesPasscode: mConfig.Type == mfaMethodTypeTOTP || duoUsePasscode,
 			Name:         mConfig.Name,
+			// This will be used by the client to determine whether it should offer the user
+			// a way to generate an MFA secret for this method.
+			SelfEnrollmentEnabled: allowSelfEnrollment,
 		}
 		mfaAny.Any = append(mfaAny.Any, mfaMethod)
 	}

@@ -74,6 +74,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "recover_source_path",
+            "description": "The source path to recover from. Only used if recover_snapshot_id parameter is also supplied. If not specified, the source path is assumed to be the same as the request path.",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
