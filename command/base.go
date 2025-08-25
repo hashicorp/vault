@@ -53,6 +53,7 @@ type BaseCommand struct {
 	flagCAPath            string
 	flagClientCert        string
 	flagClientKey         string
+	flagTPMDevice         string
 	flagNamespace         string
 	flagNS                string
 	flagPolicyOverride    bool
@@ -126,12 +127,13 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	// If we need custom TLS configuration, then set it
 	if c.flagCACert != "" || c.flagCAPath != "" || c.flagClientCert != "" ||
-		c.flagClientKey != "" || c.flagTLSServerName != "" || c.flagTLSSkipVerify {
+		c.flagClientKey != "" || c.flagTLSServerName != "" || c.flagTLSSkipVerify || c.flagTPMDevice != "" {
 		t := &api.TLSConfig{
 			CACert:        c.flagCACert,
 			CAPath:        c.flagCAPath,
 			ClientCert:    c.flagClientCert,
 			ClientKey:     c.flagClientKey,
+			TPMDevice:     c.flagTPMDevice,
 			TLSServerName: c.flagTLSServerName,
 			Insecure:      c.flagTLSSkipVerify,
 		}
@@ -466,6 +468,16 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded private key " +
 					"matching the client certificate from -client-cert.",
+			})
+
+			f.StringVar(&StringVar{
+				Name:       "tmp-device",
+				Target:     &c.flagTPMDevice,
+				Default:    "",
+				Completion: complete.PredictFiles("/dev/tpm*"),
+				Usage: "Path to the TPM device for TPM-backed private keys " +
+					"(Linux only, defaults to /dev/tpmrm0). Only used when " +
+					"-client-key contains a TSS2 format private key.",
 			})
 
 			f.StringVar(&StringVar{
