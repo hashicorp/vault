@@ -6,6 +6,7 @@ package s3
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,13 +18,13 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -36,10 +37,12 @@ var _ physical.Backend = (*S3Backend)(nil)
 // S3Backend is a physical backend that stores data
 // within an S3 bucket.
 type S3Backend struct {
+	context    context.Context
 	bucket     string
 	path       string
 	kmsKeyId   string
-	client     *s3.S3
+	client     *s3.Client
+	haEnabled  bool
 	logger     log.Logger
 	permitPool *permitpool.Pool
 }
@@ -48,6 +51,7 @@ type S3Backend struct {
 // bucket. Credentials can be provided to the backend, sourced
 // from the environment, AWS credential files or by IAM role.
 func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
+	ctx := context.TODO()
 	bucket := os.Getenv("AWS_S3_BUCKET")
 	if bucket == "" {
 		bucket = conf["bucket"]
@@ -57,7 +61,6 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	}
 
 	path := conf["path"]
-
 	accessKey, ok := conf["access_key"]
 	if !ok {
 		accessKey = ""
@@ -84,81 +87,85 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 			}
 		}
 	}
-	s3ForcePathStyleStr, ok := conf["s3_force_path_style"]
-	if !ok {
-		s3ForcePathStyleStr = "false"
-	}
-	s3ForcePathStyleBool, err := parseutil.ParseBool(s3ForcePathStyleStr)
+
+	s3ForcePathStyleBool, err := parseutil.ParseBool(conf["s3_force_path_style"])
 	if err != nil {
-		return nil, fmt.Errorf("invalid boolean set for s3_force_path_style: %q", s3ForcePathStyleStr)
+		return nil, fmt.Errorf("invalid boolean set for s3_force_path_style: %q", conf["s3_force_path_style"])
 	}
-	disableSSLStr, ok := conf["disable_ssl"]
-	if !ok {
-		disableSSLStr = "false"
-	}
-	disableSSLBool, err := parseutil.ParseBool(disableSSLStr)
+	disableSSLBool, err := parseutil.ParseBool(conf["disable_ssl"])
 	if err != nil {
-		return nil, fmt.Errorf("invalid boolean set for disable_ssl: %q", disableSSLStr)
+		return nil, fmt.Errorf("invalid boolean set for disable_ssl: %q", conf["disable_ssl"])
 	}
 
-	credsConfig := &awsutil.CredentialsConfig{
-		AccessKey:    accessKey,
-		SecretKey:    secretKey,
-		SessionToken: sessionToken,
-		Logger:       logger,
-	}
-	creds, err := credsConfig.GenerateCredentialChain()
-	if err != nil {
-		return nil, err
-	}
-
+	// Set custom transport
 	pooledTransport := cleanhttp.DefaultPooledTransport()
 	pooledTransport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
-	sess, err := session.NewSession(&aws.Config{
-		Credentials: creds,
-		HTTPClient: &http.Client{
-			Transport: pooledTransport,
-		},
-		Endpoint:         aws.String(endpoint),
-		Region:           aws.String(region),
-		S3ForcePathStyle: aws.Bool(s3ForcePathStyleBool),
-		DisableSSL:       aws.Bool(disableSSLBool),
-	})
-	if err != nil {
-		return nil, err
+	// Load the AWS configuration
+	cfg, err := config.LoadDefaultConfig(
+		ctx,
+		config.WithRegion(region),
+		config.WithHTTPClient(&http.Client{Transport: pooledTransport}),
+	)
+	if accessKey != "" && secretKey != "" {
+		cfg.Credentials = credentials.NewStaticCredentialsProvider(accessKey, secretKey, sessionToken)
 	}
-	s3conn := s3.New(sess)
 
-	_, err = s3conn.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
+	if err != nil {
+		return nil, fmt.Errorf("unable to load SDK config: %w", err)
+	}
+
+	// Set S3-specific configurations
+	s3Options := func(o *s3.Options) {
+		o.UsePathStyle = s3ForcePathStyleBool
+		if disableSSLBool {
+			o.EndpointOptions.DisableHTTPS = true
+		}
+		if endpoint != "" {
+			o.EndpointResolver = s3.EndpointResolverFromURL(endpoint)
+		}
+	}
+
+	// Create an S3 client
+	s3Client := s3.NewFromConfig(cfg, s3Options)
+
+	_, err = s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to access bucket %q in region %q: %w", bucket, region, err)
 	}
 
-	maxParStr, ok := conf["max_parallel"]
-	var maxParInt int
-	if ok {
-		maxParInt, err = strconv.Atoi(maxParStr)
-		if err != nil {
-			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
-		}
-		if logger.IsDebug() {
-			logger.Debug("max_parallel set", "max_parallel", maxParInt)
-		}
+	maxParInt, err := strconv.Atoi(conf["max_parallel"])
+	if err != nil && conf["max_parallel"] != "" {
+		return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
+	}
+	if logger.IsDebug() {
+		logger.Debug("max_parallel set", "max_parallel", maxParInt)
 	}
 
-	kmsKeyId, ok := conf["kms_key_id"]
-	if !ok {
-		kmsKeyId = ""
+	kmsKeyId := conf["kms_key_id"]
+
+	// envHAEnabled is the name of the environment variable to search for the
+	// boolean indicating if HA is enabled.
+	haEnabled := os.Getenv("S3_STORAGE_HA_ENABLED")
+	if haEnabled == "" {
+		haEnabled = conf["ha_enabled"]
+	}
+	haEnabledBool, err := strconv.ParseBool(haEnabled)
+	if err != nil && conf["ha_enabled"] != "" {
+		return nil, fmt.Errorf("failed to parse ha_enabled value: %w", err)
 	}
 
 	s := &S3Backend{
-		client:     s3conn,
+		client:     s3Client,
+		context:    ctx,
 		bucket:     bucket,
 		path:       path,
 		kmsKeyId:   kmsKeyId,
 		logger:     logger,
 		permitPool: permitpool.New(maxParInt),
+		haEnabled:  haEnabledBool,
 	}
 	return s, nil
 }
@@ -182,11 +189,11 @@ func (s *S3Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	}
 
 	if s.kmsKeyId != "" {
-		putObjectInput.ServerSideEncryption = aws.String("aws:kms")
+		putObjectInput.ServerSideEncryption = types.ServerSideEncryptionAwsKms
 		putObjectInput.SSEKMSKeyId = aws.String(s.kmsKeyId)
 	}
 
-	_, err := s.client.PutObjectWithContext(ctx, putObjectInput)
+	_, err := s.client.PutObject(ctx, putObjectInput)
 	if err != nil {
 		return err
 	}
@@ -206,21 +213,18 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 	// Setup key
 	key = path.Join(s.path, key)
 
-	resp, err := s.client.GetObjectWithContext(ctx, &s3.GetObjectInput{
+	resp, err := s.client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
-	if awsErr, ok := err.(awserr.RequestFailure); ok {
-		// Return nil on 404s, error on anything else
-		if awsErr.StatusCode() == 404 {
+	var nsk *types.NoSuchKey
+	if err != nil {
+		if errors.As(err, &nsk) {
 			return nil, nil
 		}
-		return nil, err
-	}
-	if err != nil {
 		return nil, err
 	}
 	if resp == nil {
@@ -261,7 +265,7 @@ func (s *S3Backend) Delete(ctx context.Context, key string) error {
 	// Setup key
 	key = path.Join(s.path, key)
 
-	_, err := s.client.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
@@ -290,42 +294,43 @@ func (s *S3Backend) List(ctx context.Context, prefix string) ([]string, error) {
 		prefix += "/"
 	}
 
-	params := &s3.ListObjectsV2Input{
+	var keys []string
+
+	// Create paginator
+	paginator := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
 		Prefix:    aws.String(prefix),
 		Delimiter: aws.String("/"),
-	}
+	})
 
-	keys := []string{}
+	// Iterate over all the pages
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
 
-	err := s.client.ListObjectsV2PagesWithContext(ctx, params,
-		func(page *s3.ListObjectsV2Output, lastPage bool) bool {
-			if page != nil {
-				// Add truncated 'folder' paths
-				for _, commonPrefix := range page.CommonPrefixes {
-					// Avoid panic
-					if commonPrefix == nil {
-						continue
-					}
-
-					commonPrefix := strings.TrimPrefix(*commonPrefix.Prefix, prefix)
-					keys = append(keys, commonPrefix)
-				}
-				// Add objects only from the current 'folder'
-				for _, key := range page.Contents {
-					// Avoid panic
-					if key == nil {
-						continue
-					}
-
-					key := strings.TrimPrefix(*key.Key, prefix)
-					keys = append(keys, key)
-				}
+		// Add truncated 'folder' paths
+		for _, commonPrefix := range page.CommonPrefixes {
+			// Avoid panic
+			if commonPrefix.Prefix == nil {
+				continue
 			}
-			return true
-		})
-	if err != nil {
-		return nil, err
+
+			commonPrefix := strings.TrimPrefix(*commonPrefix.Prefix, prefix)
+			keys = append(keys, commonPrefix)
+		}
+
+		// Add objects only from the current 'folder'
+		for _, key := range page.Contents {
+			// Avoid panic
+			if key.Key == nil {
+				continue
+			}
+
+			key := strings.TrimPrefix(*key.Key, prefix)
+			keys = append(keys, key)
+		}
 	}
 
 	sort.Strings(keys)
