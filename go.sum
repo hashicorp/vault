@@ -1393,6 +1393,8 @@ github.com/hashicorp/go-cleanhttp v0.5.2 h1:035FKYIWjmULyFRBKPs8TBQoi0x6d9G4xc9n
 github.com/hashicorp/go-cleanhttp v0.5.2/go.mod h1:kO/YDlP8L1346E6Sodw+PrpBSV4/SoxCXGY6BqNFT48=
 github.com/hashicorp/go-discover v1.1.0 h1:FN5AXXBCXbEMVq/BYk+qkYRhr+lwYgvBro2hMBUtnlA=
 github.com/hashicorp/go-discover v1.1.0/go.mod h1:jqvs0vDZPpnKlN21oG80bwkiIKPGCrmKChV6qItAjI0=
+github.com/hashicorp/go-discover v1.1.1-0.20250822114713-cd0e09c8e096 h1:rjiELrWxFMy6YP8f6tIVtXhTwsoQbWwHzIk7JgcIYeY=
+github.com/hashicorp/go-discover v1.1.1-0.20250822114713-cd0e09c8e096/go.mod h1:NsxyJAVM+f1GYWjoAg1dtKU7I39rOWtUjFSm2Xmuvn4=
 github.com/hashicorp/go-discover/provider/gce v0.0.0-20241120163552-5eb1507d16b4 h1:ywaDsVo7n5ko12YD8uXjuQ8G2mQhC2mxAc4Kj3WW3GE=
 github.com/hashicorp/go-discover/provider/gce v0.0.0-20241120163552-5eb1507d16b4/go.mod h1:yxikfLXA8Y5JA3FcFTR720PfqVEFd0dZY9FBpmcsO54=
 github.com/hashicorp/go-gatedio v0.5.0 h1:Jm1X5yP4yCqqWj5L1TgW7iZwCVPGtVc+mro5r/XX7Tg=
