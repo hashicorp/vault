@@ -447,7 +447,7 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 				},
 			},
 
-			skip: false,
+			skip: true,
 		},
 		"inactive ce with with docs changes": {
 			baseRefVersion: "1.17.x",
@@ -475,7 +475,7 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 				},
 			},
 
-			skip: false,
+			skip: true,
 		},
 		"inactive ce with with changelog changes": {
 			baseRefVersion: "1.17.x",
@@ -499,7 +499,7 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 					},
 				},
 				Groups: changed.FileGroups{
-					"app", "gotoolchain", "pipeline",
+					"app", "changelog", "gotoolchain",
 				},
 			},
 
