@@ -215,8 +215,8 @@ github.com/hashicorp/go-secure-stdlib/password v0.1.4 h1:h8gOB6qDRlOMvoMHOqtf4oT
 github.com/hashicorp/go-secure-stdlib/password v0.1.4/go.mod h1:DeLx56RZZdmwX8Q94fVQUetkXv6zVBfDtGAPJDh69AU=
 github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0 h1:U6y5MXGiDVOOtkWJ6o/tu1TxABnI0yKTQWJr7z6BpNk=
 github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0/go.mod h1:ecDb3o+8D4xtP0nTCufJaAVawHavy5M2eZ64Nq/8/LM=
-github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1 h1:JY+zGg8gOmslwif1fiCqT5Hu1SikLZQcHkmQhCoA9gY=
-github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1/go.mod h1:jW3KCTvdPyAdVecOUwiiO2XaYgUJ/isigt++ISkszkY=
+github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.2 h1:gCNiM4T5xEc4IpT8vM50CIO+AtElr5kO9l2Rxbq+Sz8=
+github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.2/go.mod h1:6ZM4ZdwClyAsiU2uDBmRHCvq0If/03BMbF9U+U7G5pA=
 github.com/hashicorp/go-secure-stdlib/regexp v1.0.0 h1:08mz6j5MsCG9sf8tvC8Lhboe/ZMiNg41IPSh6unK5T4=
 github.com/hashicorp/go-secure-stdlib/regexp v1.0.0/go.mod h1:n/Gj3sYIEEOYds8uKS55bFf7XiYvWN4e+d+UOA7r/YU=
 github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 h1:kes8mmyCpxJsI7FTwtzRqEy9CdjCtrXrXGuOpxEA7Ts=
