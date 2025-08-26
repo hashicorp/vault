@@ -100,10 +100,10 @@ func (p *AutomatedRotationParams) HasNonzeroRotationValues() bool {
 	return p.RotationSchedule != "" || p.RotationPeriod != 0
 }
 
-// AddAutomatedRotationFields adds plugin identity token fields to the given
-// field schema map.
+// AddAutomatedRotationFields adds rotation fields to the given field schema map, associating
+// them with the provided display attribute group, or "default" if no group is supplied.
 func AddAutomatedRotationFields(m map[string]*framework.FieldSchema, group ...string) {
-	// Set default value
+	// Note: the group argument is variadic for compatibility reasons, only one group should be supplied.
 	groupName := "default"
 	if len(group) > 0 && group[0] != "" {
 		groupName = group[0]

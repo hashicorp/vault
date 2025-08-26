@@ -38,10 +38,10 @@ func (p *PluginIdentityTokenParams) PopulatePluginIdentityTokenData(m map[string
 	m["identity_token_audience"] = p.IdentityTokenAudience
 }
 
-// AddPluginIdentityTokenFields adds plugin identity token fields to the given
-// field schema map.
+// AddPluginIdentityTokenFields adds plugin identity token fields to the given field schema map, associating
+// them with the provided display attribute group, or "default" if no group is supplied.
 func AddPluginIdentityTokenFields(m map[string]*framework.FieldSchema, group ...string) {
-	// Set default value
+	// Note: the group argument is variadic for compatibility reasons, only one group should be supplied.
 	groupName := "default"
 	if len(group) > 0 && group[0] != "" {
 		groupName = group[0]
