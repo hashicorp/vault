@@ -589,6 +589,7 @@ func readKey(ctx context.Context, s logical.Storage, path string) error {
 	return nil
 }
 
+// TestCARecover verifies secret recovery of the SSH CA
 func TestCARecover(t *testing.T) {
 	var err error
 	config := logical.TestBackendConfig()
