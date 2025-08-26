@@ -32,7 +32,8 @@ require (
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.9
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0
-	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1
+	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.2
+	github.com/hashicorp/go-secure-stdlib/regexp v1.0.0
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.3
 	github.com/hashicorp/go-sockaddr v1.0.6
@@ -54,6 +55,12 @@ require (
 	golang.org/x/text v0.23.0
 	google.golang.org/grpc v1.69.4
 	google.golang.org/protobuf v1.36.5
+)
+
+require (
+	github.com/containerd/errdefs v1.0.0 // indirect
+	github.com/containerd/errdefs/pkg v0.3.0 // indirect
+	github.com/moby/go-archive v0.1.0 // indirect
 )
 
 require (
