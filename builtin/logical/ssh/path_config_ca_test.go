@@ -7,12 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/testhelpers/snapshots"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/snapshots"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
@@ -642,6 +642,8 @@ func TestCARecover(t *testing.T) {
 	})
 }
 
+// TestCARecoverMigration is the same as TestCARecover, but recovering from a snapshot with the data in the deprecated
+// storage paths, which ensures that the migration logic is skipped during recovery.
 func TestCARecoverMigration(t *testing.T) {
 	var err error
 	config := logical.TestBackendConfig()
@@ -670,6 +672,11 @@ func TestCARecoverMigration(t *testing.T) {
 
 	t.Run("recover succeeds", func(t *testing.T) {
 		tc.DoRecover(t, "config/ca")
+		// ensure that even though the migration on read is disabled, by reading from the old path in the snapshot and
+		// creating a entry in the regular storage, that the entry ends up in the new path
+		entry, err := tc.RegularStorage().Get(context.Background(), caPublicKeyStoragePathDeprecated)
+		require.NoError(t, err)
+		require.Nil(t, entry)
 		data, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
 			Path:      "config/ca",
@@ -683,80 +690,3 @@ func TestCARecoverMigration(t *testing.T) {
 		require.Equal(t, testCAPublicKey, data.Data["public_key"])
 	})
 }
-
-//func TestCARecoverMigration(t *testing.T) {
-//	var err error
-//	config := logical.TestBackendConfig()
-//	config.StorageView = &logical.InmemStorage{}
-//
-//	b, err := Factory(context.Background(), config)
-//	if err != nil {
-//		t.Fatalf("Cannot create backend: %s", err)
-//	}
-//	tc := snapshots.NewSnapshotTestCase(t, b)
-//
-//	// generate CA keys on the snapshot storage
-//	_, err = b.HandleRequest(context.Background(), &logical.Request{
-//		Operation: logical.UpdateOperation,
-//		Path:      "config/ca",
-//		Storage:   tc.SnapshotStorage(),
-//		Data: map[string]interface{}{
-//			"public_key":  testCAPublicKey,
-//			"private_key": testCAPrivateKey,
-//		},
-//	})
-//	require.NoError(t, err)
-//
-//	// revert entries back to deprecated paths to simulate old storage
-//	// first: move public key
-//	entry, err := tc.SnapshotStorage().Get(context.Background(), caPublicKeyStoragePath)
-//	require.NoError(t, err)
-//	require.NotNil(t, entry)
-//	err = tc.SnapshotStorage().Put(context.Background(), &logical.StorageEntry{
-//		Key:   caPublicKeyStoragePathDeprecated,
-//		Value: entry.Value,
-//	})
-//	require.NoError(t, err)
-//	err = tc.SnapshotStorage().Delete(context.Background(), caPublicKeyStoragePath)
-//	require.NoError(t, err)
-//	// second: move private key
-//	entry, err = tc.SnapshotStorage().Get(context.Background(), caPrivateKeyStoragePath)
-//	require.NoError(t, err)
-//	require.NotNil(t, entry)
-//	err = tc.SnapshotStorage().Put(context.Background(), &logical.StorageEntry{
-//		Key:   caPrivateKeyStoragePathDeprecated,
-//		Value: entry.Value,
-//	})
-//	require.NoError(t, err)
-//	err = tc.SnapshotStorage().Delete(context.Background(), caPrivateKeyStoragePath)
-//	require.NoError(t, err)
-//
-//	// write different CA to the regular storage
-//	_, err = b.HandleRequest(context.Background(), &logical.Request{
-//		Operation: logical.UpdateOperation,
-//		Path:      "config/ca",
-//		Storage:   tc.RegularStorage(),
-//		Data: map[string]interface{}{
-//			"generate_signing_key": true,
-//		},
-//	})
-//	require.NoError(t, err)
-//	t.Run("read no side effects", func(t *testing.T) {
-//		tc.RunRead(t, "config/ca")
-//	})
-//
-//	t.Run("recover succeeds", func(t *testing.T) {
-//		tc.DoRecover(t, "config/ca")
-//		data, err := b.HandleRequest(context.Background(), &logical.Request{
-//			Operation: logical.ReadOperation,
-//			Path:      "config/ca",
-//			Storage:   tc.SnapshotStorage(),
-//			Data: map[string]interface{}{
-//				"public_key": "should be the actual public key but the SSH CA recovery doesn't really care as it reads directly from snapshot storage",
-//			},
-//		})
-//		require.NoError(t, err)
-//		require.NotNil(t, data)
-//		require.Equal(t, testCAPublicKey, data.Data["public_key"])
-//	})
-//}
