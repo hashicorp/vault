@@ -182,10 +182,6 @@ func FileGroupCheckerEnterprise(ctx context.Context, file *File) FileGroups {
 			strings.Contains(name, "_ent") && strings.HasSuffix(name, ".pb.go"):
 			return FileGroups{FileGroupEnterprise}
 		}
-	case ".txt":
-		if hasBaseDir(name, "changelog") && strings.HasPrefix(filepath.Base(name), "_") {
-			return FileGroups{FileGroupEnterprise}
-		}
 	case
 		".proto",
 		".hcl",

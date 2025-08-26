@@ -27,7 +27,7 @@ func TestFileGroupDefaultCheckers(t *testing.T) {
 		"builtin/logical/transit/something_ent.go":  {FileGroupGoApp, FileGroupEnterprise},
 		"buf.yml":                                           {FileGroupProto},
 		"changelog/1726.txt":                                {FileGroupChangelog},
-		"changelog/_1726.txt":                               {FileGroupChangelog, FileGroupEnterprise},
+		"changelog/_1726.txt":                               {FileGroupChangelog},
 		"command/server/config.go":                          {FileGroupGoApp},
 		"command/operator_raft_autopilot_state.go":          {FileGroupGoApp, FileGroupAutopilot},
 		"command/agent_ent_test.go":                         {FileGroupGoApp, FileGroupEnterprise},
