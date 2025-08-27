@@ -13,7 +13,7 @@ export default class AuthMethodForm extends MountForm<AuthMethodFormData> {
   fieldProps = ['tuneFields', 'userLockoutConfigFields'];
 
   userLockoutConfigFields = [
-    new FormField('user_lockout_config.lockoutThreshold', 'string', {
+    new FormField('user_lockout_config.lockout_threshold', 'string', {
       label: 'Lockout threshold',
       subText: 'Specifies the number of failed login attempts after which the user is locked out, e.g. 15.',
     }),
@@ -31,7 +31,7 @@ export default class AuthMethodForm extends MountForm<AuthMethodFormData> {
       editType: 'ttl',
       helperTextDisabled: 'No reset duration configured.',
     }),
-    new FormField('user_lockout_config.lockout_disabled', 'boolean', {
+    new FormField('user_lockout_config.lockout_disable', 'boolean', {
       label: 'Disable lockout for this mount',
       subText: 'If checked, disables the user lockout feature for this mount.',
     }),

@@ -64,9 +64,17 @@ export default class AuthConfigOptions extends Component<Args> {
       try {
         const { form } = this.args;
         const {
-          data: { description, config },
+          data: { description, config, user_lockout_config },
         } = form.toJSON();
-        const payload = { description, ...config } as MountsAuthTuneConfigurationParametersRequest;
+        const payload = {
+          description,
+          ...config,
+        } as MountsAuthTuneConfigurationParametersRequest;
+
+        if (Object.keys(user_lockout_config).length) {
+          payload.user_lockout_config = user_lockout_config;
+        }
+
         await this.api.sys.mountsAuthTuneConfigurationParameters(form.data.path, payload);
       } catch (err) {
         const { message } = await this.api.parseError(err);
