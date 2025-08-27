@@ -17,6 +17,7 @@ import type RouterService from '@ember/routing/router-service';
 import type { HTMLElementEvent } from 'vault/forms';
 import type NamespaceService from 'vault/services/namespace';
 import type VersionService from 'vault/services/version';
+import type { MountsAuthTuneConfigurationParametersRequest } from '@hashicorp/vault-client-typescript';
 
 /**
  * @module AuthConfigForm/Options
@@ -62,8 +63,11 @@ export default class AuthConfigOptions extends Component<Args> {
       this.errorMessage = null;
       try {
         const { form } = this.args;
-        const { data } = form.toJSON();
-        await this.api.sys.authTuneConfigurationParameters(form.data.path, data);
+        const {
+          data: { description, config },
+        } = form.toJSON();
+        const payload = { description, ...config } as MountsAuthTuneConfigurationParametersRequest;
+        await this.api.sys.mountsAuthTuneConfigurationParameters(form.data.path, payload);
       } catch (err) {
         const { message } = await this.api.parseError(err);
         this.errorMessage = message;
