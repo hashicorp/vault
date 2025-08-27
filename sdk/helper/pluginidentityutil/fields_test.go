@@ -115,7 +115,7 @@ func TestPopulatePluginIdentityTokenData(t *testing.T) {
 	}
 }
 
-func TestAddPluginIdentityTokenFields(t *testing.T) {
+func TestAddPluginIdentityTokenFieldsWithGroup(t *testing.T) {
 	testcases := []struct {
 		name  string
 		group string
@@ -125,6 +125,7 @@ func TestAddPluginIdentityTokenFields(t *testing.T) {
 		{
 			name:  "basic",
 			input: map[string]*framework.FieldSchema{},
+			group: "default",
 			want: map[string]*framework.FieldSchema{
 				fieldIDTokenAudience: {
 					Type:        framework.TypeString,
@@ -185,7 +186,48 @@ func TestAddPluginIdentityTokenFields(t *testing.T) {
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.input
-			AddPluginIdentityTokenFields(got, tt.group)
+			AddPluginIdentityTokenFieldsWithGroup(got, tt.group)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestAddPluginIdentityTokenFields(t *testing.T) {
+	testcases := []struct {
+		name  string
+		group string
+		input map[string]*framework.FieldSchema
+		want  map[string]*framework.FieldSchema
+	}{
+		{
+			name:  "basic",
+			input: map[string]*framework.FieldSchema{},
+			want: map[string]*framework.FieldSchema{
+				fieldIDTokenAudience: {
+					Type:        framework.TypeString,
+					Description: "Audience of plugin identity tokens",
+					Default:     "",
+					DisplayAttrs: &framework.DisplayAttributes{
+						Group: "default",
+					},
+				},
+				fieldIDTokenTTL: {
+					Type:        framework.TypeDurationSecond,
+					Description: "Time-to-live of plugin identity tokens",
+					Default:     3600,
+					DisplayAttrs: &framework.DisplayAttributes{
+						Name:  "Identity token TTL",
+						Group: "default",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.input
+			AddPluginIdentityTokenFields(got)
 			assert.Equal(t, tt.want, got)
 		})
 	}
