@@ -125,14 +125,14 @@ func TestAddPluginIdentityTokenFieldsWithGroup(t *testing.T) {
 		{
 			name:  "basic",
 			input: map[string]*framework.FieldSchema{},
-			group: "default",
+			group: "Tokens",
 			want: map[string]*framework.FieldSchema{
 				fieldIDTokenAudience: {
 					Type:        framework.TypeString,
 					Description: "Audience of plugin identity tokens",
 					Default:     "",
 					DisplayAttrs: &framework.DisplayAttributes{
-						Group: "default",
+						Group: "Tokens",
 					},
 				},
 				fieldIDTokenTTL: {
@@ -141,7 +141,7 @@ func TestAddPluginIdentityTokenFieldsWithGroup(t *testing.T) {
 					Default:     3600,
 					DisplayAttrs: &framework.DisplayAttributes{
 						Name:  "Identity token TTL",
-						Group: "default",
+						Group: "Tokens",
 					},
 				},
 			},
