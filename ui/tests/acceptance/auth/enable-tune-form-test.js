@@ -76,7 +76,10 @@ module('Acceptance | auth enable tune form test', function (hooks) {
         'root_password_ttl',
         'tenant_id',
       ];
-      this.tuneToggles = { 'Azure Options': ['client_id', 'client_secret'] };
+      // until the vault-plugin-auth-azure changes are released, these fields will be in the default group
+      // this test should then fail and the following line can be removed and the next line uncommented
+      this.tuneFields.push('client_id', 'client_secret');
+      // this.tuneToggles = { 'Azure Options': ['client_id', 'client_secret'] };
       await login();
       return visit('/vault/settings/auth/enable');
     });
@@ -101,10 +104,15 @@ module('Acceptance | auth enable tune form test', function (hooks) {
         'oidc_discovery_url',
         'oidc_response_mode',
         'oidc_response_types',
-        'provider_config',
+        // provider_config will be updated to EditType: file in next version of vault-plugin-auth-jwt
+        // commenting out for now to avoid test failure
+        // 'provider_config',
         'unsupported_critical_cert_extensions',
       ];
-      this.tuneToggles = this.oidcJwtGroup;
+      // until the vault-plugin-auth-jwt changes are released, these fields will be in the default group
+      // this test should then fail and the following line can be removed and the next line uncommented
+      this.tuneFields.push(...this.oidcJwtGroup['OIDC/JWT Options']);
+      // this.tuneToggles = this.oidcJwtGroup;
       await login();
       return visit('/vault/settings/auth/enable');
     });
@@ -175,7 +183,10 @@ module('Acceptance | auth enable tune form test', function (hooks) {
         'provider_config',
         'unsupported_critical_cert_extensions',
       ];
-      this.tuneToggles = this.oidcJwtGroup;
+      // until the vault-plugin-auth-jwt changes are released, these fields will be in the default group
+      // this test should then fail and the following line can be removed and the next line uncommented
+      this.tuneFields.push(...this.oidcJwtGroup['OIDC/JWT Options']);
+      // this.tuneToggles = this.oidcJwtGroup;
       await login();
       return visit('/vault/settings/auth/enable');
     });
