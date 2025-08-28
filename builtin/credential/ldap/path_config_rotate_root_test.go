@@ -114,13 +114,13 @@ func TestRotateRootWithRotationUrl(t *testing.T) {
 
 	newCFG, err := b.Config(ctx, req)
 	if newCFG.BindDN != cfg.BindDN {
-		t.Fatalf("a value in config that should have stayed the same changed: %s", cfg.BindDN)
+		t.Fatalf("BindDN %q changed unexpectedly, found new value %q", cfg.BindDN, newCFG.BindDN)
 	}
 	if newCFG.BindPassword == cfg.BindPassword {
 		t.Fatalf("the password should have changed, but it didn't")
 	}
 	// expecting the newCFG url to be "ldap://example.com:389"
 	if newCFG.Url != mainDummyUrl {
-		t.Fatalf("the LDAP URL should not have changed, but it did: %s", newCFG.Url)
+		t.Fatalf("URL %q changed unexpectedly, found new value %q", mainDummyUrl, newCFG.Url)
 	}
 }
