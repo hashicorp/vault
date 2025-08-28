@@ -28,13 +28,9 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     const path = `settings-path-${this.uid}`;
 
     // mount unsupported backend
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
 
-    assert.strictEqual(
-      currentURL(),
-      '/vault/settings/mount-secret-backend',
-      'navigates to the mount secret backend page'
-    );
+    assert.strictEqual(currentURL(), '/vault/secrets/mounts', 'navigates to the mount secret backend page');
     await click(MOUNT_BACKEND_FORM.mountType(type));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
@@ -58,7 +54,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     const type = 'ldap';
     const path = `ldap-${this.uid}`;
 
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     await runCmd(mountEngineCmd(type, path), false);
     await visit('/vault/secrets');
     await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), path);
@@ -77,7 +73,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     const type = 'ssh';
     const path = `ssh-${this.uid}`;
 
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     await runCmd(mountEngineCmd(type, path), false);
     await visit('/vault/secrets');
     await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), path);
