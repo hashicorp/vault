@@ -9,7 +9,7 @@ scenario "dev_single_cluster" {
     non-dev scenario instead.
 
     For a full tutorial for this scenario, see here:
-    https://eng-handbook.hashicorp.services/internal-tools/enos/tutorial-vault-dev-scenario-single-cluster/
+    https://hashicorp.atlassian.net/wiki/spaces/VAULT/pages/4163469313/Enos+Tutorial
   EOF
 
   // The matrix is where we define all the baseline combinations that enos can utilize to customize

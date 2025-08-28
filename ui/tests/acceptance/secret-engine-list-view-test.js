@@ -142,6 +142,21 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await runCmd(`delete sys/namespaces/${this.namespace}`);
   });
 
+  test('enterprise: it should navigate to cubbyhole list view in child namespace', async function (assert) {
+    this.namespace = `ns-${this.uid}`;
+
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    await loginNs(this.namespace);
+    await visit(`/vault/secrets?namespace=${this.namespace}`);
+    await click(SES.secretsBackendLink('cubbyhole'));
+
+    assert.dom(GENERAL.emptyStateTitle).hasText('No secrets in this backend');
+
+    // cleanup namespace
+    await login();
+    await runCmd(`delete sys/namespaces/${this.namespace}`);
+  });
+
   test('after disabling it stays on the list view', async function (assert) {
     // first mount an engine so we can disable it.
     const enginePath = `alicloud-disable-${this.uid}`;

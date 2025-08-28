@@ -7,13 +7,13 @@
 
   {{! TODO: Having this set up with flex for now, grid might be better? }}
   <div class="flex gap-36 has-top-margin-l">
-    <div class="flex is-flex-column row-gap-8">
+    <Hds::Layout::Flex @direction="column" @gap="8">
       <Hds::Text::Display>Engine type</Hds::Text::Display>
       <Hds::Text::Display>Current version</Hds::Text::Display>
       <Hds::Text::Display>Latest version</Hds::Text::Display>
-    </div>
+    </Hds::Layout::Flex>
 
-    <div class="flex is-flex-column is-flex-align-start row-gap-12">
+    <Hds::Layout::Flex @direction="column" @gap="12" @align="start">
       <Hds::Text::Body
         @tag="p"
         class="hds-border-strong side-padding-4 border-radius-4"
@@ -22,19 +22,20 @@
       <Hds::Text::Body @tag="p">{{@model.secretsEngine.running_plugin_version}}</Hds::Text::Body>
       {{! TODO: leaving as is for now to match design, but we might be removing this if we cant get latest version from some source }}
       <Hds::Text::Body @tag="p">v.12.46</Hds::Text::Body>
-    </div>
+    </Hds::Layout::Flex>
   </div>
 
   <Hds::Separator />
 
-  <div>
-    <Hds::Text::Display @tag="h1" class="has-bottom-margin-s">Update version to:</Hds::Text::Display>
-    <Hds::Dropdown @listPosition="bottom-left" as |D|>
-      <D.ToggleButton @text="Select version" @color="secondary" />
-      {{! TODO: Update interactives with available versions from API }}
-      <D.Interactive>12.32</D.Interactive>
-      <D.Interactive>12.4</D.Interactive>
-      <D.Interactive>12.42</D.Interactive>
-    </Hds::Dropdown>
-  </div>
+  <Hds::Layout::Flex @isInline="true">
+    <Hds::Form::Select::Field name="version-select" as |F|>
+      <F.Label>Update version to:</F.Label>
+      {{! TODO: Update options with available versions from API }}
+      <F.Options>
+        <option value="">Select version</option>
+        <option value="12.4">12.4</option>
+        <option value="12.43">12.43</option>
+      </F.Options>
+    </Hds::Form::Select::Field>
+  </Hds::Layout::Flex>
 </Hds::Card::Container>

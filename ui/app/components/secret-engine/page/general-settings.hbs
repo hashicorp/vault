@@ -19,14 +19,16 @@
       Mount parameters that you can tune to fit required engine behavior.
     </Hds::Text::Body>
 
-    <Hds::Layout::Flex @gap="24">
-      <SecretEngine::Card::Version @model={{@model}} class="is-fullwidth" />
-      {{! TODO: Lease duration component }}
-    </Hds::Layout::Flex>
+    <Hds::Layout::Flex @direction="row" @gap="32" @align="start">
+      <Hds::Layout::Flex @direction="column" @gap="8">
+        <SecretEngine::Card::Version @model={{@model}} class="is-fullwidth" />
+        <SecretEngine::Card::Metadata @model={{@model}} class="is-fullwidth" />
+      </Hds::Layout::Flex>
 
-    <Hds::Layout::Flex @gap="24">
-      <SecretEngine::Card::Metadata @model={{@model}} class="is-fullwidth" />
-      <SecretEngine::Card::Security @model={{@model}} class="is-fullwidth" />
+      <Hds::Layout::Flex @direction="column" @gap="8">
+        <SecretEngine::Card::LeaseDuration @model={{@model}} class="is-fullwidth" />
+        <SecretEngine::Card::Security @model={{@model}} class="is-fullwidth" />
+      </Hds::Layout::Flex>
     </Hds::Layout::Flex>
 
     <div class="field is-grouped has-top-bottom-margin-12">

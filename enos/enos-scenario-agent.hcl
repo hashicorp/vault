@@ -516,7 +516,8 @@ scenario "agent" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
     depends_on = [
-      step.verify_vault_unsealed
+      step.verify_vault_unsealed,
+      step.get_vault_cluster_ips
     ]
 
     providers = {
