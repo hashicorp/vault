@@ -159,6 +159,10 @@ func dynamicFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeDurationSecond,
 			Description: "Maximum time a credential is valid for",
 		},
+		"username_template_metadata": {
+			Type: framework.TypeString,
+			Description: `Meta data to be used to generate username.`,
+		},
 		"creation_statements": {
 			Type: framework.TypeStringSlice,
 			Description: `Specifies the database statements executed to
@@ -369,6 +373,7 @@ func (b *databaseBackend) pathRoleRead(ctx context.Context, req *logical.Request
 
 	data := map[string]interface{}{
 		"db_name":               role.DBName,
+		"username_template_metadata": role.UsernameTemplateMetadata,
 		"creation_statements":   role.Statements.Creation,
 		"revocation_statements": role.Statements.Revocation,
 		"rollback_statements":   role.Statements.Rollback,
@@ -448,6 +453,12 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		}
 		if role.DBName == "" {
 			return logical.ErrorResponse("database name is required"), nil
+		}
+
+		if usernameTemplateMetadataRaw, ok := data.GetOk("username_template_metadata"); ok {
+			role.UsernameTemplateMetadata = usernameTemplateMetadataRaw.(string)
+		} else if createOperation {
+			role.UsernameTemplateMetadata = data.Get("username_template_metadata").(string)
 		}
 
 		if credentialTypeRaw, ok := data.GetOk("credential_type"); ok {
@@ -851,6 +862,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 type roleEntry struct {
 	Name             string                 `json:"name"`
 	DBName           string                 `json:"db_name"`
+	UsernameTemplateMetadata string                 `json:"username_template_metadata"`
 	Statements       v4.Statements          `json:"statements"`
 	DefaultTTL       time.Duration          `json:"default_ttl"`
 	MaxTTL           time.Duration          `json:"max_ttl"`
