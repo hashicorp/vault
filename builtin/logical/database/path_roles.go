@@ -92,10 +92,11 @@ func pathRoles(b *databaseBackend) []*framework.Path {
 			Fields:         fieldsForType(databaseStaticRolePath),
 			ExistenceCheck: b.pathStaticRoleExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.pathStaticRoleRead,
-				logical.CreateOperation: b.pathStaticRoleCreateUpdate,
-				logical.UpdateOperation: b.pathStaticRoleCreateUpdate,
-				logical.DeleteOperation: b.pathStaticRoleDelete,
+				logical.ReadOperation:    b.pathStaticRoleRead,
+				logical.CreateOperation:  b.pathStaticRoleCreateUpdate,
+				logical.UpdateOperation:  b.pathStaticRoleCreateUpdate,
+				logical.DeleteOperation:  b.pathStaticRoleDelete,
+				logical.RecoverOperation: b.pathStaticRoleRecover,
 			},
 
 			HelpSynopsis:    pathStaticRoleHelpSyn,
@@ -518,6 +519,38 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 	return nil, nil
 }
 
+func (b *databaseBackend) pathStaticRoleRecover(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	exists, err := b.pathStaticRoleExistenceCheck(ctx, req, data)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		return logical.ErrorResponse("cannot recover a static role that already exists"), nil
+	}
+
+	snapStorage, err := logical.NewSnapshotStorageView(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create snapshot storage: %s", err)
+	}
+
+	name := data.Get("name").(string)
+
+	role, err := b.StaticRole(ctx, snapStorage, name)
+	if err != nil {
+		return nil, err
+	}
+	if role.StaticAccount.Password != "" {
+		data.Raw["password"] = role.StaticAccount.Password
+	}
+	req.Operation = logical.CreateOperation
+	defer func() {
+		req.Operation = logical.RecoverOperation
+	}()
+	return b.pathStaticRoleCreateUpdate(ctx, req, data)
+}
+
+// ignore-nil-nil-function-check
 func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	response := &logical.Response{}
 	name := data.Get("name").(string)

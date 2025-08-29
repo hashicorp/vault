@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/snapshots"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -1494,3 +1495,75 @@ ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 const testRoleStaticUpdateRotation = `
 ALTER USER "{{name}}" WITH PASSWORD '{{password}}';GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `
+
+// TestStaticRole_Recover verifies that a role that exists in a snapshot can be
+// read, listed, and recovered
+func TestStaticRole_Recover(t *testing.T) {
+	b, storage, mockDB := getBackend(t)
+	b2, snapStorage, mockDBSnap := getBackend(t)
+	ctx := context.Background()
+	defer b.Cleanup(ctx)
+	defer b2.Cleanup(ctx)
+	tc := snapshots.NewSnapshotTestCaseWithStorages(t, b, storage, snapStorage)
+
+	configureDBMount(t, storage)
+	configureDBMount(t, snapStorage)
+
+	createRole(t, b2, snapStorage, mockDBSnap, "hashicorp")
+
+	tc.RunRead(t, "static-roles/hashicorp")
+
+	tc.RunList(t, "static-roles")
+
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	_, err := tc.DoRecover(t, "static-roles/hashicorp")
+	require.NoError(t, err)
+	readStaticCred(t, b, storage, mockDB, "hashicorp")
+}
+
+// TestStaticRole_RecoverExists verifies that a static role cannot be updated
+// via a recover operation
+func TestStaticRole_RecoverExists(t *testing.T) {
+	b, storage, mockDB := getBackend(t)
+	b2, snapStorage, mockDBSnap := getBackend(t)
+	ctx := context.Background()
+	defer b.Cleanup(ctx)
+	defer b2.Cleanup(ctx)
+	tc := snapshots.NewSnapshotTestCaseWithStorages(t, b, storage, snapStorage)
+
+	configureDBMount(t, storage)
+	configureDBMount(t, snapStorage)
+
+	createRole(t, b2, snapStorage, mockDBSnap, "hashicorp")
+	createRole(t, b, storage, mockDB, "hashicorp")
+
+	resp, err := tc.DoRecover(t, "static-roles/hashicorp")
+	require.NoError(t, err)
+	require.True(t, resp.IsError())
+	require.ErrorContains(t, resp.Error(), "cannot recover a static role that already exists")
+}
+
+// TestStaticCreds_Recover verifies that static credentials can be read from the
+// snapshot without side effects, but they cannot be recovered
+func TestStaticCreds_Recover(t *testing.T) {
+	b, storage, mockDB := getBackend(t)
+	b2, snapStorage, mockDBSnap := getBackend(t)
+	ctx := context.Background()
+	defer b.Cleanup(ctx)
+	defer b2.Cleanup(ctx)
+	tc := snapshots.NewSnapshotTestCaseWithStorages(t, b, storage, snapStorage)
+
+	configureDBMount(t, storage)
+	configureDBMount(t, snapStorage)
+
+	createRole(t, b2, snapStorage, mockDBSnap, "hashicorp")
+	createRole(t, b, storage, mockDB, "hashicorp")
+
+	rotateRole(t, b, snapStorage, mockDB, "hashicorp")
+	tc.RunRead(t, "static-creds/hashicorp")
+
+	_, err := tc.DoRecover(t, "static-creds/hashicorp")
+	require.Error(t, err)
+}
