@@ -4,12 +4,7 @@
 }}
 
 <div class="top-right-absolute has-top-margin-s">
-  <Hds::Button
-    @text="Enable new engine"
-    @icon="plus"
-    @route="vault.cluster.settings.mount-secret-backend"
-    data-test-enable-engine
-  />
+  <Hds::Button @text="Enable new engine" @icon="plus" @route="vault.cluster.secrets.mounts" data-test-enable-engine />
 </div>
 <Toolbar>
   <ToolbarFilters>

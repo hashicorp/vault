@@ -3,6 +3,44 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.20.3
+### August 28, 2025
+
+SECURITY:
+
+* core: Update github.com/hashicorp/go-getter to fix security vulnerability GHSA-wjrx-6529-hcj3. ([8b3a9ce1](https://github.com/hashicorp/vault/commit/8b3a9ce1f651932559a129a7889243d24127cee2))
+
+CHANGES:
+
+* core: Bump Go version to 1.24.6. ([ce56e14e](https://github.com/hashicorp/vault/commit/ce56e14e7466ae80e05d11a83c8f41db0f4653be))
+* http: Add JSON configurable limits to HTTP handling for JSON payloads: `max_json_depth`, `max_json_string_value_length`, `max_json_object_entry_count`, `max_json_array_element_count`. [[GH-31069](https://github.com/hashicorp/vault/pull/31069)]
+* sdk: Upgrade to go-secure-stdlib/plugincontainer@v0.4.2, which also bumps github.com/docker/docker to v28.3.3+incompatible ([8f172169](https://github.com/hashicorp/vault/commit/8f1721697bba123117f4f98dae4154ef9fe614e5))
+* secrets/openldap (enterprise): update plugin to v0.16.1
+
+IMPROVEMENTS:
+
+* auth/ldap: add explicit logging to rotations in ldap [[GH-31401](https://github.com/hashicorp/vault/pull/31401)]
+* core (enterprise): improve rotation manager logging to include specific lines for rotation success and failure
+* secrets/database: log password rotation success (info) and failure (error). Some relevant log lines have been updated to include "path" fields. [[GH-31402](https://github.com/hashicorp/vault/pull/31402)]
+* secrets/transit: add logging on both success and failure of key rotation [[GH-31420](https://github.com/hashicorp/vault/pull/31420)]
+* ui: Use the Helios Design System Code Block component for all readonly code editors and use its Code Editor component for all other code editors [[GH-30188](https://github.com/hashicorp/vault/pull/30188)]
+
+BUG FIXES:
+
+* core (enterprise): fix a bug where issuing a token in a namespace used root auth configuration instead of namespace auth configuration
+* core/metrics: Add service name prefix for core HA metrics to avoid duplicate, zero-value metrics. ([91e5f443](https://github.com/hashicorp/vault/commit/91e5f44315fb52c37b54e8b0eece1b4390665cc3))
+* core/seal: When Seal-HA is enabled, make it an error to persist the barrier
+keyring when not all seals are healthy.  This prevents the possibility of
+failing to unseal when a different subset of seals are healthy than were
+healthy at last write. ([bbe64227](https://github.com/hashicorp/vault/commit/bbe64227c586cb34f73d9ae8025398f24aa7e12d))
+* raft (enterprise): auto-join will now work in regions that do not support dual-stack ([c66baf5e](https://github.com/hashicorp/vault/commit/c66baf5ee1ee9320daa6af5528cb2f250f2a0f3a))
+* raft/autopilot: Fixes an issue with enterprise redundancy zones where, if the leader was in a redundancy zone and that leader becomes unavailable, the node would become an unzoned voter. This can artificially inflate the required number of nodes for quorum, leading to a situation where the cluster cannot recover if another leader subsequently becomes unavailable. Vault will now keep an unavailable node in its last known redundancy zone as a non-voter. [[GH-31443](https://github.com/hashicorp/vault/pull/31443)]
+* replication (enterprise): Fix bug where group updates fail when processed on a
+standby node in a PR secondary cluster.
+* secrets-sync (enterprise): GCP locational KMS keys are no longer incorrectly removed when the location name is all lowercase.
+* secrets/database/postgresql: Support for multiline statements in the `rotation_statements` field. [[GH-31442](https://github.com/hashicorp/vault/pull/31442)]
+* ui: Fix DR secondary view from not loading/transitioning. [[GH-31478](https://github.com/hashicorp/vault/pull/31478)]
+
 ## 1.20.2
 ### August 06, 2025
 
@@ -239,6 +277,45 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.9 Enterprise
+### August 28, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* core: Update github.com/hashicorp/go-getter to fix security vulnerability GHSA-wjrx-6529-hcj3.
+
+CHANGES:
+
+* core: Bump Go version to 1.24.6.
+* http: Add JSON configurable limits to HTTP handling for JSON payloads: `max_json_depth`, `max_json_string_value_length`, `max_json_object_entry_count`, `max_json_array_element_count`.
+* sdk: Upgrade to go-secure-stdlib/plugincontainer@v0.4.2, which also bumps github.com/docker/docker to v28.3.3+incompatible
+* secrets/openldap: update plugin to v0.15.5
+
+IMPROVEMENTS:
+
+* auth/ldap: add explicit logging to rotations in ldap
+* core (enterprise): improve rotation manager logging to include specific lines for rotation success and failure
+* secrets/database: log password rotation success (info) and failure (error). Some relevant log lines have been updated to include "path" fields.
+* secrets/transit: add logging on both success and failure of key rotation
+* ui: Use the Helios Design System Code Block component for all readonly code editors and use its Code Editor component for all other code editors
+
+BUG FIXES:
+
+* core (enterprise): fix a bug where issuing a token in a namespace used root auth configuration instead of namespace auth configuration
+* core/metrics: Add service name prefix for core HA metrics to avoid duplicate, zero-value metrics.
+* core/seal: When Seal-HA is enabled, make it an error to persist the barrier
+keyring when not all seals are healthy.  This prevents the possibility of
+failing to unseal when a different subset of seals are healthy than were
+healthy at last write.
+* raft (enterprise): auto-join will now work in regions that do not support dual-stack
+* raft/autopilot: Fixes an issue with enterprise redundancy zones where, if the leader was in a redundancy zone and that leader becomes unavailable, the node would become an unzoned voter. This can artificially inflate the required number of nodes for quorum, leading to a situation where the cluster cannot recover if another leader subsequently becomes unavailable. Vault will now keep an unavailable node in its last known redundancy zone as a non-voter.
+* replication (enterprise): Fix bug where group updates fail when processed on a
+standby node in a PR secondary cluster.
+* secrets-sync (enterprise): GCP locational KMS keys are no longer incorrectly removed when the location name is all lowercase.
+* secrets/database/postgresql: Support for multiline statements in the `rotation_statements` field.
 
 ## 1.19.8 Enterprise
 ### August 06, 2025
@@ -681,6 +758,26 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
 * vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
+
+## 1.18.14 Enterprise
+### August 28, 2025
+
+CHANGES:
+
+* core: Bump Go version to 1.23.12.
+* http: Add JSON configurable limits to HTTP handling for JSON payloads: `max_json_depth`, `max_json_string_value_length`, `max_json_object_entry_count`, `max_json_array_element_count`.
+* secrets/openldap: update plugin to v0.14.7
+
+BUG FIXES:
+
+* core (enterprise): fix a bug where issuing a token in a namespace used root auth configuration instead of namespace auth configuration
+* core/metrics: Add service name prefix for core HA metrics to avoid duplicate, zero-value metrics.
+* core/seal: When Seal-HA is enabled, make it an error to persist the barrier
+keyring when not all seals are healthy.  This prevents the possibility of
+failing to unseal when a different subset of seals are healthy than were
+healthy at last write.
+* raft/autopilot: Fixes an issue with enterprise redundancy zones where, if the leader was in a redundancy zone and that leader becomes unavailable, the node would become an unzoned voter. This can artificially inflate the required number of nodes for quorum, leading to a situation where the cluster cannot recover if another leader subsequently becomes unavailable. Vault will now keep an unavailable node in its last known redundancy zone as a non-voter.
+* secrets/database/postgresql: Support for multiline statements in the `rotation_statements` field.
 
 ## 1.18.13 Enterprise
 ### August 06, 2025
@@ -1845,6 +1942,24 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.25 Enterprise
+### August 28, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+CHANGES:
+
+* core: Bump Go version to 1.23.12
+* http: Add JSON configurable limits to HTTP handling for JSON payloads: `max_json_depth`, `max_json_string_value_length`, `max_json_object_entry_count`, `max_json_array_element_count`.
+
+BUG FIXES:
+
+* core (enterprise): fix a bug where issuing a token in a namespace used root auth configuration instead of namespace auth configuration
+* core/seal: When Seal-HA is enabled, make it an error to persist the barrier
+keyring when not all seals are healthy.  This prevents the possibility of
+failing to unseal when a different subset of seals are healthy than were
+healthy at last write.
 
 ## 1.16.24 Enterprise
 ### August 06, 2025

@@ -30,7 +30,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
   test('it should prompt configuration after mounting ssh engine', async function (assert) {
     const sshPath = `ssh-${this.uid}`;
     // in this test go through the full mount process. Bypass this step in later tests.
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     await mountBackend('ssh', sshPath);
     await click(SES.configTab);
     assert.dom(GENERAL.emptyStateTitle).hasText('SSH not configured');

@@ -33,10 +33,19 @@ var _ logical.SnapshotStorageProvider = (*storageProvider)(nil)
 // when it receives snapshot operations, without having to do the end-to-end
 // setup of creating a raft cluster, taking a snapshot, and loading it.
 func NewSnapshotTestCase(t testing.TB, backend logical.Backend) *SnapshotTestCase {
+	return NewSnapshotTestCaseWithStorages(t, backend, &logical.InmemStorage{}, &logical.InmemStorage{})
+}
+
+// NewSnapshotTestCaseWithStorages is used to create a snapshot test case for a
+// particular backend, using the provided storage instances. The test case is
+// used to ensure that the backend behaves correctly when it receives snapshot
+// operations, without having to do the end-to-end setup of creating a raft
+// cluster, taking a snapshot, and loading it.
+func NewSnapshotTestCaseWithStorages(t testing.TB, backend logical.Backend, regularStorage, snapshotStorage logical.Storage) *SnapshotTestCase {
 	s := &SnapshotTestCase{
 		backend:         backend,
-		regularStorage:  &logical.InmemStorage{},
-		snapshotStorage: &logical.InmemStorage{},
+		regularStorage:  regularStorage,
+		snapshotStorage: snapshotStorage,
 	}
 
 	s.storageRouter = logical.NewSnapshotStorageRouter(s.regularStorage, &storageProvider{s.snapshotStorage})

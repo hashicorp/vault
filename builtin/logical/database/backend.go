@@ -108,6 +108,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 				"config/*",
 				"static-role/*",
 			},
+			AllowSnapshotRead: []string{"static-roles/*", "static-roles", "static-creds/*"},
 		},
 		Paths: framework.PathAppend(
 			[]*framework.Path{

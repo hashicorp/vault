@@ -9,7 +9,7 @@
   <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
   <Nav.Link
     @route="vault.cluster.secrets"
-    @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.secrets.backend.configuration.edit"
+    @current-when="vault.cluster.secrets vault.cluster.secrets.mounts vault.cluster.secrets.backend.configuration.edit"
     @text="Secrets Engines"
     data-test-sidebar-nav-link="Secrets Engines"
   />

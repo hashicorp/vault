@@ -174,6 +174,10 @@ Router.map(function () {
         });
       });
       this.route('secrets', function () {
+        this.route('mounts', function () {
+          // TODO: Revisit path on create once components are separated - should we specify selected type or just keep it generic as /create?
+          this.route('create', { path: '/:mount_type/create' });
+        });
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');

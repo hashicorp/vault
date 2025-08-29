@@ -8,7 +8,7 @@ import { settled } from '@ember/test-helpers';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 export default create({
-  visit: visitable('/vault/settings/mount-secret-backend'),
+  visit: visitable('/vault/secrets/mounts'),
   version: fillable('[data-test-input="options.version"]'),
   setMaxVersion: fillable('[data-test-input="kv_config.max_versions"]'),
   maxTTLVal: fillable('[data-test-ttl-value="Max Lease TTL"]'),
