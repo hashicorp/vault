@@ -437,44 +437,38 @@ jobs:
           )
         name: Notify build failures in Slack
         uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
-        env:
-          SLACK_BOT_TOKEN: ${{ steps.slackbot-token.outputs.slackbot-token }}
         with:
-          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
+          # send to #feed-vault-ci-official, use "C05Q4D5V89W" as the channel to send to test-vault-ci-slack-integration for testing
+          errors: true # exit with an error if the payload is invalid
+          retries: rapid # retry if we're being rated limited
+          method: chat.postMessage
+          token: ${{ steps.slackbot-token.outputs.slackbot-token }}
           payload: |
-            {
-              "text": "CE test failures on ${{ github.ref_name }}",
-              "text": "${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} build failures on ${{ github.ref_name }}",
-              "blocks": [
-                {
-                  "type": "header",
-                  "text": {
-                    "type": "plain_text",
-                    "text": ":rotating_light: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} test failures on ${{ github.ref_name }} :rotating_light:",
-                    "emoji": true
-                  }
-                },
-                {
-                  "type": "divider"
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "${{ needs.test-go.result != 'failure' && ':white_check_mark:' || ':x:' }} Go tests\n${{ needs.test-go-race.result != 'failure' && ':white_check_mark:' || ':x:' }} Go race tests\n\t\t${{ needs.test-go-race.outputs.data-race-result != 'success' && ':x: Data race detected' || ':white_check_mark: No race detected' }}\n${{ needs.test-go-testonly.result != 'failure' && ':white_check_mark:' || ':x:' }} Go testonly tests\n${{ needs.test-ui.result != 'failure' && ':white_check_mark:' || ':x:' }} UI tests"
-                  },
-                  "accessory": {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "View Failing Workflow",
-                      "emoji": true
-                    },
-                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                  }
-                }
-              ]
-            }
+            channel: C05AABYEA9Y
+            text: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} test failures on ${{ github.ref_name }}
+            blocks:
+              - type: header
+                text:
+                  type: plain_text
+                  text: :rotating_light: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} test failures on ${{ github.ref_name }} :rotating_light:
+                  emoji: true
+              - type: divider
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: |
+                    ${{ needs.test-go.result != 'failure' && ':white_check_mark:' || ':x:' }} Go tests
+                    ${{ needs.test-go-race.result != 'failure' && ':white_check_mark:' || ':x:' }} Go race tests
+                        ${{ needs.test-go-race.outputs.data-race-result != 'success' && ':x: Data race detected' || ':white_check_mark: No race detected' }}
+                    ${{ needs.test-go-testonly.result != 'failure' && ':white_check_mark:' || ':x:' }} Go testonly tests
+                    ${{ needs.test-ui.result != 'failure' && ':white_check_mark:' || ':x:' }} UI tests"
+                accessory:
+                  type: button
+                  text:
+                    type: plain_text
+                    text: View Failing Workflow
+                    emoji: true
+                  url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       # Only create the PR summary if it's a pull request and it is not a fork as we need access
       # to secrets.
       - if: ${{ needs.setup.outputs.is-fork == 'false' }}
