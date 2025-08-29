@@ -15,3 +15,5 @@ declare module '@icholy/duration' {
   import Duration from '@icholy/duration';
   export default Duration;
 }
+
+declare module 'vault/tests/helpers/vault-keys';
