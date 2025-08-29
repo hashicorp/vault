@@ -9,6 +9,7 @@
 SECURITY:
 
 * core: Update github.com/hashicorp/go-getter to fix security vulnerability GHSA-wjrx-6529-hcj3. ([8b3a9ce1](https://github.com/hashicorp/vault/commit/8b3a9ce1f651932559a129a7889243d24127cee2))
+* http: unauthenticated DoS vulnerability from complex JSON payload(CVE-6203) [[GH-31069](https://github.com/hashicorp/vault/pull/31069)], [[HCSEC-2025-24](https://discuss.hashicorp.com/t/hcsec-2025-24-vault-denial-of-service-though-complex-json-payloads/76393)]
 
 CHANGES:
 
