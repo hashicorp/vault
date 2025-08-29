@@ -3177,22 +3177,22 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	}
 
 	type entityRecord struct {
-		entity        *activity.EntityRecord
 		count         int
 		lastUsageTime int64
 	}
 	entityRecords := make(map[string]*entityRecord)
+	var uniqueEntities []*activity.EntityRecord
 
 	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time) error {
 		for _, e := range l.Clients {
 			record, ok := entityRecords[e.ClientID]
 			if !ok {
 				record = &entityRecord{
-					entity:        e,
 					count:         0,
 					lastUsageTime: e.UsageTime,
 				}
 				entityRecords[e.ClientID] = record
+				uniqueEntities = append(uniqueEntities, e)
 			}
 			record.count++
 			if e.UsageTime > record.lastUsageTime {
@@ -3213,8 +3213,7 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	}
 
 	encodeEntities := func() error {
-		for _, record := range entityRecords {
-			e := record.entity
+		for _, e := range uniqueEntities {
 			ns, err := NamespaceByID(ctx, e.NamespaceID, a.core)
 			if err != nil {
 				return err
