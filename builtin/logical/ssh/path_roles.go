@@ -372,9 +372,10 @@ func pathRoles(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathRoleRead,
-			logical.UpdateOperation: b.pathRoleWrite,
-			logical.DeleteOperation: b.pathRoleDelete,
+			logical.ReadOperation:    b.pathRoleRead,
+			logical.UpdateOperation:  b.pathRoleWrite,
+			logical.DeleteOperation:  b.pathRoleDelete,
+			logical.RecoverOperation: b.pathRoleWrite,
 		},
 
 		HelpSynopsis:    pathRoleHelpSyn,
@@ -534,7 +535,8 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 	return role, nil
 }
 
-func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*sshRole, error) {
+// ignore-nil-nil-function-check
+func (b *backend) getRole(ctx context.Context, s logical.Storage, n string, skipStorageWrite bool) (*sshRole, error) {
 	entry, err := s.Get(ctx, "roles/"+n)
 	if err != nil {
 		return nil, err
@@ -548,14 +550,14 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ss
 		return nil, err
 	}
 
-	if err := b.checkUpgrade(ctx, s, n, &result); err != nil {
+	if err := b.checkUpgrade(ctx, s, n, &result, skipStorageWrite); err != nil {
 		return nil, err
 	}
 
 	return &result, nil
 }
 
-func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string, result *sshRole) error {
+func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string, result *sshRole, skipStorageWrite bool) error {
 	modified := false
 
 	// NOTE: When introducing a new migration, increment roleEntryVersion and
@@ -632,7 +634,7 @@ func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string,
 	// Add new migrations just before here.
 	//
 	// Condition copied from PKI builtin.
-	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) && !skipStorageWrite {
 		jsonEntry, err := logical.StorageEntryJSON("roles/"+n, &result)
 		if err != nil {
 			return err
@@ -717,7 +719,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 
 	keyInfo := map[string]interface{}{}
 	for _, entry := range entries {
-		role, err := b.getRole(ctx, req.Storage, entry)
+		role, err := b.getRole(ctx, req.Storage, entry, req.IsSnapshotReadOrList())
 		if err != nil {
 			// On error, log warning and continue
 			if b.Logger().IsWarn() {
@@ -752,7 +754,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	role, err := b.getRole(ctx, req.Storage, d.Get("role").(string))
+	role, err := b.getRole(ctx, req.Storage, d.Get("role").(string), req.IsSnapshotReadOrList())
 	if err != nil {
 		return nil, err
 	}
