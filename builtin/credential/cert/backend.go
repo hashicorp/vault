@@ -73,11 +73,18 @@ func Backend() *backend {
 	return &b
 }
 
+type trustedRetry struct {
+	attempt  int
+	deadline time.Time
+}
+
 type trusted struct {
 	pool          *x509.CertPool
 	trusted       []*ParsedCert
 	trustedNonCAs []*ParsedCert
 	ocspConf      *ocsp.VerifyConfig
+	loaded        map[string]struct{}
+	retry         *trustedRetry
 }
 
 type backend struct {
