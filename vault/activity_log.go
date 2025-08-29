@@ -294,6 +294,12 @@ type ActivityLogExportRecord struct {
 	// ClientFirstUsedTime denotes the timestamp at which the activity first occurred in the query period formatted using RFC3339
 	ClientFirstUsedTime string `json:"client_first_used_time,omitempty" mapstructure:"client_first_used_time"`
 
+	// // ClientLastUsedTime denotes the timestamp at which the activity last occurred in the query period formatted using RFC3339
+	// ClientLastUsedTime string `json:"client_last_used_time,omitempty" mapstructure:"client_last_used_time"`
+
+	// // ClientCount tracks the number of times a client was seen in the query period
+	// ClientCount int `json:"client_count,omitempty" mapstructure:"client_count"`
+
 	// Policies are the list of policy names attached to the token used
 	Policies []string `json:"policies" mapstructure:"policies"`
 
@@ -3158,7 +3164,6 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 
 	a.logger.Info("starting activity log export", "start_time", startTime, "end_time", endTime, "format", format)
 
-	dedupIDs := make(map[string]struct{})
 	reqNS, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
@@ -3171,14 +3176,45 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 		return err
 	}
 
+	type entityRecord struct {
+		entity        *activity.EntityRecord
+		count         int
+		lastUsageTime int64
+	}
+	entityRecords := make(map[string]*entityRecord)
+
 	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time) error {
 		for _, e := range l.Clients {
-			if _, ok := dedupIDs[e.ClientID]; ok {
-				continue
+			record, ok := entityRecords[e.ClientID]
+			if !ok {
+				record = &entityRecord{
+					entity:        e,
+					count:         0,
+					lastUsageTime: e.UsageTime,
+				}
+				entityRecords[e.ClientID] = record
 			}
+			record.count++
+			if e.UsageTime > record.lastUsageTime {
+				record.lastUsageTime = e.UsageTime
+			}
+		}
 
-			dedupIDs[e.ClientID] = struct{}{}
+		return nil
+	}
 
+	// For each month in the filtered list walk all the log segments
+	for _, startTime := range filteredList {
+		err := a.WalkEntitySegments(ctx, startTime, walkEntities)
+		if err != nil {
+			a.logger.Error("failed to load segments for export", "error", err)
+			return fmt.Errorf("failed to load segments for export: %w", err)
+		}
+	}
+
+	encodeEntities := func() error {
+		for _, record := range entityRecords {
+			e := record.entity
 			ns, err := NamespaceByID(ctx, e.NamespaceID, a.core)
 			if err != nil {
 				return err
@@ -3385,47 +3421,29 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 				}
 			}
 		}
-
 		return nil
 	}
 
-	// JSON will always walk once, CSV should only walk twice if we've processed
-	// records during the first pass
-	shouldWalk := true
-
 	// CSV must perform two passes over the data to generate the column list
 	if format == "csv" {
-		for _, startTime := range filteredList {
-			err := a.WalkEntitySegments(ctx, startTime, walkEntities)
-			if err != nil {
-				a.logger.Error("failed to load segments for export", "error", err)
-				return fmt.Errorf("failed to load segments for export: %w", err)
-			}
+		err = encodeEntities()
+		if err != nil {
+			return err
 		}
 
-		if len(dedupIDs) > 0 {
+		if len(entityRecords) > 0 {
 			// only write header if we've seen some records
 			err = encoder.(*csvEncoder).writeHeader()
 			if err != nil {
 				return err
 			}
-
-			// clear dedupIDs for second pass
-			dedupIDs = make(map[string]struct{})
-		} else {
-			shouldWalk = false
 		}
 	}
 
-	if shouldWalk {
-		// For each month in the filtered list walk all the log segments
-		for _, startTime := range filteredList {
-			err := a.WalkEntitySegments(ctx, startTime, walkEntities)
-			if err != nil {
-				a.logger.Error("failed to load segments for export", "error", err)
-				return fmt.Errorf("failed to load segments for export: %w", err)
-			}
-		}
+	// Emit records per client
+	err = encodeEntities()
+	if err != nil {
+		return err
 	}
 
 	// Flush and error check the encoder. This is neccessary for buffered
@@ -3495,6 +3513,8 @@ func baseActivityExportCSVHeader() []string {
 		"mount_type",
 		"token_creation_time",
 		"client_first_used_time",
+		// "client_last_used_time",
+		// "client_count",
 	}
 }
 
