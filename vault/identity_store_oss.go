@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/sdk/framework"
 )
 
 func (c *Core) SendGroupUpdate(context.Context, *identity.Group) error {
@@ -17,4 +18,8 @@ func (c *Core) SendGroupUpdate(context.Context, *identity.Group) error {
 
 func (c *Core) CreateEntity(ctx context.Context) (*identity.Entity, error) {
 	return nil, nil
+}
+
+func mfaLoginEnterprisePaths(i *IdentityStore) []*framework.Path {
+	return []*framework.Path{}
 }
