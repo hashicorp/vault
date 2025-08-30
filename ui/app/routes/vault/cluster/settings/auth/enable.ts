@@ -14,6 +14,7 @@ export default class VaultClusterSettingsAuthEnableRoute extends Route {
   model() {
     const defaults = {
       config: { listing_visibility: false },
+      user_lockout_config: {},
     };
     return new AuthMethodForm(defaults, { isNew: true });
   }
