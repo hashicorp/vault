@@ -156,7 +156,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.22.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.22.0
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.1-0.20250901001715-749a56937c57
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.11.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.24.3
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.15.0
@@ -552,7 +552,7 @@ require (
 	golang.org/x/mod v0.26.0 // indirect
 	golang.org/x/time v0.12.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
-	google.golang.org/genproto v0.0.0-20250825161204-c5933d9347a5 // indirect
+	google.golang.org/genproto v0.0.0-20250826171959-ef028d996bc1 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250825161204-c5933d9347a5 // indirect; indirect\
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
