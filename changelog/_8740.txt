@@ -1,0 +1,6 @@
+```release-note:improvement
+core/snapshot-load (enterprise): Add a `force` query parameter to the `DELETE sys/storage/raft/snapshot-load/{snapshot_id}` endpoint to allow for forced deletion of snapshots. This is useful when the snapshot is in a state that prevents normal deletion, such as being in the process of loading.
+```
+```release-note:improvement
+cli (enterprise): Add a `-force` flag to `vault operator raft snapshot unload` command to force deletion of a loaded snapshot.
+```
