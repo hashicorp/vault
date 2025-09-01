@@ -84,10 +84,15 @@ const (
 	VaultSnapshotReadParam = "read_snapshot_id"
 	// VaultSnapshotRecoverParam is the query parameter sent when Vault should
 	// recover the data from a loaded snapshot
+	// Deprecated: use VaultSnapshotRecoverHeader
 	VaultSnapshotRecoverParam = "recover_snapshot_id"
-	// VaultRecoverSourcePathParam contains an optional source path
+	// VaultRecoverSourcePathHeader contains an optional source path
 	// to read the data from when performing a recover operation
-	VaultRecoverSourcePathParam = consts.RecoverSourcePathParam
+	VaultRecoverSourcePathHeader = consts.RecoverSourcePathHeader
+	// VaultSnapshotRecoverHeader holds the snapshot ID to use for a read, list, or
+	// recover from snapshot operation. This replaces the use of query parameters
+	// to pass the snapshot ID
+	VaultSnapshotRecoverHeader = "X-Vault-Recover-Snapshot-Id"
 	// CustomMaxJSONDepth specifies the maximum nesting depth of a JSON object.
 	// This limit is designed to prevent stack exhaustion attacks from deeply
 	// nested JSON payloads, which could otherwise lead to a denial-of-service
@@ -1505,7 +1510,7 @@ func requiresSnapshot(r *http.Request) bool {
 	case http.MethodGet, "LIST":
 		return query.Has(VaultSnapshotReadParam)
 	case http.MethodPut, http.MethodPost:
-		return query.Has(VaultSnapshotRecoverParam)
+		return query.Has(VaultSnapshotRecoverParam) || r.Header.Get(VaultSnapshotRecoverParam) != ""
 	}
 	return false
 }

@@ -403,15 +403,21 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 						Name:        "recover_snapshot_id",
 						Description: "Triggers a recover operation using the given snapshot ID. Request body is ignored when a recover operation is requested.",
 						In:          "query",
+						Deprecated:  true,
+						Schema:      &OASSchema{Type: "string"},
+					}, OASParameter{
+						Name:        "X-Vault-Recover-Snapshot-Id",
+						Description: "Triggers a recover operation using the given snapshot ID. Request body is ignored when a recover operation is requested.",
+						In:          "header",
 						Schema:      &OASSchema{Type: "string"},
 					})
 					// If there are path fields, it will also be possible to recover from a path with
 					// different path field values than the request path.
 					if len(pathFields) > 0 {
 						op.Parameters = append(op.Parameters, OASParameter{
-							Name:        "recover_source_path",
-							Description: "The source path to recover from. Only used if recover_snapshot_id parameter is also supplied. If not specified, the source path is assumed to be the same as the request path.",
-							In:          "query",
+							Name:        "X-Vault-Recover-Source-Path",
+							Description: "The source path to recover from. Only used if a snapshot ID is also supplied. If not specified, the source path is assumed to be the same as the request path.",
+							In:          "header",
 							Schema:      &OASSchema{Type: "string"},
 						})
 					}

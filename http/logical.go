@@ -12,7 +12,6 @@ import (
 	"mime"
 	"net"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -98,8 +97,12 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 			responseWriter = w
 		}
 
-	case "POST", "PUT":
-		op = logical.UpdateOperation
+	case "POST", "PUT", "RECOVER":
+		if r.Method == "RECOVER" {
+			op = logical.RecoverOperation
+		} else {
+			op = logical.UpdateOperation
+		}
 
 		// Buffer the request body in order to allow us to peek at the beginning
 		// without consuming it. This approach involves no copying.
@@ -219,25 +222,28 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 				data = nil
 			}
 		}
-	case logical.UpdateOperation:
-		queryVals := r.URL.Query()
-		if queryVals.Has(VaultSnapshotRecoverParam) {
-			snapshotID := queryVals.Get(VaultSnapshotRecoverParam)
-			if snapshotID != "" {
-				requiredSnapshotID = snapshotID
-				op = logical.RecoverOperation
+	case logical.UpdateOperation, logical.RecoverOperation:
+		snapshotHeaderID := r.Header.Get(VaultSnapshotRecoverHeader)
+		if snapshotHeaderID != "" {
+			requiredSnapshotID = snapshotHeaderID
+		} else {
+			queryVals := r.URL.Query()
+			if queryVals.Has(VaultSnapshotRecoverParam) {
+				snapshotID := queryVals.Get(VaultSnapshotRecoverParam)
+				if snapshotID != "" {
+					requiredSnapshotID = snapshotID
+				}
 			}
 		}
-		if op == logical.RecoverOperation {
-			if queryVals.Has(VaultRecoverSourcePathParam) {
-				sourcePath := queryVals.Get(VaultRecoverSourcePathParam)
-				if sourcePath != "" {
-					unescapedPath, err := url.QueryUnescape(sourcePath)
-					if err != nil {
-						return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to unescape %s query parameter: %w", VaultRecoverSourcePathParam, err)
-					}
-					recoverSourcePath = trimPath(ns, unescapedPath)
-				}
+		if requiredSnapshotID == "" && op == logical.RecoverOperation {
+			return nil, nil, http.StatusBadRequest, fmt.Errorf("missing required snapshot ID")
+		}
+
+		if requiredSnapshotID != "" {
+			op = logical.RecoverOperation
+			sourcePath := r.Header.Get(VaultRecoverSourcePathHeader)
+			if sourcePath != "" {
+				recoverSourcePath = trimPath(ns, sourcePath)
 			}
 		}
 	}

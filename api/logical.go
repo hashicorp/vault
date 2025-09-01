@@ -309,8 +309,9 @@ func (c *Logical) Recover(ctx context.Context, path string, snapshotID string) (
 func (c *Logical) RecoverFromPath(ctx context.Context, newPath string, snapshotID string, originalPath string) (*Secret, error) {
 	r := c.c.NewRequest(http.MethodPut, "/v1/"+newPath)
 	r.Params.Set("recover_snapshot_id", snapshotID)
+	r.Headers.Set(SnapshotHeaderName, snapshotID)
 	if originalPath != "" && originalPath != newPath {
-		r.Params.Set("recover_source_path", url.QueryEscape(originalPath))
+		r.Headers.Set(RecoverSourcePathHeaderName, originalPath)
 	}
 	return c.write(ctx, originalPath, r)
 }
