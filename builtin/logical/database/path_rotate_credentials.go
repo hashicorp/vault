@@ -96,8 +96,10 @@ func (b *databaseBackend) rotateRootCredentials(ctx context.Context, req *logica
 	defer func() {
 		if err == nil {
 			b.dbEvent(ctx, "rotate-root", req.Path, name, modified)
+			recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseRotateRootSuccess)
 		} else {
 			b.dbEvent(ctx, "rotate-root-fail", req.Path, name, modified)
+			recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseRotateRootFailure)
 		}
 	}()
 
@@ -220,6 +222,20 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 		if role == nil {
 			return logical.ErrorResponse("no static role found for role name"), nil
 		}
+
+		// We defer after we've found that the static role exists, otherwise it's not really fair to say
+		// that the rotation failed.
+		defer func() {
+			if err == nil {
+				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRotateStaticRoleSuccess,
+					AdditionalDatabaseMetadata{key: "role_name", value: name},
+					AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
+			} else {
+				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRotateStaticRoleFailure,
+					AdditionalDatabaseMetadata{key: "role_name", value: name},
+					AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
+			}
+		}()
 
 		// In create/update of static accounts, we only care if the operation
 		// err'd , and this call does not return credentials

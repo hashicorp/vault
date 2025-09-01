@@ -174,6 +174,10 @@ Router.map(function () {
         });
       });
       this.route('secrets', function () {
+        this.route('mounts', function () {
+          // TODO: Revisit path on create once components are separated - should we specify selected type or just keep it generic as /create?
+          this.route('create', { path: '/:mount_type/create' });
+        });
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
@@ -183,6 +187,8 @@ Router.map(function () {
           this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration', function () {
+            this.route('index', { path: '/' });
+            this.route('general-settings');
             // only CONFIGURABLE_SECRET_ENGINES can be configured and access the edit route
             this.route('edit');
           });

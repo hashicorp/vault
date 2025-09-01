@@ -595,7 +595,8 @@ scenario "smoke" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
     depends_on = [
-      step.vault_remove_node_and_verify
+      step.vault_remove_node_and_verify,
+      step.get_vault_cluster_ips
     ]
 
     providers = {

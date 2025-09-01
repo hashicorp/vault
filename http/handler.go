@@ -85,7 +85,9 @@ const (
 	// VaultSnapshotRecoverParam is the query parameter sent when Vault should
 	// recover the data from a loaded snapshot
 	VaultSnapshotRecoverParam = "recover_snapshot_id"
-
+	// VaultRecoverSourcePathParam contains an optional source path
+	// to read the data from when performing a recover operation
+	VaultRecoverSourcePathParam = consts.RecoverSourcePathParam
 	// CustomMaxJSONDepth specifies the maximum nesting depth of a JSON object.
 	// This limit is designed to prevent stack exhaustion attacks from deeply
 	// nested JSON payloads, which could otherwise lead to a denial-of-service

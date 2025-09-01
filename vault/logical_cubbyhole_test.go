@@ -11,7 +11,9 @@ import (
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/snapshots"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCubbyholeBackend_Write(t *testing.T) {
@@ -267,4 +269,67 @@ func testCubbyholeBackend() logical.Backend {
 		},
 	})
 	return b
+}
+
+// TestSnapshotOperations verifies that snapshot operations on the cubbyhole
+// backend succeed. It tests reading, listing, recovering, and recovering as a
+// copy from a snapshot.
+func TestSnapshotOperations(t *testing.T) {
+	backend := testCubbyholeBackend()
+	tc := snapshots.NewSnapshotTestCase(t, backend)
+	path := "secret"
+	_, err := backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.CreateOperation,
+		Storage:   tc.SnapshotStorage(),
+		Path:      path,
+		Data: map[string]interface{}{
+			"data": "old data",
+		},
+		ClientToken: "a",
+	})
+	require.NoError(t, err)
+
+	_, err = backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.CreateOperation,
+		Storage:   tc.RegularStorage(),
+		Path:      path,
+		Data: map[string]interface{}{
+			"data": "new data",
+		},
+		ClientToken: "a",
+	})
+
+	checkContent := func(t *testing.T, path string) {
+		readResp, err := backend.HandleRequest(context.Background(), &logical.Request{
+			Operation:   logical.ReadOperation,
+			Storage:     tc.RegularStorage(),
+			ClientToken: "a",
+			Path:        path,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, readResp)
+		require.Equal(t, "old data", readResp.Data["data"])
+	}
+	require.NoError(t, err)
+	addToken := func(req *logical.Request) {
+		req.ClientToken = "a"
+	}
+	t.Run("read no side effects", func(t *testing.T) {
+		tc.RunRead(t, path, snapshots.WithModifyRequests(func(req *logical.Request) {
+			req.ClientToken = "token"
+		}))
+	})
+	t.Run("list no side effects", func(t *testing.T) {
+		tc.RunList(t, path, snapshots.WithModifyRequests(addToken))
+	})
+	t.Run("recover works", func(t *testing.T) {
+		_, err := tc.DoRecover(t, path, snapshots.WithModifyRequests(addToken))
+		require.NoError(t, err)
+		checkContent(t, path)
+	})
+	t.Run("recover new path works", func(t *testing.T) {
+		_, err := tc.DoRecover(t, "different-path", snapshots.WithModifyRequests(addToken), snapshots.WithRecoverSourcePath(path))
+		require.NoError(t, err)
+		checkContent(t, "different-path")
+	})
 }

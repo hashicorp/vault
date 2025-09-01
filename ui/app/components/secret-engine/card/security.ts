@@ -10,7 +10,7 @@ interface Args {
   model: SecretsEngineResource;
 }
 
-export default class SecurityCard extends Component<Args> {
+export default class Security extends Component<Args> {
   constructor(owner: unknown, args: Args) {
     super(owner, args);
   }

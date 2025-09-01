@@ -128,8 +128,6 @@ func NewCreateBackportReq(opts ...NewCreateBackportReqOpt) *CreateBackportReq {
 		CEBranchPrefix:      "ce",
 		CEAllowInactiveGroups: changed.FileGroups{
 			changed.FileGroupChangelog,
-			changed.FileGroupDocs,
-			changed.FileGroupPipeline,
 		},
 		BaseOrigin:          "origin",
 		BackportLabelPrefix: "backport",
@@ -657,7 +655,7 @@ func (r *CreateBackportReq) backportRef(
 			Commit:   commitSHA,
 			Strategy: libgit.MergeStrategyORT,
 			StrategyOptions: []libgit.MergeStrategyOption{
-				libgit.MergeStrategyOptionOurs,
+				libgit.MergeStrategyOptionTheirs,
 				libgit.MergeStrategyOptionIgnoreSpaceChange,
 			},
 		})

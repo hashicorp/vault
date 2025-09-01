@@ -1,0 +1,52 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-s has-top-bottom-margin-12" ...attributes>
+  <Hds::Text::Display @size="300">Metadata</Hds::Text::Display>
+
+  <div class="flex gap-16 is-flex-column has-top-padding-s">
+    <Hds::Form::Fieldset @layout="vertical" as |F|>
+      <F.Legend>Path</F.Legend>
+      <F.HelperText>The mount path where this secrets engine is accessible.</F.HelperText>
+      <F.Control>
+        <Hds::Layout::Flex @gap="8">
+          <Hds::Form::TextInput::Field
+            @value={{@model.secretsEngine.path}}
+            autocomplete="off"
+            disabled
+            class="path-input-text"
+            name="Path"
+            data-test-input="path"
+          />
+          <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @targetToCopy=".path-input-text" />
+        </Hds::Layout::Flex>
+      </F.Control>
+    </Hds::Form::Fieldset>
+
+    <Hds::Form::Fieldset @layout="vertical" as |F|>
+      <F.Legend>Accessor</F.Legend>
+      <F.HelperText>Internal identifier used by Vault to reference this engine.</F.HelperText>
+      <F.Control>
+        <Hds::Layout::Flex @gap="8">
+          <Hds::Form::TextInput::Field
+            @value={{@model.secretsEngine.accessor}}
+            autocomplete="off"
+            disabled
+            name="Accessor"
+            class="accessor-input-text"
+            data-test-input="accessor"
+          />
+          <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @targetToCopy=".accessor-input-text" />
+        </Hds::Layout::Flex>
+      </F.Control>
+    </Hds::Form::Fieldset>
+
+    <Hds::Form::Textarea::Field name="description" @value={{@model.secretsEngine.description}} as |F|>
+      <F.Label>Description</F.Label>
+      <F.HelperText>A short description of the secrets engine's purpose.</F.HelperText>
+      {{! TODO: Confirm with Design - Is there a length limit for descriptions? Design has it around 765 characters, but not sure theres a backend limit? }}
+      <F.CharacterCount @maxLength={{500}} />
+    </Hds::Form::Textarea::Field>
+  </div>
+</Hds::Card::Container>

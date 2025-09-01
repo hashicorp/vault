@@ -60,7 +60,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     const maxTTLHours = 300;
     await page.visit();
 
-    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
@@ -81,11 +81,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
     await page.visit();
 
-    assert.strictEqual(
-      currentRouteName(),
-      'vault.cluster.settings.mount-secret-backend',
-      'navigates to mount page'
-    );
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index', 'navigates to mount page');
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
@@ -100,7 +96,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
   test('it sets the max ttl after pki chosen, resets after', async function (assert) {
     await page.visit();
-    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
     await click(MOUNT_BACKEND_FORM.mountType('pki'));
     assert.dom('[data-test-input="config.max_lease_ttl"]').exists();
     assert
@@ -131,7 +127,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
     await page.visit();
 
-    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
     await mountBackend('kv', path);
     await page.secretList();
     await settled();
@@ -139,7 +135,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await mountBackend('kv', path);
     await waitFor('[data-test-message-error-description]');
     assert.dom('[data-test-message-error-description]').containsText(`path is already in use at ${path}`);
-    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
 
     await page.secretList();
     await settled();
@@ -361,7 +357,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       );
 
       await login(secretsAdminToken);
-      await visit('/vault/settings/mount-secret-backend');
+      await visit('/vault/secrets/mounts');
       await click(MOUNT_BACKEND_FORM.mountType(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);
       await click(GENERAL.button('Method Options'));

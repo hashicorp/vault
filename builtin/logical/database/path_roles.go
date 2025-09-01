@@ -92,10 +92,11 @@ func pathRoles(b *databaseBackend) []*framework.Path {
 			Fields:         fieldsForType(databaseStaticRolePath),
 			ExistenceCheck: b.pathStaticRoleExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.pathStaticRoleRead,
-				logical.CreateOperation: b.pathStaticRoleCreateUpdate,
-				logical.UpdateOperation: b.pathStaticRoleCreateUpdate,
-				logical.DeleteOperation: b.pathStaticRoleDelete,
+				logical.ReadOperation:    b.pathStaticRoleRead,
+				logical.CreateOperation:  b.pathStaticRoleCreateUpdate,
+				logical.UpdateOperation:  b.pathStaticRoleCreateUpdate,
+				logical.DeleteOperation:  b.pathStaticRoleDelete,
+				logical.RecoverOperation: b.pathStaticRoleRecover,
 			},
 
 			HelpSynopsis:    pathStaticRoleHelpSyn,
@@ -257,6 +258,8 @@ func (b *databaseBackend) pathRoleDelete(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 	b.dbEvent(ctx, "role-delete", req.Path, name, true)
+	recordDatabaseObservation(ctx, b, req, "", ObservationTypeDatabaseRoleDelete,
+		AdditionalDatabaseMetadata{key: "role_name", value: name})
 	return nil, nil
 }
 
@@ -298,11 +301,14 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 	}
 
 	b.dbEvent(ctx, "static-role-delete", req.Path, name, true)
+	recordDatabaseObservation(ctx, b, req, "", ObservationTypeDatabaseStaticRoleDelete,
+		AdditionalDatabaseMetadata{key: "role_name", value: name})
 	return nil, merr.ErrorOrNil()
 }
 
 func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	role, err := b.StaticRole(ctx, req.Storage, d.Get("name").(string))
+	roleName := d.Get("name").(string)
+	role, err := b.StaticRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -344,13 +350,17 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 		data["rotation_statements"] = []string{}
 	}
 
+	recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseStaticRoleRead,
+		AdditionalDatabaseMetadata{key: "role_name", value: roleName})
+
 	return &logical.Response{
 		Data: data,
 	}, nil
 }
 
 func (b *databaseBackend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	role, err := b.Role(ctx, req.Storage, d.Get("name").(string))
+	roleName := d.Get("name").(string)
+	role, err := b.Role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -383,6 +393,9 @@ func (b *databaseBackend) pathRoleRead(ctx context.Context, req *logical.Request
 	if len(role.Statements.Renewal) == 0 {
 		data["renew_statements"] = []string{}
 	}
+
+	recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRoleRead,
+		AdditionalDatabaseMetadata{key: "role_name", value: roleName})
 
 	return &logical.Response{
 		Data: data,
@@ -427,6 +440,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 	createOperation := (req.Operation == logical.CreateOperation)
 
 	// DB Attributes
+	var credentialType string
 	{
 		if dbNameRaw, ok := data.GetOk("db_name"); ok {
 			role.DBName = dbNameRaw.(string)
@@ -438,7 +452,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		}
 
 		if credentialTypeRaw, ok := data.GetOk("credential_type"); ok {
-			credentialType := credentialTypeRaw.(string)
+			credentialType = credentialTypeRaw.(string)
 			if err := role.setCredentialType(credentialType); err != nil {
 				return logical.ErrorResponse(err.Error()), nil
 			}
@@ -515,9 +529,63 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 	}
 
 	b.dbEvent(ctx, fmt.Sprintf("role-%s", req.Operation), req.Path, name, true)
+
+	if createOperation {
+		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRoleCreate,
+			AdditionalDatabaseMetadata{key: "role_name", value: name},
+			AdditionalDatabaseMetadata{key: "credential_type", value: credentialType},
+			AdditionalDatabaseMetadata{key: "default_ttl", value: role.DefaultTTL},
+			AdditionalDatabaseMetadata{key: "max_ttl", value: role.MaxTTL})
+	} else {
+		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRoleUpdate,
+			AdditionalDatabaseMetadata{key: "role_name", value: name},
+			AdditionalDatabaseMetadata{key: "credential_type", value: credentialType},
+			AdditionalDatabaseMetadata{key: "default_ttl", value: role.DefaultTTL},
+			AdditionalDatabaseMetadata{key: "max_ttl", value: role.MaxTTL})
+	}
+
 	return nil, nil
 }
 
+func (b *databaseBackend) pathStaticRoleRecover(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	exists, err := b.pathStaticRoleExistenceCheck(ctx, req, data)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		return logical.ErrorResponse("cannot recover a static role that already exists"), nil
+	}
+
+	snapStorage, err := logical.NewSnapshotStorageView(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create snapshot storage: %s", err)
+	}
+
+	name := data.Get("name").(string)
+	if req.RecoverSourcePath != "" {
+		fd, err := b.RecoverSourcePathFieldData(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse the recover source path: %w", err)
+		}
+		name = fd.Get("name").(string)
+	}
+
+	role, err := b.StaticRole(ctx, snapStorage, name)
+	if err != nil {
+		return nil, err
+	}
+	if role.StaticAccount.Password != "" {
+		data.Raw["password"] = role.StaticAccount.Password
+	}
+	req.Operation = logical.CreateOperation
+	defer func() {
+		req.Operation = logical.RecoverOperation
+	}()
+	return b.pathStaticRoleCreateUpdate(ctx, req, data)
+}
+
+// ignore-nil-nil-function-check
 func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	response := &logical.Response{}
 	name := data.Get("name").(string)
@@ -636,8 +704,9 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.Statements.Rotation = data.Get("rotation_statements").([]string)
 	}
 
+	var credentialType string
 	if credentialTypeRaw, ok := data.GetOk("credential_type"); ok {
-		credentialType := credentialTypeRaw.(string)
+		credentialType = credentialTypeRaw.(string)
 		if err := role.setCredentialType(credentialType); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -798,6 +867,20 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return nil, err
 	}
 	b.dbEvent(ctx, fmt.Sprintf("static-role-%s", req.Operation), req.Path, name, true)
+
+	if req.Operation == logical.CreateOperation {
+		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseStaticRoleCreate,
+			AdditionalDatabaseMetadata{key: "role_name", value: name},
+			AdditionalDatabaseMetadata{key: "credential_type", value: credentialType},
+			AdditionalDatabaseMetadata{key: "default_ttl", value: role.DefaultTTL},
+			AdditionalDatabaseMetadata{key: "max_ttl", value: role.MaxTTL})
+	} else {
+		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseStaticRoleUpdate,
+			AdditionalDatabaseMetadata{key: "role_name", value: name},
+			AdditionalDatabaseMetadata{key: "credential_type", value: credentialType},
+			AdditionalDatabaseMetadata{key: "default_ttl", value: role.DefaultTTL},
+			AdditionalDatabaseMetadata{key: "max_ttl", value: role.MaxTTL})
+	}
 
 	if len(response.Warnings) == 0 {
 		return nil, nil

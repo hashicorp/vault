@@ -47,4 +47,6 @@ const (
 	PerformanceReplicationPathTarget = "performance"
 
 	DRReplicationPathTarget = "dr"
+
+	RecoverSourcePathParam = "recover_source_path"
 )

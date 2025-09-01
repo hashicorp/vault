@@ -487,6 +487,35 @@ func (b *Backend) Route(path string) *Path {
 	return result
 }
 
+// RecoverSourcePathFieldData returns the captures from the recover source path
+// as field data
+func (b *Backend) RecoverSourcePathFieldData(req *logical.Request) (*FieldData, error) {
+	if req.RecoverSourcePath == "" {
+		return nil, fmt.Errorf("request has no recover source path")
+	}
+	newPath, _ := b.route(req.Path)
+	sourcePath, sourceCaptures := b.route(req.RecoverSourcePath)
+	if sourcePath == nil || sourcePath.Pattern != newPath.Pattern {
+		return nil, fmt.Errorf("recover source path %q does not match request path %q", req.RecoverSourcePath, req.Path)
+	}
+
+	raw := make(map[string]interface{}, len(sourceCaptures))
+	for k, v := range sourceCaptures {
+		raw[k] = v
+	}
+	fd := FieldData{
+		Raw:    raw,
+		Schema: sourcePath.Fields,
+	}
+
+	err := fd.Validate()
+	if err != nil {
+		return nil, fmt.Errorf("field validation of recover source path failed: %w", err)
+	}
+
+	return &fd, nil
+}
+
 // Secret is used to look up the secret with the given type.
 func (b *Backend) Secret(k string) *Secret {
 	for _, s := range b.Secrets {

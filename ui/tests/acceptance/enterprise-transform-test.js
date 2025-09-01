@@ -100,7 +100,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
   });
 
   test('it can create a transformation and add itself to the role attached', async function (assert) {
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     const backend = `transform-${uuidv4()}`;
     await click('[data-test-mount-type="transform"]');
     await fillIn(GENERAL.inputByAttr('path'), backend);
@@ -152,7 +152,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it can create a role and add itself to the transformation attached', async function (assert) {
     const roleName = 'my-role';
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     const backend = `transform-${uuidv4()}`;
     await mountBackend('transform', backend);
     // create transformation without role
@@ -192,7 +192,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it adds a role to a transformation when added to a role', async function (assert) {
     const roleName = 'role-test';
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     const backend = `transform-${uuidv4()}`;
     await mountBackend('transform', backend);
     const transformation = await newTransformation(backend, 'b-transformation', true);
@@ -204,7 +204,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it shows a message if an update fails after save', async function (assert) {
     const roleName = 'role-remove';
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     const backend = `transform-${uuidv4()}`;
     await mountBackend('transform', backend);
     // Create transformation
@@ -242,7 +242,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it allows creation and edit of a template', async function (assert) {
     const templateName = 'my-template';
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     const backend = `transform-${uuidv4()}`;
     await mountBackend('transform', backend);
     await click('[data-test-secret-list-tab="Templates"]');
@@ -284,7 +284,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it allows creation and edit of an alphabet', async function (assert) {
     const alphabetName = 'vowels-only';
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     const backend = `transform-${uuidv4()}`;
     await mountBackend('transform', backend);
     await click('[data-test-secret-list-tab="Alphabets"]');
