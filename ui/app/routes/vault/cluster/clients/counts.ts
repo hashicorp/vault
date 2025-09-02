@@ -20,15 +20,14 @@ import type ClientsActivityModel from 'vault/vault/models/clients/activity';
 export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
   end_time?: string | number | undefined;
-  ns?: string | undefined;
-  mountPath?: string;
-  mountType?: string;
+  namespace_path?: string;
+  mount_path?: string;
+  mount_type?: string;
 }
 
 interface ActivityAdapterQuery {
   start_time: { timestamp: number } | undefined;
   end_time: { timestamp: number } | undefined;
-  namespace?: string;
 }
 
 export type ClientsCountsRouteModel = ModelFrom<ClientsCountsRoute>;
@@ -40,10 +39,13 @@ export default class ClientsCountsRoute extends Route {
   @service declare readonly version: VersionService;
 
   queryParams = {
+    // These query params make a new request to the API
     start_time: { refreshModel: true, replace: true },
     end_time: { refreshModel: true, replace: true },
-    ns: { refreshModel: true, replace: true },
-    mountPath: { refreshModel: false, replace: true },
+    // These query params just filter client-side data
+    namespace_path: { refreshModel: false, replace: true },
+    mount_path: { refreshModel: false, replace: true },
+    mount_type: { refreshModel: false, replace: true },
   };
 
   beforeModel() {
@@ -81,10 +83,6 @@ export default class ClientsCountsRoute extends Route {
         start_time: this.formatTimeQuery(params?.start_time),
         end_time: this.formatTimeQuery(params?.end_time),
       };
-      if (params?.ns) {
-        // only set explicit namespace if it's a query param
-        query.namespace = params.ns;
-      }
       try {
         activity = await this.store.queryRecord('clients/activity', query);
       } catch (error) {
@@ -131,8 +129,9 @@ export default class ClientsCountsRoute extends Route {
       controller.setProperties({
         start_time: undefined,
         end_time: undefined,
-        ns: undefined,
-        mountPath: '',
+        namespace_path: '',
+        mount_path: '',
+        mount_type: '',
       });
     }
   }
