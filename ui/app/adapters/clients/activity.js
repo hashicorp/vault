@@ -68,7 +68,7 @@ export default class ActivityAdapter extends ApplicationAdapter {
         return resp.blob();
       }
       // If it's an empty response (eg 204), there's no data so return an error
-      errorMsg = 'no data to export in provided time range.';
+      errorMsg = 'No data to export in provided time range.';
     } catch (e) {
       const { errors } = await e.json();
       errorMsg = errors?.join('. ');

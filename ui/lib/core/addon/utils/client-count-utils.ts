@@ -270,6 +270,29 @@ export interface MountNewClients extends TotalClientsSometimes {
   label: string;
 }
 
+// Serialized data from activity/export API
+export interface ActivityExportData {
+  client_id: string;
+  client_type: string;
+  namespace_id: string;
+  namespace_path: string;
+  mount_accessor: string;
+  mount_type: string;
+  mount_path: string;
+  token_creation_time: string;
+  client_first_used_time: string;
+}
+export interface EntityClients extends ActivityExportData {
+  entity_name: string;
+  entity_alias_name: string;
+  local_entity_alias: boolean;
+  policies: string[];
+  entity_metadata: Record<string, any>;
+  entity_alias_metadata: Record<string, any>;
+  entity_alias_custom_metadata: Record<string, any>;
+  entity_group_ids: string[];
+}
+
 // API RESPONSE SHAPE (prior to serialization)
 
 export interface NamespaceObject {

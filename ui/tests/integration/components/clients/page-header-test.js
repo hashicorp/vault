@@ -147,7 +147,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
     await click(CLIENT_COUNT.exportButton);
     await click(GENERAL.confirmButton);
     await waitFor('[data-test-export-error]');
-    assert.dom('[data-test-export-error]').hasText('no data to export in provided time range.');
+    assert.dom('[data-test-export-error]').hasText('No data to export in provided time range.');
   });
 
   test('it shows upgrade data in export modal', async function (assert) {

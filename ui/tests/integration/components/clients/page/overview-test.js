@@ -115,8 +115,8 @@ module('Integration | Component | clients/page/overview', function (hooks) {
   });
 
   test('it renders dropdown lists from activity response to filter table data', async function (assert) {
-    const expectedNamespaces = this.activity.byNamespace.map((n) => n.label);
     const mounts = flattenMounts(this.mostRecentMonth.new_clients.namespaces);
+    const expectedNamespaces = [...new Set(mounts.map((m) => m.namespace_path))];
     const expectedMountPaths = [...new Set(mounts.map((m) => m.mount_path))];
     const expectedMountTypes = [...new Set(mounts.map((m) => m.mount_type))];
     await this.renderComponent();

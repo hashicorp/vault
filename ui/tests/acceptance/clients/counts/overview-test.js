@@ -87,7 +87,7 @@ module('Acceptance | clients | overview', function (hooks) {
     });
 
     test('it should update charts when querying date ranges', async function (assert) {
-      // query for single, historical month with no new counts (July 2023)
+      // query for single, historical month with no new counts (July 2023), which means there is no monthly breakdown
       const service = this.owner.lookup('service:version');
       service.type = 'community';
 
@@ -100,8 +100,8 @@ module('Acceptance | clients | overview', function (hooks) {
 
       await click(GENERAL.submitButton);
       assert
-        .dom(CLIENT_COUNT.usageStats('Vault client counts'))
-        .doesNotExist('running total single month stat boxes do not show');
+        .dom(CLIENT_COUNT.usageStats('Client usage'))
+        .exists('running total single month usage stats show');
       assert
         .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
         .doesNotExist('running total month over month charts do not show');
@@ -127,13 +127,9 @@ module('Acceptance | clients | overview', function (hooks) {
       await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
       await fillIn(CLIENT_COUNT.dateRange.editDate('end'), upgradeMonth);
       await click(GENERAL.submitButton);
-
-      assert
-        .dom(CLIENT_COUNT.usageStats('Vault client counts'))
-        .exists('running total single month usage stats show');
       assert
         .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
-        .doesNotExist('running total month over month charts do not show');
+        .exists('running total month over month charts show');
 
       // query historical date range (from September 2023 to December 2023)
       await click(CLIENT_COUNT.dateRange.edit);
