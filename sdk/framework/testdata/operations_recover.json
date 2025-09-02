@@ -43,8 +43,17 @@
         "parameters": [
           {
             "name": "recover_snapshot_id",
+            "deprecated": true,
             "description": "Triggers a recover operation using the given snapshot ID. Request body is ignored when a recover operation is requested.",
             "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Vault-Recover-Snapshot-Id",
+            "description": "Triggers a recover operation using the given snapshot ID. Request body is ignored when a recover operation is requested.",
+            "in": "header",
             "schema": {
               "type": "string"
             }

@@ -1071,9 +1071,11 @@ func TestLogical_SnapshotParams(t *testing.T) {
 		method                 string
 		url                    string
 		body                   []byte
+		headers                map[string]string
 		wantData               map[string]interface{}
 		wantOperation          logical.Operation
 		wantRequiresSnapshotID string
+		wantError              bool
 	}{
 		{
 			name:                   "normal get",
@@ -1110,6 +1112,31 @@ func TestLogical_SnapshotParams(t *testing.T) {
 			wantRequiresSnapshotID: "1234",
 		},
 		{
+			name:   "snapshot list header",
+			method: http.MethodGet,
+			url:    "https://example.com?list=true",
+			body:   nil,
+			headers: map[string]string{
+				VaultSnapshotRecoverHeader: "1234",
+			},
+			wantData:               nil,
+			wantOperation:          logical.ListOperation,
+			wantRequiresSnapshotID: "",
+		},
+		{
+			name:   "snapshot read header",
+			method: http.MethodGet,
+			url:    "https://example.com",
+			headers: map[string]string{
+				VaultSnapshotRecoverHeader: "1234",
+			},
+			body:                   nil,
+			wantData:               nil,
+			wantOperation:          logical.ReadOperation,
+			wantRequiresSnapshotID: "",
+		},
+
+		{
 			name:   "normal update",
 			method: http.MethodPost,
 			url:    "https://example.com",
@@ -1130,6 +1157,44 @@ func TestLogical_SnapshotParams(t *testing.T) {
 			wantOperation:          logical.RecoverOperation,
 			wantRequiresSnapshotID: "1234",
 		},
+		{
+			name:   "snapshot update header",
+			method: http.MethodPost,
+			url:    "https://example.com",
+			body:   []byte(`{"other_data":"abcd"}`),
+			headers: map[string]string{
+				VaultSnapshotRecoverHeader: "1234",
+			},
+			wantData: map[string]interface{}{
+				"other_data": "abcd",
+			},
+			wantOperation:          logical.RecoverOperation,
+			wantRequiresSnapshotID: "1234",
+		},
+		{
+			name:   "recover operation no snapshot",
+			method: "RECOVER",
+			url:    "https://example.com",
+			body:   []byte(`{"other_data":"abcd"}`),
+			headers: map[string]string{
+				"other_header": "value",
+			},
+			wantError: true,
+		},
+		{
+			name:   "recover operation with snapshot",
+			method: "RECOVER",
+			url:    "https://example.com",
+			body:   []byte(`{"other_data":"abcd"}`),
+			headers: map[string]string{
+				VaultSnapshotRecoverHeader: "1234",
+			},
+			wantOperation: logical.RecoverOperation,
+			wantData: map[string]interface{}{
+				"other_data": "abcd",
+			},
+			wantRequiresSnapshotID: "1234",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1137,8 +1202,14 @@ func TestLogical_SnapshotParams(t *testing.T) {
 			req, _ := http.NewRequest(tc.method, tc.url, bytes.NewReader(tc.body))
 			req = req.WithContext(namespace.RootContext(nil))
 			req.Header.Add(consts.AuthHeaderName, rootToken)
-
+			for k, v := range tc.headers {
+				req.Header.Add(k, v)
+			}
 			lreq, _, status, err := buildLogicalRequest(core, nil, req, "")
+			if tc.wantError {
+				require.Error(t, err)
+				return
+			}
 			require.NoError(t, err)
 			require.Equal(t, 0, status)
 			require.Equal(t, tc.wantOperation, lreq.Operation)
