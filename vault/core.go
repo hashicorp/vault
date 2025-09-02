@@ -4018,9 +4018,20 @@ type MFACachedAuthResponse struct {
 	RequestConnRemoteAddr   string
 	TimeOfStorage           time.Time
 	RequestID               string
-	SelfEnrollmentMFASecret *mfa.Secret
+	SelfEnrollmentMFASecret *selfEnrollmentPendingMFASecret
+}
+
+// selfEnrollmentPendingMFASecret holds information about a TOTP Login MFA secret
+// that has been generated during a login request with self-enrollment enabled.
+// This secret is temporarily stored in memory until the user successfully
+// completes the MFA validation step. It is not persisted to avoid storing
+// unverified secrets.
+type selfEnrollmentPendingMFASecret struct {
+	// Fields here need to be exported because copystructure is used to copy this object.
+	MethodID string
+	Secret   *mfa.Secret
 	// Store the secret key string separately to avoid anyone accidentally persisting it on an Entity.
-	SelfEnrollmentMFASecretKey string
+	Key string
 }
 
 func (c *Core) setupCachedMFAResponseAuth() {
