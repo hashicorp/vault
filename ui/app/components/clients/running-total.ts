@@ -36,12 +36,13 @@ export default class RunningTotal extends Component<Args> {
   get chartLegend() {
     if (this.showStacked) {
       return [
-        { key: 'entity_clients', label: 'entity clients' },
-        { key: 'non_entity_clients', label: 'non-entity clients' },
-        ...(this.flags.secretsSyncIsActivated ? [{ key: 'secret_syncs', label: 'secret sync clients' }] : []),
-        { key: 'acme_clients', label: 'acme clients' },
+        { key: 'entity_clients', label: 'Entity clients' },
+        { key: 'non_entity_clients', label: 'Non-entity clients' },
+        { key: 'acme_clients', label: 'ACME clients' },
+        // MUST BE LAST because conditionally renders and legend color mapping for stacked bars will be off otherwise
+        ...(this.flags.secretsSyncIsActivated ? [{ key: 'secret_syncs', label: 'Secret sync clients' }] : []),
       ];
     }
-    return [{ key: 'new_clients', label: 'new clients' }];
+    return [{ key: 'new_clients', label: 'New clients' }];
   }
 }

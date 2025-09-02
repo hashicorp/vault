@@ -7,11 +7,12 @@
  */
 
 // LEGEND STYLING (positioning is in chart-container.scss)
-$blue-500: #1c345f;
-$secret_syncs: #6cc5b0;
-$acme_clients: #ff725c;
-$entity_clients: #4269d0;
-$non_entity_clients: #efb117;
+$single: #1c345f;
+// stacked bar chart color scheme
+$first: #4269d0;
+$second: #efb117;
+$third: #ff725c;
+$fourth: #6cc5b0;
 
 .legend-container {
   .dots {
@@ -20,20 +21,22 @@ $non_entity_clients: #efb117;
     border-radius: 50%;
     display: inline-block;
   }
-  .legend-new_clients {
-    background-color: $blue-500;
+  .legend-dot-new_clients {
+    background-color: $single;
   }
-  .legend-entity_clients {
-    background-color: $entity_clients;
+  // numbers are indices because chart legend is iterated over to ensure
+  // legend colors match the correct stacked-bar-# class below
+  .legend-dot-0 {
+    background-color: $first;
   }
-  .legend-non_entity_clients {
-    background-color: $non_entity_clients;
+  .legend-dot-1 {
+    background-color: $second;
   }
-  .legend-secret_syncs {
-    background-color: $secret_syncs;
+  .legend-dot-2 {
+    background-color: $third;
   }
-  .legend-acme_clients {
-    background-color: $acme_clients;
+  .legend-dot-3 {
+    background-color: $fourth;
   }
 }
 
@@ -85,7 +88,7 @@ $non_entity_clients: #efb117;
 }
 
 .lineal-chart-bar {
-  fill: var(--token-color-palette-blue-500);
+  fill: var(--token-color-palette-single);
 }
 
 .lineal-axis {
@@ -98,20 +101,21 @@ $non_entity_clients: #efb117;
   }
 }
 
-// @colorScale arg for Lineal::VBars is "stacked-bar", indices are added by lineal
+// @colorScale arg for Lineal::VBars is "stacked-bar", numbers are added by lineal (not 0-indexed)
 .stacked-bar-1 {
-  color: $entity_clients;
-  fill: $entity_clients;
+  color: $first;
+  fill: $first;
 }
 .stacked-bar-2 {
-  color: $non_entity_clients;
-  fill: $non_entity_clients;
+  color: $second;
+  fill: $second;
 }
 .stacked-bar-3 {
-  color: $secret_syncs;
-  fill: $secret_syncs;
+  color: $third;
+  fill: $third;
 }
+// MUST BE LAST because conditionally renders and legend color mapping for stacked bars will be off otherwise
 .stacked-bar-4 {
-  color: $acme_clients;
-  fill: $acme_clients;
+  color: $fourth;
+  fill: $fourth;
 }

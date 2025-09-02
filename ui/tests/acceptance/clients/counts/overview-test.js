@@ -42,7 +42,7 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist();
     assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
     await click(GENERAL.inputByAttr('toggle view'));
-    assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Acme clients');
+    assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients ACME clients');
   });
 
   // These tests use the clientsHandler which dynamically generates activity data, used for asserting date querying, etc
@@ -277,7 +277,12 @@ module('Acceptance | clients | overview', function (hooks) {
       await visit('/vault/clients/counts/overview');
       assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
       await click(GENERAL.inputByAttr('toggle view'));
-      assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Secret sync clients Acme clients');
+      assert
+        .dom(CHARTS.legend)
+        .hasText(
+          'Entity clients Non-entity clients ACME clients Secret sync clients',
+          'it renders legend in order that matches the stacked bar data'
+        );
     });
 
     test('it should hide secrets sync stats when feature is NOT activated', async function (assert) {
@@ -295,7 +300,12 @@ module('Acceptance | clients | overview', function (hooks) {
         .doesNotExist('stat is hidden because feature is not activated');
       assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
       await click(GENERAL.inputByAttr('toggle view'));
-      assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Acme clients');
+      assert
+        .dom(CHARTS.legend)
+        .hasText(
+          'Entity clients Non-entity clients ACME clients',
+          'it renders legend in order that matches the stacked bar data and does not include secret sync'
+        );
     });
 
     test('it should show secrets sync stats for HVD managed clusters', async function (assert) {
@@ -306,7 +316,12 @@ module('Acceptance | clients | overview', function (hooks) {
       await visit('/vault/clients/counts/overview');
       assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
       await click(GENERAL.inputByAttr('toggle view'));
-      assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Secret sync clients Acme clients');
+      assert
+        .dom(CHARTS.legend)
+        .hasText(
+          'Entity clients Non-entity clients ACME clients Secret sync clients',
+          'it renders legend in order that matches the stacked bar data'
+        );
     });
   });
 });

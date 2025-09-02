@@ -35,10 +35,10 @@ Data visualizations render in in a flex row with a 1/3-width left element and a 
 
         {{#if @legend}}
           <div class="legend-container" data-test-counts-card-legend>
-            {{#each @legend as |l|}}
+            {{#each @legend as |l idx|}}
               <div class="legend-item">
-                <span class="dots legend-{{l.key}}"></span>
-                <Hds::Text::Body @tag="p" @size="100">{{capitalize l.label}}</Hds::Text::Body>
+                <span class="dots legend-dot-{{if (eq l.key 'new_clients') 'new_clients' idx}}"></span>
+                <Hds::Text::Body @tag="p" @size="100">{{l.label}}</Hds::Text::Body>
               </div>
             {{/each}}
           </div>
