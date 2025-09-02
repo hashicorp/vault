@@ -328,4 +328,43 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     type: 'userpass',
     value: 'userpass',
   },
+
+  // TODO: enable builtin plugins after confirming with Product
+  //
+  // {
+  //   pluginCategory: 'generic',
+  //   displayName: 'Ad',
+  //   glyph: 'folder',
+  //   isOldEngine: true,
+  //   isOnlyMountable: true,
+  //   mountCategory: ['secret'],
+  //   type: 'ad',
+  // },
+  // {
+  //   pluginCategory: 'cloud',
+  //   displayName: 'MongoDB Atlas',
+  //   glyph: 'mongodb-color',
+  //   isOldEngine: true,
+  //   isOnlyMountable: true,
+  //   mountCategory: ['secret'],
+  //   type: 'mongodbatlas',
+  // },
+  // {
+  //   pluginCategory: 'infra',
+  //   displayName: 'OpenLDAP',
+  //   glyph: 'folder-users',
+  //   isOldEngine: true,
+  //   isOnlyMountable: true,
+  //   mountCategory: ['secret'],
+  //   type: 'openldap',
+  // },
+  // {
+  //   pluginCategory: 'infra',
+  //   displayName: 'Terraform',
+  //   glyph: 'terraform-color',
+  //   isOldEngine: true,
+  //   isOnlyMountable: true,
+  //   mountCategory: ['secret'],
+  //   type: 'terraform',
+  // },
 ];

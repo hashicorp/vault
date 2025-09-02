@@ -13,7 +13,6 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 
 module('Acceptance | secret engine mount settings', function (hooks) {
   setupApplicationTest(hooks);
@@ -31,7 +30,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await visit('/vault/secrets/mounts');
 
     assert.strictEqual(currentURL(), '/vault/secrets/mounts', 'navigates to the mount secret backend page');
-    await click(MOUNT_BACKEND_FORM.mountType(type));
+    await click(GENERAL.cardContainer(type));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
     await click(GENERAL.toggleInput('Default Lease TTL'));
