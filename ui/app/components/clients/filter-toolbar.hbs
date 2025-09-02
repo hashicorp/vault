@@ -4,42 +4,41 @@
 }}
 
 <Hds::SegmentedGroup as |SG|>
-  {{#if @namespaces}}
-    <SG.Dropdown data-test-dropdown={{this.filterTypes.NAMESPACE}} as |D|>
-      <D.ToggleButton @color="secondary" @text="Namespace" />
-      {{#each @namespaces as |namespace|}}
-        <D.Checkmark
-          {{on "click" (fn this.updateFilter this.filterTypes.NAMESPACE namespace D.close)}}
-          @selected={{eq namespace this.namespace_path}}
-          data-test-dropdown-item={{namespace}}
-        >{{namespace}}</D.Checkmark>
-      {{/each}}
-    </SG.Dropdown>
-  {{/if}}
-  {{#if @mountPaths}}
-    <SG.Dropdown data-test-dropdown={{this.filterTypes.MOUNT_PATH}} as |D|>
-      <D.ToggleButton @color="secondary" @text="Mount path" />
-      {{#each @mountPaths as |mountPath|}}
-        <D.Checkmark
-          {{on "click" (fn this.updateFilter this.filterTypes.MOUNT_PATH mountPath D.close)}}
-          @selected={{eq mountPath this.mount_path}}
-          data-test-dropdown-item={{mountPath}}
-        >{{mountPath}}</D.Checkmark>
-      {{/each}}
-    </SG.Dropdown>
-  {{/if}}
-  {{#if @mountTypes}}
-    <SG.Dropdown data-test-dropdown={{this.filterTypes.MOUNT_TYPE}} as |D|>
-      <D.ToggleButton @color="secondary" @text="Mount type" />
-      {{#each @mountTypes as |mountType|}}
-        <D.Checkmark
-          {{on "click" (fn this.updateFilter this.filterTypes.MOUNT_TYPE mountType D.close)}}
-          @selected={{eq mountType this.mount_type}}
-          data-test-dropdown-item={{mountType}}
-        >{{mountType}}</D.Checkmark>
-      {{/each}}
-    </SG.Dropdown>
-  {{/if}}
+  {{#each-in this.dropdownConfig as |filterProperty d|}}
+    {{#let d.label d.dropdownItems d.searchProperty as |label dropdownItems searchProperty|}}
+      <SG.Dropdown data-test-dropdown={{filterProperty}} @onClose={{this.updateSearch searchProperty ""}} as |D|>
+        <D.ToggleButton @color="secondary" @text={{capitalize label}} />
+        <D.Header>
+          <Hds::Form::TextInput::Base
+            type="search"
+            placeholder="Search"
+            id={{searchProperty}}
+            autocomplete="off"
+            @value={{get this searchProperty}}
+            {{on "input" this.handleSearch}}
+          />
+        </D.Header>
+        <D.Separator />
+        {{#let (this.searchDropdown dropdownItems searchProperty) as |matchingItems|}}
+          {{#each matchingItems as |item|}}
+            <D.Checkmark
+              {{! Select dropdown item and set as tracked property to pass back on "Apply filters" }}
+              {{on "click" (fn this.updateFilter filterProperty item D.close)}}
+              @selected={{eq item (get this filterProperty)}}
+              data-test-dropdown-item={{item}}
+            >
+              {{item}}
+            </D.Checkmark>
+          {{else}}
+            <D.Description
+              class="has-top-padding-xs"
+              @text={{this.noItemsMessage (get this searchProperty) (pluralize label)}}
+            />
+          {{/each}}
+        {{/let}}
+      </SG.Dropdown>
+    {{/let}}
+  {{/each-in}}
   <Hds::Button
     @icon="filter"
     @text="Apply filters"

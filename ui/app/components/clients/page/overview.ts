@@ -9,8 +9,8 @@ import { cached, tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { HTMLElementEvent } from 'vault/forms';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { filterTableData, flattenMounts } from 'core/utils/client-count-utils';
 
-import { filterTableData, flattenMounts, type MountClients } from 'core/utils/client-count-utils';
 import type FlagsService from 'vault/services/flags';
 import type RouterService from '@ember/routing/router-service';
 
@@ -21,18 +21,23 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
   @tracked selectedMonth = '';
 
   @cached
-  get clientsByMount() {
+  get byMonthNewClients() {
+    return this.args.activity.byMonth?.map((m) => m?.new_clients) || [];
+  }
+
+  @cached
+  // Supplies data passed to dropdown filters
+  get activityData() {
+    // Find the namespace data for the selected month
+    // If no month is selected the table displays all of the activity for the queried date range
     const namespaceData = this.selectedMonth
-      ? // Find the namespace data for the selected month
-        this.byMonthNewClients.find((m) => m.timestamp === this.selectedMonth)?.namespaces
-      : // If no month is selected the table displays all of the by_namespace activity for the queried date range
-        this.args.activity.byNamespace;
+      ? this.byMonthNewClients.find((m) => m.timestamp === this.selectedMonth)?.namespaces
+      : this.args.activity.byNamespace;
 
     // Get the array of "mounts" data nested in each namespace object and flatten
     return flattenMounts(namespaceData || []);
   }
 
-  // DROPDOWN GETTERS
   @cached
   get months() {
     return this.byMonthNewClients
@@ -40,25 +45,9 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
       .map((m) => ({ timestamp: m.timestamp, display: parseAPITimestamp(m.timestamp, 'MMMM yyyy') }));
   }
 
-  @cached
-  get namespaceLabels() {
-    return this.args.activity.byNamespace.map((n) => n.label);
-  }
-
-  @cached
-  get mountPaths() {
-    return [...new Set(this.clientsByMount.map((m: MountClients) => m.label))];
-  }
-
-  @cached
-  get mountTypes() {
-    return [...new Set(this.clientsByMount.map((m: MountClients) => m.mount_type))];
-  }
-  // end dropdown getters
-
   get tableData() {
-    if (this.clientsByMount?.length) {
-      return filterTableData(this.clientsByMount, this.args.filterQueryParams);
+    if (this.activityData?.length) {
+      return filterTableData(this.activityData, this.args.filterQueryParams);
     }
     return null;
   }

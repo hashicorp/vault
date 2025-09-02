@@ -6,9 +6,7 @@
 <Clients::CountsCard @title="Client counts by path">
   <:subheader>
     <Clients::FilterToolbar
-      @namespaces={{this.namespaceLabels}}
-      @mountPaths={{this.mountPaths}}
-      @mountTypes={{this.mountTypes}}
+      @dataset={{@exportData}}
       @onFilter={{this.handleFilter}}
       @appliedFilters={{@filterQueryParams}}
     />

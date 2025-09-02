@@ -26,6 +26,8 @@ module('Integration | Component | clients/running-total', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    this.flags = this.owner.lookup('service:flags');
+    this.flags.activatedFlags = ['secrets-sync'];
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     clientsHandler(this.server);
     const store = this.owner.lookup('service:store');
@@ -33,20 +35,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
       start_time: { timestamp: START_TIME },
       end_time: { timestamp: getUnixTime(timestamp.now()) },
     };
-    const activity = await store.queryRecord('clients/activity', activityQuery);
-    this.byMonthNewClients = activity.byMonth.map((d) => d.new_clients);
-
-    this.totalUsageCounts = activity.total;
-    this.isSecretsSyncActivated = true;
-    this.isHistoricalMonth = false;
+    this.activity = await store.queryRecord('clients/activity', activityQuery);
+    this.byMonthNewClients = this.activity.byMonth.map((d) => d.new_clients);
 
     this.renderComponent = async () => {
       await render(hbs`
       <Clients::RunningTotal
-        @isSecretsSyncActivated={{this.isSecretsSyncActivated}}
         @byMonthNewClients={{this.byMonthNewClients}}
-        @runningTotals={{this.totalUsageCounts}}
-        @isHistoricalMonth={{this.isHistoricalMonth}}
+        @runningTotals={{this.activity.total}}
       />
     `);
     };
@@ -71,11 +67,11 @@ module('Integration | Component | clients/running-total', function (hooks) {
     assert.strictEqual(color, expectedColor, `actual color: ${color}, expected color: ${expectedColor}`);
 
     const expectedValues = {
-      'New client total and type distribution': formatNumber([this.totalUsageCounts.clients]),
-      Entity: formatNumber([this.totalUsageCounts.entity_clients]),
-      'Non-entity': formatNumber([this.totalUsageCounts.non_entity_clients]),
-      ACME: formatNumber([this.totalUsageCounts.acme_clients]),
-      'Secret sync': formatNumber([this.totalUsageCounts.secret_syncs]),
+      'New client total and type distribution': formatNumber([this.activity.total.clients]),
+      Entity: formatNumber([this.activity.total.entity_clients]),
+      'Non-entity': formatNumber([this.activity.total.non_entity_clients]),
+      ACME: formatNumber([this.activity.total.acme_clients]),
+      'Secret sync': formatNumber([this.activity.total.secret_syncs]),
     };
     for (const label in expectedValues) {
       assert
@@ -136,21 +132,18 @@ module('Integration | Component | clients/running-total', function (hooks) {
       .exists({ count: months * barsPerMonth }, `renders ${barsPerMonth} bars per month`);
   });
 
-  test('it renders with single historical month data', async function (assert) {
-    const singleMonthNew = this.byMonthNewClients[this.byMonthNewClients.length - 1];
-    this.byMonthNewClients = [singleMonthNew];
-    this.isHistoricalMonth = true;
+  test('it renders when no monthly breakdown is available', async function (assert) {
+    this.byMonthNewClients = [];
     await this.renderComponent();
     const expectedStats = {
-      'New clients': formatNumber([singleMonthNew.clients]),
-      Entity: formatNumber([singleMonthNew.entity_clients]),
-      'Non-entity': formatNumber([singleMonthNew.non_entity_clients]),
-      ACME: formatNumber([singleMonthNew.acme_clients]),
-      'Secret sync': formatNumber([singleMonthNew.secret_syncs]),
+      Entity: formatNumber([this.activity.total.entity_clients]),
+      'Non-entity': formatNumber([this.activity.total.non_entity_clients]),
+      ACME: formatNumber([this.activity.total.acme_clients]),
+      'Secret sync': formatNumber([this.activity.total.secret_syncs]),
     };
     for (const label in expectedStats) {
       assert
-        .dom(`[data-test-new] ${CLIENT_COUNT.statTextValue(label)}`)
+        .dom(CLIENT_COUNT.statTextValue(label))
         .hasText(
           `${expectedStats[label]}`,
           `stat label: ${label} renders single month new clients: ${expectedStats[label]}`
@@ -161,7 +154,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
   });
 
   test('it hides secret sync totals when feature is not activated', async function (assert) {
-    this.isSecretsSyncActivated = false;
+    this.flags.activatedFlags = [];
     // reset secret sync clients to 0
     this.byMonthNewClients = this.byMonthNewClients.map((obj) => ({ ...obj, secret_syncs: 0 }));
 

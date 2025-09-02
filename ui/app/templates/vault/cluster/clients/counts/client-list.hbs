@@ -3,12 +3,16 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Clients::Page::ClientList
-  @activity={{this.model.activity}}
-  @onFilterChange={{this.countsController.updateQueryParams}}
-  @filterQueryParams={{hash
-    namespace_path=this.countsController.namespace_path
-    mount_path=this.countsController.mount_path
-    mount_type=this.countsController.mount_type
-  }}
-/>
+{{#if this.model.exportError}}
+  <Clients::Counts::Error @error={{this.model.exportError}} />
+{{else}}
+  <Clients::Page::ClientList
+    @exportData={{this.model.exportData}}
+    @onFilterChange={{this.countsController.updateQueryParams}}
+    @filterQueryParams={{hash
+      namespace_path=this.countsController.namespace_path
+      mount_path=this.countsController.mount_path
+      mount_type=this.countsController.mount_type
+    }}
+  />
+{{/if}}

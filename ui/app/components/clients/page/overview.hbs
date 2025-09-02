@@ -3,13 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Clients::RunningTotal
-  @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
-  @byMonthNewClients={{this.byMonthNewClients}}
-  @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
-  @isCurrentMonth={{this.isCurrentMonth}}
-  @runningTotals={{@activity.total}}
-/>
+<Clients::RunningTotal @byMonthNewClients={{this.byMonthNewClients}} @runningTotals={{@activity.total}} />
 
 {{! by_namespace is an empty array when there is no client count activity data }}
 {{#if @activity.byNamespace}}
@@ -41,9 +35,7 @@
             to view the clients attributed by path.
           </Hds::Text::Body>
           <Clients::FilterToolbar
-            @namespaces={{this.namespaceLabels}}
-            @mountPaths={{this.mountPaths}}
-            @mountTypes={{this.mountTypes}}
+            @dataset={{this.activityData}}
             @onFilter={{this.handleFilter}}
             @appliedFilters={{@filterQueryParams}}
           />

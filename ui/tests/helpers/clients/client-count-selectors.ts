@@ -57,6 +57,7 @@ export const FILTERS = {
   dropdown: (name: string) => `[data-test-dropdown="${name}"]`,
   dropdownToggle: (name: string) => `[data-test-dropdown="${name}"] button`,
   dropdownItem: (name: string) => `[data-test-dropdown-item="${name}"]`,
+  dropdownSearch: (name: string) => `[data-test-dropdown="${name}"] input`,
   tag: (filter?: string, value?: string) =>
     filter && value ? `[data-test-filter-tag="${filter} ${value}"]` : '[data-test-filter-tag]',
   clearTag: (value: string) => `[aria-label="Dismiss ${value}"]`,
