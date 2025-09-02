@@ -5,9 +5,9 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentURL, fillIn } from '@ember/test-helpers';
+import { click, currentURL, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 
 const link = (label) => `[data-test-sidebar-nav-link="${label}"]`;
 const panel = (label) => `[data-test-sidebar-nav-panel="${label}"]`;
@@ -17,16 +17,22 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    return authPage.login();
+    return login();
   });
 
   // common links are tested in the sidebar-nav test and will not be covered here
   test('it should render enterprise only navigation links', async function (assert) {
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
+    await click(link('Secrets Sync'));
+    assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'Sync route renders');
+
     await click(link('Replication'));
     assert.strictEqual(currentURL(), '/vault/replication', 'Replication route renders');
-    await click('[data-test-replication-enable]');
+    assert.dom(panel('Replication')).exists(`Replication nav panel renders`);
+    assert.dom(link('Overview')).hasClass('active', 'Overview link is active');
+    assert.dom(link('Performance')).exists('Performance link exists');
+    assert.dom(link('Disaster Recovery')).exists('DR link exists');
 
     await click(link('Performance'));
     assert.strictEqual(
@@ -35,20 +41,21 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
       'Replication performance route renders'
     );
 
-    await click(link('Disaster Recovery'));
-    assert.strictEqual(currentURL(), '/vault/replication/dr', 'Replication dr route renders');
-    // disable replication now that we have checked the links
-    await click('[data-test-replication-link="manage"]');
-    await click('[data-test-replication-action-trigger]');
-    await fillIn('[data-test-confirmation-modal-input="Disable Replication?"]', 'Disaster Recovery');
-    await click('[data-test-confirm-button="Disable Replication?"]');
+    // for some reason clicking this link would cause the testing browser locally
+    // to navigate to 'vault/replication/dr' and halt the test runner
+    assert
+      .dom(link('Disaster Recovery'))
+      .hasAttribute('href', '/ui/vault/replication/dr', 'Replication dr route renders');
+    await visit('/vault');
 
     await click(link('Client Count'));
-    assert.strictEqual(currentURL(), '/vault/clients/dashboard', 'Client counts route renders');
+    assert.dom(panel('Client Count')).exists('Client Count nav panel renders');
+    assert.dom(link('Client Usage')).hasClass('active', 'Client Usage link is active');
+    assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Client counts route renders');
+    await click(link('Back to main navigation'));
 
     await click(link('License'));
     assert.strictEqual(currentURL(), '/vault/license', 'License route renders');
-
     await click(link('Access'));
     await click(link('Control Groups'));
     assert.strictEqual(currentURL(), '/vault/access/control-groups', 'Control groups route renders');

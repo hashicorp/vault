@@ -16,9 +16,13 @@ export default class NamedPathAdapter extends ApplicationAdapter {
   _saveRecord(store, { modelName }, snapshot) {
     // since the response is empty return the serialized data rather than nothing
     const data = store.serializerFor(modelName).serialize(snapshot);
+    const primaryKey = store.serializerFor(modelName).primaryKey;
     return this.ajax(this.urlForUpdateRecord(snapshot.attr('name'), modelName, snapshot), this.saveMethod, {
       data,
-    }).then(() => data);
+    }).then(() => {
+      data[primaryKey] = snapshot.attr(primaryKey);
+      return data;
+    });
   }
 
   // create does not return response similar to PUT request
@@ -26,7 +30,7 @@ export default class NamedPathAdapter extends ApplicationAdapter {
     const [store, { modelName }, snapshot] = arguments;
     const name = snapshot.attr('name');
     // throw error if user attempts to create a record with same name, otherwise POST request silently overrides (updates) the existing model
-    if (store.hasRecordForId(modelName, name)) {
+    if (store.peekRecord({ type: modelName, id: name }) !== null) {
       throw new Error(`A record already exists with the name: ${name}`);
     } else {
       return this._saveRecord(...arguments);

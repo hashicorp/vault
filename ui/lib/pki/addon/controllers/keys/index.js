@@ -4,7 +4,7 @@
  */
 
 import Controller from '@ember/controller';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 
 export default class PkiKeysIndexController extends Controller {
   queryParams = ['page'];

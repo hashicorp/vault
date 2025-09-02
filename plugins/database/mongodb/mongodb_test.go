@@ -27,7 +27,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-const mongoAdminRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
+const (
+	mongoAdminRole       = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
+	mongoTestDBAdminRole = `{ "db": "test", "roles": [ { "role": "readWrite" } ] }`
+)
 
 func TestMongoDB_Initialize(t *testing.T) {
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
@@ -119,12 +122,33 @@ func TestNewUser_usernameTemplate(t *testing.T) {
 
 			expectedUsernameRegex: "^[A-Z0-9]{2}_[0-9]{10}_TESTROLENAMEWITHMANYCHARACTERS_TOKEN$",
 		},
+		"admin in test database username template": {
+			usernameTemplate: "",
+
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "token",
+					RoleName:    "testrolenamewithmanycharacters",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{mongoTestDBAdminRole},
+				},
+				Password:   "98yq3thgnakjsfhjkl",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: "^v-token-testrolenamewit-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 			defer cleanup()
+
+			if name == "admin in test database username template" {
+				connURL = connURL + "/test?authSource=test"
+			}
 
 			db := new()
 			defer dbtesting.AssertClose(t, db)
@@ -290,6 +314,40 @@ func TestMongoDB_UpdateUser_Password(t *testing.T) {
 	assertCredsExist(t, dbUser, newPassword, connURL)
 }
 
+func TestMongoDB_RotateRoot_NonAdminDB(t *testing.T) {
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	connURL = connURL + "/test?authSource=test"
+	db := new()
+	defer dbtesting.AssertClose(t, db)
+
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+		},
+		VerifyConnection: true,
+	}
+	dbtesting.AssertInitialize(t, db, initReq)
+
+	dbUser := "testmongouser"
+	startingPassword := "password"
+	createDBUser(t, connURL, "test", dbUser, startingPassword)
+
+	newPassword := "myreallysecurecredentials"
+
+	updateReq := dbplugin.UpdateUserRequest{
+		Username: dbUser,
+		Password: &dbplugin.ChangePassword{
+			NewPassword: newPassword,
+		},
+	}
+	dbtesting.AssertUpdateUser(t, db, updateReq)
+
+	assertCredsExist(t, dbUser, newPassword, connURL)
+}
+
+// TestGetTLS verify the different options of the MongoDB client created based on the multiple parameters given
 func TestGetTLSAuth(t *testing.T) {
 	ca := certhelpers.NewCert(t,
 		certhelpers.CommonName("certificate authority"),
@@ -303,6 +361,7 @@ func TestGetTLSAuth(t *testing.T) {
 
 	type testCase struct {
 		username   string
+		password   string
 		tlsCAData  []byte
 		tlsKeyData []byte
 
@@ -354,12 +413,31 @@ func TestGetTLSAuth(t *testing.T) {
 				}),
 			expectErr: false,
 		},
+		"good key + username/password": {
+			username:   "unittest",
+			password:   "unittest",
+			tlsKeyData: cert.CombinedPEM(),
+
+			expectOpts: options.Client().
+				SetTLSConfig(
+					&tls.Config{
+						Certificates: []tls.Certificate{cert.TLSCert},
+					},
+				).
+				SetAuth(options.Credential{
+					AuthMechanism: "SCRAM-SHA-256",
+					Username:      "unittest",
+					Password:      "unittest",
+				}),
+			expectErr: false,
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			c := new()
 			c.Username = test.username
+			c.Password = test.password
 			c.TLSCAData = test.tlsCAData
 			c.TLSCertificateKeyData = test.tlsKeyData
 

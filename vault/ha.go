@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/metricregistry"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
@@ -45,7 +46,29 @@ const (
 	// leaderPrefixCleanDelay is how long to wait between deletions
 	// of orphaned leader keys, to prevent slamming the backend.
 	leaderPrefixCleanDelay = 200 * time.Millisecond
+
+	haAllowedMissedHeartbeats = 2
 )
+
+func init() {
+	// Register metrics that we should always consistently report whether or not
+	// they've been hit recently. The help texts are taken verbatim from our
+	// telemetry reference docs so if updated should probably stay in sync.
+	metricregistry.RegisterSummaries([]metricregistry.SummaryDefinition{
+		{
+			Name: []string{"vault", "core", "step_down"},
+			Help: "Time required to step down cluster leadership",
+		},
+		{
+			Name: []string{"vault", "core", "leadership_setup_failed"},
+			Help: "Time taken by the most recent leadership setup failure",
+		},
+		{
+			Name: []string{"vault", "core", "leadership_lost"},
+			Help: "Total time that a high-availability cluster node last maintained leadership",
+		},
+	})
+}
 
 var (
 	addEnterpriseHaActors func(*Core, *run.Group) chan func()            = addEnterpriseHaActorsNoop
@@ -109,7 +132,7 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	}
 
 	if rb := c.getRaftBackend(); rb != nil {
-		leader.UpgradeVersion = rb.EffectiveVersion()
+		leader.UpgradeVersion = rb.UpgradeVersion()
 		leader.RedundancyZone = rb.RedundancyZone()
 	}
 
@@ -118,13 +141,16 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	for _, peerNode := range c.GetHAPeerNodesCached() {
 		lastEcho := peerNode.LastEcho
 		nodes = append(nodes, HAStatusNode{
-			Hostname:       peerNode.Hostname,
-			APIAddress:     peerNode.APIAddress,
-			ClusterAddress: peerNode.ClusterAddress,
-			LastEcho:       &lastEcho,
-			Version:        peerNode.Version,
-			UpgradeVersion: peerNode.UpgradeVersion,
-			RedundancyZone: peerNode.RedundancyZone,
+			Hostname:                    peerNode.Hostname,
+			APIAddress:                  peerNode.APIAddress,
+			ClusterAddress:              peerNode.ClusterAddress,
+			LastEcho:                    &lastEcho,
+			Version:                     peerNode.Version,
+			UpgradeVersion:              peerNode.UpgradeVersion,
+			RedundancyZone:              peerNode.RedundancyZone,
+			EchoDurationMillis:          peerNode.EchoDuration.Milliseconds(),
+			ClockSkewMillis:             peerNode.ClockSkewMillis,
+			ReplicationPrimaryCanaryAge: peerNode.ReplicationPrimaryCanaryAge,
 		})
 	}
 
@@ -150,30 +176,41 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	if c.Sealed() {
 		return false, "", "", consts.ErrSealed
 	}
-
 	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
+	return c.LeaderLocked()
+}
+
+func (c *Core) LeaderLocked() (isLeader bool, leaderAddr, clusterAddr string, err error) {
+	// Check if HA enabled. We don't need the lock for this check as it's set
+	// on startup and never modified
+	if c.ha == nil {
+		return false, "", "", ErrHANotEnabled
+	}
+
+	// Check if sealed
+	if c.Sealed() {
+		return false, "", "", consts.ErrSealed
+	}
 
 	// Check if we are the leader
 	if !c.standby {
-		c.stateLock.RUnlock()
 		return true, c.redirectAddr, c.ClusterAddr(), nil
 	}
 
 	// Initialize a lock
 	lock, err := c.ha.LockWith(CoreLockPath, "read")
 	if err != nil {
-		c.stateLock.RUnlock()
 		return false, "", "", err
 	}
 
 	// Read the value
 	held, leaderUUID, err := lock.Value()
 	if err != nil {
-		c.stateLock.RUnlock()
 		return false, "", "", err
 	}
 	if !held {
-		c.stateLock.RUnlock()
 		return false, "", "", nil
 	}
 
@@ -188,13 +225,11 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
 	if leaderUUID == localLeaderUUID && localRedirectAddr != "" {
-		c.stateLock.RUnlock()
 		return false, localRedirectAddr, localClusterAddr, nil
 	}
 
 	c.logger.Trace("found new active node information, refreshing")
 
-	defer c.stateLock.RUnlock()
 	c.leaderParamsLock.Lock()
 	defer c.leaderParamsLock.Unlock()
 
@@ -336,7 +371,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 		Auth:    auth,
 		Request: req,
 	}
-	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+	if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 		c.logger.Error("failed to audit request", "request_path", req.Path, "error", err)
 		return errors.New("failed to audit request, cannot continue")
 	}
@@ -569,6 +604,20 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		c.activeContext = activeCtx
 		c.activeContextCancelFunc.Store(activeCtxCancel)
 
+		// Trigger a seal reload if necessary. A seal reload is necessary when a node
+		// becomes the leader since its seal generation information may be out of
+		// date (as is the case, for example, when a new node joins the cluster).
+		if err := c.TriggerSealReload(c.activeContext); err != nil {
+			c.logger.Error("seal configuration reload error", "error", err)
+			c.barrier.Seal()
+			c.logger.Warn("vault is sealed")
+			c.heldHALock = nil
+			lock.Unlock()
+			close(continueCh)
+			c.stateLock.Unlock()
+			return
+		}
+
 		// Perform seal migration
 		if err := c.migrateSeal(c.activeContext); err != nil {
 			c.logger.Error("seal migration error", "error", err)
@@ -652,6 +701,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		err = c.postUnseal(activeCtx, activeCtxCancel, standardUnsealStrategy{})
 		if err == nil {
 			c.standby = false
+			c.activeTime = time.Now()
 			c.leaderUUID = uuid
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 		}
@@ -704,6 +754,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 			// Mark as standby
 			c.standby = true
+			c.activeTime = time.Time{}
 			c.leaderUUID = ""
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 
@@ -824,7 +875,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 	clusterAddr := ""
 	for {
-		timer := time.NewTimer(leaderCheckInterval)
+		timer := time.NewTimer(c.periodicLeaderRefreshInterval)
 		select {
 		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
@@ -1173,4 +1224,38 @@ func (c *Core) SetNeverBecomeActive(on bool) {
 	} else {
 		atomic.StoreUint32(c.neverBecomeActive, 0)
 	}
+}
+
+func (c *Core) getRemovableHABackend() physical.RemovableNodeHABackend {
+	var haBackend physical.RemovableNodeHABackend
+	if removableHA, ok := c.ha.(physical.RemovableNodeHABackend); ok {
+		haBackend = removableHA
+	}
+
+	if removableHA, ok := c.underlyingPhysical.(physical.RemovableNodeHABackend); ok {
+		haBackend = removableHA
+	}
+
+	return haBackend
+}
+
+// GetHAHeartbeatHealth returns whether a node's last successful heartbeat was
+// more than 2 intervals ago. If the node's request forwarding clients were
+// cleared (due to the node being sealed or finding a new leader), or the node
+// is uninitialized, healthy will be false.
+func (c *Core) GetHAHeartbeatHealth() (healthy bool, sinceLastHeartbeat *time.Duration) {
+	heartbeat := c.rpcLastSuccessfulHeartbeat.Load()
+	if heartbeat == nil {
+		return false, nil
+	}
+	lastHeartbeat := heartbeat.(time.Time)
+	if lastHeartbeat.IsZero() {
+		return false, nil
+	}
+	diff := time.Now().Sub(lastHeartbeat)
+	heartbeatInterval := c.clusterHeartbeatInterval
+	if heartbeatInterval <= 0 {
+		heartbeatInterval = 5 * time.Second
+	}
+	return diff < heartbeatInterval*haAllowedMissedHeartbeats, &diff
 }

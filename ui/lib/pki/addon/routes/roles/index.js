@@ -4,14 +4,15 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
 import { getCliMessage } from 'pki/routes/overview';
 @withConfig()
 export default class PkiRolesIndexRoute extends Route {
-  @service store;
+  @service store; // used by @withConfig decorator
   @service secretMountPath;
+  @service pagination;
 
   queryParams = {
     page: {
@@ -22,7 +23,7 @@ export default class PkiRolesIndexRoute extends Route {
   async fetchRoles(params) {
     try {
       const page = Number(params.page) || 1;
-      return await this.store.lazyPaginatedQuery('pki/role', {
+      return await this.pagination.lazyPaginatedQuery('pki/role', {
         backend: this.secretMountPath.currentPath,
         responsePath: 'data.keys',
         page,
@@ -38,7 +39,7 @@ export default class PkiRolesIndexRoute extends Route {
 
   model(params) {
     return hash({
-      hasConfig: this.shouldPromptConfig,
+      hasConfig: this.pkiMountHasConfig,
       roles: this.fetchRoles(params),
       parentModel: this.modelFor('roles'),
       pageFilter: params.pageFilter,

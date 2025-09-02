@@ -36,6 +36,11 @@ func pathSignIntermediate(b *backend) *framework.Path {
 
 func buildPathIssuerSignIntermediateRaw(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	fields := addIssuerRefField(map[string]*framework.FieldSchema{})
+	fields["enforce_leaf_not_after_behavior"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Default:     false,
+		Description: "Do not truncate the NotAfter field, use the issuer's configured leaf_not_after_behavior",
+	}
 	path := &framework.Path{
 		Pattern:      pattern,
 		DisplayAttrs: displayAttrs,
@@ -105,7 +110,7 @@ certs signed by this path; for instance,
 the non-repudiation flag;
 3) Extensions requested in the CSR will be copied
 into the issued certificate.`,
-	}
+	} // TODO: Re-Write This (!)
 
 	fields["signature_bits"] = &framework.FieldSchema{
 		Type:    framework.TypeInt,
@@ -143,6 +148,8 @@ in the above RFC section.`,
 		Description: `Whether or not to use PSS signatures when using a
 RSA key-type issuer. Defaults to false.`,
 	}
+
+	fields = addCACertKeyUsage(fields)
 
 	return path
 }

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model from '@ember-data/model';
@@ -15,4 +15,5 @@ export default class MountConfigModel extends Model {
   allowedResponseHeaders: string;
   tokenType: string;
   allowedManagedKeys: string;
+  identityTokenKey: string;
 }

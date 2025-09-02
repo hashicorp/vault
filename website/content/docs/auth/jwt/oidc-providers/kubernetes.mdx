@@ -1,10 +1,14 @@
 ---
 layout: docs
-page_title: OIDC Provider Setup - Auth Methods - Kubernetes
-description: OIDC provider configuration for Kubernetes
+page_title: Use Kubernetes for OIDC authentication
+description: >-
+  Configure Vault to use Kubernetes as an OIDC provider.
 ---
 
-## Kubernetes
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# Use Kubernetes for OIDC authentication
 
 Kubernetes can function as an OIDC provider such that Vault can validate its
 service account tokens using JWT/OIDC auth.
@@ -16,7 +20,7 @@ still be considered valid by Vault until their expiry time. To mitigate this
 risk, use short TTLs for service account tokens or use
 [Kubernetes auth](/vault/docs/auth/kubernetes) which _does_ use the `TokenReview` API.
 
-### Using service account issuer discovery
+## Use service account issuer discovery
 
 When using service account issuer discovery, you only need to provide the JWT
 auth mount with an OIDC discovery URL, and sometimes a TLS certificate authority
@@ -75,11 +79,16 @@ Configuration steps:
 
 [k8s-sa-issuer-discovery]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-issuer-discovery
 
-### Using JWT validation public keys
+## Use JWT validation public keys
 
 This method can be useful if Kubernetes' API is not reachable from Vault or if
 you would like a single JWT auth mount to service multiple Kubernetes clusters
 by chaining their public signing keys.
+
+<Note title="Rotation of the JWT Signing Key in Kubernetes">
+  Should the JWT Signing Key used by Kubernetes be rotated,
+  this process should be repeated with the new key.
+</Note>
 
 Kubernetes cluster requirements:
 
@@ -119,7 +128,7 @@ Configuration steps:
 
 [jwk-to-pem]: https://8gwifi.org/jwkconvertfunctions.jsp
 
-### Creating a role and logging in
+## Create a role and logging in
 
 Once your JWT auth mount is configured, you're ready to configure a role and
 log in. The following assumes you use the projected service account token
@@ -173,7 +182,7 @@ below if you'd like to control the audience or TTL.
       "${VAULT_ADDR}/v1/auth/jwt/login"
    ```
 
-### Specifying TTL and audience
+## Specify TTL and audience
 
 If you would like to specify a custom TTL or audience for service account tokens,
 the following pod spec illustrates a volume mount that overrides the default

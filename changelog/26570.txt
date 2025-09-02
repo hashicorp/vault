@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Add metric (vault.agent.authenticated) that is set to 1 when vault agent has a valid token and zero if it does not.
+```

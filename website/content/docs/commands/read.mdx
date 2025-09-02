@@ -7,6 +7,9 @@ description: |-
   more.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # read
 
 The `read` command reads data from Vault at the given path (wrapper command for
@@ -29,7 +32,7 @@ $ vault read aws/creds/my-role
 
 ### API versus CLI
 
-Assuming that you have K/V version 2 (`kv-v2`) secrets engine enabled at
+Assuming that you have KV version 2 (`kv-v2`) secrets engine enabled at
 `secret/`, the following command reads secrets at the `secret/data/customers`
 API path:
 
@@ -44,7 +47,7 @@ $ curl --request GET --header "X-Vault-Token: $VAULT_TOKEN" \
     $VAULT_ADDR/v1/secret/data/customers
 ```
 
-Since K/V secrets engine is a commonly used feature, Vault CLI provides the
+Since KV secrets engine is a commonly used feature, Vault CLI provides the
 [`kv`](/vault/docs/commands/kv) command. Read secrets from the `secret/data/customers`
 path using the `kv` CLI command:
 
@@ -55,13 +58,17 @@ $ vault kv get -mount=secret customers
 -> **Comparison:** All three commands retrieve the same data, but display the
 output in a different format. By default, `vault read` prints output in
 key-value format. The `curl` command prints the response in JSON. Since the
-`kv` command is designed to handle operations associated with K/V secrets
+`kv` command is designed to handle operations associated with KV secrets
 engine, it prints the output in more structured format that is easy to read.
 
 ## Usage
 
 The following flags are available in addition to the [standard set of
 flags](/vault/docs/commands) included on all commands.
+
+### Command options
+
+- `snapshot-id` `(string: "")` - Specifies a loaded snapshot ID to read the data from.
 
 ### Output options
 

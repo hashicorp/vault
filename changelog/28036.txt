@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update the client count dashboard to use API namespace filtering and other UX improvements
+```

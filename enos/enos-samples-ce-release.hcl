@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 sample "release_ce_linux_amd64_deb" {
   attributes = global.sample_attributes
@@ -41,12 +41,6 @@ sample "release_ce_linux_amd64_deb" {
       artifact_type   = ["package"]
       distro          = ["ubuntu"]
       edition         = ["ce"]
-
-      exclude {
-        // Don't test from these versions in the release pipeline because of known issues
-        // in those older versions.
-        initial_version = ["1.8.12", "1.9.10", "1.10.11"]
-      }
     }
   }
 }
@@ -91,12 +85,6 @@ sample "release_ce_linux_arm64_deb" {
       artifact_type   = ["package"]
       distro          = ["ubuntu"]
       edition         = ["ce"]
-
-      exclude {
-        // Don't test from these versions in the release pipeline because of known issues
-        // in those older versions.
-        initial_version = ["1.8.12", "1.9.10", "1.10.11"]
-      }
     }
   }
 }
@@ -109,7 +97,7 @@ sample "release_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -119,7 +107,7 @@ sample "release_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -129,7 +117,7 @@ sample "release_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -139,14 +127,8 @@ sample "release_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "rhel", "sles"]
       edition         = ["ce"]
-
-      exclude {
-        // Don't test from these versions in the release pipeline because of known issues
-        // in those older versions.
-        initial_version = ["1.8.12", "1.9.10", "1.10.11"]
-      }
     }
   }
 }
@@ -159,7 +141,7 @@ sample "release_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -169,7 +151,7 @@ sample "release_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -179,7 +161,7 @@ sample "release_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -189,14 +171,8 @@ sample "release_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "leap", "rhel", "sles"]
       edition         = ["ce"]
-
-      exclude {
-        // Don't test from these versions in the release pipeline because of known issues
-        // in those older versions.
-        initial_version = ["1.8.12", "1.9.10", "1.10.11"]
-      }
     }
   }
 }
@@ -209,6 +185,7 @@ sample "release_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["artifactory"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -218,6 +195,7 @@ sample "release_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["artifactory"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -227,6 +205,7 @@ sample "release_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["artifactory"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -236,13 +215,8 @@ sample "release_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["artifactory"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
-
-      exclude {
-        // Don't test from these versions in the release pipeline because of known issues
-        // in those older versions.
-        initial_version = ["1.8.12", "1.9.10", "1.10.11"]
-      }
     }
   }
 }
@@ -255,6 +229,7 @@ sample "release_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["bundle"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -264,6 +239,7 @@ sample "release_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["bundle"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -273,6 +249,7 @@ sample "release_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["bundle"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -282,13 +259,8 @@ sample "release_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["bundle"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
-
-      exclude {
-        // Don't test from these versions in the release pipeline because of known issues
-        // in those older versions.
-        initial_version = ["1.8.12", "1.9.10", "1.10.11"]
-      }
     }
   }
 }

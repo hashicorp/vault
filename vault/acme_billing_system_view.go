@@ -12,9 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // See comment in command/format.go
@@ -137,7 +136,7 @@ func (a *acmeBillingImpl) CreateActivityCountEventForIdentifiers(ctx context.Con
 		return nil
 	}
 	activityLog.logger.Debug(fmt.Sprintf("Handling ACME client count event for [%v] -> %v", identifiers, clientID))
-	activityLog.AddActivityToFragment(clientID, a.entry.NamespaceID, time.Now().Unix(), ACMEActivityType, a.entry.Accessor)
+	activityLog.AddActivityToFragment(clientID, a.entry.NamespaceID, time.Now().Unix(), ACMEActivityType, a.entry.Accessor, time.Now().Unix())
 
 	return nil
 }

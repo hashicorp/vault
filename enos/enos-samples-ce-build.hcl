@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 sample "build_ce_linux_amd64_deb" {
   attributes = global.sample_attributes
@@ -41,12 +41,6 @@ sample "build_ce_linux_amd64_deb" {
       artifact_type   = ["package"]
       distro          = ["ubuntu"]
       edition         = ["ce"]
-
-      exclude {
-        // Don't test from these versions in the build pipeline because of known issues
-        // in those older versions.
-        initial_version = ["1.8.12", "1.9.10", "1.10.11"]
-      }
     }
   }
 }
@@ -91,12 +85,6 @@ sample "build_ce_linux_arm64_deb" {
       artifact_type   = ["package"]
       distro          = ["ubuntu"]
       edition         = ["ce"]
-
-      exclude {
-        // Don't test from these versions in the build pipeline because of known issues
-        // in those older versions.
-        initial_version = ["1.8.12", "1.9.10", "1.10.11"]
-      }
     }
   }
 }
@@ -109,7 +97,7 @@ sample "build_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -119,7 +107,7 @@ sample "build_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -129,7 +117,7 @@ sample "build_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -139,14 +127,8 @@ sample "build_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "rhel", "sles"]
       edition         = ["ce"]
-
-      exclude {
-        // Don't test from these versions in the build pipeline because of known issues
-        // in those older versions.
-        initial_version = ["1.8.12", "1.9.10", "1.10.11"]
-      }
     }
   }
 }
@@ -159,7 +141,7 @@ sample "build_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -169,7 +151,7 @@ sample "build_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -179,7 +161,7 @@ sample "build_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -189,7 +171,7 @@ sample "build_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn", "leap", "rhel", "sles"]
       edition         = ["ce"]
 
       exclude {
@@ -209,6 +191,7 @@ sample "build_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["crt"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -218,6 +201,7 @@ sample "build_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["crt"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -227,6 +211,7 @@ sample "build_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["crt"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -236,13 +221,8 @@ sample "build_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["crt"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
-
-      exclude {
-        // Don't test from these versions in the build pipeline because of known issues
-        // in those older versions.
-        initial_version = ["1.8.12", "1.9.10", "1.10.11"]
-      }
     }
   }
 }
@@ -255,6 +235,7 @@ sample "build_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["bundle"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -264,6 +245,7 @@ sample "build_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["bundle"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -273,6 +255,7 @@ sample "build_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["bundle"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -282,13 +265,8 @@ sample "build_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["bundle"]
+      distro          = ["amzn", "ubuntu"]
       edition         = ["ce"]
-
-      exclude {
-        // Don't test from these versions in the build pipeline because of known issues
-        // in those older versions.
-        initial_version = ["1.8.12", "1.9.10", "1.10.11"]
-      }
     }
   }
 }

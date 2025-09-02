@@ -8,8 +8,8 @@ import Route from '@ember/routing/route';
 import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
-import type Model from '@ember-data/model';
-import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
+import type MountConfigModel from 'vault/models/mount-config';
+import type AdapterError from '@ember-data/adapter/error';
 
 /**
  * for use in routes that need to be aware of the config for a secrets engine
@@ -27,20 +27,23 @@ export function withConfig(modelName: string) {
   return function <RouteClass extends new (...args: any[]) => BaseRoute>(SuperClass: RouteClass) {
     if (!Object.prototype.isPrototypeOf.call(Route, SuperClass)) {
       // eslint-disable-next-line
-      console.error(
+      console.debug(
         'withConfig decorator must be used on an instance of Ember Route class. Decorator not applied to returned class'
       );
       return SuperClass;
     }
 
     return class FetchSecretsEngineConfig extends SuperClass {
-      configModel: Model | null = null;
+      configModel: MountConfigModel | null = null;
       configError: AdapterError | null = null;
       promptConfig = false;
 
       async beforeModel(transition: Transition) {
         super.beforeModel(transition);
-
+        if (!this.secretMountPath) {
+          // eslint-disable-next-line
+          console.debug('secretMountPath service is required for withConfig decorator. Add it to the route');
+        }
         const backend = this.secretMountPath.currentPath;
         // check the store for record first
         this.configModel = this.store.peekRecord(modelName, backend);

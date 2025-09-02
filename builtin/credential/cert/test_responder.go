@@ -19,7 +19,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -168,7 +168,7 @@ func (rs *Responder) ServeHTTP(response http.ResponseWriter, request *http.Reque
 			return
 		}
 	case "POST":
-		requestBody, err = ioutil.ReadAll(request.Body)
+		requestBody, err = io.ReadAll(request.Body)
 		if err != nil {
 			rs.log.Log("Problem reading body of POST", err)
 			response.WriteHeader(http.StatusBadRequest)

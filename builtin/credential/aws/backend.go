@@ -199,6 +199,10 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 		InitializeFunc: b.initialize,
 		BackendType:    logical.TypeCredential,
 		Clean:          b.cleanup,
+		RotateCredential: func(ctx context.Context, request *logical.Request) error {
+			_, err := b.rotateRoot(ctx, request)
+			return err
+		},
 	}
 
 	b.partitionToRegionMap = generatePartitionToRegionMap()

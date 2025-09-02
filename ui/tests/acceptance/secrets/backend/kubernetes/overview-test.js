@@ -7,20 +7,19 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import kubernetesScenario from 'vault/mirage/scenarios/kubernetes';
-import ENV from 'vault/config/environment';
-import authPage from 'vault/tests/pages/auth';
+import kubernetesHandlers from 'vault/mirage/handlers/kubernetes';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { visit, click, currentRouteName } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
-import { SELECTORS } from 'vault/tests/helpers/kubernetes/overview';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { KUBERNETES_OVERVIEW } from 'vault/tests/helpers/kubernetes/kubernetes-selectors';
 
 module('Acceptance | kubernetes | overview', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'kubernetes';
-  });
   hooks.beforeEach(function () {
+    kubernetesHandlers(this.server);
     this.createScenario = (shouldConfigureRoles = true) =>
       shouldConfigureRoles ? kubernetesScenario(this.server) : kubernetesScenario(this.server, false);
 
@@ -30,16 +29,13 @@ module('Acceptance | kubernetes | overview', function (hooks) {
     this.validateRoute = (assert, route, message) => {
       assert.strictEqual(currentRouteName(), `vault.cluster.secrets.backend.kubernetes.${route}`, message);
     };
-    return authPage.login();
-  });
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
+    return login();
   });
 
   test('it should transition to configuration page during empty state', async function (assert) {
     assert.expect(1);
     await this.visitOverview();
-    await click('[data-test-component="empty-state"] a');
+    await click(`${GENERAL.emptyStateActions} a`);
     this.validateRoute(assert, 'configure', 'Transitions to Configure route on click');
   });
 
@@ -47,7 +43,7 @@ module('Acceptance | kubernetes | overview', function (hooks) {
     assert.expect(1);
     this.createScenario();
     await this.visitOverview();
-    await click(SELECTORS.rolesCardLink);
+    await click(KUBERNETES_OVERVIEW.rolesCardLink);
     this.validateRoute(assert, 'roles.index', 'Transitions to roles route on View Roles click');
   });
 
@@ -55,7 +51,7 @@ module('Acceptance | kubernetes | overview', function (hooks) {
     assert.expect(1);
     this.createScenario(false);
     await this.visitOverview();
-    await click(SELECTORS.rolesCardLink);
+    await click(KUBERNETES_OVERVIEW.rolesCardLink);
     this.validateRoute(assert, 'roles.create', 'Transitions to roles route on Create Roles click');
   });
 
@@ -64,7 +60,7 @@ module('Acceptance | kubernetes | overview', function (hooks) {
     await this.createScenario();
     await this.visitOverview();
     await selectChoose('.search-select', 'role-0');
-    await click('[data-test-generate-credential-button]');
+    await click(KUBERNETES_OVERVIEW.generateCredentialsCardButton);
     this.validateRoute(assert, 'roles.role.credentials', 'Transitions to roles route on Generate click');
   });
 });

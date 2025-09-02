@@ -5,6 +5,7 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -37,13 +38,13 @@ func (b *backend) rotateExpiredStaticCreds(ctx context.Context, req *logical.Req
 }
 
 // rotateCredential pops an element from the priority queue, and if it is expired, rotate and re-push.
-// If a cred was rotated, it returns true, otherwise false.
-func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage) (rotated bool, err error) {
+// If a cred was ready for rotation, return true, otherwise return false.
+func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage) (wasReady bool, err error) {
 	// If queue is empty or first item does not need a rotation (priority is next rotation timestamp) there is nothing to do
 	item, err := b.credRotationQueue.Pop()
 	if err != nil {
 		// the queue is just empty, which is fine.
-		if err == queue.ErrEmpty {
+		if errors.Is(err, queue.ErrEmpty) {
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to pop from queue for role %q: %w", item.Key, err)
@@ -58,28 +59,38 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 		return false, nil
 	}
 
+	b.Logger().Debug("rotating credential", "role", item.Key)
 	cfg := item.Value.(staticRoleEntry)
 
-	err = b.createCredential(ctx, storage, cfg, true)
+	creds, err := b.createCredential(ctx, storage, cfg, true)
 	if err != nil {
-		return false, err
+		b.Logger().Error("failed to create credential, re-queueing", "error", err)
+		// put it back in the queue with a backoff
+		item.Priority = time.Now().Add(10 * time.Second).Unix()
+		innerErr := b.credRotationQueue.Push(item)
+		if innerErr != nil {
+			return true, fmt.Errorf("failed to add item into the rotation queue for role %q(%w), while attempting to recover from failure to create credential: %w", cfg.Name, innerErr, err)
+		}
+		// there was one that "should have" rotated, so we want to keep looking further down the queue
+		return true, err
 	}
 
 	// set new priority and re-queue
-	item.Priority = time.Now().Add(cfg.RotationPeriod).Unix()
+	item.Priority = creds.priority(cfg)
 	err = b.credRotationQueue.Push(item)
 	if err != nil {
-		return false, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", cfg.Name, err)
+		return true, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", cfg.Name, err)
 	}
 
 	return true, nil
 }
 
 // createCredential will create a new iam credential, deleting the oldest one if necessary.
-func (b *backend) createCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, shouldLockStorage bool) error {
-	iamClient, err := b.clientIAM(ctx, storage)
+func (b *backend) createCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, shouldLockStorage bool) (*awsCredentials, error) {
+	// Always create a fresh client
+	iamClient, err := b.getNonCachedIAMClient(ctx, storage, cfg)
 	if err != nil {
-		return fmt.Errorf("unable to get the AWS IAM client: %w", err)
+		return nil, fmt.Errorf("failed to get IAM client for role %q: %w", cfg.Name, err)
 	}
 
 	// IAM users can have a most 2 sets of keys at a time.
@@ -89,14 +100,14 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 
 	err = b.validateIAMUserExists(ctx, storage, &cfg, false)
 	if err != nil {
-		return fmt.Errorf("iam user didn't exist, or username/userid didn't match: %w", err)
+		return nil, fmt.Errorf("iam user didn't exist, or username/userid didn't match: %w", err)
 	}
 
 	accessKeys, err := iamClient.ListAccessKeys(&iam.ListAccessKeysInput{
 		UserName: aws.String(cfg.Username),
 	})
 	if err != nil {
-		return fmt.Errorf("unable to list existing access keys for IAM user %q: %w", cfg.Username, err)
+		return nil, fmt.Errorf("unable to list existing access keys for IAM user %q: %w", cfg.Username, err)
 	}
 
 	// If we have the maximum number of keys, we have to delete one to make another (so we can get the credentials).
@@ -119,7 +130,7 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 			UserName:    oldestKey.UserName,
 		})
 		if err != nil {
-			return fmt.Errorf("unable to delete oldest access keys for user %q: %w", cfg.Username, err)
+			return nil, fmt.Errorf("unable to delete oldest access keys for user %q: %w", cfg.Username, err)
 		}
 	}
 
@@ -128,16 +139,19 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 		UserName: aws.String(cfg.Username),
 	})
 	if err != nil {
-		return fmt.Errorf("unable to create new access keys for user %q: %w", cfg.Username, err)
+		return nil, fmt.Errorf("unable to create new access keys for user %q: %w", cfg.Username, err)
 	}
+	expiration := time.Now().UTC().Add(cfg.RotationPeriod)
 
-	// Persist new keys
-	entry, err := logical.StorageEntryJSON(formatCredsStoragePath(cfg.Name), &awsCredentials{
+	creds := &awsCredentials{
 		AccessKeyID:     *out.AccessKey.AccessKeyId,
 		SecretAccessKey: *out.AccessKey.SecretAccessKey,
-	})
+		Expiration:      &expiration,
+	}
+	// Persist new keys
+	entry, err := logical.StorageEntryJSON(formatCredsStoragePath(cfg.Name), creds)
 	if err != nil {
-		return fmt.Errorf("failed to marshal object to JSON: %w", err)
+		return nil, fmt.Errorf("failed to marshal object to JSON: %w", err)
 	}
 	if shouldLockStorage {
 		b.roleMutex.Lock()
@@ -145,10 +159,10 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 	}
 	err = storage.Put(ctx, entry)
 	if err != nil {
-		return fmt.Errorf("failed to save object in storage: %w", err)
+		return nil, fmt.Errorf("failed to save object in storage: %w", err)
 	}
 
-	return nil
+	return creds, nil
 }
 
 // delete credential will remove the credential associated with the role from storage.
@@ -178,8 +192,13 @@ func (b *backend) deleteCredential(ctx context.Context, storage logical.Storage,
 		return fmt.Errorf("couldn't delete from storage: %w", err)
 	}
 
+	iamClient, err := b.nonCachedClientIAM(ctx, storage, b.Logger(), &cfg)
+	if err != nil {
+		return fmt.Errorf("failed to get IAM client for role %q while deleting: %w", cfg.Name, err)
+	}
+
 	// because we have the information, this is the one we created, so it's safe for us to delete.
-	_, err = b.iamClient.DeleteAccessKey(&iam.DeleteAccessKeyInput{
+	_, err = iamClient.DeleteAccessKey(&iam.DeleteAccessKeyInput{
 		AccessKeyId: aws.String(creds.AccessKeyID),
 		UserName:    aws.String(cfg.Username),
 	})

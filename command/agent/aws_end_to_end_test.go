@@ -14,8 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	hclog "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	vaultaws "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
@@ -163,7 +163,7 @@ func TestAWSEndToEnd(t *testing.T) {
 		Client: client,
 	})
 	go func() {
-		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, ah.AuthInProgress)
 	}()
 	defer func() {
 		select {

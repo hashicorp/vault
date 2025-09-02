@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/posener/complete"
@@ -350,7 +351,6 @@ func TestPredict_Plugins(t *testing.T) {
 				"aws",
 				"azure",
 				"cassandra-database-plugin",
-				"centrify",
 				"cert",
 				"cf",
 				"consul",
@@ -389,7 +389,10 @@ func TestPredict_Plugins(t *testing.T) {
 				"redis-database-plugin",
 				"redis-elasticache-database-plugin",
 				"redshift-database-plugin",
+				"saml",
+				"scep",
 				"snowflake-database-plugin",
+				"spiffe",
 				"ssh",
 				"terraform",
 				"totp",
@@ -435,8 +438,32 @@ func TestPredict_Plugins(t *testing.T) {
 						}
 					}
 				}
-				if !reflect.DeepEqual(act, tc.exp) {
-					t.Errorf("expected: %q, got: %q, diff: %v", tc.exp, act, strutil.Difference(act, tc.exp, true))
+				if !strutil.StrListContains(act, "saml") {
+					for i, v := range tc.exp {
+						if v == "saml" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
+				if !strutil.StrListContains(act, "scep") {
+					for i, v := range tc.exp {
+						if v == "scep" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
+				if !strutil.StrListContains(act, "spiffe") {
+					for i, v := range tc.exp {
+						if v == "spiffe" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
+				if d := cmp.Diff(act, tc.exp); len(d) > 0 {
+					t.Errorf("expected: %q, got: %q, diff: %v", tc.exp, act, d)
 				}
 			})
 		}

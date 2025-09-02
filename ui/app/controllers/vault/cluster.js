@@ -4,10 +4,11 @@
  */
 
 /* eslint-disable ember/no-observers */
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller from '@ember/controller';
 import { observer } from '@ember/object';
+
 export default Controller.extend({
   auth: service(),
   store: service(),
@@ -16,6 +17,7 @@ export default Controller.extend({
   permissions: service(),
   namespaceService: service('namespace'),
   flashMessages: service(),
+  customMessages: service(),
 
   vaultVersion: service('version'),
   console: service(),
@@ -37,6 +39,8 @@ export default Controller.extend({
 
   consoleOpen: alias('console.isOpen'),
   activeCluster: alias('auth.activeCluster'),
+
+  permissionBanner: alias('permissions.permissionsBanner'),
 
   actions: {
     toggleConsole() {

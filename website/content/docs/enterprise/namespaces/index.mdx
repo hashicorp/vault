@@ -1,12 +1,16 @@
 ---
 layout: docs
-page_title: Namespaces - Vault Enterprise
+page_title: Namespace and SMT support in Vault
 description: >-
-  Vault Enterprise has support for Namespaces, a feature to enable Secure
-  Multi-tenancy (SMT) and self-management.
+  Learn about namespaces and secure multi-tenancy (SMT) support in Vault.
 ---
 
-# Vault Enterprise namespaces <EnterpriseAlert product=vault inline=true />
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# Namespace and secure multi-tenancy (SMT) support in Vault
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 Many organizations implement Vault as a service to provide centralized
 management of sensitive data and ensure that the different teams in an
@@ -14,11 +18,10 @@ organization operate within isolated environments known as **tenants**.
 
 Multi-tenant environments have the following implementation challenges:
 
-- **Tenant isolation**. Teams within a Visualization as a Service (VaaS)
+- **Tenant isolation**. Teams within a Vault as a Service (VaaS)
   environment require strong isolation for their policies, secrets, and
   identities. Tenant isolation may also be required due to organizational
-  security and privacy requirements or to address compliance regulations like
-  [GDPR](https://gdpr.eu).
+  security and privacy requirements or to address compliance regulations.
 - **Long-term management**. Tenants typically have different policies and teams
   request changes to their tenants at different rates. As a result, managing a
   multi-tenant environment can become difficult for a single team as the number
@@ -103,8 +106,10 @@ admins to allow teams to self-manage their namespace. In addition to basic
 management, delegate admins can create child namespaces and assign admin rights
 to subordinate delegate admins.
 
-Additionally, administrative namespaces let Vault administrators grant access to
-a [predefined subset of privileged endpoints](#privileged-endpoints) by setting
+Additionally,
+[administrative namespaces](/vault/docs/enterprise/namespaces/create-admin-namespace)
+let Vault administrators grant access to a
+[predefined subset of privileged endpoints](#privileged-endpoints) by setting
 the relevant namespace parameters in their Vault configuration file.
 
 ## Vault API and namespaces
@@ -158,5 +163,6 @@ Refer to the following tutorials to learn more about Vault namespaces:
   Relationship](/vault/tutorials/enterprise/namespaces-secrets-sharing)
 - [Vault Namespace and Mount Structuring
   Guide](/vault/tutorials/enterprise/namespace-structure)
-- [HCP Vault namespace
+- [HCP Vault Dedicated namespace
   considerations](/vault/tutorials/cloud-ops/hcp-vault-namespace-considerations)
+- [Using many Namespaces](/vault/docs/enterprise/namespaces/namespace-limits)

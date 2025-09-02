@@ -257,6 +257,8 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 		EntityID:                 r.EntityID,
 		PolicyOverride:           r.PolicyOverride,
 		Unauthenticated:          r.Unauthenticated,
+		RequiresSnapshotID:       r.RequiresSnapshotID,
+		RecoverSourcePath:        r.RecoverSourcePath,
 	}, nil
 }
 
@@ -315,6 +317,8 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		EntityID:                 r.EntityID,
 		PolicyOverride:           r.PolicyOverride,
 		Unauthenticated:          r.Unauthenticated,
+		RequiresSnapshotID:       r.RequiresSnapshotID,
+		RecoverSourcePath:        r.RecoverSourcePath,
 	}, nil
 }
 

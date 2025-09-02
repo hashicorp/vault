@@ -1,0 +1,7 @@
+```release-note:improvement
+
+storage/raft (enterprise): add support for separate entry size limit for mount
+and namespace table paths in storage to allow increased mount table size without
+allowing other user storage entries to become larger.
+
+```

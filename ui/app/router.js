@@ -5,7 +5,7 @@
 
 import EmberRouter from '@ember/routing/router';
 import config from 'vault/config/environment';
-
+import { addDocfyRoutes } from '@docfy/ember';
 export default class Router extends EmberRouter {
   location = config.locationType;
   rootURL = config.rootURL;
@@ -15,6 +15,20 @@ Router.map(function () {
   this.route('vault', { path: '/' }, function () {
     this.route('cluster', { path: '/:cluster_name' }, function () {
       this.route('dashboard');
+      this.mount('config-ui');
+      this.mount('sync');
+      // TODO remove conditional once further feature work for single item recovery for release 1.21 is completed
+      if (config.environment !== 'production') {
+        this.route('recovery', function () {
+          this.route('snapshots', function () {
+            this.route('load');
+            this.route('snapshot', { path: '/:snapshot_id' }, function () {
+              this.route('manage');
+              this.route('details');
+            });
+          });
+        });
+      }
       this.route('oidc-provider-ns', { path: '/*namespace/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
@@ -25,10 +39,17 @@ Router.map(function () {
       this.route('license');
       this.route('mfa-setup');
       this.route('clients', function () {
-        this.route('dashboard');
+        this.route('counts', function () {
+          this.route('overview');
+          // TODO remove this conditional when client count feature work for 1.21 is complete
+          if (config.environment !== 'production') {
+            this.route('client-list');
+          }
+        });
         this.route('config');
         this.route('edit');
       });
+      this.route('usage-reporting');
       this.route('storage', { path: '/storage/raft' });
       this.route('storage-restore', { path: '/storage/raft/restore' });
       this.route('settings', function () {
@@ -43,10 +64,6 @@ Router.map(function () {
           });
         });
         this.route('mount-secret-backend');
-        this.route('configure-secret-backend', { path: '/secrets/configure/:backend' }, function () {
-          this.route('index', { path: '/' });
-          this.route('section', { path: '/:section_name' });
-        });
       });
       this.route('unseal');
       this.route('tools', function () {
@@ -54,6 +71,7 @@ Router.map(function () {
         this.mount('open-api-explorer', { path: '/api-explorer' });
       });
       this.route('access', function () {
+        this.route('reset-password');
         this.route('methods', { path: '/' });
         this.route('method', { path: '/:path' }, function () {
           this.route('index', { path: '/' });
@@ -156,6 +174,10 @@ Router.map(function () {
         });
       });
       this.route('secrets', function () {
+        this.route('mounts', function () {
+          // TODO: Revisit path on create once components are separated - should we specify selected type or just keep it generic as /create?
+          this.route('create', { path: '/:mount_type/create' });
+        });
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
@@ -164,7 +186,12 @@ Router.map(function () {
           this.mount('ldap');
           this.mount('pki');
           this.route('index', { path: '/' });
-          this.route('configuration');
+          this.route('configuration', function () {
+            this.route('index', { path: '/' });
+            this.route('general-settings');
+            // only CONFIGURABLE_SECRET_ENGINES can be configured and access the edit route
+            this.route('edit');
+          });
           // because globs / params can't be empty,
           // we have to special-case ids of '' with their own routes
           this.route('list-root', { path: '/list/' });
@@ -209,4 +236,7 @@ Router.map(function () {
     });
     this.route('not-found', { path: '/*path' });
   });
+  if (config.environment !== 'production') {
+    addDocfyRoutes(this);
+  }
 });

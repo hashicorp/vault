@@ -6,13 +6,16 @@ description: |-
   endpoint in Vault's key-value store.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # kv metadata
 
-~> **NOTE:** This is a [K/V Version 2](/vault/docs/secrets/kv/kv-v2) secrets
+~> **NOTE:** This is a [KV version 2](/vault/docs/secrets/kv/kv-v2) secrets
 engine command, and not available for Version 1.
 
 The `kv metadata` command has subcommands for interacting with the metadata and
-versions for the versioned secrets (K/V Version 2 secrets engine) at the
+versions for the versioned secrets (KV version 2 secrets engine) at the
 specified path.
 
 ## Usage
@@ -86,12 +89,12 @@ destroyed        false
 
 ### kv metadata put
 
-The `kv metadata put` command can be used to create a blank key in the K/V v2
+The `kv metadata put` command can be used to create a blank key in the KV v2
 secrets engine or to update key configuration for a specified key.
 
 #### Examples
 
-Create a key in the K/V v2 with no data at the key "creds":
+Create a key in the KV v2 with no data at the key "creds":
 
 ```shell-session
 $ vault kv metadata put -mount=secret creds

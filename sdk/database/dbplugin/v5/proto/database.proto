@@ -53,6 +53,7 @@ message UpdateUserRequest {
   ChangeExpiration expiration = 3;
   ChangePublicKey public_key = 4;
   int32 credential_type = 5;
+  string self_managed_password = 6;
 }
 
 message ChangePassword {

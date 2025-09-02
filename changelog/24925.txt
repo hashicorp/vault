@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk: Add identity token helpers to consistently apply new plugin WIF fields across integrations.
+```

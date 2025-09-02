@@ -1,0 +1,3 @@
+```release-note:change
+activity (enterprise): filter all fields in client count responses by the request namespace  
+```

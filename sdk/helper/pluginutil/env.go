@@ -38,6 +38,25 @@ const (
 	// PluginMultiplexingOptOut is an ENV name used to define a comma separated list of plugin names
 	// opted-out of the multiplexing feature; for emergencies if multiplexing ever causes issues
 	PluginMultiplexingOptOut = "VAULT_PLUGIN_MULTIPLEXING_OPT_OUT"
+
+	// PluginUseLegacyEnvLayering opts out of new environment variable precedence.
+	// If set to true, Vault process environment variables take precedence over any
+	// colliding plugin-specific environment variables. Otherwise, plugin-specific
+	// environment variables take precedence over Vault process environment variables.
+	PluginUseLegacyEnvLayering = "VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING"
+
+	// PluginUsePostgresSSLInline enables the usage of a custom sslinline
+	// configuration as a shim to the pgx posgtres library.
+	// Deprecated: VAULT_PLUGIN_USE_POSTGRES_SSLINLINE will be removed in a future version of the Vault SDK.
+	PluginUsePostgresSSLInline = "VAULT_PLUGIN_USE_POSTGRES_SSLINLINE"
+
+	// PluginGRPCTimeoutType is an ENV name used to set the timeout for Vault's
+	// call to the plugin Type() GRPC method
+	PluginGRPCTimeoutType = "VAULT_PLUGIN_GRPC_TIMEOUT_TYPE"
+
+	// PluginGRPCTimeoutClose is an ENV name used to set the timeout for Vault's
+	// call to the plugin Close() GRPC method
+	PluginGRPCTimeoutClose = "VAULT_PLUGIN_GRPC_TIMEOUT_CLOSE"
 )
 
 // OptionallyEnableMlock determines if mlock should be called, and if so enables

@@ -1,0 +1,21 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<nav class="tabs has-bottom-margin-s" aria-label="navigation for managing client counts">
+  <ul>
+    <li>
+      <LinkTo @route="vault.cluster.clients.counts.overview" data-test-tab="overview">
+        Overview
+      </LinkTo>
+    </li>
+    <li>
+      {{#if this.isNotProduction}}
+        <LinkTo @route="vault.cluster.clients.counts.client-list" data-test-tab="client list">
+          Client list
+        </LinkTo>
+      {{/if}}
+    </li>
+  </ul>
+</nav>

@@ -4,7 +4,7 @@
  */
 
 import AdapterError from '@ember-data/adapter/error';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
@@ -35,8 +35,27 @@ export default Component.extend({
   props: computed('model', function () {
     return this.model.serialize();
   }),
+  validateForm() {
+    // Only validate on new models because blank passwords will not be updated
+    // in practice this only happens for userpass users
+    if (this.model.validate && this.model.isNew) {
+      const { isValid, state } = this.model.validate();
+      this.setProperties({
+        modelValidations: state,
+        isFormInvalid: !isValid,
+      });
+      return isValid;
+    } else {
+      this.set('isFormInvalid', false);
+      return true;
+    }
+  },
   saveModel: task(
     waitFor(function* () {
+      const isValid = this.validateForm();
+      if (!isValid) {
+        return;
+      }
       try {
         yield this.model.save();
       } catch (err) {
@@ -71,16 +90,6 @@ export default Component.extend({
   actions: {
     onKeyUp(name, value) {
       this.model.set(name, value);
-      if (this.model.validate) {
-        // Set validation error message for updated attribute
-        const { isValid, state } = this.model.validate();
-        this.setProperties({
-          modelValidations: state,
-          isFormInvalid: !isValid,
-        });
-      } else {
-        this.set('isFormInvalid', false);
-      }
     },
     deleteItem() {
       this.model.destroyRecord().then(() => {

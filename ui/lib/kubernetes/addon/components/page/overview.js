@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
@@ -19,7 +19,7 @@ import { action } from '@ember/object';
  */
 
 export default class OverviewPageComponent extends Component {
-  @service router;
+  @service('app-router') router;
 
   @tracked selectedRole = null;
   @tracked roleOptions = [];

@@ -1,0 +1,4 @@
+```release-note:change
+identity (enterprise): POST requests to the `/identity/entity/merge` endpoint
+are now always forwarded from standbys to the active node.
+```

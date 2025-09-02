@@ -1,0 +1,3 @@
+```release-note:change
+core/raft: Return an error on sys/storage/raft/join if a node that has been removed from raft cluster attempts to re-join when it still has existing raft data on disk.   
+```

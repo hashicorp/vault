@@ -4,12 +4,13 @@
 package command
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/helper/random"
+	"github.com/stretchr/testify/require"
 )
 
 func testPolicyFmtCommand(tb testing.TB) (*cli.MockUi, *PolicyFmtCommand) {
@@ -24,213 +25,128 @@ func testPolicyFmtCommand(tb testing.TB) (*cli.MockUi, *PolicyFmtCommand) {
 }
 
 func TestPolicyFmtCommand_Run(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		name string
-		args []string
-		out  string
-		code int
+	testCases := map[string]struct {
+		args      []string
+		envVars   map[string]string
+		policyArg string
+		out       string
+		expected  string
+		code      int
 	}{
-		{
-			"not_enough_args",
-			[]string{},
-			"Not enough arguments",
-			1,
+		"not_enough_args": {
+			args: []string{},
+			out:  "Not enough arguments",
+			code: 1,
 		},
-		{
-			"too_many_args",
-			[]string{"foo", "bar"},
-			"Too many arguments",
-			1,
+		"too_many_args": {
+			args: []string{"foo", "bar"},
+			out:  "Too many arguments",
+			code: 1,
 		},
-	}
-
-	t.Run("validations", func(t *testing.T) {
-		t.Parallel()
-
-		for _, tc := range cases {
-			tc := tc
-
-			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
-
-				client, closer := testVaultServer(t)
-				defer closer()
-
-				ui, cmd := testPolicyFmtCommand(t)
-				cmd.client = client
-
-				code := cmd.Run(tc.args)
-				if code != tc.code {
-					t.Errorf("expected %d to be %d", code, tc.code)
-				}
-
-				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-				if !strings.Contains(combined, tc.out) {
-					t.Errorf("expected %q to contain %q", combined, tc.out)
-				}
-			})
-		}
-	})
-
-	t.Run("default", func(t *testing.T) {
-		t.Parallel()
-
-		policy := strings.TrimSpace(`
+		"default": {
+			policyArg: `
 path "secret" {
   capabilities  =           ["create",    "update","delete"]
 
-}
-`)
-
-		f, err := ioutil.TempFile("", "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.Remove(f.Name())
-		if _, err := f.WriteString(policy); err != nil {
-			t.Fatal(err)
-		}
-		f.Close()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		_, cmd := testPolicyFmtCommand(t)
-		cmd.client = client
-
-		code := cmd.Run([]string{
-			f.Name(),
-		})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		expected := strings.TrimSpace(`
+}`,
+			expected: `
 path "secret" {
   capabilities = ["create", "update", "delete"]
 }
-`) + "\n"
+`,
+			code: 0,
+		},
+		"bad_hcl": {
+			policyArg: `dafdaf`,
+			out:       "failed to parse policy",
+			code:      1,
+		},
+		"bad_policy": {
+			policyArg: `banana "foo" {}`,
+			out:       "failed to parse policy",
+			code:      1,
+		},
+		"bad_policy2": {
+			policyArg: `path "secret" { capabilities = ["bogus"] }`,
+			out:       "failed to parse policy",
+			code:      1,
+		},
+		// TODO (HCL_DUP_KEYS_DEPRECATION): remove this test once deprecation is fully done
+		"hcl_duplicate_key_env_set": {
+			policyArg: `
+path "secret" {
+  capabilities = ["create", "update", "delete"]
+  capabilities = ["create"]
+}
+`,
+			envVars: map[string]string{random.AllowHclDuplicatesEnvVar: "true"},
+			code:    0,
+			out:     "WARNING: Duplicate keys found in the provided policy, duplicate keys in HCL files are deprecated and will be forbidden in a future release.",
+		},
+		"hcl_duplicate_key_env_not_set": {
+			policyArg: `
+path "secret" {
+  capabilities = ["create", "update", "delete"]
+  capabilities = ["create"]
+}
+`,
+			code: 1,
+			out:  "failed to parse policy: The argument \"capabilities\" at 4:3 was already set. Each argument can only be defined once",
+		},
+		"hcl_duplicate_key_env_set_to_false": {
+			policyArg: `
+path "secret" {
+  capabilities = ["create", "update", "delete"]
+  capabilities = ["create"]
+}
+`,
+			envVars: map[string]string{random.AllowHclDuplicatesEnvVar: "false"},
+			code:    1,
+			out:     "failed to parse policy: The argument \"capabilities\" at 4:3 was already set. Each argument can only be defined once",
+		},
+	}
 
-		contents, err := ioutil.ReadFile(f.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if string(contents) != expected {
-			t.Errorf("expected %q to be %q", string(contents), expected)
-		}
-	})
+	client, closer := testVaultServer(t)
+	t.Cleanup(closer)
 
-	t.Run("bad_hcl", func(t *testing.T) {
-		t.Parallel()
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			r := require.New(t)
 
-		policy := `dafdaf`
+			for k, v := range tc.envVars {
+				t.Setenv(k, v)
+			}
 
-		f, err := ioutil.TempFile("", "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.Remove(f.Name())
-		if _, err := f.WriteString(policy); err != nil {
-			t.Fatal(err)
-		}
-		f.Close()
+			args := tc.args
+			if tc.policyArg != "" {
+				f := populateTempFile(t, "fmt-test-*.hcl", tc.policyArg)
+				args = append(args, f.Name())
+			}
 
-		client, closer := testVaultServer(t)
-		defer closer()
+			ui, cmd := testPolicyFmtCommand(t)
+			cmd.client = client
 
-		ui, cmd := testPolicyFmtCommand(t)
-		cmd.client = client
+			code := cmd.Run(args)
+			r.Equal(tc.code, code)
 
-		code := cmd.Run([]string{
-			f.Name(),
+			if tc.out != "" {
+				t.Log(ui.ErrorWriter.String())
+				r.Contains(ui.ErrorWriter.String(), tc.out)
+			}
+
+			if tc.expected != "" {
+				contents, err := os.ReadFile(args[0])
+				r.NoError(err)
+				r.Equal(strings.TrimSpace(tc.expected), strings.TrimSpace(string(contents)))
+			}
 		})
-		if exp := 1; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
+	}
+}
 
-		stderr := ui.ErrorWriter.String()
-		expected := "failed to parse policy"
-		if !strings.Contains(stderr, expected) {
-			t.Errorf("expected %q to include %q", stderr, expected)
-		}
-	})
+// TestPolicyFmtCommandNoTabs asserts the CLI help has no tab characters.
+func TestPolicyFmtCommandNoTabs(t *testing.T) {
+	t.Parallel()
 
-	t.Run("bad_policy", func(t *testing.T) {
-		t.Parallel()
-
-		policy := `banana "foo" {}`
-
-		f, err := ioutil.TempFile("", "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.Remove(f.Name())
-		if _, err := f.WriteString(policy); err != nil {
-			t.Fatal(err)
-		}
-		f.Close()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		ui, cmd := testPolicyFmtCommand(t)
-		cmd.client = client
-
-		code := cmd.Run([]string{
-			f.Name(),
-		})
-		if exp := 1; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		stderr := ui.ErrorWriter.String()
-		expected := "failed to parse policy"
-		if !strings.Contains(stderr, expected) {
-			t.Errorf("expected %q to include %q", stderr, expected)
-		}
-	})
-
-	t.Run("bad_policy", func(t *testing.T) {
-		t.Parallel()
-
-		policy := `path "secret/" { capabilities = ["bogus"] }`
-
-		f, err := ioutil.TempFile("", "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.Remove(f.Name())
-		if _, err := f.WriteString(policy); err != nil {
-			t.Fatal(err)
-		}
-		f.Close()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		ui, cmd := testPolicyFmtCommand(t)
-		cmd.client = client
-
-		code := cmd.Run([]string{
-			f.Name(),
-		})
-		if exp := 1; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		stderr := ui.ErrorWriter.String()
-		expected := "failed to parse policy"
-		if !strings.Contains(stderr, expected) {
-			t.Errorf("expected %q to include %q", stderr, expected)
-		}
-	})
-
-	t.Run("no_tabs", func(t *testing.T) {
-		t.Parallel()
-
-		_, cmd := testPolicyFmtCommand(t)
-		assertNoTabs(t, cmd)
-	})
+	_, cmd := testPolicyFmtCommand(t)
+	assertNoTabs(t, cmd)
 }

@@ -1,0 +1,3 @@
+```release-note:change
+UI: remove outdated and unneeded js string extensions
+```

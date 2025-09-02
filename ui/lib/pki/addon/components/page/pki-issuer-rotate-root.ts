@@ -4,14 +4,15 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { waitFor } from '@ember/test-waiters';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
+
 import type Store from '@ember-data/store';
-import type Router from '@ember/routing/router';
+import type RouterService from '@ember/routing/router';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type PkiIssuerModel from 'vault/models/pki/issuer';
@@ -31,10 +32,10 @@ const RADIO_BUTTON_KEY = {
 };
 
 export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
-  @service declare readonly store: Store;
-  @service declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly secretMountPath: SecretMountPath;
+  @service declare readonly store: Store;
+  @service('app-router') declare readonly router: RouterService;
 
   @tracked displayedForm = RADIO_BUTTON_KEY.oldSettings;
   @tracked showOldSettings = false;
@@ -108,14 +109,14 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
     const endpoint = `/v1/${this.secretMountPath.currentPath}/issuer/${this.args.newRootModel.issuerId}/${format}`;
     const adapter = this.store.adapterFor('application');
     try {
-      return adapter
-        .rawRequest(endpoint, 'GET', { unauthenticated: true })
-        .then(function (response: Response) {
-          if (format === 'der') {
-            return response.blob();
-          }
-          return response.text();
-        });
+      return adapter.rawRequest(endpoint, 'GET', { unauthenticated: true }).then(function (
+        response: Response
+      ) {
+        if (format === 'der') {
+          return response.blob();
+        }
+        return response.text();
+      });
     } catch (e) {
       return null;
     }

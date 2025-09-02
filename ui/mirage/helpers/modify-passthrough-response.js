@@ -5,6 +5,7 @@
 
 // passthrough request and modify response from server
 // pass object as second arg of properties in response to override
+// ex: server.get('sys/health', (schema, req) => modifyPassthroughResponse(req, { enterprise: true }));
 export default function (req, props = {}) {
   return new Promise((resolve) => {
     const xhr = req.passthrough();

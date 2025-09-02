@@ -19,6 +19,10 @@ const (
 	// SSRF protection.
 	RequestHeaderName = "X-Vault-Request"
 
+	// WrapTTLHeaderName is the name of the header containing a directive to
+	// wrap the response
+	WrapTTLHeaderName = "X-Vault-Wrap-TTL"
+
 	// PerformanceReplicationALPN is the negotiated protocol used for
 	// performance replication.
 	PerformanceReplicationALPN = "replication_v1"
@@ -43,4 +47,6 @@ const (
 	PerformanceReplicationPathTarget = "performance"
 
 	DRReplicationPathTarget = "dr"
+
+	RecoverSourcePathHeader = "X-Vault-Recover-Source-Path"
 )

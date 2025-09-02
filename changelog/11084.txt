@@ -1,0 +1,3 @@
+```release-note:improvement
+serviceregistration: Added support for Consul ServiceMeta tags from config file from the new `service_meta` config field.
+```

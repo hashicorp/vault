@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -23,18 +23,21 @@ var (
 type SecretsTuneCommand struct {
 	*BaseCommand
 
-	flagAuditNonHMACRequestKeys   []string
-	flagAuditNonHMACResponseKeys  []string
-	flagDefaultLeaseTTL           time.Duration
-	flagDescription               string
-	flagListingVisibility         string
-	flagMaxLeaseTTL               time.Duration
-	flagPassthroughRequestHeaders []string
-	flagAllowedResponseHeaders    []string
-	flagOptions                   map[string]string
-	flagVersion                   int
-	flagPluginVersion             string
-	flagAllowedManagedKeys        []string
+	flagAuditNonHMACRequestKeys    []string
+	flagAuditNonHMACResponseKeys   []string
+	flagDefaultLeaseTTL            time.Duration
+	flagDescription                string
+	flagListingVisibility          string
+	flagMaxLeaseTTL                time.Duration
+	flagPassthroughRequestHeaders  []string
+	flagAllowedResponseHeaders     []string
+	flagOptions                    map[string]string
+	flagVersion                    int
+	flagPluginVersion              string
+	flagAllowedManagedKeys         []string
+	flagDelegatedAuthAccessors     []string
+	flagIdentityTokenKey           string
+	flagTrimRequestTrailingSlashes BoolPtr
 }
 
 func (c *SecretsTuneCommand) Synopsis() string {
@@ -158,6 +161,27 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 			"the plugin catalog, and will not start running until the plugin is reloaded.",
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameDelegatedAuthAccessors,
+		Target: &c.flagDelegatedAuthAccessors,
+		Usage: "A list of permitted authentication accessors this backend can delegate authentication to. " +
+			"Note that multiple values may be specified by providing this option multiple times, " +
+			"each time with 1 accessor.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    flagNameIdentityTokenKey,
+		Target:  &c.flagIdentityTokenKey,
+		Default: "default",
+		Usage:   "Select the key used to sign plugin identity tokens.",
+	})
+
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   flagNameTrimRequestTrailingSlashes,
+		Target: &c.flagTrimRequestTrailingSlashes,
+		Usage:  "Whether to trim trailing slashes for incoming requests to this mount",
+	})
+
 	return set
 }
 
@@ -241,6 +265,18 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			mountConfigInput.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameDelegatedAuthAccessors {
+			mountConfigInput.DelegatedAuthAccessors = c.flagDelegatedAuthAccessors
+		}
+
+		if fl.Name == flagNameIdentityTokenKey {
+			mountConfigInput.IdentityTokenKey = c.flagIdentityTokenKey
+		}
+		if fl.Name == flagNameTrimRequestTrailingSlashes && c.flagTrimRequestTrailingSlashes.IsSet() {
+			val := c.flagTrimRequestTrailingSlashes.Get()
+			mountConfigInput.TrimRequestTrailingSlashes = &val
 		}
 	})
 

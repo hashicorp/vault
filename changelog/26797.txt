@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Add a new ACME configuration parameter that allows increasing the maximum TTL for ACME leaf certificates
+```

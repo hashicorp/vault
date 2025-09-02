@@ -1,13 +1,13 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#if (or (has-block) this.isVisible)}}
   <div class="info-table-row" data-test-component="info-table-row" ...attributes>
+    {{! label section of the row }}
     <div
       class="column {{or @labelWidth 'is-one-quarter'}} {{if this.hasLabelOverflow 'label-overflow'}}"
-      data-test-label-div
       {{did-insert this.calculateLabelOverflow}}
     >
       {{#if @label}}
@@ -34,13 +34,17 @@
         <Icon @name="minus" />
       {{/if}}
     </div>
-    <div class="column is-flex-center {{if @truncateValue 'is-two-thirds'}}" data-test-value-div={{@label}}>
+    {{! value section of the row }}
+    <div class="column is-flex-center {{if @truncateValue 'is-two-thirds'}}" data-test-row-value={{@label}}>
       {{#if @addCopyButton}}
         <Hds::Copy::Button
           @text="Copy"
           @isIconOnly={{true}}
           @textToCopy={{@value}}
-          class="transparent icon-only is-paddingless"
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+          )}}
+          class="transparent has-padding-xxs"
           data-test-copy-button
         />
       {{/if}}
@@ -94,8 +98,11 @@
                       @text="Copy"
                       @isIconOnly={{true}}
                       @textToCopy={{@tooltipText}}
+                      @onError={{(fn
+                        (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+                      )}}
                       class="transparent white-icon"
-                      data-test-tooltip-copy
+                      data-test-tooltip-copy={{@tooltipText}}
                     />
                   {{/if}}
                 </div>

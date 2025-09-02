@@ -6,15 +6,18 @@ description: |-
   hash function and salt.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # `/sys/audit-hash`
+
+@include 'alerts/restricted-admin.mdx'
 
 The `/sys/audit-hash` endpoint is used to calculate the hash of the data used by
 an audit device's hash function and salt. This can be used to search audit logs
 for a hashed value when the original value is known.
 
 ## Calculate hash
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint hashes the given input data with the specified audit device's
 hash function and salt. This endpoint can be used to discover whether a given

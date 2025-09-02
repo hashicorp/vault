@@ -1,0 +1,85 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<LinkedBlock
+  @params={{array
+    (concat "vault.cluster.secrets.backend." (if @item.isFolder "list" "show") (unless @item.id "-root"))
+    @item.id
+  }}
+  class="list-item-row"
+  data-test-secret-link={{@item.id}}
+  @encode={{true}}
+  @queryParams={{secret-query-params @backendModel.type @item.type}}
+>
+  <div class="columns is-mobile">
+    <div class="column is-10">
+      <SecretLink
+        @mode={{if @item.isFolder "list" "show"}}
+        @secret={{@item.id}}
+        @backend={{@backendModel.id}}
+        @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
+        class="has-text-black has-text-weight-semibold"
+        data-test-secret-item-link={{@item.id}}
+      >
+        {{#if (eq @backendModel.type "transit")}}
+          <Icon @name="key" class="has-text-grey-light" />
+        {{else}}
+          <Icon @name={{if @item.isFolder "folder" (or @item.icon "file")}} class="has-text-grey-light" />
+        {{/if}}
+        {{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}
+      </SecretLink>
+    </div>
+    <div class="column has-text-right">
+      <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+        <dd.ToggleIcon
+          @icon="more-horizontal"
+          @text="Manage database {{@item.id}}"
+          @hasChevron={{false}}
+          data-test-popup-menu-trigger
+        />
+        {{#if @item.isFolder}}
+          <dd.Interactive @route="vault.cluster.secrets.backend.list" @model={{@item.id}}>Contents</dd.Interactive>
+        {{else}}
+          {{#if (or @item.versionPath.isLoading @item.secretPath.isLoading)}}
+            <dd.Generic class="has-text-center">
+              <LoadingDropdownOption />
+            </dd.Generic>
+          {{else}}
+            {{#if @item.canRead}}
+              <dd.Interactive
+                @route="vault.cluster.secrets.backend.show"
+                @model={{@item.id}}
+                @query={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
+              >Details</dd.Interactive>
+            {{/if}}
+            {{#if @item.canEdit}}
+              <dd.Interactive
+                @route="vault.cluster.secrets.backend.edit"
+                @model={{@item.id}}
+                @query={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
+              >Edit</dd.Interactive>
+            {{/if}}
+            {{#if @item.canDelete}}
+              <dd.Interactive
+                @color="critical"
+                data-test-confirm-action-trigger
+                {{on "click" (fn (mut this.showConfirmModal) true)}}
+              >Delete</dd.Interactive>
+            {{/if}}
+          {{/if}}
+        {{/if}}
+      </Hds::Dropdown>
+    </div>
+  </div>
+</LinkedBlock>
+
+{{#if this.showConfirmModal}}
+  <ConfirmModal
+    @color="critical"
+    @onClose={{fn (mut this.showConfirmModal) false}}
+    @confirmMessage="This will permanently delete this secret."
+    @onConfirm={{@delete}}
+  />
+{{/if}}

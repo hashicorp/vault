@@ -1,14 +1,29 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+/* eslint-disable no-useless-escape */
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { click, currentURL, fillIn, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
+import {
+  click,
+  currentURL,
+  fillIn,
+  findAll,
+  setupOnerror,
+  typeIn,
+  visit,
+  waitFor,
+} from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import {
   createPolicyCmd,
   deleteEngineCmd,
   mountEngineCmd,
   runCmd,
   createTokenCmd,
+  deleteNS,
 } from 'vault/tests/helpers/commands';
 import {
   dataPolicy,
@@ -16,22 +31,29 @@ import {
   destroyVersionsPolicy,
   metadataListPolicy,
   metadataPolicy,
-} from 'vault/tests/helpers/policy-generator/kv';
+} from 'vault/tests/helpers/kv/policy-generator';
 import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
+import { personas } from 'vault/tests/helpers/kv/policy-generator';
+import { capabilitiesStub } from 'vault/tests/helpers/stubs';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
  */
 module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
     const uid = uuidv4();
     this.backend = `kv-edge-${uid}`;
     this.rootSecret = 'root-directory';
     this.fullSecretPath = `${this.rootSecret}/nested/child-secret`;
-    await authPage.login();
+    await login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeSecret(this.backend, this.fullSecretPath, 'foo', 'bar');
     await writeSecret(this.backend, 'edge/one', 'foo', 'bar');
@@ -40,7 +62,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     await runCmd(deleteEngineCmd(this.backend));
     return;
   });
@@ -53,17 +75,17 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       const backend = this.backend;
       const token = await runCmd([
         createPolicyCmd(
-          'nested-secret-list-reader',
+          `nested-secret-list-reader-${this.backend}`,
           metadataPolicy({ backend, secretPath, capabilities }) +
             dataPolicy({ backend, secretPath, capabilities })
         ),
-        createTokenCmd('nested-secret-list-reader'),
+        createTokenCmd(`nested-secret-list-reader-${this.backend}`),
       ]);
-      await authPage.login(token);
+      await login(token);
     });
 
     test('it can navigate to secrets within a secret directory', async function (assert) {
-      assert.expect(21);
+      assert.expect(23);
       const backend = this.backend;
       const [root, subdirectory, secret] = this.fullSecretPath.split('/');
 
@@ -72,24 +94,24 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       await typeIn(PAGE.list.overviewInput, `${root}/no-access/`);
       assert
-        .dom(PAGE.list.overviewButton)
+        .dom(GENERAL.submitButton)
         .hasText('View list', 'shows list and not secret because search is a directory');
-      await click(PAGE.list.overviewButton);
-      assert.dom(PAGE.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
+      await click(GENERAL.submitButton);
+      assert.dom(GENERAL.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/`); // add slash because this is a directory
-      await click(PAGE.list.overviewButton);
+      await click(GENERAL.submitButton);
 
       // URL correct
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${root}%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/${root}/`,
         'visits list-directory of root'
       );
 
       // Title correct
-      assert.dom(PAGE.title).hasText(`${backend} Version 2`);
+      assert.dom(PAGE.title).hasText(`${backend} version 2`);
       // Tabs correct
       assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
       assert.dom(PAGE.secretTab('Secrets')).hasClass('active');
@@ -99,11 +121,15 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(PAGE.toolbarAction).exists({ count: 1 }, 'toolbar only renders create secret action');
       assert.dom(PAGE.list.filter).hasValue(`${root}/`);
       // List content correct
-      assert.dom(PAGE.list.item(`${subdirectory}/`)).exists('renders linked block for subdirectory');
-      await click(PAGE.list.item(`${subdirectory}/`));
-      assert.dom(PAGE.list.item(secret)).exists('renders linked block for child secret');
-      await click(PAGE.list.item(secret));
+      assert.dom(GENERAL.listItem(`${subdirectory}/`)).exists('renders linked block for subdirectory');
+      await click(GENERAL.listItem(`${subdirectory}/`));
+      assert.dom(GENERAL.listItem(secret)).exists('renders linked block for child secret');
+      await click(GENERAL.listItem(secret));
+      assert
+        .dom(GENERAL.overviewCard.container('Current version'))
+        .hasText(`Current version The current version of this secret. 1`);
       // Secret details visible
+      await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.title).hasText(this.fullSecretPath);
       assert.dom(PAGE.secretTab('Secret')).hasText('Secret');
       assert.dom(PAGE.secretTab('Secret')).hasClass('active');
@@ -111,7 +137,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
       assert.dom(PAGE.secretTab('Version History')).hasText('Version History');
       assert.dom(PAGE.secretTab('Version History')).doesNotHaveClass('active');
-      assert.dom(PAGE.toolbarAction).exists({ count: 5 }, 'toolbar renders all actions');
+      assert.dom(PAGE.detail.copy).exists();
+      assert.dom(PAGE.detail.versionDropdown).exists();
     });
 
     test('it navigates back to engine index route via breadcrumbs from secret details', async function (assert) {
@@ -121,29 +148,29 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       await visit(`vault/secrets/${backend}/kv/${encodeURIComponent(this.fullSecretPath)}/details?version=1`);
       // navigate back through crumbs
-      let previousCrumb = findAll('[data-test-breadcrumbs] li').length - 2;
-      await click(PAGE.breadcrumbAtIdx(previousCrumb));
+      let previousCrumb = findAll(GENERAL.breadcrumb).length - 2;
+      await click(GENERAL.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${root}%2F${subdirectory}%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/${root}/${subdirectory}/`,
         'goes back to subdirectory list'
       );
       assert.dom(PAGE.list.filter).hasValue(`${root}/${subdirectory}/`);
-      assert.dom(PAGE.list.item(secret)).exists('renders linked block for child secret');
+      assert.dom(GENERAL.listItem(secret)).exists('renders linked block for child secret');
 
       // back again
-      previousCrumb = findAll('[data-test-breadcrumbs] li').length - 2;
-      await click(PAGE.breadcrumbAtIdx(previousCrumb));
+      previousCrumb = findAll(GENERAL.breadcrumb).length - 2;
+      await click(GENERAL.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${root}%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/${root}/`,
         'goes back to root directory'
       );
-      assert.dom(PAGE.list.item(`${subdirectory}/`)).exists('renders linked block for subdirectory');
+      assert.dom(GENERAL.listItem(`${subdirectory}/`)).exists('renders linked block for subdirectory');
 
       // and back to the engine list view
-      previousCrumb = findAll('[data-test-breadcrumbs] li').length - 2;
-      await click(PAGE.breadcrumbAtIdx(previousCrumb));
+      previousCrumb = findAll(GENERAL.breadcrumb).length - 2;
+      await click(GENERAL.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/list`,
@@ -159,16 +186,40 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/${subdirectory}`); // intentionally leave out trailing slash
-      await click(PAGE.list.overviewButton);
+      await click(GENERAL.submitButton);
       assert.dom(PAGE.error.title).hasText('404 Not Found');
       assert
         .dom(PAGE.error.message)
-        .hasText(`Sorry, we were unable to find any content at /v1/${backend}/data/${root}/${subdirectory}.`);
+        .hasText(
+          `Sorry, we were unable to find any content at /v1/${backend}/metadata/${root}/${subdirectory}.`
+        );
 
-      assert.dom(PAGE.breadcrumbAtIdx(0)).hasText('secrets');
-      assert.dom(PAGE.breadcrumbAtIdx(1)).hasText(backend);
+      assert.dom(GENERAL.breadcrumbAtIdx(0)).hasText('Secrets');
+      assert.dom(GENERAL.breadcrumbAtIdx(1)).hasText(backend);
       assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('is-active');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('is-active');
+    });
+
+    // it's rare for a policy check to fail, but if it does we default to "true" and let the API handle gating.
+    // there was an issue with the new capabilities service incorrectly mapping permissions for secrets with underscores which surfaced this bug.
+    // The user logged in here does NOT have access to the subkeys endpoint, but we're stubbing capabilities to return true
+    // to simulate the capabilities map failing and returning a false positive.
+    test('it navigates to secret if policy check fails for the subkeys endpoint', async function (assert) {
+      assert.expect(2);
+      this.server.post(
+        '/sys/capabilities-self',
+        capabilitiesStub(`${this.backend}/subkeys/my_secret`, ['read'])
+      );
+
+      await visit(`/vault/secrets/${this.backend}/kv/list`);
+      await typeIn(PAGE.list.overviewInput, 'my_secret');
+      await click(GENERAL.submitButton);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/kv/my_secret`,
+        'it navigates to secret overview'
+      );
+      assert.dom(GENERAL.overviewCard.container('Paths')).exists();
     });
   });
 
@@ -185,19 +236,19 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       // user has different permissions for each secret path
       const token = await runCmd([
         createPolicyCmd(
-          'destruction-no-read',
+          `destruction-no-read-${this.backend}`,
           dataPolicy({ backend, secretPath: 'data-delete-only', capabilities: ['delete'] }) +
             deleteVersionsPolicy({ backend, secretPath: 'delete-version-only' }) +
             destroyVersionsPolicy({ backend, secretPath: 'destroy-version-only' }) +
             metadataPolicy({ backend, secretPath: 'destroy-metadata-only', capabilities: ['delete'] }) +
             metadataListPolicy(backend)
         ),
-        createTokenCmd('destruction-no-read'),
+        createTokenCmd(`destruction-no-read-${this.backend}`),
       ]);
       for (const secret of testSecrets) {
         await writeVersionedSecret(backend, secret, 'foo', 'bar', 2);
       }
-      await authPage.login(token);
+      await login(token);
     });
 
     test('it renders the delete action and disables delete this version option', async function (assert) {
@@ -253,16 +304,206 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   test('no ghost item after editing metadata', async function (assert) {
-    await visit(`/vault/secrets/${this.backend}/kv/edge/directory`);
+    await visit(`/vault/secrets/${this.backend}/kv/list/edge/`);
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
-    await click(PAGE.list.item('two'));
+    await click(GENERAL.listItem('two'));
     await click(PAGE.secretTab('Metadata'));
     await click(PAGE.metadata.editBtn);
     await fillIn(FORM.keyInput(), 'foo');
     await fillIn(FORM.valueInput(), 'bar');
     await click(FORM.saveBtn);
-    await click(PAGE.breadcrumbAtIdx(2));
+    await click(GENERAL.breadcrumbAtIdx(2));
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
+  });
+
+  test('advanced secret values default to JSON display', async function (assert) {
+    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await fillIn(FORM.inputByAttr('path'), 'complex');
+
+    await click(GENERAL.toggleInput('json'));
+
+    await waitFor('.cm-editor');
+    const view = codemirror();
+
+    assert.strictEqual(
+      getCodeEditorValue(view),
+      `{
+  \"\": \"\"
+}`,
+      'JSON editor displays correct empty object'
+    );
+    setCodeEditorValue(view, '{ "foo3": { "name": "bar3" } }');
+    await click(FORM.saveBtn);
+
+    // Details view
+    await click(PAGE.secretTab('Secret'));
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled('JSON toggle is not disabled');
+    assert.dom(GENERAL.toggleInput('json')).isChecked("JSON toggle is checked 'on'");
+
+    assert
+      .dom(GENERAL.codeBlock('secret-data'))
+      .hasText('Version data { "foo3": { "name": "bar3" } }', 'Values are displayed in the details view');
+
+    // New version view
+    await click(PAGE.detail.createNewVersion);
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
+    assert.dom(GENERAL.toggleInput('json')).isChecked();
+    assert.deepEqual(
+      getCodeEditorValue(view),
+      '{ "foo3": { "name": "bar3" } }',
+      'Values are displayed in the new version view'
+    );
+  });
+
+  test('viewing advanced secret data versions displays the correct version data', async function (assert) {
+    assert.expect(2);
+    const expectedDataV1 = `{
+  "foo1": {
+    "name": "bar1"
+  }
+}`;
+    const expectedDataV2 = `{
+  "foo2": {
+    "name": "bar2"
+  }
+}`;
+
+    let view;
+
+    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
+
+    await click(GENERAL.toggleInput('json'));
+    await waitFor('.cm-editor');
+    view = codemirror();
+    setCodeEditorValue(view, '{ "foo1": { "name": "bar1" } }');
+    await click(FORM.saveBtn);
+
+    // Create another version
+    await click(GENERAL.overviewCard.actionText('Create new'));
+    await waitFor('.cm-editor');
+    view = codemirror();
+    setCodeEditorValue(view, '{ "foo2": { "name": "bar2" } }');
+    await click(FORM.saveBtn);
+
+    // View the first version and make sure the secret data is correct
+    await click(PAGE.secretTab('Secret'));
+    await click(PAGE.detail.versionDropdown);
+    await click(`${PAGE.detail.version(1)} a`);
+    assert
+      .dom(GENERAL.codeBlock('secret-data'))
+      .hasText(`Version data ${expectedDataV1}`, 'Version one data is displayed');
+
+    // Navigate back the second version and make sure the secret data is correct
+    await click(PAGE.detail.versionDropdown);
+    await click(`${PAGE.detail.version(2)} a`);
+    assert
+      .dom(GENERAL.codeBlock('secret-data'))
+      .hasText(`Version data ${expectedDataV2}`, 'Version two data is displayed');
+  });
+
+  test('does not register as advanced when value includes {', async function (assert) {
+    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await fillIn(FORM.inputByAttr('path'), 'not-advanced');
+
+    await fillIn(FORM.keyInput(), 'foo');
+    await fillIn(FORM.maskedValueInput(), '{bar}');
+    await click(FORM.saveBtn);
+    await click(GENERAL.overviewCard.actionText('Create new'));
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
+    assert.dom(GENERAL.toggleInput('json')).isNotChecked();
+  });
+
+  // patch is technically enterprise only but stubbing the version so these tests run on both CE and enterprise
+  module('patch-persona', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.patchSecret = 'patch-secret';
+      this.owner.lookup('service:version').type = 'enterprise';
+      this.store = this.owner.lookup('service:store');
+      await writeSecret(this.backend, this.patchSecret, 'foo', 'bar');
+      await writeSecret(this.backend, 'my-destroyed-secret', 'foo', 'bar');
+      const token = await runCmd([
+        createPolicyCmd(
+          `secret-patcher-${this.backend}`,
+          personas.secretPatcher(this.backend) + personas.secretPatcher(this.emptyBackend)
+        ),
+        createTokenCmd(`secret-patcher-${this.backend}`),
+      ]);
+      await login(token);
+      clearRecords(this.store);
+      return;
+    });
+
+    test('it patches a secret from the overview page', async function (assert) {
+      await visit(`/vault/secrets/${this.backend}/kv/${this.patchSecret}`);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo');
+
+      await click(GENERAL.overviewCard.actionText('Patch secret'));
+      await click(FORM.patchEdit(0));
+      await fillIn(FORM.valueInput(0), 'newvalue');
+      await fillIn(FORM.keyInput('new'), 'newkey');
+      await fillIn(FORM.valueInput('new'), 'newvalue');
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo newkey');
+    });
+
+    test('it patches a secret from the secret details', async function (assert) {
+      await visit(`/vault/secrets/${this.backend}/kv/${this.patchSecret}`);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo');
+      await click(PAGE.secretTab('Secret'));
+      await click(PAGE.detail.patchLatest);
+      await click(FORM.patchEdit(0));
+      await fillIn(FORM.valueInput(0), 'newvalue');
+      await fillIn(FORM.keyInput('new'), 'newkey');
+      await fillIn(FORM.valueInput('new'), 'newvalue');
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo newkey');
+    });
+
+    // testing both adding and deleting a key here because the writeSecret helper only creates a single key/value pair
+    test('it adds and deletes a key', async function (assert) {
+      await visit(`/vault/secrets/${this.backend}/kv/${this.patchSecret}`);
+      // add a new key
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo');
+      await click(GENERAL.overviewCard.actionText('Patch secret'));
+      await fillIn(FORM.keyInput('new'), 'newkey');
+      await fillIn(FORM.valueInput('new'), 'newvalue');
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo newkey');
+
+      // deletes a key
+      await click(GENERAL.overviewCard.actionText('Patch secret'));
+      await click(FORM.patchDelete());
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys newkey');
+    });
+
+    test('patching a destroyed secret is not allowed', async function (assert) {
+      assert.expect(5);
+      const secret = 'my-destroyed-secret';
+      await visit(`/vault/secrets/${this.backend}/kv/${secret}`);
+      assert.dom(GENERAL.overviewCard.actionText('Patch secret')).exists();
+      await click(PAGE.secretTab('Secret'));
+      assert.dom(PAGE.detail.patchLatest).exists();
+      await click(PAGE.detail.destroy);
+      await click(PAGE.detail.deleteConfirm);
+      // check overview
+      assert
+        .dom(GENERAL.overviewCard.actionText('Patch secret'))
+        .doesNotExist('overview patch action is hidden for destroyed versions');
+      await click(PAGE.secretTab('Secret'));
+      // check secret tab
+      assert
+        .dom(PAGE.detail.patchLatest)
+        .doesNotExist('toolbar patch action is hidden for destroyed versions');
+      // check navigating directly
+      await visit(`/vault/secrets/${this.backend}/kv/${secret}/patch`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/kv/${secret}`,
+        'destroyed secrets redirect'
+      );
+    });
   });
 });
 
@@ -271,8 +512,8 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
   setupApplicationTest(hooks);
 
   const navToEngine = async (backend) => {
-    await click('[data-test-sidebar-nav-link="Secrets engines"]');
-    return await click(PAGE.backends.link(backend));
+    await click(GENERAL.navLink('Secrets Engines'));
+    return await click(SES.secretsBackendLink(backend));
   };
 
   const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
@@ -293,7 +534,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
     });
     // also asserts destroyed icon
     deleted.forEach((num) => {
-      assert.dom(`${PAGE.detail.version(num)} [data-test-icon="x-square"]`);
+      assert.dom(`${PAGE.detail.version(num)} ${GENERAL.icon('x-square')}`);
     });
   };
 
@@ -303,21 +544,21 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
     this.store = this.owner.lookup('service:store');
     this.backend = `kv-enterprise-edge-${uid}`;
     this.namespace = `ns-${uid}`;
-    await authPage.login();
+    await login();
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
     return;
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
-    await runCmd([`delete /sys/auth/${this.namespace}`]);
+    await login();
+    await runCmd(deleteNS(this.namespace));
     await runCmd(deleteEngineCmd(this.backend));
     return;
   });
 
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
-      await authPage.loginNs(this.namespace);
+      await loginNs(this.namespace);
       // mount engine within namespace
       await runCmd(mountEngineCmd('kv-v2', this.backend), false);
       clearRecords(this.store);
@@ -327,11 +568,11 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       // visit logout with namespace query param because we're transitioning from within an engine
       // and navigating directly to /vault/auth caused test context routing problems :(
       await visit(`/vault/logout?namespace=${this.namespace}`);
-      await authPage.namespaceInput(''); // clear login form namespace input
+      await fillIn(GENERAL.inputByAttr('namespace'), ''); // clear login form namespace input
     });
 
     test('namespace: it can create a secret and new secret version', async function (assert) {
-      assert.expect(15);
+      assert.expect(16);
       const backend = this.backend;
       const ns = this.namespace;
       const secret = 'my-create-secret';
@@ -348,14 +589,12 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await fillIn(FORM.keyInput(), 'foo');
       await fillIn(FORM.maskedValueInput(), 'woahsecret');
       await click(FORM.saveBtn);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=1`,
-        'navigates to details'
-      );
+      assert
+        .dom(GENERAL.overviewCard.container('Current version'))
+        .hasText(`Current version Create new The current version of this secret. 1`);
 
       // Create a new version
-      await click(PAGE.detail.createNewVersion);
+      await click(GENERAL.overviewCard.actionText('Create new'));
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue(secret);
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
@@ -364,8 +603,12 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await fillIn(FORM.keyInput(1), 'foo-two');
       await fillIn(FORM.maskedValueInput(1), 'supersecret');
       await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.overviewCard.container('Current version'))
+        .hasText(`Current version Create new The current version of this secret. 2`);
 
       // Check details
+      await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=2`,
@@ -373,7 +616,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       );
       await assertVersionDropdown(assert);
       assert
-        .dom(`${PAGE.detail.version(2)} [data-test-icon="check-circle"]`)
+        .dom(`${PAGE.detail.version(2)} ${GENERAL.icon('check-circle')}`)
         .exists('renders current version icon');
       assert.dom(PAGE.infoRowValue('foo-two')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('foo-two'));
@@ -381,7 +624,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
     });
 
     test('namespace: it manages state throughout delete, destroy and undelete operations', async function (assert) {
-      assert.expect(34);
+      assert.expect(36);
       const backend = this.backend;
       const ns = this.namespace;
       const secret = 'my-delete-secret';
@@ -391,21 +634,29 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await click(PAGE.list.item(secret));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=2`,
-        'navigates to details'
+        `/vault/secrets/${backend}/kv/${secret}?namespace=${ns}`,
+        'navigates to overview'
       );
 
       // correct toolbar options & details show
+      await click(PAGE.secretTab('Secret'));
       assertDeleteActions(assert);
       await assertVersionDropdown(assert);
       // delete flow
       await click(PAGE.detail.delete);
       await click(PAGE.detail.deleteOption);
       await click(PAGE.detail.deleteConfirm);
+      assert
+        .dom(GENERAL.overviewCard.container('Current version'))
+        .hasTextContaining(
+          'Current version Deleted Create new The current version of this secret was deleted'
+        );
+
+      await click(PAGE.secretTab('Secret'));
       // check empty state and toolbar
       assertDeleteActions(assert, ['undelete', 'destroy']);
       assert
-        .dom(PAGE.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 deleted');
       await assertVersionDropdown(assert, [2]); // important to test dropdown versions are accurate
@@ -417,12 +668,16 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       // back to secret tab to confirm deleted state
       await click(PAGE.secretTab('Secret'));
       // if this assertion fails, the view is rendering a stale model
-      assert.dom(PAGE.emptyStateTitle).exists('still renders empty state!!');
+      assert.dom(GENERAL.emptyStateTitle).exists('still renders empty state!!');
       await assertVersionDropdown(assert, [2]);
 
       // undelete flow
       await click(PAGE.detail.undelete);
+      assert
+        .dom(GENERAL.overviewCard.container('Current version'))
+        .hasTextContaining('Current version Create new The current version of this secret.');
       // details update accordingly
+      await click(PAGE.secretTab('Secret'));
       assertDeleteActions(assert, ['delete', 'destroy']);
       assert.dom(PAGE.infoRow).exists('shows secret data');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
@@ -430,9 +685,10 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       // destroy flow
       await click(PAGE.detail.destroy);
       await click(PAGE.detail.deleteConfirm);
+      await click(PAGE.secretTab('Secret'));
       assertDeleteActions(assert, []);
       assert
-        .dom(PAGE.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been permanently destroyed', 'Shows destroyed message');
 
       // navigate to sibling route to make sure empty state remains for details tab
@@ -442,7 +698,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       // back to secret tab to confirm destroyed state
       await click(PAGE.secretTab('Secret'));
       // if this assertion fails, the view is rendering a stale model
-      assert.dom(PAGE.emptyStateTitle).exists('still renders empty state!!');
+      assert.dom(GENERAL.emptyStateTitle).exists('still renders empty state!!');
       await assertVersionDropdown(assert, [2]);
     });
   });

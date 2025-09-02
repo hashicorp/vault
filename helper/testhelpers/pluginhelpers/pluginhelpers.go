@@ -14,9 +14,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"testing"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/go-testing-interface"
 )
 
 var (
@@ -34,7 +35,7 @@ type TestPlugin struct {
 	ImageSha256 string
 }
 
-func GetPlugin(t testing.T, typ consts.PluginType) (string, string, string, string) {
+func GetPlugin(t testing.TB, typ consts.PluginType) (string, string, string, string) {
 	t.Helper()
 	var pluginName string
 	var pluginType string
@@ -65,7 +66,7 @@ func GetPlugin(t testing.T, typ consts.PluginType) (string, string, string, stri
 
 // to mount a plugin, we need a working binary plugin, so we compile one here.
 // pluginVersion is used to override the plugin's self-reported version
-func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, pluginDir string) TestPlugin {
+func CompilePlugin(t testing.TB, typ consts.PluginType, pluginVersion string, pluginDir string) TestPlugin {
 	t.Helper()
 
 	pluginName, pluginType, pluginMain, pluginVersionLocation := GetPlugin(t, typ)
@@ -76,18 +77,16 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 	var pluginBytes []byte
 
 	dir := ""
-	var err error
-	pluginRootDir := "builtin"
-	if typ == consts.PluginTypeDatabase {
-		pluginRootDir = "plugins"
-	}
 	for {
-		dir, err = os.Getwd()
-		if err != nil {
-			t.Fatal(err)
+		// So that we can assign to dir without overshadowing the other
+		// err variables.
+		var getWdErr error
+		dir, getWdErr = os.Getwd()
+		if getWdErr != nil {
+			t.Fatal(getWdErr)
 		}
 		// detect if we are in a subdirectory or the root directory and compensate
-		if _, err := os.Stat(pluginRootDir); os.IsNotExist(err) {
+		if _, err := os.Stat(pluginMain); os.IsNotExist(err) {
 			err := os.Chdir("..")
 			if err != nil {
 				t.Fatal(err)
@@ -112,6 +111,12 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 		if pluginVersion != "" {
 			line = append(line, "-ldflags", fmt.Sprintf("-X %s=%s", pluginVersionLocation, pluginVersion))
 		}
+		if constants.IsEnterprise {
+			// Under VAULT-38008, tokenutil.go got stubs, which means we now need to
+			// set the enterprise tag to avoid compiling both the _ent.go and the _stubs_oss.go
+			// files.
+			line = append(line, "-tags", "enterprise")
+		}
 		line = append(line, "-o", pluginPath, pluginMain)
 		cmd := exec.Command("go", line...)
 		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
@@ -128,15 +133,20 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 	}
 
 	// write the cached plugin if necessary
-	if _, err := os.Stat(pluginPath); os.IsNotExist(err) {
-		err = os.WriteFile(pluginPath, pluginBytes, 0o755)
-	}
-	if err != nil {
-		t.Fatal(err)
+	_, statErr := os.Stat(pluginPath)
+	if os.IsNotExist(statErr) {
+		err := os.WriteFile(pluginPath, pluginBytes, 0o755)
+		if err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		if statErr != nil {
+			t.Fatal(statErr)
+		}
 	}
 
 	sha := sha256.New()
-	_, err = sha.Write(pluginBytes)
+	_, err := sha.Write(pluginBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +159,7 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 	}
 }
 
-func BuildPluginContainerImage(t testing.T, plugin TestPlugin, pluginDir string) (image string, sha256 string) {
+func BuildPluginContainerImage(t testing.TB, plugin TestPlugin, pluginDir string) (image string, sha256 string) {
 	t.Helper()
 	ref := plugin.Name
 	if plugin.Version != "" {

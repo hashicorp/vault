@@ -5,6 +5,7 @@ package clientcountutil
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -119,7 +120,10 @@ func TestWrite(t *testing.T) {
 		require.NoError(t, err)
 		body, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
-		require.JSONEq(t, `{"write":["WRITE_ENTITIES"],"data":[{"monthsAgo":3,"all":{"clients":[{"count":1}]}},{"monthsAgo":2,"segments":{"segments":[{"segmentIndex":2,"clients":{"clients":[{"count":1,"repeated":true}]}}]}},{"currentMonth":true}]}`, string(body))
+		raw := map[string]string{}
+		err = json.Unmarshal(body, &raw)
+		require.NoError(t, err)
+		require.JSONEq(t, `{"write":["WRITE_ENTITIES"],"data":[{"monthsAgo":3,"all":{"clients":[{"count":1}]}},{"monthsAgo":2,"segments":{"segments":[{"segmentIndex":2,"clients":{"clients":[{"count":1,"repeated":true}]}}]}},{"currentMonth":true}]}`, raw["input"])
 	}))
 	defer ts.Close()
 

@@ -4,15 +4,16 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
 import { getCliMessage } from 'pki/routes/overview';
 
 @withConfig()
 export default class PkiCertificatesIndexRoute extends Route {
-  @service store;
+  @service pagination;
   @service secretMountPath;
+  @service store; // used by @withConfig decorator
 
   queryParams = {
     page: {
@@ -23,7 +24,7 @@ export default class PkiCertificatesIndexRoute extends Route {
   async fetchCertificates(params) {
     try {
       const page = Number(params.page) || 1;
-      return await this.store.lazyPaginatedQuery('pki/certificate/base', {
+      return await this.pagination.lazyPaginatedQuery('pki/certificate/base', {
         backend: this.secretMountPath.currentPath,
         responsePath: 'data.keys',
         page,
@@ -39,7 +40,7 @@ export default class PkiCertificatesIndexRoute extends Route {
 
   model(params) {
     return hash({
-      hasConfig: this.shouldPromptConfig,
+      hasConfig: this.pkiMountHasConfig,
       certificates: this.fetchCertificates(params),
       parentModel: this.modelFor('certificates'),
       pageFilter: params.pageFilter,

@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Move secret-engine configuration create/edit from routing `vault/settings/secrets/configure/<backend>` to  `vault/secrets/<backend>/configuration/edit`
+```

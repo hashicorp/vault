@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 func testMonitorCommand(tb testing.TB) (*cli.MockUi, *MonitorCommand) {

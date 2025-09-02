@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -55,7 +56,7 @@ func pathListIssuers(b *backend) *framework.Path {
 }
 
 func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not list issuers until migration has completed"), nil
 	}
 
@@ -192,6 +193,12 @@ for the issuing certificate attribute. See also RFC 5280 Section 4.2.2.1.`,
 		Description: `Comma-separated list of URLs to be used
 for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
 	}
+	fields["delta_crl_distribution_points"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `Comma-separated list of URLs to be used
+for the Delta CRL distribution points attribute, also known as Freshest CRL
+distribution points attribute. See also RFC 5280 Section 4.2.1.15.`,
+	}
 	fields["ocsp_servers"] = &framework.FieldSchema{
 		Type: framework.TypeCommaStringSlice,
 		Description: `Comma-separated list of URLs to be used
@@ -208,90 +215,13 @@ and using '{{cluster_aia_path}}' requires /config/cluster's 'aia_path' member
 to be set on all PR secondary clusters.`,
 		Default: false,
 	}
+	addEntPathIssuerFields(fields)
+	updateIssuerFields := issuerResponseFields(false)
 
 	updateIssuerSchema := map[int][]framework.Response{
 		http.StatusOK: {{
 			Description: "OK",
-			Fields: map[string]*framework.FieldSchema{
-				"issuer_id": {
-					Type:        framework.TypeString,
-					Description: `Issuer Id`,
-					Required:    false,
-				},
-				"issuer_name": {
-					Type:        framework.TypeString,
-					Description: `Issuer Name`,
-					Required:    false,
-				},
-				"key_id": {
-					Type:        framework.TypeString,
-					Description: `Key Id`,
-					Required:    false,
-				},
-				"certificate": {
-					Type:        framework.TypeString,
-					Description: `Certificate`,
-					Required:    false,
-				},
-				"manual_chain": {
-					Type:        framework.TypeStringSlice,
-					Description: `Manual Chain`,
-					Required:    false,
-				},
-				"ca_chain": {
-					Type:        framework.TypeStringSlice,
-					Description: `CA Chain`,
-					Required:    false,
-				},
-				"leaf_not_after_behavior": {
-					Type:        framework.TypeString,
-					Description: `Leaf Not After Behavior`,
-					Required:    false,
-				},
-				"usage": {
-					Type:        framework.TypeString,
-					Description: `Usage`,
-					Required:    false,
-				},
-				"revocation_signature_algorithm": {
-					Type:        framework.TypeString,
-					Description: `Revocation Signature Alogrithm`,
-					Required:    false,
-				},
-				"revoked": {
-					Type:        framework.TypeBool,
-					Description: `Revoked`,
-					Required:    false,
-				},
-				"revocation_time": {
-					Type:     framework.TypeInt,
-					Required: false,
-				},
-				"revocation_time_rfc3339": {
-					Type:     framework.TypeString,
-					Required: false,
-				},
-				"issuing_certificates": {
-					Type:        framework.TypeStringSlice,
-					Description: `Issuing Certificates`,
-					Required:    false,
-				},
-				"crl_distribution_points": {
-					Type:        framework.TypeStringSlice,
-					Description: `CRL Distribution Points`,
-					Required:    false,
-				},
-				"ocsp_servers": {
-					Type:        framework.TypeStringSlice,
-					Description: `OCSP Servers`,
-					Required:    false,
-				},
-				"enable_aia_url_templating": {
-					Type:        framework.TypeBool,
-					Description: `Whether or not templating is enabled for AIA fields`,
-					Required:    false,
-				},
-			},
+			Fields:      updateIssuerFields,
 		}},
 	}
 
@@ -337,6 +267,100 @@ to be set on all PR secondary clusters.`,
 		HelpSynopsis:    pathGetIssuerHelpSyn,
 		HelpDescription: pathGetIssuerHelpDesc,
 	}
+}
+
+func issuerResponseFields(required bool) map[string]*framework.FieldSchema {
+	fields := map[string]*framework.FieldSchema{
+		"issuer_id": {
+			Type:        framework.TypeString,
+			Description: `Issuer Id`,
+			Required:    required,
+		},
+		"issuer_name": {
+			Type:        framework.TypeString,
+			Description: `Issuer Name`,
+			Required:    required,
+		},
+		"key_id": {
+			Type:        framework.TypeString,
+			Description: `Key Id`,
+			Required:    required,
+		},
+		"certificate": {
+			Type:        framework.TypeString,
+			Description: `Certificate`,
+			Required:    required,
+		},
+		"manual_chain": {
+			Type:        framework.TypeStringSlice,
+			Description: `Manual Chain`,
+			Required:    required,
+		},
+		"ca_chain": {
+			Type:        framework.TypeStringSlice,
+			Description: `CA Chain`,
+			Required:    required,
+		},
+		"leaf_not_after_behavior": {
+			Type:        framework.TypeString,
+			Description: `Leaf Not After Behavior`,
+			Required:    required,
+		},
+		"usage": {
+			Type:        framework.TypeString,
+			Description: `Usage`,
+			Required:    required,
+		},
+		"revocation_signature_algorithm": {
+			Type:        framework.TypeString,
+			Description: `Revocation Signature Alogrithm`,
+			Required:    required,
+		},
+		"revoked": {
+			Type:        framework.TypeBool,
+			Description: `Revoked`,
+			Required:    required,
+		},
+		"revocation_time": {
+			Type:        framework.TypeInt,
+			Description: `Revocation time`,
+			Required:    required,
+		},
+		"revocation_time_rfc3339": {
+			Type:        framework.TypeString,
+			Description: `Revocation time RFC 3339 formatted`,
+			Required:    required,
+		},
+		"issuing_certificates": {
+			Type:        framework.TypeStringSlice,
+			Description: `Issuing Certificates`,
+			Required:    required,
+		},
+		"crl_distribution_points": {
+			Type:        framework.TypeStringSlice,
+			Description: `CRL Distribution Points`,
+			Required:    required,
+		},
+		"delta_crl_distribution_points": {
+			Type:        framework.TypeStringSlice,
+			Description: `Delta CRL Distribution Points`,
+			Required:    required,
+		},
+		"ocsp_servers": {
+			Type:        framework.TypeStringSlice,
+			Description: `OCSP Servers`,
+			Required:    required,
+		},
+		"enable_aia_url_templating": {
+			Type:        framework.TypeBool,
+			Description: `Whether or not templating is enabled for AIA fields`,
+			Required:    required,
+		},
+	}
+
+	addEntPathIssuerResponseFields(fields)
+
+	return fields
 }
 
 func buildPathGetIssuer(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
@@ -398,11 +422,11 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 		return b.pathGetRawIssuer(ctx, req, data)
 	}
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not get issuer until migration has completed"), nil
 	}
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -424,7 +448,7 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 	return respondReadIssuer(issuer)
 }
 
-func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
+func respondReadIssuer(issuer *issuing.IssuerEntry) (*logical.Response, error) {
 	var respManualChain []string
 	for _, entity := range issuer.ManualChain {
 		respManualChain = append(respManualChain, string(entity))
@@ -451,8 +475,10 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		"revoked":                        issuer.Revoked,
 		"issuing_certificates":           []string{},
 		"crl_distribution_points":        []string{},
+		"delta_crl_distribution_points":  []string{},
 		"ocsp_servers":                   []string{},
 	}
+	setEntIssuerData(data, issuer)
 
 	if issuer.Revoked {
 		data["revocation_time"] = issuer.RevocationTime
@@ -462,8 +488,11 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 	if issuer.AIAURIs != nil {
 		data["issuing_certificates"] = issuer.AIAURIs.IssuingCertificates
 		data["crl_distribution_points"] = issuer.AIAURIs.CRLDistributionPoints
+		data["delta_crl_distribution_points"] = issuer.AIAURIs.DeltaCRLDistributionPoints
 		data["ocsp_servers"] = issuer.AIAURIs.OCSPServers
 		data["enable_aia_url_templating"] = issuer.AIAURIs.EnableTemplating
+	} else {
+		data["enable_aia_url_templating"] = false
 	}
 
 	response := &logical.Response{
@@ -483,11 +512,11 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not update issuer until migration has completed"), nil
 	}
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -528,6 +557,8 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	switch rawLeafBehavior {
 	case "err":
 		newLeafBehavior = certutil.ErrNotAfterBehavior
+	case "always_enforce_err":
+		newLeafBehavior = certutil.AlwaysEnforceErr
 	case "truncate":
 		newLeafBehavior = certutil.TruncateNotAfterBehavior
 	case "permit":
@@ -537,9 +568,9 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	rawUsage := data.Get("usage").([]string)
-	newUsage, err := NewIssuerUsageFromNames(rawUsage)
+	newUsage, err := issuing.NewIssuerUsageFromNames(rawUsage)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, AllIssuerUsages.Names())), nil
+		return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, issuing.AllIssuerUsages.Names())), nil
 	}
 
 	// Revocation signature algorithm changes
@@ -562,15 +593,19 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	// AIA access changes
 	enableTemplating := data.Get("enable_aia_url_templating").(bool)
 	issuerCertificates := data.Get("issuing_certificates").([]string)
-	if badURL := validateURLs(issuerCertificates); !enableTemplating && badURL != "" {
+	if badURL := issuing.ValidateURLs(issuerCertificates); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter issuing_certificates: %s", badURL)), nil
 	}
 	crlDistributionPoints := data.Get("crl_distribution_points").([]string)
-	if badURL := validateURLs(crlDistributionPoints); !enableTemplating && badURL != "" {
+	if badURL := issuing.ValidateURLs(crlDistributionPoints); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter crl_distribution_points: %s", badURL)), nil
 	}
+	deltaCRLDistributionPoints := data.Get("delta_crl_distribution_points").([]string)
+	if badURL := issuing.ValidateURLs(deltaCRLDistributionPoints); !enableTemplating && badURL != "" {
+		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter delta_crl_distribution_points: %s", badURL)), nil
+	}
 	ocspServers := data.Get("ocsp_servers").([]string)
-	if badURL := validateURLs(ocspServers); !enableTemplating && badURL != "" {
+	if badURL := issuing.ValidateURLs(ocspServers); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter ocsp_servers: %s", badURL)), nil
 	}
 
@@ -582,8 +617,8 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		issuer.Name = newName
 		issuer.LastModified = time.Now().UTC()
 		// See note in updateDefaultIssuerId about why this is necessary.
-		b.crlBuilder.invalidateCRLBuildTime()
-		b.crlBuilder.flushCRLBuildTimeInvalidation(sc)
+		b.CrlBuilder().invalidateCRLBuildTime()
+		b.CrlBuilder().flushCRLBuildTimeInvalidation(sc)
 		modified = true
 	}
 
@@ -593,7 +628,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	if newUsage != issuer.Usage {
-		if issuer.Revoked && newUsage.HasUsage(IssuanceUsage) {
+		if issuer.Revoked && newUsage.HasUsage(issuing.IssuanceUsage) {
 			// Forbid allowing cert signing on its usage.
 			return logical.ErrorResponse("This issuer was revoked; unable to modify its usage to include certificate signing again. Reissue this certificate (preferably with a new key) and modify that entry instead."), nil
 		}
@@ -604,7 +639,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse issuer's certificate: %w", err)
 		}
-		if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(CRLSigningUsage) {
+		if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(issuing.CRLSigningUsage) {
 			return logical.ErrorResponse("This issuer's underlying certificate lacks the CRLSign KeyUsage value; unable to set CRLSigningUsage on this issuer as a result."), nil
 		}
 
@@ -617,8 +652,8 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		modified = true
 	}
 
-	if issuer.AIAURIs == nil && (len(issuerCertificates) > 0 || len(crlDistributionPoints) > 0 || len(ocspServers) > 0) {
-		issuer.AIAURIs = &aiaConfigEntry{}
+	if issuer.AIAURIs == nil && (len(issuerCertificates) > 0 || len(crlDistributionPoints) > 0 || len(ocspServers) > 0 || len(deltaCRLDistributionPoints) > 0) {
+		issuer.AIAURIs = &issuing.AiaConfigEntry{}
 	}
 	if issuer.AIAURIs != nil {
 		// Associative mapping from data source to destination on the
@@ -640,6 +675,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 				Source: &ocspServers,
 				Dest:   &issuer.AIAURIs.OCSPServers,
 			},
+			{
+				Source: &deltaCRLDistributionPoints,
+				Dest:   &issuer.AIAURIs.DeltaCRLDistributionPoints,
+			},
 		}
 
 		// For each pair, if it is different on the object, update it.
@@ -656,16 +695,22 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 		// If no AIA URLs exist on the issuer, set the AIA URLs entry to nil
 		// to ease usage later.
-		if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
+		if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 && len(issuer.AIAURIs.DeltaCRLDistributionPoints) == 0 {
 			issuer.AIAURIs = nil
 		}
+	}
+
+	var updatedIssuanceValidations bool
+	if updateEntIssuerFields(issuer, data, false) {
+		modified = true
+		updatedIssuanceValidations = true
 	}
 
 	// Updating the chain should be the last modification as there's a chance
 	// it'll write it out to disk for us. We'd hate to then modify the issuer
 	// again and write it a second time.
 	var updateChain bool
-	var constructedChain []issuerID
+	var constructedChain []issuing.IssuerID
 	for index, newPathRef := range newPath {
 		// Allow self for the first entry.
 		if index == 0 && newPathRef == "self" {
@@ -692,32 +737,62 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	if updateChain {
+		oldChain := issuer.ManualChain
 		issuer.ManualChain = constructedChain
 
 		// Building the chain will write the issuer to disk; no need to do it
 		// twice.
 		modified = false
-		err := sc.rebuildIssuersChains(issuer)
+		err = sc.rebuildIssuersChains(issuer)
 		if err != nil {
 			return nil, err
 		}
+
+		if issuer.Usage.HasUsage(issuing.IssuanceUsage) {
+			// Issuer has been saved by building the chain above
+			err = b.issueSignEmptyCert(ctx, req, issuer.ID.String())
+			if err != nil {
+				issuer.ManualChain = oldChain
+				newErr := sc.rebuildIssuersChains(issuer)
+				if newErr != nil {
+					return logical.ErrorResponse("error reverting bad chain update, state unknown: %v, \ninitial error: %v", newErr.Error(), err.Error()), nil
+				}
+				return logical.ErrorResponse("other changes to issuer may be persisted.  Error setting manual chain, issuer would be unusuable with this chain: %v", err), nil
+			} else {
+				updatedIssuanceValidations = false
+			}
+		}
+
 	}
 
 	if modified {
-		err := sc.writeIssuer(issuer)
+		err = sc.writeIssuer(issuer)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	response, err := respondReadIssuer(issuer)
+	if err != nil {
+		return response, err
+	}
 	if newName != oldName {
 		addWarningOnDereferencing(sc, oldName, response)
 	}
 	if issuer.AIAURIs != nil && issuer.AIAURIs.EnableTemplating {
-		_, aiaErr := issuer.AIAURIs.toURLEntries(sc, issuer.ID)
+		_, aiaErr := ToURLEntries(sc, issuer.ID, issuer.AIAURIs)
 		if aiaErr != nil {
 			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
+		}
+	}
+	if (issuer.AIAURIs != nil && issuer.AIAURIs.DeltaCRLDistributionPoints != nil && len(issuer.AIAURIs.DeltaCRLDistributionPoints) > 0) &&
+		(issuer.AIAURIs.CRLDistributionPoints == nil || len(issuer.AIAURIs.CRLDistributionPoints) == 0) {
+		response.AddWarning(fmt.Sprintf("delta crl distribution points were set: %v but no base crl distribution point was set, consider setting base crl distribution point.", strings.Join(issuer.AIAURIs.DeltaCRLDistributionPoints, ", ")))
+	}
+	if updatedIssuanceValidations {
+		warning := checkIssuer(issuer, ctx, req, b)
+		if warning != "" {
+			response.AddWarning(warning)
 		}
 	}
 
@@ -730,12 +805,12 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not patch issuer until migration has completed"), nil
 	}
 
 	// First we fetch the issuer
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -782,8 +857,8 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			issuer.Name = newName
 			issuer.LastModified = time.Now().UTC()
 			// See note in updateDefaultIssuerId about why this is necessary.
-			b.crlBuilder.invalidateCRLBuildTime()
-			b.crlBuilder.flushCRLBuildTimeInvalidation(sc)
+			b.CrlBuilder().invalidateCRLBuildTime()
+			b.CrlBuilder().flushCRLBuildTimeInvalidation(sc)
 			modified = true
 		}
 	}
@@ -796,6 +871,8 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		switch rawLeafBehavior {
 		case "err":
 			newLeafBehavior = certutil.ErrNotAfterBehavior
+		case "always_enforce_err":
+			newLeafBehavior = certutil.AlwaysEnforceErr
 		case "truncate":
 			newLeafBehavior = certutil.TruncateNotAfterBehavior
 		case "permit":
@@ -813,12 +890,12 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	rawUsageData, ok := data.GetOk("usage")
 	if ok {
 		rawUsage := rawUsageData.([]string)
-		newUsage, err := NewIssuerUsageFromNames(rawUsage)
+		newUsage, err := issuing.NewIssuerUsageFromNames(rawUsage)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, AllIssuerUsages.Names())), nil
+			return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, issuing.AllIssuerUsages.Names())), nil
 		}
 		if newUsage != issuer.Usage {
-			if issuer.Revoked && newUsage.HasUsage(IssuanceUsage) {
+			if issuer.Revoked && newUsage.HasUsage(issuing.IssuanceUsage) {
 				// Forbid allowing cert signing on its usage.
 				return logical.ErrorResponse("This issuer was revoked; unable to modify its usage to include certificate signing again. Reissue this certificate (preferably with a new key) and modify that entry instead."), nil
 			}
@@ -827,7 +904,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			if err != nil {
 				return nil, fmt.Errorf("unable to parse issuer's certificate: %w", err)
 			}
-			if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(CRLSigningUsage) {
+			if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(issuing.CRLSigningUsage) {
 				return logical.ErrorResponse("This issuer's underlying certificate lacks the CRLSign KeyUsage value; unable to set CRLSigningUsage on this issuer as a result."), nil
 			}
 
@@ -864,7 +941,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 
 	// AIA access changes.
 	if issuer.AIAURIs == nil {
-		issuer.AIAURIs = &aiaConfigEntry{}
+		issuer.AIAURIs = &issuing.AiaConfigEntry{}
 	}
 
 	// Associative mapping from data source to destination on the
@@ -885,6 +962,10 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			Dest:   &issuer.AIAURIs.CRLDistributionPoints,
 		},
 		{
+			Source: "delta_crl_distribution_points",
+			Dest:   &issuer.AIAURIs.DeltaCRLDistributionPoints,
+		},
+		{
 			Source: "ocsp_servers",
 			Dest:   &issuer.AIAURIs.OCSPServers,
 		},
@@ -893,7 +974,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	if enableTemplatingRaw, ok := data.GetOk("enable_aia_url_templating"); ok {
 		enableTemplating := enableTemplatingRaw.(bool)
 		if enableTemplating != issuer.AIAURIs.EnableTemplating {
-			issuer.AIAURIs.EnableTemplating = true
+			issuer.AIAURIs.EnableTemplating = enableTemplating
 			modified = true
 		}
 	}
@@ -903,7 +984,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		rawURLsValue, ok := data.GetOk(pair.Source)
 		if ok {
 			urlsValue := rawURLsValue.([]string)
-			if badURL := validateURLs(urlsValue); !issuer.AIAURIs.EnableTemplating && badURL != "" {
+			if badURL := issuing.ValidateURLs(urlsValue); !issuer.AIAURIs.EnableTemplating && badURL != "" {
 				return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter %v: %s", pair.Source, badURL)), nil
 			}
 
@@ -916,8 +997,14 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 
 	// If no AIA URLs exist on the issuer, set the AIA URLs entry to nil to
 	// ease usage later.
-	if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
+	if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.DeltaCRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
 		issuer.AIAURIs = nil
+	}
+
+	updatedIssuanceValidations := false
+	if updateEntIssuerFields(issuer, data, true) {
+		modified = true
+		updatedIssuanceValidations = true
 	}
 
 	// Manual Chain Changes
@@ -925,7 +1012,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	if ok {
 		newPath := newPathData.([]string)
 		var updateChain bool
-		var constructedChain []issuerID
+		var constructedChain []issuing.IssuerID
 		for index, newPathRef := range newPath {
 			// Allow self for the first entry.
 			if index == 0 && newPathRef == "self" {
@@ -952,15 +1039,32 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		}
 
 		if updateChain {
+			oldChain := issuer.ManualChain
 			issuer.ManualChain = constructedChain
 
 			// Building the chain will write the issuer to disk; no need to do it
 			// twice.
 			modified = false
-			err := sc.rebuildIssuersChains(issuer)
+			err = sc.rebuildIssuersChains(issuer)
 			if err != nil {
 				return nil, err
 			}
+			// If this issuer is supposed to be issuing certificates, test that will work
+			if issuer.Usage.HasUsage(issuing.IssuanceUsage) {
+				// Issuer has been saved by building the chain above
+				err = b.issueSignEmptyCert(ctx, req, issuer.Name)
+				if err != nil {
+					issuer.ManualChain = oldChain
+					newErr := sc.rebuildIssuersChains(issuer)
+					if newErr != nil {
+						return logical.ErrorResponse("error reverting bad chain update, state unknown: %v, \ninitial error: %v", newErr.Error(), err.Error()), nil
+					}
+					return logical.ErrorResponse("other changes to issuer may be persisted.  Error setting manual chain, issuer would be unusuable with this chain: %v", err), nil
+				} else {
+					updatedIssuanceValidations = false
+				}
+			}
+
 		}
 	}
 
@@ -972,25 +1076,49 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	}
 
 	response, err := respondReadIssuer(issuer)
+	if err != nil {
+		return nil, err
+	}
 	if newName != oldName {
 		addWarningOnDereferencing(sc, oldName, response)
 	}
+	if updatedIssuanceValidations {
+		warning := checkIssuer(issuer, ctx, req, b)
+		if warning != "" {
+			response.AddWarning(warning)
+		}
+	}
 	if issuer.AIAURIs != nil && issuer.AIAURIs.EnableTemplating {
-		_, aiaErr := issuer.AIAURIs.toURLEntries(sc, issuer.ID)
+		_, aiaErr := ToURLEntries(sc, issuer.ID, issuer.AIAURIs)
 		if aiaErr != nil {
 			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
 		}
+	}
+	if (issuer.AIAURIs != nil && issuer.AIAURIs.DeltaCRLDistributionPoints != nil && len(issuer.AIAURIs.DeltaCRLDistributionPoints) > 0) &&
+		(issuer.AIAURIs.CRLDistributionPoints == nil || len(issuer.AIAURIs.CRLDistributionPoints) == 0) {
+		response.AddWarning(fmt.Sprintf("delta crl distribution points were set: %v but no base crl distribution point was set, consider setting base crl distribution point.", strings.Join(issuer.AIAURIs.DeltaCRLDistributionPoints, ", ")))
 	}
 
 	return response, err
 }
 
+// checkIssuer looks at an issuer that has already been written, and returns a warning if it is not functional.
+func checkIssuer(issuer *issuing.IssuerEntry, ctx context.Context, req *logical.Request, b *backend) (warning string) {
+	if issuer.Usage.HasUsage(issuing.IssuanceUsage) {
+		err := b.issueSignEmptyCert(ctx, req, issuer.ID.String())
+		if err != nil {
+			return fmt.Sprintf("warning: issuer with issuance usage %s cannot issue certificates with this configuration: %v", issuer.ID.String(), err)
+		}
+	}
+	return ""
+}
+
 func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not get issuer until migration has completed"), nil
 	}
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -1069,11 +1197,11 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not delete issuer until migration has completed"), nil
 	}
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -1082,7 +1210,7 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	ref, err := sc.resolveIssuerReference(issuerName)
 	if err != nil {
 		// Return as if we deleted it if we fail to lookup the issuer.
-		if ref == IssuerRefNotFound {
+		if ref == issuing.IssuerRefNotFound {
 			return &logical.Response{}, nil
 		}
 		return nil, err
@@ -1120,7 +1248,7 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	// Finally, we need to rebuild both the local and the unified CRLs. This
 	// will free up any now unnecessary space used in both the CRL config
 	// and for the underlying CRL.
-	warnings, err := b.crlBuilder.rebuild(sc, true)
+	warnings, err := b.CrlBuilder().Rebuild(sc, true)
 	if err != nil {
 		return nil, err
 	}
@@ -1220,17 +1348,17 @@ func buildPathGetIssuerCRL(b *backend, pattern string, displayAttrs *framework.D
 }
 
 func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not get issuer's CRL until migration has completed"), nil
 	}
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	warnings, err := b.crlBuilder.rebuildIfForced(sc)
+	warnings, err := b.CrlBuilder().RebuildIfForced(sc)
 	if err != nil {
 		return nil, err
 	}
@@ -1270,7 +1398,7 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		return response, nil
 	}
 
-	crlPath, err := sc.resolveIssuerCRLPath(issuerName, isUnified)
+	crlPath, err := issuing.ResolveIssuerCRLPath(sc.GetContext(), sc.GetStorage(), sc.UseLegacyBundleCaStorage(), issuerName, isUnified)
 	if err != nil {
 		return nil, err
 	}

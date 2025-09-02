@@ -1,11 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
 <TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @roles.meta.total)}}
       <FilterInput
-        @placeholder="Filter roles"
+        aria-label="Filter roles"
+        placeholder="Filter roles"
         @value={{@pageFilter}}
-        @wait={{500}}
-        @autofocus={{true}}
         @onInput={{this.onFilterChange}}
       />
     {{/if}}
@@ -33,97 +37,96 @@
       data-test-config-cta
       @title="No roles created yet"
       @message="Roles in Vault will allow you to manage LDAP credentials. Create a role to get started."
-    >
-      <LinkTo class="has-top-margin-xs" @route="roles.create">
-        Create role
-      </LinkTo>
-    </EmptyState>
+    />
   {{/if}}
 {{else}}
   <div class="has-bottom-margin-s">
     {{#each @roles as |role|}}
-      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role.details" role.type role.name}} as |Item|>
+      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{this.linkParams role}} as |Item|>
         <Item.content>
           <Icon @name="user" />
-          <span data-test-role={{role.name}}>{{role.name}}</span>
+          <span data-test-role="{{role.type}} {{role.name}}">{{role.name}}</span>
           <Hds::Badge @text={{role.type}} data-test-role-type-badge={{role.name}} />
         </Item.content>
-        <Item.menu as |Menu|>
-          {{#if role.rolePath.isLoading}}
-            <li class="action">
-              <button disabled type="button" class="link button is-loading is-transparent">
-                loading
-              </button>
-            </li>
-          {{else}}
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
-                data-test-edit
-                @route="roles.role.edit"
-                @models={{array role.type role.name}}
-                @disabled={{not role.canEdit}}
-              >
-                Edit
-              </LinkTo>
-            </li>
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
-                data-test-get-creds
-                @route="roles.role.credentials"
-                @models={{array role.type role.name}}
-                @disabled={{not role.canReadCreds}}
-              >
-                Get credentials
-              </LinkTo>
-            </li>
-            {{#if role.canRotateStaticCreds}}
-              <li class="action">
-                <Menu.Message
+        <Item.menu>
+          <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="More options"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger="{{role.type}} {{role.name}}"
+            />
+            {{#if (this.isHierarchical role.name)}}
+              <dd.Interactive
+                data-test-subdirectory
+                @route="roles.subdirectory"
+                @models={{array role.type role.completeRoleName}}
+              >Content</dd.Interactive>
+            {{else}}
+              {{#if role.canEdit}}
+                <dd.Interactive
+                  data-test-edit
+                  @route="roles.role.edit"
+                  @models={{array role.type role.name}}
+                >Edit</dd.Interactive>
+              {{/if}}
+              {{#if role.canReadCreds}}
+                <dd.Interactive
+                  data-test-get-creds
+                  @route="roles.role.credentials"
+                  @models={{array role.type role.completeRoleName}}
+                >
+                  Get credentials
+                </dd.Interactive>
+              {{/if}}
+              {{#if role.canRotateStaticCreds}}
+                <dd.Interactive
                   data-test-rotate-creds
-                  @id={{concat "rotate-" role.id}}
-                  @triggerText="Rotate credentials"
-                  @title="Are you sure?"
-                  @message="When manually rotating credentials, the rotation period will start over."
-                  @confirmButtonText="Rotate"
-                  @onConfirm={{fn this.onRotate role}}
-                />
-              </li>
-            {{/if}}
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
+                  @color="critical"
+                  {{on "click" (fn (mut this.credsToRotate) role)}}
+                >Rotate credentials</dd.Interactive>
+              {{/if}}
+              <dd.Interactive
                 data-test-details
                 @route="roles.role.details"
                 {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
-                @models={{array role.type role.name}}
-                @disabled={{not role.canRead}}
-              >
-                Details
-              </LinkTo>
-            </li>
-            {{#if role.canDelete}}
-              <li class="action">
-                <Menu.Message
+                @models={{array role.type role.completeRoleName}}
+              >Details</dd.Interactive>
+              {{#if role.canDelete}}
+                <dd.Interactive
                   data-test-delete
-                  @id={{concat "delete-" role.id}}
-                  @triggerText="Delete"
-                  @title="Are you sure?"
-                  @message="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
-                  @onConfirm={{fn this.onDelete role}}
-                />
-              </li>
+                  @color="critical"
+                  {{on "click" (fn (mut this.roleToDelete) role)}}
+                >Delete</dd.Interactive>
+              {{/if}}
             {{/if}}
-          {{/if}}
+          </Hds::Dropdown>
         </Item.menu>
       </ListItem>
     {{/each}}
 
+    {{#if this.credsToRotate}}
+      <ConfirmModal
+        @confirmMessage="When manually rotating credentials, the rotation period will start over."
+        @onConfirm={{fn this.onRotate this.credsToRotate}}
+        @onClose={{fn (mut this.credsToRotate) null}}
+      />
+    {{/if}}
+    {{#if this.roleToDelete}}
+      <ConfirmModal
+        @color="critical"
+        @confirmMessage="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
+        @onConfirm={{fn this.onDelete this.roleToDelete}}
+        @onClose={{fn (mut this.roleToDelete) null}}
+      />
+    {{/if}}
+
     <Hds::Pagination::Numbered
       @currentPage={{@roles.meta.currentPage}}
       @currentPageSize={{@roles.meta.pageSize}}
-      @route="roles"
+      {{! localName will be either "index" or "subdirectory" }}
+      @route="roles.{{this.router.currentRoute.localName}}"
+      @models={{@currentRouteParams}}
       @showSizeSelector={{false}}
       @totalItems={{@roles.meta.filteredTotal}}
       @queryFunction={{this.paginationQueryParams}}

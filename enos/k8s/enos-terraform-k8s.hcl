@@ -6,8 +6,7 @@ terraform "k8s" {
 
   required_providers {
     enos = {
-      source  = "app.terraform.io/hashicorp-qti/enos"
-      version = "< 0.4.0"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
 
     helm = {
@@ -18,8 +17,4 @@ terraform "k8s" {
 
 terraform_cli "default" {
   plugin_cache_dir = var.terraform_plugin_cache_dir != null ? abspath(var.terraform_plugin_cache_dir) : null
-
-  credentials "app.terraform.io" {
-    token = var.tfc_api_token
-  }
 }

@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <PkiPageHeader @backend={{this.model.engine}} />
 
@@ -10,8 +10,12 @@
 {{else}}
   <Toolbar />
   <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
-    <LinkTo @route="configuration.create">
-      Configure PKI
-    </LinkTo>
+    <Hds::Link::Standalone
+      @icon="chevron-right"
+      @iconPosition="trailing"
+      @text="Configure PKI"
+      @route="configuration.create"
+      @model={{this.model.engine.id}}
+    />
   </EmptyState>
 {{/if}}

@@ -1,34 +1,33 @@
 # Model Validations Decorator
-  
+
 The model-validations decorator provides a method on a model class which may be used for validating properties based on a provided rule set.
 
 ## API
 
 The decorator expects a validations object as the only argument with the following shape:
 
-``` js
+```js
 const validations = {
-  [propertyKeyName]: [
-    { type, options, message, level, validator }
-  ]
+  [propertyKeyName]: [{ type, options, message, level, validator }],
 };
 ```
+
 **propertyKeyName** [string] - each key in the validations object should refer to the property on the class to apply the validation to.
- 
-**type** [string] - the type of validation to apply. These must be exported from the [validators util](../app/utils/validators.js) for lookup. Type is required if a *validator* function is not provided.
+
+**type** [string] - the type of validation to apply. These must be exported from the [validators util](../app/utils/model-helpers/validators.js) for lookup. Type is required if a _validator_ function is not provided.
 
 **options** [object] - an optional object for the given validator -- min, max, nullable etc.
 
 **message** [string | function] - string added to the errors array and returned in the state object from the validate method if validation fails. A function may also be provided with the model as the lone argument that returns a string. Since this value is typically displayed to the user it should be a complete sentence with proper punctuation.
 
-**level** [string] *optional* - string that defaults to 'error'. Currently the only other accepted value is 'warn'.
+**level** [string] _optional_ - string that defaults to 'error'. Currently the only other accepted value is 'warn'.
 
-**validator** [function] *optional* - a function that may be used in place of type that is invoked in the validate method. This is useful when specific validations are needed which may be dependent on other class properties.
+**validator** [function] _optional_ - a function that may be used in place of type that is invoked in the validate method. This is useful when specific validations are needed which may be dependent on other class properties.
 This function takes the class context (this) as the only argument and returns true or false.
 
 ## Usage
 
-Each property defined in the validations object supports multiple validations provided as an array. For example, *presence* and *containsWhiteSpace* can both be added as validations for a string property. 
+Each property defined in the validations object supports multiple validations provided as an array. For example, _presence_ and _containsWhiteSpace_ can both be added as validations for a string property.
 
 ```js
 const validations = {
@@ -41,6 +40,7 @@ const validations = {
   ],
 };
 ```
+
 Decorate the model class and pass the validations object as the argument
 
 ```js
@@ -48,9 +48,7 @@ import Model, { attr } from '@ember-data/model';
 import withModelValidations from 'vault/decorators/model-validations';
 
 const validations = {
-  name: [
-    { type: 'presence', message: 'Name is required.' },
-  ],
+  name: [{ type: 'presence', message: 'Name is required.' }],
 };
 
 @withModelValidations(validations)
@@ -72,12 +70,13 @@ if (isValid) {
   this.errors = state;
 }
 ```
+
 **isValid** [boolean] - the validity of the full class. If no properties provided in the validations object are invalid this will be true.
 
-**state** [object] - the error state of the properties defined in the validations object. This object is keyed by the property names from the validations object and each property contains an *isValid* and *errors* value. The *errors* array will be populated with messages defined in the validations object when validations fail. Since a property can have multiple validations, errors is always returned as an array.
+**state** [object] - the error state of the properties defined in the validations object. This object is keyed by the property names from the validations object and each property contains an _isValid_ and _errors_ value. The _errors_ array will be populated with messages defined in the validations object when validations fail. Since a property can have multiple validations, errors is always returned as an array.
 
 **invalidFormMessage** [string] - message describing the number of errors currently present on the model class.
- 
+
 ```js
 const { state } = model.validate();
 const { isValid, errors } = state[propertyKeyName];
@@ -87,17 +86,18 @@ if (!isValid) {
 ```
 
 ## Examples
+
 ### Basic
 
 ```js
 const validations = {
-  foo: [
-    { type: 'presence', message: 'foo is a required field.' }
-  ],
+  foo: [{ type: 'presence', message: 'foo is a required field.' }],
 };
 
 @withModelValidations(validations)
-class SomeModel extends Model { foo = null; }
+class SomeModel extends Model {
+  foo = null;
+}
 
 const model = new SomeModel();
 const { isValid, state } = model.validate();
@@ -106,14 +106,17 @@ console.log(isValid); // false
 console.log(state.foo.isValid); // false
 console.log(state.foo.errors); // ['foo is a required field']
 ```
+
 ### Custom validator
 
 ```js
 const validations = {
-  foo: [{
-    validator: (model) => model.bar.includes('test') ? model.foo : false,
-    message: 'foo is required if bar includes test.'
-  }],
+  foo: [
+    {
+      validator: (model) => (model.bar.includes('test') ? model.foo : false),
+      message: 'foo is required if bar includes test.',
+    },
+  ],
 };
 
 @withModelValidations(validations)
@@ -139,7 +142,7 @@ console.log(state.foo.errors); // []
 
 ### Adding class in template based on validation state
 
-All form validation errors must have a red border around them. Add this by adding a conditional class *has-error-border* to the element.
+All form validation errors must have a red border around them. Add this by adding a conditional class _has-error-border_ to the element.
 
 ```js
 @action
@@ -155,5 +158,5 @@ async save() {
 ```
 
 ```hbs
- <input class="input field {{if this.isNameInvalid 'has-error-border'}}" />
+<input class='input field {{if this.isNameInvalid "has-error-border"}}' />
 ```

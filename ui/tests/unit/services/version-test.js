@@ -9,25 +9,28 @@ import { setupTest } from 'ember-qunit';
 module('Unit | Service | version', function (hooks) {
   setupTest(hooks);
 
-  test('setting version computes isOSS properly', function (assert) {
+  test('setting type computes isCommunity properly', function (assert) {
     const service = this.owner.lookup('service:version');
-    service.version = '0.9.5';
-    assert.true(service.isOSS);
+    service.type = 'community';
+    assert.true(service.isCommunity);
     assert.false(service.isEnterprise);
   });
 
-  test('setting version computes isEnterprise properly', function (assert) {
+  test('setting type computes isEnterprise properly', function (assert) {
     const service = this.owner.lookup('service:version');
-    service.version = '0.9.5+ent';
-    assert.false(service.isOSS);
+    service.type = 'enterprise';
+    assert.false(service.isCommunity);
     assert.true(service.isEnterprise);
   });
 
-  test('setting version with hsm ending computes isEnterprise properly', function (assert) {
+  test('calculates versionDisplay correctly', function (assert) {
     const service = this.owner.lookup('service:version');
-    service.version = '0.9.5+ent.hsm';
-    assert.false(service.isOSS);
-    assert.true(service.isEnterprise);
+    service.type = 'community';
+    service.version = '1.2.3';
+    assert.strictEqual(service.versionDisplay, 'v1.2.3');
+    service.type = 'enterprise';
+    service.version = '1.4.7+ent';
+    assert.strictEqual(service.versionDisplay, 'v1.4.7');
   });
 
   test('hasPerfReplication', function (assert) {
@@ -42,5 +45,32 @@ module('Unit | Service | version', function (hooks) {
     assert.false(service.hasDRReplication);
     service.features = ['DR Replication'];
     assert.true(service.hasDRReplication);
+  });
+
+  // SHOW SECRETS SYNC TESTS
+  test('hasSecretsSync: it returns false when version is community', function (assert) {
+    const service = this.owner.lookup('service:version');
+    service.type = 'community';
+    assert.false(service.hasSecretsSync);
+  });
+
+  test('hasSecretsSync: it returns true when HVD managed', function (assert) {
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    const service = this.owner.lookup('service:version');
+    service.type = 'enterprise';
+    assert.true(service.hasSecretsSync);
+  });
+
+  test('hasSecretsSync: it returns false when not on enterprise license', function (assert) {
+    const service = this.owner.lookup('service:version');
+    service.type = 'enterprise';
+    service.features = ['replication'];
+    assert.false(service.hasSecretsSync);
+  });
+  test('hasSecretsSync: it returns true when  on enterprise license', function (assert) {
+    const service = this.owner.lookup('service:version');
+    service.type = 'enterprise';
+    service.features = ['secrets-sync'];
+    assert.false(service.hasSecretsSync);
   });
 });

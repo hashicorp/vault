@@ -1,6 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
@@ -35,7 +40,7 @@ export default class LdapAccountsCheckedOutComponent extends Component<Args> {
     // filter status to only show checked out accounts associated to the current user
     // if disable_check_in_enforcement is true on the library set then all checked out accounts are displayed
     return this.args.statuses.filter((status) => {
-      const authEntityId = this.auth.authData?.entity_id;
+      const authEntityId = this.auth.authData?.entityId;
       const isRoot = !status.borrower_entity_id && !authEntityId; // root user will not have an entity id and it won't be populated on status
       const isEntity = status.borrower_entity_id === authEntityId;
       const library = this.findLibrary(status.library);

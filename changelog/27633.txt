@@ -1,0 +1,3 @@
+```release-note:improvement
+core: make authLock and mountsLock in Core configurable via the detect_deadlocks configuration parameter.
+```

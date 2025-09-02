@@ -16,8 +16,18 @@ export default function (server) {
     };
   });
 
+  server.get('/sys/activation-flags', () => {
+    return {
+      data: {
+        activated: [''],
+        unactivated: ['secrets-sync'],
+      },
+    };
+  });
+
   server.get('/sys/health', function () {
     return {
+      enterprise: true,
       initialized: true,
       sealed: false,
       standby: false,

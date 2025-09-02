@@ -4,8 +4,7 @@
  */
 
 import AdapterError from '@ember-data/adapter/error';
-import { inject as service } from '@ember/service';
-import { assign } from '@ember/polyfills';
+import { service } from '@ember/service';
 import { hash, resolve } from 'rsvp';
 import { assert } from '@ember/debug';
 import { pluralize } from 'ember-inflector';
@@ -55,12 +54,18 @@ export default ApplicationAdapter.extend({
         id,
         name: snapshot.attr('name'),
       };
-      ret = assign(ret, health);
+      ret = Object.assign(ret, health);
       if (sealStatus instanceof AdapterError === false) {
-        ret = assign(ret, { nodes: [sealStatus] });
+        ret = Object.assign(ret, { nodes: [sealStatus] });
       }
       if (replicationStatus && replicationStatus instanceof AdapterError === false) {
-        ret = assign(ret, replicationStatus.data);
+        ret = Object.assign(ret, replicationStatus.data);
+      } else if (
+        replicationStatus instanceof AdapterError &&
+        replicationStatus?.errors.find((err) => err === 'disabled path')
+      ) {
+        // set redacted if result is an error which only happens when redacted
+        ret = Object.assign(ret, { replication_redacted: true });
       }
       return resolve(ret);
     });
@@ -80,6 +85,11 @@ export default ApplicationAdapter.extend({
         performancestandbycode: 200,
       },
       unauthenticated: true,
+    }).catch(() => {
+      // sys/health will only fail when chroot set
+      // because it's allowed in root namespace only and
+      // configured to return a 200 response in other fail scenarios
+      return { has_chroot_namespace: true };
     });
   },
 
@@ -89,8 +99,8 @@ export default ApplicationAdapter.extend({
     });
   },
 
-  sealStatus() {
-    return this.ajax(this.urlFor('seal-status'), 'GET', { unauthenticated: true });
+  sealStatus(unauthenticated = true) {
+    return this.ajax(this.urlFor('seal-status'), 'GET', { unauthenticated });
   },
 
   seal() {
@@ -109,28 +119,6 @@ export default ApplicationAdapter.extend({
       data,
       unauthenticated: true,
     });
-  },
-
-  authenticate({ backend, data }) {
-    const { role, jwt, token, password, username, path, nonce } = data;
-    const url = this.urlForAuth(backend, username, path);
-    const verb = backend === 'token' ? 'GET' : 'POST';
-    const options = {
-      unauthenticated: true,
-    };
-    if (backend === 'token') {
-      options.headers = {
-        'X-Vault-Token': token,
-      };
-    } else if (backend === 'jwt' || backend === 'oidc') {
-      options.data = { role, jwt };
-    } else if (backend === 'okta') {
-      options.data = { password, nonce };
-    } else {
-      options.data = token ? { token, password } : { password };
-    }
-
-    return this.ajax(url, verb, options);
   },
 
   mfaValidate({ mfa_request_id, mfa_constraints }) {
@@ -159,30 +147,10 @@ export default ApplicationAdapter.extend({
   urlFor(endpoint) {
     if (!ENDPOINTS.includes(endpoint)) {
       throw new Error(
-        `Calls to a ${endpoint} endpoint are not currently allowed in the vault cluster adapater`
+        `Calls to a ${endpoint} endpoint are not currently allowed in the vault cluster adapter`
       );
     }
     return `${this.buildURL()}/${endpoint}`;
-  },
-
-  urlForAuth(type, username, path) {
-    const authBackend = type.toLowerCase();
-    const authURLs = {
-      github: 'login',
-      jwt: 'login',
-      oidc: 'login',
-      userpass: `login/${encodeURIComponent(username)}`,
-      ldap: `login/${encodeURIComponent(username)}`,
-      okta: `login/${encodeURIComponent(username)}`,
-      radius: `login/${encodeURIComponent(username)}`,
-      token: 'lookup-self',
-    };
-    const urlSuffix = authURLs[authBackend];
-    const urlPrefix = path && authBackend !== 'token' ? path : authBackend;
-    if (!urlSuffix) {
-      throw new Error(`There is no auth url for ${type}.`);
-    }
-    return `/v1/auth/${urlPrefix}/${urlSuffix}`;
   },
 
   urlForReplication(replicationMode, clusterMode, endpoint) {

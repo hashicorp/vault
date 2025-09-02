@@ -14,8 +14,18 @@ const Eng = Engine.extend({
   modulePrefix,
   Resolver,
   dependencies: {
-    services: ['auth', 'flash-messages', 'namespace', 'replication-mode', 'router', 'store', 'version'],
-    externalRoutes: ['replication'],
+    services: [
+      'auth',
+      'capabilities',
+      'flash-messages',
+      'namespace',
+      'replication-mode',
+      'app-router',
+      'store',
+      'version',
+      '-portal',
+    ],
+    externalRoutes: ['replication', 'vault'],
   },
 });
 

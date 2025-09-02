@@ -3,12 +3,11 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Model from '@ember-data/model';
-export default class PkiCertificateBaseModel extends Model {
+import type { WithFormFieldsAndValidationsModel } from 'vault/app-types';
+
+type PkiCertificateBaseModel = WithFormFieldsAndValidationsModel & {
   secretMountPath: class;
-  get useOpenAPI(): boolean;
   get backend(): string;
-  getHelpUrl(): void;
   altNames: string;
   commonName: string;
   caChain: string;
@@ -26,4 +25,6 @@ export default class PkiCertificateBaseModel extends Model {
   revocationTime: number;
   serialNumber: string;
   get canRevoke(): boolean;
-}
+};
+
+export default PkiCertificateBaseModel;

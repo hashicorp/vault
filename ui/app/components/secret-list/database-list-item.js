@@ -17,11 +17,12 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 
 export default class DatabaseListItem extends Component {
   @tracked roleType = '';
+  @tracked actionRunning = null;
   @service store;
   @service flashMessages;
 
@@ -41,6 +42,7 @@ export default class DatabaseListItem extends Component {
   resetConnection(id) {
     const { backend } = this.args.item;
     const adapter = this.store.adapterFor('database/connection');
+    this.actionRunning = 'reset';
     adapter
       .resetConnection(backend, id)
       .then(() => {
@@ -48,12 +50,14 @@ export default class DatabaseListItem extends Component {
       })
       .catch((e) => {
         this.flashMessages.danger(e.errors);
-      });
+      })
+      .finally(() => (this.actionRunning = null));
   }
   @action
   rotateRootCred(id) {
     const { backend } = this.args.item;
     const adapter = this.store.adapterFor('database/connection');
+    this.actionRunning = 'rotateRoot';
     adapter
       .rotateRootCredentials(backend, id)
       .then(() => {
@@ -61,12 +65,14 @@ export default class DatabaseListItem extends Component {
       })
       .catch((e) => {
         this.flashMessages.danger(e.errors);
-      });
+      })
+      .finally(() => (this.actionRunning = null));
   }
   @action
   rotateRoleCred(id) {
     const { backend } = this.args.item;
     const adapter = this.store.adapterFor('database/credential');
+    this.actionRunning = 'rotateRole';
     adapter
       .rotateRoleCredentials(backend, id)
       .then(() => {
@@ -74,6 +80,7 @@ export default class DatabaseListItem extends Component {
       })
       .catch((e) => {
         this.flashMessages.danger(e.errors);
-      });
+      })
+      .finally(() => (this.actionRunning = null));
   }
 }

@@ -6,6 +6,9 @@ description: |-
   Vault. Most users will not need to interact with these commands.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # operator
 
 The `operator` command groups subcommands for operators interacting with Vault.
@@ -54,6 +57,7 @@ Usage: vault operator <subcommand> [options] [args]
 
 Subcommands:
     generate-root    Generates a new root token
+    import           Import secrets from external systems into Vault
     init             Initializes a server
     key-status       Provides information about the active encryption key
     rekey            Generates new unseal keys

@@ -1,13 +1,13 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
 import errorMessage from 'vault/utils/error-message';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
@@ -26,10 +26,11 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 export default class KvListPageComponent extends Component {
   @service flashMessages;
-  @service router;
-  @service store;
+  @service('app-router') router;
+  @service pagination;
 
   @tracked secretPath;
+  @tracked metadataToDelete = null; // set to the metadata intended to delete
 
   get mountPoint() {
     // mountPoint tells transition where to start. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
@@ -56,7 +57,7 @@ export default class KvListPageComponent extends Component {
     try {
       // The model passed in is a kv/metadata model
       await model.destroyRecord();
-      this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
+      this.pagination.clearDataset('kv/metadata'); // Clear out the pagination cache so that the metadata/list view is updated.
       const message = `Successfully deleted the metadata and all version data of the secret ${model.fullSecretPath}.`;
       this.flashMessages.success(message);
       // if you've deleted a secret from within a directory, transition to its parent directory.
@@ -71,6 +72,8 @@ export default class KvListPageComponent extends Component {
     } catch (error) {
       const message = errorMessage(error, 'Error deleting secret. Please try again or contact support.');
       this.flashMessages.danger(message);
+    } finally {
+      this.metadataToDelete = null;
     }
   }
 
@@ -84,6 +87,6 @@ export default class KvListPageComponent extends Component {
     evt.preventDefault();
     pathIsDirectory(this.secretPath)
       ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', this.secretPath)
-      : this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', this.secretPath);
+      : this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index', this.secretPath);
   }
 }

@@ -10,14 +10,15 @@ import { v4 as uuidv4 } from 'uuid';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import backendsPage from 'vault/tests/pages/secrets/backends';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 module('Acceptance | gcpkms/enable', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   test('enable gcpkms', async function (assert) {
@@ -25,9 +26,8 @@ module('Acceptance | gcpkms/enable', function (hooks) {
     const enginePath = `gcpkms-${this.uid}`;
     await mountSecrets.visit();
     await settled();
-    await mountSecrets.selectType('gcpkms');
-    await mountSecrets.next().path(enginePath).submit();
-    await settled();
+    await mountBackend('gcpkms', enginePath);
+
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backends',

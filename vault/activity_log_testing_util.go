@@ -12,6 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"google.golang.org/protobuf/testing/protocmp"
@@ -115,7 +116,7 @@ func (a *ActivityLog) SetStandbyEnable(ctx context.Context, enabled bool) {
 	// TODO only patch enabled?
 	a.SetConfigStandby(ctx, activityConfig{
 		DefaultReportMonths: 12,
-		RetentionMonths:     24,
+		RetentionMonths:     ActivityLogMinimumRetentionMonths,
 		Enabled:             enableStr,
 	})
 }
@@ -246,4 +247,11 @@ func (a *ActivityLog) GetEnabled() bool {
 // Note: you must do the usual locking scheme when modifying the ActivityLog
 func (c *Core) GetActivityLog() *ActivityLog {
 	return c.activityLog
+}
+
+// SetClock sets the clock on the activity log. This is used for testing with mock clocks
+func (a *ActivityLog) SetClock(clock timeutil.Clock) {
+	a.l.Lock()
+	defer a.l.Unlock()
+	a.clock = clock
 }

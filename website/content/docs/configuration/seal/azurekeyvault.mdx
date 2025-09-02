@@ -1,14 +1,14 @@
 ---
 layout: docs
-page_title: Azure Key Vault - Seals - Configuration
+page_title: Azure Key Vault seal configuration
 description: >-
-  The Azure Key Vault seal configures Vault to use Azure Key Vault as the seal
-  wrapping
-
-  mechanism.
+  Configure Vault sealing to use Azure Key Vault.
 ---
 
-# `azurekeyvault` seal
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# Azure Key Vault seal configuration
 
 <Note title="Seal wrapping requires Vault Enterprise">
 
@@ -74,6 +74,8 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   Needs to be changed to connect to Azure's Managed HSM KeyVault instance type.
 
 - `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+`client_id`, `client_secret`, and `tenant_id` can be [indirect value references](/vault/docs/configuration/seal#indirect-value-references).
 
 Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
 

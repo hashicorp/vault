@@ -22,10 +22,12 @@ func testNewLeaseCache(t *testing.T, responses []*cache.SendResponse) *cache.Lea
 		t.Fatal(err)
 	}
 	lc, err := cache.NewLeaseCache(&cache.LeaseCacheConfig{
-		Client:      client,
-		BaseContext: context.Background(),
-		Proxier:     cache.NewMockProxier(responses),
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Client:              client,
+		BaseContext:         context.Background(),
+		Proxier:             cache.NewMockProxier(responses),
+		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		CacheDynamicSecrets: true,
+		UserAgentToUse:      "test",
 	})
 	if err != nil {
 		t.Fatal(err)

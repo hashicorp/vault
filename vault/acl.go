@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -39,8 +40,10 @@ type ACL struct {
 }
 
 type PolicyCheckOpts struct {
-	RootPrivsRequired bool
-	Unauth            bool
+	RootPrivsRequired          bool
+	Unauth                     bool
+	CheckSourcePath            bool
+	RecoverAlternateCapability *logical.Operation
 }
 
 type AuthResults struct {
@@ -333,6 +336,9 @@ func (a *ACL) CapabilitiesAndSubscribeEventTypes(ctx context.Context, path strin
 	if capabilities&SubscribeCapabilityInt > 0 {
 		pathCapabilities = append(pathCapabilities, SubscribeCapability)
 	}
+	if capabilities&RecoverCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, RecoverCapability)
+	}
 
 	// If "deny" is explicitly set or if the path has no capabilities at all,
 	// set the path capabilities to "deny"
@@ -409,6 +415,16 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		}
 	}
 
+	// List operations need to check without the trailing slash first, because
+	// there could be other rules with trailing wildcards that will match the
+	// path
+	if op == logical.ListOperation && strings.HasSuffix(path, "/") {
+		permissions = a.CheckAllowedFromNonExactPaths(strings.TrimSuffix(path, "/"), false)
+		if permissions != nil {
+			capabilities = permissions.CapabilitiesBitmap
+			goto CHECK
+		}
+	}
 	permissions = a.CheckAllowedFromNonExactPaths(path, false)
 	if permissions != nil {
 		capabilities = permissions.CapabilitiesBitmap
@@ -457,6 +473,9 @@ CHECK:
 	case logical.PatchOperation:
 		operationAllowed = capabilities&PatchCapabilityInt > 0
 		grantingPolicies = permissions.GrantingPoliciesMap[PatchCapabilityInt]
+	case logical.RecoverOperation:
+		operationAllowed = capabilities&RecoverCapabilityInt > 0
+		grantingPolicies = permissions.GrantingPoliciesMap[RecoverCapabilityInt]
 
 	// These three re-use UpdateCapabilityInt since that's the most appropriate
 	// capability/operation mapping
@@ -494,7 +513,7 @@ CHECK:
 
 	// Only check parameter permissions for operations that can modify
 	// parameters.
-	if op == logical.ReadOperation || op == logical.UpdateOperation || op == logical.CreateOperation || op == logical.PatchOperation {
+	if op == logical.ReadOperation || op == logical.UpdateOperation || op == logical.CreateOperation || op == logical.PatchOperation || op == logical.RecoverOperation {
 		for _, parameter := range permissions.RequiredParameters {
 			if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
 				return
@@ -724,7 +743,43 @@ SWCPATH:
 	return wcPathDescrs[len(wcPathDescrs)-1].perms
 }
 
-func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) *AuthResults {
+func (c *Core) recordPolicyEvaluationObservation(ctx context.Context, te *logical.TokenEntry, req *logical.Request, results *AuthResults) {
+	observation := map[string]interface{}{
+		"request_id": req.ID,
+		"path":       req.Path,
+		"entity_id":  req.EntityID,
+		"client_id":  req.ClientID,
+	}
+	if te != nil {
+		observation["policies"] = te.Policies
+		observation["is_root"] = te.IsRoot()
+	}
+
+	if results != nil {
+		if results.ACLResults != nil {
+			observation["request_allowed"] = results.Allowed
+			observation["request_acl_allowed"] = results.ACLResults.Allowed
+
+			grantingPolicies := make([]logical.PolicyInfo, 0)
+			if len(results.ACLResults.GrantingPolicies) > 0 {
+				grantingPolicies = append(grantingPolicies, results.ACLResults.GrantingPolicies...)
+			}
+			if results.SentinelResults != nil && len(results.SentinelResults.GrantingPolicies) > 0 {
+				grantingPolicies = append(grantingPolicies, results.SentinelResults.GrantingPolicies...)
+			}
+			if len(grantingPolicies) > 0 {
+				observation["granting_policies"] = grantingPolicies
+			}
+
+			err := c.Observations().RecordObservationToLedger(ctx, observations.ObservationTypePolicyACLEvaluation, nil, observation)
+			if err != nil {
+				c.logger.Error("error recording observation for policy checks", "error", err)
+			}
+		}
+	}
+}
+
+func (c *Core) performPolicyChecksSinglePath(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) *AuthResults {
 	ret := new(AuthResults)
 
 	// First, perform normal ACL checks if requested. The only time no ACL
@@ -735,22 +790,25 @@ func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.To
 		ret.RootPrivs = ret.ACLResults.RootPrivs
 		// Root is always allowed; skip Sentinel/MFA checks
 		if ret.ACLResults.IsRoot {
-			// logger.Warn("token is root, skipping checks")
 			ret.Allowed = true
+			c.recordPolicyEvaluationObservation(ctx, te, req, ret)
 			return ret
 		}
 		if !ret.ACLResults.Allowed {
+			c.recordPolicyEvaluationObservation(ctx, te, req, ret)
 			return ret
 		}
 		// Since HelpOperation was fast-pathed inside AllowOperation, RootPrivs will not have been populated in this
 		// case, so we need to special-case that here as well, or we'll block HelpOperation on all sudo-protected paths.
 		if !ret.RootPrivs && opts.RootPrivsRequired && req.Operation != logical.HelpOperation {
+			c.recordPolicyEvaluationObservation(ctx, te, req, ret)
 			return ret
 		}
 	}
 
 	c.performEntPolicyChecks(ctx, acl, te, req, inEntity, opts, ret)
 
+	c.recordPolicyEvaluationObservation(ctx, te, req, ret)
 	return ret
 }
 

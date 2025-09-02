@@ -4,22 +4,23 @@
  */
 
 import AdapterError from '@ember-data/adapter/error';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
-import layout from '../templates/components/edit-form';
 import { next } from '@ember/runloop';
 import { waitFor } from '@ember/test-waiters';
 
 export default Component.extend({
-  layout,
   flashMessages: service(),
 
   // internal validations
   invalidFormAlert: '',
+
   modelValidations: null,
+
   // public API
   model: null,
+
   successMessage: 'Saved!',
   deleteSuccessMessage: 'Deleted!',
   deleteButtonText: 'Delete',
@@ -71,7 +72,7 @@ export default Component.extend({
         return;
       }
       if (this.flashEnabled) {
-        this.flashMessages.success(this.get(messageKey));
+        this.flashMessages.success(this[messageKey]);
       }
       if (this.callOnSaveAfterRender) {
         next(() => {
@@ -87,7 +88,7 @@ export default Component.extend({
     // components are torn down after store is unloaded and will cause an error if attempt to unload record
     const noTeardown = this.store && !this.store.isDestroying;
     const { model } = this;
-    if (noTeardown && model && model.get('isDirty') && !model.isDestroyed && !model.isDestroying) {
+    if (noTeardown && model && model.isDirty && !model.isDestroyed && !model.isDestroying) {
       model.rollbackAttributes();
     }
     this._super(...arguments);

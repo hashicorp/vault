@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -18,6 +19,7 @@ var allowedMethods = []string{
 	http.MethodOptions,
 	http.MethodPost,
 	http.MethodPut,
+	http.MethodPatch,
 	"LIST", // LIST is not an official HTTP method, but Vault supports it.
 }
 
@@ -48,6 +50,7 @@ func wrapCORSHandler(h http.Handler, core *vault.Core) http.Handler {
 		}
 
 		if req.Method == http.MethodOptions && !strutil.StrListContains(allowedMethods, requestMethod) {
+			defer logical.IncrementResponseStatusCodeMetric(http.StatusMethodNotAllowed)
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}

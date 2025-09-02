@@ -1,0 +1,86 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if (and (eq this.mode "edit") this.model.canDelete)}}
+  <Toolbar>
+    <ToolbarActions>
+      <ConfirmAction
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @buttonText="Delete {{this.model.identityType}}"
+        @confirmTitle="Delete this {{this.model.identityType}}?"
+        @onConfirmAction={{action "deleteItem" this.model}}
+      />
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
+<form {{action (perform this.save) on="submit"}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode={{this.mode}} @noun={{lowercase (humanize this.model.identityType)}} />
+    <MessageError @model={{this.model}} />
+    {{#if (eq this.mode "merge")}}
+      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+        <A.Title>Warning</A.Title>
+        <A.Description>Metadata on merged entities is not preserved, you will need to recreate it on the entity you merge to.</A.Description>
+      </Hds::Alert>
+    {{/if}}
+    {{#each this.model.fields as |attr|}}
+      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}}>
+        <div class="form-section">
+          {{#if this.model.canCreatePolicies}}
+            <SearchSelectWithModal
+              @id="policies"
+              @label="Policies"
+              @labelClass="title is-4"
+              @models={{array "policy/acl" "policy/rgp"}}
+              @inputValue={{@model.policies}}
+              @onChange={{action (mut this.model.policies)}}
+              @fallbackComponent="string-list"
+              @modalFormTemplate="modal-form/policy-template"
+              @excludeOptions={{array "root"}}
+            />
+          {{else}}
+            <SearchSelect
+              @id="policies"
+              @label="Policies"
+              @labelClass="title is-4"
+              @models={{array "policy/acl" "policy/rgp"}}
+              @inputValue={{@model.policies}}
+              @onChange={{action (mut this.model.policies)}}
+              @fallbackComponent="string-list"
+              @disallowNewItems={{true}}
+            />
+          {{/if}}
+        </div>
+      </FormField>
+    {{/each}}
+  </div>
+
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <div class="field is-grouped">
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text={{if (eq this.mode "create") "Create" "Save"}}
+          @icon={{if this.save.isRunning "loading"}}
+          type="submit"
+          disabled={{this.save.isRunning}}
+          data-test-submit
+        />
+        {{#if (or (eq this.mode "merge") (eq this.mode "create"))}}
+          <Hds::Button @text="Cancel" @color="secondary" @route={{this.cancelLink}} data-test-cancel-link />
+        {{else}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route={{this.cancelLink}}
+            @models={{array this.model.id "details"}}
+            data-test-cancel-link
+          />
+        {{/if}}
+      </Hds::ButtonSet>
+    </div>
+  </div>
+</form>

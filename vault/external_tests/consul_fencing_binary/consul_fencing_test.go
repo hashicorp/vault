@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 	"github.com/stretchr/testify/require"
@@ -33,11 +34,12 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 
 	consulStorage := consul.NewClusterStorage()
 
-	// Create  cluster logger that will dump cluster logs to stdout for debugging.
-	logger := hclog.NewInterceptLogger(hclog.DefaultOptions)
+	// Create  cluster logger that will write cluster logs to a file in CI.
+	logger := corehelpers.NewTestLogger(t)
 	logger.SetLevel(hclog.Trace)
 
 	clusterOpts := docker.DefaultOptions(t)
+	// We can use an enterprise image here because we are swapping out the binary anyway.
 	clusterOpts.ImageRepo = "hashicorp/vault-enterprise"
 	clusterOpts.ClusterOptions.Logger = logger
 
@@ -67,6 +69,18 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 		Type: "kv-v2",
 	})
 	require.NoError(t, err)
+
+	// We need to wait for the KV mount to be ready on all servers - it runs an
+	// "Upgrade" process on mount and will error until that's done. In practice
+	// that's so fast that in CE I've never seen it fail yet, but in Enterprise
+	// there is the added complexity of the upgrade running on the primary while
+	// standby nodes wait for it to complete. So in Enterprise the first PATCH
+	// sent to a standby often comes in before the standby has "seen" that the
+	// primary has completed the upgrade and fails causing the whole test to
+	// error. We can prevent that by taking a short loop here to wait for a read
+	// to succeed on the standby/non-leader (since KV-v2 does upgrade check on
+	// read too).
+	waitForKVv2Upgrade(t, ctx, notLeader.APIClient(), "/test")
 
 	// Start two background workers that will cause writes to Consul in the
 	// background. KV v2 relies on a single active node for correctness.
@@ -104,7 +118,7 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 	require.NoError(t, err)
 
 	const interval = 500 * time.Millisecond
-
+	const timeout = 3 * time.Second
 	runWriter := func(i int, targetServer testcluster.VaultClusterNode, ctr *uint64) {
 		wg.Add(1)
 		defer wg.Done()
@@ -113,10 +127,13 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 		for {
 			key := fmt.Sprintf("c%d-%08d", i, atomic.LoadUint64(ctr))
 
-			// Use a short timeout. If we don't then the one goroutine writing to the
-			// partitioned active node can get stuck here until the 60 second request
-			// timeout kicks in without issuing another request.
-			reqCtx, cancel := context.WithTimeout(ctx, interval)
+			// Use a short timeout. If we don't then the one goroutine writing
+			// to the partitioned active node can get stuck here until the 60
+			// second request timeout kicks in without issuing another request.
+			// However, this timeout being too short can cause issues too.
+			// Having it set to 500 milliseconds caused the test to
+			// intermittently fail in CI before.
+			reqCtx, cancel := context.WithTimeout(ctx, timeout)
 			logger.Debug("sending patch", "client", i, "key", key)
 			_, err = kv.Patch(reqCtx, "data", map[string]interface{}{
 				key: 1,
@@ -202,7 +219,7 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 			logger.Info("failed write", "write_count", writesAfterPartition, "err", err)
 		default:
 		}
-		require.NoError(t, ctx.Err())
+		require.NoError(t, ctx.Err(), "context error while waiting for writes to new leader")
 	}
 
 	// Heal partition
@@ -261,6 +278,46 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 	}
 	require.Equal(t, expect0, sets[0], "Client 0 writes lost")
 	require.Equal(t, expect1, sets[1], "Client 1 writes lost")
+}
+
+func waitForKVv2Upgrade(t *testing.T, ctx context.Context, client *api.Client, path string) {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	kv := client.KVv2(path)
+	attempts := 0
+	wait := 20 * time.Millisecond
+	for {
+		// Attempt to perform a write on the KVv2 mount. It will fail until the
+		// backend is done upgrading. If this is a performance standby in Ent then
+		// it will not complete until the primary is done upgrading AND the standby
+		// has noticed that!
+		_, err := kv.Put(ctx, "test-upgrade-done", map[string]interface{}{
+			"ok": 1,
+		})
+		if err == nil {
+			return
+		}
+		t.Logf("waitForKVv2Upgrade: write failed: %s", err)
+		select {
+		case <-ctx.Done():
+			t.Fatalf("context cancelled waiting for KVv2 (%s) upgrade to complete: %s",
+				path, ctx.Err())
+			return
+		case <-time.After(wait):
+		}
+		attempts++
+		// We don't quite want exponential backoff because it really should be fast,
+		// but just reduce log spam on failures if it's taking a while.
+		if attempts > 4 {
+			wait = 250 * time.Millisecond
+		}
+		if attempts > 10 {
+			wait = time.Second
+		}
+	}
 }
 
 func makeSet(n int) []int {

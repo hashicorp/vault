@@ -1,13 +1,16 @@
 ---
 layout: docs
-page_title: Managed Keys
+page_title: Use 3rd party key management
 description: >-
-  Managed Keys is a system in Vault that defers all private key operations to a third party system.
+  Configure Vault to defer private key operations to a third party system.
 ---
 
-# Managed keys
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
 
-@include 'alerts/enterprise-and-hcp-plus.mdx'
+# Use 3rd party key management for private keys
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 Within certain environments, customers want to leverage key management systems
 external to Vault, when handling, storing, and interacting with
@@ -51,6 +54,9 @@ The [Transit Secrets Engine](/vault/api-docs/secret/transit#managed-keys) allows
 to generate and verify cryptographic signatures with Managed Keys, and in some cases encrypt
 and decrypt data, or generate MACs and HMACs. These operations are performed on the KMS or HSM
 that hosts the Managed Key material.
+
+The [SSH Secrets Engine](/vault/api-docs/secret/ssh#managed-keys) allows users to generate CA keys and
+sign SSH certificates with a Managed Key.
 
 More engines may leverage managed keys in the future.
 

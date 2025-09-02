@@ -1,3 +1,6 @@
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -33,10 +36,11 @@ h6 {
 
 a:hover,
 body,
-pre,
+// default set here is too dark for HDS codeblock
+pre:not(.hds-code-block__code),
 strong,
 table th {
-  color: $ui-gray-900;
+  color: var(--token-color-palette-neutral-600);
 }
 
 h1,
@@ -79,13 +83,11 @@ object {
 }
 
 html {
-  background-color: $white;
-  font-size: 14px;
+  background-color: hsl(0, 0%, 100%);
+  font-size: size_variables.$base-font-size; // 16px
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   min-width: 300px;
-  overflow-x: hidden;
-  overflow-y: scroll;
   text-rendering: optimizeLegibility;
   text-size-adjust: 100%;
 }
@@ -105,7 +107,7 @@ button,
 input,
 select,
 textarea {
-  font-family: $family-sans;
+  font-family: font_variables.$family-sans;
 }
 
 code,
@@ -122,12 +124,14 @@ pre code {
 }
 
 body {
-  font-size: $size-6;
+  font-size: size_variables.$size-6;
   line-height: 1.5;
+  overflow-x: hidden;
+  overflow-y: scroll;
 }
 
 a {
-  color: $blue-500;
+  color: var(--token-color-palette-blue-200);
   cursor: pointer;
   text-decoration: underline;
 
@@ -139,19 +143,19 @@ a {
 }
 
 a:hover {
-  color: $ui-gray-900;
+  color: var(--token-color-palette-neutral-600);
 }
 
 code {
   background-color: transparent;
-  color: $ui-gray-700;
+  color: var(--token-color-palette-neutral-500);
   font-size: 1em;
   font-weight: 400;
   padding: 0;
 }
 
 hr {
-  background-color: $ui-gray-300;
+  background-color: var(--token-color-palette-neutral-300);
   border: none;
   display: block;
   height: 1px;
@@ -169,4 +173,33 @@ form {
 
 label {
   cursor: pointer;
+}
+
+// HDS modifications and overrides
+// * ONLY for universal changes (i.e. to address component functionality)
+
+// <Hds::Modal>
+.hds-modal {
+  &:has(.hds-dropdown) {
+    overflow: unset;
+  }
+}
+.hds-modal__body {
+  &:has(.hds-dropdown) {
+    overflow: unset;
+  }
+}
+
+// <Hds::Dropdown>
+.hds-dropdown-list-item {
+  > button:disabled {
+    color: hsl(0, 0%, 4%);
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// <Hds::Text::Code> this applies to code elements that are placed within a surrounding text - not for standalone use
+.hds-text.code-in-text {
+  background-color: var(--token-color-surface-strong);
 }

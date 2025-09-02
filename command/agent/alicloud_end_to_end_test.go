@@ -15,7 +15,7 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/sts"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	vaultalicloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
@@ -147,7 +147,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 		Client: client,
 	})
 	go func() {
-		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, ah.AuthInProgress)
 	}()
 	defer func() {
 		select {

@@ -4,26 +4,21 @@
 package command
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"runtime/pprof"
 	"testing"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/config"
-	"github.com/hashicorp/vault/command/token"
-	"github.com/mitchellh/cli"
 )
-
-// DefaultTokenHelper returns the token helper that is configured for Vault.
-// This helper should only be used for non-server CLI commands.
-func DefaultTokenHelper() (token.TokenHelper, error) {
-	return config.DefaultTokenHelper()
-}
 
 // RawField extracts the raw field from the given data and returns it as a
 // string for printing purposes.
@@ -199,5 +194,43 @@ func (r *recordingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	r.body = body
 	return &http.Response{
 		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewReader([]byte(`{"warnings": []}`))),
 	}, nil
+}
+
+// WritePprofToFile will create a temporary directory at the specified path
+// and generate pprof files at that location. CPU requires polling over a
+// duration. For most situations 1 second is enough.
+func WritePprofToFile(path string, cpuProfileDuration time.Duration) error {
+	err := os.MkdirAll(path, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("could not create temporary directory for pprof: %v", err)
+	}
+
+	dumps := []string{"goroutine", "heap", "allocs", "threadcreate", "profile"}
+	for _, dump := range dumps {
+		pFile, err := os.Create(filepath.Join(path, dump))
+		if err != nil {
+			return fmt.Errorf("error creating pprof file %s: %v", dump, err)
+		}
+
+		if dump != "profile" {
+			err = pprof.Lookup(dump).WriteTo(pFile, 0)
+			if err != nil {
+				pFile.Close()
+				return fmt.Errorf("error generating pprof data for %s: %v", dump, err)
+			}
+		} else {
+			// CPU profiles need to run for a duration so we're going to run it
+			// just for one second to avoid blocking here.
+			if err := pprof.StartCPUProfile(pFile); err != nil {
+				pFile.Close()
+				return fmt.Errorf("could not start CPU profile: %v", err)
+			}
+			time.Sleep(cpuProfileDuration)
+			pprof.StopCPUProfile()
+		}
+		pFile.Close()
+	}
+	return nil
 }

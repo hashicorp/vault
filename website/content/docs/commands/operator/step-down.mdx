@@ -6,6 +6,9 @@ description: |-
   down from active duty.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # operator step-down
 
 The `operator step-down` forces the active Vault node within an [HA cluster](/vault/docs/concepts/ha)
@@ -31,3 +34,14 @@ Success! Stepped down: http://127.0.0.1:8200
 
 There are no flags beyond the [standard set of flags](/vault/docs/commands)
 included on all commands.
+
+## Policy requirements
+
+You must belong to a policy with `update` and `sudo` permissions to use the
+`vault operator step-down` command:
+ 
+```hcl
+path "sys/step-down" {
+  capabilities = ["update", "sudo"]
+}
+```

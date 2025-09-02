@@ -4,10 +4,9 @@
 package file
 
 import (
-	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -16,15 +15,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
-const (
-	fileServerTestDir = "vault-agent-file-test"
-)
-
 func testFileSink(t *testing.T, log hclog.Logger) (*sink.SinkConfig, string) {
-	tmpDir, err := ioutil.TempDir("", fmt.Sprintf("%s.", fileServerTestDir))
-	if err != nil {
-		t.Fatal(err)
-	}
+	tmpDir := t.TempDir()
 
 	path := filepath.Join(tmpDir, "token")
 
@@ -74,7 +66,7 @@ func TestFileSink(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fileBytes, err := ioutil.ReadFile(path)
+	fileBytes, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,19 +76,17 @@ func TestFileSink(t *testing.T) {
 	}
 }
 
-func testFileSinkMode(t *testing.T, log hclog.Logger) (*sink.SinkConfig, string) {
-	tmpDir, err := ioutil.TempDir("", fmt.Sprintf("%s.", fileServerTestDir))
-	if err != nil {
-		t.Fatal(err)
-	}
+func testFileSinkMode(t *testing.T, log hclog.Logger, gid int) (*sink.SinkConfig, string) {
+	tmpDir := t.TempDir()
 
 	path := filepath.Join(tmpDir, "token")
 
 	config := &sink.SinkConfig{
 		Logger: log.Named("sink.file"),
 		Config: map[string]interface{}{
-			"path": path,
-			"mode": 0o644,
+			"path":  path,
+			"mode":  0o644,
+			"group": gid,
 		},
 	}
 
@@ -112,7 +102,7 @@ func testFileSinkMode(t *testing.T, log hclog.Logger) (*sink.SinkConfig, string)
 func TestFileSinkMode(t *testing.T) {
 	log := logging.NewVaultLogger(hclog.Trace)
 
-	fs, tmpDir := testFileSinkMode(t, log)
+	fs, tmpDir := testFileSinkMode(t, log, os.Getegid())
 	defer os.RemoveAll(tmpDir)
 
 	path := filepath.Join(tmpDir, "token")
@@ -136,7 +126,69 @@ func TestFileSinkMode(t *testing.T) {
 		t.Fatalf("wrong file mode was detected at %s", path)
 	}
 
-	fileBytes, err := ioutil.ReadFile(path)
+	fileBytes, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(fileBytes) != uuidStr {
+		t.Fatalf("expected %s, got %s", uuidStr, string(fileBytes))
+	}
+}
+
+// TestFileSinkMode_Ownership tests that the file is owned by the group specified
+// in the configuration. This test requires the current user to be in at least two
+// groups. If the user is not in two groups, the test will be skipped.
+func TestFileSinkMode_Ownership(t *testing.T) {
+	groups, err := os.Getgroups()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(groups) < 2 {
+		t.Skip("not enough groups to test file ownership")
+	}
+
+	// find a group that is not the current group
+	var gid int
+	for _, g := range groups {
+		if g != os.Getegid() {
+			gid = g
+			break
+		}
+	}
+
+	log := logging.NewVaultLogger(hclog.Trace)
+
+	fs, tmpDir := testFileSinkMode(t, log, gid)
+	defer os.RemoveAll(tmpDir)
+
+	path := filepath.Join(tmpDir, "token")
+
+	uuidStr, _ := uuid.GenerateUUID()
+	if err := fs.WriteToken(uuidStr); err != nil {
+		t.Fatal(err)
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	fi, err := file.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi.Mode() != os.FileMode(0o644) {
+		t.Fatalf("wrong file mode was detected at %s", path)
+	}
+	// check if file is owned by the group
+	if fi.Sys().(*syscall.Stat_t).Gid != uint32(gid) {
+		t.Fatalf("file is not owned by the group %d", gid)
+	}
+
+	fileBytes, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}

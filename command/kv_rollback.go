@@ -9,7 +9,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/posener/complete"
 )
 
@@ -160,7 +160,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 	}
 
 	if !v2 {
-		c.UI.Error("K/V engine mount must be version 2 for rollback support")
+		c.UI.Error("KV engine mount must be version 2 for rollback support")
 		return 2
 	}
 

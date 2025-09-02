@@ -1,3 +1,7 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/mixins';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -8,18 +12,18 @@
 .input,
 .textarea {
   align-items: center;
-  border-radius: $radius;
-  border: $base-border;
-  box-shadow: 0 4px 1px rgba($black, 0.06) inset;
-  color: $grey-dark;
+  border-radius: size_variables.$radius;
+  border: box-shadow_variables.$base-border;
+  box-shadow: 0 4px 1px rgba(hsl(0, 0%, 4%), 0.06) inset;
+  color: var(--token-color-palette-neutral-500);
   display: inline-flex;
-  font-size: $size-6;
-  height: $size-2;
+  font-size: size_variables.$size-6;
+  height: size_variables.$size-2;
   line-height: 1.5;
   max-width: 100%;
   padding-bottom: calc(0.375em - 1px);
-  padding-left: $size-8;
-  padding-right: $size-8;
+  padding-left: size_variables.$spacing-12;
+  padding-right: size_variables.$spacing-12;
   padding-top: calc(0.375em - 1px);
   width: 100%;
 
@@ -28,17 +32,17 @@
   &.is-active,
   &:focus-visible {
     outline: none;
-    background-color: $white;
-    border-color: $blue-500 !important;
+    background-color: hsl(0, 0%, 100%);
+    border-color: var(--token-color-palette-blue-200) !important;
     box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
   }
 
   &:hover {
-    border-color: $ui-gray-300;
+    border-color: var(--token-color-palette-neutral-300);
   }
 
-  @include until($desktop) {
-    font-size: $size-6;
+  @include mixins.until(size_variables.$desktop) {
+    font-size: size_variables.$size-6;
   }
 
   &::placeholder {
@@ -48,13 +52,13 @@
 
 .input[disabled],
 .textarea[disabled] {
-  border-color: $grey-light;
-  background-color: $ui-gray-100;
-  color: $ui-gray-500;
+  border-color: var(--token-color-palette-neutral-300);
+  background-color: var(--token-color-palette-neutral-100);
+  color: var(--token-color-palette-neutral-400);
   cursor: not-allowed;
 
   &:hover {
-    border-color: $grey-light;
+    border-color: var(--token-color-palette-neutral-300);
   }
 }
 
@@ -79,7 +83,7 @@
 
 // custom input
 .input-hint {
-  padding: 0 $size-9;
-  font-size: $size-8;
-  color: $grey;
+  padding: 0 size_variables.$spacing-10;
+  font-size: size_variables.$size-8;
+  color: var(--token-color-foreground-faint);
 }

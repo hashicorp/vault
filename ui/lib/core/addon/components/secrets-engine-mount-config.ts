@@ -1,29 +1,46 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { duration } from 'core/helpers/format-duration';
 
-import type SecretEngineModel from 'vault/models/secret-engine';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
+
+/**
+ * @module SecretsEngineMountConfig
+ * SecretsEngineMountConfig component is used to display a "Show mount configuration" toggle section. It is generally used alongside the fetch-secret-engine-config decorator which displays the engine configuration above this component. Mount configuration is always available for display but is hidden by default behind a toggle.
+ *
+ * @example
+ * <SecretsEngineMountConfig @secretsEngine={{this.model}} />
+ *
+ * @param {SecretsEngineResource} secretsEngine - the secrets engine resource containing the mount configuration details
+ */
 
 interface Args {
-  model: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
 }
 interface Field {
   label: string;
   value: string | boolean;
 }
 
-export default class SecretsEngineMountConfigComponent extends Component<Args> {
+export default class SecretsEngineMountConfig extends Component<Args> {
   @tracked showConfig = false;
 
   get fields(): Array<Field> {
-    const { model } = this.args;
+    const { secretsEngine } = this.args;
     return [
-      { label: 'Secret Engine Type', value: model.engineType },
-      { label: 'Path', value: model.path },
-      { label: 'Accessor', value: model.accessor },
-      { label: 'Local', value: model.local },
-      { label: 'Seal Wrap', value: model.sealWrap },
-      { label: 'Default Lease TTL', value: model.config.defaultLeaseTtl },
-      { label: 'Max Lease TTL', value: model.config.maxLeaseTtl },
+      { label: 'Secret engine type', value: secretsEngine.engineType },
+      { label: 'Path', value: secretsEngine.path },
+      { label: 'Accessor', value: secretsEngine.accessor },
+      { label: 'Local', value: secretsEngine.local },
+      { label: 'Seal wrap', value: secretsEngine.seal_wrap },
+      { label: 'Default Lease TTL', value: duration([secretsEngine.config.default_lease_ttl]) },
+      { label: 'Max Lease TTL', value: duration([secretsEngine.config.max_lease_ttl]) },
+      { label: 'Identity token key', value: secretsEngine.config.identity_token_key },
     ];
   }
 }

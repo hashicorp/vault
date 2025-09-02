@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#each (get @model this.fieldGroups) as |fieldGroup|}}
   {{#each-in fieldGroup as |group fields|}}
@@ -28,7 +28,7 @@
           @closedLabel={{group}}
           @onClick={{fn (mut (get @model prop))}}
           class="is-block"
-          data-test-toggle-group={{group}}
+          data-test-button={{group}}
         />
         {{#if (get @model prop)}}
           <div class="box is-marginless">

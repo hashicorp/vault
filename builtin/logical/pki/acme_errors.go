@@ -14,8 +14,10 @@ import (
 )
 
 // Error prefix; see RFC 8555 Section 6.7. Errors.
-const ErrorPrefix = "urn:ietf:params:acme:error:"
-const ErrorContentType = "application/problem+json"
+const (
+	ErrorPrefix      = "urn:ietf:params:acme:error:"
+	ErrorContentType = "application/problem+json"
+)
 
 // See RFC 8555 Section 6.7. Errors.
 var ErrAccountDoesNotExist = errors.New("The request specified an account that does not exist")
@@ -108,7 +110,7 @@ type ErrorResponse struct {
 	StatusCode  int              `json:"-"`
 	Type        string           `json:"type"`
 	Detail      string           `json:"detail"`
-	Subproblems []*ErrorResponse `json:"subproblems"`
+	Subproblems []*ErrorResponse `json:"subproblems,omitempty"`
 }
 
 func (e *ErrorResponse) MarshalForStorage() map[string]interface{} {
@@ -140,8 +142,7 @@ func (e *ErrorResponse) Marshal() (*logical.Response, error) {
 	return &resp, nil
 }
 
-func FindType(given error) (err error, id string, code int, found bool) {
-	matchedError := false
+func FindType(given error) (err error, id string, code int, matchedError bool) {
 	for err, id = range errIdMappings {
 		if errors.Is(given, err) {
 			matchedError = true

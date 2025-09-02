@@ -11,12 +11,16 @@ import (
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
-	"golang.org/x/exp/slices"
-
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 )
+
+func FloatPtr(t float64) *float64 {
+	return &t
+}
 
 func TestLoadConfigFile_AgentCache(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config-cache.hcl")
@@ -91,6 +95,9 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 				ExitOnErr:               true,
 				ServiceAccountTokenFile: "/tmp/serviceaccount/token",
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address:          "http://127.0.0.1:1111",
@@ -197,6 +204,9 @@ func TestLoadConfigDir_AgentCache(t *testing.T) {
 				ServiceAccountTokenFile: "/tmp/serviceaccount/token",
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address:          "http://127.0.0.1:1111",
 			CACert:           "config_ca_cert",
@@ -221,6 +231,9 @@ func TestLoadConfigDir_AgentCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	config2, err := LoadConfigFile("./test-fixtures/config-dir-cache/config-cache2.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	mergedConfig := config.Merge(config2)
 
@@ -266,6 +279,9 @@ func TestLoadConfigDir_AutoAuthAndListener(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -329,6 +345,9 @@ func TestLoadConfigDir_VaultBlock(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -397,6 +416,9 @@ func TestLoadConfigFile_AgentCache_NoListeners(t *testing.T) {
 				ServiceAccountTokenFile: "/tmp/serviceaccount/token",
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address:          "http://127.0.0.1:1111",
 			CACert:           "config_ca_cert",
@@ -423,74 +445,117 @@ func TestLoadConfigFile_AgentCache_NoListeners(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFile(t *testing.T) {
-	if err := os.Setenv("TEST_AAD_ENV", "aad"); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.Unsetenv("TEST_AAD_ENV"); err != nil {
-			t.Fatal(err)
-		}
-	}()
+// Test_LoadConfigFile_AutoAuth_AddrConformance verifies basic config file
+// loading in addition to RFC-5942 §4 normalization of auto-auth methods.
+// See: https://rfc-editor.org/rfc/rfc5952.html
+func Test_LoadConfigFile_AutoAuth_AddrConformance(t *testing.T) {
+	t.Setenv("TEST_AAD_ENV", "aad")
 
-	config, err := LoadConfigFile("./test-fixtures/config.hcl")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	expected := &Config{
-		SharedConfig: &configutil.SharedConfig{
-			PidFile: "./pidfile",
-			LogFile: "/var/log/vault/vault-agent.log",
-		},
-		AutoAuth: &AutoAuth{
-			Method: &Method{
-				Type:      "aws",
-				MountPath: "auth/aws",
-				Namespace: "my-namespace/",
-				Config: map[string]interface{}{
-					"role": "foobar",
-				},
-				MaxBackoff: 0,
-			},
-			Sinks: []*Sink{
-				{
-					Type:   "file",
-					DHType: "curve25519",
-					DHPath: "/tmp/file-foo-dhpath",
-					AAD:    "foobar",
-					Config: map[string]interface{}{
-						"path": "/tmp/file-foo",
-					},
-				},
-				{
-					Type:      "file",
-					WrapTTL:   5 * time.Minute,
-					DHType:    "curve25519",
-					DHPath:    "/tmp/file-foo-dhpath2",
-					AAD:       "aad",
-					DeriveKey: true,
-					Config: map[string]interface{}{
-						"path": "/tmp/file-bar",
-					},
-				},
+	for name, method := range map[string]*Method{
+		"aws": {
+			Type:      "aws",
+			MountPath: "auth/aws",
+			Namespace: "aws-namespace/",
+			Config: map[string]any{
+				"role": "foobar",
 			},
 		},
-	}
+		"azure": {
+			Type:      "azure",
+			MountPath: "auth/azure",
+			Namespace: "azure-namespace/",
+			Config: map[string]any{
+				"authenticate_from_environment": true,
+				"role":                          "dev-role",
+				"resource":                      "https://[2001:0:0:1::1]",
+			},
+		},
+		"gcp": {
+			Type:      "gcp",
+			MountPath: "auth/gcp",
+			Namespace: "gcp-namespace/",
+			Config: map[string]any{
+				"role":            "dev-role",
+				"service_account": "https://[2001:db8:ac3:fe4::1]",
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			config, err := LoadConfigFile("./test-fixtures/config-auto-auth-" + name + ".hcl")
+			require.NoError(t, err)
 
-	config.Prune()
-	if diff := deep.Equal(config, expected); diff != nil {
-		t.Fatal(diff)
-	}
+			expected := &Config{
+				SharedConfig: &configutil.SharedConfig{
+					PidFile: "./pidfile",
+					Listeners: []*configutil.Listener{
+						{
+							Type:       "unix",
+							Address:    "/path/to/socket",
+							TLSDisable: true,
+							AgentAPI: &configutil.AgentAPI{
+								EnableQuit: true,
+							},
+						},
+						{
+							Type:       "tcp",
+							Address:    "2001:db8::1:8200", // Normalized
+							TLSDisable: true,
+						},
+						{
+							Type:       "tcp",
+							Address:    "[2001:0:0:1::1]:3000", // Normalized
+							Role:       "metrics_only",
+							TLSDisable: true,
+						},
+						{
+							Type:        "tcp",
+							Role:        "default",
+							Address:     "2001:db8:0:1:1:1:1:1:8400", // Normalized
+							TLSKeyFile:  "/path/to/cakey.pem",
+							TLSCertFile: "/path/to/cacert.pem",
+						},
+					},
+					LogFile: "/var/log/vault/vault-agent.log",
+				},
+				Vault: &Vault{
+					Address: "https://[2001:db8::1]:8200", // Address is normalized
+					Retry: &Retry{
+						NumRetries: 12, // Default number of retries when a vault stanza is set
+					},
+				},
+				AutoAuth: &AutoAuth{
+					Method: method, // Method properties are normalized correctly
+					Sinks: []*Sink{
+						{
+							Type:   "file",
+							DHType: "curve25519",
+							DHPath: "/tmp/file-foo-dhpath",
+							AAD:    "foobar",
+							Config: map[string]interface{}{
+								"path": "/tmp/file-foo",
+							},
+						},
+						{
+							Type:      "file",
+							WrapTTL:   5 * time.Minute,
+							DHType:    "curve25519",
+							DHPath:    "/tmp/file-foo-dhpath2",
+							AAD:       "aad",
+							DeriveKey: true,
+							Config: map[string]interface{}{
+								"path": "/tmp/file-bar",
+							},
+						},
+					},
+				},
+				TemplateConfig: &TemplateConfig{
+					MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+				},
+			}
 
-	config, err = LoadConfigFile("./test-fixtures/config-embedded-type.hcl")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	config.Prune()
-	if diff := deep.Equal(config, expected); diff != nil {
-		t.Fatal(diff)
+			config.Prune()
+			require.EqualValues(t, expected, config)
+		})
 	}
 }
 
@@ -523,6 +588,9 @@ func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -563,6 +631,9 @@ func TestLoadConfigFile_Method_InitialBackoff(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -602,6 +673,9 @@ func TestLoadConfigFile_Method_ExitOnErr(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -627,6 +701,9 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 					TLSDisable: true,
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -762,6 +839,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -804,6 +884,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: "force",
 			ForceAutoAuthToken:  true,
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -848,6 +931,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 			UseAutoAuthTokenRaw: "true",
 			ForceAutoAuthToken:  false,
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -888,6 +974,9 @@ func TestLoadConfigFile_Agent_AutoAuth_APIProxyAllConfig(t *testing.T) {
 			ForceAutoAuthToken:  true,
 			EnforceConsistency:  "always",
 			WhenInconsistent:    "forward",
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -939,6 +1028,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 			UseAutoAuthTokenRaw: "false",
 			ForceAutoAuthToken:  false,
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -973,6 +1065,9 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -998,12 +1093,21 @@ func TestLoadConfigFile_TemplateConfig(t *testing.T) {
 			TemplateConfig{
 				ExitOnRetryFailure:    true,
 				StaticSecretRenderInt: 1 * time.Minute,
+				MaxConnectionsPerHost: 100,
+				LeaseRenewalThreshold: FloatPtr(0.8),
 			},
 		},
 		"empty": {
 			"./test-fixtures/config-template_config-empty.hcl",
 			TemplateConfig{
-				ExitOnRetryFailure: false,
+				ExitOnRetryFailure:    false,
+				MaxConnectionsPerHost: 10,
+			},
+		},
+		"missing": {
+			"./test-fixtures/config-template_config-missing.hcl",
+			TemplateConfig{
+				MaxConnectionsPerHost: 10,
 			},
 		},
 	}
@@ -1037,6 +1141,55 @@ func TestLoadConfigFile_TemplateConfig(t *testing.T) {
 				t.Fatal(diff)
 			}
 		})
+	}
+}
+
+// TestLoadConfigFile_TemplateConfig_MergeConfigs tests that in the case of multiple config files,
+// a provided TemplateConfig in one file is properly preserved in the merged config
+func TestLoadConfigFile_TemplateConfig_MergeConfigs(t *testing.T) {
+	configPaths := []string{
+		"./test-fixtures/config-template_config.hcl",
+		"./test-fixtures/config-template-min-no-auth.hcl",
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:1111",
+			Retry: &Retry{
+				NumRetries: 5,
+			},
+		},
+		TemplateConfig: &TemplateConfig{
+			ExitOnRetryFailure:    true,
+			StaticSecretRenderInt: 1 * time.Minute,
+			MaxConnectionsPerHost: 100,
+			LeaseRenewalThreshold: FloatPtr(0.8),
+		},
+		Templates: []*ctconfig.TemplateConfig{
+			{
+				Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
+				Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+			},
+			{
+				Source:      pointerutil.StringPtr("/path/on/disk/to/template2.ctmpl"),
+				Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render2.txt"),
+			},
+		},
+	}
+
+	cfg := NewConfig()
+	for _, path := range configPaths {
+		configFromPath, err := LoadConfigFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cfg = cfg.Merge(configFromPath)
+	}
+
+	cfg.Prune()
+	if diff := deep.Equal(cfg, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -1139,6 +1292,9 @@ func TestLoadConfigFile_Template(t *testing.T) {
 						},
 					},
 				},
+				TemplateConfig: &TemplateConfig{
+					MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+				},
 				Templates: tc.expectedTemplates,
 			}
 
@@ -1235,6 +1391,9 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 					},
 					Sinks: nil,
 				},
+				TemplateConfig: &TemplateConfig{
+					MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+				},
 				Templates: tc.expectedTemplates,
 			}
 
@@ -1269,6 +1428,9 @@ func TestLoadConfigFile_Template_WithCache(t *testing.T) {
 			},
 		},
 		Cache: &Cache{},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Templates: []*ctconfig.TemplateConfig{
 			{
 				Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
@@ -1313,6 +1475,9 @@ func TestLoadConfigFile_Vault_Retry(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1359,6 +1524,9 @@ func TestLoadConfigFile_Vault_Retry_Empty(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -1394,6 +1562,9 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 			EnforceConsistency: "always",
 			WhenInconsistent:   "retry",
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -1422,6 +1593,9 @@ func TestLoadConfigFile_EnforceConsistency_APIProxy(t *testing.T) {
 		APIProxy: &APIProxy{
 			EnforceConsistency: "always",
 			WhenInconsistent:   "retry",
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -1465,6 +1639,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_All(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1515,6 +1692,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Auto_Auth(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -1563,6 +1743,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Templating(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1613,6 +1796,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Caching(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -1662,6 +1848,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Proxying(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -1710,6 +1899,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Empty(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1765,6 +1957,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Env(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1822,6 +2017,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_All(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -1870,6 +2068,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Auto_Auth(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1920,6 +2121,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Templating(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -1968,6 +2172,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Caching(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -2018,6 +2225,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Proxying(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -2066,6 +2276,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Empty(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -2121,6 +2334,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Env(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",

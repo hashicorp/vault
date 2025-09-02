@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fixed an issue with performance standbys not being able to handle rotate root requests.
+```

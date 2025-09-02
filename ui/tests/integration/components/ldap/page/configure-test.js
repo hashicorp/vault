@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -11,7 +11,8 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
-import { generateBreadcrumbs } from 'vault/tests/helpers/ldap';
+import { generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const selectors = {
   radioCard: '[data-test-radio-card="OpenLDAP"]',
@@ -30,7 +31,8 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     await fillIn(selectors.binddn, 'foo');
     await fillIn(selectors.bindpass, 'bar');
     await click(selectors.save);
-    await click(`[data-test-save-${rotate}-rotate]`);
+    const buttonLabel = rotate === 'without' ? 'Save without rotating' : 'Save and rotate';
+    await click(GENERAL.button(buttonLabel));
   };
 
   hooks.beforeEach(function () {
@@ -50,12 +52,9 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     this.breadcrumbs = generateBreadcrumbs('ldap', 'configure');
     this.model = this.newModel; // most of the tests use newModel but set this to editModel when needed
     this.renderComponent = () => {
-      return render(
-        hbs`<div id="modal-wormhole"></div><Page::Configure @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
-        {
-          owner: this.engine,
-        }
-      );
+      return render(hbs`<Page::Configure @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+        owner: this.engine,
+      });
     };
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
   });
@@ -82,13 +81,13 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     await click(selectors.save);
 
     assert
-      .dom('[data-test-field="binddn"] [data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('binddn'))
       .hasText('Administrator distinguished name is required.', 'Validation message renders for binddn');
     assert
-      .dom('[data-test-field="bindpass"] [data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('bindpass'))
       .hasText('Administrator password is required.', 'Validation message renders for bindpass');
     assert
-      .dom('[data-test-invalid-form-message] p')
+      .dom('[data-test-invalid-form-message]')
       .hasText('There are 2 errors with this form.', 'Invalid form message renders');
   });
 

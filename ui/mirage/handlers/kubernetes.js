@@ -56,7 +56,7 @@ export default function (server) {
   server.get('/:path/roles', (schema) => {
     return {
       data: {
-        keys: schema.db.kubernetesRoles.where({}).mapBy('name'),
+        keys: schema.db.kubernetesRoles.where({}).map((role) => role.name),
       },
     };
   });

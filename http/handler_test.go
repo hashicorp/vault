@@ -4,16 +4,18 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
 	"net/url"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -21,9 +23,11 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHandler_parseMFAHandler(t *testing.T) {
@@ -111,6 +115,28 @@ func TestHandler_parseMFAHandler(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected an error; actual: %#v\n", req.MFACreds)
 	}
+}
+
+// TestHandler_CORS_Patch verifies that http PATCH is included in the list of
+// allowed request methods
+func TestHandler_CORS_Patch(t *testing.T) {
+	core, _, _ := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	corsConfig := core.CORSConfig()
+	err := corsConfig.Enable(context.Background(), []string{addr}, nil)
+	require.NoError(t, err)
+	req, err := http.NewRequest(http.MethodOptions, addr+"/v1/sys/seal-status", nil)
+	require.NoError(t, err)
+
+	req.Header.Set("Origin", addr)
+	req.Header.Set("Access-Control-Request-Method", http.MethodPatch)
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestHandler_cors(t *testing.T) {
@@ -806,6 +832,7 @@ func testNonPrintable(t *testing.T, disable bool) {
 	props := &vault.HandlerProperties{
 		Core:                  core,
 		DisablePrintableCheck: disable,
+		ListenerConfig:        &configutil.Listener{},
 	}
 	TestServerWithListenerAndProperties(t, ln, addr, core, props)
 	defer ln.Close()
@@ -858,7 +885,7 @@ func TestHandler_Parse_Form(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Body = ioutil.NopCloser(strings.NewReader(values.Encode()))
+	req.Body = io.NopCloser(strings.NewReader(values.Encode()))
 	req.Header.Set("x-vault-token", cluster.RootToken)
 	req.Header.Set("content-type", "application/x-www-form-urlencoded")
 	resp, err := c.Do(req)
@@ -887,5 +914,116 @@ func TestHandler_Parse_Form(t *testing.T) {
 	}
 	if diff := deep.Equal(expected, apiResp.Data); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+// TestHandler_MaxRequestSize verifies that a request larger than the
+// MaxRequestSize fails
+func TestHandler_MaxRequestSize(t *testing.T) {
+	t.Parallel()
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{
+				MaxRequestSize: 1024,
+			},
+		},
+		HandlerFunc: Handler,
+		NumCores:    1,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	_, err := client.KVv2("secret").Put(context.Background(), "foo", map[string]interface{}{
+		"bar": strings.Repeat("a", 1025),
+	})
+
+	require.ErrorContains(t, err, "http: request body too large")
+}
+
+// TestHandler_MaxRequestSize_Memory sets the max request size to 1024 bytes,
+// and creates a 1MB request. The test verifies that less than 1MB of memory is
+// allocated when the request is sent. This test shouldn't be run in parallel,
+// because it modifies GOMAXPROCS
+func TestHandler_MaxRequestSize_Memory(t *testing.T) {
+	ln, addr := TestListener(t)
+	core, _, token := vault.TestCoreUnsealed(t)
+	TestServerWithListenerAndProperties(t, ln, addr, core, &vault.HandlerProperties{
+		Core: core,
+		ListenerConfig: &configutil.Listener{
+			Address:        addr,
+			MaxRequestSize: 1024,
+		},
+	})
+	defer ln.Close()
+
+	data := bytes.Repeat([]byte{0x1}, 1024*1024)
+
+	req, err := http.NewRequest("POST", addr+"/v1/sys/unseal", bytes.NewReader(data))
+	require.NoError(t, err)
+	req.Header.Set(consts.AuthHeaderName, token)
+
+	client := cleanhttp.DefaultClient()
+	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(1))
+	var start, end runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&start)
+	client.Do(req)
+	runtime.ReadMemStats(&end)
+	require.Less(t, end.TotalAlloc-start.TotalAlloc, uint64(1024*1024))
+}
+
+// Test_requiresSnapshot verifies that a request is marked as requiring a
+// snapshot when it's a read, list, or create/update and has a snapshot query
+// parameter
+func Test_requiresSnapshot(t *testing.T) {
+	testCases := []struct {
+		name        string
+		method      string
+		queryParams map[string][]string
+		expected    bool
+	}{
+		{
+			name:        "get no snapshot",
+			method:      http.MethodGet,
+			queryParams: map[string][]string{"other": {"param"}},
+			expected:    false,
+		},
+		{
+			name:        "options with snapshot",
+			method:      http.MethodOptions,
+			queryParams: map[string][]string{VaultSnapshotRecoverParam: {"param"}},
+			expected:    false,
+		},
+		{
+			name:        "put with read snapshot",
+			method:      http.MethodPut,
+			queryParams: map[string][]string{VaultSnapshotReadParam: {"param"}},
+			expected:    false,
+		},
+		{
+			name:        "put with recover snapshot",
+			method:      http.MethodPut,
+			queryParams: map[string][]string{VaultSnapshotRecoverParam: {"param"}},
+			expected:    true,
+		},
+		{
+			name:        "list with snapshot",
+			method:      "LIST",
+			queryParams: map[string][]string{VaultSnapshotReadParam: {"param"}},
+			expected:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := &http.Request{
+				Method: tc.method,
+				URL: &url.URL{
+					RawQuery: url.Values(tc.queryParams).Encode(),
+				},
+			}
+			require.Equal(t, tc.expected, requiresSnapshot(req))
+		})
 	}
 }

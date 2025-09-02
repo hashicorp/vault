@@ -18,34 +18,35 @@ is going to give you faster feedback and execution time, whereas Enos is going
 to give you a real-world execution and validation of the requirement. Consider
 the following cases as examples of when one might opt for an Enos scenario:
 
-* The feature require third-party integrations. Whether that be networked
+- The feature require third-party integrations. Whether that be networked
   dependencies like a real Consul backend, a real KMS key to test awskms
   auto-unseal, auto-join discovery using AWS tags, or Cloud hardware KMS's.
-* The feature might behave differently under multiple configuration variants
+- The feature might behave differently under multiple configuration variants
   and therefore should be tested with both combinations, e.g. auto-unseal and
   manual shamir unseal or replication in HA mode with integrated storage or
   Consul storage.
-* The scenario requires coordination between multiple targets. For example,
+- The scenario requires coordination between multiple targets. For example,
   consider the complex lifecycle event of migrating the seal type or storage,
   or manually triggering a raft disaster scenario by partitioning the network
   between the leader and follower nodes. Or perhaps an auto-pilot upgrade between
   a stable version of Vault and our candidate version.
-* The scenario has specific deployment strategy requirements. For example,
+- The scenario has specific deployment strategy requirements. For example,
   if we want to add a regression test for an issue that only arises when the
   software is deployed in a certain manner.
-* The scenario needs to use actual build artifacts that will be promoted
+- The scenario needs to use actual build artifacts that will be promoted
   through the pipeline.
 
 ## Requirements
-* AWS access. HashiCorp Vault developers should use Doormat.
-* Terraform >= 1.2
-* Enos >= v0.0.10. You can [install it from a release channel](https://github.com/hashicorp/Enos-Docs/blob/main/installation.md).
-* Access to the QTI org in Terraform Cloud. HashiCorp Vault developers can
-  access a shared token in 1Password or request their own in #team-quality on
-  Slack.
-* An SSH keypair in the AWS region you wish to run the scenario. You can use
+- AWS access. HashiCorp Vault developers should use Doormat.
+- Terraform >= 1.7
+- Enos >= v0.0.28. You can [download a release](https://github.com/hashicorp/enos/releases/) or
+  install it with Homebrew:
+  ```shell
+  brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
+  ```
+- An SSH keypair in the AWS region you wish to run the scenario. You can use
   Doormat to log in to the AWS console to create or upload an existing keypair.
-* A Vault artifact is downloaded from the GHA artifacts when using the `artifact_source:crt` variants, from Artifactory when using `artifact_source:artifactory`, and is built locally from the current branch when using  `artifact_source:local` variant.
+- A Vault artifact is downloaded from the GHA artifacts when using the `artifact_source:crt` variants, from Artifactory when using `artifact_source:artifactory`, and is built locally from the current branch when using  `artifact_source:local` variant.
 
 ## Scenario Variables
 In CI, each scenario is executed via Github Actions and has been configured using
@@ -57,12 +58,32 @@ variables, or you can update `enos.vars.hcl` with values and uncomment the lines
 Variables that are required:
 * `aws_ssh_keypair_name`
 * `aws_ssh_private_key_path`
-* `tfc_api_token`
 * `vault_bundle_path`
 * `vault_license_path` (only required for non-OSS editions)
 
 See [enos.vars.hcl](./enos.vars.hcl) or [enos-variables.hcl](./enos-variables.hcl)
 for further descriptions of the variables.
+
+Additional variable information can also be found in the [Scenario Outlines](#scenario_outlines)
+
+## Scenario Outlines
+Enos is capable of producing an outline of each scenario that is defined in a given directory. These
+scenarios often include a description of what behavior the scenario performs, which variants are
+available, and which variables are required. They also provide a step by step breakdown including
+which quality requirments are verifiend by a given step.
+
+You can generate outlines of all scenarios or specify one via it's name.
+
+From the `enos` directory:
+```bash
+enos scenario outline smoke
+```
+
+There are also HTML versions available for an improved reading experience:
+```bash
+enos scenario outline --format html > index.html
+open index.html
+```
 
 ## Executing Scenarios
 From the `enos` directory:
@@ -95,45 +116,6 @@ enos scenario destroy smoke artifact_source:local
 
 Refer to the [Enos documentation](https://github.com/hashicorp/Enos-Docs)
 for further information regarding installation, execution or composing scenarios.
-
-# Scenarios
-There are current two scenarios: `smoke` and `upgrade`. Both begin by building Vault
-as specified by the selected `artifact_source` variant (see Variants section below for more
-information).
-
-## Smoke
-The [`smoke` scenario](./enos-scenario-smoke.hcl) creates a Vault cluster using
-the version from the current branch (either in CI or locally), with the backend
-specified by the `backend` variant (`raft` or `consul`). Next, it unseals with the
-appropriate method (`awskms` or `shamir`) and performs different verifications
-depending on the backend and seal type.
-
-## Upgrade
-The [`upgrade` scenario](./enos-scenario-upgrade.hcl) creates a Vault cluster using
-the version specified in `vault_upgrade_initial_release`, with the backend specified
-by the `backend` variant (`raft` or `consul`). Next, it upgrades the Vault binary
-that is determined by the `artifact_source` variant. After the upgrade, it verifies that
-cluster is at the desired version, along with additional verifications.
-
-
-## Autopilot
-The [`autopilot` scenario](./enos-scenario-autopilot.hcl) creates a Vault cluster using
-the version specified in `vault_upgrade_initial_release`. It writes test data to the Vault cluster. Next, it creates additional nodes with the candidate version of Vault as determined by the `vault_product_version` variable set.
-The module uses AWS auto-join to handle discovery and unseals with auto-unseal
-or Shamir depending on the `seal` variant. After the new nodes have joined and been
-unsealed, it verifies reading stored data on the new nodes. Autopilot upgrade verification checks the upgrade status is "await-server-removal" and the target version is set to the version of upgraded nodes. This test also verifies the undo_logs status for Vault versions 1.13.x
-
-## Replication
-The [`replication` scenario](./enos-scenario-replication.hcl) creates two 3-node Vault clusters and runs following verification steps:
-
- 1. Writes data on the primary cluster
- 1. Enables performance replication
- 1. Verifies reading stored data from secondary cluster
- 1. Verifies initial replication status between both clusters
- 1. Replaces the leader node and one standby node on the primary Vault cluster
- 1. Verifies updated replication status between both clusters
-
- This scenario verifies the performance replication status on both clusters to have their connection_status as "connected" and that the secondary cluster has known_primaries cluster addresses updated to the active nodes IP addresses of the primary Vault cluster. This scenario currently works around issues VAULT-12311 and VAULT-12309.  The scenario fails when the primary storage backend is Consul due to issue VAULT-12332
 
 ## UI Tests
 The [`ui` scenario](./enos-scenario-ui.hcl) creates a Vault cluster (deployed to AWS) using a version 
@@ -202,11 +184,9 @@ unzipped Vault binary at the `vault_local_binary_path`.
 
 ## `artifact_source:artifactory`
 This variant is for running the Enos scenario to test an artifact from Artifactory. It requires following Enos variables to be set:
-* `artifactory_username`
 * `artifactory_token`
 * `aws_ssh_keypair_name`
 * `aws_ssh_private_key_path`
-* `tfc_api_token`
 * `vault_product_version`
 * `vault_revision`
 
@@ -234,7 +214,6 @@ and destroyed each time a scenario is run, the Terraform state will be managed b
 Here are the steps to configure the GitHub Actions service user:
 
 #### Pre-requisites
-- Access to the `hashicorp-qti` organization in Terraform Cloud.
 - Full access to the CI AWS account is required.
 
 **Notes:**
@@ -247,15 +226,15 @@ Here are the steps to configure the GitHub Actions service user:
   - Access can be requested by clicking: `Cloud Access` --> `AWS` --> `Request Account Access`.
 
 1. **Create the Terraform Cloud Workspace** - The name of the workspace to be created depends on the 
-   repository for which it is being created, but the pattern is: `<repository>-ci-service-user-iam`,
-   e.g. `vault-ci-service-user-iam`. It is important that the execution mode for the workspace be set 
+   repository for which it is being created, but the pattern is: `<repository>-ci-enos-service-user-iam`,
+   e.g. `vault-ci-enos-service-user-iam`. It is important that the execution mode for the workspace be set 
    to `local`. For help on setting up the workspace, contact the QT team on Slack (#team-quality)
 
 
 2. **Execute the Terraform module**
 ```shell
 > cd ./enos/ci/service-user-iam
-> export TF_WORKSPACE=<repo name>-ci-service-user-iam
+> export TF_WORKSPACE=<repo name>-ci-enos-service-user-iam
 > export TF_TOKEN_app_terraform_io=<Terraform Cloud Token>
 > export TF_VAR_repository=<repository name>
 > terraform init

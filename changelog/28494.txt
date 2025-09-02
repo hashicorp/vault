@@ -1,0 +1,3 @@
+```release-note:bug
+proxy/cache (enterprise): Fixed a data race that could occur while tracking capabilities in Proxy's static secret cache.
+```

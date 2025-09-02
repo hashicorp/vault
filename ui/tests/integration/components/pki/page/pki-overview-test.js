@@ -9,8 +9,10 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/overview';
+import { PKI_OVERVIEW } from 'vault/tests/helpers/pki/pki-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
+const { overviewCard } = GENERAL;
 module('Integration | Component | Page::PkiOverview', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
@@ -39,9 +41,11 @@ module('Integration | Component | Page::PkiOverview', function (hooks) {
       hbs`<Page::PkiOverview @issuers={{this.issuers}} @roles={{this.roles}} @engine={{this.engineId}} />,`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.issuersCardTitle).hasText('Issuers');
-    assert.dom(SELECTORS.issuersCardOverviewNum).hasText('2');
-    assert.dom(SELECTORS.issuersCardLink).hasText('View issuers');
+    assert
+      .dom(overviewCard.container('Issuers'))
+      .hasText(
+        'Issuers View issuers The total number of issuers in this PKI mount. Includes both root and intermediate certificates. 2'
+      );
   });
 
   test('shows the correct information on roles card', async function (assert) {
@@ -49,15 +53,21 @@ module('Integration | Component | Page::PkiOverview', function (hooks) {
       hbs`<Page::PkiOverview @issuers={{this.issuers}} @roles={{this.roles}} @engine={{this.engineId}} />,`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.rolesCardTitle).hasText('Roles');
-    assert.dom(SELECTORS.rolesCardOverviewNum).hasText('3');
-    assert.dom(SELECTORS.rolesCardLink).hasText('View roles');
+    assert
+      .dom(overviewCard.container('Roles'))
+      .hasText(
+        'Roles View roles The total number of roles in this PKI mount that have been created to generate certificates. 3'
+      );
     this.roles = 404;
     await render(
       hbs`<Page::PkiOverview @issuers={{this.issuers}} @roles={{this.roles}} @engine={{this.engineId}} />,`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.rolesCardOverviewNum).hasText('0');
+    assert
+      .dom(overviewCard.container('Roles'))
+      .hasText(
+        'Roles View roles The total number of roles in this PKI mount that have been created to generate certificates. 0'
+      );
   });
 
   test('shows the input search fields for View Certificates card', async function (assert) {
@@ -65,9 +75,9 @@ module('Integration | Component | Page::PkiOverview', function (hooks) {
       hbs`<Page::PkiOverview @issuers={{this.issuers}} @roles={{this.roles}} @engine={{this.engineId}} />,`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.issueCertificate).hasText('Issue certificate');
-    assert.dom(SELECTORS.issueCertificateInput).exists();
-    assert.dom(SELECTORS.issueCertificateButton).hasText('Issue');
+    assert.dom(overviewCard.title('Issue certificate')).hasText('Issue certificate');
+    assert.dom(PKI_OVERVIEW.issueCertificateInput).exists();
+    assert.dom(PKI_OVERVIEW.issueCertificateButton).hasText('Issue');
   });
 
   test('shows the input search fields for Issue Certificates card', async function (assert) {
@@ -75,8 +85,8 @@ module('Integration | Component | Page::PkiOverview', function (hooks) {
       hbs`<Page::PkiOverview @issuers={{this.issuers}} @roles={{this.roles}} @engine={{this.engineId}} />,`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.viewCertificate).hasText('View certificate');
-    assert.dom(SELECTORS.viewCertificateInput).exists();
-    assert.dom(SELECTORS.viewCertificateButton).hasText('View');
+    assert.dom(overviewCard.title('View certificate')).hasText('View certificate');
+    assert.dom(PKI_OVERVIEW.viewCertificateInput).exists();
+    assert.dom(PKI_OVERVIEW.viewCertificateButton).hasText('View');
   });
 });

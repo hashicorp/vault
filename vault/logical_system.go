@@ -15,6 +15,7 @@ import (
 	"hash"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -31,6 +32,8 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	semver "github.com/hashicorp/go-version"
+	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -49,9 +52,12 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/plugincatalog"
+	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -81,15 +87,21 @@ type PolicyMFABackend struct {
 	*MFABackend
 }
 
-func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
+func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConfig) *SystemBackend {
 	db, _ := memdb.NewMemDB(systemBackendMemDBSchema())
 
+	syncBackend := NewSecretsSyncBackend(core, logger)
+	if err := syncBackend.Setup(core.activeContext, config); err != nil {
+		return nil
+	}
+
 	b := &SystemBackend{
-		Core:        core,
-		db:          db,
-		logger:      logger,
-		mfaBackend:  NewPolicyMFABackend(core, logger),
-		syncBackend: NewSecretsSyncBackend(core, logger),
+		Core:                 core,
+		db:                   db,
+		logger:               logger,
+		mfaBackend:           NewPolicyMFABackend(core, logger),
+		syncBackend:          syncBackend,
+		raftChallengeLimiter: rate.NewLimiter(rate.Limit(RaftChallengesPerSecond), RaftInitialChallengeLimit),
 	}
 
 	b.Backend = &framework.Backend{
@@ -124,6 +136,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"storage/raft/snapshot-auto/config/*",
 				"leases",
 				"internal/inspect/*",
+				"internal/counters/activity/export",
 				// sys/seal and sys/step-down actually have their sudo requirement enforced through hardcoding
 				// PolicyCheckOpts.RootPrivsRequired in dedicated calls to Core.performPolicyChecks, but we still need
 				// to declare them here so that the generated OpenAPI spec gets their sudo status correct.
@@ -136,6 +149,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"wrapping/pubkey",
 				"replication/status",
 				"internal/specs/openapi",
+				"internal/ui/authenticated-messages",
+				"internal/ui/unauthenticated-messages",
 				"internal/ui/mounts",
 				"internal/ui/mounts/*",
 				"internal/ui/namespaces",
@@ -180,6 +195,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 			},
 		},
 	}
+	b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, entUnauthenticatedPaths()...)
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
@@ -187,8 +203,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.statusPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
+	b.Backend.Paths = append(b.Backend.Paths, entWrappedPluginsCRUDPath(b)...)
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsListPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRootReloadPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
@@ -212,6 +231,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.wellKnownPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.activationFlagsPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
@@ -231,6 +252,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 
 	b.Backend.Invalidate = sysInvalidate(b)
 	b.Backend.InitializeFunc = sysInitialize(b)
+	b.Backend.Clean = sysClean(b)
+	b.entInit()
 	return b
 }
 
@@ -250,11 +273,15 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
 	*framework.Backend
-	Core        *Core
-	db          *memdb.MemDB
-	logger      log.Logger
-	mfaBackend  *PolicyMFABackend
-	syncBackend *SecretsSyncBackend
+	entSystemBackend
+	Core                 *Core
+	db                   *memdb.MemDB
+	logger               log.Logger
+	mfaBackend           *PolicyMFABackend
+	syncBackend          *SecretsSyncBackend
+	idStoreBackend       *framework.Backend
+	raftChallengeLimiter *rate.Limiter
+	activationFlags      *activationflags.FeatureActivationFlags
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration
@@ -447,9 +474,6 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 			return nil, err
 		}
 
-		// Sort for consistent ordering
-		sortVersionedPlugins(versioned)
-
 		versionedPlugins = append(versionedPlugins, versioned...)
 	}
 
@@ -489,23 +513,6 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 	}, nil
 }
 
-func sortVersionedPlugins(versionedPlugins []pluginutil.VersionedPlugin) {
-	sort.SliceStable(versionedPlugins, func(i, j int) bool {
-		left, right := versionedPlugins[i], versionedPlugins[j]
-		if left.Type != right.Type {
-			return left.Type < right.Type
-		}
-		if left.Name != right.Name {
-			return left.Name < right.Name
-		}
-		if left.Version != right.Version {
-			return right.SemanticVersion.GreaterThan(left.SemanticVersion)
-		}
-
-		return false
-	})
-}
-
 func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
@@ -531,17 +538,30 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return logical.ErrorResponse("version %q is not allowed because 'builtin' is a reserved metadata identifier", pluginVersion), nil
 	}
 
+	if download := d.Get("download").(bool); download {
+		return logical.ErrorResponse("download is an enterprise only feature"), nil
+	}
+
 	sha256 := d.Get("sha256").(string)
 	if sha256 == "" {
 		sha256 = d.Get("sha_256").(string)
-		if sha256 == "" {
-			return logical.ErrorResponse("missing SHA-256 value"), nil
-		}
+	}
+
+	if sha256 == "" && pluginVersion == "" {
+		return logical.ErrorResponse("must provide at least one of sha256 or version: use sha256 for binary registration (version optional) or version only for artifact registration"), nil
+	}
+
+	if resp := validateSha256IsEmptyForEntPluginVersion(pluginVersion, sha256); resp.IsError() {
+		return resp, nil
 	}
 
 	command := d.Get("command").(string)
 	ociImage := d.Get("oci_image").(string)
-	if command == "" && ociImage == "" {
+	var resp logical.Response
+
+	if sha256 == "" && command != "" {
+		resp.AddWarning(fmt.Sprintf("When sha256 is unspecified, a plugin artifact is expected for registration and the command parameter %q will be ignored.", command))
+	} else if sha256 != "" && (command == "" && ociImage == "") {
 		return logical.ErrorResponse("must provide at least one of command or oci_image"), nil
 	}
 
@@ -598,13 +618,20 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		Sha256:   sha256Bytes,
 	})
 	if err != nil {
-		if errors.Is(err, ErrPluginNotFound) || strings.HasPrefix(err.Error(), "plugin version mismatch") {
+		if errors.Is(err, plugincatalog.ErrPluginNotFound) ||
+			errors.Is(err, plugincatalog.ErrPluginVersionMismatch) ||
+			errors.Is(err, plugincatalog.ErrPluginUnableToRun) {
 			return logical.ErrorResponse(err.Error()), nil
 		}
+
 		return nil, err
 	}
 
-	return nil, nil
+	if len(resp.Warnings) == 0 {
+		return nil, nil
+	}
+
+	return &resp, nil
 }
 
 func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -643,7 +670,7 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 
 	command := plugin.Command
 	if !plugin.Builtin && plugin.OCIImage == "" {
-		command, err = filepath.Rel(b.Core.pluginCatalog.directory, command)
+		command, err = filepath.Rel(b.Core.pluginDirectory, command)
 		if err != nil {
 			return nil, err
 		}
@@ -747,32 +774,226 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 		return logical.ErrorResponse("plugin or mounts must be provided"), nil
 	}
 
-	if pluginName != "" {
-		err := b.Core.reloadMatchingPlugin(ctx, pluginName)
-		if err != nil {
-			return nil, err
-		}
-	} else if len(pluginMounts) > 0 {
-		err := b.Core.reloadMatchingPluginMounts(ctx, pluginMounts)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	r := logical.Response{
+	resp := logical.Response{
 		Data: map[string]interface{}{
 			"reload_id": req.ID,
 		},
 	}
 
-	if scope == globalScope {
-		err := handleGlobalPluginReload(ctx, b.Core, req.ID, pluginName, pluginMounts)
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if pluginName != "" {
+		reloaded, err := b.Core.reloadMatchingPlugin(ctx, ns, consts.PluginTypeUnknown, pluginName)
 		if err != nil {
 			return nil, err
 		}
-		return logical.RespondWithStatusCode(&r, req, http.StatusAccepted)
+		if reloaded == 0 {
+			if scope == globalScope {
+				resp.AddWarning("no plugins were reloaded locally (but they may be reloaded on other nodes)")
+			} else {
+				resp.AddWarning("no plugins were reloaded")
+			}
+		}
+	} else if len(pluginMounts) > 0 {
+		err := b.Core.reloadMatchingPluginMounts(ctx, ns, pluginMounts)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return &r, nil
+
+	if scope == globalScope {
+		reloadRequest := pluginReloadRequest{
+			Namespace:  ns,
+			Timestamp:  time.Now(),
+			ReloadID:   req.ID,
+			PluginType: consts.PluginTypeUnknown,
+		}
+
+		if pluginName != "" {
+			reloadRequest.Type = pluginReloadPluginsType
+			reloadRequest.Subjects = []string{pluginName}
+		} else {
+			reloadRequest.Type = pluginReloadMountsType
+			reloadRequest.Subjects = pluginMounts
+		}
+		err = handleGlobalPluginReload(ctx, b.Core, reloadRequest)
+		if err != nil {
+			return nil, err
+		}
+		return logical.RespondWithStatusCode(&resp, req, http.StatusAccepted)
+	}
+	return &resp, nil
+}
+
+func (b *SystemBackend) handleRootPluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	pluginTypeStr := d.Get("type").(string)
+	scope := d.Get("scope").(string)
+
+	if pluginName == "" {
+		return logical.ErrorResponse("'plugin' must be provided"), nil
+	}
+	if pluginTypeStr == "" {
+		return logical.ErrorResponse("'type' must be provided"), nil
+	}
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
+	if err != nil {
+		return logical.ErrorResponse(`error parsing %q as a plugin type, must be one of "auth", "secret", "database", or "unknown"`, pluginTypeStr), nil
+	}
+	if scope != "" && scope != globalScope {
+		return logical.ErrorResponse("reload scope must be omitted or 'global'"), nil
+	}
+
+	resp := logical.Response{
+		Data: map[string]interface{}{
+			"reload_id": req.ID,
+		},
+	}
+
+	reloaded, err := b.Core.reloadMatchingPlugin(ctx, nil, pluginType, pluginName)
+	if err != nil {
+		return nil, err
+	}
+	if reloaded == 0 {
+		if scope == globalScope {
+			resp.AddWarning("no plugins were reloaded locally (but they may be reloaded on other nodes)")
+		} else {
+			resp.AddWarning("no plugins were reloaded")
+		}
+	}
+
+	if scope == globalScope {
+		reloadRequest := pluginReloadRequest{
+			Type:       pluginReloadPluginsType,
+			Subjects:   []string{pluginName},
+			PluginType: pluginType,
+			Namespace:  nil,
+			Timestamp:  time.Now(),
+			ReloadID:   req.ID,
+		}
+
+		err = handleGlobalPluginReload(ctx, b.Core, reloadRequest)
+		if err != nil {
+			return nil, err
+		}
+		return logical.RespondWithStatusCode(&resp, req, http.StatusAccepted)
+	}
+	return &resp, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogPinUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginType, pluginName, resp := requirePluginTypeAndName(d)
+	if resp != nil {
+		return resp, nil
+	}
+
+	pluginVersion, builtin, err := getVersion(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	if pluginVersion == "" {
+		return logical.ErrorResponse("missing plugin version"), nil
+	}
+	if builtin {
+		return logical.ErrorResponse("cannot pin a builtin plugin: %q", pluginVersion), nil
+	}
+
+	err = b.Core.pluginCatalog.SetPinnedVersion(ctx, &pluginutil.PinnedVersion{
+		Name:    pluginName,
+		Type:    pluginType,
+		Version: pluginVersion,
+	})
+	if err != nil {
+		if errors.Is(err, plugincatalog.ErrPluginNotFound) {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		return nil, err
+	}
+
+	return &logical.Response{}, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogPinRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginType, pluginName, resp := requirePluginTypeAndName(d)
+	if resp != nil {
+		return resp, nil
+	}
+
+	pin, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
+	if errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return nil, logical.CodedError(http.StatusNotFound, "no pinned version for this plugin")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"name":    pin.Name,
+			"type":    pin.Type.String(),
+			"version": pin.Version,
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogPinDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginType, pluginName, resp := requirePluginTypeAndName(d)
+	if resp != nil {
+		return resp, nil
+	}
+
+	if err := b.Core.pluginCatalog.DeletePinnedVersion(ctx, pluginType, pluginName); err != nil {
+		if errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+			return &logical.Response{}, nil
+		}
+
+		return nil, err
+	}
+
+	return &logical.Response{}, nil
+}
+
+func requirePluginTypeAndName(d *framework.FieldData) (consts.PluginType, string, *logical.Response) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return consts.PluginTypeUnknown, "", logical.ErrorResponse("missing plugin name")
+	}
+
+	pluginTypeStr := d.Get("type").(string)
+	if pluginTypeStr == "" {
+		return consts.PluginTypeUnknown, "", logical.ErrorResponse("missing plugin type")
+	}
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
+	if err != nil {
+		return consts.PluginTypeUnknown, "", logical.ErrorResponse("invalid plugin type: %s", err)
+	}
+
+	return pluginType, pluginName, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogPinList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	pins, err := b.Core.pluginCatalog.ListPinnedVersions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	pinnedVersions := []map[string]any{}
+	for _, pin := range pins {
+		pinnedVersions = append(pinnedVersions, map[string]any{
+			"name":    pin.Name,
+			"type":    pin.Type.String(),
+			"version": pin.Version,
+		})
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"pinned_versions": pinnedVersions,
+		},
+	}, nil
 }
 
 func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -803,6 +1024,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 		if memory < 0 {
 			return logical.ErrorResponse("runtime memory in bytes cannot be negative"), nil
 		}
+		rootless := d.Get("rootless").(bool)
 		if err = b.Core.pluginRuntimeCatalog.Set(ctx,
 			&pluginruntimeutil.PluginRuntimeConfig{
 				Name:         runtimeName,
@@ -811,6 +1033,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 				CgroupParent: cgroupParent,
 				CPU:          cpu,
 				Memory:       memory,
+				Rootless:     rootless,
 			}); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -869,7 +1092,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 	}
 
 	conf, err := b.Core.pluginRuntimeCatalog.Get(ctx, runtimeName, runtimeType)
-	if err != nil && !errors.Is(err, ErrPluginRuntimeNotFound) {
+	if err != nil && !errors.Is(err, plugincatalog.ErrPluginRuntimeNotFound) {
 		return nil, err
 	}
 	if conf == nil {
@@ -883,11 +1106,12 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 		"cgroup_parent": conf.CgroupParent,
 		"cpu_nanos":     conf.CPU,
 		"memory_bytes":  conf.Memory,
+		"rootless":      conf.Rootless,
 	}}, nil
 }
 
 func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var data []map[string]any
+	runtimes := []map[string]any{}
 
 	var pluginRuntimeTypes []consts.PluginRuntimeType
 	runtimeTypeStr := d.Get("type").(string)
@@ -915,39 +1139,35 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 				return strings.Compare(configs[i].Name, configs[j].Name) == -1
 			})
 			for _, conf := range configs {
-				data = append(data, map[string]any{
+				runtimes = append(runtimes, map[string]any{
 					"name":          conf.Name,
 					"type":          conf.Type.String(),
 					"oci_runtime":   conf.OCIRuntime,
 					"cgroup_parent": conf.CgroupParent,
 					"cpu_nanos":     conf.CPU,
 					"memory_bytes":  conf.Memory,
+					"rootless":      conf.Rootless,
 				})
 			}
 		}
 	}
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{},
-	}
-
-	if len(data) > 0 {
-		resp.Data["runtimes"] = data
-	}
-
-	return resp, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"runtimes": runtimes,
+		},
+	}, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
-func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	hmac := d.Get("hmac").(bool)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.add(ctx, header, hmac)
+	err := b.Core.AuditedHeadersConfig().Add(ctx, header, hmac)
 	if err != nil {
 		return nil, err
 	}
@@ -956,14 +1176,13 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logi
 }
 
 // handleAuditedHeaderDelete deletes the header with the given name
-func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.remove(ctx, header)
+	err := b.Core.AuditedHeadersConfig().Remove(ctx, header)
 	if err != nil {
 		return nil, err
 	}
@@ -972,14 +1191,13 @@ func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logi
 }
 
 // handleAuditedHeaderRead returns the header configuration for the given header name
-func (b *SystemBackend) handleAuditedHeaderRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderRead(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	settings, ok := headerConfig.Headers[strings.ToLower(header)]
+	settings, ok := b.Core.AuditedHeadersConfig().Header(header)
 	if !ok {
 		return logical.ErrorResponse("Could not find header in config"), nil
 	}
@@ -992,12 +1210,12 @@ func (b *SystemBackend) handleAuditedHeaderRead(ctx context.Context, req *logica
 }
 
 // handleAuditedHeadersRead returns the whole audited headers config
-func (b *SystemBackend) handleAuditedHeadersRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	headerConfig := b.Core.AuditedHeadersConfig()
+func (b *SystemBackend) handleAuditedHeadersRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	headerSettings := b.Core.AuditedHeadersConfig().Headers()
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"headers": headerConfig.Headers,
+			"headers": headerSettings,
 		},
 	}, nil
 }
@@ -1164,7 +1382,7 @@ func (b *SystemBackend) handleGenerateRootDecodeTokenUpdate(ctx context.Context,
 	return resp, nil
 }
 
-func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[string]interface{} {
+func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry, legacyTTLFormat bool) map[string]interface{} {
 	info := map[string]interface{}{
 		"type":                    entry.Type,
 		"description":             entry.Description,
@@ -1178,10 +1396,25 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 		"running_plugin_version":  entry.RunningVersion,
 		"running_sha256":          entry.RunningSha256,
 	}
+	coreDefTTL := int64(b.Core.defaultLeaseTTL.Seconds())
+	coreMaxTTL := int64(b.Core.maxLeaseTTL.Seconds())
+	entDefTTL := int64(entry.Config.DefaultLeaseTTL.Seconds())
+	entMaxTTL := int64(entry.Config.MaxLeaseTTL.Seconds())
 	entryConfig := map[string]interface{}{
-		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-		"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+		"default_lease_ttl": entDefTTL,
+		"max_lease_ttl":     entMaxTTL,
 		"force_no_cache":    entry.Config.ForceNoCache,
+	}
+	if !legacyTTLFormat {
+		if entDefTTL == 0 {
+			entryConfig["default_lease_ttl"] = coreDefTTL
+		}
+		if entMaxTTL == 0 {
+			entryConfig["max_lease_ttl"] = coreMaxTTL
+		}
+	}
+	if entry.Config.TrimRequestTrailingSlashes {
+		entryConfig["trim_request_trailing_slashes"] = true
 	}
 	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
@@ -1203,6 +1436,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_managed_keys"); ok {
 		entryConfig["allowed_managed_keys"] = rawVal.([]string)
 	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("identity_token_key"); ok {
+		entryConfig["identity_token_key"] = rawVal.(string)
+	}
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
@@ -1214,6 +1450,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 			"user_lockout_disable":                entry.Config.UserLockoutConfig.DisableLockout,
 		}
 		entryConfig["user_lockout_config"] = userLockoutConfig
+	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("delegated_auth_accessors"); ok {
+		entryConfig["delegated_auth_accessors"] = rawVal.([]string)
 	}
 
 	// Add deprecation status only if it exists
@@ -1255,7 +1494,7 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 		}
 
 		// Populate mount info
-		info := b.mountInfo(ctx, entry)
+		info := b.mountInfo(ctx, entry, true)
 
 		resp.Data[entry.Path] = info
 	}
@@ -1400,6 +1639,10 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.ForceNoCache = true
 	}
 
+	if apiConfig.TrimRequestTrailingSlashes {
+		config.TrimRequestTrailingSlashes = true
+	}
+
 	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
@@ -1420,6 +1663,45 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	if len(apiConfig.AllowedManagedKeys) > 0 {
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
+	if len(apiConfig.DelegatedAuthAccessors) > 0 {
+		config.DelegatedAuthAccessors = apiConfig.DelegatedAuthAccessors
+	}
+
+	storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+	if storage == nil {
+		return nil, errors.New("failed to find identity storage")
+	}
+
+	// Ensure that the mount's identity token key exists
+	identityStore := b.Core.IdentityStore()
+	identityStore.oidcLock.Lock()
+	defer identityStore.oidcLock.Unlock()
+	if apiConfig.IdentityTokenKey != "" {
+		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
+		}
+		if k == nil {
+			return logical.ErrorResponse("key %q does not exist", apiConfig.IdentityTokenKey), nil
+		}
+
+		config.IdentityTokenKey = apiConfig.IdentityTokenKey
+	}
+
+	// Don't lazily generate the default OIDC key for KV mounts. A default KV mount
+	// is enabled in dev and test servers. We don't want to pay the cost of key
+	// generation for that KV mount in all tests.
+	if config.usingOIDCDefaultKey() && logicalType != mountTypeKV {
+		err := identityStore.lazyGenerateDefaultKey(ctx, storage)
+		if err != nil {
+			if local && errors.Is(err, logical.ErrReadOnly) {
+				b.Logger().Warn("skipping default OIDC key generation for local mount",
+					"name", logicalType, "path", path)
+			} else {
+				return nil, fmt.Errorf("failed to generate default key: %w", err)
+			}
+		}
+	}
 
 	// Create the mount entry
 	me := &MountEntry{
@@ -1435,7 +1717,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Version:               pluginVersion,
 	}
 
-	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets) {
+	builtin, err := b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets)
+	if err != nil {
+		return nil, err
+	}
+	if builtin {
 		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
 		if err != nil {
 			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
@@ -1495,9 +1781,20 @@ func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("No secret engine mount at %s", path), nil
 	}
 
-	return &logical.Response{
-		Data: b.mountInfo(ctx, entry),
-	}, nil
+	resp := &logical.Response{
+		Data: b.mountInfo(ctx, entry, true),
+	}
+	if entry.Version != "" && entry.Version != entry.RunningVersion {
+		warning := fmt.Sprintf("Plugin version is configured as %q, but running %q", entry.Version, entry.RunningVersion)
+		if pin, _ := b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeSecrets, entry.Type); pin != nil && pin.Version == entry.RunningVersion {
+			warning += " because that version is pinned"
+		} else {
+			warning += " either due to a pinned version or because the plugin was upgraded and not yet reloaded"
+		}
+		resp.AddWarning(warning)
+	}
+
+	return resp, nil
 }
 
 // used to intercept an HTTPCodedError so it goes back to callee
@@ -1701,8 +1998,8 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		err := b.moveMount(ns, logger, migrationID, entry, fromPathDetails, toPathDetails)
 		if err != nil {
 			logger.Error("remount failed", "error", err)
-			if err := b.Core.setMigrationStatus(migrationID, MigrationFailureStatus); err != nil {
-				logger.Error("Setting migration status failed", "error", err, "target_status", MigrationFailureStatus)
+			if err := b.Core.setMigrationStatus(migrationID, MigrationStatusFailure); err != nil {
+				logger.Error("Setting migration status failed", "error", err, "target_status", MigrationStatusFailure)
 			}
 		}
 	}(migrationID)
@@ -1758,7 +2055,7 @@ func (b *SystemBackend) moveMount(ns *namespace.Namespace, logger log.Logger, mi
 		return err
 	}
 
-	if err := b.Core.setMigrationStatus(migrationID, MigrationSuccessStatus); err != nil {
+	if err := b.Core.setMigrationStatus(migrationID, MigrationStatusSuccess); err != nil {
 		return err
 	}
 	logger.Info("Completed mount move operations")
@@ -1849,7 +2146,8 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["external_entropy_access"] = true
 	}
 
-	if mountEntry.Table == credentialTableType {
+	isAuth := mountEntry.Table == credentialTableType
+	if isAuth {
 		resp.Data["token_type"] = mountEntry.Config.TokenType.String()
 	}
 
@@ -1877,6 +2175,14 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["allowed_managed_keys"] = rawVal.([]string)
 	}
 
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("identity_token_key"); ok {
+		resp.Data["identity_token_key"] = rawVal.(string)
+	}
+
+	if mountEntry.Config.TrimRequestTrailingSlashes {
+		resp.Data["trim_request_trailing_slashes"] = mountEntry.Config.TrimRequestTrailingSlashes
+	}
+
 	if mountEntry.Config.UserLockoutConfig != nil {
 		resp.Data["user_lockout_counter_reset_duration"] = int64(mountEntry.Config.UserLockoutConfig.LockoutCounterReset.Seconds())
 		resp.Data["user_lockout_threshold"] = mountEntry.Config.UserLockoutConfig.LockoutThreshold
@@ -1890,6 +2196,19 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	if mountEntry.Version != "" {
 		resp.Data["plugin_version"] = mountEntry.Version
+	}
+	var pinnedVersion *pluginutil.PinnedVersion
+	var err error
+	if isAuth {
+		pinnedVersion, err = b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeCredential, mountEntry.Type)
+	} else {
+		pinnedVersion, err = b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeSecrets, mountEntry.Type)
+	}
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return nil, err
+	}
+	if pinnedVersion != nil && mountEntry.Version != pinnedVersion.Version {
+		resp.AddWarning(fmt.Sprintf("plugin_version is configured as %s but a version pin for %s is in effect", mountEntry.Version, pinnedVersion.Version))
 	}
 
 	return resp, nil
@@ -1941,12 +2260,12 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		return nil, logical.ErrReadOnly
 	}
 
-	var lock *locking.DeadlockRWMutex
+	var lock locking.RWMutex
 	switch {
 	case strings.HasPrefix(path, credentialRoutePrefix):
-		lock = &b.Core.authLock
+		lock = b.Core.authLock
 	default:
-		lock = &b.Core.mountsLock
+		lock = b.Core.mountsLock
 	}
 
 	lock.Lock()
@@ -2132,6 +2451,30 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("plugin_version"); ok {
+		pluginType := consts.PluginTypeSecrets
+		if strings.HasPrefix(path, "auth/") {
+			pluginType = consts.PluginTypeCredential
+		}
+
+		// Update MountEntry.Type of external plugins registered in Vault pre-v1.0.0 to the plugin binary name
+		// stored in MountEntry.Config.PluginName
+		// Previously, when upgrading Vault from pre-v1.0.0 to post-v1.0.0, MountEntry.Type of external plugins
+		// remained "plugin" where it should follow the new scheme and be updated to the plugin binary name.
+		// https://hashicorp.atlassian.net/browse/VAULT-21999
+		if mountEntry.Config.PluginName != "" {
+			if mountEntry.Config.PluginName != mountEntry.Type && mountEntry.Type == "plugin" {
+				mountEntry.Type = mountEntry.Config.PluginName
+			}
+		}
+
+		pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, mountEntry.Type)
+		if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+			return nil, err
+		}
+		if pinnedVersion != nil {
+			return logical.ErrorResponse(fmt.Sprintf("plugin_version cannot be set for %s plugin %q as a pinned version %s is in effect", pluginType, mountEntry.Type, pinnedVersion.Version)), nil
+		}
+
 		version := rawVal.(string)
 		semanticVersion, err := semver.NewVersion(version)
 		if err != nil {
@@ -2140,10 +2483,6 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		version = "v" + semanticVersion.String()
 
 		// Lookup the version to ensure it exists in the catalog before committing.
-		pluginType := consts.PluginTypeSecrets
-		if strings.HasPrefix(path, "auth/") {
-			pluginType = consts.PluginTypeCredential
-		}
 		_, err = b.System().LookupPluginVersion(ctx, mountEntry.Type, pluginType, version)
 		if err != nil {
 			return handleError(err)
@@ -2165,6 +2504,64 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of version successful", "path", path, "version", version)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("identity_token_key"); ok {
+		identityTokenKey := rawVal.(string)
+
+		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+		if storage == nil {
+			return nil, errors.New("failed to find identity storage")
+		}
+
+		// Ensure that the mount's identity token key exists
+		identityStore := b.Core.IdentityStore()
+		identityStore.oidcLock.Lock()
+		defer identityStore.oidcLock.Unlock()
+		if identityTokenKey != "" {
+			k, err := identityStore.getNamedKey(ctx, storage, identityTokenKey)
+			if err != nil {
+				return nil, fmt.Errorf("failed getting key %q: %w", identityTokenKey, err)
+			}
+			if k == nil {
+				return logical.ErrorResponse("key %q does not exist", identityTokenKey), nil
+			}
+		}
+
+		oldVal := mountEntry.Config.IdentityTokenKey
+		mountEntry.Config.IdentityTokenKey = identityTokenKey
+
+		if mountEntry.Config.usingOIDCDefaultKey() {
+			err := identityStore.lazyGenerateDefaultKey(ctx, storage)
+			if err != nil {
+				if mountEntry.Local && errors.Is(err, logical.ErrReadOnly) {
+					b.Logger().Warn("skipping default OIDC key generation for local mount",
+						"name", mountEntry.Type, "path", path)
+				} else {
+					mountEntry.Config.IdentityTokenKey = oldVal
+					return nil, fmt.Errorf("failed to generate default key: %w", err)
+				}
+			}
+		}
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.IdentityTokenKey = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of identity_token_key successful", "path", path)
 		}
 	}
 
@@ -2253,7 +2650,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		if !strings.HasPrefix(path, "auth/") {
 			return logical.ErrorResponse(fmt.Sprintf("'token_type' can only be modified on auth mounts")), logical.ErrInvalidRequest
 		}
-		if mountEntry.Type == "token" || mountEntry.Type == "ns_token" {
+		if mountEntry.Type == mountTypeToken || mountEntry.Type == mountTypeNSToken {
 			return logical.ErrorResponse(fmt.Sprintf("'token_type' cannot be set for 'token' or 'ns_token' auth mounts")), logical.ErrInvalidRequest
 		}
 
@@ -2361,6 +2758,56 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of allowed_managed_keys successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("delegated_auth_accessors"); ok {
+		delegatedAuthAccessors := rawVal.([]string)
+
+		oldVal := mountEntry.Config.DelegatedAuthAccessors
+		mountEntry.Config.DelegatedAuthAccessors = delegatedAuthAccessors
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.DelegatedAuthAccessors = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of delegated_auth_accessors successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("trim_request_trailing_slashes"); ok {
+		trimRequestTrailingSlashes := rawVal.(bool)
+
+		oldVal := mountEntry.Config.TrimRequestTrailingSlashes
+		mountEntry.Config.TrimRequestTrailingSlashes = trimRequestTrailingSlashes
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.TrimRequestTrailingSlashes = oldVal
+			return handleError(err)
+		}
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of trim_request_trailing_slashes successful", "path", path)
 		}
 	}
 
@@ -2684,7 +3131,7 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			continue
 		}
 
-		info := b.mountInfo(ctx, entry)
+		info := b.mountInfo(ctx, entry, true)
 		resp.Data[entry.Path] = info
 	}
 
@@ -2718,7 +3165,7 @@ func (b *SystemBackend) handleReadAuth(ctx context.Context, req *logical.Request
 		}
 
 		return &logical.Response{
-			Data: b.mountInfo(ctx, entry),
+			Data: b.mountInfo(ctx, entry, true),
 		}, nil
 	}
 
@@ -2880,6 +3327,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
 	config.ListingVisibility = apiConfig.ListingVisibility
+	config.TrimRequestTrailingSlashes = apiConfig.TrimRequestTrailingSlashes
 
 	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
 		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
@@ -2897,6 +3345,38 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
 
+	storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+	if storage == nil {
+		return nil, errors.New("failed to find identity storage")
+	}
+
+	// Ensure that the mount's identity token key exists
+	identityStore := b.Core.IdentityStore()
+	identityStore.oidcLock.Lock()
+	defer identityStore.oidcLock.Unlock()
+	if apiConfig.IdentityTokenKey != "" {
+		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
+		}
+		if k == nil {
+			return logical.ErrorResponse("key %q does not exist", apiConfig.IdentityTokenKey), nil
+		}
+
+		config.IdentityTokenKey = apiConfig.IdentityTokenKey
+	}
+	if config.usingOIDCDefaultKey() {
+		err := identityStore.lazyGenerateDefaultKey(ctx, storage)
+		if err != nil {
+			if local && errors.Is(err, logical.ErrReadOnly) {
+				b.Logger().Warn("skipping default OIDC key generation for local mount",
+					"name", logicalType, "path", path)
+			} else {
+				return nil, fmt.Errorf("failed to generate default key: %w", err)
+			}
+		}
+	}
+
 	// Create the mount entry
 	me := &MountEntry{
 		Table:                 credentialTableType,
@@ -2912,7 +3392,11 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	var resp *logical.Response
-	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential) {
+	builtin, err := b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential)
+	if err != nil {
+		return nil, err
+	}
+	if builtin {
 		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
 		if err != nil {
 			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
@@ -2929,6 +3413,18 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) validateVersion(ctx context.Context, version string, pluginName string, pluginType consts.PluginType) (string, *logical.Response, error) {
+	pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return "", nil, err
+	}
+	if pinnedVersion != nil {
+		if version != "" {
+			return "", logical.ErrorResponse("cannot specify plugin_version for %s plugin %q, as it is pinned to version %s", pluginType.String(), pluginName, pinnedVersion.Version), nil
+		}
+
+		return pinnedVersion.Version, nil, nil
+	}
+
 	switch version {
 	case "":
 		var err error
@@ -3168,9 +3664,12 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			policy.Raw = string(polBytes)
 		}
 
+		var duplicate bool
 		switch policyType {
 		case PolicyTypeACL:
-			p, err := ParseACLPolicy(ns, policy.Raw)
+			var p *Policy
+			// TODO (HCL_DUP_KEYS_DEPRECATION): go back to ParseACLPolicy once the deprecation is done
+			p, duplicate, err = ParseACLPolicyCheckDuplicates(ns, policy.Raw)
 			if err != nil {
 				return handleError(err)
 			}
@@ -3194,6 +3693,14 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			return handleError(err)
 		}
 
+		if duplicate {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			// TODO (HCL_DUP_KEYS_DEPRECATION): remove log and API Warning once the deprecation is done
+			b.logger.Warn("newly created HCL policy contains duplicate attributes, which will no longer be supported in a future version", "policy", policy.Name, "namespace", ns.Path)
+			resp.AddWarning("policy contains duplicate attributes, which will no longer be supported in a future version")
+		}
 		return resp, nil
 	}
 }
@@ -3459,7 +3966,7 @@ func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Reques
 }
 
 // handleEnableAudit is used to enable a new audit backend
-func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleEnableAudit(ctx context.Context, _ *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
@@ -3488,14 +3995,15 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 
 	// Attempt enabling
 	if err := b.Core.enableAudit(ctx, me, true); err != nil {
-		b.Backend.Logger().Error("enable audit mount failed", "path", me.Path, "error", err)
-		return handleError(err)
+		b.Core.logger.Error("enable audit mount failed", "path", me.Path, "error", err)
+
+		return handleError(audit.ConvertToExternalError(err))
 	}
 	return nil, nil
 }
 
 // handleDisableAudit is used to disable an audit backend
-func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleDisableAudit(ctx context.Context, _ *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 
 	if !strings.HasSuffix(path, "/") {
@@ -3530,7 +4038,8 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 	// Attempt disable
 	if existed, err := b.Core.disableAudit(ctx, path, true); existed && err != nil {
 		b.Backend.Logger().Error("disable audit mount failed", "path", path, "error", err)
-		return handleError(err)
+
+		return handleError(audit.ConvertToExternalError(err))
 	}
 	return nil, nil
 }
@@ -3697,7 +4206,7 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 	}
 
 	// Store the rotation config
-	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
+	err = b.Core.barrier.SetRotationConfig(ctx, rotConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -4381,7 +4890,8 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
 			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0,
 			perms.CapabilitiesBitmap&PatchCapabilityInt > 0,
-			perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0:
+			perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0,
+			perms.CapabilitiesBitmap&RecoverCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
 
@@ -4403,6 +4913,87 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 	}
 
 	return aclCapabilitiesGiven
+}
+
+// pathInternalUIAuthenticatedMessages finds all of the active messages whose
+// Authenticated property is set to true in the current namespace (based on the
+// provided context.Context) or in any ancestor namespace all the way up to the
+// root namespace.
+func (b *SystemBackend) pathInternalUIAuthenticatedMessages(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// Make sure that the request includes a Vault token.
+	var tokenEntry *logical.TokenEntry
+	if token := req.ClientToken; token != "" {
+		tokenEntry, _ = b.Core.LookupToken(ctx, token)
+	}
+
+	if tokenEntry == nil {
+		return logical.ListResponseWithInfo([]string{}, map[string]any{}), nil
+	}
+
+	filter := uicustommessages.FindFilter{
+		IncludeAncestors: true,
+	}
+	filter.Active(true)
+	filter.Authenticated(true)
+
+	return b.pathInternalUICustomMessagesCommon(ctx, filter)
+}
+
+// pathInternalUIUnauthenticatedMessages finds all of the active messages whose
+// Authenticated property is set to false in the current namespace (based on the
+// provided context.Context) or in any ancestor namespace all the way up to the
+// root namespace.
+func (b *SystemBackend) pathInternalUIUnauthenticatedMessages(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	filter := uicustommessages.FindFilter{
+		IncludeAncestors: true,
+	}
+	filter.Active(true)
+	filter.Authenticated(false)
+
+	return b.pathInternalUICustomMessagesCommon(ctx, filter)
+}
+
+// pathInternalUICustomMessagesCommon takes care of finding the custom messages
+// that meet the criteria set in the provided uicustommessages.FindFilter.
+func (b *SystemBackend) pathInternalUICustomMessagesCommon(ctx context.Context, filter uicustommessages.FindFilter) (*logical.Response, error) {
+	messages, err := b.Core.customMessageManager.FindMessages(ctx, filter)
+	if err != nil {
+		return logical.ErrorResponse("failed to retrieve custom messages: %w", err), nil
+	}
+
+	keys := []string{}
+	keyInfo := map[string]any{}
+
+	for _, message := range messages {
+		keys = append(keys, message.ID)
+
+		var endTimeFormatted any
+
+		if message.EndTime != nil {
+			endTimeFormatted = message.EndTime.Format(time.RFC3339Nano)
+		}
+
+		var linkFormatted map[string]string = nil
+
+		if message.Link != nil {
+			linkFormatted = make(map[string]string)
+
+			linkFormatted[message.Link.Title] = message.Link.Href
+		}
+
+		keyInfo[message.ID] = map[string]any{
+			"title":         message.Title,
+			"message":       message.Message,
+			"authenticated": message.Authenticated,
+			"type":          message.Type,
+			"start_time":    message.StartTime.Format(time.RFC3339Nano),
+			"end_time":      endTimeFormatted,
+			"link":          linkFormatted,
+			"options":       message.Options,
+		}
+	}
+
+	return logical.ListResponseWithInfo(keys, keyInfo), nil
 }
 
 func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -4473,7 +5064,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
-				secretMounts[entry.Path] = b.mountInfo(ctx, entry)
+				secretMounts[entry.Path] = b.mountInfo(ctx, entry, false)
 			} else {
 				secretMounts[entry.Path] = map[string]interface{}{
 					"type":        entry.Type,
@@ -4500,7 +5091,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
-				authMounts[entry.Path] = b.mountInfo(ctx, entry)
+				authMounts[entry.Path] = b.mountInfo(ctx, entry, false)
 			} else {
 				authMounts[entry.Path] = map[string]interface{}{
 					"type":        entry.Type,
@@ -4550,7 +5141,20 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return errResp, logical.ErrPermissionDenied
 	}
 
-	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, "")
+	var routerPrefix string
+	if strings.HasPrefix(me.APIPathNoNamespace(), credentialRoutePrefix) {
+		routerPrefix = credentialRoutePrefix
+	}
+
+	// the mount's namespace is (at least partially) in the request path and not
+	// in the request's context, so we need to add the namespace from the
+	// request path to the router prefix
+	if me.NamespaceID != ns.ID {
+		namespaceRouterPrefix := strings.TrimPrefix(me.Namespace().Path, ns.Path)
+		routerPrefix = namespaceRouterPrefix + routerPrefix
+	}
+
+	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, routerPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -4558,7 +5162,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return errResp, logical.ErrPermissionDenied
 	}
 	resp := &logical.Response{
-		Data: b.mountInfo(ctx, me),
+		Data: b.mountInfo(ctx, me, false),
 	}
 	resp.Data["path"] = me.Path
 
@@ -4587,21 +5191,6 @@ func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *l
 	resp := logical.ErrorResponse("The functionality has been removed on this path")
 
 	return resp, logical.ErrPathFunctionalityRemoved
-}
-
-func (b *SystemBackend) pathInternalCountersTokens(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	activeTokens, err := b.Core.countActiveTokens(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"counters": activeTokens,
-		},
-	}
-
-	return resp, nil
 }
 
 func (b *SystemBackend) pathInternalCountersEntities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -4664,6 +5253,8 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		},
 	}
 
+	resp.Data["chroot_namespace"] = req.ChrootNamespace
+
 	if acl.root {
 		resp.Data["root"] = true
 		return resp, nil
@@ -4703,6 +5294,9 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		}
 		if perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0 {
 			capabilities = append(capabilities, SubscribeCapability)
+		}
+		if perms.CapabilitiesBitmap&RecoverCapabilityInt > 0 {
+			capabilities = append(capabilities, RecoverCapability)
 		}
 
 		// If "deny" is explicitly set or if the path has no capabilities at all,
@@ -4762,8 +5356,14 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	context := d.Get("context").(string)
 
+	vaultVersion := version.Version
+	redactVersion, _, _, _ := logical.CtxRedactionSettingsValue(ctx)
+	if redactVersion {
+		vaultVersion = ""
+	}
+
 	// Set up target document
-	doc := framework.NewOASDocument(version.Version)
+	doc := framework.NewOASDocument(vaultVersion)
 
 	// Generic mount paths will primarily be used for code generation purposes.
 	// This will result in parameterized mount paths being returned instead of
@@ -4852,7 +5452,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 				// Add tags to all of the operations if necessary
 				if tag != "" {
-					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Delete} {
+					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Patch, obj.Delete} {
 						// TODO: a special override for identity is used used here because the backend
 						// is currently categorized as "secret", which will likely change. Also of interest
 						// is removing all tag handling here and providing the mount information to OpenAPI.
@@ -4924,23 +5524,25 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 }
 
 type SealStatusResponse struct {
-	Type              string   `json:"type"`
-	Initialized       bool     `json:"initialized"`
-	Sealed            bool     `json:"sealed"`
-	T                 int      `json:"t"`
-	N                 int      `json:"n"`
-	Progress          int      `json:"progress"`
-	Nonce             string   `json:"nonce"`
-	Version           string   `json:"version"`
-	BuildDate         string   `json:"build_date"`
-	Migration         bool     `json:"migration"`
-	ClusterName       string   `json:"cluster_name,omitempty"`
-	ClusterID         string   `json:"cluster_id,omitempty"`
-	RecoverySeal      bool     `json:"recovery_seal"`
-	StorageType       string   `json:"storage_type,omitempty"`
-	HCPLinkStatus     string   `json:"hcp_link_status,omitempty"`
-	HCPLinkResourceID string   `json:"hcp_link_resource_ID,omitempty"`
-	Warnings          []string `json:"warnings,omitempty"`
+	Type               string   `json:"type"`
+	Initialized        bool     `json:"initialized"`
+	Sealed             bool     `json:"sealed"`
+	T                  int      `json:"t"`
+	N                  int      `json:"n"`
+	Progress           int      `json:"progress"`
+	Nonce              string   `json:"nonce"`
+	Version            string   `json:"version"`
+	BuildDate          string   `json:"build_date"`
+	Migration          bool     `json:"migration"`
+	ClusterName        string   `json:"cluster_name,omitempty"`
+	ClusterID          string   `json:"cluster_id,omitempty"`
+	RecoverySeal       bool     `json:"recovery_seal"`
+	StorageType        string   `json:"storage_type,omitempty"`
+	HCPLinkStatus      string   `json:"hcp_link_status,omitempty"`
+	HCPLinkResourceID  string   `json:"hcp_link_resource_ID,omitempty"`
+	Warnings           []string `json:"warnings,omitempty"`
+	RecoverySealType   string   `json:"recovery_seal_type,omitempty"`
+	RemovedFromCluster *bool    `json:"removed_from_cluster,omitempty"`
 }
 
 type SealBackendStatus struct {
@@ -4953,9 +5555,10 @@ type SealBackendStatusResponse struct {
 	Healthy        bool                `json:"healthy"`
 	UnhealthySince string              `json:"unhealthy_since,omitempty"`
 	Backends       []SealBackendStatus `json:"backends"`
+	FullyWrapped   bool                `json:"fully_wrapped"`
 }
 
-func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
+func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResponse, error) {
 	sealed := core.Sealed()
 
 	initialized, err := core.Initialized(ctx)
@@ -4975,15 +5578,28 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 
 	hcpLinkStatus, resourceIDonHCP := core.GetHCPLinkStatus()
 
+	redactVersion, _, redactClusterName, _ := logical.CtxRedactionSettingsValue(ctx)
+	var removed *bool
+	isRemoved, shouldInclude := core.IsRemovedFromCluster()
+	if shouldInclude {
+		removed = &isRemoved
+	}
+
 	if sealConfig == nil {
 		s := &SealStatusResponse{
-			Type:         core.SealAccess().BarrierSealConfigType().String(),
-			Initialized:  initialized,
-			Sealed:       true,
-			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-			StorageType:  core.StorageType(),
-			Version:      version.GetVersion().VersionNumber(),
-			BuildDate:    version.BuildDate,
+			Type:               core.SealAccess().BarrierSealConfigType().String(),
+			Initialized:        initialized,
+			Sealed:             true,
+			RecoverySeal:       core.SealAccess().RecoveryKeySupported(),
+			StorageType:        core.StorageType(),
+			Version:            version.GetVersion().VersionNumber(),
+			BuildDate:          version.BuildDate,
+			RemovedFromCluster: removed,
+		}
+
+		if redactVersion {
+			s.Version = ""
+			s.BuildDate = ""
 		}
 
 		if resourceIDonHCP != "" {
@@ -4992,6 +5608,15 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		}
 
 		return s, nil
+	}
+
+	var sealType string
+	var recoverySealType string
+	if core.SealAccess().RecoveryKeySupported() {
+		recoverySealType = sealConfig.Type
+		sealType = core.seal.BarrierSealConfigType().String()
+	} else {
+		sealType = sealConfig.Type
 	}
 
 	// Fetch the local cluster name and identifier
@@ -5008,28 +5633,39 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		clusterID = cluster.ID
 	}
 
-	progress, nonce := core.SecretProgress()
+	progress, nonce := core.SecretProgress(lock)
 
 	s := &SealStatusResponse{
-		Type:         sealConfig.Type,
-		Initialized:  initialized,
-		Sealed:       sealed,
-		T:            sealConfig.SecretThreshold,
-		N:            sealConfig.SecretShares,
-		Progress:     progress,
-		Nonce:        nonce,
-		Version:      version.GetVersion().VersionNumber(),
-		BuildDate:    version.BuildDate,
-		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
-		ClusterName:  clusterName,
-		ClusterID:    clusterID,
-		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-		StorageType:  core.StorageType(),
+		Type:               sealType,
+		Initialized:        initialized,
+		Sealed:             sealed,
+		T:                  sealConfig.SecretThreshold,
+		N:                  sealConfig.SecretShares,
+		Progress:           progress,
+		Nonce:              nonce,
+		Version:            version.GetVersion().VersionNumber(),
+		BuildDate:          version.BuildDate,
+		Migration:          core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
+		RemovedFromCluster: removed,
+		ClusterName:        clusterName,
+		ClusterID:          clusterID,
+		RecoverySeal:       core.SealAccess().RecoveryKeySupported(),
+		RecoverySealType:   recoverySealType,
+		StorageType:        core.StorageType(),
 	}
 
 	if resourceIDonHCP != "" {
 		s.HCPLinkStatus = hcpLinkStatus
 		s.HCPLinkResourceID = resourceIDonHCP
+	}
+
+	if redactVersion {
+		s.Version = ""
+		s.BuildDate = ""
+	}
+
+	if redactClusterName {
+		s.ClusterName = ""
 	}
 
 	return s, nil
@@ -5068,6 +5704,22 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 		}
 		r.Healthy = true
 	}
+
+	pps, err := GetPartiallySealWrappedPaths(ctx, c.physical)
+	if err != nil {
+		return nil, fmt.Errorf("could not list partially seal wrapped values: %w", err)
+	}
+	// When multi-seal is enabled, use the stored seal generation information. Note that the in-memory
+	// value may not be up-to-date on non-active nodes.
+	genInfo, err := PhysicalSealGenInfo(ctx, c.physical)
+	if err != nil {
+		return nil, fmt.Errorf("could not read seal generation information: %w", err)
+	}
+	if genInfo == nil {
+		// Multi-seal is not enabled, use the in-memory value.
+		genInfo = c.seal.GetAccess().GetSealGenerationInfo()
+	}
+	r.FullyWrapped = genInfo.IsRewrapped() && len(pps) == 0
 	return &r, nil
 }
 
@@ -5086,9 +5738,16 @@ type LeaderResponse struct {
 	RaftAppliedIndex   uint64 `json:"raft_applied_index,omitempty"`
 }
 
-func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
+func (core *Core) GetLeaderStatus(ctx context.Context) (*LeaderResponse, error) {
+	core.stateLock.RLock()
+	defer core.stateLock.RUnlock()
+
+	return core.GetLeaderStatusLocked(ctx)
+}
+
+func (core *Core) GetLeaderStatusLocked(ctx context.Context) (*LeaderResponse, error) {
 	haEnabled := true
-	isLeader, address, clusterAddr, err := core.Leader()
+	isLeader, address, clusterAddr, err := core.LeaderLocked()
 	if errwrap.Contains(err, ErrHANotEnabled.Error()) {
 		haEnabled = false
 		err = nil
@@ -5102,23 +5761,41 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 		IsSelf:               isLeader,
 		LeaderAddress:        address,
 		LeaderClusterAddress: clusterAddr,
-		PerfStandby:          core.PerfStandby(),
+		PerfStandby:          core.perfStandby,
 	}
 	if isLeader {
-		resp.ActiveTime = core.ActiveTime()
+		resp.ActiveTime = core.activeTime
 	}
 	if resp.PerfStandby {
-		resp.PerfStandbyLastRemoteWAL = LastRemoteWAL(core)
+		resp.PerfStandbyLastRemoteWAL = core.EntLastRemoteWAL()
 	} else if isLeader || !haEnabled {
-		resp.LastWAL = LastWAL(core)
+		resp.LastWAL = core.EntLastWAL()
 	}
 
-	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()
+	_, redactAddresses, _, _ := logical.CtxRedactionSettingsValue(ctx)
+	if redactAddresses {
+		resp.LeaderAddress = ""
+		resp.LeaderClusterAddress = ""
+	}
+
+	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexesLocked()
+
 	return resp, nil
 }
 
 func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetSealStatus(ctx)
+	var tokenPresent bool
+	token := req.ClientToken
+	if token != "" {
+		// We don't care about the error, we just want to know if the token exists
+		_, tokenEntry, _, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+	// If there is a valid token then we will not redact any values
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, false, false)
+	}
+	status, err := b.Core.GetSealStatus(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -5137,7 +5814,19 @@ func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetLeaderStatus()
+	var tokenPresent bool
+	token := req.ClientToken
+
+	if token != "" {
+		// We don't care about the error, we just want to know if token exists
+		_, tokenEntry, _, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, false, false)
+	}
+	status, err := b.Core.GetLeaderStatusLocked(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -5214,14 +5903,17 @@ func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request
 }
 
 type HAStatusNode struct {
-	Hostname       string     `json:"hostname"`
-	APIAddress     string     `json:"api_address"`
-	ClusterAddress string     `json:"cluster_address"`
-	ActiveNode     bool       `json:"active_node"`
-	LastEcho       *time.Time `json:"last_echo"`
-	Version        string     `json:"version"`
-	UpgradeVersion string     `json:"upgrade_version,omitempty"`
-	RedundancyZone string     `json:"redundancy_zone,omitempty"`
+	Hostname                    string     `json:"hostname"`
+	APIAddress                  string     `json:"api_address"`
+	ClusterAddress              string     `json:"cluster_address"`
+	ActiveNode                  bool       `json:"active_node"`
+	LastEcho                    *time.Time `json:"last_echo"`
+	Version                     string     `json:"version"`
+	UpgradeVersion              string     `json:"upgrade_version,omitempty"`
+	RedundancyZone              string     `json:"redundancy_zone,omitempty"`
+	EchoDurationMillis          int64      `json:"echo_duration_ms"`
+	ClockSkewMillis             int64      `json:"clock_skew_ms"`
+	ReplicationPrimaryCanaryAge int64      `json:"replication_primary_canary_age_ms"`
 }
 
 func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -5444,13 +6136,75 @@ func (b *SystemBackend) handleReadExperiments(ctx context.Context, _ *logical.Re
 	}, nil
 }
 
+// handleWellKnownList handles /sys/well-known/ endpoint to provide the list of registered labels
+// within the /.well-known path on this server
+func (b *SystemBackend) handleWellKnownList() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		labels := b.Core.WellKnownRedirects.List()
+
+		respKeys := []string{}
+		respKeyInfo := map[string]interface{}{}
+
+		for label, wk := range labels {
+			respKeys = append(respKeys, label)
+
+			mountPath := ""
+			m := b.Core.router.MatchingMountByUUID(wk.mountUUID)
+			if m != nil {
+				mountPath, _ = url.JoinPath(m.namespace.Path, m.Path)
+			}
+
+			respKeyInfo[label] = map[string]interface{}{
+				"mount_path": mountPath,
+				"mount_uuid": wk.mountUUID,
+				"prefix":     wk.prefix,
+			}
+		}
+
+		return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
+	}
+}
+
+// handleWellKnownRead handles the "/sys/well-known/<name>" endpoint to read a registered well-known label
+func (b *SystemBackend) handleWellKnownRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		label := data.Get("label").(string)
+
+		wk, ok := b.Core.WellKnownRedirects.Get(label)
+		if !ok {
+			return nil, nil
+		}
+
+		mountPath := ""
+		m := b.Core.router.MatchingMountByUUID(wk.mountUUID)
+		if m != nil {
+			mountPath, _ = url.JoinPath(m.namespace.Path, m.Path)
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"label":      label,
+				"mount_path": mountPath,
+				"mount_uuid": wk.mountUUID,
+				"prefix":     wk.prefix,
+			},
+		}, nil
+	}
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
 	}
 
-	if strings.HasPrefix(path, "/") {
-		path = path[1:]
+	// Check for the specified prefixes and trim them if present
+	for strings.HasPrefix(path, "/") || strings.HasPrefix(path, "/\\") {
+		switch {
+		case strings.HasPrefix(path, "/\\"):
+			path = path[2:]
+		case strings.HasPrefix(path, "/"):
+			path = path[1:]
+		}
 	}
 
 	return path
@@ -5682,11 +6436,11 @@ in the plugin catalog.`,
 	},
 
 	"tune_audit_non_hmac_request_keys": {
-		`The list of keys in the request data object that will not be HMAC'ed by audit devices.`,
+		`The list of keys in the request data object that will not be HMAC'd by audit devices.`,
 	},
 
 	"tune_audit_non_hmac_response_keys": {
-		`The list of keys in the response data object that will not be HMAC'ed by audit devices.`,
+		`The list of keys in the response data object that will not be HMAC'd by audit devices.`,
 	},
 
 	"tune_mount_options": {
@@ -5751,7 +6505,7 @@ This path responds to the following HTTP methods.
 	},
 
 	"alias_identifier": {
-		`It is the name of the alias (user). For example, if the alias belongs to userpass backend, 
+		`It is the name of the alias (user). For example, if the alias belongs to userpass backend,
 	   the name should be a valid username within userpass auth method. If the alias belongs
 	    to an approle auth method, the name should be a valid RoleID`,
 		"",
@@ -6173,6 +6927,33 @@ Must already be present on the machine.`,
 		`The Vault plugin runtime to use when running the plugin.`,
 		"",
 	},
+	"plugin-catalog_download": {
+		`Automatically downloads official HashiCorp plugins
+from releases.hashicorp.com (beta)`,
+		"",
+	},
+	"plugin-catalog-pins": {
+		"Configures pinned plugin versions from the plugin catalog",
+		`
+This path responds to the following HTTP methods.
+		GET /<type>/<name>
+			Retrieve the pinned version for the named plugin.
+
+		PUT /<type>/<name>
+			Add or update a pinned version for the named plugin. Does not trigger changes until the plugin is reloaded.
+
+		DELETE /<type>/<name>
+			Delete the pinned version for the named plugin. Does not trigger changes until the plugin is reloaded.
+		`,
+	},
+	"plugin-catalog-pins-list-all": {
+		"Lists all the pinned plugin versions known to Vault",
+		`
+This path responds to the following HTTP methods.
+		LIST /
+			Returns a list of configured pinned versions.
+		`,
+	},
 	"plugin-runtime-catalog": {
 		"Configures plugin runtimes",
 		`
@@ -6218,6 +6999,14 @@ This path responds to the following HTTP methods.
 		"Memory limit to set per container in bytes. Defaults to no limit.",
 		"",
 	},
+	"plugin-runtime-catalog_rootless": {
+		"Whether the container runtime is run as a non-privileged (non-root) user.",
+		"",
+	},
+	"identity_token_key": {
+		"The name of the key used to sign plugin identity tokens. Defaults to the default key.",
+		"",
+	},
 	"leases": {
 		`View or list lease metadata.`,
 		`
@@ -6249,6 +7038,36 @@ This path responds to the following HTTP methods.
 	"plugin-backend-reload-mounts": {
 		`The mount paths of the plugin backends to reload.`,
 		"",
+	},
+	"plugin-backend-reload-scope": {
+		`The scope for the reload operation. May be empty or "global".`,
+		`The scope for the reload operation. May be empty or "global". If empty,
+		the plugin(s) will be reloaded only on the local node. If "global", the
+		plugin(s) will be reloaded on all nodes in the cluster and in all replicated
+		clusters.`,
+	},
+	"root-plugin-reload": {
+		"Reload all instances of a specific plugin.",
+		`Reload all plugins of a specific name and type across all namespaces. If
+		"scope" is provided and is "global", the plugin is reloaded across all
+		nodes and clusters. If a new plugin version has been pinned, this will
+		ensure all instances start using the new version.`,
+	},
+	"root-plugin-reload-name": {
+		`The name of the plugin to reload, as registered in the plugin catalog.`,
+		"",
+	},
+	"root-plugin-reload-type": {
+		`The type of the plugin to reload, as registered in the plugin catalog.`,
+		"",
+	},
+	"root-plugin-reload-scope": {
+		`The scope for the reload operation. May be empty or "global".`,
+		`The scope for the reload operation. May be empty or "global". If empty,
+		the plugin will be reloaded only on the local node. If "global", the
+		plugin will be reloaded on all nodes in the cluster and in all replicated
+		clusters. A "global" reload will ensure that any pinned version specified
+		is in full effect.`,
 	},
 	"hash": {
 		"Generate a hash sum for input data",
@@ -6312,10 +7131,6 @@ This path responds to the following HTTP methods.
 		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time.",
 		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
 	},
-	"internal-counters-tokens": {
-		"Count of active tokens in this Vault cluster.",
-		"Count of active tokens in this Vault cluster.",
-	},
 	"internal-counters-entities": {
 		"Count of active entities in this Vault cluster.",
 		"Count of active entities in this Vault cluster.",
@@ -6374,5 +7189,49 @@ This path responds to the following HTTP methods.
 		GET /
 			Returns the available and enabled experiments.
 		`,
+	},
+	"delegated_auth_accessors": {
+		"A list of auth accessors that the mount is allowed to delegate authentication too",
+		"",
+	},
+	"utilization": {
+		"This internal api will return manual license reporting report data.",
+		`
+This path responds to the following HTTP methods.
+
+	POST /
+		returns the manual license reporting data.
+		`,
+	},
+
+	"well-known-list": {
+		`List the registered well-known labels to associated mounts.`,
+		`
+This path responds to the following HTTP methods.
+    LIST /
+        List the names of the registered labels within the .well-known folder on this server.
+
+    GET /
+        List the names of the registered labels within the .well-known folder on this server.
+
+    GET /<label>
+        Retrieve the information regarding a specific registered label on this server.
+	    `,
+	},
+
+	"well-known": {
+		`Read the associated mount info for a registered label within the well-known path prefix`,
+		`
+        Retrieve the information regarding a specific registered label on this server.
+		`,
+	},
+
+	"well-known-label": {
+		`The label representing a path-prefix within the /.well-known/ path`,
+		"",
+	},
+	"trim_request_trailing_slashes": {
+		`Whether to trim a trailing slash on incoming requests to this mount`,
+		"",
 	},
 }

@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update flat, shell-quote and swagger-ui-dist packages. Remove swagger-ui styling overrides.
+```

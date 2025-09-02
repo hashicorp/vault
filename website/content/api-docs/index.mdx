@@ -4,6 +4,9 @@ page_title: HTTP API
 description: Vault has an HTTP API that can be used to control every aspect of Vault.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # HTTP API
 
 The Vault HTTP API gives you full access to Vault using [REST like HTTP verbs](https://en.wikipedia.org/wiki/Representational_state_transfer).
@@ -54,6 +57,8 @@ in periods. Otherwise, Vault will return a 404 unsupported path error.
 
 ## Namespaces
 
+@include 'alerts/enterprise-and-hcp.mdx'
+
 When using [Namespaces](/vault/docs/enterprise/namespaces) the final path of the API
 request is relative to the `X-Vault-Namespace` header. For instance, if a
 request URI is `secret/foo` with the `X-Vault-Namespace` header set as `ns1/ns2/`,
@@ -83,6 +88,22 @@ $ curl \
     http://127.0.0.1:8200/v1/ns1/ns2/secret/foo
 ```
 
+Some APIs are only available in a limited number of namespaces. More details
+are available in the Namespace
+[documentation](/vault/docs/enterprise/namespaces#restricted-api-paths).
+
+<Warning title="HCP Vault Dedicated">
+
+When you are working with HCP Vault Dedicated, your request must specify the
+target namespace. In absence of an explicit namespace, Vault tries to send
+the request to `root` namespace which results in an error. 
+
+The top-level namespace for HCP Vault Dedicated clusters is `admin`, so the
+requests must include `-H "X-Vault-Namespace: admin"` header or `admin` in the
+API endpoint path.
+
+</Warning>
+
 ## API operations
 
 Typically the request data, body and response data to and from Vault is in JSON.
@@ -90,7 +111,7 @@ Vault sets the `Content-Type` header appropriately with its response and does
 not require it from the clients request.
 
 The demonstration below uses the [`KVv1` secrets engine](/vault/api-docs/secret/kv/kv-v1), which is a
-simple Key/Value store. Please read [the API documentation of KV secret engines](/vault/api-docs/secret/kv)
+simple Key Value store. Please read [the API documentation of KV secret engines](/vault/api-docs/secret/kv)
 for details of `KVv1` compared to `KVv2` and how they differ in their URI paths
 as well as the features available in version 2 of the KV secrets engine.
 
@@ -131,6 +152,12 @@ $ curl \
 
 The API documentation uses `LIST` as the HTTP verb, but you can still use `GET`
 with the `?list=true` query string.
+
+If the list result is an empty set, Vault responds with status code 404 and the following JSON:
+
+```json
+{"errors":[]}
+```
 
 To make an API with specific data in request body, issue a `POST`:
 
@@ -291,7 +318,7 @@ warnings are generated during the operation.
   requests.
 - `404` - Invalid path. This can both mean that the path truly doesn't exist or
   that you don't have permission to view a specific path. We use 404 in some
-  cases to avoid state leakage.
+  cases to avoid state leakage. LIST requests with no results will also return 404s.
 - `405` - Unsupported operation.  You tried to use a method inappropriate to
   the request path, e.g. a POST on an endpoint that only accepts GETs.
 - `412` - Precondition failed.  Returned on Enterprise when a request can't be

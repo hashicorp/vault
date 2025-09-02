@@ -7,7 +7,8 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, visit } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | raft storage', function (hooks) {
   setupApplicationTest(hooks);
@@ -18,8 +19,8 @@ module('Acceptance | raft storage', function (hooks) {
     this.server.get('/sys/internal/ui/resultant-acl', () =>
       this.server.create('configuration', { data: { root: true } })
     );
-    this.server.get('/sys/license/features', () => ({}));
-    await authPage.login();
+    this.server.get('/sys/license/features', () => ({ features: [] }));
+    await login();
   });
 
   test('it should render correct number of raft peers', async function (assert) {
@@ -64,11 +65,12 @@ module('Acceptance | raft storage', function (hooks) {
       return {};
     });
 
+    const row = '[data-raft-row]:nth-child(2) [data-test-raft-actions]';
     await visit('/vault/storage/raft');
     assert.dom('[data-raft-row]').exists({ count: 2 }, '2 raft peers render in table');
-    await click('[data-raft-row]:nth-child(2) [data-test-popup-menu-trigger]');
-    await click('[data-test-confirm-action-trigger]');
-    await click('[data-test-confirm-button]');
+    await click(`${row} button`);
+    await click(`${row} ${GENERAL.confirmTrigger}`);
+    await click(GENERAL.confirmButton);
     assert.dom('[data-raft-row]').exists({ count: 1 }, 'Raft peer successfully removed');
   });
 });

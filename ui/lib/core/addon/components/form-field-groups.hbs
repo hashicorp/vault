@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#each (get @model this.fieldGroups) as |fieldGroup|}}
   {{#each-in fieldGroup as |group fields|}}
@@ -24,6 +24,10 @@
             {{! OTHERWISE WE'RE EDITING }}
             {{#if (or (eq attr.name "name") (attr.options.editDisabled))}}
               <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
+            {{else if (and @useEnableInput attr.options.sensitive)}}
+              <EnableInput data-test-enable-field={{attr.name}} class="field" @attr={{attr}}>
+                <FormField @attr={{attr}} @model={{@model}} @modelValidations={{@modelValidations}} @onKeyUp={{@onKeyUp}} />
+              </EnableInput>
             {{else}}
               <FormField
                 data-test-field
@@ -45,7 +49,7 @@
           @closedLabel={{group}}
           @onClick={{fn this.toggleGroup group}}
           class="is-block"
-          data-test-toggle-group={{group}}
+          data-test-button={{group}}
         />
         {{#if (eq this.showGroup group)}}
           <div class="box is-marginless">
@@ -61,7 +65,11 @@
                   @onKeyUp={{@onKeyUp}}
                   @modelValidations={{@modelValidations}}
                   @showHelpText={{@showHelpText}}
-                />
+                >
+                  {{#if (and (has-block "identityTokenKey") (eq attr.name "config.identity_token_key"))}}
+                    {{yield to="identityTokenKey"}}
+                  {{/if}}
+                </FormField>
               {{else}}
                 {{! OTHERWISE WE'RE EDITING }}
                 {{#if (or (eq attr.name "name") (eq attr.options.editDisabled true))}}

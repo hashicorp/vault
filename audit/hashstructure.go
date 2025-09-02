@@ -11,14 +11,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/copystructure"
 	"github.com/mitchellh/reflectwalk"
 )
 
-// HashString hashes the given opaque string and returns it
-func HashString(ctx context.Context, salter Salter, data string) (string, error) {
+// hashString uses the Salter to hash the supplied opaque string and returns it.
+func hashString(ctx context.Context, salter Salter, data string) (string, error) {
 	salt, err := salter.Salt(ctx)
 	if err != nil {
 		return "", err
@@ -27,79 +25,68 @@ func HashString(ctx context.Context, salter Salter, data string) (string, error)
 	return salt.GetIdentifiedHMAC(data), nil
 }
 
-// HashAuth returns a hashed copy of the logical.Auth input.
-func HashAuth(ctx context.Context, salter Salter, in *logical.Auth, HMACAccessor bool) (*logical.Auth, error) {
-	if in == nil {
-		return nil, nil
+// hashAuth uses the Salter to hash the supplied auth (modifying it).
+// hmacAccessor is used to indicate whether the accessor should also be HMAC'd
+// when present.
+func hashAuth(ctx context.Context, salter Salter, auth *auth, hmacAccessor bool) error {
+	if auth == nil {
+		return nil
 	}
 
 	salt, err := salter.Salt(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	fn := salt.GetIdentifiedHMAC
-	auth := *in
 
 	if auth.ClientToken != "" {
 		auth.ClientToken = fn(auth.ClientToken)
 	}
-	if HMACAccessor && auth.Accessor != "" {
+	if hmacAccessor && auth.Accessor != "" {
 		auth.Accessor = fn(auth.Accessor)
 	}
-	return &auth, nil
+
+	return nil
 }
 
-// HashRequest returns a hashed copy of the logical.Request input.
-func HashRequest(ctx context.Context, salter Salter, in *logical.Request, HMACAccessor bool, nonHMACDataKeys []string) (*logical.Request, error) {
-	if in == nil {
-		return nil, nil
+// hashRequest uses the Salter to hash the supplied request (modifying it).
+// nonHMACDataKeys is used when hashing any 'Data' field within the request which
+// prevents those specific keys from HMAC'd.
+// hmacAccessor is used to indicate whether some accessors should also be HMAC'd
+// when present.
+// nonHMACDataKeys is used when hashing any 'Data' field within the request which
+// prevents those specific keys from HMAC'd.
+func hashRequest(ctx context.Context, salter Salter, req *request, hmacAccessor bool, nonHMACDataKeys []string) error {
+	if req == nil {
+		return nil
 	}
 
 	salt, err := salter.Salt(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	fn := salt.GetIdentifiedHMAC
-	req := *in
-
-	if req.Auth != nil {
-		cp, err := copystructure.Copy(req.Auth)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Auth, err = HashAuth(ctx, salter, cp.(*logical.Auth), HMACAccessor)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	if req.ClientToken != "" {
 		req.ClientToken = fn(req.ClientToken)
 	}
-	if HMACAccessor && req.ClientTokenAccessor != "" {
+	if hmacAccessor && req.ClientTokenAccessor != "" {
 		req.ClientTokenAccessor = fn(req.ClientTokenAccessor)
 	}
 
 	if req.Data != nil {
-		copy, err := copystructure.Copy(req.Data)
+		err = hashMap(fn, req.Data, nonHMACDataKeys)
 		if err != nil {
-			return nil, err
+			return err
 		}
-
-		err = hashMap(fn, copy.(map[string]interface{}), nonHMACDataKeys)
-		if err != nil {
-			return nil, err
-		}
-		req.Data = copy.(map[string]interface{})
 	}
 
-	return &req, nil
+	return nil
 }
 
-func hashMap(hashFunc HashCallback, data map[string]interface{}, nonHMACDataKeys []string) error {
+func hashMap(hashFunc hashCallback, data map[string]interface{}, nonHMACDataKeys []string) error {
 	for k, v := range data {
 		if o, ok := v.(logical.OptMarshaler); ok {
 			marshaled, err := o.MarshalJSONWithOptions(&logical.MarshalOptions{
@@ -112,104 +99,87 @@ func hashMap(hashFunc HashCallback, data map[string]interface{}, nonHMACDataKeys
 		}
 	}
 
-	return HashStructure(data, hashFunc, nonHMACDataKeys)
+	return hashStructure(data, hashFunc, nonHMACDataKeys)
 }
 
-// HashResponse returns a hashed copy of the logical.Request input.
-func HashResponse(ctx context.Context, salter Salter, in *logical.Response, HMACAccessor bool, nonHMACDataKeys []string, elideListResponseData bool) (*logical.Response, error) {
-	if in == nil {
-		return nil, nil
+// hashResponse uses the Salter to hash the supplied response (modifying it).
+// hmacAccessor is used to indicate whether some accessors should also be HMAC'd
+// when present.
+// nonHMACDataKeys is used when hashing any 'Data' field within the response which
+// prevents those specific keys from HMAC'd.
+// See: /vault/docs/audit#eliding-list-response-bodies
+func hashResponse(ctx context.Context, salter Salter, resp *response, hmacAccessor bool, nonHMACDataKeys []string) error {
+	if resp == nil {
+		return nil
 	}
 
 	salt, err := salter.Salt(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	fn := salt.GetIdentifiedHMAC
-	resp := *in
 
-	if resp.Auth != nil {
-		cp, err := copystructure.Copy(resp.Auth)
-		if err != nil {
-			return nil, err
-		}
-
-		resp.Auth, err = HashAuth(ctx, salter, cp.(*logical.Auth), HMACAccessor)
-		if err != nil {
-			return nil, err
-		}
+	err = hashAuth(ctx, salter, resp.Auth, hmacAccessor)
+	if err != nil {
+		return err
 	}
 
 	if resp.Data != nil {
-		copy, err := copystructure.Copy(resp.Data)
+		if b, ok := resp.Data[logical.HTTPRawBody].([]byte); ok {
+			resp.Data[logical.HTTPRawBody] = string(b)
+		}
+
+		err = hashMap(fn, resp.Data, nonHMACDataKeys)
 		if err != nil {
-			return nil, err
+			return err
 		}
-
-		mapCopy := copy.(map[string]interface{})
-		if b, ok := mapCopy[logical.HTTPRawBody].([]byte); ok {
-			mapCopy[logical.HTTPRawBody] = string(b)
-		}
-
-		// Processing list response data elision takes place at this point in the code for performance reasons:
-		// - take advantage of the deep copy of resp.Data that was going to be done anyway for hashing
-		// - but elide data before potentially spending time hashing it
-		if elideListResponseData {
-			doElideListResponseData(mapCopy)
-		}
-
-		err = hashMap(fn, mapCopy, nonHMACDataKeys)
-		if err != nil {
-			return nil, err
-		}
-		resp.Data = mapCopy
 	}
 
 	if resp.WrapInfo != nil {
 		var err error
-		resp.WrapInfo, err = hashWrapInfo(fn, resp.WrapInfo, HMACAccessor)
+		err = hashWrapInfo(fn, resp.WrapInfo, hmacAccessor)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return &resp, nil
+	return nil
 }
 
-// hashWrapInfo returns a hashed copy of the wrapping.ResponseWrapInfo input.
-func hashWrapInfo(hashFunc HashCallback, in *wrapping.ResponseWrapInfo, HMACAccessor bool) (*wrapping.ResponseWrapInfo, error) {
-	if in == nil {
-		return nil, nil
+// hashWrapInfo uses the supplied hashing function to hash responseWrapInfo (modifying it).
+// hmacAccessor is used to indicate whether some accessors should also be HMAC'd
+// when present.
+func hashWrapInfo(hashFunc hashCallback, wrapInfo *responseWrapInfo, hmacAccessor bool) error {
+	if wrapInfo == nil {
+		return nil
 	}
 
-	wrapinfo := *in
+	wrapInfo.Token = hashFunc(wrapInfo.Token)
 
-	wrapinfo.Token = hashFunc(wrapinfo.Token)
+	if hmacAccessor {
+		wrapInfo.Accessor = hashFunc(wrapInfo.Accessor)
 
-	if HMACAccessor {
-		wrapinfo.Accessor = hashFunc(wrapinfo.Accessor)
-
-		if wrapinfo.WrappedAccessor != "" {
-			wrapinfo.WrappedAccessor = hashFunc(wrapinfo.WrappedAccessor)
+		if wrapInfo.WrappedAccessor != "" {
+			wrapInfo.WrappedAccessor = hashFunc(wrapInfo.WrappedAccessor)
 		}
 	}
 
-	return &wrapinfo, nil
+	return nil
 }
 
-// HashStructure takes an interface and hashes all the values within
+// hashStructure takes an interface and hashes all the values within
 // the structure. Only _values_ are hashed: keys of objects are not.
 //
-// For the HashCallback, see the built-in HashCallbacks below.
-func HashStructure(s interface{}, cb HashCallback, ignoredKeys []string) error {
+// For the hashCallback, see the built-in HashCallbacks below.
+func hashStructure(s interface{}, cb hashCallback, ignoredKeys []string) error {
 	walker := &hashWalker{Callback: cb, IgnoredKeys: ignoredKeys}
 	return reflectwalk.Walk(s, walker)
 }
 
-// HashCallback is the callback called for HashStructure to hash
+// hashCallback is the callback called for hashStructure to hash
 // a value.
-type HashCallback func(string) string
+type hashCallback func(string) string
 
 // hashWalker implements interfaces for the reflectwalk package
 // (github.com/mitchellh/reflectwalk) that can be used to automatically
@@ -218,21 +188,27 @@ type hashWalker struct {
 	// Callback is the function to call with the primitive that is
 	// to be hashed. If there is an error, walking will be halted
 	// immediately and the error returned.
-	Callback HashCallback
-	// IgnoreKeys are the keys that wont have the HashCallback applied
+	Callback hashCallback
+
+	// IgnoreKeys are the keys that won't have the hashCallback applied
 	IgnoredKeys []string
+
 	// MapElem appends the key itself (not the reflect.Value) to key.
 	// The last element in key is the most recently entered map key.
 	// Since Exit pops the last element of key, only nesting to another
 	// structure increases the size of this slice.
-	key       []string
+	key []string
+
 	lastValue reflect.Value
+
 	// Enter appends to loc and exit pops loc. The last element of loc is thus
 	// the current location.
 	loc []reflectwalk.Location
+
 	// Map and Slice append to cs, Exit pops the last element off cs.
 	// The last element in cs is the most recently entered map or slice.
 	cs []reflect.Value
+
 	// MapElem and SliceElem append to csKey. The last element in csKey is the
 	// most recently entered map key or slice index. Since Exit pops the last
 	// element of csKey, only nesting to another structure increases the size of

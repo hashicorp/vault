@@ -6,31 +6,40 @@ description: |-
   given path.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # token capabilities
 
 The `token capabilities` command fetches the capabilities of a token for a given
 path.
 
-If a TOKEN is provided as an argument, this command uses the "/sys/capabilities"
-endpoint and permission. If no TOKEN is provided, this command uses the
-"/sys/capabilities-self" endpoint and permission with the locally authenticated
-token.
+If you pass a token value as an argument, this command uses the
+`/sys/capabilities` endpoint and permission. In the absence of an explicit token
+value, this command uses the `/sys/capabilities-self` endpoint and permission
+with the locally authenticated token.
 
 ## Examples
 
-List capabilities for the local token on the "secret/foo" path:
+List capabilities for the local token on the `secret/foo` path:
 
 ```shell-session
 $ vault token capabilities secret/foo
 read
 ```
 
-List capabilities for a token on the "cubbyhole/foo" path:
+The output shows the local token has read permission on the `secret/foo` path.
+
+List capabilities for a token (`hvs.CAESI...WtiSW5mWUY`) on the `cubbyhole/foo`
+path:
 
 ```shell-session
-$ vault token capabilities 96ddf4bc-d217-f3ba-f9bd-017055595017 database/creds/readonly
+$ vault token capabilities hvs.CAESI...WtiSW5mWUY database/creds/readonly
 deny
 ```
+
+The output shows the token (`hvs.CAESI...WtiSW5mWUY`) has no permission to
+operate on the `cubbyhole/foo` path.
 
 ## Usage
 

@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <Hds::SideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
   <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
@@ -9,10 +9,26 @@
   <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
   <Nav.Link
     @route="vault.cluster.secrets"
-    @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
-    @text="Secrets engines"
-    data-test-sidebar-nav-link="Secrets engines"
+    @current-when="vault.cluster.secrets vault.cluster.secrets.mounts vault.cluster.secrets.backend.configuration.edit"
+    @text="Secrets Engines"
+    data-test-sidebar-nav-link="Secrets Engines"
   />
+  {{#if this.showSecretsSync}}
+    <Nav.Link
+      @route="vault.cluster.sync"
+      @text="Secrets Sync"
+      @badge={{if this.flags.isHvdManaged "Plus" ""}}
+      data-test-sidebar-nav-link="Secrets Sync"
+    />
+  {{/if}}
+  {{#if this.isNotProduction}}
+    <Nav.Link
+      @route="vault.cluster.recovery.snapshots"
+      @text="Secrets Recovery"
+      @badge={{if this.version.isCommunity "Enterprise" ""}}
+      data-test-sidebar-nav-link="Secrets Recovery"
+    />
+  {{/if}}
   {{#if (has-permission "access")}}
     <Nav.Link
       @route={{get (route-params-for "access") "route"}}
@@ -43,45 +59,29 @@
   {{/if}}
 
   {{#if
-    (and
-      this.version.isEnterprise
-      this.namespace.inRootNamespace
-      this.cluster.anyReplicationEnabled
-      (has-permission "status" routeParams="replication")
-    )
-  }}
-    <Nav.Title data-test-sidebar-nav-heading="Replication">Replication</Nav.Title>
-    <Nav.Link
-      @route="vault.cluster.replication.mode.index"
-      @model="dr"
-      @text="Disaster Recovery"
-      data-test-sidebar-nav-link="Disaster Recovery"
-    />
-
-    {{#if (has-feature "Performance Replication")}}
-      <Nav.Link
-        @route="vault.cluster.replication.mode.index"
-        @model="performance"
-        @text="Performance"
-        data-test-sidebar-nav-link="Performance"
-      />
-    {{/if}}
-  {{/if}}
-
-  {{#if
     (or
-      (and
-        this.namespace.inRootNamespace (has-permission "status" routeParams=(array "replication" "raft" "license" "seal"))
-      )
-      (has-permission "clients" routeParams="activity")
+      (and this.isRootNamespace (has-permission "status" routeParams=(array "replication" "raft" "license" "seal")))
+      (and (has-permission "clients" routeParams="activity") (not this.hasChrootNamespace))
     )
   }}
     <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
   {{/if}}
-  {{#if (and this.version.isEnterprise this.namespace.inRootNamespace (has-permission "status" routeParams="replication"))}}
-    <Nav.Link @route="vault.cluster.replication.index" @text="Replication" data-test-sidebar-nav-link="Replication" />
+  {{#if
+    (and
+      this.version.isEnterprise
+      this.isRootNamespace
+      (not this.cluster.replicationRedacted)
+      (has-permission "status" routeParams="replication")
+    )
+  }}
+    <Nav.Link
+      @route="vault.cluster.replication.index"
+      @text="Replication"
+      data-test-sidebar-nav-link="Replication"
+      @hasSubItems={{true}}
+    />
   {{/if}}
-  {{#if (and this.cluster.usingRaft this.namespace.inRootNamespace (has-permission "status" routeParams="raft"))}}
+  {{#if (and this.cluster.usingRaft this.isRootNamespace (has-permission "status" routeParams="raft"))}}
     <Nav.Link
       @route="vault.cluster.storage"
       @model={{this.cluster.name}}
@@ -89,13 +89,23 @@
       data-test-sidebar-nav-link="Raft Storage"
     />
   {{/if}}
-  {{#if (and (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary))}}
-    <Nav.Link @route="vault.cluster.clients" @text="Client Count" data-test-sidebar-nav-link="Client Count" />
+  {{#if
+    (and (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary) (not this.hasChrootNamespace))
+  }}
+    <Nav.Link
+      @route="vault.cluster.clients"
+      @text="Client Count"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Client Count"
+    />
+  {{/if}}
+  {{#if this.canAccessVaultUsageDashboard}}
+    <Nav.Link @route="vault.cluster.usage-reporting" @text="Vault Usage" data-test-sidebar-nav-link="Vault Usage" />
   {{/if}}
   {{#if
     (and
       this.version.features
-      this.namespace.inRootNamespace
+      this.isRootNamespace
       (has-permission "status" routeParams="license")
       (not this.cluster.dr.isSecondary)
     )
@@ -107,12 +117,28 @@
       data-test-sidebar-nav-link="License"
     />
   {{/if}}
-  {{#if (and this.namespace.inRootNamespace (has-permission "status" routeParams="seal") (not this.cluster.dr.isSecondary))}}
+  {{#if (and this.isRootNamespace (has-permission "status" routeParams="seal") (not this.cluster.dr.isSecondary))}}
     <Nav.Link
       @route="vault.cluster.settings.seal"
       @model={{this.cluster.name}}
       @text="Seal Vault"
       data-test-sidebar-nav-link="Seal Vault"
     />
+  {{/if}}
+
+  {{#if (and this.version.isEnterprise (has-permission "settings"))}}
+    <Nav.Title data-test-sidebar-nav-heading="Settings">Settings</Nav.Title>
+    <Nav.Link
+      @route="vault.cluster.config-ui.messages"
+      @text="Custom Messages"
+      data-test-sidebar-nav-link="Custom Messages"
+    />
+    {{#if (or this.isRootNamespace this.namespace.isHvdAdminNamespace)}}
+      <Nav.Link
+        @route="vault.cluster.config-ui.login-settings"
+        @text="UI Login Settings"
+        data-test-sidebar-nav-link="UI Login Settings"
+      />
+    {{/if}}
   {{/if}}
 </Hds::SideNav::Portal>

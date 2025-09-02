@@ -55,9 +55,9 @@ Vagrantfile
 !.release/ci.hcl
 !.release/security-scan.hcl
 !.release/linux/package/etc/vault.d/vault.hcl
-!command/agent/config/test-fixtures/*.hcl
-!command/server/test-fixtures/**/*.hcl
 !enos/**/*.hcl
+!**/test-fixtures/**/*.hcl
+!**/testdata/*.hcl
 
 # Enos
 .enos
@@ -133,4 +133,6 @@ website/components/node_modules
 tools/godoctests/.bin
 tools/gonilnilfunctions/.bin
 tools/codechecker/.bin
+tools/pipeline/.bin
+tools/pipeline/pipeline
 .ci-bootstrap

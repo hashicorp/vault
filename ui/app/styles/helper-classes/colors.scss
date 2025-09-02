@@ -6,20 +6,28 @@
 /* This helper includes styles referencing background color, border color, and text color. */
 
 // background colors
+.background-neutral-50 {
+  background: var(--token-color-palette-neutral-50);
+}
+
 .has-background-white-bis {
-  background: $ui-gray-050;
+  background: var(--token-color-palette-neutral-50);
 }
 
 .has-background-gray-100 {
-  background-color: $ui-gray-100;
+  background-color: var(--token-color-palette-neutral-100);
 }
 
 .has-background-gray-200 {
-  background-color: $ui-gray-200;
+  background-color: var(--token-color-palette-neutral-200);
+}
+
+.has-background-gray-300 {
+  background-color: var(--token-color-palette-neutral-300);
 }
 
 .has-background-gray-900 {
-  background-color: $ui-gray-900;
+  background-color: var(--token-color-palette-neutral-600);
 }
 
 .background-color-black {
@@ -29,75 +37,77 @@
 // borders
 .has-border-top-light {
   border-radius: 0;
-  border-top: 1px solid $grey-light;
+  border-top: 1px solid var(--token-color-palette-neutral-300);
 }
 
 .has-border-bottom-light {
   border-radius: 0;
-  border-bottom: 1px solid $grey-light;
+  border-bottom: 1px solid var(--token-color-palette-neutral-300);
 }
 
 .has-error-border,
 select.has-error-border,
 .ttl-picker-form-field-error input,
-.string-list-form-field-error .field:first-of-type textarea {
-  border: 1px solid $red-500;
+.string-list-form-field-error .field:first-of-type textarea,
+.hds-form-checkbox.has-error-border {
+  border: 1px solid var(--token-color-palette-red-200);
+}
+
+.error-border-child-inputs input,
+.error-border-child-inputs textarea {
+  border: 1px solid var(--token-color-palette-red-200);
 }
 
 // specifically for the SearchSelect dropdown.
 .dropdown-has-error-border > div.ember-basic-dropdown-trigger {
-  border: 1px solid $red-500;
+  border: 1px solid var(--token-color-palette-red-200);
 }
 
 // text color
 .text-grey-lightest {
-  color: $grey-lightest;
+  color: var(--token-color-palette-neutral-50);
 }
 
-.has-text-grey-light {
-  color: $ui-gray-300 !important;
-}
-
-.has-text-grey-400 {
-  color: $ui-gray-400;
+.has-text-neutral-300 {
+  color: var(--token-color-foreground-faint) !important;
 }
 
 .has-text-grey {
-  color: $ui-gray-500 !important;
+  color: var(--token-color-foreground-faint) !important;
 }
 
-.has-text-grey-dark {
-  color: $ui-gray-700 !important;
+.has-text-neutral-500 {
+  color: var(--token-color-palette-neutral-500) !important;
 }
 
 .has-text-white {
-  color: $white !important;
+  color: hsl(0, 0%, 100%) !important;
 }
 
 .has-text-black {
-  color: $black !important;
+  color: hsl(0, 0%, 4%) !important;
 }
 
 .has-text-info {
-  color: $blue-500 !important;
+  color: var(--token-color-palette-blue-200) !important;
 }
 // same without the !important
 .has-text-primary {
-  color: $blue-500;
+  color: var(--token-color-palette-blue-200);
 }
 
 .has-text-success {
-  color: $green-500 !important;
+  color: var(--token-color-palette-green-200) !important;
 }
 
 .has-text-highlight {
-  color: $yellow-500;
+  color: var(--token-color-palette-amber-200);
 }
 
 .has-text-danger {
-  color: $red-500 !important;
+  color: var(--token-color-palette-red-200) !important;
 }
 
 .has-text-primary {
-  color: $blue;
+  color: var(--token-color-palette-blue-200);
 }

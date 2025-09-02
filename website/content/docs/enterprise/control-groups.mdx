@@ -1,12 +1,17 @@
 ---
 layout: docs
-page_title: Vault Enterprise Control Groups
-description: Vault Enterprise has support for Control Group Authorization.
+page_title: Use control groups for authorization
+description: >-
+    Use control group authorization to add authorization to existing
+    authentication request.
 ---
 
-# Vault Enterprise control groups
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
 
-@include 'alerts/enterprise-and-hcp-plus.mdx'
+# Use control groups for authorization
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 Vault Enterprise has support for Control Group Authorization. Control Groups
 add additional authorization factors to be required before satisfying a request.
@@ -37,7 +42,7 @@ Finally, the capabilities in the `controlled_capabilities` stanza must be a subs
 `capabilities` specified in the policy itself. For example, a policy giving only `read` access to
 the path `secret/foo` cannot specify a control group factor with `list` as a controlled capability.
 
-Please see the following section for example ACL Policies.
+Please see the following section for examples using ACL policies.
 
 ## Control groups in ACL policies
 
@@ -85,7 +90,7 @@ path "secret/foo" {
 ```
 
 The above policy grants `create` and `update` access to `secret/foo` only after
-two member of the "managers" or "leads" group and one member of the "superusers"
+two (2) members of the "managers" or "leads" group and one member of the "superusers"
 group authorizes the request. If an authorizer is a member of both the
 "managers" and "superusers" group, one authorization for both factors will be
 satisfied.
@@ -137,9 +142,9 @@ path "kv/*" {
 ```
 
 Because the second path stanza has a control group factor with no `controlled_capabilities` field,
-any token with this policy will be required to get 2 approvals from the `superuser` group before executing
+any token with this policy will be required to get two (2) approvals from the "superuser" group before executing
 any operation against `kv/*`. In addition, by virtue of the `controlled_capabilities` field in the first
-path stanza, `delete`,`list`, and `sudo` operations will require an additional approval from the `admin` group.
+path stanza, `delete`,`list`, and `sudo` operations will require an additional approval from the "admin" group.
 
 ```
 path "kv/*" {
@@ -168,13 +173,13 @@ one superuser approval and one admin approval. `List` will require no extra appr
 from any of the control group factors, and a token with this policy will not be required
 to go through the control group workflow in order to execute a read operation against `kv/*`.
 
-## Control groups in sentinel
+## Control groups in Sentinel
 
 Control Groups are also supported in Sentinel policies using the `controlgroup`
 import. See [Sentinel Documentation](/vault/docs/enterprise/sentinel) for more
 details on available properties.
 
-### Sample sentinel policy
+### Sample Sentinel policy
 
 ```
 import "time"
@@ -200,7 +205,7 @@ main = rule {
 }
 ```
 
-The above policy will reject the request unless two members of the `managers`
+The above policy will reject the request unless two members of the "managers"
 group have authorized the request. Additionally it verifies the authorizations
 happened in the last hour.
 

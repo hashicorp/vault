@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
@@ -53,49 +52,86 @@ func TestBackend_impl(t *testing.T) {
 }
 
 func TestBackendHandleRequestFieldWarnings(t *testing.T) {
-	handler := func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"an_int":   data.Get("an_int"),
-				"a_string": data.Get("a_string"),
-				"name":     data.Get("name"),
-			},
-		}, nil
-	}
+	t.Run("check replaced and ignored endpoints", func(t *testing.T) {
+		handler := func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
+			return &logical.Response{
+				Data: map[string]interface{}{
+					"an_int":   data.Get("an_int"),
+					"a_string": data.Get("a_string"),
+					"name":     data.Get("name"),
+				},
+			}, nil
+		}
 
-	backend := &Backend{
-		Paths: []*Path{
-			{
-				Pattern: "foo/bar/(?P<name>.+)",
-				Fields: map[string]*FieldSchema{
-					"an_int":   {Type: TypeInt},
-					"a_string": {Type: TypeString},
-					"name":     {Type: TypeString},
-				},
-				Operations: map[logical.Operation]OperationHandler{
-					logical.UpdateOperation: &PathOperation{Callback: handler},
+		backend := &Backend{
+			Paths: []*Path{
+				{
+					Pattern: "foo/bar/(?P<name>.+)",
+					Fields: map[string]*FieldSchema{
+						"an_int":   {Type: TypeInt},
+						"a_string": {Type: TypeString},
+						"name":     {Type: TypeString},
+					},
+					Operations: map[logical.Operation]OperationHandler{
+						logical.UpdateOperation: &PathOperation{Callback: handler},
+					},
 				},
 			},
-		},
-	}
-	ctx := context.Background()
-	resp, err := backend.HandleRequest(ctx, &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "foo/bar/baz",
-		Data: map[string]interface{}{
-			"an_int":        10,
-			"a_string":      "accepted",
-			"unrecognized1": "unrecognized",
-			"unrecognized2": 20.2,
-			"name":          "noop",
-		},
+		}
+		ctx := context.Background()
+		resp, err := backend.HandleRequest(ctx, &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "foo/bar/baz",
+			Data: map[string]interface{}{
+				"an_int":        10,
+				"a_string":      "accepted",
+				"unrecognized1": "unrecognized",
+				"unrecognized2": 20.2,
+				"name":          "noop",
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Len(t, resp.Warnings, 2)
+		require.True(t, strutil.StrListContains(resp.Warnings, "Endpoint ignored these unrecognized parameters: [unrecognized1 unrecognized2]"))
+		require.True(t, strutil.StrListContains(resp.Warnings, "Endpoint replaced the value of these parameters with the values captured from the endpoint's path: [name]"))
 	})
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	t.Log(resp.Warnings)
-	require.Len(t, resp.Warnings, 2)
-	require.True(t, strutil.StrListContains(resp.Warnings, "Endpoint ignored these unrecognized parameters: [unrecognized1 unrecognized2]"))
-	require.True(t, strutil.StrListContains(resp.Warnings, "Endpoint replaced the value of these parameters with the values captured from the endpoint's path: [name]"))
+
+	t.Run("check ignored DB secrets config ignored fields", func(t *testing.T) {
+		handler := func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
+			return &logical.Response{
+				Data: map[string]interface{}{},
+			}, nil
+		}
+
+		backend := &Backend{
+			Paths: []*Path{
+				{
+					Pattern: "config/sqldb",
+					Fields:  map[string]*FieldSchema{},
+					Operations: map[logical.Operation]OperationHandler{
+						logical.UpdateOperation: &PathOperation{Callback: handler},
+					},
+				},
+			},
+		}
+		ctx := context.Background()
+		resp, err := backend.HandleRequest(ctx, &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "config/sqldb",
+			MountType: "database",
+			Data: map[string]interface{}{
+				"connection_url": "localhost",
+				"username":       "user",
+				"password":       "pass",
+				"unrecognized1":  "unrecognized",
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Len(t, resp.Warnings, 1)
+		require.Equal(t, resp.Warnings[0], "Endpoint ignored these unrecognized parameters: [unrecognized1]")
+	})
 }
 
 func TestBackendHandleRequest(t *testing.T) {
@@ -832,6 +868,101 @@ func TestFieldTypeMethods(t *testing.T) {
 			}
 
 			_ = i.Zero()
+		})
+	}
+}
+
+// TestRecoverSourcePathFieldData verifies that source path data is correctly
+// extracted from the path
+func TestRecoverSourcePathFieldData(t *testing.T) {
+	backend := &Backend{
+		Paths: []*Path{
+			{
+				Pattern: "path/" + GenericNameRegex("name") + "/type/" + GenericNameRegex("type"),
+				Fields: map[string]*FieldSchema{
+					"name": {
+						Type:     TypeString,
+						Required: true,
+					},
+					"type": {
+						Type:     TypeString,
+						Required: true,
+					},
+					// content won't be present in the path
+					"content": {
+						Type:     TypeString,
+						Required: true,
+					},
+				},
+			},
+		},
+	}
+	testCases := []struct {
+		name       string
+		path       string
+		sourcePath string
+		wantName   string
+		wantType   string
+		wantError  bool
+	}{
+		{
+			name:      "no source path errors",
+			path:      "path/foo/type/bar",
+			wantError: true,
+		},
+		{
+			name:       "non matching paths errors",
+			path:       "path/foo/type/bar",
+			sourcePath: "other/baz/type/qux",
+			wantError:  true,
+		},
+		{
+			name:       "missing path element errors",
+			path:       "path/foo/type/bar",
+			sourcePath: "path/foo/type",
+			wantError:  true,
+		},
+		{
+			name:       "different name",
+			path:       "path/foo/type/bar",
+			sourcePath: "path/other/type/bar",
+			wantName:   "other",
+			wantType:   "bar",
+		},
+		{
+			name:       "different type",
+			path:       "path/foo/type/bar",
+			sourcePath: "path/foo/type/other",
+			wantName:   "foo",
+			wantType:   "other",
+		},
+		{
+			name:       "different name and type",
+			path:       "path/foo/type/bar",
+			sourcePath: "path/other/type/qux",
+			wantName:   "other",
+			wantType:   "qux",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := &logical.Request{
+				Operation:         logical.RecoverOperation,
+				Path:              tc.path,
+				RecoverSourcePath: tc.sourcePath,
+			}
+			data, err := backend.RecoverSourcePathFieldData(req)
+			if tc.wantError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			if tc.wantName != "" {
+				require.Equal(t, tc.wantName, data.Get("name"))
+			}
+			if tc.wantType != "" {
+				require.Equal(t, tc.wantType, data.Get("type"))
+			}
 		})
 	}
 }

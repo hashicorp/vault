@@ -1,3 +1,6 @@
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -9,22 +12,22 @@
   display: inline-flex;
   align-items: center;
   &:before {
-    font-size: $size-5;
-    color: $blue-500;
+    font-size: size_variables.$size-5;
+    color: var(--token-color-palette-blue-200);
     content: '|';
     position: relative;
   }
 }
 
 .list-header {
-  margin: $size-9 $size-9 0;
-  color: $grey;
-  font-size: $size-8;
-  font-weight: $font-weight-semibold;
+  margin: size_variables.$spacing-10 size_variables.$spacing-10 0;
+  color: var(--token-color-palette-neutral-400);
+  font-size: size_variables.$size-8;
+  font-weight: font_variables.$font-weight-semibold;
   text-transform: uppercase;
 }
 
 ul.bullet {
   list-style: disc;
-  padding-left: $spacing-m;
+  padding-left: size_variables.$spacing-16;
 }

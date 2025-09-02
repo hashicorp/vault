@@ -6,16 +6,18 @@ package aws
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/queue"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/queue"
 )
 
 // TestStaticRolesValidation verifies that valid requests pass validation and that invalid requests fail validation.
@@ -98,7 +100,10 @@ func TestStaticRolesValidation(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			b.iamClient = miam
+			// Used to override the real IAM client creation to return the mocked client
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+				return miam, nil
+			}
 			if err := b.Setup(bgCTX, config); err != nil {
 				t.Fatal(err)
 			}
@@ -124,12 +129,21 @@ func TestStaticRolesWrite(t *testing.T) {
 	bgCTX := context.Background()
 
 	cases := []struct {
-		name          string
-		opts          []awsutil.MockIAMOption
+		name string
+		// objects to return from mock IAM.
+		// You'll need a GetUserOutput (to validate the existence of the user being written,
+		// the keys the user has already been assigned,
+		// and the new key vault requests.
+		opts []awsutil.MockIAMOption // objects to return from the mock IAM
+		// the name, username if updating, and rotation_period of the user. This is the inbound request the cod would get.
 		data          map[string]interface{}
 		expectedError bool
 		findUser      bool
-		isUpdate      bool
+		// if data is sent the name "johnny", then we'll match an existing user with rotation period 24 hours.
+		isUpdate    bool
+		newPriority int64 // update time of new item in queue, skip if isUpdate false. There is a wiggle room of 5 seconds
+		// so the deltas between the old and the new update time should be larger than that to ensure the difference
+		// can be detected.
 	}{
 		{
 			name: "happy path",
@@ -168,7 +182,7 @@ func TestStaticRolesWrite(t *testing.T) {
 			expectedError: true,
 		},
 		{
-			name: "update existing user",
+			name: "update existing user, decreased rotation duration",
 			opts: []awsutil.MockIAMOption{
 				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("john-doe"), UserId: aws.String("unique-id")}}),
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
@@ -187,8 +201,33 @@ func TestStaticRolesWrite(t *testing.T) {
 				"name":            "johnny",
 				"rotation_period": "19m",
 			},
-			findUser: true,
-			isUpdate: true,
+			findUser:    true,
+			isUpdate:    true,
+			newPriority: time.Now().Add(19 * time.Minute).Unix(),
+		},
+		{
+			name: "update existing user, increased rotation duration",
+			opts: []awsutil.MockIAMOption{
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("john-doe"), UserId: aws.String("unique-id")}}),
+				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
+					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
+					IsTruncated:       aws.Bool(false),
+				}),
+				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
+					AccessKey: &iam.AccessKey{
+						AccessKeyId:     aws.String("abcdefghijklmnopqrstuvwxyz"),
+						SecretAccessKey: aws.String("zyxwvutsrqponmlkjihgfedcba"),
+						UserName:        aws.String("john-doe"),
+					},
+				}),
+			},
+			data: map[string]interface{}{
+				"name":            "johnny",
+				"rotation_period": "40h",
+			},
+			findUser:    true,
+			isUpdate:    true,
+			newPriority: time.Now().Add(40 * time.Hour).Unix(),
 		},
 	}
 
@@ -208,7 +247,10 @@ func TestStaticRolesWrite(t *testing.T) {
 			}
 
 			b := Backend(config)
-			b.iamClient = miam
+			// Used to override the real IAM client creation to return the mocked client
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+				return miam, nil
+			}
 			if err := b.Setup(bgCTX, config); err != nil {
 				t.Fatal(err)
 			}
@@ -269,6 +311,11 @@ func TestStaticRolesWrite(t *testing.T) {
 				expectedData = staticRole
 			}
 
+			var actualItem *queue.Item
+			if c.isUpdate {
+				actualItem, _ = b.credRotationQueue.PopByKey(expectedData.Name)
+			}
+
 			if u, ok := fieldData.GetOk("username"); ok {
 				expectedData.Username = u.(string)
 			}
@@ -288,6 +335,20 @@ func TestStaticRolesWrite(t *testing.T) {
 			}
 			if en, an := expectedData.Name, actualData.Name; en != an {
 				t.Fatalf("mismatched role name, expected %q, but got %q", en, an)
+			}
+
+			// one-off to avoid importing/casting
+			abs := func(x int64) int64 {
+				if x < 0 {
+					return -x
+				}
+				return x
+			}
+
+			if c.isUpdate {
+				if ep, ap := c.newPriority, actualItem.Priority; abs(ep-ap) > 5 { // 5 second wiggle room for how long the test takes
+					t.Fatalf("mismatched updated priority, expected %d but got %d", ep, ap)
+				}
 			}
 		})
 	}
@@ -402,7 +463,10 @@ func TestStaticRoleDelete(t *testing.T) {
 			}
 
 			b := Backend(config)
-			b.iamClient = miam
+			// Used to override the real IAM client creation to return the mocked client
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+				return miam, nil
+			}
 
 			// put in storage
 			staticRole := staticRoleEntry{
@@ -467,6 +531,61 @@ func TestStaticRoleDelete(t *testing.T) {
 				t.Fatal("size of queue changed after what should have been no deletion")
 			}
 		})
+	}
+}
+
+// TestStaticRolesList validates that we can list all the static roles in the storage backend.
+func TestStaticRolesList(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	bgCTX := context.Background()
+
+	staticRoles := []staticRoleEntry{}
+	for i := 1; i <= 10; i++ {
+		roles := staticRoleEntry{
+			Name:           "testrole" + strconv.Itoa(i),
+			Username:       "jane-doe",
+			RotationPeriod: 24 * time.Hour,
+		}
+		staticRoles = append(staticRoles, roles)
+	}
+
+	for _, role := range staticRoles {
+		entry, err := logical.StorageEntryJSON(formatRoleStoragePath(role.Name), role)
+		if err != nil {
+			t.Fatalf("failed to create storage entry for %s: %v", role.Name, err)
+		}
+		err = config.StorageView.Put(bgCTX, entry)
+		if err != nil {
+			t.Fatalf("failed to store role %s: %v", role.Name, err)
+		}
+	}
+
+	b := Backend(config)
+	resp, err := b.HandleRequest(bgCTX, &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "static-roles",
+		Storage:   config.StorageView,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: listing roles failed. resp:%#v\n err:%v", resp, err)
+	}
+
+	if len(resp.Data["keys"].([]string)) != 10 {
+		t.Fatalf("failed to list all 10 roles")
+	}
+
+	resp, err = b.HandleRequest(bgCTX, &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "static-roles/",
+		Storage:   config.StorageView,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: listing roles failed. resp:%#v\n err:%v", resp, err)
+	}
+
+	if len(resp.Data["keys"].([]string)) != 10 {
+		t.Fatalf("failed to list all 10 roles")
 	}
 }
 

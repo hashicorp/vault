@@ -58,7 +58,7 @@ export default class MfaMethod extends Model {
   @attr('string', {
     label: 'Namespace',
   })
-  namespace_id;
+  namespace_path;
   @attr('string') mount_accessor;
 
   // PING ID
@@ -166,6 +166,19 @@ export default class MfaMethod extends Model {
 
   get name() {
     return this.type === 'totp' ? this.type.toUpperCase() : capitalize(this.type);
+  }
+
+  get icon() {
+    switch (this.type) {
+      case 'totp':
+        return 'history';
+      case 'pingid':
+        return 'ping-identity-color';
+      case 'duo':
+        return 'duo-color';
+      default:
+        return this.type;
+    }
   }
 
   get formFields() {

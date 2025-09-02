@@ -1,0 +1,3 @@
+```release-note:improvement
+command/token-capabilities: allow using accessor when listing token capabilities on a path
+```

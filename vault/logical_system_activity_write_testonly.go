@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"strings"
 	"sync"
 	"time"
@@ -47,6 +48,8 @@ func (b *SystemBackend) activityWritePath() *framework.Path {
 }
 
 func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	now := time.Now().UTC()
+
 	json := data.Get("input")
 	input := &generation.ActivityLogMockInput{}
 	err := protojson.Unmarshal([]byte(json.(string)), input)
@@ -73,7 +76,7 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	}
 	generated := newMultipleMonthsActivityClients(numMonths + 1)
 	for _, month := range input.Data {
-		err := generated.processMonth(ctx, b.Core, month)
+		err := generated.processMonth(ctx, b.Core, month, now)
 		if err != nil {
 			return logical.ErrorResponse("failed to process data for month %d", month.GetMonthsAgo()), err
 		}
@@ -83,8 +86,9 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	for _, opt := range input.Write {
 		opts[opt] = struct{}{}
 	}
-	paths, err := generated.write(ctx, opts, b.Core.activityLog)
+	paths, err := generated.write(ctx, opts, b.Core.activityLog, now)
 	if err != nil {
+		b.logger.Debug("failed to write activity log data", "error", err.Error())
 		return logical.ErrorResponse("failed to write data"), err
 	}
 	return &logical.Response{
@@ -123,11 +127,13 @@ func (s *singleMonthActivityClients) addEntityRecord(record *activity.EntityReco
 // keys are the segment index, and the value are the clients that were seen in
 // that index. If the value is an empty slice, then it's an empty index. If the
 // value is nil, then it's a skipped index
-func (s *singleMonthActivityClients) populateSegments() (map[int][]*activity.EntityRecord, error) {
+// If loadClientIDsToMemory is true, it returns the list of clientIDs added.
+func (s *singleMonthActivityClients) populateSegments(loadClientIDsToMemory bool) (map[int][]*activity.EntityRecord, map[string]struct{}, error) {
 	segments := make(map[int][]*activity.EntityRecord)
 	ignoreIndexes := make(map[int]struct{})
 	skipIndexes := s.generationParameters.SkipSegmentIndexes
 	emptyIndexes := s.generationParameters.EmptySegmentIndexes
+	clientIDsAdded := make(map[string]struct{})
 
 	for _, i := range skipIndexes {
 		segments[int(i)] = nil
@@ -144,26 +150,42 @@ func (s *singleMonthActivityClients) populateSegments() (map[int][]*activity.Ent
 			clientsInSegment := make([]*activity.EntityRecord, 0, len(clientIndexes))
 			for _, idx := range clientIndexes {
 				clientsInSegment = append(clientsInSegment, s.clients[idx])
+				if loadClientIDsToMemory {
+					clientIDsAdded[s.clients[idx].ClientID] = struct{}{}
+				}
 			}
 			segments[segment] = clientsInSegment
 		}
-		return segments, nil
+		return segments, clientIDsAdded, nil
 	}
 
-	totalSegmentCount := 1
+	// determine how many segments are necessary to store the clients for this month
+	// using the default storage limits
+	numNecessarySegments := len(s.clients) / ActivitySegmentClientCapacity
+	if len(s.clients)%ActivitySegmentClientCapacity != 0 {
+		numNecessarySegments++
+	}
+	totalSegmentCount := numNecessarySegments
+
+	// override the segment count if set by client
 	if s.generationParameters.GetNumSegments() > 0 {
 		totalSegmentCount = int(s.generationParameters.GetNumSegments())
 	}
+
 	numNonUsable := len(skipIndexes) + len(emptyIndexes)
 	usableSegmentCount := totalSegmentCount - numNonUsable
 	if usableSegmentCount <= 0 {
-		return nil, fmt.Errorf("num segments %d is too low, it must be greater than %d (%d skipped indexes + %d empty indexes)", totalSegmentCount, numNonUsable, len(skipIndexes), len(emptyIndexes))
+		return nil, nil, fmt.Errorf("num segments %d is too low, it must be greater than %d (%d skipped indexes + %d empty indexes)", totalSegmentCount, numNonUsable, len(skipIndexes), len(emptyIndexes))
 	}
 
 	// determine how many clients should be in each segment
 	segmentSizes := len(s.clients) / usableSegmentCount
 	if len(s.clients)%usableSegmentCount != 0 {
 		segmentSizes++
+	}
+
+	if segmentSizes > ActivitySegmentClientCapacity {
+		return nil, nil, fmt.Errorf("the number of segments is too low, it must be greater than %d in order to meet storage limits", numNecessarySegments)
 	}
 
 	clientIndex := 0
@@ -176,20 +198,25 @@ func (s *singleMonthActivityClients) populateSegments() (map[int][]*activity.Ent
 		}
 		for len(segments[i]) < segmentSizes && clientIndex < len(s.clients) {
 			segments[i] = append(segments[i], s.clients[clientIndex])
+			if loadClientIDsToMemory {
+				clientIDsAdded[s.clients[clientIndex].ClientID] = struct{}{}
+			}
 			clientIndex++
 		}
 	}
-	return segments, nil
+	return segments, clientIDsAdded, nil
 }
 
 // addNewClients generates clients according to the given parameters, and adds them to the month
 // the client will always have the mountAccessor as its mount accessor
-func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAccessor string, segmentIndex *int) error {
+func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAccessor string, segmentIndex *int, monthsAgo int32, now time.Time) error {
 	count := 1
 	if c.Count > 1 {
 		count = int(c.Count)
 	}
 	isNonEntity := c.ClientType != entityActivityType
+	ts := timeutil.MonthsPreviousTo(int(monthsAgo), now)
+
 	for i := 0; i < count; i++ {
 		record := &activity.EntityRecord{
 			ClientID:      c.Id,
@@ -197,6 +224,8 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 			MountAccessor: mountAccessor,
 			NonEntity:     isNonEntity,
 			ClientType:    c.ClientType,
+			Timestamp:     ts.Unix(),
+			UsageTime:     ts.Unix(),
 		}
 		if record.ClientID == "" {
 			var err error
@@ -211,7 +240,7 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 }
 
 // processMonth populates a month of client data
-func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *Core, month *generation.Data) error {
+func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *Core, month *generation.Data, now time.Time) error {
 	// default to using the root namespace and the first mount on the root namespace
 	mounts, err := core.ListMounts()
 	if err != nil {
@@ -274,7 +303,7 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 				}
 			}
 
-			err = m.addClientToMonth(month.GetMonthsAgo(), clients, mountAccessor, segmentIndex)
+			err = m.addClientToMonth(month.GetMonthsAgo(), clients, mountAccessor, segmentIndex, now)
 			if err != nil {
 				return err
 			}
@@ -300,14 +329,14 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 	return nil
 }
 
-func (m *multipleMonthsActivityClients) addClientToMonth(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int) error {
+func (m *multipleMonthsActivityClients) addClientToMonth(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int, now time.Time) error {
 	if c.Repeated || c.RepeatedFromMonth > 0 {
-		return m.addRepeatedClients(monthsAgo, c, mountAccessor, segmentIndex)
+		return m.addRepeatedClients(monthsAgo, c, mountAccessor, segmentIndex, now)
 	}
-	return m.months[monthsAgo].addNewClients(c, mountAccessor, segmentIndex)
+	return m.months[monthsAgo].addNewClients(c, mountAccessor, segmentIndex, monthsAgo, now)
 }
 
-func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int) error {
+func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int, now time.Time) error {
 	addingTo := m.months[monthsAgo]
 	repeatedFromMonth := monthsAgo + 1
 	if c.RepeatedFromMonth > 0 {
@@ -318,9 +347,19 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 	if c.Count > 0 {
 		numClients = int(c.Count)
 	}
+
+	// usage time of the client in the month that the client is being added to
+	// this is a random time in the usage month
+	usageTime, err := timeutil.GetRandomTimeInMonth(timeutil.MonthsPreviousTo(int(monthsAgo), now))
+	if err != nil {
+		return err
+	}
+
 	for _, client := range repeatedFrom.clients {
 		if c.ClientType == client.ClientType && mountAccessor == client.MountAccessor && c.Namespace == client.NamespaceID {
-			addingTo.addEntityRecord(client, segmentIndex)
+			repeatedClient := *client
+			repeatedClient.UsageTime = usageTime.Unix()
+			addingTo.addEntityRecord(&repeatedClient, segmentIndex)
 			numClients--
 			if numClients == 0 {
 				break
@@ -333,75 +372,95 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 	return nil
 }
 
-func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
-	now := time.Now().UTC()
+func (m *multipleMonthsActivityClients) addMissingCurrentMonth() {
+	missing := m.months[0].generationParameters == nil &&
+		len(m.months) > 1 &&
+		m.months[1].generationParameters != nil
+	if !missing {
+		return
+	}
+	m.months[0].generationParameters = &generation.Data{EmptySegmentIndexes: []int32{0}, NumSegments: 2}
+}
+
+func (m *multipleMonthsActivityClients) timestampForMonth(i int, now time.Time) time.Time {
+	if i > 0 {
+		return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
+	}
+	return now
+}
+
+func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog, now time.Time) ([]string, error) {
 	paths := []string{}
 
 	_, writePQ := opts[generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES]
 	_, writeDistinctClients := opts[generation.WriteOptions_WRITE_DISTINCT_CLIENTS]
-	_, writeEntities := opts[generation.WriteOptions_WRITE_ENTITIES]
 	_, writeIntentLog := opts[generation.WriteOptions_WRITE_INTENT_LOGS]
+	_, writeClientIDsMemory := opts[generation.WriteOptions_WRITE_CLIENT_IDS_MEMORY]
 
-	pqOpts := pqOptions{}
-	if writePQ || writeDistinctClients {
-		pqOpts.byNamespace = make(map[string]*processByNamespace)
-		pqOpts.byMonth = make(map[int64]*processMonth)
-		pqOpts.activePeriodEnd = m.latestTimestamp(now, true)
-		pqOpts.endTime = timeutil.EndOfMonth(m.latestTimestamp(pqOpts.activePeriodEnd, false))
-		pqOpts.activePeriodStart = m.earliestTimestamp(now)
-	}
+	m.addMissingCurrentMonth()
 
-	var earliestTimestamp, latestTimestamp time.Time
+	clientIDsToAddToMemory := make(map[string]struct{})
 	for i, month := range m.months {
 		if month.generationParameters == nil {
 			continue
 		}
-		var timestamp time.Time
-		if i > 0 {
-			timestamp = timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
-		} else {
-			timestamp = now
+		var loadClientIDsToMemory bool
+		timestamp := m.timestampForMonth(i, now)
+		startTime, endTime := activityLog.getStartTimeAndEndTimeUntilLastMonth(true)
+
+		// only load clients used until last month in the billing period to memory
+		if writeClientIDsMemory && (startTime != time.Time{} && !startTime.After(timestamp) && !endTime.Before(timestamp)) {
+			loadClientIDsToMemory = true
 		}
-		if earliestTimestamp.IsZero() || timestamp.Before(earliestTimestamp) {
-			earliestTimestamp = timestamp
-		}
-		if timestamp.After(latestTimestamp) {
-			latestTimestamp = timestamp
-		}
-		segments, err := month.populateSegments()
+
+		segments, clientIDsInSegments, err := month.populateSegments(loadClientIDsToMemory)
 		if err != nil {
 			return nil, err
 		}
-		for segmentIndex, segment := range segments {
-			if writeEntities || writeIntentLog {
-				if segment == nil {
-					// skip the index
-					continue
-				}
-				entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
-					startTimestamp:       timestamp.Unix(),
-					currentClients:       &activity.EntityActivityLog{Clients: segment},
-					clientSequenceNumber: uint64(segmentIndex),
-					tokenCount:           &activity.TokenCount{},
-				}, true)
-				if err != nil {
-					return nil, err
-				}
-				paths = append(paths, entityPath)
-			}
+
+		// add segment clients to clientIDs map if load to memory option has been selected
+		if loadClientIDsToMemory {
+			maps.Copy(clientIDsToAddToMemory, clientIDsInSegments)
 		}
 
-		if (writePQ || writeDistinctClients) && i > 0 {
-			reader := newProtoSegmentReader(segments)
-			err = activityLog.segmentToPrecomputedQuery(ctx, timestamp, reader, pqOpts)
+		for segmentIndex, segment := range segments {
+			if segment == nil {
+				// skip the index
+				continue
+			}
+			entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
+				startTimestamp:       timestamp.Unix(),
+				currentClients:       &activity.EntityActivityLog{Clients: segment},
+				clientSequenceNumber: uint64(segmentIndex),
+				tokenCount:           &activity.TokenCount{},
+			}, true)
 			if err != nil {
 				return nil, err
 			}
+			paths = append(paths, entityPath)
 		}
-
+	}
+	if writeClientIDsMemory {
+		activityLog.SetClientIDsUsageInfo(clientIDsToAddToMemory)
+	}
+	if writePQ || writeDistinctClients {
+		// start with the oldest month of data, and create precomputed queries
+		// up to that month
+		pqWg := sync.WaitGroup{}
+		for i := len(m.months) - 1; i > 0; i-- {
+			pqWg.Add(1)
+			go func(i int) {
+				defer pqWg.Done()
+				activityLog.precomputedQueryWorker(ctx, &ActivityIntentLog{
+					PreviousMonth: m.timestampForMonth(i, now).Unix(),
+					NextMonth:     now.Unix(),
+				})
+			}(i)
+		}
+		pqWg.Wait()
 	}
 	if writeIntentLog {
-		err := activityLog.writeIntentLog(ctx, earliestTimestamp.UTC().Unix(), latestTimestamp.UTC())
+		err := activityLog.writeIntentLog(ctx, m.latestTimestamp(now, false).Unix(), m.latestTimestamp(now, true).UTC())
 		if err != nil {
 			return nil, err
 		}

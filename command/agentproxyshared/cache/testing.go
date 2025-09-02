@@ -7,15 +7,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/useragent"
-
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/useragent"
 )
 
 // mockProxier is a mock implementation of the Proxier interface, used for testing purposes.
@@ -62,7 +61,7 @@ func newTestSendResponse(status int, body string) *SendResponse {
 	resp.Response.Header.Set("Date", time.Now().Format(http.TimeFormat))
 
 	if body != "" {
-		resp.Response.Body = ioutil.NopCloser(strings.NewReader(body))
+		resp.Response.Body = io.NopCloser(strings.NewReader(body))
 		resp.ResponseBody = []byte(body)
 	}
 

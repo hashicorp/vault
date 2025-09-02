@@ -1,0 +1,14 @@
+<Warning title="Experimental">
+
+### vault.raft.wal.head-truncations ((#vault-raft-wal-head-truncations)) 
+
+</Warning>
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+counter     | number  | Number of log entries that have been truncated from the head.
+
+Counts the number of log entries truncated from the head (i.e. the oldest entries).
+
+If you track the rate of change in head truncations over time, individual
+truncate calls appear as spikes.

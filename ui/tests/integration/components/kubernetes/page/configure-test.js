@@ -11,6 +11,8 @@ import { render, click, waitUntil, find, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kubernetes | Page::Configure', function (hooks) {
   setupRenderingTest(hooks);
@@ -33,9 +35,9 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     });
     this.editModel = this.store.peekRecord('kubernetes/config', 'kubernetes-edit');
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: 'kubernetes', route: 'overview' },
-      { label: 'configure' },
+      { label: 'Configure' },
     ];
     this.expectedInferred = {
       disable_local_ca_jwt: false,
@@ -43,6 +45,13 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       kubernetes_host: null,
       service_account_jwt: null,
     };
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should display proper options when toggling radio cards', async function (assert) {
@@ -199,14 +208,13 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
 
     await render(
       hbs`
-      <div id="modal-wormhole"></div>
-      <Page::Configure @model={{this.editModel}} @breadcrumbs={{this.breadcrumbs}} />
+            <Page::Configure @model={{this.editModel}} @breadcrumbs={{this.breadcrumbs}} />
     `,
       { owner: this.engine }
     );
     await click('[data-test-config-save]');
     assert
-      .dom('.modal-card-body')
+      .dom('[data-test-edit-config-body]')
       .hasText(
         'Making changes to your configuration may affect how Vault will reach the Kubernetes API and authenticate with it. Are you sure?',
         'Confirm modal renders'
@@ -223,9 +231,9 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     await click('[data-test-config-save]');
 
     assert
-      .dom('[data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('kubernetesHost'))
       .hasText('Kubernetes host is required', 'Error renders for required field');
-    assert.dom('[data-test-alert] p').hasText('There is an error with this form.', 'Alert renders');
+    assert.dom('[data-test-alert]').hasText('There is an error with this form.', 'Alert renders');
   });
 
   test('it should save inferred config', async function (assert) {

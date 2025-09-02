@@ -4,6 +4,9 @@ page_title: /sys/tools - HTTP API
 description: This is the API documentation for a general set of crypto  tools.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # `/sys/tools`
 
 The `/sys/tools` endpoints are a general set of tools.
@@ -79,10 +82,6 @@ algorithm.
   - `sha3-256`
   - `sha3-384`
   - `sha3-512`
-
-  ~> **Note**: In FIPS 140-2 mode, the following algorithms are not certified
-     and thus should not be used: `sha3-224`, `sha3-256`, `sha3-384`, and
-     `sha3-512`.
 
 - `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
 

@@ -7,9 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/url"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -36,7 +38,7 @@ const (
 type AzureBackend struct {
 	container  *azblob.ContainerURL
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // Verify AzureBackend satisfies the correct interfaces
@@ -56,12 +58,19 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
+	if err := validateContainerName(name); err != nil {
+		return nil, fmt.Errorf("invalid container name %s: %w", name, err)
+	}
+
 	accountName := os.Getenv("AZURE_ACCOUNT_NAME")
 	if accountName == "" {
 		accountName = conf["accountName"]
 		if accountName == "" {
 			return nil, fmt.Errorf("'accountName' must be set")
 		}
+	}
+	if err := validateAccountName(accountName); err != nil {
+		return nil, fmt.Errorf("invalid account name %s: %w", accountName, err)
 	}
 
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
@@ -183,9 +192,38 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	a := &AzureBackend{
 		container:  &containerURL,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}
 	return a, nil
+}
+
+// validation rules for containers are defined here:
+// https://learn.microsoft.com/en-us/rest/api/storageservices/Naming-and-Referencing-Containers--Blobs--and-Metadata#container-names
+var containerNameRegex = regexp.MustCompile("^[a-z0-9]+(-[a-z0-9]+)*$")
+
+func validateContainerName(name string) error {
+	if len(name) < 3 || len(name) > 63 {
+		return errors.New("name must be between 3 and 63 characters long")
+	}
+
+	if !containerNameRegex.MatchString(name) {
+		return errors.New("name is invalid")
+	}
+	return nil
+}
+
+// validation rules are defined here:
+// https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/error-storage-account-name?tabs=bicep#cause
+var accountNameRegex = regexp.MustCompile("^[a-z0-9]+$")
+
+func validateAccountName(name string) error {
+	if len(name) < 3 || len(name) > 24 {
+		return errors.New("name must be between 3 and 24 characters long")
+	}
+	if !accountNameRegex.MatchString(name) {
+		return errors.New("name is invalid")
+	}
+	return nil
 }
 
 // Put is used to insert or update an entry
@@ -196,7 +234,9 @@ func (a *AzureBackend) Put(ctx context.Context, entry *physical.Entry) error {
 		return fmt.Errorf("value is bigger than the current supported limit of 4MBytes")
 	}
 
-	a.permitPool.Acquire()
+	if err := a.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer a.permitPool.Release()
 
 	blobURL := a.container.NewBlockBlobURL(entry.Key)
@@ -211,7 +251,9 @@ func (a *AzureBackend) Put(ctx context.Context, entry *physical.Entry) error {
 func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"azure", "get"}, time.Now())
 
-	a.permitPool.Acquire()
+	if err := a.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer a.permitPool.Release()
 
 	blobURL := a.container.NewBlockBlobURL(key)
@@ -234,7 +276,7 @@ func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 	reader := res.Body(azblob.RetryReaderOptions{})
 	defer reader.Close()
 
-	data, err := ioutil.ReadAll(reader)
+	data, err := io.ReadAll(reader)
 
 	ent := &physical.Entry{
 		Key:   key,
@@ -248,7 +290,9 @@ func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 func (a *AzureBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"azure", "delete"}, time.Now())
 
-	a.permitPool.Acquire()
+	if err := a.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer a.permitPool.Release()
 
 	blobURL := a.container.NewBlockBlobURL(key)
@@ -273,7 +317,9 @@ func (a *AzureBackend) Delete(ctx context.Context, key string) error {
 func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"azure", "list"}, time.Now())
 
-	a.permitPool.Acquire()
+	if err := a.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer a.permitPool.Release()
 
 	var keys []string
@@ -307,7 +353,7 @@ func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error
 // getAuthTokenFromIMDS uses the Azure Instance Metadata Service to retrieve a short-lived credential using OAuth
 // more info on this https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview
 func getAuthTokenFromIMDS(resource string) (*adal.ServicePrincipalToken, error) {
-	msiEndpoint, err := adal.GetMSIVMEndpoint()
+	msiEndpoint, err := adal.GetMSIEndpoint()
 	if err != nil {
 		return nil, err
 	}

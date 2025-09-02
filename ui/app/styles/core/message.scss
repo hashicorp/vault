@@ -1,108 +1,112 @@
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 .alert-title {
-  font-size: $size-5;
-  font-weight: $font-weight-bold;
+  font-size: size_variables.$size-5;
+  font-weight: font_variables.$font-weight-bold;
 }
 
 .message {
-  background: $blue-010;
-  border: 1px solid $blue-100;
-  margin-bottom: $spacing-s;
-  padding: $spacing-s $spacing-m $spacing-m $spacing-s;
+  background: var(--token-color-palette-blue-50);
+  border: 1px solid var(--token-color-palette-blue-100);
+  margin-bottom: size_variables.$spacing-12;
+  padding: size_variables.$spacing-12 size_variables.$spacing-16 size_variables.$spacing-16
+    size_variables.$spacing-12;
   position: relative;
 
   &:not(:last-child) {
-    margin-bottom: $size-4;
+    margin-bottom: size_variables.$spacing-20;
   }
 
   .message-icon {
-    color: $blue;
-    margin-right: $spacing-xs;
+    color: var(--token-color-palette-blue-200);
+    margin-right: size_variables.$spacing-8;
   }
 
   .message-title {
-    color: $blue-500;
+    color: var(--token-color-palette-blue-200);
     font-size: 16px;
-    font-weight: $font-weight-bold;
+    font-weight: font_variables.$font-weight-bold;
     line-height: 1.25;
   }
 
   .message-body {
     border: 0;
     padding: 1em 1.25em;
-    margin-top: $spacing-xxs;
+    margin-top: size_variables.$spacing-4;
   }
 
   // message types, see message-types.js
   &.is-danger {
-    background: $red-010;
-    border: 1px solid $red-050;
+    background: var(--token-color-surface-critical);
+    border: 1px solid var(--token-color-palette-red-50);
 
     .message-body {
-      color: $red-700;
+      color: var(--token-color-palette-red-300);
     }
 
     .message-icon {
-      color: $red-500;
+      color: var(--token-color-palette-red-200);
     }
 
     .message-title {
-      color: $red-700;
+      color: var(--token-color-palette-red-300);
     }
   }
 
   &.is-highlight {
-    background: $yellow-010;
-    border: 1px solid $yellow-100;
+    background: var(--token-color-surface-warning);
+    border: 1px solid var(--token-color-palette-amber-100);
 
     .message-body {
-      color: $ui-gray-900;
+      color: var(--token-color-palette-neutral-600);
     }
 
     .message-icon {
-      color: $yellow-500;
+      color: var(--token-color-palette-amber-200);
     }
 
     .message-title {
-      color: $orange-700;
+      color: var(--token-color-palette-amber-300);
     }
   }
 
   &.is-info {
-    background-color: $blue-010;
+    background-color: var(--token-color-palette-blue-50);
 
     .message-body {
-      color: $blue-700;
+      color: var(--token-color-palette-blue-300);
     }
 
     .message-header {
-      background-color: $blue-500;
-      color: $white;
+      background-color: var(--token-color-palette-blue-200);
+      color: hsl(0, 0%, 100%);
     }
 
     .message-title {
-      color: $blue-700;
+      color: var(--token-color-palette-blue-300);
     }
   }
 
   &.is-success {
-    background: $green-010;
-    border: 1px solid $green-100;
+    background: var(--token-color-surface-success);
+    border: 1px solid var(--token-color-palette-green-100);
 
     .message-body {
-      color: $green-900;
+      color: var(--token-color-palette-green-500);
     }
 
     .message-icon {
-      color: $green-500;
+      color: var(--token-color-palette-green-200);
     }
 
     .message-title {
-      color: $green-700;
+      color: var(--token-color-palette-green-300);
     }
   }
 }

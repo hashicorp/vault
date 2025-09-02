@@ -11,6 +11,8 @@ export default class PkiTidySerializer extends ApplicationSerializer {
     if (tidyType === 'manual') {
       delete data?.enabled;
       delete data?.intervalDuration;
+      delete data?.minStartupBackoffDuration;
+      delete data?.maxStartupBackoffDuration;
     }
     return data;
   }

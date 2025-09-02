@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-//go:build !race && !hsm && !fips_140_3
+//go:build !race && !hsm
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
 // safe to use env vars since that provides an attack vector in the real world.
@@ -11,22 +11,37 @@
 package command
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// Modifier is a function that modifies a string
+type Modifier func(string) string
+
+// regexReplacer returns a Modifier that replaces all occurrences of re with repl
+func regexReplacer(re, repl string) Modifier {
+	return func(s string) string {
+		return regexp.MustCompile(re).ReplaceAllString(s, repl)
+	}
+}
 
 func init() {
 	if signed := os.Getenv("VAULT_LICENSE_CI"); signed != "" {
@@ -34,10 +49,10 @@ func init() {
 	}
 }
 
-func testBaseHCL(tb testing.TB, listenerExtras string) string {
+func testBaseHCL(tb testing.TB, listenerExtras string, modifiers ...Modifier) string {
 	tb.Helper()
 
-	return strings.TrimSpace(fmt.Sprintf(`
+	base := strings.TrimSpace(fmt.Sprintf(`
 		disable_mlock = true
 		listener "tcp" {
 			address     = "127.0.0.1:%d"
@@ -45,6 +60,11 @@ func testBaseHCL(tb testing.TB, listenerExtras string) string {
 			%s
 		}
 	`, 0, listenerExtras))
+
+	for _, mod := range modifiers {
+		base = mod(base)
+	}
+	return base
 }
 
 const (
@@ -58,6 +78,12 @@ const (
 	badListenerWriteTimeout      = `http_write_timeout = "56lbs"`
 	badListenerIdleTimeout       = `http_idle_timeout = "78gophers"`
 
+	raftHCL = `
+storage "raft" {
+  path = "/path/to/raft/data"
+  node_id = "raft_node_1"
+}
+	`
 	inmemHCL = `
 backend "inmem_ha" {
   advertise_addr       = "http://127.0.0.1:8200"
@@ -68,7 +94,6 @@ ha_backend "inmem_ha" {
   redirect_addr        = "http://127.0.0.1:8200"
 }
 `
-
 	badHAInmemHCL = `
 ha_backend "inmem" {}
 `
@@ -90,29 +115,6 @@ cloud {
 }
 `
 )
-
-func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
-	tb.Helper()
-
-	ui := cli.NewMockUi()
-	return ui, &ServerCommand{
-		BaseCommand: &BaseCommand{
-			UI: ui,
-		},
-		ShutdownCh: MakeShutdownCh(),
-		SighupCh:   MakeSighupCh(),
-		SigUSR2Ch:  MakeSigUSR2Ch(),
-		PhysicalBackends: map[string]physical.Factory{
-			"inmem":    physInmem.NewInmem,
-			"inmem_ha": physInmem.NewInmemHA,
-		},
-
-		// These prevent us from random sleep guessing...
-		startedCh:         make(chan struct{}, 5),
-		reloadedCh:        make(chan struct{}, 5),
-		licenseReloadedCh: make(chan error),
-	}
-}
 
 func TestServer_ReloadListener(t *testing.T) {
 	t.Parallel()
@@ -294,6 +296,13 @@ func TestServer(t *testing.T) {
 			0,
 			[]string{"-test-verify-only", "-recovery"},
 		},
+		{
+			"missing_disable_mlock_value_with_integrated_storage",
+			testBaseHCL(t, goodListenerTimeouts, regexReplacer(`\s*disable_mlock\s*=\s*.+`, "")) + raftHCL,
+			"disable_mlock must be configured",
+			1,
+			[]string{"-test-server-config"},
+		},
 	}
 
 	for _, tc := range cases {
@@ -399,4 +408,46 @@ func TestConfigureDevTLS(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConfigureSeals(t *testing.T) {
+	testConfig := server.Config{SharedConfig: &configutil.SharedConfig{}}
+	_, testCommand := testServerCommand(t)
+
+	logger := corehelpers.NewTestLogger(t)
+	backend, err := physInmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testCommand.logger = logger
+
+	setSealResponse, _, err := testCommand.configureSeals(context.Background(), &testConfig, backend, []string{}, map[string]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(setSealResponse.barrierSeal.GetAccess().GetAllSealWrappersByPriority()) != 1 {
+		t.Fatalf("expected 1 seal, got %d", len(setSealResponse.barrierSeal.GetAccess().GetAllSealWrappersByPriority()))
+	}
+
+	if setSealResponse.barrierSeal.BarrierSealConfigType() != vault.SealConfigTypeShamir {
+		t.Fatalf("expected shamir seal, got seal type %s", setSealResponse.barrierSeal.BarrierSealConfigType())
+	}
+}
+
+func TestReloadSeals(t *testing.T) {
+	testCore := vault.TestCoreWithSeal(t, vault.NewTestSeal(t, &seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedShamirRoot}), false)
+	_, testCommand := testServerCommand(t)
+	testConfig := server.Config{SharedConfig: &configutil.SharedConfig{}}
+
+	testCommand.logger = corehelpers.NewTestLogger(t)
+	ctx := context.Background()
+	reloaded, err := testCommand.reloadSealsOnSigHup(ctx, testCore, &testConfig)
+	require.NoError(t, err)
+	require.False(t, reloaded, "reloadSeals does not support Shamir seals")
+
+	testConfig = server.Config{SharedConfig: &configutil.SharedConfig{Seals: []*configutil.KMS{{Disabled: true}}}}
+	reloaded, err = testCommand.reloadSealsOnSigHup(ctx, testCore, &testConfig)
+	require.NoError(t, err)
+	require.False(t, reloaded, "reloadSeals does not support Shamir seals")
 }

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import Component from '@ember/component';
@@ -27,6 +27,9 @@ export const removeFromList = (list, itemToRemove) => {
   return newList.uniq();
 };
 
+/**
+ * @type Class
+ */
 export default Component.extend(FocusOnInsertMixin, {
   store: service(),
   flashMessages: service(),

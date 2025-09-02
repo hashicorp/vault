@@ -9,7 +9,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -17,7 +16,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
@@ -29,39 +27,40 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
-	raftlib "github.com/hashicorp/raft"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
-	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
-	"github.com/mitchellh/go-testing-interface"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/net/http2"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -103,45 +102,61 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 )
 
 // TestCore returns a pure in-memory, uninitialized core for testing.
-func TestCore(t testing.T) *Core {
+func TestCore(t testing.TB) *Core {
 	return TestCoreWithSeal(t, nil, false)
 }
 
 // TestCoreRaw returns a pure in-memory, uninitialized core for testing. The raw
 // storage endpoints are enabled with this core.
-func TestCoreRaw(t testing.T) *Core {
+func TestCoreRaw(t testing.TB) *Core {
 	return TestCoreWithSeal(t, nil, true)
 }
 
 // TestCoreNewSeal returns a pure in-memory, uninitialized core with
 // the new seal configuration.
-func TestCoreNewSeal(t testing.T) *Core {
+func TestCoreNewSeal(t testing.TB) *Core {
 	seal := NewTestSeal(t, nil)
 	return TestCoreWithSeal(t, seal, false)
 }
 
 // TestCoreWithConfig returns a pure in-memory, uninitialized core with the
 // specified core configurations overridden for testing.
-func TestCoreWithConfig(t testing.T, conf *CoreConfig) *Core {
+func TestCoreWithConfig(t testing.TB, conf *CoreConfig) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
 
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
-func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
+func TestCoreWithSeal(t testing.TB, testSeal Seal, enableRaw bool) *Core {
 	conf := &CoreConfig{
 		Seal:            testSeal,
 		EnableUI:        false,
 		EnableRaw:       enableRaw,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
+			audit.TypeFile:   audit.NewFileBackend,
+			audit.TypeSocket: audit.NewSocketBackend,
+			audit.TypeSyslog: audit.NewSyslogBackend,
 		},
 	}
 	return TestCoreWithSealAndUI(t, conf)
 }
 
-func TestCoreWithCustomResponseHeaderAndUI(t testing.T, CustomResponseHeaders map[string]map[string]string, enableUI bool) (*Core, [][]byte, string) {
+func TestCoreWithDeadlockDetection(t testing.TB, testSeal Seal, enableRaw bool) *Core {
+	conf := &CoreConfig{
+		Seal:            testSeal,
+		EnableUI:        false,
+		EnableRaw:       enableRaw,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"file": audit.NewFileBackend,
+		},
+		DetectDeadlocks: "expiration,quotas,statelock,barrier",
+	}
+	return TestCoreWithSealAndUI(t, conf)
+}
+
+func TestCoreWithCustomResponseHeaderAndUI(t testing.TB, CustomResponseHeaders map[string]map[string]string, enableUI bool) (*Core, [][]byte, string) {
 	confRaw := &server.Config{
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
@@ -164,7 +179,7 @@ func TestCoreWithCustomResponseHeaderAndUI(t testing.T, CustomResponseHeaders ma
 	return testCoreUnsealed(t, core)
 }
 
-func TestCoreUI(t testing.T, enableUI bool) *Core {
+func TestCoreUI(t testing.TB, enableUI bool) *Core {
 	conf := &CoreConfig{
 		EnableUI:        enableUI,
 		EnableRaw:       true,
@@ -173,7 +188,7 @@ func TestCoreUI(t testing.T, enableUI bool) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
 
-func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
+func TestCoreWithSealAndUI(t testing.TB, opts *CoreConfig) *Core {
 	c := TestCoreWithSealAndUINoCleanup(t, opts)
 
 	t.Cleanup(func() {
@@ -193,7 +208,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	return c
 }
 
-func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
+func TestCoreWithSealAndUINoCleanup(t testing.TB, opts *CoreConfig) *Core {
 	logger := corehelpers.NewTestLogger(t)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
@@ -204,8 +219,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 
 	// Start off with base test core config
 	conf := testCoreConfig(t, errInjector, logger)
-
-	corehelpers.RegisterSubloggerAdder(logger, conf)
 
 	// Override config values with ones that gets passed in
 	conf.EnableUI = opts.EnableUI
@@ -223,9 +236,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = opts.Experiments
-	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
-	conf.AllLoggers = logger.AllLoggers
 	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
 	if opts.Logger != nil {
@@ -252,6 +263,11 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	if opts.NumRollbackWorkers != 0 {
 		conf.NumRollbackWorkers = opts.NumRollbackWorkers
 	}
+	if conf.RawConfig != nil {
+		if conf.RawConfig.Storage != nil {
+			conf.StorageType = conf.RawConfig.Storage.Type
+		}
+	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
 	testApplyEntBaseConfig(conf, opts)
@@ -261,15 +277,13 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Switch the SubloggerHook over to core
-	corehelpers.RegisterSubloggerAdder(logger, c)
 	return c
 }
 
-func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {
+func testCoreConfig(t testing.TB, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {
 	t.Helper()
 	noopAudits := map[string]audit.Factory{
-		"noop": corehelpers.NoopAuditFactory(nil),
+		"noop": audit.NoopAuditFactory(nil),
 	}
 
 	noopBackends := make(map[string]logical.Factory)
@@ -296,7 +310,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 		logicalBackends[backendName] = backendFactory
 	}
 
-	logicalBackends["kv"] = LeasedPassthroughBackendFactory
+	logicalBackends["kv"] = kv.Factory
 	for backendName, backendFactory := range testLogicalBackends {
 		logicalBackends[backendName] = backendFactory
 	}
@@ -317,13 +331,13 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 
 // TestCoreInit initializes the core with a single key, and returns
 // the key that must be used to unseal the core and a root token.
-func TestCoreInit(t testing.T, core *Core) ([][]byte, string) {
+func TestCoreInit(t testing.TB, core *Core) ([][]byte, string) {
 	t.Helper()
 	secretShares, _, root := TestCoreInitClusterWrapperSetup(t, core, nil)
 	return secretShares, root
 }
 
-func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handler) ([][]byte, [][]byte, string) {
+func TestCoreInitClusterWrapperSetup(t testing.TB, core *Core, handler http.Handler) ([][]byte, [][]byte, string) {
 	t.Helper()
 	core.SetClusterHandler(handler)
 
@@ -372,7 +386,7 @@ func TestCoreSeal(core *Core) error {
 
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
-func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
+func TestCoreUnsealed(t testing.TB) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCore(t)
 	return testCoreUnsealed(t, core)
@@ -385,7 +399,7 @@ func SetupMetrics(conf *CoreConfig) *metrics.InmemSink {
 	return inmemSink
 }
 
-func TestCoreUnsealedWithMetrics(t testing.T) (*Core, [][]byte, string, *metrics.InmemSink) {
+func TestCoreUnsealedWithMetrics(t testing.TB) (*Core, [][]byte, string, *metrics.InmemSink) {
 	t.Helper()
 	conf := &CoreConfig{
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
@@ -395,9 +409,17 @@ func TestCoreUnsealedWithMetrics(t testing.T) (*Core, [][]byte, string, *metrics
 	return core, keys, root, sink
 }
 
+func TestCoreUnsealedWithMetricsAndConfig(t testing.TB, conf *CoreConfig) (*Core, [][]byte, string, *metrics.InmemSink) {
+	t.Helper()
+	conf.BuiltinRegistry = corehelpers.NewMockBuiltinRegistry()
+	sink := SetupMetrics(conf)
+	core, keys, root := TestCoreUnsealedWithConfig(t, conf)
+	return core, keys, root, sink
+}
+
 // TestCoreUnsealedRaw returns a pure in-memory core that is already
 // initialized, unsealed, and with raw endpoints enabled.
-func TestCoreUnsealedRaw(t testing.T) (*Core, [][]byte, string) {
+func TestCoreUnsealedRaw(t testing.TB) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCoreRaw(t)
 	return testCoreUnsealed(t, core)
@@ -405,21 +427,21 @@ func TestCoreUnsealedRaw(t testing.T) (*Core, [][]byte, string) {
 
 // TestCoreUnsealedWithConfig returns a pure in-memory core that is already
 // initialized, unsealed, with the any provided core config values overridden.
-func TestCoreUnsealedWithConfig(t testing.T, conf *CoreConfig) (*Core, [][]byte, string) {
+func TestCoreUnsealedWithConfig(t testing.TB, conf *CoreConfig) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCoreWithConfig(t, conf)
 	return testCoreUnsealed(t, core)
 }
 
-func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
+func testCoreUnsealed(t testing.TB, core *Core) (*Core, [][]byte, string) {
 	t.Helper()
 	token, keys := TestInitUnsealCore(t, core)
 
-	testCoreAddSecretMount(t, core, token)
+	testCoreAddSecretMount(t, core, token, "1")
 	return core, keys, token
 }
 
-func TestInitUnsealCore(t testing.T, core *Core) (string, [][]byte) {
+func TestInitUnsealCore(t testing.TB, core *Core) (string, [][]byte) {
 	keys, token := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -433,7 +455,7 @@ func TestInitUnsealCore(t testing.T, core *Core) (string, [][]byte) {
 	return token, keys
 }
 
-func testCoreAddSecretMount(t testing.T, core *Core, token string) {
+func testCoreAddSecretMount(t testing.TB, core *Core, token, kvVersion string) {
 	kvReq := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: token,
@@ -443,7 +465,7 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 			"path":        "secret/",
 			"description": "key/value secret storage",
 			"options": map[string]string{
-				"version": "1",
+				"version": kvVersion,
 			},
 		},
 	}
@@ -456,7 +478,7 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 	}
 }
 
-func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
+func TestCoreUnsealedBackend(t testing.TB, backend physical.Backend) (*Core, [][]byte, string) {
 	t.Helper()
 	logger := corehelpers.NewTestLogger(t)
 	conf := testCoreConfig(t, backend, logger)
@@ -506,7 +528,7 @@ func TestKeyCopy(key []byte) []byte {
 	return result
 }
 
-func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView {
+func TestDynamicSystemView(c *Core, ns *namespace.Namespace) logical.SystemView {
 	me := &MountEntry{
 		Config: MountConfig{
 			DefaultLeaseTTL: 24 * time.Hour,
@@ -521,139 +543,14 @@ func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView 
 		me.namespace = ns
 	}
 
-	return &dynamicSystemView{c, me, c.perfStandby}
-}
-
-// TestAddTestPlugin registers the testFunc as part of the plugin command to the
-// plugin catalog. If provided, uses tmpDir as the plugin directory.
-// NB: The test func you pass in MUST be in the same package as the parent test,
-// or the test func won't be compiled into the test binary being run and the output
-// will be something like:
-// stderr (ignored by go-plugin): "testing: warning: no tests to run"
-// stdout: "PASS"
-func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string, tempDir string) {
-	file, err := os.Open(os.Args[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-
-	dirPath := filepath.Dir(os.Args[0])
-	fileName := filepath.Base(os.Args[0])
-
-	if tempDir != "" {
-		fi, err := file.Stat()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Copy over the file to the temp dir
-		dst := filepath.Join(tempDir, fileName)
-
-		// delete the file first to avoid notary failures in macOS
-		_ = os.Remove(dst) // ignore error
-		out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer out.Close()
-
-		if _, err = io.Copy(out, file); err != nil {
-			t.Fatal(err)
-		}
-		err = out.Sync()
-		if err != nil {
-			t.Fatal(err)
-		}
-		// Ensure that the file is closed and written. This seems to be
-		// necessary on Linux systems.
-		out.Close()
-
-		dirPath = tempDir
-	}
-
-	// Determine plugin directory full path, evaluating potential symlink path
-	fullPath, err := filepath.EvalSymlinks(dirPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	reader, err := os.Open(filepath.Join(fullPath, fileName))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer reader.Close()
-
-	// Find out the sha256
-	hash := sha256.New()
-
-	_, err = io.Copy(hash, reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sum := hash.Sum(nil)
-
-	// Set core's plugin directory and plugin catalog directory
-	c.pluginDirectory = fullPath
-	c.pluginCatalog.directory = fullPath
-
-	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
-		Name:    name,
-		Type:    pluginType,
-		Version: version,
-		Command: fileName,
-		Args:    args,
-		Env:     env,
-		Sha256:  sum,
-	})
-	if err != nil {
-		t.Fatal(err)
+	return &extendedSystemViewImpl{
+		dynamicSystemView{c, me, c.perfStandby},
 	}
 }
 
-// TestRunTestPlugin runs the testFunc which has already been registered to the
-// plugin catalog and returns a pluginClient. This can be called after calling
-// TestAddTestPlugin.
-func TestRunTestPlugin(t testing.T, c *Core, pluginType consts.PluginType, pluginName string) *pluginClient {
+func TestAddTestPlugin(t testing.TB, core *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string) {
 	t.Helper()
-	config := TestPluginClientConfig(c, pluginType, pluginName)
-	client, err := c.pluginCatalog.NewPluginClient(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return client
-}
-
-func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName string) pluginutil.PluginClientConfig {
-	dsv := TestDynamicSystemView(c, nil)
-	switch pluginType {
-	case consts.PluginTypeCredential, consts.PluginTypeSecrets:
-		return pluginutil.PluginClientConfig{
-			Name:            pluginName,
-			PluginType:      pluginType,
-			PluginSets:      backendplugin.PluginSet,
-			HandshakeConfig: backendplugin.HandshakeConfig,
-			Logger:          log.NewNullLogger(),
-			AutoMTLS:        true,
-			IsMetadataMode:  false,
-			Wrapper:         dsv,
-		}
-	case consts.PluginTypeDatabase:
-		return pluginutil.PluginClientConfig{
-			Name:            pluginName,
-			PluginType:      pluginType,
-			PluginSets:      v5.PluginSets,
-			HandshakeConfig: v5.HandshakeConfig,
-			Logger:          log.NewNullLogger(),
-			AutoMTLS:        true,
-			IsMetadataMode:  false,
-			Wrapper:         dsv,
-		}
-	}
-	return pluginutil.PluginClientConfig{}
+	plugincatalog.TestAddTestPlugin(t, core.pluginCatalog, name, pluginType, version, testFunc, env)
 }
 
 var (
@@ -760,14 +657,32 @@ func GenerateRandBytes(length int) ([]byte, error) {
 	return buf, nil
 }
 
-func TestWaitActive(t testing.T, core *Core) {
+func TestWaitPerfStandby(t testing.TB, core *Core) {
+	t.Helper()
+	start := time.Now()
+	var perfStandby bool
+	for time.Now().Sub(start) < 30*time.Second {
+		perfStandby = core.PerfStandby()
+
+		if perfStandby {
+			break
+		}
+	}
+	if !perfStandby {
+		err := errors.New("core not in perf standby mode")
+		t.Fatal(err)
+	}
+}
+
+func TestWaitActive(t testing.TB, core *Core) {
 	t.Helper()
 	if err := TestWaitActiveWithError(core); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestWaitActiveForwardingReady(t testing.T, core *Core) {
+func TestWaitActiveForwardingReady(t testing.TB, core *Core) {
+	t.Helper()
 	TestWaitActive(t, core)
 
 	deadline := time.Now().Add(2 * time.Second)
@@ -820,7 +735,6 @@ type TestCluster struct {
 	SetupFunc          func()
 
 	cleanupFuncs      []func()
-	base              *CoreConfig
 	LicensePublicKey  ed25519.PublicKey
 	LicensePrivateKey ed25519.PrivateKey
 	opts              *TestClusterOptions
@@ -828,12 +742,15 @@ type TestCluster struct {
 
 func (c *TestCluster) SetRootToken(token string) {
 	c.RootToken = token
+	for _, c := range c.Cores {
+		c.Client.SetToken(token)
+	}
 }
 
 func (c *TestCluster) Start() {
 }
 
-func (c *TestCluster) start(t testing.T) {
+func (c *TestCluster) start(t testing.TB) {
 	t.Helper()
 	for i, core := range c.Cores {
 		if core.Server != nil {
@@ -855,7 +772,7 @@ func (c *TestCluster) start(t testing.T) {
 
 	activeCore := -1
 WAITACTIVE:
-	for i := 0; i < 60; i++ {
+	for i := 0; i < 600; i++ {
 		for i, core := range c.Cores {
 			if standby, _ := core.Core.Standby(); !standby {
 				activeCore = i
@@ -863,7 +780,7 @@ WAITACTIVE:
 			}
 		}
 
-		time.Sleep(time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 	if activeCore == -1 {
 		t.Fatalf("no core became active")
@@ -897,14 +814,14 @@ WAITACTIVE:
 }
 
 // UnsealCores uses the cluster barrier keys to unseal the test cluster cores
-func (c *TestCluster) UnsealCores(t testing.T) {
+func (c *TestCluster) UnsealCores(t testing.TB) {
 	t.Helper()
-	if err := c.UnsealCoresWithError(false); err != nil {
+	if err := c.UnsealCoresWithError(t, false); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
+func (c *TestCluster) UnsealCoresWithError(t testing.TB, useStoredKeys bool) error {
 	unseal := func(core *Core) error {
 		for _, key := range c.BarrierKeys {
 			if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
@@ -941,24 +858,26 @@ func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
 	}
 
 	// Let them come fully up to standby
-	time.Sleep(2 * time.Second)
+	corehelpers.RetryUntil(t, 2*time.Second, func() error {
+		// Ensure cluster connection info is populated.
+		// Other cores should not come up as leaders.
+		for i := 1; i < len(c.Cores); i++ {
+			isLeader, _, _, err := c.Cores[i].Leader()
+			if err != nil {
+				return err
+			}
+			if isLeader {
+				return fmt.Errorf("core[%d] should not be leader", i)
+			}
+		}
 
-	// Ensure cluster connection info is populated.
-	// Other cores should not come up as leaders.
-	for i := 1; i < len(c.Cores); i++ {
-		isLeader, _, _, err := c.Cores[i].Leader()
-		if err != nil {
-			return err
-		}
-		if isLeader {
-			return fmt.Errorf("core[%d] should not be leader", i)
-		}
-	}
+		return nil
+	})
 
 	return nil
 }
 
-func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
+func (c *TestCluster) UnsealCore(t testing.TB, core *TestClusterCore) {
 	err := c.AttemptUnsealCore(core)
 	if err != nil {
 		t.Fatal(err)
@@ -980,21 +899,21 @@ func (c *TestCluster) AttemptUnsealCore(core *TestClusterCore) error {
 	return nil
 }
 
-func (c *TestCluster) UnsealCoreWithStoredKeys(t testing.T, core *TestClusterCore) {
+func (c *TestCluster) UnsealCoreWithStoredKeys(t testing.TB, core *TestClusterCore) {
 	t.Helper()
 	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func (c *TestCluster) EnsureCoresSealed(t testing.T) {
+func (c *TestCluster) EnsureCoresSealed(t testing.TB) {
 	t.Helper()
 	if err := c.ensureCoresSealed(); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func (c *TestClusterCore) Seal(t testing.T) {
+func (c *TestClusterCore) Seal(t testing.TB) {
 	t.Helper()
 	if err := c.Core.sealInternal(); err != nil {
 		t.Fatal(err)
@@ -1063,6 +982,14 @@ func (c *TestClusterCore) ClusterListener() *cluster.Listener {
 	return c.getClusterListener()
 }
 
+// NetworkLayer returns the network layer for the cluster core. This can be used
+// in conjunction with the cluster.InmemLayer to disconnect specific nodes from
+// the cluster when we need to simulate abrupt node failure or a network
+// partition in NewTestCluster tests.
+func (c *TestClusterCore) NetworkLayer() cluster.NetworkLayer {
+	return c.Core.clusterNetworkLayer
+}
+
 func (c *TestCluster) Cleanup() {
 	c.Logger.Info("cleaning up vault cluster")
 	if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {
@@ -1091,8 +1018,6 @@ func (c *TestCluster) Cleanup() {
 		os.RemoveAll(c.TempDir)
 	}
 
-	// Give time to actually shut down/clean up before the next test
-	time.Sleep(time.Second)
 	if c.CleanupFunc != nil {
 		c.CleanupFunc()
 	}
@@ -1153,6 +1078,12 @@ type PhysicalBackendBundle struct {
 	Backend   physical.Backend
 	HABackend physical.HABackend
 	Cleanup   func()
+	// MutateCoreConfig is invoked when applying the bundle to core config
+	// during core creation.  We do it this way rather than providing the input
+	// directly as part of the CoreConfig passed in to NewTestCluster so that
+	// the same input conf and opts can be used for multiple clusters, but at
+	// the same time can have per-cluster configuration specified by the backend.
+	MutateCoreConfig func(conf *CoreConfig)
 }
 
 type HandlerHandler interface {
@@ -1201,13 +1132,13 @@ type TestClusterOptions struct {
 	// core in cluster will have 0, second 1, etc.
 	// If the backend is shared across the cluster (i.e. is not Raft) then it
 	// should return nil when coreIdx != 0.
-	PhysicalFactory func(t testing.T, coreIdx int, logger log.Logger, conf map[string]interface{}) *PhysicalBackendBundle
+	PhysicalFactory func(t testing.TB, coreIdx int, logger log.Logger, conf map[string]interface{}) *PhysicalBackendBundle
 	// FirstCoreNumber is used to assign a unique number to each core within
 	// a multi-cluster setup.
 	FirstCoreNumber   int
 	RequireClientAuth bool
 	// SetupFunc is called after the cluster is started.
-	SetupFunc      func(t testing.T, c *TestCluster)
+	SetupFunc      func(t testing.TB, c *TestCluster)
 	PR1103Disabled bool
 
 	// ClusterLayers are used to override the default cluster connection layer
@@ -1216,29 +1147,20 @@ type TestClusterOptions struct {
 	// built using the inmem implementation.
 	InmemClusterLayers bool
 
-	// RaftAddressProvider is used to set the raft ServerAddressProvider on
-	// each core.
-	//
-	// If SkipInit is true, then RaftAddressProvider has no effect.
-	// RaftAddressProvider should only be specified if the underlying physical
-	// storage is Raft.
-	RaftAddressProvider raftlib.ServerAddressProvider
-
 	CoreMetricSinkProvider func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper)
 
-	PhysicalFactoryConfig map[string]interface{}
-	LicensePublicKey      ed25519.PublicKey
-	LicensePrivateKey     ed25519.PrivateKey
+	PhysicalFactoryConfig        map[string]interface{}
+	PerNodePhysicalFactoryConfig map[int]map[string]interface{}
 
-	// this stores the vault version that should be used for each core config
-	VersionMap             map[int]string
-	RedundancyZoneMap      map[int]string
+	LicensePublicKey  ed25519.PublicKey
+	LicensePrivateKey ed25519.PrivateKey
+
 	KVVersion              string
 	EffectiveSDKVersionMap map[int]string
 
 	NoDefaultQuotas bool
 
-	Plugins *TestPluginConfig
+	Plugins []*TestPluginConfig
 
 	// if populated, the callback is called for every request
 	RequestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
@@ -1276,8 +1198,15 @@ type certInfo struct {
 // logger and will be the basis for each core's logger.  If no opts.Logger is
 // given, one will be generated based on t.Name() for the cluster logger, and if
 // no base.Logger is given will also be used as the basis for each core's logger.
-func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
+func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
 	var err error
+
+	if opts == nil {
+		opts = &TestClusterOptions{}
+	}
+	if opts.DefaultHandlerProperties.ListenerConfig == nil {
+		opts.DefaultHandlerProperties.ListenerConfig = &configutil.Listener{}
+	}
 
 	var numCores int
 	if opts == nil || opts.NumCores == 0 {
@@ -1293,10 +1222,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	baseAddr, certIPs := GenerateListenerAddr(t, opts, certIPs)
 	var testCluster TestCluster
-	testCluster.base = base
 
 	switch {
-	case opts != nil && opts.Logger != nil:
+	case opts != nil && opts.Logger != nil && !reflect.ValueOf(opts.Logger).IsNil():
 		testCluster.Logger = opts.Logger
 	default:
 		testCluster.Logger = corehelpers.NewTestLogger(t)
@@ -1310,7 +1238,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		testCluster.TempDir = opts.TempDir
 	} else {
-		tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
+		tempDir, err := os.MkdirTemp("", "vault-test-cluster-")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1522,18 +1450,21 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	coreConfig := &CoreConfig{
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
-		AuditBackends:      make(map[string]audit.Factory),
-		RedirectAddr:       fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
-		ClusterAddr:        "https://127.0.0.1:0",
-		DisableMlock:       true,
-		EnableUI:           true,
-		EnableRaw:          true,
-		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			audit.TypeFile:   audit.NewFileBackend,
+			audit.TypeSocket: audit.NewSocketBackend,
+			audit.TypeSyslog: audit.NewSyslogBackend,
+		},
+		RedirectAddr:    fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
+		ClusterAddr:     "https://127.0.0.1:0",
+		DisableMlock:    true,
+		EnableUI:        true,
+		EnableRaw:       true,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 	}
 
-	corehelpers.RegisterSubloggerAdder(testCluster.Logger, coreConfig)
-
 	if base != nil {
+		coreConfig.ClusterHeartbeatInterval = base.ClusterHeartbeatInterval
 		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
 		coreConfig.DisableCache = base.DisableCache
@@ -1542,6 +1473,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.MaxLeaseTTL = base.MaxLeaseTTL
 		coreConfig.CacheSize = base.CacheSize
 		coreConfig.PluginDirectory = base.PluginDirectory
+		coreConfig.PluginTmpdir = base.PluginTmpdir
 		coreConfig.Seal = base.Seal
 		coreConfig.UnwrapSeal = base.UnwrapSeal
 		coreConfig.DevToken = base.DevToken
@@ -1616,6 +1548,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.RollbackPeriod = base.RollbackPeriod
 		coreConfig.PendingRemovalMountsAllowed = base.PendingRemovalMountsAllowed
 		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
+		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
+		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
+		coreConfig.ObservationSystemConfig = base.ObservationSystemConfig
+
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -1631,15 +1567,15 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.ClusterHeartbeatInterval = 2 * time.Second
 	}
 
+	if coreConfig.PeriodicLeaderRefreshInterval == 0 {
+		// Set this lower so that perf standby nodes become stable more quickly
+		coreConfig.PeriodicLeaderRefreshInterval = 250 * time.Millisecond
+	}
+
 	if coreConfig.RawConfig == nil {
 		c := new(server.Config)
 		c.SharedConfig = &configutil.SharedConfig{LogFormat: logging.UnspecifiedFormat.String()}
 		coreConfig.RawConfig = c
-	}
-
-	addAuditBackend := len(coreConfig.AuditBackends) == 0
-	if addAuditBackend {
-		coreConfig.AuditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
@@ -1676,27 +1612,25 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		opts.ClusterLayers = inmemCluster
 	}
 
-	if opts != nil && opts.Plugins != nil {
-		if opts.Plugins.Container && runtime.GOOS != "linux" {
-			t.Skip("Running plugins in containers is only supported on linux")
-		}
-
-		var pluginDir string
-		var cleanup func(t testing.T)
-
-		if coreConfig.PluginDirectory == "" {
-			pluginDir, cleanup = corehelpers.MakeTestPluginDir(t)
-			coreConfig.PluginDirectory = pluginDir
-			t.Cleanup(func() { cleanup(t) })
-		}
-
+	if opts != nil && len(opts.Plugins) != 0 {
 		var plugins []pluginhelpers.TestPlugin
-		for _, version := range opts.Plugins.Versions {
-			plugin := pluginhelpers.CompilePlugin(t, opts.Plugins.Typ, version, coreConfig.PluginDirectory)
-			if opts.Plugins.Container {
-				plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, coreConfig.PluginDirectory)
+		for _, pluginType := range opts.Plugins {
+			if pluginType.Container && runtime.GOOS != "linux" {
+				t.Skip("Running plugins in containers is only supported on linux")
 			}
-			plugins = append(plugins, plugin)
+
+			if coreConfig.PluginDirectory == "" {
+				pluginDir := corehelpers.MakeTestPluginDir(t)
+				coreConfig.PluginDirectory = pluginDir
+			}
+
+			for _, version := range pluginType.Versions {
+				plugin := pluginhelpers.CompilePlugin(t, pluginType.Typ, version, coreConfig.PluginDirectory)
+				if pluginType.Container {
+					plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, coreConfig.PluginDirectory)
+				}
+				plugins = append(plugins, plugin)
+			}
 		}
 		testCluster.Plugins = plugins
 	}
@@ -1708,8 +1642,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	for i := 0; i < numCores; i++ {
 		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], testCluster.LicensePublicKey)
-
-		corehelpers.RegisterSubloggerAdder(testCluster.Logger, c)
 
 		testCluster.cleanupFuncs = append(testCluster.cleanupFuncs, cleanup)
 		cores = append(cores, c)
@@ -1761,7 +1693,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	// Initialize cores
 	if opts == nil || !opts.SkipInit {
-		testCluster.initCores(t, opts, addAuditBackend)
+		testCluster.initCores(t, opts)
 	}
 
 	// Assign clients
@@ -1779,13 +1711,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		for _, c := range testCluster.cleanupFuncs {
 			c()
 		}
-		if l, ok := testCluster.Logger.(*corehelpers.TestLogger); ok {
-			if t.Failed() {
-				_ = l.File.Close()
-			} else {
-				_ = os.Remove(l.Path)
-			}
-		}
 	}
 
 	// Setup
@@ -1799,11 +1724,17 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	testCluster.opts = opts
 	testCluster.start(t)
+
+	if !coreConfig.DisablePerformanceStandby && numCores > 1 && constants.IsEnterprise {
+		// Sleep so that perf standbys have the opportunity to run periodicLeaderRefresh
+		// once, otherwise when they re-initialize themselves they can yield 500s.
+		time.Sleep(coreConfig.PeriodicLeaderRefreshInterval)
+	}
 	return &testCluster
 }
 
 // StopCore performs an orderly shutdown of a core.
-func (cluster *TestCluster) StopCore(t testing.T, idx int) {
+func (cluster *TestCluster) StopCore(t testing.TB, idx int) {
 	t.Helper()
 
 	if idx < 0 || idx > len(cluster.Cores) {
@@ -1821,13 +1752,12 @@ func (cluster *TestCluster) StopCore(t testing.T, idx int) {
 	cluster.cleanupFuncs[idx]()
 }
 
-func GenerateListenerAddr(t testing.T, opts *TestClusterOptions, certIPs []net.IP) (*net.TCPAddr, []net.IP) {
+func GenerateListenerAddr(t testing.TB, opts *TestClusterOptions, certIPs []net.IP) (*net.TCPAddr, []net.IP) {
 	var baseAddr *net.TCPAddr
 	var err error
 
 	if opts != nil && opts.BaseListenAddress != "" {
 		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
-
 		if err != nil {
 			t.Fatal("could not parse given base IP")
 		}
@@ -1844,7 +1774,7 @@ func GenerateListenerAddr(t testing.T, opts *TestClusterOptions, certIPs []net.I
 
 // StartCore restarts a TestClusterCore that was stopped, by replacing the
 // underlying Core.
-func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOptions) {
+func (cluster *TestCluster) StartCore(t testing.TB, idx int, opts *TestClusterOptions) {
 	t.Helper()
 
 	if idx < 0 || idx > len(cluster.Cores) {
@@ -1901,7 +1831,7 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	tcc.Logger().Info("restarted test core", "core", idx)
 }
 
-func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []*TestListener, pubKey ed25519.PublicKey) (func(), *Core, CoreConfig, http.Handler) {
+func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []*TestListener, pubKey ed25519.PublicKey) (func(), *Core, CoreConfig, http.Handler) {
 	localConfig := *coreConfig
 	cleanupFunc := func() {}
 	var handler http.Handler
@@ -1939,11 +1869,10 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		if pfc == nil {
 			pfc = make(map[string]interface{})
 		}
-		if len(opts.VersionMap) > 0 {
-			pfc["autopilot_upgrade_version"] = opts.VersionMap[idx]
-		}
-		if len(opts.RedundancyZoneMap) > 0 {
-			pfc["autopilot_redundancy_zone"] = opts.RedundancyZoneMap[idx]
+		if opts.PerNodePhysicalFactoryConfig != nil {
+			for k, v := range opts.PerNodePhysicalFactoryConfig[idx] {
+				pfc[k] = v
+			}
 		}
 		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger, pfc)
 		switch {
@@ -1972,12 +1901,19 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 			if physBundle.Cleanup != nil {
 				cleanupFunc = physBundle.Cleanup
 			}
+
+			if physBundle.MutateCoreConfig != nil {
+				physBundle.MutateCoreConfig(&localConfig)
+			}
 		}
 	}
 
 	if opts != nil && opts.ClusterLayers != nil {
 		localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[idx]
 		localConfig.ClusterAddr = "https://" + localConfig.ClusterNetworkLayer.Listeners()[0].Addr().String()
+	}
+	if opts != nil && opts.BaseClusterListenPort != 0 {
+		localConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", opts.BaseClusterListenPort+idx)
 	}
 
 	switch {
@@ -2033,7 +1969,7 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 }
 
 func (testCluster *TestCluster) setupClusterListener(
-	t testing.T, idx int, core *Core, coreConfig *CoreConfig,
+	t testing.TB, idx int, core *Core, coreConfig *CoreConfig,
 	opts *TestClusterOptions, listeners []*TestListener, handler http.Handler,
 ) {
 	if coreConfig.ClusterAddr == "" {
@@ -2068,11 +2004,9 @@ func (testCluster *TestCluster) setupClusterListener(
 	core.SetClusterHandler(handler)
 }
 
-func (tc *TestCluster) InitCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
-	tc.initCores(t, opts, addAuditBackend)
-}
-
-func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
+// initCores attempts to initialize a core for a test cluster using the supplied
+// options.
+func (tc *TestCluster) initCores(t testing.TB, opts *TestClusterOptions) {
 	leader := tc.Cores[0]
 
 	bKeys, rKeys, root := TestCoreInitClusterWrapperSetup(t, leader.Core, leader.Handler)
@@ -2131,34 +2065,6 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 
 	TestWaitActive(t, leader.Core)
 
-	kvVersion := "1"
-	if opts != nil {
-		kvVersion = opts.KVVersion
-	}
-
-	// Existing tests rely on this; we can make a toggle to disable it
-	// later if we want
-	kvReq := &logical.Request{
-		Operation:   logical.UpdateOperation,
-		ClientToken: tc.RootToken,
-		Path:        "sys/mounts/secret",
-		Data: map[string]interface{}{
-			"type":        "kv",
-			"path":        "secret/",
-			"description": "key/value secret storage",
-			"options": map[string]string{
-				"version": kvVersion,
-			},
-		},
-	}
-	resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), kvReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.IsError() {
-		t.Fatal(err)
-	}
-
 	cfg, err := leader.Core.seal.BarrierConfig(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -2183,53 +2089,41 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		}
 
 		// Let them come fully up to standby
-		time.Sleep(2 * time.Second)
+		corehelpers.RetryUntil(t, 2*time.Second, func() error {
+			// Ensure cluster connection info is populated.
+			// Other cores should not come up as leaders.
+			for i := 1; i < numCores; i++ {
+				isLeader, _, _, err := tc.Cores[i].Core.Leader()
+				if err != nil {
+					return err
+				}
+				if isLeader {
+					return fmt.Errorf("core[%d] should not be leader", i)
+				}
+			}
 
-		// Ensure cluster connection info is populated.
-		// Other cores should not come up as leaders.
-		for i := 1; i < numCores; i++ {
-			isLeader, _, _, err := tc.Cores[i].Core.Leader()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if isLeader {
-				t.Fatalf("core[%d] should not be leader", i)
-			}
-		}
+			return nil
+		})
 	}
 
-	//
 	// Set test cluster core(s) and test cluster
-	//
 	cluster, err := leader.Core.Cluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	tc.ID = cluster.ID
 
-	if addAuditBackend {
-		// Enable auditing.
-		auditReq := &logical.Request{
-			Operation:   logical.UpdateOperation,
-			ClientToken: tc.RootToken,
-			Path:        "sys/audit/noop",
-			Data: map[string]interface{}{
-				"type": "noop",
-			},
-		}
-		resp, err = leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if resp.IsError() {
-			t.Fatal(err)
-		}
+	// Configure a secret engine (kv)
+	kvVersion := "1"
+	if opts != nil {
+		kvVersion = opts.KVVersion
 	}
+
+	testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
 }
 
 func (testCluster *TestCluster) getAPIClient(
-	t testing.T, opts *TestClusterOptions,
+	t testing.TB, opts *TestClusterOptions,
 	port int, tlsConfig *tls.Config,
 ) *api.Client {
 	transport := cleanhttp.DefaultPooledTransport()
@@ -2335,3 +2229,151 @@ var (
 	_ testcluster.VaultCluster     = &TestCluster{}
 	_ testcluster.VaultClusterNode = &TestClusterCore{}
 )
+
+func TestUserpassMount(c *Core, local bool) (*MountEntry, error) {
+	return TestUserpassMountContext(namespace.RootContext(nil), c, local)
+}
+
+func TestUserpassMountContext(ctx context.Context, c *Core, local bool) (*MountEntry, error) {
+	name := "userpass"
+	if local {
+		name += "-local"
+	}
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        name + "/",
+		Type:        "userpass",
+		Description: name,
+		// Don't specify an accessor so we use a random one otherwise we will cause
+		// horrible issues when we try to create a new mount on a different
+		// namespace but they have the same accessor!
+		Local: local,
+	}
+	if err := c.enableCredential(ctx, userpassMe); err != nil {
+		return nil, err
+	}
+	return userpassMe, nil
+}
+
+// TestCreateDuplicateEntityAliasesInStorage creates n entities with a duplicate alias in storage
+// This should only be used in testing
+func TestCreateDuplicateEntityAliasesInStorage(ctx context.Context, c *Core, n int) ([]string, error) {
+	userpassMe, err := TestUserpassMount(c, false)
+	if err != nil {
+		return nil, err
+	}
+
+	var entityIDs []string
+	for i := 0; i < n; i++ {
+		entityID := fmt.Sprintf("e%d", i)
+		entityIDs = append(entityIDs, entityID)
+		a := &identity.Alias{
+			ID:            entityID,
+			CanonicalID:   entityID,
+			MountType:     "userpass",
+			MountAccessor: userpassMe.Accessor,
+			Name:          "alias-dup",
+		}
+		e := &identity.Entity{
+			ID:   entityID,
+			Name: "entity-dup",
+			Aliases: []*identity.Alias{
+				a,
+			},
+			NamespaceID: namespace.RootNamespaceID,
+			BucketKey:   c.identityStore.entityPacker.BucketKey(entityID),
+		}
+		if err := TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e); err != nil {
+			return nil, err
+		}
+	}
+
+	return entityIDs, nil
+}
+
+// TestHelperWriteToStoragePacker takes care of boiler place to insert into a
+// storage packer. Just provide the raw protobuf object e.g. &identity.Entity{}
+// and it is wrapped and inserted for you. You still need to populate BucketKey
+// in the object if applicable before passing it.
+func TestHelperWriteToStoragePacker(ctx context.Context, p *storagepacker.StoragePacker, id string, m protoreflect.ProtoMessage) error {
+	a, err := anypb.New(m)
+	if err != nil {
+		return err
+	}
+	i := &storagepacker.Item{
+		ID:      id,
+		Message: a,
+	}
+	return p.PutItem(context.Background(), i)
+}
+
+// TestCreateStorageGroup creates a group in storage only to bypass checks that the entities exist in memdb
+// Should only be used in testing
+func TestCreateStorageGroup(ctx context.Context, c *Core, entityIDs []string) error {
+	// generate random int
+	i := mathrand.Intn(100)
+
+	key := fmt.Sprintf("testgroupid-%d", i)
+
+	group := &identity.Group{
+		ID:              key,
+		Name:            "testgroupname",
+		Policies:        []string{"testgrouppolicy"},
+		MemberEntityIDs: entityIDs,
+		BucketKey:       c.identityStore.groupPacker.BucketKey(key),
+	}
+	groupAsAny, err := anypb.New(group)
+	if err != nil {
+		return err
+	}
+	item := &storagepacker.Item{
+		ID:      group.ID,
+		Message: groupAsAny,
+	}
+	err = c.identityStore.groupPacker.PutItem(ctx, item)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Mock HABackend is a non-functional HABackend for testing purposes
+type MockHABackend struct {
+	physical.HABackend
+	physical.Backend
+}
+
+func (m *MockHABackend) HAEnabled() bool {
+	return true
+}
+
+// MockRemovableNodeHABackend is a barely functional RemovableNodeHABackend for testing purposes.
+// It has a functional IsRemoved method and an exported Removed field so that the desired state can be easily set.
+type MockRemovableNodeHABackend struct {
+	physical.RemovableNodeHABackend
+	physical.Backend
+	Removed bool
+}
+
+func (m *MockRemovableNodeHABackend) HAEnabled() bool {
+	return true
+}
+
+func (m *MockRemovableNodeHABackend) IsRemoved() bool {
+	return m.Removed
+}
+
+func TestCoreWithMockRemovableNodeHABackend(t *testing.T, removed bool) (*Core, error) {
+	t.Helper()
+	logger := corehelpers.NewTestLogger(t)
+	inmha, err := physInmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := testCoreConfig(t, inmha, logger)
+	mockHABackend := &MockRemovableNodeHABackend{Removed: removed}
+	conf.HAPhysical = mockHABackend
+	conf.RedirectAddr = "http://127.0.0.1:8200"
+
+	return NewCore(conf)
+}

@@ -5,7 +5,7 @@
 
 import Component from '@ember/component';
 import { set, computed } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { readOnly } from '@ember/object/computed';
 import { task, timeout } from 'ember-concurrency';
 
@@ -93,8 +93,8 @@ export default Component.extend({
       secretList = result.secret;
       authList = result.auth;
     }
-    var currentSecrets = lastOptions && lastOptions.findBy('groupName', 'Secret Engines');
-    var currentAuths = lastOptions && lastOptions.findBy('groupName', 'Auth Methods');
+    var currentSecrets = lastOptions && lastOptions.find((opt) => opt.groupName === 'Secret Engines');
+    var currentAuths = lastOptions && lastOptions.find((opt) => opt.groupName === 'Auth Methods');
     const formattedNamespaces = namespaces.map((val) => {
       return {
         id: val,

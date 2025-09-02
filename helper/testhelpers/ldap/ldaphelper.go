@@ -4,17 +4,22 @@
 package ldap
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/cap/ldap"
-
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 )
+
+// DefaultVersion is the default version of the container to pull.
+// NOTE: This is currently pinned to a sha instead of "master", see: https://github.com/rroemhild/docker-test-openldap/issues/62
+const DefaultVersion = "sha256:f4d9c5ba97f9662e9aea082b4aa89233994ca6e232abc1952d5d90da7e16b0eb"
 
 func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ldaputil.ConfigEntry) {
 	// note: this image isn't supported on arm64 architecture in CI.
@@ -23,14 +28,16 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		t.Skip("Skipping, as this image is not supported on ARM architectures")
 	}
 
+	logsWriter := bytes.NewBuffer([]byte{})
+
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		// Currently set to "michelvocks" until https://github.com/rroemhild/docker-test-openldap/pull/14
-		// has been merged.
-		ImageRepo:     "docker.mirror.hashicorp.services/michelvocks/docker-test-openldap",
+		ImageRepo:     "ghcr.io/rroemhild/docker-test-openldap",
 		ImageTag:      version,
 		ContainerName: "ldap",
-		Ports:         []string{"389/tcp"},
+		Ports:         []string{"10389/tcp"},
 		// Env:        []string{"LDAP_DEBUG_LEVEL=384"},
+		LogStderr: logsWriter,
+		LogStdout: logsWriter,
 	})
 	if err != nil {
 		t.Fatalf("could not start local LDAP docker container: %s", err)
@@ -47,27 +54,48 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	cfg.RequestTimeout = 60
 	cfg.MaximumPageSize = 1000
 
-	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
-		connURL := fmt.Sprintf("ldap://%s:%d", host, port)
-		cfg.Url = connURL
+	var started bool
 
-		client, err := ldap.NewClient(ctx, ldaputil.ConvertConfig(cfg))
+	ctx, _ := context.WithTimeout(t.Context(), 1*time.Minute)
+	for i := 0; i < 3; i++ {
+		svc, err := runner.StartService(ctx, func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+			connURL := fmt.Sprintf("ldap://%s:%d", host, port)
+			cfg.Url = connURL
+
+			client, err := ldap.NewClient(ctx, ldaputil.ConvertConfig(cfg))
+			if err != nil {
+				return nil, err
+			}
+
+			defer client.Close(ctx)
+
+			_, err = client.Authenticate(ctx, "Philip J. Fry", "fry")
+			if err != nil {
+				return nil, err
+			}
+
+			return docker.NewServiceURLParse(connURL)
+		})
 		if err != nil {
-			return nil, err
+			t.Logf("could not start local LDAP docker container: %s", err)
+			t.Log("Docker container logs: ")
+			t.Log(logsWriter.String())
+			continue
 		}
 
-		defer client.Close(ctx)
-
-		_, err = client.Authenticate(ctx, "Philip J. Fry", "fry")
-		if err != nil {
-			return nil, err
+		started = true
+		cleanup = func() {
+			if t.Failed() {
+				t.Log(logsWriter.String())
+			}
+			svc.Cleanup()
 		}
-
-		return docker.NewServiceURLParse(connURL)
-	})
-	if err != nil {
-		t.Fatalf("could not start local LDAP docker container: %s", err)
+		break
 	}
 
-	return svc.Cleanup, cfg
+	if !started {
+		t.FailNow()
+	}
+
+	return cleanup, cfg
 }

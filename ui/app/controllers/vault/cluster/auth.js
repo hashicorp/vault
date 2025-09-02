@@ -2,95 +2,81 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
-import { task, timeout } from 'ember-concurrency';
+import { task } from 'ember-concurrency';
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default Controller.extend({
-  flashMessages: service(),
   vaultController: controller('vault'),
   clusterController: controller('vault.cluster'),
+  flashMessages: service(),
   namespaceService: service('namespace'),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
+  version: service(),
   auth: service(),
   router: service(),
-  queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
+  customMessages: service(),
+  queryParams: [{ authMount: 'with', oidcProvider: 'o' }],
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
-  wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
-  managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
-  authMethod: '',
+  hvdManagedNamespaceRoot: alias('flagsService.hvdManagedNamespaceRoot'),
+  shouldRefocusNamespaceInput: false,
+
+  // Query params
+  authMount: '',
   oidcProvider: '',
+  unwrapTokenError: '',
 
-  get managedNamespaceChild() {
-    const fullParam = this.namespaceQueryParam;
-    const split = fullParam.split('/');
-    if (split.length > 1) {
-      split.shift();
-      return `/${split.join('/')}`;
+  fullNamespaceFromInput(value) {
+    const strippedNs = sanitizePath(value);
+    if (this.hvdManagedNamespaceRoot) {
+      return `${this.hvdManagedNamespaceRoot}/${strippedNs}`;
     }
-    return '';
+    return strippedNs;
   },
-
-  updateManagedNamespace: task(function* (value) {
-    // debounce
-    yield timeout(500);
-    // TODO: Move this to shared fn
-    const newNamespace = `${this.managedNamespaceRoot}${value}`;
-    this.namespaceService.setNamespace(newNamespace, true);
-    this.set('namespaceQueryParam', newNamespace);
-  }).restartable(),
 
   updateNamespace: task(function* (value) {
-    // debounce
-    yield timeout(500);
-    this.namespaceService.setNamespace(value, true);
-    this.set('namespaceQueryParam', value);
+    const ns = this.fullNamespaceFromInput(value);
+    this.namespaceService.setNamespace(ns);
+    yield this.customMessages.fetchMessages();
+    this.set('namespaceQueryParam', ns);
+    // if user is inputting a namespace, maintain input focus as the param updates
+    this.set('shouldRefocusNamespaceInput', true);
   }).restartable(),
 
-  authSuccess({ isRoot, namespace }) {
-    let transition;
-    if (this.redirectTo) {
-      // here we don't need the namespace because it will be encoded in redirectTo
-      transition = this.router.transitionTo(this.redirectTo);
-      // reset the value on the controller because it's bound here
-      this.set('redirectTo', '');
-    } else {
-      transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
-    }
-    transition.followRedirects().then(() => {
-      if (isRoot) {
-        this.flashMessages.warning(
-          'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
-        );
-      }
-    });
-  },
-
   actions: {
-    onAuthResponse(authResponse, backend, data) {
-      const { mfa_requirement } = authResponse;
-      // if an mfa requirement exists further action is required
-      if (mfa_requirement) {
-        this.set('mfaAuthData', { mfa_requirement, backend, data });
+    // TODO CMB move to auth service?
+    authSuccess({ isRoot, namespace }) {
+      let transition;
+      this.version.fetchVersion();
+      if (this.redirectTo) {
+        // here we don't need the namespace because it will be encoded in redirectTo
+        transition = this.router.transitionTo(this.redirectTo);
+        // reset the value on the controller because it's bound here
+        this.set('redirectTo', '');
       } else {
-        this.authSuccess(authResponse);
+        transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
       }
-    },
-    onMfaSuccess(authResponse) {
-      this.authSuccess(authResponse);
-    },
-    onMfaErrorDismiss() {
-      this.setProperties({
-        mfaAuthData: null,
-        mfaErrors: null,
+      transition.followRedirects().then(() => {
+        if (this.version.isEnterprise) {
+          this.customMessages.fetchMessages();
+        }
+
+        if (isRoot) {
+          this.auth.set('isRootToken', true);
+          this.flashMessages.warning(
+            'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
+          );
+        }
       });
     },
-    cancelAuthentication() {
-      this.set('cancelAuth', true);
-      this.set('waitingForOktaNumberChallenge', false);
+    backToLogin() {
+      // reset error
+      this.set('unwrapTokenError', '');
+      // reset query params and go back to auth route
+      this.router.replaceWith('vault.cluster.auth', { queryParams: { wrapped_token: null } });
     },
   },
 });

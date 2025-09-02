@@ -75,112 +75,142 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 }
 
 func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
 		name := data.Get("name").(string)
-		if name == "" {
-			return logical.ErrorResponse(respErrEmptyName), nil
-		}
-
-		config, err := b.DatabaseConfig(ctx, req.Storage, name)
+		resp, err = b.rotateRootCredentials(ctx, req, name)
 		if err != nil {
-			return nil, err
+			b.Logger().Error("failed to rotate root credential on user request", "path", req.Path, "error", err.Error())
+		} else {
+			b.Logger().Info("succesfully rotated root credential on user request", "path", req.Path)
 		}
-
-		rootUsername, ok := config.ConnectionDetails["username"].(string)
-		if !ok || rootUsername == "" {
-			return nil, fmt.Errorf("unable to rotate root credentials: no username in configuration")
-		}
-
-		rootPassword, ok := config.ConnectionDetails["password"].(string)
-		if !ok || rootPassword == "" {
-			return nil, fmt.Errorf("unable to rotate root credentials: no password in configuration")
-		}
-
-		dbi, err := b.GetConnection(ctx, req.Storage, name)
-		if err != nil {
-			return nil, err
-		}
-
-		// Take the write lock on the instance
-		dbi.Lock()
-		defer func() {
-			dbi.Unlock()
-			// Even on error, still remove the connection
-			b.ClearConnectionId(name, dbi.id)
-		}()
-		defer func() {
-			// Close the plugin
-			dbi.closed = true
-			if err := dbi.database.Close(); err != nil {
-				b.Logger().Error("error closing the database plugin connection", "err", err)
-			}
-		}()
-
-		generator, err := newPasswordGenerator(nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to construct credential generator: %s", err)
-		}
-		generator.PasswordPolicy = config.PasswordPolicy
-
-		// Generate new credentials
-		oldPassword := config.ConnectionDetails["password"].(string)
-		newPassword, err := generator.generate(ctx, b, dbi.database)
-		if err != nil {
-			b.CloseIfShutdown(dbi, err)
-			return nil, fmt.Errorf("failed to generate password: %s", err)
-		}
-		config.ConnectionDetails["password"] = newPassword
-
-		// Write a WAL entry
-		walID, err := framework.PutWAL(ctx, req.Storage, rotateRootWALKey, &rotateRootCredentialsWAL{
-			ConnectionName: name,
-			UserName:       rootUsername,
-			OldPassword:    oldPassword,
-			NewPassword:    newPassword,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		updateReq := v5.UpdateUserRequest{
-			Username:       rootUsername,
-			CredentialType: v5.CredentialTypePassword,
-			Password: &v5.ChangePassword{
-				NewPassword: newPassword,
-				Statements: v5.Statements{
-					Commands: config.RootCredentialsRotateStatements,
-				},
-			},
-		}
-		newConfigDetails, err := dbi.database.UpdateUser(ctx, updateReq, true)
-		if err != nil {
-			return nil, fmt.Errorf("failed to update user: %w", err)
-		}
-		if newConfigDetails != nil {
-			config.ConnectionDetails = newConfigDetails
-		}
-
-		// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
-		// that, so clean up any pre-existing stored builtin versions on write.
-		if versions.IsBuiltinVersion(config.PluginVersion) {
-			config.PluginVersion = ""
-		}
-		err = storeConfig(ctx, req.Storage, name, config)
-		if err != nil {
-			return nil, err
-		}
-
-		err = framework.DeleteWAL(ctx, req.Storage, walID)
-		if err != nil {
-			b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
-		}
-		return nil, nil
+		return resp, err
 	}
 }
 
+func (b *databaseBackend) rotateRootCredentials(ctx context.Context, req *logical.Request, name string) (resp *logical.Response, err error) {
+	if name == "" {
+		return logical.ErrorResponse(respErrEmptyName), nil
+	}
+
+	modified := false
+	defer func() {
+		if err == nil {
+			b.dbEvent(ctx, "rotate-root", req.Path, name, modified)
+			recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseRotateRootSuccess)
+		} else {
+			b.dbEvent(ctx, "rotate-root-fail", req.Path, name, modified)
+			recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseRotateRootFailure)
+		}
+	}()
+
+	config, err := b.DatabaseConfig(ctx, req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+
+	rootUsername, ok := config.ConnectionDetails["username"].(string)
+	if !ok || rootUsername == "" {
+		return nil, fmt.Errorf("unable to rotate root credentials: no username in configuration")
+	}
+
+	rootPassword, ok := config.ConnectionDetails["password"].(string)
+	if !ok || rootPassword == "" {
+		return nil, fmt.Errorf("unable to rotate root credentials: no password in configuration")
+	}
+
+	dbi, err := b.GetConnection(ctx, req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Take the write lock on the instance
+	dbi.Lock()
+	defer func() {
+		dbi.Unlock()
+		// Even on error, still remove the connection
+		b.ClearConnectionId(name, dbi.id)
+	}()
+	defer func() {
+		// Close the plugin
+		dbi.closed = true
+		if err := dbi.database.Close(); err != nil {
+			b.Logger().Error("error closing the database plugin connection", "err", err)
+		}
+	}()
+
+	generator, err := newPasswordGenerator(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct credential generator: %s", err)
+	}
+	generator.PasswordPolicy = config.PasswordPolicy
+
+	// Generate new credentials
+	oldPassword := config.ConnectionDetails["password"].(string)
+	newPassword, err := generator.generate(ctx, b, dbi.database)
+	if err != nil {
+		b.CloseIfShutdown(dbi, err)
+		return nil, fmt.Errorf("failed to generate password: %s", err)
+	}
+	config.ConnectionDetails["password"] = newPassword
+
+	// Write a WAL entry
+	walID, err := framework.PutWAL(ctx, req.Storage, rotateRootWALKey, &rotateRootCredentialsWAL{
+		ConnectionName: name,
+		UserName:       rootUsername,
+		OldPassword:    oldPassword,
+		NewPassword:    newPassword,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	updateReq := v5.UpdateUserRequest{
+		Username:       rootUsername,
+		CredentialType: v5.CredentialTypePassword,
+		Password: &v5.ChangePassword{
+			NewPassword: newPassword,
+			Statements: v5.Statements{
+				Commands: config.RootCredentialsRotateStatements,
+			},
+		},
+	}
+	newConfigDetails, err := dbi.database.UpdateUser(ctx, updateReq, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+	if newConfigDetails != nil {
+		config.ConnectionDetails = newConfigDetails
+	}
+	modified = true
+
+	// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
+	// that, so clean up any pre-existing stored builtin versions on write.
+	if versions.IsBuiltinVersion(config.PluginVersion) {
+		config.PluginVersion = ""
+	}
+	err = storeConfig(ctx, req.Storage, name, config)
+	if err != nil {
+		return nil, err
+	}
+
+	err = framework.DeleteWAL(ctx, req.Storage, walID)
+	if err != nil {
+		b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
+	}
+	return nil, nil
+}
+
 func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (_ *logical.Response, err error) {
 		name := data.Get("name").(string)
+		modified := false
+		defer func() {
+			if err == nil {
+				b.dbEvent(ctx, "rotate", req.Path, name, modified)
+			} else {
+				b.dbEvent(ctx, "rotate-fail", req.Path, name, modified)
+			}
+		}()
 		if name == "" {
 			return logical.ErrorResponse("empty role name attribute given"), nil
 		}
@@ -192,6 +222,20 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 		if role == nil {
 			return logical.ErrorResponse("no static role found for role name"), nil
 		}
+
+		// We defer after we've found that the static role exists, otherwise it's not really fair to say
+		// that the rotation failed.
+		defer func() {
+			if err == nil {
+				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRotateStaticRoleSuccess,
+					AdditionalDatabaseMetadata{key: "role_name", value: name},
+					AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
+			} else {
+				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRotateStaticRoleFailure,
+					AdditionalDatabaseMetadata{key: "role_name", value: name},
+					AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
+			}
+		}()
 
 		// In create/update of static accounts, we only care if the operation
 		// err'd , and this call does not return credentials
@@ -214,7 +258,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 		// this item back on the queue. The err should still be returned at the end
 		// of this method.
 		if err != nil {
-			b.logger.Warn("unable to rotate credentials in rotate-role", "error", err)
+			b.logger.Error("unable to rotate credentials in rotate-role on user request", "path", req.Path, "error", err.Error())
 			// Update the priority to re-try this rotation and re-add the item to
 			// the queue
 			item.Priority = time.Now().Add(10 * time.Second).Unix()
@@ -225,8 +269,11 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			}
 		} else {
 			item.Priority = role.StaticAccount.NextRotationTimeFromInput(resp.RotationTime).Unix()
+			ttl := role.StaticAccount.CredentialTTL().Seconds()
+			b.Logger().Info("rotated credential in rotate-role on user request", "path", req.Path, "TTL", ttl)
 			// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
 			item.Value = ""
+			modified = true
 		}
 
 		// Add their rotation to the queue
@@ -239,7 +286,6 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 				"continue in the background but it is also safe to retry manually: %w", err)
 		}
 
-		// return any err from the setStaticAccount call
 		return nil, nil
 	}
 }

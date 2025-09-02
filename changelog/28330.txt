@@ -1,0 +1,3 @@
+```release-note:bug
+secret/aws: Fixed potential panic after step-down and the queue has not repopulated.
+```

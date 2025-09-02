@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 
 /**
@@ -17,7 +17,7 @@ import errorMessage from 'vault/utils/error-message';
  */
 
 export default class RoleDetailsPageComponent extends Component {
-  @service router;
+  @service('app-router') router;
   @service flashMessages;
 
   get extraFields() {

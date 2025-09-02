@@ -8,15 +8,12 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
-import {
-  SELECTORS,
-  OIDC_BASE_URL,
-  CLIENT_LIST_RESPONSE,
-  overrideMirageResponse,
-  overrideCapabilities,
-} from 'vault/tests/helpers/oidc-config';
+import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
+import { SELECTORS, OIDC_BASE_URL, CLIENT_LIST_RESPONSE } from 'vault/tests/helpers/oidc-config';
 import parseURL from 'core/utils/parse-url';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const ISSUER_URL = 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider';
 
@@ -24,15 +21,8 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'oidcConfig';
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
-  });
-
   hooks.beforeEach(function () {
+    oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
     this.server.get('/identity/oidc/scope', () => {
       return {
@@ -48,7 +38,17 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
         auth: null,
       };
     });
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should save new provider', async function (assert) {
@@ -82,11 +82,12 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     await fillIn('[data-test-input="name"]', ' ');
     await click(SELECTORS.providerSaveButton);
 
-    const validationErrors = findAll(SELECTORS.inlineAlert);
     assert
-      .dom(validationErrors[0])
+      .dom(GENERAL.validationErrorByAttr('name'))
       .hasText('Name is required. Name cannot contain whitespace.', 'Validation messages are shown for name');
-    assert.dom(validationErrors[1]).hasText('There are 2 errors with this form.', 'Renders form error count');
+    assert
+      .dom(SELECTORS.inlineAlert)
+      .hasText('There are 2 errors with this form.', 'Renders form error count');
 
     await click('[data-test-oidc-radio="limited"]');
     assert
@@ -189,8 +190,8 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
   test('it should render fallback for search select', async function (assert) {
     assert.expect(2);
     this.model = this.store.createRecord('oidc/provider');
-    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(403));
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(403));
+    this.server.get('/identity/oidc/scope', () => overrideResponse(403));
+    this.server.get('/identity/oidc/client', () => overrideResponse(403));
     await render(hbs`
       <Oidc::ProviderForm
         @model={{this.model}}
@@ -211,7 +212,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
   test('it should render error alerts when API returns an error', async function (assert) {
     assert.expect(2);
     this.model = this.store.createRecord('oidc/provider');
-    this.server.post('/sys/capabilities-self', () => overrideCapabilities(OIDC_BASE_URL + '/providers'));
+    this.server.post('/sys/capabilities-self', () => capabilitiesStub(OIDC_BASE_URL + '/providers'));
     await render(hbs`
       <Oidc::ProviderForm
         @model={{this.model}}

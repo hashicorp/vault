@@ -1,10 +1,13 @@
 ---
 layout: docs
-page_title: Install the Vault EKM Provider
-description: Installation steps for the Vault EKM Provider for Microsoft SQL Server.
+page_title: Install the Vault EKM provider
+description: Installation steps for the Vault EKM provider for Microsoft SQL Server.
 ---
 
-# Installing the Vault EKM provider
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# Install the Vault EKM provider
 
 This guide assumes you are installing the Vault EKM Provider for the first time.
 For upgrade instructions, see [upgrading](/vault/docs/platform/mssql/upgrading).
@@ -46,6 +49,12 @@ EKM provider to use it.
         max_token_ttl=30m \
         token_policies=tde-policy
     ```
+
+-> **Note:** After authenticating to Vault with the AppRole, the EKM provider
+will re-use the token it receives until it expires, at which point it will
+authenticate using the AppRole credentials again; it will not attempt to renew
+its token. The example AppRole configuraiton here will work for this, but keep
+that in mind if you choose to use a different AppRole configuration.
 
 1. Retrieve the AppRole ID and secret ID for use later when configuring SQL Server:
 
@@ -96,9 +105,41 @@ The remaining steps are all run on the database server.
 
 1. Download and run the latest Vault EKM provider installer from
   [releases.hashicorp.com](https://releases.hashicorp.com/vault-mssql-ekm-provider/)
-1. Enter your Vault server's address when prompted and complete the installer
-1. If you need to configure non-default namespace or mount paths for your AppRole and
-   Transit engines, see [configuration](/vault/docs/platform/mssql/configuration).
+1. Run the installer to create an initial configuration. If your server URL is
+   too long for the input field, you can set it manually in the next step.
+1. If you need to configure non-default namespaces or mount paths or your server
+   URL exceeds the character limit in the installer, set the relevant
+   [EKM configuration parameters](/vault/docs/platform/mssql/configuration)
+   manually in your configuration file:
+
+    <Tabs>
+    <Tab heading="Self-managed Vault">
+
+    ```hcl
+    {
+      "namespace": "<custom_namespace>",
+      "appRoleMountPath": "<custom_approle_path>",
+      "transitMountPath": "<custom_approle_path>",
+      "enableTrace": "true",
+      "vaultApiBaseUrl": "<server_url>"
+    }
+    ```
+
+    </Tab>
+    <Tab heading="HCP Vault Dedicated">
+
+    ```hcl
+    {
+      "namespace": "admin/<custom_namespace>",
+      "appRoleMountPath": "<custom_approle_path>",
+      "transitMountPath": "<custom_approle_path>",
+      "enableTrace": "true",
+      "vaultApiBaseUrl": "<server_url>"
+    }
+    ```
+
+    </Tab>
+    </Tabs>
 
 ### Configure the EKM provider using SQL
 
@@ -215,38 +256,5 @@ installation.
 
 ## Key rotation
 
-Both the database encryption key and Vault Transit's asymmetric key can be rotated independently.
-
-To rotate the database encryption key, you can execute the
-[following SQL query](https://docs.microsoft.com/en-us/sql/t-sql/statements/alter-database-encryption-key-transact-sql?view=azuresqldb-current)
-in Microsoft SQL Server Management Studio:
-
-```sql
-USE TestTDE;
-GO
-
-ALTER DATABASE ENCRYPTION KEY
-REGENERATE WITH ALGORITHM = AES_256;
-GO
-
-SELECT * FROM sys.dm_database_encryption_keys;
-```
-
-To rotate the asymmetric key in Vault's Transit, you can use the standard
-[`/rotate`](/vault/api-docs/secret/transit#rotate-key) endpoint:
-
-```shell-session
-$ vault write -f transit/keys/ekm-encryption-key/rotate
-```
-
-After rotating the Vault asymmetric key, you can force SQL Server to re-encrypt the database encryption
-key with the newest version of the Vault key with:
-
-```sql
-USE TestTDE;
-GO
-
-ALTER DATABASE ENCRYPTION KEY
-ENCRYPTION BY SERVER ASYMMETRIC KEY TransitVaultAsymmetric;
-GO
-```
+See [key rotation](/vault/docs/platform/mssql/rotation) for guidance on rotating
+the encryption keys.

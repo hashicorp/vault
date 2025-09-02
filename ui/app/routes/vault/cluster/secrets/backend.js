@@ -3,32 +3,40 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
+import SecretsEngineResource from 'vault/resources/secrets/engine';
+
 export default Route.extend({
-  store: service(),
   flashMessages: service(),
+  router: service(),
   secretMountPath: service(),
+  api: service(),
+
   oldModel: null,
 
-  model(params) {
+  async model(params) {
     const { backend } = params;
     this.secretMountPath.update(backend);
-    return this.store
-      .query('secret-engine', {
-        path: backend,
-      })
-      .then((model) => {
-        if (model) {
-          return model.get('firstObject');
-        }
-      });
+
+    try {
+      const secretsEngine = await this.api.sys.internalUiReadMountInformation(backend);
+      return new SecretsEngineResource({ ...secretsEngine, path: `${backend}/` });
+    } catch (e) {
+      // the backend.error template is expecting additional data so for now we will catch and rethrow
+      const error = await this.api.parseError(e);
+      throw {
+        backend,
+        httpStatus: error.status,
+        ...error,
+      };
+    }
   },
 
   afterModel(model, transition) {
-    const path = model && model.get('path');
+    const path = model && model.path;
     if (transition.targetName === this.routeName) {
-      return this.replaceWith('vault.cluster.secrets.backend.list-root', path);
+      return this.router.replaceWith('vault.cluster.secrets.backend.list-root', path);
     }
   },
 });

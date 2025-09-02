@@ -7,6 +7,11 @@
 
 module.exports = {
   name: require('./package').name,
+
+  babel: {
+    plugins: [require.resolve('ember-concurrency/async-arrow-task-transform')],
+  },
+
   isDevelopingAddon() {
     return true;
   },

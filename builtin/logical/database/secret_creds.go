@@ -34,6 +34,9 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			return nil, fmt.Errorf("secret is missing username internal data")
 		}
 		username, ok := usernameRaw.(string)
+		if !ok {
+			return nil, fmt.Errorf("username not a string")
+		}
 
 		roleNameRaw, ok := req.Secret.InternalData["role"]
 		if !ok {
@@ -86,6 +89,10 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		resp := &logical.Response{Secret: req.Secret}
 		resp.Secret.TTL = role.DefaultTTL
 		resp.Secret.MaxTTL = role.MaxTTL
+
+		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseCredentialRenew,
+			AdditionalDatabaseMetadata{key: "role_name", value: role.Name},
+			AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
 		return resp, nil
 	}
 }
@@ -98,6 +105,9 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			return nil, fmt.Errorf("secret is missing username internal data")
 		}
 		username, ok := usernameRaw.(string)
+		if !ok {
+			return nil, fmt.Errorf("username not a string")
+		}
 
 		var resp *logical.Response
 
@@ -105,11 +115,12 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 		if !ok {
 			return nil, fmt.Errorf("no role name was provided")
 		}
+		roleNameString := roleNameRaw.(string)
 
 		var dbName string
 		var statements v4.Statements
 
-		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
+		role, err := b.Role(ctx, req.Storage, roleNameString)
 		if err != nil {
 			return nil, err
 		}
@@ -162,6 +173,10 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			b.CloseIfShutdown(dbi, err)
 			return nil, err
 		}
+
+		recordDatabaseObservation(ctx, b, req, dbName, ObservationTypeDatabaseCredentialRevoke,
+			AdditionalDatabaseMetadata{key: "role_name", value: roleNameString})
+
 		return resp, nil
 	}
 }

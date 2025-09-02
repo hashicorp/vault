@@ -56,24 +56,48 @@ func TestParsePolicies(t *testing.T) {
 }
 
 func TestEquivalentPolicies(t *testing.T) {
-	a := []string{"foo", "bar"}
-	var b []string
-	if EquivalentPolicies(a, b) {
-		t.Fatal("bad")
+	testCases := map[string]struct {
+		A        []string
+		B        []string
+		Expected bool
+	}{
+		"nil": {
+			A:        nil,
+			B:        nil,
+			Expected: true,
+		},
+		"empty": {
+			A:        []string{"foo", "bar"},
+			B:        []string{},
+			Expected: false,
+		},
+		"missing": {
+			A:        []string{"foo", "bar"},
+			B:        []string{"foo"},
+			Expected: false,
+		},
+		"equal": {
+			A:        []string{"bar", "foo"},
+			B:        []string{"bar", "foo"},
+			Expected: true,
+		},
+		"default": {
+			A:        []string{"bar", "foo"},
+			B:        []string{"foo", "default", "bar"},
+			Expected: true,
+		},
+		"case-insensitive": {
+			A:        []string{"test"},
+			B:        []string{"Test"},
+			Expected: true,
+		},
 	}
 
-	b = []string{"foo"}
-	if EquivalentPolicies(a, b) {
-		t.Fatal("bad")
-	}
-
-	b = []string{"bar", "foo"}
-	if !EquivalentPolicies(a, b) {
-		t.Fatal("bad")
-	}
-
-	b = []string{"foo", "default", "bar"}
-	if !EquivalentPolicies(a, b) {
-		t.Fatal("bad")
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if EquivalentPolicies(tc.A, tc.B) != tc.Expected {
+				t.Fatal("bad")
+			}
+		})
 	}
 }

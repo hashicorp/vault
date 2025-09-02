@@ -1,10 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
-import type SecretEngineModel from 'vault/models/secret-engine';
+
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 /**
  * @module DashboardSecretsEnginesCard
@@ -18,7 +19,7 @@ import type SecretEngineModel from 'vault/models/secret-engine';
  */
 
 interface Args {
-  secretsEngines: SecretEngineModel[];
+  secretsEngines: SecretsEngineResource[];
 }
 
 export default class DashboardSecretsEnginesCard extends Component<Args> {

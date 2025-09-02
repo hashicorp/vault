@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add `deletion_allowed` param to transformations and include `tokenization` as a type option
+```

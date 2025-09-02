@@ -18,10 +18,6 @@
         "path": "secret"
       },
       {
-        "title": "Active Directory",
-        "path": "secret/ad"
-      },
-      {
         "title": "AliCloud",
         "path": "secret/alicloud"
       },
@@ -216,18 +212,18 @@
         ]
       },
       {
-        "title": "Key/Value",
+        "title": "Key Value",
         "routes": [
           {
             "title": "Overview",
             "path": "secret/kv"
           },
           {
-            "title": "K/V Version 1",
+            "title": "KV version 1",
             "path": "secret/kv/kv-v1"
           },
           {
-            "title": "K/V Version 2",
+            "title": "KV version 2",
             "path": "secret/kv/kv-v2"
           }
         ]
@@ -259,7 +255,16 @@
       },
       {
         "title": "PKI",
-        "path": "secret/pki"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/pki"
+          },
+          {
+            "title": "Issuance Protocols",
+            "path": "secret/pki/issuance"
+          }
+        ]
       },
       {
         "title": "RabbitMQ",
@@ -365,6 +370,15 @@
         }
       },
       {
+        "title": "SCEP",
+        "path": "auth/scep",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },
@@ -384,6 +398,15 @@
       {
         "title": "Overview",
         "path": "system"
+      },
+      {
+        "title": "<code>/sys/activation-flags</code>",
+        "path": "system/activation-flags",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "<code>/sys/audit</code>",
@@ -439,8 +462,26 @@
         "path": "system/config-state"
       },
       {
-        "title": "<code>/sys/config/ui</code>",
-        "path": "system/config-ui"
+        "title": "<code>/sys/config/ui/custom-messages</code>",
+        "path": "system/config-ui-custom-messages",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "<code>/sys/config/ui/headers</code>",
+        "path": "system/config-ui-headers"
+      },
+      {
+        "title": "<code>/sys/config/ui/login/default-auth</code>",
+        "path": "system/config-ui-login-default-auth",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "<code>/sys/control-group</code>",
@@ -500,6 +541,19 @@
         "path": "system/internal-specs-openapi"
       },
       {
+        "title": "<code>/sys/internal/ui/authenticated-messages</code>",
+        "path": "system/internal-ui-authenticated-messages"
+      },
+      {
+        "title": "<code>/sys/internal/ui/default-auth-methods</code>",
+        "path": "system/internal-ui-default-auth-methods",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "<code>/sys/internal/ui/feature-flags</code>",
         "path": "system/internal-ui-feature"
       },
@@ -514,6 +568,10 @@
       {
         "title": "<code>/sys/internal/ui/resultant-acl</code>",
         "path": "system/internal-ui-resultant-acl"
+      },
+      {
+        "title": "<code>/sys/internal/ui/unauthenticated-messages</code>",
+        "path": "system/internal-ui-unauthenticated-messages"
       },
       {
         "title": "<code>/sys/key-status</code>",
@@ -538,6 +596,10 @@
       {
         "title": "<code>/sys/locked-users</code>",
         "path": "system/user-lockout"
+      },
+      {
+        "title": "<code>/sys/utilization-report</code>",
+        "path": "system/utilization-report"
       },
       {
         "title": "<code>/sys/loggers</code>",
@@ -598,12 +660,20 @@
         "path": "system/namespaces"
       },
       {
-        "title": "<code>/sys/plugins/reload/backend</code>",
-        "path": "system/plugins-reload-backend"
-      },
-      {
         "title": "<code>/sys/plugins/catalog</code>",
         "path": "system/plugins-catalog"
+      },
+      {
+        "title": "<code>/sys/plugins/pins</code>",
+        "path": "system/plugins-pins"
+      },
+      {
+        "title": "<code>/sys/plugins/reload</code>",
+        "path": "system/plugins-reload"
+      },
+      {
+        "title": "<code>/sys/plugins/runtimes/catalog</code>",
+        "path": "system/plugins-runtimes-catalog"
       },
       {
         "title": "<code>/sys/policy</code>",
@@ -712,6 +782,10 @@
           {
             "title": "<code>/sys/storage/raft/snapshot-auto</code>",
             "path": "system/storage/raftautosnapshots"
+          },
+          {
+            "title": "<code>/sys/storage/raft/snapshot-load</code>",
+            "path": "system/storage/raftsnapshotload"
           }
         ]
       },
@@ -735,6 +809,10 @@
       {
         "title": "<code>/sys/version-history</code>",
         "path": "system/version-history"
+      },
+      {
+        "title": "<code>/sys/well-known</code>",
+        "path": "system/well-known"
       },
       {
         "title": "<code>/sys/wrapping/lookup</code>",

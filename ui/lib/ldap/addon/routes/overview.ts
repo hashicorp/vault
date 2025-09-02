@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
 
@@ -18,10 +18,10 @@ import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import { LdapLibraryAccountStatus } from 'vault/vault/adapters/ldap/library';
 
-interface LdapOverviewController extends Controller {
+interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
 }
-interface LdapOverviewRouteModel {
+interface RouteModel {
   backendModel: SecretEngineModel;
   promptConfig: boolean;
   roles: Array<LdapRoleModel>;
@@ -66,15 +66,11 @@ export default class LdapOverviewRoute extends Route {
     });
   }
 
-  setupController(
-    controller: LdapOverviewController,
-    resolvedModel: LdapOverviewRouteModel,
-    transition: Transition
-  ) {
+  setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backendModel.id },
     ];
   }

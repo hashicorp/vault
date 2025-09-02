@@ -28,6 +28,7 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/config/ui/headers":                        regexp.MustCompile(`^/sys/config/ui/headers/?$`),
 	"/sys/config/ui/headers/{header}":               regexp.MustCompile(`^/sys/config/ui/headers/.+$`),
 	"/sys/internal/inspect/router/{tag}":            regexp.MustCompile(`^/sys/internal/inspect/router/.+$`),
+	"/sys/internal/counters/activity/export":        regexp.MustCompile(`^/sys/internal/counters/activity/export$`),
 	"/sys/leases":                                   regexp.MustCompile(`^/sys/leases$`),
 	// This entry is a bit wrong... sys/leases/lookup does NOT require sudo. But sys/leases/lookup/ with a trailing
 	// slash DOES require sudo. But the part of the Vault CLI that uses this logic doesn't pass operation-appropriate

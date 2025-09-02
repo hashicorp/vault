@@ -1,0 +1,43 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<LinkedBlock
+  class="list-item-row"
+  @params={{array "vault.cluster.access.mfa.enforcements.enforcement" @model.id}}
+  data-test-list-item={{@model.name}}
+>
+  <div class="level is-mobile">
+    <div class="level-left">
+      <div>
+        <Icon @name="lock" />
+        <span class="has-text-weight-semibold has-text-black" data-test-list-item-title={{@model.name}}>
+          {{@model.name}}
+        </span>
+      </div>
+    </div>
+    <div class="level-right is-flex is-paddingless is-marginless">
+      <div class="level-item">
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+          <dd.ToggleIcon
+            @icon="more-horizontal"
+            @text="Manage M-F-A enforcement"
+            @hasChevron={{false}}
+            data-test-popup-menu-trigger
+          />
+          <dd.Interactive
+            @route="vault.cluster.access.mfa.enforcements.enforcement"
+            @model={{@model.name}}
+            data-test-list-item-link="details"
+          >Details</dd.Interactive>
+          <dd.Interactive
+            @route="vault.cluster.access.mfa.enforcements.enforcement.edit"
+            @model={{@model.name}}
+            data-test-list-item-link="edit"
+          >Edit</dd.Interactive>
+        </Hds::Dropdown>
+      </div>
+    </div>
+  </div>
+</LinkedBlock>

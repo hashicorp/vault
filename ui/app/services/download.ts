@@ -11,6 +11,7 @@ interface Extensions {
   hcl: string;
   sentinel: string;
   json: string;
+  jsonl: string;
   pem: string;
   txt: string;
 }
@@ -21,6 +22,7 @@ const EXTENSION_TO_MIME: Extensions = {
   hcl: 'text/plain',
   sentinel: 'text/plain',
   json: 'application/json',
+  jsonl: 'application/json',
   pem: 'application/x-pem-file',
   txt: 'text/plain',
 };

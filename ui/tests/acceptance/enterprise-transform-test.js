@@ -5,28 +5,25 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, click, settled, currentRouteName } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, fillIn, settled, visit } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
-import { typeInSearch, selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
+import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import transformationsPage from 'vault/tests/pages/secrets/backend/transform/transformations';
 import rolesPage from 'vault/tests/pages/secrets/backend/transform/roles';
-import templatesPage from 'vault/tests/pages/secrets/backend/transform/templates';
 import alphabetsPage from 'vault/tests/pages/secrets/backend/transform/alphabets';
 import searchSelect from 'vault/tests/pages/components/search-select';
 import { runCmd } from '../helpers/commands';
-import { allEngines } from 'vault/helpers/mountable-secret-engines';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import { v4 as uuidv4 } from 'uuid';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const searchSelectComponent = create(searchSelect);
-
-const mount = async () => {
-  const path = `transform-${Date.now()}`;
-  await mountSecrets.enable('transform', path);
-  await settled();
-  return path;
-};
 
 const newTransformation = async (backend, name, submit = false) => {
   const transformationName = name || 'foo';
@@ -39,8 +36,7 @@ const newTransformation = async (backend, name, submit = false) => {
   await settled();
   // Don't automatically choose role because we might be testing that
   if (submit) {
-    await transformationsPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
   }
   return transformationName;
 };
@@ -55,28 +51,25 @@ const newRole = async (backend, name) => {
   await settled();
   await selectChoose('#transformations', '.ember-power-select-option', 0);
   await settled();
-  await rolesPage.submit();
-  await settled();
+  await click(GENERAL.submitButton);
   return roleName;
 };
 
 module('Acceptance | Enterprise | Transform secrets', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
-    return authPage.login();
+  hooks.beforeEach(async function () {
+    return login();
   });
 
   test('it transitions to list route after mount success', async function (assert) {
     assert.expect(1);
-    const engine = allEngines().find((e) => e.type === 'transform');
+    const engine = engineDisplayData('transform');
 
     // delete any previous mount with same name
     await runCmd([`delete sys/mounts/${engine.type}`]);
     await mountSecrets.visit();
-    await mountSecrets.selectType(engine.type);
-    await mountSecrets.next().path(engine.type);
-    await mountSecrets.submit();
+    await mountBackend(engine.type, engine.type);
 
     assert.strictEqual(
       currentRouteName(),
@@ -107,12 +100,16 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
   });
 
   test('it can create a transformation and add itself to the role attached', async function (assert) {
-    const backend = await mount();
+    await visit('/vault/secrets/mounts');
+    const backend = `transform-${uuidv4()}`;
+    await click('[data-test-mount-type="transform"]');
+    await fillIn(GENERAL.inputByAttr('path'), backend);
+    await click(GENERAL.submitButton);
     const transformationName = 'foo';
     const roleName = 'foo-role';
     await settled();
-    await transformationsPage.createLink({ backend });
-    await settled();
+    await click(SES.createSecretLink);
+
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create`,
@@ -120,34 +117,32 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     );
     await transformationsPage.name(transformationName);
     await settled();
-    assert.dom('[data-test-input="type"]').hasValue('fpe', 'Has type FPE by default');
-    assert.dom('[data-test-input="tweak_source"]').exists('Shows tweak source when FPE');
+    assert.dom(GENERAL.inputByAttr('type')).hasValue('fpe', 'Has type FPE by default');
+    assert.dom(GENERAL.inputByAttr('tweak_source')).exists('Shows tweak source when FPE');
     await transformationsPage.type('masking');
     await settled();
     assert
-      .dom('[data-test-input="masking_character"]')
+      .dom(GENERAL.inputByAttr('masking_character'))
       .exists('Shows masking character input when changed to masking type');
-    assert.dom('[data-test-input="tweak_source"]').doesNotExist('Does not show tweak source when masking');
+    assert.dom(GENERAL.inputByAttr('tweak_source')).doesNotExist('Does not show tweak source when masking');
     await clickTrigger('#template');
     await settled();
     assert.strictEqual(searchSelectComponent.options.length, 2, 'list shows two builtin options by default');
     await selectChoose('#template', '.ember-power-select-option', 0);
     await settled();
-
     await clickTrigger('#allowed_roles');
     await settled();
     await typeInSearch(roleName);
     await settled();
     await selectChoose('#allowed_roles', '.ember-power-select-option', 0);
     await settled();
-    await transformationsPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/${transformationName}`,
       'redirects to show transformation page after submit'
     );
-    await click(`[data-test-secret-breadcrumb="${backend}"]`);
+    await click(`[data-test-secret-breadcrumb="${backend}"] a`);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list`,
@@ -157,10 +152,12 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it can create a role and add itself to the transformation attached', async function (assert) {
     const roleName = 'my-role';
-    const backend = await mount();
+    await visit('/vault/secrets/mounts');
+    const backend = `transform-${uuidv4()}`;
+    await mountBackend('transform', backend);
     // create transformation without role
     await newTransformation(backend, 'a-transformation', true);
-    await click(`[data-test-secret-breadcrumb="${backend}"]`);
+    await click(`[data-test-secret-breadcrumb="${backend}"] a`);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list`,
@@ -169,7 +166,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await click('[data-test-secret-list-tab="Roles"]');
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/list?tab=role`, 'links to role list page');
     // create role with transformation attached
-    await rolesPage.createLink();
+    await click(SES.createSecretLink);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create?itemType=role`,
@@ -179,14 +176,13 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await clickTrigger('#transformations');
     assert.strictEqual(searchSelectComponent.options.length, 1, 'lists the transformation');
     await selectChoose('#transformations', '.ember-power-select-option', 0);
-    await rolesPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/role/${roleName}`,
       'redirects to show role page after submit'
     );
-    await click(`[data-test-secret-breadcrumb="${backend}"]`);
+    await click(`[data-test-secret-breadcrumb="${backend}"] a`);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list?tab=role`,
@@ -196,7 +192,9 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it adds a role to a transformation when added to a role', async function (assert) {
     const roleName = 'role-test';
-    const backend = await mount();
+    await visit('/vault/secrets/mounts');
+    const backend = `transform-${uuidv4()}`;
+    await mountBackend('transform', backend);
     const transformation = await newTransformation(backend, 'b-transformation', true);
     await newRole(backend, roleName);
     await transformationsPage.visitShow({ backend, id: transformation });
@@ -206,7 +204,9 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it shows a message if an update fails after save', async function (assert) {
     const roleName = 'role-remove';
-    const backend = await mount();
+    await visit('/vault/secrets/mounts');
+    const backend = `transform-${uuidv4()}`;
+    await mountBackend('transform', backend);
     // Create transformation
     const transformation = await newTransformation(backend, 'c-transformation', true);
     // create role
@@ -216,7 +216,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     assert.dom('[data-test-row-value="Allowed roles"]').hasText(roleName);
     // Edit transformation
     await click('[data-test-edit-link]');
-    assert.dom('.modal.is-active').exists('Confirmation modal appears');
+    assert.dom('#transformation-edit-modal').exists('Confirmation modal appears');
     await rolesPage.modalConfirm();
     await settled();
     assert.strictEqual(
@@ -228,8 +228,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await settled();
     await click('#allowed_roles [data-test-selected-list-button="delete"]');
 
-    await transformationsPage.save();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.dom('.flash-message.is-info').exists('Shows info message since role could not be updated');
     assert.strictEqual(
       currentURL(),
@@ -243,7 +242,9 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it allows creation and edit of a template', async function (assert) {
     const templateName = 'my-template';
-    const backend = await mount();
+    await visit('/vault/secrets/mounts');
+    const backend = `transform-${uuidv4()}`;
+    await mountBackend('transform', backend);
     await click('[data-test-secret-list-tab="Templates"]');
 
     assert.strictEqual(
@@ -252,28 +253,26 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       'links to template list page'
     );
     await settled();
-    await templatesPage.createLink();
+    await click(SES.createSecretLink);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create?itemType=template`,
       'redirects to create template page'
     );
-    await templatesPage.name(templateName);
-    await templatesPage.pattern(`(\\d{4})`);
+    await fillIn(GENERAL.inputByAttr('name'), templateName);
+    await fillIn(GENERAL.inputByAttr('pattern'), `(\\d{4})`);
     await clickTrigger('#alphabet');
     await settled();
     assert.ok(searchSelectComponent.options.length > 0, 'lists built-in alphabets');
     await selectChoose('#alphabet', '.ember-power-select-option', 0);
     assert.dom('#alphabet .ember-power-select-trigger').doesNotExist('Alphabet input no longer searchable');
-    await templatesPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/template/${templateName}`,
       'redirects to show template page after submit'
     );
-    await templatesPage.editLink();
-    await settled();
+    await click('[data-test-edit-link]');
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/edit/template/${templateName}`,
@@ -285,7 +284,9 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it allows creation and edit of an alphabet', async function (assert) {
     const alphabetName = 'vowels-only';
-    const backend = await mount();
+    await visit('/vault/secrets/mounts');
+    const backend = `transform-${uuidv4()}`;
+    await mountBackend('transform', backend);
     await click('[data-test-secret-list-tab="Alphabets"]');
 
     assert.strictEqual(
@@ -293,8 +294,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets/${backend}/list?tab=alphabet`,
       'links to alphabet list page'
     );
-    await alphabetsPage.createLink();
-    await settled();
+    await click(SES.createSecretLink);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create?itemType=alphabet`,
@@ -302,8 +302,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     );
     await alphabetsPage.name(alphabetName);
     await alphabetsPage.alphabet('aeiou');
-    await alphabetsPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/alphabet/${alphabetName}`,

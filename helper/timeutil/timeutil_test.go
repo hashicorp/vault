@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestTimeutil_StartOfPreviousMonth(t *testing.T) {
@@ -223,6 +225,47 @@ func TestTimeutil_IsCurrentMonth(t *testing.T) {
 	}
 }
 
+// TestTimeutil_IsCurrentDay checks if the test times equals the current day or not.
+func TestTimeutil_IsCurrentDay(t *testing.T) {
+	now := time.Now()
+	testCases := []struct {
+		input    time.Time
+		expected bool
+	}{
+		{
+			input:    now,
+			expected: true,
+		},
+		{
+			input:    StartOfDay(now).AddDate(0, 0, -1),
+			expected: false,
+		},
+		{
+			input:    StartOfDay(now).AddDate(-1, 0, 0),
+			expected: false,
+		},
+		{
+			input:    StartOfDay(now).Add(1 * time.Second),
+			expected: true,
+		},
+		{
+			input:    StartOfDay(now).Add(-1 * time.Second),
+			expected: false,
+		},
+		{
+			input:    StartOfDay(now).Add(86400), // a day is 86400 seconds
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		result := IsCurrentDay(tc.input, now)
+		if result != tc.expected {
+			t.Errorf("invalid result. expected %t for %v", tc.expected, tc.input)
+		}
+	}
+}
+
 func TestTimeUtil_ContiguousMonths(t *testing.T) {
 	testCases := []struct {
 		input    []time.Time
@@ -324,5 +367,131 @@ func TestTimeUtil_ParseTimeFromPath(t *testing.T) {
 		if gotError != tc.expectError {
 			t.Errorf("bad error status on input %q. expected error: %t, got error: %t", tc.input, tc.expectError, gotError)
 		}
+	}
+}
+
+// TestTimeUtil_NormalizeToYear tests NormalizeToYear function which returns the normalized input date wrt to the normal.
+func TestTimeUtil_NormalizeToYear(t *testing.T) {
+	testCases := []struct {
+		inputDate              time.Time
+		normalDate             time.Time
+		expectedNormalizedDate time.Time
+	}{
+		{
+			inputDate:              time.Date(2024, 9, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2024, 10, 1, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2024, 9, 29, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			inputDate:              time.Date(2024, 9, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2025, 9, 29, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2025, 9, 29, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			inputDate:              time.Date(2024, 9, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2025, 10, 1, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2025, 9, 29, 0, 0, 0, 0, time.UTC),
+		},
+		// inputDate more than 2 years prior to normal date
+		{
+			inputDate:              time.Date(2022, 9, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2024, 6, 15, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2023, 9, 29, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			inputDate:              time.Date(2022, 9, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2024, 9, 28, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2023, 9, 29, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			inputDate:              time.Date(2022, 9, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2024, 9, 29, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2024, 9, 29, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			inputDate:              time.Date(2022, 9, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2024, 9, 30, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2024, 9, 29, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			inputDate:              time.Date(2020, 9, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2024, 12, 1, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2024, 9, 29, 0, 0, 0, 0, time.UTC),
+		},
+		// leap year test cases
+		{
+			inputDate:              time.Date(2020, 9, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2024, 9, 28, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2023, 9, 29, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			inputDate:              time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2025, 2, 28, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			inputDate:              time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			inputDate:              time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2025, 3, 2, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			inputDate:              time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2028, 2, 28, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2027, 3, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			inputDate:              time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2028, 2, 29, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2027, 3, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			inputDate:              time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC),
+			normalDate:             time.Date(2028, 3, 1, 0, 0, 0, 0, time.UTC),
+			expectedNormalizedDate: time.Date(2028, 3, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+	for _, tc := range testCases {
+		normalizedDate := NormalizeToYear(tc.inputDate, tc.normalDate)
+		require.Equal(t, tc.expectedNormalizedDate, normalizedDate)
+	}
+}
+
+// Test_GetRandomTimeInMonth verifies that the random time generated is in the same month of input time.
+func Test_GetRandomTimeInMonth(t *testing.T) {
+	currYear, _, _ := time.Now().Date()
+	middleOfMonth := time.Date(currYear, 8, 15, 1, 2, 3, 0, time.UTC)
+
+	cases := []struct {
+		name      string
+		inputTime time.Time
+	}{
+		{
+			name:      "input time is in the start of a month",
+			inputTime: StartOfMonth(time.Now()),
+		},
+		{
+			name:      "input time is in the middle of a month",
+			inputTime: middleOfMonth,
+		},
+		{
+			name:      "input time is in the last of a month ",
+			inputTime: EndOfMonth(time.Now()),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			randomTime, err := GetRandomTimeInMonth(tc.inputTime)
+			require.NoError(t, err)
+			startOfMonth := StartOfMonth(tc.inputTime)
+			endOfMonth := EndOfMonth(tc.inputTime)
+			if !((randomTime.After(startOfMonth) || randomTime.Equal(startOfMonth)) && (randomTime.Before(endOfMonth) || randomTime.Equal(endOfMonth))) {
+				t.Fatalf("random time %v is not in the same month as input time %v", randomTime.UTC(), tc.inputTime.UTC())
+			}
+		})
 	}
 }

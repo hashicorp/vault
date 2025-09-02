@@ -1,29 +1,37 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, visit } from '@ember/test-helpers';
+/* eslint-disable ember/no-settled-after-test-helper */
+import { click, fillIn, visit, settled } from '@ember/test-helpers';
 import { FORM } from './kv-selectors';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { assert } from '@ember/debug';
+import { kvMetadataPath } from 'vault/utils/kv-path';
 
 // CUSTOM ACTIONS RELEVANT TO KV-V2
 
 export const writeSecret = async function (backend, path, key, val, ns = null) {
   const url = `vault/secrets/${backend}/kv/create`;
   ns ? await visit(url + `?namespace=${ns}`) : await visit(url);
+  await settled();
   await fillIn(FORM.inputByAttr('path'), path);
   await fillIn(FORM.keyInput(), key);
   await fillIn(FORM.maskedValueInput(), val);
-  return click(FORM.saveBtn);
+  await click(FORM.saveBtn);
+  await settled();
+  return;
 };
 
 export const writeVersionedSecret = async function (backend, path, key, val, version = 2, ns = null) {
   await writeSecret(backend, path, 'key-1', 'val-1', ns);
+  await settled();
   for (let currentVersion = 2; currentVersion <= version; currentVersion++) {
     const url = `/vault/secrets/${backend}/kv/${encodeURIComponent(path)}/details/edit`;
     ns ? await visit(url + `?namespace=${ns}`) : await visit(url);
-
+    await settled();
     if (currentVersion === version) {
       await fillIn(FORM.keyInput(), key);
       await fillIn(FORM.maskedValueInput(), val);
@@ -32,6 +40,7 @@ export const writeVersionedSecret = async function (backend, path, key, val, ver
       await fillIn(FORM.maskedValueInput(), `val-${currentVersion}`);
     }
     await click(FORM.saveBtn);
+    await settled();
   }
   return;
 };
@@ -60,3 +69,30 @@ export function clearRecords(store) {
   store.unloadAll('kv/metatata');
   store.unloadAll('capabilities');
 }
+
+// TEST SETUP HELPERS
+
+// sets basic path, backend, and metadata
+export const baseSetup = (context) => {
+  assert(
+    `'baseSetup()' requires mirage: import { setupMirage } from 'ember-cli-mirage/test-support'`,
+    context.server
+  );
+  context.store = context.owner.lookup('service:store');
+  context.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
+  context.backend = 'kv-engine';
+  context.path = 'my-secret';
+  context.metadata = metadataModel(context, { withCustom: false });
+};
+
+export const metadataModel = (context, { withCustom = false }) => {
+  const metadata = withCustom
+    ? context.server.create('kv-metadatum', 'withCustomMetadata')
+    : context.server.create('kv-metadatum');
+  metadata.id = kvMetadataPath(context.backend, context.path);
+  context.store.pushPayload('kv/metadata', {
+    modelName: 'kv/metadata',
+    ...metadata,
+  });
+  return context.store.peekRecord('kv/metadata', metadata.id);
+};

@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret
+```

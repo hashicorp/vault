@@ -4,6 +4,9 @@ page_title: Namespace API Lock
 description: Lock the Vault API on a per-namespace basis.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Namespace lock and unlock
 
 Vault makes the API available (unlocked) by default for all namespaces. In
@@ -27,7 +30,7 @@ unlocking the descendant.
 Blocking access to much of Vault can be an important break-glass tool in the
 event of unexpected behavior.
 
-For HCP Vault, this provides functionality analogous to sealing Vault, without
+For HCP Vault Dedicated, this provides functionality analogous to sealing Vault, without
 the Vault administrator requesting that the Managed Service Provider seal/unseal
 Vault.
 
@@ -57,7 +60,7 @@ locking namespace.
 
 The API can be unlocked by running `vault namespace unlock` (or via the API)
 while operating in the namespace to unlock. Optionally, a subpath can be
-provided to lock a descendant of the current namespace.
+provided to unlock a descendant of the current namespace.
 
 In general, an unlock key is required to unlock the API. This is the same as the
 unlock key provided when the namespace was locked.

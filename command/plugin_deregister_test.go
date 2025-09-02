@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
 )
 
 func testPluginDeregisterCommand(tb testing.TB) (*cli.MockUi, *PluginDeregisterCommand) {
@@ -35,7 +35,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 	}{
 		{
 			"not_enough_args",
-			nil,
+			[]string{"foo"},
 			"Not enough arguments",
 			1,
 		},
@@ -80,8 +80,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
@@ -92,13 +91,17 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		ui, cmd := testPluginDeregisterCommand(t)
 		cmd.client = client
 
-		if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+		registerResp, err := client.Sys().RegisterPluginDetailed(&api.RegisterPluginInput{
 			Name:    pluginName,
 			Type:    api.PluginTypeCredential,
 			Command: pluginName,
 			SHA256:  sha256Sum,
-		}); err != nil {
+		})
+		if err != nil {
 			t.Fatal(err)
+		}
+		if len(registerResp.Warnings) > 0 {
+			t.Errorf("expected no warnings, got %q", registerResp.Warnings)
 		}
 
 		code := cmd.Run([]string{
@@ -109,13 +112,13 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Deregistered plugin (if it was registered): "
+		expected := "Success! Deregistered auth plugin: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
+		listResp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
 			Type: api.PluginTypeCredential,
 		})
 		if err != nil {
@@ -123,7 +126,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 
 		found := false
-		for _, plugins := range resp.PluginsByType {
+		for _, plugins := range listResp.PluginsByType {
 			for _, p := range plugins {
 				if p == pluginName {
 					found = true
@@ -131,15 +134,14 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			}
 		}
 		if found {
-			t.Errorf("expected %q to not be in %q", pluginName, resp.PluginsByType)
+			t.Errorf("expected %q to not be in %q", pluginName, listResp.PluginsByType)
 		}
 	})
 
 	t.Run("integration with version", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
@@ -159,7 +161,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Deregistered plugin (if it was registered): "
+		expected := "Success! Deregistered auth plugin: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -186,8 +188,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 	t.Run("integration with missing version", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
@@ -206,7 +207,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Deregistered plugin (if it was registered): "
+		expected := "does not exist in the catalog"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -227,6 +228,28 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("expected %q to be in %#v", pluginName, resp.Details)
+		}
+	})
+
+	t.Run("deregister builtin", func(t *testing.T) {
+		t.Parallel()
+
+		pluginDir := corehelpers.MakeTestPluginDir(t)
+
+		client, _, closer := testVaultServerPluginDir(t, pluginDir)
+		defer closer()
+
+		ui, cmd := testPluginDeregisterCommand(t)
+		cmd.client = client
+
+		expected := "is a builtin plugin"
+		if code := cmd.Run([]string{
+			consts.PluginTypeCredential.String(),
+			"github",
+		}); code != 2 {
+			t.Errorf("expected %d to be %d", code, 2)
+		} else if !strings.Contains(ui.ErrorWriter.String(), expected) {
+			t.Errorf("expected %q to contain %q", ui.ErrorWriter.String(), expected)
 		}
 	})
 

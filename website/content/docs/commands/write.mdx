@@ -7,6 +7,9 @@ description: |-
   of this command is determined at the thing mounted at the path.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # write
 
 The `write` command writes data to Vault at the given path (wrapper command for
@@ -55,6 +58,15 @@ Configure access to Consul by providing an access token:
 
 ```shell-session
 $ echo $MY_TOKEN | vault write consul/config/access token=-
+```
+
+Set role-level TTL values for a user named "alice" so the generated lease has a
+default TTL of 8 hours (28800 seconds) and maximum TTL of 12 hours
+(43200 seconds):
+
+```shell-session
+$ VAULT_TOKEN=$VAULT_TOKEN vault write /auth/userpass/users/alice \
+    token_ttl="8h" token_max_ttl="12h"
 ```
 
 ### API versus CLI

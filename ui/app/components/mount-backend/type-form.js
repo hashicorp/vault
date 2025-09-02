@@ -4,10 +4,8 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
-import { allMethods, methods } from 'vault/helpers/mountable-auth-methods';
-import { allEngines, mountableEngines } from 'vault/helpers/mountable-secret-engines';
-import { tracked } from '@glimmer/tracking';
+import { service } from '@ember/service';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 /**
  *
@@ -17,25 +15,28 @@ import { tracked } from '@glimmer/tracking';
  *
  * @example
  * ```js
- * <MountBackend::TypeForm @setMountType={{this.setMountType}} @mountType="secret" />
+ * <MountBackend::TypeForm @setMountType={{this.setMountType}} @mountCategory="secret" />
  * ```
- * @param {CallableFunction} setMountType - function will recieve the mount type string. Should update the model type value
- * @param {string} [mountType=auth] - mount type can be `auth` or `secret`
+ * @param {CallableFunction} setMountType - function will receive the mount type string. Should update the model type value
+ * @param {string} [mountCategory=auth] - mount category can be `auth` or `secret`
  */
 
 export default class MountBackendTypeForm extends Component {
   @service version;
-  @tracked selection;
 
   get secretEngines() {
-    return this.version.isEnterprise ? allEngines() : mountableEngines();
+    // If an enterprise license is present, return all secret engines;
+    // otherwise, return only the secret engines supported in OSS.
+    return filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: this.version.isEnterprise });
   }
 
   get authMethods() {
-    return this.version.isEnterprise ? allMethods() : methods();
+    // If an enterprise license is present, return all auth methods;
+    // otherwise, return only the auth methods supported in OSS.
+    return filterEnginesByMountCategory({ mountCategory: 'auth', isEnterprise: this.version.isEnterprise });
   }
 
   get mountTypes() {
-    return this.args.mountType === 'secret' ? this.secretEngines : this.authMethods;
+    return this.args.mountCategory === 'secret' ? this.secretEngines : this.authMethods;
   }
 }

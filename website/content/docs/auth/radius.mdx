@@ -6,7 +6,12 @@ description: |-
   existing RADIUS server.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # RADIUS auth method
+
+@include 'tips/custom-authn.mdx'
 
 The `radius` auth method allows users to authenticate with Vault using an
 existing RADIUS server that accepts the PAP authentication scheme.

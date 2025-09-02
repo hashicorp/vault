@@ -4,9 +4,11 @@
  */
 
 import Route from '@ember/routing/route';
+import { service } from '@ember/service';
 
-export default Route.extend({
+export default class ClusterIndexRoute extends Route {
+  @service router;
   beforeModel() {
-    return this.transitionTo('vault.cluster.dashboard');
-  },
-});
+    return this.router.transitionTo('vault.cluster.dashboard');
+  }
+}

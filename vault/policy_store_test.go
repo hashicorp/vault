@@ -4,11 +4,15 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"reflect"
+	"sync"
 	"testing"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
@@ -394,7 +398,7 @@ func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
 			paramNamespace:       "1AbcD",
 			paramPolicyName:      "policy1",
 			isErrorExpected:      true,
-			expectedErrorMessage: "policy does not exist in type map: 1AbcD/policy1",
+			expectedErrorMessage: "policy does not exist in type map",
 		},
 		"not-in-map-rgp": {
 			policyStoreKey:       "2WxyZ/policy2",
@@ -402,7 +406,7 @@ func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
 			paramNamespace:       "1AbcD",
 			paramPolicyName:      "policy1",
 			isErrorExpected:      true,
-			expectedErrorMessage: "policy does not exist in type map: 1AbcD/policy1",
+			expectedErrorMessage: "policy does not exist in type map",
 		},
 		"unknown-policy-type": {
 			policyStoreKey:       "1AbcD/policy1",
@@ -436,4 +440,58 @@ func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestPolicyStore_DuplicateAttributes checks the behaviour of the policyStore.ACL method when it finds a templated
+// policy with duplicate attributes
+// TODO (HCL_DUP_KEYS_DEPRECATION): change this test to expect an error. Will need to manually create the policy since
+// ParseACLPolicy will fail on duplicate attributes.
+func TestPolicyStore_DuplicateAttributes(t *testing.T) {
+	logOut := new(bytes.Buffer)
+	conf := &CoreConfig{
+		Logger: log.New(&log.LoggerOptions{
+			Mutex:  &sync.Mutex{},
+			Level:  log.Warn,
+			Output: logOut,
+		}),
+	}
+	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
+	ps := core.policyStore
+	dupAttrPolicy := aclPolicy + `
+path "foo" {
+	capabilities = ["list"]
+	capabilities = ["read"]
+}
+`
+	t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
+	policy, err := ParseACLPolicy(namespace.RootNamespace, dupAttrPolicy)
+	require.NoError(t, err)
+	// check that "list" and "read" get concatenated
+	require.Len(t, policy.Paths[len(policy.Paths)-1].Capabilities, 2)
+	policy.Templated = true
+	require.NoError(t, err)
+	ctx := namespace.RootContext(context.Background())
+	err = ps.SetPolicy(ctx, policy)
+	require.NoError(t, err)
+
+	logOut.Reset()
+	_, err = ps.ACL(ctx, nil, map[string][]string{namespace.RootNamespace.ID: {"dev", "ops"}})
+	require.NoError(t, err)
+	require.Contains(t, logOut.String(), "HCL policy contains duplicate attributes, which will no longer be supported in a future version")
+
+	ps.tokenPoliciesLRU.Purge()
+	logOut.Reset()
+	p, err := ps.GetPolicy(ctx, "dev", PolicyTypeACL)
+	require.NotNil(t, p)
+	require.NoError(t, err)
+	require.Contains(t, logOut.String(), "HCL policy contains duplicate attributes, which will no longer be supported in a future version")
+
+	t.Setenv(random.AllowHclDuplicatesEnvVar, "false")
+	_, err = ps.ACL(ctx, nil, map[string][]string{namespace.RootNamespace.ID: {"dev", "ops"}})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "error parsing templated policy \"dev\": failed to parse policy: The argument \"capabilities\" at 61:2 was already set. Each argument can only be defined once")
+	ps.tokenPoliciesLRU.Purge()
+	_, err = ps.GetPolicy(ctx, "dev", PolicyTypeACL)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to parse policy: failed to parse policy: The argument \"capabilities\" at 61:2 was already set. Each argument can only be defined once")
 }

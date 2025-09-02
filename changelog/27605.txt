@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/raft: Bump raft to v1.7.0 which includes pre-vote. This should make clusters more stable during network partitions.
+```

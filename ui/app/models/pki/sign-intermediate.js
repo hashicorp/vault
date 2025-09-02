@@ -19,15 +19,11 @@ const validations = {
   'excludeCnFromSans',
   'customTtl',
   'notBeforeDuration',
+  'enforceLeafNotAfterBehavior',
   'format',
-  'permittedDnsDomains',
   'maxPathLength',
 ])
 export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
-  getHelpUrl(backend) {
-    return `/v1/${backend}/issuer/example/sign-intermediate?help=1`;
-  }
-
   @attr issuerRef;
 
   @attr('string', {
@@ -56,18 +52,59 @@ export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
   })
   notBeforeDuration;
 
-  @attr({
-    label: 'Permitted DNS domains',
-    subText:
-      'DNS domains for which certificates are allowed to be issued or signed by this CA certificate. Enter each value as a new input.',
+  @attr('boolean', {
+    subText: "Do not truncate the NotAfter field, use the issuer's configured leaf_not_after_behavior",
   })
-  permittedDnsDomains;
+  enforceLeafNotAfterBehavior;
 
   @attr({
     subText: 'Specifies the maximum path length to encode in the generated certificate. -1 means no limit',
     defaultValue: '-1',
   })
   maxPathLength;
+
+  /* Name constraint overrides */
+  @attr({
+    subText: 'DNS domains for which certificates are allowed to be issued or signed by this CA certificate.',
+  })
+  permittedDnsDomains;
+
+  @attr({
+    subText: 'Domains for which this certificate is not allowed to sign or issue child certificates.',
+  })
+  excludedDnsDomains;
+
+  @attr({
+    subText: 'Email addresses for which this certificate is not allowed to sign or issue child certificates.',
+  })
+  excludedEmailAddresses;
+
+  @attr({
+    subText:
+      'IP ranges for which this certificate is not allowed to sign or issue child certificates. Ranges must be specified in the notation of IP address and prefix length, such as "192.0.2.0/24" or "2001:db8::/32", as defined in RFC 4632 and RFC 4291.',
+  })
+  excludedIpRanges;
+
+  @attr({
+    subText: 'URI domains for which this certificate is not allowed to sign or issue child certificates.',
+  })
+  excludedUriDomains;
+
+  @attr({
+    subText: 'Email addresses for which this certificate is allowed to sign or issue child certificates.',
+  })
+  permittedEmailAddresses;
+
+  @attr({
+    subText:
+      'IP ranges for which this certificate is allowed to sign or issue child certificates. Ranges must be specified in the notation of IP address and prefix length, such as "192.0.2.0/24" or "2001:db8::/32", as defined in RFC 4632 and RFC 4291.',
+  })
+  permittedIpRanges;
+
+  @attr({
+    subText: 'URI domains for which this certificate is allowed to sign or issue child certificates.',
+  })
+  permittedUriDomains;
 
   /* Signing Options overrides */
   @attr({

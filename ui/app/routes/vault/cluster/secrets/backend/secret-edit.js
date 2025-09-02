@@ -6,11 +6,14 @@
 import { set } from '@ember/object';
 import Ember from 'ember';
 import { resolve } from 'rsvp';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 
+/**
+ * @type Class
+ */
 export default Route.extend({
   store: service(),
   router: service(),
@@ -68,22 +71,49 @@ export default Route.extend({
   },
 
   backendType() {
-    return this.modelFor('vault.cluster.secrets.backend').get('engineType');
+    return this.modelFor('vault.cluster.secrets.backend').engineType;
   },
 
   templateName: 'vault/cluster/secrets/backend/secretEditLayout',
 
   beforeModel({ to: { queryParams } }) {
     const secret = this.secretParam();
+    const secretEngine = this.modelFor('vault.cluster.secrets.backend');
     return this.buildModel(secret, queryParams).then(() => {
       const parentKey = parentKeyForKey(secret);
       const mode = this.routeName.split('.').pop();
+      // for kv v2, redirect users from the old url to the new engine url (1.15.0 +)
+      if (secretEngine.type === 'kv' && secretEngine.version === 2) {
+        let route, params;
+        switch (true) {
+          case !secret:
+            // if no secret param redirect to the create route
+            route = 'vault.cluster.secrets.backend.kv.create';
+            params = [secretEngine.id];
+            break;
+          case this.routeName === 'vault.cluster.secrets.backend.show':
+            route = 'vault.cluster.secrets.backend.kv.secret.index';
+            params = [secretEngine.id, secret];
+            break;
+          case this.routeName === 'vault.cluster.secrets.backend.edit':
+            route = 'vault.cluster.secrets.backend.kv.secret.details.edit';
+            params = [secretEngine.id, secret];
+            break;
+          default:
+            route = 'vault.cluster.secrets.backend.kv.secret.index';
+            params = [secretEngine.id, secret];
+            break;
+        }
+        this.router.transitionTo(route, ...params);
+        return;
+      }
       if (mode === 'edit' && keyIsFolder(secret)) {
         if (parentKey) {
-          return this.router.transitionTo('vault.cluster.secrets.backend.list', encodePath(parentKey));
+          this.router.transitionTo('vault.cluster.secrets.backend.list', encodePath(parentKey));
         } else {
-          return this.router.transitionTo('vault.cluster.secrets.backend.list-root');
+          this.router.transitionTo('vault.cluster.secrets.backend.list-root');
         }
+        return;
       }
     });
   },
@@ -94,12 +124,12 @@ export default Route.extend({
     if (modelType === 'secret') {
       return resolve();
     }
-    return this.pathHelp.getNewModel(modelType, backend);
+    return this.pathHelp.hydrateModel(modelType, backend);
   },
 
   modelType(backend, secret, options = {}) {
     const backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
-    const type = backendModel.get('engineType');
+    const { engineType } = backendModel;
     const types = {
       database: secret && secret.startsWith('role/') ? 'database/role' : 'database/connection',
       transit: 'transit-key',
@@ -110,13 +140,14 @@ export default Route.extend({
       kv: 'secret',
       keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
       generic: 'secret',
+      totp: 'totp-key',
     };
-    return types[type];
+    return types[engineType];
   },
 
   handleSecretModelError(capabilities, secretId, modelType, error) {
     // can't read the path and don't have update capability, so re-throw
-    if (!capabilities.get('canUpdate') && modelType === 'secret') {
+    if (!capabilities.canUpdate && modelType === 'secret') {
       throw error;
     }
     this.store.push({
@@ -175,7 +206,7 @@ export default Route.extend({
     const backend = this.enginePathParam();
     const preferAdvancedEdit =
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
-      this.controllerFor('vault.cluster.secrets.backend').get('preferAdvancedEdit') || false;
+      this.controllerFor('vault.cluster.secrets.backend').preferAdvancedEdit || false;
     const backendType = this.backendType();
     model.secret.setProperties({ backend });
     controller.setProperties({

@@ -7,18 +7,17 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import kubernetesScenario from 'vault/mirage/scenarios/kubernetes';
-import ENV from 'vault/config/environment';
-import authPage from 'vault/tests/pages/auth';
+import kubernetesHandlers from 'vault/mirage/handlers/kubernetes';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { fillIn, visit, click, currentRouteName } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | kubernetes | credentials', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'kubernetes';
-  });
   hooks.beforeEach(function () {
+    kubernetesHandlers(this.server);
     kubernetesScenario(this.server);
     this.visitRoleCredentials = () => {
       return visit('/vault/secrets/kubernetes/kubernetes/roles/role-0/credentials');
@@ -26,10 +25,7 @@ module('Acceptance | kubernetes | credentials', function (hooks) {
     this.validateRoute = (assert, route, message) => {
       assert.strictEqual(currentRouteName(), `vault.cluster.secrets.backend.kubernetes.${route}`, message);
     };
-    return authPage.login();
-  });
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
+    return login();
   });
 
   test('it should have correct breadcrumb links in credentials view', async function (assert) {
@@ -71,8 +67,8 @@ module('Acceptance | kubernetes | credentials', function (hooks) {
       };
     });
     await fillIn('[data-test-kubernetes-namespace]', 'kubernetes-test');
-    await click('[data-test-toggle-input]');
-    await click('[data-test-toggle-input="Time-to-Live (TTL)"]');
+    await click(GENERAL.toggleInput('kubernetes-clusterRoleBinding'));
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
     await fillIn('[data-test-ttl-value="Time-to-Live (TTL)"]', 2);
     await click('[data-test-generate-credentials-button]');
     await click('[data-test-generate-credentials-done]');

@@ -5,23 +5,35 @@ package pprof
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/command/server"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
 
 func TestSysPprof(t *testing.T) {
 	t.Parallel()
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+
+	// trace test setup
+	dir, err := os.MkdirTemp("", "vault-trace-test")
+	require.NoError(t, err)
+
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		RawConfig: &server.Config{
+			EnablePostUnsealTrace: true,
+			PostUnsealTraceDir:    dir,
+		},
+	}, &vault.TestClusterOptions{
 		HandlerFunc:             vaulthttp.Handler,
 		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
@@ -31,6 +43,14 @@ func TestSysPprof(t *testing.T) {
 	core := cluster.Cores[0].Core
 	vault.TestWaitActive(t, core)
 	SysPprof_Test(t, cluster)
+
+	// draft trace test onto pprof one to avoid increasing test runtime with additional clusters
+	files, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	require.Greater(t, len(files), 0)
+	traceFile, err := files[0].Info()
+	require.NoError(t, err)
+	require.Greater(t, traceFile.Size(), int64(0))
 }
 
 func TestSysPprof_MaxRequestDuration(t *testing.T) {
@@ -65,7 +85,7 @@ func TestSysPprof_MaxRequestDuration(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	httpRespBody, err := ioutil.ReadAll(resp.Body)
+	httpRespBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,23 +105,4 @@ func TestSysPprof_MaxRequestDuration(t *testing.T) {
 	if len(errs) == 0 || !strings.Contains(errs[0].(string), "exceeds max request duration") {
 		t.Fatalf("unexpected error returned: %v", errs)
 	}
-}
-
-func TestSysPprof_Standby(t *testing.T) {
-	t.Parallel()
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
-		DisablePerformanceStandby: true,
-	}, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		DefaultHandlerProperties: vault.HandlerProperties{
-			ListenerConfig: &configutil.Listener{
-				Profiling: configutil.ListenerProfiling{
-					UnauthenticatedPProfAccess: true,
-				},
-			},
-		},
-	})
-	defer cluster.Cleanup()
-
-	SysPprof_Standby_Test(t, cluster)
 }

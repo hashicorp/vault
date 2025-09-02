@@ -5,16 +5,15 @@ package vault
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-
 	"github.com/armon/go-metrics"
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -143,8 +142,8 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 	}
 
 	// Verify matching mount tables
-	if !reflect.DeepEqual(c.auth, c2.auth) {
-		t.Fatalf("mismatch: %v %v", c.auth, c2.auth)
+	if diffs := deep.Equal(c.auth, c2.auth); len(diffs) != 0 {
+		t.Fatalf("mismatch: %v %v:\nDiffs: %v", c.auth, c2.auth, diffs)
 	}
 }
 
@@ -231,8 +230,8 @@ func TestCore_EnableCredential(t *testing.T) {
 	}
 
 	// Verify matching auth tables
-	if !reflect.DeepEqual(c.auth, c2.auth) {
-		t.Fatalf("mismatch: %v %v", c.auth, c2.auth)
+	if diffs := deep.Equal(c.auth, c2.auth); len(diffs) != 0 {
+		t.Fatalf("mismatch: %v %v:\nDiffs: %v", c.auth, c2.auth, diffs)
 	}
 }
 
@@ -290,8 +289,8 @@ func TestCore_EnableCredential_aws_ec2(t *testing.T) {
 	}
 
 	// Verify matching auth tables
-	if !reflect.DeepEqual(c.auth, c2.auth) {
-		t.Fatalf("mismatch: %v %v", c.auth, c2.auth)
+	if diffs := deep.Equal(c.auth, c2.auth); len(diffs) != 0 {
+		t.Fatalf("mismatch: %v %v:\n%v", c.auth, c2.auth, diffs)
 	}
 }
 
@@ -378,8 +377,8 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(oldCredential, c.auth) {
-		t.Fatalf("expected\n%#v\ngot\n%#v\n", oldCredential, c.auth)
+	if diffs := deep.Equal(oldCredential, c.auth); len(diffs) != 0 {
+		t.Fatalf("expected\n%#v\ngot\n%#v:\nDiffs: %v", oldCredential, c.auth, diffs)
 	}
 
 	if len(c.auth.Entries) != 2 {
@@ -487,8 +486,8 @@ func TestCore_DisableCredential(t *testing.T) {
 	}
 
 	// Verify matching mount tables
-	if !reflect.DeepEqual(c.auth, c2.auth) {
-		t.Fatalf("mismatch: %v %v", c.auth, c2.auth)
+	if diffs := deep.Equal(c.auth, c2.auth); len(diffs) != 0 {
+		t.Fatalf("mismatch: %v %v:\nDiffs: %v", c.auth, c2.auth, diffs)
 	}
 }
 

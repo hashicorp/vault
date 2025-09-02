@@ -5,19 +5,21 @@ package command
 
 import (
 	"context"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/mitchellh/cli"
-
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 // minTokenLengthExternal is the minimum size of SSC
@@ -613,4 +615,58 @@ func TestLoginMFATwoPhaseNonInteractiveMethodName(t *testing.T) {
 	}
 
 	validateFunc(methodName)
+}
+
+// TestLoginPrintsWarningOnDuplicateHclKeys ensures that a warning is printed when the token helper file contains
+// duplicate keys.
+func TestLoginPrintsWarningOnDuplicateHclKeys(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), ".vault")
+	f.WriteString(`
+token_helper = "/token"
+token_helper = ""
+`)
+	require.NoError(t, err)
+	t.Setenv("VAULT_CONFIG_PATH", f.Name())
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+		TTL:      "30m",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := secret.Auth.ClientToken
+
+	t.Run("fail if duplicates are not allowed", func(t *testing.T) {
+		_, cmd := testLoginCommand(t)
+		cmd.tokenHelper = nil // cause default one to be used
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			token,
+		})
+		if exp := 1; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+	})
+
+	t.Run("succeed if duplicates are allowed", func(t *testing.T) {
+		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
+		ui, cmd := testLoginCommand(t)
+		cmd.tokenHelper = nil // cause default one to be used
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			token,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		require.Contains(t, ui.ErrorWriter.String(),
+			"WARNING: Duplicate keys found in the Vault token helper configuration file, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
+	})
 }

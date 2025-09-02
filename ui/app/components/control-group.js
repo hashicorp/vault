@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
@@ -24,7 +24,7 @@ export default Component.extend({
     this.set('controlGroupResponse', data);
   },
 
-  currentUserEntityId: alias('auth.authData.entity_id'),
+  currentUserEntityId: alias('auth.authData.entityId'),
 
   currentUserIsRequesting: computed('currentUserEntityId', 'model.requestEntity.id', function () {
     if (!this.model.requestEntity) return false;
@@ -33,7 +33,7 @@ export default Component.extend({
 
   currentUserHasAuthorized: computed('currentUserEntityId', 'model.authorizations.@each.id', function () {
     const authorizations = this.model.authorizations || [];
-    return Boolean(authorizations.findBy('id', this.currentUserEntityId));
+    return Boolean(authorizations.find((authz) => authz.id === this.currentUserEntityId));
   }),
 
   isSuccess: or('currentUserHasAuthorized', 'model.approved'),

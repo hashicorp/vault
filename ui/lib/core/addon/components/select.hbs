@@ -1,0 +1,37 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if this.label}}
+  <label for="select-{{this.name}}" class="is-label" data-test-select-label>
+    {{this.label}}
+  </label>
+{{/if}}
+<div class="control {{if this.isInline 'select is-inline-block'}}">
+  <div class="select {{if this.isFullwidth 'is-fullwidth'}}">
+    <select
+      class="select"
+      {{! TODO: when 2 TtlPickers are on the same view this becomes two of the same ids. Shows up as dom warning. JIRA 29298}}
+      id="select-{{this.name}}"
+      onchange={{action this.onChange value="target.value"}}
+      data-test-select={{this.name}}
+      aria-label={{this.ariaLabel}}
+    >
+      {{#if this.noDefault}}
+        <option value="">
+          Select one
+        </option>
+      {{/if}}
+      {{#each this.options as |op|}}
+        <option
+          disabled={{or op.isDisabled false}}
+          value={{or (get op this.valueAttribute) op}}
+          selected={{eq this.selectedValue (or (get op this.valueAttribute) op)}}
+        >
+          {{or (get op this.labelAttribute) op}}
+        </option>
+      {{/each}}
+    </select>
+  </div>
+</div>

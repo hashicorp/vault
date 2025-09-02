@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
@@ -13,13 +13,15 @@ import errorMessage from 'vault/utils/error-message';
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type PkiIssuerModel from 'vault/models/pki/issuer';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
+import { addToArray } from 'vault/helpers/add-to-array';
 
 interface Args {
   model: PkiIssuerModel;
 }
 
 export default class PkiIssuerEditComponent extends Component<Args> {
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked usageValues: Array<string> = [];
@@ -36,8 +38,11 @@ export default class PkiIssuerEditComponent extends Component<Args> {
 
   @action
   setUsage(value: string) {
-    const method = this.usageValues.includes(value) ? 'removeObject' : 'addObject';
-    this.usageValues[method](value);
+    if (this.usageValues.includes(value)) {
+      this.usageValues = removeFromArray(this.usageValues, value);
+    } else {
+      this.usageValues = addToArray(this.usageValues, value);
+    }
     this.args.model.usage = this.usageValues.join(',');
   }
 

@@ -1,0 +1,12 @@
+<a id="audit-arg-socket-socket_type" />
+
+**`socket_type (string : "tcp")`**
+
+Communication protocol expected by the socket. Vault can write to any
+[net.Dialer](https://pkg.go.dev/net#Dialer)-compatible socket. If a TCP socket
+stops responding, Vault may become unresponsive due to a
+[blocked audit device error](/vault/docs/audit#blocked-audit-devices).
+
+**Example**: `socket_type="udp"`
+
+

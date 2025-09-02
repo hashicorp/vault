@@ -67,8 +67,16 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 }
 
 func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
 		name := data.Get("name").(string)
+		modified := false
+		defer func() {
+			if err == nil && (resp == nil || !resp.IsError()) {
+				b.dbEvent(ctx, "creds-create", req.Path, name, modified)
+			} else {
+				b.dbEvent(ctx, "creds-create-fail", req.Path, name, modified)
+			}
+		}()
 
 		// Get the role
 		role, err := b.Role(ctx, req.Storage, name)
@@ -78,6 +86,19 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		if role == nil {
 			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 		}
+
+		defer func() {
+			if err == nil && (resp == nil || !resp.IsError()) {
+				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseCredentialCreateSuccess,
+					AdditionalDatabaseMetadata{key: "role_name", value: name},
+					AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
+			} else {
+				b.dbEvent(ctx, "creds-create-fail", req.Path, name, modified)
+				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseCredentialCreateFail,
+					AdditionalDatabaseMetadata{key: "role_name", value: name},
+					AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
+			}
+		}()
 
 		dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
 		if err != nil {
@@ -202,6 +223,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			b.CloseIfShutdown(dbi, err)
 			return nil, err
 		}
+		modified = true
 		respData["username"] = newUserResp.Username
 
 		// Database plugins using the v4 interface generate and return the password.
@@ -216,7 +238,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			"db_name":               role.DBName,
 			"revocation_statements": role.Statements.Revocation,
 		}
-		resp := b.Secret(SecretCredsType).Response(respData, internal)
+		resp = b.Secret(SecretCredsType).Response(respData, internal)
 		resp.Secret.TTL = role.DefaultTTL
 		resp.Secret.MaxTTL = role.MaxTTL
 		return resp, nil
@@ -247,9 +269,11 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 		}
 
 		respData := map[string]interface{}{
-			"username":            role.StaticAccount.Username,
-			"ttl":                 role.StaticAccount.CredentialTTL().Seconds(),
-			"last_vault_rotation": role.StaticAccount.LastVaultRotation,
+			"username": role.StaticAccount.Username,
+			"ttl":      role.StaticAccount.CredentialTTL().Seconds(),
+		}
+		if !role.StaticAccount.LastVaultRotation.IsZero() {
+			respData["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
 		}
 
 		if role.StaticAccount.UsesRotationPeriod() {
@@ -259,6 +283,8 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 			if role.StaticAccount.RotationWindow.Seconds() != 0 {
 				respData["rotation_window"] = role.StaticAccount.RotationWindow.Seconds()
 			}
+
+			respData["ttl"] = role.StaticAccount.CredentialTTL().Seconds()
 		}
 
 		switch role.CredentialType {
@@ -267,6 +293,10 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 		case v5.CredentialTypeRSAPrivateKey:
 			respData["rsa_private_key"] = string(role.StaticAccount.PrivateKey)
 		}
+
+		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseStaticCredentialRead,
+			AdditionalDatabaseMetadata{key: "role_name", value: name},
+			AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
 
 		return &logical.Response{
 			Data: respData,

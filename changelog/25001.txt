@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Allows users to search within KV v2 directories from the Dashboard's quick action card.
+```

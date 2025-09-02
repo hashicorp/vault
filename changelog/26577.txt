@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update userpass user form to allow setting `password_hash` field.
+```

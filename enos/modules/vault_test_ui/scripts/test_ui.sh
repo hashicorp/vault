@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -eux -o pipefail
 
 project_root=$(git rev-parse --show-toplevel)

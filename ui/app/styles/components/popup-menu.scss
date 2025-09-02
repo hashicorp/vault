@@ -1,23 +1,28 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+// Popup menu no longer exists, but these styles are still used in some places
 .popup-menu-content,
-.ember-power-select-options {
-  border-radius: $radius;
+.search-select .ember-power-select-options {
+  border-radius: size_variables.$radius;
   margin: -2px 0 0 0;
 
   & > .box {
-    border-radius: $radius;
-    box-shadow: $box-shadow, $box-shadow-middle;
+    border-radius: size_variables.$radius;
+    box-shadow: box-shadow_variables.$box-shadow, box-shadow_variables.$box-shadow-middle;
     padding: 0;
     position: relative;
     width: 210px;
   }
 
   &.is-wide > .box {
-    width: $drawer-width;
+    width: size_variables.$drawer-width;
   }
 
   .confirm-action span .button {
@@ -27,7 +32,7 @@
   }
 
   .menu {
-    padding: $size-11 0;
+    padding: size_variables.$spacing-4 0;
   }
 
   button.link,
@@ -40,38 +45,52 @@
     border: none;
     display: block;
     height: auto;
-    font-size: $size-7;
-    font-weight: $font-weight-semibold;
-    padding: $size-9 $size-8;
+    font-size: size_variables.$size-7;
+    font-weight: font_variables.$font-weight-semibold;
+    padding: size_variables.$spacing-10 size_variables.$spacing-12;
     text-align: left;
     text-decoration: none;
     width: 100%;
+  }
+
+  // TODO HDS polish - temp styling fix for ConfirmAction dropdown buttons
+  // so they match other dropdown elements until we replace popup-menu with Hds::Dropdown
+  .hds-confirm-action-critical {
+    &:hover {
+      background-color: var(--token-color-palette-neutral-50);
+    }
+    div,
+    span {
+      margin-left: -(size_variables.$spacing-4);
+      font-size: size_variables.$size-7;
+      font-weight: font_variables.$font-weight-semibold;
+    }
   }
 
   button.link,
   .ember-power-select-option,
   .ember-power-select-option[aria-current='true'],
   a {
-    background-color: $white;
-    color: $grey-darkest;
+    background-color: hsl(0, 0%, 100%);
+    color: var(--token-color-palette-neutral-600);
 
     &:hover {
-      background-color: $ui-gray-050;
-      color: $ui-gray-900;
+      background-color: var(--token-color-palette-neutral-50);
+      color: var(--token-color-palette-neutral-600);
     }
 
     &.active,
     &.is-active {
       background-color: transparent;
-      color: $blue;
+      color: var(--token-color-palette-blue-200);
     }
 
     &.is-destroy {
-      color: $red;
+      color: var(--token-color-palette-red-200);
 
       &:hover {
-        background-color: $red;
-        color: $white;
+        background-color: var(--token-color-palette-red-200);
+        color: hsl(0, 0%, 100%);
       }
     }
 
@@ -83,32 +102,36 @@
         cursor: default;
       }
     }
+    &.loading-dropdown {
+      display: flex;
+      align-items: center;
+    }
   }
 
   .menu-label {
-    color: $grey-dark;
-    font-size: $size-9;
-    font-weight: $font-weight-normal;
+    color: var(--token-color-palette-neutral-500);
+    font-size: size_variables.$size-9;
+    font-weight: font_variables.$font-weight-normal;
     letter-spacing: 0;
     margin: 0;
-    padding: $size-10 $size-8 0;
+    padding: size_variables.$spacing-8 size_variables.$spacing-12 0;
     text-transform: uppercase;
   }
 
   .menu-content {
-    padding: $size-10 $size-8;
+    padding: size_variables.$spacing-8 size_variables.$spacing-12;
   }
 
   hr {
-    background-color: $ui-gray-200;
+    background-color: var(--token-color-palette-neutral-200);
     margin: 0;
   }
 }
 
 .popup-menu-content p {
   box-shadow: none;
-  padding-top: $size-10;
-  font-weight: $font-weight-semibold;
+  padding-top: size_variables.$spacing-8;
+  font-weight: font_variables.$font-weight-semibold;
 }
 
 .popup-menu-content .level-left {
@@ -122,8 +145,7 @@
 }
 
 .list-item-row,
-.info-table-row,
-.wizard-dismiss-menu {
+.info-table-row {
   .popup-menu-trigger {
     height: 2.5rem;
     min-width: 0;
@@ -132,30 +154,47 @@
   }
 }
 
-.ember-basic-dropdown-content {
-  background-color: transparent;
+.search-select {
+  .ember-basic-dropdown-content {
+    background-color: transparent;
 
-  &--left.popup-menu {
-    margin: 0px 0 0 -8px;
+    &--left.popup-menu {
+      margin: 0px 0 0 -8px;
+    }
+
+    &--below {
+      &.ember-basic-dropdown--transitioning-in {
+        animation: drop-fade-above 0.15s;
+      }
+
+      &.ember-basic-dropdown--transitioning-out {
+        animation: drop-fade-above 0.15s reverse;
+      }
+    }
+
+    &--above {
+      &.ember-basic-dropdown--transitioning-in {
+        animation: drop-fade-below 0.15s;
+      }
+
+      &.ember-basic-dropdown--transitioning-out {
+        animation: drop-fade-below 0.15s reverse;
+      }
+    }
   }
+}
 
-  &--below {
-    &.ember-basic-dropdown--transitioning-in {
-      animation: drop-fade-above 0.15s;
-    }
-
-    &.ember-basic-dropdown--transitioning-out {
-      animation: drop-fade-above 0.15s reverse;
-    }
-  }
-
-  &--above {
-    &.ember-basic-dropdown--transitioning-in {
-      animation: drop-fade-below 0.15s;
-    }
-
-    &.ember-basic-dropdown--transitioning-out {
-      animation: drop-fade-below 0.15s reverse;
-    }
+// Match HDS styling for namespace ink
+a.ns-dropdown-item {
+  color: var(--token-color-foreground-primary);
+  display: flex;
+  align-items: flex-start;
+  padding: 7px 9px 7px 0px;
+  border: 1px solid transparent;
+  outline-style: solid;
+  outline-color: transparent;
+  text-decoration: none;
+  &:hover {
+    color: var(--token-color-foreground-action-hover);
   }
 }

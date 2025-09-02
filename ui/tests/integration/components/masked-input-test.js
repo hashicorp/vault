@@ -6,13 +6,13 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, focus, triggerKeyEvent, typeIn, fillIn, click } from '@ember/test-helpers';
-import { create } from 'ember-cli-page-object';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import maskedInput from 'vault/tests/pages/components/masked-input';
 
-const component = create(maskedInput);
-
+const SELECTORS = {
+  stringify: '[data-test-stringify-toggle]',
+};
 module('Integration | Component | masked input', function (hooks) {
   setupRenderingTest(hooks);
 
@@ -26,14 +26,14 @@ module('Integration | Component | masked input', function (hooks) {
   test('it renders', async function (assert) {
     await render(hbs`<MaskedInput />`);
     assert.dom('[data-test-masked-input]').exists('shows masked input');
-    assert.ok(component.textareaIsPresent);
-    assert.dom('[data-test-textarea]').hasClass('masked-font', 'it renders an input with obscure font');
-    assert.notOk(component.copyButtonIsPresent, 'does not render copy button by default');
-    assert.notOk(component.downloadButtonIsPresent, 'does not render download button by default');
+    assert.dom('textarea').exists();
+    assert.dom('textarea').hasClass('masked-font', 'it renders an input with obscure font');
+    assert.dom(GENERAL.copyButton).doesNotExist('does not render copy button by default');
+    assert.dom(GENERAL.button('Download')).doesNotExist('does not render download button by default');
 
-    await component.toggleMasked();
+    await click(GENERAL.button('toggle-masked'));
     assert.dom('.masked-value').doesNotHaveClass('masked-font', 'it unmasks when show button is clicked');
-    await component.toggleMasked();
+    await click(GENERAL.button('toggle-masked'));
     assert.dom('.masked-value').hasClass('masked-font', 'it remasks text when button is clicked');
   });
 
@@ -42,23 +42,21 @@ module('Integration | Component | masked input', function (hooks) {
     await render(hbs`<MaskedInput @displayOnly={{true}} @value={{this.value}} />`);
 
     assert.dom('.masked-value').hasClass('masked-font', 'value has obscured font');
-    assert.notOk(component.textareaIsPresent, 'it does not render a textarea when displayOnly is true');
+    assert.dom('textarea').doesNotExist('it does not render a textarea when displayOnly is true');
   });
 
   test('it renders a copy button when allowCopy is true', async function (assert) {
-    await render(hbs`<MaskedInput @allowCopy={{true}} />`);
-    assert.ok(component.copyButtonIsPresent);
+    this.set('value', { some: 'object' });
+    await render(hbs`<MaskedInput @allowCopy={{true}} @value={{this.value}} />`);
+    assert.dom(GENERAL.copyButton).exists();
   });
 
   test('it renders a download button when allowDownload is true', async function (assert) {
-    await render(hbs`<MaskedInput @allowDownload={{true}} /> <div id="modal-wormhole"></div>
-`);
-    assert.ok(component.downloadIconIsPresent);
+    await render(hbs`<MaskedInput @allowDownload={{true}} /> `);
+    assert.dom(GENERAL.button('Download secret value')).exists();
 
-    await click('[data-test-download-icon]');
-    assert.ok(component.downloadButtonIsPresent, 'clicking download icon opens modal with download button');
-
-    assert;
+    await click(GENERAL.button('Download secret value'));
+    assert.dom(GENERAL.button('Download')).exists('clicking download icon opens modal with download button');
   });
 
   test('it shortens all outputs when displayOnly and masked', async function (assert) {
@@ -67,7 +65,7 @@ module('Integration | Component | masked input', function (hooks) {
     const maskedValue = document.querySelector('.masked-value').innerText;
     assert.strictEqual(maskedValue.length, 11);
 
-    await component.toggleMasked();
+    await click(GENERAL.button('toggle-masked'));
     const unMaskedValue = document.querySelector('.masked-value').innerText;
     assert.strictEqual(unMaskedValue.length, this.value.length);
   });
@@ -85,7 +83,7 @@ module('Integration | Component | masked input', function (hooks) {
     this.set('value', 'before');
     this.set('onChange', changeSpy);
     await render(hbs`<MaskedInput @value={{this.value}} @onChange={{this.onChange}} />`);
-    await fillIn('[data-test-textarea]', 'after');
+    await fillIn('textarea', 'after');
     assert.true(changeSpy.calledWith('after'));
   });
 
@@ -94,7 +92,7 @@ module('Integration | Component | masked input', function (hooks) {
     this.set('value', '');
     this.set('onKeyUp', keyupSpy);
     await render(hbs`<MaskedInput @name="foo" @value={{this.value}} @onKeyUp={{this.onKeyUp}} />`);
-    await typeIn('[data-test-textarea]', 'baz');
+    await typeIn('textarea', 'baz');
     assert.true(keyupSpy.calledThrice, 'calls for each letter of typing');
     assert.true(keyupSpy.firstCall.calledWithExactly('foo', 'b'));
     assert.true(keyupSpy.secondCall.calledWithExactly('foo', 'ba'));
@@ -104,8 +102,8 @@ module('Integration | Component | masked input', function (hooks) {
   test('it does not remove value on tab', async function (assert) {
     this.set('value', 'hello');
     await render(hbs`<MaskedInput @value={{this.value}} />`);
-    await triggerKeyEvent('[data-test-textarea]', 'keydown', 9);
-    await component.toggleMasked();
+    await triggerKeyEvent('textarea', 'keydown', 9);
+    await click(GENERAL.button('toggle-masked'));
     const unMaskedValue = document.querySelector('.masked-value').value;
     assert.strictEqual(unMaskedValue, this.value);
   });
@@ -121,14 +119,47 @@ module('Integration | Component | masked input', function (hooks) {
       />
     `);
     assert.dom('[data-test-masked-input]').exists('shows masked input');
-    assert.ok(component.copyButtonIsPresent);
-    assert.ok(component.downloadIconIsPresent);
-    assert.dom('[data-test-button="toggle-masked"]').exists('shows toggle mask button');
+    assert.dom(GENERAL.copyButton).exists();
+    assert.dom(GENERAL.button('Download secret value')).exists();
+    assert.dom(GENERAL.button('toggle-masked')).exists('shows toggle mask button');
 
-    await component.toggleMasked();
+    await click(GENERAL.button('toggle-masked'));
     assert.dom('.masked-value').doesNotHaveClass('masked-font', 'it unmasks when show button is clicked');
     assert
       .dom('[data-test-icon="minus"]')
       .exists('shows minus icon when unmasked because value is empty string');
+  });
+
+  test('it should render stringify toggle in download modal', async function (assert) {
+    assert.expect(3);
+
+    // this looks wonky but need a new line in there to test stringify adding escape character
+    this.value = `bar
+`;
+
+    const downloadStub = sinon.stub(this.owner.lookup('service:download'), 'miscExtension');
+    downloadStub.callsFake((fileName, value) => {
+      const firstCall = downloadStub.callCount === 1;
+      const assertVal = firstCall ? this.value : JSON.stringify(this.value);
+      assert.strictEqual(assertVal, value, `Value is ${firstCall ? 'not ' : ''}stringified`);
+      return true;
+    });
+
+    await render(hbs`
+      <MaskedInput
+        @name="key"
+        @value={{this.value}}
+        @displayOnly={{true}}
+        @allowDownload={{true}}
+      />
+    `);
+
+    await click(GENERAL.button('Download secret value'));
+    assert.dom(SELECTORS.stringify).isNotChecked('Stringify toggle off as default');
+    await click(GENERAL.button('Download'));
+
+    await click(GENERAL.button('Download secret value'));
+    await click(SELECTORS.stringify);
+    await click(GENERAL.button('Download'));
   });
 });

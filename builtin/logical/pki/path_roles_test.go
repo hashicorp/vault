@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
@@ -69,7 +70,7 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var role roleEntry
+	var role issuing.RoleEntry
 	if err := entry.DecodeJSON(&role); err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +171,7 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var role roleEntry
+	var role issuing.RoleEntry
 	if err := entry.DecodeJSON(&role); err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +206,7 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 	if entry == nil {
 		t.Fatalf("role should not be nil")
 	}
-	var result roleEntry
+	var result issuing.RoleEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -265,7 +266,7 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var role roleEntry
+	var role issuing.RoleEntry
 	if err := entry.DecodeJSON(&role); err != nil {
 		t.Fatal(err)
 	}
@@ -305,7 +306,7 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 	if entry == nil {
 		t.Fatalf("role should not be nil")
 	}
-	var result roleEntry
+	var result issuing.RoleEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -365,7 +366,7 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var role roleEntry
+	var role issuing.RoleEntry
 	if err := entry.DecodeJSON(&role); err != nil {
 		t.Fatal(err)
 	}
@@ -399,7 +400,7 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 	if entry == nil {
 		t.Fatalf("role should not be nil")
 	}
-	var result roleEntry
+	var result issuing.RoleEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -879,6 +880,11 @@ func TestPki_RolePatch(t *testing.T) {
 			Patched: true,
 		},
 		{
+			Field:   "serial_number_source",
+			Before:  "json-csr",
+			Patched: "json",
+		},
+		{
 			Field:   "ou",
 			Before:  []string{"crypto"},
 			Patched: []string{"cryptosec"},
@@ -1139,8 +1145,8 @@ func getPolicyIdentifiersOffCertificate(resp logical.Response) ([]string, error)
 	if err != nil {
 		return nil, err
 	}
-	policyIdentifierStrings := make([]string, len(certificate.PolicyIdentifiers))
-	for index, asnOid := range certificate.PolicyIdentifiers {
+	policyIdentifierStrings := make([]string, len(certificate.Policies))
+	for index, asnOid := range certificate.Policies {
 		policyIdentifierStrings[index] = asnOid.String()
 	}
 	return policyIdentifierStrings, nil

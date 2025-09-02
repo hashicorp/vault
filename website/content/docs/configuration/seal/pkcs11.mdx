@@ -1,12 +1,14 @@
 ---
 layout: docs
-page_title: PKCS11 - Seals - Configuration
-description: |-
-  The PKCS11 seal configures Vault to use an HSM with PKCS11 as the seal
-  wrapping mechanism.
+page_title: HSM PKCS11 seal configuration
+description: >-
+  Configure Vault sealing to use PKCS11.
 ---
 
-# `pkcs11` seal
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# HSM PKCS11 seal configuration
 
 
 <Note title="Auto-unseal and seal wrapping requires Vault Enterprise">
@@ -156,13 +158,22 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   circumstances, such as if proprietary vendor extensions are required to
   create keys of a suitable type.
 
+  ~> **NOTE**: Once the initial key creation has occurred post cluster
+  initialization, it is advisable to disable this flag to prevent any
+  unintended key creation in the future.
+
 - `force_rw_session` `(string: "false")`: Force all operations to open up
   a read-write session to the HSM. This is a boolean expressed as a string (e.g.
   `"true"`). May also be specified by the `VAULT_HSM_FORCE_RW_SESSION` environment
   variable. This key is mainly to work around a limitation within AWS's CloudHSM v5
   pkcs11 implementation.
 
+- `max_parallel` `(int: 1)` - The number of concurrent requests that may be
+  in flight to the HSM at any given time.
+
 - `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+`pin` can be an [indirect value reference](/vault/docs/configuration/seal#indirect-value-references).
 
 Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
   
@@ -277,7 +288,9 @@ This seal supports rotating keys by using different key labels to track key vers
 the key value, generate a new key in a different key label in the HSM and update Vault's
 configuration with the new key label value. Restart your vault instance to pick up the new key
 label and all new encryption operations will use the updated key label. Old keys must not be disabled
-or deleted and are used to decrypt older data.
+or deleted and are used to decrypt older data. To disable or delete old keys, Vault needs to
+ perform [seal-rewrap](/vault/api-docs/system/sealwrap-rewrap#start-a-seal-rewrap-process)
+ so  that data encrypted by the old key can be decrypted using the new key. 
 
 **NOTE**: Prior to version 0.10.1, key information was not tracked with the ciphertext. If
 rotation is desired for data that was seal wrapped prior to this version must also set

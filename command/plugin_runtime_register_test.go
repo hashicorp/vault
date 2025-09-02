@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
 )
 
 func testPluginRuntimeRegisterCommand(tb testing.TB) (*cli.MockUi, *PluginRuntimeRegisterCommand) {
@@ -130,7 +130,7 @@ func TestPluginRuntimeFlagParsing(t *testing.T) {
 		cgroupParent    string
 		cpu             int64
 		memory          int64
-		args            []string
+		rootless        bool
 		expectedPayload string
 	}{
 		"minimal": {
@@ -145,7 +145,8 @@ func TestPluginRuntimeFlagParsing(t *testing.T) {
 			ociRuntime:      "runtime",
 			cpu:             5678,
 			memory:          1234,
-			expectedPayload: `{"type":1,"cgroup_parent":"/cpulimit/","memory_bytes":1234,"cpu_nanos":5678,"oci_runtime":"runtime"}`,
+			rootless:        true,
+			expectedPayload: `{"type":1,"cgroup_parent":"/cpulimit/","memory_bytes":1234,"cpu_nanos":5678,"oci_runtime":"runtime","rootless":true}`,
 		},
 	} {
 		tc := tc
@@ -166,6 +167,9 @@ func TestPluginRuntimeFlagParsing(t *testing.T) {
 			}
 			if tc.cpu != 0 {
 				args = append(args, fmt.Sprintf("-cpu_nanos=%d", tc.cpu))
+			}
+			if tc.rootless {
+				args = append(args, "-rootless=true")
 			}
 
 			if tc.runtimeType != api.PluginRuntimeTypeUnsupported {

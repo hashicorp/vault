@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -41,10 +41,10 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
   test('it renders all inputs for a model that has all default values', async function (assert) {
     assert.expect(5);
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.metadataModelCreate.backend, route: 'list' },
       { label: this.metadataModelCreate.path, route: 'secret.details', model: this.metadataModelCreate.path },
-      { label: 'metadata' },
+      { label: 'Metadata' },
     ];
     await render(
       hbs`
@@ -71,10 +71,10 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
   test('it displays previous inputs from metadata record and saves new values', async function (assert) {
     assert.expect(5);
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.metadataModelEdit.backend, route: 'list' },
       { label: this.metadataModelEdit.path, route: 'secret.details', model: this.metadataModelEdit.path },
-      { label: 'metadata' },
+      { label: 'Metadata' },
     ];
     await render(
       hbs`
@@ -128,10 +128,10 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
   test('it displays validation errors and does not save inputs on cancel', async function (assert) {
     assert.expect(2);
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.metadataModelEdit.backend, route: 'list' },
       { label: this.metadataModelEdit.path, route: 'secret.details', model: this.metadataModelEdit.path },
-      { label: 'metadata' },
+      { label: 'Metadata' },
     ];
     await render(
       hbs`
@@ -148,7 +148,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
     await fillIn(FORM.inputByAttr('maxVersions'), 'a');
     await click(FORM.saveBtn);
     assert
-      .dom(FORM.inlineAlert)
+      .dom(FORM.validationError('maxVersions'))
       .hasText('Maximum versions must be a number.', 'Validation message is shown for max_versions');
 
     await click(FORM.cancelBtn);
@@ -159,10 +159,10 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
     assert.expect(1);
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub('list'));
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.metadataModelEdit.backend, route: 'list' },
       { label: this.metadataModelEdit.path, route: 'secret.details', model: this.metadataModelEdit.path },
-      { label: 'metadata' },
+      { label: 'Metadata' },
     ];
     await render(
       hbs`

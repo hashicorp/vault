@@ -11,7 +11,7 @@ jobs:
       regions: ${{steps.setup.outputs.regions}}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
@@ -28,7 +28,7 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     container:
-      image: rebuy/aws-nuke
+      image: ghcr.io/ekristen/aws-nuke:v3.51.0 # https://github.com/ekristen/aws-nuke/pkgs/container/aws-nuke
       options:
          --user root
          -t
@@ -36,11 +36,11 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
         TIME_LIMIT: "72h"
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - name: Configure AWS credentials
         id: aws-configure
-        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
@@ -49,7 +49,7 @@ jobs:
           role-skip-session-tagging: true
           role-duration-seconds: 3600
           mask-aws-account-id: false
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Configure
         run: |
           cp enos/ci/aws-nuke.yml .
@@ -59,8 +59,9 @@ jobs:
       # we'll fail on actually actionable things in the quota steep afterwards.
       - name: Clean up abandoned resources
         # Filter STDERR because it's super noisy about things we don't have access to
+        # Remove --no-dry-run to do dry run
         run: |
-          aws-nuke -c aws-nuke.yml -q --no-dry-run --force 2>/tmp/aws-nuke-error.log || true
+          aws-nuke run -c aws-nuke.yml -q --no-dry-run --force 2>/tmp/aws-nuke-error.log | grep -v "level=error" || true
 
   check-quotas:
     needs: [ setup, aws-nuke ]
@@ -75,7 +76,7 @@ jobs:
         region: ${{ fromJSON(needs.setup.outputs.regions) }}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}

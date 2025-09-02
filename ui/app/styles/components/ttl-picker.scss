@@ -14,7 +14,7 @@
 input.has-error,
 input.has-error:focus,
 input.has-error:hover {
-  border-color: $red-dark;
+  border-color: var(--token-color-palette-red-300);
 }
 
 .ttl-value-error {

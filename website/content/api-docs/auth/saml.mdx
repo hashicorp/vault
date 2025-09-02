@@ -5,6 +5,9 @@ description: |-
   This is the API documentation for the Vault SAML auth method.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # SAML auth method (API)
 
 <EnterpriseAlert />
@@ -46,6 +49,19 @@ Configures the auth method with a SAML identity provider.
   protection.
 - `default_role` `(string, <optional>)` - The role to use if no role is provided during login.
   If not set, a role is required during login.
+- `verbose_logging` `(bool, false)` - **Not recommended for production**. Log
+  additional, **potentially sensitive** information during the SAML exchange
+  according to the current logging level. When `verbose_logging` is `true`,
+  debug-level logs provide user attributes and trace-level logs provide the full
+  SAML response.
+- `validate_response_signature` `(bool, false)` - Enables validation of signature
+  for at least response in the SAML response. If your IDP allows signing both response
+  and assertion, then recommendation is to opt in for validating signatures of both
+  by enabling both options.
+- `validate_assertion_signature` `(bool, false)` - Enables validation of signature
+  for at least assertion in the SAML response. If your IDP allows signing both response
+  and assertion, then recommendation is to opt in for validating signatures of both
+  by enabling both options.
 
 ### Sample payload
 
@@ -101,6 +117,8 @@ $ curl \
     "default_role": "admin",
     "entity_id": "https://my.vault/v1/auth/saml",
     "idp_metadata_url": "https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml/metadata"
+    "validate_assertion_signature" : false,
+    "validate_response_signature" : false
   },
   "warnings": null
 }

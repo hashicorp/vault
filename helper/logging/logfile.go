@@ -57,7 +57,8 @@ func (l *LogFile) Write(b []byte) (n int, err error) {
 		if err := l.openNew(); err != nil {
 			return 0, err
 		}
-	} else if err := l.rotate(); err != nil { // Check for the last contact and rotate if necessary
+	}
+	if err := l.rotate(); err != nil { // Check for the last contact and rotate if necessary
 		return 0, err
 	}
 
@@ -82,21 +83,20 @@ func (l *LogFile) fileNamePattern() string {
 }
 
 func (l *LogFile) openNew() error {
-	fileNamePattern := l.fileNamePattern()
-
-	createTime := now()
-	newFileName := fmt.Sprintf(fileNamePattern, strconv.FormatInt(createTime.UnixNano(), 10))
+	newFileName := l.fileName
 	newFilePath := filepath.Join(l.logPath, newFileName)
 
-	// Try creating a file. We truncate the file because we are the only authority to write the logs
-	filePointer, err := os.OpenFile(newFilePath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o640)
+	// Try creating or opening the active log file. Since the active log file
+	// always has the same name, append log entries to prevent overwriting
+	// previous log data.
+	filePointer, err := os.OpenFile(newFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o640)
 	if err != nil {
 		return err
 	}
 
-	// New file, new 'bytes' tracker, new creation time :) :)
+	// New file, new bytes tracker, new creation time :)
 	l.fileInfo = filePointer
-	l.lastCreated = createTime
+	l.lastCreated = now()
 	l.bytesWritten = 0
 	return nil
 }
@@ -107,6 +107,9 @@ func (l *LogFile) rotate() error {
 	// Rotate if we hit the byte file limit or the time limit
 	if (l.bytesWritten >= int64(l.maxBytes) && (l.maxBytes > 0)) || timeElapsed >= l.duration {
 		if err := l.fileInfo.Close(); err != nil {
+			return err
+		}
+		if err := l.renameCurrentFile(); err != nil {
 			return err
 		}
 		if err := l.pruneFiles(); err != nil {
@@ -147,4 +150,14 @@ func removeFiles(files []string) (err error) {
 		}
 	}
 	return err
+}
+
+func (l *LogFile) renameCurrentFile() error {
+	fileNamePattern := l.fileNamePattern()
+	createTime := now()
+	currentFilePath := filepath.Join(l.logPath, l.fileName)
+	oldFileName := fmt.Sprintf(fileNamePattern, strconv.FormatInt(createTime.UnixNano(), 10))
+	oldFilePath := filepath.Join(l.logPath, oldFileName)
+
+	return os.Rename(currentFilePath, oldFilePath)
 }

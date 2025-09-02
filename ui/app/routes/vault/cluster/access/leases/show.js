@@ -6,21 +6,22 @@
 import { hash } from 'rsvp';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 
 export default Route.extend(UnloadModelRoute, {
   store: service(),
+  router: service(),
 
   beforeModel() {
     const { lease_id: leaseId } = this.paramsFor(this.routeName);
     const parentKey = parentKeyForKey(leaseId);
     if (keyIsFolder(leaseId)) {
       if (parentKey) {
-        return this.transitionTo('vault.cluster.access.leases.list', parentKey);
+        return this.router.transitionTo('vault.cluster.access.leases.list', parentKey);
       } else {
-        return this.transitionTo('vault.cluster.access.leases.list-root');
+        return this.router.transitionTo('vault.cluster.access.leases.list-root');
       }
     }
   },

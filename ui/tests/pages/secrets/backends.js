@@ -13,14 +13,5 @@ export default create({
     path: text('[data-test-secret-path]'),
     menu: clickable('[data-test-popup-menu-trigger]'),
   }),
-  configLink: clickable('[data-test-engine-config]', {
-    testContainer: '#ember-testing',
-  }),
-  disableButton: clickable('[data-test-confirm-action-trigger]', {
-    testContainer: '#ember-testing',
-  }),
-  confirmDisable: clickable('[data-test-confirm-button]', {
-    testContainer: '#ember-testing',
-  }),
   console: uiPanel,
 });

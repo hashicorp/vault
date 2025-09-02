@@ -6,14 +6,10 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, render, resetOnerror, setupOnerror } from '@ember/test-helpers';
-import { isPresent } from 'ember-cli-page-object';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
-const SELECTORS = {
-  button: '[data-test-download-button]',
-  icon: '[data-test-icon="download"]',
-};
 module('Integration | Component | download button', function (hooks) {
   setupRenderingTest(hooks);
 
@@ -28,27 +24,25 @@ module('Integration | Component | download button', function (hooks) {
 
   test('it renders', async function (assert) {
     await render(hbs`
-     <DownloadButton class="button">
-      <Icon @name="download" />
-        Download
-     </DownloadButton>
-   `);
-    assert.dom(SELECTORS.button).hasClass('button');
-    assert.ok(isPresent(SELECTORS.icon), 'renders yielded icon');
-    assert.dom(SELECTORS.button).hasTextContaining('Download', 'renders yielded text');
+     <DownloadButton /> `);
+    assert.dom(GENERAL.icon('download')).exists('renders download icon');
+    assert.dom(GENERAL.button('Download')).hasText('Download', 'renders default text');
+  });
+
+  test('it renders passed args', async function (assert) {
+    await render(hbs`
+     <DownloadButton @text="I do something" @hideIcon={{true}} /> `);
+    assert.dom(GENERAL.icon('download')).doesNotExist('hides icon');
+    assert.dom(GENERAL.button('Download')).hasText('I do something', 'renders passed text');
   });
 
   test('it downloads with defaults when only passed @data arg', async function (assert) {
     assert.expect(3);
 
     await render(hbs`
-      <DownloadButton class="button"
-        @data={{this.data}}
-      >
-        Download
-      </DownloadButton>
+      <DownloadButton @data={{this.data}} />
     `);
-    await click(SELECTORS.button);
+    await click(GENERAL.button('Download'));
     const [filename, content, extension] = this.downloadSpy.getCall(0).args;
     assert.ok(filename.includes('Z'), 'filename defaults to ISO string');
     assert.strictEqual(content, this.data, 'called with correct data');
@@ -59,17 +53,14 @@ module('Integration | Component | download button', function (hooks) {
     assert.expect(3);
 
     await render(hbs`
-      <DownloadButton class="button"
+      <DownloadButton
         @data={{this.data}}
         @filename={{this.filename}}
         @mime={{this.mime}}
         @extension={{this.extension}}
-      >
-        Download
-      </DownloadButton>
+      />
     `);
-
-    await click(SELECTORS.button);
+    await click(GENERAL.button('Download'));
     const [filename, content, extension] = this.downloadSpy.getCall(0).args;
     assert.ok(filename.includes(`${this.filename}-`), 'filename added to ISO string');
     assert.strictEqual(content, this.data, 'called with correct data');
@@ -80,12 +71,10 @@ module('Integration | Component | download button', function (hooks) {
     assert.expect(3);
     this.fetchData = () => 'this is fetched data from a parent function';
     await render(hbs`
-      <DownloadButton class="button" @fetchData={{this.fetchData}} >
-        Download
-      </DownloadButton>
+      <DownloadButton @fetchData={{this.fetchData}} />
     `);
 
-    await click(SELECTORS.button);
+    await click(GENERAL.button('Download'));
     const [filename, content, extension] = this.downloadSpy.getCall(0).args;
     assert.ok(filename.includes('Z'), 'filename defaults to ISO string');
     assert.strictEqual(content, this.fetchData(), 'called with fetched data');
@@ -103,7 +92,7 @@ module('Integration | Component | download button', function (hooks) {
     });
     this.fetchData = () => 'this is fetched data from a parent function';
     await render(hbs`
-        <DownloadButton class="button" @data={{this.data}} @fetchData={{this.fetchData}} />
+        <DownloadButton @data={{this.data}} @fetchData={{this.fetchData}} />
       `);
     resetOnerror();
   });

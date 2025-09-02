@@ -1,17 +1,11 @@
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 .overview-card {
-  padding: $spacing-l;
+  padding: size_variables.$spacing-24;
   line-height: initial;
-
-  .title-number {
-    color: $black;
-    padding-top: $spacing-s;
-    font-size: 36px;
-    font-weight: 500;
-    line-height: 1.33;
-  }
 }

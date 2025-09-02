@@ -1,14 +1,16 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 import type { WithFormFieldsAndValidationsModel } from 'vault/app-types';
 import type { FormField } from 'vault/app-types';
 import CapabilitiesModel from '../capabilities';
 import { LdapDynamicRoleCredentials, LdapStaticRoleCredentials } from 'ldap/routes/roles/role/credentials';
 export default interface LdapRoleModel extends WithFormFieldsAndValidationsModel {
+  id: string;
   type: string;
   backend: string;
+  path_to_role: string;
   name: string;
   dn: string;
   username: string;
@@ -18,6 +20,7 @@ export default interface LdapRoleModel extends WithFormFieldsAndValidationsModel
   username_template: string;
   creation_ldif: string;
   rollback_ldif: string;
+  get completeRoleName(): string;
   get isStatic(): string;
   get isDynamic(): string;
   get fieldsForType(): Array<string>;

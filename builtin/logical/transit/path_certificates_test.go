@@ -1,12 +1,11 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
 import (
 	"context"
 	cryptoRand "crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -17,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
@@ -167,7 +167,7 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 	require.NoError(t, err)
 
 	// Setup a new CSR
-	privKey, err := rsa.GenerateKey(cryptoRand.Reader, 3072)
+	privKey, err := cryptoutil.GenerateRSAKey(cryptoRand.Reader, 3072)
 	require.NoError(t, err)
 
 	var csrTemplate x509.CertificateRequest

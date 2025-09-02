@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
 @withConfirmLeave()
@@ -19,9 +19,9 @@ export default class PkiIssuersGenerateRootRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'generate root' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
+      { label: 'Generate Root' },
     ];
   }
 }

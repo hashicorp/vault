@@ -6,6 +6,7 @@ package pki
 import (
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 )
 
@@ -163,6 +164,13 @@ if any, in a comma-delimited list. Restricted by allowed_user_ids.
 Any values are added with OID 0.9.2342.19200300.100.1.1.`,
 		DisplayAttrs: &framework.DisplayAttributes{
 			Name: "User ID(s)",
+		},
+	}
+	fields["cert_metadata"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `User supplied metadata to store associated with this certificate's serial number, base64 encoded`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Certificate Metadata",
 		},
 	}
 
@@ -324,9 +332,8 @@ is required. Ignored for other types.`,
 		Type:    framework.TypeInt,
 		Default: 0,
 		Description: `The number of bits to use. Allowed values are
-0 (universal default); with rsa key_type: 2048 (default), 3072, or
-4096; with ec key_type: 224, 256 (default), 384, or 521; ignored with
-ed25519.`,
+0 (universal default); with rsa key_type: 2048 (default), 3072, 4096 or 8192;
+with ec key_type: 224, 256 (default), 384, or 521; ignored with ed25519.`,
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: 0,
 		},
@@ -381,6 +388,60 @@ func addCAIssueFields(fields map[string]*framework.FieldSchema) map[string]*fram
 		Description: `Domains for which this certificate is allowed to sign or issue child certificates. If set, all DNS names (subject and alt) on child certs must be exact matches or subsets of the given domains (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
 		DisplayAttrs: &framework.DisplayAttributes{
 			Name: "Permitted DNS Domains",
+		},
+	}
+	fields["excluded_dns_domains"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `Domains for which this certificate is not allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Excluded DNS Domains",
+		},
+	}
+
+	fields["permitted_ip_ranges"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `IP ranges for which this certificate is allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
+Ranges must be specified in the notation of IP address and prefix length, like "192.0.2.0/24" or "2001:db8::/32", as defined in RFC 4632 and RFC 4291.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Permitted IP ranges",
+		},
+	}
+	fields["excluded_ip_ranges"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `IP ranges for which this certificate is not allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
+Ranges must be specified in the notation of IP address and prefix length, like "192.0.2.0/24" or "2001:db8::/32", as defined in RFC 4632 and RFC 4291.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Excluded IP ranges",
+		},
+	}
+
+	fields["permitted_email_addresses"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `Email addresses for which this certificate is allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Permitted email addresses",
+		},
+	}
+	fields["excluded_email_addresses"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `Email addresses for which this certificate is not allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Excluded email addresses",
+		},
+	}
+
+	fields["permitted_uri_domains"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `URI domains for which this certificate is allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Permitted URI domains",
+		},
+	}
+	fields["excluded_uri_domains"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `URI domains for which this certificate is not allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Excluded URI domains",
 		},
 	}
 
@@ -572,6 +633,16 @@ the cross-cluster revoked certificate store. Only runs on the active
 primary node.`,
 	}
 
+	fields["tidy_cert_metadata"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Set to true to enable tidying up certificate metadata`,
+	}
+
+	fields["tidy_cmpv2_nonce_store"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Set to true to enable tidying up the CMPv2 nonce store`,
+	}
+
 	return fields
 }
 
@@ -598,7 +669,7 @@ basic constraints.`,
 func addSignVerbatimRoleFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
 	fields["key_usage"] = &framework.FieldSchema{
 		Type:    framework.TypeCommaStringSlice,
-		Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+		Default: issuing.DefaultRoleKeyUsages,
 		Description: `A comma-separated string or list of key usages (not extended
 key usages). Valid values can be found at
 https://golang.org/pkg/crypto/x509/#KeyUsage
@@ -609,7 +680,7 @@ this value to an empty list.`,
 
 	fields["ext_key_usage"] = &framework.FieldSchema{
 		Type:    framework.TypeCommaStringSlice,
-		Default: []string{},
+		Default: issuing.DefaultRoleEstKeyUsages,
 		Description: `A comma-separated string or list of extended key usages. Valid values can be found at
 https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 -- simply drop the "ExtKeyUsage" part of the name.
@@ -619,26 +690,57 @@ this value to an empty list.`,
 
 	fields["ext_key_usage_oids"] = &framework.FieldSchema{
 		Type:        framework.TypeCommaStringSlice,
+		Default:     issuing.DefaultRoleEstKeyUsageOids,
 		Description: `A comma-separated string or list of extended key usage oids.`,
 	}
 
 	fields["signature_bits"] = &framework.FieldSchema{
 		Type:    framework.TypeInt,
-		Default: 0,
+		Default: issuing.DefaultRoleSignatureBits,
 		Description: `The number of bits to use in the signature
 algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
 SHA-2-512. Defaults to 0 to automatically detect based on key length
 (SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
 		DisplayAttrs: &framework.DisplayAttributes{
-			Value: 0,
+			Value: issuing.DefaultRoleSignatureBits,
 		},
 	}
 
 	fields["use_pss"] = &framework.FieldSchema{
 		Type:    framework.TypeBool,
-		Default: false,
+		Default: issuing.DefaultRoleUsePss,
 		Description: `Whether or not to use PSS signatures when using a
 RSA key-type issuer. Defaults to false.`,
+	}
+
+	return fields
+}
+
+func addCACertKeyUsage(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["key_usage"] = &framework.FieldSchema{ // Same Name as Leaf-Cert Field, and CA CSR Field, but Description and Default Differ
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{"CertSign", "CRLSign"},
+		Description: `This list of key usages (not extended key usages) will be 
+added to the existing set of key usages, CRL,CertSign, on 
+the generated certificate.  Valid values can be found at 
+https://golang.org/pkg/crypto/x509/#KeyUsage -- simply drop 
+the "KeyUsage" part of the name.  To use the issuer for 
+CMPv2, DigitalSignature must be set.`,
+	}
+
+	return fields
+}
+
+func addCaCsrKeyUsage(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["key_usage"] = &framework.FieldSchema{ // Same Name as Leaf-Cert, CA-Cert Field, but Description and Default Differ
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{},
+		Description: `Specifies key_usage to encode in the certificate signing
+request.  This is a comma-separated string or list of key
+usages (not extended key usages). Valid values can be found
+at https://golang.org/pkg/crypto/x509/#KeyUsage -- simply 
+drop the "KeyUsage" part of the name.  If not set, key 
+usage will not appear on the CSR.`,
 	}
 
 	return fields

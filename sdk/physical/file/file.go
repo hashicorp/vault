@@ -17,7 +17,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -41,7 +41,7 @@ type FileBackend struct {
 	sync.RWMutex
 	path       string
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 type TransactionalFileBackend struct {
@@ -62,7 +62,7 @@ func NewFileBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	return &FileBackend{
 		path:       path,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool: permitpool.New(physical.DefaultParallelOperations),
 	}, nil
 }
 
@@ -77,13 +77,15 @@ func NewTransactionalFileBackend(conf map[string]string, logger log.Logger) (phy
 		FileBackend: FileBackend{
 			path:       path,
 			logger:     logger,
-			permitPool: physical.NewPermitPool(1),
+			permitPool: permitpool.New(1),
 		},
 	}, nil
 }
 
 func (b *FileBackend) Delete(ctx context.Context, path string) error {
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	b.Lock()
@@ -158,7 +160,9 @@ func (b *FileBackend) cleanupLogicalPath(path string) error {
 }
 
 func (b *FileBackend) Get(ctx context.Context, k string) (*physical.Entry, error) {
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer b.permitPool.Release()
 
 	b.RLock()
@@ -217,7 +221,9 @@ func (b *FileBackend) GetInternal(ctx context.Context, k string) (*physical.Entr
 }
 
 func (b *FileBackend) Put(ctx context.Context, entry *physical.Entry) error {
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	b.Lock()
@@ -245,17 +251,21 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 
 	// JSON encode the entry and write it
 	fullPath := filepath.Join(path, key)
-	tempPath := fullPath + ".temp"
-	f, err := os.OpenFile(
-		tempPath,
-		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
-		0o600)
+	f, err := os.CreateTemp(path, key)
 	if err != nil {
 		if f != nil {
 			f.Close()
 		}
 		return err
 	}
+
+	if err = os.Chmod(f.Name(), 0o600); err != nil {
+		if f != nil {
+			f.Close()
+		}
+		return err
+	}
+
 	if f == nil {
 		return errors.New("could not successfully get a file handle")
 	}
@@ -266,7 +276,7 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	})
 	f.Close()
 	if encErr == nil {
-		err = os.Rename(tempPath, fullPath)
+		err = os.Rename(f.Name(), fullPath)
 		if err != nil {
 			return err
 		}
@@ -278,7 +288,7 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	// See if we ended up with a zero-byte file and if so delete it, might be a
 	// case of disk being full but the file info is in metadata that is
 	// reserved.
-	fi, err := os.Stat(tempPath)
+	fi, err := os.Stat(f.Name())
 	if err != nil {
 		return encErr
 	}
@@ -286,13 +296,15 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 		return encErr
 	}
 	if fi.Size() == 0 {
-		os.Remove(tempPath)
+		os.Remove(f.Name())
 	}
 	return encErr
 }
 
 func (b *FileBackend) List(ctx context.Context, prefix string) ([]string, error) {
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer b.permitPool.Release()
 
 	b.RLock()
@@ -373,7 +385,9 @@ func (b *FileBackend) validatePath(path string) error {
 }
 
 func (b *TransactionalFileBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	b.Lock()

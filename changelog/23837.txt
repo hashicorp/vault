@@ -1,0 +1,3 @@
+```release-note:change
+telemetry: Seal wrap encrypt/decrypt metrics now differentiate between seals using a metrics label of seal name rather than separate metric names.
+```

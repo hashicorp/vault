@@ -4,21 +4,21 @@
 package pprof
 
 import (
-	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 
 	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
-	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
 
 func SysPprof_Test(t *testing.T, cluster testcluster.VaultCluster) {
 	nodes := cluster.Nodes()
+	if len(nodes) == 0 {
+		t.Fatal("no nodes returned")
+	}
 	client := nodes[0].APIClient()
 
 	transport := cleanhttp.DefaultPooledTransport()
@@ -87,7 +87,7 @@ func SysPprof_Test(t *testing.T, cluster testcluster.VaultCluster) {
 		}
 		defer resp.Body.Close()
 
-		httpRespBody, err := ioutil.ReadAll(resp.Body)
+		httpRespBody, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -113,28 +113,4 @@ func SysPprof_Test(t *testing.T, cluster testcluster.VaultCluster) {
 			pprofRequest(t, tc.path, tc.seconds)
 		})
 	}
-}
-
-func SysPprof_Standby_Test(t *testing.T, cluster testcluster.VaultCluster) {
-	pprof := func(client *api.Client) (string, error) {
-		req := client.NewRequest("GET", "/v1/sys/pprof/cmdline")
-		resp, err := client.RawRequestWithContext(context.Background(), req)
-		if err != nil {
-			return "", err
-		}
-		defer resp.Body.Close()
-
-		data, err := ioutil.ReadAll(resp.Body)
-		return string(data), err
-	}
-
-	cmdline, err := pprof(cluster.Nodes()[0].APIClient())
-	require.Nil(t, err)
-	require.NotEmpty(t, cmdline)
-	t.Log(cmdline)
-
-	cmdline, err = pprof(cluster.Nodes()[1].APIClient())
-	require.Nil(t, err)
-	require.NotEmpty(t, cmdline)
-	t.Log(cmdline)
 }

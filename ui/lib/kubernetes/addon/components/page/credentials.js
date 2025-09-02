@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
@@ -23,7 +23,7 @@ import timestamp from 'vault/utils/timestamp';
  */
 export default class CredentialsPageComponent extends Component {
   @service store;
-  @service router;
+  @service('app-router') router;
 
   @tracked ttl = '';
   @tracked clusterRoleBinding = false;

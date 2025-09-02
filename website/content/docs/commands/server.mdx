@@ -7,6 +7,9 @@ description: |-
   initialized before use.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # server
 
 The `server` command starts a Vault server that responds to API requests. By
@@ -60,15 +63,18 @@ flags](/vault/docs/commands) included on all commands.
   are `standard` and `json`. This can also be specified via the
   `VAULT_LOG_FORMAT` environment variable.
 
-- `-log-file` ((#\_log_file)) - writes all the Vault log messages
-  to a file. This value is used as a prefix for the log file name. The current timestamp
-  is appended to the file name. If the value ends in a path separator, `vault`
-  will be appended to the value. If the file name is missing an extension, `.log`
-  is appended. For example, setting `log-file` to `/var/log/` would result in a log
-  file path of `/var/log/vault-{timestamp}.log`. `log-file` can be combined with
-  [`-log-rotate-bytes`](#_log_rotate_bytes) and [`-log-rotate-duration`](#_log_rotate_duration)
-  for a fine-grained log rotation experience. This output operates in addition to existing 
-  outputs, meaning logs will continue to be written to journald / stdout (where appropriate).
+- `-log-file` ((#\_log_file)) - The absolute path where Vault should save log
+  messages in addition to other, existing outputs like journald / stdout. Paths
+  that end with a path separator use the default file name, `vault.log`. Paths
+  that do not end with a file extension use the default `.log` extension. If the
+  log file rotates, Vault appends the current timestamp to the file name
+  at the time of rotation. For example:
+
+  | `log-file`              | Full log file           | Rotated log file                    |
+  |-------------------------|-------------------------|-------------------------------------|
+  | `/var/log/`             | `/var/log/vault.log`    | `/var/log/vault-{timestamp}.log`    |
+  | `/var/log/my-diary`     | `/var/log/my-diary.log` | `/var/log/my-diary-{timestamp}.log` |
+  | `/var/log/my-diary.txt` | `/var/log/my-diary.txt` | `/var/log/my-diary-{timestamp}.txt` |
 
 - `-log-rotate-bytes` ((#\_log_rotate_bytes)) - to specify the number of
   bytes that should be written to a log before it needs to be rotated. Unless specified,
@@ -89,13 +95,18 @@ flags](/vault/docs/commands) included on all commands.
   `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
   [`experiments`](/vault/docs/configuration#experiments) config key.
 
+- `-pprof-dump-dir` `(string: "")` - Directory where the generated profiles are
+  created. Vault does not generate profiles when `pprof-dump-dir` is unset.
+  Use `pprof-dump-dir` temporarily during debugging sessions. Do not use
+  `pprof-dump-dir` in regular production processes.
+
 - `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` `(bool: false)` - (environment variable)
   Allow Vault to be started with builtin engines which have the `Pending Removal`
   deprecation state. This is a temporary stopgap in place in order to perform an
   upgrade and disable these engines. Once these engines are marked `Removed` (in
   the next major release of Vault), the environment variable will no longer work
   and a downgrade must be performed in order to remove the offending engines. For
-  more information, see the [deprecation faq](/vault/docs/deprecation/faq/#q-what-are-the-phases-of-deprecation).
+  more information, refer to the [deprecation notices](/vault/docs/updates/deprecation).
 
 ### Dev options
 

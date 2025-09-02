@@ -4,15 +4,15 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default class PkiIssuersListRoute extends Route {
-  @service store;
+  @service pagination;
   @service secretMountPath;
 
   model(params) {
     const page = Number(params.page) || 1;
-    return this.store
+    return this.pagination
       .lazyPaginatedQuery('pki/issuer', {
         backend: this.secretMountPath.currentPath,
         responsePath: 'data.keys',
@@ -35,9 +35,9 @@ export default class PkiIssuersListRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'issuers', route: 'issuers.index' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
+      { label: 'Issuers', route: 'issuers.index', model: this.secretMountPath.currentPath },
     ];
   }
 

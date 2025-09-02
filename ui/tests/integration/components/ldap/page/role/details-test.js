@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -11,6 +11,8 @@ import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { duration } from 'core/helpers/format-duration';
+import { ldapRoleID } from 'vault/adapters/ldap/role';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Role::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -25,6 +27,7 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
     }));
     this.renderComponent = (type) => {
       const data = this.server.create('ldap-role', type);
+      data.id = ldapRoleID(type, data.name);
       const store = this.owner.lookup('service:store');
       store.pushPayload('ldap/role', {
         modelName: 'ldap/role',
@@ -32,10 +35,10 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
         type,
         ...data,
       });
-      this.model = store.peekRecord('ldap/role', data.name);
+      this.model = store.peekRecord('ldap/role', ldapRoleID(type, data.name));
       this.breadcrumbs = [
         { label: this.model.backend, route: 'overview' },
-        { label: 'roles', route: 'roles' },
+        { label: 'Roles', route: 'roles' },
         { label: this.model.name },
       ];
       return render(hbs`<Page::Role::Details @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
@@ -50,7 +53,7 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(1)')
       .containsText(this.model.backend, 'Overview breadcrumb renders');
-    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('roles', 'Roles breadcrumb renders');
+    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('Roles', 'Roles breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(3)')
       .containsText(this.model.name, 'Role breadcrumb renders');
@@ -61,8 +64,10 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
 
     await this.renderComponent('static');
 
-    assert.dom('[data-test-delete] button').hasText('Delete role', 'Delete action renders');
-    assert.dom('[data-test-get-credentials]').hasText('Get credentials', 'Get credentials action renders');
+    assert.dom('[data-test-delete]').hasText('Delete role', 'Delete action renders');
+    assert
+      .dom(GENERAL.button('Get credentials'))
+      .hasText('Get credentials', 'Get credentials action renders');
     assert.dom('[data-test-rotate-credentials]').exists('Rotate credentials action renders for static role');
     assert.dom('[data-test-edit]').hasText('Edit role', 'Edit action renders');
 
@@ -78,8 +83,8 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
       .dom('[data-test-rotate-credentials]')
       .doesNotExist('Rotate credentials action is hidden for dynamic role');
 
-    await click('[data-test-delete] button');
-    await click('[data-test-confirm-button]');
+    await click('[data-test-delete]');
+    await click(GENERAL.confirmButton);
     assert.ok(
       transitionStub.calledWith('vault.cluster.secrets.backend.ldap.roles'),
       'Transitions to roles route on delete success'

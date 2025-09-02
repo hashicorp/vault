@@ -13,9 +13,17 @@ const DOMAIN_STRINGS = {
   'ping.com': 'Ping',
   'okta.com': 'Okta',
   'auth0.com': 'Auth0',
+  'login.microsoftonline.com': 'Azure',
 };
 
-const PROVIDER_WITH_LOGO = ['GitLab', 'Google', 'Auth0'];
+const PROVIDER_WITH_LOGO = {
+  GitHub: 'github',
+  GitLab: 'gitlab',
+  Google: 'google',
+  Okta: 'okta',
+  Auth0: 'auth0',
+  Azure: 'azure',
+};
 
 export { DOMAIN_STRINGS, PROVIDER_WITH_LOGO };
 
@@ -28,8 +36,8 @@ export default class RoleJwtModel extends Model {
     return DOMAIN_STRINGS[firstMatch] || null;
   }
 
-  get providerButtonComponent() {
+  get providerIcon() {
     const { providerName } = this;
-    return PROVIDER_WITH_LOGO.includes(providerName) ? `auth-button-${providerName.toLowerCase()}` : null;
+    return PROVIDER_WITH_LOGO[providerName] || null;
   }
 }

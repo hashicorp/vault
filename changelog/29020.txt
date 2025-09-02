@@ -1,0 +1,5 @@
+```release-note: improvement
+sdk/helper: utitilize a randomly seeded cryptographic determinstic random bit generator for
+RSA key generation when using slow random sources, speeding key generation
+considerably.
+```

@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { Response } from 'miragejs';
+
 export function capabilitiesStub(requestPath, capabilitiesArray) {
   // sample of capabilitiesArray: ['read', 'update']
   return {
-    [requestPath]: capabilitiesArray,
-    capabilities: capabilitiesArray,
     request_id: '40f7e44d-af5c-9b60-bd20-df72eb17e294',
     lease_id: '',
     renewable: false,
@@ -56,4 +56,27 @@ export function allowAllCapabilitiesStub(capabilitiesList = ['root']) {
       auth: null,
     };
   };
+}
+
+/**
+ * returns a response with the given httpStatus and data based on status
+ * @param {number} httpStatus 403, 404, 204, or 200 (default)
+ * @param {object} payload what to return in the response if status is 200
+ * @returns {Response}
+ */
+export function overrideResponse(httpStatus = 200, payload = {}) {
+  if (httpStatus === 403) {
+    return new Response(
+      403,
+      { 'Content-Type': 'application/json' },
+      JSON.stringify({ errors: ['permission denied'] })
+    );
+  }
+  if (httpStatus === 404) {
+    return new Response(404, { 'Content-Type': 'application/json' });
+  }
+  if (httpStatus === 204) {
+    return new Response(204, { 'Content-Type': 'application/json' });
+  }
+  return new Response(httpStatus, { 'Content-Type': 'application/json' }, payload);
 }

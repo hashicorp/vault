@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -39,6 +39,8 @@ type AuthTuneCommand struct {
 	flagUserLockoutDuration             time.Duration
 	flagUserLockoutCounterResetDuration time.Duration
 	flagUserLockoutDisable              bool
+	flagIdentityTokenKey                string
+	flagTrimRequestTrailingSlashes      BoolPtr
 }
 
 func (c *AuthTuneCommand) Synopsis() string {
@@ -194,6 +196,18 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Usage: "Select the semantic version of the plugin to run. The new version must be registered in " +
 			"the plugin catalog, and will not start running until the plugin is reloaded.",
 	})
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   flagNameTrimRequestTrailingSlashes,
+		Target: &c.flagTrimRequestTrailingSlashes,
+		Usage:  "Whether to trim trailing slashes for incoming requests to this mount",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    flagNameIdentityTokenKey,
+		Target:  &c.flagIdentityTokenKey,
+		Default: "default",
+		Usage:   "Select the key used to sign plugin identity tokens.",
+	})
 
 	return set
 }
@@ -293,6 +307,15 @@ func (c *AuthTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			mountConfigInput.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameIdentityTokenKey {
+			mountConfigInput.IdentityTokenKey = c.flagIdentityTokenKey
+		}
+
+		if fl.Name == flagNameTrimRequestTrailingSlashes && c.flagTrimRequestTrailingSlashes.IsSet() {
+			val := c.flagTrimRequestTrailingSlashes.Get()
+			mountConfigInput.TrimRequestTrailingSlashes = &val
 		}
 	})
 

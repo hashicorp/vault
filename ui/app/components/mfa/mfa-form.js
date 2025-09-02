@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import Ember from 'ember';
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, set } from '@ember/object';
 import { task, timeout } from 'ember-concurrency';
 import { numberToWord } from 'vault/helpers/number-to-word';
+import errorMessage from 'vault/utils/error-message';
 /**
  * @module MfaForm
  * The MfaForm component is used to enter a passcode when mfa is required to login
@@ -18,7 +20,7 @@ import { numberToWord } from 'vault/helpers/number-to-word';
  * <Mfa::MfaForm @clusterId={this.model.id} @authData={this.authData} />
  * ```
  * @param {string} clusterId - id of selected cluster
- * @param {object} authData - data from initial auth request -- { mfa_requirement, backend, data }
+ * @param {object} authData - data from initial auth request -- { mfaRequirement, backend, data }
  * @param {function} onSuccess - fired when passcode passes validation
  * @param {function} onError - fired for multi-method or non-passcode method validation errors
  */
@@ -29,7 +31,7 @@ export const TOTP_VALIDATION_ERROR =
 export default class MfaForm extends Component {
   @service auth;
 
-  @tracked countdown;
+  @tracked countdown = 0;
   @tracked error;
   @tracked codeDelayMessage;
 
@@ -37,7 +39,7 @@ export default class MfaForm extends Component {
     super(...arguments);
     // trigger validation immediately when passcode is not required
     const passcodeOrSelect = this.constraints.filter((constraint) => {
-      return constraint.methods.length > 1 || constraint.methods.findBy('uses_passcode');
+      return constraint.methods.length > 1 || constraint.methods.find((m) => m.uses_passcode);
     });
     if (!passcodeOrSelect.length) {
       this.validate.perform();
@@ -45,7 +47,7 @@ export default class MfaForm extends Component {
   }
 
   get constraints() {
-    return this.args.authData.mfa_requirement.mfa_constraints;
+    return this.args.authData.mfaRequirement.mfa_constraints;
   }
   get multiConstraint() {
     return this.constraints.length > 1;
@@ -82,6 +84,7 @@ export default class MfaForm extends Component {
         clusterId: this.args.clusterId,
         ...this.args.authData,
       });
+      // calls onMfaSuccess in auth/page.js
       this.args.onSuccess(response);
     } catch (error) {
       const errors = error.errors || [];
@@ -96,15 +99,28 @@ export default class MfaForm extends Component {
       } else if (this.singlePasscode) {
         this.error = TOTP_VALIDATION_ERROR;
       } else {
-        this.args.onError(this.auth.handleError(error));
+        this.args.onError(errorMessage(error));
       }
     }
   }
 
-  @task *newCodeDelay(message) {
+  @task *newCodeDelay(errorMessage) {
+    let delay;
+
     // parse validity period from error string to initialize countdown
-    this.countdown = parseInt(message.match(/(\d\w seconds)/)[0].split(' ')[0]);
-    while (this.countdown) {
+    const delayRegExMatches = errorMessage.match(/(\d+\w seconds)/);
+    if (delayRegExMatches && delayRegExMatches.length) {
+      delay = delayRegExMatches[0].split(' ')[0];
+    } else {
+      // default to 30 seconds if error message doesn't specify one
+      delay = 30;
+    }
+    this.countdown = parseInt(delay);
+
+    // skip countdown in testing environment
+    if (Ember.testing) return;
+
+    while (this.countdown > 0) {
       yield timeout(1000);
       this.countdown--;
     }
@@ -112,7 +128,11 @@ export default class MfaForm extends Component {
 
   @action onSelect(constraint, id) {
     set(constraint, 'selectedId', id);
-    set(constraint, 'selectedMethod', constraint.methods.findBy('id', id));
+    set(
+      constraint,
+      'selectedMethod',
+      constraint.methods.find((m) => m.id === id)
+    );
   }
   @action submit(e) {
     e.preventDefault();

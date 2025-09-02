@@ -5,6 +5,8 @@ syntax = "proto3";
 
 package vault;
 
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
 import "helper/forwarding/types.proto";
 
 option go_package = "github.com/hashicorp/vault/vault";
@@ -26,6 +28,12 @@ message EchoRequest {
   string raft_upgrade_version = 9;
   string raft_redundancy_zone = 10;
   string sdk_version = 11;
+  google.protobuf.Timestamp now = 12;
+  // last_roundtrip_time is the time taken for the last echo request
+  google.protobuf.Duration last_roundtrip_time = 13;
+  // clock_skew_millis is the server time minus the local time
+  int64 clock_skew_millis = 14;
+  int64 replication_primary_canary_age_millis = 15;
 }
 
 message EchoReply {
@@ -35,6 +43,8 @@ message EchoReply {
   uint64 raft_applied_index = 4;
   string raft_node_id = 5;
   NodeInformation node_info = 6;
+  // now is the time on the server
+  google.protobuf.Timestamp now = 7;
 }
 
 message NodeInformation {

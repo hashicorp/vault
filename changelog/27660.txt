@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): Fix HTTP redirects in namespaces to use the correct path and (in the case of event subscriptions) the correct URI scheme.
+```

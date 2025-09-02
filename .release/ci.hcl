@@ -1,7 +1,7 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-schema = "1"
+schema = "2"
 
 project "vault" {
   team = "vault"
@@ -81,19 +81,6 @@ event "promote-staging" {
   }
 }
 
-event "promote-staging-docker" {
-  depends = ["promote-staging"]
-  action "promote-staging-docker" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "promote-staging-docker"
-  }
-
-  notification {
-    on = "always"
-  }
-}
-
 event "trigger-production" {
 // This event is dispatched by the bob trigger-promotion command
 // and is required - do not delete.
@@ -107,70 +94,26 @@ event "promote-production" {
     workflow = "promote-production"
   }
 
+  promotion-events {
+    update-ironbank = true
+    bump-version-patch = true
+    post-publish-website = true
+  }
+
   notification {
     on = "always"
   }
 }
 
-event "promote-production-docker" {
+event "crt-generate-sbom" {
   depends = ["promote-production"]
-  action "promote-production-docker" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "promote-production-docker"
+  action "crt-generate-sbom" {
+	organization = "hashicorp"
+	repository = "security-generate-release-sbom"
+	workflow = "crt-generate-sbom"
   }
 
   notification {
-    on = "always"
-  }
-}
-
-event "promote-production-packaging" {
-  depends = ["promote-production-docker"]
-  action "promote-production-packaging" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "promote-production-packaging"
-  }
-
-  notification {
-    on = "always"
-  }
-}
-
-# The post-publish-website event should not be merged into the enterprise repo.
-# It is for OSS use only.
-event "post-publish-website" {
-  depends = ["promote-production-packaging"]
-  action "post-publish-website" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "post-publish-website"
-  }
-
-  notification {
-    on = "always"
-  }
-}
-
-event "bump-version" {
-  depends = ["post-publish-website"]
-  action "bump-version" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "bump-version"
-  }
-}
-
-event "update-ironbank" {
-  depends = ["bump-version"]
-  action "update-ironbank" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "update-ironbank"
-  }
-
-  notification {
-    on = "fail"
+	on = "fail"
   }
 }

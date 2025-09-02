@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -9,8 +9,9 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
+import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | ldap | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -55,6 +56,13 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
         }
       );
     };
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should render tab page header and config cta', async function (assert) {
@@ -62,7 +70,7 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('flight-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
     assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
     assert.dom('[data-test-toolbar-action="config"]').hasText('Configure LDAP', 'Toolbar action renders');
     assert.dom('[data-test-config-cta]').exists('Config cta renders');

@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func groupAliasPaths(i *IdentityStore) []*framework.Path {
@@ -45,8 +45,12 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathGroupAliasRegister(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                    i.pathGroupAliasRegister(),
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupAliasHelp["group-alias"][0]),
@@ -85,6 +89,8 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "update",
 					},
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: i.pathGroupAliasIDRead(),
@@ -97,6 +103,8 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "delete",
 					},
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 			},
 
@@ -170,7 +178,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 
 	if groupAlias == nil {
 		groupAlias = &identity.Alias{
-			CreationTime: ptypes.TimestampNow(),
+			CreationTime: timestamppb.Now(),
 			NamespaceID:  ns.ID,
 		}
 		groupAlias.LastUpdateTime = groupAlias.CreationTime
@@ -178,7 +186,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 		if ns.ID != groupAlias.NamespaceID {
 			return logical.ErrorResponse("existing alias not in the same namespace as request"), logical.ErrPermissionDenied
 		}
-		groupAlias.LastUpdateTime = ptypes.TimestampNow()
+		groupAlias.LastUpdateTime = timestamppb.Now()
 		if groupAlias.CreationTime == nil {
 			groupAlias.CreationTime = groupAlias.LastUpdateTime
 		}

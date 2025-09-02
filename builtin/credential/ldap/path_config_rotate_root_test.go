@@ -1,0 +1,122 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-2.0
+
+package ldap
+
+import (
+	"context"
+	"os"
+	"testing"
+
+	"github.com/hashicorp/vault/helper/testhelpers/ldap"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/logical"
+)
+
+// This test relies on a docker ldap server with a suitable person object (cn=admin,dc=planetexpress,dc=com)
+// with bindpassword "admin". `PrepareTestContainer` does this for us. - see the backend_test for more details
+func TestRotateRoot(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip("skipping rotate root tests because VAULT_ACC is unset")
+	}
+	ctx := context.Background()
+
+	b, store := createBackendWithStorage(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	defer cleanup()
+	// set up auth config
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Storage:   store,
+		Data: map[string]interface{}{
+			"url":      cfg.Url,
+			"binddn":   cfg.BindDN,
+			"bindpass": cfg.BindPassword,
+			"userdn":   cfg.UserDN,
+		},
+	}
+
+	resp, err := b.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("failed to initialize ldap auth config: %s", err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to initialize ldap auth config: %s", resp.Data["error"])
+	}
+
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/rotate-root",
+		Storage:   store,
+	}
+
+	_, err = b.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("failed to rotate password: %s", err)
+	}
+
+	newCFG, err := b.Config(ctx, req)
+	if newCFG.BindDN != cfg.BindDN {
+		t.Fatalf("a value in config that should have stayed the same changed: %s", cfg.BindDN)
+	}
+	if newCFG.BindPassword == cfg.BindPassword {
+		t.Fatalf("the password should have changed, but it didn't")
+	}
+}
+
+// TestRotateRootWithRotationUrl relies on a docker ldap server with a suitable person object (cn=admin,dc=planetexpress,dc=com)
+// with bindpassword "admin". `PrepareTestContainer` does this for us. - see the backend_test for more details
+// It checks that rotation url is being used instead of the main URL and assures that setting rotation url does't
+// replace main URL
+func TestRotateRootWithRotationUrl(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip("skipping rotate root tests because VAULT_ACC is unset")
+	}
+	ctx := context.Background()
+
+	b, store := createBackendWithStorage(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	defer cleanup()
+	// set up auth config
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Storage:   store,
+		Data: map[string]interface{}{
+			"url":          cfg.Url,
+			"binddn":       cfg.BindDN,
+			"bindpass":     cfg.BindPassword,
+			"userdn":       cfg.UserDN,
+			"rotation_url": "ldap://rotation.example.com:389",
+		},
+	}
+
+	resp, err := b.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("failed to initialize ldap auth config: %s", err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to initialize ldap auth config: %s", resp.Data["error"])
+	}
+
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/rotate-root",
+		Storage:   store,
+	}
+
+	// this should error because the rotation URL is not pointing to anything, which validate the rotation URL is used
+	_, err = b.HandleRequest(ctx, req)
+	if err == nil {
+		t.Fatalf("expected an error when rotating root with a rotation URL that does not point to a valid LDAP server")
+	}
+	// validate that rotationURL doesnt affect LDAP URL in the config
+	newCFG, err := b.Config(ctx, req)
+	if err != nil {
+		t.Fatalf("failed to get config after rotation: %s", err)
+	}
+	if newCFG.Url != cfg.Url {
+		t.Fatalf("the LDAP URL should not have changed, but it did: %s", newCFG.Url)
+	}
+}

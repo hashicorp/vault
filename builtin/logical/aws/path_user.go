@@ -48,6 +48,10 @@ func pathUser(b *backend) *framework.Path {
 				Description: "Session name to use when assuming role. Max chars: 64",
 				Query:       true,
 			},
+			"mfa_code": {
+				Type:        framework.TypeString,
+				Description: "MFA code to provide for session tokens",
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -107,6 +111,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 
 	roleArn := d.Get("role_arn").(string)
 	roleSessionName := d.Get("role_session_name").(string)
+	mfaCode := d.Get("mfa_code").(string)
 
 	var credentialType string
 	switch {
@@ -152,9 +157,11 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		case !strutil.StrListContainsGlob(role.RoleArns, roleArn):
 			return logical.ErrorResponse(fmt.Sprintf("role_arn %q not in allowed role arns for Vault role %q", roleArn, roleName)), nil
 		}
-		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl, roleSessionName)
+		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl, roleSessionName, role.SessionTags, role.ExternalID)
 	case federationTokenCred:
 		return b.getFederationToken(ctx, req.Storage, req.DisplayName, roleName, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl)
+	case sessionTokenCred:
+		return b.getSessionToken(ctx, req.Storage, role.SerialNumber, mfaCode, ttl)
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown credential_type: %q", credentialType)), nil
 	}
@@ -168,7 +175,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 	username := entry.UserName
 
 	// Get the client
-	client, err := b.clientIAM(ctx, req.Storage)
+	client, err := b.clientIAM(ctx, req.Storage, nil)
 	if err != nil {
 		return err
 	}

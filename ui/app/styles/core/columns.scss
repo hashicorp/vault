@@ -1,3 +1,5 @@
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -7,12 +9,12 @@
 
 // Columns (plural)
 .columns {
-  margin-left: -$size-9;
-  margin-right: -$size-9;
-  margin-top: -$size-9;
+  margin-left: -(size_variables.$spacing-10);
+  margin-right: -(size_variables.$spacing-10);
+  margin-top: -(size_variables.$spacing-10);
 
   &:last-child {
-    margin-bottom: -$size-9;
+    margin-bottom: -(size_variables.$spacing-10);
   }
 
   &.is-centered {
@@ -31,7 +33,7 @@
   }
 
   &.is-gapless:not(:last-child) {
-    margin-bottom: $size-4;
+    margin-bottom: size_variables.$spacing-20;
   }
 
   &.is-gapless:last-child {
@@ -197,5 +199,6 @@
   .column.is-4-desktop {
     flex: none;
     width: 33.33333%;
+    max-width: 600px;
   }
 }

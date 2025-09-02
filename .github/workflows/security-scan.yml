@@ -15,80 +15,53 @@ on:
 
 jobs:
   scan:
-    runs-on: ${{ fromJSON(vars.RUNNER_XL) }}
-    # The first check ensures this doesn't run on community-contributed PRs, who
-    # won't have the permissions to run this job.
-    if: ${{ (github.repository != 'hashicorp/vault' || (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name))
-          && (github.actor != 'dependabot[bot]') && ( github.actor != 'hc-github-team-secure-vault-core') }}
-    
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ondemand","os=linux","type=c6a.4xlarge"]') }}
+    # The first check ensures this doesn't run on community-contributed PRs, who won't have the
+    # permissions to run this job.
+    if: |
+      ! github.event.pull_request.head.repo.fork &&
+      github.actor != 'dependabot[bot]' &&
+      github.actor != 'hc-github-team-secure-vault-core'
     steps:
-    - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
     - name: Set up Go
-      uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
       with:
         cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
         go-version-file: .go-version
 
     - name: Set up Python
-      uses: actions/setup-python@bd6b4b6205c4dbad673328db7b31b7fab9e241c0 # v4.6.1
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       with:
         python-version: 3.x
 
-    - name: Clone Security Scanner repo
-      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+    - name: Set up Security Scanner
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         repository: hashicorp/security-scanner
-        token: ${{ secrets.HASHIBOT_PRODSEC_GITHUB_TOKEN }}
+        token: ${{ secrets.PRODSEC_SCANNER_READ_ONLY }}
         path: security-scanner
-        ref: 52d94588851f38a416f11c1e727131b3c8b0dd4d
+        ref: main
 
-    - name: Install dependencies
+    - name: Install Security Scanner Semgrep Plugin Dependency
       shell: bash
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        mkdir "$HOME/.bin"
-        cd "$GITHUB_WORKSPACE/security-scanner/pkg/sdk/examples/scan-plugin-semgrep"
-        go build -o scan-plugin-semgrep .
-        mv scan-plugin-semgrep "$HOME/.bin"
-
-        cd "$GITHUB_WORKSPACE/security-scanner/pkg/sdk/examples/scan-plugin-codeql"
-        go build -o scan-plugin-codeql .
-        mv scan-plugin-codeql "$HOME/.bin"
-
-        # Semgrep
-        python3 -m pip install semgrep
-
-        # CodeQL
-        LATEST=$(gh release list --repo https://github.com/github/codeql-action | cut -f 3 | sort --version-sort | tail -n1)
-        gh release download --repo https://github.com/github/codeql-action --pattern codeql-bundle-linux64.tar.gz "$LATEST"
-        tar xf codeql-bundle-linux64.tar.gz -C "$HOME/.bin"
-
-        # Add to PATH
-        echo "$HOME/.bin" >> "$GITHUB_PATH"
-        echo "$HOME/.bin/codeql" >> "$GITHUB_PATH"
+        python3 -m pip install semgrep==1.45.0
 
     - name: Scan
       id: scan
       uses: ./security-scanner
-      # env:
-        # Note: this _should_ work, but causes some issues with Semgrep.
-        # Instead, rely on filtering in the SARIF Output step.
-        #SEMGREP_BASELINE_REF: ${{ github.base_ref }}
       with:
         repository: "$PWD"
-        cache-build: true
-        cache-go-modules: false
+        plugins: "codeql semgrep"
 
-    - name: SARIF Output
+    - name: Read SARIF
       shell: bash
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        cat results.sarif
+        cat ${{ steps.scan.outputs.sarif-file-path }}
 
-    - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@46a6823b81f2d7c67ddf123851eea88365bc8a67 # codeql-bundle-v2.13.5
+    - name: Upload SARIF 
+      uses: github/codeql-action/upload-sarif@3096afedf9873361b2b2f65e1445b13272c83eb8  # TSCCR: could not find entry for github/codeql-action/upload-sarif
       with:
-        sarif_file: results.sarif
+        sarif_file: ${{ steps.scan.outputs.sarif-file-path }}

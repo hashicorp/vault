@@ -15,9 +15,11 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/snapshots"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBackend_Roles_CredentialTypes(t *testing.T) {
@@ -222,7 +224,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -487,7 +489,7 @@ func TestBackend_StaticRole_ReadCreds(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -667,7 +669,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -966,7 +968,7 @@ func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -1085,6 +1087,76 @@ func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	if resp == nil || !resp.IsError() {
 		t.Fatalf("expected error, got none")
 	}
+}
+
+// TestStaticRole_NewCredentialGeneration verifies that new
+// credentials are generated if a retried credential continues
+// to fail
+func TestStaticRole_NewCredentialGeneration(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	roleName := "hashicorp"
+	createRole(t, b, storage, mockDB, "hashicorp")
+
+	t.Run("rotation failures should generate new password on retry", func(t *testing.T) {
+		// Fail to rotate the role
+		generateWALFromFailedRotation(t, b, storage, mockDB, roleName)
+
+		// Get WAL
+		walIDs := requireWALs(t, storage, 1)
+		wal, err := b.findStaticWAL(ctx, storage, walIDs[0])
+		if err != nil || wal == nil {
+			t.Fatal(err)
+		}
+
+		// Store password
+		initialPassword := wal.NewPassword
+
+		// Rotate role manually and fail again #1 with same password
+		generateWALFromFailedRotation(t, b, storage, mockDB, roleName)
+
+		// Ensure WAL is deleted since retrying password failed
+		requireWALs(t, storage, 0)
+
+		// Successfully rotate the role
+		mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+			Return(v5.UpdateUserResponse{}, nil).
+			Once()
+		_, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "rotate-role/" + roleName,
+			Storage:   storage,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Ensure WAL is flushed since request was successful
+		requireWALs(t, storage, 0)
+
+		// Read the credential
+		data := map[string]interface{}{}
+		req := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "static-creds/" + roleName,
+			Storage:   storage,
+			Data:      data,
+		}
+
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+
+		// Confirm successful rotation used new credential
+		// Assert previous failing credential is not being used
+		if resp.Data["password"] == initialPassword {
+			t.Fatalf("expected password to be different after second retry")
+		}
+	})
 }
 
 func TestWALsStillTrackedAfterUpdate(t *testing.T) {
@@ -1282,6 +1354,57 @@ func TestIsInsideRotationWindow(t *testing.T) {
 	}
 }
 
+// TestStaticRoleTTLAfterUpdate tests that a static roles
+// TTL is properly updated after updating rotation period
+// This addresses a bug in which NextVaultRotation was not
+// set on update
+func TestStaticRoleTTLAfterUpdate(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	roleName := "hashicorp"
+	data := map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "10m",
+	}
+
+	createRoleWithData(t, b, storage, mockDB, roleName, data)
+	// read credential
+	resp := readStaticCred(t, b, storage, mockDB, roleName)
+	var initialTTL float64
+	if v, ok := resp.Data["ttl"]; !ok || v == nil {
+		require.FailNow(t, "initial ttl should be set")
+	} else {
+		initialTTL, ok = v.(float64)
+		if !ok {
+			require.FailNow(t, "expected ttl to be an integer")
+		}
+	}
+
+	updateStaticRoleWithData(t, b, storage, mockDB, roleName, map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "20m",
+	})
+
+	resp = readStaticCred(t, b, storage, mockDB, roleName)
+	var updatedTTL float64
+	if v, ok := resp.Data["ttl"]; !ok || v == nil {
+		require.FailNow(t, "expected ttl to be set after update")
+	} else {
+		updatedTTL, ok = v.(float64)
+		if !ok {
+			require.FailNow(t, "expected ttl to be a float64 after update")
+		}
+	}
+
+	require.Greaterf(t, updatedTTL, initialTTL, "expected ttl to be greater than %f, actual value: %f",
+		initialTTL, updatedTTL)
+}
+
 func createRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
 	t.Helper()
 	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
@@ -1318,6 +1441,47 @@ func createRoleWithData(t *testing.T, b *databaseBackend, s logical.Storage, moc
 	}
 }
 
+func readStaticCred(t *testing.T, b *databaseBackend, s logical.Storage, mockDB *mockNewDatabase, roleName string) *logical.Response {
+	t.Helper()
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "static-creds/" + roleName,
+		Storage:   s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatal(resp, err)
+	}
+	return resp
+}
+
+func updateStaticRoleWithData(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string, d map[string]interface{}) {
+	t.Helper()
+
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "static-roles/" + roleName,
+		Storage:   storage,
+		Data:      d,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), req)
+	assert.NoError(t, err, "unexpected error")
+	if resp != nil {
+		assert.NoError(t, resp.Error(), "unexpected error in response")
+	}
+
+	if t.Failed() {
+		require.FailNow(t, "failed to update static role: %s", roleName)
+	}
+}
+
 const testRoleStaticCreate = `
 CREATE ROLE "{{name}}" WITH
   LOGIN
@@ -1331,3 +1495,90 @@ ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 const testRoleStaticUpdateRotation = `
 ALTER USER "{{name}}" WITH PASSWORD '{{password}}';GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `
+
+// TestStaticRole_Recover verifies that a role that exists in a snapshot can be
+// read, listed, and recovered
+func TestStaticRole_Recover(t *testing.T) {
+	b, storage, mockDB := getBackend(t)
+	b2, snapStorage, mockDBSnap := getBackend(t)
+	ctx := context.Background()
+	defer b.Cleanup(ctx)
+	defer b2.Cleanup(ctx)
+	tc := snapshots.NewSnapshotTestCaseWithStorages(t, b, storage, snapStorage)
+
+	configureDBMount(t, storage)
+	configureDBMount(t, snapStorage)
+
+	createRole(t, b2, snapStorage, mockDBSnap, "hashicorp")
+
+	tc.RunRead(t, "static-roles/hashicorp")
+
+	tc.RunList(t, "static-roles")
+
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	_, err := tc.DoRecover(t, "static-roles/hashicorp")
+	require.NoError(t, err)
+	readStaticCred(t, b, storage, mockDB, "hashicorp")
+
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	_, err = tc.DoRecover(t, "static-roles/hashicorp-copy", snapshots.WithRecoverSourcePath("static-roles/hashicorp"))
+	require.NoError(t, err)
+	readStaticCred(t, b, storage, mockDB, "hashicorp-copy")
+}
+
+// TestStaticRole_RecoverExists verifies that a static role cannot be updated
+// via a recover operation, but can be copied to a new role
+func TestStaticRole_RecoverExists(t *testing.T) {
+	b, storage, mockDB := getBackend(t)
+	b2, snapStorage, mockDBSnap := getBackend(t)
+	ctx := context.Background()
+	defer b.Cleanup(ctx)
+	defer b2.Cleanup(ctx)
+	tc := snapshots.NewSnapshotTestCaseWithStorages(t, b, storage, snapStorage)
+
+	configureDBMount(t, storage)
+	configureDBMount(t, snapStorage)
+
+	createRole(t, b2, snapStorage, mockDBSnap, "hashicorp")
+	createRole(t, b, storage, mockDB, "hashicorp")
+
+	resp, err := tc.DoRecover(t, "static-roles/hashicorp")
+	require.NoError(t, err)
+	require.True(t, resp.IsError())
+	require.ErrorContains(t, resp.Error(), "cannot recover a static role that already exists")
+
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	resp, err = tc.DoRecover(t, "static-roles/hashicorp-copy", snapshots.WithRecoverSourcePath("static-roles/hashicorp"))
+	require.NoError(t, err)
+	require.False(t, resp.IsError())
+	readStaticCred(t, b, storage, mockDB, "hashicorp-copy")
+}
+
+// TestStaticCreds_Recover verifies that static credentials can be read from the
+// snapshot without side effects, but they cannot be recovered
+func TestStaticCreds_Recover(t *testing.T) {
+	b, storage, mockDB := getBackend(t)
+	b2, snapStorage, mockDBSnap := getBackend(t)
+	ctx := context.Background()
+	defer b.Cleanup(ctx)
+	defer b2.Cleanup(ctx)
+	tc := snapshots.NewSnapshotTestCaseWithStorages(t, b, storage, snapStorage)
+
+	configureDBMount(t, storage)
+	configureDBMount(t, snapStorage)
+
+	createRole(t, b2, snapStorage, mockDBSnap, "hashicorp")
+	createRole(t, b, storage, mockDB, "hashicorp")
+
+	rotateRole(t, b, snapStorage, mockDB, "hashicorp")
+	tc.RunRead(t, "static-creds/hashicorp")
+
+	_, err := tc.DoRecover(t, "static-creds/hashicorp")
+	require.Error(t, err)
+}

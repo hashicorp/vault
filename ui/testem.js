@@ -6,7 +6,7 @@
 'use strict';
 
 module.exports = {
-  test_page: 'tests/index.html?hidepassed',
+  test_page: 'tests/index.html?hidepassed&enableA11yAudit',
   tap_quiet_logs: true,
   tap_failed_tests_only: true,
   disable_watching: true,
@@ -25,12 +25,16 @@ module.exports = {
         '--window-size=1440,900',
       ].filter(Boolean),
     },
+    Firefox: {
+      ci: ['--headless'],
+    },
   },
   proxies: {
     '/v1': {
-      target: 'http://localhost:9200',
+      target: 'http://127.0.0.1:9200',
     },
   },
+  parallel: process.env.EMBER_EXAM_SPLIT_COUNT || 1,
 };
 
 if (process.env.CI) {

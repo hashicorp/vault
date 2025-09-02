@@ -82,12 +82,12 @@ func TestACMEIssuerRoleLoading(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			f := b.acmeWrapper(acmeWrapperOpts{}, func(acmeCtx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-				if tt.roleName != acmeCtx.role.Name {
-					return nil, fmt.Errorf("expected role %s but got %s", tt.roleName, acmeCtx.role.Name)
+				if tt.roleName != acmeCtx.Role.Name {
+					return nil, fmt.Errorf("expected role %s but got %s", tt.roleName, acmeCtx.Role.Name)
 				}
 
-				if tt.expectedIssuerName != acmeCtx.issuer.Name {
-					return nil, fmt.Errorf("expected issuer %s but got %s", tt.expectedIssuerName, acmeCtx.issuer.Name)
+				if tt.expectedIssuerName != acmeCtx.Issuer.Name {
+					return nil, fmt.Errorf("expected issuer %s but got %s", tt.expectedIssuerName, acmeCtx.Issuer.Name)
 				}
 
 				return nil, nil

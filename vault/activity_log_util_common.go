@@ -8,73 +8,24 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/axiomhq/hyperloglog"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"google.golang.org/protobuf/proto"
 )
 
-type HLLGetter func(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error)
-
 // computeCurrentMonthForBillingPeriod computes the current month's data with respect
 // to a billing period.
-func (a *ActivityLog) computeCurrentMonthForBillingPeriod(ctx context.Context, byMonth map[int64]*processMonth, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {
-	return a.computeCurrentMonthForBillingPeriodInternal(ctx, byMonth, a.CreateOrFetchHyperlogLog, startTime, endTime)
+func (a *ActivityLog) computeCurrentMonthForBillingPeriod(byMonth map[int64]*processMonth, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {
+	return a.computeCurrentMonthForBillingPeriodInternal(byMonth, startTime, endTime)
 }
 
-// CreateOrFetchHyperlogLog creates a new hyperlogLog for each startTime (month) if it does not exist in storage.
-// hyperlogLog is used here to solve count-distinct problem i.e, to count the number of distinct clients
-// In activity log, hyperloglog is a sketch containing clientID's in a given month
-func (a *ActivityLog) CreateOrFetchHyperlogLog(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error) {
-	monthlyHLLPath := fmt.Sprintf("%s%d", distinctClientsBasePath, startTime.Unix())
-	hll := hyperloglog.New()
-	data, err := a.view.Get(ctx, monthlyHLLPath)
-	if err != nil {
-		// If there is no hll, we should log the error, as having this fire multiple times
-		// is a sign that something is wrong with hll store/get. However, this is not a
-		// critical failure (in fact it is expected during the first month rotation after
-		// this code is deployed), so we will not throw an error.
-		a.logger.Warn("fetch of hyperloglog threw an error at path", monthlyHLLPath, "error", err)
-	}
-	if data == nil {
-		a.logger.Trace("creating hyperloglog ", "path", monthlyHLLPath)
-		err = a.StoreHyperlogLog(ctx, startTime, hll)
-		if err != nil {
-			return hll, fmt.Errorf("error storing hyperloglog at path %s: error %w", monthlyHLLPath, err)
-		}
-	} else {
-		err = hll.UnmarshalBinary(data.Value)
-		if err != nil {
-			return hll, fmt.Errorf("error unmarshaling hyperloglog at path %s: error %w", monthlyHLLPath, err)
-		}
-	}
-	return hll, nil
-}
-
-// StoreHyperlogLog stores the hyperloglog (a sketch containing client IDs) for startTime (month) in storage
-func (a *ActivityLog) StoreHyperlogLog(ctx context.Context, startTime time.Time, newHll *hyperloglog.Sketch) error {
-	monthlyHLLPath := fmt.Sprintf("%s%d", distinctClientsBasePath, startTime.Unix())
-	a.logger.Trace("storing hyperloglog ", "path", monthlyHLLPath)
-	marshalledHll, err := newHll.MarshalBinary()
-	if err != nil {
-		return err
-	}
-	err = a.view.Put(ctx, &logical.StorageEntry{
-		Key:   monthlyHLLPath,
-		Value: marshalledHll,
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Context, byMonth map[int64]*processMonth, hllGetFunc HLLGetter, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {
+func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(byMonth map[int64]*processMonth, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {
 	if timeutil.IsCurrentMonth(startTime, a.clock.Now().UTC()) {
 		monthlyComputation := a.transformMonthBreakdowns(byMonth)
 		if len(monthlyComputation) > 1 {
@@ -84,86 +35,154 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 			return monthlyComputation[0], nil
 		}
 	}
-	// Fetch all hyperloglogs for months from startMonth to endMonth. If a month doesn't have an associated
-	// hll, warn and continue.
-
-	// hllMonthlyTimestamp is the start time of the month corresponding to which a hyperloglog of that month's
-	// client data is stored. The path at which the hyperloglog for a month is stored containes this timestamp.
-	hllMonthlyTimestamp := timeutil.StartOfMonth(startTime)
-	billingPeriodHLL := hyperloglog.New()
-	for hllMonthlyTimestamp.Before(timeutil.StartOfMonth(endTime)) {
-		monthSketch, err := hllGetFunc(ctx, hllMonthlyTimestamp)
-		// If there's an error with the hyperloglog fetch, we should still deduplicate on
-		// the hlls that we have so we will warn that we couldn't find a hll for the month
-		// and continue.
-		if err != nil {
-			a.logger.Warn("no hyperloglog associated with timestamp", "timestamp", hllMonthlyTimestamp)
-			hllMonthlyTimestamp = timeutil.StartOfNextMonth(hllMonthlyTimestamp)
-			continue
-		}
-		// Union the monthly hll into the billing period's hll
-		err = billingPeriodHLL.Merge(monthSketch)
-		if err != nil {
-			// In this case we can't afford to fail silently. Since this error indicates
-			// data corruption, we should not try to do any further deduplication
-			return nil, err
-		}
-		hllMonthlyTimestamp = timeutil.StartOfNextMonth(hllMonthlyTimestamp)
-	}
-
-	// Now we will add the clients for the current month to a copy of the billing period's hll to
-	// see how the cardinality grows.
-	billingPeriodHLLWithCurrentMonthEntityClients := billingPeriodHLL.Clone()
-	billingPeriodHLLWithCurrentMonthNonEntityClients := billingPeriodHLL.Clone()
 
 	// There's at most one month of data here. We should validate this assumption explicitly
 	if len(byMonth) > 1 {
 		return nil, errors.New(fmt.Sprintf("multiple months of data found in partial month's client count breakdowns: %+v\n", byMonth))
 	}
 
-	totalEntities := 0
-	totalNonEntities := 0
-	for _, month := range byMonth {
+	// counts including new clients and old clients
+	totalCounts := &activity.CountsRecord{}
+	// new client counts
+	newCounts := &activity.CountsRecord{}
+	// namespaces of new clients
+	newNamespaces := make([]*activity.MonthlyNamespaceRecord, 0)
+	// namespaces including both namespaces with new and repeated clients
+	totalNamespaces := make([]*activity.MonthlyNamespaceRecord, 0)
 
-		if month.NewClients == nil || month.NewClients.Counts == nil || month.Counts == nil {
-			return nil, errors.New("malformed current month used to calculate current month's activity")
-		}
+	monthRecord := &activity.MonthRecord{
+		Timestamp:  timeutil.StartOfMonth(endTime).UTC().Unix(),
+		Counts:     totalCounts,
+		Namespaces: totalNamespaces,
+		NewClients: &activity.NewClientRecord{
+			Counts:     newCounts,
+			Namespaces: newNamespaces,
+		},
+	}
+	if len(byMonth) == 0 {
+		return monthRecord, nil
+	}
 
-		// Note that the following calculations assume that all clients seen are currently in
-		// the NewClients section of byMonth. It is best to explicitly check this, just verify
-		// our assumptions about the passed in byMonth argument.
-		if len(month.Counts.Entities) != len(month.NewClients.Counts.Entities) ||
-			len(month.Counts.NonEntities) != len(month.NewClients.Counts.NonEntities) {
-			return nil, errors.New("current month clients cache assumes billing period")
-		}
+	// we've already checked that byMonth has length of 1, so this will get the
+	// value of the only entry in the map
+	var month *processMonth
+	for _, month = range byMonth {
+	}
 
-		// All the clients for the current month are in the newClients section, initially.
-		// We need to deduplicate these clients across the billing period by adding them
-		// into the billing period hyperloglogs.
-		entities := month.NewClients.Counts.Entities
-		nonEntities := month.NewClients.Counts.NonEntities
-		if entities != nil {
-			for entityID := range entities {
-				billingPeriodHLLWithCurrentMonthEntityClients.Insert([]byte(entityID))
-				totalEntities += 1
+	// This month should have clients
+	if month.NewClients == nil || month.NewClients.Counts == nil || month.Counts == nil {
+		return nil, errors.New("malformed current month used to calculate current month's activity")
+	}
+
+	// clients in current billing period until last month
+	currentBillingPeriodClients := a.GetClientIDsUsageInfo()
+	for nsID, namespace := range month.Namespaces {
+		namespaceActivity := &activity.MonthlyNamespaceRecord{NamespaceID: nsID, Counts: &activity.CountsRecord{}}
+		newNamespaceActivity := &activity.MonthlyNamespaceRecord{NamespaceID: nsID, Counts: &activity.CountsRecord{}}
+		mountsActivity := make([]*activity.MountRecord, 0)
+		newMountsActivity := make([]*activity.MountRecord, 0)
+
+		for mountAccessor, mount := range namespace.Mounts {
+			mountPath := a.mountAccessorToMountPath(mountAccessor)
+
+			mountCounts := &activity.CountsRecord{}
+			newMountCounts := &activity.CountsRecord{}
+
+			for _, typ := range ActivityClientTypes {
+				for clientID := range mount.Counts.clientsByType(typ) {
+					if _, ok := currentBillingPeriodClients[clientID]; !ok {
+						// new client
+						a.incrementCount(newCounts, 1, typ)
+						a.incrementCount(newMountCounts, 1, typ)
+						a.incrementCount(newNamespaceActivity.Counts, 1, typ)
+					}
+
+					// increment the per mount, per namespace, and total counts
+					// for each client
+					a.incrementCount(totalCounts, 1, typ)
+					a.incrementCount(mountCounts, 1, typ)
+					a.incrementCount(namespaceActivity.Counts, 1, typ)
+				}
 			}
-		}
-		if nonEntities != nil {
-			for nonEntityID := range nonEntities {
-				billingPeriodHLLWithCurrentMonthNonEntityClients.Insert([]byte(nonEntityID))
-				totalNonEntities += 1
+
+			// if there are any new clients on this mount, add it to the
+			// list of new mounts
+			if newMountCounts.HasCounts() {
+				newMountsActivity = append(newMountsActivity, &activity.MountRecord{MountPath: mountPath, Counts: newMountCounts})
 			}
+			mountsActivity = append(mountsActivity, &activity.MountRecord{MountPath: mountPath, Counts: mountCounts})
+		}
+
+		namespaceActivity.Mounts = mountsActivity
+		totalNamespaces = append(totalNamespaces, namespaceActivity)
+
+		// if there are any new clients on this namespace, add it to the
+		// list of new namespaces
+		if newNamespaceActivity.Counts.HasCounts() {
+			newNamespaceActivity.Mounts = newMountsActivity
+			newNamespaces = append(newNamespaces, newNamespaceActivity)
 		}
 	}
-	// The number of new entities for the current month is approximately the size of the hll with
-	// the current month's entities minus the size of the initial billing period hll.
-	currentMonthNewEntities := billingPeriodHLLWithCurrentMonthEntityClients.Estimate() - billingPeriodHLL.Estimate()
-	currentMonthNewNonEntities := billingPeriodHLLWithCurrentMonthNonEntityClients.Estimate() - billingPeriodHLL.Estimate()
-	return &activity.MonthRecord{
-		Timestamp:  timeutil.StartOfMonth(endTime).UTC().Unix(),
-		NewClients: &activity.NewClientRecord{Counts: &activity.CountsRecord{EntityClients: int(currentMonthNewEntities), NonEntityClients: int(currentMonthNewNonEntities)}},
-		Counts:     &activity.CountsRecord{EntityClients: totalEntities, NonEntityClients: totalNonEntities},
-	}, nil
+
+	monthRecord.Namespaces = totalNamespaces
+	monthRecord.NewClients.Namespaces = newNamespaces
+	return monthRecord, nil
+}
+
+// incrementCount modifies the passed-in counts record by incrementing the
+// client type's field by num
+func (a *ActivityLog) incrementCount(c *activity.CountsRecord, num int, typ string) {
+	switch typ {
+	case entityActivityType:
+		c.EntityClients += num
+	case nonEntityTokenActivityType:
+		c.NonEntityClients += num
+	case secretSyncActivityType:
+		c.SecretSyncs += num
+	case ACMEActivityType:
+		c.ACMEClients += num
+	}
+}
+
+type processByNamespaceID struct {
+	id string
+	*processByNamespace
+}
+
+func (s summaryByNamespace) sort() []*processByNamespaceID {
+	namespaces := make([]*processByNamespaceID, 0, len(s))
+	for nsID, namespace := range s {
+		namespaces = append(namespaces, &processByNamespaceID{id: nsID, processByNamespace: namespace})
+	}
+	slices.SortStableFunc(namespaces, func(a, b *processByNamespaceID) int {
+		return strings.Compare(a.id, b.id)
+	})
+	return namespaces
+}
+
+type processMountAccessor struct {
+	accessor string
+	*processMount
+}
+
+func (s summaryByMount) sort() []*processMountAccessor {
+	mounts := make([]*processMountAccessor, 0, len(s))
+	for mountAccessor, mount := range s {
+		mounts = append(mounts, &processMountAccessor{accessor: mountAccessor, processMount: mount})
+	}
+	slices.SortStableFunc(mounts, func(a, b *processMountAccessor) int {
+		return strings.Compare(a.accessor, b.accessor)
+	})
+	return mounts
+}
+
+func (c clientIDSet) sort() []string {
+	clientIDs := make([]string, 0, len(c))
+	for clientID := range c {
+		clientIDs = append(clientIDs, clientID)
+	}
+	sort.Strings(clientIDs)
+	return clientIDs
 }
 
 // sortALResponseNamespaces sorts the namespaces for activity log responses.
@@ -183,8 +202,10 @@ func (a *ActivityLog) transformALNamespaceBreakdowns(nsData map[string]*processB
 
 		nsRecord := activity.NamespaceRecord{
 			NamespaceID:     nsID,
-			Entities:        uint64(len(ns.Counts.Entities)),
-			NonEntityTokens: uint64(len(ns.Counts.NonEntities) + int(ns.Counts.Tokens)),
+			Entities:        uint64(ns.Counts.countByType(entityActivityType)),
+			NonEntityTokens: uint64(ns.Counts.countByType(nonEntityTokenActivityType)),
+			SecretSyncs:     uint64(ns.Counts.countByType(secretSyncActivityType)),
+			ACMEClients:     uint64(ns.Counts.countByType(ACMEActivityType)),
 			Mounts:          a.transformActivityLogMounts(ns.Mounts),
 		}
 		byNamespace = append(byNamespace, &nsRecord)
@@ -194,19 +215,17 @@ func (a *ActivityLog) transformALNamespaceBreakdowns(nsData map[string]*processB
 
 // limitNamespacesInALResponse will truncate the number of namespaces shown in the activity
 // endpoints to the number specified in limitNamespaces (the API filtering parameter)
-func (a *ActivityLog) limitNamespacesInALResponse(byNamespaceResponse []*ResponseNamespace, limitNamespaces int) (int, int, []*ResponseNamespace) {
+func (a *ActivityLog) limitNamespacesInALResponse(byNamespaceResponse []*ResponseNamespace, limitNamespaces int) (*ResponseCounts, []*ResponseNamespace) {
 	if limitNamespaces > len(byNamespaceResponse) {
 		limitNamespaces = len(byNamespaceResponse)
 	}
 	byNamespaceResponse = byNamespaceResponse[:limitNamespaces]
 	// recalculate total entities and tokens
-	totalEntities := 0
-	totalTokens := 0
+	totalCounts := &ResponseCounts{}
 	for _, namespaceData := range byNamespaceResponse {
-		totalEntities += namespaceData.Counts.DistinctEntities
-		totalTokens += namespaceData.Counts.NonEntityTokens
+		totalCounts.Add(&namespaceData.Counts)
 	}
-	return totalEntities, totalTokens, byNamespaceResponse
+	return totalCounts, byNamespaceResponse
 }
 
 // transformActivityLogMounts is a helper used to reformat data for transformMonthlyNamespaceBreakdowns.
@@ -216,10 +235,7 @@ func (a *ActivityLog) transformActivityLogMounts(mts map[string]*processMount) [
 	for mountAccessor, mountCounts := range mts {
 		mount := activity.MountRecord{
 			MountPath: a.mountAccessorToMountPath(mountAccessor),
-			Counts: &activity.CountsRecord{
-				EntityClients:    len(mountCounts.Counts.Entities),
-				NonEntityClients: len(mountCounts.Counts.NonEntities) + int(mountCounts.Counts.Tokens),
-			},
+			Counts:    mountCounts.Counts.toCountsRecord(),
 		}
 		mounts = append(mounts, &mount)
 	}
@@ -267,8 +283,11 @@ func (a *ActivityLog) sortActivityLogMonthsResponse(months []*ResponseMonth) {
 }
 
 const (
-	noMountAccessor = "no mount accessor (pre-1.10 upgrade?)"
-	deletedMountFmt = "deleted mount; accessor %q"
+	noMountAccessor     = "no mount accessor (pre-1.10 upgrade?)"
+	noMountPath         = "no mount path (pre-1.10 upgrade?)"
+	DeletedMountFmt     = "deleted mount; accessor %q"
+	DeletedMountPath    = "deleted mount"
+	DeletedNamespaceFmt = "deleted namespace %q"
 )
 
 // mountAccessorToMountPath transforms the mount accessor to the mount path
@@ -280,7 +299,7 @@ func (a *ActivityLog) mountAccessorToMountPath(mountAccessor string) string {
 	} else {
 		valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
 		if valResp == nil {
-			displayPath = fmt.Sprintf(deletedMountFmt, mountAccessor)
+			displayPath = fmt.Sprintf(DeletedMountFmt, mountAccessor)
 		} else {
 			displayPath = valResp.MountPath
 			if !strings.HasSuffix(displayPath, "/") {
@@ -289,6 +308,26 @@ func (a *ActivityLog) mountAccessorToMountPath(mountAccessor string) string {
 		}
 	}
 	return displayPath
+}
+
+// mountPathToMountType transforms the mount path to the mount type
+// returns a placeholder string if the mount path is empty or deleted
+func (a *ActivityLog) mountPathToMountType(ctx context.Context, mountPath string) string {
+	var mountType string
+	if mountPath == "" {
+		mountType = noMountPath
+	} else {
+		path, valResp := a.core.router.MatchingMountAndEntry(ctx, mountPath)
+		if path == "" {
+			mountType = DeletedMountPath
+		} else {
+			mountType = valResp.Type
+			if !strings.HasSuffix(mountType, "/") {
+				mountType += "/"
+			}
+		}
+	}
+	return mountType
 }
 
 type singleTypeSegmentReader struct {
@@ -382,4 +421,59 @@ func (e *segmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivit
 		return nil, err
 	}
 	return out, nil
+}
+
+// namespaceRecordToCountsResponse converts the record to the ResponseCounts
+// type. The function sums entity, non-entity, and secret sync counts to get the
+// total client count.
+func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord) *ResponseCounts {
+	response := &ResponseCounts{
+		EntityClients:    record.EntityClients,
+		NonEntityClients: record.NonEntityClients,
+		Clients:          record.EntityClients + record.NonEntityClients + record.SecretSyncs + record.ACMEClients,
+		SecretSyncs:      record.SecretSyncs,
+		ACMEClients:      record.ACMEClients,
+	}
+	return response
+}
+
+// namespaceRecordToCountsResponse converts the namespace counts to the
+// ResponseCounts type. The function sums entity, non-entity, and secret sync
+// counts to get the total client count.
+func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.NamespaceRecord) *ResponseCounts {
+	return &ResponseCounts{
+		EntityClients:    int(record.Entities),
+		NonEntityClients: int(record.NonEntityTokens),
+		Clients:          int(record.Entities + record.NonEntityTokens + record.SecretSyncs + record.ACMEClients),
+		SecretSyncs:      int(record.SecretSyncs),
+		ACMEClients:      int(record.ACMEClients),
+	}
+}
+
+func (a *ActivityLog) GetClientIDsUsageInfo() map[string]struct{} {
+	a.clientIDsUsage.clientIDsUsageInfoLock.Lock()
+	defer a.clientIDsUsage.clientIDsUsageInfoLock.Unlock()
+	return a.clientIDsUsage.clientIDsUsageInfo
+}
+
+func (a *ActivityLog) SetClientIDsUsageInfo(inMemClientIDsMap map[string]struct{}) {
+	a.clientIDsUsage.clientIDsUsageInfoLock.Lock()
+	defer a.clientIDsUsage.clientIDsUsageInfoLock.Unlock()
+
+	a.clientIDsUsage.clientIDsUsageInfo = inMemClientIDsMap
+}
+
+// GetclientIDsUsageInfoLoaded gets a.clientIDsUsageInfoLoaded for external tests
+func (a *ActivityLog) GetClientIDsUsageInfoLoaded() bool {
+	return a.clientIDsUsage.clientIDsUsageInfoLoaded.Load()
+}
+
+// SetClientIDsUsageInfoLoaded sets a.clientIDsUsageInfoLoaded for external tests
+func (a *ActivityLog) SetClientIDsUsageInfoLoaded(loaded bool) {
+	a.clientIDsUsage.clientIDsUsageInfoLoaded.Store(loaded)
+}
+
+// SetupClientIDsUsageInfo calls core.setupClientIDsUsageInfo for external tests
+func (c *Core) SetupClientIDsUsageInfo(ctx context.Context) {
+	c.setupClientIDsUsageInfo(ctx)
 }

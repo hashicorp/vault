@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -36,10 +36,10 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-History',
     });
     this.metadata = store.peekRecord('kv/metadata', metadata.id);
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.metadata.backend, route: 'list' },
       { label: this.metadata.path, route: 'secret.details', model: this.metadata.path },
-      { label: 'version history' },
+      { label: 'Version History' },
     ];
   });
 
@@ -64,12 +64,12 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-History',
       if (data.destroyed) {
         assert
           .dom(`${PAGE.versions.icon(version)} [data-test-icon="x-square-fill"]`)
-          .hasStyle({ color: 'rgb(199, 52, 69)' });
+          .hasStyle({ color: 'rgb(229, 34, 40)' });
       }
       if (data.isSecretDeleted) {
         assert
           .dom(`${PAGE.versions.icon(version)} [data-test-icon="x-square-fill"]`)
-          .hasStyle({ color: 'rgb(111, 118, 130)' });
+          .hasStyle({ color: 'rgb(101, 106, 118)' });
       }
     }
   });
@@ -87,10 +87,10 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-History',
       { owner: this.engine }
     );
     // because the popup menu is nested in a linked block we must combine the two selectors
-    const popupSelector = `${PAGE.versions.linkedBlock(2)} ${PAGE.popup}`;
+    const popupSelector = `${PAGE.versions.linkedBlock(1)} ${PAGE.popup}`;
     await click(popupSelector);
     assert
-      .dom('[data-test-create-new-version-from="2"]')
+      .dom('[data-test-create-new-version-from="1"]')
       .exists('Shows the option to create a new version from that secret.');
   });
 });

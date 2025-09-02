@@ -1,0 +1,55 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#each @model as |client|}}
+  <LinkedBlock
+    class="list-item-row"
+    @params={{array "vault.cluster.access.oidc.clients.client.details" client.name}}
+    data-test-oidc-client-linked-block={{client.name}}
+  >
+    <div class="level is-mobile">
+      <div class="level-left">
+        <div>
+          <Icon @name="code" class="has-text-grey-light" />
+          <span class="has-text-weight-semibold is-underline">
+            {{client.name}}
+          </span>
+          <div class="has-text-grey is-size-8">
+            Client ID:
+            {{client.clientId}}
+          </div>
+        </div>
+      </div>
+      <div class="level-right is-flex is-paddingless is-marginless">
+        <div class="level-item">
+          {{#if (or client.canRead client.canEdit)}}
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="Application nav options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              {{#if client.canRead}}
+                <dd.Interactive
+                  @route="vault.cluster.access.oidc.clients.client.details"
+                  @model={{client.name}}
+                  data-test-oidc-client-menu-link="details"
+                >Details</dd.Interactive>
+              {{/if}}
+              {{#if client.canEdit}}
+                <dd.Interactive
+                  @route="vault.cluster.access.oidc.clients.client.edit"
+                  @model={{client.name}}
+                  data-test-oidc-client-menu-link="edit"
+                >Edit</dd.Interactive>
+              {{/if}}
+            </Hds::Dropdown>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </LinkedBlock>
+{{/each}}

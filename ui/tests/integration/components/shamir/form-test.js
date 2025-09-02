@@ -8,7 +8,7 @@ import sinon from 'sinon';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render, settled, typeIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { SHAMIR_FORM } from 'vault/tests/helpers/components/shamir';
+import { SHAMIR_FORM } from 'vault/tests/helpers/components/shamir-selectors';
 
 module('Integration | Component | shamir/form', function (hooks) {
   setupRenderingTest(hooks);

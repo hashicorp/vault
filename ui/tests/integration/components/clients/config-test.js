@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, find, click, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -18,7 +19,7 @@ module('Integration | Component | client count config', function (hooks) {
     this.router = this.owner.lookup('service:router');
     this.transitionStub = sinon.stub(this.router, 'transitionTo');
     const store = this.owner.lookup('service:store');
-    this.createModel = (enabled = 'enable', reporting_enabled = false, minimum_retention_months = 24) => {
+    this.createModel = (enabled = 'enable', reporting_enabled = false, minimum_retention_months = 48) => {
       store.pushPayload('clients/config', {
         modelName: 'clients/config',
         id: 'foo',
@@ -26,7 +27,7 @@ module('Integration | Component | client count config', function (hooks) {
           enabled,
           reporting_enabled,
           minimum_retention_months,
-          retention_months: 24,
+          retention_months: 49,
         },
       });
       this.model = store.peekRecord('clients/config', 'foo');
@@ -46,25 +47,24 @@ module('Integration | Component | client count config', function (hooks) {
       'Enabled value matches model'
     );
     assert.ok(
-      find('[data-test-row-value="Retention period"]').textContent.includes('24'),
+      find('[data-test-row-value="Retention period"]').textContent.includes('49'),
       'Retention period value matches model'
     );
   });
 
   test('it should function in edit mode when reporting is disabled', async function (assert) {
     assert.expect(13);
-
+    const retentionMonths = 60;
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
-      const expected = { enabled: 'enable', retention_months: 24 };
-      assert.deepEqual(expected, { enabled, retention_months }, 'Correct data sent in PUT request');
+      const expected = { enabled: 'enable', retention_months: retentionMonths };
+      assert.deepEqual({ enabled, retention_months }, expected, 'Correct data sent in PUT request (1)');
       return {};
     });
 
     this.createModel('disable');
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
@@ -72,23 +72,30 @@ module('Integration | Component | client count config', function (hooks) {
     assert
       .dom('label[for="enabled"]')
       .hasText('Data collection is off', 'Correct label renders when data collection is off');
-    assert.dom('[data-test-input="retentionMonths"]').hasValue('24', 'Retention months render');
+    assert.dom('[data-test-input="retentionMonths"]').hasValue('49', 'Retention months render');
 
     await click('[data-test-input="enabled"]');
-    await fillIn('[data-test-input="retentionMonths"]', -3);
-    await click('[data-test-clients-config-save]');
+    await fillIn('[data-test-input="retentionMonths"]', 20);
+    await click(GENERAL.submitButton);
     assert
-      .dom('[data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('retentionMonths'))
       .hasText(
-        'Retention period must be greater than or equal to 24.',
-        'Validation error shows for incorrect retention period'
+        'Retention period must be greater than or equal to 48.',
+        'Validation error shows for min retention period'
+      );
+    await fillIn('[data-test-input="retentionMonths"]', 90);
+    await click(GENERAL.submitButton);
+    assert
+      .dom(GENERAL.validationErrorByAttr('retentionMonths'))
+      .hasText(
+        'Retention period must be less than or equal to 60.',
+        'Validation error shows for max retention period'
       );
 
-    await fillIn('[data-test-input="retentionMonths"]', 24);
-    await click('[data-test-clients-config-save]');
-    assert.dom('.modal.is-active').exists('Modal renders');
+    await fillIn('[data-test-input="retentionMonths"]', retentionMonths);
+    await click(GENERAL.submitButton);
     assert
-      .dom('[data-test-modal-title] span')
+      .dom('[data-test-clients-config-modal="title"]')
       .hasText('Turn usage tracking on?', 'Correct modal title renders');
     assert.dom('[data-test-clients-config-modal="on"]').exists('Correct modal description block renders');
 
@@ -98,55 +105,51 @@ module('Integration | Component | client count config', function (hooks) {
       'Route transitions correctly on save success'
     );
 
+    // we need to close the modal
+    await click('[data-test-clients-config-modal="cancel"]');
+
     await click('[data-test-input="enabled"]');
-    await click('[data-test-clients-config-save]');
-    assert.dom('.modal.is-active').exists('Modal renders');
+    await click(GENERAL.submitButton);
+    assert.dom('[data-test-clients-config-modal]').exists('Modal renders');
     assert
-      .dom('[data-test-modal-title] span')
+      .dom('[data-test-clients-config-modal="title"]')
       .hasText('Turn usage tracking off?', 'Correct modal title renders');
     assert.dom('[data-test-clients-config-modal="off"]').exists('Correct modal description block renders');
 
     await click('[data-test-clients-config-modal="cancel"]');
-    assert.dom('.modal.is-active').doesNotExist('Modal is hidden on cancel');
+    assert.dom('[data-test-clients-config-modal]').doesNotExist('Modal is hidden on cancel');
   });
 
-  test('it should function in edit mode when reporting is enabled', async function (assert) {
-    assert.expect(6);
+  test('it should be hidden in edit mode when reporting is enabled', async function (assert) {
+    assert.expect(4);
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
       const expected = { enabled: 'enable', retention_months: 48 };
-      assert.deepEqual(expected, { enabled, retention_months }, 'Correct data sent in PUT request');
+      assert.deepEqual({ enabled, retention_months }, expected, 'Correct data sent in PUT request (2)');
       return {};
     });
 
     this.createModel('enable', true, 24);
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
-    assert.dom('[data-test-input="enabled"]').isChecked('Data collection input is checked');
-    assert
-      .dom('[data-test-input="enabled"]')
-      .isDisabled('Data collection input disabled when reporting is enabled');
-    assert
-      .dom('label[for="enabled"]')
-      .hasText('Data collection is on', 'Correct label renders when data collection is on');
-    assert.dom('[data-test-input="retentionMonths"]').hasValue('24', 'Retention months render');
+    assert.dom('[data-test-input="enabled"]').doesNotExist('Data collection input not shown ');
+    assert.dom('[data-test-input="retentionMonths"]').hasValue('49', 'Retention months render');
 
     await fillIn('[data-test-input="retentionMonths"]', 5);
-    await click('[data-test-clients-config-save]');
+    await click(GENERAL.submitButton);
     assert
-      .dom('[data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('retentionMonths'))
       .hasText(
         'Retention period must be greater than or equal to 24.',
         'Validation error shows for incorrect retention period'
       );
 
     await fillIn('[data-test-input="retentionMonths"]', 48);
-    await click('[data-test-clients-config-save]');
+    await click(GENERAL.submitButton);
   });
 
   test('it should not show modal when data collection is not changed', async function (assert) {
@@ -154,18 +157,17 @@ module('Integration | Component | client count config', function (hooks) {
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
-      const expected = { enabled: 'enable', retention_months: 24 };
-      assert.deepEqual(expected, { enabled, retention_months }, 'Correct data sent in PUT request');
+      const expected = { enabled: 'enable', retention_months: 48 };
+      assert.deepEqual({ enabled, retention_months }, expected, 'Correct data sent in PUT request (3)');
       return {};
     });
 
     this.createModel();
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
-    await fillIn('[data-test-input="retentionMonths"]', 24);
-    await click('[data-test-clients-config-save]');
+    await fillIn('[data-test-input="retentionMonths"]', 48);
+    await click(GENERAL.submitButton);
   });
 });

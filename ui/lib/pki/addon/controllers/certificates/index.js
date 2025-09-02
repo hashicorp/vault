@@ -4,7 +4,7 @@
  */
 
 import Controller from '@ember/controller';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { action } from '@ember/object';
 
 export default class PkiCertificatesIndexController extends Controller {

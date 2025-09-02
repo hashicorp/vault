@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
@@ -77,6 +79,7 @@ type Vault struct {
 	ClientCert       string      `hcl:"client_cert"`
 	ClientKey        string      `hcl:"client_key"`
 	TLSServerName    string      `hcl:"tls_server_name"`
+	Namespace        string      `hcl:"namespace"`
 	Retry            *Retry      `hcl:"retry"`
 }
 
@@ -92,18 +95,23 @@ type transportDialer interface {
 
 // APIProxy contains any configuration needed for proxy mode
 type APIProxy struct {
-	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
-	UseAutoAuthToken    bool        `hcl:"-"`
-	ForceAutoAuthToken  bool        `hcl:"-"`
-	EnforceConsistency  string      `hcl:"enforce_consistency"`
-	WhenInconsistent    string      `hcl:"when_inconsistent"`
+	UseAutoAuthTokenRaw        interface{} `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken           bool        `hcl:"-"`
+	ForceAutoAuthToken         bool        `hcl:"-"`
+	EnforceConsistency         string      `hcl:"enforce_consistency"`
+	WhenInconsistent           string      `hcl:"when_inconsistent"`
+	PrependConfiguredNamespace bool        `hcl:"prepend_configured_namespace"`
 }
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	Persist            *agentproxyshared.PersistConfig `hcl:"persist"`
-	InProcDialer       transportDialer                 `hcl:"-"`
-	CacheStaticSecrets bool                            `hcl:"cache_static_secrets"`
+	Persist                                       *agentproxyshared.PersistConfig `hcl:"persist"`
+	InProcDialer                                  transportDialer                 `hcl:"-"`
+	CacheStaticSecrets                            bool                            `hcl:"cache_static_secrets"`
+	DisableCachingDynamicSecrets                  bool                            `hcl:"disable_caching_dynamic_secrets"`
+	StaticSecretTokenCapabilityRefreshIntervalRaw interface{}                     `hcl:"static_secret_token_capability_refresh_interval"`
+	StaticSecretTokenCapabilityRefreshInterval    time.Duration                   `hcl:"-"`
+	StaticSecretTokenCapabilityRefreshBehaviour   string                          `hcl:"static_secret_token_capability_refresh_behavior"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -111,8 +119,6 @@ type AutoAuth struct {
 	Method *Method `hcl:"-"`
 	Sinks  []*Sink `hcl:"sinks"`
 
-	// NOTE: This is unsupported outside of testing and may disappear at any
-	// time.
 	EnableReauthOnNewCredentials bool `hcl:"enable_reauth_on_new_credentials"`
 }
 
@@ -247,14 +253,32 @@ func (c *Config) ValidateConfig() error {
 	}
 
 	if c.AutoAuth != nil {
+		cacheStaticSecrets := c.Cache != nil && c.Cache.CacheStaticSecrets
 		if len(c.AutoAuth.Sinks) == 0 &&
-			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) {
-			return fmt.Errorf("auto_auth requires at least one sink or api_proxy.use_auto_auth_token=true")
+			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) && !cacheStaticSecrets {
+			return fmt.Errorf("auto_auth requires at least one sink, api_proxy.use_auto_auth_token=true, or cache.cache_static_secrets=true")
 		}
+	}
+
+	if c.Cache != nil && c.Cache.CacheStaticSecrets && c.AutoAuth == nil {
+		return fmt.Errorf("cache.cache_static_secrets=true requires an auto-auth block configured, to use the token to connect with Vault's event system")
+	}
+
+	if c.Cache != nil && !c.Cache.CacheStaticSecrets && c.Cache.DisableCachingDynamicSecrets {
+		return fmt.Errorf("to enable the cache, the cache must be configured to either cache static secrets or dynamic secrets")
 	}
 
 	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
 		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
+	}
+
+	if c.Cache != nil && c.Cache.StaticSecretTokenCapabilityRefreshBehaviour != "" {
+		switch c.Cache.StaticSecretTokenCapabilityRefreshBehaviour {
+		case "pessimistic":
+		case "optimistic":
+		default:
+			return fmt.Errorf("cache.static_secret_token_capability_refresh_behavior must be either \"optimistic\" or \"pessimistic\"")
+		}
 	}
 
 	return nil
@@ -263,31 +287,47 @@ func (c *Config) ValidateConfig() error {
 // LoadConfig loads the configuration at the given path, regardless if
 // it's a file or directory.
 func LoadConfig(path string) (*Config, error) {
+	cfg, _, err := LoadConfigCheckDuplicate(path)
+	return cfg, err
+}
+
+// LoadConfigCheckDuplicate is the same as the above but adds the ability to check if the HCL config file has
+// duplicate attributes.
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfig once deprecation is complete
+func LoadConfigCheckDuplicate(path string) (cfg *Config, duplicate bool, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if fi.IsDir() {
-		return LoadConfigDir(path)
+		return LoadConfigDirCheckDuplicate(path)
 	}
-	return LoadConfigFile(path)
+	return LoadConfigFileCheckDuplicate(path)
 }
 
 // LoadConfigDir loads the configuration at the given path if it's a directory
 func LoadConfigDir(dir string) (*Config, error) {
+	cfg, _, err := LoadConfigDirCheckDuplicate(dir)
+	return cfg, err
+}
+
+// LoadConfigDirCheckDuplicate is the same as the above but adds the ability to check if the HCL config file has
+// duplicate attributes.
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfigDir once deprecation is complete
+func LoadConfigDirCheckDuplicate(dir string) (cfg *Config, duplicate bool, err error) {
 	f, err := os.Open(dir)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	defer f.Close()
 
 	fi, err := f.Stat()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if !fi.IsDir() {
-		return nil, fmt.Errorf("configuration path must be a directory: %q", dir)
+		return nil, false, fmt.Errorf("configuration path must be a directory: %q", dir)
 	}
 
 	var files []string
@@ -296,7 +336,7 @@ func LoadConfigDir(dir string) (*Config, error) {
 		var fis []os.FileInfo
 		fis, err = f.Readdir(128)
 		if err != nil && err != io.EOF {
-			return nil, err
+			return nil, false, err
 		}
 
 		for _, fi := range fis {
@@ -324,10 +364,11 @@ func LoadConfigDir(dir string) (*Config, error) {
 
 	result := NewConfig()
 	for _, f := range files {
-		config, err := LoadConfigFile(f)
+		config, dup, err := LoadConfigFileCheckDuplicate(f)
 		if err != nil {
-			return nil, fmt.Errorf("error loading %q: %w", f, err)
+			return nil, duplicate, fmt.Errorf("error loading %q: %w", f, err)
 		}
+		duplicate = duplicate || dup
 
 		if result == nil {
 			result = config
@@ -336,7 +377,7 @@ func LoadConfigDir(dir string) (*Config, error) {
 		}
 	}
 
-	return result, nil
+	return result, duplicate, nil
 }
 
 // isTemporaryFile returns true or false depending on whether the
@@ -349,26 +390,35 @@ func isTemporaryFile(name string) bool {
 }
 
 // LoadConfigFile loads the configuration at the given path if it's a file
-func LoadConfigFile(path string) (*Config, error) {
+func LoadConfigFile(path string) (cfg *Config, err error) {
+	cfg, _, err = LoadConfigFileCheckDuplicate(path)
+	return cfg, err
+}
+
+// LoadConfigFileCheckDuplicate is the same as the above but adds the ability to check if the HCL config file has
+// duplicate attributes.
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfigFile once deprecation is complete
+func LoadConfigFileCheckDuplicate(path string) (cfg *Config, duplicate bool, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if fi.IsDir() {
-		return nil, fmt.Errorf("location is a directory, not a file")
+		return nil, false, fmt.Errorf("location is a directory, not a file")
 	}
 
 	// Read the file
 	d, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	// Parse!
-	obj, err := hcl.Parse(string(d))
+	// TODO (HCL_DUP_KEYS_DEPRECATION): Return to hcl.Parse once deprecation is complete
+	obj, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(string(d))
 	if err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
 
 	// Attribute
@@ -382,13 +432,15 @@ func LoadConfigFile(path string) (*Config, error) {
 	// Start building the result
 	result := NewConfig()
 	if err := hcl.DecodeObject(result, obj); err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
 
-	sharedConfig, err := configutil.ParseConfig(string(d))
+	// TODO (HCL_DUP_KEYS_DEPRECATION): Return to configutil.ParseConfig once deprecation is complete
+	sharedConfig, dup, err := configutil.ParseConfigCheckDuplicate(string(d))
 	if err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
+	duplicate = duplicate || dup
 
 	// Pruning custom headers for Vault for now
 	for _, ln := range sharedConfig.Listeners {
@@ -399,24 +451,24 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
+		return nil, duplicate, fmt.Errorf("error parsing: file doesn't contain a root object")
 	}
 
 	if err := parseAutoAuth(result, list); err != nil {
-		return nil, fmt.Errorf("error parsing 'auto_auth': %w", err)
+		return nil, duplicate, fmt.Errorf("error parsing 'auto_auth': %w", err)
 	}
 
 	if err := parseCache(result, list); err != nil {
-		return nil, fmt.Errorf("error parsing 'cache':%w", err)
+		return nil, duplicate, fmt.Errorf("error parsing 'cache':%w", err)
 	}
 
 	if err := parseAPIProxy(result, list); err != nil {
-		return nil, fmt.Errorf("error parsing 'api_proxy':%w", err)
+		return nil, duplicate, fmt.Errorf("error parsing 'api_proxy':%w", err)
 	}
 
 	err = parseVault(result, list)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing 'vault':%w", err)
+		return nil, duplicate, fmt.Errorf("error parsing 'vault':%w", err)
 	}
 
 	if result.Vault != nil {
@@ -435,7 +487,7 @@ func LoadConfigFile(path string) (*Config, error) {
 	if disableIdleConnsEnv := os.Getenv(DisableIdleConnsEnv); disableIdleConnsEnv != "" {
 		result.DisableIdleConns, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableIdleConnsEnv))
 		if err != nil {
-			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableIdleConnsEnv, err)
+			return nil, duplicate, fmt.Errorf("error parsing environment variable %s: %v", DisableIdleConnsEnv, err)
 		}
 	}
 
@@ -448,14 +500,14 @@ func LoadConfigFile(path string) (*Config, error) {
 		case "":
 			continue
 		default:
-			return nil, fmt.Errorf("unknown disable_idle_connections value: %s", subsystem)
+			return nil, duplicate, fmt.Errorf("unknown disable_idle_connections value: %s", subsystem)
 		}
 	}
 
 	if disableKeepAlivesEnv := os.Getenv(DisableKeepAlivesEnv); disableKeepAlivesEnv != "" {
 		result.DisableKeepAlives, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableKeepAlivesEnv))
 		if err != nil {
-			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableKeepAlivesEnv, err)
+			return nil, duplicate, fmt.Errorf("error parsing environment variable %s: %v", DisableKeepAlivesEnv, err)
 		}
 	}
 
@@ -468,11 +520,11 @@ func LoadConfigFile(path string) (*Config, error) {
 		case "":
 			continue
 		default:
-			return nil, fmt.Errorf("unknown disable_keep_alives value: %s", subsystem)
+			return nil, duplicate, fmt.Errorf("unknown disable_keep_alives value: %s", subsystem)
 		}
 	}
 
-	return result, nil
+	return result, duplicate, nil
 }
 
 func parseVault(result *Config, list *ast.ObjectList) error {
@@ -493,6 +545,10 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 	err := hcl.DecodeObject(&v, item.Val)
 	if err != nil {
 		return err
+	}
+
+	if v.Address != "" {
+		v.Address = configutil.NormalizeAddr(v.Address)
 	}
 
 	if v.TLSSkipVerifyRaw != nil {
@@ -614,6 +670,14 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 	subList := subs.List
 	if err := parsePersist(result, subList); err != nil {
 		return fmt.Errorf("error parsing persist: %w", err)
+	}
+
+	if result.Cache.StaticSecretTokenCapabilityRefreshIntervalRaw != nil {
+		var err error
+		if result.Cache.StaticSecretTokenCapabilityRefreshInterval, err = parseutil.ParseDurationSecond(result.Cache.StaticSecretTokenCapabilityRefreshIntervalRaw); err != nil {
+			return fmt.Errorf("error parsing static_secret_token_capability_refresh_interval, must be provided as a duration string: %w", err)
+		}
+		result.Cache.StaticSecretTokenCapabilityRefreshIntervalRaw = nil
 	}
 
 	return nil
@@ -763,8 +827,61 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 	// Canonicalize namespace path if provided
 	m.Namespace = namespace.Canonicalize(m.Namespace)
 
+	// Normalize any configuration addresses
+	if len(m.Config) > 0 {
+		var err error
+		for k, v := range m.Config {
+			vStr, ok := v.(string)
+			if !ok {
+				continue
+			}
+			m.Config[k], err = normalizeAutoAuthMethod(m.Type, k, vStr)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	result.AutoAuth.Method = &m
 	return nil
+}
+
+// autoAuthMethodKeys maps an auto-auth method type to its associated
+// configuration whose values are URLs, IP addresses, or host:port style
+// addresses. All auto-auth types must have an entry in this map, otherwise our
+// normalization check will fail when parsing the storage entry config.
+// Auto-auth method types which don't contain such keys should include an empty
+// array.
+var autoAuthMethodKeys = map[string][]string{
+	"alicloud":   {""},
+	"approle":    {""},
+	"aws":        {""},
+	"azure":      {"resource"},
+	"cert":       {""},
+	"cf":         {""},
+	"gcp":        {"service_account"},
+	"jwt":        {""},
+	"ldap":       {""},
+	"kerberos":   {""},
+	"kubernetes": {""},
+	"oci":        {""},
+	"token_file": {""},
+}
+
+// normalizeAutoAuthMethod takes a storage name, a configuration key
+// and it's associated value and will normalize any URLs, IP addresses, or
+// host:port style addresses.
+func normalizeAutoAuthMethod(method string, key string, value string) (string, error) {
+	keys, ok := autoAuthMethodKeys[method]
+	if !ok {
+		return "", fmt.Errorf("unknown auto-auth method type %s", method)
+	}
+
+	if slices.Contains(keys, key) {
+		return configutil.NormalizeAddr(value), nil
+	}
+
+	return value, nil
 }
 
 func parseSinks(result *Config, list *ast.ObjectList) error {

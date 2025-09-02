@@ -1,12 +1,17 @@
 ---
 layout: docs
-page_title: Performance Standby Nodes - Vault Enterprise
-description: Performance Standby Nodes - Vault Enterprise
+page_title: Use performance standby nodes
+description: >-
+  Use performance standby nodes with Vault Enterprise clusters for high
+  availability.
 ---
 
-# Performance standby nodes
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
 
-@include 'alerts/enterprise-and-hcp-plus.mdx'
+# Use performance standby nodes
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 Vault supports a multi-server mode for high availability. This mode protects
 against outages by running multiple Vault servers. High availability mode
@@ -21,6 +26,8 @@ that do not modify Vault's storage.
 
 Performance Standbys require the request forwarding method described in the [HA
 Server-to-Server](/vault/docs/concepts/ha#server-to-server-communication) docs.
+Unlike regular standby nodes, performance standbys will **not** respect the
+`X-Vault-No-Request-Forwarding` header.
 
 A performance standby will connect to the active node over the existing request
 forwarding connection. If selected by the active node to be promoted to a

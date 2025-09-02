@@ -4,6 +4,9 @@ page_title: /sys/step-down - HTTP API
 description: The `/sys/step-down` endpoint causes the node to give up active status.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # `/sys/step-down`
 
 @include 'alerts/restricted-root.mdx'
@@ -12,8 +15,12 @@ The `/sys/step-down` endpoint causes the node to give up active status.
 
 ## Step down leader
 
-This endpoint forces the node to give up active status. If the node does not
-have active status, this endpoint does nothing. Note that the node will sleep
+The step-down endpoint forces nodes to give up "active" status. If you
+call the endpoint against a non-active node, for example, a DR or
+ performance standby node, Vault forwards the request to the active
+  node.
+  
+    Note that the node will sleep
 for ten seconds before attempting to grab the active lock again, but if no
 standby nodes grab the active lock in the interim, the same node may become the
 active node again. Requires a token with `root` policy or `sudo` capability on

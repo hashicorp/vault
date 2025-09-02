@@ -1,0 +1,53 @@
+Autopilot exposes a [configuration
+API](/vault/api-docs/system/storage/raftautopilot#set-configuration) to manage its
+behavior. These items cannot be set in Vault server configuration files.
+Autopilot gets initialized with the following default values. If these default
+values do not meet your expected autopilot behavior, don't forget to set them to your desired values.
+
+- `cleanup_dead_servers` `(bool: false)` - This controls whether to remove dead servers from
+the Raft peer list periodically or when a new server joins. This requires that
+`min-quorum` is also set.
+
+- `dead_server_last_contact_threshold` `(string: "24h")` - Limit on the amount of time
+a server can go without leader contact before being considered failed. This
+takes effect only when `cleanup_dead_servers` is set. When adding new nodes
+to your cluster, the `dead_server_last_contact_threshold` needs to be larger
+than the amount of time that it takes to load a Raft snapshot, otherwise the
+newly added nodes will be removed from your cluster before they have finished
+loading the snapshot and starting up. If you are using an [HSM](/vault/docs/enterprise/hsm), your
+`dead_server_last_contact_threshold` needs to be larger than the response
+time of the HSM.
+
+<Warning>
+
+  We strongly recommend keeping `dead_server_last_contact_threshold` at a high
+  duration, such as a day, as it being too low could result in removal of nodes
+  that aren't actually dead
+
+</Warning>
+
+- `min_quorum` `(int)` - The minimum number of servers that should always be
+present in a cluster. Autopilot will not prune servers below this number.
+**There is no default for this value** and it should be set to the expected
+number of voters in your cluster when `cleanup_dead_servers` is set as `true`.
+Use the [quorum size guidance](/vault/docs/internals/integrated-storage#quorum-size-and-failure-tolerance)
+to determine the proper minimum quorum size for your cluster.
+
+- `max_trailing_logs` `(int: 1000)` - Amount of entries in the Raft Log that a
+server can be behind before being considered unhealthy. If this value is too low,
+it can cause the cluster to lose quorum if a follower falls behind. This
+value only needs to be increased from the default if you have a very high
+write load on Vault and you see that it takes a long time to promote new
+servers to becoming voters. This is an unlikely scenario and most users
+should not modify this value.
+
+- `last_contact_threshold` `(string "10s")` - Limit on the amount of time a
+server can go without leader contact before being considered unhealthy.
+
+- `server_stabilization_time` `(string "10s")` - Minimum amount of time a server
+must be in a healthy state before it can become a voter. Until that happens,
+it will be visible as a peer in the cluster, but as a non-voter, meaning it
+won't contribute to quorum.
+
+- `disable_upgrade_migration` `(bool: false)` - Disables automatically upgrading
+Vault using autopilot (Enterprise-only)

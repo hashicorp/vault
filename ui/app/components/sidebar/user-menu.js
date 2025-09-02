@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { later } from '@ember/runloop';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
@@ -19,7 +19,10 @@ export default class SidebarUserMenuComponent extends Component {
   get hasEntityId() {
     // root users will not have an entity_id because they are not associated with an entity.
     // in order to use the MFA end user setup they need an entity_id
-    return !!this.auth.authData?.entity_id;
+    return !!this.auth.authData?.entityId;
+  }
+  get isUserpass() {
+    return this.auth.authData?.authMethodType === 'userpass';
   }
 
   get isRenewing() {

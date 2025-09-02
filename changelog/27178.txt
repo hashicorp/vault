@@ -1,0 +1,3 @@
+```release-note:change
+ui/kubernetes: Update the roles filter-input to use explicit search.
+```

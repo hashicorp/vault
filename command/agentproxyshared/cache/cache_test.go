@@ -33,7 +33,7 @@ func tokenRevocationValidation(t *testing.T, sampleSpace map[string]string, expe
 	t.Helper()
 	for val, valType := range sampleSpace {
 		index, err := leaseCache.db.Get(valType, val)
-		if err != nil {
+		if err != nil && err != cachememdb.ErrCacheItemNotFound {
 			t.Fatal(err)
 		}
 		if expected[val] == "" && index != nil {
@@ -81,7 +81,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink("testid"), true))
+	mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink("testid"), false, true, nil, nil))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -168,9 +168,8 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 
 	// Create a muxer and add paths relevant for the lease cache layer
 	mux := http.NewServeMux()
-	// mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), false))
+	mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), true, true, nil, nil))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -227,17 +226,19 @@ func TestCache_ConcurrentRequests(t *testing.T) {
 				"key": key,
 			})
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err.Error())
+				return
 			}
 			secret, err := testClient.Logical().Read(key)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err.Error())
+				return
 			}
 			if secret == nil || secret.Data["key"].(string) != key {
-				t.Fatal(fmt.Sprintf("failed to read value for key: %q", key))
+				t.Errorf("failed to read value for key: %q", key)
+				return
 			}
 		}(i)
-
 	}
 	wg.Wait()
 }
@@ -1098,12 +1099,8 @@ func testCachingCacheClearCommon(t *testing.T, clearType string) {
 
 	// Verify the entry is cleared
 	idx, err = leaseCache.db.Get(cachememdb.IndexNameLease, gotLeaseID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if idx != nil {
-		t.Fatalf("expected entry to be nil, got: %v", idx)
+	if err != cachememdb.ErrCacheItemNotFound {
+		t.Fatal("expected entry to be nil, got", err)
 	}
 }
 

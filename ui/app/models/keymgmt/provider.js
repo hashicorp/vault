@@ -8,7 +8,7 @@ import { tracked } from '@glimmer/tracking';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 const CRED_PROPS = {
   azurekeyvault: ['client_id', 'client_secret', 'tenant_id'],
@@ -44,7 +44,7 @@ const validations = {
 
 @withModelValidations(validations)
 export default class KeymgmtProviderModel extends Model {
-  @service store;
+  @service pagination;
   @attr('string') backend;
   @attr('string', {
     label: 'Provider name',
@@ -128,11 +128,11 @@ export default class KeymgmtProviderModel extends Model {
     } else {
       // try unless capabilities returns false
       try {
-        this.keys = await this.store.lazyPaginatedQuery('keymgmt/key', {
+        this.keys = await this.pagination.lazyPaginatedQuery('keymgmt/key', {
           backend: this.backend,
           provider: this.name,
           responsePath: 'data.keys',
-          page,
+          page: Number(page) || 1,
         });
       } catch (error) {
         this.keys = [];

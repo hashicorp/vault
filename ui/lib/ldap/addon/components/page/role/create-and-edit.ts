@@ -1,7 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
@@ -10,7 +15,7 @@ import type LdapRoleModel from 'vault/models/ldap/role';
 import { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
-import type StoreService from 'vault/services/store';
+import type PaginationService from 'vault/services/pagination';
 
 interface Args {
   model: LdapRoleModel;
@@ -25,8 +30,8 @@ interface RoleTypeOption {
 
 export default class LdapCreateAndEditRolePageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly router: RouterService;
-  @service declare readonly store: StoreService;
+  @service('app-router') declare readonly router: RouterService;
+  @service declare readonly pagination: PaginationService;
 
   @tracked modelValidations: ValidationMap | null = null;
   @tracked invalidFormMessage = '';
@@ -66,7 +71,7 @@ export default class LdapCreateAndEditRolePageComponent extends Component<Args> 
         yield model.save();
         this.flashMessages.success(`Successfully ${action} the role ${model.name}`);
         if (action === 'created') {
-          this.store.clearDataset('ldap/role');
+          this.pagination.clearDataset('ldap/role');
         }
         this.router.transitionTo(
           'vault.cluster.secrets.backend.ldap.roles.role.details',

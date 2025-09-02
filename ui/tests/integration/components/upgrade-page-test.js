@@ -14,8 +14,7 @@ module('Integration | Component | upgrade page', function (hooks) {
   test('it renders with defaults', async function (assert) {
     await render(hbs`
       {{upgrade-page}}
-      <div id="modal-wormhole"></div>
-    `);
+          `);
 
     assert.dom('.page-header .title').hasText('Vault Enterprise', 'renders default page title');
     assert
@@ -33,8 +32,7 @@ module('Integration | Component | upgrade page', function (hooks) {
   test('it renders with custom attributes', async function (assert) {
     await render(hbs`
       {{upgrade-page title="Test Feature Title" minimumEdition="Vault Enterprise Premium"}}
-      <div id="modal-wormhole"></div>
-    `);
+          `);
 
     assert.dom('.page-header .title').hasText('Test Feature Title', 'renders custom page title');
     assert

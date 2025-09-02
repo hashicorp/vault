@@ -1,0 +1,3 @@
+```release-note:bug
+ui/database: Fixes 'cannot update static username' error when updating static role's rotation period
+```

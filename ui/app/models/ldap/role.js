@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -63,7 +63,8 @@ export const dynamicRoleFields = [
 @withModelValidations(validations)
 @withFormFields()
 export default class LdapRoleModel extends Model {
-  @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
+  @attr('string') backend; // mount path of ldap engine -- set on response from value passed to queryRecord
+  @attr('string') path_to_role; // ancestral path to the role added in the adapter (only exists for nested roles)
 
   @attr('string', {
     defaultValue: 'static',
@@ -162,6 +163,12 @@ export default class LdapRoleModel extends Model {
   })
   rollback_ldif;
 
+  get completeRoleName() {
+    // if there is a path_to_role then the name is hierarchical
+    // and we must concat the ancestors with the leaf name to get the full role path
+    return this.path_to_role ? this.path_to_role + this.name : this.name;
+  }
+
   get isStatic() {
     return this.type === 'static';
   }
@@ -223,9 +230,11 @@ export default class LdapRoleModel extends Model {
   }
 
   fetchCredentials() {
-    return this.store.adapterFor('ldap/role').fetchCredentials(this.backend, this.type, this.name);
+    return this.store
+      .adapterFor('ldap/role')
+      .fetchCredentials(this.backend, this.type, this.completeRoleName);
   }
   rotateStaticPassword() {
-    return this.store.adapterFor('ldap/role').rotateStaticPassword(this.backend, this.name);
+    return this.store.adapterFor('ldap/role').rotateStaticPassword(this.backend, this.completeRoleName);
   }
 }

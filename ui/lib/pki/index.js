@@ -11,6 +11,9 @@ module.exports = buildEngine({
   lazyLoading: {
     enabled: false,
   },
+  babel: {
+    plugins: [require.resolve('ember-concurrency/async-arrow-task-transform')],
+  },
   isDevelopingAddon() {
     return true;
   },

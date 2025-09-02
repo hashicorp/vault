@@ -7,22 +7,22 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-cleanhttp"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -31,8 +31,10 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/cluster"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
@@ -50,11 +52,16 @@ type RaftClusterOpts struct {
 	VersionMap                     map[int]string
 	RedundancyZoneMap              map[int]string
 	EffectiveSDKVersionMap         map[int]string
+	PerNodePhysicalFactoryConfig   map[int]map[string]interface{}
+	DisableMlock                   bool
 }
 
-func raftCluster(t testing.TB, ropts *RaftClusterOpts) (*vault.TestCluster, *vault.TestClusterOptions) {
+func raftClusterBuilder(t testing.TB, ropts *RaftClusterOpts) (*vault.CoreConfig, vault.TestClusterOptions) {
 	if ropts == nil {
-		ropts = &RaftClusterOpts{}
+		ropts = &RaftClusterOpts{
+			InmemCluster: true,
+			DisableMlock: true,
+		}
 	}
 
 	conf := &vault.CoreConfig{
@@ -64,6 +71,8 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) (*vault.TestCluster, *vau
 		DisableAutopilot:               !ropts.EnableAutopilot,
 		EnableResponseHeaderRaftNodeID: ropts.EnableResponseHeaderRaftNodeID,
 		Seal:                           ropts.Seal,
+		EnableRaw:                      true,
+		DisableMlock:                   ropts.DisableMlock,
 	}
 
 	opts := vault.TestClusterOptions{
@@ -73,41 +82,56 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) (*vault.TestCluster, *vau
 	opts.PhysicalFactoryConfig = ropts.PhysicalFactoryConfig
 	conf.DisablePerformanceStandby = ropts.DisablePerfStandby
 	opts.NumCores = ropts.NumCores
-	opts.VersionMap = ropts.VersionMap
-	opts.RedundancyZoneMap = ropts.RedundancyZoneMap
 	opts.EffectiveSDKVersionMap = ropts.EffectiveSDKVersionMap
+	opts.PerNodePhysicalFactoryConfig = ropts.PerNodePhysicalFactoryConfig
+	if len(ropts.VersionMap) > 0 || len(ropts.RedundancyZoneMap) > 0 {
+		if opts.PerNodePhysicalFactoryConfig == nil {
+			opts.PerNodePhysicalFactoryConfig = map[int]map[string]interface{}{}
+		}
+		for idx, ver := range ropts.VersionMap {
+			if opts.PerNodePhysicalFactoryConfig[idx] == nil {
+				opts.PerNodePhysicalFactoryConfig[idx] = map[string]interface{}{}
+			}
+			opts.PerNodePhysicalFactoryConfig[idx]["autopilot_upgrade_version"] = ver
+		}
+		for idx, zone := range ropts.RedundancyZoneMap {
+			if opts.PerNodePhysicalFactoryConfig[idx] == nil {
+				opts.PerNodePhysicalFactoryConfig[idx] = map[string]interface{}{}
+			}
+			opts.PerNodePhysicalFactoryConfig[idx]["autopilot_redundancy_zone"] = zone
+		}
+	}
 
 	teststorage.RaftBackendSetup(conf, &opts)
 
 	if ropts.DisableFollowerJoins {
 		opts.SetupFunc = nil
 	}
+	return conf, opts
+}
 
-	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), conf, &opts)
-	cluster.Start()
-	vault.TestWaitActive(benchhelpers.TBtoT(t), cluster.Cores[0].Core)
+func raftCluster(t testing.TB, ropts *RaftClusterOpts) (*vault.TestCluster, *vault.TestClusterOptions) {
+	conf, opts := raftClusterBuilder(t, ropts)
+	cluster := vault.NewTestCluster(t, conf, &opts)
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster, &opts
 }
 
 func TestRaft_BoltDBMetrics(t *testing.T) {
 	t.Parallel()
-	conf := vault.CoreConfig{}
-	opts := vault.TestClusterOptions{
-		HandlerFunc:            vaulthttp.Handler,
-		NumCores:               1,
-		CoreMetricSinkProvider: testhelpers.TestMetricSinkProvider(time.Minute),
-		DefaultHandlerProperties: vault.HandlerProperties{
-			ListenerConfig: &configutil.Listener{
-				Telemetry: configutil.ListenerTelemetry{
-					UnauthenticatedMetricsAccess: true,
-				},
+	conf, opts := raftClusterBuilder(t, &RaftClusterOpts{
+		InmemCluster: true,
+		NumCores:     1,
+	})
+	opts.CoreMetricSinkProvider = testhelpers.TestMetricSinkProvider(time.Minute)
+	opts.DefaultHandlerProperties = vault.HandlerProperties{
+		ListenerConfig: &configutil.Listener{
+			Telemetry: configutil.ListenerTelemetry{
+				UnauthenticatedMetricsAccess: true,
 			},
 		},
 	}
-
-	teststorage.RaftBackendSetup(&conf, &opts)
-	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
+	cluster := vault.NewTestCluster(t, conf, &opts)
 	defer cluster.Cleanup()
 
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
@@ -148,30 +172,13 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 func TestRaft_RetryAutoJoin(t *testing.T) {
 	t.Parallel()
 
-	var (
-		conf vault.CoreConfig
-
-		opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
-	)
-
-	teststorage.RaftBackendSetup(&conf, &opts)
-
-	opts.SetupFunc = nil
-	cluster := vault.NewTestCluster(t, &conf, &opts)
-
-	cluster.Start()
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		InmemCluster:         true,
+		DisableFollowerJoins: true,
+	})
 	defer cluster.Cleanup()
 
-	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
 	leaderCore := cluster.Cores[0]
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-	{
-		testhelpers.EnsureCoreSealed(t, leaderCore)
-		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leaderCore)
-		vault.TestWaitActive(t, leaderCore.Core)
-	}
 
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
@@ -184,7 +191,6 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 	{
 		// expected to pass but not join as we're not actually discovering leader addresses
 		core := cluster.Cores[1]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 
 		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
 		require.NoError(t, err)
@@ -200,24 +206,14 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 
 func TestRaft_Retry_Join(t *testing.T) {
 	t.Parallel()
-	var conf vault.CoreConfig
-	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
-	teststorage.RaftBackendSetup(&conf, &opts)
-	opts.SetupFunc = nil
-	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		InmemCluster:         true,
+		DisableFollowerJoins: true,
+	})
 	defer cluster.Cleanup()
-
-	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-	{
-		testhelpers.EnsureCoreSealed(t, leaderCore)
-		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-	}
 
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
@@ -233,7 +229,6 @@ func TestRaft_Retry_Join(t *testing.T) {
 		go func(t *testing.T, core *vault.TestClusterCore) {
 			t.Helper()
 			defer wg.Done()
-			core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 			_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
 			if err != nil {
 				t.Error(err)
@@ -261,29 +256,178 @@ func TestRaft_Retry_Join(t *testing.T) {
 	})
 }
 
-func TestRaft_Join(t *testing.T) {
+// TestRaftChallenge_sameAnswerSameID_concurrent verifies that 10 goroutines
+// all requesting a raft challenge with the same ID all return the same answer.
+// This is a regression test for a TOCTTOU race found during testing.
+func TestRaftChallenge_sameAnswerSameID_concurrent(t *testing.T) {
 	t.Parallel()
-	var conf vault.CoreConfig
-	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
-	teststorage.RaftBackendSetup(&conf, &opts)
-	opts.SetupFunc = nil
-	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
+
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+		NumCores:             1,
+	})
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	challenges := make(chan string, 15)
+	wg := sync.WaitGroup{}
+	for i := 0; i < 15; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			res, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+				"server_id": "node1",
+			})
+			require.NoError(t, err)
+			challenges <- res.Data["challenge"].(string)
+		}()
+	}
+
+	wg.Wait()
+	challengeSet := make(map[string]struct{})
+	close(challenges)
+	for challenge := range challenges {
+		challengeSet[challenge] = struct{}{}
+	}
+
+	require.Len(t, challengeSet, 1)
+}
+
+// TestRaftChallenge_sameAnswerSameID verifies that repeated bootstrap requests
+// with the same node ID return the same challenge, but that a different node ID
+// returns a different challenge
+func TestRaftChallenge_sameAnswerSameID(t *testing.T) {
+	t.Parallel()
+
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+		NumCores:             1,
+	})
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+	res, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+		"server_id": "node1",
+	})
+	require.NoError(t, err)
+
+	// querying the same ID returns the same challenge
+	challenge := res.Data["challenge"]
+	resSameID, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+		"server_id": "node1",
+	})
+	require.NoError(t, err)
+	require.Equal(t, challenge, resSameID.Data["challenge"])
+
+	// querying a different ID returns a new challenge
+	resDiffID, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+		"server_id": "node2",
+	})
+	require.NoError(t, err)
+	require.NotEqual(t, challenge, resDiffID.Data["challenge"])
+}
+
+// TestRaftChallenge_evicted verifies that a valid answer errors if there have
+// been more than 20 challenge requests after it, because our cache of pending
+// bootstraps is limited to 20
+func TestRaftChallenge_evicted(t *testing.T) {
+	t.Parallel()
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+		NumCores:             1,
+	})
+	defer cluster.Cleanup()
+	firstResponse := map[string]interface{}{}
+	client := cluster.Cores[0].Client
+	for i := 0; i < vault.RaftInitialChallengeLimit+1; i++ {
+		if i == vault.RaftInitialChallengeLimit {
+			// wait before sending the last request, so we don't get rate
+			// limited
+			time.Sleep(2 * time.Second)
+		}
+		res, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+			"server_id": fmt.Sprintf("node-%d", i),
+		})
+		require.NoError(t, err)
+
+		// save the response from the first challenge
+		if i == 0 {
+			firstResponse = res.Data
+		}
+	}
+
+	// get the answer to the challenge
+	challengeRaw, err := base64.StdEncoding.DecodeString(firstResponse["challenge"].(string))
+	require.NoError(t, err)
+	eBlob := &wrapping.BlobInfo{}
+	err = proto.Unmarshal(challengeRaw, eBlob)
+	require.NoError(t, err)
+	access := cluster.Cores[0].SealAccess().GetAccess()
+	multiWrapValue := &vaultseal.MultiWrapValue{
+		Generation: access.Generation(),
+		Slots:      []*wrapping.BlobInfo{eBlob},
+	}
+	plaintext, _, err := access.Decrypt(context.Background(), multiWrapValue)
+	require.NoError(t, err)
+
+	// send the answer
+	_, err = client.Logical().Write("sys/storage/raft/bootstrap/answer", map[string]interface{}{
+		"answer":          base64.StdEncoding.EncodeToString(plaintext),
+		"server_id":       "node-0",
+		"cluster_addr":    "127.0.0.1:8200",
+		"sdk_version":     "1.1.1",
+		"upgrade_version": "1.2.3",
+		"non_voter":       false,
+	})
+
+	require.ErrorContains(t, err, "no expected answer for the server id provided")
+}
+
+// TestRaft_ChallengeSpam creates 40 raft bootstrap challenges. The first 20
+// should succeed. After 20 challenges have been created, slow down the requests
+// so that there are 2.5 occurring per second. Some of these will fail, due to
+// rate limiting, but others will succeed.
+func TestRaft_ChallengeSpam(t *testing.T) {
+	t.Parallel()
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+	})
 	defer cluster.Cleanup()
 
-	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+	// Execute 2 * MaxInFlightRequests, over a period that should allow some to proceed as the token bucket
+	// refills.
+	var someLaterFailed bool
+	var someLaterSucceeded bool
+	for n := 0; n < 2*vault.RaftInitialChallengeLimit; n++ {
+		_, err := cluster.Cores[0].Client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+			"server_id": fmt.Sprintf("core-%d", n),
+		})
+		// First MaxInFlightRequests should succeed for sure
+		if n < vault.RaftInitialChallengeLimit {
+			require.NoError(t, err)
+		} else {
+			// slow down to twice the configured rps
+			time.Sleep((1000 * time.Millisecond) / (2 * time.Duration(vault.RaftChallengesPerSecond)))
+			if err != nil {
+				require.Equal(t, 429, err.(*api.ResponseError).StatusCode)
+				someLaterFailed = true
+			} else {
+				someLaterSucceeded = true
+			}
+		}
+	}
+	require.True(t, someLaterFailed)
+	require.True(t, someLaterSucceeded)
+}
+
+func TestRaft_Join(t *testing.T) {
+	t.Parallel()
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+	})
+	defer cluster.Cleanup()
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-	// Seal the leader so we can install an address provider
-	{
-		testhelpers.EnsureCoreSealed(t, leaderCore)
-		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leaderCore)
-		vault.TestWaitActive(t, leaderCore.Core)
-	}
 
 	joinFunc := func(client *api.Client, addClientCerts bool) {
 		req := &api.RaftJoinRequest{
@@ -392,6 +536,7 @@ func TestRaft_NodeIDHeader(t *testing.T) {
 			description: "with header configured",
 			ropts: &RaftClusterOpts{
 				EnableResponseHeaderRaftNodeID: true,
+				InmemCluster:                   true,
 			},
 			headerPresent: true,
 		},
@@ -514,7 +659,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 	// defer goleak.VerifyNone(t)
 	t.Parallel()
 
-	seal, setErr := vaultseal.NewToggleableTestSeal(nil)
+	seal, wrappers := vaultseal.NewTestSeal(nil)
 	autoSeal := vault.NewAutoSeal(seal)
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		NumCores: 1,
@@ -543,11 +688,11 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 
 	var readErr error
 	go func() {
-		snap, readErr = ioutil.ReadAll(r)
+		snap, readErr = io.ReadAll(r)
 		wg.Done()
 	}()
 
-	setErr[0](errors.New("seal failure"))
+	wrappers[0].SetError(errors.New("seal failure"))
 	// Take a snapshot
 	err := leaderClient.Sys().RaftSnapshot(w)
 	w.Close()
@@ -622,7 +767,9 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			tCaseLocal := tCase
 			t.Parallel()
 
-			cluster, _ := raftCluster(t, &RaftClusterOpts{DisablePerfStandby: tCaseLocal.DisablePerfStandby})
+			cluster, _ := raftCluster(t, &RaftClusterOpts{
+				DisablePerfStandby: tCaseLocal.DisablePerfStandby,
+			})
 			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
@@ -658,7 +805,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			}
 			defer resp.Body.Close()
 
-			snap, err := ioutil.ReadAll(resp.Body)
+			snap, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -824,7 +971,9 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			tCaseLocal := tCase
 			t.Parallel()
 
-			cluster, _ := raftCluster(t, &RaftClusterOpts{DisablePerfStandby: tCaseLocal.DisablePerfStandby})
+			cluster, _ := raftCluster(t, &RaftClusterOpts{
+				DisablePerfStandby: tCaseLocal.DisablePerfStandby,
+			})
 			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
@@ -859,7 +1008,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			snap, err := ioutil.ReadAll(resp.Body)
+			snap, err := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			if err != nil {
 				t.Fatal(err)
@@ -916,7 +1065,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			snap2, err := ioutil.ReadAll(resp.Body)
+			snap2, err := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			if err != nil {
 				t.Fatal(err)
@@ -1046,7 +1195,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := ioutil.ReadAll(resp.Body)
+	snap, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
 		t.Fatal(err)
@@ -1134,27 +1283,15 @@ func BenchmarkRaft_SingleNode(b *testing.B) {
 
 func TestRaft_Join_InitStatus(t *testing.T) {
 	t.Parallel()
-	var conf vault.CoreConfig
-	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
-	teststorage.RaftBackendSetup(&conf, &opts)
-	opts.SetupFunc = nil
-	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		InmemCluster:         true,
+		DisableFollowerJoins: true,
+	})
+	defer cluster.Cleanup()
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-	// Seal the leader so we can install an address provider
-	{
-		testhelpers.EnsureCoreSealed(t, leaderCore)
-		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leaderCore)
-		vault.TestWaitActive(t, leaderCore.Core)
-	}
 
 	joinFunc := func(client *api.Client) {
 		req := &api.RaftJoinRequest{
@@ -1227,4 +1364,253 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 	for i := range cluster.Cores {
 		verifyInitStatus(i, true)
 	}
+}
+
+// TestRaftCluster_Removed creates a 3 node raft cluster and then removes one of
+// the nodes. The test verifies that a write on the removed node errors, and that
+// the removed node is sealed.
+func TestRaftCluster_Removed(t *testing.T) {
+	t.Parallel()
+	cluster, _ := raftCluster(t, nil)
+	defer cluster.Cleanup()
+
+	follower := cluster.Cores[2]
+	followerClient := follower.Client
+	_, err := followerClient.Logical().Write("secret/foo", map[string]interface{}{
+		"test": "data",
+	})
+	require.NoError(t, err)
+
+	leaderClient := cluster.Cores[0].Client
+	_, err = leaderClient.Logical().Write("/sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": follower.NodeID,
+	})
+	require.NoError(t, err)
+	followerClient.SetCheckRedirect(func(request *http.Request, requests []*http.Request) error {
+		require.Fail(t, "request caused a redirect", request.URL.Path)
+		return fmt.Errorf("no redirects allowed")
+	})
+	configChanged := func() bool {
+		config, err := leaderClient.Logical().Read("sys/storage/raft/configuration")
+		require.NoError(t, err)
+		cfg := config.Data["config"].(map[string]interface{})
+		servers := cfg["servers"].([]interface{})
+		return len(servers) == 2
+	}
+	// raft config changes happen async, so block until the config change is
+	// applied
+	require.Eventually(t, configChanged, 3*time.Second, 50*time.Millisecond)
+
+	_, err = followerClient.Logical().Write("secret/foo", map[string]interface{}{
+		"test": "other_data",
+	})
+	require.Error(t, err)
+	require.Eventually(t, follower.Sealed, 3*time.Second, 250*time.Millisecond)
+}
+
+// TestRaftCluster_Removed_RaftConfig creates a 3 node raft cluster with an extremely long
+// heartbeat interval, and then removes one of the nodes. The test verifies that
+// removed node discovers that it has been removed (via not being present in the
+// raft config) and seals.
+func TestRaftCluster_Removed_RaftConfig(t *testing.T) {
+	t.Parallel()
+	conf, opts := raftClusterBuilder(t, nil)
+	conf.ClusterHeartbeatInterval = 5 * time.Minute
+	cluster := vault.NewTestCluster(t, conf, &opts)
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	follower := cluster.Cores[2]
+	followerClient := follower.Client
+	_, err := followerClient.Logical().Write("secret/foo", map[string]interface{}{
+		"test": "data",
+	})
+	require.NoError(t, err)
+
+	_, err = cluster.Cores[0].Client.Logical().Write("/sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": follower.NodeID,
+	})
+	require.Eventually(t, follower.Sealed, 10*time.Second, 500*time.Millisecond)
+}
+
+// TestSysHealth_Raft creates a raft cluster and verifies that the health status
+// is OK for a healthy follower. The test partitions one of the nodes so that it
+// can't send request forwarding RPCs. The test verifies that the status
+// endpoint  shows that HA isn't healthy. Finally, the test removes the
+// partitioned follower and unpartitions it. The follower will learn that it has
+// been removed, and should return the removed status.
+func TestSysHealth_Raft(t *testing.T) {
+	parseHealthBody := func(t *testing.T, resp *api.Response) *vaulthttp.HealthResponse {
+		t.Helper()
+		health := vaulthttp.HealthResponse{}
+		defer resp.Body.Close()
+		require.NoError(t, jsonutil.DecodeJSONFromReader(resp.Body, &health))
+		return &health
+	}
+
+	opts := &vault.TestClusterOptions{
+		HandlerFunc:        vaulthttp.Handler,
+		NumCores:           3,
+		InmemClusterLayers: true,
+	}
+	heartbeat := 500 * time.Millisecond
+	teststorage.RaftBackendSetup(nil, opts)
+	conf := &vault.CoreConfig{
+		ClusterHeartbeatInterval: heartbeat,
+	}
+	vaultCluster := vault.NewTestCluster(t, conf, opts)
+	defer vaultCluster.Cleanup()
+	testhelpers.WaitForActiveNodeAndStandbys(t, vaultCluster)
+	followerClient := vaultCluster.Cores[1].Client
+
+	t.Run("healthy", func(t *testing.T) {
+		resp, err := followerClient.Logical().ReadRawWithData("sys/health", map[string][]string{
+			"perfstandbyok": {"true"},
+			"standbyok":     {"true"},
+		})
+		require.NoError(t, err)
+		require.Equal(t, resp.StatusCode, 200)
+		r := parseHealthBody(t, resp)
+		require.False(t, *r.RemovedFromCluster)
+		require.True(t, *r.HAConnectionHealthy)
+		require.Less(t, r.LastRequestForwardingHeartbeatMillis, 2*heartbeat.Milliseconds())
+	})
+	nl := vaultCluster.Cores[1].NetworkLayer()
+	inmem, ok := nl.(*cluster.InmemLayer)
+	require.True(t, ok)
+	unpartition := inmem.Partition()
+
+	t.Run("partition", func(t *testing.T) {
+		time.Sleep(2 * heartbeat)
+		var erroredResponse *api.Response
+		// the node isn't able to send/receive heartbeats, so it will have
+		// haunhealthy status.
+		testhelpers.RetryUntil(t, 3*time.Second, func() error {
+			resp, err := followerClient.Logical().ReadRawWithData("sys/health", map[string][]string{
+				"perfstandbyok": {"true"},
+				"standbyok":     {"true"},
+			})
+			if err == nil {
+				if resp != nil && resp.Body != nil {
+					resp.Body.Close()
+				}
+				return errors.New("expected error")
+			}
+			if resp.StatusCode != 474 {
+				resp.Body.Close()
+				return fmt.Errorf("status code %d", resp.StatusCode)
+			}
+			erroredResponse = resp
+			return nil
+		})
+		r := parseHealthBody(t, erroredResponse)
+		require.False(t, *r.RemovedFromCluster)
+		require.False(t, *r.HAConnectionHealthy)
+		require.Greater(t, r.LastRequestForwardingHeartbeatMillis, 2*heartbeat.Milliseconds())
+
+		// ensure haunhealthycode is respected
+		resp, err := followerClient.Logical().ReadRawWithData("sys/health", map[string][]string{
+			"perfstandbyok":   {"true"},
+			"standbyok":       {"true"},
+			"haunhealthycode": {"299"},
+		})
+		require.NoError(t, err)
+		require.Equal(t, 299, resp.StatusCode)
+		resp.Body.Close()
+	})
+
+	t.Run("remove and unpartition", func(t *testing.T) {
+		leaderClient := vaultCluster.Cores[0].Client
+		_, err := leaderClient.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+			"server_id": vaultCluster.Cores[1].NodeID,
+		})
+		require.NoError(t, err)
+		unpartition()
+
+		var erroredResponse *api.Response
+
+		// now that the node can connect again, it will start getting the removed
+		// error when trying to connect. The code should be removed
+		testhelpers.RetryUntil(t, 10*time.Second, func() error {
+			resp, err := followerClient.Logical().ReadRawWithData("sys/health", map[string][]string{
+				"perfstandbyok": {"true"},
+				"standbyok":     {"true"},
+			})
+			if err == nil {
+				if resp != nil && resp.Body != nil {
+					resp.Body.Close()
+				}
+				return fmt.Errorf("expected error")
+			}
+			if resp.StatusCode != 530 {
+				resp.Body.Close()
+				return fmt.Errorf("status code %d", resp.StatusCode)
+			}
+			erroredResponse = resp
+			return nil
+		})
+		r := parseHealthBody(t, erroredResponse)
+		require.True(t, true, *r.RemovedFromCluster)
+		// The HA connection health should either be nil or false. It's possible
+		// for it to be false if we got the response in between the node marking
+		// itself removed and sealing
+		if r.HAConnectionHealthy != nil {
+			require.False(t, *r.HAConnectionHealthy)
+		}
+	})
+}
+
+// TestRaftCluster_Removed_ReAdd creates a three node raft cluster and then
+// removes one of the nodes. The removed follower tries to re-join, and the test
+// verifies that it errors and cannot join.
+func TestRaftCluster_Removed_ReAdd(t *testing.T) {
+	t.Parallel()
+	cluster, _ := raftCluster(t, nil)
+	defer cluster.Cleanup()
+
+	leader := cluster.Cores[0]
+	follower := cluster.Cores[2]
+
+	_, err := leader.Client.Logical().Write("/sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": follower.NodeID,
+	})
+	require.NoError(t, err)
+	require.Eventually(t, follower.Sealed, 10*time.Second, 250*time.Millisecond)
+
+	joinReq := &api.RaftJoinRequest{LeaderAPIAddr: leader.Address.String()}
+	_, err = follower.Client.Sys().RaftJoin(joinReq)
+	require.Error(t, err)
+}
+
+// TestCore_RaftDataDirPath verifies that the RaftDataDirPath method returns a
+// data path when the storage backend is raft, and no data path when the storage
+// is not raft
+func TestCore_RaftDataDirPath(t *testing.T) {
+	t.Parallel()
+	t.Run("raft", func(t *testing.T) {
+		t.Parallel()
+		cluster, _ := raftCluster(t, nil)
+		defer cluster.Cleanup()
+		path, ok := cluster.Cores[0].RaftDataDirPath()
+		require.True(t, ok)
+		require.NotEmpty(t, path)
+	})
+	t.Run("inmem", func(t *testing.T) {
+		t.Parallel()
+		core, _, _ := vault.TestCoreUnsealed(t)
+		defer core.Shutdown()
+		path, ok := core.RaftDataDirPath()
+		require.False(t, ok)
+		require.Empty(t, path)
+	})
+	t.Run("raft ha", func(t *testing.T) {
+		t.Parallel()
+		var conf vault.CoreConfig
+		opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+		teststorage.RaftHASetup(&conf, &opts, teststorage.MakeFileBackend)
+		cluster := vault.NewTestCluster(t, &conf, &opts)
+		defer cluster.Cleanup()
+		path, ok := cluster.Cores[0].RaftDataDirPath()
+		require.False(t, ok)
+		require.Empty(t, path)
+	})
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -129,6 +130,13 @@ DONELISTHANDLING:
 		}
 	}
 
+	// If the response is from a snapshot read or list, we need to make sure
+	// that hte wrapped value is written to real storage, not to the snapshot
+	// storage
+	if req.IsSnapshotReadOrList() {
+		ctx = logical.CreateContextWithSnapshotID(ctx, "")
+	}
+
 	// If we are wrapping, the first part (performed in this functions) happens
 	// before auditing so that resp.WrapInfo.Token can contain the HMAC'd
 	// wrapping token ID in the audit logs, so that it can be determined from
@@ -218,7 +226,7 @@ DONELISTHANDLING:
 			priClaims.Accessor = resp.Auth.Accessor
 		}
 		sig, err := jose.NewSigner(
-			jose.SigningKey{Algorithm: jose.ES512, Key: c.wrappingJWTKey},
+			jose.SigningKey{Algorithm: jose.SignatureAlgorithm(api.CubbyHoleJWTSignatureAlgorithm), Key: c.wrappingJWTKey},
 			(&jose.SignerOptions{}).WithType("JWT"))
 		if err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
@@ -376,7 +384,7 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 			if !valid {
 				logInput.OuterErr = consts.ErrInvalidWrappingToken
 			}
-			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+			if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			}
 		}

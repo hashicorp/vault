@@ -8,61 +8,48 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const testCases = [
   {
-    // default case should show all possible fields for each type
-    pluginType: '',
-    staticRoleFields: ['name', 'username', 'rotation_period', 'rotation_statements'],
-    dynamicRoleFields: [
-      'name',
-      'default_ttl',
-      'max_ttl',
-      'creation_statements',
-      'revocation_statements',
-      'rollback_statements',
-      'renew_statements',
-    ],
-  },
-  {
     pluginType: 'elasticsearch-database-plugin',
-    staticRoleFields: ['username', 'rotation_period'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
     dynamicRoleFields: ['creation_statement', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mongodb-database-plugin',
-    staticRoleFields: ['username', 'rotation_period'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
     dynamicRoleFields: ['creation_statement', 'revocation_statement', 'default_ttl', 'max_ttl'],
     statementsHidden: true,
   },
   {
     pluginType: 'mssql-database-plugin',
-    staticRoleFields: ['username', 'rotation_period'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mysql-database-plugin',
-    staticRoleFields: ['username', 'rotation_period'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mysql-aurora-database-plugin',
-    staticRoleFields: ['username', 'rotation_period'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mysql-rds-database-plugin',
-    staticRoleFields: ['username', 'rotation_period'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mysql-legacy-database-plugin',
-    staticRoleFields: ['username', 'rotation_period'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'vault-plugin-database-oracle',
-    staticRoleFields: ['username', 'rotation_period'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
 ];
@@ -72,6 +59,7 @@ const ALL_ATTRS = [
   { name: 'default_ttl', type: 'string', options: {} },
   { name: 'max_ttl', type: 'string', options: {} },
   { name: 'username', type: 'string', options: {} },
+  { name: 'skip_import_rotation', type: 'boolean', options: {} },
   { name: 'rotation_period', type: 'string', options: {} },
   { name: 'creation_statements', type: 'string', options: {} },
   { name: 'creation_statement', type: 'string', options: {} },
@@ -101,26 +89,31 @@ module('Integration | Component | database-role-setting-form', function (hooks) 
   });
 
   test('it shows empty states when no roleType passed in', async function (assert) {
+    setRunOptions({
+      rules: {
+        // Fails on #ember-testing-container
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
     await render(hbs`<DatabaseRoleSettingForm @attrs={{this.model.attrs}} @model={{this.model}}/>`);
     assert.dom('[data-test-component="empty-state"]').exists({ count: 2 }, 'Two empty states exist');
   });
 
   test('it shows appropriate fields based on roleType and db plugin', async function (assert) {
     this.set('roleType', 'static');
-    this.set('dbType', '');
+    this.set('dbParams', { plugin_name: '', skip_static_role_rotation_import: false });
     await render(hbs`
       <DatabaseRoleSettingForm
         @attrs={{this.model.attrs}}
         @model={{this.model}}
         @roleType={{this.roleType}}
-        @dbType={{this.dbType}}
+        @dbParams={{this.dbParams}}
       />
     `);
-    assert.dom('[data-test-component="empty-state"]').doesNotExist('Does not show empty states');
     for (const testCase of testCases) {
       const staticFields = getFields(testCase.staticRoleFields);
       const dynamicFields = getFields(testCase.dynamicRoleFields);
-      this.set('dbType', testCase.pluginType);
+      this.set('dbParams', { plugin_name: testCase.pluginType, skip_static_role_rotation_import: false });
       this.set('roleType', 'static');
       staticFields.show.forEach((attr) => {
         assert

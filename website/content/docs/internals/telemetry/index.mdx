@@ -5,12 +5,15 @@ description: |-
   Learn about the telemetry data available in Vault
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Telemetry
 
 The Vault server process collects various runtime metrics about the performance
 of different libraries and subsystems. These metrics are aggregated on a
 10-second interval and retained for one minute in memory. High-cardinality
-metrics, like `vault.kv.secret.count`, report every 10 minutes or at an interval
+metrics, like `vault.secret.kv.count`, report every 10 minutes or at an interval
 configured with in the `telemetry` stanza.
 
 Telemetry from Vault must be streamed and stored in metrics aggregation

@@ -1,29 +1,42 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <Hds::Card::Container
   @level="mid"
   @hasBorder={{true}}
-  class="overview-card border-radius-2"
+  class="overview-card"
   data-test-overview-card-container={{@cardTitle}}
   ...attributes
 >
-  <div class="is-flex-between" data-test-overview-card={{@cardTitle}}>
-    <h3 class="title is-5">{{@cardTitle}}</h3>
-    {{#if @actionText}}
-      <LinkTo
-        class="has-icon-right is-ghost is-no-underline has-text-weight-semibold"
-        @route={{@actionTo}}
-        @query={{hash @actionQuery}}
-        data-test-action-text={{@actionText}}
-      >
-        {{@actionText}}
-        <Icon @name="chevron-right" />
-      </LinkTo>
+  <div class="flex row-wrap space-between" data-test-overview-card={{@cardTitle}}>
+    {{#if (has-block "customTitle")}}
+      {{yield to="customTitle"}}
+    {{else}}
+      <Hds::Text::Display @weight="semibold" @size="300" data-test-overview-card-title={{@cardTitle}}>
+        {{@cardTitle}}
+      </Hds::Text::Display>
+    {{/if}}
+
+    {{#if (has-block "action")}}
+      {{yield to="action"}}
     {{/if}}
   </div>
-  <p class="has-text-grey is-size-8 {{unless @actionText 'has-top-margin-s'}}">{{@subText}}</p>
-  {{yield}}
+
+  {{! Pass @subText for text only content to use default styling. }}
+  {{#if @subText}}
+    <Hds::Text::Body @color="faint" data-test-overview-card-subtitle={{@cardTitle}}>
+      {{@subText}}
+    </Hds::Text::Body>
+  {{/if}}
+
+  {{! Use the "customSubtext" yield for stylized subtext or including elements like doc links. }}
+  {{#if (has-block "customSubtext")}}
+    {{yield to="customSubtext"}}
+  {{/if}}
+
+  {{#if (has-block "content")}}
+    {{yield to="content"}}
+  {{/if}}
 </Hds::Card::Container>

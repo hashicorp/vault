@@ -10,12 +10,12 @@ import hbs from 'htmlbars-inline-precompile';
 import { stubFeaturesAndPermissions } from 'vault/tests/helpers/components/sidebar-nav';
 import { toolsActions } from 'vault/helpers/tools-actions';
 import { capitalize } from '@ember/string';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const renderComponent = () => {
   return render(hbs`
     <Sidebar::Frame @isVisible={{true}}>
-      <div id="modal-wormhole"></div>
-      <Sidebar::Nav::Tools />
+            <Sidebar::Nav::Tools />
     </Sidebar::Frame>
   `);
 };
@@ -23,7 +23,18 @@ const renderComponent = () => {
 module('Integration | Component | sidebar-nav-tools', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it should hide links user does not have access too', async function (assert) {
+  hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // This is an issue with Hds::SideNav::Header::HomeLink
+        'aria-prohibited-attr': { enabled: false },
+        // TODO: fix use Dropdown on user-menu
+        'nested-interactive': { enabled: false },
+      },
+    });
+  });
+
+  test('it should hide links user does not have access to', async function (assert) {
     await renderComponent();
     assert
       .dom('[data-test-sidebar-nav-link]')

@@ -1,0 +1,3 @@
+```release-note:bug
+auth/cert: Address an issue in which OCSP query responses were not cached
+```

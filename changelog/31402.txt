@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/database: log password rotation success (info) and failure (error). Some relevant log lines have been updated to include "path" fields.
+```

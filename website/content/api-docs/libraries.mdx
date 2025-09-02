@@ -6,6 +6,9 @@ description: >-
   Vault HTTP API.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Libraries
 
 The programming libraries listed on this page can be used to consume the API more conveniently.
@@ -30,21 +33,13 @@ $ go get github.com/hashicorp/vault/api
 
 ### Ruby
 
+@include 'alerts/deprecated.mdx'
+
 - [Vault Ruby Client](https://github.com/hashicorp/vault-ruby)
 
 ```shell-session
 $ gem install vault
 ```
-
-## C#
-
-- [Vault DotNet Client](https://github.com/hashicorp/vault-client-dotnet) - Note that this is currently in early development, and is not yet production-ready. 
-
-```shell-session
-# Install-Package HashiCorp.Vault
-```
-
-[Example application](https://github.com/hashicorp/vault-client-dotnet#getting-started)
 
 ## Community
 
@@ -62,7 +57,8 @@ $ pip install ansible-modules-hashivault
 ### C&#35;
 
 - [VaultSharp](https://github.com/rajanadar/VaultSharp)
-  - Supports .NET 4.6.x, 4.7.x, 4.8.x, .NET Standard 2.x, .NET 6.0 and 7.0.
+  - Supports .NET 4.6.x, 4.7.x, 4.8.x, .NET Standard 2.x, .NET 6.0, 7.0, and 8.0.
+  - Supports every auth and secret backend supported by Vault, along with several system APIs.
 
 ```shell-session
 $ Install-Package VaultSharp
@@ -117,11 +113,13 @@ $ stack install gothic
 
 ### Java
 
+- [Quarkus Vault](https://github.com/quarkiverse/quarkus-vault)
 - [Spring Vault](https://github.com/spring-projects/spring-vault)
 - [vault-java-driver](https://github.com/jopenlibs/vault-java-driver)
 
 ### Kotlin
 
+- [kault](https://github.com/Hansanto/kault)
 - [vault-kotlin](https://github.com/kunickiaj/vault-kotlin)
 
 ### Node.js
@@ -130,6 +128,12 @@ $ stack install gothic
 
 ```shell-session
 $ npm install node-vault
+```
+
+- [node-vault](https://github.com/shahradelahi/node-vault) (Typescript)
+
+```shell-session
+$ npm install @litehex/node-vault
 ```
 
 - [vaulTS](https://github.com/mittwald/vaulTS) (Github NPM Registry)
@@ -204,3 +208,19 @@ $ pip install hvac
 ### Scala
 
 - [scala-vault](https://github.com/janstenpickle/scala-vault)
+
+## Experimental
+
+### C#
+
+- [Vault DotNet Client](https://github.com/hashicorp/vault-client-dotnet) - 
+Note that this is an experimental approach to auto-generating libraries from
+OpenAPI content and is not production-ready. We do not have plans to make
+this production-ready at this time.
+
+```shell-session
+# Install-Package HashiCorp.Vault
+```
+
+[Example application](https://github.com/hashicorp/vault-client-dotnet#getting-started)
+

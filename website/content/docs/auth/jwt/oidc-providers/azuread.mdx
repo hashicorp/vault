@@ -1,10 +1,14 @@
 ---
 layout: docs
-page_title: OIDC Provider Setup - Auth Methods - Azure Active Directory
-description: OIDC provider configuration for Azure Active Directory
+page_title: Use Azure AD for OIDC
+description: >-
+  Configure Vault to use Azure Active Directory (AD) as an OIDC provider.
 ---
 
-## Azure active directory (AAD)
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# Use Azure AD for OIDC authentication
 
 ~> **Note:** Azure Active Directory Applications that have custom signing keys as a result of using
 the [claims-mapping](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-claims-mapping)
@@ -68,14 +72,14 @@ You should set up a [Vault policy](/vault/tutorials/policies/policies) for the A
   from Azure.
    - `allowed_redirect_uris` should be the two redirect URIs for Vault CLI and UI access.
    - `groups_claim` should be set to `"groups"`.
-   - `oidc_scopes` should be set to `"https://graph.microsoft.com/.default"`.
+   - `oidc_scopes` should be set to `"https://graph.microsoft.com/.default profile"`.
    
    ```shell
    vault write auth/oidc/role/your_default_role \
       user_claim="sub" \
       allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
       groups_claim="groups" \
-      oidc_scopes="https://graph.microsoft.com/.default" \
+      oidc_scopes="https://graph.microsoft.com/.default profile" \
       policies=default
    ```
 
@@ -147,7 +151,7 @@ To set the proper permissions on the Azure app:
 1. Add `"profile"` to `oidc_scopes` so the user's ID comes back on the JWT.
    ```shell
    vault write auth/oidc/role/your_default_role \
-    user_claim="email" \
+    user_claim="sub" \
     allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
     groups_claim="groups" \
     oidc_scopes="profile" \

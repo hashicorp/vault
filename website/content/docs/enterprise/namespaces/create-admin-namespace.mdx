@@ -2,20 +2,24 @@
 layout: docs
 page_title: Configure an administrative namespace
 description: >-
-  Step-by-step guide for setting up an administrative namespace with Vault
-  Enterprise
+  Step-by-step guide for setting up an administrative namespace in Vault
 ---
 
-# Create an administrative namespace <EnterpriseAlert product=vault inline=true />
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# Create an administrative namespace
+
+@include 'alerts/enterprise-only.mdx'
 
 Grant access to a predefined subset of privileged system backend endpoints in
 the Vault API with an administrative namespace.
 
-<Tip title="HCP Vault has a built-in administrative namespace">
+<Tip title="HCP Vault Dedicated has a built-in administrative namespace">
 
-  HCP Vault clusters include an administrative namespace (`admin`) by default.
-  For more information on managing namespaces with HCP Vault, refer to the
-  [HCP Vault namespace considerations](/vault/tutorials/cloud-ops/hcp-vault-namespace-considerations)
+  HCP Vault Dedicated clusters include an administrative namespace (`admin`) by default.
+  For more information on managing namespaces with HCP Vault Dedicated, refer to the
+  [HCP Vault Dedicated namespace considerations](/vault/tutorials/cloud-ops/hcp-vault-namespace-considerations)
   guide.
 
 </Tip>

@@ -1,14 +1,14 @@
 ---
 layout: docs
-page_title: Consul - Service Registration - Configuration
+page_title: Consul service registration
 description: >-
-  Consul Service Registration registers Vault as a service in Consul with a
-  default
-
-  health check.
+  Configure Vault to use Consul to manage service registration.
 ---
 
-# Consul service registration
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# Configure Consul service registration
 
 Consul Service Registration registers Vault as a service in [Consul][consul] with
 a default health check. When Consul is configured as the storage backend, the stanza
@@ -84,6 +84,9 @@ at Consul's service discovery layer.
 
 - `service_tags` `(string: "")` – Specifies a comma-separated list of case-sensitive
   tags to attach to the service registration in Consul.
+
+- `service_meta` `(map[string]string: {})` – Specifies a key-value list of meta tags to
+  attach to the service registration in Consul. See [ServiceMeta](/consul/api-docs/catalog#servicemeta) in the Consul docs for more information.
 
 - `service_address` `(string: nil)` – Specifies a service-specific address to
   set on the service registration in Consul. If unset, Vault will use what it

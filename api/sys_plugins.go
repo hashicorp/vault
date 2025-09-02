@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -215,14 +216,24 @@ type RegisterPluginInput struct {
 	// Env specifies a list of key=value pairs to add to the plugin's environment
 	// variables.
 	Env []string `json:"env,omitempty"`
+
+	// Download the plugin when set to true. This is only applicable for external plugins.
+	Download bool `json:"download,omitempty"`
+}
+
+// RegisterPluginResponse is the response from the RegisterPluginDetailed call.
+type RegisterPluginResponse struct {
+	Warnings []string `json:"warnings"`
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.
+// Deprecated: Use RegisterPluginDetailed instead.
 func (c *Sys) RegisterPlugin(i *RegisterPluginInput) error {
 	return c.RegisterPluginWithContext(context.Background(), i)
 }
 
 // RegisterPluginWithContext registers the plugin with the given information.
+// Deprecated: Use RegisterPluginWithContextDetailed instead.
 func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginInput) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
@@ -239,6 +250,58 @@ func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginIn
 		defer resp.Body.Close()
 	}
 	return err
+}
+
+// RegisterPluginDetailed wraps RegisterPluginWtihContextDetailed using context.Background.
+func (c *Sys) RegisterPluginDetailed(i *RegisterPluginInput) (*RegisterPluginResponse, error) {
+	return c.RegisterPluginWithContextDetailed(context.Background(), i)
+}
+
+// RegisterPluginWithContextDetailed registers the plugin with the given information.
+func (c *Sys) RegisterPluginWithContextDetailed(ctx context.Context, i *RegisterPluginInput) (*RegisterPluginResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	path := catalogPathByType(i.Type, i.Name)
+	req := c.c.NewRequest(http.MethodPut, path)
+
+	if err := req.SetJSONBody(i); err != nil {
+		return nil, err
+	}
+
+	resp, err := c.c.rawRequestWithContext(ctx, req)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var registerResp RegisterPluginResponse
+	if resp != nil && resp.StatusCode != http.StatusNoContent {
+		if err := resp.DecodeJSON(&registerResp); err != nil {
+			return nil, err
+		}
+	}
+
+	// Filter out the `Endpoint replaced the value of these parameters with the values captured from the endpoint's path: [type]`
+	// warning because it is expected behavior from this function, as we set the type parameter in both the path and request body,
+	// and the warning informs us the path parameter takes precedence. However, this warning is not relevant for an end user so we
+	// omit it before returning to any client.
+	// TODO: This can likely be removed once https://hashicorp.atlassian.net/browse/VAULT-36722 is addressed.
+	var filteredWarnings []string
+	if len(registerResp.Warnings) > 0 {
+		filteredWarnings = make([]string, 0, len(registerResp.Warnings))
+	}
+
+	for _, warning := range registerResp.Warnings {
+		if !strings.Contains(warning, "Endpoint replaced the value of these parameters with the values captured from the endpoint's path") {
+			filteredWarnings = append(filteredWarnings, warning)
+		}
+	}
+	registerResp.Warnings = filteredWarnings
+
+	return &registerResp, err
 }
 
 // DeregisterPluginInput is used as input to the DeregisterPlugin function.
@@ -274,6 +337,22 @@ func (c *Sys) DeregisterPluginWithContext(ctx context.Context, i *DeregisterPlug
 	return err
 }
 
+// RootReloadPluginInput is used as input to the RootReloadPlugin function.
+type RootReloadPluginInput struct {
+	Plugin string     `json:"-"`               // Plugin name, as registered in the plugin catalog.
+	Type   PluginType `json:"-"`               // Plugin type: auth, secret, or database.
+	Scope  string     `json:"scope,omitempty"` // Empty to reload on current node, "global" for all nodes.
+}
+
+// RootReloadPlugin reloads plugins, possibly returning reloadID for a global
+// scoped reload. This is only available in the root namespace, and reloads
+// plugins across all namespaces, whereas ReloadPlugin is available in all
+// namespaces but only reloads plugins in use in the request's namespace.
+func (c *Sys) RootReloadPlugin(ctx context.Context, i *RootReloadPluginInput) (string, error) {
+	path := fmt.Sprintf("/v1/sys/plugins/reload/%s/%s", i.Type.String(), i.Plugin)
+	return c.reloadPluginInternal(ctx, path, i, i.Scope == "global")
+}
+
 // ReloadPluginInput is used as input to the ReloadPlugin function.
 type ReloadPluginInput struct {
 	// Plugin is the name of the plugin to reload, as registered in the plugin catalog
@@ -292,15 +371,20 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 }
 
 // ReloadPluginWithContext reloads mounted plugin backends, possibly returning
-// reloadId for a cluster scoped reload
+// reloadID for a cluster scoped reload. It is limited to reloading plugins that
+// are in use in the request's namespace. See RootReloadPlugin for an API that
+// can reload plugins across all namespaces.
 func (c *Sys) ReloadPluginWithContext(ctx context.Context, i *ReloadPluginInput) (string, error) {
+	return c.reloadPluginInternal(ctx, "/v1/sys/plugins/reload/backend", i, i.Scope == "global")
+}
+
+func (c *Sys) reloadPluginInternal(ctx context.Context, path string, body any, global bool) (string, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	path := "/v1/sys/plugins/reload/backend"
 	req := c.c.NewRequest(http.MethodPut, path)
 
-	if err := req.SetJSONBody(i); err != nil {
+	if err := req.SetJSONBody(body); err != nil {
 		return "", err
 	}
 
@@ -310,7 +394,7 @@ func (c *Sys) ReloadPluginWithContext(ctx context.Context, i *ReloadPluginInput)
 	}
 	defer resp.Body.Close()
 
-	if i.Scope == "global" {
+	if global {
 		// Get the reload id
 		secret, parseErr := ParseSecret(resp.Body)
 		if parseErr != nil {

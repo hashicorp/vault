@@ -3,18 +3,21 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import { task, waitForEvent } from 'ember-concurrency';
 import Component from '@ember/component';
 import { set } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
-import keys from 'core/utils/key-codes';
+import keys from 'core/utils/keys';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
+/**
+ * @type Class
+ */
 export default Component.extend(FocusOnInsertMixin, {
   router: service(),
 
@@ -46,7 +49,8 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   onEscape(e) {
-    if (e.keyCode !== keys.ESC || this.mode !== 'show') {
+    const isEscKeyPressed = keys.ESC.includes(e.key);
+    if (isEscKeyPressed || this.mode !== 'show') {
       return;
     }
     this.transitionToRoute(LIST_ROOT_ROUTE);
@@ -98,12 +102,12 @@ export default Component.extend(FocusOnInsertMixin, {
       });
     },
 
-    codemirrorUpdated(attr, val, codemirror) {
-      codemirror.performLint();
-      const hasErrors = codemirror.state.lint.marked.length > 0;
-
-      if (!hasErrors) {
+    editorUpdated(attr, val) {
+      // wont set invalid JSON to the model
+      try {
         set(this.model, attr, JSON.parse(val));
+      } catch {
+        // linting is handled by the component
       }
     },
   },

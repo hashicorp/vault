@@ -16,12 +16,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-
-	"github.com/google/tink/go/kwp/subtle"
-
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+	"github.com/tink-crypto/tink-go/v2/kwp/subtle"
 )
 
 var (

@@ -4,6 +4,9 @@ page_title: Cloud Foundry - Auth Methods - HTTP API
 description: This is the API documentation for the Vault Cloud Foundry auth method.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Pivotal Cloud Foundry (CF) auth method (API)
 
 @include 'x509-sha1-deprecation.mdx'
@@ -46,6 +49,8 @@ documentation](/vault/docs/auth/cf).
 - `login_max_seconds_not_after` `(int: 60)`: In case of clock drift, the maximum number of
   seconds in the future when a signature could have been created. The lower the value,
   the lower the risk of replay attacks.
+- `cf_timeout` `(duration: 0s)`: The timeout for the CF API. If not set, the default
+  timeout is 0, which means no timeout.
 
 ### Sample payload
 

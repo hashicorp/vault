@@ -272,10 +272,12 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
 		leaseCache, err = NewLeaseCache(&LeaseCacheConfig{
-			Client:      clienToUse,
-			BaseContext: ctx,
-			Proxier:     apiProxy,
-			Logger:      cacheLogger.Named("leasecache"),
+			Client:              clienToUse,
+			BaseContext:         ctx,
+			Proxier:             apiProxy,
+			Logger:              cacheLogger.Named("leasecache"),
+			CacheDynamicSecrets: true,
+			UserAgentToUse:      "test",
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -283,9 +285,9 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 
 		mux.Handle("/agent/v1/cache-clear", leaseCache.HandleCacheClear(ctx))
 
-		mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, nil, true))
+		mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, nil, false, false, nil, nil))
 	} else {
-		mux.Handle("/", ProxyHandler(ctx, apiProxyLogger, apiProxy, nil, true))
+		mux.Handle("/", ProxyHandler(ctx, apiProxyLogger, apiProxy, nil, false, false, nil, nil))
 	}
 
 	server := &http.Server{

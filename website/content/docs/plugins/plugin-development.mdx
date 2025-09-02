@@ -1,8 +1,11 @@
 ---
 layout: docs
-page_title: Plugin Development
-description: Learn about Vault plugin development.
+page_title: Plugin development
+description: Learn about building a Vault plugin.
 ---
+
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
 
 # Plugin development
 
@@ -34,6 +37,12 @@ from Vault.
 ## Serving a plugin
 
 ### Serving a plugin with multiplexing
+
+Multiplexing plugins must use the `ServeMultiplex` function call from the
+official Vault `plugin` or `dbplugin` SDK packages. At
+this time, there is no opt-out capability for plugins that implement
+multiplexing. To use a non-multiplexed plugin, run an older version of the
+plugin, i.e., the plugin calls the `Serve` function.
 
 ~> Plugin multiplexing requires `github.com/hashicorp/vault/sdk v0.5.4` or above.
 
@@ -75,7 +84,7 @@ func main() {
 And that's basically it! You would just need to change `myPlugin` to your actual
 plugin.
 
-## Plugin backwards compatibility with Vault
+### Plugin backwards compatibility with Vault
 
 Let's take a closer look at a snippet from the above main package.
 
@@ -112,6 +121,25 @@ Database plugins have a smaller API than `framework.Backend` exposes, and should
 instead implement the
 [`PluginVersioner`](https://github.com/hashicorp/vault/blob/sdk/v0.6.0/sdk/logical/logical.go#L150-L154)
 interface directly.
+
+## Plugin logging
+
+Auth and secrets plugins based on `framework.Backend` from the SDK can take
+advantage of the SDK's [default logger](https://github.com/hashicorp/vault/blob/fe55cbbf05586ec4c0cd9bdf865ec6f741a8933c/sdk/framework/backend.go#L437).
+No additional setup is required. The logger can be used like the following:
+
+```go
+func (b *backend) example() {
+    b.Logger().Trace("Trace level log")
+    b.Logger().Debug("Debug level log")
+    b.Logger().Info("Info level log")
+    b.Logger().Warn("Warn level log")
+    b.Logger().Error("Error level log")
+}
+```
+
+See the source code of [vault-auth-plugin-example](https://github.com/hashicorp/vault-auth-plugin-example)
+for a more complete example of a plugin using logging.
 
 ## Building a plugin from source
 

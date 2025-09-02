@@ -27,10 +27,7 @@ const displayFields = [
 @withFormFields(inputFields, displayFields)
 export default class PkiIssuerModel extends Model {
   @service secretMountPath;
-  // TODO use openAPI after removing route extension (see pki/roles route for example)
-  get useOpenAPI() {
-    return false;
-  }
+
   get backend() {
     return this.secretMountPath.currentPath;
   }
@@ -66,7 +63,7 @@ export default class PkiIssuerModel extends Model {
       'What happens when a leaf certificate is issued, but its NotAfter field (and therefore its expiry date) exceeds that of this issuer.',
     docLink: '/vault/api-docs/secret/pki#update-issuer',
     editType: 'yield',
-    valueOptions: ['err', 'truncate', 'permit'],
+    valueOptions: ['always_enforce_err', 'err', 'truncate', 'permit'],
   })
   leafNotAfterBehavior;
 
@@ -135,13 +132,14 @@ export default class PkiIssuerModel extends Model {
   @attr importedKeys;
   @attr mapping;
 
-  @lazyCapabilities(apiPath`${'backend'}/issuer/${'issuerId'}`) issuerPath;
-  @lazyCapabilities(apiPath`${'backend'}/root/rotate/exported`) rotateExported;
-  @lazyCapabilities(apiPath`${'backend'}/root/rotate/internal`) rotateInternal;
-  @lazyCapabilities(apiPath`${'backend'}/root/rotate/existing`) rotateExisting;
+  @lazyCapabilities(apiPath`${'backend'}/issuer/${'issuerId'}`, 'backend', 'issuerId') issuerPath;
+  @lazyCapabilities(apiPath`${'backend'}/root/rotate/exported`, 'backend') rotateExported;
+  @lazyCapabilities(apiPath`${'backend'}/root/rotate/internal`, 'backend') rotateInternal;
+  @lazyCapabilities(apiPath`${'backend'}/root/rotate/existing`, 'backend') rotateExisting;
   @lazyCapabilities(apiPath`${'backend'}/root`, 'backend') deletePath;
-  @lazyCapabilities(apiPath`${'backend'}/intermediate/cross-sign`) crossSignPath;
-  @lazyCapabilities(apiPath`${'backend'}/issuer/${'issuerId'}/sign-intermediate`) signIntermediate;
+  @lazyCapabilities(apiPath`${'backend'}/intermediate/cross-sign`, 'backend') crossSignPath;
+  @lazyCapabilities(apiPath`${'backend'}/issuer/${'issuerId'}/sign-intermediate`, 'backend', 'issuerId')
+  signIntermediate;
   get canRotateIssuer() {
     return (
       this.rotateExported.get('canUpdate') !== false ||

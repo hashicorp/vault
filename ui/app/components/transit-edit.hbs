@@ -1,0 +1,57 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{#if (eq this.mode "create")}}
+        Create Key
+      {{else if (eq this.mode "edit")}}
+        Edit Key
+      {{else}}
+        Key
+        <code>{{this.key.id}}</code>
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+{{#if (eq this.mode "create")}}
+  <TransitFormCreate
+    @createOrUpdateKey={{action "createOrUpdateKey" this.mode}}
+    @setValueOnKey={{action "setValueOnKey" "exportable"}}
+    @autoRotateInvalid={{this.autoRotateInvalid}}
+    @handleAutoRotateChange={{action "handleAutoRotateChange"}}
+    @derivedChange={{action "derivedChange" value="target.checked"}}
+    @convergentEncryptionChange={{action "convergentEncryptionChange" value="target.checked"}}
+    @key={{this.key}}
+    @errorMessage={{this.errorMessage}}
+    @requestInFlight={{this.requestInFlight}}
+  />
+{{else if (eq this.mode "edit")}}
+  <TransitFormEdit
+    @createOrUpdateKey={{action "createOrUpdateKey" this.mode}}
+    @setValueOnKey={{action "setValueOnKey" "deletionAllowed"}}
+    @autoRotateInvalid={{this.autoRotateInvalid}}
+    @handleAutoRotateChange={{action "handleAutoRotateChange"}}
+    @deleteKey={{action "deleteKey"}}
+    @key={{this.key}}
+    @requestInFlight={{this.requestInFlight}}
+    @model={{this.model}}
+  />
+{{else if (eq this.mode "show")}}
+  <TransitFormShow
+    @refresh={{action "refresh"}}
+    @tab={{this.tab}}
+    @key={{this.key}}
+    @mode={{this.mode}}
+    @model={{this.model}}
+    @backend={{this.backend}}
+  />
+{{else}}
+  <EmptyState @title="No Transit mode selected" />
+{{/if}}

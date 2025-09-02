@@ -5,15 +5,16 @@
 
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default Route.extend(ClusterRoute, {
   store: service(),
   version: service(),
+  router: service(),
 
   beforeModel() {
-    if (this.version.isOSS) {
-      this.transitionTo('vault.cluster');
+    if (this.version.isCommunity) {
+      this.router.transitionTo('vault.cluster');
     }
   },
 

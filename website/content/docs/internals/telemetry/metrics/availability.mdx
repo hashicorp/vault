@@ -5,6 +5,9 @@ description: >-
   Technical reference for availability related telemetry values.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Availability telemetry
 
 Availability telemetry provides information about standby and active nodes in
@@ -49,6 +52,14 @@ your Vault instance. Enterprise installations also include
 
 @include 'telemetry-metrics/vault/wal/persistwals.mdx'
 
+@include 'telemetry-metrics/vault/wal/write_controller/d.mdx'
+
+@include 'telemetry-metrics/vault/wal/write_controller/i.mdx'
+
+@include 'telemetry-metrics/vault/wal/write_controller/p.mdx'
+
+@include 'telemetry-metrics/vault/wal/write_controller/reject_fraction.mdx'
+
 ## Log shipping metrics
 
 @include 'telemetry-metrics/vault/logshipper/buffer/length.mdx'
@@ -72,6 +83,8 @@ your Vault instance. Enterprise installations also include
 @include 'telemetry-metrics/vault/replication/fetchremotekeys.mdx'
 
 @include 'telemetry-metrics/vault/replication/fsm/last_remote_wal.mdx'
+
+@include 'telemetry-metrics/vault/replication/fsm/last_upstream_remote_wal.mdx'
 
 @include 'telemetry-metrics/vault/replication/merkle/commit_index.mdx'
 
@@ -118,6 +131,8 @@ your Vault instance. Enterprise installations also include
 @include 'telemetry-metrics/vault/replication/rpc/server/conflicting_pages_request.mdx'
 
 @include 'telemetry-metrics/vault/replication/rpc/server/echo.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/last_heartbeat.mdx'
 
 @include 'telemetry-metrics/vault/replication/rpc/server/forwarding_request.mdx'
 

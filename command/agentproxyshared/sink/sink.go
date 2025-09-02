@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/dhutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -72,7 +72,7 @@ func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 
 // Run executes the server's run loop, which is responsible for reading
 // in new tokens and pushing them out to the various sinks.
-func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*SinkConfig) error {
+func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*SinkConfig, tokenWriteInProgress *atomic.Bool) error {
 	latestToken := new(string)
 	writeSink := func(currSink *SinkConfig, currToken string) error {
 		if currToken != *latestToken {
@@ -101,6 +101,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 
 	ss.logger.Info("starting sink server")
 	defer func() {
+		tokenWriteInProgress.Store(false)
 		ss.logger.Info("sink server stopped")
 	}()
 
@@ -138,6 +139,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 				}
 			} else {
 				ss.logger.Trace("no sinks, ignoring new token")
+				tokenWriteInProgress.Store(false)
 				if ss.exitAfterAuth {
 					ss.logger.Trace("no sinks, exitAfterAuth, bye")
 					return nil
@@ -164,8 +166,11 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 					sinkCh <- st
 				}
 			} else {
-				if atomic.LoadInt32(ss.remaining) == 0 && ss.exitAfterAuth {
-					return nil
+				if atomic.LoadInt32(ss.remaining) == 0 {
+					tokenWriteInProgress.Store(false)
+					if ss.exitAfterAuth {
+						return nil
+					}
 				}
 			}
 		}

@@ -4,31 +4,24 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { resolve } from 'rsvp';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
+import { addToArray } from 'vault/helpers/add-to-array';
+import { assert } from '@ember/debug';
 /**
  * @module SearchSelect
  * The `SearchSelect` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
+ * 
  * @example
- *  <SearchSelect
- *    @id="policy"
- *    @models={{array "policies/acl"}}
- *    @onChange={{this.onChange}}
- *    @inputValue={{get @model this.valuePath}}
- *    @wildcardLabel="role"
- *    @fallbackComponent="string-list"
- *    @selectLimit={{1}}
- *    @backend={{@model.backend}}
- *    @disallowNewItems={{true}}
- *    class={{if this.validationError "dropdown-has-error-border"}}
- * />
+ *  <SearchSelect @id="policy" @models={{array "policies/acl"}} @onChange={{this.onChange}} @inputValue={{get @model this.valuePath}} @wildcardLabel="role" @fallbackComponent="string-list" @selectLimit={{1}} @backend={{@model.backend}} @disallowNewItems={{true}} class={{if this.validationError "dropdown-has-error-border"}} />
  *
  // * component functionality
- * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
+ * @param {function} onChange - The onchange action for this form field. ** SEE EXAMPLE ** mfa-login-enforcement-form.js (onMethodChange) for example when selecting models from a hasMany relationship
  * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
  * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models or if this.idKey !== 'id'
@@ -47,6 +40,7 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  * @param {string} id - The name of the form field
  * @param {string} [label] - Label for this form field
  * @param {string} [labelClass] - overwrite default label size (14px) from class="is-label"
+ * @param {string} [ariaLabel] - fallback accessible label if label is not provided
  * @param {string} [subText] - Text to be displayed below the label
  * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
  * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
@@ -70,6 +64,14 @@ export default class SearchSelect extends Component {
   @tracked dropdownOptions = []; // options that will render in dropdown, updates as selections are added/discarded
   @tracked allOptions = []; // both selected and unselected options, used for wildcard filter
 
+  constructor() {
+    super(...arguments);
+    assert(
+      'one of @id, @label, or @ariaLabel must be passed to search-select component',
+      this.args.id || this.args.label || this.args.ariaLabel
+    );
+  }
+
   get hidePowerSelect() {
     return this.selectedOptions.length >= this.args.selectLimit;
   }
@@ -92,9 +94,14 @@ export default class SearchSelect extends Component {
     return this.args.nameKey || 'name';
   }
 
+  get searchEnabled() {
+    if (typeof this.args.searchEnabled === 'boolean') return this.args.searchEnabled;
+    return true;
+  }
+
   addSearchText(optionsToFormat) {
     // maps over array of objects or response from query
-    return optionsToFormat.toArray().map((option) => {
+    return optionsToFormat.map((option) => {
       const id = option[this.idKey] ? option[this.idKey] : option.id;
       option.searchText = `${option[this.nameKey]} ${id}`;
       return option;
@@ -105,14 +112,14 @@ export default class SearchSelect extends Component {
     // inputValues are initially an array of strings from @inputValue
     // map over so selectedOptions are objects
     return inputValues.map((option) => {
-      const matchingOption = this.dropdownOptions.findBy(this.idKey, option);
+      const matchingOption = this.dropdownOptions.find((opt) => opt[this.idKey] === option);
       // tooltip text comes from return of parent function
       const addTooltip = this.args.renderInfoTooltip
         ? this.args.renderInfoTooltip(option, this.dropdownOptions)
         : false;
 
       // remove any matches from dropdown list
-      this.dropdownOptions.removeObject(matchingOption);
+      this.dropdownOptions = removeFromArray(this.dropdownOptions, matchingOption);
       return {
         id: option,
         name: matchingOption ? matchingOption[this.nameKey] : option,
@@ -134,7 +141,7 @@ export default class SearchSelect extends Component {
     }
 
     if (!this.args.models) {
-      if (this.args.options) {
+      if (Array.isArray(this.args.options)) {
         const { options } = this.args;
         // if options are nested, let parent handle formatting - see path-filter-config-list.js
         this.dropdownOptions = options.some((e) => Object.keys(e).includes('groupName'))
@@ -164,7 +171,7 @@ export default class SearchSelect extends Component {
         const options = yield this.store.query(modelType, queryParams);
 
         // store both select + unselected options in tracked property used by wildcard filter
-        this.allOptions = [...this.allOptions, ...options.mapBy('id')];
+        this.allOptions = [...this.allOptions, ...options.map((option) => option.id)];
 
         // add to dropdown options
         this.dropdownOptions = [...this.dropdownOptions, ...this.addSearchText(options)];
@@ -190,7 +197,7 @@ export default class SearchSelect extends Component {
 
   @action
   handleChange() {
-    if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
+    if (this.selectedOptions.length && typeof this.selectedOptions[0] === 'object') {
       this.args.onChange(
         Array.from(this.selectedOptions, (option) =>
           this.args.passObject ? this.customizeObject(option) : option.id
@@ -202,12 +209,11 @@ export default class SearchSelect extends Component {
   }
 
   shouldShowCreate(id, searchResults) {
-    if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
-      return !searchResults.some((group) => group.options.findBy('id', id));
+    if (searchResults && searchResults.length && searchResults[0].groupName) {
+      return !searchResults.some((group) => group.options.find((opt) => opt.id === id));
     }
     const existingOption =
-      this.dropdownOptions &&
-      (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
+      this.dropdownOptions && this.dropdownOptions.find((opt) => opt.id === id || opt.name === id);
     if (this.args.disallowNewItems && !existingOption) {
       return false;
     }
@@ -258,9 +264,9 @@ export default class SearchSelect extends Component {
 
   @action
   discardSelection(selected) {
-    this.selectedOptions.removeObject(selected);
+    this.selectedOptions = removeFromArray(this.selectedOptions, selected);
     if (!selected.new) {
-      this.dropdownOptions.pushObject(selected);
+      this.dropdownOptions = addToArray(this.dropdownOptions, selected);
     }
     this.handleChange();
   }
@@ -273,9 +279,6 @@ export default class SearchSelect extends Component {
     }
     if (this.args.search) {
       return resolve(this.args.search(term, select)).then((results) => {
-        if (results.toArray) {
-          results = results.toArray();
-        }
         this.addCreateOption(term, results);
         return results;
       });
@@ -289,10 +292,10 @@ export default class SearchSelect extends Component {
   selectOrCreate(selection) {
     if (selection && selection.__isSuggestion__) {
       const name = selection.__value__;
-      this.selectedOptions.pushObject({ name, id: name, new: true });
+      this.selectedOptions = addToArray(this.selectedOptions, { name, id: name, new: true });
     } else {
-      this.selectedOptions.pushObject(selection);
-      this.dropdownOptions.removeObject(selection);
+      this.selectedOptions = addToArray(this.selectedOptions, selection);
+      this.dropdownOptions = removeFromArray(this.dropdownOptions, selection);
     }
     this.handleChange();
   }

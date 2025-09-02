@@ -1,0 +1,6 @@
+```release-note:change
+plugins/database: Reading connection config at `database/config/:name` will now return a computed `running_plugin_version` field if a non-builtin version is running.
+```
+```release-note:improvement
+plugins: Add new pin version APIs to enforce all plugins of a specific type and name to run the same version.
+```

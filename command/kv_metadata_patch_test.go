@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 )
 
 func testKVMetadataPatchCommand(tb testing.TB) (*cli.MockUi, *KVMetadataPatchCommand) {

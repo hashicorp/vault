@@ -4,7 +4,12 @@ page_title: /sys/monitor - HTTP API
 description: The `/sys/monitor` endpoint is used to receive streaming logs from the Vault server.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # `/sys/monitor`
+
+@include 'alerts/restricted-admin.mdx'
 
 The `/sys/monitor` endpoint is used to receive streaming logs from the Vault server.
 
@@ -12,8 +17,6 @@ If Vault is emitting log messages faster than a receiver can process them, then
 some log lines will be dropped.
 
 ## Monitor system logs
-
-- @include 'alerts/restricted-admin.mdx'
 
 This endpoint streams logs back to the client from Vault. Note that unlike most API endpoints in Vault, this one
 does not return JSON by default. This will send back data in whatever log format Vault has been configured with. By

@@ -43,3 +43,29 @@ func Test_BoltOptions(t *testing.T) {
 		})
 	}
 }
+
+// TestMmapFlags tests the getMmapFlags function, ensuring it returns the appropriate integer representing the desired mmap flag.
+func TestMmapFlags(t *testing.T) {
+	testCases := []struct {
+		name               string
+		disableMapPopulate bool
+	}{
+		{"MAP_POPULATE is enabled", false},
+		{"MAP_POPULATE disabled by env var", true},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.disableMapPopulate {
+				t.Setenv("VAULT_RAFT_DISABLE_MAP_POPULATE", "true")
+			}
+
+			isEnabled := usingMapPopulate(getMmapFlags(""))
+			if tc.disableMapPopulate && isEnabled {
+				t.Error("expected MAP_POPULATE to be disabled but it was enabled")
+			}
+		})
+	}
+}

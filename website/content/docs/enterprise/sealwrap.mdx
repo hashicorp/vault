@@ -1,23 +1,39 @@
 ---
 layout: docs
-page_title: Vault Enterprise Seal Wrap
-description: |-
-  Vault Enterprise features a mechanism to wrap values with an extra layer of
-  encryption for supporting seals.
+page_title: Wrap seals with encryption
+description: >-
+  Wrap sealed data with an extra layer of encryption to honor increased
+  compliance and regulatory requirements including FIPS 140-2/3.
 ---
 
-# Seal wrap
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
 
-@include 'alerts/enterprise-and-hcp-plus.mdx'
+# Wrap seals with encryption
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 Vault Enterprise features a mechanism to wrap values with an extra layer of
-encryption for supporting [seals](/vault/docs/configuration/seal). This adds an
+encryption for supported [seals](/vault/docs/configuration/seal). This adds an
 extra layer of protection and is useful in some compliance and regulatory
-environments, including FIPS 140-2 environments.
+environments, including FIPS 140-2/3 environments.
 
 To use this feature, you must have an active or trial license for Vault
 Enterprise Plus (HSMs). To start a trial, contact [HashiCorp
 sales](mailto:sales@hashicorp.com).
+
+## Seal Wrap benefits
+
+Your Vault deployments can gain the following benefits by enabling seal wrapping:
+
+- Conformance with FIPS 140-2/3 directives on Key Storage and Key Transport as [certified by Leidos](/vault/docs/enterprise/sealwrap#fips-140-2-compliance)
+- Supports FIPS level of security equal to HSM
+  - For example, if you use Level 3 hardware encryption on an HSM, Vault will be
+    using FIPS 140-3 Level 3 cryptography
+- Enables Vault deployments in high security [GRC](https://en.wikipedia.org/wiki/Governance,_risk_management,_and_compliance)
+  environments (e.g. PCI-DSS, HIPAA) where FIPS guidelines important for external audits
+- Pathway to use Vault for managing Department of Defense (DOD) or North
+  Atlantic Treaty Organization (NATO) military secrets
 
 ## Enabling/Disabling
 
@@ -26,6 +42,12 @@ must be available throughout Vault's runtime. Most cloud-based seals should be
 quite reliable, but, for instance, if using an HSM in a non-HA setup a
 connection interruption to the HSM will result in issues with Vault
 functionality.
+
+<Tip>
+
+Having Vault generate its own key is the easiest way to get up and running, but for security, Vault marks the key as non-exportable. If your HSM key backup strategy requires the key to be exportable, you should generate the key yourself. Refer to the [key generation attributes](/vault/docs/configuration/seal/pkcs11#vault-key-generation-attributes).
+
+</Tip>
 
 To disable seal wrapping, set `disable_sealwrap = true` in Vault's
 [configuration file][configuration]. This will not affect auto-unsealing functionality; Vault's

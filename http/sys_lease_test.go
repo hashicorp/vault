@@ -7,11 +7,17 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestSysRenew(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, token := vault.TestCoreUnsealedWithConfig(t, coreConfig)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)

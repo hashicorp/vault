@@ -1,14 +1,14 @@
 ---
 layout: docs
-page_title: Consul - Storage Backends - Configuration
-description: |-
-  The Consul storage backend is used to persist Vault's data in Consul's
-  key-value store. In addition to providing durable storage, inclusion of this
-  backend will also register Vault as a service in Consul with a default health
-  check.
+page_title: Consul configuration
+description: >-
+  Configure Vault backend storage to use a Consul key-value store.
 ---
 
-# Consul storage backend
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# Consul configuration for Vault backend storage
 
 The Consul storage backend is used to persist Vault's data in [Consul's][consul]
 key-value store. In addition to providing durable storage, inclusion of this
@@ -91,6 +91,9 @@ and [`cluster_addr`][cluster-addr] ([example][listener-example]).
 
 - `service_tags` `(string: "")` – Specifies a comma-separated list of tags to
   attach to the service registration in Consul.
+
+- `service_meta` `(map[string]string: {})` – Specifies a key-value list of meta tags to
+  attach to the service registration in Consul. See [ServiceMeta](/consul/api-docs/catalog#servicemeta) in the Consul docs for more information.
 
 - `service_address` `(string: nil)` – Specifies a service-specific address to
   set on the service registration in Consul. If unset, Vault will use what it

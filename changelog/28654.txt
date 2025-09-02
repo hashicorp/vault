@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Add a CRL entry limit to prevent runaway revocations from overloading Vault, reconfigurable with max_crl_entries on the CRL config.
+```

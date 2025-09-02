@@ -1,0 +1,25 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Recovery::Page::Header @title="Secrets Recovery" />
+
+<div class="has-top-padding-s">
+  {{#let @model as |snapshot|}}
+    <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-m">
+      <div class="flex space-between">
+        <Hds::Text::Display @tag="h2">Snapshot</Hds::Text::Display>
+        <Hds::Badge @text={{snapshot.status}} @color="success" data-test-badge="status" />
+      </div>
+      <Hds::Text::Body @tag="p">Expiring at {{snapshot.expires_at}}</Hds::Text::Body>
+      <Hds::Link::Standalone
+        @iconPosition="trailing"
+        @icon="arrow-right"
+        @text="View details"
+        @route="vault.cluster.recovery.snapshots.snapshot.details"
+        @model={{snapshot.snapshot_id}}
+      />
+    </Hds::Card::Container>
+  {{/let}}
+</div>

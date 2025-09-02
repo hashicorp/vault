@@ -5,9 +5,10 @@
 
 import Controller from '@ember/controller';
 import { dropTask } from 'ember-concurrency';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import sortObjects from 'vault/utils/sort-objects';
 
 export default class VaultClusterAccessMethodsController extends Controller {
   @service flashMessages;
@@ -15,6 +16,7 @@ export default class VaultClusterAccessMethodsController extends Controller {
   @tracked authMethodOptions = [];
   @tracked selectedAuthType = null;
   @tracked selectedAuthName = null;
+  @tracked methodToDisable = null;
 
   queryParams = ['page, pageFilter'];
 
@@ -22,24 +24,26 @@ export default class VaultClusterAccessMethodsController extends Controller {
   pageFilter = null;
   filter = null;
 
+  // list returned by getter is sorted in template
   get authMethodList() {
+    const { methods } = this.model;
     // return an options list to filter by engine type, ex: 'kv'
     if (this.selectedAuthType) {
       // check first if the user has also filtered by name.
       // names are individualized across type so you can't have the same name for an aws auth method and userpass.
       // this means it's fine to filter by first type and then name or just name.
       if (this.selectedAuthName) {
-        return this.model.filter((method) => this.selectedAuthName === method.id);
+        return methods.filter((method) => this.selectedAuthName === method.id);
       }
       // otherwise filter by auth type
-      return this.model.filter((method) => this.selectedAuthType === method.type);
+      return methods.filter((method) => this.selectedAuthType === method.type);
     }
     // return an options list to filter by auth name, ex: 'my-userpass'
     if (this.selectedAuthName) {
-      return this.model.filter((method) => this.selectedAuthName === method.id);
+      return methods.filter((method) => this.selectedAuthName === method.id);
     }
-    // no filters, return full sorted list.
-    return this.model;
+    // no filters, return full list
+    return methods;
   }
 
   get authMethodArrayByType() {
@@ -80,6 +84,11 @@ export default class VaultClusterAccessMethodsController extends Controller {
       this.flashMessages.danger(
         `There was an error disabling Auth Method at ${path}: ${err.errors.join(' ')}.`
       );
+    } finally {
+      this.methodToDisable = null;
     }
   }
+
+  // template helper
+  sortMethods = (methods) => sortObjects(methods.slice(), 'path');
 }

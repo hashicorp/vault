@@ -7,7 +7,8 @@
   "dependencies": {
     "ember-cli-htmlbars": "*",
     "ember-cli-babel": "*",
-    "@hashicorp/design-system-components": "*"
+    "@hashicorp/design-system-components": "*",
+    "ember-auto-import": "*"
 
   },
   "ember-addon": {

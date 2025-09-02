@@ -1,0 +1,5 @@
+```release-note:improvement
+auth/cert: Cache full list of role trust information separately to avoid
+eviction, and avoid duplicate loading during multiple simultaneous logins on
+the same role.
+```

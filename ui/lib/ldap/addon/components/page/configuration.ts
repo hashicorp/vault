@@ -1,12 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
 
 import type LdapConfigModel from 'vault/models/ldap/config';
 import type SecretEngineModel from 'vault/models/secret-engine';
-import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
+import type AdapterError from '@ember-data/adapter/error';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 

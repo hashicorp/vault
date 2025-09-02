@@ -1,0 +1,3 @@
+```release-note:bug
+auth/cert: When using ocsp_ca_certificates, an error was produced though extra certs validation succeeded.
+```

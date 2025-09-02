@@ -10,6 +10,9 @@ description: >-
   level, with no decryption involved.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # operator migrate
 
 The `operator migrate` command copies data between storage backends to facilitate
@@ -95,7 +98,7 @@ cluster_addr = "http://127.0.0.1:8201"
 ### Run the migration
 
 Vault will need to be offline during the migration process. First, stop Vault.
-Then, run the migration on the server you wish to become a the new Vault node.
+Then, run the migration on the server you wish to become the new Vault node.
 
 ```shell-session
 $ vault operator migrate -config migrate.hcl

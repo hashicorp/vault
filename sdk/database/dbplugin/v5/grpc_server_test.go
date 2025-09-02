@@ -11,16 +11,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/logical"
-	"google.golang.org/protobuf/types/known/structpb"
-
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Before minValidSeconds in ptypes package
@@ -552,6 +551,19 @@ func TestGRPCServer_Close(t *testing.T) {
 				}
 			},
 		},
+		"error path for multiplexed plugin": {
+			db: fakeDatabase{
+				closeErr: errors.New("close error"),
+			},
+			expectErr:     true,
+			expectCode:    codes.Internal,
+			grpcSetupFunc: testGrpcServer,
+			assertFunc: func(t *testing.T, g gRPCServer) {
+				if len(g.instances) != 1 {
+					t.Fatalf("err expected instances map to contain exactly 1 element")
+				}
+			},
+		},
 		"happy path for non-multiplexed plugin": {
 			db:            fakeDatabase{},
 			expectErr:     false,
@@ -694,26 +706,7 @@ func (badJSONValue) UnmarshalJSON([]byte) error {
 	return fmt.Errorf("this cannot be unmarshalled from JSON")
 }
 
-var _ Database = fakeDatabase{}
-
-type fakeDatabase struct {
-	initResp InitializeResponse
-	initErr  error
-
-	newUserResp NewUserResponse
-	newUserErr  error
-
-	updateUserResp UpdateUserResponse
-	updateUserErr  error
-
-	deleteUserResp DeleteUserResponse
-	deleteUserErr  error
-
-	typeResp string
-	typeErr  error
-
-	closeErr error
-}
+// fakeDatabase methods
 
 func (e fakeDatabase) Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error) {
 	return e.initResp, e.initErr
@@ -739,19 +732,7 @@ func (e fakeDatabase) Close() error {
 	return e.closeErr
 }
 
-var _ Database = &recordingDatabase{}
-
-type recordingDatabase struct {
-	initializeCalls int
-	newUserCalls    int
-	updateUserCalls int
-	deleteUserCalls int
-	typeCalls       int
-	closeCalls      int
-
-	// recordingDatabase can act as middleware so we can record the calls to other test Database implementations
-	next Database
-}
+// recordingDatabase methods
 
 func (f *recordingDatabase) Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error) {
 	f.initializeCalls++
@@ -801,9 +782,7 @@ func (f *recordingDatabase) Close() error {
 	return f.next.Close()
 }
 
-type fakeDatabaseWithVersion struct {
-	version string
-}
+// fakeDatabaseWithVersion methods
 
 func (e fakeDatabaseWithVersion) PluginVersion() logical.PluginVersion {
 	return logical.PluginVersion{Version: e.version}

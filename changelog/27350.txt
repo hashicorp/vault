@@ -1,0 +1,4 @@
+```release-note:change
+activity log: Deprecated the field "default_report_months". Instead, the billing start time will be used to determine the start time
+when querying the activity log endpoints.
+```

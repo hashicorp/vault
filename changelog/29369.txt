@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Add `serial_number_source` option to PKI roles to control the source for the subject serial number.
+```

@@ -1,0 +1,115 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<LinkedBlock
+  @params={{array
+    (concat "vault.cluster.secrets.backend." (if (eq @item.keyType "ca") "sign" "credentials") (unless @item.id "-root"))
+    @item.id
+  }}
+  class="list-item-row"
+  data-test-secret-link={{@item.id}}
+  @encode={{true}}
+>
+  <div class="columns is-mobile">
+    <div class="column is-10">
+      <LinkTo
+        @route={{concat
+          "vault.cluster.secrets.backend."
+          (if (eq @item.keyType "ca") "sign" "credentials")
+          (unless @item.id "-root")
+        }}
+        @model={{@item.id}}
+        class="has-text-black has-text-weight-semibold"
+      >
+        <Icon @name="user" class="has-text-grey-light is-pulled-left" />
+        <div class="role-item-details">
+          <span class="is-underline">{{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}</span>
+          <br />
+          <Hds::Badge @text={{@item.keyType}} />
+          {{#if @item.zeroAddress}}
+            <span class="has-text-grey is-size-7">Zero-Address</span>
+          {{/if}}
+        </div>
+      </LinkTo>
+    </div>
+    <div class="column has-text-right">
+      {{#if (eq @backendType "ssh")}}
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+          <dd.ToggleIcon
+            @icon="more-horizontal"
+            @text="Manage SSH role {{@item.id}}"
+            @hasChevron={{false}}
+            data-test-popup-menu-trigger
+          />
+          {{#if (eq @item.keyType "otp")}}
+            {{#if @item.generatePath.isPending}}
+              <dd.Generic class="has-text-center">
+                <LoadingDropdownOption />
+              </dd.Generic>
+            {{else if @item.canGenerate}}
+              <dd.Interactive
+                @route="vault.cluster.secrets.backend.credentials"
+                @model={{@item.id}}
+                data-test-role-ssh-link="generate"
+              >Generate credentials</dd.Interactive>
+            {{/if}}
+          {{else if (eq @item.keyType "ca")}}
+            {{#if @item.signPath.isPending}}
+              <dd.Generic class="has-text-center">
+                <LoadingDropdownOption />
+              </dd.Generic>
+            {{else if @item.canGenerate}}
+              <dd.Interactive
+                @route="vault.cluster.secrets.backend.sign"
+                @model={{@item.id}}
+                data-test-role-ssh-link="generate"
+              >Sign Keys</dd.Interactive>
+            {{/if}}
+          {{/if}}
+          {{#if @loadingToggleZeroAddress}}
+            <dd.Generic class="has-text-center">
+              <LoadingDropdownOption />
+            </dd.Generic>
+          {{else if @item.canEditZeroAddress}}
+            <dd.Interactive {{on "click" @toggleZeroAddress}}>
+              {{if @item.zeroAddress "Disable Zero Address" "Enable Zero Address"}}
+            </dd.Interactive>
+          {{/if}}
+          {{#if @item.updatePath.isPending}}
+            <dd.Generic class="has-text-center">
+              <LoadingDropdownOption />
+            </dd.Generic>
+          {{else}}
+            {{#if @item.canRead}}
+              <dd.Interactive
+                @route="vault.cluster.secrets.backend.show"
+                @model={{@item.id}}
+                data-test-role-ssh-link="show"
+              >Details</dd.Interactive>
+            {{/if}}
+            {{#if @item.canEdit}}
+              <dd.Interactive
+                @route="vault.cluster.secrets.backend.edit"
+                @model={{@item.id}}
+                data-test-role-ssh-link="edit"
+              >Edit</dd.Interactive>
+            {{/if}}
+            {{#if @item.canDelete}}
+              <dd.Interactive
+                @color="critical"
+                {{on "click" (fn (mut this.showConfirmModal) true)}}
+                data-test-ssh-role-delete
+              >Delete</dd.Interactive>
+            {{/if}}
+          {{/if}}
+        </Hds::Dropdown>
+      {{/if}}
+    </div>
+  </div>
+</LinkedBlock>
+
+{{#if this.showConfirmModal}}
+  <ConfirmModal @color="critical" @onClose={{fn (mut this.showConfirmModal) false}} @onConfirm={{@delete}} />
+{{/if}}

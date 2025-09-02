@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 // SystemView exposes system configuration information in a safe way
@@ -97,6 +98,25 @@ type SystemView interface {
 	// write forwarding (WriteForwardedPaths). This value will be templated
 	// in for the {{cluterId}} sentinel.
 	ClusterID(ctx context.Context) (string, error)
+
+	// GenerateIdentityToken returns an identity token for the requesting plugin.
+	GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error)
+
+	// GetRotationInformation gets rotation information from the system about an established rotation job.
+	GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error)
+
+	// RegisterRotationJob returns a rotation ID after registering a
+	// rotation job for the requesting plugin.
+	// NOTE: This method is intended for use only by HashiCorp Vault Enterprise plugins.
+	RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (rotationID string, err error)
+
+	// DeregisterRotationJob returns any errors in de-registering a
+	// credential from the Rotation Manager.
+	// NOTE: This method is intended for use only by HashiCorp Vault Enterprise plugins.
+	DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) error
+
+	// ExtractVerifyPlugin extracts and verifies the plugin artifact
+	DownloadExtractVerifyPlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error
 }
 
 type PasswordPolicy interface {
@@ -104,18 +124,35 @@ type PasswordPolicy interface {
 	Generate(context.Context, io.Reader) (string, error)
 }
 
+type WellKnownSystemView interface {
+	// RequestWellKnownRedirect registers a redirect from .well-known/src
+	// to dest, where dest is a sub-path of the mount. An error
+	// is returned if that source path is already taken
+	RequestWellKnownRedirect(ctx context.Context, src, dest string) error
+
+	// DeregisterWellKnownRedirect unregisters a specific redirect. Returns
+	// true if that redirect source was found
+	DeregisterWellKnownRedirect(ctx context.Context, src string) bool
+}
+
 type ExtendedSystemView interface {
+	WellKnownSystemView
+
 	Auditor() Auditor
 	ForwardGenericRequest(context.Context, *Request) (*Response, error)
 
 	// APILockShouldBlockRequest returns whether a namespace for the requested
 	// mount is locked and should be blocked
 	APILockShouldBlockRequest() (bool, error)
+
+	// GetPinnedPluginVersion returns the pinned version for the given plugin, if any.
+	GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error)
 }
 
 type PasswordGenerator func() (password string, err error)
 
 type StaticSystemView struct {
+	EntStaticSystemView
 	DefaultLeaseTTLVal           time.Duration
 	MaxLeaseTTLVal               time.Duration
 	SudoPrivilegeVal             bool
@@ -259,6 +296,26 @@ func (d StaticSystemView) ClusterID(ctx context.Context) (string, error) {
 	return d.ClusterUUID, nil
 }
 
+func (d StaticSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
+	return nil, errors.New("GenerateIdentityToken is not implemented in StaticSystemView")
+}
+
 func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
 	return d.APILockShouldBlockRequestVal, nil
+}
+
+func (d StaticSystemView) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error) {
+	return nil, errors.New("GetRotationInformation is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJobConfigureRequest) (rotationID string, err error) {
+	return "", errors.New("RegisterRotationJob is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) (err error) {
+	return errors.New("DeregisterRotationJob is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) DownloadExtractVerifyPlugin(_ context.Context, _ *pluginutil.PluginRunner) error {
+	return errors.New("DownloadExtractVerifyPlugin is not implemented in StaticSystemView")
 }

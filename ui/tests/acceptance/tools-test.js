@@ -3,167 +3,223 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, find, findAll, currentURL, visit, settled, waitUntil } from '@ember/test-helpers';
-import Pretender from 'pretender';
+import { click, fillIn, find, findAll, currentURL, visit, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
+
 import { capitalize } from '@ember/string';
+import codemirror, { assertCodeBlockValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
+
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
+
+const createTokenStore = () => {
+  let token;
+  return {
+    set(val) {
+      token = val;
+    },
+    get() {
+      return token;
+    },
+  };
+};
+const DATA_TO_WRAP = JSON.stringify({ tools: 'tests' });
 
 module('Acceptance | tools', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
-  hooks.beforeEach(function () {
-    return authPage.login();
+  hooks.beforeEach(async function () {
+    await login();
+    return visit('/vault/tools');
   });
 
-  const DATA_TO_WRAP = JSON.stringify({ tools: 'tests' });
-  const TOOLS_ACTIONS = toolsActions();
+  test('it navigates to each action link', async function (assert) {
+    assert.strictEqual(currentURL(), '/vault/tools/wrap', 'forwards from "vault/tools" to the first action');
+    for (const action of toolsActions()) {
+      await click(GENERAL.navLink(capitalize(action)));
+      assert.strictEqual(currentURL(), `/vault/tools/${action}`, `it navigates to ${action}`);
+    }
+  });
 
-  /*
-  data-test-tools-input="wrapping-token"
-  data-test-tools-input="rewrapped-token"
-  data-test-tools="token-lookup-row"
-  data-test-sidebar-nav-link=supportedAction
-  */
+  module('cross tool workflow', function () {
+    test('it wraps data, performs lookup, rewraps and then unwraps data', async function (assert) {
+      const tokenStore = createTokenStore();
 
-  var createTokenStore = () => {
-    let token;
-    return {
-      set(val) {
-        token = val;
-      },
-      get() {
-        return token;
-      },
-    };
-  };
-  test('tools functionality', async function (assert) {
-    var tokenStore = createTokenStore();
-    await visit('/vault/tools');
+      await waitUntil(() => find('.cm-editor'));
 
-    assert.strictEqual(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
-    TOOLS_ACTIONS.forEach((action) => {
-      assert.dom(`[data-test-sidebar-nav-link="${capitalize(action)}"]`).exists(`${action} link renders`);
+      const editor = codemirror();
+      setCodeEditorValue(editor, DATA_TO_WRAP);
+
+      await click(GENERAL.submitButton);
+      const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
+      tokenStore.set(wrappedToken.innerText);
+
+      // lookup
+      await click(GENERAL.navLink('Lookup'));
+
+      await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
+      await click(GENERAL.submitButton);
+      await waitUntil(() => findAll('[data-test-component="info-table-row"]').length >= 3);
+      assert
+        .dom(GENERAL.infoRowValue('Creation path'))
+        .hasText('sys/wrapping/wrap', 'show creation path row');
+      assert.dom(GENERAL.infoRowValue('Creation time')).exists();
+      assert.dom(GENERAL.infoRowValue('Creation TTL')).hasText('1800', 'show creation ttl row');
+
+      // rewrap
+      await click(GENERAL.navLink('Rewrap'));
+
+      await fillIn(TS.toolsInput('original-token'), tokenStore.get());
+      await click(GENERAL.submitButton);
+      await waitUntil(() => find(TS.toolsInput('rewrapped-token')));
+      const rewrappedToken = find(TS.toolsInput('rewrapped-token')).innerText;
+      assert.notEqual(rewrappedToken, tokenStore.get(), 're-wrapped token is not the wrapped token');
+      tokenStore.set(rewrappedToken);
+
+      // unwrap
+      await click(GENERAL.navLink('Unwrap'));
+      await fillIn(TS.toolsInput('unwrap-token'), tokenStore.get());
+      await click(GENERAL.submitButton);
+
+      await waitUntil(() => find('.hds-code-block__code'));
+      assertCodeBlockValue(assert, '.hds-code-block__code', DATA_TO_WRAP);
+
+      await waitUntil(() => find(GENERAL.hdsTab('details')));
+      await click(GENERAL.hdsTab('details'));
+      await click(GENERAL.hdsTab('data'));
+      assertCodeBlockValue(assert, '.hds-code-block__code', DATA_TO_WRAP);
     });
-
-    const { CodeMirror } = await waitUntil(() => find('.CodeMirror'));
-    CodeMirror.setValue(DATA_TO_WRAP);
-
-    // wrap
-    await click('[data-test-tools-submit]');
-    const wrappedToken = await waitUntil(() => find('[data-test-tools-input="wrapping-token"]'));
-    tokenStore.set(wrappedToken.value);
-    assert
-      .dom('[data-test-tools-input="wrapping-token"]')
-      .hasValue(wrappedToken.value, 'has a wrapping token');
-
-    //lookup
-    await click('[data-test-sidebar-nav-link="Lookup"]');
-
-    await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
-    await click('[data-test-tools-submit]');
-    await waitUntil(() => findAll('[data-test-tools="token-lookup-row"]').length >= 3);
-    const rows = findAll('[data-test-tools="token-lookup-row"]');
-    assert.dom(rows[0]).hasText(/Creation path/, 'show creation path row');
-    assert.dom(rows[1]).hasText(/Creation time/, 'show creation time row');
-    assert.dom(rows[2]).hasText(/Creation TTL/, 'show creation ttl row');
-
-    //rewrap
-    await click('[data-test-sidebar-nav-link="Rewrap"]');
-
-    await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
-    await click('[data-test-tools-submit]');
-    const rewrappedToken = await waitUntil(() => find('[data-test-tools-input="rewrapped-token"]'));
-    assert.ok(rewrappedToken.value, 'has a new re-wrapped token');
-    assert.notEqual(rewrappedToken.value, tokenStore.get(), 're-wrapped token is not the wrapped token');
-    tokenStore.set(rewrappedToken.value);
-    await settled();
-
-    //unwrap
-    await click('[data-test-sidebar-nav-link="Unwrap"]');
-
-    await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
-    await click('[data-test-tools-submit]');
-    assert.deepEqual(
-      JSON.parse(CodeMirror.getValue()),
-      JSON.parse(DATA_TO_WRAP),
-      'unwrapped data equals input data'
-    );
-    const buttonDetails = await waitUntil(() => find('[data-test-button-details]'));
-    await click(buttonDetails);
-    await click('[data-test-button-data]');
-    assert.dom('.CodeMirror').exists();
-
-    //random
-    await click('[data-test-sidebar-nav-link="Random"]');
-
-    assert.dom('[data-test-tools-input="bytes"]').hasValue('32', 'defaults to 32 bytes');
-    await click('[data-test-tools-submit]');
-    const randomBytes = await waitUntil(() => find('[data-test-tools-input="random-bytes"]'));
-    assert.ok(randomBytes.value, 'shows the returned value of random bytes');
-
-    //hash
-    await click('[data-test-sidebar-nav-link="Hash"]');
-
-    await fillIn('[data-test-tools-input="hash-input"]', 'foo');
-    await click('[data-test-transit-b64-toggle="input"]');
-
-    await click('[data-test-tools-submit]');
-    let sumInput = await waitUntil(() => find('[data-test-tools-input="sum"]'));
-    assert
-      .dom(sumInput)
-      .hasValue('LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=', 'hashes the data, encodes input');
-    await click('[data-test-tools-back]');
-
-    await fillIn('[data-test-tools-input="hash-input"]', 'e2RhdGE6ImZvbyJ9');
-
-    await click('[data-test-tools-submit]');
-    sumInput = await waitUntil(() => find('[data-test-tools-input="sum"]'));
-    assert
-      .dom(sumInput)
-      .hasValue('JmSi2Hhbgu2WYOrcOyTqqMdym7KT3sohCwAwaMonVrc=', 'hashes the data, passes b64 input through');
   });
 
-  const AUTH_RESPONSE = {
-    request_id: '39802bc4-235c-2f0b-87f3-ccf38503ac3e',
-    lease_id: '',
-    renewable: false,
-    lease_duration: 0,
-    data: null,
-    wrap_info: null,
-    warnings: null,
-    auth: {
-      client_token: 'ecfc2758-588e-981d-50f4-a25883bbf03c',
-      accessor: '6299780b-f2b2-1a3f-7b83-9d3d67629249',
-      policies: ['root'],
-      metadata: null,
-      lease_duration: 0,
-      renewable: false,
-      entity_id: '',
-    },
-  };
+  module('random', function () {
+    test('it generates random bytes', async function (assert) {
+      await click(GENERAL.navLink('Random'));
+      assert.dom(TS.toolsInput('bytes')).hasValue('32', 'defaults to 32 bytes');
+      await click(GENERAL.submitButton);
+      const randomBytes = await waitUntil(() => find(TS.toolsInput('random-bytes')));
+      assert.strictEqual(randomBytes.innerText.length, 44, 'shows the returned value of random bytes');
+    });
+  });
 
-  test('ensure unwrap with auth block works properly', async function (assert) {
-    this.server = new Pretender(function () {
-      this.post('/v1/sys/wrapping/unwrap', (response) => {
-        return [response, { 'Content-Type': 'application/json' }, JSON.stringify(AUTH_RESPONSE)];
+  module('hash', function () {
+    test('it generates hash', async function (assert) {
+      await click(GENERAL.navLink('Hash'));
+
+      await fillIn(TS.toolsInput('hash-input'), 'foo');
+      await click(TS.toolsInput('b64-toggle'));
+      assert.dom(TS.toolsInput('hash-input')).hasValue('Zm9v', 'it base64 encodes input');
+      await click(GENERAL.submitButton);
+      let sumInput = await waitUntil(() => find(TS.toolsInput('sum')));
+      assert
+        .dom(sumInput)
+        .hasText('LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=', 'hashes the data, encodes input');
+      await click(GENERAL.button('Done'));
+
+      await waitUntil(() => find(TS.toolsInput('hash-input')));
+      assert.dom(TS.toolsInput('hash-input')).hasText('', 'it clears input on done');
+      await fillIn(TS.toolsInput('hash-input'), 'e2RhdGE6ImZvbyJ9');
+
+      await click(GENERAL.submitButton);
+      sumInput = await waitUntil(() => find(TS.toolsInput('sum')));
+      assert
+        .dom(sumInput)
+        .hasText('JmSi2Hhbgu2WYOrcOyTqqMdym7KT3sohCwAwaMonVrc=', 'hashes the data, passes b64 input through');
+    });
+  });
+
+  module('unwrap', function () {
+    test('it unwraps with auth block', async function (assert) {
+      const AUTH_RESPONSE = {
+        request_id: '39802bc4-235c-2f0b-87f3-ccf38503ac3e',
+        lease_id: '',
+        renewable: false,
+        lease_duration: 0,
+        data: null,
+        wrap_info: null,
+        warnings: null,
+        auth: {
+          client_token: 'ecfc2758-588e-981d-50f4-a25883bbf03c',
+          accessor: '6299780b-f2b2-1a3f-7b83-9d3d67629249',
+          policies: ['root'],
+          metadata: null,
+          lease_duration: 0,
+          renewable: false,
+          entity_id: '',
+        },
+      };
+      this.server.post('/sys/wrapping/unwrap', () => {
+        return AUTH_RESPONSE;
       });
+
+      // unwrap
+      await click(GENERAL.navLink('Unwrap'));
+
+      await fillIn(TS.toolsInput('unwrap-token'), 'sometoken');
+      await click(GENERAL.submitButton);
+
+      await waitUntil(() => find('.hds-code-block__code'));
+      assertCodeBlockValue(assert, '.hds-code-block__code', AUTH_RESPONSE.auth);
     });
-    await visit('/vault/tools');
+  });
 
-    //unwrap
-    await click('[data-test-sidebar-nav-link="Unwrap"]');
+  module('wrap', function () {
+    test('it wraps data again after clicking "Back"', async function (assert) {
+      const tokenStore = createTokenStore();
+      await visit('/vault/tools/wrap');
 
-    await fillIn('[data-test-tools-input="wrapping-token"]', 'sometoken');
-    await click('[data-test-tools-submit]');
+      await waitUntil(() => find('.cm-editor'));
+      const editor = codemirror();
+      setCodeEditorValue(editor, DATA_TO_WRAP);
 
-    assert.deepEqual(
-      JSON.parse(findAll('.CodeMirror')[0].CodeMirror.getValue()),
-      AUTH_RESPONSE.auth,
-      'unwrapped data equals input data'
-    );
-    this.server.shutdown();
+      // initial wrap
+      await click(GENERAL.submitButton);
+      await waitUntil(() => find(TS.toolsInput('wrapping-token')));
+      await click(GENERAL.button('Back'));
+
+      // wrap again without re-inputting data
+      await click(GENERAL.submitButton);
+      const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
+      tokenStore.set(wrappedToken.innerText);
+
+      // there was a bug where clicking "back" cleared the parent's data, but not the child form component
+      // so when users attempted to wrap data again the payload was actually empty and unwrapping the token returned {token: ""}
+      // it is user desired behavior that the form does not clear on back, and that wrapping can be immediately repeated
+      // we use lookup to check our token from the second wrap returns the unwrapped data we expect
+      await click(GENERAL.navLink('Unwrap'));
+      await fillIn(TS.toolsInput('unwrap-token'), tokenStore.get());
+      await click(GENERAL.submitButton);
+
+      await waitUntil(() => find('.hds-code-block__code'));
+      assertCodeBlockValue(assert, '.hds-code-block__code', '{   "tools": "tests" }');
+    });
+
+    test('it sends wrap ttl', async function (assert) {
+      const tokenStore = createTokenStore();
+      await visit('/vault/tools/wrap');
+
+      await waitUntil(() => find('.cm-editor'));
+      const editor = codemirror();
+      setCodeEditorValue(editor, DATA_TO_WRAP);
+
+      // update to non-default ttl
+      await click(GENERAL.toggleInput('Wrap TTL'));
+      await fillIn(GENERAL.ttl.input('Wrap TTL'), '20');
+
+      await click(GENERAL.submitButton);
+      const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
+      tokenStore.set(wrappedToken.innerText);
+
+      // lookup to check ttl is what we expect
+      await click(GENERAL.navLink('Lookup'));
+      await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
+      await click(GENERAL.submitButton);
+      await waitUntil(() => findAll('[data-test-component="info-table-row"]').length >= 3);
+      assert.dom(GENERAL.infoRowValue('Creation TTL')).hasText('1200', 'show creation ttl row');
+    });
   });
 });

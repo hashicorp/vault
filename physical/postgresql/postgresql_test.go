@@ -4,12 +4,14 @@
 package postgresql
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-pgmultiauth"
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -22,7 +24,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	// Use docker as pg backend if no url is provided via environment variables
 	connURL := os.Getenv("PGURL")
 	if connURL == "" {
-		cleanup, u := postgresql.PrepareTestContainer(t, "11.1")
+		cleanup, u := postgresql.PrepareTestContainer(t)
 		defer cleanup()
 		connURL = u
 	}
@@ -159,7 +161,7 @@ func TestConnectionURL(t *testing.T) {
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			// This is necessary to avoid always testing the branch where the env is set.
-			// As long the the env is set --- even if the value is "" --- `ok` returns true.
+			// As long the env is set --- even if the value is "" --- `ok` returns true.
 			if tt.input.envar != "" {
 				os.Setenv("VAULT_PG_CONNECTION_URL", tt.input.envar)
 				defer os.Unsetenv("VAULT_PG_CONNECTION_URL")
@@ -170,6 +172,47 @@ func TestConnectionURL(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("connectionURL(%s): want %q, got %q", tt.input, tt.want, got)
 			}
+		})
+	}
+}
+
+// TestGetAuthConfig - We only test the standard flow as we would get errors for cloud based auth while fetching token
+func TestGetAuthConfig(t *testing.T) {
+	cases := map[string]struct {
+		url       string
+		conf      map[string]string
+		expectErr bool
+	}{
+		"no_auth_config": {
+			url:  "postgresql://user:password@localhost:5432/dbname",
+			conf: map[string]string{},
+		},
+		"aws with no region": {
+			url: "postgresql://user:password@localhost:5432/dbname",
+			conf: map[string]string{
+				"auth_mode": "aws_iam",
+			},
+			expectErr: true,
+		},
+	}
+
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			cfg, err := getAuthConfig(context.Background(), tt.url, tt.conf, log.Default())
+			if err != nil {
+				if !tt.expectErr {
+					t.Fatalf("Expected no error, got: %v", err)
+				}
+				return
+			}
+
+			db, err := pgmultiauth.Open(context.TODO(), cfg)
+			if err != nil {
+				t.Fatalf("Failed to open db: %v", err)
+				return
+			}
+
+			defer db.Close()
 		})
 	}
 }

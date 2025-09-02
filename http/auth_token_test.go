@@ -6,9 +6,40 @@ package http
 import (
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
+)
+
+const (
+	rootLeasePolicies = `
+path "sys/internal/ui/*" {
+capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+path "auth/token/*" {
+capabilities = ["create", "update", "read", "list"]
+}
+
+path "kv/foo*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+`
+
+	dummy = `
+path "/ns1/sys/leases/*" {
+	capabilities = ["sudo", "create", "read", "update", "delete", "list"]
+}
+
+path "/ns1/auth/token/*" {
+	capabilities = ["sudo", "create", "read", "update", "delete", "list"]
+}
+`
 )
 
 func TestAuthTokenCreate(t *testing.T) {
@@ -206,4 +237,107 @@ func TestAuthTokenRenew(t *testing.T) {
 	if secret.Auth.Renewable != true {
 		t.Error("expected lease to be renewable")
 	}
+}
+
+// TestToken_InvalidTokenError checks that an InvalidToken error is only returned
+// for tokens that have (1) exceeded the token TTL and (2) exceeded the number of uses
+func TestToken_InvalidTokenError(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       logging.NewVaultLogger(hclog.Trace),
+	}
+
+	// Init new test cluster
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+
+	client := cores[0].Client
+
+	// Add policy
+	if err := client.Sys().PutPolicy("root-lease-policy", rootLeasePolicies); err != nil {
+		t.Fatal(err)
+	}
+	// Add a dummy policy
+	if err := client.Sys().PutPolicy("dummy", dummy); err != nil {
+		t.Fatal(err)
+	}
+
+	rootToken := client.Token()
+
+	// Enable kv secrets and mount initial secrets
+	err := client.Sys().Mount("kv", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
+	writeSecretsToMount(t, client, "kv/foo", map[string]interface{}{
+		"user":     "admin",
+		"password": "password",
+	})
+
+	// Create a token that has a TTL of 5s
+	tokenCreateRequest := &api.TokenCreateRequest{
+		Policies: []string{"root-lease-policy"},
+		TTL:      "5s",
+	}
+	secret, err := client.Auth().Token().CreateOrphan(tokenCreateRequest)
+	token := secret.Auth.ClientToken
+	client.SetToken(token)
+
+	// Verify that token works to read from kv mount
+	_, err = client.Logical().Read("kv/foo")
+	require.NoError(t, err)
+
+	time.Sleep(time.Second * 5)
+
+	// Verify that token is expired and shows an "invalid token" error
+	_, err = client.Logical().Read("kv/foo")
+	require.ErrorContains(t, err, logical.ErrInvalidToken.Error())
+	require.ErrorContains(t, err, logical.ErrPermissionDenied.Error())
+
+	// Create a second approle token with a token use limit
+	client.SetToken(rootToken)
+	tokenCreateRequest = &api.TokenCreateRequest{
+		Policies: []string{"root-lease-policy"},
+		NumUses:  5,
+	}
+
+	secret, err = client.Auth().Token().CreateOrphan(tokenCreateRequest)
+	token = secret.Auth.ClientToken
+	client.SetToken(token)
+
+	for i := 0; i < 5; i++ {
+		_, err = client.Logical().Read("kv/foo")
+		require.NoError(t, err)
+	}
+	// Verify that the number of uses is exceeded so the "invalid token" error is displayed
+	_, err = client.Logical().Read("kv/foo")
+	require.ErrorContains(t, err, logical.ErrInvalidToken.Error())
+	require.ErrorContains(t, err, logical.ErrPermissionDenied.Error())
+
+	// Create a third approle token that will have incorrect policy access to the subsequent request
+	client.SetToken(rootToken)
+	tokenCreateRequest = &api.TokenCreateRequest{
+		Policies: []string{"dummy"},
+	}
+
+	secret, err = client.Auth().Token().CreateOrphan(tokenCreateRequest)
+	token = secret.Auth.ClientToken
+	client.SetToken(token)
+
+	// Incorrect policy access should only return an ErrPermissionDenied error
+	_, err = client.Logical().Read("kv/foo")
+	require.ErrorContains(t, err, logical.ErrPermissionDenied.Error())
+	require.NotContains(t, err.Error(), logical.ErrInvalidToken)
+}
+
+func writeSecretsToMount(t *testing.T, client *api.Client, mountPath string, data map[string]interface{}) {
+	_, err := client.Logical().Write(mountPath, data)
+	require.NoError(t, err)
 }

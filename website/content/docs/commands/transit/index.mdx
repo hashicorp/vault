@@ -6,6 +6,9 @@ description: |-
   secrets engine.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # transit
 
 The `transit` command groups subcommands for interacting with Vault's
@@ -27,6 +30,6 @@ $ vault transit import transit/keys/test-key @test-key type=rsa-2048
 Retrieving transit wrapping key.
 Wrapping source key with ephemeral key.
 Encrypting ephemeral key with transit wrapping key.
-Submitting wrapped key to Vault transit.
+Submitting wrapped key.
 Success!
 ```

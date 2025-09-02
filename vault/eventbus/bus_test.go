@@ -18,12 +18,13 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // TestBusBasics tests that basic event sending and subscribing function.
 func TestBusBasics(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,14 +37,14 @@ func TestBusBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 	if !errors.Is(err, ErrNotStarted) {
 		t.Errorf("Expected not started error but got: %v", err)
 	}
 
 	bus.Start()
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 	if err != nil {
 		t.Errorf("Expected no error sending: %v", err)
 	}
@@ -59,9 +60,50 @@ func TestBusBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 	if err != nil {
 		t.Error(err)
+	}
+
+	timeout := time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		if message.Payload.(*logical.EventReceived).Event.Id != event.Id {
+			t.Errorf("Got unexpected message: %+v", message)
+		}
+	case <-timeout:
+		t.Error("Timeout waiting for message")
+	}
+}
+
+// TestBusIgnoresSendContext tests that the context is ignored when sending to an event,
+// so that we do not give up too quickly.
+func TestBusIgnoresSendContext(t *testing.T) {
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eventType := logical.EventType("someType")
+
+	event, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ch, subCancel, err := bus.Subscribe(context.Background(), namespace.RootNamespace, string(eventType), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subCancel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
+	if err != nil {
+		t.Errorf("Expected no error sending: %v", err)
 	}
 
 	timeout := time.After(1 * time.Second)
@@ -78,7 +120,7 @@ func TestBusBasics(t *testing.T) {
 // TestSubscribeNonRootNamespace verifies that events for non-root namespaces
 // aren't filtered out by the bus.
 func TestSubscribeNonRootNamespace(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +145,7 @@ func TestSubscribeNonRootNamespace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendEventInternal(ctx, ns, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, ns, nil, eventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -121,7 +163,7 @@ func TestSubscribeNonRootNamespace(t *testing.T) {
 
 // TestNamespaceFiltering verifies that events for other namespaces are filtered out by the bus.
 func TestNamespaceFiltering(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +191,7 @@ func TestNamespaceFiltering(t *testing.T) {
 	err = bus.SendEventInternal(ctx, &namespace.Namespace{
 		ID:   "abc",
 		Path: "/abc",
-	}, nil, eventType, event)
+	}, nil, eventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -162,7 +204,7 @@ func TestNamespaceFiltering(t *testing.T) {
 		// okay
 	}
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -181,7 +223,7 @@ func TestNamespaceFiltering(t *testing.T) {
 
 // TestBus2Subscriptions verifies that events of different types are successfully routed to the correct subscribers.
 func TestBus2Subscriptions(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,11 +254,11 @@ func TestBus2Subscriptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType2, event2)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType2, false, event2)
 	if err != nil {
 		t.Error(err)
 	}
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType1, event1)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType1, false, event1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -252,7 +294,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("cancel=%v", tc.cancel), func(t *testing.T) {
 			subscriptions.Store(0)
-			bus, err := NewEventBus(nil)
+			bus, err := NewEventBus("", nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -304,7 +346,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 			if err != nil {
 				t.Error(err)
 			}
@@ -316,7 +358,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 			if err != nil {
 				t.Error(err)
 			}
@@ -355,7 +397,7 @@ func waitFor(t *testing.T, maxWait time.Duration, f func() bool) {
 // TestBusWildcardSubscriptions tests that a single subscription can receive
 // multiple event types using * for glob patterns.
 func TestBusWildcardSubscriptions(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,11 +428,11 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, barEventType, event2)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, barEventType, false, event2)
 	if err != nil {
 		t.Error(err)
 	}
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, fooEventType, event1)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, fooEventType, false, event1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -430,7 +472,7 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 // TestDataPathIsPrependedWithMount tests that "data_path", if present in the
 // metadata, is prepended with the plugin's mount.
 func TestDataPathIsPrependedWithMount(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -463,7 +505,7 @@ func TestDataPathIsPrependedWithMount(t *testing.T) {
 	}
 
 	// no plugin info means nothing should change
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, fooEventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, fooEventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -489,7 +531,7 @@ func TestDataPathIsPrependedWithMount(t *testing.T) {
 		PluginVersion: "v1.13.1+builtin",
 		Version:       "2",
 	}
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -530,7 +572,7 @@ func TestDataPathIsPrependedWithMount(t *testing.T) {
 	if err := event.Metadata.UnmarshalJSON(metadataBytes); err != nil {
 		t.Fatal(err)
 	}
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -546,11 +588,45 @@ func TestDataPathIsPrependedWithMount(t *testing.T) {
 	case <-timeout:
 		t.Error("Timeout waiting for event")
 	}
+
+	// Test that a forwarded event does not have anything prepended
+	event, err = logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadata = map[string]string{
+		logical.EventMetadataDataPath: "your/secret/path",
+		"not_touched":                 "xyz",
+	}
+	metadataBytes, err = json.Marshal(metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event.Metadata = &structpb.Struct{}
+	if err := event.Metadata.UnmarshalJSON(metadataBytes); err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, true, event)
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeout = time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
+		assert.Contains(t, metadata, "not_touched")
+		assert.Equal(t, "xyz", metadata["not_touched"])
+		assert.Contains(t, metadata, "data_path")
+		assert.Equal(t, "your/secret/path", metadata["data_path"])
+	case <-timeout:
+		t.Error("Timeout waiting for event")
+	}
 }
 
 // TestBexpr tests go-bexpr filters are evaluated on an event.
 func TestBexpr(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -584,7 +660,7 @@ func TestBexpr(t *testing.T) {
 			PluginVersion: "v1.13.1+builtin",
 			Version:       "2",
 		}
-		return bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, logical.EventType(eventType), event)
+		return bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, logical.EventType(eventType), false, event)
 	}
 
 	testCases := []struct {
@@ -630,7 +706,7 @@ func TestBexpr(t *testing.T) {
 // TestPipelineCleanedUp ensures pipelines are properly cleaned up after
 // subscriptions are closed.
 func TestPipelineCleanedUp(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -642,6 +718,10 @@ func TestPipelineCleanedUp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// check that the filters are set
+	if !bus.filters.anyMatch(namespace.RootNamespace, eventType) {
+		t.Fatal()
+	}
 	if !bus.broker.IsAnyPipelineRegistered(eventTypeAll) {
 		cancel()
 		t.Fatal()
@@ -651,5 +731,456 @@ func TestPipelineCleanedUp(t *testing.T) {
 
 	if bus.broker.IsAnyPipelineRegistered(eventTypeAll) {
 		t.Fatal()
+	}
+
+	// and that the filters are cleaned up
+	if bus.filters.anyMatch(namespace.RootNamespace, eventType) {
+		t.Fatal()
+	}
+}
+
+// TestSubscribeGlobal tests that the global filter subscription mechanism works.
+func TestSubscribeGlobal(t *testing.T) {
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	bus.filters.addGlobalPattern([]string{""}, "abc*")
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+	ch, cancel2, err := bus.NewGlobalSubscription(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	ev, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", false, ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case recv := <-ch:
+		// ok
+		event := recv.Payload.(*logical.EventReceived)
+		assert.Equal(t, "abcd", event.EventType)
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for event")
+	}
+}
+
+// TestSubscribeGlobal_WithApply tests that the global filter subscription mechanism works when using ApplyGlobalFilterChanges.
+func TestSubscribeGlobal_WithApply(t *testing.T) {
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+	assert.False(t, bus.GlobalMatch(namespace.RootNamespace, "abcd"))
+	bus.ApplyGlobalFilterChanges([]FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
+	assert.True(t, bus.GlobalMatch(namespace.RootNamespace, "abcd"))
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+	ch, cancel2, err := bus.NewGlobalSubscription(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	ev, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", false, ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case recv := <-ch:
+		// ok
+		event := recv.Payload.(*logical.EventReceived)
+		assert.Equal(t, "abcd", event.EventType)
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for event")
+	}
+}
+
+// TestSubscribeClusterNode tests that the cluster node filter subscription
+// mechanism works.
+func TestSubscribeClusterNode(t *testing.T) {
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	bus.filters.addPattern("somecluster", []string{""}, "abc*")
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+	ch, cancel2, err := bus.NewClusterNodeSubscription(ctx, "somecluster")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	ev, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", false, ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case recv := <-ch:
+		// ok
+		event := recv.Payload.(*logical.EventReceived)
+		assert.Equal(t, "abcd", event.EventType)
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for event")
+	}
+}
+
+// TestSubscribeClusterNode_WithApply tests that the cluster node filter
+// subscription mechanism works when using ApplyClusterNodeFilterChanges.
+func TestSubscribeClusterNode_WithApply(t *testing.T) {
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+	bus.ApplyClusterNodeFilterChanges("somecluster", []FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
+	ch, cancel2, err := bus.NewClusterNodeSubscription(ctx, "somecluster")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	ev, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", false, ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case recv := <-ch:
+		// ok
+		event := recv.Payload.(*logical.EventReceived)
+		assert.Equal(t, "abcd", event.EventType)
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for event")
+	}
+}
+
+// TestClearGlobalFilter tests that clearing the global filter means no messages get through.
+func TestClearGlobalFilter(t *testing.T) {
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+	bus.ApplyGlobalFilterChanges([]FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
+	bus.ClearGlobalFilter()
+	ch, cancel2, err := bus.NewGlobalSubscription(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	ev, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", false, ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case <-ch:
+		t.Fatal("We should not have gotten an event")
+	case <-time.After(100 * time.Millisecond):
+		// ok
+	}
+}
+
+// TestClearClusterNodeFilter tests that clearing a cluster node filter means no
+// messages get through.
+func TestClearClusterNodeFilter(t *testing.T) {
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+	bus.ApplyClusterNodeFilterChanges("somecluster", []FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
+	bus.ClearClusterNodeFilter("somecluster")
+	ch, cancel2, err := bus.NewClusterNodeSubscription(ctx, "somecluster")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	ev, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", false, ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case <-ch:
+		t.Fatal("We should not have gotten an event")
+	case <-time.After(100 * time.Millisecond):
+		// ok
+	}
+}
+
+// TestNotifyOnGlobalFilterChanges tests that notifications on global filter changes are sent.
+func TestNotifyOnGlobalFilterChanges(t *testing.T) {
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+
+	ch, cancel2, err := bus.NotifyOnGlobalFilterChanges(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	bus.ApplyGlobalFilterChanges([]FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
+
+	select {
+	case changes := <-ch:
+		if len(changes) == 2 {
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}, {Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		} else {
+			// could be split into two updates
+			assert.Len(t, changes, 1)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}}, changes)
+			changes := <-ch
+			assert.Len(t, changes, 1)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("We expected to get a global filter notification")
+	}
+}
+
+// TestNotifyOnLocalFilterChanges tests that notifications on local cluster node
+// filter changes are sent.
+func TestNotifyOnLocalFilterChanges(t *testing.T) {
+	bus, err := NewEventBus("somecluster", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+
+	ch, cancel2, err := bus.NotifyOnLocalFilterChanges(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	bus.ApplyClusterNodeFilterChanges("somecluster", []FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
+
+	select {
+	case changes := <-ch:
+		if len(changes) == 2 {
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}, {Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		} else {
+			// could be split into two updates
+			assert.Len(t, changes, 1)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}}, changes)
+			changes := <-ch
+			assert.Len(t, changes, 1)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("We expected to get a global filter notification")
+	}
+}
+
+type fakeWALGetter struct {
+	Header string
+}
+
+func (f *fakeWALGetter) GetCurrentWALHeader() string {
+	return f.Header
+}
+
+var _ StorageWALGetter = (*fakeWALGetter)(nil)
+
+// Test_getIndexForEvent tests the retrieval of the Vault storage index for an
+// event based on its metadata.
+func Test_getIndexForEvent(t *testing.T) {
+	tests := map[string]struct {
+		event       *logical.EventReceived
+		walGetter   StorageWALGetter
+		expectErr   string
+		expectIndex string
+	}{
+		"event with modified true": {
+			event: &logical.EventReceived{
+				Event: &logical.EventData{
+					Metadata: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"modified": {Kind: &structpb.Value_StringValue{StringValue: "true"}},
+						},
+					},
+				},
+			},
+			walGetter:   &fakeWALGetter{"test-wal"},
+			expectErr:   "",
+			expectIndex: "test-wal",
+		},
+		"event with modified false": {
+			event: &logical.EventReceived{
+				Event: &logical.EventData{
+					Metadata: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"modified": {Kind: &structpb.Value_StringValue{StringValue: "false"}},
+						},
+					},
+				},
+			},
+			walGetter:   &fakeWALGetter{"test-wal"},
+			expectErr:   "",
+			expectIndex: "",
+		},
+		"event with modified not set": {
+			event: &logical.EventReceived{
+				Event: &logical.EventData{
+					Metadata: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"path": {Kind: &structpb.Value_StringValue{StringValue: "abc/"}},
+						},
+					},
+				},
+			},
+			walGetter:   &fakeWALGetter{"test-wal"},
+			expectErr:   "",
+			expectIndex: "",
+		},
+		"event with modified invalid": {
+			event: &logical.EventReceived{
+				Event: &logical.EventData{
+					Metadata: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"modified": {Kind: &structpb.Value_StringValue{StringValue: "invalid"}},
+						},
+					},
+				},
+			},
+			walGetter:   &fakeWALGetter{"test-wal"},
+			expectErr:   "failed to parse event metadata modified",
+			expectIndex: "",
+		},
+		"event without metadata": {
+			event: &logical.EventReceived{
+				Event: &logical.EventData{
+					Metadata: nil,
+				},
+			},
+			expectErr:   "",
+			expectIndex: "",
+		},
+		"nil walGetter": {
+			event: &logical.EventReceived{
+				Event: &logical.EventData{
+					Metadata: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"modified": {Kind: &structpb.Value_StringValue{StringValue: "true"}},
+						},
+					},
+				},
+			},
+			walGetter:   nil,
+			expectErr:   "",
+			expectIndex: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			bus, err := NewEventBus("", nil, tc.walGetter)
+			require.NoError(t, err)
+			bus.Start()
+
+			index, err := bus.getIndexForEvent(tc.event)
+			if tc.expectErr != "" {
+				assert.ErrorContains(t, err, tc.expectErr)
+				assert.Equal(t, tc.expectIndex, index)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectIndex, index)
+			}
+		})
 	}
 }

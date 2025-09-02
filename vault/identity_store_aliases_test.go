@@ -642,7 +642,6 @@ func TestIdentityStore_AliasMove_DuplicateAccessor(t *testing.T) {
 	aliasReq.Data = updateData
 	aliasReq.Path = "entity-alias/id/" + alias2ID
 	resp, err = is.HandleRequest(ctx, aliasReq)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -715,7 +714,6 @@ func TestIdentityStore_AliasUpdate_DuplicateAccessor(t *testing.T) {
 	aliasReq.Data = updateData
 	aliasReq.Path = "entity-alias/id/" + alias2ID
 	resp, err = is.HandleRequest(ctx, aliasReq)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -769,7 +767,6 @@ func TestIdentityStore_AliasCreate_DuplicateAccessor(t *testing.T) {
 
 	// This will try to create a new alias with the same accessor and entity
 	resp, err = is.HandleRequest(ctx, aliasReq)
-
 	if err != nil {
 		t.Fatal(err)
 	}

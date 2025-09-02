@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
@@ -19,7 +20,6 @@ import (
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 )
 
 // TestSystemBackend_handleActivityWriteData calls the activity log write endpoint and confirms that the inputs are
@@ -76,6 +76,7 @@ func TestSystemBackend_handleActivityWriteData(t *testing.T) {
 			name:      "correctly formatted data succeeds",
 			operation: logical.UpdateOperation,
 			input:     map[string]interface{}{"input": `{"write":["WRITE_PRECOMPUTED_QUERIES"],"data":[{"current_month":true,"all":{"clients":[{"count":5}]}}]}`},
+			wantPaths: 1,
 		},
 		{
 			name:      "entities with multiple segments",
@@ -169,7 +170,7 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 			m := &singleMonthActivityClients{
 				predefinedSegments: make(map[int][]int),
 			}
-			err := m.addNewClients(tt.clients, tt.mount, tt.segmentIndex)
+			err := m.addNewClients(tt.clients, tt.mount, tt.segmentIndex, 0, time.Now().UTC())
 			require.NoError(t, err)
 			numNew := tt.clients.Count
 			if numNew == 0 {
@@ -274,7 +275,7 @@ func Test_multipleMonthsActivityClients_processMonth(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := newMultipleMonthsActivityClients(tt.numMonths)
-			err := m.processMonth(context.Background(), core, tt.clients)
+			err := m.processMonth(context.Background(), core, tt.clients, time.Now().UTC())
 			if tt.wantError {
 				require.Error(t, err)
 			} else {
@@ -319,7 +320,7 @@ func Test_multipleMonthsActivityClients_processMonth_segmented(t *testing.T) {
 	}
 	m := newMultipleMonthsActivityClients(1)
 	core, _, _ := TestCoreUnsealed(t)
-	require.NoError(t, m.processMonth(context.Background(), core, data))
+	require.NoError(t, m.processMonth(context.Background(), core, data, time.Now().UTC()))
 	require.Len(t, m.months[0].predefinedSegments, 3)
 	require.Len(t, m.months[0].clients, 3)
 
@@ -338,39 +339,57 @@ func Test_multipleMonthsActivityClients_processMonth_segmented(t *testing.T) {
 // from 1 month ago and 2 months ago, and verifies that the correct clients are
 // added based on namespace, mount, and non-entity attributes
 func Test_multipleMonthsActivityClients_addRepeatedClients(t *testing.T) {
+	now := time.Now().UTC()
+
 	m := newMultipleMonthsActivityClients(3)
 	defaultMount := "default"
 
-	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2}, "identity", nil))
-	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2, Namespace: "other_ns"}, defaultMount, nil))
-	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2}, defaultMount, nil))
-	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2, ClientType: "non-entity"}, defaultMount, nil))
+	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2}, "identity", nil, now))
+	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2, Namespace: "other_ns"}, defaultMount, nil, now))
+	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2}, defaultMount, nil, now))
+	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2, ClientType: "non-entity"}, defaultMount, nil, now))
 
 	month2Clients := m.months[2].clients
 	month1Clients := m.months[1].clients
 
+	// checks if all the clients in "containsClients" array exists in "allClients" array
+	hasClients := func(allClients []*activity.EntityRecord, containsClients []*activity.EntityRecord) bool {
+		allClientsList := make(map[string]struct{})
+
+		for _, client := range allClients {
+			allClientsList[client.ClientID] = struct{}{}
+		}
+
+		for _, client := range containsClients {
+			if _, exists := allClientsList[client.ClientID]; !exists {
+				return false
+			}
+		}
+		return true
+	}
+
 	thisMonth := m.months[0]
 	// this will match the first client in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true}, defaultMount, nil))
-	require.Contains(t, month1Clients, thisMonth.clients[0])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true}, defaultMount, nil, time.Now().UTC()))
+	require.True(t, hasClients(month1Clients, []*activity.EntityRecord{thisMonth.clients[0]}))
 
 	// this will match the 3rd client in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, ClientType: "non-entity"}, defaultMount, nil))
-	require.Equal(t, month1Clients[2], thisMonth.clients[1])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, ClientType: "non-entity"}, defaultMount, nil, time.Now().UTC()))
+	require.True(t, hasClients([]*activity.EntityRecord{month1Clients[2]}, []*activity.EntityRecord{thisMonth.clients[1]}))
 
 	// this will match the first two clients in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 2, Repeated: true}, defaultMount, nil))
-	require.Equal(t, month1Clients[0:2], thisMonth.clients[2:4])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 2, Repeated: true}, defaultMount, nil, time.Now().UTC()))
+	require.True(t, hasClients(month1Clients[0:2], thisMonth.clients[2:4]))
 
 	// this will match the first client in month 2
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2}, "identity", nil))
-	require.Equal(t, month2Clients[0], thisMonth.clients[4])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2}, "identity", nil, time.Now().UTC()))
+	require.True(t, hasClients([]*activity.EntityRecord{month2Clients[0]}, []*activity.EntityRecord{thisMonth.clients[4]}))
 
 	// this will match the 3rd client in month 2
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, defaultMount, nil))
-	require.Equal(t, month2Clients[2], thisMonth.clients[5])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, defaultMount, nil, time.Now().UTC()))
+	require.True(t, hasClients([]*activity.EntityRecord{month2Clients[2]}, []*activity.EntityRecord{thisMonth.clients[5]}))
 
-	require.Error(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, "other_mount", nil))
+	require.Error(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, "other_mount", nil, time.Now().UTC()))
 }
 
 // Test_singleMonthActivityClients_populateSegments calls populateSegments for a
@@ -385,12 +404,14 @@ func Test_singleMonthActivityClients_populateSegments(t *testing.T) {
 		{ClientID: "e"},
 	}
 	cases := []struct {
-		name         string
-		segments     map[int][]int
-		numSegments  int
-		emptyIndexes []int32
-		skipIndexes  []int32
-		wantSegments map[int][]*activity.EntityRecord
+		name                  string
+		segments              map[int][]int
+		numSegments           int
+		emptyIndexes          []int32
+		skipIndexes           []int32
+		loadClientIDsToMemory bool
+		wantClientIDs         map[string]struct{}
+		wantSegments          map[int][]*activity.EntityRecord
 	}{
 		{
 			name: "segmented",
@@ -422,6 +443,27 @@ func Test_singleMonthActivityClients_populateSegments(t *testing.T) {
 			},
 		},
 		{
+			name: "segmented with skip and empty with load clients to memory input flag",
+			segments: map[int][]int{
+				0: {0, 1},
+				2: {0, 1},
+			},
+			emptyIndexes:          []int32{1, 4},
+			skipIndexes:           []int32{3},
+			loadClientIDsToMemory: true,
+			wantClientIDs: map[string]struct{}{
+				"a": {},
+				"b": {},
+			},
+			wantSegments: map[int][]*activity.EntityRecord{
+				0: {{ClientID: "a"}, {ClientID: "b"}},
+				1: {},
+				2: {{ClientID: "a"}, {ClientID: "b"}},
+				3: nil,
+				4: {},
+			},
+		},
+		{
 			name:        "all clients",
 			numSegments: 0,
 			wantSegments: map[int][]*activity.EntityRecord{
@@ -429,8 +471,39 @@ func Test_singleMonthActivityClients_populateSegments(t *testing.T) {
 			},
 		},
 		{
+			name:                  "all clients with load clients to memory input flag",
+			numSegments:           0,
+			loadClientIDsToMemory: true,
+			wantClientIDs: map[string]struct{}{
+				"a": {},
+				"b": {},
+				"c": {},
+				"d": {},
+				"e": {},
+			},
+			wantSegments: map[int][]*activity.EntityRecord{
+				0: {{ClientID: "a"}, {ClientID: "b"}, {ClientID: "c"}, {ClientID: "d"}, {ClientID: "e"}},
+			},
+		},
+		{
 			name:        "all clients split",
 			numSegments: 2,
+			wantSegments: map[int][]*activity.EntityRecord{
+				0: {{ClientID: "a"}, {ClientID: "b"}, {ClientID: "c"}},
+				1: {{ClientID: "d"}, {ClientID: "e"}},
+			},
+		},
+		{
+			name:                  "all clients split with load clients to memory input flag",
+			numSegments:           2,
+			loadClientIDsToMemory: true,
+			wantClientIDs: map[string]struct{}{
+				"a": {},
+				"b": {},
+				"c": {},
+				"d": {},
+				"e": {},
+			},
 			wantSegments: map[int][]*activity.EntityRecord{
 				0: {{ClientID: "a"}, {ClientID: "b"}, {ClientID: "c"}},
 				1: {{ClientID: "d"}, {ClientID: "e"}},
@@ -449,12 +522,36 @@ func Test_singleMonthActivityClients_populateSegments(t *testing.T) {
 				4: {{ClientID: "d"}, {ClientID: "e"}},
 			},
 		},
+		{
+			name:                  "all clients with skip and empty with load clients to memory input flag",
+			numSegments:           5,
+			skipIndexes:           []int32{0, 3},
+			emptyIndexes:          []int32{2},
+			loadClientIDsToMemory: true,
+			wantClientIDs: map[string]struct{}{
+				"a": {},
+				"b": {},
+				"c": {},
+				"d": {},
+				"e": {},
+			},
+			wantSegments: map[int][]*activity.EntityRecord{
+				0: nil,
+				1: {{ClientID: "a"}, {ClientID: "b"}, {ClientID: "c"}},
+				2: {},
+				3: nil,
+				4: {{ClientID: "d"}, {ClientID: "e"}},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := singleMonthActivityClients{predefinedSegments: tc.segments, clients: clients, generationParameters: &generation.Data{EmptySegmentIndexes: tc.emptyIndexes, SkipSegmentIndexes: tc.skipIndexes, NumSegments: int32(tc.numSegments)}}
-			gotSegments, err := s.populateSegments()
+			gotSegments, clientsAdded, err := s.populateSegments(tc.loadClientIDsToMemory)
 			require.NoError(t, err)
+			if tc.loadClientIDsToMemory {
+				require.Equal(t, tc.wantClientIDs, clientsAdded)
+			}
 			require.Equal(t, tc.wantSegments, gotSegments)
 		})
 	}
@@ -465,7 +562,7 @@ func Test_singleMonthActivityClients_populateSegments(t *testing.T) {
 // precomputed queries are written. written and then storage is queried. The
 // test verifies that the correct timestamps are present in the activity log and
 // that the correct segment numbers for each month contain the correct number of
-// clients
+// clients and right number of clientIDs are loaded to memory
 func Test_handleActivityWriteData(t *testing.T) {
 	index5 := int32(5)
 	index4 := int32(4)
@@ -526,7 +623,7 @@ func Test_handleActivityWriteData(t *testing.T) {
 		paths := resp.Data["paths"].([]string)
 		require.Len(t, paths, 9)
 
-		times, err := core.activityLog.availableLogs(context.Background())
+		times, err := core.activityLog.availableLogs(context.Background(), time.Now())
 		require.NoError(t, err)
 		require.Len(t, times, 4)
 
@@ -643,10 +740,28 @@ func Test_handleActivityWriteData(t *testing.T) {
 		next := time.Unix(intent.NextMonth, 0)
 
 		require.Equal(t, timeutil.StartOfMonth(now), next.UTC())
-		require.Equal(t, timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)), prev.UTC())
+		require.Equal(t, timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)), prev.UTC())
 
-		times, err := core.activityLog.availableLogs(context.Background())
+		times, err := core.activityLog.availableLogs(context.Background(), time.Now())
 		require.NoError(t, err)
 		require.Len(t, times, 4)
+	})
+	t.Run("write clientIDs to memory", func(t *testing.T) {
+		core, _, _ := TestCoreUnsealed(t)
+		marshaled, err := protojson.Marshal(&generation.ActivityLogMockInput{
+			Data:  data,
+			Write: []generation.WriteOptions{generation.WriteOptions_WRITE_CLIENT_IDS_MEMORY},
+		})
+		require.NoError(t, err)
+		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/activity/write")
+		req.Data = map[string]interface{}{"input": string(marshaled)}
+		_, err = core.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+		require.NoError(t, err)
+		activityLog := core.GetActivityLog()
+
+		// clients until last month in the billing period must be loaded to memory
+		// Since, billing start is not available in ce, no clients are loaded
+		// This test will return 0 when run on ent as billing start is not set in this testcase
+		require.Equal(t, len(activityLog.GetClientIDsUsageInfo()), 0)
 	})
 }

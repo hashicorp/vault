@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/version"
-	"github.com/mitchellh/cli"
 )
 
 func testVersionCommand(tb testing.TB) (*cli.MockUi, *VersionCommand) {

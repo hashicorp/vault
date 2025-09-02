@@ -7,9 +7,12 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, fillIn, waitFor, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 
 module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -39,9 +42,16 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     this.newModel = store.createRecord('kubernetes/role', { backend: 'kubernetes-test' });
     this.breadcrumbs = [
       { label: this.newModel.backend, route: 'overview' },
-      { label: 'roles', route: 'roles' },
-      { label: 'create' },
+      { label: 'Roles', route: 'roles' },
+      { label: 'Create' },
     ];
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should display placeholder when generation preference is not selected', async function (assert) {
@@ -49,16 +59,14 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`,
       { owner: this.engine }
     );
+    assert.dom(GENERAL.emptyStateTitle).hasText('Choose an option above', 'Empty state title renders');
     assert
-      .dom('[data-test-empty-state-title]')
-      .hasText('Choose an option above', 'Empty state title renders');
-    assert
-      .dom('[data-test-empty-state-message]')
+      .dom(GENERAL.emptyStateMessage)
       .hasText(
         'To configure a Vault role, choose what should be generated in Kubernetes by Vault.',
         'Empty state message renders'
       );
-    assert.dom('[data-test-save]').isDisabled('Save button is disabled');
+    assert.dom(GENERAL.submitButton).isDisabled('Save button is disabled');
   });
 
   test('it should display different form fields based on generation preference selection', async function (assert) {
@@ -76,17 +84,17 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
 
     await click('[data-test-radio-card="basic"]');
     ['serviceAccountName', ...commonFields].forEach((field) => {
-      assert.dom(`[data-test-field="${field}"]`).exists(`${field} field renders`);
+      assert.dom(GENERAL.fieldByAttr(field)).exists(`${field} field renders`);
     });
 
     await click('[data-test-radio-card="expanded"]');
     ['kubernetesRoleType', 'kubernetesRoleName', 'nameTemplate', ...commonFields].forEach((field) => {
-      assert.dom(`[data-test-field="${field}"]`).exists(`${field} field renders`);
+      assert.dom(GENERAL.fieldByAttr(field)).exists(`${field} field renders`);
     });
 
     await click('[data-test-radio-card="full"]');
     ['kubernetesRoleType', 'nameTemplate', ...commonFields].forEach((field) => {
-      assert.dom(`[data-test-field="${field}"]`).exists(`${field} field renders`);
+      assert.dom(GENERAL.fieldByAttr(field)).exists(`${field} field renders`);
     });
     assert.dom('[data-test-generated-role-rules]').exists('Generated role rules section renders');
   });
@@ -98,7 +106,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     );
 
     await click('[data-test-radio-card="basic"]');
-    await fillIn('[data-test-input="serviceAccountName"]', 'test');
+    await fillIn(GENERAL.inputByAttr('serviceAccountName'), 'test');
     await click('[data-test-radio-card="expanded"]');
     assert.strictEqual(
       this.newModel.serviceAccountName,
@@ -106,7 +114,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       'Service account name cleared when switching from basic to expanded'
     );
 
-    await fillIn('[data-test-input="kubernetesRoleName"]', 'test');
+    await fillIn(GENERAL.inputByAttr('kubernetesRoleName'), 'test');
     await click('[data-test-radio-card="full"]');
     assert.strictEqual(
       this.newModel.kubernetesRoleName,
@@ -114,9 +122,9 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       'Kubernetes role name cleared when switching from expanded to full'
     );
 
-    await click('[data-test-input="kubernetesRoleType"] input');
-    await click('[data-test-toggle-input="show-nameTemplate"]');
-    await fillIn('[data-test-input="nameTemplate"]', 'bar');
+    await click(`${GENERAL.inputGroupByAttr('kubernetesRoleType')} input`);
+    await click(GENERAL.toggleInput('show-nameTemplate'));
+    await fillIn(GENERAL.inputByAttr('nameTemplate'), 'bar');
     await fillIn('[data-test-select-template]', '6');
     await click('[data-test-radio-card="expanded"]');
     assert.strictEqual(
@@ -153,11 +161,13 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { owner: this.engine }
     );
     await click('[data-test-radio-card="basic"]');
-    await click('[data-test-save]');
-    assert.dom('[data-test-inline-error-message]').hasText('Name is required', 'Validation error renders');
-    await fillIn('[data-test-input="name"]', 'role-1');
-    await fillIn('[data-test-input="serviceAccountName"]', 'default');
-    await click('[data-test-save]');
+
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.validationErrorByAttr('name')).hasText('Name is required', 'Validation error renders');
+    await fillIn(GENERAL.inputByAttr('name'), 'role-1');
+    await fillIn(GENERAL.inputByAttr('serviceAccountName'), 'default');
+    await click(GENERAL.submitButton);
+
     assert.ok(
       this.transitionCalledWith('roles.role.details', this.newModel.name),
       'Transitions to details route on save'
@@ -177,11 +187,11 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
         { owner: this.engine }
       );
       assert.dom(`[data-test-radio-card="${pref}"] input`).isChecked('Correct radio card is checked');
-      assert.dom('[data-test-input="name"]').hasValue(this.role.name, 'Role name is populated');
+      assert.dom(GENERAL.inputByAttr('name')).hasValue(this.role.name, 'Role name is populated');
       const selector = {
-        basic: { name: '[data-test-input="serviceAccountName"]', method: 'hasValue', value: 'default' },
+        basic: { name: GENERAL.inputByAttr('serviceAccountName'), method: 'hasValue', value: 'default' },
         expanded: {
-          name: '[data-test-input="kubernetesRoleName"]',
+          name: GENERAL.inputByAttr('kubernetesRoleName'),
           method: 'hasValue',
           value: 'vault-k8s-secrets-role',
         },
@@ -192,7 +202,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
         },
       }[pref];
       assert.dom(selector.name)[selector.method](selector.value);
-      await click('[data-test-save]');
+      await click(GENERAL.submitButton);
       assert.ok(
         this.transitionCalledWith('roles.role.details', this.role.name),
         'Transitions to details route on save'
@@ -208,15 +218,15 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await click('[data-test-radio-card="basic"]');
     assert.dom('[data-test-annotations]').doesNotExist('Annotations and labels are hidden');
 
-    await click('[data-test-field="annotations"]');
+    await click(GENERAL.fieldByAttr('annotations'));
     await fillIn('[data-test-kv="annotations"] [data-test-kv-key]', 'foo');
     await fillIn('[data-test-kv="annotations"] [data-test-kv-value]', 'bar');
-    await click('[data-test-kv="annotations"] [data-test-kv-add-row]');
+    await click(`[data-test-kv="annotations"] ${GENERAL.kvObjectEditor.addRow}`);
     assert.deepEqual(this.newModel.extraAnnotations, { foo: 'bar' }, 'Annotations set');
 
     await fillIn('[data-test-kv="labels"] [data-test-kv-key]', 'bar');
     await fillIn('[data-test-kv="labels"] [data-test-kv-value]', 'baz');
-    await click('[data-test-kv="labels"] [data-test-kv-add-row]');
+    await click(`[data-test-kv="labels"]  ${GENERAL.kvObjectEditor.addRow}`);
     assert.deepEqual(this.newModel.extraLabels, { bar: 'baz' }, 'Labels set');
   });
 
@@ -243,9 +253,12 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       owner: this.engine,
     });
     const addedText = 'this will be add to the start of the first line in the JsonEditor';
-    await fillIn('[data-test-component="code-mirror-modifier"] textarea', addedText);
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, addedText);
+    await settled();
     await click('[data-test-restore-example]');
-    assert.dom('.CodeMirror-code').doesNotContainText(addedText, 'Role rules example restored');
+    assert.dom('.cm-content').doesNotContainText(addedText, 'Role rules example restored');
   });
 
   test('it should set generatedRoleRoles model prop on save', async function (assert) {
@@ -266,9 +279,9 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { owner: this.engine }
     );
     await click('[data-test-radio-card="full"]');
-    await fillIn('[data-test-input="name"]', 'role-1');
+    await fillIn(GENERAL.inputByAttr('name'), 'role-1');
     await fillIn('[data-test-select-template]', '5');
-    await click('[data-test-save]');
+    await click(GENERAL.submitButton);
   });
 
   test('it should unset selectedTemplateId when switching from full generation preference', async function (assert) {
@@ -284,11 +297,11 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { owner: this.engine }
     );
     await click('[data-test-radio-card="full"]');
-    await fillIn('[data-test-input="name"]', 'role-1');
+    await fillIn(GENERAL.inputByAttr('name'), 'role-1');
     await fillIn('[data-test-select-template]', '5');
     await click('[data-test-radio-card="basic"]');
-    await fillIn('[data-test-input="serviceAccountName"]', 'default');
-    await click('[data-test-save]');
+    await fillIn(GENERAL.inputByAttr('serviceAccountName'), 'default');
+    await click(GENERAL.submitButton);
   });
 
   test('it should go back to list route and clean up model', async function (assert) {
@@ -297,7 +310,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}}/>`,
       { owner: this.engine }
     );
-    await click('[data-test-cancel]');
+    await click(GENERAL.cancelButton);
     assert.ok(unloadSpy.calledOnce, 'New model is unloaded on cancel');
     assert.ok(this.transitionCalledWith('roles'), 'Transitions to roles list on cancel');
 
@@ -306,7 +319,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
-    await click('[data-test-cancel]');
+    await click(GENERAL.cancelButton);
     assert.ok(rollbackSpy.calledOnce, 'Attributes are rolled back for existing model on cancel');
     assert.ok(this.transitionCalledWith('roles'), 'Transitions to roles list on cancel');
   });
@@ -317,13 +330,12 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { owner: this.engine }
     );
     await click('[data-test-radio-card="basic"]');
-    await click('[data-test-save]');
+
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.validationErrorByAttr('name')).hasText('Name is required');
+
     assert
-      .dom('[data-test-input="name"]')
-      .hasClass('has-error-border', 'shows border error on input with error');
-    assert.dom('[data-test-inline-error-message]').hasText('Name is required');
-    assert
-      .dom('[data-test-invalid-form-alert] [data-test-inline-error-message]')
+      .dom(`[data-test-invalid-form-alert] ${GENERAL.inlineError}`)
       .hasText('There is an error with this form.');
   });
 
@@ -349,7 +361,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       owner: this.engine,
     });
 
-    await fillIn('[data-test-input="serviceAccountName"]', 'demo');
-    await click('[data-test-save]');
+    await fillIn(GENERAL.inputByAttr('serviceAccountName'), 'demo');
+    await click(GENERAL.submitButton);
   });
 });

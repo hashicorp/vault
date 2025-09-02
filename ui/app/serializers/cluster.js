@@ -4,7 +4,6 @@
  */
 
 import RESTSerializer, { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
-import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 import IdentityManager from '../utils/identity-manager';
 
@@ -49,7 +48,7 @@ export default RESTSerializer.extend(EmbeddedRecordsMixin, {
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     // FIXME when multiple clusters lands
     const transformedPayload = {
-      clusters: assign({ id: '1' }, payload.data || payload),
+      clusters: Object.assign({ id: '1' }, payload.data || payload),
     };
 
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);

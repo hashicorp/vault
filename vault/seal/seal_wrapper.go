@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package seal
 
 import (
@@ -11,6 +14,20 @@ import (
 
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
+
+var RequireFullWrap = struct{}{}
+
+func ContextWithFullRewrapRequired(ctx context.Context) context.Context {
+	return context.WithValue(ctx, RequireFullWrap, true)
+}
+
+type PartialSealWrapError struct {
+	Err error
+}
+
+func (p *PartialSealWrapError) Error() string {
+	return p.Err.Error()
+}
 
 // SealWrapper contains a Wrapper and related information needed by the seal that uses it.
 // Use NewSealWrapper to construct new instances, do not do it directly.
@@ -40,29 +57,32 @@ type SealWrapper struct {
 
 func NewSealWrapper(wrapper wrapping.Wrapper, priority int, name string, sealConfigType string, disabled bool, configured bool) *SealWrapper {
 	ret := &SealWrapper{
-		Wrapper:        wrapper,
-		Priority:       priority,
-		Name:           name,
-		SealConfigType: sealConfigType,
-		Disabled:       disabled,
-		Configured:     configured,
+		Wrapper:         wrapper,
+		Priority:        priority,
+		Name:            name,
+		SealConfigType:  sealConfigType,
+		Disabled:        disabled,
+		Configured:      configured,
+		lastSeenHealthy: time.Now(),
+		healthy:         false,
 	}
 
 	if configured {
-		setHealth(ret, true, time.Now(), ret.lastHealthCheck)
-	} else {
-		setHealth(ret, false, time.Now(), ret.lastHealthCheck)
+		ret.healthy = true
 	}
 
 	return ret
 }
 
 func (sw *SealWrapper) SetHealthy(healthy bool, checkTime time.Time) {
+	sw.hcLock.Lock()
+	defer sw.hcLock.Unlock()
+
+	sw.healthy = healthy
+	sw.lastHealthCheck = checkTime
+
 	if healthy {
-		setHealth(sw, true, checkTime, checkTime)
-	} else {
-		// do not update lastSeenHealthy
-		setHealth(sw, false, sw.lastHealthCheck, checkTime)
+		sw.lastSeenHealthy = checkTime
 	}
 }
 
@@ -122,14 +142,4 @@ func getHealth(sw *SealWrapper) (healthy bool, lastSeenHealthy time.Time, lastHe
 	defer sw.hcLock.RUnlock()
 
 	return sw.healthy, sw.lastSeenHealthy, sw.lastHealthCheck
-}
-
-// setHealth is the only function allowed to mutate the health fields
-func setHealth(sw *SealWrapper, healthy bool, lastSeenHealthy, lastHealthCheck time.Time) {
-	sw.hcLock.Lock()
-	defer sw.hcLock.Unlock()
-
-	sw.healthy = healthy
-	sw.lastSeenHealthy = lastSeenHealthy
-	sw.lastHealthCheck = lastHealthCheck
 }

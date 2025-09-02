@@ -1,0 +1,3 @@
+```release-note:security
+auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request
+```

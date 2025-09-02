@@ -5,8 +5,11 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/rpc"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -36,13 +40,16 @@ const (
 	minRootCredRollbackAge  = 1 * time.Minute
 )
 
+var databaseConfigNameFromRotationIDRegex = regexp.MustCompile("^.+/config/(.+$)")
+
 type dbPluginInstance struct {
 	sync.RWMutex
 	database databaseVersionWrapper
 
-	id     string
-	name   string
-	closed bool
+	id                   string
+	name                 string
+	runningPluginVersion string
+	closed               bool
 }
 
 func (dbi *dbPluginInstance) ID() string {
@@ -101,12 +108,14 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 				"config/*",
 				"static-role/*",
 			},
+			AllowSnapshotRead: []string{"static-roles/*", "static-roles", "static-creds/*"},
 		},
 		Paths: framework.PathAppend(
 			[]*framework.Path{
 				pathListPluginConnection(&b),
 				pathConfigurePluginConnection(&b),
 				pathResetConnection(&b),
+				pathReloadPlugin(&b),
 			},
 			pathListRoles(&b),
 			pathRoles(&b),
@@ -122,6 +131,14 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minRootCredRollbackAge,
 		BackendType:       logical.TypeLogical,
+		RotateCredential: func(ctx context.Context, request *logical.Request) error {
+			name, err := b.getDatabaseConfigNameFromRotationID(request.RotationID)
+			if err != nil {
+				return err
+			}
+			_, err = b.rotateRootCredentials(ctx, request, name)
+			return err
+		},
 	}
 
 	b.logger = conf.Logger
@@ -157,6 +174,9 @@ func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]m
 
 type databaseBackend struct {
 	// connections holds configured database connections by config name
+	createConnectionLock sync.Mutex
+
+	// Connections are loaded lazily, when a connection to a specific database plugin is needed.
 	connections *syncmap.SyncMap[string, *dbPluginInstance]
 	logger      log.Logger
 
@@ -200,6 +220,19 @@ func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage,
 	return &config, nil
 }
 
+// ConnectionDetails decodes the DatabaseConfig.ConnectionDetails map into a
+// struct
+func (b *databaseBackend) ConnectionDetails(ctx context.Context, config *DatabaseConfig) (*ConnectionDetails, error) {
+	cd := &ConnectionDetails{}
+
+	err := mapstructure.WeakDecode(config.ConnectionDetails, &cd)
+	if err != nil {
+		return nil, err
+	}
+
+	return cd, nil
+}
+
 type upgradeStatements struct {
 	// This json tag has a typo in it, the new version does not. This
 	// necessitates this upgrade logic.
@@ -223,6 +256,20 @@ func (b *databaseBackend) StaticRole(ctx context.Context, s logical.Storage, rol
 	return b.roleAtPath(ctx, s, roleName, databaseStaticRolePath)
 }
 
+func (b *databaseBackend) StoreStaticRole(ctx context.Context, s logical.Storage, r *roleEntry) error {
+	logger := b.Logger().With("role", r.Name, "database", r.DBName)
+	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+r.Name, r)
+	if err != nil {
+		logger.Error("unable to encode entry for storage", "error", err)
+		return err
+	}
+	if err := s.Put(ctx, entry); err != nil {
+		logger.Error("unable to write to storage", "error", err)
+		return err
+	}
+	return nil
+}
+
 func (b *databaseBackend) roleAtPath(ctx context.Context, s logical.Storage, roleName string, pathPrefix string) (*roleEntry, error) {
 	entry, err := s.Get(ctx, pathPrefix+roleName)
 	if err != nil {
@@ -240,6 +287,11 @@ func (b *databaseBackend) roleAtPath(ctx context.Context, s logical.Storage, rol
 	var result roleEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
+	}
+
+	// handle upgrade for new field Name
+	if result.Name == "" {
+		result.Name = roleName
 	}
 
 	switch {
@@ -286,8 +338,32 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 	return b.GetConnectionWithConfig(ctx, name, config)
 }
 
+func (b *databaseBackend) GetConnectionSkipVerify(ctx context.Context, s logical.Storage, name string) (*dbPluginInstance, error) {
+	config, err := b.DatabaseConfig(ctx, s, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Force the skip verifying the connection
+	config.VerifyConnection = false
+
+	return b.GetConnectionWithConfig(ctx, name, config)
+}
+
 func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name string, config *DatabaseConfig) (*dbPluginInstance, error) {
+	// fast path, reuse the existing connection
 	dbi := b.connections.Get(name)
+	if dbi != nil {
+		return dbi, nil
+	}
+
+	// slow path, create a new connection
+	// if we don't lock the rest of the operation, there is a race condition for multiple callers of this function
+	b.createConnectionLock.Lock()
+	defer b.createConnectionLock.Unlock()
+
+	// check again in case we lost the race
+	dbi = b.connections.Get(name)
 	if dbi != nil {
 		return dbi, nil
 	}
@@ -297,14 +373,24 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		return nil, err
 	}
 
-	dbw, err := newDatabaseWrapper(ctx, config.PluginName, config.PluginVersion, b.System(), b.logger)
+	// Override the configured version if there is a pinned version.
+	pinnedVersion, err := b.getPinnedVersion(ctx, config.PluginName)
+	if err != nil {
+		return nil, err
+	}
+	pluginVersion := config.PluginVersion
+	if pinnedVersion != "" {
+		pluginVersion = pinnedVersion
+	}
+
+	dbw, err := newDatabaseWrapper(ctx, config.PluginName, pluginVersion, b.System(), b.logger)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create database instance: %w", err)
 	}
 
 	initReq := v5.InitializeRequest{
 		Config:           config.ConnectionDetails,
-		VerifyConnection: true,
+		VerifyConnection: config.VerifyConnection,
 	}
 	_, err = dbw.Initialize(ctx, initReq)
 	if err != nil {
@@ -313,18 +399,22 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 	}
 
 	dbi = &dbPluginInstance{
-		database: dbw,
-		id:       id,
-		name:     name,
+		database:             dbw,
+		id:                   id,
+		name:                 name,
+		runningPluginVersion: pluginVersion,
 	}
-	oldConn := b.connections.Put(name, dbi)
-	if oldConn != nil {
-		err := oldConn.Close()
+	conn, ok := b.connections.PutIfEmpty(name, dbi)
+	if !ok {
+		// this is a bug
+		b.Logger().Warn("BUG: there was a race condition adding to the database connection map")
+		// There was already an existing connection, so we will use that and close our new one to avoid a race condition.
+		err := dbi.Close()
 		if err != nil {
-			b.Logger().Warn("Error closing database connection", "error", err)
+			b.Logger().Warn("Error closing new database connection", "error", err)
 		}
 	}
-	return dbi, nil
+	return conn, nil
 }
 
 // ClearConnection closes the database connection and
@@ -383,6 +473,89 @@ func (b *databaseBackend) clean(_ context.Context) {
 		}
 		b.gaugeCollectionProcess = nil
 	})
+}
+
+func (b *databaseBackend) dbEvent(ctx context.Context,
+	operation string,
+	path string,
+	name string,
+	modified bool,
+	additionalMetadataPairs ...string,
+) {
+	metadata := []string{
+		logical.EventMetadataModified, strconv.FormatBool(modified),
+		logical.EventMetadataOperation, operation,
+		"path", path,
+	}
+	if name != "" {
+		metadata = append(metadata, "name", name)
+	}
+	metadata = append(metadata, additionalMetadataPairs...)
+	err := logical.SendEvent(ctx, b, fmt.Sprintf("database/%s", operation), metadata...)
+	if err != nil && !errors.Is(err, framework.ErrNoEvents) {
+		b.Logger().Error("Error sending event", "error", err)
+	}
+}
+
+type AdditionalDatabaseMetadata struct {
+	key   string
+	value interface{}
+}
+
+func recordDatabaseObservation(ctx context.Context, b *databaseBackend, req *logical.Request, connectionName string, observationType string,
+	additionalMetadata ...AdditionalDatabaseMetadata,
+) {
+	metadata := map[string]interface{}{
+		"path":       req.Path,
+		"client_id":  req.ClientID,
+		"entity_id":  req.EntityID,
+		"request_id": req.ID,
+	}
+
+	if connectionName != "" {
+		metadata["connection_name"] = connectionName
+	}
+
+	for _, meta := range additionalMetadata {
+		metadata[meta.key] = meta.value
+	}
+
+	err := b.RecordObservation(ctx, observationType, metadata)
+
+	if err != nil && !errors.Is(err, framework.ErrNoObservations) {
+		b.Logger().Error("error recording observation", "observationType", observationType, "error", err)
+	}
+}
+
+func (b *databaseBackend) getDatabaseConfigNameFromRotationID(path string) (string, error) {
+	if !databaseConfigNameFromRotationIDRegex.MatchString(path) {
+		return "", fmt.Errorf("no name found from rotation ID")
+	}
+	res := databaseConfigNameFromRotationIDRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for name in rotation ID", len(res))
+	}
+	return res[1], nil
+}
+
+// GetConnectionMetrics returns a count of the active Database connections.
+// The returned count depends on the database connections map which is not
+// guaranteed to be an exhaustive list of all configured connections.
+func (b *databaseBackend) GetConnectionMetrics() (map[string]int, error) {
+	// Access the private b.connections field here
+	counts := make(map[string]int)
+	connectionsCopy := b.connections.Values()
+
+	for _, v := range connectionsCopy {
+		dbType, err := v.database.Type()
+		if err != nil {
+			continue
+		}
+
+		counts[dbType]++
+	}
+
+	return counts, nil
 }
 
 const backendHelp = `

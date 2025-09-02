@@ -5,6 +5,9 @@ description: >-
   Full list of all telemetry values provided by Vault.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # All Vault telemetry metrics
 
 For completeness, we provide a full list of available metrics below in
@@ -80,11 +83,7 @@ alphabetic order by name.
 
 @include 'telemetry-metrics/secrets/pki/tidy/success.mdx'
 
-@include 'telemetry-metrics/vault/audit/device/log_request_failure.mdx'
-
 @include 'telemetry-metrics/vault/audit/device/log_request.mdx'
-
-@include 'telemetry-metrics/vault/audit/device/log_response_failure.mdx'
 
 @include 'telemetry-metrics/vault/audit/device/log_response.mdx'
 
@@ -95,6 +94,14 @@ alphabetic order by name.
 @include 'telemetry-metrics/vault/audit/log_response_failure.mdx'
 
 @include 'telemetry-metrics/vault/audit/log_response.mdx'
+
+@include 'telemetry-metrics/vault/audit/sink_success.mdx'
+
+@include 'telemetry-metrics/vault/audit/sink_failure.mdx'
+
+@include 'telemetry-metrics/vault/audit/fallback_success.mdx'
+
+@include 'telemetry-metrics/vault/audit/fallback_miss.mdx'
 
 @include 'telemetry-metrics/vault/autopilot/failure_tolerance.mdx'
 
@@ -125,6 +132,8 @@ alphabetic order by name.
 @include 'telemetry-metrics/vault/azure/put.mdx'
 
 @include 'telemetry-metrics/vault/barrier/delete.mdx'
+
+@include 'telemetry-metrics/vault/barrier/estimated_encryptions.mdx'
 
 @include 'telemetry-metrics/vault/barrier/get.mdx'
 
@@ -308,11 +317,17 @@ alphabetic order by name.
 
 @include 'telemetry-metrics/vault/ha/rpc/client/forward/errors.mdx'
 
+@include 'telemetry-metrics/vault/client/billing_period/activity.mdx'
+
 @include 'telemetry-metrics/vault/identity/entity/active/monthly.mdx'
+
+@include 'telemetry-metrics/vault/identity/nonentity/active/monthly.mdx'
 
 @include 'telemetry-metrics/vault/identity/entity/active/partial_month.mdx'
 
 @include 'telemetry-metrics/vault/identity/entity/active/reporting_period.mdx'
+
+@include 'telemetry-metrics/vault/identity/nonentity/active/reporting_period.mdx'
 
 @include 'telemetry-metrics/vault/identity/entity/alias/count.mdx'
 
@@ -321,6 +336,14 @@ alphabetic order by name.
 @include 'telemetry-metrics/vault/identity/entity/creation.mdx'
 
 @include 'telemetry-metrics/vault/identity/num_entities.mdx'
+
+@include 'telemetry-metrics/vault/identity/pki_acme/monthly.mdx'
+
+@include 'telemetry-metrics/vault/identity/pki_acme/reporting_period.mdx'
+
+@include 'telemetry-metrics/vault/identity/secret_sync/monthly.mdx'
+
+@include 'telemetry-metrics/vault/identity/secret_sync/reporting_period.mdx'
 
 @include 'telemetry-metrics/vault/identity/upsert_entity_txn.mdx'
 
@@ -454,6 +477,28 @@ alphabetic order by name.
 
 @include 'telemetry-metrics/vault/raft-storage/transaction.mdx'
 
+@include 'telemetry-metrics/vault/raft-wal/head-truncations.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/tail-truncations.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/log-entries-read.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/log-entries-written.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/log-entry-bytes-read.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/log-entry-bytes-written.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/stable-gets.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/stable-sets.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/log-appends.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/segment-rotations.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/last-segment-age-seconds.mdx'
+
 @include 'telemetry-metrics/vault/raft/apply.mdx'
 
 @include 'telemetry-metrics/vault/raft/barrier.mdx'
@@ -538,6 +583,8 @@ alphabetic order by name.
 
 @include 'telemetry-metrics/vault/replication/fsm/last_remote_wal.mdx'
 
+@include 'telemetry-metrics/vault/replication/fsm/last_upstream_remote_wal.mdx'
+
 @include 'telemetry-metrics/vault/replication/merkle/commit_index.mdx'
 
 @include 'telemetry-metrics/vault/replication/merklediff.mdx'
@@ -583,6 +630,8 @@ alphabetic order by name.
 @include 'telemetry-metrics/vault/replication/rpc/server/conflicting_pages_request.mdx'
 
 @include 'telemetry-metrics/vault/replication/rpc/server/echo.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/last_heartbeat.mdx'
 
 @include 'telemetry-metrics/vault/replication/rpc/server/forwarding_request.mdx'
 
@@ -672,6 +721,10 @@ alphabetic order by name.
 
 @include 'telemetry-metrics/vault/secret/lease/creation.mdx'
 
+@include 'telemetry-metrics/vault/secrets-sync/destinations.mdx'
+
+@include 'telemetry-metrics/vault/secrets-sync/associations.mdx'
+
 @include 'telemetry-metrics/vault/spanner/delete.mdx'
 
 @include 'telemetry-metrics/vault/spanner/get.mdx'
@@ -731,6 +784,14 @@ alphabetic order by name.
 @include 'telemetry-metrics/vault/wal/loadwal.mdx'
 
 @include 'telemetry-metrics/vault/wal/persistwals.mdx'
+
+@include 'telemetry-metrics/vault/wal/write_controller/d.mdx'
+
+@include 'telemetry-metrics/vault/wal/write_controller/i.mdx'
+
+@include 'telemetry-metrics/vault/wal/write_controller/p.mdx'
+
+@include 'telemetry-metrics/vault/wal/write_controller/reject_fraction.mdx'
 
 @include 'telemetry-metrics/vault/zookeeper/delete.mdx'
 

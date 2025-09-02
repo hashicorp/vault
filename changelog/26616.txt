@@ -1,0 +1,5 @@
+```release-note:bug
+core/audit: Audit logging a Vault request/response will now use a minimum 5 second context timeout. 
+If the existing context deadline occurs later than 5s in the future, it will be used, otherwise a 
+new context, separate from the original will be used.
+```

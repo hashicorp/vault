@@ -1,0 +1,3 @@
+```release-note:improvement
+sys: adds configuration of the key used to sign plugin identity tokens during mount enable and tune
+```

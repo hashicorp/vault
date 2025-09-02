@@ -4,6 +4,9 @@ page_title: /sys/unseal - HTTP API
 description: The `/sys/unseal` endpoint is used to unseal the Vault.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # `/sys/unseal`
 
 @include 'alerts/restricted-root.mdx'
@@ -32,9 +35,8 @@ Either the `key` or `reset` parameter must be provided; if both are provided,
 - `reset` `(bool: false)` – Specifies if previously-provided unseal keys are
   discarded and the unseal process is reset.
 
-- `migrate` `(bool: false)` - Available in 1.0 - Used to migrate the seal
-  from shamir to autoseal or autoseal to shamir. Must be provided on all unseal
-  key calls.
+- `migrate` `(bool: false)` - Used to migrate the seal from shamir to autoseal 
+  or autoseal to shamir. Must be provided on all unseal key calls.
 
 ### Sample payload
 

@@ -1,30 +1,34 @@
 ---
 layout: docs
-page_title: Vault Enterprise Eventual Consistency
-description: Vault Enterprise Consistency Model
+page_title: Data consistency in Vault replication
+description: >-
+  Learn how Vault establishes data consistency in replicated deployments.
 ---
 
-# Vault eventual consistency
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
 
-@include 'alerts/enterprise-and-hcp-plus.mdx'
+# Eventual consistency in Vault replication
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 When running in a cluster, Vault has an eventual consistency model.
-Only one node (the leader) can write to Vault's storage.
+Only one node (the leader) can write to backend storage.
 Users generally expect read-after-write consistency: in other
 words, after writing foo=1, a subsequent read of foo should return 1. Depending
 on the Vault configuration this isn't always the case. When using performance
-standbys with Integrated Storage, or when using performance replication,
+standbys with integrated storage, or when using performance replication,
 there are some sequences of operations that don't always yield read-after-write
 consistency.
 
 ## Performance standby nodes
 
-When using the Integrated Storage backend without performance standbys, only
+When using the integrated storage backend without performance standbys, only
 a single Vault node (the active node) handles requests. Requests sent to
 regular standbys are handled by forwarding them to the active node. This Vault configuration
 gives Vault the same behavior as the default Consul consistency model.
 
-When using the Integrated Storage backend with performance standbys, both the
+When using the integrated storage backend with performance standbys, both the
 active node and performance standbys can handle requests. If a performance standby
 handles a login request, or a request that generates a dynamic secret, the
 performance standby will issue a remote procedure call (RPC) to the active node to store the token
@@ -32,7 +36,7 @@ and/or lease. If the performance standby handles any other request that
 results in a storage write, it will forward that request to the active node
 in the same way a regular standby forwards all requests.
 
-With Integrated Storage, all writes occur on the active node, which then issues
+With integrated storage, all writes occur on the active node, which then issues
 RPCs to update the local storage on every other node. Between when the active
 node writes the data to its local disk, and when those RPCs are handled on the
 other nodes to write the data to their local disks, those nodes present a stale
@@ -56,7 +60,7 @@ it won't be visible on the secondary cluster until the data has been replicated
 from the primary. Therefore, on the secondary cluster, it initially appears as if
 the data write hasn't happened.
 
-If the secondary cluster is using Integrated Storage, and the read request is
+If the secondary cluster is using integrated storage, and the read request is
 being handled on one of its performance standbys, the problem is exacerbated because it
 has to be sent first from the primary active node to the secondary active node,
 and then from there to the secondary performance standby, each of which can
@@ -68,6 +72,42 @@ groups which span across clusters. As such, when logging in to a secondary clust
 using a shared mount, Vault tries to generate an entity and alias if they don't
 already exist, and these must be stored on the primary using an RPC. Something
 similar happens with groups.
+
+## Clock skew and replication lag
+
+As seen above, both performance standbys and replication secondaries can lag
+behind the active node or the primary.  As of Vault 1.17, it's possible to get
+some insight into that lag using sys/health, sys/ha-status, and the replication
+status endpoints.
+
+Secondaries and standbys regularly issue an "echo" heartbeat RPC to their upstream
+source.  This heartbeat serves many purposes, one of them being to get a rough
+idea of whether the clocks of the client and server are in sync.  The server
+response to the heartbeat RPC includes the server's local clock time, and the
+client takes the delta in milliseconds between that time and the client's local
+clock time to compute the clock_skew_ms field.  No effort is made to factor into
+that field the time it took to actually perform the RPC, though that information
+is made available as the last_heartbeat_duration_ms field.  In other words, the
+reported clock skew has an uncertainty of up to last_heartbeat_duration_ms.
+
+Vault assumes that clocks are synced across all nodes in a cluster, and if they
+aren't, problems may arise, e.g. one node may think that a lease has expired and
+another node won't yet.  Some community-supported storage backends may have further
+problems relating to HA mode.
+
+There are fewer problems expected when clock skew exists between a replication primary
+and secondary.  However, one known issue is that the replication lag canary discussed
+next will produce surprising values if clocks aren't synced between the clusters.
+
+Non-secondary active nodes periodically write a small record to storage containing the
+local clock time for that node.  Replication secondaries read that record and compare
+it to their local clock time, calling the delta the replication_primary_canary_age_ms,
+which is exposed in the replication status endpoints.  Performance standbys do the same
+computation, exposing replication_primary_canary_age_ms in the sys/health and
+sys/ha-status endpoints.  Performance standbys and replication secondaries include
+their current replication_primary_canary_age_ms as part of their payload for the
+aforementioned "echo" heartbeat RPCs they issue, allowing the active node or primary
+cluster to report on the lag seen by their downstream clients.
 
 ## Mitigations
 
@@ -208,7 +248,6 @@ The replication option [allow_forwarding_via_token](/vault/docs/configuration/re
 can be used to enforce requests that would have returned 412s in the
 aforementioned way will be forwarded instead to the active node.
 
-Refer to the [Server Side Consistent Token FAQ](/vault/docs/faq/ssct) for details.
 
 ## Client API helpers
 

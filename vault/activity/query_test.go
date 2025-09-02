@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 )
 
 func NewTestQueryStore(t *testing.T) *PrecomputedQueryStore {
@@ -291,4 +292,355 @@ func TestQueryStore_TimeRanges(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestCombineWithCurrentMonth is a unit test that verifies that an
+// internal join method to combine a precomputed query data structure
+// with the current month data.
+// This will create various repeating mounts, new mounts, and new namespaces and
+// verify that these two structures are properly combined.
+func TestCombineWithCurrentMonth(t *testing.T) {
+	// Create two months worth of records
+	months := []*MonthRecord{
+		{
+			Counts: &CountsRecord{
+				EntityClients:    1,
+				NonEntityClients: 1,
+				SecretSyncs:      1,
+				ACMEClients:      1,
+			},
+		},
+		{
+			Counts: &CountsRecord{
+				EntityClients:    1,
+				NonEntityClients: 1,
+				SecretSyncs:      1,
+				ACMEClients:      1,
+			},
+		},
+	}
+	pq := &PrecomputedQuery{
+		Months: months,
+		Namespaces: []*NamespaceRecord{
+			{
+				NamespaceID:     "ns1",
+				Entities:        2,
+				ACMEClients:     2,
+				NonEntityTokens: 2,
+				SecretSyncs:     2,
+				Mounts: []*MountRecord{
+					{
+						MountPath: "m1",
+						Counts: &CountsRecord{
+							EntityClients:    1,
+							NonEntityClients: 1,
+							SecretSyncs:      1,
+							ACMEClients:      1,
+						},
+					},
+					{
+						MountPath: "m2",
+						Counts: &CountsRecord{
+							EntityClients:    1,
+							NonEntityClients: 1,
+							SecretSyncs:      1,
+							ACMEClients:      1,
+						},
+					},
+				},
+			},
+			{
+				NamespaceID:     "ns2",
+				Entities:        2,
+				ACMEClients:     2,
+				NonEntityTokens: 2,
+				SecretSyncs:     2,
+				Mounts: []*MountRecord{
+					{
+						MountPath: "m1",
+						Counts: &CountsRecord{
+							EntityClients:    1,
+							NonEntityClients: 1,
+							SecretSyncs:      1,
+							ACMEClients:      1,
+						},
+					},
+					{
+						MountPath: "m2",
+						Counts: &CountsRecord{
+							EntityClients:    1,
+							NonEntityClients: 1,
+							SecretSyncs:      1,
+							ACMEClients:      1,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// In the new month we will add clients to three namespaces
+	// Namespace 1: clients for m1 (already present in PQ), and clients for m2 (already present in PQ)
+	// Namespace 2: clients for m1 (already present in PQ), and clients for m3 (NOT in PQ)
+	// Namespace 2: all clients and mounts are new
+	newMonthlyRecord := &MonthRecord{
+		Namespaces: []*MonthlyNamespaceRecord{
+			{
+				NamespaceID: "ns1",
+				Counts: &CountsRecord{
+					EntityClients:    4,
+					NonEntityClients: 4,
+					SecretSyncs:      4,
+					ACMEClients:      4,
+				},
+				Mounts: []*MountRecord{
+					{
+						MountPath: "m1",
+						Counts: &CountsRecord{
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
+						},
+					},
+					{
+						MountPath: "m2",
+						Counts: &CountsRecord{
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
+						},
+					},
+				},
+			},
+			{
+				NamespaceID: "ns2",
+				Counts: &CountsRecord{
+					EntityClients:    4,
+					NonEntityClients: 4,
+					SecretSyncs:      4,
+					ACMEClients:      4,
+				},
+				Mounts: []*MountRecord{
+					{
+						MountPath: "m1",
+						Counts: &CountsRecord{
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
+						},
+					},
+					{
+						MountPath: "m3",
+						Counts: &CountsRecord{
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
+						},
+					},
+				},
+			},
+			{
+				NamespaceID: "ns3",
+				Counts: &CountsRecord{
+					EntityClients:    4,
+					NonEntityClients: 4,
+					SecretSyncs:      4,
+					ACMEClients:      4,
+				},
+				Mounts: []*MountRecord{
+					{
+						MountPath: "m1",
+						Counts: &CountsRecord{
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
+						},
+					},
+					{
+						MountPath: "m2",
+						Counts: &CountsRecord{
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
+						},
+					},
+				},
+			},
+		},
+		NewClients: &NewClientRecord{
+			Namespaces: []*MonthlyNamespaceRecord{
+				{
+					NamespaceID: "ns1",
+					Counts: &CountsRecord{
+						EntityClients:    2,
+						NonEntityClients: 2,
+						SecretSyncs:      2,
+						ACMEClients:      2,
+					},
+					Mounts: []*MountRecord{
+						{
+							MountPath: "m1",
+							Counts: &CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+						},
+						{
+							MountPath: "m2",
+							Counts: &CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+						},
+					},
+				},
+				{
+					NamespaceID: "ns2",
+					Counts: &CountsRecord{
+						EntityClients:    2,
+						NonEntityClients: 2,
+						SecretSyncs:      2,
+						ACMEClients:      2,
+					},
+					Mounts: []*MountRecord{
+						{
+							MountPath: "m1",
+							Counts: &CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+						},
+						{
+							MountPath: "m3",
+							Counts: &CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+						},
+					},
+				},
+				{
+					NamespaceID: "ns3",
+					Counts: &CountsRecord{
+						EntityClients:    2,
+						NonEntityClients: 2,
+						SecretSyncs:      2,
+						ACMEClients:      2,
+					},
+					Mounts: []*MountRecord{
+						{
+							MountPath: "m1",
+							Counts: &CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+						},
+						{
+							MountPath: "m2",
+							Counts: &CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pq.CombineWithCurrentMonth(newMonthlyRecord)
+
+	// There should be 3 namespaces (one new one from this month)
+	assert.Equal(t, 3, len(pq.Namespaces))
+	// There should be 3 months (one new month from this month)
+	assert.Equal(t, 3, len(pq.Months))
+
+	// Verify first namespace values
+	assert.Equal(t, 4, int(pq.Namespaces[0].SecretSyncs))
+	assert.Equal(t, 4, int(pq.Namespaces[0].ACMEClients))
+	assert.Equal(t, 4, int(pq.Namespaces[0].Entities))
+	assert.Equal(t, 4, int(pq.Namespaces[0].NonEntityTokens))
+	assert.Equal(t, 2, len(pq.Namespaces[0].Mounts))
+	for i := 0; i < 2; i++ {
+		compareCountsRecords(t, &CountsRecord{
+			EntityClients:    2,
+			ACMEClients:      2,
+			NonEntityClients: 2,
+			SecretSyncs:      2,
+		}, pq.Namespaces[0].Mounts[i].Counts)
+	}
+
+	// Verify second namespace values
+	assert.Equal(t, 4, int(pq.Namespaces[1].SecretSyncs))
+	assert.Equal(t, 4, int(pq.Namespaces[1].ACMEClients))
+	assert.Equal(t, 4, int(pq.Namespaces[1].Entities))
+	assert.Equal(t, 4, int(pq.Namespaces[1].NonEntityTokens))
+	assert.Equal(t, 3, len(pq.Namespaces[1].Mounts)) // We added a new mount to this namespace (m3)
+	// Check that the duplicate mount got incremented properly (m1)
+	compareCountsRecords(t, &CountsRecord{
+		EntityClients:    2,
+		ACMEClients:      2,
+		NonEntityClients: 2,
+		SecretSyncs:      2,
+	}, pq.Namespaces[1].Mounts[0].Counts)
+	// Check the old mount counts have not changed (m2)
+	compareCountsRecords(t, &CountsRecord{
+		EntityClients:    1,
+		ACMEClients:      1,
+		NonEntityClients: 1,
+		SecretSyncs:      1,
+	}, pq.Namespaces[1].Mounts[1].Counts)
+	// Check the new mounts have been added (m3)
+	compareCountsRecords(t, &CountsRecord{
+		EntityClients:    1,
+		ACMEClients:      1,
+		NonEntityClients: 1,
+		SecretSyncs:      1,
+	}, pq.Namespaces[1].Mounts[2].Counts)
+
+	// Verify third namespace counts
+	// This is a completely new namespace
+	assert.Equal(t, 2, int(pq.Namespaces[2].SecretSyncs))
+	assert.Equal(t, 2, int(pq.Namespaces[2].ACMEClients))
+	assert.Equal(t, 2, int(pq.Namespaces[2].Entities))
+	assert.Equal(t, 2, int(pq.Namespaces[2].NonEntityTokens))
+	assert.Equal(t, 2, len(pq.Namespaces[2].Mounts))
+	compareCountsRecords(t, &CountsRecord{
+		EntityClients:    1,
+		ACMEClients:      1,
+		NonEntityClients: 1,
+		SecretSyncs:      1,
+	}, pq.Namespaces[2].Mounts[0].Counts)
+	compareCountsRecords(t, &CountsRecord{
+		EntityClients:    1,
+		ACMEClients:      1,
+		NonEntityClients: 1,
+		SecretSyncs:      1,
+	}, pq.Namespaces[2].Mounts[1].Counts)
+}
+
+func compareCountsRecords(t *testing.T, record *CountsRecord, toCompare *CountsRecord) {
+	t.Helper()
+	assert.Equal(t, record.NonEntityClients, toCompare.NonEntityClients)
+	assert.Equal(t, record.ACMEClients, toCompare.ACMEClients)
+	assert.Equal(t, record.SecretSyncs, toCompare.SecretSyncs)
+	assert.Equal(t, record.EntityClients, toCompare.EntityClients)
 }

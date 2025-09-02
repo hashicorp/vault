@@ -9,15 +9,16 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers/azurite"
-
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers/azurite"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/stretchr/testify/require"
 )
 
 /// These tests run against an Azurite docker container, unless AZURE_ACCOUNT_NAME is given.
@@ -34,7 +35,7 @@ func testFixture(t *testing.T) (*AzureBackend, func()) {
 	t.Helper()
 
 	ts := time.Now().UnixNano()
-	name := fmt.Sprintf("vault-test-%d", ts)
+	name := fmt.Sprintf("vlt-%d", ts)
 	_ = os.Setenv("AZURE_BLOB_CONTAINER", name)
 
 	cleanup := func() {}
@@ -128,4 +129,117 @@ func isIMDSReachable(t *testing.T) bool {
 	}
 
 	return true
+}
+
+// TestAzureBackend_validateContainerName validates that the given container
+// names meet the Azure restrictions for container names
+func TestAzureBackend_validateContainerName(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name          string
+		containerName string
+		wantError     bool
+	}{
+		{
+			name:          "success",
+			containerName: "abcd-1234-efgh",
+			wantError:     false,
+		},
+		{
+			name:          "uppercase",
+			containerName: "Abcd-1234-efgh",
+			wantError:     true,
+		},
+		{
+			name:          "hyphen start",
+			containerName: "-abcd-1234-efgh",
+			wantError:     true,
+		},
+		{
+			name:          "hyphen end",
+			containerName: "abcd-1234-efgh-",
+			wantError:     true,
+		},
+		{
+			name:          "double hyphen",
+			containerName: "abcd-1234--efgh",
+			wantError:     true,
+		},
+		{
+			name:          "too short",
+			containerName: "ab",
+			wantError:     true,
+		},
+		{
+			name:          "too long",
+			containerName: strings.Repeat("a", 64),
+			wantError:     true,
+		},
+		{
+			name:          "other character",
+			containerName: "abcd-1234-e!gh",
+			wantError:     true,
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateContainerName(tc.containerName)
+			if tc.wantError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestAzureBackend_validateAccountName validates that the given account names
+// meet the Azure restrictions for account names
+func TestAzureBackend_validateAccountName(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name        string
+		accountName string
+		wantError   bool
+	}{
+		{
+			name:        "success",
+			accountName: "abcd1234",
+			wantError:   false,
+		},
+		{
+			name:        "uppercase",
+			accountName: "Abcd0123",
+			wantError:   true,
+		},
+		{
+			name:        "hyphen",
+			accountName: "abcd-1234",
+			wantError:   true,
+		},
+		{
+			name:        "too short",
+			accountName: "ab",
+			wantError:   true,
+		},
+		{
+			name:        "too long",
+			accountName: strings.Repeat("a", 25),
+			wantError:   true,
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateAccountName(tc.accountName)
+			if tc.wantError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }

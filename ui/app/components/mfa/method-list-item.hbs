@@ -1,0 +1,54 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<LinkedBlock
+  class="list-item-row"
+  @params={{array "vault.cluster.access.mfa.methods.method" @model.id}}
+  data-test-mfa-method-list-item={{@model.id}}
+>
+  <div class="level is-mobile">
+    <div class="level-left">
+      <div class="is-flex-row">
+        <Hds::Icon @size="24" @name={{@model.icon}} class="has-text-grey" data-test-mfa-method-list-icon={{@model.type}} />
+        <div>
+          <span class="has-text-weight-semibold has-text-black">
+            {{@model.name}}
+          </span>
+          <Hds::Badge @text={{@model.id}} class="has-left-margin-xs" />
+          {{#if @model.namespace_path}}
+            <div class="has-top-margin-xs">
+              <code class="is-size-9">
+                Namespace:
+                {{@model.namespace_path}}
+              </code>
+            </div>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+    <div class="level-right is-flex is-paddingless is-marginless">
+      <div class="level-item">
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+          <dd.ToggleIcon
+            @icon="more-horizontal"
+            @text="Manage M-F-A method"
+            @hasChevron={{false}}
+            data-test-popup-menu-trigger
+          />
+          <dd.Interactive
+            @route="vault.cluster.access.mfa.methods.method"
+            @model={{@model.id}}
+            data-test-mfa-method-menu-link="details"
+          >Details</dd.Interactive>
+          <dd.Interactive
+            @route="vault.cluster.access.mfa.methods.method.edit"
+            @model={{@model.id}}
+            data-test-mfa-method-menu-link="edit"
+          >Edit</dd.Interactive>
+        </Hds::Dropdown>
+      </div>
+    </div>
+  </div>
+</LinkedBlock>

@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
@@ -18,7 +18,7 @@ import errorMessage from 'vault/utils/error-message';
  * @param {object} model - config model that contains kubernetes configuration
  */
 export default class ConfigurePageComponent extends Component {
-  @service router;
+  @service('app-router') router;
   @service store;
 
   @tracked inferredState;

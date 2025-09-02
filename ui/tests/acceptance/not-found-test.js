@@ -6,7 +6,7 @@
 import { visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import Ember from 'ember';
 
 let adapterException;
@@ -17,7 +17,7 @@ module('Acceptance | not-found', function (hooks) {
   hooks.beforeEach(function () {
     adapterException = Ember.Test.adapter.exception;
     Ember.Test.adapter.exception = () => {};
-    return authPage.login();
+    return login();
   });
 
   hooks.afterEach(function () {
@@ -45,7 +45,7 @@ module('Acceptance | not-found', function (hooks) {
   });
 
   test('secret not-found', async function (assert) {
-    await visit('/vault/secrets/secret/show/404');
+    await visit('/vault/secrets/cubbyhole/show/404');
     assert.dom('[data-test-secret-not-found]').exists('renders the message about the secret not being found');
   });
 });

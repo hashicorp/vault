@@ -4,7 +4,6 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-import { assert } from '@ember/debug';
 import { service } from '@ember/service';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
@@ -25,14 +24,8 @@ const certDisplayFields = ['certificate', 'commonName', 'revocationTime', 'seria
 export default class PkiCertificateBaseModel extends Model {
   @service secretMountPath;
 
-  get useOpenAPI() {
-    return true;
-  }
   get backend() {
     return this.secretMountPath.currentPath;
-  }
-  getHelpUrl() {
-    assert('You must provide a helpUrl for OpenAPI', true);
   }
 
   // The attributes parsed from parse-pki-cert util live here
@@ -81,6 +74,9 @@ export default class PkiCertificateBaseModel extends Model {
     subText: 'Requested other SANs with the format <oid>;UTF8:<utf8 string value> for each entry.',
   })
   otherSans;
+
+  // Fixes warning about "no attribute or relationship with the name `role` on `pki/certificate/base`"
+  @attr('string') role;
 
   // Attrs that come back from API POST request
   @attr({ label: 'CA Chain', isCertificate: true }) caChain;

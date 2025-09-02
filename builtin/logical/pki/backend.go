@@ -5,21 +5,25 @@ package pki
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
-	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	atomic2 "go.uber.org/atomic"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -47,9 +51,9 @@ const (
  * will be forwarded to that cluster's active node and not go all the way up to the performance primary's
  * active node.
  *
- * If a certificate issue request has a role in which no_store is set to true, that node itself
- * will issue the certificate and not forward the request to the active node, as this does not
- * need to write to storage.
+ * If a certificate issue request has a role in which no_store and no_store_metadata is set to
+ * true, that node itself will issue the certificate and not forward the request to the active
+ * node, as this does not need to write to storage.
  *
  * Following the same pattern, if a managed key is involved to sign an issued certificate request
  * and the local node does not have access for some reason to it, the request will be forwarded to
@@ -123,9 +127,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 				localDeltaWALPath,
 				legacyCRLPath,
 				clusterConfigPath,
-				"crls/",
-				"certs/",
+				issuing.PathCrls,
+				issuing.PathCerts,
+				issuing.PathCertMetadata,
 				acmePathPrefix,
+				autoTidyLastRunPath,
 			},
 
 			Root: []string{
@@ -141,8 +147,20 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			WriteForwardedStorage: []string{
 				crossRevocationPath,
-				unifiedRevocationWritePathPrefix,
+				revocation.UnifiedRevocationWritePathPrefix,
 				unifiedDeltaWALPath,
+			},
+
+			Limited: []string{
+				"issue",
+				"issue/*",
+			},
+
+			Binary: []string{
+				"ocsp",           // OCSP POST
+				"ocsp/*",         // OCSP GET
+				"unified-ocsp",   // Unified OCSP POST
+				"unified-ocsp/*", // Unified OCSP GET
 			},
 		},
 
@@ -219,6 +237,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathAcmeConfig(&b),
 			pathAcmeEabList(&b),
 			pathAcmeEabDelete(&b),
+			pathAcmeMgmtAccountList(&b),
+			pathAcmeMgmtAccountRead(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -277,23 +297,22 @@ func Backend(conf *logical.BackendConfig) *backend {
 		conf.System.ReplicationState().HasState(consts.ReplicationDRSecondary)
 	b.crlBuilder = newCRLBuilder(!cannotRebuildCRLs)
 
-	// Delay the first tidy until after we've started up.
-	b.lastTidy = time.Now()
+	// Delay the first tidy until after we've started up, this will be reset within the initialize function
+	now := time.Now()
+	b.tidyStatusLock.Lock()
+	b.lastAutoTidy = now
+	b.tidyStatusLock.Unlock()
 
-	// Metrics initialization for count of certificates in storage
-	b.certCountEnabled = atomic2.NewBool(false)
-	b.publishCertCountMetrics = atomic2.NewBool(false)
-	b.certsCounted = atomic2.NewBool(false)
-	b.certCountError = "Initialize Not Yet Run, Cert Counts Unavailable"
-	b.certCount = &atomic.Uint32{}
-	b.revokedCertCount = &atomic.Uint32{}
-	b.possibleDoubleCountedSerials = make([]string, 0, 250)
-	b.possibleDoubleCountedRevokedSerials = make([]string, 0, 250)
+	// Keep track of when this mount was started up.
+	b.mountStartup = now
 
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
 	b.acmeState = NewACMEState()
+	b.certificateCounter = NewCertificateCounter(b.backendUUID)
 
+	// It is important that we call SetupEnt at the very end as
+	// some ENT backends need access to the member vars initialized above.
 	b.SetupEnt()
 	return &b
 }
@@ -310,21 +329,21 @@ type backend struct {
 
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
-	lastTidy       time.Time
+	// lastAutoTidy should be accessed through the tidyStatusLock,
+	// use getAutoTidyLastRun and writeAutoTidyLastRun instead of direct access
+	lastAutoTidy time.Time
 
-	unifiedTransferStatus *unifiedTransferStatus
+	// autoTidyBackoff a random time in the future in which auto-tidy can't start
+	// for after the system starts up to avoid a thundering herd of tidy operations
+	// at startup.
+	autoTidyBackoff time.Time
 
-	certCountEnabled                    *atomic2.Bool
-	publishCertCountMetrics             *atomic2.Bool
-	certCount                           *atomic.Uint32
-	revokedCertCount                    *atomic.Uint32
-	certsCounted                        *atomic2.Bool
-	certCountError                      string
-	possibleDoubleCountedSerials        []string
-	possibleDoubleCountedRevokedSerials []string
+	unifiedTransferStatus *UnifiedTransferStatus
+
+	certificateCounter *CertificateCounter
 
 	pkiStorageVersion atomic.Value
-	crlBuilder        *crlBuilder
+	crlBuilder        *CrlBuilder
 
 	// Write lock around issuers and keys.
 	issuersLock sync.RWMutex
@@ -332,9 +351,32 @@ type backend struct {
 	// Context around ACME operations
 	acmeState       *acmeState
 	acmeAccountLock sync.RWMutex // (Write) Locked on Tidy, (Read) Locked on Account Creation
+
+	// Track when this mount was started.
+	mountStartup time.Time
 }
 
-type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
+// BackendOps a bridge/legacy interface until we can further
+// separate out backend things into distinct packages.
+type BackendOps interface {
+	managed_key.PkiManagedKeyView
+	pki_backend.SystemViewGetter
+	pki_backend.MountInfo
+	pki_backend.Logger
+	revocation.RevokerFactory
+
+	UseLegacyBundleCaStorage() bool
+	CrlBuilder() *CrlBuilder
+	GetRevokeStorageLock() *sync.RWMutex
+	GetUnifiedTransferStatus() *UnifiedTransferStatus
+	GetAcmeState() *acmeState
+	GetRole(ctx context.Context, s logical.Storage, n string) (*issuing.RoleEntry, error)
+	GetCertificateCounter() *CertificateCounter
+}
+
+var _ BackendOps = &backend{}
+
+type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry) (*logical.Response, error)
 
 const backendHelp = `
 The PKI backend dynamically generates X509 server and client certificates.
@@ -356,7 +398,7 @@ func metricsKey(req *logical.Request, extra ...string) []string {
 func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		key := metricsKey(req, callType)
-		var role *roleEntry
+		var role *issuing.RoleEntry
 		var labels []metrics.Label
 		var err error
 
@@ -372,7 +414,7 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 		}
 		if roleMode > noRole {
 			// Get the role
-			role, err = b.getRole(ctx, req.Storage, roleName)
+			role, err = b.GetRole(ctx, req.Storage, roleName)
 			if err != nil {
 				return nil, err
 			}
@@ -403,7 +445,7 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 // initialize is used to perform a possible PKI storage migration if needed
 func (b *backend) initialize(ctx context.Context, ir *logical.InitializationRequest) error {
 	sc := b.makeStorageContext(ctx, b.storage)
-	if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
+	if err := b.CrlBuilder().reloadConfigIfRequired(sc); err != nil {
 		return err
 	}
 
@@ -412,7 +454,7 @@ func (b *backend) initialize(ctx context.Context, ir *logical.InitializationRequ
 		return err
 	}
 
-	err = b.acmeState.Initialize(b, sc)
+	err = b.GetAcmeState().Initialize(b, sc)
 	if err != nil {
 		return err
 	}
@@ -422,16 +464,45 @@ func (b *backend) initialize(ctx context.Context, ir *logical.InitializationRequ
 	if err != nil {
 		// Don't block/err initialize/startup for metrics.  Context on this call can time out due to number of certificates.
 		b.Logger().Error("Could not initialize stored certificate counts", "error", err)
-		b.certCountError = err.Error()
+		b.GetCertificateCounter().SetError(err)
 	}
 
+	// Initialize lastAutoTidy from disk
+	b.initializeLastTidyFromStorage(sc)
+
 	return b.initializeEnt(sc, ir)
+}
+
+// initializeLastTidyFromStorage reads the time we last ran auto tidy from storage and initializes
+// b.lastAutoTidy with the value. If no previous value existed, we persist time.Now() and initialize
+// b.lastAutoTidy with that value.
+func (b *backend) initializeLastTidyFromStorage(sc *storageContext) {
+	now := time.Now()
+
+	lastTidyTime, err := sc.getAutoTidyLastRun()
+	if err != nil {
+		lastTidyTime = now
+		b.Logger().Error("failed loading previous tidy last run time, using now", "error", err.Error())
+	}
+	if lastTidyTime.IsZero() {
+		// No previous time was set, persist now so we can track a starting point across Vault restarts
+		lastTidyTime = now
+		if err = b.updateLastAutoTidyTime(sc, now); err != nil {
+			b.Logger().Error("failed persisting tidy last run time", "error", err.Error())
+		}
+	}
+
+	// We bypass using updateLastAutoTidyTime here to avoid the storage write on init
+	// that normally isn't required
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+	b.lastAutoTidy = lastTidyTime
 }
 
 func (b *backend) cleanup(ctx context.Context) {
 	sc := b.makeStorageContext(ctx, b.storage)
 
-	b.acmeState.Shutdown(b)
+	b.GetAcmeState().Shutdown(b)
 
 	b.cleanupEnt(sc)
 }
@@ -462,7 +533,31 @@ func (b *backend) initializePKIIssuersStorage(ctx context.Context) error {
 	return nil
 }
 
-func (b *backend) useLegacyBundleCaStorage() bool {
+func (b *backend) BackendUUID() string {
+	return b.backendUUID
+}
+
+func (b *backend) CrlBuilder() *CrlBuilder {
+	return b.crlBuilder
+}
+
+func (b *backend) GetRevokeStorageLock() *sync.RWMutex {
+	return &b.revokeStorageLock
+}
+
+func (b *backend) GetUnifiedTransferStatus() *UnifiedTransferStatus {
+	return b.unifiedTransferStatus
+}
+
+func (b *backend) GetAcmeState() *acmeState {
+	return b.acmeState
+}
+
+func (b *backend) GetCertificateCounter() *CertificateCounter {
+	return b.certificateCounter
+}
+
+func (b *backend) UseLegacyBundleCaStorage() bool {
 	// This helper function is here to choose whether or not we use the newer
 	// issuer/key storage format or the older legacy ca bundle format.
 	//
@@ -473,6 +568,18 @@ func (b *backend) useLegacyBundleCaStorage() bool {
 	// and the storage is migrated to the new format.
 	version := b.pkiStorageVersion.Load()
 	return version == nil || version == 0
+}
+
+func (b *backend) IsSecondaryNode() bool {
+	return b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby)
+}
+
+func (b *backend) GetManagedKeyView() (logical.ManagedKeySystemView, error) {
+	managedKeyView, ok := b.System().(logical.ManagedKeySystemView)
+	if !ok {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported system view")}
+	}
+	return managedKeyView, nil
 }
 
 func (b *backend) updatePkiStorageVersion(ctx context.Context, grabIssuersLock bool) {
@@ -513,36 +620,36 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		go func() {
 			b.Logger().Info("Detected a migration completed, resetting pki storage version")
 			b.updatePkiStorageVersion(ctx, true)
-			b.crlBuilder.requestRebuildIfActiveNode(b)
+			b.CrlBuilder().requestRebuildIfActiveNode(b)
 		}()
 	case strings.HasPrefix(key, issuerPrefix):
-		if !b.useLegacyBundleCaStorage() {
+		if !b.UseLegacyBundleCaStorage() {
 			// See note in updateDefaultIssuerId about why this is necessary.
 			// We do this ahead of CRL rebuilding just so we know that things
 			// are stale.
-			b.crlBuilder.invalidateCRLBuildTime()
+			b.CrlBuilder().invalidateCRLBuildTime()
 
 			// If an issuer has changed on the primary, we need to schedule an update of our CRL,
 			// the primary cluster would have done it already, but the CRL is cluster specific so
 			// force a rebuild of ours.
-			b.crlBuilder.requestRebuildIfActiveNode(b)
+			b.CrlBuilder().requestRebuildIfActiveNode(b)
 		} else {
 			b.Logger().Debug("Ignoring invalidation updates for issuer as the PKI migration has yet to complete.")
 		}
 	case key == "config/crl":
 		// We may need to reload our OCSP status flag
-		b.crlBuilder.markConfigDirty()
+		b.CrlBuilder().markConfigDirty()
 	case key == storageAcmeConfig:
-		b.acmeState.markConfigDirty()
+		b.GetAcmeState().markConfigDirty()
 	case key == storageIssuerConfig:
-		b.crlBuilder.invalidateCRLBuildTime()
+		b.CrlBuilder().invalidateCRLBuildTime()
 	case strings.HasPrefix(key, crossRevocationPrefix):
 		split := strings.Split(key, "/")
 
 		if !strings.HasSuffix(key, "/confirmed") {
 			cluster := split[len(split)-2]
 			serial := split[len(split)-1]
-			b.crlBuilder.addCertForRevocationCheck(cluster, serial)
+			b.CrlBuilder().addCertForRevocationCheck(cluster, serial)
 		} else {
 			if len(split) >= 3 {
 				cluster := split[len(split)-3]
@@ -553,7 +660,7 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 				// ignore them). On performance primary nodes though,
 				// we do want to track them to remove them.
 				if !isNotPerfPrimary {
-					b.crlBuilder.addCertForRevocationRemoval(cluster, serial)
+					b.CrlBuilder().addCertForRevocationRemoval(cluster, serial)
 				}
 			}
 		}
@@ -562,7 +669,7 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		split := strings.Split(key, "/")
 		cluster := split[len(split)-2]
 		serial := split[len(split)-1]
-		b.crlBuilder.addCertFromCrossRevocation(cluster, serial)
+		b.CrlBuilder().addCertFromCrossRevocation(cluster, serial)
 	}
 
 	b.invalidateEnt(ctx, key)
@@ -573,7 +680,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 
 	doCRL := func() error {
 		// First attempt to reload the CRL configuration.
-		if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
+		if err := b.CrlBuilder().reloadConfigIfRequired(sc); err != nil {
 			return err
 		}
 
@@ -585,22 +692,22 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		}
 
 		// First handle any global revocation queue entries.
-		if err := b.crlBuilder.processRevocationQueue(sc); err != nil {
+		if err := b.CrlBuilder().processRevocationQueue(sc); err != nil {
 			return err
 		}
 
 		// Then handle any unified cross-cluster revocations.
-		if err := b.crlBuilder.processCrossClusterRevocations(sc); err != nil {
+		if err := b.CrlBuilder().processCrossClusterRevocations(sc); err != nil {
 			return err
 		}
 
 		// Check if we're set to auto rebuild and a CRL is set to expire.
-		if err := b.crlBuilder.checkForAutoRebuild(sc); err != nil {
+		if err := b.CrlBuilder().checkForAutoRebuild(sc); err != nil {
 			return err
 		}
 
 		// Then attempt to rebuild the CRLs if required.
-		warnings, err := b.crlBuilder.rebuildIfForced(sc)
+		warnings, err := b.CrlBuilder().RebuildIfForced(sc)
 		if err != nil {
 			return err
 		}
@@ -615,7 +722,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		// If a delta CRL was rebuilt above as part of the complete CRL rebuild,
 		// this will be a no-op. However, if we do need to rebuild delta CRLs,
 		// this would cause us to do so.
-		warnings, err = b.crlBuilder.rebuildDeltaCRLsIfForced(sc, false)
+		warnings, err = b.CrlBuilder().rebuildDeltaCRLsIfForced(sc, false)
 		if err != nil {
 			return err
 		}
@@ -649,10 +756,17 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 
 		// Check if we should run another tidy...
 		now := time.Now()
-		b.tidyStatusLock.RLock()
-		nextOp := b.lastTidy.Add(config.Interval)
-		b.tidyStatusLock.RUnlock()
+		nextOp := b.getLastAutoTidyTime().Add(config.Interval)
 		if now.Before(nextOp) {
+			return nil
+		}
+
+		if b.autoTidyBackoff.IsZero() {
+			b.autoTidyBackoff = config.CalculateStartupBackoff(b.mountStartup)
+		}
+
+		if b.autoTidyBackoff.After(now) {
+			b.Logger().Info("Auto tidy will not run as we are still within the random backoff ending at", "backoff_until", b.autoTidyBackoff)
 			return nil
 		}
 
@@ -665,9 +779,11 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		// Prevent ourselves from starting another tidy operation while
 		// this one is still running. This operation runs in the background
 		// and has a separate error reporting mechanism.
-		b.tidyStatusLock.Lock()
-		b.lastTidy = now
-		b.tidyStatusLock.Unlock()
+		err = b.updateLastAutoTidyTime(sc, now)
+		if err != nil {
+			// We don't really mind if this write fails, we'll re-run in the future
+			b.Logger().Warn("failed to persist auto tidy last run time", "error", err.Error())
+		}
 
 		// Because the request from the parent storage will be cleared at
 		// some point (and potentially reused) -- due to tidy executing in
@@ -682,7 +798,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 	}
 
 	// First tidy any ACME nonces to free memory.
-	b.acmeState.DoTidyNonces()
+	b.GetAcmeState().DoTidyNonces()
 
 	// Then run unified transfer.
 	backgroundSc := b.makeStorageContext(context.Background(), b.storage)
@@ -693,11 +809,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 	tidyErr := doAutoTidy()
 
 	// Periodically re-emit gauges so that they don't disappear/go stale
-	tidyConfig, err := sc.getAutoTidyConfig()
-	if err != nil {
-		return err
-	}
-	b.emitCertStoreMetrics(tidyConfig)
+	b.GetCertificateCounter().EmitCertStoreMetrics()
 
 	var errors error
 	if crlErr != nil {
@@ -714,7 +826,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 
 	// Check if the CRL was invalidated due to issuer swap and update
 	// accordingly.
-	if err := b.crlBuilder.flushCRLBuildTimeInvalidation(sc); err != nil {
+	if err := b.CrlBuilder().flushCRLBuildTimeInvalidation(sc); err != nil {
 		return err
 	}
 
@@ -735,211 +847,96 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		return err
 	}
 
-	b.certCountEnabled.Store(config.MaintainCount)
-	b.publishCertCountMetrics.Store(config.PublishMetrics)
-
-	if config.MaintainCount == false {
-		b.possibleDoubleCountedRevokedSerials = nil
-		b.possibleDoubleCountedSerials = nil
-		b.certsCounted.Store(true)
-		b.certCount.Store(0)
-		b.revokedCertCount.Store(0)
-		b.certCountError = "Cert Count is Disabled: enable via Tidy Config maintain_stored_certificate_counts"
+	certCounter := b.GetCertificateCounter()
+	isEnabled := certCounter.ReconfigureWithTidyConfig(config)
+	if !isEnabled {
 		return nil
 	}
 
-	// Ideally these three things would be set in one transaction, since that isn't possible, set the counts to "0",
-	// first, so count will over-count (and miss putting things in deduplicate queue), rather than under-count.
-	b.certCount.Store(0)
-	b.revokedCertCount.Store(0)
-	b.possibleDoubleCountedRevokedSerials = nil
-	b.possibleDoubleCountedSerials = nil
-	// A cert issued or revoked here will be double-counted.  That's okay, this is "best effort" metrics.
-	b.certsCounted.Store(false)
-
-	entries, err := b.storage.List(ctx, "certs/")
+	entries, err := b.storage.List(ctx, issuing.PathCerts)
 	if err != nil {
 		return err
 	}
-	b.certCount.Add(uint32(len(entries)))
 
 	revokedEntries, err := b.storage.List(ctx, "revoked/")
 	if err != nil {
 		return err
 	}
-	b.revokedCertCount.Add(uint32(len(revokedEntries)))
 
-	b.certsCounted.Store(true)
-	// Now that the metrics are set, we can switch from appending newly-stored certificates to the possible double-count
-	// list, and instead have them update the counter directly.  We need to do this so that we are looking at a static
-	// slice of possibly double counted serials.  Note that certsCounted is computed before the storage operation, so
-	// there may be some delay here.
-
-	// Sort the listed-entries first, to accommodate that delay.
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i] < entries[j]
-	})
-
-	sort.Slice(revokedEntries, func(i, j int) bool {
-		return revokedEntries[i] < revokedEntries[j]
-	})
-
-	// We assume here that these lists are now complete.
-	sort.Slice(b.possibleDoubleCountedSerials, func(i, j int) bool {
-		return b.possibleDoubleCountedSerials[i] < b.possibleDoubleCountedSerials[j]
-	})
-
-	listEntriesIndex := 0
-	possibleDoubleCountIndex := 0
-	for {
-		if listEntriesIndex >= len(entries) {
-			break
-		}
-		if possibleDoubleCountIndex >= len(b.possibleDoubleCountedSerials) {
-			break
-		}
-		if entries[listEntriesIndex] == b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
-			// This represents a double-counted entry
-			b.decrementTotalCertificatesCountNoReport()
-			listEntriesIndex = listEntriesIndex + 1
-			possibleDoubleCountIndex = possibleDoubleCountIndex + 1
-			continue
-		}
-		if entries[listEntriesIndex] < b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
-			listEntriesIndex = listEntriesIndex + 1
-			continue
-		}
-		if entries[listEntriesIndex] > b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
-			possibleDoubleCountIndex = possibleDoubleCountIndex + 1
-			continue
-		}
-	}
-
-	sort.Slice(b.possibleDoubleCountedRevokedSerials, func(i, j int) bool {
-		return b.possibleDoubleCountedRevokedSerials[i] < b.possibleDoubleCountedRevokedSerials[j]
-	})
-
-	listRevokedEntriesIndex := 0
-	possibleRevokedDoubleCountIndex := 0
-	for {
-		if listRevokedEntriesIndex >= len(revokedEntries) {
-			break
-		}
-		if possibleRevokedDoubleCountIndex >= len(b.possibleDoubleCountedRevokedSerials) {
-			break
-		}
-		if revokedEntries[listRevokedEntriesIndex] == b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
-			// This represents a double-counted revoked entry
-			b.decrementTotalRevokedCertificatesCountNoReport()
-			listRevokedEntriesIndex = listRevokedEntriesIndex + 1
-			possibleRevokedDoubleCountIndex = possibleRevokedDoubleCountIndex + 1
-			continue
-		}
-		if revokedEntries[listRevokedEntriesIndex] < b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
-			listRevokedEntriesIndex = listRevokedEntriesIndex + 1
-			continue
-		}
-		if revokedEntries[listRevokedEntriesIndex] > b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
-			possibleRevokedDoubleCountIndex = possibleRevokedDoubleCountIndex + 1
-			continue
-		}
-	}
-
-	b.possibleDoubleCountedRevokedSerials = nil
-	b.possibleDoubleCountedSerials = nil
-
-	b.emitCertStoreMetrics(config)
-
-	b.certCountError = ""
-
+	certCounter.InitializeCountsFromStorage(entries, revokedEntries)
 	return nil
 }
 
-func (b *backend) emitCertStoreMetrics(config *tidyConfig) {
-	if config.PublishMetrics == true {
-		certCount := b.certCount.Load()
-		b.emitTotalCertCountMetric(certCount)
-		revokedCertCount := b.revokedCertCount.Load()
-		b.emitTotalRevokedCountMetric(revokedCertCount)
-	}
+var _ revocation.Revoker = &revoker{}
+
+type revoker struct {
+	backend        *backend
+	storageContext *storageContext
+	crlConfig      *pki_backend.CrlConfig
 }
 
-// The "certsCounted" boolean here should be loaded from the backend certsCounted before the corresponding storage call:
-// eg. certsCounted := b.certsCounted.Load()
-func (b *backend) ifCountEnabledIncrementTotalCertificatesCount(certsCounted bool, newSerial string) {
-	if b.certCountEnabled.Load() {
-		certCount := b.certCount.Add(1)
-		switch {
-		case !certsCounted:
-			// This is unsafe, but a good best-attempt
-			if strings.HasPrefix(newSerial, "certs/") {
-				newSerial = newSerial[6:]
-			}
-			b.possibleDoubleCountedSerials = append(b.possibleDoubleCountedSerials, newSerial)
-		default:
-			if b.publishCertCountMetrics.Load() {
-				b.emitTotalCertCountMetric(certCount)
-			}
+func (r *revoker) RevokeCert(cert *x509.Certificate) (revocation.RevokeCertInfo, error) {
+	r.backend.GetRevokeStorageLock().Lock()
+	defer r.backend.GetRevokeStorageLock().Unlock()
+	resp, err := revokeCert(r.storageContext, r.crlConfig, cert)
+	return parseRevokeCertOutput(resp, err)
+}
+
+func (r *revoker) RevokeCertBySerial(serial string) (revocation.RevokeCertInfo, error) {
+	// NOTE: tryRevokeCertBySerial grabs the revoke storage lock for us
+	resp, err := tryRevokeCertBySerial(r.storageContext, r.crlConfig, serial)
+	return parseRevokeCertOutput(resp, err)
+}
+
+// There are a bunch of reasons that a certificate will/won't be revoked. Sadly we will need a further
+// refactoring but for now handle the basics of the reasons/response objects back to a usable object
+// that doesn't directly reply to the API request
+func parseRevokeCertOutput(resp *logical.Response, err error) (revocation.RevokeCertInfo, error) {
+	if err != nil {
+		return revocation.RevokeCertInfo{}, err
+	}
+
+	if resp == nil {
+		// nil, nil response, most likely means the certificate was missing,
+		// but *might* be other things such as a tainted mount
+		return revocation.RevokeCertInfo{}, nil
+	}
+
+	if resp.IsError() {
+		// There are a few reasons we return a response error but not an error,
+		// such as UserError's or they tried to revoke the CA
+		return revocation.RevokeCertInfo{}, resp.Error()
+	}
+
+	// It is possible we don't return the field for various reasons if just a bunch of warnings are set.
+	if revTimeRaw, ok := resp.Data["revocation_time"]; ok {
+		revTimeInt, err := parseutil.ParseInt(revTimeRaw)
+		if err != nil {
+			// Lets me lenient for now
+			revTimeInt = 0
 		}
+		revTime := time.Unix(revTimeInt, 0)
+		return revocation.RevokeCertInfo{
+			RevocationTime: revTime,
+		}, nil
 	}
+
+	// Since we don't really know what went wrong if anything, for example the certificate might
+	// have been expired or close to expiry, lets punt on it for now
+	return revocation.RevokeCertInfo{
+		Warnings: resp.Warnings,
+	}, nil
 }
 
-func (b *backend) ifCountEnabledDecrementTotalCertificatesCountReport() {
-	if b.certCountEnabled.Load() {
-		certCount := b.decrementTotalCertificatesCountNoReport()
-		if b.publishCertCountMetrics.Load() {
-			b.emitTotalCertCountMetric(certCount)
-		}
+func (b *backend) GetRevoker(ctx context.Context, s logical.Storage) (revocation.Revoker, error) {
+	sc := b.makeStorageContext(ctx, s)
+	crlConfig, err := b.CrlBuilder().GetConfigWithUpdate(sc)
+	if err != nil {
+		return nil, err
 	}
-}
-
-func (b *backend) emitTotalCertCountMetric(certCount uint32) {
-	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(certCount))
-}
-
-// Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
-// Does not respect whether-we-are-counting backend information.
-func (b *backend) decrementTotalCertificatesCountNoReport() uint32 {
-	newCount := b.certCount.Add(^uint32(0))
-	return newCount
-}
-
-// The "certsCounted" boolean here should be loaded from the backend certsCounted before the corresponding storage call:
-// eg. certsCounted := b.certsCounted.Load()
-func (b *backend) ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted bool, newSerial string) {
-	if b.certCountEnabled.Load() {
-		newRevokedCertCount := b.revokedCertCount.Add(1)
-		switch {
-		case !certsCounted:
-			// This is unsafe, but a good best-attempt
-			if strings.HasPrefix(newSerial, "revoked/") { // allow passing in the path (revoked/serial) OR the serial
-				newSerial = newSerial[8:]
-			}
-			b.possibleDoubleCountedRevokedSerials = append(b.possibleDoubleCountedRevokedSerials, newSerial)
-		default:
-			if b.publishCertCountMetrics.Load() {
-				b.emitTotalRevokedCountMetric(newRevokedCertCount)
-			}
-		}
-	}
-}
-
-func (b *backend) ifCountEnabledDecrementTotalRevokedCertificatesCountReport() {
-	if b.certCountEnabled.Load() {
-		revokedCertCount := b.decrementTotalRevokedCertificatesCountNoReport()
-		if b.publishCertCountMetrics.Load() {
-			b.emitTotalRevokedCountMetric(revokedCertCount)
-		}
-	}
-}
-
-func (b *backend) emitTotalRevokedCountMetric(revokedCertCount uint32) {
-	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(revokedCertCount))
-}
-
-// Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
-// Does not respect whether-we-are-counting backend information.
-func (b *backend) decrementTotalRevokedCertificatesCountNoReport() uint32 {
-	newRevokedCertCount := b.revokedCertCount.Add(^uint32(0))
-	return newRevokedCertCount
+	return &revoker{
+		backend:        b,
+		crlConfig:      crlConfig,
+		storageContext: sc,
+	}, nil
 }

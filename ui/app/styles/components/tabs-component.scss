@@ -1,3 +1,6 @@
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -11,7 +14,7 @@
 
 .tabs {
   align-items: stretch;
-  box-shadow: inset 0 -1px 0 $grey-light;
+  box-shadow: inset 0 -1px 0 var(--token-color-palette-neutral-300);
   display: flex;
   justify-content: space-between;
   overflow: hidden;
@@ -29,28 +32,23 @@
       &:focus {
         box-shadow: none;
       }
-      &.active,
-      &.active .tab {
-        border-color: $blue;
-        color: $blue;
+      &.active {
+        border-color: var(--token-color-palette-blue-200);
+        color: var(--token-color-palette-blue-200);
       }
     }
     li {
       // solves for tools -> sub-tabs like "Unwrap data" -> "Data"
       &.is-active {
-        border-bottom: 2px solid $blue;
-        color: $blue;
-
-        > button {
-          color: $blue;
-        }
+        border-bottom: 2px solid var(--token-color-palette-blue-200);
+        color: var(--token-color-palette-blue-200);
       }
       // solves for tabs on auth mounts & secrets engines
       > a {
         &.active {
-          color: $blue;
+          color: var(--token-color-palette-blue-200);
           background-color: transparent;
-          border-bottom: 2px solid $blue;
+          border-bottom: 2px solid var(--token-color-palette-blue-200);
         }
       }
     }
@@ -61,10 +59,9 @@
       box-shadow: none;
     }
     &.active a,
-    &.is-active a,
-    &.active .tab {
-      border-color: $blue;
-      color: $blue;
+    &.is-active a {
+      border-color: var(--token-color-palette-blue-200);
+      color: var(--token-color-palette-blue-200);
     }
   }
   // important for auth tabs in active state, otherwise the border-bottom will not show.
@@ -73,25 +70,23 @@
     display: flex;
     justify-content: center;
     vertical-align: top;
-  }
-
-  a,
-  .tab {
     border-bottom: 2px solid transparent;
-    color: $grey;
-    font-weight: $font-weight-semibold;
-    padding: $size-6 $size-8 $size-8;
+    color: var(--token-color-palette-neutral-400);
+    font-weight: font_variables.$font-weight-semibold;
+    padding: size_variables.$spacing-14 size_variables.$spacing-12 size_variables.$spacing-12;
     text-decoration: none;
-    transition: background-color $speed, border-color $speed;
+    transition:
+      background-color size_variables.$speed,
+      border-color size_variables.$speed;
 
     &:hover,
     &:active {
-      border-color: $grey-light;
+      border-color: var(--token-color-palette-neutral-300);
     }
 
     &:hover {
-      background-color: $ui-gray-050;
-      color: $grey-darkest;
+      background-color: var(--token-color-palette-neutral-50);
+      color: var(--token-color-palette-neutral-600);
     }
   }
 

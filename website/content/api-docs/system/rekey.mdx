@@ -4,6 +4,9 @@ page_title: /sys/rekey - HTTP API
 description: The `/sys/rekey` endpoints are used to rekey the unseal keys for Vault.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # `/sys/rekey`
 
 @include 'alerts/restricted-root.mdx'
@@ -122,9 +125,27 @@ well as any progress made. This must be called to change the parameters of the
 rekey. Note: verification is still a part of a rekey. If rekeying is canceled
 during the verification flow, the current unseal keys remain valid.
 
+<Note title="Unrestricted endpoint">
+  Clients can call the endpoint without authenticating to Vault.
+</Note>
+
 | Method   | Path              |
 | :------- | :---------------- |
 | `DELETE` | `/sys/rekey/init` |
+
+### Parameters
+
+- `nonce` `(string: <optional>)` – Specifies the nonce of the rekey operation. If
+  the rekey was initialized within the last 10 minutes, you must provide the
+  nonce to cancel the operation.
+
+### Sample payload
+
+```json
+{
+  "nonce": "abcd1234..."
+}
+```
 
 ### Sample request
 
@@ -132,6 +153,7 @@ during the verification flow, the current unseal keys remain valid.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/sys/rekey/init
 ```
 

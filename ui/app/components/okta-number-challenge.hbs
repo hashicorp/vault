@@ -1,0 +1,36 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container @level="high" @hasBorder={{true}} class="overflow-auto" data-test-okta-number-challenge>
+  <div class="has-padding-l">
+    <p data-test-okta-number-challenge-description>
+      To finish signing in, you will need to complete an additional MFA step.
+    </p>
+    {{#if @hasError}}
+      <MessageError class="has-top-margin-s" @errorMessage={{@hasError}} />
+    {{else if @correctAnswer}}
+      <p class="has-top-margin-s has-text-black has-text-weight-semibold" data-test-verification-type>
+        Okta verification
+      </p>
+      <p data-test-description>Select the following number to complete verification:</p>
+      <h1 class="title has-font-weight-normal has-top-margin-m has-bottom-margin-s" data-test-answer>
+        {{@correctAnswer}}
+      </h1>
+    {{else}}
+      <div class="has-top-margin-l has-bottom-margin-m is-flex-row">
+        <Hds::Icon @name="loading" @isInline={{true}} />
+        <p class="has-left-margin-xs" data-test-loading>Please wait...</p>
+      </div>
+    {{/if}}
+  </div>
+  <Hds::Button
+    @text="Back to login"
+    @icon="arrow-left"
+    @color="tertiary"
+    class="has-bottom-margin-s has-left-margin-s"
+    {{on "click" @onReturnToLogin}}
+    data-test-back-button
+  />
+</Hds::Card::Container>

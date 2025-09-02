@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/mitchellh/cli"
 )
 
 func TestUnixListener(t *testing.T) {

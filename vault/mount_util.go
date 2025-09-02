@@ -33,7 +33,7 @@ func runFilteredPathsEvaluation(context.Context, *Core, bool) error           { 
 // ViewPath returns storage prefix for the view
 func (e *MountEntry) ViewPath() string {
 	switch e.Type {
-	case systemMountType:
+	case mountTypeSystem:
 		return systemBarrierPrefix
 	case "token":
 		return path.Join(systemBarrierPrefix, tokenSubPath) + "/"
@@ -75,4 +75,8 @@ func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
 
 func (c *Core) entBuiltinPluginMetrics(ctx context.Context, entry *MountEntry, val float32) error {
 	return nil
+}
+
+func newSnapshotStorageRouter(c *Core, storage logical.Storage) logical.Storage {
+	return storage
 }

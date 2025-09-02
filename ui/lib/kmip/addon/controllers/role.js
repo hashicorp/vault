@@ -4,12 +4,12 @@
  */
 
 import Controller from '@ember/controller';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 
 export default class RoleController extends Controller {
   @service flashMessages;
-  @service router;
+  @service('app-router') router;
 
   @action
   async deleteRole() {

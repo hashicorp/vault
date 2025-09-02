@@ -1,12 +1,15 @@
 ---
 layout: docs
-page_title: Entropy Augmentation - Configuration
+page_title: Configure entropy augmentation
 description: >-
-  Entropy augmentation enables Vault to sample entropy from external
-  cryptographic modules.
+  Configure entropy augmentation to sample entropy from external cryptographic
+  modules when sealing Vault.
 ---
 
-# `Entropy augmentation` seal
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# Configure entropy augmentation
 
 Entropy augmentation enables Vault to sample entropy from external cryptographic modules.
 Sourcing external entropy is done by configuring a supported [Seal](/vault/docs/configuration/seal) type which
@@ -22,7 +25,7 @@ from seals in priority order, using bytes from the first available and online se
 
 A valid Vault Enterprise license is required for Entropy Augmentation.
 
-~> **Warning** This feature is not available with FIPS 140-2 Inside variants of Vault.
+~> **Warning** This feature is not available with FIPS 140-3 Inside variants of Vault.
 
 Additionally, the following software packages and enterprise modules are required for sourcing entropy
 via the [PKCS11 seal](/vault/docs/configuration/seal/pkcs11):
@@ -59,3 +62,5 @@ These parameters apply to the `entropy` stanza in the Vault configuration file:
 - `mode` `(string: <required>)`: The mode determines which Vault operations requiring
   entropy will sample entropy from the external source. Currently, the only mode supported
   is `augmentation` which sources entropy for [Critical Security Parameters (CSPs)](/vault/docs/enterprise/entropy-augmentation#critical-security-parameters-csps).
+- `seal_name` `(string: '')`: Specifies which seal (by name) in a   [Seal HA](/vault/docs/concepts/seal#seal-high-availability) setup to use to  source entropy. 
+  By default, Vault sources entropy from the first available seal moving from lowest to highest priority.

@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -26,6 +26,7 @@ type PluginRuntimeRegisterCommand struct {
 	flagCgroupParent string
 	flagCPUNanos     int64
 	flagMemoryBytes  int64
+	flagRootless     bool
 }
 
 func (c *PluginRuntimeRegisterCommand) Synopsis() string {
@@ -86,6 +87,15 @@ func (c *PluginRuntimeRegisterCommand) Flags() *FlagSets {
 		Target:     &c.flagMemoryBytes,
 		Completion: complete.PredictAnything,
 		Usage:      "Memory limit to set per container in bytes. Defaults to no limit.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:       "rootless",
+		Target:     &c.flagRootless,
+		Completion: complete.PredictAnything,
+		Usage: "Whether the container runtime is configured to run as a " +
+			"non-privileged (non-root) user. Required if the plugin container " +
+			"image is also configured to run as a non-root user.",
 	})
 
 	return set
@@ -151,6 +161,7 @@ func (c *PluginRuntimeRegisterCommand) Run(args []string) int {
 		CgroupParent: cgroupParent,
 		CPU:          c.flagCPUNanos,
 		Memory:       c.flagMemoryBytes,
+		Rootless:     c.flagRootless,
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error registering plugin runtime %s: %s", runtimeName, err))
 		return 2

@@ -6,7 +6,12 @@ description: >-
   username and password.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Userpass auth method
+
+@include 'tips/custom-authn.mdx'
 
 The `userpass` auth method allows users to authenticate with Vault using
 a username and password combination.
@@ -17,6 +22,10 @@ passwords from an external source.
 
 The method lowercases all submitted usernames, e.g. `Mary` and `mary` are the
 same entry.
+
+This documentation assumes the Username & Password method is mounted at the default `/auth/userpass`
+path in Vault. Since it is possible to enable auth methods at any location,
+please update your CLI calls accordingly with the `-path` flag.
 
 ## Authentication
 
@@ -69,7 +78,8 @@ management tool.
    $ vault auth enable userpass
    ```
 
-   This enables the userpass auth method at `auth/userpass`. To enable it at a different path, use the `-path` flag:
+  Enable the `userpass` auth method at the default `auth/userpass` path.
+  You can choose to enable the auth method at a different path with the `-path` flag:
 
    ```shell-session
    $ vault auth enable -path=<path> userpass

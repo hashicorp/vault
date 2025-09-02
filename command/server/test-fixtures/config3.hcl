@@ -13,6 +13,7 @@ cluster_addr = "top_level_cluster_addr"
 listener "tcp" {
   address = "127.0.0.1:443"
   chroot_namespace="admin/"
+  disable_request_limiter = false
 }
 
 backend "consul" {
@@ -57,3 +58,6 @@ raw_storage_endpoint = true
 disable_sealwrap = true
 disable_sentinel_trace = true
 administrative_namespace_path = "admin/"
+enable_post_unseal_trace = true
+post_unseal_trace_directory = "/tmp"
+remove_irrevocable_lease_after = "30d"

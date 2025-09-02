@@ -1,3 +1,7 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/size_variables';
+@use '../core/box.scss';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -6,10 +10,12 @@
 .control-group,
 .control-group-success {
   @extend .box;
-  box-shadow: $box-shadow-middle, 0 0 1px $grey-dark;
+  box-shadow:
+    box-shadow_variables.$box-shadow-middle,
+    0 0 1px var(--token-color-palette-neutral-500);
 }
 .control-group-success.is-editor {
-  background: $grey-lightest;
+  background: var(--token-color-palette-neutral-50);
 }
 
 .control-group a {
@@ -17,9 +23,9 @@
 }
 .control-group-header {
   box-shadow: 0 0 1px currentColor;
-  padding: $size-9 $size-6;
-  background: $grey-lightest;
-  color: $grey-dark;
+  padding: size_variables.$spacing-10 size_variables.$spacing-14;
+  background: var(--token-color-palette-neutral-50);
+  color: var(--token-color-palette-neutral-500);
   position: relative;
   strong {
     color: currentColor;
@@ -27,10 +33,10 @@
 }
 
 .control-group-header.is-success {
-  color: $green-dark;
-  background: $green-lightest;
+  color: var(--token-color-palette-green-300);
+  background: var(--token-color-palette-green-50);
 }
 
 .control-group .authorizations {
-  margin-top: $size-9;
+  margin-top: size_variables.$spacing-10;
 }

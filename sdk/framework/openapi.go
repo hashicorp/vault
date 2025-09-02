@@ -116,6 +116,7 @@ type OASPathItem struct {
 
 	Get    *OASOperation `json:"get,omitempty"`
 	Post   *OASOperation `json:"post,omitempty"`
+	Patch  *OASOperation `json:"patch,omitempty"`
 	Delete *OASOperation `json:"delete,omitempty"`
 }
 
@@ -244,10 +245,12 @@ func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocum
 func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
 	var sudoPaths []string
 	var unauthPaths []string
+	var allowSnapshotReadPaths []string
 
 	if backend.PathsSpecial != nil {
 		sudoPaths = backend.PathsSpecial.Root
 		unauthPaths = backend.PathsSpecial.Unauthenticated
+		allowSnapshotReadPaths = backend.PathsSpecial.AllowSnapshotRead
 	}
 
 	// Convert optional parameters into distinct patterns to be processed independently.
@@ -277,6 +280,7 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 		pi.Sudo = specialPathMatch(path, sudoPaths)
 		pi.Unauthenticated = specialPathMatch(path, unauthPaths)
 		pi.DisplayAttrs = withoutOperationHints(p.DisplayAttrs)
+		allowSnapshotRead := specialPathMatch(path, allowSnapshotReadPaths)
 
 		// If the newer style Operations map isn't defined, create one from the legacy fields.
 		operations := p.Operations
@@ -328,6 +332,14 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 				continue
 			}
 
+			// OpenAPI doesn't allow for multiple operations on the same path and with the same HTTP method, so both
+			// Create, Update and Recover which operate on either POST or PUT methods are folded into Update (under POST
+			// method on OpenAPI). Furthermore, so far there's no use case for a Recover operation on an endpoint that
+			// doesn't support either Create or Update, so we skip it here as well.
+			if opType == logical.RecoverOperation {
+				continue
+			}
+
 			if opType == logical.CreateOperation {
 				pi.CreateSupported = true
 
@@ -354,9 +366,11 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 			op.OperationID = operationID
 
 			switch opType {
-			// For the operation types which map to POST/PUT methods, and so allow for request body parameters,
+			// For the operation types which map to POST/PUT/PATCH methods, and so allow for request body parameters,
 			// prepare the request body definition
 			case logical.CreateOperation:
+				fallthrough
+			case logical.PatchOperation:
 				fallthrough
 			case logical.UpdateOperation:
 				s := &OASSchema{
@@ -377,9 +391,36 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 
 				// Contrary to what one might guess, fields marked with "Query: true" are only query fields when the
 				// request method is one which does not allow for a request body - they are still body fields when
-				// dealing with a POST/PUT request.
+				// dealing with a POST/PUT/PATCH request.
 				for name, field := range queryFields {
 					addFieldToOASSchema(s, name, field)
+				}
+
+				// The recover operation is a special case, it's under the same POST/PUT method as Create and
+				// Update, but it's triggered via a query parameter, not a field in the body.
+				if operations[logical.RecoverOperation] != nil && opType != logical.PatchOperation {
+					op.Parameters = append(op.Parameters, OASParameter{
+						Name:        "recover_snapshot_id",
+						Description: "Triggers a recover operation using the given snapshot ID. Request body is ignored when a recover operation is requested.",
+						In:          "query",
+						Deprecated:  true,
+						Schema:      &OASSchema{Type: "string"},
+					}, OASParameter{
+						Name:        "X-Vault-Recover-Snapshot-Id",
+						Description: "Triggers a recover operation using the given snapshot ID. Request body is ignored when a recover operation is requested.",
+						In:          "header",
+						Schema:      &OASSchema{Type: "string"},
+					})
+					// If there are path fields, it will also be possible to recover from a path with
+					// different path field values than the request path.
+					if len(pathFields) > 0 {
+						op.Parameters = append(op.Parameters, OASParameter{
+							Name:        "X-Vault-Recover-Source-Path",
+							Description: "The source path to recover from. Only used if a snapshot ID is also supplied. If not specified, the source path is assumed to be the same as the request path.",
+							In:          "header",
+							Schema:      &OASSchema{Type: "string"},
+						})
+					}
 				}
 
 				// Make the ordering deterministic, so that the generated OpenAPI spec document, observed over several
@@ -461,6 +502,15 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 						Deprecated: field.Deprecated,
 					}
 					op.Parameters = append(op.Parameters, p)
+				}
+
+				if allowSnapshotRead && opType != logical.DeleteOperation {
+					op.Parameters = append(op.Parameters, OASParameter{
+						Name:        "read_snapshot_id",
+						Description: "Targets the read operation to the provided loaded snapshot Id",
+						In:          "query",
+						Schema:      &OASSchema{Type: "string"},
+					})
 				}
 
 				// Sort parameters for a stable output
@@ -571,6 +621,8 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 				pi.Delete = op
 			case logical.ListOperation:
 				listOperation = op
+			case logical.PatchOperation:
+				pi.Patch = op
 			}
 		}
 
@@ -579,13 +631,14 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 		// the two following blocks of code (non-list, and list) write an OpenAPI path to the output document, then the
 		// first one will definitely not have a trailing slash.
 		originalPathHasTrailingSlash := strings.HasSuffix(path, "/")
-		if originalPathHasTrailingSlash && (pi.Get != nil || pi.Post != nil || pi.Delete != nil) {
+		if originalPathHasTrailingSlash && (pi.Get != nil || pi.Post != nil || pi.Delete != nil || pi.Patch != nil) {
 			backend.Logger().Warn(
 				"OpenAPI spec generation: discarding impossible-to-invoke non-list operations from path with "+
 					"required trailing slash; this is a bug in the backend code", "path", path)
 			pi.Get = nil
 			pi.Post = nil
 			pi.Delete = nil
+			pi.Patch = nil
 		}
 
 		// Write the regular, non-list, OpenAPI path to the OpenAPI document, UNLESS we generated a ListOperation, and
@@ -597,7 +650,7 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 		// to provide documentation to a human that an endpoint exists, even if it has no invokable OpenAPI operations.
 		// Examples of this include kv-v2's ".*" endpoint (regex cannot be translated to OpenAPI parameters), and the
 		// auth/oci/login endpoint (implements ResolveRoleOperation only, only callable from inside Vault).
-		if listOperation == nil || pi.Get != nil || pi.Post != nil || pi.Delete != nil {
+		if listOperation == nil || pi.Get != nil || pi.Post != nil || pi.Delete != nil || pi.Patch != nil {
 			openAPIPath := "/" + path
 			if doc.Paths[openAPIPath] != nil {
 				backend.Logger().Warn(
@@ -1174,24 +1227,26 @@ func hyphenatedToTitleCase(in string) string {
 // cleanedResponse is identical to logical.Response but with nulls
 // removed from from JSON encoding
 type cleanedResponse struct {
-	Secret   *logical.Secret            `json:"secret,omitempty"`
-	Auth     *logical.Auth              `json:"auth,omitempty"`
-	Data     map[string]interface{}     `json:"data,omitempty"`
-	Redirect string                     `json:"redirect,omitempty"`
-	Warnings []string                   `json:"warnings,omitempty"`
-	WrapInfo *wrapping.ResponseWrapInfo `json:"wrap_info,omitempty"`
-	Headers  map[string][]string        `json:"headers,omitempty"`
+	Secret    *logical.Secret            `json:"secret,omitempty"`
+	Auth      *logical.Auth              `json:"auth,omitempty"`
+	Data      map[string]interface{}     `json:"data,omitempty"`
+	Redirect  string                     `json:"redirect,omitempty"`
+	Warnings  []string                   `json:"warnings,omitempty"`
+	WrapInfo  *wrapping.ResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers   map[string][]string        `json:"headers,omitempty"`
+	MountType string                     `json:"mount_type,omitempty"`
 }
 
 func cleanResponse(resp *logical.Response) *cleanedResponse {
 	return &cleanedResponse{
-		Secret:   resp.Secret,
-		Auth:     resp.Auth,
-		Data:     resp.Data,
-		Redirect: resp.Redirect,
-		Warnings: resp.Warnings,
-		WrapInfo: resp.WrapInfo,
-		Headers:  resp.Headers,
+		Secret:    resp.Secret,
+		Auth:      resp.Auth,
+		Data:      resp.Data,
+		Redirect:  resp.Redirect,
+		Warnings:  resp.Warnings,
+		WrapInfo:  resp.WrapInfo,
+		Headers:   resp.Headers,
+		MountType: resp.MountType,
 	}
 }
 
@@ -1220,7 +1275,7 @@ func (d *OASDocument) CreateOperationIDs(context string) {
 
 	for _, path := range paths {
 		pi := d.Paths[path]
-		for _, method := range []string{"get", "post", "delete"} {
+		for _, method := range []string{"get", "post", "delete", "patch"} {
 			var oasOperation *OASOperation
 			switch method {
 			case "get":
@@ -1229,6 +1284,8 @@ func (d *OASDocument) CreateOperationIDs(context string) {
 				oasOperation = pi.Post
 			case "delete":
 				oasOperation = pi.Delete
+			case "patch":
+				oasOperation = pi.Patch
 			}
 
 			if oasOperation == nil {

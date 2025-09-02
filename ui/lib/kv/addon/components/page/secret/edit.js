@@ -1,14 +1,15 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
+import { isAdvancedSecret } from 'core/utils/advanced-secret';
 
 /**
  * @module KvSecretEdit is used for creating a new version of a secret
@@ -30,7 +31,7 @@ import errorMessage from 'vault/utils/error-message';
 export default class KvSecretEdit extends Component {
   @service controlGroup;
   @service flashMessages;
-  @service router;
+  @service('app-router') router;
 
   @tracked showJsonView = false;
   @tracked showDiff = false;
@@ -42,6 +43,10 @@ export default class KvSecretEdit extends Component {
   constructor() {
     super(...arguments);
     this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
+    if (isAdvancedSecret(this.originalSecret)) {
+      // Default to JSON view if advanced
+      this.showJsonView = true;
+    }
   }
 
   get showOldVersionAlert() {
@@ -79,9 +84,7 @@ export default class KvSecretEdit extends Component {
         const { secret } = this.args;
         yield secret.save();
         this.flashMessages.success(`Successfully created new version of ${secret.path}.`);
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', {
-          queryParams: { version: secret?.version },
-        });
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
       }
     } catch (error) {
       let message = errorMessage(error);
@@ -97,6 +100,6 @@ export default class KvSecretEdit extends Component {
 
   @action
   onCancel() {
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details');
+    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
   }
 }

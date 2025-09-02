@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/posener/complete"
 )
 
@@ -36,9 +36,17 @@ Usage: vault read [options] PATH
   Reads data from Vault at the given path. This can be used to read secrets,
   generate dynamic credentials, get configuration details, and more.
 
-  Read a secret from the static secrets engine:
+  Read details of your own token:
 
-      $ vault read secret/my-secret
+      $ vault read auth/token/lookup-self
+
+  Read entity details of a given ID:
+
+      $ vault read identity/entity/id/2f09126d-d161-abb8-2241-555886491d97
+
+  Generate credentials for my-role in an AWS secrets engine:
+
+      $ vault read aws/creds/my-role
 
   For a full list of examples and paths, please see the documentation that
   corresponds to the secrets engine in use.
@@ -49,7 +57,7 @@ Usage: vault read [options] PATH
 }
 
 func (c *ReadCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetSnapshot)
 }
 
 func (c *ReadCommand) AutocompleteArgs() complete.Predictor {
@@ -97,6 +105,13 @@ func (c *ReadCommand) Run(args []string) int {
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
 		return 1
+	}
+
+	if c.flagSnapshotID != "" {
+		if data == nil {
+			data = make(map[string][]string)
+		}
+		data["read_snapshot_id"] = []string{c.flagSnapshotID}
 	}
 
 	if Format(c.UI) != "raw" {

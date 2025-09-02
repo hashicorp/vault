@@ -1,0 +1,41 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if (eq this.attrsForCurrentMode.mode "initializing")}}
+  The cluster is initializing replication. This may take some time.
+{{else}}
+  <p>{{this.cluster.replicationModeStatus.cluster_id}}</p>
+  <div class="replication">
+    <ReplicationPage @model={{this.cluster}} as |Page|>
+      <Page.dashboard
+        @data={{this.cluster}}
+        @componentToRender={{if
+          (eq this.attrsForCurrentMode.mode "secondary")
+          "replication-secondary-card"
+          "replication-primary-card"
+        }}
+        as |Dashboard|
+      >
+        {{#if (eq this.attrsForCurrentMode.mode "secondary")}}
+          <Dashboard.card @title="Status" />
+          <Dashboard.card @title="Primary cluster" />
+        {{else}}
+          <Dashboard.card
+            @title="State"
+            @description="The cluster’s current operating state."
+            @glyph={{get (cluster-states this.attrsForCurrentMode.state) "glyph"}}
+            @metric={{this.attrsForCurrentMode.state}}
+          />
+          <Dashboard.card
+            @title="Last WAL entry"
+            @description="Index of last Write Ahead Logs entry written on local storage. Updates every ten seconds."
+            @metric={{format-number this.attrsForCurrentMode.lastWAL}}
+          />
+          <Dashboard.secondaryCard @cluster={{this.cluster}} @replicationAttrs={{this.attrsForCurrentMode}} />
+        {{/if}}
+      </Page.dashboard>
+    </ReplicationPage>
+  </div>
+{{/if}}

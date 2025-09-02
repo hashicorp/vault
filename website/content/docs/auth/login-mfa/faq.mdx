@@ -1,8 +1,12 @@
 ---
 layout: docs
 page_title: Login MFA FAQ
-description: An FAQ page to answer the most commonly asked questions about login mfa.
+description: >-
+  Commonly questions about Vault login MFA and multi-factor authentication.
 ---
+
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
 
 # Login MFA FAQ
 
@@ -11,7 +15,7 @@ This FAQ section contains frequently asked questions about the Login MFA feature
 - [Q: What MFA features can I access if I upgrade to Vault version 1.10?](#q-what-mfa-features-can-i-access-if-i-upgrade-to-vault-version-1-10)
 - [Q: What are the various MFA workflows that are available to me as a Vault user as of Vault version 1.10, and how are they different?](#q-what-are-the-various-mfa-workflows-that-are-available-to-me-as-a-vault-user-as-of-vault-version-1-10-and-how-are-they-different)
 - [Q: What is the Legacy MFA feature?](#q-what-is-the-legacy-mfa-feature)
-- [Q: Will HCP Vault support MFA?](#q-will-hcp-vault-support-mfa)
+- [Q: Will HCP Vault Dedicated support MFA?](#q-will-hcp-vault-support-mfa)
 - [Q: What is Single-Phase MFA vs. Two-Phase MFA?](#q-what-is-single-phase-mfa-vs-two-phase-mfa)
 - [Q: Are there new MFA API endpoints introduced as part of the new Vault version 1.10 MFA for login functionality?](#q-are-there-new-mfa-api-endpoints-introduced-as-part-of-the-new-vault-version-1-10-mfa-for-login-functionality)
 - [Q: How do MFA configurations differ between the Login MFA and Step-up Enterprise MFA?](#q-how-do-mfa-configurations-differ-between-the-login-mfa-and-step-up-enterprise-mfa)
@@ -42,11 +46,11 @@ The Step-up Enterprise MFA will co-exist with the newly introduced Login MFA sta
 
 ### Q: what is the legacy MFA feature?
 
-[Legacy MFA](/vault/docs/v1.10.x/auth/mfa) is functionality that was available in Vault Community Edition, prior to introducing MFA in the Enterprise version. This is now a deprecated feature. Please see the [Vault Feature Deprecation Notice and Plans](/vault/docs/deprecation) for detailed product plans around deprecated features. We plan to remove Legacy MFA in 1.11.
+[Legacy MFA](/vault/docs/v1.10.x/auth/mfa) is functionality that was available in Vault Community Edition, prior to introducing MFA in the Enterprise version. This is now a deprecated feature. Refer to the [deprecation notices](/vault/docs/updates/deprecation) page for detailed product plans around deprecated features. We plan to remove Legacy MFA in 1.11.
 
-### Q: will HCP Vault support MFA?
+### Q: will HCP Vault Dedicated support MFA?
 
-Yes, HCP Vault will support MFA across all tiers and offering as part of the April 2022 release.
+Yes, HCP Vault Dedicated will support MFA across all tiers and offering as part of the April 2022 release.
 
 ### Q: what is Single-Phase MFA vs. Two-Phase MFA?
 

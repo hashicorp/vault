@@ -1,12 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
-
-variable "artifactory_username" {
-  type        = string
-  description = "The username to use when testing an artifact from artifactory"
-  default     = null
-  sensitive   = true
-}
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 variable "artifactory_token" {
   type        = string
@@ -69,16 +62,40 @@ variable "backend_log_level" {
   default     = "trace"
 }
 
+variable "distro_version_amzn" {
+  description = "The version of Amazon Linux 2 to use"
+  type        = string
+  default     = "2023" // or "2", though pkcs11 has not been tested with 2
+}
+
+variable "distro_version_leap" {
+  description = "The version of openSUSE leap to use"
+  type        = string
+  default     = "15.6"
+}
+
+variable "distro_version_rhel" {
+  description = "The version of RHEL to use"
+  type        = string
+  default     = "10.0" // or "8.10", "9.6"
+}
+
+variable "distro_version_sles" {
+  description = "The version of SUSE SLES to use"
+  type        = string
+  default     = "15.6"
+}
+
+variable "distro_version_ubuntu" {
+  description = "The version of ubuntu to use"
+  type        = string
+  default     = "24.04" // or "22.04"
+}
+
 variable "project_name" {
   description = "The description of the project"
   type        = string
   default     = "vault-enos-integration"
-}
-
-variable "rhel_distro_version" {
-  description = "The version of RHEL to use"
-  type        = string
-  default     = "9.1" // or "8.8"
 }
 
 variable "tags" {
@@ -91,18 +108,6 @@ variable "terraform_plugin_cache_dir" {
   description = "The directory to cache Terraform modules and providers"
   type        = string
   default     = null
-}
-
-variable "tfc_api_token" {
-  description = "The Terraform Cloud QTI Organization API token. This is used to download the enos Terraform provider."
-  type        = string
-  sensitive   = true
-}
-
-variable "ubuntu_distro_version" {
-  description = "The version of ubuntu to use"
-  type        = string
-  default     = "22.04" // or "20.04", "18.04"
 }
 
 variable "ui_test_filter" {
@@ -118,7 +123,7 @@ variable "ui_run_tests" {
 }
 
 variable "vault_artifact_type" {
-  description = "The type of Vault artifact to use when installing Vault from artifactory. It should be 'package' for .deb or # .rpm package and 'bundle' for .zip bundles"
+  description = "The type of Vault artifact to use when installing Vault from artifactory. It should be 'package' for .deb or .rpm package and 'bundle' for .zip bundles"
   default     = "bundle"
 }
 
@@ -176,17 +181,38 @@ variable "vault_product_version" {
   default     = null
 }
 
+variable "vault_radar_license_path" {
+  description = "The license for vault-radar which is used to verify the audit log"
+  type        = string
+  default     = null
+}
+
 variable "vault_revision" {
   description = "The git sha of Vault artifact we are testing"
   type        = string
   default     = null
 }
 
-variable "vault_upgrade_initial_release" {
+variable "vault_upgrade_initial_version" {
   description = "The Vault release to deploy before upgrading"
-  default = {
-    edition = "ce"
-    // Vault 1.10.5 has a known issue with retry_join.
-    version = "1.10.4"
-  }
+  type        = string
+  default     = "1.13.13"
+}
+
+variable "verify_aws_secrets_engine" {
+  description = "If true we'll verify AWS secrets engines behavior. Because of user creation restrictions in Doormat AWS accounts, only turn this on for CI, as it depends on resources that exist only in those accounts"
+  type        = bool
+  default     = false
+}
+
+variable "verify_ldap_secrets_engine" {
+  description = "If true we'll verify LDAP secrets engines behavior"
+  type        = bool
+  default     = false
+}
+
+variable "verify_log_secrets" {
+  description = "If true and var.vault_enable_audit_devices is true we'll verify that the audit log does not contain unencrypted secrets. Requires var.vault_radar_license_path to be set to a valid license file."
+  type        = bool
+  default     = false
 }

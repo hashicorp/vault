@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes issue with sidebar navigation links disappearing when navigating to policies when a user is not authorized
+```

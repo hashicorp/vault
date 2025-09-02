@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Remove possibility of returning an undefined timezone from date-format helper
+```

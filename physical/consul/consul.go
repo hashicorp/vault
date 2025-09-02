@@ -19,6 +19,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -41,10 +42,11 @@ const (
 
 // Verify ConsulBackend satisfies the correct interfaces
 var (
-	_ physical.Backend          = (*ConsulBackend)(nil)
-	_ physical.FencingHABackend = (*ConsulBackend)(nil)
-	_ physical.Lock             = (*ConsulLock)(nil)
-	_ physical.Transactional    = (*ConsulBackend)(nil)
+	_ physical.Backend             = (*ConsulBackend)(nil)
+	_ physical.FencingHABackend    = (*ConsulBackend)(nil)
+	_ physical.Lock                = (*ConsulLock)(nil)
+	_ physical.Transactional       = (*ConsulBackend)(nil)
+	_ physical.TransactionalLimits = (*ConsulBackend)(nil)
 
 	GetInTxnDisabledError = errors.New("get operations inside transactions are disabled in consul backend")
 )
@@ -59,7 +61,7 @@ type ConsulBackend struct {
 	path            string
 	kv              *api.KV
 	txn             *api.Txn
-	permitPool      *physical.PermitPool
+	permitPool      *permitpool.Pool
 	consistencyMode string
 	sessionTTL      string
 	lockWaitTime    time.Duration
@@ -160,7 +162,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		client:          client,
 		kv:              client.KV(),
 		txn:             client.Txn(),
-		permitPool:      physical.NewPermitPool(maxParInt),
+		permitPool:      permitpool.New(maxParInt),
 		consistencyMode: consistencyMode,
 		sessionTTL:      sessionTTL,
 		lockWaitTime:    lockWaitTime,
@@ -252,7 +254,9 @@ func (c *ConsulBackend) ExpandedCapabilitiesAvailable(ctx context.Context) bool 
 		}}
 	}
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return false
+	}
 	defer c.permitPool.Release()
 
 	queryOpts := &api.QueryOptions{}
@@ -331,7 +335,9 @@ func (c *ConsulBackend) txnInternal(ctx context.Context, txns []*physical.TxnEnt
 		ops = append(ops, o)
 	}
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer c.permitPool.Release()
 
 	var retErr *multierror.Error
@@ -430,6 +436,15 @@ func (c *ConsulBackend) makeApiTxn(txn *physical.TxnEntry) (*api.TxnOp, error) {
 	return &api.TxnOp{KV: op}, nil
 }
 
+func (c *ConsulBackend) TransactionLimits() (int, int) {
+	// Note that even for modern Consul versions that support 128 entries per txn,
+	// we have an effective limit of 64 write operations because the other 64 are
+	// used for undo log read operations. We also reserve 1 for a check-session
+	// operation to prevent split brain so the most we allow WAL to put in a batch
+	// is 63.
+	return 63, 128 * 1024
+}
+
 // Put is used to insert or update an entry
 func (c *ConsulBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	txns := []*physical.TxnEntry{
@@ -445,7 +460,9 @@ func (c *ConsulBackend) Put(ctx context.Context, entry *physical.Entry) error {
 func (c *ConsulBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"consul", "get"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer c.permitPool.Release()
 
 	queryOpts := &api.QueryOptions{}
@@ -495,7 +512,9 @@ func (c *ConsulBackend) List(ctx context.Context, prefix string) ([]string, erro
 		scan = scan[:len(scan)-1]
 	}
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer c.permitPool.Release()
 
 	queryOpts := &api.QueryOptions{}

@@ -41,7 +41,7 @@ func patternAcmeNonce(b *backend, pattern string, opts acmeWrapperOpts) *framewo
 }
 
 func (b *backend) acmeNonceHandler(ctx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	nonce, _, err := b.acmeState.GetNonce()
+	nonce, _, err := b.GetAcmeState().GetNonce()
 	if err != nil {
 		return nil, err
 	}

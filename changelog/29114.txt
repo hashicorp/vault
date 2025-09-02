@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Decode `connection_url` to fix database connection updates (i.e. editing connection config, deleting roles) failing when urls include template variables.
+```

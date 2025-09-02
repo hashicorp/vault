@@ -1,3 +1,5 @@
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -7,7 +9,9 @@
 
 // box-shadow helpers
 .has-only-top-shadow {
-  box-shadow: 0 -1px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
+  box-shadow:
+    0 -1px 0 -1px var(--token-color-palette-neutral-300),
+    0 -2px 0 -1px var(--token-color-palette-neutral-300);
 }
 
 .is-shadowless {
@@ -15,17 +19,19 @@
 }
 
 .is-sideless {
-  box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
+  box-shadow:
+    0 2px 0 -1px var(--token-color-palette-neutral-300),
+    0 -2px 0 -1px var(--token-color-palette-neutral-300);
 }
 
 // this helper needs to go after is-sideless as they are often used together and is-bottomless needs to override is-sideless (no this is not ideal).
 .is-bottomless {
-  box-shadow: 0 -1px 0 0 $grey-light;
+  box-shadow: 0 -1px 0 0 var(--token-color-palette-neutral-300);
 }
 
 // border helpers
 .has-default-border {
-  border: 1px solid $grey !important;
+  border: 1px solid var(--token-color-palette-neutral-400) !important;
 }
 
 .is-borderless {
@@ -47,7 +53,7 @@
 
 // other
 .has-background-transition {
-  transition: background-color ease-out $speed;
+  transition: background-color ease-out size_variables.$speed;
 }
 
 .has-current-color-fill {
@@ -57,16 +63,20 @@
   }
 }
 
+.white-space-pre-line {
+  white-space: pre-line;
+}
+
 // large grouped css blocks
 .is-hint {
-  color: $grey;
-  font-size: $size-8;
-  padding: $size-8 0;
+  color: var(--token-color-palette-neutral-400);
+  font-size: size_variables.$size-8;
+  padding: size_variables.$spacing-12 0;
 }
 
 .is-optional {
-  color: $grey;
-  font-size: $size-8;
+  color: var(--token-color-palette-neutral-400);
+  font-size: size_variables.$size-8;
   text-transform: lowercase;
 }
 
@@ -75,6 +85,14 @@
   word-wrap: break-word;
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+.overflow-wrap {
+  overflow-wrap: break-word;
+
+  &.word-break {
+    word-break: break-word;
+  }
 }
 
 .truncate-second-line {
@@ -114,12 +132,8 @@
 }
 
 // border-radius
-.border-radius-2 {
-  border-radius: $radius;
-}
-
 .border-radius-4 {
-  border-radius: $radius-large;
+  border-radius: size_variables.$radius-large;
 }
 
 // border-spacing

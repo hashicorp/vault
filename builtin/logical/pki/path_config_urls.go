@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/asaskevich/govalidator"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -33,6 +33,12 @@ for the issuing certificate attribute. See also RFC 5280 Section 4.2.2.1.`,
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
 for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
+			},
+
+			"delta_crl_distribution_points": {
+				Type: framework.TypeCommaStringSlice,
+				Description: `Comma-separated list of URLs to be used
+for the Delta CRL distribution points attribute.  See also RFC 5280 Section 4.2.1.15.`,
 			},
 
 			"ocsp_servers": {
@@ -75,6 +81,11 @@ for the issuing certificate attribute. See also RFC 5280 Section 4.2.2.1.`,
 								Description: `Comma-separated list of URLs to be used
 for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
 							},
+							"delta_crl_distribution_points": {
+								Type: framework.TypeCommaStringSlice,
+								Description: `Comma-separated list of URLs to be used
+for the Delta CRL distribution points attribute.  See also RFC 5280 Section 4.2.1.15.`,
+							},
 							"ocsp_servers": {
 								Type: framework.TypeCommaStringSlice,
 								Description: `Comma-separated list of URLs to be used
@@ -114,6 +125,11 @@ for the issuing certificate attribute. See also RFC 5280 Section 4.2.2.1.`,
 for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
 								Required: true,
 							},
+							"delta_crl_distribution_points": {
+								Type: framework.TypeCommaStringSlice,
+								Description: `Comma-separated list of URLs to be used
+for the Delta CRL distribution points attribute.  See also RFC 5280 Section 4.2.1.15.`,
+							},
 							"ocsp_servers": {
 								Type: framework.TypeCommaStringSlice,
 								Description: `Comma-separated list of URLs to be used
@@ -140,27 +156,18 @@ set on all PR Secondary clusters.`,
 	}
 }
 
-func validateURLs(urls []string) string {
-	for _, curr := range urls {
-		if !govalidator.IsURL(curr) || strings.Contains(curr, "{{issuer_id}}") || strings.Contains(curr, "{{cluster_path}}") || strings.Contains(curr, "{{cluster_aia_path}}") {
-			return curr
-		}
-	}
-
-	return ""
-}
-
-func getGlobalAIAURLs(ctx context.Context, storage logical.Storage) (*aiaConfigEntry, error) {
+func getGlobalAIAURLs(ctx context.Context, storage logical.Storage) (*issuing.AiaConfigEntry, error) {
 	entry, err := storage.Get(ctx, "urls")
 	if err != nil {
 		return nil, err
 	}
 
-	entries := &aiaConfigEntry{
-		IssuingCertificates:   []string{},
-		CRLDistributionPoints: []string{},
-		OCSPServers:           []string{},
-		EnableTemplating:      false,
+	entries := &issuing.AiaConfigEntry{
+		IssuingCertificates:        []string{},
+		CRLDistributionPoints:      []string{},
+		DeltaCRLDistributionPoints: []string{},
+		OCSPServers:                []string{},
+		EnableTemplating:           false,
 	}
 
 	if entry == nil {
@@ -174,7 +181,7 @@ func getGlobalAIAURLs(ctx context.Context, storage logical.Storage) (*aiaConfigE
 	return entries, nil
 }
 
-func writeURLs(ctx context.Context, storage logical.Storage, entries *aiaConfigEntry) error {
+func writeURLs(ctx context.Context, storage logical.Storage, entries *issuing.AiaConfigEntry) error {
 	entry, err := logical.StorageEntryJSON("urls", entries)
 	if err != nil {
 		return err
@@ -199,10 +206,11 @@ func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *fram
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"issuing_certificates":    entries.IssuingCertificates,
-			"crl_distribution_points": entries.CRLDistributionPoints,
-			"ocsp_servers":            entries.OCSPServers,
-			"enable_templating":       entries.EnableTemplating,
+			"issuing_certificates":          entries.IssuingCertificates,
+			"crl_distribution_points":       entries.CRLDistributionPoints,
+			"delta_crl_distribution_points": entries.DeltaCRLDistributionPoints,
+			"ocsp_servers":                  entries.OCSPServers,
+			"enable_templating":             entries.EnableTemplating,
 		},
 	}
 
@@ -224,20 +232,29 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 	if urlsInt, ok := data.GetOk("crl_distribution_points"); ok {
 		entries.CRLDistributionPoints = urlsInt.([]string)
 	}
+	if urlsInt, ok := data.GetOk("delta_crl_distribution_points"); ok {
+		entries.DeltaCRLDistributionPoints = urlsInt.([]string)
+	}
 	if urlsInt, ok := data.GetOk("ocsp_servers"); ok {
 		entries.OCSPServers = urlsInt.([]string)
 	}
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"issuing_certificates":    entries.IssuingCertificates,
-			"crl_distribution_points": entries.CRLDistributionPoints,
-			"ocsp_servers":            entries.OCSPServers,
-			"enable_templating":       entries.EnableTemplating,
+			"issuing_certificates":          entries.IssuingCertificates,
+			"crl_distribution_points":       entries.CRLDistributionPoints,
+			"delta_crl_distribution_points": entries.DeltaCRLDistributionPoints,
+			"ocsp_servers":                  entries.OCSPServers,
+			"enable_templating":             entries.EnableTemplating,
 		},
 	}
 
-	if entries.EnableTemplating && !b.useLegacyBundleCaStorage() {
+	if ((entries.DeltaCRLDistributionPoints != nil) && (len(entries.DeltaCRLDistributionPoints) > 0)) &&
+		(entries.CRLDistributionPoints == nil || len(entries.CRLDistributionPoints) == 0) {
+		resp.AddWarning(fmt.Sprintf("delta_crl_distribution_points were set: %v but not crl_distribution_points, consider setting crl_distribution_points", strings.Join(entries.DeltaCRLDistributionPoints, ", ")))
+	}
+
+	if entries.EnableTemplating && !b.UseLegacyBundleCaStorage() {
 		sc := b.makeStorageContext(ctx, req.Storage)
 		issuers, err := sc.listIssuers()
 		if err != nil {
@@ -250,23 +267,28 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 				return nil, fmt.Errorf("unable to read issuer to validate templated URIs: %w", err)
 			}
 
-			_, err = entries.toURLEntries(sc, issuer.ID)
+			_, err = ToURLEntries(sc, issuer.ID, entries)
 			if err != nil {
 				resp.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", err))
 			}
 		}
 	} else if !entries.EnableTemplating {
-		if badURL := validateURLs(entries.IssuingCertificates); badURL != "" {
+		if badURL := issuing.ValidateURLs(entries.IssuingCertificates); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid URL found in Authority Information Access (AIA) parameter issuing_certificates: %s", badURL)), nil
 		}
 
-		if badURL := validateURLs(entries.CRLDistributionPoints); badURL != "" {
+		if badURL := issuing.ValidateURLs(entries.CRLDistributionPoints); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid URL found in Authority Information Access (AIA) parameter crl_distribution_points: %s", badURL)), nil
 		}
 
-		if badURL := validateURLs(entries.OCSPServers); badURL != "" {
+		if badURL := issuing.ValidateURLs(entries.DeltaCRLDistributionPoints); badURL != "" {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"invalid URL found in Authority Information Access (AIA) parameter delta_crl_distribution_points: %s", badURL)), nil
+		}
+
+		if badURL := issuing.ValidateURLs(entries.OCSPServers); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid URL found in Authority Information Access (AIA) parameter ocsp_servers: %s", badURL)), nil
 		}

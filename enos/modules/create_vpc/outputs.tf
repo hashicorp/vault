@@ -1,22 +1,22 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-output "vpc_id" {
+output "id" {
   description = "Created VPC ID"
   value       = aws_vpc.vpc.id
 }
 
-output "vpc_cidr" {
-  description = "CIDR for whole VPC"
-  value       = var.cidr
+output "ipv4_cidr" {
+  description = "The VPC subnet CIDR for ipv4 mode"
+  value       = var.ipv4_cidr
 }
 
-output "kms_key_arn" {
-  description = "ARN of the generated KMS key"
-  value       = try(aws_kms_key.key[0].arn, null)
+output "ipv6_cidr" {
+  description = "The VPC subnet CIDR for ipv6 mode"
+  value       = aws_vpc.vpc.ipv6_cidr_block
 }
 
-output "kms_key_alias" {
-  description = "Alias of the generated KMS key"
-  value       = try(aws_kms_alias.alias[0].name, null)
+output "cluster_id" {
+  description = "A unique string associated with the VPC"
+  value       = random_string.cluster_id.result
 }

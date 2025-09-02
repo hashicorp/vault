@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -9,10 +9,14 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
-import { click, fillIn, findAll, render, typeIn } from '@ember/test-helpers';
-import codemirror from 'vault/tests/helpers/codemirror';
+
+import { click, fillIn, render, typeIn, waitFor, settled } from '@ember/test-helpers';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
+
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hooks) {
   setupRenderingTest(hooks);
@@ -29,10 +33,17 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     this.secret = this.store.createRecord('kv/data', { backend: this.backend, casVersion: 0 });
     this.metadata = this.store.createRecord('kv/metadata', { backend: this.backend });
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
-      { label: 'create' },
+      { label: 'Create' },
     ];
+    setRunOptions({
+      rules: {
+        // TODO fix JSONEditor, KVObjectEditor, MaskedInput
+        label: { enabled: false },
+        'color-contrast': { enabled: false }, // JSONEditor only
+      },
+    });
   });
 
   hooks.afterEach(function () {
@@ -87,15 +98,16 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     await fillIn(FORM.maskedValueInput(), 'bar');
 
     await click(FORM.toggleMetadata);
-    await fillIn(`[data-test-field="customMetadata"] ${FORM.keyInput()}`, 'my-custom');
-    await fillIn(`[data-test-field="customMetadata"] ${FORM.valueInput()}`, 'metadata');
+    await fillIn(`${GENERAL.fieldByAttr('customMetadata')} ${FORM.keyInput()}`, 'my-custom');
+    await fillIn(`${GENERAL.fieldByAttr('customMetadata')} ${FORM.valueInput()}`, 'metadata');
     await fillIn(FORM.inputByAttr('maxVersions'), this.maxVersions);
 
     await click(FORM.saveBtn);
-
-    assert.ok(
-      this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
-      'router transitions to secret details route on save'
+    const [actual] = this.transitionStub.lastCall.args;
+    assert.strictEqual(
+      actual,
+      'vault.cluster.secrets.backend.kv.secret.index',
+      'router transitions to secret overview route on save'
     );
   });
 
@@ -232,25 +244,28 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
 
     await fillIn(FORM.inputByAttr('path'), ''); // clear input
     await typeIn(FORM.inputByAttr('path'), 'slash/');
-    assert.dom(FORM.validation('path')).hasText(`Path can't end in forward slash '/'.`);
+    assert.dom(FORM.validationError('path')).hasText(`Path can't end in forward slash '/'.`);
 
     await typeIn(FORM.inputByAttr('path'), 'secret');
     assert
-      .dom(FORM.validation('path'))
+      .dom(FORM.validationError('path'))
       .doesNotExist('it removes validation on key up when secret contains slash but does not end in one');
 
-    await click(FORM.toggleJson);
-    codemirror().setValue('i am a string and not JSON');
+    await click(GENERAL.toggleInput('json'));
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, 'i am a string and not JSON');
+    await settled();
     assert
       .dom(FORM.inlineAlert)
       .hasText('JSON is unparsable. Fix linting errors to avoid data discrepancies.');
 
-    codemirror().setValue('{}'); // clear linting error
+    setCodeEditorValue(editor, '{}');
+    await settled();
     await fillIn(FORM.inputByAttr('path'), '');
     await click(FORM.saveBtn);
-    const [pathValidation, formAlert] = findAll(FORM.inlineAlert);
-    assert.dom(pathValidation).hasText(`Path can't be blank.`);
-    assert.dom(formAlert).hasText('There is an error with this form.');
+    assert.dom(FORM.validationError('path')).hasText(`Path can't be blank.`);
+    assert.dom(FORM.inlineAlert).hasText('There is an error with this form.');
   });
 
   test('it toggles JSON view and saves modified data', async function (assert) {
@@ -284,10 +299,12 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     );
 
     assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Secret data');
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Secret data');
 
-    codemirror().setValue(`{ "hello": "there"}`);
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, `{ "hello": "there"}`);
     await fillIn(FORM.inputByAttr('path'), this.path);
     await click(FORM.saveBtn);
   });

@@ -1,14 +1,16 @@
 ---
 layout: docs
-page_title: MFA Support - Vault Enterprise
+page_title: MFA support in Vault
 description: >-
-  Vault Enterprise has support for Multi-factor Authentication (MFA), using
-  different authentication types.
+  Learn about using multi-factor authentication (MFA) support with Vault.
 ---
 
-# Vault enterprise MFA support
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
 
-@include 'alerts/enterprise-and-hcp-plus.mdx'
+# Multi-factor authentication (MFA) support in Vault
+
+@include 'alerts/enterprise-only.mdx'
 
 Vault Enterprise has support for Multi-factor Authentication (MFA), using
 different authentication types. MFA is built on top of the Identity system of
@@ -18,22 +20,22 @@ Vault.
 
 MFA in Vault can be of the following types.
 
-- `Time-based One-time Password (TOTP)` - If configured and enabled on a path,
+- **Time-based One-time Password (TOTP)** - If configured and enabled on a path,
   this would require a TOTP passcode along with Vault token, to be presented
   while invoking the API request. The passcode will be validated against the
   TOTP key present in the identity of the caller in Vault.
 
-- `Okta` - If Okta push is configured and enabled on a path, then the enrolled
+- **Okta** - If Okta push is configured and enabled on a path, then the enrolled
   device of the user will get a push notification to approve or deny the access
   to the API. The Okta username will be derived from the caller identity's
   alias.
 
-- `Duo` - If Duo push is configured and enabled on a path, then the enrolled
+- **Duo** - If Duo push is configured and enabled on a path, then the enrolled
   device of the user will get a push notification to approve or deny the access
   to the API. The Duo username will be derived from the caller identity's
   alias.
 
-- `PingID` - If PingID push is configured and enabled on a path, then the
+- **PingID** - If PingID push is configured and enabled on a path, then the
   enrolled device of the user will get a push notification to approve or deny
   the access to the API. The PingID username will be derived from the caller
   identity's alias.
@@ -110,6 +112,13 @@ $ curl \
     http://127.0.0.1:8200/v1/secret/foo
 ```
 
-### API
+## API
 
 MFA can be managed entirely over the HTTP API. Please see [MFA API](/vault/api-docs/system/mfa) for more details.
+
+## Additional resources
+
+- [Duo MFA documentation](/vault/docs/enterprise/mfa/mfa-duo)
+- [Okta MFA documentation](/vault/docs/enterprise/mfa/mfa-okta)
+- [PingID MFA documentation](/vault/docs/enterprise/mfa/mfa-pingid)
+- [TOTP MFA documentation](/vault/docs/enterprise/mfa/mfa-totp)

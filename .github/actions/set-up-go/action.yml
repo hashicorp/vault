@@ -2,27 +2,31 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 ---
-name: Set up Go with a shared module cache
-description: Set up Go with a shared module cache
+name: Set up Go with a shared module cache.
+description: Set up Go with a shared module cache.
 
 inputs:
   github-token:
-    description: "An elevated Github token to access private modules if necessary"
-    type: string
+    description: An elevated Github token to access private modules if necessary.
   no-restore:
-    description: "Whether or not to restore the Go module cache on a cache hit"
-    type: boolean
-    default: false
+    description: Whether or not to restore the Go module cache on a cache hit
+    default: "false"
+  no-save:
+    description: Whether or not to create a Go module cache on cache miss
+    default: "false"
+  go-version:
+    description: "Override .go-version"
+    default: ""
 
 outputs:
   cache-key:
-    description: "The Go modules cache key"
+    description: The Go modules cache key
     value: ${{ steps.metadata.outputs.cache-key }}
   cache-path:
-    description: "The GOMODCACHE path"
+    description: The GOMODCACHE path
     value: ${{ steps.metadata.outputs.cache-path }}
   go-version:
-    description: "The version of Go in the .go-version file"
+    description: "The version of Go used"
     value: ${{ steps.go-version.outputs.go-version }}
 
 runs:
@@ -30,18 +34,36 @@ runs:
   steps:
     - id: go-version
       shell: bash
-      run: echo "go-version=$(cat ./.go-version)" >> "$GITHUB_OUTPUT"
-    - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      run: |
+        if [ "${{ inputs.go-version }}" = "" ]; then
+          echo "go-version=$(cat ./.go-version)" | tee -a "$GITHUB_OUTPUT"
+        else
+          echo "go-version=${{ inputs.go-version }}" | tee -a "$GITHUB_OUTPUT"
+        fi
+    - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
       with:
         go-version: ${{ steps.go-version.outputs.go-version }}
         cache: false # We use our own caching strategy
     - id: metadata
       shell: bash
       run: |
-        echo "cache-path=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
-        echo "cache-key=go-modules-${{ hashFiles('**/go.sum') }}" >> "$GITHUB_OUTPUT"
+        # Cache restore have some surprising relative pathing behavior we need
+        # to deal with. When actions/cache restores something it does it
+        # realtive to the check working directory. Since that can be different
+        # depending on our self-hosted vs Github hosted runners
+        #   /home/runner/actions-runner/_work vs. /home/runner/work
+        # we need to factor in the absolute path of our working directory in our
+        # cache key. If we don't then cache restores will be incompatible on one
+        # or the other runner.
+        #
+        # See: https://github.com/actions/cache/issues/1127
+        wd_hash=$(realpath . | sha256sum | head -c 8)
+        {
+          echo "cache-path=$(go env GOMODCACHE)/cache"
+          echo "cache-key=go-modules-${wd_hash}-${{ hashFiles('**/go.sum') }}"
+        } | tee -a "$GITHUB_OUTPUT"
     - id: cache-modules
-      uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
       with:
         enableCrossOsArchive: true
         lookup-only: ${{ inputs.no-restore }}
@@ -60,15 +82,12 @@ runs:
         # keeps cache upload time, download time, and storage size to a minimum.
         path: ${{ steps.metadata.outputs.cache-path }}
         key: ${{ steps.metadata.outputs.cache-key }}
-    - if: steps.cache-modules.outputs.cache-hit != 'true'
+    - if: steps.cache-modules.outputs.cache-hit != 'true' && inputs.no-save != 'true'
       name: Download go modules
       shell: bash
+      env:
+        GOPRIVATE: github.com/hashicorp/*
       run: |
         git config --global url."https://${{ inputs.github-token }}@github.com".insteadOf https://github.com
-        for mod in $(find . -type f -name go.mod); do
-          pushd "$(dirname $mod)"
-            go list ./...
-            go list -test ./...
-            go mod download
-          popd
-        done
+        make go-mod-download
+        du -h -d 1 ${{ steps.metadata.outputs.cache-path }}

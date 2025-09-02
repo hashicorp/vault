@@ -1,30 +1,34 @@
+@use '../utils/mixins';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 .splash-page-logo {
-  padding: $spacing-xs $spacing-s $spacing-xs $spacing-l;
+  padding: size_variables.$spacing-8 size_variables.$spacing-12 size_variables.$spacing-8
+    size_variables.$spacing-24;
 
-  @include from($mobile) {
-    padding-left: $spacing-xs;
+  @include mixins.from(size_variables.$mobile) {
+    padding-left: size_variables.$spacing-8;
   }
 
   svg {
-    fill: $white;
+    fill: hsl(0, 0%, 100%);
     height: 24px;
     width: 72px;
 
-    @include from($mobile) {
-      margin-left: $spacing-xs;
+    @include mixins.from(size_variables.$mobile) {
+      margin-left: size_variables.$spacing-8;
     }
   }
 }
 
 .splash-page-container {
-  margin: $size-2 0;
+  margin: size_variables.$spacing-36 0;
 }
 
 .splash-page-header {
-  padding: $size-6 0;
+  padding: size_variables.$spacing-14 0;
 }

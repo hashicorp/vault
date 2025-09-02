@@ -12,14 +12,18 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
 
 func TestQuotas_MountPathOverwrite(t *testing.T) {
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink())
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
-	quota := NewRateLimitQuota("tq", "", "kv1/", "", "", false, time.Second, 0, 10)
+	view := &logical.InmemStorage{}
+	require.NoError(t, qm.Setup(context.Background(), view, nil))
+
+	quota := NewRateLimitQuota("tq", "", "kv1/", "", "", GroupByIp, false, time.Second, 0, 10, 0)
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, false))
 	quota = quota.Clone().(*RateLimitQuota)
 	quota.MountPath = "kv2/"
@@ -43,12 +47,12 @@ func TestQuotas_MountPathOverwrite(t *testing.T) {
 }
 
 func TestQuotas_Precedence(t *testing.T) {
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink())
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
 	setQuotaFunc := func(t *testing.T, name, nsPath, mountPath, pathSuffix, role string, inheritable bool) Quota {
 		t.Helper()
-		quota := NewRateLimitQuota(name, nsPath, mountPath, pathSuffix, role, inheritable, time.Second, 0, 10)
+		quota := NewRateLimitQuota(name, nsPath, mountPath, pathSuffix, role, GroupByIp, inheritable, time.Second, 0, 10, 0)
 		require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
 		return quota
 	}
@@ -68,6 +72,9 @@ func TestQuotas_Precedence(t *testing.T) {
 			t.Fatal(diff)
 		}
 	}
+
+	view := &logical.InmemStorage{}
+	require.NoError(t, qm.Setup(context.Background(), view, nil))
 
 	// No quota present. Expect nil.
 	checkQuotaFunc(t, "", "", "", "", nil)
@@ -142,9 +149,11 @@ func TestQuotas_QueryResolveRole_RateLimitQuotas(t *testing.T) {
 	leaseWalkFunc := func(context.Context, func(request *Request) bool) error {
 		return nil
 	}
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), leaseWalkFunc, metricsutil.BlackholeSink())
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), leaseWalkFunc, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
+	view := &logical.InmemStorage{}
+	require.NoError(t, qm.Setup(context.Background(), view, nil))
 	rlqReq := &Request{
 		Type:          TypeRateLimit,
 		Path:          "",
@@ -158,7 +167,7 @@ func TestQuotas_QueryResolveRole_RateLimitQuotas(t *testing.T) {
 	require.False(t, required)
 
 	// Create a non-role-based RLQ on mount1/ and make sure it doesn't require role resolution
-	rlq := NewRateLimitQuota("tq", rlqReq.NamespacePath, rlqReq.MountPath, rlqReq.Path, rlqReq.Role, false, 1*time.Minute, 10*time.Second, 10)
+	rlq := NewRateLimitQuota("tq", rlqReq.NamespacePath, rlqReq.MountPath, rlqReq.Path, rlqReq.Role, GroupByIp, false, 1*time.Minute, 0, 10, 0)
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), rlq, false))
 
 	required, err = qm.QueryResolveRoleQuotas(rlqReq)
@@ -167,7 +176,7 @@ func TestQuotas_QueryResolveRole_RateLimitQuotas(t *testing.T) {
 
 	// Create a role-based RLQ on mount1/ and make sure it requires role resolution
 	rlqReq.Role = "test"
-	rlq = NewRateLimitQuota("tq", rlqReq.NamespacePath, rlqReq.MountPath, rlqReq.Path, rlqReq.Role, false, 1*time.Minute, 10*time.Second, 10)
+	rlq = NewRateLimitQuota("tq", rlqReq.NamespacePath, rlqReq.MountPath, rlqReq.Path, rlqReq.Role, GroupByIp, false, 1*time.Minute, 0, 10, 0)
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), rlq, false))
 
 	required, err = qm.QueryResolveRoleQuotas(rlqReq)

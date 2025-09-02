@@ -1,0 +1,3 @@
+```release-note:improvement
+core/config: reload service registration configuration on SIGHUP
+```

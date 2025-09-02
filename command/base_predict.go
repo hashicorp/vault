@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/api/cliconfig"
 	"github.com/posener/complete"
 )
 
@@ -28,7 +29,9 @@ func (p *Predict) Client() *api.Client {
 			client, _ := api.NewClient(nil)
 
 			if client.Token() == "" {
-				helper, err := DefaultTokenHelper()
+				// ignore duplicate keys in HCL files on autocompletion as printing a warning here would be too annoying
+				// TODO (HCL_DUP_KEYS_DEPRECATION): remove the comment above
+				helper, err := cliconfig.DefaultTokenHelper()
 				if err != nil {
 					return
 				}

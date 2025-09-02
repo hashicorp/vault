@@ -1,10 +1,10 @@
 # unconventional js
 /blueprints/*/files/
-/vendor/
 
 # compiled output
 /dist/
 /tmp/
+/vault-reporting/
 
 # dependencies
 /bower_components/
@@ -15,7 +15,6 @@
 /coverage/
 !.*
 .*/
-.eslintcache
 
 # ember-try
 /.node_modules.ember-try/

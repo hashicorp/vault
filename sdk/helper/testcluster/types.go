@@ -41,8 +41,8 @@ type VaultNodeConfig struct {
 	//   ClusterAddr          string      `hcl:"cluster_addr"`
 	//   Storage   *Storage `hcl:"-"`
 	//   HAStorage *Storage `hcl:"-"`
-	//   DisableMlock bool `hcl:"disable_mlock"`
 	//   ClusterName string `hcl:"cluster_name"`
+	// 	 DisableMlock bool  `hcl:"disable_mlock"`
 
 	// Not configurable yet:
 	//   Listeners []*Listener `hcl:"-"`
@@ -105,8 +105,11 @@ type ClusterOptions struct {
 }
 
 type VaultNodeListenerConfig struct {
-	Port            int
-	ChrootNamespace string
+	Port              int
+	ChrootNamespace   string
+	RedactAddresses   bool
+	RedactClusterName bool
+	RedactVersion     bool
 }
 
 type CA struct {

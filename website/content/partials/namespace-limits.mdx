@@ -1,0 +1,22 @@
+The entire list of namespaces must fit in a single storage
+entry. However, the effective limit is generally much smaller because each
+namespace must have at least two secret engine mounts (for `sys` and `identity`),
+one local secret engine (`cubbyhole`) and one auth engine mount (`token`).
+
+|                                                                              | Consul default (512 KiB) | Integrated storage default (1 MiB) |
+| ---------------------------------------------------------------------------- | ------------------------ | ---------------------------------- |
+| Maximum number of namespaces                                                 | ~3500                    | ~7000                              |
+| Maximum number of namespaces with one additional secret engine per namespace | ~2300                    | ~4600                              |
+| Maximum nesting depth for namespaces                                         | ~160                     | ~220                               |
+
+The maximum nesting depth calculation assumes a cost of 40 bytes per namespace
+path element. 160 nested paths = 160 namespaces ranging from 40 bytes to
+6400 bytes.
+
+You can monitor the number of namespaces by querying
+[`sys/namespaces`](/vault/api-docs/system/namespaces).
+
+To estimate the number of namespaces that can be created, divide the mount
+point limit by the larger of the number of auth mounts per namespace
+(including `ns_token`) and the number of secret mounts per namespace
+(including `identity` and `sys`.)

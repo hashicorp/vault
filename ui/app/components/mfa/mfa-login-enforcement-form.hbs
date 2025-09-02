@@ -1,0 +1,163 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div ...attributes>
+  <FormFieldLabel
+    for="name"
+    @label="Name"
+    @subText="The name for this enforcement. Giving it a name means that you can refer to it again later. This name will not be editable later."
+    data-test-mlef-label="name"
+  />
+  <input
+    autocomplete="off"
+    spellcheck="false"
+    value={{@model.name}}
+    disabled={{not @model.isNew}}
+    class="input field {{if this.errors.name.errors 'has-error-border'}}"
+    data-test-mlef-input="name"
+    id="name"
+    {{on "input" (pipe (pick "target.value") (fn (mut @model.name)))}}
+  />
+  {{#if this.errors.name.errors}}
+    <AlertInline @type="danger" @message={{join ", " this.errors.name.errors}} />
+  {{/if}}
+
+  {{#unless @isInline}}
+    <div class="field">
+      <FormFieldLabel
+        for="methods"
+        @label="MFA methods"
+        @subText="The MFA method(s) that this enforcement will apply to."
+        data-test-mlef-label="methods"
+      />
+      {{! component only computes inputValue on init -- ensure Ember Data hasMany promise has resolved }}
+      {{#if @model.mfa_methods.isFulfilled}}
+        <SearchSelect
+          @id="methods"
+          @placeholder="Type to search for existing MFA methods"
+          @inputValue={{map-by "id" this.mfaMethods}}
+          @shouldRenderName={{true}}
+          @disallowNewItems={{true}}
+          @models={{array "mfa-method"}}
+          @onChange={{this.onMethodChange}}
+          data-test-mlef-search="methods"
+        />
+      {{/if}}
+      {{#if this.errors.mfa_methods.errors}}
+        <AlertInline @type="danger" @message={{join ", " this.errors.mfa_methods.errors}} />
+      {{/if}}
+    </div>
+  {{/unless}}
+
+  <div>
+    <FormFieldLabel
+      for="targets"
+      @label="Targets"
+      @subText="The list of authentication types, authentication mounts, groups, and/or entities that will require this MFA configuration."
+      data-test-mlef-label="targets"
+    />
+    {{#each this.targets as |target|}}
+      <div class="is-flex-center has-border-top-light" data-test-mlef-target={{target.label}}>
+        <InfoTableRow @label={{target.label}} class="is-flex-grow-1 has-no-shadow">
+          {{#if target.value.id}}
+            {{target.value.name}}
+            <Hds::Badge @text={{target.value.id}} class="has-left-margin-s" />
+          {{else}}
+            {{target.value}}
+          {{/if}}
+        </InfoTableRow>
+        <Hds::Button
+          @text="Remove target"
+          @icon="trash"
+          @isIconOnly={{true}}
+          @color="secondary"
+          data-test-mlef-remove-target={{target.label}}
+          {{on "click" (fn this.removeTarget target)}}
+        />
+      </div>
+    {{/each}}
+    <div class="is-flex-row {{if this.targets 'has-top-padding-s has-border-top-light'}}">
+      <Select
+        class="is-marginless"
+        @options={{this.targetTypes}}
+        @labelAttribute="label"
+        @valueAttribute="type"
+        @selectedValue={{this.selectedTargetType}}
+        @onChange={{this.onTargetSelect}}
+        @name="target-type"
+        data-test-mlef-select="target-type"
+        aria-label="Target type"
+      />
+      <div class="has-left-margin-s is-flex-grow-1">
+        {{#if (eq this.selectedTargetType "accessor")}}
+          <MountAccessorSelect
+            @value={{this.selectedTargetValue}}
+            @showAccessor={{true}}
+            @noDefault={{true}}
+            @onChange={{this.setTargetValue}}
+            @filterToken={{true}}
+            data-test-mlef-select="accessor"
+          />
+        {{else if (eq this.selectedTargetType "method")}}
+          <Select
+            @options={{this.authMethods}}
+            @labelAttribute="displayName"
+            @valueAttribute="value"
+            @isFullwidth={{true}}
+            @noDefault={{true}}
+            @selectedValue={{this.selectedTargetValue}}
+            @onChange={{this.setTargetValue}}
+            @name="Auth method"
+            data-test-mlef-select="auth-method"
+            aria-label="Auth method"
+          />
+        {{else}}
+          <SearchSelect
+            @id="existing-targets"
+            @placeholder="Search for an existing target"
+            @options={{this.searchSelect.options}}
+            @parentManageSelected={{this.searchSelect.selected}}
+            @shouldRenderName={{true}}
+            @selectLimit={{1}}
+            @onChange={{this.setTargetValue}}
+            data-test-mlef-search={{this.selectedTargetType}}
+          />
+        {{/if}}
+      </div>
+      <Hds::Button
+        @text="Add"
+        @color="secondary"
+        class="has-left-margin-s"
+        disabled={{not this.selectedTargetValue}}
+        data-test-mlef-add-target
+        {{on "click" this.addTarget}}
+      />
+    </div>
+    {{#if this.errors.targets.errors}}
+      <AlertInline class="has-top-padding-s" @type="danger" @message={{join ", " this.errors.targets.errors}} />
+    {{/if}}
+  </div>
+  {{#unless @isInline}}
+    <hr />
+    <div class="has-top-padding-s">
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text={{if @model.isNew "Create" "Update"}}
+          @icon={{if this.save.isRunning "loading"}}
+          disabled={{this.save.isRunning}}
+          data-test-mlef-save
+          {{on "click" (perform this.save)}}
+        />
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          disabled={{this.save.isRunning}}
+          data-test-mlef-cancel
+          {{on "click" this.cancel}}
+        />
+      </Hds::ButtonSet>
+    </div>
+  {{/unless}}
+</div>

@@ -1,0 +1,3 @@
+```release-note:bug
+helper/pkcs7: Fix parsing certain messages containing only certificates
+```

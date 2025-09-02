@@ -1,19 +1,33 @@
 ---
 layout: docs
-page_title: Vault Agent Windows Service
+page_title: Run Vault Agent as a Windows service
 description: >-
-  Vault Agent can be run as a Windows service.
+  Register Vault Agent with sc.exe and run Agent as a Windows service.
 ---
 
-# Vault agent windows service
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# Run Vault Agent as a Windows service
 
 Vault Agent can be run as a Windows service. In order to do this, you need to register Vault Agent with the Windows
 Service Control Manager. After Vault Agent is registered, it can be started like any other Windows
 service.
 
-**Note:** These commands should be run in a PowerShell session with Administrator capabilities.
+While this guide focuses on an example for Vault Agent, this example can be easily adapted to work for
+[Vault Proxy](/vault/docs/agent-and-proxy/proxy) by changing the config and subcommand
+given to `vault.exe` as appropriate.
 
-## Register Vault agent as a windows service
+<Note>
+
+- Run the commands on this page in a PowerShell session with Administrator capabilities.
+
+- When specifying Windows file paths in config files, they should be formatted like this: `C:/foo/bar/file.txt`
+instead of using backslashes.
+
+</Note>
+
+## Register Vault Agent as a Windows service
 
 There are multiple ways to register Vault Agent as a Windows service. One way is to use
 [`sc.exe`](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/sc-create). `sc.exe` works
@@ -27,8 +41,12 @@ both will be shown below.
 
 ### Using sc.exe
 
-~> **Important Note:** Ensure the executable path of the service is quoted, especially when it contains spaces, to avoid
+<Note title="Important">
+
+Ensure the executable path of the service is quoted, especially when it contains spaces, to avoid
 potential privilege escalation risks.
+
+</Note>
 
 If you use `sc.exe`, make sure you specify `sc.exe` explicitly, and not just `sc`. The command below shows the creation
 of Vault Agent as a service, using "Vault Agent" as the display name, and starting automatically when Windows starts.
@@ -77,16 +95,16 @@ If anything goes wrong during this process, and you need to manually edit the pa
 the following key: `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VaultAgent`. You can edit the `ImagePath` value
 at that key to the correct path.
 
-## Start the Vault agent service
+## Start the Vault Agent service
 
 There are multiple ways to start the service.
 
 - Using the `sc.exe` command.
 - Using the `Start-Service` cmdlet.
 - Go to the Windows Service Manager, and look for **VaultAgent** in the service name column. Click the
-  `Start` button to start the service.
+`Start` button to start the service.
 
-### Example starting Vault agent using `sc.exe`
+### Example starting Vault Agent using `sc.exe`
 
 ```shell-session
 PS C:\Windows\system32> sc.exe start VaultAgent
@@ -103,7 +121,7 @@ SERVICE_NAME: VaultAgent
      FLAGS              :
 ```
 
-### Example starting Vault agent using `Start-Service`
+### Example starting Vault Agent using `Start-Service`
 
 ```shell-session
 PS C:\Windows\system32> Start-Service -Name "VaultAgent"

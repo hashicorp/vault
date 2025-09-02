@@ -1,0 +1,55 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#each @model as |provider|}}
+  <LinkedBlock
+    class="list-item-row"
+    @params={{array "vault.cluster.access.oidc.providers.provider.details" provider.name}}
+    data-test-oidc-provider-linked-block={{provider.name}}
+  >
+    <div class="level is-mobile">
+      <div class="level-left">
+        <div>
+          <Icon @name="provider" class="has-text-grey-light" />
+          <span class="has-text-weight-semibold is-underline">
+            {{provider.name}}
+          </span>
+          <div class="has-text-grey is-size-8">
+            Issuer:
+            {{provider.issuer}}
+          </div>
+        </div>
+      </div>
+      <div class="level-right is-flex is-paddingless is-marginless">
+        <div class="level-item">
+          {{#if (or provider.canRead provider.canEdit)}}
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="Provider nav options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              {{#if provider.canRead}}
+                <dd.Interactive
+                  @route="vault.cluster.access.oidc.providers.provider.details"
+                  @model={{provider.name}}
+                  data-test-oidc-provider-menu-link="details"
+                >Details</dd.Interactive>
+              {{/if}}
+              {{#if provider.canEdit}}
+                <dd.Interactive
+                  @route="vault.cluster.access.oidc.providers.provider.edit"
+                  @model={{provider.name}}
+                  data-test-oidc-provider-menu-link="edit"
+                >Edit</dd.Interactive>
+              {{/if}}
+            </Hds::Dropdown>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </LinkedBlock>
+{{/each}}

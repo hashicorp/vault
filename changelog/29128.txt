@@ -1,0 +1,3 @@
+```release-note:bug
+vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off.
+```

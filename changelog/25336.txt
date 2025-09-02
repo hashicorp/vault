@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/transit: When provided an invalid input with hash_algorithm=none, a lock was not released properly before reporting an error leading to deadlocks on a subsequent key configuration update.
+```

@@ -8,9 +8,10 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | pki-role-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -25,10 +26,16 @@ module('Integration | Component | pki-role-form', function (hooks) {
     this.issuers = this.store.peekAll('pki/issuer');
     this.role.backend = 'pki';
     this.onCancel = sinon.spy();
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should render default fields and toggle groups', async function (assert) {
-    assert.expect(13);
     await render(
       hbs`
       <PkiRoleForm
@@ -40,24 +47,46 @@ module('Integration | Component | pki-role-form', function (hooks) {
   `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.issuerRefToggle).exists('shows issuer ref toggle');
-    assert.dom(SELECTORS.backdateValidity).exists('shows form-field backdate validity');
-    assert.dom(SELECTORS.customTtl).exists('shows custom yielded form field');
-    assert.dom(SELECTORS.maxTtl).exists('shows form-field max ttl');
-    assert.dom(SELECTORS.generateLease).exists('shows form-field generateLease');
-    assert.dom(SELECTORS.noStore).exists('shows form-field no store');
-    assert.dom(SELECTORS.addBasicConstraints).exists('shows form-field add basic constraints');
-    assert.dom(SELECTORS.domainHandling).exists('shows form-field group add domain handling');
-    assert.dom(SELECTORS.keyParams).exists('shows form-field group key params');
-    assert.dom(SELECTORS.keyUsage).exists('shows form-field group key usage');
-    assert.dom(SELECTORS.policyIdentifiers).exists('shows form-field group policy identifiers');
-    assert.dom(SELECTORS.san).exists('shows form-field group SAN');
-    assert.dom(SELECTORS.additionalSubjectFields).exists('shows form-field group additional subject fields');
+    assert.dom(GENERAL.ttl.toggle('issuerRef-toggle')).exists();
+    assert.dom(GENERAL.ttl.input('Backdate validity')).exists();
+    assert.dom(GENERAL.fieldByAttr('customTtl')).exists();
+    assert.dom(GENERAL.ttl.toggle('Max TTL')).exists();
+    assert.dom(GENERAL.fieldByAttr('generateLease')).exists();
+    assert.dom(GENERAL.fieldByAttr('noStore')).exists();
+    assert
+      .dom(GENERAL.fieldByAttr('noStoreMetadata'))
+      .doesNotExist('noStoreMetadata is not shown b/c not enterprise');
+    assert.dom(GENERAL.inputByAttr('addBasicConstraints')).exists();
+    assert.dom(GENERAL.button('Domain handling')).exists('shows form-field group add domain handling');
+    assert.dom(GENERAL.button('Key parameters')).exists('shows form-field group key params');
+    assert.dom(GENERAL.button('Key usage')).exists('shows form-field group key usage');
+    assert.dom(GENERAL.button('Policy identifiers')).exists('shows form-field group policy identifiers');
+    assert.dom(GENERAL.button('Subject Alternative Name (SAN) Options')).exists('shows form-field group SAN');
+    assert
+      .dom(GENERAL.button('Additional subject fields'))
+      .exists('shows form-field group additional subject fields');
+  });
+
+  test('it renders enterprise-only values in enterprise edition', async function (assert) {
+    const version = this.owner.lookup('service:version');
+    version.type = 'enterprise';
+    await render(
+      hbs`
+      <PkiRoleForm
+         @role={{this.role}}
+         @issuers={{this.issuers}}
+         @onCancel={{this.onCancel}}
+         @onSave={{this.onSave}}
+       />
+  `,
+      { owner: this.engine }
+    );
+    assert.dom(GENERAL.fieldByAttr('noStoreMetadata')).exists();
   });
 
   test('it should save a new pki role with various options selected', async function (assert) {
     // Key usage, Key params and Not valid after options are tested in their respective component tests
-    assert.expect(8);
+    assert.expect(7);
     this.server.post(`/${this.role.backend}/roles/test-role`, (schema, req) => {
       assert.ok(true, 'Request made to save role');
       const request = JSON.parse(req.requestBody);
@@ -91,30 +120,27 @@ module('Integration | Component | pki-role-form', function (hooks) {
       { owner: this.engine }
     );
 
-    await click(SELECTORS.roleCreateButton);
+    await click(GENERAL.submitButton);
 
     assert
-      .dom(SELECTORS.roleName)
-      .hasClass('has-error-border', 'shows border error on role name field when no role name is submitted');
-    assert
-      .dom('[data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('name'))
       .includesText('Name is required.', 'show correct error message');
 
-    await fillIn(SELECTORS.roleName, 'test-role');
+    await fillIn(GENERAL.inputByAttr('name'), 'test-role');
     await click('[data-test-input="addBasicConstraints"]');
-    await click(SELECTORS.domainHandling);
+    await click(GENERAL.button('Domain handling'));
     await click('[data-test-input="allowedDomainsTemplate"]');
-    await click(SELECTORS.policyIdentifiers);
+    await click(GENERAL.button('Policy identifiers'));
     await fillIn('[data-test-input="policyIdentifiers"] [data-test-string-list-input="0"]', 'some-oid');
-    await click(SELECTORS.san);
+    await click(GENERAL.button('Subject Alternative Name (SAN) Options'));
     await click('[data-test-input="allowUriSansTemplate"]');
-    await click(SELECTORS.additionalSubjectFields);
+    await click(GENERAL.button('Additional subject fields'));
     await fillIn(
       '[data-test-input="allowedSerialNumbers"] [data-test-string-list-input="0"]',
       'some-serial-number'
     );
 
-    await click(SELECTORS.roleCreateButton);
+    await click(GENERAL.submitButton);
   });
 
   test('it should update attributes on the model on update', async function (assert) {
@@ -140,9 +166,9 @@ module('Integration | Component | pki-role-form', function (hooks) {
       `,
       { owner: this.engine }
     );
-    await click(SELECTORS.issuerRefToggle);
-    await fillIn(SELECTORS.issuerRefSelect, 'issuer-1');
-    await click(SELECTORS.roleCreateButton);
+    await click(GENERAL.ttl.toggle('issuerRef-toggle'));
+    await fillIn(GENERAL.selectByAttr('issuerRef'), 'issuer-1');
+    await click(GENERAL.submitButton);
     assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
   });
 
@@ -161,6 +187,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
           key_usage: ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'],
           not_before_duration: '30s',
           require_cn: true,
+          serial_number_source: 'json-csr',
           signature_bits: '384',
           use_csr_common_name: true,
           use_csr_sans: true,
@@ -194,21 +221,29 @@ module('Integration | Component | pki-role-form', function (hooks) {
       { owner: this.engine }
     );
 
-    await click(SELECTORS.issuerRefToggle);
-    await fillIn(SELECTORS.issuerRefSelect, 'issuer-1');
+    await click(GENERAL.ttl.toggle('issuerRef-toggle'));
+    await fillIn(GENERAL.selectByAttr('issuerRef'), 'issuer-1');
 
-    await click(SELECTORS.keyParams);
-    assert.dom(SELECTORS.keyType).hasValue('rsa');
-    assert.dom(SELECTORS.keyBits).hasValue('3072', 'dropdown has model value, not default value (2048)');
-    assert.dom(SELECTORS.signatureBits).hasValue('512', 'dropdown has model value, not default value (0)');
+    await click(GENERAL.button('Key parameters'));
+    assert.dom(GENERAL.inputByAttr('keyType')).hasValue('rsa');
+    assert
+      .dom(GENERAL.inputByAttr('keyBits'))
+      .hasValue('3072', 'dropdown has model value, not default value (2048)');
+    assert
+      .dom(GENERAL.inputByAttr('signatureBits'))
+      .hasValue('512', 'dropdown has model value, not default value (0)');
 
-    await fillIn(SELECTORS.keyType, 'ec');
-    await fillIn(SELECTORS.keyBits, '224');
-    assert.dom(SELECTORS.keyBits).hasValue('224', 'dropdown has selected value, not default value (256)');
-    await fillIn(SELECTORS.signatureBits, '384');
-    assert.dom(SELECTORS.signatureBits).hasValue('384', 'dropdown has selected value, not default value (0)');
+    await fillIn(GENERAL.inputByAttr('keyType'), 'ec');
+    await fillIn(GENERAL.inputByAttr('keyBits'), '224');
+    assert
+      .dom(GENERAL.inputByAttr('keyBits'))
+      .hasValue('224', 'dropdown has selected value, not default value (256)');
+    await fillIn(GENERAL.inputByAttr('signatureBits'), '384');
+    assert
+      .dom(GENERAL.inputByAttr('signatureBits'))
+      .hasValue('384', 'dropdown has selected value, not default value (0)');
 
-    await click(SELECTORS.roleCreateButton);
+    await click(GENERAL.submitButton);
     assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
   });
 });

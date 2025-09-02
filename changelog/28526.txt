@@ -1,0 +1,3 @@
+```release-note:improvement
+physical/raft: Log when the MAP_POPULATE mmap flag gets disabled before opening the database.
+```

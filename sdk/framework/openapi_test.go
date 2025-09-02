@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -246,18 +247,22 @@ func TestOpenAPI_SplitFields(t *testing.T) {
 
 func TestOpenAPI_SpecialPaths(t *testing.T) {
 	tests := map[string]struct {
-		pattern                 string
-		rootPaths               []string
-		rootExpected            bool
-		unauthenticatedPaths    []string
-		unauthenticatedExpected bool
+		pattern                   string
+		rootPaths                 []string
+		rootExpected              bool
+		unauthenticatedPaths      []string
+		unauthenticatedExpected   bool
+		allowSnapshotRead         []string
+		allowSnapshotReadExpected bool
 	}{
 		"empty": {
-			pattern:                 "foo",
-			rootPaths:               []string{},
-			rootExpected:            false,
-			unauthenticatedPaths:    []string{},
-			unauthenticatedExpected: false,
+			pattern:                   "foo",
+			rootPaths:                 []string{},
+			rootExpected:              false,
+			unauthenticatedPaths:      []string{},
+			unauthenticatedExpected:   false,
+			allowSnapshotRead:         []string{},
+			allowSnapshotReadExpected: false,
 		},
 		"exact-match-unauthenticated": {
 			pattern:                 "foo",
@@ -336,17 +341,75 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 			unauthenticatedPaths:    []string{"foo/bar"},
 			unauthenticatedExpected: false,
 		},
+		"exact-match-snapshot-read": {
+			pattern:                   "foo",
+			rootPaths:                 []string{},
+			rootExpected:              false,
+			unauthenticatedPaths:      []string{},
+			unauthenticatedExpected:   false,
+			allowSnapshotRead:         []string{"foo"},
+			allowSnapshotReadExpected: true,
+		},
+		"asterisk-match-snapshot-read": {
+			pattern:                   "foo/bar",
+			rootPaths:                 []string{},
+			rootExpected:              false,
+			unauthenticatedPaths:      []string{},
+			unauthenticatedExpected:   false,
+			allowSnapshotRead:         []string{"foo/*"},
+			allowSnapshotReadExpected: true,
+		},
+		"no-match-snapshot-read": {
+			pattern:                   "foo/bar",
+			rootPaths:                 []string{},
+			rootExpected:              false,
+			unauthenticatedPaths:      []string{},
+			unauthenticatedExpected:   false,
+			allowSnapshotRead:         []string{"baz"},
+			allowSnapshotReadExpected: false,
+		},
+		"multiple-snapshot-read-paths": {
+			pattern:                   "foo/bar",
+			rootPaths:                 []string{},
+			rootExpected:              false,
+			unauthenticatedPaths:      []string{},
+			unauthenticatedExpected:   false,
+			allowSnapshotRead:         []string{"foo/*", "baz"},
+			allowSnapshotReadExpected: true,
+		},
+		"plus-match-snapshot-read": {
+			pattern:                   "foo/bar/baz",
+			rootPaths:                 []string{},
+			rootExpected:              false,
+			unauthenticatedPaths:      []string{},
+			unauthenticatedExpected:   false,
+			allowSnapshotRead:         []string{"foo/+/baz"},
+			allowSnapshotReadExpected: true,
+		},
+		"plus-and-asterisk-snapshot-read": {
+			pattern:                   "foo/bar/baz/something",
+			rootPaths:                 []string{},
+			rootExpected:              false,
+			unauthenticatedPaths:      []string{},
+			unauthenticatedExpected:   false,
+			allowSnapshotRead:         []string{"foo/+/baz/*"},
+			allowSnapshotReadExpected: true,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			doc := NewOASDocument("version")
 			path := Path{
 				Pattern: test.pattern,
+				Operations: map[logical.Operation]OperationHandler{
+					logical.ReadOperation: &PathOperation{},
+				},
 			}
 			backend := &Backend{
 				PathsSpecial: &logical.Paths{
-					Root:            test.rootPaths,
-					Unauthenticated: test.unauthenticatedPaths,
+					Root:              test.rootPaths,
+					Unauthenticated:   test.unauthenticatedPaths,
+					AllowSnapshotRead: test.allowSnapshotRead,
 				},
 				BackendType: logical.TypeLogical,
 			}
@@ -363,6 +426,16 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 			actual = doc.Paths["/"+test.pattern].Unauthenticated
 			if actual != test.unauthenticatedExpected {
 				t.Fatalf("Test (unauth): expected: %v; got: %v", test.unauthenticatedExpected, actual)
+			}
+
+			var supportsSnapshotId bool
+			if doc.Paths["/"+test.pattern].Get != nil {
+				supportsSnapshotId = slices.ContainsFunc(doc.Paths["/"+test.pattern].Get.Parameters, func(p OASParameter) bool {
+					return p.Name == "read_snapshot_id"
+				})
+			}
+			if supportsSnapshotId != test.allowSnapshotReadExpected {
+				t.Fatalf("Test (allowSnapshotRead): expected: %v; got: %v", test.allowSnapshotReadExpected, actual)
 			}
 		})
 	}
@@ -459,6 +532,10 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Summary:     "Update Summary",
 					Description: "Update Description",
 				},
+				logical.PatchOperation: &PathOperation{
+					Summary:     "Patch Summary",
+					Description: "Patch Description",
+				},
 				logical.CreateOperation: &PathOperation{
 					Summary:     "Create Summary",
 					Description: "Create Description",
@@ -471,6 +548,9 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Summary:     "This shouldn't show up",
 					Unpublished: true,
 				},
+				logical.RecoverOperation: &PathOperation{
+					Summary: "Recover Summary shouldn't show up",
+				},
 			},
 			DisplayAttrs: &DisplayAttributes{
 				Navigation: true,
@@ -478,11 +558,36 @@ func TestOpenAPI_Paths(t *testing.T) {
 		}
 
 		sp := &logical.Paths{
-			Root: []string{"foo*"},
+			Root:              []string{"foo*"},
+			AllowSnapshotRead: []string{"*"},
 		}
 		testPath(t, p, sp, expected("operations"))
 	})
+	t.Run("Operations - Recover no path fields", func(t *testing.T) {
+		p := &Path{
+			Pattern: "foo",
+			Fields: map[string]*FieldSchema{
+				"name": {
+					Type:        TypeNameString,
+					Default:     "Larry",
+					Description: "the name",
+				},
+			},
+			Operations: map[logical.Operation]OperationHandler{
+				logical.RecoverOperation: &PathOperation{},
+				logical.ReadOperation:    &PathOperation{},
+				logical.UpdateOperation:  &PathOperation{},
+			},
+			DisplayAttrs: &DisplayAttributes{
+				Navigation: true,
+			},
+		}
 
+		sp := &logical.Paths{
+			AllowSnapshotRead: []string{"*"},
+		}
+		testPath(t, p, sp, expected("operations_recover"))
+	})
 	t.Run("Operations - List Only", func(t *testing.T) {
 		p := &Path{
 			Pattern: "foo/" + GenericNameRegex("id"),
@@ -655,13 +760,14 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 	// logical.Response. This will fail if logical.Response changes without a corresponding
 	// change to cleanResponse()
 	orig = &logical.Response{
-		Secret:   new(logical.Secret),
-		Auth:     new(logical.Auth),
-		Data:     map[string]interface{}{"foo": 42},
-		Redirect: "foo",
-		Warnings: []string{"foo"},
-		WrapInfo: &wrapping.ResponseWrapInfo{Token: "foo"},
-		Headers:  map[string][]string{"foo": {"bar"}},
+		Secret:    new(logical.Secret),
+		Auth:      new(logical.Auth),
+		Data:      map[string]interface{}{"foo": 42},
+		Redirect:  "foo",
+		Warnings:  []string{"foo"},
+		WrapInfo:  &wrapping.ResponseWrapInfo{Token: "foo"},
+		Headers:   map[string][]string{"foo": {"bar"}},
+		MountType: "mount",
 	}
 	origJSON := mustJSONMarshal(t, orig)
 
@@ -710,6 +816,15 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 			operationAttributes: nil,
 			defaultPrefix:       "test",
 			expected:            "test-write-path-to-thing",
+		},
+		"simple-patch": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.PatchOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "test-patch-path-to-thing",
 		},
 		"operation-verb": {
 			path:                "path/to/thing",
@@ -900,7 +1015,6 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	// Compare json by first decoding, then comparing with a deep equality check.
 	var expected, actual interface{}
 	if err := jsonutil.DecodeJSON(docJSON, &actual); err != nil {
@@ -914,19 +1028,6 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	if diff := deep.Equal(actual, expected); diff != nil {
 		// fmt.Println(string(docJSON)) // uncomment to debug generated JSON (very helpful when fixing tests)
 		t.Fatal(diff)
-	}
-}
-
-func getPathOp(pi *OASPathItem, op string) *OASOperation {
-	switch op {
-	case "get":
-		return pi.Get
-	case "post":
-		return pi.Post
-	case "delete":
-		return pi.Delete
-	default:
-		panic("unexpected operation: " + op)
 	}
 }
 

@@ -111,6 +111,10 @@ type BackendConfig struct {
 
 	// EventsSender provides a mechanism to interact with Vault events.
 	EventsSender EventSender
+
+	// ObservationsRecorder provides a mechanism to interact with the
+	// Vault Observation System.
+	ObservationRecorder ObservationRecorder
 }
 
 // Factory is the factory function to create a logical backend.
@@ -159,6 +163,29 @@ type Paths struct {
 	// On standby nodes, like all storage write operations, this will trigger
 	// an ErrReadOnly return.
 	WriteForwardedStorage []string
+
+	// Binary paths are those whose request bodies should not be assumed to
+	// be JSON encoded, and for which the backend will decode values for auditing
+	Binary []string
+
+	// Limited paths are storage paths that require special-cased request
+	// limiting.
+	//
+	// This was initially added to separate limiting of "write" requests
+	// (limits.WriteLimiter) from limiting for CPU-bound pki/issue requests
+	// (limits.SpecialPathLimiter). Other plugins might also choose to mark
+	// paths if they don't follow a typical resource usage pattern.
+	//
+	// For more details, consult limits/registry.go.
+	Limited []string
+
+	// AllowSnapshotRead paths are API paths that are allowed to be read from
+	// a loaded snapshot. These can't be regular expressions, it is either an
+	// exact match, a prefix match and/or a wildcard match.
+	// For prefix match, append '*' as a suffix.
+	// For a wildcard match, use '+' in the segment to match any identifier
+	// (e.g. 'foo/+/bar'). Note that '+' can't be adjacent to a non-slash.
+	AllowSnapshotRead []string
 }
 
 type Auditor interface {
@@ -174,6 +201,12 @@ type PluginVersion struct {
 type PluginVersioner interface {
 	// PluginVersion returns the version for the backend
 	PluginVersion() PluginVersion
+}
+
+// MetricsReporter is an optional interface that returns a
+// metric. Currently only implemented by the database backend.
+type MetricsReporter interface {
+	GetConnectionMetrics() (map[string]int, error)
 }
 
 var EmptyPluginVersion = PluginVersion{""}

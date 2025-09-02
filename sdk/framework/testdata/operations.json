@@ -12,20 +12,7 @@
   "paths": {
     "/foo/{id}": {
       "description": "Synopsis",
-      "x-vault-createSupported": true,
-      "x-vault-sudo": true,
-      "x-vault-displayAttrs": {
-        "navigation": true
-      },
       "parameters": [
-        {
-          "name": "format",
-          "description": "a query param",
-          "in": "query",
-          "schema": {
-            "type": "string"
-          }
-        },
         {
           "name": "id",
           "description": "id path parameter",
@@ -36,13 +23,36 @@
           "required": true
         }
       ],
+      "x-vault-sudo": true,
+      "x-vault-createSupported": true,
+      "x-vault-displayAttrs": {
+        "navigation": true
+      },
       "get": {
+        "summary": "My Summary",
+        "description": "My Description",
         "operationId": "kv-read-foo-id",
         "tags": [
           "secrets"
         ],
-        "summary": "My Summary",
-        "description": "My Description",
+        "parameters": [
+          {
+            "name": "format",
+            "description": "a query param",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "read_snapshot_id",
+            "description": "Targets the read operation to the provided loaded snapshot Id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -50,12 +60,39 @@
         }
       },
       "post": {
+        "summary": "Update Summary",
+        "description": "Update Description",
         "operationId": "kv-write-foo-id",
         "tags": [
           "secrets"
         ],
-        "summary": "Update Summary",
-        "description": "Update Description",
+        "parameters": [
+          {
+            "name": "recover_snapshot_id",
+            "description": "Triggers a recover operation using the given snapshot ID. Request body is ignored when a recover operation is requested.",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "deprecated": true
+          },
+          {
+            "name": "X-Vault-Recover-Snapshot-Id",
+            "description": "Triggers a recover operation using the given snapshot ID. Request body is ignored when a recover operation is requested.",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Vault-Recover-Source-Path",
+            "description": "The source path to recover from. Only used if a snapshot ID is also supplied. If not specified, the source path is assumed to be the same as the request path.",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -71,23 +108,34 @@
             "description": "OK"
           }
         }
+      },
+      "patch": {
+        "summary": "Patch Summary",
+        "description": "Patch Description",
+        "operationId": "kv-patch-foo-id",
+        "tags": [
+          "secrets"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KvPatchFooIdRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
       }
     },
     "/foo/{id}/": {
       "description": "Synopsis",
-      "x-vault-sudo": true,
-      "x-vault-displayAttrs": {
-        "navigation": true
-      },
       "parameters": [
-        {
-          "name": "format",
-          "description": "a query param",
-          "in": "query",
-          "schema": {
-            "type": "string"
-          }
-        },
         {
           "name": "id",
           "description": "id path parameter",
@@ -98,32 +146,59 @@
           "required": true
         }
       ],
+      "x-vault-sudo": true,
+      "x-vault-displayAttrs": {
+        "navigation": true
+      },
       "get": {
+        "summary": "List Summary",
+        "description": "List Description",
         "operationId": "kv-list-foo-id",
         "tags": [
           "secrets"
         ],
-        "summary": "List Summary",
-        "description": "List Description",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        },
         "parameters": [
+          {
+            "name": "format",
+            "description": "a query param",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "list",
             "description": "Must be set to `true`",
-            "required": true,
             "in": "query",
             "schema": {
               "type": "string",
               "enum": [
                 "true"
               ]
+            },
+            "required": true
+          },
+          {
+            "name": "read_snapshot_id",
+            "description": "Targets the read operation to the provided loaded snapshot Id",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardListResponse"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -131,17 +206,7 @@
     "schemas": {
       "KvWriteFooIdRequest": {
         "type": "object",
-        "required": [
-          "age"
-        ],
         "properties": {
-          "flavors": {
-            "type": "array",
-            "description": "the flavors",
-            "items": {
-              "type": "string"
-            }
-          },
           "age": {
             "type": "integer",
             "description": "the age",
@@ -152,16 +217,32 @@
             ],
             "x-vault-displayAttrs": {
               "name": "Age",
+              "value": 7,
               "sensitive": true,
-              "group": "Some Group",
-              "value": 7
+              "group": "Some Group"
             }
+          },
+          "flavors": {
+            "type": "array",
+            "description": "the flavors",
+            "items": {
+              "type": "string"
+            }
+          },
+          "format": {
+            "type": "string",
+            "description": "a query param"
+          },
+          "maximum": {
+            "type": "integer",
+            "description": "a maximum value",
+            "format": "int64"
           },
           "name": {
             "type": "string",
             "description": "the name",
-            "default": "Larry",
-            "pattern": "\\w([\\w-.]*\\w)?"
+            "pattern": "\\w([\\w-.]*\\w)?",
+            "default": "Larry"
           },
           "x-abc-token": {
             "type": "string",
@@ -171,11 +252,74 @@
               "b",
               "c"
             ]
+          }
+        },
+        "required": [
+          "age"
+        ]
+      },
+      "KvPatchFooIdRequest": {
+        "type": "object",
+        "properties": {
+          "age": {
+            "type": "integer",
+            "description": "the age",
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "x-vault-displayAttrs": {
+              "name": "Age",
+              "value": 7,
+              "sensitive": true,
+              "group": "Some Group"
+            }
+          },
+          "flavors": {
+            "type": "array",
+            "description": "the flavors",
+            "items": {
+              "type": "string"
+            }
+          },
+          "format": {
+            "type": "string",
+            "description": "a query param"
           },
           "maximum": {
             "type": "integer",
             "description": "a maximum value",
             "format": "int64"
+          },
+          "name": {
+            "type": "string",
+            "description": "the name",
+            "pattern": "\\w([\\w-.]*\\w)?",
+            "default": "Larry"
+          },
+          "x-abc-token": {
+            "type": "string",
+            "description": "a header value",
+            "enum": [
+              "a",
+              "b",
+              "c"
+            ]
+          }
+        },
+        "required": [
+          "age"
+        ]
+      },
+      "StandardListResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       }

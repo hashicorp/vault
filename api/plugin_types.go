@@ -7,7 +7,10 @@ package api
 // https://github.com/hashicorp/vault/blob/main/sdk/helper/consts/plugin_types.go
 // Any changes made should be made to both files at the same time.
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 var PluginTypes = []PluginType{
 	PluginTypeUnknown,
@@ -63,4 +66,35 @@ func ParsePluginType(pluginType string) (PluginType, error) {
 	default:
 		return PluginTypeUnknown, fmt.Errorf("%q is not a supported plugin type", pluginType)
 	}
+}
+
+// UnmarshalJSON implements json.Unmarshaler. It supports unmarshaling either a
+// string or a uint32. All new serialization will be as a string, but we
+// previously serialized as a uint32 so we need to support that for backwards
+// compatibility.
+func (p *PluginType) UnmarshalJSON(data []byte) error {
+	var asString string
+	err := json.Unmarshal(data, &asString)
+	if err == nil {
+		*p, err = ParsePluginType(asString)
+		return err
+	}
+
+	var asUint32 uint32
+	err = json.Unmarshal(data, &asUint32)
+	if err != nil {
+		return err
+	}
+	*p = PluginType(asUint32)
+	switch *p {
+	case PluginTypeUnknown, PluginTypeCredential, PluginTypeDatabase, PluginTypeSecrets:
+		return nil
+	default:
+		return fmt.Errorf("%d is not a supported plugin type", asUint32)
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (p PluginType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.String())
 }

@@ -180,6 +180,7 @@ auto_auth \{
 template_config \{
   static_secret_render_interval = "5m"
   exit_on_retry_failure         = true
+  max_connections_per_host      = 10
 }
 
 vault \{
@@ -222,6 +223,7 @@ auto_auth \{
 template_config \{
   static_secret_render_interval = "5m"
   exit_on_retry_failure         = true
+  max_connections_per_host      = 10
 }
 
 vault \{

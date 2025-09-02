@@ -4,17 +4,13 @@
  */
 
 import Controller from '@ember/controller';
+import { service } from '@ember/service';
 
 export default Controller.extend({
+  router: service(),
   showLicenseError: false,
 
   actions: {
-    transitionToCluster() {
-      return this.model.reload().then(() => {
-        return this.transitionToRoute('vault.cluster', this.model.name);
-      });
-    },
-
     reloadCluster() {
       return this.model.reload();
     },

@@ -28,11 +28,12 @@ const (
 	HashTypeSHA3512
 )
 
+//go:generate enumer -type=MarshalingType -trimprefix=MarshalingType -transform=snake
 type MarshalingType uint32
 
 const (
-	_                                 = iota
-	MarshalingTypeASN1 MarshalingType = iota
+	_ MarshalingType = iota
+	MarshalingTypeASN1
 	MarshalingTypeJWS
 )
 
@@ -76,8 +77,5 @@ var (
 		HashTypeSHA3512: crypto.SHA3_512,
 	}
 
-	MarshalingTypeMap = map[string]MarshalingType{
-		"asn1": MarshalingTypeASN1,
-		"jws":  MarshalingTypeJWS,
-	}
+	MarshalingTypeMap = _MarshalingTypeNameToValueMap
 )

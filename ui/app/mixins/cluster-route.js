@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Mixin from '@ember/object/mixin';
 import RSVP from 'rsvp';
 import {
@@ -42,9 +42,11 @@ export default Mixin.create({
         transition.targetName !== CLUSTER_INDEX &&
         !isExcluded
       ) {
-        return this.transitionTo(targetRoute, { queryParams: { redirect_to: this.router.currentURL } });
+        return this.router.transitionTo(targetRoute, {
+          queryParams: { redirect_to: this.router.currentURL },
+        });
       }
-      return this.transitionTo(targetRoute);
+      return this.router.transitionTo(targetRoute);
     }
 
     return RSVP.resolve();

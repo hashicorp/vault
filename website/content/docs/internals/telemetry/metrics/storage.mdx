@@ -5,6 +5,9 @@ description: >-
   Technical reference for individual storage plugin telemetry values.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Storage plugin telemetry
 
 Storage telemetry provides information on the health of Vault storage and your
@@ -14,6 +17,8 @@ configured storage backends. For integrated storage metrics, refer to the
 ## Barrier metrics
 
 @include 'telemetry-metrics/vault/barrier/delete.mdx'
+
+@include 'telemetry-metrics/vault/barrier/estimated_encryptions.mdx'
 
 @include 'telemetry-metrics/vault/barrier/get.mdx'
 

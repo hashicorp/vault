@@ -8,7 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,6 +19,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -26,7 +27,7 @@ import (
 type CouchDBBackend struct {
 	logger     log.Logger
 	client     *couchDBClient
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // Verify CouchDBBackend satisfies the correct interfaces
@@ -114,7 +115,7 @@ func (m *couchDBClient) get(key string) (*physical.Entry, error) {
 	} else if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GET returned %q", resp.Status)
 	}
-	bs, err := ioutil.ReadAll(resp.Body)
+	bs, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +144,7 @@ func (m *couchDBClient) list(prefix string) ([]couchDBListItem, error) {
 	}
 	defer resp.Body.Close()
 
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +197,7 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 			Client:   cleanhttp.DefaultPooledClient(),
 		},
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}, nil
 }
 
@@ -213,7 +214,9 @@ type couchDBEntry struct {
 
 // Put is used to insert or update an entry
 func (m *CouchDBBackend) Put(ctx context.Context, entry *physical.Entry) error {
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer m.permitPool.Release()
 
 	return m.PutInternal(ctx, entry)
@@ -221,7 +224,9 @@ func (m *CouchDBBackend) Put(ctx context.Context, entry *physical.Entry) error {
 
 // Get is used to fetch an entry
 func (m *CouchDBBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer m.permitPool.Release()
 
 	return m.GetInternal(ctx, key)
@@ -229,7 +234,9 @@ func (m *CouchDBBackend) Get(ctx context.Context, key string) (*physical.Entry, 
 
 // Delete is used to permanently delete an entry
 func (m *CouchDBBackend) Delete(ctx context.Context, key string) error {
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer m.permitPool.Release()
 
 	return m.DeleteInternal(ctx, key)
@@ -239,7 +246,9 @@ func (m *CouchDBBackend) Delete(ctx context.Context, key string) error {
 func (m *CouchDBBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"couchdb", "list"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer m.permitPool.Release()
 
 	items, err := m.client.list(prefix)
@@ -276,7 +285,7 @@ func NewTransactionalCouchDBBackend(conf map[string]string, logger log.Logger) (
 	if err != nil {
 		return nil, err
 	}
-	backend.permitPool = physical.NewPermitPool(1)
+	backend.permitPool = permitpool.New(1)
 
 	return &TransactionalCouchDBBackend{
 		CouchDBBackend: *backend,

@@ -19,12 +19,8 @@ const appConfig = {
     serviceWorkerScope: config.serviceWorkerScope,
     skipWaitingOnMessage: true,
   },
-  svgJar: {
-    //optimize: false,
-    //paths: [],
-    optimizer: {},
-    sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
-    rootURL: '/ui/',
+  babel: {
+    plugins: [require.resolve('ember-concurrency/async-arrow-task-transform')],
   },
   fingerprint: {
     exclude: ['images/'],
@@ -34,21 +30,26 @@ const appConfig = {
       return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
     },
   },
-  babel: {
-    plugins: [['inline-json-import', {}]],
+  'ember-cli-babel': {
+    enableTypeScriptTransform: true,
+    throwUnlessParallelizable: true,
   },
   hinting: isTest,
-  tests: isTest,
+  tests: !isProd,
   sourcemaps: {
     enabled: !isProd,
   },
   sassOptions: {
     sourceMap: false,
     onlyIncluded: true,
+    quietDeps: true, // silences deprecation warnings from dependencies
     precision: 4,
     includePaths: [
-      './node_modules/@hashicorp/design-system-components/app/styles',
+      './node_modules/@hashicorp/design-system-components/dist/styles',
       './node_modules/@hashicorp/design-system-tokens/dist/products/css',
+      './node_modules/ember-basic-dropdown/',
+      './node_modules/ember-power-select/',
+      './node_modules/@hashicorp/vault-reporting/dist/styles',
     ],
   },
   minifyCSS: {
@@ -78,21 +79,15 @@ const appConfig = {
 module.exports = function (defaults) {
   const app = new EmberApp(defaults, appConfig);
 
-  app.import('vendor/string-includes.js');
-  app.import('node_modules/string.prototype.endswith/endswith.js');
-  app.import('node_modules/string.prototype.startswith/startswith.js');
-
   app.import('node_modules/jsonlint/lib/jsonlint.js');
-  app.import('node_modules/codemirror/addon/lint/lint.css');
-  app.import('node_modules/codemirror/lib/codemirror.css');
   app.import('node_modules/text-encoder-lite/text-encoder-lite.js');
   app.import('node_modules/jsondiffpatch/dist/jsondiffpatch.umd.js');
   app.import('node_modules/jsondiffpatch/dist/formatters-styles/html.css');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
-
-  app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
-  app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
+  app.import(
+    'node_modules/@hashicorp/design-system-components/dist/styles/@hashicorp/design-system-components.css'
+  );
 
   return app.toTree();
 };

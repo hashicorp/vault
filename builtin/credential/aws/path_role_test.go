@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/helper/constants"
 	vlttesting "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
@@ -304,7 +305,6 @@ func TestBackend_pathIam(t *testing.T) {
 		Data:      data,
 		Storage:   storage,
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -635,8 +635,12 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"token_type":                     "default",
 	}
 
+	if constants.IsEnterprise {
+		expected["token_auth_metadata"] = map[string]string{}
+	}
+
 	if resp.Data["role_id"] == nil {
-		t.Fatal("role_id not found in repsonse")
+		t.Fatal("role_id not found in response")
 	}
 	expected["role_id"] = resp.Data["role_id"]
 	if diff := deep.Equal(expected, resp.Data); diff != nil {

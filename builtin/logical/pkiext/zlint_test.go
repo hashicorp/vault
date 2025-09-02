@@ -6,10 +6,16 @@ package pkiext
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"regexp"
+	"runtime"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
 )
@@ -17,14 +23,23 @@ import (
 var (
 	zRunner        *docker.Runner
 	buildZLintOnce sync.Once
+	releaseRegex   = regexp.MustCompile(`^go\d+\.\d+\.\d+$`)
 )
 
 func buildZLintContainer(t *testing.T) {
-	containerfile := `
-FROM docker.mirror.hashicorp.services/library/golang:latest
-
-RUN go install github.com/zmap/zlint/v3/cmd/zlint@latest
-`
+	// Leverage the Go version running the test to pull a version tagged image
+	// to avoid the issues we sometimes encounter pulling images with the latest tag
+	runtimeVer := runtime.Version()
+	goVersion := "latest"
+	// The version returned from Go might not be a release tag such as go1.23.2, if it
+	// isn't fallback to latest
+	if releaseRegex.MatchString(runtimeVer) {
+		goVersion = strings.TrimPrefix(runtime.Version(), "go")
+	}
+	containerfile := fmt.Sprintf(`
+FROM docker.mirror.hashicorp.services/library/golang:%s
+RUN go install github.com/zmap/zlint/v3/cmd/zlint@v3.6.2
+`, goVersion)
 
 	bCtx := docker.NewBuildContext()
 
@@ -50,15 +65,21 @@ RUN go install github.com/zmap/zlint/v3/cmd/zlint@latest
 	}
 
 	ctx := context.Background()
-	output, err := zRunner.BuildImage(ctx, containerfile, bCtx,
-		docker.BuildRemove(true), docker.BuildForceRemove(true),
-		docker.BuildPullParent(true),
-		docker.BuildTags([]string{imageName + ":" + imageTag}))
-	if err != nil {
-		t.Fatalf("Could not build new image: %v", err)
-	}
 
-	t.Logf("Image build output: %v", string(output))
+	// Sometimes we see timeouts and issues pulling the zlint code from GitHub
+	testhelpers.RetryUntil(t, 30*time.Second, func() error {
+		output, err := zRunner.BuildImage(ctx, containerfile, bCtx,
+			docker.BuildRemove(true),
+			docker.BuildForceRemove(true),
+			docker.BuildPullParent(true),
+			docker.BuildTags([]string{imageName + ":" + imageTag}))
+		if err != nil {
+			return fmt.Errorf("could not build new image with zlint: %w", err)
+		}
+
+		t.Logf("Image build output: %v", string(output))
+		return nil
+	})
 }
 
 func RunZLintContainer(t *testing.T, certificate string) []byte {

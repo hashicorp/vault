@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <Hds::Card::Container
   @level="mid"
@@ -14,18 +14,19 @@
   </span>
   <div class="has-left-margin-m is-min-width-0 is-flex-grow-1">
     <p class="has-text-weight-bold" data-test-certificate-label>
-      {{this.format}}
+      {{this.certLabel}}
     </p>
     <code class="is-size-8 truncate-second-line has-text-grey" data-test-certificate-value>
       {{@data}}
     </code>
   </div>
-  <div class="is-flex-center has-background-white-bis has-side-padding-s has-top-bottom-margin-negative-m">
+  <div class="is-flex-center has-background-white-bis has-top-bottom-margin-negative-m">
     <Hds::Copy::Button
       @text="Copy"
       @isIconOnly={{true}}
-      @textToCopy={{@data}}
-      class="transparent is-paddingless"
+      @textToCopy={{this.copyValue}}
+      @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+      class="transparent"
       data-test-copy-button
     />
   </div>

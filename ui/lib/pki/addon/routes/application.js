@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 
 export default class PkiRoute extends Route {
@@ -17,15 +17,15 @@ export default class PkiRoute extends Route {
     // the openAPI attributes to the model prototype
     const mountPath = this.secretMountPath.currentPath;
     return hash({
-      acme: this.pathHelp.getNewModel('pki/config/acme', mountPath),
-      certGenerate: this.pathHelp.getNewModel('pki/certificate/generate', mountPath),
-      certSign: this.pathHelp.getNewModel('pki/certificate/sign', mountPath),
-      cluster: this.pathHelp.getNewModel('pki/config/cluster', mountPath),
-      key: this.pathHelp.getNewModel('pki/key', mountPath),
-      role: this.pathHelp.getNewModel('pki/role', mountPath),
-      signCsr: this.pathHelp.getNewModel('pki/sign-intermediate', mountPath),
-      tidy: this.pathHelp.getNewModel('pki/tidy', mountPath),
-      urls: this.pathHelp.getNewModel('pki/config/urls', mountPath),
+      acme: this.pathHelp.hydrateModel('pki/config/acme', mountPath),
+      certGenerate: this.pathHelp.hydrateModel('pki/certificate/generate', mountPath),
+      certSign: this.pathHelp.hydrateModel('pki/certificate/sign', mountPath),
+      cluster: this.pathHelp.hydrateModel('pki/config/cluster', mountPath),
+      key: this.pathHelp.hydrateModel('pki/key', mountPath),
+      role: this.pathHelp.hydrateModel('pki/role', mountPath),
+      signCsr: this.pathHelp.hydrateModel('pki/sign-intermediate', mountPath),
+      tidy: this.pathHelp.hydrateModel('pki/tidy', mountPath),
+      urls: this.pathHelp.hydrateModel('pki/config/urls', mountPath),
     });
   }
 }

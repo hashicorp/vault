@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { assign } from '@ember/polyfills';
 import { allSettled } from 'rsvp';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
@@ -11,11 +10,11 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 export default ApplicationAdapter.extend({
   namespace: 'v1',
 
-  createOrUpdate(store, type, snapshot) {
-    const { backend, name } = snapshot.record;
-    const serializer = store.serializerFor(type.modelName);
+  createOrUpdate(store, { modelName }, snapshot) {
+    const { backend, name, type } = snapshot.record;
+    const serializer = store.serializerFor(modelName);
     const data = serializer.serialize(snapshot);
-    const url = this.urlForTransformations(backend, name);
+    const url = this.urlForTransformations(backend, name, type);
 
     return this.ajax(url, 'POST', { data }).then((resp) => {
       const response = resp || {};
@@ -34,18 +33,18 @@ export default ApplicationAdapter.extend({
 
   deleteRecord(store, type, snapshot) {
     const { id } = snapshot;
-    return this.ajax(this.urlForTransformations(snapshot.record.get('backend'), id), 'DELETE');
+    return this.ajax(this.urlForTransformations(snapshot.record.backend, id), 'DELETE');
   },
 
   pathForType() {
     return 'transform';
   },
 
-  urlForTransformations(backend, id) {
-    let url = `${this.buildURL()}/${encodePath(backend)}/transformation`;
-    if (id) {
-      url = url + '/' + encodePath(id);
-    }
+  urlForTransformations(backend, id, type) {
+    const base = `${this.buildURL()}/${encodePath(backend)}`;
+    // when type exists, transformations is plural
+    const url = type ? `${base}/transformations/${type}` : `${base}/transformation`;
+    if (id) return `${url}/${encodePath(id)}`;
     return url;
   },
 
@@ -62,7 +61,7 @@ export default ApplicationAdapter.extend({
     const queryAjax = this.ajax(this.urlForTransformations(backend, id), 'GET', this.optionsForQuery(id));
 
     return allSettled([queryAjax]).then((results) => {
-      // query result 404d, so throw the adapterError
+      // query result 404, so throw the adapterError
       if (!results[0].value) {
         throw results[0].reason;
       }
@@ -85,7 +84,7 @@ export default ApplicationAdapter.extend({
             };
             delete d.templates;
           }
-          resp.data = assign({}, resp.data, d);
+          resp.data = { ...resp.data, ...d };
         }
       });
       return resp;

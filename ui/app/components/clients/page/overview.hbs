@@ -1,0 +1,74 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Clients::RunningTotal
+  @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
+  @byMonthNewClients={{this.byMonthNewClients}}
+  @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
+  @isCurrentMonth={{this.isCurrentMonth}}
+  @runningTotals={{this.totalUsageCounts}}
+  @upgradeData={{this.upgradesDuringActivity}}
+  @mountPath={{@mountPath}}
+/>
+
+{{#if this.hasAttributionData}}
+  <Clients::CountsCard @title="Client attribution" @legend={{this.chartLegend}}>
+    <:subheader>
+      <Hds::Form::Select::Base
+        class="has-bottom-margin-m"
+        aria-label="Month"
+        name="month"
+        {{on "input" this.selectMonth}}
+        @width="200px"
+        data-test-select="attribution-month"
+        as |S|
+      >
+        <S.Options>
+          <option value="">Select month</option>
+          {{#each this.months as |m|}}
+            <option value={{m.value}} selected={{eq m.value this.selectedMonth}}>{{m.display}}</option>
+          {{/each}}
+        </S.Options>
+      </Hds::Form::Select::Base>
+    </:subheader>
+
+    <:table>
+      <Clients::Table
+        data-test-table="attribution"
+        @data={{this.tableData}}
+        @columns={{this.tableColumns}}
+        @initiallySortBy={{hash column="clients" direction="desc"}}
+      >
+        <:emptyState>
+          <Hds::ApplicationState as |A|>
+            <A.Header
+              @title={{if
+                this.selectedMonth
+                "No data is available for the selected month"
+                "Select a month to view client attribution"
+              }}
+            />
+            <A.Body
+              @text="View the namespace mount breakdown of clients by selecting {{if
+                this.selectedMonth
+                'another'
+                'a'
+              }} month."
+            />
+            <A.Footer as |F|>
+              <F.LinkStandalone
+                @icon="file-text"
+                @text="Client count documentation"
+                @href="https://developer.hashicorp.com/vault/docs/concepts/client-count"
+                @iconPosition="trailing"
+              />
+            </A.Footer>
+          </Hds::ApplicationState>
+        </:emptyState>
+      </Clients::Table>
+    </:table>
+  </Clients::CountsCard>
+
+{{/if}}

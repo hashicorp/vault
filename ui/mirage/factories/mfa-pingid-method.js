@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { Factory } from 'ember-cli-mirage';
+import { Factory } from 'miragejs';
 
 export default Factory.extend({
   use_signature: true,
@@ -13,5 +13,5 @@ export default Factory.extend({
   org_alias: 'foobarbaz',
   type: 'pingid',
   username_template: '',
-  namespace_id: 'root',
+  namespace_path: 'admin/',
 });

@@ -7,11 +7,10 @@ import (
 	"context"
 	"testing"
 
-	"google.golang.org/grpc"
-
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"google.golang.org/grpc"
 )
 
 func TestStorage_GRPC_ReturnsErrIfStorageNil(t *testing.T) {

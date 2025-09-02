@@ -1,0 +1,36 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div class="action-block is-rounded" data-test-generate-token-replication>
+  <div class="action-block-info">
+    <h4 class="title is-5 is-marginless">
+      Generate operation token
+    </h4>
+    <p>
+      This token is needed for update and promote actions.
+    </p>
+  </div>
+
+  <div class="action-block-action">
+    <Hds::Button
+      @text="Generate token"
+      @color="secondary"
+      {{on "click" (action (mut this.isModalActive) true)}}
+      data-test-button="Generate token"
+    />
+  </div>
+</div>
+
+{{#if this.isModalActive}}
+  <Hds::Modal id="shamir-flow-modal" @color="warning" @onClose={{action (mut this.isModalActive) false}} as |M|>
+    <M.Header>
+      Generate operation token
+    </M.Header>
+    <M.Body>
+      <Shamir::DrTokenFlow @action="generate-dr-operation-token" @onCancel={{action (mut this.isModalActive) false}} />
+    </M.Body>
+    {{! Section & Footer is in child component since the form must do side effects on cancel }}
+  </Hds::Modal>
+{{/if}}

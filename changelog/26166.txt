@@ -1,0 +1,3 @@
+```release-note:bug
+core: Only reload seal configuration when enable_multiseal is set to true.
+```

@@ -3,11 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@ember/component';
-import { computed } from '@ember/object';
+import Component from '@glimmer/component';
 import { clusterStates } from 'core/helpers/cluster-states';
 import { capitalize } from '@ember/string';
-import layout from '../templates/components/replication-dashboard';
 
 /**
  * @module ReplicationDashboard
@@ -18,7 +16,6 @@ import layout from '../templates/components/replication-dashboard';
  * @example
  * ```js
  * <ReplicationDashboard
-    @data={{model}}
     @componentToRender='replication-primary-card'
     @isSecondary=false
     @isSummaryDashboard=false
@@ -28,7 +25,6 @@ import layout from '../templates/components/replication-dashboard';
     @reindexingDetails={{reindexingDetails}}
     />
  * ```
- * @param {Object} data=null - An Ember data object that is pulled from the Ember Cluster Model.
  * @param {String} [componentToRender=''] - A string that determines which card component is displayed.  There are three options, replication-primary-card, replication-secondary-card, replication-summary-card.
  * @param {Boolean} [isSecondary=false] - Used to determine the title and display logic.
  * @param {Boolean} [isSummaryDashboard=false] -  Only true when the cluster is both a dr and performance primary. If true, replicationDetailsSummary is populated and used to pass through the cluster details.
@@ -38,34 +34,25 @@ import layout from '../templates/components/replication-dashboard';
  * @param {Object} reindexingDetails=null - An Ember data object used to show a reindexing progress bar.
  */
 
-export default Component.extend({
-  layout,
-  componentToRender: '',
-  data: null,
-  isSecondary: false,
-  isSummaryDashboard: false,
-  replicationDetails: null,
-  replicationDetailsSummary: null,
-  isSyncing: computed('replicationDetails.state', 'isSecondary', function () {
-    const { state } = this.replicationDetails;
-    const isSecondary = this.isSecondary;
+export default class ReplicationDashboard extends Component {
+  get isSyncing() {
+    const { state } = this.args.replicationDetails;
+    const isSecondary = this.args.isSecondary;
     return isSecondary && state && clusterStates([state]).isSyncing;
-  }),
-  isReindexing: computed('replicationDetails.reindex_in_progress', function () {
-    const { replicationDetails } = this;
-    return !!replicationDetails.reindex_in_progress;
-  }),
-  reindexingStage: computed('replicationDetails.reindex_stage', function () {
-    const { replicationDetails } = this;
-    const stage = replicationDetails.reindex_stage;
+  }
+  get isReindexing() {
+    return !!this.args.replicationDetails.reindex_in_progress;
+  }
+  get reindexingStage() {
+    const stage = this.args.replicationDetails.reindex_stage;
     // specify the stage if we have one
     if (stage) {
       return `: ${capitalize(stage)}`;
     }
     return '';
-  }),
-  progressBar: computed('replicationDetails.{reindex_building_progress,reindex_building_total}', function () {
-    const { reindex_building_progress, reindex_building_total } = this.replicationDetails;
+  }
+  get progressBar() {
+    const { reindex_building_progress, reindex_building_total } = this.args.replicationDetails;
     let progressBar = null;
 
     if (reindex_building_progress && reindex_building_total) {
@@ -76,9 +63,9 @@ export default Component.extend({
     }
 
     return progressBar;
-  }),
-  summaryState: computed('replicationDetailsSummary.{dr.state,performance.state}', function () {
-    const { replicationDetailsSummary } = this;
+  }
+  get summaryState() {
+    const { replicationDetailsSummary } = this.args;
     const drState = replicationDetailsSummary.dr.state;
     const performanceState = replicationDetailsSummary.performance.state;
 
@@ -90,11 +77,11 @@ export default Component.extend({
     }
 
     return drState;
-  }),
-  reindexMessage: computed('isSecondary', 'progressBar', function () {
-    if (!this.isSecondary) {
+  }
+  get reindexMessage() {
+    if (!this.args.isSecondary) {
       return 'This can cause a delay depending on the size of the data store. You can <b>not</b> use Vault during this time.';
     }
     return 'This can cause a delay depending on the size of the data store. You can use Vault during this time.';
-  }),
-});
+  }
+}

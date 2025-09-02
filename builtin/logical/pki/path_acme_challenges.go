@@ -57,7 +57,7 @@ func (b *backend) acmeChallengeHandler(acmeCtx *acmeContext, r *logical.Request,
 	authId := fields.Get("auth_id").(string)
 	challengeType := fields.Get("challenge_type").(string)
 
-	authz, err := b.acmeState.LoadAuthorization(acmeCtx, userCtx, authId)
+	authz, err := b.GetAcmeState().LoadAuthorization(acmeCtx, userCtx, authId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load authorization: %w", err)
 	}
@@ -95,7 +95,7 @@ func (b *backend) acmeChallengeFetchHandler(acmeCtx *acmeContext, r *logical.Req
 			return nil, fmt.Errorf("failed to get thumbprint for key: %w", err)
 		}
 
-		if err := b.acmeState.validator.AcceptChallenge(acmeCtx.sc, userCtx.Kid, authz, challenge, thumbprint); err != nil {
+		if err := b.GetAcmeState().validator.AcceptChallenge(acmeCtx.sc, userCtx.Kid, authz, challenge, thumbprint); err != nil {
 			return nil, fmt.Errorf("error submitting challenge for validation: %w", err)
 		}
 	}

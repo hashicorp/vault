@@ -6,6 +6,9 @@ description: |-
   auth method.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Userpass auth method (HTTP API)
 
 This is the API documentation for the Vault Username & Password auth method. For
@@ -27,8 +30,8 @@ Create a new user or update an existing user. This path honors the distinction b
 ### Parameters
 
 - `username` `(string: <required>)` – The username for the user. Accepted characters: alphanumeric plus "_", "-", "." (underscore, hyphen and period); username cannot begin with a hyphen, nor can it begin or end with a period.
-- `password` `(string: <required>)` - The password for the user. Only required
-  when creating the user.
+- `password` `(string: <required if password_hash is not given>)` - Password for the current user. Only required when creating the user.  Mutually exclusive with `password_hash`.
+- `password_hash` `(string: <required if password is not given>)` - Pre-hashed password for the current user in bcrypt format. Mutually exclusive with `password`.
 
 @include 'tokenfields.mdx'
 
@@ -50,6 +53,20 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/auth/userpass/users/mitchellh
+```
+
+### Examples
+
+Set role-level TTL values for a user named "alice" so the generated lease has a
+default TTL of 8 hours (28800 seconds) and maximum TTL of 12 hours
+(43200 seconds):
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    --data '{"token_ttl":"8h","token_max_ttl":"12h"}' \
+    $VAULT_ADDR/v1/auth/userpass/users/alice
 ```
 
 ## Read user

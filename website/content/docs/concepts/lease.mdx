@@ -6,6 +6,9 @@ description: >-
   will revoke that secret.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Lease, renew, and revoke
 
 With every dynamic secret and `service` type authentication token, Vault
@@ -35,7 +38,7 @@ the user interface (UI) under the Access tab, or automatically by Vault. When a 
 is expired, Vault will automatically revoke that lease. When a token is revoked,
 Vault will revoke all leases that were created using that token.
 
-**Note**: The [Key/Value Backend](/vault/docs/secrets/kv) which stores
+**Note**: The [Key Value Backend](/vault/docs/secrets/kv) which stores
 arbitrary secrets does not issue leases although it will sometimes return a
 lease duration; see the documentation for more information.
 

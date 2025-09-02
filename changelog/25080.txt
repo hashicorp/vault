@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Fix auto_join not working with mDNS provider.
+```

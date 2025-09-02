@@ -1,13 +1,14 @@
 ---
 layout: docs
-page_title: Etcd - Storage Backends - Configuration
-description: |-
-  The Etcd storage backend is used to persist Vault's data in Etcd. It supports
-  both the v2 and v3 Etcd APIs, and the version is automatically detected based
-  on the version of the Etcd cluster.
+page_title: Etcd configuration
+description: >-
+  Configure Vault backend storage to use Etcd clusters.
 ---
 
-# Etcd storage backend
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# Etcd configuration for Vault backend storage
 
 The Etcd storage backend is used to persist Vault's data in [Etcd][etcd]. It
 supports both the v2 and v3 Etcd APIs, and the version is automatically detected

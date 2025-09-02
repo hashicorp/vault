@@ -1,65 +1,71 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
-
+}}
 <div ...attributes>
-  {{#if this.getShowToolbar}}
-    <div data-test-component="json-editor-toolbar">
-      <Toolbar>
-        <label class="has-text-weight-bold" data-test-component="json-editor-title">
+  {{#if @readOnly}}
+    <Hds::CodeBlock @hasCopyButton={{true}} @language={{@mode}} @value={{or @value @example}} as |CB|>
+      {{#if @title}}
+        <CB.Title data-test-component="json-editor-title">
           {{@title}}
-          {{#if @subTitle}}
-            <span class="is-size-9 is-lowercase has-text-grey">({{@subTitle}})</span>
-          {{/if}}
-        </label>
-        <ToolbarActions>
+        </CB.Title>
+      {{/if}}
+
+      {{#if @helpText}}
+        <CB.Description>
+          {{@helpText}}
+        </CB.Description>
+      {{/if}}
+    </Hds::CodeBlock>
+  {{else}}
+    <Hds::CodeEditor
+      data-test-component="code-mirror-modifier"
+      @ariaLabel={{this.ariaLabel}}
+      @extraKeys={{@extraKeys}}
+      @hasCopyButton={{true}}
+      @language={{this.mode}}
+      @isLintingEnabled={{eq this.mode "json"}}
+      @value={{or @value @example}}
+      @onBlur={{@onBlur}}
+      @onInput={{this.onUpdate}}
+      @onLint={{@onLint}}
+      @onSetup={{this.onSetup}}
+      as |CE|
+    >
+      {{#if this.getShowToolbar}}
+        {{#if @title}}
+          <CE.Title data-test-component="json-editor-title">
+            {{@title}}
+          </CE.Title>
+        {{/if}}
+
+        {{#if @subTitle}}
+          <CE.Description>
+            {{@subTitle}}
+          </CE.Description>
+        {{/if}}
+
+        {{#if @helpText}}
+          <CE.Description>
+            {{@helpText}}
+          </CE.Description>
+        {{/if}}
+
+        <CE.Generic>
           {{yield}}
+
           {{#if @example}}
-            <button
-              type="button"
-              class="toolbar-link"
+            <Hds::Button
+              class="toolbar-button"
+              @icon="reload"
+              @text="Restore example"
               disabled={{not @value}}
               {{on "click" this.restoreExample}}
               data-test-restore-example
-            >
-              Restore example
-              <Icon @name="reload" />
-            </button>
+            />
           {{/if}}
-          <div class="toolbar-separator"></div>
-          <Hds::Copy::Button
-            @text="Copy"
-            @isIconOnly={{true}}
-            @textToCopy={{@value}}
-            class="transparent"
-            data-test-copy-button
-          />
-        </ToolbarActions>
-      </Toolbar>
-    </div>
-  {{/if}}
-  <div
-    {{code-mirror
-      content=(or @value @example)
-      extraKeys=@extraKeys
-      gutters=@gutters
-      lineNumbers=(if @readOnly false true)
-      mode=@mode
-      readOnly=@readOnly
-      theme=@theme
-      viewportMarg=@viewportMargin
-      onSetup=this.onSetup
-      onUpdate=this.onUpdate
-      onFocus=this.onFocus
-    }}
-    class={{if @readOnly "readonly-codemirror"}}
-    data-test-component="code-mirror-modifier"
-  ></div>
-
-  {{#if @helpText}}
-    <div class="box is-shadowless is-fullwidth has-short-padding">
-      <p class="sub-text">{{@helpText}}</p>
-    </div>
+        </CE.Generic>
+      {{/if}}
+    </Hds::CodeEditor>
   {{/if}}
 </div>

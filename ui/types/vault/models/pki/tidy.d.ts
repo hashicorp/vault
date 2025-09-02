@@ -3,19 +3,21 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Model from '@ember-data/model';
-import { FormField, FormFieldGroups } from 'vault/vault/app-types';
+import type { FormField, FormFieldGroups, WithFormFieldsModel } from 'vault/app-types';
 
-export default class PkiTidyModel extends Model {
+type PkiTidyModel = WithFormFieldsModel & {
   version: string;
   acmeAccountSafetyBuffer: string;
   tidyAcme: boolean;
   enabled: boolean;
   intervalDuration: string;
+  minStartupBackoffDuration: string;
+  maxStartupBackoffDuration: string;
   issuerSafetyBuffer: string;
   pauseDuration: string;
   revocationQueueSafetyBuffer: string;
   safetyBuffer: string;
+  tidyCertMetadata: boolean;
   tidyCertStore: boolean;
   tidyCrossClusterRevokedCerts: boolean;
   tidyExpiredIssuers: boolean;
@@ -23,12 +25,10 @@ export default class PkiTidyModel extends Model {
   tidyRevocationQueue: boolean;
   tidyRevokedCertIssuerAssociations: boolean;
   tidyRevokedCerts: boolean;
-  get useOpenAPI(): boolean;
-  getHelpUrl(backend: string): string;
   allByKey: {
     intervalDuration: FormField[];
   };
-  get allGroups(): FormFieldGroups[];
   get sharedFields(): FormFieldGroups[];
-  get formFieldGroups(): FormFieldGroups[];
-}
+};
+
+export default PkiTidyModel;

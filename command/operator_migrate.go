@@ -14,16 +14,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
 	"golang.org/x/sync/errgroup"
@@ -331,9 +332,13 @@ func (c *OperatorMigrateCommand) loadMigratorConfig(path string) (*migratorConfi
 		return nil, err
 	}
 
-	obj, err := hcl.ParseBytes(d)
+	// TODO (HCL_DUP_KEYS_DEPRECATION): Return to hcl.Parse once duplicates are forbidden
+	obj, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(string(d))
 	if err != nil {
 		return nil, err
+	}
+	if duplicate {
+		c.UI.Warn("WARNING: Duplicate keys found in migration configuration file, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
 	}
 
 	var result migratorConfig

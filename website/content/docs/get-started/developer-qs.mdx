@@ -1,8 +1,11 @@
 ---
 layout: docs
-page_title: Developer Quick Start
-description: Learn how to store and retrieve your first secret.
+page_title: Developer quick start
+description: Learn how to store and retrieve your first secret from your applications using Vault API.
 ---
+
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
 
 # Developer quick start
 
@@ -36,7 +39,7 @@ Run the Vault server in a non-production "dev" mode in one of the following ways
 **For Docker users, run this command**:
 
 ```shell-session
-$ docker run -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=dev-only-token' vault
+$ docker run -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=dev-only-token' hashicorp/vault
 ```
 
 **For non-Docker users, run this command**:

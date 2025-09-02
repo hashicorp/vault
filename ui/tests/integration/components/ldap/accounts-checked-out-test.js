@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -44,8 +44,7 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
     this.renderComponent = () => {
       return render(
         hbs`
-          <div id="modal-wormhole"></div>
-          <AccountsCheckedOut
+                    <AccountsCheckedOut
             @libraries={{array this.library}}
             @statuses={{this.statuses}}
             @showLibraryColumn={{this.showLibraryColumn}}
@@ -56,6 +55,10 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
         }
       );
     };
+  });
+
+  hooks.afterEach(function () {
+    this.authStub.restore();
   });
 
   test('it should render empty state when no accounts are checked out', async function (assert) {
@@ -75,7 +78,7 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
   });
 
   test('it should filter accounts for root user', async function (assert) {
-    this.authStub.value({});
+    this.authStub.value({ entityId: '' });
 
     await this.renderComponent();
 
@@ -86,7 +89,7 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
   });
 
   test('it should filter accounts for non root user', async function (assert) {
-    this.authStub.value({ entity_id: '456' });
+    this.authStub.value({ entityId: '456' });
 
     await this.renderComponent();
 
@@ -108,7 +111,7 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
   });
 
   test('it should display details in table', async function (assert) {
-    this.authStub.value({ entity_id: '456' });
+    this.authStub.value({ entityId: '456' });
 
     await this.renderComponent();
 

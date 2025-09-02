@@ -1,0 +1,266 @@
+<Tabs>
+
+<Tab heading="Binary file" group="binary">
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+1. Save the SHA for your plugin binary:
+    ```shell-session
+    $ PLUGIN_SHA=$(sha256sum <path_to_plugin_binary> | awk '{print $1;}')
+    ```
+
+1. Use [`vault plugin register`](/vault/docs/commands/plugin/register) to add your
+   plugin to the catalog:
+
+    ```shell-session
+    $ vault plugin register                     \
+        -command <command_to_run_plugin_binary> \
+        -sha256 "${PLUGIN_SHA[0]}"              \
+        -version "<semantic_version>"           \
+        <plugin_type>                           \
+        <plugin_name>                           \
+    ```
+
+    For example, to register a secrets plugin called `mykv` that runs on the
+    command line as `mykvplugin`:
+
+  <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ vault plugin register   \
+        -command mykvplugin   \
+        -sha256 ${PLUGIN_SHA} \
+        -version "v1.0.1"     \
+        secret                \
+        mykv
+
+    Success! Registered plugin: mykv
+    ```
+
+  </CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+1. Save the SHA, version, and run command for your plugin binary to a JSON file:
+
+    ```shell-session
+    $ cat <<-EOF > data.json
+    {
+      "sha256": "$(sha256sum <path_to_plugin_binary> | awk '{print $1;}')",
+      "command": "<command_to_run_plugin_binary>",
+      "version": "<semantic_version>"
+    }
+    EOF
+    ```
+
+    For example, to create a data file for a plugin that runs on the command
+    line as `mykvplugin`:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ cat <<-EOF > data.json
+    {
+      "sha256": "$(sha256sum mykvplugin | awk '{print $1;}')",
+      "command": "mykvplugin",
+      "version": "v1.0.1"
+    }
+    EOF
+    ```
+    </CodeBlockConfig>
+
+1. Call the [RegisterPlugin](/vault/api-docs/system/plugins-catalog#register-plugin)
+   endpoint to add your plugin to the catalog:
+
+    ```shell-session
+    $ curl                                      \
+      --request POST                            \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      --data @data.json                         \
+      ${VAULT_ADDR}/v1/sys/plugins/catalog/<plugin_type>/<plugin_name>
+    ```
+
+    For example, to register a secrets plugin called `mykv`:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ curl                                      \
+      --request POST                            \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      --data @data.json                         \
+      ${VAULT_ADDR}/v1/sys/plugins/catalog/secret/mykv
+    ```
+
+    </CodeBlockConfig>
+
+1. Call the [ListPlugins](/vault/api-docs/system/plugins-catalog#list-plugins)
+   endpoint to verify registration:
+    
+    ```shell-session
+    $ curl                                      \
+      --request GET                             \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      ${VAULT_ADDR}/v1/sys/plugins/catalog      \
+      | jq '.data.detailed | .[] | select(.name =="mykv")'
+    ```
+
+    For example:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ curl                                      \
+      --request GET                             \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      ${VAULT_ADDR}/v1/sys/plugins/catalog      \
+      | jq '.data.detailed | .[] | select(.name =="mykv")'
+
+    {
+      "builtin": false,
+      "name": "mykv",
+      "sha256": "4b7c6993b7147d84d958f30438f9d0c34f34aa400300693b193e62774e4338d7",
+      "type": "secret",
+      "version": "v1.0.1"
+    }
+    ```
+
+    </CodeBlockConfig>
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+<Tab heading=".zip file" group="zip">
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+1. Use [`vault plugin register`](/vault/docs/commands/plugin/register) to add
+   your plugin to the catalog using `-version`. Do not provide a SHA value:
+
+    ```shell-session
+    $ vault plugin register
+        -version "<semantic_version>"
+        <plugin_type>
+        <plugin_name>
+    ```
+
+  For example, to register the `vault-plugin-secrets-keymgmt` plugin with the
+  extracted artifact directory `vault-plugin-secrets-keymgmt_0.16.0+ent_linux_amd64/`:
+
+  <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ vault plugin register     \
+        -version "v0.16.0+ent"  \
+        secret                  \
+        vault-plugin-secrets-keymgmt
+
+    Success! Registered plugin: vault-plugin-secrets-keymgmt
+    ```
+
+  </CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+1. Save the version information for your extracted plugin folder to a JSON file:
+
+    ```shell-session
+    $ cat <<-EOF > data.json
+    {
+      "version": "<semantic_version>"
+    }
+    EOF
+    ```
+
+    For example, to create a data file for the `vault-plugin-secrets-keymgmt`
+    plugin with the extracted artifact directory
+    `vault-plugin-secrets-keymgmt_0.16.0+ent_linux_amd64/`:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ cat <<-EOF > data.json
+    {
+      "version": "v0.16.0+ent"
+    }
+    EOF
+    ```
+    </CodeBlockConfig>
+
+2. Call the [RegisterPlugin](/vault/api-docs/system/plugins-catalog#register-plugin)
+   endpoint to add your plugin to the catalog:
+
+    ```shell-session
+    $ curl                                      \
+      --request POST                            \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      --data @data.json                         \
+      ${VAULT_ADDR}/v1/sys/plugins/catalog/<plugin_type>/<plugin_name>
+    ```
+
+    For example, to register the `vault-plugin-secrets-keymgmt` plugin with the
+    extracted artifact directory `vault-plugin-secrets-keymgmt_0.16.0+ent_linux_amd64/`:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ curl                                      \
+      --request POST                            \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      --data @data.json                         \
+      ${VAULT_ADDR}/v1/sys/plugins/catalog/secret/vault-plugin-secrets-keymgmt
+    ```
+
+    </CodeBlockConfig>
+
+3. Call the [ListPlugins](/vault/api-docs/system/plugins-catalog#list-plugins)
+   endpoint to verify registration:
+    
+    ```shell-session
+    $ curl                                      \
+      --request GET                             \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      ${VAULT_ADDR}/v1/sys/plugins/catalog      \
+      | jq '.data.detailed | .[] | select(.name =="<plugin_name>")'
+    ```
+
+    For example:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ curl                                      \
+      --request GET                             \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      ${VAULT_ADDR}/v1/sys/plugins/catalog      \
+      | jq '.data.detailed | .[] | select(.name =="vault-plugin-secrets-keymgmt")'
+
+    {
+      "builtin": false,
+      "name": "vault-plugin-secrets-keymgmt",
+      "sha256": "95f051152c4b69c720afef2fef26469f83a2e084842bdfad0f795850047fc84f",
+      "type": "secret",
+      "version": "v0.16.0+ent"
+    }
+    ```
+
+    </CodeBlockConfig>
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+</Tabs>

@@ -55,6 +55,8 @@ message TOTPConfig {
   int32 qr_size = 7;
   // @inject_tag: sentinel:"-"
   uint32 max_validation_attempts = 8;
+  // @inject_tag: sentinel:"-"
+  bool enable_self_enrollment = 9;
 }
 
 // DuoConfig represents the configuration information required to perform

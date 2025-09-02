@@ -1,0 +1,25 @@
+The majority of the voting servers in a cluster need to be available to agree on
+changes in configuration. If a voting node becomes unavailable and that causes
+the cluster to have fewer voting nodes than the quorum size, then Autopilot will not
+be able to promote a non-voter to become a voter. This is the **failure tolerance** of
+the cluster. Redundancy zones are not able to improve the failure tolerance of a
+cluster.
+
+Say that you have a cluster configured to have 2 redundancy zones and each zone
+has 2 servers within it (for total of 4 nodes in the cluster). The quorum size
+is 2. If the zone voter in either of the redundancy zones becomes unavailable,
+the cluster does not have quorum and is not able to agree on the configuration
+change needed to promote the non-voter in the zone into a voter.
+
+Redundancy zones do improve the **optimistic failure tolerance** of a cluster.
+The optimistic failure tolerance is the number of healthy active and back-up
+voting servers that can fail gradually without causing an outage. If the Vault
+cluster is able to maintain a quorum of voting nodes, then the cluster has the
+capability to lose nodes gradually and promote the standby redundancy zone nodes
+to take the place of voters.
+
+For example, consider a cluster that is configured to have 3 redundancy zones
+with 2 nodes in each zone. If a voting node becomes unreachable, the zone standby
+in that zone is promoted. The cluster then maintains 3 voting nodes with 2 remaining
+standbys. The cluster can handle an additional 2 gradual failures before it loses
+quorum.

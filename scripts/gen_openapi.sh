@@ -54,7 +54,6 @@ vault auth enable "alicloud"
 vault auth enable "approle"
 vault auth enable "aws"
 vault auth enable "azure"
-vault auth enable "centrify"
 vault auth enable "cert"
 vault auth enable "cf"
 vault auth enable "gcp"
@@ -90,10 +89,14 @@ vault secrets enable "totp"
 vault secrets enable "transit"
 
 # Enable enterprise features
-if [[ -n "${VAULT_LICENSE:-}" ]]; then
+# Check if vault version contains +ent
+if vault version | grep -q "+ent"; then
     vault secrets enable "keymgmt"
     vault secrets enable "kmip"
     vault secrets enable "transform"
+    vault auth enable "saml"
+    vault auth enable "scep"
+    vault auth enable "spiffe"
 fi
 
 # Output OpenAPI, optionally formatted

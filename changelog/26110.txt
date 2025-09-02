@@ -1,0 +1,3 @@
+```release-note:change
+sdk: String templates now have a maximum size of 100,000 characters.
+```

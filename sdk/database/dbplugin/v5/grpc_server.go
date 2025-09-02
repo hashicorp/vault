@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -20,21 +19,6 @@ import (
 )
 
 var _ proto.DatabaseServer = &gRPCServer{}
-
-type gRPCServer struct {
-	proto.UnimplementedDatabaseServer
-	logical.UnimplementedPluginVersionServer
-
-	// holds the non-multiplexed Database
-	// when this is set the plugin does not support multiplexing
-	singleImpl Database
-
-	// instances holds the multiplexed Databases
-	instances   map[string]Database
-	factoryFunc func() (interface{}, error)
-
-	sync.RWMutex
-}
 
 func (g *gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
 	g.Lock()
@@ -171,12 +155,12 @@ func (g *gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*p
 
 func (g *gRPCServer) UpdateUser(ctx context.Context, req *proto.UpdateUserRequest) (*proto.UpdateUserResponse, error) {
 	if req.GetUsername() == "" {
-		return &proto.UpdateUserResponse{}, status.Errorf(codes.InvalidArgument, "no username provided")
+		return &proto.UpdateUserResponse{}, status.Error(codes.InvalidArgument, "no username provided")
 	}
 
 	dbReq, err := getUpdateUserRequest(req)
 	if err != nil {
-		return &proto.UpdateUserResponse{}, status.Errorf(codes.InvalidArgument, err.Error())
+		return &proto.UpdateUserResponse{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	impl, err := g.getDatabase(ctx)
@@ -222,11 +206,12 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 	}
 
 	dbReq := UpdateUserRequest{
-		Username:       req.GetUsername(),
-		CredentialType: CredentialType(req.GetCredentialType()),
-		Password:       password,
-		PublicKey:      publicKey,
-		Expiration:     expiration,
+		Username:            req.GetUsername(),
+		CredentialType:      CredentialType(req.GetCredentialType()),
+		Password:            password,
+		PublicKey:           publicKey,
+		Expiration:          expiration,
+		SelfManagedPassword: req.SelfManagedPassword,
 	}
 
 	if !hasChange(dbReq) {
@@ -289,25 +274,44 @@ func (g *gRPCServer) Type(ctx context.Context, _ *proto.Empty) (*proto.TypeRespo
 
 func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, error) {
 	g.Lock()
-	defer g.Unlock()
 
 	impl, err := g.getDatabaseInternal(ctx)
 	if err != nil {
+		g.Unlock()
 		return nil, err
 	}
 
-	err = impl.Close()
-	if err != nil {
-		return &proto.Empty{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
-	}
-
+	var id string
 	if g.singleImpl == nil {
 		// only cleanup instances map when multiplexing is supported
-		id, err := pluginutil.GetMultiplexIDFromContext(ctx)
+		id, err = pluginutil.GetMultiplexIDFromContext(ctx)
 		if err != nil {
+			g.Unlock()
 			return nil, err
 		}
 		delete(g.instances, id)
+	}
+
+	// unlock here so that the subsequent call to Close() does not hold the
+	// lock in case the DB is slow to respond
+	g.Unlock()
+
+	err = impl.Close()
+	if err != nil {
+		// The call to Close failed, so we will put the DB instance back in the
+		// map. This might not be necessary, but we do this in case anything
+		// relies on being able to retry Close.
+		g.Lock()
+		defer g.Unlock()
+		if g.singleImpl == nil {
+			// There is a chance that while we were calling Close another DB
+			// config was created for the old ID. So we only put it back if
+			// it's not set.
+			if _, ok := g.instances[id]; !ok {
+				g.instances[id] = impl
+			}
+		}
+		return &proto.Empty{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
 	}
 
 	return &proto.Empty{}, nil

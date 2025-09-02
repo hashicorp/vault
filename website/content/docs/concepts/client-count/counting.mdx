@@ -2,38 +2,32 @@
 layout: docs
 page_title: Client count calculation
 description: |-
-  Technical overview of client count calculations in Vault 
+  Technical overview of client count calculations in Vault
 ---
+
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
 
 # Client count calculation
 
 Vault provides usage telemetry for the number of clients based on the number of
 unique entity assignments within a Vault cluster over a given billing period:
 
-- Standard entity assignments based on authentication method for active entities. 
+- Standard entity assignments based on authentication method for active entities.
 - Constructed entity assignments for active non-entity tokens, including batch
   tokens created by performance standby nodes.
 - Certificate entity assignments for ACME connections.
+- Secrets being synced to at least one sync destination.
 
 ```markdown
 CLIENT_COUNT_PER_CLUSTER = UNIQUE_STANDARD_ENTITIES +
                            UNIQUE_CONSTRUCTED_ENTITIES +
-                           UNIQUE CERTIFICATE_ENTITIES
+                           UNIQUE_CERTIFICATE_ENTITIES +
+                           UNIQUE_SYNCED_SECRETS
 ```
 
 Vault does not aggregate or de-duplicate clients across clusters, but all logs
 and precomputed reports are included in DR replication.
-
-<Note heading="Certificate entities currently reported as non-entity clients">
-
-  Vault currently rolls certificate entities into the non-entity client count
-  in the UI and API query requests. For more detailed information on certificate
-  entities, use the
-  [internal counter endpoint](/vault/api-docs/system/internal-counters) to query
-  monthly data for the PKI mount path or export historic data and look for
-  `client_type=pki-acme`.
-
-</Note>
 
 ## How Vault tracks clients
 
@@ -69,7 +63,11 @@ The deduplication process has two additional consequences:
 1. Billing period reports that include the current month must use an
    approximation for the number of new clients in the current month.
 
-## How Vault approximates current-month client count
+@include 'counters-api-new-clients-behavior-change.mdx'
+
+## How Vault approximates current-month client count prior to Vault versions 1.20 and 1.20+ent
+
+@include 'counters-api-new-clients-behavior-change.mdx'
 
 Vault approximates client count for the current month using a
 [hyperloglog algorithm](https://en.wikipedia.org/wiki/HyperLogLog) that looks
@@ -86,13 +84,16 @@ accuracy estimate for the approximation decreases as the difference between the
 number of clients in the current month and the number of clients in the billing
 period increases.
 
-### Testing verification for client count approximations 
+
+### Testing verification for client count approximations prior to Vault versions 1.20 and 1.20+ent
+
+@include 'counters-api-new-clients-behavior-change.mdx'
 
 Given `CM` as the number of clients for the current month and `BP` as the number
 of clients in the billing period, we found that the approximation becomes
 increasingly imprecise as:
 
-- the difference between `BC` and `CM` increases
+- the difference between `BP` and `CM` increases
 - the value of `CM` approaches zero.
 - the number of months in the billing period increase.
 
@@ -143,10 +144,8 @@ active entity in the client log consumes a few bytes of storage. As a safety
 measure against runaway storage growth, Vault limits the number of entity
 records to 656,000 per month, but typical storage costs are much less.
 
-On average, 1000 monthly active entities requires 1.5 MiB of storage capacity
-over the default 24-month retention period.
-
-@include "content-footer-title.mdx"
+On average, 1000 monthly active entities requires 3.0 MiB of storage capacity
+over the default 48-month retention period.
 
 <Tabs>
 
@@ -175,12 +174,12 @@ over the default 24-month retention period.
 <Tab heading="Related tutorials">
 <ul>
   <li>
-    <a href="/vault/tutorials/monitoring/usage-metrics">
-      Vault Usage Metrics in Vault UI
+    <a href="/vault/docs/concepts/client-count/client-usage">
+      Client Usage in Vault GUI
     </a>
   </li>
   <li>
-    <a href="/vault/tutorials/monitoring/usage-metrics">KMIP Client metrics</a>
+    <a href="/vault/docs/concepts/client-count/client-usage">KMIP Client metrics</a>
   </li>
 </ul>
 </Tab>

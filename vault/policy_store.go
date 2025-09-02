@@ -256,6 +256,7 @@ func (c *Core) setupPolicyStore(ctx context.Context) error {
 	var err error
 	sysView := &dynamicSystemView{core: c, perfStandby: c.perfStandby}
 	psLogger := c.baseLogger.Named("policy")
+	c.AddLogger(psLogger)
 	c.policyStore, err = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, psLogger)
 	if err != nil {
 		return err
@@ -466,7 +467,7 @@ func (ps *PolicyStore) GetNonEGPPolicyType(nsID string, name string) (*PolicyTyp
 	pt, ok := ps.policyTypeMap.Load(index)
 	if !ok {
 		// Doesn't exist
-		return nil, fmt.Errorf("policy does not exist in type map: %v", index)
+		return nil, ErrPolicyNotExistInTypeMap
 	}
 
 	policyType, ok := pt.(PolicyType)
@@ -587,9 +588,12 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 	switch policyEntry.Type {
 	case PolicyTypeACL:
 		// Parse normally
-		p, err := ParseACLPolicy(ns, policyEntry.Raw)
+		p, duplicate, err := ParseACLPolicyCheckDuplicates(ns, policyEntry.Raw)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse policy: %w", err)
+		}
+		if duplicate {
+			ps.logger.Warn("HCL policy contains duplicate attributes, which will no longer be supported in a future version", "policy", policy.Name, "namespace", policy.namespace.Path)
 		}
 		policy.Paths = p.Paths
 
@@ -870,9 +874,12 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 					groups = append(directGroups, inheritedGroups...)
 				}
 			}
-			p, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups)
+			p, duplicate, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing templated policy %q: %w", policy.Name, err)
+			}
+			if duplicate {
+				ps.logger.Warn("HCL policy contains duplicate attributes, which will no longer be supported in a future version", "policy", policy.Name, "namespace", policy.namespace.Path)
 			}
 			p.Name = policy.Name
 			allPolicies[i] = p

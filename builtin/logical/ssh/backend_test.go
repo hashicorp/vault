@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -24,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 )
@@ -210,6 +212,101 @@ func testSSH(user, host string, auth ssh.AuthMethod, command string) error {
 		return fmt.Errorf("command %v failed, error: %v, stderr: %v", command, err, stderr.String())
 	}
 	return nil
+}
+
+// TestBackend_ReadRolesReturnsAllFields validates we did not forget to return a newly added
+// field from the ssh role in the read API.
+func TestBackend_ReadRolesReturnsAllFields(t *testing.T) {
+	t.Parallel()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b, err := Backend(config)
+	require.NoError(t, err, "failed creating backend")
+	err = b.Setup(context.Background(), config)
+	require.NoError(t, err, "failed setting up backend")
+
+	tests := []struct {
+		name          string
+		data          map[string]interface{}
+		ignoredFields []string
+	}{
+		{
+			name: "otp",
+			data: map[string]interface{}{
+				"key_type":     "otp",
+				"default_user": "ubuntu",
+			},
+			ignoredFields: []string{
+				"allow_host_certificates", "allow_subdomains",
+				"default_user_template", "allowed_extensions", "allowed_user_key_lengths",
+				"allow_empty_principals", "ttl", "allowed_domains_template",
+				"default_extensions_template", "default_critical_options",
+				"allow_bare_domains", "allowed_domains", "allowed_critical_options",
+				"allow_user_certificates", "allow_user_key_ids", "algorithm_signer",
+				"not_before_duration", "max_ttl", "default_extensions", "allowed_users_template", "key_id_format",
+			},
+		},
+		{
+			name: "ca",
+			data: map[string]interface{}{
+				"key_type":                "ca",
+				"algorithm_signer":        "rsa-sha2-256",
+				"allow_user_certificates": true,
+			},
+			ignoredFields: []string{"port", "cidr_list", "exclude_cidr_list"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var fieldsToIgnore []string
+			fieldsToIgnore = append(fieldsToIgnore, tc.ignoredFields...)
+			// These fields apply to all use cases, role_version is never returned and
+			// allowed_user_key_types_lengths is an internal value for the allowed_user_key_lengths field
+			fieldsToIgnore = append(fieldsToIgnore, "role_version")
+			fieldsToIgnore = append(fieldsToIgnore, "allowed_user_key_types_lengths")
+
+			roleName := fmt.Sprintf("roles/role-%s", tc.name)
+			req := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      roleName,
+				Storage:   config.StorageView,
+				Data:      tc.data,
+			}
+			resp, err := b.HandleRequest(context.Background(), req)
+			if err != nil || (resp != nil && resp.IsError()) || resp != nil {
+				t.Fatalf("failed to create role %s: resp:%#v err:%s", roleName, resp, err)
+			}
+
+			req = &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      roleName,
+				Storage:   config.StorageView,
+			}
+			resp, err = b.HandleRequest(context.Background(), req)
+			if err != nil || (resp != nil && resp.IsError()) || resp == nil {
+				t.Fatalf("failed to read role %s: resp:%#v err:%s", roleName, resp, err)
+			}
+
+			roleMap := map[string]interface{}{}
+			err = mapstructure.Decode(sshRole{}, &roleMap)
+			require.NoError(t, err, "failed getting all fields in ssh role")
+
+			// Identify missing fields from OTP response
+			var missingFields []string
+			for fieldName := range roleMap {
+				if _, ok := resp.Data[fieldName]; !ok {
+					if strutil.StrListContains(fieldsToIgnore, fieldName) {
+						continue
+					}
+					missingFields = append(missingFields, fieldName)
+				}
+			}
+			assert.Empty(t, missingFields, "response was missing fields: %s", missingFields)
+		})
+	}
 }
 
 func TestBackend_AllowedUsers(t *testing.T) {
@@ -1298,6 +1395,80 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+func TestBackend_EmptyPrincipals(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(testCAPublicKey, testCAPrivateKey),
+			createRoleStep("no_user_principals", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_certificates": true,
+				"allowed_user_key_lengths": map[string]interface{}{
+					"rsa": 2048,
+				},
+				"allowed_users": "no_principals",
+			}),
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/no_user_principals",
+				Data: map[string]interface{}{
+					"public_key": testCAPublicKey,
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != "empty valid principals not allowed by role" {
+						return errors.New("expected empty valid principals not allowed by role")
+					}
+					return nil
+				},
+			},
+			createRoleStep("no_host_principals", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "*",
+			}),
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/no_host_principals",
+				Data: map[string]interface{}{
+					"cert_type":  "host",
+					"public_key": testCAPublicKeyEd25519,
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != "empty valid principals not allowed by role" {
+						return errors.New("expected empty valid principals not allowed by role")
+					}
+					return nil
+				},
+			},
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/no_host_principals",
+				Data: map[string]interface{}{
+					"cert_type":        "host",
+					"public_key":       testCAPublicKeyEd25519,
+					"valid_principals": "example.com",
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != nil {
+						return errors.New("expected no error")
+					}
+					return nil
+				},
+			},
+		},
+	}
+	logicaltest.Test(t, testCase)
+}
+
 func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 	config := logical.TestBackendConfig()
 
@@ -1315,6 +1486,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				"allowed_user_key_lengths": map[string]interface{}{
 					"rsa": 4096,
 				},
+				"allowed_users": "guest",
 			}),
 			{
 				Operation: logical.UpdateOperation,
@@ -1336,13 +1508,15 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				"allowed_user_key_lengths": map[string]interface{}{
 					"rsa": 2048,
 				},
+				"allowed_users": "guest",
 			}),
 			// Pass with 2048 key
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/stdkey",
 				Data: map[string]interface{}{
-					"public_key": testCAPublicKey,
+					"public_key":       testCAPublicKey,
+					"valid_principals": "guest",
 				},
 			},
 			// Fail with 4096 key
@@ -1350,7 +1524,8 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "sign/stdkey",
 				Data: map[string]interface{}{
-					"public_key": publicKey4096,
+					"public_key":       publicKey4096,
+					"valid_principals": "guest",
 				},
 				ErrorOk: true,
 				Check: func(resp *logical.Response) error {
@@ -1366,13 +1541,15 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				"allowed_user_key_lengths": map[string]interface{}{
 					"rsa": []int{2048, 4096},
 				},
+				"allowed_users": "guest",
 			}),
 			// Pass with 2048-bit key
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/multikey",
 				Data: map[string]interface{}{
-					"public_key": testCAPublicKey,
+					"public_key":       testCAPublicKey,
+					"valid_principals": "guest",
 				},
 			},
 			// Pass with 4096-bit key
@@ -1380,7 +1557,8 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "sign/multikey",
 				Data: map[string]interface{}{
-					"public_key": publicKey4096,
+					"public_key":       publicKey4096,
+					"valid_principals": "guest",
 				},
 			},
 			// Fail with 3072-bit key
@@ -1403,7 +1581,8 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "sign/multikey",
 				Data: map[string]interface{}{
-					"public_key": publicKeyECDSA256,
+					"public_key":       publicKeyECDSA256,
+					"valid_principals": "guest",
 				},
 				ErrorOk: true,
 				Check: func(resp *logical.Response) error {
@@ -1420,13 +1599,15 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 					"ec":                  []int{256},
 					"ecdsa-sha2-nistp521": 0,
 				},
+				"allowed_users": "guest",
 			}),
 			// Pass with ECDSA P-256
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/ectypes",
 				Data: map[string]interface{}{
-					"public_key": publicKeyECDSA256,
+					"public_key":       publicKeyECDSA256,
+					"valid_principals": "guest",
 				},
 			},
 			// Pass with ECDSA P-521
@@ -1434,7 +1615,8 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "sign/ectypes",
 				Data: map[string]interface{}{
-					"public_key": publicKeyECDSA521,
+					"public_key":       publicKeyECDSA521,
+					"valid_principals": "guest",
 				},
 			},
 			// Fail with RSA key
@@ -1442,7 +1624,8 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "sign/ectypes",
 				Data: map[string]interface{}{
-					"public_key": publicKey3072,
+					"public_key":       publicKey3072,
+					"valid_principals": "guest",
 				},
 				ErrorOk: true,
 				Check: func(resp *logical.Response) error {
@@ -1896,6 +2079,7 @@ func TestSSHBackend_IssueSign(t *testing.T) {
 					"ecdsa-sha2-nistp521": 0,
 					"ed25519":             0,
 				},
+				"allow_empty_principals": true,
 			}),
 			// Key_type not in allowed_user_key_types_lengths
 			issueSSHKeyPairStep("testing", "ec", 256, true, "provided key_type value not in allowed_user_key_types"),
@@ -2726,13 +2910,14 @@ func TestProperAuthing(t *testing.T) {
 	_, err = client.Logical().WriteWithContext(ctx, "ssh/roles/test-ca", map[string]interface{}{
 		"key_type":                "ca",
 		"allow_user_certificates": true,
+		"allowed_users":           "toor",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	_, err = client.Logical().WriteWithContext(ctx, "ssh/issue/test-ca", map[string]interface{}{
-		"username": "toor",
+		"valid_principals": "toor",
 	})
 	if err != nil {
 		t.Fatal(err)

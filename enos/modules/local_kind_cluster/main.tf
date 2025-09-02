@@ -4,7 +4,7 @@
 terraform {
   required_providers {
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
     random = {
       source  = "hashicorp/random"

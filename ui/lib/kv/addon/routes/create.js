@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
@@ -31,10 +31,10 @@ export default class KvSecretsCreateRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     const crumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend, route: 'list' },
-      ...breadcrumbsForSecret(resolvedModel.path),
-      { label: 'create' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
+      ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.path),
+      { label: 'Create' },
     ];
     controller.breadcrumbs = crumbs;
   }

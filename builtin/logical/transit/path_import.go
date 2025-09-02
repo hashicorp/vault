@@ -17,10 +17,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/tink/go/kwp/subtle"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/tink-crypto/tink-go/v2/kwp/subtle"
 )
 
 const EncryptedKeyBytes = 512
@@ -45,7 +46,8 @@ func (b *backend) pathImport() *framework.Path {
 				Default: "aes256-gcm96",
 				Description: `The type of key being imported. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
 (asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-3072"
-(asymmetric), "rsa-4096" (asymmetric) are supported.  Defaults to "aes256-gcm96".
+(asymmetric), "rsa-4096" (asymmetric), "ml-dsa-44 (asymmetric)", "ml-dsa-65 (asymmetric)", "ml-dsa-87 (asymmetric)", "hmac", "aes128-cmac", 
+"aes192-cmac", aes256-cmac" are supported.  Defaults to "aes256-gcm96".
 `,
 			},
 			"hash_function": {
@@ -214,8 +216,22 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_RSA4096
 	case "hmac":
 		polReq.KeyType = keysutil.KeyType_HMAC
+	case "aes128-cmac":
+		polReq.KeyType = keysutil.KeyType_AES128_CMAC
+	case "aes256-cmac":
+		polReq.KeyType = keysutil.KeyType_AES256_CMAC
+	case "aes192-cmac":
+		polReq.KeyType = keysutil.KeyType_AES192_CMAC
+	case "aes128-cbc":
+		polReq.KeyType = keysutil.KeyType_AES128_CBC
+	case "aes256-cbc":
+		polReq.KeyType = keysutil.KeyType_AES256_CBC
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type: %v", keyType)), logical.ErrInvalidRequest
+	}
+
+	if polReq.KeyType.IsEnterpriseOnly() && !constants.IsEnterprise {
+		return logical.ErrorResponse(ErrKeyTypeEntOnly, polReq.KeyType), logical.ErrInvalidRequest
 	}
 
 	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())

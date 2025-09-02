@@ -1,7 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
@@ -18,7 +23,7 @@ interface Args {
 
 export default class LdapCreateAndEditLibraryPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
 
   @tracked modelValidations: ValidationMap | null = null;
   @tracked invalidFormMessage = '';

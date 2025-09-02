@@ -7,10 +7,9 @@ import (
 	"context"
 	"errors"
 
-	"google.golang.org/grpc"
-
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"google.golang.org/grpc"
 )
 
 var errMissingStorage = errors.New("missing storage implementation: this method should not be called during plugin Setup, but only during and after Initialize")
@@ -28,6 +27,7 @@ type GRPCStorageClient struct {
 }
 
 func (s *GRPCStorageClient) List(ctx context.Context, prefix string) ([]string, error) {
+	ctx = logicalCtxToPBMetadataCtx(ctx)
 	reply, err := s.client.List(ctx, &pb.StorageListArgs{
 		Prefix: prefix,
 	}, largeMsgGRPCCallOpts...)
@@ -41,6 +41,7 @@ func (s *GRPCStorageClient) List(ctx context.Context, prefix string) ([]string, 
 }
 
 func (s *GRPCStorageClient) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
+	ctx = logicalCtxToPBMetadataCtx(ctx)
 	reply, err := s.client.Get(ctx, &pb.StorageGetArgs{
 		Key: key,
 	}, largeMsgGRPCCallOpts...)
@@ -54,6 +55,7 @@ func (s *GRPCStorageClient) Get(ctx context.Context, key string) (*logical.Stora
 }
 
 func (s *GRPCStorageClient) Put(ctx context.Context, entry *logical.StorageEntry) error {
+	ctx = logicalCtxToPBMetadataCtx(ctx)
 	reply, err := s.client.Put(ctx, &pb.StoragePutArgs{
 		Entry: pb.LogicalStorageEntryToProtoStorageEntry(entry),
 	}, largeMsgGRPCCallOpts...)
@@ -67,6 +69,7 @@ func (s *GRPCStorageClient) Put(ctx context.Context, entry *logical.StorageEntry
 }
 
 func (s *GRPCStorageClient) Delete(ctx context.Context, key string) error {
+	ctx = logicalCtxToPBMetadataCtx(ctx)
 	reply, err := s.client.Delete(ctx, &pb.StorageDeleteArgs{
 		Key: key,
 	})
@@ -89,6 +92,7 @@ func (s *GRPCStorageServer) List(ctx context.Context, args *pb.StorageListArgs) 
 	if s.impl == nil {
 		return nil, errMissingStorage
 	}
+	ctx = pbMetadataCtxToLogicalCtx(ctx)
 	keys, err := s.impl.List(ctx, args.Prefix)
 	return &pb.StorageListReply{
 		Keys: keys,
@@ -100,6 +104,7 @@ func (s *GRPCStorageServer) Get(ctx context.Context, args *pb.StorageGetArgs) (*
 	if s.impl == nil {
 		return nil, errMissingStorage
 	}
+	ctx = pbMetadataCtxToLogicalCtx(ctx)
 	storageEntry, err := s.impl.Get(ctx, args.Key)
 	if storageEntry == nil {
 		return &pb.StorageGetReply{
@@ -117,6 +122,7 @@ func (s *GRPCStorageServer) Put(ctx context.Context, args *pb.StoragePutArgs) (*
 	if s.impl == nil {
 		return nil, errMissingStorage
 	}
+	ctx = pbMetadataCtxToLogicalCtx(ctx)
 	err := s.impl.Put(ctx, pb.ProtoStorageEntryToLogicalStorageEntry(args.Entry))
 	return &pb.StoragePutReply{
 		Err: pb.ErrToString(err),
@@ -127,6 +133,7 @@ func (s *GRPCStorageServer) Delete(ctx context.Context, args *pb.StorageDeleteAr
 	if s.impl == nil {
 		return nil, errMissingStorage
 	}
+	ctx = pbMetadataCtxToLogicalCtx(ctx)
 	err := s.impl.Delete(ctx, args.Key)
 	return &pb.StorageDeleteReply{
 		Err: pb.ErrToString(err),

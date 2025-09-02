@@ -7,18 +7,17 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import kubernetesScenario from 'vault/mirage/scenarios/kubernetes';
-import ENV from 'vault/config/environment';
-import authPage from 'vault/tests/pages/auth';
+import kubernetesHandlers from 'vault/mirage/handlers/kubernetes';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { fillIn, visit, currentURL, click, currentRouteName } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | kubernetes | roles', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'kubernetes';
-  });
   hooks.beforeEach(function () {
+    kubernetesHandlers(this.server);
     kubernetesScenario(this.server);
     this.visitRoles = () => {
       return visit('/vault/secrets/kubernetes/kubernetes/roles');
@@ -26,16 +25,14 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     this.validateRoute = (assert, route, message) => {
       assert.strictEqual(currentRouteName(), `vault.cluster.secrets.backend.kubernetes.${route}`, message);
     };
-    return authPage.login();
-  });
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
+    return login();
   });
 
   test('it should filter roles', async function (assert) {
     await this.visitRoles();
     assert.dom('[data-test-list-item-link]').exists({ count: 3 }, 'Roles list renders');
-    await fillIn('[data-test-component="navigate-input"]', '1');
+    await fillIn(GENERAL.filterInputExplicit, '1');
+    await click(GENERAL.button('Search'));
     assert.dom('[data-test-list-item-link]').exists({ count: 1 }, 'Filtered roles list renders');
     assert.ok(currentURL().includes('pageFilter=1'), 'pageFilter query param value is set');
   });
@@ -65,7 +62,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
       await click('[data-test-list-item-popup] button');
       await click(`[data-test-${action}]`);
       if (action === 'delete') {
-        await click('[data-test-confirm-button]');
+        await click(GENERAL.confirmButton);
         assert.dom('[data-test-list-item-link]').exists({ count: 2 }, 'Deleted role removed from list');
       } else {
         this.validateRoute(
@@ -88,7 +85,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     await fillIn('[data-test-input="name"]', 'new-test-role');
     await fillIn('[data-test-input="serviceAccountName"]', 'default');
     await fillIn('[data-test-input="allowedKubernetesNamespaces"]', '*');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
     this.validateRoute(assert, 'roles.role.details', 'Transitions to details route on save success');
     await click('[data-test-breadcrumbs] li:nth-child(2) a');
     assert.dom('[data-test-role="new-test-role"]').exists('New role renders in list');
@@ -105,8 +102,8 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     this.validateRoute(assert, 'roles.role.edit', 'Transitions to edit route');
     await click('[data-test-cancel]');
     await click('[data-test-list-item-link]');
-    await click('[data-test-delete] button');
-    await click('[data-test-confirm-button]');
+    await click('[data-test-delete]');
+    await click(GENERAL.confirmButton);
     assert
       .dom('[data-test-list-item-link]')
       .exists({ count: 2 }, 'Transitions to roles route and deleted role removed from list');

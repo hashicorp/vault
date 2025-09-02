@@ -2,10 +2,15 @@
 layout: docs
 page_title: Replication - Configuration
 description: |-
-  The replication stanza specifies various parameters for tuning replication related values.
+  Configure the replication stanza to tune replication behavior in Vault.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # `replication` stanza
+
+@include 'alerts/enterprise-only.mdx'
 
 The `replication` stanza specifies various parameters for tuning replication related values.
 
@@ -44,5 +49,9 @@ replication {
   time to see the resulting WAL present locally before returning a response to the client.
 - `allow_forwarding_via_token` `(string: "")` - When set to `new_token`, requests sent to non-active nodes
   are forwarded if the node does not yet have the token information in storage.
-
-Support for Server Side Consistent Tokens is now available. Refer to the [Server Side Consistent Token FAQ](/vault/docs/faq/ssct) for details.
+- `replication_canary_write_interval_seconds` `(integer: 1)` - Interval in
+  seconds between writes of the replication canary to the storage on the primary
+  cluster. Set to 0 to disable the canary. Refer to the [Clock skew and
+  replication
+  lag](/vault/docs/enterprise/consistency#clock-skew-and-replication-lag) page
+  for details on the canary.

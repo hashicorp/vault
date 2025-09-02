@@ -9,7 +9,9 @@ import { equal } from '@ember/object/computed'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
+import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
+import { ALL_ENGINES, isAddonEngine } from 'vault/utils/all-engines-metadata';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const LINKED_BACKENDS = supportedSecretBackends();
 
@@ -22,8 +24,7 @@ const validations = {
     { type: 'presence', message: "Path can't be blank." },
     {
       type: 'containsWhiteSpace',
-      message:
-        "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      message: WHITESPACE_WARNING('path'),
       level: 'warn',
     },
   ],
@@ -52,7 +53,7 @@ export default class SecretEngineModel extends Model {
   local;
   @attr('boolean', {
     helpText:
-      'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For K/V mounts, all values will be seal wrapped.) This can only be specified at mount time.',
+      'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For KV mounts, all values will be seal wrapped.) This can only be specified at mount time.',
   })
   sealWrap;
   @attr('boolean') externalEntropyAccess;
@@ -67,14 +68,6 @@ export default class SecretEngineModel extends Model {
     defaultFormValue: 2, // Set the form to 2 by default
   })
   version;
-
-  // SSH specific attributes
-  @attr('string') privateKey;
-  @attr('string') publicKey;
-  @attr('boolean', {
-    defaultValue: true,
-  })
-  generateSigningKey;
 
   // AWS specific attributes
   @attr('string') lease;
@@ -107,6 +100,14 @@ export default class SecretEngineModel extends Model {
   })
   deleteVersionAfter;
 
+  // `plugin_version` represents the version specified at mount time (if any), and is only used for external plugins.
+  // For built-in plugins, this field is intentionally left empty to simplify upgrades.
+  //
+  // `running_plugin_version` reflects the actual version of the plugin currently running,
+  // regardless of whether it is built-in or external. This provides a reliable source of truth
+  // and is why we are surfacing it over plugin_version.
+  @attr('string') runningPluginVersion;
+
   /* GETTERS */
   get isV2KV() {
     return this.version === 2 && (this.engineType === 'kv' || this.engineType === 'generic');
@@ -123,14 +124,9 @@ export default class SecretEngineModel extends Model {
   }
 
   get icon() {
-    const defaultIcon = this.engineType || 'secrets';
-    return (
-      {
-        keymgmt: 'key',
-        kmip: 'secrets',
-        ldap: 'folder-users',
-      }[this.engineType] || defaultIcon
-    );
+    const engineData = engineDisplayData(this.engineType);
+
+    return engineData?.glyph || 'lock';
   }
 
   get engineType() {
@@ -150,10 +146,20 @@ export default class SecretEngineModel extends Model {
       return 'vault.cluster.secrets.backend.overview';
     }
     if (isAddonEngine(this.engineType, this.version)) {
-      const { engineRoute } = allEngines().findBy('type', this.engineType);
-      return `vault.cluster.secrets.backend.${engineRoute}`;
+      return `vault.cluster.secrets.backend.${engineDisplayData(this.engineType).engineRoute}`;
+    }
+    if (this.isV2KV) {
+      // if it's KV v2 but not registered as an addon, it's type generic
+      return 'vault.cluster.secrets.backend.kv.list';
     }
     return `vault.cluster.secrets.backend.list-root`;
+  }
+
+  get backendConfigurationLink() {
+    if (isAddonEngine(this.engineType, this.version)) {
+      return `vault.cluster.secrets.backend.${this.engineType}.configuration`;
+    }
+    return `vault.cluster.secrets.backend.configuration`;
   }
 
   get localDisplay() {
@@ -162,7 +168,7 @@ export default class SecretEngineModel extends Model {
 
   get formFields() {
     const type = this.engineType;
-    const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
+    const fields = ['type', 'path', 'description', 'accessor', 'runningPluginVersion', 'local', 'sealWrap'];
     // no ttl options for keymgmt
     if (type !== 'keymgmt') {
       fields.push('config.defaultLeaseTtl', 'config.maxLeaseTtl');
@@ -180,6 +186,10 @@ export default class SecretEngineModel extends Model {
     // version comes in as number not string
     if (type === 'kv' && parseInt(this.version, 10) === 2) {
       fields.push('casRequired', 'deleteVersionAfter', 'maxVersions');
+    }
+    // For WIF Secret engines, allow users to set the identity token key when mounting the engine.
+    if (engineDisplayData(type)?.isWIF) {
+      fields.push('config.identityTokenKey');
     }
     return fields;
   }
@@ -230,6 +240,17 @@ export default class SecretEngineModel extends Model {
         // no ttl options for keymgmt
         optionFields = [...CORE_OPTIONS, 'config.allowedManagedKeys', ...STANDARD_CONFIG];
         break;
+      case ALL_ENGINES.find((engine) => engine.type === this.engineType && engine.isWIF)?.type:
+        defaultFields = ['path'];
+        optionFields = [
+          ...CORE_OPTIONS,
+          'config.defaultLeaseTtl',
+          'config.maxLeaseTtl',
+          'config.identityTokenKey',
+          'config.allowedManagedKeys',
+          ...STANDARD_CONFIG,
+        ];
+        break;
       default:
         defaultFields = ['path'];
         optionFields = [
@@ -251,24 +272,6 @@ export default class SecretEngineModel extends Model {
   }
 
   /* ACTIONS */
-  saveCA(options) {
-    if (this.type !== 'ssh') {
-      return;
-    }
-    if (options.isDelete) {
-      this.privateKey = null;
-      this.publicKey = null;
-      this.generateSigningKey = false;
-    }
-    return this.save({
-      adapterOptions: {
-        options: options,
-        apiPath: 'config/ca',
-        attrsToSend: ['privateKey', 'publicKey', 'generateSigningKey'],
-      },
-    });
-  }
-
   saveZeroAddressConfig() {
     return this.save({
       adapterOptions: {

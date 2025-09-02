@@ -1,3 +1,6 @@
+@use '../utils/mixins';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -23,15 +26,8 @@
   grid-template-rows: repeat(2, 1fr);
   grid-gap: 2rem;
 
-  @include until($mobile) {
+  @include mixins.until(size_variables.$mobile) {
     grid-template-columns: 2fr;
-  }
-
-  .selectable-card.is-grid-container {
-    display: grid;
-    grid-template-columns: 2fr 0.5fr;
-    grid-template-rows: 1fr 2fr 0.5fr;
-    padding: $spacing-l 0 14px $spacing-l; // modify bottom spacing to better align with other cards
   }
 }
 

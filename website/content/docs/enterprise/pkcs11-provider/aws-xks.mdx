@@ -1,13 +1,17 @@
 ---
 layout: docs
-page_title: AWS KMS External Key Store (XKS) - PKCS#11 Provider - Vault Enterprise
-description: |-
-  AWS KMS External Key Store can use Vault as a key store via the Vault PKCS#11 Provider.
+page_title: Configure PKCS#11 with AWS KMS XKS
+description: >-
+  Use the Vault PKCS#11 provider with AWS KMS External Key Store (XKS) to store
+  and manage cryptographic keys.
 ---
 
-# Vault with AWS KMS external key store (XKS) via PKCS#11 and XKS proxy
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
 
-@include 'alerts/enterprise-and-hcp-plus.mdx'
+# Configure PKCS#11 with AWS KMS external key store (XKS)
+
+@include 'alerts/enterprise-only.mdx'
 
 ~> **Note**: AWS [`xks-proxy`](https://github.com/aws-samples/aws-kms-xks-proxy) is used in this document as a sample implementation.
 

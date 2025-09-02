@@ -6,6 +6,9 @@ description: |-
   method.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # TLS certificate auth method (API)
 
 @include 'x509-sha1-deprecation.mdx'
@@ -69,7 +72,7 @@ Sets a CA cert and associated parameters in a role name.
   by a dash (-) instead of a dot (.) to allow usage in ACL templates.
 - `ocsp_enabled` `(bool: false)` - If enabled, validate certificates' revocation
   status using OCSP.
-- `ocsp_ca_certificates` `(string: "")` Any additional CA certificates needed to
+- `ocsp_ca_certificates` `(string: "")` Any additional OCSP responder certificates needed to
   verify OCSP responses.  Provided as base64 encoded PEM data.
 - `ocsp_servers_override` `(array: [])`: A comma-separated list of OCSP server
   addresses.  If unset, the OCSP server is determined from the AuthorityInformationAccess
@@ -77,6 +80,11 @@ Sets a CA cert and associated parameters in a role name.
 - `ocsp_fail_open` `(bool: false)` - If true and an OCSP response cannot be fetched
   or is of an unknown status, the login will proceed as if the certificate has not
   been revoked.
+- `ocsp_this_update_max_age` `(integer:0 or string: "")` - If greater than 0, specifies
+  the maximum age of an OCSP thisUpdate field. This avoids accepting old responses
+  without a nextUpdate field.
+- `ocsp_max_retries` `(integer: 4)` - The number of retries attempted before giving
+  up on an OCSP request. 0 will disable retries
 - `ocsp_query_all_servers` `(bool: false)` - If set to true, rather than accepting
   the first successful OCSP response, query all servers and consider the certificate
   valid only if all servers agree.
@@ -360,6 +368,11 @@ Configuration options for the method.
   `allowed_metadata_extensions` will be stored in the alias
 - `ocsp_cache_size` `(int: 100)` - The size of the OCSP response LRU cache.  Note
   that this cache is used for all configured certificates.
+- `role_cache_size` `(int: 200)` - The size of the role cache.  Use `-1` to disable
+  role caching.
+- `enable_metadata_on_failures` `(boolean: false)` - If set, metadata of the client
+  certificate such as common name, serial, subject key id and authority key id will
+  be returned on authentication failures and appear in auditing records.
 
 ### Sample payload
 
@@ -377,7 +390,7 @@ $ curl \
     --request POST \
     --cacert vault-ca.pem \
     --data @payload.json \
-    https://127.0.0.1:8200/v1/auth/cert/certs/cert1
+    https://127.0.0.1:8200/v1/auth/cert/config
 ```
 
 ## Login with TLS certificate method

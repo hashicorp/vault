@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint-env node */
@@ -15,6 +15,10 @@ module.exports = buildEngine({
   lazyLoading: Object.freeze({
     enabled: false,
   }),
+
+  babel: {
+    plugins: [require.resolve('ember-concurrency/async-arrow-task-transform')],
+  },
 
   isDevelopingAddon() {
     return true;

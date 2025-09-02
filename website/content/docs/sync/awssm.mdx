@@ -1,10 +1,14 @@
 ---
 layout: docs
-page_title: AWS Secrets Manager - Secrets Sync Destination
-description: The AWS Secrets Manager destination syncs secrets from Vault to AWS.
+page_title: Sync secrets from Vault to AWS Secrets Manager
+description: >-
+  Automatically sync and unsync the secrets from Vault to AWS Secrets Manager to centralize visibility and control of secrets lifecycle management.
 ---
 
-# AWS Secrets Manager
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
+# Sync secrets from Vault to AWS Secrets Manager
 
 The AWS Secrets Manager destination enables Vault to sync and unsync secrets of your choosing into
 an external AWS account. When configured, Vault will actively maintain the state of each externally-synced
@@ -136,6 +140,67 @@ Prerequisites:
 Moving forward, any modification on the Vault secret will be propagated to its AWS Secrets Manager
 counterpart. Creating a new secret version in Vault will update the one in AWS to the new version. Deleting either
 the secret or the association in Vault will delete the secret in your AWS account as well.
+
+## Access management
+
+You can allow or restrict access to secrets by attaching AWS Resource Tags
+to secrets. For example, the following AWS IAM policy prevents Vault from
+modifying secrets that were not created by a sync operation:
+
+  <CodeBlockConfig hideClipboard>
+
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "secretsmanager:*",
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringEquals": {
+              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
+            }
+          }
+        }
+      ]
+    }
+
+  </CodeBlockConfig>
+
+To prevent out-of-band overwrites, we recommend adding a negative condition on
+all write-access policies not used by Vault:
+
+  <CodeBlockConfig hideClipboard>
+
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Deny",
+          "Action": [
+            "secretsmanager:*"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringNotEquals": {
+              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
+            }
+          }
+        }
+      ]
+    }
+
+  </CodeBlockConfig>
+
+<Warning title="Use wildcards with extreme caution">
+
+  The previous examples use wildcards for the sake of brevity. We strongly
+  recommend you use the principle of least privilege to restrict actions and
+  resources for each use case to the minimum necessary requirements.
+  
+</Warning>
 
 ## Tutorial
 

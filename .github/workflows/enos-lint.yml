@@ -12,20 +12,20 @@ jobs:
     # as we need secrets to install enos.
     if: "! github.event.pull_request.head.repo.fork"
     name: metadata
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     outputs:
       runs-on: ${{ steps.metadata.outputs.runs-on }}
       version: ${{ steps.metadata.outputs.version }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - id: set-product-version
-        uses: hashicorp/actions-set-product-version@v1
+        uses: hashicorp/actions-set-product-version@2ec1b51402b3070bccf7ca95306afbd039e574ff # v2.0.1
       - id: metadata
         run: |
           echo "version=${{ steps.set-product-version.outputs.product-version }}" >> "$GITHUB_OUTPUT"
           github_repository="${{ github.repository }}"
           if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
-            echo 'runs-on=["self-hosted","ondemand","linux","type=c6a.4xlarge"]' >> "$GITHUB_OUTPUT"
+            echo 'runs-on=["self-hosted","ubuntu-latest-x64","type=c6a.4xlarge"]' >> "$GITHUB_OUTPUT"
           else
             echo 'runs-on="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
           fi
@@ -33,17 +33,19 @@ jobs:
   lint:
     needs: metadata
     runs-on: ${{ fromJSON(needs.metadata.outputs.runs-on) }}
-    env:
-      GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: hashicorp/setup-terraform@v2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: ./.github/actions/set-up-go
+        with:
+          no-restore: true
+          no-save: true
+      - uses: ./.github/actions/install-external-tools
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_wrapper: false
-      - uses: hashicorp/action-setup-enos@v1
-        with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - uses: hashicorp/action-setup-enos@b9fa53484a1e8fdcc7b02a118bcf01d65b9414c9 # v1.37
+      - name: Ensure shellcheck is available for linting
+        run: which shellcheck || (sudo apt update && sudo apt install -y shellcheck)
       - name: lint
         working-directory: ./enos
         env:

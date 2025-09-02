@@ -40,6 +40,7 @@ func NewVaultPkiCluster(t *testing.T) *VaultPkiCluster {
 			},
 			NumCores: 3,
 		},
+		DisableMlock: true,
 	}
 
 	cluster := docker.NewTestDockerCluster(t, opts)

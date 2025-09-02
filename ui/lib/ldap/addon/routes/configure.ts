@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 
 import type Store from '@ember-data/store';
@@ -14,7 +14,7 @@ import type LdapConfigModel from 'vault/models/ldap/config';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
 
-interface LdapConfigureController extends Controller {
+interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
 }
 
@@ -30,11 +30,7 @@ export default class LdapConfigureRoute extends Route {
     return this.configModel || this.store.createRecord('ldap/config', { backend });
   }
 
-  setupController(
-    controller: LdapConfigureController,
-    resolvedModel: LdapConfigModel,
-    transition: Transition
-  ) {
+  setupController(controller: RouteController, resolvedModel: LdapConfigModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [

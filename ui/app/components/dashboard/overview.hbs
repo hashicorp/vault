@@ -1,0 +1,52 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Dashboard::VaultVersionTitle @version={{@version}} />
+
+<div class="has-bottom-margin-xl">
+  <div class="is-flex-row gap-24">
+    {{#if @version.isEnterprise}}
+      <div class="is-flex-column is-flex-1 gap-24">
+        {{#if (and (has-permission "clients" routeParams="activity") this.shouldShowClientCount)}}
+          <Dashboard::ClientCountCard />
+        {{/if}}
+        {{#if
+          (and (has-permission "status" routeParams="replication") (not (is-empty-value @replication)) @isRootNamespace)
+        }}
+          <Dashboard::ReplicationCard
+            @replication={{@replication}}
+            @version={{@version}}
+            @refresh={{@refreshModel}}
+            @updatedAt={{@replicationUpdatedAt}}
+          />
+        {{/if}}
+        <Dashboard::SecretsEnginesCard @secretsEngines={{@secretsEngines}} />
+      </div>
+
+      <div class="is-flex-column is-flex-1 gap-24">
+        <Dashboard::QuickActionsCard @secretsEngines={{@secretsEngines}} />
+        {{#if @vaultConfiguration}}
+          <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@vaultConfiguration}} />
+        {{/if}}
+        <div>
+          <Dashboard::LearnMoreCard @isEnterprise={{@version.isEnterprise}} />
+        </div>
+      </div>
+    {{else}}
+      <div class="is-flex-column is-flex-1 gap-24">
+        <Dashboard::SecretsEnginesCard @secretsEngines={{@secretsEngines}} />
+        <div>
+          <Dashboard::LearnMoreCard @isEnterprise={{@version.isEnterprise}} />
+        </div>
+      </div>
+      <div class="is-flex-column is-flex-1 gap-24">
+        <Dashboard::QuickActionsCard @secretsEngines={{@secretsEngines}} />
+        {{#if @vaultConfiguration}}
+          <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@vaultConfiguration}} />
+        {{/if}}
+      </div>
+    {{/if}}
+  </div>
+</div>
