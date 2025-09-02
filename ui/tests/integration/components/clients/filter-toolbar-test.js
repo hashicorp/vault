@@ -20,7 +20,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     this.mountPaths = ['auth/token/', 'auth/auto/eng/core/auth/core-gh-auth/', 'auth/userpass-root/'];
     this.mountTypes = ['token/', 'userpass/', 'ns_token/'];
     this.onFilter = sinon.spy();
-    this.appliedFilters = { nsLabel: '', mountPath: '', mountType: '' };
+    this.appliedFilters = { namespace_path: '', mount_path: '', mount_type: '' };
 
     this.renderComponent = async () => {
       await render(hbs`
@@ -34,7 +34,11 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     };
 
     this.presetFilters = () => {
-      this.appliedFilters = { nsLabel: 'admin/', mountPath: 'auth/userpass-root/', mountType: 'token/' };
+      this.appliedFilters = {
+        namespace_path: 'admin/',
+        mount_path: 'auth/userpass-root/',
+        mount_type: 'token/',
+      };
     };
 
     this.selectFilters = async () => {
@@ -121,7 +125,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
   });
 
   test('it applies updated filters when filters are preset', async function (assert) {
-    this.appliedFilters = { mountPath: 'auth/token/', mountType: 'ns_token/', nsLabel: 'ns1' };
+    this.appliedFilters = { namespace_path: 'ns1', mount_path: 'auth/token/', mount_type: 'ns_token/' };
     await this.renderComponent();
     // Check initial filters
     await click(GENERAL.button('Apply filters'));
@@ -133,7 +137,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     const [afterUpdate] = this.onFilter.lastCall.args;
     assert.propEqual(
       afterUpdate,
-      { mountPath: 'auth/userpass-root/', mountType: 'token/', nsLabel: 'admin/' },
+      { namespace_path: 'admin/', mount_path: 'auth/userpass-root/', mount_type: 'token/' },
       'callback fires with updated selection'
     );
   });
@@ -159,7 +163,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     const [beforeClear] = this.onFilter.lastCall.args;
     assert.propEqual(
       beforeClear,
-      { mountPath: 'auth/userpass-root/', mountType: 'token/', nsLabel: 'admin/' },
+      { namespace_path: 'admin/', mount_path: 'auth/userpass-root/', mount_type: 'token/' },
       'callback fires with preset filters'
     );
     // now clear filters and confirm values are cleared
@@ -167,7 +171,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     const [afterClear] = this.onFilter.lastCall.args;
     assert.propEqual(
       afterClear,
-      { mountPath: '', mountType: '', nsLabel: '' },
+      { namespace_path: '', mount_path: '', mount_type: '' },
       'onFilter callback has empty values when "Clear filters" is clicked'
     );
   });
@@ -180,15 +184,15 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     const [beforeClear] = this.onFilter.lastCall.args;
     assert.propEqual(
       beforeClear,
-      { mountPath: 'auth/userpass-root/', mountType: 'token/', nsLabel: 'admin/' },
+      { namespace_path: 'admin/', mount_path: 'auth/userpass-root/', mount_type: 'token/' },
       'callback fires with preset filters'
     );
     await click(FILTERS.clearTag('admin/'));
     const afterClear = this.onFilter.lastCall.args[0];
     assert.propEqual(
       afterClear,
-      { mountPath: 'auth/userpass-root/', mountType: 'token/', nsLabel: '' },
-      'onFilter callback fires with empty nsLabel'
+      { namespace_path: '', mount_path: 'auth/userpass-root/', mount_type: 'token/' },
+      'onFilter callback fires with empty namespace_path'
     );
   });
 

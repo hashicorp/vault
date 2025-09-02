@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, findAll, render } from '@ember/test-helpers';
+import { click, fillIn, findAll, render, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
@@ -14,8 +14,9 @@ const MOCK_DATA = [
   { island: 'Maldives', visit_length: 5, is_booked: false, trip_date: '2025-06-22T00:00:00.000Z' },
   { island: 'Bora Bora', visit_length: 7, is_booked: true, trip_date: '2025-03-15T00:00:00.000Z' },
   { island: 'Fiji', visit_length: 10, is_booked: true, trip_date: '2025-09-08T00:00:00.000Z' },
-  { island: 'Seychelles', visit_length: 6, is_booked: false, trip_date: '2025-12-03T00:00:00.000Z' },
+  { island: 'Santorini', visit_length: 4, is_booked: false, trip_date: '2026-04-10T00:00:00.000Z' },
   { island: 'Maui', visit_length: 8, is_booked: true, trip_date: '2026-01-18T00:00:00.000Z' },
+  { island: 'Seychelles', visit_length: 6, is_booked: false, trip_date: '2025-12-03T00:00:00.000Z' },
 ];
 module('Integration | Component | clients/table', function (hooks) {
   setupRenderingTest(hooks);
@@ -70,7 +71,7 @@ module('Integration | Component | clients/table', function (hooks) {
     this.data = MOCK_DATA;
     await this.renderComponent();
     assert.dom(CLIENT_COUNT.card('table empty state')).doesNotExist();
-    assert.dom(GENERAL.paginationInfo).hasText(`1–3 of ${this.data.length}`);
+    assert.dom(GENERAL.paginationInfo).hasText(`1–5 of ${this.data.length}`);
     await click(GENERAL.nextPage);
     assert.dom(GENERAL.tableData(0, 'island')).hasText('Seychelles', 'it paginates the data');
   });
@@ -88,30 +89,39 @@ module('Integration | Component | clients/table', function (hooks) {
     await this.renderComponent();
     const [firstColumn, secondColumn, thirdColumn, fourthColumn] = findAll(GENERAL.icon('swap-vertical'));
     await click(firstColumn);
-    assertSortOrder(['Bora Bora', 'Fiji', 'Maldives'], { column: 'island', page: 1 });
+    assertSortOrder(['Bora Bora', 'Fiji', 'Maldives', 'Maui', 'Santorini'], { column: 'island', page: 1 });
     await click(GENERAL.nextPage);
-    assertSortOrder(['Maui', 'Seychelles'], { column: 'island', page: 2 });
+    assertSortOrder(['Seychelles'], { column: 'island', page: 2 });
 
     await click(GENERAL.prevPage);
     await click(secondColumn);
-    assertSortOrder(['5', '6', '7'], { column: 'visit_length', page: 1 });
+    assertSortOrder(['4', '5', '6', '7', '8'], { column: 'visit_length', page: 1 });
     await click(GENERAL.nextPage);
-    assertSortOrder(['8', '10'], { column: 'visit_length', page: 2 });
+    assertSortOrder(['10'], { column: 'visit_length', page: 2 });
 
     await click(GENERAL.prevPage);
     await click(thirdColumn);
-    assertSortOrder(['false', 'false', 'true'], { column: 'is_booked', page: 1 });
+    assertSortOrder(['false', 'false', 'false', 'true', 'true'], { column: 'is_booked', page: 1 });
     await click(GENERAL.nextPage);
-    assertSortOrder(['true', 'true'], { column: 'is_booked', page: 2 });
+    assertSortOrder(['true'], { column: 'is_booked', page: 2 });
 
     await click(GENERAL.prevPage);
     await click(fourthColumn);
-    assertSortOrder(['2025-03-15T00:00:00.000Z', '2025-06-22T00:00:00.000Z', '2025-09-08T00:00:00.000Z'], {
-      column: 'trip_date',
-      page: 1,
-    });
+    assertSortOrder(
+      [
+        '2025-03-15T00:00:00.000Z',
+        '2025-06-22T00:00:00.000Z',
+        '2025-09-08T00:00:00.000Z',
+        '2025-12-03T00:00:00.000Z',
+        '2026-01-18T00:00:00.000Z',
+      ],
+      {
+        column: 'trip_date',
+        page: 1,
+      }
+    );
     await click(GENERAL.nextPage);
-    assertSortOrder(['2025-12-03T00:00:00.000Z', '2026-01-18T00:00:00.000Z'], {
+    assertSortOrder(['2026-04-10T00:00:00.000Z'], {
       column: 'trip_date',
       page: 2,
     });
@@ -125,12 +135,12 @@ module('Integration | Component | clients/table', function (hooks) {
     assert
       .dom(`${GENERAL.tableColumnHeader(2, { isAdvanced: true })} ${GENERAL.icon('arrow-down')}`)
       .exists();
-    const firstPage = ['Fiji', 'Maui', 'Bora Bora'];
+    const firstPage = ['Fiji', 'Maui', 'Bora Bora', 'Seychelles', 'Maldives'];
     firstPage.forEach((value, idx) => {
       assert.dom(GENERAL.tableData(idx, 'island')).hasText(value, `page 1, row ${idx} has ${value}`);
     });
     await click(GENERAL.nextPage);
-    const secondPage = ['Seychelles', 'Maldives'];
+    const secondPage = ['Santorini'];
     secondPage.forEach((value, idx) => {
       assert.dom(GENERAL.tableData(idx, 'island')).hasText(value, `page 2, row ${idx} has ${value}`);
     });
@@ -185,5 +195,37 @@ module('Integration | Component | clients/table', function (hooks) {
       .dom(`${GENERAL.tableData(0, 'mount_type')} .hds-badge`)
       .exists('it renders a badge for the deleted mount')
       .hasText('Deleted');
+  });
+
+  test('it resets pagination when data changes', async function (assert) {
+    // We need more than 5 rows, so here's more mock data!
+    const moreData = [
+      { island: 'Tahiti', visit_length: 12, is_booked: true, trip_date: '2025-05-10T00:00:00.000Z' },
+      { island: 'Barbados', visit_length: 6, is_booked: false, trip_date: '2025-08-25T00:00:00.000Z' },
+      { island: 'Cyprus', visit_length: 9, is_booked: true, trip_date: '2026-03-12T00:00:00.000Z' },
+      { island: 'Jamaica', visit_length: 7, is_booked: false, trip_date: '2025-11-05T00:00:00.000Z' },
+      { island: 'Crete', visit_length: 11, is_booked: true, trip_date: '2026-06-18T00:00:00.000Z' },
+      { island: 'Aruba', visit_length: 5, is_booked: false, trip_date: '2025-10-14T00:00:00.000Z' },
+    ];
+    this.data = [...MOCK_DATA, ...moreData];
+    this.showPaginationSizeSelector = true;
+    await this.renderComponent();
+    await fillIn(GENERAL.paginationSizeSelector, '10'); // Default is 5, so change to something else
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.paginationInfo).hasText(`11–12 of ${this.data.length}`, 'it navigates to next page');
+    assert.dom(GENERAL.tableRow()).exists({ count: 2 }, '2 row renders');
+    // Changing the @data arg should trigger an update and reset pagination
+    // We have to use `this.set` to trigger did-update
+    this.set('data', [
+      { island: 'Palawan', visit_length: 9, is_booked: true, trip_date: '2025-11-14T00:00:00.000Z' },
+      { island: 'Mykonos', visit_length: 3, is_booked: false, trip_date: '2026-02-28T00:00:00.000Z' },
+    ]);
+
+    // There's a workaround using next() from @ember/runloop because the Hds::Pagination::Numbered component
+    // doesn't re-render when @currentPage updates. When that's fixed at the source we should be able to remove waitFor
+    await waitFor(GENERAL.paginationInfo);
+    assert.dom(GENERAL.paginationInfo).hasText(`1–2 of ${this.data.length}`);
+    assert.dom(GENERAL.tableRow()).exists({ count: 2 }, '2 rows render');
+    assert.dom(GENERAL.paginationSizeSelector).hasValue('10', 'page selector is unchanged when data updates');
   });
 });
