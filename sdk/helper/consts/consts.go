@@ -48,5 +48,5 @@ const (
 
 	DRReplicationPathTarget = "dr"
 
-	RecoverSourcePathParam = "recover_source_path"
+	RecoverSourcePathHeader = "X-Vault-Recover-Source-Path"
 )

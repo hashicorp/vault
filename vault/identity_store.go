@@ -165,6 +165,7 @@ func (i *IdentityStore) paths() []*framework.Path {
 		mfaDuoPaths(i),
 		mfaPingIDPaths(i),
 		mfaLoginEnforcementPaths(i),
+		mfaLoginEnterprisePaths(i),
 	)
 }
 

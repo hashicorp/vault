@@ -503,10 +503,27 @@ func (c *Sys) RaftUnloadSnapshot(snapID string) (*Secret, error) {
 // RaftUnloadSnapshotWithContext unloads a snapshot from the raft cluster.
 // It accepts a snapshot ID to identify the snapshot to be unloaded.
 func (c *Sys) RaftUnloadSnapshotWithContext(ctx context.Context, snapID string) (*Secret, error) {
+	return c.raftUnloadSnapshotWithContext(ctx, snapID, false)
+}
+
+// RaftForceUnloadSnapshot wraps RaftForceUnloadSnapshotWithContext using context.Background.
+func (c *Sys) RaftForceUnloadSnapshot(snapID string) (*Secret, error) {
+	return c.RaftForceUnloadSnapshotWithContext(context.Background(), snapID)
+}
+
+// RaftForceUnloadSnapshotWithContext forcefully unloads the given snapshot
+func (c *Sys) RaftForceUnloadSnapshotWithContext(ctx context.Context, snapID string) (*Secret, error) {
+	return c.raftUnloadSnapshotWithContext(ctx, snapID, true)
+}
+
+func (c *Sys) raftUnloadSnapshotWithContext(ctx context.Context, snapID string, force bool) (*Secret, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
 	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/storage/raft/snapshot-load/"+snapID)
+	if force {
+		r.Params.Set("force", "true")
+	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
