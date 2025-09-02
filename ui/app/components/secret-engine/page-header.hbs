@@ -31,6 +31,18 @@
               General settings
             </LinkTo>
           </li>
+          {{! If engine is not configurable, hide plugin settings link }}
+          {{#if (get (engines-display-data @model.secretsEngine.type) "isConfigurable")}}
+            <li>
+              <LinkTo
+                @route="vault.cluster.secrets.backend.configuration.plugin-settings"
+                @model={{@model.secretsEngine.id}}
+              >
+                {{get (engines-display-data @model.secretsEngine.type) "displayName"}}
+                settings
+              </LinkTo>
+            </li>
+          {{/if}}
         </ul>
       </nav>
     </div>

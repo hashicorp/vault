@@ -1,0 +1,89 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if @isOpen}}
+  <Hds::Flyout @onClose={{@onClose}} data-test-flyout as |F|>
+    <F.Header @icon="info">
+      {{#if this.hasPlugin}}
+        {{this.displayName}}
+        plugin information
+      {{else}}
+        External plugins information
+      {{/if}}
+    </F.Header>
+
+    <F.Body>
+      <div class="has-bottom-margin-m">
+        {{#if this.hasPlugin}}
+          <Hds::Text::Body>
+            The
+            <strong>{{this.displayName}}</strong>
+            {{this.pluginTypeDisplay}}
+            is not currently enabled in this Vault instance. To use this plugin, it needs to be enabled by a Vault
+            administrator.
+          </Hds::Text::Body>
+        {{else}}
+          <Hds::Text::Body>
+            External plugins are plugins found in the plugin catalog that are not part of Vault's built-in engines. These may
+            be custom plugins or third-party plugins that have been registered with your Vault instance.
+          </Hds::Text::Body>
+          <Hds::Text::Body class="has-top-margin-s">
+            External plugins appear in the catalog when they have been registered using the
+            <code aria-label="vault plugin register command">vault plugin register</code>
+            command or through the Vault API. They provide additional functionality beyond Vault's built-in secrets engines
+            and authentication methods.
+          </Hds::Text::Body>
+        {{/if}}
+      </div>
+
+      <div>
+        <Hds::Text::Display @tag="h3" @size="300" class="has-bottom-margin-xs">
+          Documentation
+        </Hds::Text::Display>
+        {{#if this.hasPlugin}}
+          <Hds::Text::Body>
+            For more information about configuring and using the
+            {{this.displayName}}
+            {{this.pluginTypeDisplay}}, visit the official documentation:
+          </Hds::Text::Body>
+        {{else}}
+          <Hds::Text::Body>
+            For more information about registering and managing external plugins, visit the official documentation:
+          </Hds::Text::Body>
+        {{/if}}
+        <div class="has-top-margin-xs">
+          <Hds::Link::Standalone
+            @text="Register and enable external plugins"
+            @href="https://developer.hashicorp.com/vault/docs/plugins/register"
+            @icon="external-link"
+            @iconPosition="trailing"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-test-link-to="Register and enable external plugins"
+          />
+          {{#unless this.hasPlugin}}
+            <div class="has-top-margin-xs">
+              <Hds::Link::Standalone
+                @text="Plugin development guide"
+                @href="https://developer.hashicorp.com/vault/docs/plugins/plugin-development"
+                @icon="external-link"
+                @iconPosition="trailing"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-test-link-to="Plugin development guide"
+              />
+            </div>
+          {{/unless}}
+        </div>
+      </div>
+    </F.Body>
+
+    <F.Footer>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Close" @color="primary" {{on "click" @onClose}} data-test-button="Close" />
+      </Hds::ButtonSet>
+    </F.Footer>
+  </Hds::Flyout>
+{{/if}}

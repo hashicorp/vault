@@ -17,7 +17,6 @@ import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run
 import { runCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
-import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SS } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { createSecret } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
@@ -48,7 +47,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       const enginePath = `kv-secret-${this.uid}`;
       const maxVersion = '101';
       await mountSecrets.visit();
-      await click(MOUNT_BACKEND_FORM.mountType('kv'));
+      await click(GENERAL.cardContainer('kv'));
       await fillIn(GENERAL.inputByAttr('path'), enginePath);
 
       await fillIn(GENERAL.inputByAttr('kv_config.max_versions'), maxVersion);
@@ -138,7 +137,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       this.backend = `kv-v1-${this.uid}`;
       // mount version 1 engine
       await mountSecrets.visit();
-      await click(MOUNT_BACKEND_FORM.mountType('kv'));
+      await click(GENERAL.cardContainer('kv'));
       await fillIn(GENERAL.inputByAttr('path'), this.backend);
       await click(GENERAL.button('Method Options'));
       await mountSecrets.version(1);
