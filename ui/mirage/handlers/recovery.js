@@ -19,11 +19,26 @@ export default function (server) {
     data: {},
   }));
 
+  // UNLOAD SNAPSHOT HANDLER
+  server.delete('/sys/storage/raft/snapshot-load/:snapshot_id', (schema, req) => {
+    const record = schema.db['snapshots'].findBy(req.params);
+    if (record) {
+      schema.db['snapshots'].remove(record);
+      return new Response(204); // No content
+    }
+    return new Response(404, {}, { errors: [] });
+  });
+
   // LOADED SNAPSHOT HANDLERS
   server.get('/sys/storage/raft/snapshot-load', (schema) => {
     // Currently only one snapshot can be loaded at a time
-    const { snapshot_id } = schema.db['snapshots'][0];
-    return { data: { keys: [snapshot_id] } };
+    const record = schema.db['snapshots'][0];
+
+    if (record) {
+      const { snapshot_id } = record;
+      return { data: { keys: [snapshot_id] } };
+    }
+    return new Response(404, {}, { errors: [] });
   });
 
   server.get('/sys/storage/raft/snapshot-load/:snapshot_id', (schema, req) => {

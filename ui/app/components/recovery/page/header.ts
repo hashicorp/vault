@@ -7,6 +7,12 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import type VersionService from 'vault/services/version';
 
-export default class Header extends Component {
+interface Args {
+  title: string;
+  subtitle?: string;
+  action?: unknown;
+}
+
+export default class Header extends Component<Args> {
   @service declare readonly version: VersionService;
 }

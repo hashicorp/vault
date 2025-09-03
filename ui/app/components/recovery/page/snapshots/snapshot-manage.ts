@@ -4,15 +4,18 @@
  */
 
 import Component from '@glimmer/component';
-import Ember from 'ember';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { restartableTask, task, timeout } from 'ember-concurrency';
+import { restartableTask } from 'ember-concurrency';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import SecretsEngineResource, { RecoverySupportedEngines } from 'vault/resources/secrets/engine';
 import { SupportedSecretBackendsEnum } from 'vault/helpers/supported-secret-backends';
 import { ROOT_NAMESPACE } from 'vault/services/namespace';
+import {
+  createPollingTask,
+  getSnapshotStatusBadge,
+} from 'vault/components/recovery/page/snapshots/snapshot-utils';
 
 import type ApiService from 'vault/services/api';
 import type NamespaceService from 'vault/services/namespace';
@@ -53,6 +56,8 @@ export default class SnapshotManage extends Component<Args> {
 
   @tracked snapshotStatus: string | null = null;
 
+  private pollingController: { start: () => Promise<void>; cancel: () => void } | null = null;
+
   recoverySupportedEngines = [
     { display: 'Cubbyhole', value: SupportedSecretBackendsEnum.CUBBYHOLE },
     { display: 'KV v1', value: SupportedSecretBackendsEnum.KV },
@@ -62,7 +67,22 @@ export default class SnapshotManage extends Component<Args> {
     super(owner, args);
     this.selectedNamespace = this.namespace.inRootNamespace ? 'root' : this.namespace.path;
     this.fetchMounts.perform();
-    this.pollSnapshotStatus.perform();
+
+    // Create and start polling task
+    this.pollingController = createPollingTask(
+      this.args.model.snapshot.snapshot_id,
+      this.api,
+      this.onPollSuccess,
+      this.onPollError
+    );
+    this.pollingController.start();
+  }
+
+  willDestroy() {
+    super.willDestroy();
+    if (this.pollingController) {
+      this.pollingController.cancel();
+    }
   }
 
   get hasValidationErrors() {
@@ -102,31 +122,19 @@ export default class SnapshotManage extends Component<Args> {
 
   get badge() {
     // Use polled status if available, otherwise fall back to initial model status
-    const status = this.snapshotStatus || (this.args.model.snapshot as { status: string })?.status;
-
-    switch (status) {
-      case 'error':
-        return {
-          status: 'Error',
-          color: 'critical',
-        };
-      case 'loading':
-        return {
-          status: 'Loading',
-          color: 'highlight',
-        };
-      case 'ready':
-        return {
-          status: 'Ready',
-          color: 'success',
-        };
-      default:
-        return {
-          status: status || 'Unknown',
-          color: 'warning',
-        };
-    }
+    const status = this.snapshotStatus || this.args.model.snapshot?.status;
+    return getSnapshotStatusBadge(status);
   }
+
+  onPollError = async (e: unknown) => {
+    const error = await this.api.parseError(e);
+    this.bannerError = `Snapshot load error: ${error.message}`;
+    this.snapshotStatus = 'error';
+  };
+
+  onPollSuccess = async (status: string) => {
+    this.snapshotStatus = status;
+  };
 
   fetchMounts = restartableTask(async () => {
     try {
@@ -153,45 +161,6 @@ export default class SnapshotManage extends Component<Args> {
       });
     } catch {
       this.mountOptions = [];
-    }
-  });
-
-  pollSnapshotStatus = task(async () => {
-    const { snapshot_id } = this.args.model.snapshot;
-
-    if (!snapshot_id) {
-      return;
-    }
-
-    let wait = 5000;
-
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      if (Ember.testing) return;
-      await timeout(wait);
-
-      try {
-        const response = await this.api.sys.systemReadStorageRaftSnapshotLoadId(
-          snapshot_id,
-          this.api.buildHeaders({ namespace: ROOT_NAMESPACE })
-        );
-
-        this.snapshotStatus = response.status || null;
-
-        // Stop polling if status reaches error state
-        if (response.status === 'error') {
-          break;
-        }
-
-        // Slow down polling once status reaches a ready state.
-        // We still want to poll occasionally in case of an error
-        wait = 30000;
-      } catch (e) {
-        const error = await this.api.parseError(e);
-        this.bannerError = `Snapshot load error: ${error.message}`;
-        this.snapshotStatus = 'error';
-        break;
-      }
     }
   });
 

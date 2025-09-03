@@ -9,10 +9,11 @@ import { SystemListStorageRaftSnapshotLoadListEnum } from '@hashicorp/vault-clie
 
 import type ApiService from 'vault/services/api';
 import type Capabilities from 'vault/services/capabilities';
-import type RouterService from '@ember/routing/router-service';
 import type { ModelFrom } from 'vault/vault/route';
+import type RouterService from '@ember/routing/router-service';
+import type Transition from '@ember/routing/transition';
 
-type SnapshotRouteModel = ModelFrom<RecoverySnapshotsRoute>;
+export type SnapshotsRouteModel = ModelFrom<RecoverySnapshotsRoute>;
 
 export default class RecoverySnapshotsRoute extends Route {
   @service declare readonly api: ApiService;
@@ -32,8 +33,10 @@ export default class RecoverySnapshotsRoute extends Route {
     };
   }
 
-  afterModel(model: SnapshotRouteModel) {
-    if (model.snapshots.length === 1) {
+  afterModel(model: SnapshotsRouteModel, transition: Transition) {
+    // Don't redirect if we're already on details route
+    const toRoute = transition.to?.name;
+    if (model.snapshots.length === 1 && toRoute !== 'vault.cluster.recovery.snapshots.snapshot.details') {
       const snapshot_id = model.snapshots[0];
       this.router.transitionTo('vault.cluster.recovery.snapshots.snapshot.manage', snapshot_id);
     }
