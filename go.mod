@@ -79,7 +79,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp/cap v0.9.0
+	github.com/hashicorp/cap v0.10.0
 	github.com/hashicorp/cap/ldap v0.0.0-20250106213447-9047b8b3240f
 	github.com/hashicorp/cli v1.1.7
 	github.com/hashicorp/consul-template v0.41.1
@@ -142,7 +142,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.21.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.21.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.21.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.24.1
+	github.com/hashicorp/vault-plugin-auth-jwt v0.24.2-0.20250901001254-b4b56b72bd77
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.15.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.2
 	github.com/hashicorp/vault-plugin-auth-oci v0.19.0
@@ -206,7 +206,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tink-crypto/tink-go/v2 v2.2.0
 	go.etcd.io/bbolt v1.4.0-beta.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.17
