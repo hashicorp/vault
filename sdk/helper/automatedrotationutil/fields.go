@@ -100,25 +100,37 @@ func (p *AutomatedRotationParams) HasNonzeroRotationValues() bool {
 	return p.RotationSchedule != "" || p.RotationPeriod != 0
 }
 
-// AddAutomatedRotationFields adds plugin identity token fields to the given
-// field schema map.
-func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
+// AddAutomatedRotationFieldsWithGroup adds rotation fields to the given field schema map
+// the fields are associated to the provided display attribute group
+func AddAutomatedRotationFieldsWithGroup(m map[string]*framework.FieldSchema, group string) {
 	fields := map[string]*framework.FieldSchema{
 		"rotation_schedule": {
 			Type:        framework.TypeString,
 			Description: "CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with rotation_period",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Group: group,
+			},
 		},
 		"rotation_window": {
 			Type:        framework.TypeDurationSecond,
 			Description: "Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Group: group,
+			},
 		},
 		"rotation_period": {
 			Type:        framework.TypeDurationSecond,
 			Description: "TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Group: group,
+			},
 		},
 		"disable_automated_rotation": {
 			Type:        framework.TypeBool,
 			Description: "If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Group: group,
+			},
 		},
 	}
 
@@ -128,4 +140,11 @@ func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 		}
 		m[name] = schema
 	}
+}
+
+// stubbing original function for compatibility
+// AddAutomatedRotationFieldsWithGroup should be used directly
+// future utils that define fields should include a group parameter
+func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
+	AddAutomatedRotationFieldsWithGroup(m, "default")
 }
