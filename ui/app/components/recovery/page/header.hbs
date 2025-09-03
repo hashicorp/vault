@@ -20,4 +20,17 @@
   <PH.Subtitle>
     {{@subtitle}}
   </PH.Subtitle>
+
+  {{#if @action}}
+    <PH.Actions>
+      <Hds::Button
+        @text={{@action.text}}
+        @icon={{@action.icon}}
+        @iconPosition={{@action.iconPosition}}
+        @color={{@action.color}}
+        @route={{@action.route}}
+        @models={{@action.models}}
+      />
+    </PH.Actions>
+  {{/if}}
 </Hds::PageHeader>
