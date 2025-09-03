@@ -11,6 +11,9 @@ interface PathsResponse {
     capabilities: string[];
   };
 }
+
+export const ROOT_NAMESPACE: string;
+
 export default class NamespaceService extends Service {
   accessibleNamespaces: string[];
   userRootNamespace: string;

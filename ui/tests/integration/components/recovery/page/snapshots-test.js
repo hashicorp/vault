@@ -11,7 +11,6 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { dateFormat } from 'core/helpers/date-format';
 
 const SELECTORS = {
   badge: (name) => `[data-test-badge="${name}"]`,
@@ -96,23 +95,5 @@ module('Integration | Component | recovery/snapshots', function (hooks) {
         'empty state message renders'
       );
     assert.dom(GENERAL.emptyStateActions).hasText('Upload snapshot', 'empty state action renders');
-  });
-
-  // TODO will move over to separate test file with further feature work
-  test('it displays loaded snapshot card', async function (assert) {
-    const expiryDate = dateFormat(
-      [new Date('2023-09-20T10:51:53.961861096-04:00'), 'MMMM do yyyy, h:mm:ss a'],
-      {}
-    );
-
-    this.model = {
-      snapshot_id: '6ecc06a9-3592-26f9-40cb-8d1b511890a6',
-      status: 'ready',
-      expires_at: expiryDate,
-    };
-
-    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
-
-    assert.dom(SELECTORS.badge('status')).hasText('ready', 'status badge renders');
   });
 });
