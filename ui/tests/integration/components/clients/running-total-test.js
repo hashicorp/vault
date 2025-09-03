@@ -14,7 +14,6 @@ import { getUnixTime } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import timestamp from 'core/utils/timestamp';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
@@ -46,12 +45,6 @@ module('Integration | Component | clients/running-total', function (hooks) {
       />
     `);
     };
-    // Fails on #ember-testing-container
-    setRunOptions({
-      rules: {
-        'scrollable-region-focusable': { enabled: false },
-      },
-    });
   });
 
   test('it renders with full monthly activity data', async function (assert) {

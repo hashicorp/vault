@@ -10,13 +10,13 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
-import type { ActivityExportData, ClientFilterTypes, EntityClients } from 'core/utils/client-count-utils';
+import type { ActivityExportData, ClientFilterTypes } from 'core/utils/client-count-utils';
 
 /* This component does not actually render and is the base class to house
  shared computations between the Clients::Page::Overview and Clients::Page::List components */
-interface Args {
+export interface Args {
   activity: ClientsActivityModel;
-  exportData: ActivityExportData[] | EntityClients[];
+  exportData: ActivityExportData[];
   onFilterChange: CallableFunction;
   filterQueryParams: Record<ClientFilterTypes, string>;
 }

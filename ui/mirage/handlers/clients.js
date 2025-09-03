@@ -84,7 +84,7 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns, skipCounts =
   const max = isLowerCounts ? 100 : 1000;
   const nsBlock = {
     namespace_id: ns?.namespace_id || (idx === 0 ? 'root' : Math.random().toString(36).slice(2, 7) + idx),
-    namespace_path: ns?.namespace_path || (idx === 0 ? '' : `ns${idx}`),
+    namespace_path: ns?.namespace_path || (idx === 0 ? '' : `ns${idx}/`),
     counts: {},
     mounts: {},
   };
@@ -295,15 +295,17 @@ export default function (server) {
     const activities = schema['clients/activities'];
     const namespace = req.requestHeaders['X-Vault-Namespace'];
     let { start_time, end_time } = req.queryParams;
-    if (!start_time && !end_time) {
+    if (!start_time) {
       // if there are no date query params, the activity log default behavior
       // queries from the builtin license start timestamp to the current month
       start_time = LICENSE_START.toISOString();
+    }
+    if (!end_time) {
       end_time = STATIC_NOW.toISOString();
     }
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
-    if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
-    if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
+    if (!start_time?.includes('T')) start_time = fromUnixTime(start_time).toISOString();
+    if (!end_time?.includes('T')) end_time = fromUnixTime(end_time).toISOString();
 
     const record = activities.findBy({ start_time, end_time });
     let data;

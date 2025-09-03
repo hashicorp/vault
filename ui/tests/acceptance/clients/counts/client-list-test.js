@@ -20,6 +20,10 @@ module('Acceptance | clients | counts | client list', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    // This tab is hidden on community so the version is stubbed for consistent test running on either version
+    this.version = this.owner.lookup('service:version');
+    this.version.type === 'enterprise';
+
     // The activity export endpoint returns a ReadableStream of json lines, this is not easily mocked using mirage.
     // Stubbing the adapter method return instead.
     const mockResponse = {
@@ -39,6 +43,11 @@ module('Acceptance | clients | counts | client list', function (hooks) {
     this.exportDataStub.restore();
   });
 
+  test('it hides client list tab on community', async function (assert) {
+    this.version.type === 'community';
+    assert.dom(GENERAL.tab('client list')).doesNotExist();
+  });
+
   test('it navigates to client list tab', async function (assert) {
     assert.expect(3);
     await click(GENERAL.navLink('Client Count'));
@@ -51,7 +60,7 @@ module('Acceptance | clients | counts | client list', function (hooks) {
 
   test('filters are preset if URL includes query params', async function (assert) {
     assert.expect(4);
-    const ns = 'test-ns-2/';
+    const ns = 'ns2/';
     const mPath = 'auth/userpass/';
     const mType = 'userpass';
     await visit(
@@ -65,7 +74,7 @@ module('Acceptance | clients | counts | client list', function (hooks) {
 
   test('selecting filters update URL query params', async function (assert) {
     assert.expect(3);
-    const ns = 'test-ns-2/';
+    const ns = 'ns2/';
     const mPath = 'auth/userpass/';
     const mType = 'userpass';
     const url = '/vault/clients/counts/client-list';
@@ -80,7 +89,6 @@ module('Acceptance | clients | counts | client list', function (hooks) {
     // select mount type
     await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
     await click(FILTERS.dropdownItem(mType));
-    await click(GENERAL.button('Apply filters'));
     assert.strictEqual(
       currentURL(),
       `${url}?mount_path=${encodeURIComponent(mPath)}&mount_type=${mType}&namespace_path=${encodeURIComponent(

@@ -20,6 +20,7 @@ import {
   ACTIVITY_RESPONSE_STUB as RESPONSE,
   MIXED_ACTIVITY_RESPONSE_STUB as MIXED_RESPONSE,
   SERIALIZED_ACTIVITY_RESPONSE,
+  ENTITY_EXPORT,
 } from 'vault/tests/helpers/clients/client-count-helpers';
 
 /*
@@ -461,6 +462,154 @@ module('Integration | Util | client count utils', function (hooks) {
     test('it returns an empty array when filter includes keys the dataset does not contain', async function (assert) {
       const noMatches = filterTableData(this.mockMountData, { foo: 'root', bar: '' });
       assert.propEqual(noMatches, [], 'returns an empty array when no keys match dataset');
+      this.assertOriginal(assert);
+    });
+
+    test('it matches on empty strings or "root" for the root namespace', async function (assert) {
+      const mockExportData = ENTITY_EXPORT.trim()
+        .split('\n')
+        .map((line) => JSON.parse(line));
+      const combinedData = [...this.mockMountData, ...mockExportData];
+      const filteredData = filterTableData(combinedData, { namespace_path: 'root' });
+      const expected = [
+        {
+          acme_clients: 0,
+          clients: 8091,
+          entity_clients: 4002,
+          label: 'auth/userpass/0',
+          mount_path: 'auth/userpass/0',
+          mount_type: 'userpass',
+          namespace_path: 'root',
+          non_entity_clients: 4089,
+          secret_syncs: 0,
+        },
+        {
+          acme_clients: 0,
+          clients: 4290,
+          entity_clients: 0,
+          label: 'secrets/kv/0',
+          mount_path: 'secrets/kv/0',
+          mount_type: 'kv',
+          namespace_path: 'root',
+          non_entity_clients: 0,
+          secret_syncs: 4290,
+        },
+        {
+          acme_clients: 4003,
+          clients: 4003,
+          entity_clients: 0,
+          label: 'acme/pki/0',
+          mount_path: 'acme/pki/0',
+          mount_type: 'pki',
+          namespace_path: 'root',
+          non_entity_clients: 0,
+          secret_syncs: 0,
+        },
+        {
+          client_first_used_time: '2025-08-15T23:48:09Z',
+          client_id: '5692c6ef-c871-128e-fb06-df2be7bfc0db',
+          client_type: 'entity',
+          entity_alias_custom_metadata: {},
+          entity_alias_metadata: {},
+          entity_alias_name: 'bob',
+          entity_group_ids: ['7537e6b7-3b06-65c2-1fb2-c83116eb5e6f'],
+          entity_metadata: {},
+          entity_name: 'entity_b3e2a7ff',
+          local_entity_alias: false,
+          mount_accessor: 'auth_userpass_f47ad0b4',
+          mount_path: 'auth/userpass/',
+          mount_type: 'userpass',
+          namespace_id: 'root',
+          namespace_path: '',
+          policies: [],
+          token_creation_time: '2025-08-15T23:48:09Z',
+        },
+        {
+          client_first_used_time: '2025-08-15T23:53:19Z',
+          client_id: '23a04911-5d72-ba98-11d3-527f2fcf3a81',
+          client_type: 'entity',
+          entity_alias_custom_metadata: {
+            account: 'Tester Account',
+          },
+          entity_alias_metadata: {},
+          entity_alias_name: 'bob',
+          entity_group_ids: ['7537e6b7-3b06-65c2-1fb2-c83116eb5e6f'],
+          entity_metadata: {
+            organization: 'ACME Inc.',
+            team: 'QA',
+          },
+          entity_name: 'bob-smith',
+          local_entity_alias: false,
+          mount_accessor: 'auth_userpass_de28062c',
+          mount_path: 'auth/userpass-test/',
+          mount_type: 'userpass',
+          namespace_id: 'root',
+          namespace_path: '',
+          policies: ['base'],
+          token_creation_time: '2025-08-15T23:52:38Z',
+        },
+        {
+          client_first_used_time: '2025-08-16T09:16:03Z',
+          client_id: 'a7c8d912-4f61-23b5-88e4-627a3dcf2b92',
+          client_type: 'entity',
+          entity_alias_custom_metadata: {
+            role: 'Senior Engineer',
+          },
+          entity_alias_metadata: {
+            department: 'Engineering',
+          },
+          entity_alias_name: 'alice',
+          entity_group_ids: ['7537e6b7-3b06-65c2-1fb2-c83116eb5e6f', 'a1b2c3d4-5e6f-7g8h-9i0j-k1l2m3n4o5p6'],
+          entity_metadata: {
+            location: 'San Francisco',
+            organization: 'TechCorp',
+            team: 'DevOps',
+          },
+          entity_name: 'alice-johnson',
+          local_entity_alias: false,
+          mount_accessor: 'auth_userpass_f47ad0b4',
+          mount_path: 'auth/userpass/',
+          mount_type: 'userpass',
+          namespace_id: 'root',
+          namespace_path: '',
+          policies: ['admin', 'audit'],
+          token_creation_time: '2025-08-16T09:15:42Z',
+        },
+        {
+          client_first_used_time: '2025-08-17T16:44:12Z',
+          client_id: 'c6b9d248-5a71-39e4-c7f2-951d8eaf6b95',
+          client_type: 'entity',
+          entity_alias_custom_metadata: {
+            expertise: 'kubernetes',
+            on_call: 'true',
+          },
+          entity_alias_metadata: {
+            iss: 'https://auth.cloudops.io',
+            sub: 'frank.castle@cloudops.io',
+          },
+          entity_alias_name: 'frank',
+          entity_group_ids: ['9a8b7c6d-5e4f-3210-9876-543210fedcba'],
+          entity_metadata: {
+            organization: 'CloudOps',
+            region: 'us-east-1',
+            team: 'SRE',
+          },
+          entity_name: 'frank-castle',
+          local_entity_alias: false,
+          mount_accessor: 'auth_jwt_9d8c7b6a',
+          mount_path: 'auth/jwt/',
+          mount_type: 'jwt',
+          namespace_id: 'root',
+          namespace_path: '',
+          policies: ['operations', 'monitoring'],
+          token_creation_time: '2025-08-17T16:43:28Z',
+        },
+      ];
+      assert.propEqual(
+        filteredData,
+        expected,
+        "filtered data includes items with namespace_path equal to either 'root' or an empty string"
+      );
       this.assertOriginal(assert);
     });
   });

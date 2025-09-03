@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, findAll, render, triggerEvent } from '@ember/test-helpers';
+import { click, fillIn, find, findAll, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients/client-count-helpers';
@@ -38,6 +38,27 @@ module('Integration | Component | clients/page/overview', function (hooks) {
         @onFilterChange={{this.onFilterChange}} 
         @filterQueryParams={{this.filterQueryParams}} 
       />`);
+
+    this.assertTableData = async (assert, filterKey, filterValue) => {
+      const expectedData = flattenMounts(this.mostRecentMonth.new_clients.namespaces).filter(
+        (d) => d[filterKey] === filterValue
+      );
+      await fillIn(GENERAL.selectByAttr('attribution-month'), this.mostRecentMonth.timestamp);
+      assert.dom(GENERAL.tableRow()).exists({ count: expectedData.length });
+      // Find all rendered rows and assert they satisfy the filter value and table data matches expected values
+      const rows = findAll(GENERAL.tableRow());
+      rows.forEach((_, idx) => {
+        assert.dom(GENERAL.tableData(idx, filterKey)).hasText(filterValue);
+        // Get namespace and mount paths to find original data in expectedData
+        const rowMountPath = find(GENERAL.tableData(idx, 'mount_path')).innerText;
+        const rowNsPath = find(GENERAL.tableData(idx, 'namespace_path')).innerText;
+        // find the expected clients from the response and assert the table matches
+        const { clients: expectedClients } = expectedData.find(
+          (d) => d.mount_path === rowMountPath && d.namespace_path === rowNsPath
+        );
+        assert.dom(GENERAL.tableData(idx, 'clients')).hasText(`${expectedClients}`);
+      });
+    };
   });
 
   test('it hides attribution when there is no data', async function (assert) {
@@ -181,5 +202,57 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       .hasText(`1–5 of ${monthMounts.length}`, 'pagination resets to page one');
     assert.dom(GENERAL.tableRow()).exists({ count: 5 }, '5 rows render');
     assert.dom(GENERAL.paginationSizeSelector).hasValue('5', 'size selector does not reset to 10');
+  });
+
+  test('it filters data if @filterQueryParams specify a namespace_path', async function (assert) {
+    const filterKey = 'namespace_path';
+    const filterValue = 'ns1';
+    this.filterQueryParams[filterKey] = filterValue;
+    await this.renderComponent();
+    await this.assertTableData(assert, filterKey, filterValue);
+  });
+
+  test('it filters data if @filterQueryParams specify a mount_path', async function (assert) {
+    const filterKey = 'mount_path';
+    const filterValue = 'acme/pki/0';
+    this.filterQueryParams[filterKey] = filterValue;
+    await this.renderComponent();
+    await this.assertTableData(assert, filterKey, filterValue);
+  });
+
+  test('it filters data if @filterQueryParams specify a mount_type', async function (assert) {
+    const filterKey = 'mount_type';
+    const filterValue = 'kv';
+    this.filterQueryParams[filterKey] = filterValue;
+    await this.renderComponent();
+    await this.assertTableData(assert, filterKey, filterValue);
+  });
+
+  test('it filters data if @filterQueryParams specify a multiple filters', async function (assert) {
+    this.filterQueryParams = {
+      namespace_path: 'ns1',
+      mount_path: 'auth/userpass/0',
+      mount_type: 'userpass',
+    };
+
+    const { namespace_path, mount_path, mount_type } = this.filterQueryParams;
+    await this.renderComponent();
+    await fillIn(GENERAL.selectByAttr('attribution-month'), this.mostRecentMonth.timestamp);
+    const expectedData = flattenMounts(this.mostRecentMonth.new_clients.namespaces).find(
+      (d) => d.namespace_path === namespace_path && d.mount_path === mount_path && d.mount_type === mount_type
+    );
+    assert.dom(GENERAL.tableRow()).exists({ count: 1 });
+    assert.dom(GENERAL.tableData(0, 'namespace_path')).hasText(expectedData.namespace_path);
+    assert.dom(GENERAL.tableData(0, 'mount_path')).hasText(expectedData.mount_path);
+    assert.dom(GENERAL.tableData(0, 'mount_type')).hasText(expectedData.mount_type);
+    assert.dom(GENERAL.tableData(0, 'clients')).hasText(`${expectedData.clients}`);
+  });
+
+  test('it renders empty state message when filter selections yield no results', async function (assert) {
+    this.filterQueryParams = { namespace_path: 'dev/', mount_path: 'pluto/', mount_type: 'banana' };
+    await this.renderComponent();
+    assert
+      .dom(CLIENT_COUNT.card('table empty state'))
+      .hasText('No data found Clear or change filters to view client count data. Client count documentation');
   });
 });
