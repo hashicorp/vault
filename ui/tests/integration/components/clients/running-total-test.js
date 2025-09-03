@@ -101,14 +101,19 @@ module('Integration | Component | clients/running-total', function (hooks) {
       .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
       .exists('running total component renders');
     assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
-    assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Secret sync clients Acme clients');
+    assert
+      .dom(CHARTS.legend)
+      .hasText(
+        'Entity clients Non-entity clients ACME clients Secret sync clients',
+        'it renders legend in order that matches the stacked bar data and secret sync clients is last'
+      );
 
     // assert each legend item is correct
     const expectedLegend = [
       { label: 'Entity clients', color: 'rgb(66, 105, 208)' },
       { label: 'Non-entity clients', color: 'rgb(239, 177, 23)' },
+      { label: 'ACME clients', color: 'rgb(255, 114, 92)' },
       { label: 'Secret sync clients', color: 'rgb(108, 197, 176)' },
-      { label: 'Acme clients', color: 'rgb(255, 114, 92)' },
     ];
 
     findAll('.legend-item').forEach((e, i) => {
@@ -172,13 +177,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await click(GENERAL.inputByAttr('toggle view'));
     assert
       .dom(CHARTS.legend)
-      .hasText('Entity clients Non-entity clients Acme clients', 'legend does not include sync clients');
+      .hasText('Entity clients Non-entity clients ACME clients', 'legend does not include sync clients');
 
     // assert each legend item is correct
     const expectedLegend = [
       { label: 'Entity clients', color: 'rgb(66, 105, 208)' },
       { label: 'Non-entity clients', color: 'rgb(239, 177, 23)' },
-      { label: 'Acme clients', color: 'rgb(255, 114, 92)' },
+      { label: 'ACME clients', color: 'rgb(255, 114, 92)' },
     ];
 
     findAll('.legend-item').forEach((e, i) => {
