@@ -5,10 +5,10 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import type { ModelFrom } from 'vault/vault/route';
 
+import type ApiService from 'vault/services/api';
+import type { ModelFrom } from 'vault/vault/route';
 import type NamespaceService from 'vault/services/namespace';
-import ApiService from 'vault/services/api';
 
 export type SnapshotManageModel = ModelFrom<RecoverySnapshotsSnapshotManageRoute>;
 

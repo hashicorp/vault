@@ -4,7 +4,6 @@
  */
 
 import Component from '@glimmer/component';
-import { action } from '@ember/object';
 import { service } from '@ember/service';
 
 import type NamespaceService from 'vault/services/namespace';
@@ -80,10 +79,5 @@ export default class Index extends Component<Args> {
     } else {
       return this.viewState.ALLOW_UPLOAD;
     }
-  }
-
-  @action
-  uploadSnapshot() {
-    // TODO this will be completed in further feature work for single item recovery in the 1.21 release
   }
 }

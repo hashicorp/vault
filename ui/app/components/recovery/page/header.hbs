@@ -4,6 +4,12 @@
 }}
 
 <Hds::PageHeader class="has-top-padding-l has-bottom-padding-m" as |PH|>
+  {{#if @breadcrumbs}}
+    <PH.Breadcrumb>
+      <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+    </PH.Breadcrumb>
+  {{/if}}
+
   <PH.Title>
     {{@title}}
     {{#if this.version.isCommunity}}
@@ -12,7 +18,6 @@
   </PH.Title>
 
   <PH.Subtitle>
-    Recover lost or deleted secrets from a raft snapshot. Supported types include KV v1 and Cubbyhole.
+    {{@subtitle}}
   </PH.Subtitle>
 </Hds::PageHeader>
-{{! TODO if in snapshot load form, will show breadcrumbs instead }}

@@ -3,7 +3,10 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Recovery::Page::Header @title="Secrets Recovery" />
+<Recovery::Page::Header
+  @title="Secrets Recovery"
+  @subtitle="Recover lost or deleted secrets from a raft snapshot. Supported types include KV v1 and Cubbyhole."
+/>
 
 {{#let @model.snapshot as |snapshot|}}
   <Hds::Card::Container

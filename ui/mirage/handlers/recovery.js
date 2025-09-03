@@ -10,6 +10,16 @@ export default function (server) {
     return server.create('configuration', 'withRaft');
   });
 
+  // LOAD SNAPSHOT FORM HANDLERS
+  server.post('sys/storage/raft/snapshot-load', () => ({
+    data: {},
+  }));
+
+  server.post('sys/storage/raft/snapshot-auto/snapshot-load/:config_name', () => ({
+    data: {},
+  }));
+
+  // LOADED SNAPSHOT HANDLERS
   server.get('/sys/storage/raft/snapshot-load', (schema) => {
     // Currently only one snapshot can be loaded at a time
     const { snapshot_id } = schema.db['snapshots'][0];
