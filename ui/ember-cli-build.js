@@ -35,7 +35,7 @@ const appConfig = {
     throwUnlessParallelizable: true,
   },
   hinting: isTest,
-  tests: !isProd,
+  tests: isTest,
   sourcemaps: {
     enabled: !isProd,
   },

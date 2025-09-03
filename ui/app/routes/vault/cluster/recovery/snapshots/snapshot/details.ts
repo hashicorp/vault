@@ -5,4 +5,15 @@
 
 import Route from '@ember/routing/route';
 
-export default class RecoverySnapshotsSnapshotDetailsRoute extends Route {}
+import type { ModelFrom } from 'vault/vault/route';
+
+export type SnapshotManageModel = ModelFrom<RecoverySnapshotsSnapshotDetailsRoute>;
+
+export default class RecoverySnapshotsSnapshotDetailsRoute extends Route {
+  async model() {
+    const snapshot = this.modelFor('vault.cluster.recovery.snapshots.snapshot');
+    return {
+      snapshot,
+    };
+  }
+}

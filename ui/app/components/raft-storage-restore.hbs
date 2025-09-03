@@ -36,7 +36,7 @@
         <A.Title>This might take a while</A.Title>
         <A.Description>Raft snapshots can be very large files. Uploading the snapshot may take some time.</A.Description>
       </Hds::Alert>
-      <FileToArrayBuffer @onChange={{action (mut this.file)}} />
+      <FileToArrayBuffer @label="Choose a file..." @onChange={{action (mut this.file)}} />
       <div class="b-checkbox">
         <input
           type="checkbox"
