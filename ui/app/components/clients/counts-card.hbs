@@ -9,7 +9,9 @@ Data visualizations render in in a flex row with a 1/3-width left element and a 
 
 <Hds::Card::Container class="counts-card-container" data-test-card={{@title}} ...attributes>
   <div class="has-bottom-margin-xl">
-    <Hds::Text::Display @tag="h2" @size="300" class="has-bottom-margin-xs">{{@title}}</Hds::Text::Display>
+    {{#if @title}}
+      <Hds::Text::Display @tag="h2" @size="300" class="has-bottom-margin-xs">{{@title}}</Hds::Text::Display>
+    {{/if}}
     {{#if @description}}
       <Hds::Text::Body @tag="p" @size="100" @color="faint">{{@description}}</Hds::Text::Body>
     {{/if}}

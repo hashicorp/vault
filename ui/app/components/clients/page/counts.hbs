@@ -15,7 +15,7 @@
   />
 </div>
 
-<div class="box is-sideless is-fullwidth is-marginless is-bottomless is-shadowless">
+<div class="has-top-bottom-margin">
 
   {{#if (eq @activity.id "no-data")}}
     <Clients::NoData @config={{@config}} @dateRangeMessage={{this.dateRangeMessage}} />
@@ -71,7 +71,10 @@
         </Hds::Alert>
       {{/if}}
 
-      <Clients::Counts::NavBar />
+      {{#if this.version.isEnterprise}}
+        {{! The "Client list" tab only renders for enterprise versions so there is no need for the nav bar }}
+        <Clients::Counts::NavBar />
+      {{/if}}
 
       {{! CLIENT COUNT PAGE COMPONENTS RENDER HERE }}
       {{yield}}

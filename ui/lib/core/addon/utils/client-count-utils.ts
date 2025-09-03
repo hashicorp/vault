@@ -35,6 +35,12 @@ export enum ClientFilters {
 
 export type ClientFilterTypes = (typeof ClientFilters)[keyof typeof ClientFilters];
 
+// client_type in the exported activity data differs slightly from the types of client keys
+// returned by sys/internal/counters/activity endpoint (:
+export const EXPORT_CLIENT_TYPES = ['non-entity-token', 'pki-acme', 'secret-sync', 'entity'] as const;
+
+export type ActivityExportClientTypes = (typeof EXPORT_CLIENT_TYPES)[number];
+
 // returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
 // that occurred between timestamps (i.e. queried activity data)
 export const filterVersionHistory = (
@@ -159,10 +165,16 @@ export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[]) => {
   );
 };
 
-export const filterTableData = (
-  data: MountClients[],
+// *Performance note*
+// The client dashboard renders dropdown lists that specify filters. When the user selects a dropdown item (filter)
+// it updates the query param and this method is called to filter the data passed to the displayed table.
+// This method is not doing anything computationally expensive so it should be fine for filtering up to 50K rows of data.
+// If activity data (either the by_namespace list or rows of data in the activity export API) grow past that, then we
+// will want to look at converting this to a restartable task or do something else :)
+export function filterTableData(
+  data: MountClients[] | ActivityExportData[],
   filters: Record<ClientFilterTypes, string>
-): MountClients[] => {
+): MountClients[] | ActivityExportData[] {
   // Return original data if no filters are specified
   if (!filters || Object.values(filters).every((v) => !v)) {
     return data;
@@ -174,9 +186,25 @@ export const filterTableData = (
       // If no filter is specified for that key, return true
       if (!filterValue) return true;
       // Otherwise only return true if the datum matches the filter
-      return datum[filterKey as ClientFilterTypes] === filterValue;
+      return matchesFilter(datum, filterKey as ClientFilterTypes, filterValue);
     });
-  });
+  }) as typeof data;
+}
+
+const matchesFilter = (
+  datum: MountClients | ActivityExportData,
+  filterKey: ClientFilterTypes,
+  filterValue: string
+) => {
+  const datumValue = datum[filterKey];
+  // The API returns and empty string as the namespace_path for the "root" namespace.
+  // When a user selects "root" as a namespace filter we need to match the datum value
+  // as either an empty string (for the activity export data) OR as "root"
+  // (the by_namespace data is serialized to make "root" the namespace_path).
+  if (filterKey === 'namespace_path' && filterValue === 'root') {
+    return datumValue === '' || datumValue === filterValue;
+  }
+  return datumValue === filterValue;
 };
 
 export const flattenMounts = (namespaceArray: ByNamespaceClients[]) =>
@@ -273,7 +301,7 @@ export interface MountNewClients extends TotalClientsSometimes {
 // Serialized data from activity/export API
 export interface ActivityExportData {
   client_id: string;
-  client_type: string;
+  client_type: ActivityExportClientTypes;
   namespace_id: string;
   namespace_path: string;
   mount_accessor: string;

@@ -21,8 +21,15 @@
           {{#let (get B.data key) as |value|}}
             {{#if (and (eq key "mount_type") (eq value "deleted mount"))}}
               <B.Td data-test-table-data={{key}}><Hds::Badge @text="Deleted" @type="outlined" /></B.Td>
+            {{else if (eq key "client_id")}}
+              <B.Td data-test-table-data={{key}} class="white-space-nowrap">
+                <Hds::Copy::Snippet @textToCopy={{value}} @color="secondary" />
+              </B.Td>
             {{else}}
-              <B.Td data-test-table-data={{key}}>{{value}}</B.Td>
+              <B.Td class="white-space-nowrap" data-test-table-data={{key}}>
+                {{! stringify value if it is an array or object, otherwise render directly }}
+                {{if (this.isObject value) (stringify value) value}}
+              </B.Td>
             {{/if}}
           {{/let}}
         {{/each}}

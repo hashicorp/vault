@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, triggerEvent } from '@ember/test-helpers';
+import { findAll, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 const EXAMPLE = [
@@ -40,12 +40,29 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
 
   hooks.beforeEach(function () {
     this.data = EXAMPLE;
+    this.showTable = false;
+    this.renderComponent = async () => {
+      await render(
+        hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" @chartTitle="My chart" @showTable={{this.showTable}} />`
+      );
+    };
+  });
+
+  test('it renders bars the expected color', async function (assert) {
+    await this.renderComponent();
+    // the first bar has no data and doesn't render so get the second one
+    const bars = findAll('.lineal-chart-bar');
+    const actualColor = getComputedStyle(bars[1]).fill;
+    const expectedColor = 'rgb(28, 52, 95)';
+    assert.strictEqual(
+      actualColor,
+      expectedColor,
+      `actual color: ${actualColor}, expected color: ${expectedColor}`
+    );
   });
 
   test('it renders when some months have no data', async function (assert) {
-    await render(
-      hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" @chartTitle="My chart"/>`
-    );
+    await this.renderComponent();
     assert.dom('[data-test-chart="My chart"]').exists('renders chart container');
     assert.dom('[data-test-vertical-bar]').exists({ count: 3 }, 'renders 3 vertical bars');
 
@@ -88,9 +105,7 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
         secret_syncs: 0,
       },
     ];
-    await render(
-      hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" @chartTitle="My chart"/>`
-    );
+    await this.renderComponent();
 
     assert.dom('[data-test-chart="My chart"]').exists('renders chart container');
     assert.dom('[data-test-vertical-bar]').exists({ count: 2 }, 'renders 2 vertical bars');
@@ -108,9 +123,8 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
   });
 
   test('it renders underlying data', async function (assert) {
-    await render(
-      hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" @showTable={{true}} @chartTitle="My chart"/>`
-    );
+    this.showTable = true;
+    await this.renderComponent();
     assert.dom('[data-test-chart="My chart"]').exists('renders chart container');
     assert.dom('[data-test-underlying-data]').exists('renders underlying data when showTable=true');
     assert

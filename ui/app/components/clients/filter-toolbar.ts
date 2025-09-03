@@ -7,42 +7,44 @@ import Component from '@glimmer/component';
 import { cached, tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { debounce } from '@ember/runloop';
-import { ClientFilters, type ClientFilterTypes, filterIsSupported } from 'core/utils/client-count-utils';
+import { capitalize } from '@ember/string';
 
+import { ClientFilters, type ClientFilterTypes } from 'core/utils/client-count-utils';
 import type { HTMLElementEvent } from 'vault/forms';
+
 interface Args {
-  appliedFilters: Record<ClientFilterTypes, string>;
-  // the dataset objects have more keys than the client filter types, but at minimum they have ClientFilterTypes
+  filterQueryParams: Record<ClientFilterTypes, string>;
+  // Dataset objects technically have more keys than the client filter types, but at minimum they contain ClientFilterTypes
   dataset: Record<ClientFilterTypes, string>[];
   onFilter: CallableFunction;
 }
 
+// Correspond to each search input's tracked variable in the component class
 type SearchProperty = 'namespacePathSearch' | 'mountPathSearch' | 'mountTypeSearch';
 
 export default class ClientsFilterToolbar extends Component<Args> {
-  filterTypes = ClientFilters;
+  filterTypes = Object.values(ClientFilters);
 
+  // Tracked filter values
   @tracked namespace_path: string;
   @tracked mount_path: string;
   @tracked mount_type: string;
 
+  // Tracked search inputs
   @tracked namespacePathSearch = '';
   @tracked mountPathSearch = '';
   @tracked mountTypeSearch = '';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    const { namespace_path, mount_path, mount_type } = this.args.appliedFilters;
+    const { namespace_path, mount_path, mount_type } = this.args.filterQueryParams;
     this.namespace_path = namespace_path || '';
     this.mount_path = mount_path || '';
     this.mount_type = mount_type || '';
   }
 
   get anyFilters() {
-    return (
-      Object.keys(this.args.appliedFilters).every((f) => filterIsSupported(f)) &&
-      Object.values(this.args.appliedFilters).some((v) => !!v)
-    );
+    return Object.values(this.filterProps).some((v) => !!v);
   }
 
   @cached
@@ -61,37 +63,70 @@ export default class ClientsFilterToolbar extends Component<Args> {
     });
 
     return {
-      [this.filterTypes.NAMESPACE]: [...namespacePaths],
-      [this.filterTypes.MOUNT_PATH]: [...mountPaths],
-      [this.filterTypes.MOUNT_TYPE]: [...mountTypes],
+      [ClientFilters.NAMESPACE]: [...namespacePaths],
+      [ClientFilters.MOUNT_PATH]: [...mountPaths],
+      [ClientFilters.MOUNT_TYPE]: [...mountTypes],
     };
   }
 
   @cached
   get dropdownConfig() {
     return {
-      [this.filterTypes.NAMESPACE]: {
+      [ClientFilters.NAMESPACE]: {
         label: 'namespace',
-        dropdownItems: this.dropdownItems[this.filterTypes.NAMESPACE],
+        dropdownItems: this.dropdownItems[ClientFilters.NAMESPACE],
         searchProperty: 'namespacePathSearch',
       },
-      [this.filterTypes.MOUNT_PATH]: {
+      [ClientFilters.MOUNT_PATH]: {
         label: 'mount path',
-        dropdownItems: this.dropdownItems[this.filterTypes.MOUNT_PATH],
+        dropdownItems: this.dropdownItems[ClientFilters.MOUNT_PATH],
         searchProperty: 'mountPathSearch',
       },
-      [this.filterTypes.MOUNT_TYPE]: {
+      [ClientFilters.MOUNT_TYPE]: {
         label: 'mount type',
-        dropdownItems: this.dropdownItems[this.filterTypes.MOUNT_TYPE],
+        dropdownItems: this.dropdownItems[ClientFilters.MOUNT_TYPE],
         searchProperty: 'mountTypeSearch',
       },
     };
   }
 
+  // It's possible that a query param may not exist in the dropdown, in which case show an alert
+  get filterAlert() {
+    const alert = (label: string, filter: string) =>
+      `${capitalize(label)} "${filter}" not found in the current data.`;
+    return this.filterTypes
+      .flatMap((f: ClientFilters) => {
+        const filterValue = this.filterProps[f];
+        const inDropdown = this.dropdownItems[f].includes(filterValue);
+        return !inDropdown && filterValue ? [alert(this.dropdownConfig[f].label, filterValue)] : [];
+      })
+      .join(' ');
+  }
+
+  // the cached decorator recomputes this getter every time the tracked properties
+  // update instead of every time it is accessed
+  @cached
+  get filterProps() {
+    return this.filterTypes.reduce(
+      (obj, filterType) => {
+        obj[filterType] = this[filterType];
+        return obj;
+      },
+      {} as Record<ClientFilterTypes, string>
+    );
+  }
+
   @action
-  updateFilter(filterProperty: ClientFilterTypes, value: string, close: CallableFunction) {
+  handleFilterSelect(filterProperty: ClientFilterTypes, value: string, close: CallableFunction) {
     this[filterProperty] = value;
     close();
+  }
+
+  @action
+  handleDropdownClose(searchProperty: SearchProperty) {
+    // reset search input for that dropdown
+    this.updateSearch(searchProperty, '');
+    this.applyFilters();
   }
 
   @action
@@ -103,17 +138,13 @@ export default class ClientsFilterToolbar extends Component<Args> {
       this.mount_path = '';
       this.mount_type = '';
     }
-    // Fire callback so URL query params update when filters are cleared
     this.applyFilters();
   }
 
   @action
   applyFilters() {
-    this.args.onFilter({
-      namespace_path: this.namespace_path,
-      mount_path: this.mount_path,
-      mount_type: this.mount_type,
-    });
+    // Fire callback so URL query params match selected filters
+    this.args.onFilter(this.filterProps);
   }
 
   @action

@@ -196,7 +196,6 @@ module('Acceptance | clients | overview', function (hooks) {
       await click(FILTERS.dropdownItem(mount_path));
       await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
       await click(FILTERS.dropdownItem(mount_type));
-      await click(GENERAL.button('Apply filters'));
       assert.strictEqual(
         currentURL(),
         `${url}?mount_path=${encodeURIComponent(
@@ -222,7 +221,6 @@ module('Acceptance | clients | overview', function (hooks) {
       await click(FILTERS.dropdownItem(mount_path));
       await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
       await click(FILTERS.dropdownItem(mount_type));
-      await click(GENERAL.button('Apply filters'));
       assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'it only renders the filtered table row');
       await click(FILTERS.clearTag(namespace_path));
       assert.strictEqual(
@@ -254,7 +252,6 @@ module('Acceptance | clients | overview', function (hooks) {
       await click(FILTERS.dropdownItem(mount_path));
       await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
       await click(FILTERS.dropdownItem(mount_type));
-      await click(GENERAL.button('Apply filters'));
       assert.strictEqual(
         currentURL(),
         `${url}?mount_path=${encodeURIComponent(

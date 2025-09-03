@@ -129,4 +129,7 @@ export default class ClientsTable extends Component<Args> {
     this.sortColumn = column;
     this.sortDirection = direction;
   }
+
+  // TEMPLATE HELPERS
+  isObject = (value: any) => typeof value === 'object';
 }

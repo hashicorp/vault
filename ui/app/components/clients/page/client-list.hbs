@@ -3,16 +3,53 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Clients::CountsCard @title="Client counts by path">
+<Clients::CountsCard data-test-card="Export activity data">
   <:subheader>
     <Clients::FilterToolbar
       @dataset={{@exportData}}
       @onFilter={{this.handleFilter}}
-      @appliedFilters={{@filterQueryParams}}
+      @filterQueryParams={{@filterQueryParams}}
     />
   </:subheader>
 
   <:table>
-    {{! table }}
+    <Hds::Tabs @onClickTab={{this.onClickTab}} @selectedTabIndex={{this.selectedTabIndex}} as |T|>
+      {{#each-in this.exportDataByTab as |tabName exportData|}}
+        {{#let (this.filterData exportData) as |tableData|}}
+          <T.Tab @count={{or tableData.length "0"}} data-test-tab={{tabName}}>{{tabName}}</T.Tab>
+          <T.Panel>
+            <div class="has-top-margin-xs">
+              {{#if this.anyFilters}}
+                <Hds::Text::Body @tag="p" @color="faint" class="has-bottom-margin-xs" data-test-table-summary={{tabName}}>
+                  Summary:
+                  {{pluralize tableData.length "client"}}
+                  {{if (eq tableData.length 1) "matches" "match"}}
+                  the filter criteria.
+                </Hds::Text::Body>
+              {{/if}}
+
+              {{! Elements "behind" tabs always render on the DOM and are just superficially hidden/shown. }}
+              {{! The export data can be many rows so for performance only render the currently selected tab }}
+              {{#if (eq tabName this.selectedTab)}}
+                <Clients::Table
+                  data-test-table="attribution"
+                  @data={{tableData}}
+                  @columns={{this.tableColumns tabName}}
+                  @setPageSize={{50}}
+                  @showPaginationSizeSelector={{true}}
+                >
+                  <:emptyState>
+                    <Hds::ApplicationState as |A|>
+                      <A.Header @title="No data found" />
+                      <A.Body @text="Clear or change filters to view client count data." />
+                    </Hds::ApplicationState>
+                  </:emptyState>
+                </Clients::Table>
+              {{/if}}
+            </div>
+          </T.Panel>
+        {{/let}}
+      {{/each-in}}
+    </Hds::Tabs>
   </:table>
 </Clients::CountsCard>
