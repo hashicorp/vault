@@ -38,19 +38,26 @@ func (p *PluginIdentityTokenParams) PopulatePluginIdentityTokenData(m map[string
 	m["identity_token_audience"] = p.IdentityTokenAudience
 }
 
-// AddPluginIdentityTokenFields adds plugin identity token fields to the given
-// field schema map.
-func AddPluginIdentityTokenFields(m map[string]*framework.FieldSchema) {
+// AddPluginIdentityTokenFields adds plugin identity token fields to the given field schema map
+// the fields are associated to the provided display attribute group
+func AddPluginIdentityTokenFieldsWithGroup(m map[string]*framework.FieldSchema, group string) {
 	fields := map[string]*framework.FieldSchema{
 		"identity_token_audience": {
 			Type:        framework.TypeString,
 			Description: "Audience of plugin identity tokens",
 			Default:     "",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Group: group,
+			},
 		},
 		"identity_token_ttl": {
 			Type:        framework.TypeDurationSecond,
 			Description: "Time-to-live of plugin identity tokens",
 			Default:     3600,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:  "Identity token TTL",
+				Group: group,
+			},
 		},
 	}
 
@@ -60,4 +67,11 @@ func AddPluginIdentityTokenFields(m map[string]*framework.FieldSchema) {
 		}
 		m[name] = schema
 	}
+}
+
+// stubbing original function for compatibility
+// AddPluginIdentityTokenFieldsWithGroup should be used directly
+// future utils that define fields should include a group parameter
+func AddPluginIdentityTokenFields(m map[string]*framework.FieldSchema) {
+	AddPluginIdentityTokenFieldsWithGroup(m, "default")
 }
