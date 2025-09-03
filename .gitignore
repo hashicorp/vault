@@ -70,7 +70,7 @@ enos/**/kubeconfig
 
 .DS_Store
 .idea
-.vscode
+# .vscode - We intentionally commit .vscode in order to share project-specific settings
 
 # VSCode debugger executable
 __debug_bin*
