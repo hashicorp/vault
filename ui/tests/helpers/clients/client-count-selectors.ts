@@ -27,11 +27,7 @@ export const CLIENT_COUNT = {
   statTextValue: (label: string) =>
     label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
   usageStats: (title: string) => `[data-test-usage-stats="${title}"]`,
-  filterBar: '[data-test-clients-filter-bar]',
-  nsFilter: '#namespace-search-select',
-  mountFilter: '#mounts-search-select',
-  selectedAuthMount: 'div#mounts-search-select [data-test-selected-option] div',
-  selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
+  tableSummary: (tabName: string) => `[data-test-table-summary="${tabName}"]`,
   upgradeWarning: '[data-test-clients-upgrade-warning]',
   exportButton: '[data-test-export-button]',
 };
@@ -54,9 +50,12 @@ export const CHARTS = {
 };
 
 export const FILTERS = {
+  dropdown: (name: string) => `[data-test-dropdown="${name}"]`,
   dropdownToggle: (name: string) => `[data-test-dropdown="${name}"] button`,
   dropdownItem: (name: string) => `[data-test-dropdown-item="${name}"]`,
+  dropdownSearch: (name: string) => `[data-test-dropdown="${name}"] input`,
   tag: (filter?: string, value?: string) =>
     filter && value ? `[data-test-filter-tag="${filter} ${value}"]` : '[data-test-filter-tag]',
+  tagContainer: '[data-test-filter-tag-container]',
   clearTag: (value: string) => `[aria-label="Dismiss ${value}"]`,
 };

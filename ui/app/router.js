@@ -41,10 +41,7 @@ Router.map(function () {
       this.route('clients', function () {
         this.route('counts', function () {
           this.route('overview');
-          // TODO remove this conditional when client count feature work for 1.21 is complete
-          if (config.environment !== 'production') {
-            this.route('client-list');
-          }
+          this.route('client-list');
         });
         this.route('config');
         this.route('edit');
@@ -187,8 +184,9 @@ Router.map(function () {
           this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration', function () {
-            this.route('index', { path: '/' });
+            this.route('index', { path: '/' }); // this is still used by old engines
             this.route('general-settings');
+            this.route('plugin-settings');
             // only CONFIGURABLE_SECRET_ENGINES can be configured and access the edit route
             this.route('edit');
           });

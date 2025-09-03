@@ -1864,7 +1864,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			// run single-phase login MFA check, else run two-phase login MFA check
 			if len(matchedMfaEnforcementList) > 0 && len(req.MFACreds) > 0 {
 				for _, eConfig := range matchedMfaEnforcementList {
-					err = c.validateLoginMFA(ctx, eConfig, entity, req.Connection.RemoteAddr, req.MFACreds)
+					err = c.validateLoginMFA(ctx, eConfig, entity, req.Connection.RemoteAddr, req.MFACreds, nil)
 					if err != nil {
 						return nil, nil, logical.ErrPermissionDenied
 					}

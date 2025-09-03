@@ -29,7 +29,6 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
 import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secret-engine/policy-generator';
@@ -61,7 +60,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await page.visit();
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
-    await click(MOUNT_BACKEND_FORM.mountType('kv'));
+    await click(GENERAL.cardContainer('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
     await click(GENERAL.toggleInput('Default Lease TTL'));
@@ -82,7 +81,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await page.visit();
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index', 'navigates to mount page');
-    await click(MOUNT_BACKEND_FORM.mountType('kv'));
+    await click(GENERAL.cardContainer('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
     await click(GENERAL.toggleInput('Default Lease TTL'));
@@ -97,7 +96,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   test('it sets the max ttl after pki chosen, resets after', async function (assert) {
     await page.visit();
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
-    await click(MOUNT_BACKEND_FORM.mountType('pki'));
+    await click(GENERAL.cardContainer('pki'));
     assert.dom('[data-test-input="config.max_lease_ttl"]').exists();
     assert
       .dom('[data-test-input="config.max_lease_ttl"] [data-test-ttl-toggle]')
@@ -107,7 +106,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
     // Go back and choose a different type
     await click(GENERAL.backButton);
-    await click(MOUNT_BACKEND_FORM.mountType('database'));
+    await click(GENERAL.cardContainer('database'));
     assert.dom('[data-test-input="config.max_lease_ttl"]').exists('3650');
     assert
       .dom('[data-test-input="config.max_lease_ttl"] [data-test-ttl-toggle]')
@@ -179,7 +178,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await login(userToken);
     // create the engine
     await mountSecrets.visit();
-    await click(MOUNT_BACKEND_FORM.mountType('kv'));
+    await click(GENERAL.cardContainer('kv'));
     await fillIn(GENERAL.inputByAttr('path'), enginePath);
     await mountSecrets.setMaxVersion(101);
     await click(GENERAL.submitButton);
@@ -240,7 +239,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         `delete sys/mounts/${engine.type}`,
       ]);
       await mountSecrets.visit();
-      await click(MOUNT_BACKEND_FORM.mountType(engine.type));
+      await click(GENERAL.cardContainer(engine.type));
       await fillIn(GENERAL.inputByAttr('path'), engine.type);
       if (engine.type === 'kv') {
         await click(GENERAL.button('Method Options'));
@@ -306,7 +305,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       `delete sys/mounts/${v1}`,
     ]);
     await mountSecrets.visit();
-    await click(MOUNT_BACKEND_FORM.mountType('kv'));
+    await click(GENERAL.cardContainer('kv'));
     await fillIn(GENERAL.inputByAttr('path'), v1);
     await click(GENERAL.button('Method Options'));
     await mountSecrets.version(1);
@@ -326,7 +325,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await runCmd(`write identity/oidc/key/some-key allowed_client_ids="*"`);
 
       await page.visit();
-      await click(MOUNT_BACKEND_FORM.mountType('aws')); // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
+      await click(GENERAL.cardContainer('aws')); // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
       await click(GENERAL.button('Method Options'));
       assert.dom('[data-test-search-select-with-modal]').exists('Search select with modal component renders');
       await clickTrigger('#key');
@@ -338,7 +337,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         .hasText('some-key', 'some-key was selected and displays in the search select');
       await click(GENERAL.backButton);
       // Choose a non-wif engine
-      await click(MOUNT_BACKEND_FORM.mountType('ssh'));
+      await click(GENERAL.cardContainer('ssh'));
       assert
         .dom('[data-test-search-select-with-modal]')
         .doesNotExist('for type ssh, the modal field does not render.');
@@ -358,7 +357,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
       await login(secretsAdminToken);
       await visit('/vault/secrets/mounts');
-      await click(MOUNT_BACKEND_FORM.mountType(engine));
+      await click(GENERAL.cardContainer(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);
       await click(GENERAL.button('Method Options'));
       await clickTrigger('#key');
@@ -400,7 +399,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
       await login(secretsNoOidcAdminToken);
       await page.visit();
-      await click(MOUNT_BACKEND_FORM.mountType(engine));
+      await click(GENERAL.cardContainer(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);
       await click(GENERAL.button('Method Options'));
       // type-in fallback component to create new key

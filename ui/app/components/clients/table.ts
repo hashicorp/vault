@@ -4,10 +4,10 @@
  */
 
 import Component from '@glimmer/component';
-import Ember from 'ember';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
+import { cached, tracked } from '@glimmer/tracking';
 import { paginate } from 'core/utils/paginate-list';
+import { next } from '@ember/runloop';
 
 /**
  * @module ClientsTable
@@ -49,24 +49,37 @@ interface Args {
 
 export default class ClientsTable extends Component<Args> {
   @tracked currentPage = 1;
-  @tracked pageSize = Ember.testing ? 3 : 10; // lower in tests to test pagination without seeding more data
+  @tracked pageSize = 5; // Can be overridden by @setPageSize
   @tracked sortColumn = '';
-  @tracked sortDirection: SortDirection;
+  @tracked sortDirection: SortDirection = 'asc'; // default is 'asc' for consistency with HDS defaults
+
+  //  WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage
+  @tracked renderPagination = true;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
 
-    const { column = '', direction = 'asc' } = this.args.initiallySortBy || {};
-    this.sortColumn = column;
-    this.sortDirection = direction; // default is 'asc' for consistency with HDS defaults
+    const { column, direction } = this.args.initiallySortBy || {};
+    if (column) {
+      this.sortColumn = column;
+    }
+    if (direction) {
+      this.sortDirection = direction;
+    }
 
     // Override default page size with a custom amount.
-    // pageSize can be updated by the end user if @showPaginationSizeSelector is true
+    // pageSize can be updated by the user if @showPaginationSizeSelector is true
     if (this.args.setPageSize) {
       this.pageSize = this.args.setPageSize;
     }
   }
 
+  @cached
+  get columnKeys() {
+    return this.args.columns.map((k: TableColumn) => k['key']);
+  }
+
+  @cached
   get paginatedTableData(): Record<string, any>[] {
     const sorted = this.sortTableData(this.args.data);
     const paginated = paginate(sorted, {
@@ -75,10 +88,6 @@ export default class ClientsTable extends Component<Args> {
     });
 
     return paginated;
-  }
-
-  get columnKeys() {
-    return this.args.columns.map((k: TableColumn) => k['key']);
   }
 
   // This table is paginated so we cannot use any out of the box filtering
@@ -103,9 +112,24 @@ export default class ClientsTable extends Component<Args> {
   }
 
   @action
+  async resetPagination() {
+    // setPageSize is intentionally NOT reset here so user changes to page size
+    // are preserved regardless of whether or not the table data updates.
+    this.renderPagination = false;
+    this.currentPage = 1;
+    //  WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage
+    next(() => {
+      this.renderPagination = true;
+    });
+  }
+
+  @action
   updateSort(column: string, direction: SortDirection) {
     // Update tracked variables so paginatedTableData recomputes
     this.sortColumn = column;
     this.sortDirection = direction;
   }
+
+  // TEMPLATE HELPERS
+  isObject = (value: any) => typeof value === 'object';
 }

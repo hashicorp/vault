@@ -3,21 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Clients::RunningTotal
-  @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
-  @byMonthNewClients={{this.byMonthNewClients}}
-  @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
-  @isCurrentMonth={{this.isCurrentMonth}}
-  @runningTotals={{this.totalUsageCounts}}
-  @upgradeData={{this.upgradesDuringActivity}}
-  @mountPath={{@mountPath}}
-/>
+<Clients::RunningTotal @byMonthNewClients={{this.byMonthNewClients}} @runningTotals={{@activity.total}} />
 
-{{#if this.hasAttributionData}}
-  <Clients::CountsCard @title="Client attribution" @legend={{this.chartLegend}}>
+{{! by_namespace is an empty array when there is no client count activity data }}
+{{#if @activity.byNamespace}}
+  <Clients::CountsCard
+    @title="Client attribution"
+    @description="Select a month to view the client count per mount for that month."
+  >
     <:subheader>
       <Hds::Form::Select::Base
-        class="has-bottom-margin-m"
+        class="has-top-margin-m"
         aria-label="Month"
         name="month"
         {{on "input" this.selectMonth}}
@@ -28,10 +24,23 @@
         <S.Options>
           <option value="">Select month</option>
           {{#each this.months as |m|}}
-            <option value={{m.value}} selected={{eq m.value this.selectedMonth}}>{{m.display}}</option>
+            <option value={{m.timestamp}} selected={{eq m.timestamp this.selectedMonth}}>{{m.display}}</option>
           {{/each}}
         </S.Options>
       </Hds::Form::Select::Base>
+
+      {{#if this.selectedMonth}}
+        <div>
+          <Hds::Text::Body class="has-top-margin-l has-bottom-margin-m" @tag="p" @size="100" @color="faint">Use the filters
+            to view the clients attributed by path.
+          </Hds::Text::Body>
+          <Clients::FilterToolbar
+            @dataset={{this.activityData}}
+            @onFilter={{this.handleFilter}}
+            @filterQueryParams={{@filterQueryParams}}
+          />
+        </div>
+      {{/if}}
     </:subheader>
 
     <:table>
@@ -40,23 +49,13 @@
         @data={{this.tableData}}
         @columns={{this.tableColumns}}
         @initiallySortBy={{hash column="clients" direction="desc"}}
+        @setPageSize={{10}}
+        @showPaginationSizeSelector={{true}}
       >
         <:emptyState>
           <Hds::ApplicationState as |A|>
-            <A.Header
-              @title={{if
-                this.selectedMonth
-                "No data is available for the selected month"
-                "Select a month to view client attribution"
-              }}
-            />
-            <A.Body
-              @text="View the namespace mount breakdown of clients by selecting {{if
-                this.selectedMonth
-                'another'
-                'a'
-              }} month."
-            />
+            <A.Header @title="No data found" />
+            <A.Body @text="Clear or change filters to view client count data." />
             <A.Footer as |F|>
               <F.LinkStandalone
                 @icon="file-text"
@@ -70,5 +69,4 @@
       </Clients::Table>
     </:table>
   </Clients::CountsCard>
-
 {{/if}}
