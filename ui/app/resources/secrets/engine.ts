@@ -4,11 +4,22 @@
  */
 
 import { baseResourceFactory } from 'vault/resources/base-factory';
-import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import {
+  supportedSecretBackends,
+  SupportedSecretBackendsEnum,
+} from 'vault/helpers/supported-secret-backends';
 import { isAddonEngine } from 'vault/utils/all-engines-metadata';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
 import type { Mount } from 'vault/mount';
+
+export const SUPPORTS_RECOVERY = [
+  SupportedSecretBackendsEnum.CUBBYHOLE,
+  SupportedSecretBackendsEnum.KV, // only kv v1
+] as const;
+
+// TODO: Add "database" when once that is supported later in 1.21 feature work
+export type RecoverySupportedEngines = (typeof SUPPORTS_RECOVERY)[number];
 
 export default class SecretsEngineResource extends baseResourceFactory<Mount>() {
   id: string;
@@ -37,7 +48,10 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
   }
 
   get isV2KV() {
-    return this.version === 2 && (this.engineType === 'kv' || this.engineType === 'generic');
+    return (
+      this.version === 2 &&
+      (this.engineType === SupportedSecretBackendsEnum.KV || this.engineType === 'generic')
+    );
   }
 
   get shouldIncludeInList() {
@@ -45,7 +59,7 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
   }
 
   get isSupportedBackend() {
-    return supportedSecretBackends().includes(this.engineType);
+    return supportedSecretBackends().includes(this.engineType as SupportedSecretBackendsEnum);
   }
 
   get backendLink() {
@@ -74,5 +88,17 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
 
   get localDisplay() {
     return this.local ? 'local' : 'replicated';
+  }
+
+  get supportsRecovery() {
+    if (!SUPPORTS_RECOVERY.includes(this.engineType as RecoverySupportedEngines)) {
+      return false;
+    }
+
+    if (this.engineType === SupportedSecretBackendsEnum.KV) {
+      return !this.isV2KV;
+    }
+
+    return true;
   }
 }

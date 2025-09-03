@@ -11,7 +11,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { Response } from 'miragejs';
 
-module('Acceptance | recovery snapshots', function (hooks) {
+module('Acceptance | recovery | snapshots', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
