@@ -2182,6 +2182,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@embroider/util@npm:^1.13.4":
+  version: 1.13.4
+  resolution: "@embroider/util@npm:1.13.4"
+  dependencies:
+    "@embroider/macros": ^1.18.1
+    broccoli-funnel: ^3.0.5
+    ember-cli-babel: ^7.26.11
+  peerDependencies:
+    "@glint/environment-ember-loose": ^1.0.0
+    "@glint/template": ^1.0.0
+    ember-source: "*"
+  peerDependenciesMeta:
+    "@glint/environment-ember-loose":
+      optional: true
+    "@glint/template":
+      optional: true
+  checksum: a3f88d44ab2a3df63e530f1b0988cdfe5ea3c4fab0e38fccdb46c80a6dfc6c6c4df79d6311c7c2a98ede937c9725a3202c2fe5f1338f0c2b81708a4a2ab5dd91
+  languageName: node
+  linkType: hard
+
 "@eslint-community/eslint-utils@npm:^4.1.2, @eslint-community/eslint-utils@npm:^4.2.0, @eslint-community/eslint-utils@npm:^4.4.0":
   version: 4.7.0
   resolution: "@eslint-community/eslint-utils@npm:4.7.0"
@@ -2653,9 +2673,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:4.20.1":
-  version: 4.20.1
-  resolution: "@hashicorp/design-system-components@npm:4.20.1"
+"@hashicorp/design-system-components@npm:4.23.0-rc-20250903164120":
+  version: 4.23.0-rc-20250903164120
+  resolution: "@hashicorp/design-system-components@npm:4.23.0-rc-20250903164120"
   dependencies:
     "@codemirror/commands": ^6.8.0
     "@codemirror/lang-go": ^6.0.1
@@ -2670,27 +2690,26 @@ __metadata:
     "@codemirror/state": ^6.5.0
     "@codemirror/view": ^6.36.2
     "@ember/render-modifiers": ^2.1.0
-    "@ember/string": ^3.1.1
     "@ember/test-waiters": ^3.1.0
-    "@embroider/addon-shim": ^1.9.0
-    "@embroider/macros": ^1.16.12
-    "@embroider/util": ^1.13.2
+    "@embroider/addon-shim": ^1.10.0
+    "@embroider/macros": ^1.18.1
+    "@embroider/util": ^1.13.4
     "@floating-ui/dom": ^1.6.12
     "@hashicorp/design-system-tokens": ^2.3.0
-    "@hashicorp/flight-icons": ^3.11.0
+    "@hashicorp/flight-icons": 3.13.0-rc-20250903164120
     "@lezer/highlight": ^1.2.1
-    "@nullvoxpopuli/ember-composable-helpers": ^5.2.9
+    "@nullvoxpopuli/ember-composable-helpers": ^5.2.11
     clipboard-polyfill: ^4.1.1
     codemirror-lang-hcl: ^0.0.0-beta.2
     decorator-transforms: ^2.3.0
     ember-a11y-refocus: ^4.1.4
     ember-cli-sass: ^11.0.1
-    ember-concurrency: ^4.0.2
+    ember-concurrency: ^4.0.4
     ember-element-helper: ^0.8.6
     ember-focus-trap: ^1.1.1
     ember-get-config: ^2.1.1
-    ember-modifier: ^4.2.0
-    ember-power-select: ^8.6.2
+    ember-modifier: ^4.2.2
+    ember-power-select: ^8.7.1
     ember-stargate: ^0.5.0
     ember-style-modifier: ^4.4.0
     ember-truth-helpers: ^4.0.3
@@ -2699,12 +2718,17 @@ __metadata:
     sass: ^1.83.0
     tabbable: ^6.2.0
     tippy.js: ^6.3.7
+    tracked-built-ins: ^4.0.0
   peerDependencies:
+    "@ember/string": ^3.1.1 || ^4.0.0
     ember-engines: ">= 0.11.0"
+    ember-intl: ^7.3.0
   peerDependenciesMeta:
     ember-engines:
       optional: true
-  checksum: 1b8d77f255aaf4db2c5601403bb9a63704ebfdd23333d465fc4104866e2669021ab631c74c11ca0af696894f5b2fa3aac66043cfbed5d11c6fffb7c423126847
+    ember-intl:
+      optional: true
+  checksum: e503a49c97a8e9c8d63d9187c30b15d12a94129b917b1eedf781617e73b9373dce00780e9635b630f447b1875d4c4d0802c88aa9958644d8154d93667af931a2
   languageName: node
   linkType: hard
 
@@ -2767,17 +2791,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@hashicorp/flight-icons@npm:3.13.0-rc-20250903164120":
+  version: 3.13.0-rc-20250903164120
+  resolution: "@hashicorp/flight-icons@npm:3.13.0-rc-20250903164120"
+  checksum: eb67e1ca4060cfcb6c447b2137a686af57557cdf7e950f4fa8b8f4711f57d1d4e33edd9962a01351cbe89fd99ace4482ba5e8640497ed2f3a6092d2e8afe2265
+  languageName: node
+  linkType: hard
+
 "@hashicorp/flight-icons@npm:^3.10.0":
   version: 3.10.0
   resolution: "@hashicorp/flight-icons@npm:3.10.0"
   checksum: 757545760ca599aa3880a9680054dbcd2d9f7ceaac1ded4110152afed6b2ccf7a2d08940cbeb3fea2d64db77b9a75d99d7b4ef5056eb9541ee5f0a5f0002120d
-  languageName: node
-  linkType: hard
-
-"@hashicorp/flight-icons@npm:^3.11.0":
-  version: 3.12.0
-  resolution: "@hashicorp/flight-icons@npm:3.12.0"
-  checksum: 2a64c1498df3f3f20da467f3b861d41727d5d422c097b51c5a486bd2de172e24730e0ef85892c199ada74325b7adecc2f583949792f6da59d68aa053396102de
   languageName: node
   linkType: hard
 
@@ -3192,6 +3216,16 @@ __metadata:
   dependencies:
     semver: ^7.3.5
   checksum: 68951c589e9a4328698a35fd82fe71909a257d6f2ede0434d236fa55634f0fbcad9bb8755553ce5849bd25ee6f019f4d435921ac715c853582c4a7f5983c8d4a
+  languageName: node
+  linkType: hard
+
+"@nullvoxpopuli/ember-composable-helpers@npm:^5.2.11":
+  version: 5.3.0
+  resolution: "@nullvoxpopuli/ember-composable-helpers@npm:5.3.0"
+  dependencies:
+    "@embroider/addon-shim": ^1.9.0
+    decorator-transforms: ^2.3.0
+  checksum: 7c462c24ed79aab74e319745bc1a9e8c0f3b7af9c5ccb1e7506ed8363882a0e79407e2b918276b00c002e2562b8e08b6d505d3a1e7a9446d77d435768a4d39bc
   languageName: node
   linkType: hard
 
@@ -8624,6 +8658,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ember-concurrency@npm:^4.0.4":
+  version: 4.0.6
+  resolution: "ember-concurrency@npm:4.0.6"
+  dependencies:
+    "@babel/helper-module-imports": ^7.22.15
+    "@babel/helper-plugin-utils": ^7.12.13
+    "@babel/types": ^7.12.13
+    "@embroider/addon-shim": ^1.8.7
+    decorator-transforms: ^1.0.1
+  peerDependencies:
+    "@glint/template": ">= 1.0.0"
+  peerDependenciesMeta:
+    "@glint/template":
+      optional: true
+  checksum: 035ebe7999dac0ae5dded104c3067710189d1318c38936fdecfe11eb644214fcca0f3cb1cb6236b15057631681094141f27cabc0763224d1dbde13d0610c81db
+  languageName: node
+  linkType: hard
+
 "ember-data@npm:~5.3.13":
   version: 5.3.13
   resolution: "ember-data@npm:5.3.13"
@@ -8860,7 +8912,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-modifier@npm:^3.2.7 || ^4.0.0, ember-modifier@npm:^4.1.0, ember-modifier@npm:^4.2.0, ember-modifier@npm:~4.2.0":
+"ember-modifier@npm:^3.2.7 || ^4.0.0, ember-modifier@npm:^4.1.0, ember-modifier@npm:^4.2.0, ember-modifier@npm:^4.2.2, ember-modifier@npm:~4.2.0":
   version: 4.2.2
   resolution: "ember-modifier@npm:4.2.2"
   dependencies:
@@ -8889,6 +8941,26 @@ __metadata:
     ember-basic-dropdown: ^8.5.1
     ember-concurrency: ^4.0.4
   checksum: a8263edbb930fde10edcdc62abaeb380886c5fc378d446e5015a3eafdc1ec76b6d43ba81c6556628adad4ae4e69ae844086f1ab06cdc44961e5afb4d21fa23f1
+  languageName: node
+  linkType: hard
+
+"ember-power-select@npm:^8.7.1":
+  version: 8.8.0
+  resolution: "ember-power-select@npm:8.8.0"
+  dependencies:
+    "@embroider/addon-shim": ^1.10.0
+    "@embroider/util": ^1.13.2
+    decorator-transforms: ^2.3.0
+    ember-assign-helper: ^0.5.0
+    ember-lifeline: ^7.0.0
+    ember-modifier: ^4.2.0
+    ember-truth-helpers: ^4.0.3
+  peerDependencies:
+    "@ember/test-helpers": ^2.9.4 || ^3.2.1 || ^4.0.2 || ^5.0.0
+    "@glimmer/component": ^1.1.2 || ^2.0.0
+    ember-basic-dropdown: ^8.5.1
+    ember-concurrency: ^4.0.4 || ^5.1.0
+  checksum: acacabe708a812a2a825cc5527aebb36ac3deae00e88ac4c8c94b603eab8f9051cc690e4dcd728a01d7f162dc091ffaeb3d4425c525f97f7669c751de300e2b2
   languageName: node
   linkType: hard
 
@@ -17887,6 +17959,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tracked-built-ins@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "tracked-built-ins@npm:4.0.0"
+  dependencies:
+    "@embroider/addon-shim": ^1.8.7
+    decorator-transforms: ^2.0.0
+    ember-tracked-storage-polyfill: ^1.0.0
+  checksum: 0db7f3119bf9504876f5c356f38b65d13253e7e5dcc8e9745f3102005eff52da3384b032d4fb8f426f352bcceb1aae8d9c310a76073af40fceba047c55ff82d6
+  languageName: node
+  linkType: hard
+
 "tracked-built-ins@npm:~3.4.0":
   version: 3.4.0
   resolution: "tracked-built-ins@npm:3.4.0"
@@ -18575,7 +18658,7 @@ __metadata:
     "@ember/test-waiters": ~4.1.0
     "@glimmer/component": ~1.1.2
     "@glimmer/tracking": ~1.1.2
-    "@hashicorp/design-system-components": 4.20.1
+    "@hashicorp/design-system-components": 4.23.0-rc-20250903164120
     "@hashicorp/vault-client-typescript": hashicorp/vault-client-typescript
     "@hashicorp/vault-reporting": "portal:./vault-reporting"
     "@icholy/duration": ~5.1.0
