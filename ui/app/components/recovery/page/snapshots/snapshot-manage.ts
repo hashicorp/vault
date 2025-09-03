@@ -33,6 +33,7 @@ type MountOption = { type: RecoverySupportedEngines; path: string };
 
 export default class SnapshotManage extends Component<Args> {
   @service declare readonly api: ApiService;
+  @service declare readonly currentCluster: any;
   @service declare readonly namespace: NamespaceService;
 
   @tracked selectedNamespace: string;
@@ -135,6 +136,11 @@ export default class SnapshotManage extends Component<Args> {
 
       this.mountOptions = this.api.responseObjectToArray(secret, 'path').flatMap((engine) => {
         const eng = new SecretsEngineResource(engine);
+
+        // performance secondaries cannot perform snapshot operations on shared paths
+        // operations can still be performed on local mounts
+        if (this.currentCluster?.performance?.isSecondary && !eng.local) return [];
+
         // Use `engineType` as it is the normalized version of `type`
         return eng.supportsRecovery
           ? [
@@ -293,6 +299,10 @@ export default class SnapshotManage extends Component<Args> {
           this.api.buildHeaders({ namespace: namespace || this.namespace.path });
           await this.api.secrets.cubbyholeWrite(this.resourcePath, {}, snapshot_id, headers);
           break;
+        }
+        default: {
+          // This should never be reached, but just in case
+          throw new Error('Unsupported recovery engine');
         }
       }
 
