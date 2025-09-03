@@ -37,6 +37,10 @@ cd "$PREVIEW_DIR"
 if [ "$should_pull" = true ]; then
     git pull origin main
 fi
+# TODO: remove this once the following PR is merged:
+#  https://github.com/hashicorp/dev-portal/pull/1334
+git checkout zs.next-remote-watch
+git pull origin zs.next-remote-watch
 
 # Run the dev-portal content-repo start script
 REPO=$PRODUCT \
