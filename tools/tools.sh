@@ -40,13 +40,14 @@ install_external() {
     github.com/favadi/protoc-go-inject-tag@latest
     github.com/golangci/misspell/cmd/misspell@latest
     github.com/golangci/revgrep/cmd/revgrep@latest
-    golang.org/x/tools/cmd/goimports@latest
-    google.golang.org/protobuf/cmd/protoc-gen-go@latest
-    google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-    gotest.tools/gotestsum@latest
-    honnef.co/go/tools/cmd/staticcheck@latest
-    mvdan.cc/gofumpt@latest
-    github.com/loggerhead/enumer@latest
+    github.com/stevendpclark/enumer@v0.0.0-20250122154818-a42b666c3cd3
+    github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
+    golang.org/x/tools/cmd/goimports@v0.30.0
+    google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.1
+    google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
+    gotest.tools/gotestsum@v1.12.3
+    mvdan.cc/gofumpt@v0.8.0
+    mvdan.cc/sh/v3/cmd/shfmt@v3.10.0
   )
 
   echo "==> Installing external tools..."
