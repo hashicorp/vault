@@ -39,12 +39,18 @@ outputs:
   go-tags:
     description: The minimal set of Go tags required to build the correct edition of Vault.
     value: ${{ steps.workflow-metadata.outputs.go-tags }}
+  is-ce-in-enterprise:
+    description: Whether or not the workflow is running CE Vault in the context of Vault Enterprise.
+    value: ${{ steps.workflow-metadata.outputs.is-ce-in-enterprise }}
   is-draft:
     description: Whether or not the workflow is executing in the context of a pull request draft.
     value: ${{ steps.workflow-metadata.outputs.is-draft }}
-  is-enterprise:
-    description: Whether or not the workflow is executing in the context of Vault enterprise.
-    value: ${{ steps.workflow-metadata.outputs.is-enterprise }}
+  is-ent-branch:
+    description: Whether or not the workflow is executing in the context of Vault Enterprise.
+    value: ${{ steps.workflow-metadata.outputs.is-ent-branch }}
+  is-ent-repo:
+    description: Whether or not the workflow is executing in the context of hashicorp/vault-enterprise
+    value: ${{ steps.workflow-metadata.outputs.is-ent-repo }}
   is-fork:
     description: Whether or not the workflow is being triggered on a pull request that is a fork.
     value: ${{ steps.workflow-metadata.outputs.is-fork }}
@@ -102,9 +108,9 @@ runs:
           is_draft='${{ github.event.pull_request.draft }}'
 
           # Determine our pull request labels. We specifically look them up via the pulls API
-          # because at some point they stopped being reliable in the
-          # github.event.pull_request.labels.*.name context.
-
+          # because the github.event.pull_request.labels.*.name context is very inflexible.
+          # This allows people to add labels after inital pull request and/or to re-run this
+          # workflow to reload them.
           labels=$(gh api "/repos/${{ github.repository }}/issues/${{ github.event.number }}/labels" | jq -erc '. | map(.name)')
         else
           # We can assume we're being triggered for a 'push' (a merge)
@@ -145,28 +151,47 @@ runs:
           echo "workflow-trigger=${{ github.event_name }}"
         } | tee -a "$GITHUB_OUTPUT"
 
-        # Set CE and Ent specific workflow metadata
-        is_enterprise='${{ contains(github.repository, 'vault-enterprise') }}'
-        if [ "$is_enterprise" = 'true' ]; then
-          {
-            echo 'compute-build=["self-hosted","ondemand","os=linux","disk_gb=64","type=c6a.4xlarge"]'
-            echo 'compute-build-ui=["self-hosted","ondemand","os=linux", "disk_gb=64", "type=c6a.2xlarge"]'
-            echo 'compute-test-go=["self-hosted","ondemand","os=linux","disk_gb=64","type=c6a.2xlarge"]'
-            echo 'compute-test-ui=["self-hosted","ondemand","os=linux","type=m6a.2xlarge"]'
-            echo 'compute-small=["self-hosted","linux","small"]'
-            echo 'go-tags=ent,enterprise'
-            echo 'is-enterprise=true'
-            echo 'vault-version-metadata=${{ inputs.vault-version }}+ent'
-          } | tee -a "$GITHUB_OUTPUT"
+        # Set CE, Ent, and CE in Ent specific workflow metadata
+        is_enterprise_repo='${{ contains(github.repository, 'vault-enterprise') }}'
+        if [ "$is_enterprise_repo" = 'true' ]; then
+          base_ref='${{ github.event.pull_request.base.ref || github.event.base_ref || github.ref_name || github.event.branch || github.ref }}'
+          is_ent_repo='true'
+          is_ce_in_enterprise=$([[ $base_ref == ce/* ]] && echo "true" || echo "false")
+          if [ "$is_ce_in_enterprise" = 'true' ]; then
+            is_enterprise="false"
+            go_tags=''
+            version_metadata='${{ inputs.vault-version }}'
+          else
+            is_enterprise='true'
+            go_tags='ent,enterprise'
+            version_metadata='${{ inputs.vault-version }}+ent'
+          fi
+          compute_build='["self-hosted","ondemand","os=linux","disk_gb=64","type=c6a.4xlarge"]'
+          compute_build_ui='["self-hosted","ondemand","os=linux", "disk_gb=64", "type=c6a.2xlarge"]'
+          compute_test_go='["self-hosted","ondemand","os=linux","disk_gb=64","type=c6a.2xlarge"]'
+          compute_test_ui='["self-hosted","ondemand","os=linux","type=m6a.2xlarge"]'
+          compute_small='["self-hosted","linux","small"]'
         else
-          {
-            echo 'compute-build="custom-linux-medium-vault-latest"'
-            echo 'compute-build-ui="custom-linux-xl-vault-latest"'
-            echo 'compute-test-go="custom-linux-medium-vault-latest"'
-            echo 'compute-test-ui="custom-linux-medium-vault-latest"'
-            echo 'compute-small="ubuntu-latest"'
-            echo 'go-tags='
-            echo 'is-enterprise=false'
-            echo 'vault-version-metadata=${{ inputs.vault-version }}'
-          } | tee -a "$GITHUB_OUTPUT"
+          compute_build='"custom-linux-medium-vault-latest"'
+          compute_build_ui='"custom-linux-xl-vault-latest"'
+          compute_test_go='"custom-linux-medium-vault-latest"'
+          compute_test_ui='"custom-linux-medium-vault-latest"'
+          compute_small='"ubuntu-latest"'
+          go_tags=''
+          is_ce_in_enterprise='false'
+          is_ent_branch='false'
+          is_ent_repo='false'
+          version_metadata='${{ inputs.vault-version }}'
         fi
+        {
+          echo "compute-build=${compute_build}"
+          echo "compute-build-ui=${compute_test_ui}"
+          echo "compute-test-go=${compute_test_go}"
+          echo "compute-test-ui=${compute_test_ui}"
+          echo "compute-small=${compute_small}"
+          echo "go-tags=${go_tags}"
+          echo "is-ce-in-enterprise=${is_ce_in_enterprise}"
+          echo "is-ent-branch=${is_enterprise}"
+          echo "is-ent-repo=${is_ent_repo}"
+          echo "vault-version-metadata=${version_metadata}"
+        } | tee -a "$GITHUB_OUTPUT"

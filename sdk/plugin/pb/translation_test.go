@@ -92,6 +92,7 @@ func TestTranslation_Request(t *testing.T) {
 				},
 			},
 			RequiresSnapshotID: "abcd",
+			RecoverSourcePath:  "path",
 		},
 		{
 			ID:                 "ID",
@@ -172,6 +173,7 @@ func TestTranslation_Request(t *testing.T) {
 			PolicyOverride:           true,
 			Unauthenticated:          true,
 			RequiresSnapshotID:       "abcd",
+			RecoverSourcePath:        "path",
 		},
 	}
 

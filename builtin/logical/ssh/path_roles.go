@@ -594,7 +594,8 @@ func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string,
 		// signing key type as we want to make ssh-rsa an explicitly notated
 		// algorithm choice.
 		var publicKey ssh.PublicKey
-		publicKeyStr, err := getCAPublicKey(ctx, s)
+		const allowPathMigration = true
+		publicKeyStr, err := getCAPublicKey(ctx, s, allowPathMigration)
 		if err != nil {
 			b.Logger().Debug(fmt.Sprintf("failed to load public key entry while attempting to migrate: %v", err))
 			goto SKIPVERSION2

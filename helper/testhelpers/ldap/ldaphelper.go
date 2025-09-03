@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/cap/ldap"
 	"github.com/hashicorp/vault/sdk/helper/docker"
@@ -55,8 +56,9 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 
 	var started bool
 
+	ctx, _ := context.WithTimeout(t.Context(), 1*time.Minute)
 	for i := 0; i < 3; i++ {
-		svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+		svc, err := runner.StartService(ctx, func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 			connURL := fmt.Sprintf("ldap://%s:%d", host, port)
 			cfg.Url = connURL
 

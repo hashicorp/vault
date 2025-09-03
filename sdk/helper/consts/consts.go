@@ -47,4 +47,6 @@ const (
 	PerformanceReplicationPathTarget = "performance"
 
 	DRReplicationPathTarget = "dr"
+
+	RecoverSourcePathHeader = "X-Vault-Recover-Source-Path"
 )

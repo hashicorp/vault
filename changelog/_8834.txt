@@ -1,0 +1,3 @@
+```release-note:change
+Secrets Recovery (enterprise): Deprecate the `recover_snapshot_id` query parameter to pass the snapshot ID for recover operations, in favor of a `X-Vault-Recover-Snapshot-Id` header. Vault will still accept the query parameter for backward compatibility. Also support setting the HTTP method to `RECOVER` for recover operations, in addition to `POST` and `PUT`.
+```

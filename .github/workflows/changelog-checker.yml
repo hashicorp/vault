@@ -16,19 +16,20 @@ jobs:
     # If there  a `pr/no-changelog` label we ignore this check
     if: "!contains(github.event.pull_request.labels.*.name, 'pr/no-changelog')"
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 # by default the checkout action doesn't checkout all branches
+      - uses: ./.github/actions/metadata
+        id: metadata
       - name: Check for changelog entry in diff
         run: |
           # Check if there is a diff in the changelog directory.
           #
           # Try to identify the expected changelog file name based on PR
           # number. This won't work for Go version updates though.
-          if [ ${{ github.event.repository.name }} == "vault-enterprise" ]; then
+          if [[ '${{ steps.metadata.outputs.is-ent-branch }}' == 'true' ]]; then
             expected_changelog_file=changelog/_${{ github.event.pull_request.number }}.txt
           else
             expected_changelog_file=changelog/${{ github.event.pull_request.number }}.txt

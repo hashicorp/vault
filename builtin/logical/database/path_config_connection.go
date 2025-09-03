@@ -117,6 +117,7 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 		}
 
 		b.dbEvent(ctx, "reset", req.Path, name, false)
+		recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseConnectionReset)
 		return nil, nil
 	}
 }
@@ -194,14 +195,23 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 				if err := b.reloadConnection(ctx, req.Storage, connName); err != nil {
 					b.Logger().Error("failed to reload connection", "name", connName, "error", err)
 					b.dbEvent(ctx, "reload-connection-fail", req.Path, "", false, "name", connName)
+					recordDatabaseObservation(ctx, b, req, connName, ObservationTypeDatabaseReloadFail,
+						AdditionalDatabaseMetadata{key: "plugin_name", value: pluginName})
 					reloadFailed = append(reloadFailed, connName)
 				} else {
 					b.Logger().Debug("reloaded connection", "name", connName)
 					b.dbEvent(ctx, "reload-connection", req.Path, "", true, "name", connName)
+					recordDatabaseObservation(ctx, b, req, connName, ObservationTypeDatabaseReloadSuccess,
+						AdditionalDatabaseMetadata{key: "plugin_name", value: pluginName})
 					reloaded = append(reloaded, connName)
 				}
 			}
 		}
+
+		recordDatabaseObservation(ctx, b, req, "", ObservationTypeDatabaseReloadPlugin,
+			AdditionalDatabaseMetadata{key: "plugin_name", value: pluginName},
+			AdditionalDatabaseMetadata{key: "reloaded", value: reloaded},
+			AdditionalDatabaseMetadata{key: "reload_failed", value: reloadFailed})
 
 		resp := &logical.Response{
 			Data: map[string]interface{}{
@@ -423,6 +433,9 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		// remove extra nested AutomatedRotationParams key
 		// before returning response
 		delete(resp.Data, "AutomatedRotationParams")
+
+		recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseConfigRead)
+
 		return resp, nil
 	}
 }
@@ -445,6 +458,7 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 		}
 
 		b.dbEvent(ctx, "config-delete", req.Path, name, true)
+		recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseConfigDelete)
 		return nil, nil
 	}
 }
@@ -658,6 +672,8 @@ available at https://www.snowflake.com/en/blog/blocking-single-factor-password-a
 		}
 
 		b.dbEvent(ctx, "config-write", req.Path, name, true)
+		recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseConfigWrite)
+
 		if len(resp.Warnings) == 0 {
 			return nil, nil
 		}

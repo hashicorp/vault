@@ -1,0 +1,82 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::ButtonSet>
+  <Hds::SegmentedGroup as |SG|>
+    {{! "filterProperty" is the tracked variable in the component class that corresponds to the filter type }}
+    {{#each-in this.dropdownConfig as |filterProperty d|}}
+      {{! "searchProperty" is the tracked variable in the component class that corresponds to the search input }}
+      {{#let d.label d.dropdownItems d.searchProperty as |label dropdownItems searchProperty|}}
+        <SG.Dropdown data-test-dropdown={{filterProperty}} @onClose={{fn this.handleDropdownClose searchProperty}} as |D|>
+          <D.ToggleButton @color="secondary" @text={{capitalize label}} />
+          <D.Header>
+            <Hds::Form::TextInput::Base
+              type="search"
+              placeholder="Search"
+              id={{searchProperty}}
+              autocomplete="off"
+              @value={{get this searchProperty}}
+              {{on "input" this.handleSearch}}
+            />
+          </D.Header>
+          <D.Separator />
+          {{#let (this.searchDropdown dropdownItems searchProperty) as |matchingItems|}}
+            {{#each matchingItems as |item|}}
+              <D.Checkmark
+                {{! Select dropdown item and set as tracked property to update URL query params }}
+                {{on "click" (fn this.handleFilterSelect filterProperty item D.close)}}
+                {{! (get this filterProperty) returns the tracked filter value }}
+                @selected={{eq item (get this filterProperty)}}
+                data-test-dropdown-item={{item}}
+              >
+                {{item}}
+              </D.Checkmark>
+            {{else}}
+              <D.Description
+                class="has-top-padding-xs"
+                {{! (get this searchProperty) returns the tracked search value }}
+                @text={{this.noItemsMessage (get this searchProperty) (pluralize label)}}
+              />
+            {{/each}}
+          {{/let}}
+        </SG.Dropdown>
+      {{/let}}
+    {{/each-in}}
+  </Hds::SegmentedGroup>
+  <Hds::Button
+    @icon="x-circle"
+    @text="Clear filters"
+    @color="tertiary"
+    {{on "click" (fn this.clearFilters "")}}
+    data-test-button="Clear filters"
+  />
+</Hds::ButtonSet>
+
+<Hds::Layout::Flex class="has-top-margin-s" @gap="8" @align="center" data-test-filter-tag-container>
+  <Hds::Text::Body @color="faint">Filters applied:</Hds::Text::Body>
+  {{#if this.anyFilters}}
+    {{#each-in this.filterProps as |filter value|}}
+      {{#if value}}
+        <div>
+          <Hds::Tag
+            @text={{value}}
+            {{! Filter renders in a tooltip if exceeds 20 characters  }}
+            @tooltipPlacement="bottom"
+            @onDismiss={{fn this.clearFilters filter}}
+            data-test-filter-tag="{{filter}} {{value}}"
+          />
+        </div>
+      {{/if}}
+    {{/each-in}}
+  {{else}}
+    <Hds::Text::Body @color="faint">None</Hds::Text::Body>
+  {{/if}}
+</Hds::Layout::Flex>
+
+{{#if this.filterAlert}}
+  <Hds::Alert @type="compact" class="has-top-padding-xs" data-test-inline-alert as |A|>
+    <A.Description>{{this.filterAlert}}</A.Description>
+  </Hds::Alert>
+{{/if}}

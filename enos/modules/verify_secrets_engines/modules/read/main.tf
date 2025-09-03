@@ -50,7 +50,7 @@ variable "vault_root_token" {
   default     = null
 }
 
-variable "verify_aws_secrets_engine" {
+variable "aws_enabled" {
   type        = bool
   description = <<-EOF
     Whether or not we'll verify the AWS secrets engine. Due to the various security requirements in
@@ -63,6 +63,12 @@ variable "verify_aws_secrets_engine" {
   default     = false
 }
 
+variable "ldap_enabled" {
+  type        = bool
+  description = "Whether or not we'll verify the LDAP secrets engine"
+  default     = false
+}
+
 variable "verify_aws_engine_creds" {
   type    = bool
   default = true
@@ -71,6 +77,12 @@ variable "verify_aws_engine_creds" {
 variable "verify_pki_certs" {
   type        = bool
   description = "Flag to verify pki certificates"
+  default     = true
+}
+
+variable "verify_ssh_secrets" {
+  type        = bool
+  description = "Flag to verify SSH secrets"
   default     = true
 }
 

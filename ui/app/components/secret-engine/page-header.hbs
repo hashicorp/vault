@@ -1,0 +1,50 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#let (engines-display-data @model.secretsEngine.type) as |engineData|}}
+  <Hds::PageHeader class="page-header" as |PH|>
+    <PH.Title>{{@model.secretsEngine.id}} configuration</PH.Title>
+    <PH.Description>{{get engineData "displayName"}}</PH.Description>
+    <PH.Breadcrumb>
+      <Hds::Breadcrumb>
+        <Hds::Breadcrumb::Item @text="Secrets" />
+        <Hds::Breadcrumb::Item
+          @text={{@model.secretsEngine.id}}
+          @route="vault.cluster.secrets.backend.list-root"
+          @model={{@model.secretsEngine.id}}
+        />
+        <Hds::Breadcrumb::Item @text="Configuration" />
+      </Hds::Breadcrumb>
+    </PH.Breadcrumb>
+    <PH.IconTile @icon={{get engineData "glyph"}} />
+    <PH.Subtitle>{{get engineData "typeDisplay"}}</PH.Subtitle>
+  </Hds::PageHeader>
+
+  <div class="has-top-margin-l">
+    <div class="tabs-container box is-marginless is-fullwidth is-paddingless">
+      <nav class="tabs" aria-label={{@model.secretsEngine.id}}>
+        <ul>
+          <li>
+            <LinkTo @route="vault.cluster.secrets.backend.configuration.general-settings" @model={{@model.secretsEngine.id}}>
+              General settings
+            </LinkTo>
+          </li>
+          {{! If engine is not configurable, hide plugin settings link }}
+          {{#if (get (engines-display-data @model.secretsEngine.type) "isConfigurable")}}
+            <li>
+              <LinkTo
+                @route="vault.cluster.secrets.backend.configuration.plugin-settings"
+                @model={{@model.secretsEngine.id}}
+              >
+                {{get (engines-display-data @model.secretsEngine.type) "displayName"}}
+                settings
+              </LinkTo>
+            </li>
+          {{/if}}
+        </ul>
+      </nav>
+    </div>
+  </div>
+{{/let}}

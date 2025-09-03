@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/raft (enterprise): Add `autoload_enabled` option to raft automated snapshot configurations. When enabled, this option will automatically load raft snapshots into Vault, which can then be used for recovery operations.
+```

@@ -7,96 +7,29 @@
 // contains getters that filter and extract data from activity model for use in charts
 
 import Component from '@glimmer/component';
-import { isSameMonth } from 'date-fns';
-import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { calculateAverage } from 'vault/utils/chart-helpers';
-import {
-  filterByMonthDataForMount,
-  filteredTotalForMount,
-  filterVersionHistory,
-} from 'core/utils/client-count-utils';
-import { service } from '@ember/service';
-import { sanitizePath } from 'core/utils/sanitize-path';
+import { action } from '@ember/object';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
-import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
-import type {
-  ByMonthNewClients,
-  MountNewClients,
-  NamespaceByKey,
-  NamespaceNewClients,
-  TotalClients,
-} from 'core/utils/client-count-utils';
-import type NamespaceService from 'vault/services/namespace';
+import type { ActivityExportData, ClientFilterTypes } from 'core/utils/client-count-utils';
 
-interface Args {
+/* This component does not actually render and is the base class to house
+ shared computations between the Clients::Page::Overview and Clients::Page::List components */
+export interface Args {
   activity: ClientsActivityModel;
-  versionHistory: ClientsVersionHistoryModel[];
-  startTimestamp: string;
-  endTimestamp: string;
-  namespace: string;
-  mountPath: string;
+  exportData: ActivityExportData[];
+  onFilterChange: CallableFunction;
+  filterQueryParams: Record<ClientFilterTypes, string>;
 }
 
 export default class ClientsActivityComponent extends Component<Args> {
-  @service declare readonly namespace: NamespaceService;
-
-  average = (
-    data:
-      | (ByMonthNewClients | NamespaceNewClients | MountNewClients | undefined)[]
-      | (NamespaceByKey | undefined)[],
-    key: string
-  ) => {
-    return calculateAverage(data, key);
-  };
-
-  // path of the filtered namespace OR current one, for filtering relevant data
-  get namespacePathForFilter() {
-    const { namespace } = this.args;
-    const currentNs = this.namespace.currentNamespace;
-    return sanitizePath(namespace || currentNs || 'root');
+  @action
+  handleFilter(filters: Record<ClientFilterTypes, string>) {
+    const { namespace_path, mount_path, mount_type } = filters;
+    this.args.onFilterChange({ namespace_path, mount_path, mount_type });
   }
 
-  get byMonthNewClients() {
-    const { activity, mountPath } = this.args;
-    const nsPath = this.namespacePathForFilter;
-
-    const data = mountPath
-      ? filterByMonthDataForMount(activity.byMonth, nsPath, mountPath)
-      : activity.byMonth;
-
-    return data ? data?.map((m) => m?.new_clients) : [];
-  }
-
-  get isCurrentMonth() {
-    const { activity } = this.args;
-    const current = parseAPITimestamp(activity.responseTimestamp) as Date;
-    const start = parseAPITimestamp(activity.startTime) as Date;
-    const end = parseAPITimestamp(activity.endTime) as Date;
-    return isSameMonth(start, current) && isSameMonth(end, current);
-  }
-
-  get isDateRange() {
-    const { activity } = this.args;
-    return !isSameMonth(
-      parseAPITimestamp(activity.startTime) as Date,
-      parseAPITimestamp(activity.endTime) as Date
-    );
-  }
-
-  // (object) top level TOTAL client counts for given date range
-  get totalUsageCounts(): TotalClients {
-    const { namespace, activity, mountPath } = this.args;
-    // only do this if we have a mountPath filter.
-    // namespace is filtered on API layer
-    if (activity?.byNamespace && namespace && mountPath) {
-      return filteredTotalForMount(activity.byNamespace, namespace, mountPath);
-    }
-    return activity?.total;
-  }
-
-  get upgradesDuringActivity() {
-    const { versionHistory, activity } = this.args;
-    return filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
+  @action
+  resetFilters() {
+    this.handleFilter({ namespace_path: '', mount_path: '', mount_type: '' });
   }
 }

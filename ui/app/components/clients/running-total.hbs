@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if (gt @byMonthNewClients.length 1)}}
+{{#if @byMonthNewClients.length}}
   <Clients::CountsCard
     @title="Client usage trends for selected billing period"
     @description={{this.chartContainerText}}
@@ -25,7 +25,7 @@
       </div>
       <div class="has-top-padding-m is-flex-row gap-16">
         <StatText @label="ACME" @value={{@runningTotals.acme_clients}} @size="m" />
-        {{#if @isSecretsSyncActivated}}
+        {{#if this.flags.secretsSyncIsActivated}}
           <StatText @label="Secret sync" @value={{@runningTotals.secret_syncs}} @size="m" />
         {{/if}}
       </div>
@@ -60,74 +60,44 @@
     </:dataRight>
   </Clients::CountsCard>
 {{else}}
-  {{#let (get @byMonthNewClients "0") as |singleMonthData|}}
-    {{#if (and @isHistoricalMonth singleMonthData.clients)}}
-      <Clients::UsageStats @title="Vault client counts" @description={{this.chartContainerText}}>
-        <div class="column" data-test-new>
-          <StatText
-            @label="New clients"
-            @subText="This is the number of clients which were created in Vault for the first time in the selected month."
-            @value={{singleMonthData.clients}}
-            @size="l"
-            class="has-bottom-margin-l"
-          />
-          <div class="flex row-wrap gap-36">
-            <StatText @label="Entity" @value={{singleMonthData.entity_clients}} @size="m" />
-            <StatText @label="Non-entity" @value={{singleMonthData.non_entity_clients}} @size="m" />
-            <StatText @label="ACME" @value={{singleMonthData.acme_clients}} @size="m" />
-            {{#if @isSecretsSyncActivated}}
-              <StatText @label="Secret sync" @value={{singleMonthData.secret_syncs}} @size="m" />
-            {{/if}}
-          </div>
-        </div>
-      </Clients::UsageStats>
-    {{else}}
-      {{! Renders when viewing the current month or for activity log data that predates the monthly breakdown added in 1.11 }}
-      <Clients::UsageStats
-        @title="Total usage"
-        @description="These totals are within this {{or @mountPath 'namespace and all its children'}}. {{if
-          @isCurrentMonth
-          "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current billing period' filter."
-        }}"
-      >
-        <StatText
-          class="column"
-          @label="Total clients"
-          @value={{@runningTotals.clients}}
-          @size="l"
-          @subText="The number of clients which interacted with Vault during this month. This is Vault’s primary billing metric."
-        />
-        <StatText
-          class="column"
-          @label="Entity"
-          @value={{@runningTotals.entity_clients}}
-          @size="l"
-          @subText="Representations of a particular user, client, or application that created a token via login."
-        />
-        <StatText
-          class="column"
-          @label="Non-entity"
-          @value={{@runningTotals.non_entity_clients}}
-          @size="l"
-          @subText="Clients created with a shared set of permissions, but not associated with an entity."
-        />
-        <StatText
-          class="column"
-          @label="ACME"
-          @value={{@runningTotals.acme_clients}}
-          @size="l"
-          @subText="Each ACME request counts as one client."
-        />
-        {{#if @isSecretsSyncActivated}}
-          <StatText
-            class="column"
-            @label="Secret sync"
-            @value={{@runningTotals.secret_syncs}}
-            @size="l"
-            @subText="A secret with a configured sync destination qualifies as a unique and active client."
-          />
-        {{/if}}
-      </Clients::UsageStats>
+  {{! Renders when viewing activity log data that predates the monthly breakdown added in 1.11 }}
+  <Clients::UsageStats @title="Client usage" @description="Total client usage for the selected billing period.">
+    <StatText
+      class="column"
+      @label="Total clients"
+      @value={{@runningTotals.clients}}
+      @size="l"
+      @subText="The number of clients which interacted with Vault during this month. This is Vault’s primary billing metric."
+    />
+    <StatText
+      class="column"
+      @label="Entity"
+      @value={{@runningTotals.entity_clients}}
+      @size="l"
+      @subText="Representations of a particular user, client, or application that created a token via login."
+    />
+    <StatText
+      class="column"
+      @label="Non-entity"
+      @value={{@runningTotals.non_entity_clients}}
+      @size="l"
+      @subText="Clients created with a shared set of permissions, but not associated with an entity."
+    />
+    <StatText
+      class="column"
+      @label="ACME"
+      @value={{@runningTotals.acme_clients}}
+      @size="l"
+      @subText="Each ACME request counts as one client."
+    />
+    {{#if this.flags.secretsSyncIsActivated}}
+      <StatText
+        class="column"
+        @label="Secret sync"
+        @value={{@runningTotals.secret_syncs}}
+        @size="l"
+        @subText="A secret with a configured sync destination qualifies as a unique and active client."
+      />
     {{/if}}
-  {{/let}}
+  </Clients::UsageStats>
 {{/if}}

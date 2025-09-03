@@ -19,7 +19,6 @@ import {
   tokenWithPolicyCmd,
 } from 'vault/tests/helpers/commands';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
-import { MOUNT_BACKEND_FORM } from '../helpers/components/mount-backend-form-selectors';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | secret-engine list view', function (hooks) {
@@ -43,7 +42,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   test('it does not camelize the secret mount path', async function (assert) {
     await visit('/vault/secrets');
     await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('aws'));
+    await click(GENERAL.cardContainer('aws'));
     await fillIn(GENERAL.inputByAttr('path'), 'aws_engine');
     await click(GENERAL.submitButton);
     await click(GENERAL.breadcrumbLink('Secrets'));
@@ -60,7 +59,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   test('after enabling an unsupported engine it takes you to list page', async function (assert) {
     await visit('/vault/secrets');
     await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('nomad'));
+    await click(GENERAL.cardContainer('nomad'));
     await click(GENERAL.submitButton);
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'navigates to the list page');
@@ -71,7 +70,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   test('after enabling a supported engine it takes you to mount page, can see configure and clicking breadcrumb takes you back to list page', async function (assert) {
     await visit('/vault/secrets');
     await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('aws'));
+    await click(GENERAL.cardContainer('aws'));
     await click(GENERAL.submitButton);
 
     assert.dom(SES.configTab).exists();
@@ -142,6 +141,21 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await runCmd(`delete sys/namespaces/${this.namespace}`);
   });
 
+  test('enterprise: it should navigate to cubbyhole list view in child namespace', async function (assert) {
+    this.namespace = `ns-${this.uid}`;
+
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    await loginNs(this.namespace);
+    await visit(`/vault/secrets?namespace=${this.namespace}`);
+    await click(SES.secretsBackendLink('cubbyhole'));
+
+    assert.dom(GENERAL.emptyStateTitle).hasText('No secrets in this backend');
+
+    // cleanup namespace
+    await login();
+    await runCmd(`delete sys/namespaces/${this.namespace}`);
+  });
+
   test('after disabling it stays on the list view', async function (assert) {
     // first mount an engine so we can disable it.
     const enginePath = `alicloud-disable-${this.uid}`;
@@ -176,7 +190,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     }
 
     // navigate and check that details view is shown from non-nested secrets
-    await click(GENERAL.pagination.next);
+    await click(GENERAL.nextPage);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${enginePath1}/list?page=2`,
@@ -217,7 +231,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       'After clicking a nested secret it navigates to the children list view.'
     );
 
-    await click(GENERAL.pagination.next);
+    await click(GENERAL.nextPage);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${enginePath1}/list/${parentPath}/?page=2`,

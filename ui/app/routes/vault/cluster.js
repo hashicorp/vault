@@ -110,8 +110,10 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   poll: task(function* () {
     while (true) {
-      // when testing, the polling loop causes promises to never settle so acceptance tests hang
-      // to get around that, we just disable the poll in tests
+      // In test mode, polling causes acceptance tests to hang due to never-settling promises.
+      // To avoid this, polling is disabled during tests.
+      // If your test depends on cluster status changes (e.g., replication mode),
+      // manually trigger polling using pollCluster from 'vault/tests/helpers/poll-cluster'.
       if (Ember.testing) {
         return;
       }
@@ -128,7 +130,8 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     .cancelOn('deactivate')
     .keepLatest(),
 
-  async afterModel(model, transition) {
+  // Note: do not make this afterModel hook async, it will break the DR secondary flow.
+  afterModel(model, transition) {
     this._super(...arguments);
 
     this.currentCluster.setCluster(model);
@@ -142,7 +145,20 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     if (this.namespaceService.path && !this.version.hasNamespaces) {
       return this.router.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
+    // Skip analytics initialization if the cluster is a DR secondary:
+    // 1. There is little value in collecting analytics in this state.
+    // 2. The analytics service requires resolving async setup (e.g. await),
+    //   which delays the afterModel hook resolution and breaks the DR secondary flow.
+    if (model.dr?.isSecondary) {
+      return this.transitionToTargetRoute(transition);
+    }
 
+    this.addAnalyticsService(model);
+
+    return this.transitionToTargetRoute(transition);
+  },
+
+  async addAnalyticsService(model) {
     // identify user for analytics service
     if (this.analytics.activated) {
       let licenseId = '';
@@ -172,8 +188,6 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
         console.log('unable to start analytics', e);
       }
     }
-
-    return this.transitionToTargetRoute(transition);
   },
 
   setupController() {

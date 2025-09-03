@@ -5,7 +5,6 @@
 
 import { click, currentURL } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 const assertFields = (assert, fields, customSelectors = {}) => {
@@ -21,7 +20,7 @@ const assertFields = (assert, fields, customSelectors = {}) => {
 };
 export default (test) => {
   test('it renders mount fields', async function (assert) {
-    await click(MOUNT_BACKEND_FORM.mountType(this.type));
+    await click(GENERAL.cardContainer(this.type));
     await click(GENERAL.button('Method Options'));
     assertFields(assert, this.mountFields, this.customSelectors);
   });

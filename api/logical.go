@@ -7,8 +7,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -74,7 +76,15 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	resp, err := c.readRawWithDataWithContext(ctx, path, data)
+	resp, err := c.readRawWithDataWithContext(ctx, path, data, nil)
+	return c.ParseRawResponseAndCloseBody(resp, err)
+}
+
+// ReadWithRequest returns a Secret for the given LogicalReadRequest. This is a
+// more flexible version of ReadWithContext, which allows for passing extra
+// headers to the Vault server.
+func (c *Logical) ReadWithRequest(ctx context.Context, req LogicalReadRequest) (*Secret, error) {
+	resp, err := c.readRawWithDataWithContext(ctx, req.Path(), req.Values(), req.Headers())
 	return c.ParseRawResponseAndCloseBody(resp, err)
 }
 
@@ -122,7 +132,7 @@ func (c *Logical) ReadRawFromSnapshot(path string, snapshotID string) (*Response
 // request timeout; if a timeout is desired, please set it through
 // context.WithTimeout or context.WithDeadline.
 func (c *Logical) ReadRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
-	return c.readRawWithDataWithContext(ctx, path, data)
+	return c.readRawWithDataWithContext(ctx, path, data, nil)
 }
 
 func (c *Logical) ParseRawResponseAndCloseBody(resp *Response, err error) (*Secret, error) {
@@ -150,21 +160,15 @@ func (c *Logical) ParseRawResponseAndCloseBody(resp *Response, err error) (*Secr
 	return ParseSecret(resp.Body)
 }
 
-func (c *Logical) readRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
+func (c *Logical) readRawWithDataWithContext(ctx context.Context, path string, values url.Values, extraHeaders http.Header) (*Response, error) {
 	r := c.c.NewRequest(http.MethodGet, "/v1/"+path)
 
-	var values url.Values
-	for k, v := range data {
-		if values == nil {
-			values = make(url.Values)
-		}
-		for _, val := range v {
-			values.Add(k, val)
-		}
+	if err := c.addExtraHeaders(r, extraHeaders); err != nil {
+		return nil, err
 	}
 
 	if values != nil {
-		r.Params = values
+		r.Params = maps.Clone(values)
 	}
 
 	return c.c.RawRequestWithContext(ctx, r)
@@ -244,12 +248,72 @@ func (c *Logical) WriteRawWithContext(ctx context.Context, path string, data []b
 	return c.writeRaw(ctx, r)
 }
 
+// WriteWithRequest returns a Secret for the given LogicalRequest. This is a
+// more flexible version of WriteWithContext, which allows for passing extra
+// headers to the Vault server.
+func (c *Logical) WriteWithRequest(ctx context.Context, req LogicalWriteRequest) (*Secret, error) {
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+req.Path())
+	if err := c.addExtraHeaders(r, req.Headers()); err != nil {
+		return nil, err
+	}
+
+	if err := r.SetJSONBody(req.Data()); err != nil {
+		return nil, err
+	}
+
+	return c.write(ctx, req.Path(), r)
+}
+
+// addExtraHeaders adds the given headers to the request, but only if they are
+// not already set in the request. If a header is already set in the request, it
+// returns an error for each header that is already set.
+func (c *Logical) addExtraHeaders(r *Request, headers http.Header) error {
+	var errs error
+
+	if r == nil {
+		return fmt.Errorf("cannot add extra headers to nil request")
+	}
+
+	if len(headers) == 0 {
+		return nil
+	}
+
+	if r.Headers == nil {
+		r.Headers = headers
+		return nil
+	}
+
+	curHeaders := r.Headers.Clone()
+	for k, v := range headers {
+		ck := http.CanonicalHeaderKey(k)
+		if curVal := curHeaders.Get(ck); curVal != "" {
+			errs = errors.Join(errs, fmt.Errorf("cannot set extra header %q, it is reserved", ck))
+			continue
+		}
+		curHeaders[ck] = v
+	}
+	if errs != nil {
+		return fmt.Errorf("cannot add extra headers: %w", errs)
+	}
+
+	r.Headers = curHeaders
+	return nil
+}
+
 // Recover recovers the data at the given Vault path from a loaded snapshot.
 // The snapshotID parameter is the ID of the loaded snapshot
 func (c *Logical) Recover(ctx context.Context, path string, snapshotID string) (*Secret, error) {
-	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
+	return c.RecoverFromPath(ctx, path, snapshotID, "")
+}
+
+func (c *Logical) RecoverFromPath(ctx context.Context, newPath string, snapshotID string, originalPath string) (*Secret, error) {
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+newPath)
 	r.Params.Set("recover_snapshot_id", snapshotID)
-	return c.write(ctx, path, r)
+	r.Headers.Set(SnapshotHeaderName, snapshotID)
+	if originalPath != "" && originalPath != newPath {
+		r.Headers.Set(RecoverSourcePathHeaderName, originalPath)
+	}
+	return c.write(ctx, originalPath, r)
 }
 
 func (c *Logical) JSONMergePatch(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
@@ -321,24 +385,33 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 	return c.DeleteWithDataWithContext(context.Background(), path, data)
 }
 
+// DeleteWithRequest returns a Secret for the given LogicalDeleteRequest. This is a
+// more flexible version of DeleteWithContext, which allows for passing extra
+// headers to the Vault server.
+func (c *Logical) DeleteWithRequest(ctx context.Context, req LogicalDeleteRequest) (*Secret, error) {
+	return c.DeleteWithDataWithContext(ctx, req.Path(), req.Values())
+}
+
 func (c *Logical) DeleteWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
+	return c.deleteWithDataWithContext(ctx, path, data)
+}
+
+func (c *Logical) deleteWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
+	return c.delete(ctx, NewDeleteRequest(path, data, nil))
+}
+
+func (c *Logical) delete(ctx context.Context, req LogicalDeleteRequest) (*Secret, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodDelete, "/v1/"+path)
+	r := c.c.NewRequest(http.MethodDelete, "/v1/"+req.Path())
 
-	var values url.Values
-	for k, v := range data {
-		if values == nil {
-			values = make(url.Values)
-		}
-		for _, val := range v {
-			values.Add(k, val)
-		}
+	if values := req.Values(); values != nil {
+		r.Params = values
 	}
 
-	if values != nil {
-		r.Params = values
+	if err := c.addExtraHeaders(r, req.Headers()); err != nil {
+		return nil, err
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)

@@ -717,6 +717,7 @@ func (a *access) tryEncrypt(ctx context.Context, sealWrapper *SealWrapper, plain
 func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, options ...wrapping.Option) ([]byte, bool, error) {
 	isUpToDate, err := a.IsUpToDate(ctx, ciphertext, false)
 	if err != nil {
+		a.logger.Trace("UNWRAP error in isUpToDate check", "error", err)
 		return nil, false, err
 	}
 
@@ -724,8 +725,10 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 	if len(wrappersByPriority) == 0 {
 		// If all seals are unhealthy, try any way since a seal may have recovered
 		wrappersByPriority = a.filterSealWrappers(configuredWrappers)
+		a.logger.Trace("UNWRAP all seals are unhealthy, trying all configured seals")
 	}
 	if len(wrappersByPriority) == 0 {
+		a.logger.Trace("UNWRAP no healty seals", "error", ErrNoHealthySeals)
 		return nil, false, ErrNoHealthySeals
 	}
 
@@ -766,6 +769,7 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 	// Start goroutines to decrypt the value
 	first := wrappersByPriority[0]
 	found := false
+	var sealKeyIds []string
 outer:
 	// This loop finds the highest priority seal with a keyId in common with the blobInfoMap,
 	// and ensures we'll use it first.  This should equal the highest priority wrapper in the nominal
@@ -774,10 +778,12 @@ outer:
 	for _, sealWrapper := range wrappersByPriority {
 		keyId, err := sealWrapper.Wrapper.KeyId(ctx)
 		if err != nil {
+			a.logger.Trace("UNWRAP error calling sealWrapper.Wrapper.KeyId()", "sealWrapper.Name", sealWrapper.Name, "error", err)
 			resultWg.Add(1)
 			go reportResult(sealWrapper.Name, nil, false, err)
 			continue
 		}
+		sealKeyIds = append(sealKeyIds, keyId)
 		if bi := ciphertext.BlobInfoForKeyId(keyId); bi != nil {
 			found = true
 			first = sealWrapper
@@ -787,6 +793,26 @@ outer:
 
 	if !found {
 		a.logger.Warn("while unwrapping, value has no key-id in common with currently healthy seals.  Trying all healthy seals")
+
+		if a.logger.IsTrace() {
+			var blobInfoKeyIds []string
+			for _, bi := range ciphertext.Slots {
+				if bi.KeyInfo == nil {
+					blobInfoKeyIds = append(blobInfoKeyIds, "<nil KeyInfo>")
+				} else if bi.KeyInfo.KeyId == "" {
+					blobInfoKeyIds = append(blobInfoKeyIds, "<nil KeyId>")
+				} else {
+					blobInfoKeyIds = append(blobInfoKeyIds, bi.KeyInfo.KeyId)
+				}
+			}
+			var configKeyIds []string
+			for _, cfg := range a.sealGenerationInfo.Seals {
+				configKeyIds = append(configKeyIds, cfg.Config["kms_key_id"])
+			}
+			a.logger.Trace("UNWRAP no common key IDs SEAL CONFIG", "sealGenerationInfo.Generation", a.sealGenerationInfo.Generation, "sealWrapper.Wrapper.KeyId", configKeyIds)
+			a.logger.Trace("UNWRAP no common key IDs SEAL ACTUAL", "sealGenerationInfo.Generation", a.sealGenerationInfo.Generation, "sealWrapper.Wrapper.KeyId", sealKeyIds)
+			a.logger.Trace("UNWRAP no common key IDs BLOB INFO  ", "ciphertext.Generation", ciphertext.Generation, "blobInfo.KeyInfo.KeyIds", blobInfoKeyIds)
+		}
 	}
 
 	resultWg.Add(1)
@@ -860,21 +886,40 @@ func (a *access) tryDecrypt(ctx context.Context, sealWrapper *SealWrapper, value
 	var keyId string
 	if id, err := sealWrapper.Wrapper.KeyId(ctx); err == nil {
 		keyId = id
-		if ciphertext := value.BlobInfoForKeyId(keyId); ciphertext != nil {
+		ciphertext := value.BlobInfoForKeyId(keyId)
+		if ciphertext != nil {
 			pt, decryptErr = sealWrapper.Wrapper.Decrypt(ctx, ciphertext, options...)
 
-			sealWrapper.SetHealthy(decryptErr == nil || IsOldKeyError(decryptErr), now)
+			healthy := decryptErr == nil || IsOldKeyError(decryptErr)
+			sealWrapper.SetHealthy(healthy, now)
+			if healthy {
+				a.logger.Trace("UNWRAP exact key ID match decrypt success", "sealWrapper.Name", sealWrapper.Name, "sealWrapper.Wrapper.KeyId", keyId)
+			} else {
+				a.logger.Trace("UNWRAP exact key ID match decrypt failure", "sealWrapper.Name", sealWrapper.Name, "sealWrapper.Wrapper.KeyId", keyId, "error", decryptErr)
+			}
 		}
 	}
 	// If we don't get a result, try all the slots
 	if pt == nil && decryptErr == nil {
+		a.logger.Trace("UNWRAP no exact key ID match, trying all blob infos", "sealWrapper.Name", sealWrapper.Name)
 		for _, ciphertext := range value.Slots {
 			pt, decryptErr = sealWrapper.Wrapper.Decrypt(ctx, ciphertext, options...)
+			var keyId string
+			if a.logger.IsTrace() {
+				if id, keyIdErr := sealWrapper.Wrapper.KeyId(ctx); keyIdErr != nil {
+					keyId = fmt.Sprintf("error getting key ID: %v", keyIdErr)
+				} else {
+					keyId = id
+				}
+			}
 			if decryptErr == nil {
 				// Note that we only update wrapper health for failures on exact key ID match,
 				// otherwise we would have false negatives.
 				sealWrapper.SetHealthy(true, now)
+				a.logger.Trace("UNWRAP inexact key ID match decrypt success", "sealWrapper.Name", sealWrapper.Name, "sealWrapper.Wrapper.KeyId", keyId)
 				break
+			} else {
+				a.logger.Trace("UNWRAP inexact key ID match decrypt failure", "seal_name", sealWrapper.Name, "sealWrapper.Wrapper.KeyId", keyId, "error", decryptErr)
 			}
 		}
 	}

@@ -1,0 +1,24 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.selectable-engine-card {
+  &:hover:not(.disabled),
+  &:focus,
+  &:focus-visible {
+    cursor: pointer;
+    box-shadow: var(--token-focus-ring-action-box-shadow);
+  }
+
+  &.small-card {
+    width: 8rem;
+    min-height: 8rem;
+  }
+}
+
+/* Vertical divider between enabled and disabled plugins */
+.selectable-engines-vertical-divider {
+  border-left: 2px solid var(--token-color-border-primary);
+  align-self: stretch;
+}

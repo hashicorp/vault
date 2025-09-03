@@ -1,0 +1,33 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#let this.isDisabled as |isDisabled|}}
+  <Hds::Card::Container
+    class="selectable-engine-card
+      {{if isDisabled 'disabled'}}
+      has-top-padding-l has-bottom-padding-s has-side-padding-8 has-text-centered small-card overflow-wrap"
+    @level={{if isDisabled "base" "mid"}}
+    @background={{if isDisabled "neutral-secondary" "neutral-primary"}}
+    @hasBorder={{true}}
+    @ariaLabel="{{@type.displayName}} - {{if isDisabled 'disabled' 'enabled'}} engine type"
+    tabindex="0"
+    {{on "click" this.handleSelection}}
+    {{on "keydown" this.handleKeyDown}}
+    data-test-card-container={{@type.type}}
+  >
+    {{#if @type.glyph}}
+      <Icon @name={{@type.glyph}} @size="24" class="has-bottom-margin-xs" />
+    {{/if}}
+    <Hds::Text::Body @tag="h3" @size="300">
+      {{@type.displayName}}
+    </Hds::Text::Body>
+    {{#if this.showDeprecationBadge}}
+      <Hds::Badge @text={{capitalize @type.deprecationStatus}} @size="small" />
+    {{/if}}
+    {{#if this.showEnterpriseBadge}}
+      <Hds::Badge @text="Enterprise" @size="small" />
+    {{/if}}
+  </Hds::Card::Container>
+{{/let}}

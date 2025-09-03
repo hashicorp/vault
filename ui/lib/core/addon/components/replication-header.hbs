@@ -37,12 +37,16 @@
       {{else}}
         <ul>
           <li>
-            <LinkTo @route="vault.cluster.replication-dr-promote.details">
+            <LinkTo @route="vault.cluster.replication-dr-promote.details" data-test-link-to="Details">
               Details
             </LinkTo>
           </li>
           <li>
-            <LinkTo @route="vault.cluster.replication-dr-promote" @current-when="vault.cluster.replication-dr-promote.index">
+            <LinkTo
+              @route="vault.cluster.replication-dr-promote"
+              @current-when="vault.cluster.replication-dr-promote.index"
+              data-test-link-to="Manage"
+            >
               Manage
             </LinkTo>
           </li>

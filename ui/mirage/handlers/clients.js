@@ -66,8 +66,11 @@ function generateMountBlock(path, counts) {
     obj[key] = 0;
     return obj;
   }, {});
+  // this logic is random nonsense just to have some mounts be "deleted"
+  const setMountType = () => (counts.clients % 5 <= 1 ? 'deleted mount' : path.split('/')[1]);
   return {
     mount_path: path,
+    mount_type: setMountType(),
     counts: {
       ...baseObject,
       // object contains keys for which 0-values of base object to overwrite
@@ -81,7 +84,7 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns, skipCounts =
   const max = isLowerCounts ? 100 : 1000;
   const nsBlock = {
     namespace_id: ns?.namespace_id || (idx === 0 ? 'root' : Math.random().toString(36).slice(2, 7) + idx),
-    namespace_path: ns?.namespace_path || (idx === 0 ? '' : `ns${idx}`),
+    namespace_path: ns?.namespace_path || (idx === 0 ? '' : `ns${idx}/`),
     counts: {},
     mounts: {},
   };
@@ -97,13 +100,13 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns, skipCounts =
 
     // each mount type generates a different type of client
     return [
-      generateMountBlock(`auth/authid/${idx}`, {
+      generateMountBlock(`auth/token/${idx}`, {
         clients: non_entity_clients + entity_clients,
         non_entity_clients,
         entity_clients,
       }),
-      generateMountBlock(`kvv2-engine-${idx}`, { clients: secret_syncs, secret_syncs }),
-      generateMountBlock(`pki-engine-${idx}`, { clients: acme_clients, acme_clients }),
+      generateMountBlock(`secrets/kv/${idx}`, { clients: secret_syncs, secret_syncs }),
+      generateMountBlock(`acme/pki/${idx}`, { clients: acme_clients, acme_clients }),
     ];
   };
 
@@ -167,10 +170,9 @@ function generateActivityResponse(startDate, endDate) {
         d.namespaces.find((n) => n.namespace_path === ns.namespace_path)
       );
       const mountCounts = nsData.flatMap((d) => d.mounts);
-      const paths = nsData[0].mounts.map(({ mount_path }) => mount_path);
-      ns.mounts = paths.map((path) => {
-        const counts = getTotalCounts(mountCounts.filter((m) => m.mount_path === path));
-        return { mount_path: path, counts };
+      ns.mounts = nsData[0].mounts.map((mount) => {
+        const counts = getTotalCounts(mountCounts.filter((m) => m.mount_path === mount.mount_path));
+        return { ...mount, counts };
       });
       ns.counts = getTotalCounts(nsData);
     });
@@ -254,7 +256,7 @@ function filterMonths(months, namespacePath) {
 /**
  * Util to mock filter namespace data from the activity response, matching what the API does
  */
-export function filterActivityResponse(originalData, namespacePath) {
+function filterActivityResponse(originalData, namespacePath) {
   // make a deep copy of the object so we don't mutate the original
   const data = JSON.parse(JSON.stringify(originalData));
   if (!namespacePath) return data;
@@ -293,15 +295,17 @@ export default function (server) {
     const activities = schema['clients/activities'];
     const namespace = req.requestHeaders['X-Vault-Namespace'];
     let { start_time, end_time } = req.queryParams;
-    if (!start_time && !end_time) {
+    if (!start_time) {
       // if there are no date query params, the activity log default behavior
       // queries from the builtin license start timestamp to the current month
       start_time = LICENSE_START.toISOString();
+    }
+    if (!end_time) {
       end_time = STATIC_NOW.toISOString();
     }
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
-    if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
-    if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
+    if (!start_time?.includes('T')) start_time = fromUnixTime(start_time).toISOString();
+    if (!end_time?.includes('T')) end_time = fromUnixTime(end_time).toISOString();
 
     const record = activities.findBy({ start_time, end_time });
     let data;

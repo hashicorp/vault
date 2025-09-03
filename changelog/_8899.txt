@@ -1,0 +1,3 @@
+```release-note:security
+core: Update github.com/hashicorp/go-getter to fix security vulnerability GHSA-wjrx-6529-hcj3.
+```

@@ -12,14 +12,22 @@ import (
 )
 
 func (c *Sys) UtilizationReport() (*UtilizationReportOutput, error) {
-	return c.UtilizationReportWithContext(context.Background())
+	return c.UtilizationReportWithContext(context.Background(), "")
 }
 
-func (c *Sys) UtilizationReportWithContext(ctx context.Context) (*UtilizationReportOutput, error) {
+func (c *Sys) UtilizationReportWithNamespace(nsPath string) (*UtilizationReportOutput, error) {
+	return c.UtilizationReportWithContext(context.Background(), nsPath)
+}
+
+func (c *Sys) UtilizationReportWithContext(ctx context.Context, nsPath string) (*UtilizationReportOutput, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
 	r := c.c.NewRequest(http.MethodGet, "/v1/sys/utilization-report")
+
+	if nsPath != "" {
+		r.Params.Add("namespace", nsPath)
+	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {

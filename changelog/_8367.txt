@@ -1,0 +1,3 @@
+```release-note:feature
+**AES-CBC in Transit** (Enterprise): Add support for encryption and decryption with AES-CBC in the Transit Secrets Engine.
+```

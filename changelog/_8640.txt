@@ -1,0 +1,3 @@
+```release-note:improvement
+Secrets Recovery (enterprise): Support recovering items from a snapshot to a new path in the live cluster. By calling the `vault recover` command with a `-from` flag, users can specify the path of the item in the snapshot.  
+```

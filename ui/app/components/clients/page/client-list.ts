@@ -3,33 +3,103 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import ActivityComponent, { Args } from '../activity';
 import { tracked } from '@glimmer/tracking';
-import ActivityComponent from '../activity';
 import { action } from '@ember/object';
+import { HTMLElementEvent } from 'vault/forms';
+
+import { filterIsSupported, filterTableData, type ActivityExportData } from 'core/utils/client-count-utils';
+
+// Define the base mapping to derive types from
+const CLIENT_TYPE_MAP = {
+  entity: 'Entity',
+  'non-entity-token': 'Non-entity',
+  'pki-acme': 'ACME',
+  'secret-sync': 'Secret sync',
+} as const;
+
+// Dynamically derive the tab values from the mapping
+type ClientListTabs = (typeof CLIENT_TYPE_MAP)[keyof typeof CLIENT_TYPE_MAP];
 
 export default class ClientsClientListPageComponent extends ActivityComponent {
-  @tracked selectedNamespace = '';
-  @tracked selectedMountPath = '';
+  @tracked selectedTab: ClientListTabs;
+  @tracked exportDataByTab;
 
-  // TODO stubbing this action here now, but it might end up being a callback in the parent to set URL query params
-  @action
-  setFilter(prop: 'selectedNamespace' | 'selectedMountPath', value: string) {
-    this[prop] = value;
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+
+    this.exportDataByTab = this.args.exportData.reduce(
+      (obj, data) => {
+        const clientLabel = CLIENT_TYPE_MAP[data.client_type];
+        if (!obj[clientLabel]) {
+          obj[clientLabel] = [];
+        }
+        obj[clientLabel].push(data);
+        return obj;
+      },
+      {} as Record<ClientListTabs, ActivityExportData[]>
+    );
+
+    const firstTab = Object.keys(this.exportDataByTab)[0] as ClientListTabs;
+    this.selectedTab = firstTab;
+  }
+
+  get selectedTabIndex() {
+    return Object.keys(this.exportDataByTab).indexOf(this.selectedTab);
+  }
+
+  // Only render tabs for whatever the export data returns
+  get tabs(): ClientListTabs[] {
+    return Object.keys(this.exportDataByTab) as ClientListTabs[];
   }
 
   @action
-  resetFilters() {
-    this.selectedNamespace = '';
-    this.selectedMountPath = '';
+  onClickTab(_event: HTMLElementEvent<HTMLInputElement>, idx: number) {
+    const tab = this.tabs[idx];
+    this.selectedTab = tab ?? this.tabs[0]!;
   }
 
-  get namespaces() {
-    // TODO map over exported activity data for list of namespaces
-    return ['root'];
+  get anyFilters() {
+    return (
+      Object.keys(this.args.filterQueryParams).every((f) => filterIsSupported(f)) &&
+      Object.values(this.args.filterQueryParams).some((v) => !!v)
+    );
   }
 
-  get mountPaths() {
-    // TODO map over exported activity data for list of mountPaths
-    return [];
+  // TEMPLATE HELPERS
+  filterData = (dataset: ActivityExportData[]) => filterTableData(dataset, this.args.filterQueryParams);
+
+  tableColumns(tab: ClientListTabs) {
+    // all client types have values for these columns
+    const defaultColumns = [
+      { key: 'client_id', label: 'Client ID' },
+      { key: 'client_type', label: 'Client type' },
+      { key: 'namespace_path', label: 'Namespace path' },
+      { key: 'namespace_id', label: 'Namespace ID' },
+      {
+        key: 'client_first_used_time',
+        label: 'Initial usage',
+        tooltip: 'When the client ID was first used in the selected billing period.',
+      },
+      { key: 'mount_path', label: 'Mount path' },
+      { key: 'mount_type', label: 'Mount type' },
+      { key: 'mount_accessor', label: 'Mount accessor' },
+    ];
+    // these params only have value for "entity" client types
+    const entityOnly = [
+      {
+        key: 'entity_name',
+        label: 'Entity name',
+        tooltip: 'Entity name will be empty in the case of a deleted entity.',
+      },
+      { key: 'entity_alias_name', label: 'Entity alias name' },
+      { key: 'local_entity_alias', label: 'Local entity alias' },
+      { key: 'policies', label: 'Policies' },
+      { key: 'entity_metadata', label: 'Entity metadata' },
+      { key: 'entity_alias_metadata', label: 'Entity alias metadata' },
+      { key: 'entity_alias_custom_metadata', label: 'Entity alias custom metadata' },
+      { key: 'entity_group_ids', label: 'Entity group IDs' },
+    ];
+    return tab === 'Entity' ? [...defaultColumns, ...entityOnly] : defaultColumns;
   }
 }

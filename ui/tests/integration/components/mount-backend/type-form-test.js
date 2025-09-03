@@ -10,7 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const secretTypes = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false })
   .filter((engine) => engine.type !== 'cubbyhole')
@@ -39,9 +39,9 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
     await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
 
     for (const type of secretTypes) {
-      assert.dom(MOUNT_BACKEND_FORM.mountType(type)).exists(`Renders ${type} mountable secret engine`);
+      assert.dom(GENERAL.cardContainer(type)).exists(`Renders ${type} mountable secret engine`);
     }
-    await click(MOUNT_BACKEND_FORM.mountType('ssh'));
+    await click(GENERAL.cardContainer('ssh'));
     assert.ok(spy.calledOnceWith('ssh'));
   });
 
@@ -52,9 +52,9 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
     await render(hbs`<MountBackend::TypeForm @setMountType={{this.setType}} />`);
 
     for (const type of authTypes) {
-      assert.dom(MOUNT_BACKEND_FORM.mountType(type)).exists(`Renders ${type} mountable auth engine`);
+      assert.dom(GENERAL.cardContainer(type)).exists(`Renders ${type} mountable auth engine`);
     }
-    await click(MOUNT_BACKEND_FORM.mountType('okta'));
+    await click(GENERAL.cardContainer('okta'));
     assert.ok(spy.calledOnceWith('okta'));
   });
 
@@ -74,7 +74,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
       });
       await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
       for (const type of allSecretTypes) {
-        assert.dom(MOUNT_BACKEND_FORM.mountType(type)).exists(`Renders ${type} secret engine`);
+        assert.dom(GENERAL.cardContainer(type)).exists(`Renders ${type} secret engine`);
       }
     });
 
@@ -82,7 +82,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
       assert.expect(allAuthTypes.length, 'renders all enterprise auth engines');
       await render(hbs`<MountBackend::TypeForm @mountCategory="auth" @setMountType={{this.setType}} />`);
       for (const type of allAuthTypes) {
-        assert.dom(MOUNT_BACKEND_FORM.mountType(type)).exists(`Renders ${type} auth engine`);
+        assert.dom(GENERAL.cardContainer(type)).exists(`Renders ${type} auth engine`);
       }
     });
   });

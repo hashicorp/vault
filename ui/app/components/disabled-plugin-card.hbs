@@ -1,0 +1,23 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container
+  class="selectable-engine-card has-top-padding-l has-bottom-padding-s has-side-padding-8 has-text-centered small-card overflow-wrap"
+  @level="base"
+  @background="neutral-secondary"
+  @hasBorder={{false}}
+  @ariaLabel="{{@type.displayName}} - disabled engine type"
+  tabindex="0"
+  {{on "click" (fn @handleDisabledPluginClick @type)}}
+  {{on "keydown" (fn @handleDisabledPluginKeyDown @type)}}
+  data-test-card-container={{@type.type}}
+>
+  {{#if @type.glyph}}
+    <Icon @name={{@type.glyph}} @size="24" class="has-bottom-margin-xs disabled-icon" />
+  {{/if}}
+  <Hds::Text::Body @tag="h3" @size="300">
+    {{@type.displayName}}
+  </Hds::Text::Body>
+</Hds::Card::Container>

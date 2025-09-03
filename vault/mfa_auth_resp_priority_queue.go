@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -69,6 +70,20 @@ func (pq *LoginMFAPriorityQueue) PopByKey(reqID string) (*MFACachedAuthResponse,
 	}
 
 	return item.Value.(*MFACachedAuthResponse), nil
+}
+
+// PeekByKey returns the item with the given key without removing it from the queue.
+func (pq *LoginMFAPriorityQueue) PeekByKey(reqID string) (*MFACachedAuthResponse, error) {
+	pq.l.RLock()
+	defer pq.l.RUnlock()
+
+	item := pq.wrapped.PeekByKey(reqID)
+	if item == nil {
+		return nil, errors.New("no item found with the given request ID")
+	}
+
+	mfaResp := item.Value.(*MFACachedAuthResponse)
+	return mfaResp, nil
 }
 
 // RemoveExpiredMfaAuthResponse pops elements of the queue and check

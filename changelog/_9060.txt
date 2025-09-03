@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix page loading error when users navigate away from identity entities and groups list views.
+```

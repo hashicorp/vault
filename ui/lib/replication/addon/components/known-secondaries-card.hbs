@@ -29,7 +29,12 @@
     {{/if}}
   </div>
   {{#if this.cluster.canAddSecondary}}
-    <LinkTo @route="mode.secondaries.add" @model={{this.cluster.replicationMode}} class="link add-secondaries">
+    <LinkTo
+      @route="mode.secondaries.add"
+      @model={{this.cluster.replicationMode}}
+      class="link add-secondaries"
+      data-test-link-to="Add secondary"
+    >
       Add secondary
     </LinkTo>
   {{/if}}

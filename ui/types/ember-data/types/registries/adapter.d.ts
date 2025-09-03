@@ -6,21 +6,24 @@
 import Application from 'vault/adapters/application';
 import Adapter from 'ember-data/adapter';
 import ModelRegistry from 'ember-data/types/registries/model';
+
 import AuthMethodAdapter from 'vault/vault/adapters/auth-method';
-import PkiIssuerAdapter from 'vault/adapters/pki/issuer';
-import PkiTidyAdapter from 'vault/adapters/pki/tidy';
-import LdapRoleAdapter from 'vault/adapters/ldap/role';
-import LdapLibraryAdapter from 'vault/adapters/ldap/library';
+import ClientsActivityAdapter from 'vault/vault/adapters/clients/activity';
 import KvDataAdapter from 'vault/adapters/kv/data';
 import KvMetadataAdapter from 'vault/adapters/kv/metadata';
-import SyncDestinationAdapter from 'vault/adapters/sync/destination';
+import LdapLibraryAdapter from 'vault/adapters/ldap/library';
+import LdapRoleAdapter from 'vault/adapters/ldap/role';
+import PkiIssuerAdapter from 'vault/adapters/pki/issuer';
+import PkiTidyAdapter from 'vault/adapters/pki/tidy';
 import SyncAssociationAdapter from 'vault/adapters/sync/association';
+import SyncDestinationAdapter from 'vault/adapters/sync/destination';
 
 /**
  * Catch-all for ember-data.
  */
 export default interface AdapterRegistry {
   'auth-method': AuthMethodAdapter;
+  'clients/activity': ClientsActivityAdapter;
   'ldap/library': LdapLibraryAdapter;
   'ldap/role': LdapRoleAdapter;
   'pki/issuer': PkiIssuerAdapter;

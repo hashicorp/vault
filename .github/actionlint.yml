@@ -6,6 +6,8 @@ self-hosted-runner:
   labels:
     - small
     - medium
+    - large
+    - xlarge
     - ondemand
     - disk_gb=64
     - os=linux

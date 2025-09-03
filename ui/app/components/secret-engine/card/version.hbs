@@ -1,0 +1,41 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-s has-top-bottom-margin-12" ...attributes>
+  <Hds::Text::Display @size="300">Version</Hds::Text::Display>
+
+  {{! TODO: Having this set up with flex for now, grid might be better? }}
+  <div class="flex gap-36 has-top-margin-l">
+    <Hds::Layout::Flex @direction="column" @gap="8">
+      <Hds::Text::Display>Engine type</Hds::Text::Display>
+      <Hds::Text::Display>Current version</Hds::Text::Display>
+      <Hds::Text::Display>Latest version</Hds::Text::Display>
+    </Hds::Layout::Flex>
+
+    <Hds::Layout::Flex @direction="column" @gap="12" @align="start">
+      <Hds::Text::Body
+        @tag="p"
+        class="hds-border-strong side-padding-4 border-radius-4"
+      >{{@model.secretsEngine.type}}</Hds::Text::Body>
+      {{! TODO: Verify if we want to display the full version or chop down ie. v0.17.1 vs v0.17.1-0.230942309423094... }}
+      <Hds::Text::Body @tag="p">{{@model.secretsEngine.running_plugin_version}}</Hds::Text::Body>
+      {{! TODO: leaving as is for now to match design, but we might be removing this if we cant get latest version from some source }}
+      <Hds::Text::Body @tag="p">v.12.46</Hds::Text::Body>
+    </Hds::Layout::Flex>
+  </div>
+
+  <Hds::Separator />
+
+  <Hds::Layout::Flex @isInline="true">
+    <Hds::Form::Select::Field name="version-select" as |F|>
+      <F.Label>Update version to:</F.Label>
+      {{! TODO: Update options with available versions from API }}
+      <F.Options>
+        <option value="">Select version</option>
+        <option value="12.4">12.4</option>
+        <option value="12.43">12.43</option>
+      </F.Options>
+    </Hds::Form::Select::Field>
+  </Hds::Layout::Flex>
+</Hds::Card::Container>

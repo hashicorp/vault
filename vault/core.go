@@ -3993,14 +3993,45 @@ func (c *Core) loadLoginMFAConfigs(ctx context.Context) error {
 	return nil
 }
 
+// MFACachedAuthResponse represents an authentication response that has been
+// temporarily cached during a two-phase MFA (Multi-Factor Authentication) login flow.
+//
+// This struct is used when an MFA enforcement is configured and a login request
+// lacks MFA credentials. Instead of completing the authentication immediately,
+// Vault caches the auth response and returns an MFARequirement to the client.
+// The client must then complete MFA validation using the mfa/validate endpoint
+// to retrieve the cached authentication and receive their token.
+//
+// The cached response includes the original authentication details along with
+// request metadata needed for MFA validation, such as the client's IP address
+// for methods like Duo that require connection information.
+//
+// This struct is also used to cache self-enrollment TOTP MFA secrets generated
+// during login when self-enrollment is enabled. This allows Vault to avoid
+// persisting the newly generated MFA secret until it has been successfully used
+// for validating an MFA-enforced login request.
 type MFACachedAuthResponse struct {
-	CachedAuth            *logical.Auth
-	RequestPath           string
-	RequestNSID           string
-	RequestNSPath         string
-	RequestConnRemoteAddr string
-	TimeOfStorage         time.Time
-	RequestID             string
+	CachedAuth              *logical.Auth
+	RequestPath             string
+	RequestNSID             string
+	RequestNSPath           string
+	RequestConnRemoteAddr   string
+	TimeOfStorage           time.Time
+	RequestID               string
+	SelfEnrollmentMFASecret *selfEnrollmentPendingMFASecret
+}
+
+// selfEnrollmentPendingMFASecret holds information about a TOTP Login MFA secret
+// that has been generated during a login request with self-enrollment enabled.
+// This secret is temporarily stored in memory until the user successfully
+// completes the MFA validation step. It is not persisted to avoid storing
+// unverified secrets.
+type selfEnrollmentPendingMFASecret struct {
+	// Fields here need to be exported because copystructure is used to copy this object.
+	MethodID string
+	Secret   *mfa.Secret
+	// Store the secret key string separately to avoid anyone accidentally persisting it on an Entity.
+	Key string
 }
 
 func (c *Core) setupCachedMFAResponseAuth() {

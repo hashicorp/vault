@@ -46,21 +46,18 @@ module "install_packages" {
   packages = var.packages
 }
 
-# Creating OpenLDAP Server
+# Creating OpenLDAP Server using generic container script
 resource "enos_remote_exec" "setup_openldap" {
   depends_on = [module.install_packages]
 
-  environment = {
-    LDAP_CONTAINER_VERSION = local.ldap_server.version
-    LDAP_DOMAIN            = local.ldap_server.domain
-    LDAP_ORG               = local.ldap_server.org
-    LDAP_ADMIN_PW          = local.ldap_server.admin_pw
-    LDAP_IP_ADDRESS        = local.test_server_address
-    LDAP_PORT              = local.ldap_server.port
-    LDAPS_PORT             = local.ldap_server.secure_port
-  }
+  scripts = [abspath("${path.module}/scripts/start-container.sh")]
 
-  scripts = [abspath("${path.module}/scripts/set-up-openldap.sh")]
+  environment = {
+    CONTAINER_IMAGE = "docker.io/osixia/openldap:${local.ldap_server.version}"
+    CONTAINER_NAME  = "openldap"
+    CONTAINER_PORTS = "${local.ldap_server.port},${local.ldap_server.secure_port}"
+    CONTAINER_ENVS  = "LDAP_ORGANISATION=${local.ldap_server.org},LDAP_DOMAIN=${local.ldap_server.domain},LDAP_ADMIN_PASSWORD=${local.ldap_server.admin_pw}"
+  }
 
   transport = {
     ssh = {
@@ -69,16 +66,23 @@ resource "enos_remote_exec" "setup_openldap" {
   }
 }
 
-# Creating KMIP Server
+# Creating KMIP Server using generic container script
 resource "enos_remote_exec" "create_kmip" {
   depends_on = [module.install_packages]
 
-  environment = {
-    VAULT_ADDR = var.ip_version == "6" ? var.hosts[0].ipv6 : var.hosts[0].public_ip
-    KMIP_PORT  = var.ports.kmip.port
-  }
+  inline = [
+    "mkdir -p /tmp/kmip_temp"
+  ]
 
-  scripts = [abspath("${path.module}/scripts/setup_kmip.sh")]
+  scripts = [abspath("${path.module}/scripts/start-container.sh")]
+
+  environment = {
+    CONTAINER_IMAGE   = "docker.io/percona/percona-server:8.0"
+    CONTAINER_NAME    = "kmip"
+    CONTAINER_VOLUMES = "/tmp/kmip_temp:/TEMP_DIR"
+    CONTAINER_ENVS    = "KMIP_ADDR=${local.test_server_address},MYSQL_ROOT_PASSWORD=testpassword"
+    CONTAINER_ARGS    = "--port ${var.ports.kmip.port}"
+  }
 
   transport = {
     ssh = {

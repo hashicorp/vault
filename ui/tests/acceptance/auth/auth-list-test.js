@@ -12,7 +12,6 @@ import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { MANAGED_AUTH_BACKENDS } from 'vault/helpers/supported-managed-auth-backends';
 import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 const SELECTORS = {
@@ -86,7 +85,7 @@ module('Acceptance | auth backend list', function (hooks) {
           // Enable auth if the backend is not type token
           if (!isTokenType) {
             await visit('/vault/settings/auth/enable');
-            await click(MOUNT_BACKEND_FORM.mountType(type));
+            await click(GENERAL.cardContainer(type));
             await fillIn(GENERAL.inputByAttr('path'), path);
             await click(GENERAL.submitButton);
           }

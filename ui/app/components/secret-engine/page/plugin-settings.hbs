@@ -1,0 +1,62 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<SecretEngine::PageHeader @model={{@model}} />
+
+{{#if @model.config}}
+  {{#each this.displayFields as |field|}}
+    {{! public key while not sensitive when editing/creating, should be hidden by default on viewing }}
+    {{#if (eq field "public_key")}}
+      <InfoTableRow @label="Public key" @value={{@model.config.public_key}}>
+        <MaskedInput @value={{@model.config.public_key}} @name={{field}} @displayOnly={{true}} @allowCopy={{true}} />
+      </InfoTableRow>
+    {{else}}
+      <InfoTableRow
+        @alwaysRender={{not (is-empty-value (get @model.config field))}}
+        @label={{this.label field}}
+        @value={{get @model.config field}}
+        @formatTtl={{this.isDuration field}}
+      />
+    {{/if}}
+  {{/each}}
+{{else}}
+  {{#if (get (engines-display-data @model.secretsEngine.type) "isConfigurable")}}
+    {{! Prompt user to configure the secret engine }}
+    <EmptyState
+      data-test-config-cta
+      @title="{{get (engines-display-data @model.secretsEngine.type) 'displayName'}} not configured"
+      @message="Get started by configuring your {{get
+        (engines-display-data @model.secretsEngine.type)
+        'displayName'
+      }} secrets engine."
+    >
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Configure {{get (engines-display-data @model.secretsEngine.type) 'displayName'}}"
+        @route="vault.cluster.secrets.backend.configuration.edit"
+        @model={{@id}}
+      />
+    </EmptyState>
+
+  {{else}}
+    <EmptyState
+      data-test-no-config
+      @title="No configuration details available"
+      @message="{{get
+        (engines-display-data @model.secretsEngine.type)
+        'displayName'
+      }} does not have any plugin specific configuration. All configurable parameters for this engine are under 'General Settings'."
+    >
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Back to general settings"
+        @route="vault.cluster.secrets.backend.configuration.general-settings"
+        @model={{@id}}
+      />
+    </EmptyState>
+  {{/if}}
+{{/if}}

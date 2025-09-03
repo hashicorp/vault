@@ -298,6 +298,11 @@ type MFAMethodID struct {
 	ID           string `json:"id,omitempty"`
 	UsesPasscode bool   `json:"uses_passcode,omitempty"`
 	Name         string `json:"name,omitempty"`
+	// SelfEnrollmentEnabled indicates whether the user does not yet have an MFA
+	// secret for this method and self-enrollment is enabled for it. Clients (like the UI) can use
+	// this to determine whether to offer the user a way to generate an MFA secret
+	// for this method.
+	SelfEnrollmentEnabled bool `json:"self_enrollment_enabled,omitempty"`
 }
 
 type MFAConstraintAny struct {
