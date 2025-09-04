@@ -1962,76 +1962,14 @@ func (a *ActivityLog) DefaultStartTime(endTime time.Time) time.Time {
 }
 
 func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.Time, limitNamespaces int) (map[string]interface{}, error) {
-	var computePartial bool
-
-	// Change the start time to the beginning of the month, and the end time to be the end
-	// of the month.
+	// Normalize the start time to the beginning of the month, and the end time to be the end of the month.
 	startTime = timeutil.StartOfMonth(startTime)
 	endTime = timeutil.EndOfMonth(endTime)
 
-	// At the max, we only want to return data up until the end of the current month.
-	// Adjust the end time be the current month if a future date has been provided.
-	endOfCurrentMonth := timeutil.EndOfMonth(a.clock.Now().UTC())
-	adjustedEndTime := endTime
-	if endTime.After(endOfCurrentMonth) {
-		adjustedEndTime = endOfCurrentMonth
-	}
-
-	// If the endTime of the query is the current month, request data from the queryStore
-	// with the endTime equal to the end of the last month, and add in the current month
-	// data.
-	precomputedQueryEndTime := adjustedEndTime
-	if timeutil.IsCurrentMonth(adjustedEndTime, a.clock.Now().UTC()) {
-		precomputedQueryEndTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(adjustedEndTime)))
-		computePartial = true
-	}
-
-	pq := &activity.PrecomputedQuery{}
-	if startTime.After(precomputedQueryEndTime) && timeutil.IsCurrentMonth(startTime, a.clock.Now().UTC()) {
-		// We're only calculating the partial month client count. Skip the precomputation
-		// get call.
-		pq = &activity.PrecomputedQuery{
-			StartTime:  startTime,
-			EndTime:    endTime,
-			Namespaces: make([]*activity.NamespaceRecord, 0),
-			Months:     make([]*activity.MonthRecord, 0),
-		}
-	} else {
-		storedQuery, err := a.queryStore.Get(ctx, startTime, precomputedQueryEndTime)
-		if err != nil {
-			return nil, err
-		}
-		if storedQuery == nil {
-			// If the storedQuery is nil, that means there's no historical data to process. But, it's possible there's
-			// still current month data to process, so rather than returning a 204, let's proceed along like we're
-			// just querying the current month.
-			storedQuery = &activity.PrecomputedQuery{
-				StartTime:  startTime,
-				EndTime:    endTime,
-				Namespaces: make([]*activity.NamespaceRecord, 0),
-				Months:     make([]*activity.MonthRecord, 0),
-			}
-		}
-		pq = storedQuery
-	}
-
-	var partialByMonth map[int64]*processMonth
-	if computePartial {
-		// Traverse through current month's activitylog data and group clients
-		// into months and namespaces
-		a.fragmentLock.RLock()
-		partialByMonth, _ = a.populateNamespaceAndMonthlyBreakdowns()
-		a.fragmentLock.RUnlock()
-
-		// Estimate the current month totals. These record contains is complete with all the
-		// current month data, grouped by namespace and mounts
-		currentMonth, err := a.computeCurrentMonthForBillingPeriod(partialByMonth, startTime, adjustedEndTime)
-		if err != nil {
-			return nil, err
-		}
-
-		// Combine the existing months precomputed query with the current month data
-		pq.CombineWithCurrentMonth(currentMonth)
+	// Compute the total clients in the billing period, and get the breakdown by namespace.
+	pq, err := a.computeClientsInBillingPeriod(ctx, startTime, endTime)
+	if err != nil {
+		return nil, err
 	}
 
 	// Convert the namespace data into a protobuf format that can be returned in the response
@@ -2071,7 +2009,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	a.sortActivityLogMonthsResponse(months)
 
 	// Modify the final month output to make response more consumable based on API request
-	months = a.modifyResponseMonths(months, startTime, adjustedEndTime)
+	months = a.modifyResponseMonths(months, startTime, endTime)
 	responseData["months"] = months
 
 	return responseData, nil
