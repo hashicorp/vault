@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { action } from '@ember/object';
+import AuthMethodResource from 'vault/resources/auth/method';
 
 /**
  * @module MountAccessorSelect
@@ -27,7 +28,7 @@ import { action } from '@ember/object';
  */
 
 export default class MountAccessorSelect extends Component {
-  @service store;
+  @service api;
 
   get filterToken() {
     return this.args.filterToken || false;
@@ -43,7 +44,11 @@ export default class MountAccessorSelect extends Component {
   }
 
   @task *authMethods() {
-    const methods = yield this.store.findAll('auth-method');
+    const { data } = yield this.api.sys.authListEnabledMethods();
+    const methods = this.api
+      .responseObjectToArray(data, 'path')
+      .map((method) => new AuthMethodResource(method, this));
+
     if (!this.args.value && !this.args.noDefault) {
       const getValue = methods[0].accessor;
       this.args.onChange(getValue);

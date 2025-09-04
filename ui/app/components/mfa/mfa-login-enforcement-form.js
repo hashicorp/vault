@@ -10,6 +10,7 @@ import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { addManyToArray, addToArray } from 'vault/helpers/add-to-array';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
+import AuthMethodResource from 'vault/resources/auth/method';
 
 /**
  * @module MfaLoginEnforcementForm
@@ -31,6 +32,7 @@ import { removeFromArray } from 'vault/helpers/remove-from-array';
 export default class MfaLoginEnforcementForm extends Component {
   @service store;
   @service flashMessages;
+  @service api;
 
   targetTypes = [
     { label: 'Authentication mount', type: 'accessor', key: 'auth_method_accessors' },
@@ -93,8 +95,11 @@ export default class MfaLoginEnforcementForm extends Component {
     }
   }
   async fetchAuthMethods() {
-    const mounts = await this.store.findAll('auth-method');
-    this.authMethods = mounts.map((auth) => auth.type).uniq();
+    const { data } = await this.api.sys.authListEnabledMethods();
+    this.authMethods = this.api
+      .responseObjectToArray(data, 'path')
+      .map((method) => new AuthMethodResource(method, this).methodType)
+      .uniq();
   }
 
   async fetchMfaMethods() {

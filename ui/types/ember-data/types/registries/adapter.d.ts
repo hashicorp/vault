@@ -7,7 +7,6 @@ import Application from 'vault/adapters/application';
 import Adapter from 'ember-data/adapter';
 import ModelRegistry from 'ember-data/types/registries/model';
 
-import AuthMethodAdapter from 'vault/vault/adapters/auth-method';
 import ClientsActivityAdapter from 'vault/vault/adapters/clients/activity';
 import KvDataAdapter from 'vault/adapters/kv/data';
 import KvMetadataAdapter from 'vault/adapters/kv/metadata';
@@ -22,7 +21,6 @@ import SyncDestinationAdapter from 'vault/adapters/sync/destination';
  * Catch-all for ember-data.
  */
 export default interface AdapterRegistry {
-  'auth-method': AuthMethodAdapter;
   'clients/activity': ClientsActivityAdapter;
   'ldap/library': LdapLibraryAdapter;
   'ldap/role': LdapRoleAdapter;

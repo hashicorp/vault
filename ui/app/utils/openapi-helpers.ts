@@ -208,16 +208,6 @@ export function filterPathsByItemType(pathInfo: PathInfo, itemType: string): Pat
  * This object maps model names to the openAPI path that hydrates the model, given the backend path.
  */
 const OPENAPI_POWERED_MODELS = {
-  'auth-config/azure': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/cert': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/gcp': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/github': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/jwt': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/kubernetes': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/ldap': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/oidc': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/okta': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/radius': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'kmip/config': (backend: string) => `/v1/${backend}/config?help=1`,
   'kmip/role': (backend: string) => `/v1/${backend}/scope/example/role/example?help=1`,
   'pki/certificate/generate': (backend: string) => `/v1/${backend}/issue/example?help=1`,
