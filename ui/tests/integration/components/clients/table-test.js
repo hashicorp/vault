@@ -87,13 +87,17 @@ module('Integration | Component | clients/table', function (hooks) {
     };
 
     await this.renderComponent();
-    const [firstColumn, secondColumn, thirdColumn, fourthColumn] = findAll(GENERAL.icon('swap-vertical'));
+    let [firstColumn, secondColumn, thirdColumn, fourthColumn] = findAll(GENERAL.icon('swap-vertical'));
+
     await click(firstColumn);
     assertSortOrder(['Bora Bora', 'Fiji', 'Maldives', 'Maui', 'Santorini'], { column: 'island', page: 1 });
     await click(GENERAL.nextPage);
     assertSortOrder(['Seychelles'], { column: 'island', page: 2 });
 
     await click(GENERAL.prevPage);
+    // We refetch the icons as the table rereenders after sorting
+    [secondColumn, thirdColumn, fourthColumn] = findAll(GENERAL.icon('swap-vertical'));
+
     await click(secondColumn);
     assertSortOrder(['4', '5', '6', '7', '8'], { column: 'visit_length', page: 1 });
     await click(GENERAL.nextPage);
@@ -106,6 +110,9 @@ module('Integration | Component | clients/table', function (hooks) {
     assertSortOrder(['true'], { column: 'is_booked', page: 2 });
 
     await click(GENERAL.prevPage);
+    // We refetch the icons as the table rereenders after sorting
+    [firstColumn, secondColumn, fourthColumn] = findAll(GENERAL.icon('swap-vertical'));
+
     await click(fourthColumn);
     assertSortOrder(
       [
