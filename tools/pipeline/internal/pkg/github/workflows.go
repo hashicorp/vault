@@ -1,0 +1,119 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
+package github
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+
+	gh "github.com/google/go-github/v74/github"
+	slogctx "github.com/veqryn/slog-context"
+)
+
+// getWorkflow attempts to locate the workflow associated with our workflow name.
+func getWorkflow(
+	ctx context.Context,
+	client *gh.Client,
+	owner string,
+	repo string,
+	name string,
+) (*gh.Workflow, error) {
+	slog.Default().DebugContext(slogctx.Append(ctx,
+		slog.String("owner", owner),
+		slog.String("repo", repo),
+		slog.String("name", name),
+	), "getting github actions workflow")
+
+	opts := &gh.ListOptions{PerPage: PerPageMax}
+	for {
+		wfs, res, err := client.Actions.ListWorkflows(ctx, owner, repo, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, wf := range wfs.Workflows {
+			if wf.GetName() == name {
+				return wf, nil
+			}
+		}
+
+		if res.NextPage == 0 {
+			return nil, fmt.Errorf("no workflow matching %s could be found", name)
+		}
+
+		opts.Page = res.NextPage
+	}
+}
+
+// getWorkflowRuns gets the workflow runs associated with a workflow ID.
+func getWorkflowRuns(
+	ctx context.Context,
+	client *gh.Client,
+	owner string,
+	repo string,
+	id int64,
+	opts *gh.ListWorkflowRunsOptions,
+) ([]*WorkflowRun, error) {
+	slog.Default().DebugContext(slogctx.Append(ctx,
+		slog.String("owner", owner),
+		slog.String("repo", repo),
+		slog.Int64("id", id),
+	), "getting github actions workflow runs")
+
+	var runs []*WorkflowRun
+	opts.ListOptions = gh.ListOptions{PerPage: PerPageMax}
+
+	for {
+		wfrs, res, err := client.Actions.ListWorkflowRunsByID(ctx, owner, repo, id, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, r := range wfrs.WorkflowRuns {
+			runs = append(runs, &WorkflowRun{Run: r})
+		}
+
+		if res.NextPage == 0 {
+			return runs, nil
+		}
+
+		opts.ListOptions.Page = res.NextPage
+	}
+}
+
+// getWorkflowRunArtifacts gets the artifacts associated with a workflow run
+func getWorkflowRunArtifacts(
+	ctx context.Context,
+	client *gh.Client,
+	owner string,
+	repo string,
+	id int64,
+) (gh.ArtifactList, error) {
+	slog.Default().DebugContext(slogctx.Append(ctx,
+		slog.String("owner", owner),
+		slog.String("repo", repo),
+		slog.Int64("id", id),
+	), "getting github actions workflow run artifacts")
+
+	opts := &gh.ListOptions{PerPage: PerPageMax}
+	artifacts := gh.ArtifactList{}
+
+	for {
+		arts, res, err := client.Actions.ListWorkflowRunArtifacts(ctx, owner, repo, id, opts)
+		if err != nil {
+			return artifacts, err
+		}
+
+		newTotal := artifacts.GetTotalCount() + arts.GetTotalCount()
+		artifacts.TotalCount = &newTotal
+		artifacts.Artifacts = append(artifacts.Artifacts, arts.Artifacts...)
+
+		if res.NextPage == 0 {
+			return artifacts, nil
+		}
+
+		opts.Page = res.NextPage
+	}
+}
