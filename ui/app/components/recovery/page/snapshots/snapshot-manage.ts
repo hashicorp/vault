@@ -261,12 +261,19 @@ export default class SnapshotManage extends Component<Args> {
       const headers = this.api.buildHeaders({ namespace });
       switch (mountType) {
         case SupportedSecretBackendsEnum.KV: {
-          await this.api.secrets.kvV1Write(this.resourcePath, this.mountPath, {}, snapshot_id, headers);
+          await this.api.secrets.kvV1Write(
+            this.resourcePath,
+            this.mountPath,
+            {},
+            snapshot_id,
+            undefined,
+            headers
+          );
           break;
         }
         case SupportedSecretBackendsEnum.CUBBYHOLE: {
           this.api.buildHeaders({ namespace: namespace || this.namespace.path });
-          await this.api.secrets.cubbyholeWrite(this.resourcePath, {}, snapshot_id, headers);
+          await this.api.secrets.cubbyholeWrite(this.resourcePath, {}, snapshot_id, undefined, headers);
           break;
         }
         default: {
