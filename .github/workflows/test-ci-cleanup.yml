@@ -13,8 +13,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
           aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
@@ -42,8 +42,8 @@ jobs:
         id: aws-configure
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
           aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
@@ -69,8 +69,8 @@ jobs:
     container:
       image: jantman/awslimitchecker
       env:
-        AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID_CI }}
-        AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY_CI }}
+        AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID_CI_09042025 }}
+        AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
     strategy:
       matrix:
         region: ${{ fromJSON(needs.setup.outputs.regions) }}
@@ -78,8 +78,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
           aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
