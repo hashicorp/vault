@@ -7,11 +7,10 @@ import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
-import errorMessage from 'vault/utils/error-message';
 
 export default class PageUserpassResetPasswordComponent extends Component {
-  @service store;
   @service flashMessages;
+  @service api;
 
   @tracked newPassword = '';
   @tracked error = '';
@@ -26,7 +25,6 @@ export default class PageUserpassResetPasswordComponent extends Component {
   *updatePassword(evt) {
     evt.preventDefault();
     this.error = '';
-    const adapter = this.store.adapterFor('auth-method');
     const { backend, username } = this.args;
     if (!backend || !username) return;
     if (!this.newPassword) {
@@ -34,10 +32,11 @@ export default class PageUserpassResetPasswordComponent extends Component {
       return;
     }
     try {
-      yield adapter.resetPassword(backend, username, this.newPassword);
+      yield this.api.auth.userpassResetPassword(username, backend, { password: this.newPassword });
       this.onSuccess();
     } catch (e) {
-      this.error = errorMessage(e, 'Check Vault logs for details');
+      const { message } = yield this.api.parseError(e, 'Check Vault logs for details');
+      this.error = message;
     }
   }
 }
