@@ -148,9 +148,13 @@ export default class ApiService extends Service {
   // convenience method for updating the query params object on the request context
   // eg. this.api.sys.uiConfigListCustomMessages(true, ({ context: { query } }) => { query.authenticated = true });
   // -> this.api.sys.uiConfigListCustomMessages(true, (context) => this.api.addQueryParams(context, { authenticated: true }));
-  addQueryParams(requestContext: { init: HTTPRequestInit; context: RequestOpts }, params: HTTPQuery = {}) {
-    const { context } = requestContext;
+  async addQueryParams(
+    requestContext: { init: HTTPRequestInit; context: RequestOpts },
+    params: HTTPQuery = {}
+  ) {
+    const { context, init } = requestContext;
     context.query = { ...context.query, ...params };
+    return init;
   }
 
   // accepts an error response and returns { status, message, response, path }
