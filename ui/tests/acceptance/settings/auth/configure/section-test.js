@@ -31,7 +31,12 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
 
   test('it can save options', async function (assert) {
     assert.expect(6);
-    this.server.post(`/sys/mounts/auth/:path/tune`, function (schema, request) {
+
+    const path = `approle-save-${this.uid}`;
+    const type = 'approle';
+    const section = 'options';
+
+    this.server.post(`/sys/mounts/auth/${path}/tune`, function (schema, request) {
       const body = JSON.parse(request.requestBody);
       const keys = Object.keys(body);
       assert.strictEqual(body.token_type, 'batch', 'passes new token type');
@@ -40,17 +45,16 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
       assert.true(keys.includes('description'), 'passes updated description on tune');
       return request.passthrough();
     });
-    const path = `approle-save-${this.uid}`;
-    const type = 'approle';
-    const section = 'options';
+
     await enablePage.enable(type, path);
     await page.visit({ path, section });
     await fillIn(GENERAL.inputByAttr('description'), 'This is Approle!');
     assert
-      .dom(GENERAL.inputByAttr('config.tokenType'))
+      .dom(GENERAL.inputByAttr('config.token_type'))
       .hasValue('default-service', 'as default the token type selected is default-service.');
-    await fillIn(GENERAL.inputByAttr('config.tokenType'), 'batch');
+    await fillIn(GENERAL.inputByAttr('config.token_type'), 'batch');
     await click(GENERAL.submitButton);
+
     assert.strictEqual(
       page.flash.latestMessage,
       `The configuration was saved successfully.`,
