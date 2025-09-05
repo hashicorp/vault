@@ -9,6 +9,7 @@
 SECURITY:
 
 * core: Update github.com/hashicorp/go-getter to fix security vulnerability GHSA-wjrx-6529-hcj3. ([8b3a9ce1](https://github.com/hashicorp/vault/commit/8b3a9ce1f651932559a129a7889243d24127cee2))
+* http: unauthenticated DoS vulnerability from complex JSON payload(CVE-6203) [[GH-31069](https://github.com/hashicorp/vault/pull/31069)], [[HCSEC-2025-24](https://discuss.hashicorp.com/t/hcsec-2025-24-vault-denial-of-service-though-complex-json-payloads/76393)]
 
 CHANGES:
 
@@ -286,6 +287,7 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 SECURITY:
 
 * core: Update github.com/hashicorp/go-getter to fix security vulnerability GHSA-wjrx-6529-hcj3.
+* http: unauthenticated DoS vulnerability from complex JSON payload(CVE-6203)[[HCSEC-2025-24](https://discuss.hashicorp.com/t/hcsec-2025-24-vault-denial-of-service-though-complex-json-payloads/76393)]
 
 CHANGES:
 
@@ -761,6 +763,10 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 
 ## 1.18.14 Enterprise
 ### August 28, 2025
+
+SECURITY:
+
+* http: unauthenticated DoS vulnerability from complex JSON payload(CVE-6203). [[HCSEC-2025-24](https://discuss.hashicorp.com/t/hcsec-2025-24-vault-denial-of-service-though-complex-json-payloads/76393)]
 
 CHANGES:
 
@@ -1947,6 +1953,10 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 ### August 28, 2025
 
 **Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* http: unauthenticated DoS vulnerability from complex JSON payload(CVE-6203)[[HCSEC-2025-24](https://discuss.hashicorp.com/t/hcsec-2025-24-vault-denial-of-service-though-complex-json-payloads/76393)]
 
 CHANGES:
 
