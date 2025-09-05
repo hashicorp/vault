@@ -238,6 +238,10 @@ type TLSConfig struct {
 	// ClientKey is the path to the private key for Vault communication
 	ClientKey string
 
+	// TPMDevice is the path to the TPM device for TPM-backed keys (Linux only)
+	// Defaults to /dev/tpmrm0 if not specified
+	TPMDevice string
+
 	// TLSServerName, if set, is used to set the SNI host when connecting via
 	// TLS.
 	TLSServerName string
@@ -315,7 +319,8 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 	switch {
 	case t.ClientCert != "" && t.ClientKey != "":
 		var err error
-		clientCert, err = tls.LoadX509KeyPair(t.ClientCert, t.ClientKey)
+		// Use TPM-aware key loading that auto-detects TSS2 format
+		clientCert, err = loadX509KeyPairWithTPM(t.ClientCert, t.ClientKey, t.TPMDevice)
 		if err != nil {
 			return err
 		}
