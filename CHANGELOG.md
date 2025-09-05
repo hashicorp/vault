@@ -9,6 +9,7 @@
 FEATURES:
 
 * **IBM RACF Static Role Password Phrase Management**: Add support for static role password phrase management to the LDAP secrets engine.
+  NOTE: This was relased in Enterprise Vault 1.20.3. This was not included in the CE Vault release for 1.20.3. (https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/184)
 
 SECURITY:
 
@@ -289,7 +290,7 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 
 FEATURES:
 
-* **IBM RACF Static Role Password Phrase Management**: Add support for static role password phrase management to the LDAP secrets engine.
+* **IBM RACF Static Role Password Phrase Management**: Add support for static role password phrase management to the LDAP secrets engine. (https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/184)
 
 SECURITY:
 
@@ -772,7 +773,7 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 
 FEATURES:
 
-* **IBM RACF Static Role Password Phrase Management**: Add support for static role password phrase management to the LDAP secrets engine.
+* **IBM RACF Static Role Password Phrase Management**: Add support for static role password phrase management to the LDAP secrets engine. (https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/184)
 
 CHANGES:
 
