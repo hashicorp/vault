@@ -22,7 +22,7 @@ module('Acceptance | clients | counts | client list', function (hooks) {
   hooks.beforeEach(async function () {
     // This tab is hidden on community so the version is stubbed for consistent test running on either version
     this.version = this.owner.lookup('service:version');
-    this.version.type === 'enterprise';
+    this.version.type = 'enterprise';
 
     // The activity export endpoint returns a ReadableStream of json lines, this is not easily mocked using mirage.
     // Stubbing the adapter method return instead.
@@ -44,7 +44,7 @@ module('Acceptance | clients | counts | client list', function (hooks) {
   });
 
   test('it hides client list tab on community', async function (assert) {
-    this.version.type === 'community';
+    this.version.type = 'community';
     assert.dom(GENERAL.tab('client list')).doesNotExist();
   });
 
