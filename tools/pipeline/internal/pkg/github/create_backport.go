@@ -15,7 +15,7 @@ import (
 	"slices"
 	"strings"
 
-	libgithub "github.com/google/go-github/v68/github"
+	libgithub "github.com/google/go-github/v74/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
