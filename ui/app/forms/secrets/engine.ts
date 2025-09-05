@@ -22,12 +22,7 @@ export default class SecretsEngineForm extends MountForm<SecretsEngineFormData> 
     ];
   }
 
-  coreOptionFields = [
-    this.fields.description,
-    this.fields.listingVisibility,
-    this.fields.local,
-    this.fields.sealWrap,
-  ];
+  coreOptionFields = [this.fields.description, this.fields.local, this.fields.sealWrap];
 
   leaseConfigFields = [
     this.fields.defaultLeaseTtl,
