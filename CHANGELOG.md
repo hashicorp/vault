@@ -6,6 +6,10 @@
 ## 1.20.3
 ### August 28, 2025
 
+FEATURES:
+
+* **IBM RACF Static Role Password Phrase Management (Enterprise)**: Add support for static role password phrase management to the LDAP secrets engine. (https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/184)
+
 SECURITY:
 
 * core: Update github.com/hashicorp/go-getter to fix security vulnerability GHSA-wjrx-6529-hcj3. ([8b3a9ce1](https://github.com/hashicorp/vault/commit/8b3a9ce1f651932559a129a7889243d24127cee2))
@@ -282,6 +286,10 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 ### August 28, 2025
 
 **Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+FEATURES:
+
+* **IBM RACF Static Role Password Phrase Management**: Add support for static role password phrase management to the LDAP secrets engine. (https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/184)
 
 SECURITY:
 
@@ -761,6 +769,10 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 
 ## 1.18.14 Enterprise
 ### August 28, 2025
+
+FEATURES:
+
+* **IBM RACF Static Role Password Phrase Management**: Add support for static role password phrase management to the LDAP secrets engine. (https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/184)
 
 CHANGES:
 
