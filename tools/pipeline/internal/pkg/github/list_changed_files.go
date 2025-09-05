@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strings"
 
-	gh "github.com/google/go-github/v68/github"
+	gh "github.com/google/go-github/v74/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/jedib0t/go-pretty/v6/table"
 )

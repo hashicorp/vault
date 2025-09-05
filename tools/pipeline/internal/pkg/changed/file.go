@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	gh "github.com/google/go-github/v68/github"
+	gh "github.com/google/go-github/v74/github"
 )
 
 type (
