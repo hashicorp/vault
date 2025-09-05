@@ -3,6 +3,13 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.20.4
+### September 4, 2025
+
+SECURITY:
+
+* secrets: Update AWS access key var to refer to new key 
+
 ## 1.20.3
 ### August 28, 2025
 
