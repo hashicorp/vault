@@ -166,6 +166,17 @@ At least one must exist in the OU field.`,
 				},
 			},
 
+			"allowed_organizations": {
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated list of Organization names.
+At least one must exist in the O field.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:        "Allowed Organizations",
+					Group:       "Constraints",
+					Description: "A list of Organization names. At least one must exist in the O field.",
+				},
+			},
+
 			"required_extensions": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or array of extensions
@@ -312,6 +323,7 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 		"allowed_email_sans":           cert.AllowedEmailSANs,
 		"allowed_uri_sans":             cert.AllowedURISANs,
 		"allowed_organizational_units": cert.AllowedOrganizationalUnits,
+		"allowed_organizations":        cert.AllowedOrganizations,
 		"required_extensions":          cert.RequiredExtensions,
 		"allowed_metadata_extensions":  cert.AllowedMetadataExtensions,
 		"ocsp_ca_certificates":         cert.OcspCaCertificates,
@@ -413,6 +425,9 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 	if allowedOrganizationalUnitsRaw, ok := d.GetOk("allowed_organizational_units"); ok {
 		cert.AllowedOrganizationalUnits = allowedOrganizationalUnitsRaw.([]string)
+	}
+	if allowedOrganizationsRaw, ok := d.GetOk("allowed_organizations"); ok {
+		cert.AllowedOrganizations = allowedOrganizationsRaw.([]string)
 	}
 	if requiredExtensionsRaw, ok := d.GetOk("required_extensions"); ok {
 		cert.RequiredExtensions = requiredExtensionsRaw.([]string)
@@ -534,6 +549,7 @@ type CertEntry struct {
 	AllowedEmailSANs           []string
 	AllowedURISANs             []string
 	AllowedOrganizationalUnits []string
+	AllowedOrganizations       []string
 	RequiredExtensions         []string
 	AllowedMetadataExtensions  []string
 	BoundCIDRs                 []*sockaddr.SockAddrMarshaler
