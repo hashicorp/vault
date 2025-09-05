@@ -109,6 +109,7 @@ Router.map(function () {
           this.route('show', { path: '/show/*lease_id' });
         });
         // the outer identity route handles group and entity items
+        // the "identity" routes expect :item_type to be plural
         this.route('identity', { path: '/identity/:item_type' }, function () {
           this.route('index', { path: '/' });
           this.route('create');
