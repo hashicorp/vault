@@ -86,6 +86,7 @@ interface Args {
   loginSettings: { defaultType: string; backupTypes: string[] | null }; // enterprise only
   onAuthSuccess: CallableFunction;
   visibleAuthMounts: UnauthMountsResponse;
+  roleQueryParam?: string;
 }
 
 interface MfaAuthData {
@@ -231,6 +232,10 @@ export default class AuthPage extends Component<Args> {
     const showAlternate = authIsNotDefaultTab && (hasAlternateView || authIsAlternateTab);
 
     return { initialAuthType: this.initialAuthType, showAlternate };
+  }
+
+  get formQueryParams() {
+    return { role: this.args.roleQueryParam };
   }
 
   // ACTIONS
