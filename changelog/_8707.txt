@@ -1,0 +1,6 @@
+```release-note:bug
+core/seal: When Seal-HA is enabled, make it an error to persist the barrier
+keyring when not all seals are healthy.  This prevents the possibility of
+failing to unseal when a different subset of seals are healthy than were
+healthy at last write.
+```

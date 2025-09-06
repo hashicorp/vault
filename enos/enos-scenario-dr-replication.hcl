@@ -32,7 +32,6 @@ scenario "dr_replication" {
     https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/#execution-error-expected-vs-got-for-vault-versioneditionrevisionbuild-date.
 
     Variables required for some scenario variants:
-      - artifactory_username (if using `artifact_source:artifactory` in your filter)
       - artifactory_token (if using `artifact_source:artifactory` in your filter)
       - aws_region (if different from the default value in enos-variables.hcl)
       - consul_license_path (if using an ENT edition of Consul)
@@ -125,20 +124,19 @@ scenario "dr_replication" {
     module      = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : global.build_tags[matrix.edition]
-      artifact_path        = local.artifact_path
-      goarch               = matrix.arch
-      goos                 = "linux"
-      artifactory_host     = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
-      artifactory_repo     = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
-      artifactory_username = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
-      artifactory_token    = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
-      arch                 = matrix.artifact_source == "artifactory" ? matrix.arch : null
-      product_version      = var.vault_product_version
-      artifact_type        = matrix.artifact_type
-      distro               = matrix.artifact_source == "artifactory" ? matrix.distro : null
-      edition              = matrix.artifact_source == "artifactory" ? matrix.edition : null
-      revision             = var.vault_revision
+      build_tags        = var.vault_local_build_tags != null ? var.vault_local_build_tags : global.build_tags[matrix.edition]
+      artifact_path     = local.artifact_path
+      goarch            = matrix.arch
+      goos              = "linux"
+      artifactory_host  = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
+      artifactory_repo  = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
+      artifactory_token = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
+      arch              = matrix.artifact_source == "artifactory" ? matrix.arch : null
+      product_version   = var.vault_product_version
+      artifact_type     = matrix.artifact_type
+      distro            = matrix.artifact_source == "artifactory" ? matrix.distro : null
+      edition           = matrix.artifact_source == "artifactory" ? matrix.edition : null
+      revision          = var.vault_revision
     }
   }
 
@@ -320,8 +318,7 @@ scenario "dr_replication" {
       hosts      = step.create_external_integration_target.hosts
       ip_version = matrix.ip_version
       packages   = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
-      ldap_port  = global.ports.ldap.port
-      ldaps_port = global.ports.ldaps.port
+      ports      = global.integration_host_ports
     }
   }
 
@@ -741,18 +738,23 @@ scenario "dr_replication" {
       quality.vault_api_sys_policy_write,
       quality.vault_mount_auth,
       quality.vault_mount_kv,
+      quality.vault_secrets_kmip_write_config,
       quality.vault_secrets_kv_write,
       quality.vault_secrets_ldap_write_config,
     ]
 
     variables {
-      hosts             = step.create_primary_cluster_targets.hosts
-      ip_version        = matrix.ip_version
-      ldap_host         = step.set_up_external_integration_target.state.ldap.host
-      leader_host       = step.get_primary_cluster_ips.leader_host
-      vault_addr        = step.create_primary_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_primary_cluster.root_token
+      hosts                  = step.create_primary_cluster_targets.hosts
+      ip_version             = matrix.ip_version
+      integration_host_state = step.set_up_external_integration_target.state
+      ldap_enabled           = false
+      leader_host            = step.get_primary_cluster_ips.leader_host
+      ports                  = global.ports
+      ipv4_cidr              = step.create_vpc.ipv4_cidr
+      vault_addr             = step.create_primary_cluster.api_addr_localhost
+      vault_edition          = matrix.edition
+      vault_install_dir      = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token       = step.create_primary_cluster.root_token
     }
   }
 
@@ -1152,11 +1154,15 @@ scenario "dr_replication" {
     variables {
       create_state            = step.verify_secrets_engines_on_primary.state
       hosts                   = step.get_secondary_cluster_ips.follower_hosts
+      ip_version              = matrix.ip_version
+      ldap_enabled            = false
       vault_addr              = step.create_secondary_cluster.api_addr_localhost
+      vault_edition           = matrix.edition
       vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
       vault_root_token        = step.create_secondary_cluster.root_token
       verify_pki_certs        = false
       verify_aws_engine_creds = false
+      verify_ssh_secrets      = false
     }
   }
 
@@ -1291,11 +1297,47 @@ scenario "dr_replication" {
     variables {
       create_state            = step.verify_secrets_engines_on_primary.state
       hosts                   = step.get_secondary_cluster_ips.follower_hosts
+      ip_version              = matrix.ip_version
+      ldap_enabled            = false
       vault_addr              = step.create_secondary_cluster.api_addr_localhost
+      vault_edition           = matrix.edition
       vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
       vault_root_token        = step.create_secondary_cluster.root_token
       verify_pki_certs        = false
       verify_aws_engine_creds = false
+      verify_ssh_secrets      = false
+    }
+  }
+
+  # Verification is intentionally disabled for DR clusters because they do not handle client requests.
+  # However, we still include this step to future-proof the module, making it easier to enable delete
+  # verification later for other secrets engines or use cases where DR verification becomes relevant.
+  # For now, the script will short-circuit if verification is disabled. Potential future work will include
+  # verifying against the primary cluster.
+  step "verify_secrets_engines_delete" {
+    description = global.description.verify_secrets_engines_delete
+    module      = module.vault_verify_secrets_engines_delete
+    depends_on = [
+      step.verify_secrets_engines_on_primary,
+      step.verify_failover_replicated_data
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_ssh_role_delete
+    ]
+
+    variables {
+      create_state       = step.verify_secrets_engines_on_primary.state
+      hosts              = step.get_secondary_cluster_ips.follower_hosts
+      leader_host        = step.get_secondary_cluster_ips.leader_host
+      vault_addr         = step.create_secondary_cluster.api_addr_localhost
+      vault_install_dir  = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token   = step.create_secondary_cluster.root_token
+      verify_ssh_secrets = false
     }
   }
 

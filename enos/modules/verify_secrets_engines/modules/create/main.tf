@@ -9,7 +9,7 @@ terraform {
   }
 }
 
-variable "create_aws_secrets_engine" {
+variable "aws_enabled" {
   type        = bool
   description = <<-EOF
     Whether or not we'll verify the AWS secrets engine. Due to the various security requirements in
@@ -20,6 +20,30 @@ variable "create_aws_secrets_engine" {
     See: https://github.com/hashicorp/honeybee-templates/blob/main/templates/iam_policy/DemoUser.yaml
   EOF
   default     = false
+}
+
+variable "ldap_enabled" {
+  type        = bool
+  description = "Whether or not we'll verify the LDAP secrets engine"
+  default     = false
+}
+
+variable "ipv4_cidr" {
+  type        = string
+  description = "The CIDR block for the VPC when using IPv4 mode"
+}
+
+variable "ports" {
+  type = map(object({
+    description = string
+    port        = number
+    protocol    = string
+  }))
+  description = "The ports to use for the Vault cluster instances"
+}
+
+variable "integration_host_state" {
+  description = "The state of the test server from the 'backend_test_servers' module"
 }
 
 variable "hosts" {
@@ -35,27 +59,6 @@ variable "ip_version" {
   type        = string
   description = "IP Version (4 or 6)"
   default     = "4"
-}
-
-variable "ldap_host" {
-  type = object({
-    ipv6       = string
-    private_ip = string
-    public_ip  = string
-  })
-  description = "The external server instances that were created"
-}
-
-variable "ldap_port" {
-  type        = string
-  description = "The LDAP Server port"
-  default     = "389"
-}
-
-variable "ldap_password" {
-  type        = string
-  description = "The LDAP Server admin password"
-  default     = "password1"
 }
 
 variable "leader_host" {
@@ -84,13 +87,20 @@ variable "vault_root_token" {
   default     = null
 }
 
+variable "vault_edition" {
+  description = "The Vault binary edition (e.g., 'ce', 'ent', 'ent.fips1403', etc.)"
+  type        = string
+}
+
 output "state" {
   value = {
     auth     = local.auth_output
     identity = local.identity_output
     kv       = local.kv_output
     pki      = local.pki_output
+    ssh      = local.ssh_output
     aws      = local.aws_state
     ldap     = local.ldap_output
+    kmip     = local.kmip_output
   }
 }

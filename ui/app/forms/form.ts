@@ -18,6 +18,11 @@ export default class Form<T extends object> {
   declare validations: Validations;
   declare isNew: boolean;
 
+  // used by proxy to determine if the property being accessed is a form field
+  // override these in subclasses to define additional/different fields defined on the class
+  fieldProps = ['formFields'];
+  fieldGroupProps = ['formFieldGroups'];
+
   constructor(data: Partial<T> = {}, options: FormOptions = {}, validations?: Validations) {
     this.data = { ...data } as T;
     this.isNew = options.isNew || false;
@@ -29,27 +34,38 @@ export default class Form<T extends object> {
     // to ease migration from Ember Data Models, return a proxy that forwards get/set to the data object for form field props
     // this allows for form field properties to be accessed directly on the class rather than form.data.someField
     const proxyTarget = (target: this, prop: string) => {
-      // check if the property that is being accessed is a form field
-      const { formFields, formFieldGroups } = target as {
-        formFields?: FormField[];
-        formFieldGroups?: FormFieldGroup[];
-      };
-      const fields = Array.isArray(formFields) ? formFields : [];
-      // in the case of formFieldGroups we need extract the fields out into a flat array
-      const groupFields = Array.isArray(formFieldGroups)
-        ? formFieldGroups.reduce((arr: FormField[], group) => {
-            const values = Object.values(group)[0] || [];
-            return [...arr, ...values];
-          }, [])
-        : [];
-      // combine the formFields and formGroupFields into a single array
-      const allFields = [...fields, ...groupFields];
-      const formDataKeys = allFields.map((field) => field.name) || [];
-      // if the property is a form field return the data object as the target, otherwise return the original target (this)
-      // account for nested form data properties like 'config.maxLeaseTtl' when accessing the object like this.config
-      const isDataProp = formDataKeys.some((key) => key === prop || key.split('.').includes(prop));
-
-      return !Reflect.has(target, prop) && isDataProp ? target.data : target;
+      try {
+        // check if the property that is being accessed is a form field
+        const fields = this.fieldProps.reduce((fields: FormField[], prop) => {
+          const formFields = target[prop as keyof this];
+          if (Array.isArray(formFields)) {
+            fields.push(...formFields);
+          }
+          return fields;
+        }, []);
+        // in the case of formFieldGroups we need extract the fields out into a flat array
+        const groupFields = this.fieldGroupProps.reduce((groupFields: FormField[], prop) => {
+          const formFieldGroups = target[prop as keyof this];
+          if (Array.isArray(formFieldGroups)) {
+            const fields = formFieldGroups.reduce((arr: FormField[], group: FormFieldGroup) => {
+              const values = Object.values(group)[0] || [];
+              return [...arr, ...values];
+            }, []);
+            groupFields.push(...fields);
+          }
+          return groupFields;
+        }, []);
+        // combine the formFields and formGroupFields into a single array
+        const allFields = [...fields, ...groupFields];
+        const formDataKeys = allFields.map((field) => field.name) || [];
+        // if the property is a form field return the data object as the target, otherwise return the original target (this)
+        // account for nested form data properties like 'config.maxLeaseTtl' when accessing the object like this.config
+        const isDataProp = formDataKeys.some((key) => key === prop || key.split('.').includes(prop));
+        return !Reflect.has(target, prop) && isDataProp ? target.data : target;
+      } catch (e) {
+        // if this fails for any reason return the target object
+        return target;
+      }
     };
 
     return new Proxy(this, {

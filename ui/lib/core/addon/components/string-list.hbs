@@ -19,7 +19,7 @@
       {{/if}}
     </label>
     {{#if @subText}}
-      <p class="sub-text">
+      <p class="sub-text" id={{concat (dasherize @label) "-helper-text"}}>
         {{@subText}}
       </p>
     {{/if}}
@@ -33,6 +33,7 @@
           @value={{data.value}}
           name={{concat this.elementId "-" index}}
           aria-label="{{@label}} list item {{index}}"
+          aria-describedby={{concat (dasherize @label) "-helper-text"}}
           {{on "keyup" (action "inputChanged" index)}}
           {{on "change" (action "inputChanged" index)}}
         />
@@ -53,7 +54,7 @@
         {{/if}}
       </div>
       {{#if (includes index this.indicesWithComma)}}
-        <Hds::Icon @name="alert-triangle" @color="var(--token-color-foreground-warning)" @size="24" @isInline={{true}} />
+        <Hds::Icon @name="alert-triangle" @color="warning" @size="24" @isInline={{true}} />
       {{/if}}
     </div>
   {{/each}}

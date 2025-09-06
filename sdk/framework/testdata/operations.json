@@ -73,6 +73,23 @@
             "in": "query",
             "schema": {
               "type": "string"
+            },
+            "deprecated": true
+          },
+          {
+            "name": "X-Vault-Recover-Snapshot-Id",
+            "description": "Triggers a recover operation using the given snapshot ID. Request body is ignored when a recover operation is requested.",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Vault-Recover-Source-Path",
+            "description": "The source path to recover from. Only used if a snapshot ID is also supplied. If not specified, the source path is assumed to be the same as the request path.",
+            "in": "header",
+            "schema": {
+              "type": "string"
             }
           }
         ],

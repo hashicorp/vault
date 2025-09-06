@@ -55,7 +55,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     test('it should prompt configuration after mounting the aws engine', async function (assert) {
       const path = `aws-${this.uid}`;
       // in this test go through the full mount process. Bypass this step in later tests.
-      await visit('/vault/settings/mount-secret-backend');
+      await visit('/vault/secrets/mounts');
       await mountBackend('aws', path);
       await click(SES.configTab);
       assert.dom(GENERAL.emptyStateTitle).hasText('AWS not configured');

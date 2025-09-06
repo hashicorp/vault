@@ -1,0 +1,32 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Recovery::Page::Header
+  @title="Secrets Recovery"
+  @subtitle="Recover lost or deleted secrets from a raft snapshot. Supported types include KV v1 and Cubbyhole."
+/>
+
+{{! Currently, only a single snapshot is supported. In the future, this may change to support multiple loaded snapshots
+and a LIST view will be used then. }}
+{{#unless @model.snapshots}}
+  {{#let (get this.emptyStateDetails this.state) as |d|}}
+    <EmptyState @title={{d.title}} @icon={{d.icon}} @message={{d.message}}>
+
+      {{#if (eq this.state this.viewState.ALLOW_UPLOAD)}}
+        <Hds::Button @text={{d.buttonText}} @color={{d.buttonColor}} @route="vault.cluster.recovery.snapshots.load" />
+      {{else}}
+        <Hds::Button
+          @text={{d.buttonText}}
+          @color={{d.buttonColor}}
+          @icon={{d.buttonIcon}}
+          @iconPosition="trailing"
+          @route={{d.buttonRoute}}
+          @query={{if d.buttonRoute (hash namespace="")}}
+          @href={{doc-link d.buttonHref}}
+        />
+      {{/if}}
+    </EmptyState>
+  {{/let}}
+{{/unless}}

@@ -1,0 +1,209 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Recovery::Page::Header
+  @title="Secrets Recovery"
+  @subtitle="Recover lost or deleted secrets from a raft snapshot. Supported types include KV v1 and Cubbyhole."
+/>
+
+{{#let @model.snapshot as |snapshot|}}
+  <Hds::Card::Container
+    @level="mid"
+    @hasBorder={{true}}
+    class="has-padding-m has-top-margin-s has-bottom-margin-m one-half-width"
+  >
+    <div class="flex space-between">
+      <Hds::Text::Display @tag="h2">Snapshot</Hds::Text::Display>
+      <Hds::Badge @text={{this.badge.status}} @color={{this.badge.color}} data-test-badge="status" />
+    </div>
+    <Hds::Text::Body @tag="p" data-test-expiration>Expiring at
+      {{date-format snapshot.expires_at "MMM d, yyyy, h:mm:ss aaa" withTimeZone=true}}</Hds::Text::Body>
+    <Hds::Link::Standalone
+      @iconPosition="trailing"
+      @icon="arrow-right"
+      @text="View details"
+      @route="vault.cluster.recovery.snapshots.snapshot.details"
+      @model={{snapshot.snapshot_id}}
+      data-test-details-link
+    />
+  </Hds::Card::Container>
+{{/let}}
+
+<hr class="has-background-gray-300" />
+
+<Hds::Text::Display @tag="h3" class="has-top-padding-m">Recover or read data</Hds::Text::Display>
+{{#if this.recoveryData}}
+  <Hds::Alert @type="inline" @color="success" class="has-top-margin-m has-bottom-margin-m" data-test-inline-alert as |A|>
+    <A.Title>Success</A.Title>
+    <A.Description>Secret at
+      <Hds::Link::Inline
+        @route="vault.cluster.secrets.backend.show"
+        @models={{this.recoveryData.models}}
+        @query={{this.recoveryData.query}}
+        data-test-link-to="details"
+      >
+        {{this.resourcePath}}
+      </Hds::Link::Inline>
+      has been successfully recovered.</A.Description>
+  </Hds::Alert>
+{{/if}}
+
+{{#if this.bannerError}}
+  <div class="has-top-padding-m has-bottom-padding-m">
+    <Hds::Alert @type="inline" @color="critical" data-test-inline-alert as |A|>
+      <A.Title>Error</A.Title>
+      <A.Description>{{this.bannerError}}</A.Description>
+    </Hds::Alert>
+  </div>
+{{/if}}
+
+<Hds::Layout::Flex @gap="24" @align="start" class="has-bottom-padding-m">
+  {{! Selecting a namespace is only available in root, otherwise the namespace context 
+  is assumed as the current namespace for requesting the list of mount options }}
+  {{#if this.namespace.inRootNamespace}}
+    <Hds::Form::SuperSelect::Single::Field
+      @onChange={{this.handleSelectNamespace}}
+      @selected={{this.selectedNamespace}}
+      @options={{this.namespaceOptions}}
+      @searchEnabled={{true}}
+      data-test-select="namespace"
+      as |F|
+    >
+      <F.Label>Namespace</F.Label>
+      <F.Options>{{F.options}}</F.Options>
+    </Hds::Form::SuperSelect::Single::Field>
+  {{/if}}
+
+  {{! Allow for manual entry of mount paths if no mounts are returned (such as when the user does not have LIST permissions) }}
+  {{#if this.mountOptions}}
+    <Hds::Form::SuperSelect::Single::Field
+      @onChange={{this.handleSelectMount}}
+      @selected={{this.selectedMount}}
+      @options={{this.mountOptions}}
+      @searchEnabled={{true}}
+      @isInvalid={{this.mountError}}
+      @selectedItemComponent={{component "recovery/snapshot-mount-selected-item"}}
+      data-test-select="mount"
+      as |F|
+    >
+      <F.Label>Secret mount</F.Label>
+      <F.Options>
+        {{#let F.options as |option|}}
+          <div>
+            <strong>{{option.path}}</strong>
+          </div>
+          {{option.type}}
+        {{/let}}
+      </F.Options>
+      {{#if this.mountError}}
+        <F.Error data-test-validation-error="mount">{{this.mountError}}</F.Error>
+      {{/if}}
+    </Hds::Form::SuperSelect::Single::Field>
+  {{else}}
+    <Hds::Form::Field @layout="vertical" as |F|>
+      <F.Label>Mount Path</F.Label>
+      <F.Control>
+        <Hds::SegmentedGroup as |SG|>
+          <SG.Dropdown as |D|>
+            <D.ToggleButton @color="secondary" @text={{or this.selectedMount.type "Type"}} />
+            {{#each this.recoverySupportedEngines as |engine|}}
+              <D.Radio
+                name="mount-type"
+                checked={{eq this.selectedMount.type engine.value}}
+                {{on "change" (fn this.handleSelectMount (hash type=engine.value path=""))}}
+                data-test-radio={{engine.value}}
+              >
+                {{engine.display}}
+              </D.Radio>
+            {{/each}}
+          </SG.Dropdown>
+          <SG.TextInput
+            @isInvalid={{this.mountError}}
+            @value={{this.selectedMount.path}}
+            id={{F.id}}
+            aria-describedby={{F.ariaDescribedBy}}
+            size="32"
+            placeholder="Enter mount path..."
+            disabled={{not this.selectedMount.type}}
+            readonly={{eq this.selectedMount.type "cubbyhole"}}
+            {{on "input" (pipe (pick "target.value") (fn (mut this.selectedMount.path)))}}
+            data-test-input="manual-mount-path"
+          />
+        </Hds::SegmentedGroup>
+      </F.Control>
+      {{#if this.mountError}}
+        <F.Error data-test-validation-error="mount">{{this.mountError}}</F.Error>
+      {{/if}}
+    </Hds::Form::Field>
+  {{/if}}
+
+  <Hds::Form::TextInput::Field
+    @value={{this.resourcePath}}
+    @isInvalid={{this.resourcePathError}}
+    {{on "input" this.updateResourcePath}}
+    data-test-input="resourcePath"
+    as |F|
+  >
+    <F.Label>Resource Path</F.Label>
+    {{#if this.resourcePathError}}
+      <F.Error data-test-validation-error="resourcePath">{{this.resourcePathError}}</F.Error>
+    {{/if}}
+  </Hds::Form::TextInput::Field>
+
+  <div class={{if this.resourcePathError "align-self-center" "align-self-end"}}>
+    <Hds::Button
+      @text="Clear"
+      @icon="trash"
+      @color="secondary"
+      {{on "click" this.clearSelections}}
+      data-test-button="clear"
+    />
+  </div>
+</Hds::Layout::Flex>
+
+<hr class="has-background-gray-300" />
+
+<Hds::ButtonSet class="has-top-padding-m">
+  <Hds::Button
+    @text="Recover"
+    type="submit"
+    disabled={{not (eq this.badge.status "Ready")}}
+    data-test-button="recover"
+    {{on "click" this.recover}}
+  />
+  <Hds::Button
+    @text="Read"
+    @color="secondary"
+    disabled={{not (eq this.badge.status "Ready")}}
+    data-test-button="read"
+    {{on "click" this.readResource}}
+  />
+</Hds::ButtonSet>
+
+{{#if this.showReadModal}}
+  <Hds::Modal @onClose={{this.closeReadModal}} data-test-read-secrets as |M|>
+    <M.Header>
+      Read secrets
+    </M.Header>
+    <M.Body>
+      <div class="has-bottom-padding-m">
+        <Hds::Form::Toggle::Field
+          checked={{this.showJson}}
+          {{on "change" this.toggleJson}}
+          data-test-toggle-input="snapshot-read-secrets"
+          as |F|
+        >
+          <F.Label>JSON</F.Label>
+          <F.HelperText>Please use the toggle to see your secret value in JSON.</F.HelperText>
+        </Hds::Form::Toggle::Field>
+      </div>
+
+      <SecretFormShow @showAdvancedMode={{this.showJson}} @modelForData={{this.modelForData}} />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button type="button" @text="Close" {{on "click" F.close}} data-test-button="close" />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

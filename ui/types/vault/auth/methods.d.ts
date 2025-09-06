@@ -6,6 +6,8 @@
 import type { ApiResponse, WrapInfo } from 'vault/auth/api';
 import type { POSSIBLE_FIELDS } from 'vault/utils/auth-form-helpers';
 import type { MfaRequirementApiResponse } from './mfa';
+import { AuthEnableMethodRequest } from '@hashicorp/vault-client-typescript';
+import { MountConfig } from 'vault/mount';
 
 // ApiResponse includes top-level fields like request_id, etc.
 // Some auth methods return login data under the "auth" key,
@@ -84,3 +86,16 @@ export interface UsernameLoginResponse extends ApiResponse {
     metadata: { username: string };
   };
 }
+
+export type UserLockoutConfig = {
+  lockout_threshold?: string;
+  lockout_duration?: string;
+  lockout_counter_reset?: string;
+  lockout_disable?: boolean;
+};
+
+export type AuthMethodFormData = AuthEnableMethodRequest & {
+  path: string;
+  config: MountConfig;
+  user_lockout_config: UserLockoutConfig;
+};

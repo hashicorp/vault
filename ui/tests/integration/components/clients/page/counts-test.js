@@ -16,7 +16,6 @@ import clientsHandler, {
 import { fromUnixTime, getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
-import { selectChoose } from 'ember-power-select/test-support';
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
@@ -53,8 +52,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
         @versionHistory={{this.versionHistory}}
         @startTimestamp={{this.startTimestamp}}
         @endTimestamp={{this.endTimestamp}}
-        @namespace={{this.namespace}}
-        @mountPath={{this.mountPath}}
         @onFilterChange={{this.onFilterChange}}
       >
         <div data-test-yield>Yield block</div>
@@ -162,41 +159,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText(testCase.expectedStart);
       assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText(testCase.expectedEnd);
     });
-  });
-
-  test('it should render namespace and auth mount filters', async function (assert) {
-    assert.expect(5);
-
-    this.namespace = 'root';
-    this.mountPath = 'auth/authid0';
-
-    let assertion = (params) =>
-      assert.deepEqual(params, { ns: undefined, mountPath: undefined }, 'Auth mount cleared with namespace');
-    this.onFilterChange = (params) => {
-      if (assertion) {
-        assertion(params);
-      }
-      const keys = Object.keys(params);
-      this.namespace = keys.includes('ns') ? params.ns : this.namespace;
-      this.mountPath = keys.includes('mountPath') ? params.mountPath : this.mountPath;
-    };
-
-    await this.renderComponent();
-
-    assert.dom(CLIENT_COUNT.counts.namespaces).includesText(this.namespace, 'Selected namespace renders');
-    assert.dom(CLIENT_COUNT.counts.mountPaths).includesText(this.mountPath, 'Selected auth mount renders');
-
-    await click(`${CLIENT_COUNT.counts.namespaces} button`);
-    // this is only necessary in tests since SearchSelect does not respond to initialValue changes
-    // in the app the component is rerender on query param change
-    assertion = null;
-    await click(`${CLIENT_COUNT.counts.mountPaths} button`);
-    assertion = (params) => assert.true(params.ns.includes('ns'), 'Namespace value sent on change');
-    await selectChoose(CLIENT_COUNT.counts.namespaces, '.ember-power-select-option', 0);
-
-    assertion = (params) =>
-      assert.true(params.mountPath.includes('auth/'), 'Auth mount value sent on change');
-    await selectChoose(CLIENT_COUNT.counts.mountPaths, 'auth/authid0');
   });
 
   test('it should render start time discrepancy alert', async function (assert) {

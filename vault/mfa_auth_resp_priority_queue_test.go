@@ -87,6 +87,89 @@ func TestLoginMFAPriorityQueue_PushPopByKey(t *testing.T) {
 	}
 }
 
+// TestLoginMFAPriorityQueue_PeekByKey tests the PeekByKey method of
+// LoginMFAPriorityQueue. It verifies that PeekByKey returns the correct item
+// without removing it from the queue, returns errors on unhappy paths, handles
+// non-existing keys appropriately, works correctly on empty queues, and
+// properly handles empty key strings.
+func TestLoginMFAPriorityQueue_PeekByKey(t *testing.T) {
+	pq := NewLoginMFAPriorityQueue()
+	tc := testCases()
+	expectedLength := len(tc)
+
+	// Peek from empty queue
+	peekedItem, err := pq.PeekByKey("item-2")
+	if peekedItem != nil {
+		t.Fatal("expected nil when peeking from empty queue, got item")
+	}
+	if err == nil {
+		t.Fatal("expected an error when peeking from empty queue, got nil")
+	}
+	if pq.Len() != 0 {
+		t.Fatalf("expected empty queue to remain size 0, got %d", pq.Len())
+	}
+
+	// Push test items
+	for _, item := range tc {
+		if err := pq.Push(item); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Peek with empty key
+	peekedItem, err = pq.PeekByKey("")
+	if peekedItem != nil {
+		t.Fatal("expected nil for empty key, got item")
+	}
+	if err == nil {
+		t.Fatal("expected error when peeking with empty key , got nil")
+	}
+	// Verify queue size unchanged
+	if pq.Len() != expectedLength {
+		t.Fatalf("expected queue size to remain %d, got %d", expectedLength, pq.Len())
+	}
+
+	// Peek at non-existing item
+	peekedItem, err = pq.PeekByKey("non-existing-key")
+	if peekedItem != nil {
+		t.Fatal("expected nil for non-existing key, got item")
+	}
+	if err == nil {
+		t.Fatal("expected error when peeking with non-existing key, got nil")
+	}
+	// Verify queue size unchanged
+	if pq.Len() != expectedLength {
+		t.Fatalf("expected queue size to remain %d, got %d", expectedLength, pq.Len())
+	}
+
+	// Peek at a specific item
+	peekedItem, err = pq.PeekByKey(tc[2].RequestID)
+	if peekedItem == nil {
+		t.Fatal("expected to peek item-2, got nil")
+	}
+	if err != nil {
+		t.Fatal("expected no error when peeking existing key, got", err)
+	}
+	if peekedItem.RequestID != tc[2].RequestID {
+		t.Fatal("expected the same item on subsequent peeks, got different items")
+	}
+	// Verify queue size unchanged
+	if pq.Len() != expectedLength {
+		t.Fatalf("expected queue size to remain %d, got %d", expectedLength, pq.Len())
+	}
+	// Verify item still exists in queue
+	stillExists, err := pq.PeekByKey(tc[2].RequestID)
+	if stillExists == nil {
+		t.Fatal("item should still exist after peek")
+	}
+	if err != nil {
+		t.Fatal("expected no error when peeking existing key for the second time, got", err)
+	}
+	if stillExists.RequestID != tc[2].RequestID {
+		t.Fatal("expected the same item on subsequent peeks, got different items")
+	}
+}
+
 func TestLoginMFARemoveStaleEntries(t *testing.T) {
 	pq := NewLoginMFAPriorityQueue()
 

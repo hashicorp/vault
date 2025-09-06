@@ -1,0 +1,25 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<div class="box is-fullwidth is-marginless is-shadowless">
+  <Hds::Form::FileInput::Field {{on "change" this.pickedFile}} data-test-file-input as |F|>
+    <F.Label>{{@label}}</F.Label>
+    {{#if @fileHelpText}}
+      <F.HelperText>
+        {{@fileHelpText}}
+      </F.HelperText>
+    {{/if}}
+    {{#if @error}}
+      <F.Error data-test-validation-error="file">{{@error}}</F.Error>
+    {{/if}}
+  </Hds::Form::FileInput::Field>
+  {{#if this.filename}}
+    <p class="help has-text-grey">
+      This file is
+      {{this.fileSize}}
+      and was created on
+      {{date-format this.fileLastModified "MMM dd, yyyy hh:mm:ss a"}}.
+    </p>
+  {{/if}}
+</div>

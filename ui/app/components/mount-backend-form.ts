@@ -6,42 +6,53 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import { action } from '@ember/object';
+import { action, set } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { presence } from 'vault/utils/forms/validators';
 import { filterEnginesByMountCategory, isAddonEngine } from 'vault/utils/all-engines-metadata';
+import { MOUNT_CATEGORIES } from 'vault/utils/plugin-catalog-helpers';
 import { assert } from '@ember/debug';
-import { ResponseError } from '@hashicorp/vault-client-typescript';
-import AdapterError from '@ember-data/adapter/error';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
-import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
+import type AuthMethodForm from 'vault/forms/auth/method';
 import type SecretsEngineForm from 'vault/forms/secrets/engine';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type ApiService from 'vault/services/api';
 import type { ApiError } from '@ember-data/adapter/error';
+import type { ValidationMap } from 'vault/vault/app-types';
+import type { EnhancedPluginCatalogData } from 'vault/services/plugin-catalog';
 
 /**
  * @module MountBackendForm
  * The `MountBackendForm` is used to mount either a secret or auth backend.
  *
  * @example ```js
- *   <MountBackendForm @mountCategory="secret" @onMountSuccess={{this.onMountSuccess}} />```
+ *   <MountBackendForm @mountModel={{this.model}} @mountCategory="secret" @onMountSuccess={{this.onMountSuccess}} />```
  *
+ * @param {object|Form} mountModel - Either a model object containing form and plugin data (secrets), or the form directly (auth).
  * @param {function} onMountSuccess - A function that transitions once the Mount has been successfully posted.
  * @param {string} mountCategory - The type of engine to mount, either 'secret' or 'auth'.
  *
  */
 
-type MountModel = SecretsEngineForm | AuthEnableModel;
+type MountModel =
+  | {
+      form: SecretsEngineForm;
+      pluginCatalogData?: EnhancedPluginCatalogData | null;
+      pluginCatalogError?: boolean;
+    }
+  | AuthMethodForm;
 
 interface Args {
   mountModel: MountModel;
   mountCategory: 'secret' | 'auth';
   onMountSuccess: (type: string, path: string, useEngineRoute: boolean) => void;
 }
+
+const SECRET_MOUNT_CATEGORY = MOUNT_CATEGORIES.SECRET;
+const AUTH_MOUNT_CATEGORY = MOUNT_CATEGORIES.AUTH;
 
 export default class MountBackendForm extends Component<Args> {
   @service declare readonly store: Store;
@@ -50,64 +61,62 @@ export default class MountBackendForm extends Component<Args> {
   @service declare readonly api: ApiService;
 
   // validation related properties
-  @tracked modelValidations = null;
-  @tracked invalidFormAlert = null;
+  @tracked modelValidations: ValidationMap | null = null;
+  @tracked invalidFormAlert: string | null = null;
 
   @tracked errorMessage: string | string[] = '';
+
+  get mountForm(): SecretsEngineForm | AuthMethodForm {
+    // Check if mountModel has form property (secrets route)
+    if (typeof this.args.mountModel === 'object' && 'form' in this.args.mountModel) {
+      return this.args.mountModel.form;
+    }
+    // Otherwise, assume the model IS the form (auth route)
+    return this.args.mountModel as SecretsEngineForm | AuthMethodForm;
+  }
+
+  get showEnable(): boolean {
+    return !!this.mountForm.type;
+  }
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     assert(`@mountCategory is required. Must be "auth" or "secret".`, presence(this.args.mountCategory));
   }
 
-  willDestroy() {
-    // components are torn down after store is unloaded and will cause an error if attempt to unload record
-    const noTeardown = this.store && !this.store.isDestroying;
-    if (noTeardown && this.args.mountCategory === 'auth' && this.args?.mountModel?.isNew) {
-      this.args.mountModel.unloadRecord();
-    }
-    super.willDestroy();
-  }
-
   checkPathChange(backendType: string) {
     if (!backendType) return;
-    const mount = this.args.mountModel;
-    const currentPath = mount.path;
+    const { data } = this.mountForm;
     // mountCategory is usually 'secret' or 'auth', but sometimes an empty string is passed in (like when we click the cancel button).
     // In these cases, we should default to returning auth methods.
     const mountsByType = filterEnginesByMountCategory({
-      mountCategory: this.args.mountCategory ?? 'auth',
+      mountCategory: this.args.mountCategory ?? AUTH_MOUNT_CATEGORY,
       isEnterprise: true,
     }).map((engine) => engine.type);
-    // if the current path has not been altered by user,
+
+    // if the current path has not been altered by user (is empty or matches a default mount type),
     // change it here to match the new type
-    if (!currentPath || mountsByType.includes(currentPath)) {
-      mount.path = backendType;
+    if (!data.path || mountsByType.includes(data.path)) {
+      data.path = backendType;
     }
   }
 
   typeChangeSideEffect(type: string) {
-    if (this.args.mountCategory !== 'secret') return;
     // If type PKI, set max lease to ~10years
-    this.args.mountModel.config.max_lease_ttl = type === 'pki' ? '3650d' : 0;
-  }
-
-  checkModelValidity(model: MountModel) {
-    const { mountCategory } = this.args;
-    const { isValid, state, invalidFormMessage, data } =
-      mountCategory === 'secret' ? model.toJSON() : model.validate();
-    this.modelValidations = state;
-    this.invalidFormAlert = invalidFormMessage;
-    return { isValid, data };
+    if (this.args.mountCategory === SECRET_MOUNT_CATEGORY) {
+      this.mountForm.data.config.max_lease_ttl = type === 'pki' ? '3650d' : 0;
+    }
   }
 
   checkModelWarnings() {
     // check for warnings on change
     // since we only show errors on submit we need to clear those out and only send warning state
-    const { mountCategory, mountModel } = this.args;
-    const { state } = mountCategory === 'secret' ? mountModel.toJSON() : mountModel.validate();
+    const mountModel = this.mountForm;
+    const { state } = mountModel.toJSON();
     for (const key in state) {
-      state[key].errors = [];
+      if (state[key]) {
+        state[key].errors = [];
+      }
     }
     this.modelValidations = state;
     this.invalidFormAlert = null;
@@ -116,7 +125,7 @@ export default class MountBackendForm extends Component<Args> {
   async saveKvConfig(path: string, formData: SecretsEngineForm['data']) {
     const { options, kv_config = {} } = formData;
     const { max_versions, cas_required, delete_version_after } = kv_config;
-    const isKvV2 = options?.version === 2 && ['kv', 'generic'].includes(this.args.mountModel.engineType);
+    const isKvV2 = options?.version === 2 && ['kv', 'generic'].includes(this.mountForm.normalizedType);
     const hasConfig = max_versions || cas_required || delete_version_after;
 
     if (isKvV2 && hasConfig) {
@@ -159,49 +168,49 @@ export default class MountBackendForm extends Component<Args> {
   @waitFor
   *mountBackend(event: Event) {
     event.preventDefault();
-    const { mountModel, mountCategory } = this.args;
-    const { type, path } = mountModel;
+    const { mountCategory } = this.args;
+    const mountModel = this.mountForm;
+    const { type } = mountModel;
+    const { path } = mountModel.data;
     // only submit form if validations pass
-    const { isValid, data: formData } = this.checkModelValidity(mountModel);
+    const { isValid, state, invalidFormMessage, data } = mountModel.toJSON();
     if (!isValid) {
+      this.modelValidations = state;
+      this.invalidFormAlert = invalidFormMessage;
       return;
     }
 
     try {
-      if (mountCategory === 'secret') {
-        yield this.api.sys.mountsEnableSecretsEngine(path, formData);
-        yield this.saveKvConfig(path, formData);
+      if (mountCategory === SECRET_MOUNT_CATEGORY) {
+        yield this.api.sys.mountsEnableSecretsEngine(path, data);
+        yield this.saveKvConfig(path, data as SecretsEngineForm['data']);
       } else {
-        yield mountModel.save();
+        yield this.api.sys.authEnableMethod(path, data);
       }
       this.flashMessages.success(
-        `Successfully mounted the ${type} ${
-          this.args.mountCategory === 'secret' ? 'secrets engine' : 'auth method'
+        `Successfully mounted the ${mountModel.type} ${
+          mountCategory === SECRET_MOUNT_CATEGORY ? 'secrets engine' : 'auth method'
         } at ${path}.`
       );
       // check whether to use the Ember engine route
-      const useEngineRoute = isAddonEngine(mountModel.engineType, Number(formData?.options?.version));
+      const version = (data as SecretsEngineForm['data']).options?.version;
+      const useEngineRoute = isAddonEngine(mountModel.normalizedType, Number(version));
       this.args.onMountSuccess(type, path, useEngineRoute);
     } catch (error) {
-      if (error instanceof ResponseError) {
-        const { status, response, message } = yield this.api.parseError(error);
-        this.onMountError(status, response.errors, message);
-      } else {
-        const err = error as AdapterError;
-        this.onMountError(err.httpStatus, err.errors, err.message);
-      }
+      const { status, response, message } = yield this.api.parseError(error);
+      this.onMountError(status, response.errors, message);
     }
   }
 
   @action
   onKeyUp(name: string, value: string) {
-    this.args.mountModel[name] = value;
+    set(this.mountForm.data, name, value);
     this.checkModelWarnings();
   }
 
   @action
   setMountType(value: string) {
-    this.args.mountModel.type = value;
+    this.mountForm.type = value;
     this.typeChangeSideEffect(value);
     this.checkPathChange(value);
   }
@@ -209,6 +218,7 @@ export default class MountBackendForm extends Component<Args> {
   @action
   handleIdentityTokenKeyChange(value: string[] | string): void {
     // if array, it's coming from the search-select component, otherwise it hit the fallback component and will come in as a string.
-    this.args.mountModel.config.identity_token_key = Array.isArray(value) ? value[0] : value;
+    const { config } = this.mountForm.data;
+    config.identity_token_key = Array.isArray(value) ? value[0] : value;
   }
 }

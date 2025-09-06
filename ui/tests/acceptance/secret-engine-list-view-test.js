@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, currentRouteName, visit, currentURL, triggerEvent } from '@ember/test-helpers';
+import { click, fillIn, currentRouteName, visit, currentURL } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -19,7 +19,6 @@ import {
   tokenWithPolicyCmd,
 } from 'vault/tests/helpers/commands';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
-import { MOUNT_BACKEND_FORM } from '../helpers/components/mount-backend-form-selectors';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | secret-engine list view', function (hooks) {
@@ -43,7 +42,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   test('it does not camelize the secret mount path', async function (assert) {
     await visit('/vault/secrets');
     await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('aws'));
+    await click(GENERAL.cardContainer('aws'));
     await fillIn(GENERAL.inputByAttr('path'), 'aws_engine');
     await click(GENERAL.submitButton);
     await click(GENERAL.breadcrumbLink('Secrets'));
@@ -60,7 +59,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   test('after enabling an unsupported engine it takes you to list page', async function (assert) {
     await visit('/vault/secrets');
     await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('nomad'));
+    await click(GENERAL.cardContainer('nomad'));
     await click(GENERAL.submitButton);
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'navigates to the list page');
@@ -71,7 +70,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   test('after enabling a supported engine it takes you to mount page, can see configure and clicking breadcrumb takes you back to list page', async function (assert) {
     await visit('/vault/secrets');
     await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('aws'));
+    await click(GENERAL.cardContainer('aws'));
     await click(GENERAL.submitButton);
 
     assert.dom(SES.configTab).exists();
@@ -84,57 +83,6 @@ module('Acceptance | secret-engine list view', function (hooks) {
     );
     // cleanup
     await runCmd(deleteEngineCmd('aws'));
-  });
-
-  test('hovering over the icon of an unsupported engine shows unsupported tooltip', async function (assert) {
-    await visit('/vault/secrets');
-    await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('nomad'));
-    await click(GENERAL.submitButton);
-
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'nomad');
-
-    await triggerEvent('.hds-tooltip-button', 'mouseenter');
-    assert
-      .dom('.hds-tooltip-container')
-      .hasText(
-        'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.',
-        'shows tooltip text for unsupported engine'
-      );
-    // cleanup
-    await runCmd(deleteEngineCmd('nomad'));
-  });
-
-  test('hovering over the icon of a supported engine shows engine name', async function (assert) {
-    await visit('/vault/secrets');
-    await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('ssh'));
-    await click(GENERAL.submitButton);
-    await click(GENERAL.breadcrumbLink('Secrets'));
-
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'ssh');
-    await triggerEvent('.hds-tooltip-button', 'mouseenter');
-    assert.dom('.hds-tooltip-container').hasText('SSH', 'shows tooltip for SSH without version');
-
-    // cleanup
-    await runCmd(deleteEngineCmd('ssh'));
-  });
-
-  test('hovering over the icon of a kv engine shows engine name and version', async function (assert) {
-    await visit('/vault/secrets');
-
-    await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('kv'));
-    await fillIn(GENERAL.inputByAttr('path'), `kv-${this.uid}`);
-    await click(GENERAL.submitButton);
-    await click(GENERAL.breadcrumbLink('Secrets'));
-
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), `kv-${this.uid}`);
-    await triggerEvent('.hds-tooltip-button', 'mouseenter');
-    assert.dom('.hds-tooltip-container').hasText('KV version 2', 'shows tooltip for kv version 2');
-
-    // cleanup
-    await runCmd(deleteEngineCmd('kv'));
   });
 
   test('enterprise: cannot view list without permissions inside a namespace', async function (assert) {
@@ -193,6 +141,21 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await runCmd(`delete sys/namespaces/${this.namespace}`);
   });
 
+  test('enterprise: it should navigate to cubbyhole list view in child namespace', async function (assert) {
+    this.namespace = `ns-${this.uid}`;
+
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    await loginNs(this.namespace);
+    await visit(`/vault/secrets?namespace=${this.namespace}`);
+    await click(SES.secretsBackendLink('cubbyhole'));
+
+    assert.dom(GENERAL.emptyStateTitle).hasText('No secrets in this backend');
+
+    // cleanup namespace
+    await login();
+    await runCmd(`delete sys/namespaces/${this.namespace}`);
+  });
+
   test('after disabling it stays on the list view', async function (assert) {
     // first mount an engine so we can disable it.
     const enginePath = `alicloud-disable-${this.uid}`;
@@ -227,7 +190,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     }
 
     // navigate and check that details view is shown from non-nested secrets
-    await click(GENERAL.pagination.next);
+    await click(GENERAL.nextPage);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${enginePath1}/list?page=2`,
@@ -268,7 +231,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       'After clicking a nested secret it navigates to the children list view.'
     );
 
-    await click(GENERAL.pagination.next);
+    await click(GENERAL.nextPage);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${enginePath1}/list/${parentPath}/?page=2`,

@@ -1,0 +1,137 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Recovery::Page::Header @title="Upload Snapshot" @breadcrumbs={{@breadcrumbs}} />
+
+{{#if this.bannerError}}
+  <div class="has-top-padding-m has-bottom-padding-m">
+    <Hds::Alert @type="inline" @color="critical" data-test-inline-alert as |A|>
+      <A.Title>Error</A.Title>
+      <A.Description>{{this.bannerError}}</A.Description>
+    </Hds::Alert>
+  </div>
+{{/if}}
+
+<form {{on "submit" this.loadSnapshot}}>
+  <Hds::Form::Legend>
+    Choose how to provide the snapshot
+  </Hds::Form::Legend>
+  <div class="has-top-padding-s">
+    <Hds::Form::Radio::Field
+      name="data-center-radio"
+      checked={{eq this.selectedLoadMethod this.loadMethods.AUTOMATED}}
+      disabled={{eq @model.configError.status 404}}
+      @value={{this.loadMethods.AUTOMATED}}
+      {{on "change" this.selectLoadMethod}}
+      data-test-input="automatic"
+      as |F|
+    >
+      <F.Label>
+        Load from automated snapshots
+        {{#if (eq @model.configError.status 404)}}
+          <Hds::Badge
+            class="has-left-margin-xs"
+            @text="No snapshots available"
+            @size="small"
+            @icon="alert-triangle"
+            @color="warning"
+          />
+        {{/if}}
+      </F.Label>
+      <F.HelperText>
+        Provide the snapshot URL from a configured cloud storage
+      </F.HelperText>
+    </Hds::Form::Radio::Field>
+  </div>
+  <div class="has-top-padding-s has-bottom-padding-m">
+    <Hds::Form::Radio::Field
+      name="data-center-radio"
+      checked={{eq this.selectedLoadMethod this.loadMethods.MANUAL}}
+      @value={{this.loadMethods.MANUAL}}
+      {{on "change" this.selectLoadMethod}}
+      data-test-input="manual"
+      as |F|
+    >
+      <F.Label>Manually upload snapshots</F.Label>
+      <F.HelperText>
+        Upload a new snapshot to the disk
+      </F.HelperText>
+    </Hds::Form::Radio::Field>
+  </div>
+  <div class="has-left-padding-l">
+
+    {{#if (eq this.selectedLoadMethod this.loadMethods.AUTOMATED)}}
+      <div class="has-bottom-padding-m">
+        {{! Allow manual entry for automated configs if there are no results due to 403}}
+        {{#if this.automatedConfigs}}
+          <Hds::Form::SuperSelect::Single::Field
+            @onChange={{fn (mut this.selectedConfig)}}
+            @selected={{this.selectedConfig}}
+            @options={{this.automatedConfigs}}
+            @isInvalid={{this.configError}}
+            data-test-select="config"
+            as |F|
+          >
+            <F.Label>Snapshot configuration name</F.Label>
+            <F.HelperText>
+              Name of the configuration that created the snapshot. Existing automated snapshots should be configured via /sys
+              endpoint.
+            </F.HelperText>
+            <F.Options>{{F.options}}</F.Options>
+          </Hds::Form::SuperSelect::Single::Field>
+        {{else}}
+          <Hds::Form::TextInput::Field
+            @isInvalid={{this.configError}}
+            @value={{this.selectedConfig}}
+            {{on "input" (pipe (pick "target.value") (fn (mut this.selectedConfig)))}}
+            data-test-input="manual-config"
+            as |F|
+          >
+            <F.Label>Snapshot configuration name</F.Label>
+            <F.HelperText>
+              Name of the configuration that created the snapshot. Existing automated snapshots should be configured via /sys
+              endpoint.
+            </F.HelperText>
+            {{#if this.configError}}
+              <F.Error data-test-validation-error="config">{{this.configError}}</F.Error>
+            {{/if}}
+          </Hds::Form::TextInput::Field>
+        {{/if}}
+      </div>
+      <div class="has-bottom-padding-m">
+        <Hds::Form::TextInput::Field
+          @isInvalid={{this.urlError}}
+          @value={{this.url}}
+          name="url"
+          {{on "input" this.updateUrl}}
+          data-test-input="url"
+          as |F|
+        >
+          <F.Label>URL</F.Label>
+          <F.HelperText>
+            The URL to the cloud storage bucket
+          </F.HelperText>
+          {{#if this.urlError}}
+            <F.Error data-test-validation-error="url">{{this.urlError}}</F.Error>
+          {{/if}}
+        </Hds::Form::TextInput::Field>
+      </div>
+    {{else}}
+      <FileToArrayBuffer
+        class="hsa-left-padding-l"
+        @error={{this.fileError}}
+        @label="Please choose a snapshot file"
+        @onChange={{fn (mut this.file)}}
+      />
+    {{/if}}
+  </div>
+
+  <hr class="has-background-gray-300" />
+
+  <Hds::ButtonSet class="has-top-padding-m">
+    <Hds::Button @text="Load snapshot" type="submit" data-test-submit />
+    <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.recovery.snapshots" data-test-cancel />
+  </Hds::ButtonSet>
+</form>

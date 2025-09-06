@@ -1,4 +1,3 @@
-@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -13,8 +12,8 @@
 }
 
 .message {
-  background: color_variables.$blue-010;
-  border: 1px solid color_variables.$blue-100;
+  background: var(--token-color-palette-blue-50);
+  border: 1px solid var(--token-color-palette-blue-100);
   margin-bottom: size_variables.$spacing-12;
   padding: size_variables.$spacing-12 size_variables.$spacing-16 size_variables.$spacing-16
     size_variables.$spacing-12;
@@ -25,12 +24,12 @@
   }
 
   .message-icon {
-    color: color_variables.$blue;
+    color: var(--token-color-palette-blue-200);
     margin-right: size_variables.$spacing-8;
   }
 
   .message-title {
-    color: color_variables.$blue-500;
+    color: var(--token-color-palette-blue-200);
     font-size: 16px;
     font-weight: font_variables.$font-weight-bold;
     line-height: 1.25;
@@ -44,70 +43,70 @@
 
   // message types, see message-types.js
   &.is-danger {
-    background: color_variables.$red-010;
-    border: 1px solid color_variables.$red-050;
+    background: var(--token-color-surface-critical);
+    border: 1px solid var(--token-color-palette-red-50);
 
     .message-body {
-      color: color_variables.$red-700;
+      color: var(--token-color-palette-red-300);
     }
 
     .message-icon {
-      color: color_variables.$red-500;
+      color: var(--token-color-palette-red-200);
     }
 
     .message-title {
-      color: color_variables.$red-700;
+      color: var(--token-color-palette-red-300);
     }
   }
 
   &.is-highlight {
-    background: color_variables.$yellow-010;
-    border: 1px solid color_variables.$yellow-100;
+    background: var(--token-color-surface-warning);
+    border: 1px solid var(--token-color-palette-amber-100);
 
     .message-body {
-      color: color_variables.$ui-gray-900;
+      color: var(--token-color-palette-neutral-600);
     }
 
     .message-icon {
-      color: color_variables.$yellow-500;
+      color: var(--token-color-palette-amber-200);
     }
 
     .message-title {
-      color: color_variables.$orange-700;
+      color: var(--token-color-palette-amber-300);
     }
   }
 
   &.is-info {
-    background-color: color_variables.$blue-010;
+    background-color: var(--token-color-palette-blue-50);
 
     .message-body {
-      color: color_variables.$blue-700;
+      color: var(--token-color-palette-blue-300);
     }
 
     .message-header {
-      background-color: color_variables.$blue-500;
-      color: color_variables.$white;
+      background-color: var(--token-color-palette-blue-200);
+      color: hsl(0, 0%, 100%);
     }
 
     .message-title {
-      color: color_variables.$blue-700;
+      color: var(--token-color-palette-blue-300);
     }
   }
 
   &.is-success {
-    background: color_variables.$green-010;
-    border: 1px solid color_variables.$green-100;
+    background: var(--token-color-surface-success);
+    border: 1px solid var(--token-color-palette-green-100);
 
     .message-body {
-      color: color_variables.$green-900;
+      color: var(--token-color-palette-green-500);
     }
 
     .message-icon {
-      color: color_variables.$green-500;
+      color: var(--token-color-palette-green-200);
     }
 
     .message-title {
-      color: color_variables.$green-700;
+      color: var(--token-color-palette-green-300);
     }
   }
 }

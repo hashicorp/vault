@@ -87,6 +87,19 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 		}
 
+		defer func() {
+			if err == nil && (resp == nil || !resp.IsError()) {
+				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseCredentialCreateSuccess,
+					AdditionalDatabaseMetadata{key: "role_name", value: name},
+					AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
+			} else {
+				b.dbEvent(ctx, "creds-create-fail", req.Path, name, modified)
+				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseCredentialCreateFail,
+					AdditionalDatabaseMetadata{key: "role_name", value: name},
+					AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
+			}
+		}()
+
 		dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
 		if err != nil {
 			return nil, err
@@ -280,6 +293,10 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 		case v5.CredentialTypeRSAPrivateKey:
 			respData["rsa_private_key"] = string(role.StaticAccount.PrivateKey)
 		}
+
+		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseStaticCredentialRead,
+			AdditionalDatabaseMetadata{key: "role_name", value: name},
+			AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
 
 		return &logical.Response{
 			Data: respData,

@@ -16,10 +16,16 @@ locals {
     org         = "hashicorp"
     admin_pw    = "password1"
     version     = var.ldap_version
-    port        = var.ldap_port
-    secure_port = var.ldaps_port
+    port        = var.ports.ldap.port
+    secure_port = var.ports.ldaps.port
     ip_version  = var.ip_version
     host        = var.hosts[0]
+  }
+  kmip_client = {
+    // The KMIP client configuration is used to connect to the KMIP server
+    // uses Percona (MySQL) as the KMIP client.
+    port = var.ports.mysql.port
+    host = var.hosts[0]
   }
 }
 
@@ -27,6 +33,7 @@ locals {
 output "state" {
   value = {
     ldap = local.ldap_server
+    kmip = local.kmip_client
   }
 }
 
@@ -39,25 +46,47 @@ module "install_packages" {
   packages = var.packages
 }
 
-# Creating OpenLDAP Server
+# Creating OpenLDAP Server using generic container script
 resource "enos_remote_exec" "setup_openldap" {
   depends_on = [module.install_packages]
 
-  environment = {
-    LDAP_CONTAINER_VERSION = local.ldap_server.version
-    LDAP_DOMAIN            = local.ldap_server.domain
-    LDAP_ORG               = local.ldap_server.org
-    LDAP_ADMIN_PW          = local.ldap_server.admin_pw
-    LDAP_IP_ADDRESS        = local.test_server_address
-    LDAP_PORT              = local.ldap_server.port
-    LDAPS_PORT             = local.ldap_server.secure_port
-  }
+  scripts = [abspath("${path.module}/scripts/start-container.sh")]
 
-  scripts = [abspath("${path.module}/scripts/set-up-openldap.sh")]
+  environment = {
+    CONTAINER_IMAGE = "docker.io/osixia/openldap:${local.ldap_server.version}"
+    CONTAINER_NAME  = "openldap"
+    CONTAINER_PORTS = "${local.ldap_server.port},${local.ldap_server.secure_port}"
+    CONTAINER_ENVS  = "LDAP_ORGANISATION=${local.ldap_server.org},LDAP_DOMAIN=${local.ldap_server.domain},LDAP_ADMIN_PASSWORD=${local.ldap_server.admin_pw}"
+  }
 
   transport = {
     ssh = {
       host = local.ldap_server.host.public_ip
+    }
+  }
+}
+
+# Creating KMIP Server using generic container script
+resource "enos_remote_exec" "create_kmip" {
+  depends_on = [module.install_packages]
+
+  inline = [
+    "mkdir -p /tmp/kmip_temp"
+  ]
+
+  scripts = [abspath("${path.module}/scripts/start-container.sh")]
+
+  environment = {
+    CONTAINER_IMAGE   = "docker.io/percona/percona-server:8.0"
+    CONTAINER_NAME    = "kmip"
+    CONTAINER_VOLUMES = "/tmp/kmip_temp:/TEMP_DIR"
+    CONTAINER_ENVS    = "KMIP_ADDR=${local.test_server_address},MYSQL_ROOT_PASSWORD=testpassword"
+    CONTAINER_ARGS    = "--port ${var.ports.kmip.port}"
+  }
+
+  transport = {
+    ssh = {
+      host = local.kmip_client.host.public_ip
     }
   }
 }

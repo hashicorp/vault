@@ -4,18 +4,23 @@
  */
 
 import Route from '@ember/routing/route';
-import { service } from '@ember/service';
 import SecretsEngineForm from 'vault/forms/secrets/engine';
+import { service } from '@ember/service';
+import { hash } from 'rsvp';
 
 import type { ModelFrom } from 'vault/vault/route';
-import type Store from '@ember-data/store';
+import type AuthService from 'vault/services/auth';
+import type NamespaceService from 'vault/services/namespace';
+import type PluginCatalogService from 'vault/services/plugin-catalog';
 
 export type MountSecretBackendModel = ModelFrom<VaultClusterSettingsMountSecretBackendRoute>;
 
 export default class VaultClusterSettingsMountSecretBackendRoute extends Route {
-  @service declare readonly store: Store;
+  @service declare readonly auth: AuthService;
+  @service declare readonly namespace: NamespaceService;
+  @service('plugin-catalog') declare readonly pluginCatalog: PluginCatalogService;
 
-  model() {
+  async model() {
     const defaults = {
       config: { listing_visibility: false },
       kv_config: {
@@ -25,6 +30,16 @@ export default class VaultClusterSettingsMountSecretBackendRoute extends Route {
       },
       options: { version: 2 },
     };
-    return new SecretsEngineForm(defaults, { isNew: true });
+
+    const secretEngineForm = new SecretsEngineForm(defaults, { isNew: true });
+
+    // Fetch plugin catalog data to enhance the secret engines list
+    const pluginCatalogResponse = await this.pluginCatalog.fetchPluginCatalog();
+
+    return hash({
+      form: secretEngineForm,
+      pluginCatalogData: pluginCatalogResponse.data,
+      pluginCatalogError: pluginCatalogResponse.error,
+    });
   }
 }

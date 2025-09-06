@@ -4,25 +4,25 @@
  */
 
 import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import { service } from '@ember/service';
+
 import type { ByMonthNewClients, TotalClients } from 'core/utils/client-count-utils';
-import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
+import type FlagsService from 'vault/services/flags';
 
 interface Args {
-  isSecretsSyncActivated: boolean;
   byMonthNewClients: ByMonthNewClients[];
-  isHistoricalMonth: boolean;
-  isCurrentMonth: boolean;
   runningTotals: TotalClients;
-  upgradesDuringActivity: ClientsVersionHistoryModel[];
-  responseTimestamp: string;
-  mountPath: string;
 }
 
 export default class RunningTotal extends Component<Args> {
+  @service declare readonly flags: FlagsService;
+
+  @tracked showStacked = false;
+
   get chartContainerText() {
-    const { isSecretsSyncActivated } = this.args;
     return `The total clients in the specified date range, displayed per month. This includes entity, non-entity${
-      isSecretsSyncActivated ? ', ACME and secrets sync clients' : ' and ACME clients'
+      this.flags.secretsSyncIsActivated ? ', ACME and secrets sync clients' : ' and ACME clients'
     }. The total client count number is an important consideration for Vault billing.`;
   }
 
@@ -34,6 +34,15 @@ export default class RunningTotal extends Component<Args> {
   }
 
   get chartLegend() {
-    return [{ key: 'new_clients', label: 'new clients' }];
+    if (this.showStacked) {
+      return [
+        { key: 'entity_clients', label: 'Entity clients' },
+        { key: 'non_entity_clients', label: 'Non-entity clients' },
+        { key: 'acme_clients', label: 'ACME clients' },
+        // MUST BE LAST because conditionally renders and legend color mapping for stacked bars will be off otherwise
+        ...(this.flags.secretsSyncIsActivated ? [{ key: 'secret_syncs', label: 'Secret sync clients' }] : []),
+      ];
+    }
+    return [{ key: 'new_clients', label: 'New clients' }];
   }
 }

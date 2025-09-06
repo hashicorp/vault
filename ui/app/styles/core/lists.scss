@@ -1,4 +1,3 @@
-@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -14,7 +13,7 @@
   align-items: center;
   &:before {
     font-size: size_variables.$size-5;
-    color: color_variables.$blue-500;
+    color: var(--token-color-palette-blue-200);
     content: '|';
     position: relative;
   }
@@ -22,7 +21,7 @@
 
 .list-header {
   margin: size_variables.$spacing-10 size_variables.$spacing-10 0;
-  color: color_variables.$grey;
+  color: var(--token-color-palette-neutral-400);
   font-size: size_variables.$size-8;
   font-weight: font_variables.$font-weight-semibold;
   text-transform: uppercase;

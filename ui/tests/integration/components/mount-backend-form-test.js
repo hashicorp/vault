@@ -3,20 +3,19 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled, click, typeIn, fillIn } from '@ember/test-helpers';
+import { render, click, typeIn, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allowAllCapabilitiesStub, noopStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { ALL_ENGINES, filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import SecretsEngineForm from 'vault/forms/secrets/engine';
+import AuthMethodForm from 'vault/forms/auth/method';
 
 const WIF_ENGINES = ALL_ENGINES.filter((e) => e.isWIF).map((e) => e.type);
 
@@ -35,14 +34,12 @@ module('Integration | Component | mount backend form', function (hooks) {
     this.onMountSuccess = sinon.spy();
   });
 
-  hooks.afterEach(function () {
-    this.server.shutdown();
-  });
-
   module('auth method', function (hooks) {
     hooks.beforeEach(function () {
-      this.model = this.store.createRecord('auth-method');
-      this.model.set('config', this.store.createRecord('mount-config'));
+      const defaults = {
+        config: { listing_visibility: false },
+      };
+      this.model = new AuthMethodForm(defaults, { isNew: true });
     });
 
     test('it renders default state', async function (assert) {
@@ -59,7 +56,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         isEnterprise: false,
       }).filter((engine) => engine.type !== 'token')) {
         assert
-          .dom(MOUNT_BACKEND_FORM.mountType(method.type))
+          .dom(GENERAL.cardContainer(method.type))
           .hasText(method.displayName, `renders type:${method.displayName} picker`);
       }
     });
@@ -69,10 +66,10 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountCategory="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
 
-      await click(MOUNT_BACKEND_FORM.mountType('aws'));
+      await click(GENERAL.cardContainer('aws'));
       assert.dom(GENERAL.inputByAttr('path')).hasValue('aws', 'sets the value of the type');
       await click(GENERAL.backButton);
-      await click(MOUNT_BACKEND_FORM.mountType('approle'));
+      await click(GENERAL.cardContainer('approle'));
       assert.dom(GENERAL.inputByAttr('path')).hasValue('approle', 'updates the value of the type');
     });
 
@@ -80,7 +77,7 @@ module('Integration | Component | mount backend form', function (hooks) {
       await render(
         hbs`<MountBackendForm @mountCategory="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
-      await click(MOUNT_BACKEND_FORM.mountType('approle'));
+      await click(GENERAL.cardContainer('approle'));
       assert.strictEqual(this.model.type, 'approle', 'Updates type on model');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('approle', 'defaults to approle (first in the list)');
       await fillIn(GENERAL.inputByAttr('path'), 'newpath');
@@ -88,7 +85,7 @@ module('Integration | Component | mount backend form', function (hooks) {
       await click(GENERAL.backButton);
       assert.strictEqual(this.model.type, '', 'Clears type on back');
       assert.strictEqual(this.model.path, 'newpath', 'Path is still newPath');
-      await click(MOUNT_BACKEND_FORM.mountType('aws'));
+      await click(GENERAL.cardContainer('aws'));
       assert.strictEqual(this.model.type, 'aws', 'Updates type on model');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('newpath', 'keeps custom path value');
     });
@@ -97,12 +94,12 @@ module('Integration | Component | mount backend form', function (hooks) {
       await render(
         hbs`<MountBackendForm @mountCategory="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
-      await click(MOUNT_BACKEND_FORM.mountType('github'));
+      await click(GENERAL.cardContainer('github'));
       await click(GENERAL.button('Method Options'));
       assert
-        .dom('[data-test-input="config.tokenType"]')
+        .dom('[data-test-input="config.token_type"]')
         .hasValue('', 'token type does not have a default value.');
-      const selectOptions = document.querySelector('[data-test-input="config.tokenType"]').options;
+      const selectOptions = document.querySelector('[data-test-input="config.token_type"]').options;
       assert.strictEqual(selectOptions[1].text, 'default-service', 'first option is default-service');
       assert.strictEqual(selectOptions[2].text, 'default-batch', 'second option is default-batch');
       assert.strictEqual(selectOptions[3].text, 'batch', 'third option is batch');
@@ -123,8 +120,6 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountCategory="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await mountBackend('approle', 'foo');
-      later(() => cancelTimers(), 50);
-      await settled();
 
       assert.true(spy.calledOnce, 'calls the passed success method');
       assert.true(
@@ -149,17 +144,21 @@ module('Integration | Component | mount backend form', function (hooks) {
     });
 
     test('it renders secret engine specific headers', async function (assert) {
-      assert.expect(17);
+      const expectedEngines = filterEnginesByMountCategory({
+        mountCategory: 'secret',
+        isEnterprise: false,
+      }).filter((engine) => engine.type !== 'cubbyhole');
+
+      // Dynamic assertion count: 1 for title + number of engines
+      assert.expect(1 + expectedEngines.length);
+
       await render(
         hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       assert.dom(GENERAL.title).hasText('Enable a Secrets Engine', 'renders secrets header');
-      for (const method of filterEnginesByMountCategory({
-        mountCategory: 'secret',
-        isEnterprise: false,
-      }).filter((engine) => engine.type !== 'cubbyhole')) {
+      for (const method of expectedEngines) {
         assert
-          .dom(MOUNT_BACKEND_FORM.mountType(method.type))
+          .dom(GENERAL.cardContainer(method.type))
           .hasText(method.displayName, `renders type:${method.displayName} picker`);
       }
     });
@@ -168,10 +167,10 @@ module('Integration | Component | mount backend form', function (hooks) {
       await render(
         hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
-      await click(MOUNT_BACKEND_FORM.mountType('azure'));
+      await click(GENERAL.cardContainer('azure'));
       assert.dom(GENERAL.inputByAttr('path')).hasValue('azure', 'sets the value of the type');
       await click(GENERAL.backButton);
-      await click(MOUNT_BACKEND_FORM.mountType('nomad'));
+      await click(GENERAL.cardContainer('nomad'));
       assert.dom(GENERAL.inputByAttr('path')).hasValue('nomad', 'updates the value of the type');
     });
 
@@ -179,7 +178,7 @@ module('Integration | Component | mount backend form', function (hooks) {
       await render(
         hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
-      await click(MOUNT_BACKEND_FORM.mountType('kv'));
+      await click(GENERAL.cardContainer('kv'));
       assert.strictEqual(this.model.type, 'kv', 'Updates type on model');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('kv', 'path matches mount type');
       await fillIn(GENERAL.inputByAttr('path'), 'newpath');
@@ -187,7 +186,7 @@ module('Integration | Component | mount backend form', function (hooks) {
       await click(GENERAL.backButton);
       assert.strictEqual(this.model.type, '', 'Clears type on back');
       assert.strictEqual(this.model.path, 'newpath', 'path is still newpath');
-      await click(MOUNT_BACKEND_FORM.mountType('ssh'));
+      await click(GENERAL.cardContainer('ssh'));
       assert.strictEqual(this.model.type, 'ssh', 'Updates type on model');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('newpath', 'path stays the same');
     });
@@ -207,8 +206,6 @@ module('Integration | Component | mount backend form', function (hooks) {
       );
 
       await mountBackend('ssh', 'foo');
-      // later(() => cancelTimers(), 50);
-      // await settled();
 
       assert.true(spy.calledOnce, 'calls the passed success method');
       assert.true(
@@ -223,7 +220,7 @@ module('Integration | Component | mount backend form', function (hooks) {
           hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
         );
         for (const engine of WIF_ENGINES) {
-          await click(MOUNT_BACKEND_FORM.mountType(engine));
+          await click(GENERAL.cardContainer(engine));
           await click(GENERAL.button('Method Options'));
           assert
             .dom(GENERAL.fieldByAttr('config.identity_token_key'))
@@ -235,7 +232,7 @@ module('Integration | Component | mount backend form', function (hooks) {
           isEnterprise: false,
         }).filter((e) => !WIF_ENGINES.includes(e.type) && e.type !== 'cubbyhole')) {
           // check non-wif engine
-          await click(MOUNT_BACKEND_FORM.mountType(engine.type));
+          await click(GENERAL.cardContainer(engine.type));
           await click(GENERAL.button('Method Options'));
           assert
             .dom(GENERAL.fieldByAttr('config.identity_token_key'))
@@ -254,7 +251,7 @@ module('Integration | Component | mount backend form', function (hooks) {
           `On init identity_token_key is not set on the model`
         );
         for (const engine of WIF_ENGINES) {
-          await click(MOUNT_BACKEND_FORM.mountType(engine));
+          await click(GENERAL.cardContainer(engine));
           await click(GENERAL.button('Method Options'));
           await typeIn(GENERAL.inputSearch('key'), `${engine}+specialKey`); // set to something else
 

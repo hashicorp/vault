@@ -4,7 +4,6 @@
  */
 
 // Variables
-@use 'utils/color_variables'; // colors need to come first.
 @use 'utils/box-shadow_variables';
 @use 'utils/font_variables';
 @use 'utils/size_variables';
@@ -23,7 +22,6 @@
 @use 'core/box';
 @use 'core/buttons';
 @use 'core/charts';
-@use 'core/charts-lineal';
 @use 'core/checkbox-and-radio';
 @use 'core/columns';
 @use 'core/containers';
@@ -56,7 +54,7 @@
 @use 'components/b64-toggle';
 @use 'components/box-label';
 @use 'components/calendar-widget';
-@use 'components/chart-container';
+@use 'components/clients-counts-card.scss';
 @use 'components/clients-date-range';
 @use 'components/cluster-banners';
 @use 'components/console-ui-panel';
@@ -105,6 +103,7 @@
 @use 'components/transform-edit';
 @use 'components/transit-card';
 @use 'components/ttl-picker';
+@use 'components/type-form';
 @use 'components/unseal-warning';
 @use 'components/usage-page';
 @use 'components/vault-loading';

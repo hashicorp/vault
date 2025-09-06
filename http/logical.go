@@ -97,8 +97,12 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 			responseWriter = w
 		}
 
-	case "POST", "PUT":
-		op = logical.UpdateOperation
+	case "POST", "PUT", "RECOVER":
+		if r.Method == "RECOVER" {
+			op = logical.RecoverOperation
+		} else {
+			op = logical.UpdateOperation
+		}
 
 		// Buffer the request body in order to allow us to peek at the beginning
 		// without consuming it. This approach involves no copying.
@@ -147,7 +151,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 				if err != nil {
 					status := http.StatusBadRequest
 					logical.AdjustErrorStatusCode(&status, err)
-					return nil, nil, status, fmt.Errorf("error parsing JSON")
+					return nil, nil, status, fmt.Errorf("error parsing JSON: %w", err)
 				}
 			}
 		}
@@ -205,7 +209,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		return nil, nil, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err)
 	}
 
-	var requiredSnapshotID string
+	var requiredSnapshotID, recoverSourcePath string
 
 	// check for a read, list, or recover from snapshot request
 	switch op {
@@ -218,13 +222,28 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 				data = nil
 			}
 		}
-	case logical.UpdateOperation:
-		queryVals := r.URL.Query()
-		if queryVals.Has(VaultSnapshotRecoverParam) {
-			snapshotID := queryVals.Get(VaultSnapshotRecoverParam)
-			if snapshotID != "" {
-				requiredSnapshotID = snapshotID
-				op = logical.RecoverOperation
+	case logical.UpdateOperation, logical.RecoverOperation:
+		snapshotHeaderID := r.Header.Get(VaultSnapshotRecoverHeader)
+		if snapshotHeaderID != "" {
+			requiredSnapshotID = snapshotHeaderID
+		} else {
+			queryVals := r.URL.Query()
+			if queryVals.Has(VaultSnapshotRecoverParam) {
+				snapshotID := queryVals.Get(VaultSnapshotRecoverParam)
+				if snapshotID != "" {
+					requiredSnapshotID = snapshotID
+				}
+			}
+		}
+		if requiredSnapshotID == "" && op == logical.RecoverOperation {
+			return nil, nil, http.StatusBadRequest, fmt.Errorf("missing required snapshot ID")
+		}
+
+		if requiredSnapshotID != "" {
+			op = logical.RecoverOperation
+			sourcePath := r.Header.Get(VaultRecoverSourcePathHeader)
+			if sourcePath != "" {
+				recoverSourcePath = trimPath(ns, sourcePath)
 			}
 		}
 	}
@@ -237,6 +256,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		Connection:         getConnection(r),
 		Headers:            r.Header,
 		RequiresSnapshotID: requiredSnapshotID,
+		RecoverSourcePath:  recoverSourcePath,
 	}
 
 	if ra != nil && ra.IsLimitedPath(r.Context(), path) {
