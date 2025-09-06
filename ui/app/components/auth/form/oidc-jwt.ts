@@ -46,11 +46,10 @@ interface UrlParseData {
 export default class AuthFormOidcJwt extends AuthBase {
   @service declare readonly router: RouterService;
 
-  @tracked loginFields = [
+  loginFields = [
     {
       name: 'role',
       helperText: 'Vault will use the default role to sign in if this field is left blank.',
-      value: '',
     },
   ];
 
@@ -85,17 +84,6 @@ export default class AuthFormOidcJwt extends AuthBase {
   @action
   initializeFormData(element: HTMLFormElement) {
     this._formData = new FormData(element);
-    const params = this.router.currentRoute?.queryParams;
-    if (params?.['role']) {
-      this._formData.set('role', params['role'] as string);
-      this.loginFields = this.loginFields.map((field) => {
-        if (field.name === 'role') {
-          return { ...field, value: params['role'] as string };
-        }
-        return field;
-      });
-    }
-
     this.fetchAuthUrl.perform();
   }
 

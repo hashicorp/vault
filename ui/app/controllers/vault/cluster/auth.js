@@ -18,7 +18,7 @@ export default Controller.extend({
   auth: service(),
   router: service(),
   customMessages: service(),
-  queryParams: [{ authMount: 'with', oidcProvider: 'o' }],
+  queryParams: [{ authMount: 'with', oidcProvider: 'o' }, 'role'],
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   redirectTo: alias('vaultController.redirectTo'),
   hvdManagedNamespaceRoot: alias('flagsService.hvdManagedNamespaceRoot'),
@@ -27,6 +27,7 @@ export default Controller.extend({
   // Query params
   authMount: '',
   oidcProvider: '',
+  role: '',
   unwrapTokenError: '',
 
   fullNamespaceFromInput(value) {

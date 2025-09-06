@@ -12,7 +12,7 @@
       name={{name}}
       class="has-bottom-margin-m"
       data-test-input={{name}}
-      @value="{{field.value}}"
+      @value={{if (eq name "role") @formQueryParams.role ""}}
       as |F|
     >
       <F.Label>{{or label (capitalize name)}}</F.Label>
