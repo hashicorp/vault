@@ -107,13 +107,25 @@ module('Acceptance | clients | counts | client list', function (hooks) {
     assert.strictEqual(currentURL(), url, '"Clear filters" resets URL query params');
   });
 
-  test('it renders error message if export fails', async function (assert) {
+  test('it renders error message if export has no data', async function (assert) {
     this.exportDataStub.throws(new Error('No data to export in provided time range.'));
     await visit('/vault/clients/counts/client-list');
     await click(CLIENT_COUNT.dateRange.edit);
     await click(CLIENT_COUNT.dateRange.dropdownOption(4));
+    assert.dom(GENERAL.emptyStateTitle).hasText('No data found');
+    assert.dom(GENERAL.emptyStateMessage).hasText('No data to export in provided time range.');
+    // Assert the empty state message renders below the page header so user can query other dates
+    assert.dom(GENERAL.tab('overview')).exists('Overview tab still renders');
+    assert.dom(GENERAL.tab('client list')).exists('Client list tab still renders');
+  });
+
+  test('it renders error message for permission denied', async function (assert) {
+    this.exportDataStub.throws(new Error('permission denied'));
+    await visit('/vault/clients/counts/client-list');
+    await click(CLIENT_COUNT.dateRange.edit);
+    await click(CLIENT_COUNT.dateRange.dropdownOption(4));
     assert.dom(GENERAL.emptyStateTitle).hasText('Error');
-    assert.dom(GENERAL.emptyStateActions).hasText('No data to export in provided time range.');
+    assert.dom(GENERAL.emptyStateMessage).hasText('permission denied');
     // Assert the empty state message renders below the page header so user can query other dates
     assert.dom(GENERAL.tab('overview')).exists('Overview tab still renders');
     assert.dom(GENERAL.tab('client list')).exists('Client list tab still renders');

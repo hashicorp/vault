@@ -5,7 +5,7 @@
 
 {{#if (or @config.reportingEnabled (eq @config.enabled "On"))}}
   <EmptyState
-    @title="No data received {{if @dateRangeMessage @dateRangeMessage}}"
+    @title="No data received"
     @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
     class="is-shadowless"
   />
