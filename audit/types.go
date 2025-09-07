@@ -10,7 +10,7 @@ import (
 // entry represents an audit entry.
 // It could be an entry for a request or response.
 type entry struct {
-	Time          string    `json:"time,omitempty"`
+	Time          string    `json:"time,omitempty"` // Kept as first field, useful for log parsers and forwarders for extracting timestamp easily
 	Auth          *auth     `json:"auth,omitempty"`
 	Error         string    `json:"error,omitempty"`
 	Forwarded     bool      `json:"forwarded,omitempty"`
