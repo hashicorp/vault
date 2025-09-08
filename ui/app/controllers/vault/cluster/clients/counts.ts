@@ -17,8 +17,8 @@ const queryParamKeys = [...ACTIVITY_QUERY_PARAMS, ...DROPDOWN_FILTERS];
 export default class ClientsCountsController extends Controller {
   queryParams = queryParamKeys;
 
-  start_time: string | number | undefined = undefined;
-  end_time: string | number | undefined = undefined;
+  start_time = '';
+  end_time = '';
   namespace_path = '';
   mount_path = '';
   mount_type = '';
