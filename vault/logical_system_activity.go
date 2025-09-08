@@ -64,19 +64,23 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 				Deprecated:  true,
 				Type:        framework.TypeBool,
 				Description: "Query utilization for configured billing period",
+				Query:       true,
 			},
 			"start_time": {
 				Type:        framework.TypeTime,
 				Description: "Start of query interval",
+				Query:       true,
 			},
 			"end_time": {
 				Type:        framework.TypeTime,
 				Description: "End of query interval",
+				Query:       true,
 			},
 			"limit_namespaces": {
 				Type:        framework.TypeInt,
 				Default:     0,
 				Description: "Limit query output by namespaces",
+				Query:       true,
 			},
 		},
 		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-query"][0]),
@@ -209,15 +213,18 @@ func (b *SystemBackend) activityPaths() []*framework.Path {
 				"start_time": {
 					Type:        framework.TypeTime,
 					Description: "Start of query interval",
+					Query:       true,
 				},
 				"end_time": {
 					Type:        framework.TypeTime,
 					Description: "End of query interval",
+					Query:       true,
 				},
 				"format": {
 					Type:        framework.TypeString,
 					Description: "Format of the file. Either a CSV or a JSON file with an object per line.",
 					Default:     "json",
+					Query:       true,
 				},
 			},
 
@@ -266,16 +273,19 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 					Default:     12,
 					Description: "Number of months to report if no start date specified.",
 					Deprecated:  true,
+					Query:       true,
 				},
 				"retention_months": {
 					Type:        framework.TypeInt,
 					Default:     ActivityLogMinimumRetentionMonths,
 					Description: "Number of months of client data to retain. Setting to 0 will clear all existing data.",
+					Query:       true,
 				},
 				"enabled": {
 					Type:        framework.TypeString,
 					Default:     "default",
 					Description: "Enable or disable collection of client count: enable, disable, or default.",
+					Query:       true,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["activity-config"][0]),
@@ -358,15 +368,18 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 				"start_time": {
 					Type:        framework.TypeTime,
 					Description: "Start of query interval",
+					Query:       true,
 				},
 				"end_time": {
 					Type:        framework.TypeTime,
 					Description: "End of query interval",
+					Query:       true,
 				},
 				"format": {
 					Type:        framework.TypeString,
 					Description: "Format of the file. Either a CSV or a JSON file with an object per line.",
 					Default:     "json",
+					Query:       true,
 				},
 			},
 
