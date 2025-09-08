@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -85,6 +86,42 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.handleClientMetricQuery,
 				Summary:  "Report the client count metrics, for this namespace and all child namespaces.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+						Fields: map[string]*framework.FieldSchema{
+							"start_time": {
+								Type:        framework.TypeString,
+								Description: "The start time of the query interval.",
+							},
+							"end_time": {
+								Type:        framework.TypeString,
+								Description: "The end time of the query interval.",
+							},
+							"by_namespace": {
+								Type:        framework.TypeSlice,
+								Description: "A list of usage counts broken down by namespace. Each element is an object containing namespace name, counts, and mounts.",
+							},
+							"total": {
+								Type:        framework.TypeMap,
+								Description: "Aggregated usage counts across all namespaces.",
+							},
+							"months": {
+								Type:        framework.TypeSlice,
+								Description: "A list of objects, each representing monthly client count data.",
+							},
+						},
+					}},
+					http.StatusNoContent: {{
+						Description: http.StatusText(http.StatusNoContent),
+					}},
+					http.StatusBadRequest: {{
+						Description: http.StatusText(http.StatusBadRequest),
+					}},
+					http.StatusInternalServerError: {{
+						Description: http.StatusText(http.StatusInternalServerError),
+					}},
+				},
 			},
 		},
 	}
@@ -107,6 +144,50 @@ func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.handleMonthlyActivityCount,
 				Summary:  "Report the number of clients for this month, for this namespace and all child namespaces.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+						Fields: map[string]*framework.FieldSchema{
+							"by_namespace": {
+								Type:        framework.TypeMap,
+								Description: "A map of namespace paths to their respective client counts for the month.",
+							},
+							"entity_clients": {
+								Type:        framework.TypeInt,
+								Description: "The number of unique entity clients for the month.",
+							},
+							"non_entity_clients": {
+								Type:        framework.TypeInt,
+								Description: "The number of unique non-entity clients for the month.",
+							},
+							"clients": {
+								Type:        framework.TypeInt,
+								Description: "The total number of unique clients for the month.",
+							},
+							"secret_syncs": {
+								Type:        framework.TypeInt,
+								Description: "The number of secret synchronizations for the month.",
+							},
+							"acme_clients": {
+								Type:        framework.TypeInt,
+								Description: "The number of ACME clients for the month.",
+							},
+							"months": {
+								Type:        framework.TypeSlice,
+								Description: "A list of objects, each representing monthly client count data.",
+							},
+						},
+					}},
+					http.StatusNoContent: {{
+						Description: http.StatusText(http.StatusNoContent),
+					}},
+					http.StatusBadRequest: {{
+						Description: http.StatusText(http.StatusBadRequest),
+					}},
+					http.StatusInternalServerError: {{
+						Description: http.StatusText(http.StatusInternalServerError),
+					}},
+				},
 			},
 		},
 	}
@@ -147,6 +228,20 @@ func (b *SystemBackend) activityPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleClientExport,
 					Summary:  "Returns a deduplicated export of all clients that had activity within the provided start and end times for this namespace and all child namespaces.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: http.StatusText(http.StatusOK),
+						}},
+						http.StatusNoContent: {{
+							Description: http.StatusText(http.StatusNoContent),
+						}},
+						http.StatusBadRequest: {{
+							Description: http.StatusText(http.StatusBadRequest),
+						}},
+						http.StatusInternalServerError: {{
+							Description: http.StatusText(http.StatusInternalServerError),
+						}},
+					},
 				},
 			},
 		},
@@ -193,6 +288,43 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 						OperationSuffix: "configuration",
 					},
 					Summary: "Read the client count tracking configuration.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: http.StatusText(http.StatusOK),
+							Fields: map[string]*framework.FieldSchema{
+								"retention_months": {
+									Type:        framework.TypeInt,
+									Description: "The number of months of client data to retain.",
+								},
+								"enabled": {
+									Type:        framework.TypeString,
+									Description: "The current state of client count collection.",
+								},
+								"queries_available": {
+									Type:        framework.TypeBool,
+									Description: "Indicates if activity queries are available.",
+								},
+								"reporting_enabled": {
+									Type:        framework.TypeBool,
+									Description: "Indicates if automated license reporting is enabled.",
+								},
+								"billing_start_timestamp": {
+									Type:        framework.TypeTime,
+									Description: "The timestamp for the start of the billing period.",
+								},
+								"minimum_retention_months": {
+									Type:        framework.TypeInt,
+									Description: "The minimum retention period required.",
+								},
+							},
+						}},
+						http.StatusBadRequest: {{
+							Description: http.StatusText(http.StatusBadRequest),
+						}},
+						http.StatusInternalServerError: {{
+							Description: http.StatusText(http.StatusInternalServerError),
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleActivityConfigUpdate,
@@ -200,6 +332,17 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 						OperationVerb: "configure",
 					},
 					Summary: "Enable or disable collection of client count, set retention period, or set default reporting period.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: http.StatusText(http.StatusOK),
+						}},
+						http.StatusBadRequest: {{
+							Description: http.StatusText(http.StatusBadRequest),
+						}},
+						http.StatusInternalServerError: {{
+							Description: http.StatusText(http.StatusInternalServerError),
+						}},
+					},
 				},
 			},
 		},
@@ -234,6 +377,20 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleClientExport,
 					Summary:  "Report the client count metrics, for this namespace and all child namespaces.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: http.StatusText(http.StatusOK),
+						}},
+						http.StatusNoContent: {{
+							Description: http.StatusText(http.StatusNoContent),
+						}},
+						http.StatusBadRequest: {{
+							Description: http.StatusText(http.StatusBadRequest),
+						}},
+						http.StatusInternalServerError: {{
+							Description: http.StatusText(http.StatusInternalServerError),
+						}},
+					},
 				},
 			},
 		},
@@ -319,6 +476,22 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 	return respNoContent, err
 }
 
+// toMap converts a struct to a map[string]interface{}
+func toMap(v interface{}) (map[string]interface{}, error) {
+	if v == nil {
+		return map[string]interface{}{}, nil
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
@@ -363,6 +536,37 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		return resp204, err
 	}
 
+	// normalize "total" into a map
+	if recordRaw, ok := results["total"].(*ResponseCounts); ok && recordRaw != nil {
+		if m, err := toMap(recordRaw); err == nil {
+			results["total"] = m
+		} else {
+			results["total"] = map[string]interface{}{}
+		}
+	}
+
+	// normalize "by_namespace" into a slice
+	if recordsRaw, ok := results["by_namespace"].([]*ResponseNamespace); ok {
+		converted := make([]map[string]interface{}, 0, len(recordsRaw))
+		for _, record := range recordsRaw {
+			if m, err := toMap(record); err == nil {
+				converted = append(converted, m)
+			}
+		}
+		results["by_namespace"] = converted
+	}
+
+	// normalize "months" into a slice
+	if recordsRaw, ok := results["months"].([]*ResponseMonth); ok {
+		converted := make([]map[string]interface{}, 0, len(recordsRaw))
+		for _, record := range recordsRaw {
+			if m, err := toMap(record); err == nil {
+				converted = append(converted, m)
+			}
+		}
+		results["months"] = converted
+	}
+
 	if timeWarnings.EndTimeAdjustedToPastMonth {
 		warnings = append(warnings, WarningEndTimeAsCurrentMonthOrFutureIgnored)
 	}
@@ -393,6 +597,28 @@ func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *log
 	}
 	if results == nil {
 		return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
+	}
+
+	// normalize "by_namespace" into a map
+	if recordsRaw, ok := results["by_namespace"].([]*ResponseNamespace); ok {
+		converted := make([]map[string]interface{}, 0, len(recordsRaw))
+		for _, record := range recordsRaw {
+			if m, err := toMap(record); err == nil {
+				converted = append(converted, m)
+			}
+		}
+		results["by_namespace"] = converted
+	}
+
+	// normalize "months" into a slice
+	if recordsRaw, ok := results["months"].([]*ResponseMonth); ok {
+		converted := make([]map[string]interface{}, 0, len(recordsRaw))
+		for _, record := range recordsRaw {
+			if m, err := toMap(record); err == nil {
+				converted = append(converted, m)
+			}
+		}
+		results["months"] = converted
 	}
 
 	return &logical.Response{
