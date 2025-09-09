@@ -6959,6 +6959,8 @@ func TestProperAuthing(t *testing.T) {
 	eabKid := "13b80844-e60d-42d2-b7e9-152a8e834b90"
 	acmeKeyId := "hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="
 	paths := map[string]pathAuthChecker{
+		"acme/mgmt/account/keyid/":               shouldBeAuthed,
+		"acme/mgmt/account/keyid/" + acmeKeyId:   shouldBeAuthed,
 		"ca_chain":                               shouldBeUnauthedReadList,
 		"cert/ca_chain":                          shouldBeUnauthedReadList,
 		"ca":                                     shouldBeUnauthedReadList,
@@ -6996,6 +6998,8 @@ func TestProperAuthing(t *testing.T) {
 		"crl/delta/pem":                          shouldBeUnauthedReadList,
 		"crl/rotate":                             shouldBeAuthed,
 		"crl/rotate-delta":                       shouldBeAuthed,
+		"eab/":                                   shouldBeAuthed,
+		"eab/" + eabKid:                          shouldBeAuthed,
 		"intermediate/cross-sign":                shouldBeAuthed,
 		"intermediate/generate/exported":         shouldBeAuthed,
 		"intermediate/generate/internal":         shouldBeAuthed,
@@ -7075,10 +7079,6 @@ func TestProperAuthing(t *testing.T) {
 		"unified-crl/delta/pem":                  shouldBeUnauthedReadList,
 		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
-		"eab/":                                   shouldBeAuthed,
-		"eab/" + eabKid:                          shouldBeAuthed,
-		"acme/mgmt/account/keyid/":               shouldBeAuthed,
-		"acme/mgmt/account/keyid/" + acmeKeyId:   shouldBeAuthed,
 	}
 
 	entPaths := getEntProperAuthingPaths(serial)
