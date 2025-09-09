@@ -37,7 +37,7 @@ func runFindGithubWorkflowArtifactCmd(cmd *cobra.Command, args []string) error {
 
 	res, err := findWorkflowArtifact.Run(context.TODO(), githubCmdState.Github)
 	if err != nil {
-		return fmt.Errorf("listing github workflow failures: %w", err)
+		return fmt.Errorf("finding workflow artifact: %w", err)
 	}
 
 	switch rootCfg.format {

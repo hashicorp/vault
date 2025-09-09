@@ -56,31 +56,40 @@ func getWorkflowRuns(
 	id int64,
 	opts *gh.ListWorkflowRunsOptions,
 ) ([]*WorkflowRun, error) {
-	slog.Default().DebugContext(slogctx.Append(ctx,
-		slog.String("owner", owner),
-		slog.String("repo", repo),
-		slog.Int64("id", id),
-	), "getting github actions workflow runs")
-
 	var runs []*WorkflowRun
 	opts.ListOptions = gh.ListOptions{PerPage: PerPageMax}
 
-	for {
-		wfrs, res, err := client.Actions.ListWorkflowRunsByID(ctx, owner, repo, id, opts)
-		if err != nil {
-			return nil, err
-		}
+	// By default our status will be "success" which elimates in_progress runs.
+	// Instead, we'll try both so that we're sure to include what's actually
+	// running along with historical runs.
+	for _, status := range []string{"success", "in_progress"} {
+		for {
+			opts.Status = status
+			slog.Default().DebugContext(slogctx.Append(ctx,
+				slog.String("owner", owner),
+				slog.String("repo", repo),
+				slog.Int64("id", id),
+				slog.String("query-status", opts.Status),
+			), "getting github actions workflow runs")
 
-		for _, r := range wfrs.WorkflowRuns {
-			runs = append(runs, &WorkflowRun{Run: r})
-		}
+			wfrs, res, err := client.Actions.ListWorkflowRunsByID(ctx, owner, repo, id, opts)
+			if err != nil {
+				return nil, err
+			}
 
-		if res.NextPage == 0 {
-			return runs, nil
-		}
+			for _, r := range wfrs.WorkflowRuns {
+				runs = append(runs, &WorkflowRun{Run: r})
+			}
 
-		opts.ListOptions.Page = res.NextPage
+			if res.NextPage == 0 {
+				break
+			}
+
+			opts.ListOptions.Page = res.NextPage
+		}
 	}
+
+	return runs, nil
 }
 
 // getWorkflowRunArtifacts gets the artifacts associated with a workflow run
