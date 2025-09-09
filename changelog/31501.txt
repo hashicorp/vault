@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/cert: Support RFC 9440 colon-wrapped Base64 certificates in `x_forwarded_for_client_cert_header`, to fix TLS certificate auth errors with Google Cloud Application Load Balancer.
+```
