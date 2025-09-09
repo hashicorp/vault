@@ -671,7 +671,14 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 							}
 							v = decoded
 						case "BASE64":
-							decoded, err := base64.StdEncoding.DecodeString(v)
+							// Support RFC 9440/8941 Structured Headers byte sequence values (":MIIC...==:").
+							// If the value is wrapped in leading/trailing colons, unwrap before decoding.
+							base64Value := v
+							if len(v) >= 2 && v[0] == ':' && v[len(v)-1] == ':' {
+								base64Value = v[1 : len(v)-1]
+							}
+
+							decoded, err := base64.StdEncoding.DecodeString(base64Value)
 							if err != nil {
 								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to base64 decode the client certificate: %w", err))
 								return
