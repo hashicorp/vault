@@ -11,9 +11,12 @@ import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 import ListController from 'core/mixins/list-controller';
 import { keyIsFolder } from 'core/utils/key-utils';
 import engineDisplayData from 'vault/helpers/engines-display-data';
+import { task } from 'ember-concurrency';
 
 export default Controller.extend(ListController, BackendCrumbMixin, {
   flashMessages: service(),
+  api: service(),
+  router: service(),
   queryParams: ['page', 'pageFilter', 'tab'],
 
   tab: '',
@@ -71,4 +74,20 @@ export default Controller.extend(ListController, BackendCrumbMixin, {
         });
     },
   },
+
+  disableEngine: task(function* (engine) {
+    const { engineType, id, path } = engine;
+    try {
+      yield this.api.sys.mountsDisableSecretsEngine(id);
+      this.flashMessages.success(`The ${engineType} Secrets Engine at ${path} has been disabled.`);
+      this.router.transitionTo('vault.cluster.secrets.backends');
+    } catch (err) {
+      const { message } = yield this.api.parseError(err);
+      this.flashMessages.danger(
+        `There was an error disabling the ${engineType} Secrets Engines at ${path}: ${message}.`
+      );
+    } finally {
+      this.engineToDisable = null;
+    }
+  }).drop(),
 });
