@@ -36,6 +36,16 @@ export interface PluginCatalogResponse {
   error: boolean;
 }
 
+export interface PluginCatalogRawDataResponse {
+  data: {
+    secret: Array<PluginCatalogPlugin>;
+    auth: Array<PluginCatalogPlugin>;
+    database: Array<PluginCatalogPlugin>;
+    detailed: Array<PluginCatalogPlugin>;
+  } | null;
+  error: boolean;
+}
+
 export default class PluginCatalogService extends Service {
   @service declare readonly api: ApiService;
   @service declare readonly auth: AuthService;
@@ -69,6 +79,52 @@ export default class PluginCatalogService extends Service {
         const databasePlugins = detailedPlugins
           .filter((plugin) => plugin.type === 'database')
           .map((plugin) => plugin.name);
+
+        return {
+          data: {
+            secret: secretPlugins,
+            auth: authPlugins,
+            database: databasePlugins,
+            detailed: detailedPlugins,
+          },
+          error: false,
+        };
+      }
+
+      return {
+        data: null,
+        error: true,
+      };
+    } catch (error) {
+      return {
+        data: null,
+        error: true,
+      };
+    }
+  }
+
+  /**
+   * Fetches the plugin catalog from the Vault API and groups the data by plugin type
+   * Uses the API service middleware for authentication, namespacing, and error handling
+   * @returns Promise resolving to plugin catalog data and error state
+   */
+  async getRawPluginCatalogData(): Promise<PluginCatalogRawDataResponse> {
+    try {
+      const response = await this.api.sys.pluginsCatalogListPlugins({
+        headers: {
+          token: this.auth.currentToken,
+          namespace: sanitizePath(this.namespace.path),
+        },
+      });
+
+      if (response && response.detailed && Array.isArray(response.detailed) && response.detailed.length > 0) {
+        const detailedPlugins = response.detailed as PluginCatalogPlugin[];
+
+        const secretPlugins = detailedPlugins.filter((plugin) => plugin.type === 'secret');
+
+        const authPlugins = detailedPlugins.filter((plugin) => plugin.type === 'auth');
+
+        const databasePlugins = detailedPlugins.filter((plugin) => plugin.type === 'database');
 
         return {
           data: {

@@ -203,3 +203,12 @@ export function categorizeEnginesByStatus(engines: EnhancedEngineDisplayData[]):
 
   return { enabled, disabled };
 }
+
+export function getPluginVersionsFromEngineType(list: PluginCatalogPlugin[] | undefined, name: string) {
+  if (!list) return [];
+
+  return list.reduce((acc: string[], item: PluginCatalogPlugin) => {
+    if (item.name === name) acc.push(item.version);
+    return acc;
+  }, []);
+}

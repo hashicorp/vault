@@ -2,11 +2,11 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
-<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-s has-top-bottom-margin-12" ...attributes>
+<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-m has-top-bottom-margin" ...attributes>
+  <Hds::Text::Display @size="300" @tag="h2" class="has-bottom-margin-s hds-foreground-strong">Lease Duration</Hds::Text::Display>
 
   <Hds::Layout::Flex @align="start" @gap="16" class="has-bottom-margin-m">
     <Hds::Layout::Flex @direction="column" @gap="4">
-      <Hds::Text::Display @size="300" @tag="h5">Lease Duration</Hds::Text::Display>
       <Hds::Text::Body @size="200" @tag="p">Lease, measured by the “time-to-live” value, defines how long any secret issued
         by this engine remains valid.</Hds::Text::Body>
       {{! TODO: Verify what link this is supposed to be }}
@@ -20,49 +20,7 @@
   </Hds::Layout::Flex>
 
   <Hds::Layout::Flex @direction="column" @gap="24" @isInline="true" class="has-top-padding-s has-bottom-padding-s">
-    <Hds::Form::Select::Field name="TTL-select" @width="150px" {{on "input" this.setTTLType}} as |F|>
-      <F.Label>Time-to-live (TTL)</F.Label>
-      <F.HelperText>Standard expiry deadline.</F.HelperText>
-      <F.Options>
-        <option value="System default" selected>System default</option>
-        <option value="Custom">Custom</option>
-      </F.Options>
-    </Hds::Form::Select::Field>
-
-    {{#if this.enableTTL}}
-      <Hds::SegmentedGroup as |SG|>
-        <SG.TextInput @width="100px" size="32" @value={{this.time}} name="time" {{on "input" this.setTtlTime}} />
-        <SG.Select @width="100px" {{on "input" this.setUnit}} as |S|>
-          <S.Options>
-            <option value="s" selected>seconds</option>
-            <option value="m">minutes</option>
-            <option value="h">hours</option>
-            <option value="d">days</option>
-          </S.Options>
-        </SG.Select>
-      </Hds::SegmentedGroup>
-    {{/if}}
-    <Hds::Form::Select::Field name="max-TTL-select" @width="150px" {{on "input" this.setMaxTTLType}} as |F|>
-      <F.Label>Maximum Time-to-live (TTL)</F.Label>
-      <F.HelperText>Maximum possible extension for expiry.</F.HelperText>
-      <F.Options>
-        <option value="System default" selected>System default</option>
-        <option value="Custom">Custom</option>
-      </F.Options>
-    </Hds::Form::Select::Field>
-
-    {{#if this.enableMaxTTL}}
-      <Hds::SegmentedGroup as |SG|>
-        <SG.TextInput @width="100px" size="32" @value={{this.maxTime}} name="max-time" {{on "input" this.setMaxTtlTime}} />
-        <SG.Select @width="100px" {{on "input" this.setMaxUnit}} as |S|>
-          <S.Options>
-            <option value="s" selected>seconds</option>
-            <option value="m">minutes</option>
-            <option value="h">hours</option>
-            <option value="d">days</option>
-          </S.Options>
-        </SG.Select>
-      </Hds::SegmentedGroup>
-    {{/if}}
+    <SecretEngine::TtlPickerV2 @model={{@model}} @ttlKey="default_lease_ttl" />
+    <SecretEngine::TtlPickerV2 @model={{@model}} @ttlKey="max_lease_ttl" />
   </Hds::Layout::Flex>
 </Hds::Card::Container>
