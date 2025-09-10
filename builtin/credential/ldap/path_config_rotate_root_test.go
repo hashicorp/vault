@@ -78,17 +78,18 @@ func TestRotateRootWithRotationUrl(t *testing.T) {
 	b, store := createBackendWithStorage(t)
 	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
+	const mainDummyUrl = "ldap://example.com:389"
 	// set up auth config
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Storage:   store,
 		Data: map[string]interface{}{
-			"url":          cfg.Url,
+			"url":          mainDummyUrl,
 			"binddn":       cfg.BindDN,
 			"bindpass":     cfg.BindPassword,
 			"userdn":       cfg.UserDN,
-			"rotation_url": "ldap://rotation.example.com:389",
+			"rotation_url": cfg.Url,
 		},
 	}
 
@@ -106,17 +107,20 @@ func TestRotateRootWithRotationUrl(t *testing.T) {
 		Storage:   store,
 	}
 
-	// this should error because the rotation URL is not pointing to anything, which validate the rotation URL is used
 	_, err = b.HandleRequest(ctx, req)
-	if err == nil {
-		t.Fatalf("expected an error when rotating root with a rotation URL that does not point to a valid LDAP server")
-	}
-	// validate that rotationURL doesnt affect LDAP URL in the config
-	newCFG, err := b.Config(ctx, req)
 	if err != nil {
-		t.Fatalf("failed to get config after rotation: %s", err)
+		t.Fatalf("failed to rotate password: %s", err)
 	}
-	if newCFG.Url != cfg.Url {
-		t.Fatalf("the LDAP URL should not have changed, but it did: %s", newCFG.Url)
+
+	newCFG, err := b.Config(ctx, req)
+	if newCFG.BindDN != cfg.BindDN {
+		t.Fatalf("BindDN %q changed unexpectedly, found new value %q", cfg.BindDN, newCFG.BindDN)
+	}
+	if newCFG.BindPassword == cfg.BindPassword {
+		t.Fatalf("the password should have changed, but it didn't")
+	}
+	// expecting the newCFG url to be "ldap://example.com:389"
+	if newCFG.Url != mainDummyUrl {
+		t.Fatalf("URL %q changed unexpectedly, found new value %q", mainDummyUrl, newCFG.Url)
 	}
 }
