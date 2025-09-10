@@ -60,7 +60,6 @@ Router.map(function () {
             this.route('section', { path: '/:section_name' });
           });
         });
-        this.route('mount-secret-backend');
       });
       this.route('unseal');
       this.route('tools', function () {
