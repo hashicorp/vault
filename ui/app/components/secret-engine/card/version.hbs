@@ -2,40 +2,38 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
-<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-s has-top-bottom-margin-12" ...attributes>
-  <Hds::Text::Display @size="300">Version</Hds::Text::Display>
+<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-m has-top-bottom-margin" ...attributes>
+  <Hds::Text::Display @size="300" @tag="h2" class="has-bottom-margin-s hds-foreground-strong">Version</Hds::Text::Display>
 
-  {{! TODO: Having this set up with flex for now, grid might be better? }}
-  <div class="flex gap-36 has-top-margin-l">
-    <Hds::Layout::Flex @direction="column" @gap="8">
-      <Hds::Text::Display>Engine type</Hds::Text::Display>
-      <Hds::Text::Display>Current version</Hds::Text::Display>
-      <Hds::Text::Display>Latest version</Hds::Text::Display>
-    </Hds::Layout::Flex>
+  <Hds::Layout::Grid @columnMinWidth="10%" @gap="12" {{style height="100%" grid-template-rows="min-content"}} as |LG|>
+    <LG.Item @colspan={{2}}>
+      <Hds::Text::Body @tag="h3" class="hds-font-weight-semibold has-bottom-margin-s hds-foreground-strong">Engine type</Hds::Text::Body>
+      <Hds::Text::Body @tag="h3" class="hds-font-weight-semibold has-bottom-margin-s hds-foreground-strong">Current version</Hds::Text::Body>
+    </LG.Item>
 
-    <Hds::Layout::Flex @direction="column" @gap="12" @align="start">
+    <LG.Item @colspan={{3}}>
       <Hds::Text::Body
         @tag="p"
-        class="hds-border-strong side-padding-4 border-radius-4"
+        class="hds-border-strong has-side-padding-8 border-radius-4 is-inline-block has-bottom-margin-s"
       >{{@model.secretsEngine.type}}</Hds::Text::Body>
       {{! TODO: Verify if we want to display the full version or chop down ie. v0.17.1 vs v0.17.1-0.230942309423094... }}
       <Hds::Text::Body @tag="p">{{@model.secretsEngine.running_plugin_version}}</Hds::Text::Body>
-      {{! TODO: leaving as is for now to match design, but we might be removing this if we cant get latest version from some source }}
-      <Hds::Text::Body @tag="p">v.12.46</Hds::Text::Body>
+    </LG.Item>
+  </Hds::Layout::Grid>
+
+  {{#if (gt @model.versions.length 1)}}
+    <Hds::Separator />
+
+    <Hds::Layout::Flex @isInline="true">
+      <Hds::Form::Select::Field name="plugin-version" as |F|>
+        <F.Label>Update version to:</F.Label>
+        <F.Options>
+          <option value="">Select version</option>
+          {{#each @model.versions as |version|}}
+            <option value={{version}}>{{version}}</option>
+          {{/each}}
+        </F.Options>
+      </Hds::Form::Select::Field>
     </Hds::Layout::Flex>
-  </div>
-
-  <Hds::Separator />
-
-  <Hds::Layout::Flex @isInline="true">
-    <Hds::Form::Select::Field name="version-select" as |F|>
-      <F.Label>Update version to:</F.Label>
-      {{! TODO: Update options with available versions from API }}
-      <F.Options>
-        <option value="">Select version</option>
-        <option value="12.4">12.4</option>
-        <option value="12.43">12.43</option>
-      </F.Options>
-    </Hds::Form::Select::Field>
-  </Hds::Layout::Flex>
+  {{/if}}
 </Hds::Card::Container>
