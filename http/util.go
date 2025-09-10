@@ -153,7 +153,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		if requiresResolveRole {
 			buf := bytes.Buffer{}
 			teeReader := io.TeeReader(r.Body, &buf)
-			role := core.DetermineRoleFromLoginRequestFromReader(r.Context(), mountPath, teeReader)
+			role := core.DetermineRoleFromLoginRequestFromReader(r.Context(), mountPath, teeReader, getConnection(r), r.Header)
 
 			// Reset the body if it was read
 			if buf.Len() > 0 {
