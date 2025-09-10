@@ -9,6 +9,10 @@ import { cached, tracked } from '@glimmer/tracking';
 import { paginate } from 'core/utils/paginate-list';
 import { next } from '@ember/runloop';
 
+import type { ClientFilterTypes } from 'core/utils/client-count-utils';
+import { service } from '@ember/service';
+import VersionService from 'vault/services/version';
+
 /**
  * @module ClientsTable
  * ClientsTable renders a paginated table for a passed dataset. HDS table components handle basic sorting
@@ -48,6 +52,8 @@ interface Args {
 }
 
 export default class ClientsTable extends Component<Args> {
+  @service declare readonly version: VersionService;
+
   @tracked currentPage = 1;
   @tracked pageSize = 5; // Can be overridden by @setPageSize
   @tracked sortColumn = '';
@@ -132,4 +138,9 @@ export default class ClientsTable extends Component<Args> {
 
   // TEMPLATE HELPERS
   isObject = (value: any) => typeof value === 'object';
+
+  generateQueryParams = (datum: Record<ClientFilterTypes, any>) => {
+    const { namespace_path = '', mount_path = '', mount_type = '' } = datum;
+    return { namespace_path, mount_path, mount_type };
+  };
 }

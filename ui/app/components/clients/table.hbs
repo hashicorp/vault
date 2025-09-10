@@ -25,6 +25,13 @@
               <B.Td data-test-table-data={{key}} class="white-space-nowrap">
                 <Hds::Copy::Snippet @textToCopy={{value}} @color="secondary" />
               </B.Td>
+            {{else if (and (eq key "clients") this.version.isEnterprise)}}
+              <B.Td data-test-table-data={{key}} class="white-space-nowrap">
+                <Hds::Link::Inline
+                  @route="vault.cluster.clients.counts.client-list"
+                  @query={{this.generateQueryParams B.data}}
+                >{{value}}</Hds::Link::Inline>
+              </B.Td>
             {{else}}
               <B.Td class="white-space-nowrap" data-test-table-data={{key}}>
                 {{! stringify value if it is an array or object, otherwise render directly }}

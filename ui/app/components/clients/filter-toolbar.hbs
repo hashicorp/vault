@@ -31,7 +31,7 @@
                 @selected={{eq item (get this filterProperty)}}
                 data-test-dropdown-item={{item}}
               >
-                {{item}}
+                {{if (eq filterProperty "month") (this.formatTimestamp item) item}}
               </D.Checkmark>
             {{else}}
               <D.Description
@@ -61,7 +61,7 @@
       {{#if value}}
         <div>
           <Hds::Tag
-            @text={{value}}
+            @text={{if (eq filter "month") (this.formatTimestamp value) value}}
             {{! Filter renders in a tooltip if exceeds 20 characters  }}
             @tooltipPlacement="bottom"
             @onDismiss={{fn this.clearFilters filter}}

@@ -18,7 +18,8 @@
             @icon="docs-link"
             @iconPosition="trailing"
             @text="Client Export Documentation"
-            @href={{doc-link "/vault/api-docs/secret/databases"}}
+            @isHrefExternal={{true}}
+            @href={{doc-link "/vault/api-docs/system/internal-counters#activity-export"}}
           />
         </Hds::Text::Body>
       {{/if}}
@@ -28,10 +29,6 @@
   <Clients::Page::ClientList
     @exportData={{this.model.exportData}}
     @onFilterChange={{this.countsController.updateQueryParams}}
-    @filterQueryParams={{hash
-      namespace_path=this.countsController.namespace_path
-      mount_path=this.countsController.mount_path
-      mount_type=this.countsController.mount_type
-    }}
+    @filterQueryParams={{this.countsController.filterQueryParams}}
   />
 {{/if}}

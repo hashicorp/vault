@@ -25,7 +25,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
       { namespace_path: 'ns1/', mount_type: 'ns_token/', mount_path: 'auth/token/' },
     ];
     this.onFilter = sinon.spy();
-    this.filterQueryParams = { namespace_path: '', mount_path: '', mount_type: '' };
+    this.filterQueryParams = { namespace_path: '', mount_path: '', mount_type: '', month: '' };
 
     this.renderComponent = async () => {
       await render(hbs`
@@ -260,7 +260,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     const [afterUpdate] = this.onFilter.lastCall.args;
     assert.propEqual(
       afterUpdate,
-      { namespace_path: 'admin/', mount_path: 'auth/userpass-root/', mount_type: 'token/' },
+      { namespace_path: 'admin/', mount_path: 'auth/userpass-root/', mount_type: 'token/', month: '' },
       'callback fires with updated selection'
     );
     assert.dom(FILTERS.tagContainer).hasText('Filters applied: admin/ auth/userpass-root/ token/');
@@ -273,7 +273,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     const [afterClear] = this.onFilter.lastCall.args;
     assert.propEqual(
       afterClear,
-      { namespace_path: '', mount_path: '', mount_type: '' },
+      { namespace_path: '', mount_path: '', mount_type: '', month: '' },
       'onFilter callback has empty values when "Clear filters" is clicked'
     );
     assert.dom(FILTERS.tagContainer).hasText('Filters applied: None');
@@ -286,7 +286,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     const afterClear = this.onFilter.lastCall.args[0];
     assert.propEqual(
       afterClear,
-      { namespace_path: '', mount_path: 'auth/userpass-root/', mount_type: 'token/' },
+      { namespace_path: '', mount_path: 'auth/userpass-root/', mount_type: 'token/', month: '' },
       'onFilter callback fires with empty namespace_path'
     );
   });

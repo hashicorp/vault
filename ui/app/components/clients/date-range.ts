@@ -7,9 +7,10 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { buildISOTimestamp, parseAPITimestamp } from 'core/utils/date-formatters';
 import timestamp from 'core/utils/timestamp';
 import { format } from 'date-fns';
+
 import type VersionService from 'vault/services/version';
 import type { HTMLElementEvent } from 'forms';
 
@@ -67,16 +68,11 @@ export default class ClientsDateRangeComponent extends Component<Args> {
     const periods: string[] = [];
 
     for (let i = 1; i <= count; i++) {
-      const startDate = new Date(this.args.billingStartTime);
-      const utcMonth = startDate.getUTCMonth();
+      const startDate = parseAPITimestamp(this.args.billingStartTime) as Date;
       const utcYear = startDate.getUTCFullYear() - i;
-
       startDate.setUTCFullYear(utcYear);
-      startDate.setUTCMonth(utcMonth);
-
       periods.push(startDate.toISOString());
     }
-
     return periods;
   }
 
@@ -128,18 +124,11 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   }
 
   // HELPERS
-  formatModalTimestamp(modalValue: string, isEnd: boolean) {
+  formatModalTimestamp(modalValue: string, isEndDate: boolean) {
     const [yearString, month] = modalValue.split('-');
     const monthIdx = Number(month) - 1;
     const year = Number(yearString);
-    // day = 0 for Date.UTC(year, month, day) returns the last day of the previous month,
-    // which is why the monthIdx is increased by one for end dates.
-    // Date.UTC() also returns December if -1 is passed (which happens when January is selected)
-    const utc = isEnd
-      ? new Date(Date.UTC(year, monthIdx + 1, 0, 23, 59, 59))
-      : new Date(Date.UTC(year, monthIdx, 1));
-
-    return utc.toISOString();
+    return buildISOTimestamp({ monthIdx, year, isEndDate });
   }
 
   setTrackedFromArgs() {

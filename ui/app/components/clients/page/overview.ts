@@ -3,21 +3,20 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import ActivityComponent from '../activity';
-import { service } from '@ember/service';
+import Component from '@glimmer/component';
 import { cached, tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { HTMLElementEvent } from 'vault/forms';
-import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { filterTableData, flattenMounts } from 'core/utils/client-count-utils';
+import { filterTableData, flattenMounts, type ClientFilterTypes } from 'core/utils/client-count-utils';
 
-import type FlagsService from 'vault/services/flags';
-import type RouterService from '@ember/routing/router-service';
+import type ClientsActivityModel from 'vault/vault/models/clients/activity';
 
-export default class ClientsOverviewPageComponent extends ActivityComponent {
-  @service declare readonly flags: FlagsService;
-  @service('app-router') declare readonly router: RouterService;
+export interface Args {
+  activity: ClientsActivityModel;
+  onFilterChange: CallableFunction;
+  filterQueryParams: Record<ClientFilterTypes, string>;
+}
 
+export default class ClientsOverviewPageComponent extends Component<Args> {
   @tracked selectedMonth = '';
 
   @cached
@@ -25,13 +24,12 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
     return this.args.activity.byMonth?.map((m) => m?.new_clients) || [];
   }
 
-  @cached
-  // Supplies data passed to dropdown filters
+  // Supplies data passed to dropdown filters (except months which is computed below )
   get activityData() {
-    // Find the namespace data for the selected month
-    // If no month is selected the table displays all of the activity for the queried date range
-    const namespaceData = this.selectedMonth
-      ? this.byMonthNewClients.find((m) => m.timestamp === this.selectedMonth)?.namespaces
+    // If no month is selected the table displays all of the activity for the queried date range.
+    const selectedMonth = this.args.filterQueryParams.month;
+    const namespaceData = selectedMonth
+      ? this.byMonthNewClients.find((m) => m.timestamp === selectedMonth)?.namespaces
       : this.args.activity.byNamespace;
 
     // Get the array of "mounts" data nested in each namespace object and flatten
@@ -40,14 +38,16 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
 
   @cached
   get months() {
-    return this.byMonthNewClients
-      .reverse()
-      .map((m) => ({ timestamp: m.timestamp, display: parseAPITimestamp(m.timestamp, 'MMMM yyyy') }));
+    return this.byMonthNewClients.reverse().map((m) => m.timestamp);
   }
 
   get tableData() {
     if (this.activityData?.length) {
-      return filterTableData(this.activityData, this.args.filterQueryParams);
+      // Reset the `month` query param because it determines which dataset (see this.activityData)
+      // is passed to the table and is does not filter for key/value pairs within this dataset.
+      const filters = { ...this.args.filterQueryParams };
+      filters.month = '';
+      return filterTableData(this.activityData, filters);
     }
     return null;
   }
@@ -62,11 +62,7 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
   }
 
   @action
-  selectMonth(e: HTMLElementEvent<HTMLInputElement>) {
-    this.selectedMonth = e.target.value;
-    // Reset filters when no month is selected
-    if (this.selectedMonth === '') {
-      this.resetFilters();
-    }
+  handleFilter(filters: Record<ClientFilterTypes, string>) {
+    this.args.onFilterChange(filters);
   }
 }

@@ -250,6 +250,8 @@ module('Integration | Component | clients/page/client-list', function (hooks) {
   });
 
   test('it renders empty state message when filter selections yield no results', async function (assert) {
+    const flags = this.owner.lookup('service:flags');
+    flags.activatedFlags = ['secrets-sync'];
     this.filterQueryParams = { namespace_path: 'dev/', mount_path: 'pluto/', mount_type: 'banana' };
     await this.renderComponent();
 
@@ -257,7 +259,18 @@ module('Integration | Component | clients/page/client-list', function (hooks) {
       await click(GENERAL.hdsTab(tabName));
       assert
         .dom(CLIENT_COUNT.card('table empty state'))
-        .hasText('No data found Clear or change filters to view client count data.');
+        .hasText('No data found Select another client type or update filters to view client count data.');
     }
+  });
+
+  test('it renders empty state message when secret sync is not activated', async function (assert) {
+    this.filterQueryParams = { namespace_path: 'dev/', mount_path: 'pluto/', mount_type: 'banana' };
+    await this.renderComponent();
+    await click(GENERAL.hdsTab('Secret sync'));
+    assert
+      .dom(CLIENT_COUNT.card('table empty state'))
+      .hasText(
+        'No secret sync clients No data is available because Secrets Sync has not been activated. Activate Secrets Sync'
+      );
   });
 });
