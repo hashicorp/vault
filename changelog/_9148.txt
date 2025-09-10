@@ -1,0 +1,3 @@
+```release-note:improvement
+ui/activity: Adds filtering by month to the Client Count dashboard to link client counts to specific client IDs from the export API
+```

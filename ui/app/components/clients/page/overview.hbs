@@ -12,35 +12,15 @@
     @description="Select a month to view the client count per mount for that month."
   >
     <:subheader>
-      <Hds::Form::Select::Base
-        class="has-top-margin-m"
-        aria-label="Month"
-        name="month"
-        {{on "input" this.selectMonth}}
-        @width="200px"
-        data-test-select="attribution-month"
-        as |S|
-      >
-        <S.Options>
-          <option value="">Select month</option>
-          {{#each this.months as |m|}}
-            <option value={{m.timestamp}} selected={{eq m.timestamp this.selectedMonth}}>{{m.display}}</option>
-          {{/each}}
-        </S.Options>
-      </Hds::Form::Select::Base>
-
-      {{#if this.selectedMonth}}
-        <div>
-          <Hds::Text::Body class="has-top-margin-l has-bottom-margin-m" @tag="p" @size="100" @color="faint">Use the filters
-            to view the clients attributed by path.
-          </Hds::Text::Body>
-          <Clients::FilterToolbar
-            @dataset={{this.activityData}}
-            @onFilter={{this.handleFilter}}
-            @filterQueryParams={{@filterQueryParams}}
-          />
-        </div>
-      {{/if}}
+      <Hds::Text::Body class="has-top-margin-l has-bottom-margin-m" @tag="p" @size="100" @color="faint">Use the filters to
+        view the clients attributed by path.
+      </Hds::Text::Body>
+      <Clients::FilterToolbar
+        @dataset={{this.activityData}}
+        @onFilter={{this.handleFilter}}
+        @filterQueryParams={{@filterQueryParams}}
+        @dropdownMonths={{this.months}}
+      />
     </:subheader>
 
     <:table>

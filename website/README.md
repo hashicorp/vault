@@ -1,4 +1,4 @@
-# Vault Website
+# Vault product documentation website
 
 > [!IMPORTANT]  
 >

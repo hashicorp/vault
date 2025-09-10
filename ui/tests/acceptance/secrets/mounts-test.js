@@ -39,7 +39,7 @@ const consoleComponent = create(consoleClass);
 
 // enterprise backends are tested separately
 const BACKENDS_WITH_ENGINES = ['kv', 'pki', 'ldap', 'kubernetes'];
-module('Acceptance | settings/mount-secret-backend', function (hooks) {
+module('Acceptance | secrets/mounts', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {

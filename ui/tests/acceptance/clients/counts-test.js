@@ -51,13 +51,13 @@ module('Acceptance | clients | counts', function (hooks) {
     await visit('/vault/clients/counts/overview');
     assert.dom(GENERAL.emptyStateTitle).hasText('You are not authorized');
     assert
-      .dom(GENERAL.emptyStateActions)
+      .dom(GENERAL.emptyStateMessage)
       .hasText(
         'You must be granted permissions to view this page. Ask your administrator if you think you should have access to the /v1/sys/internal/counters/activity endpoint.'
       );
   });
 
-  test('it should use the first month timestamp from default response rather than response start_time', async function (assert) {
+  test('it should use the response start_time as the timestamp', async function (assert) {
     const getCounts = () => {
       return {
         acme_clients: 0,
@@ -75,22 +75,10 @@ module('Acceptance | clients | counts', function (hooks) {
       return {
         request_id: 'some-activity-id',
         data: {
-          start_time: '2023-04-01T00:00:00Z', // reflects the first month with data
+          start_time: '2023-04-01T00:00:00Z', // API returns complete billing cycles, so we use this date as the source of truth
           end_time: '2023-04-30T00:00:00Z',
           by_namespace: [],
           months: [
-            {
-              timestamp: '2023-02-01T00:00:00Z',
-              counts: null,
-              namespaces: null,
-              new_clients: null,
-            },
-            {
-              timestamp: '2023-03-01T00:00:00Z',
-              counts: null,
-              namespaces: null,
-              new_clients: null,
-            },
             {
               timestamp: '2023-04-01T00:00:00Z',
               counts: getCounts(),
@@ -130,8 +118,7 @@ module('Acceptance | clients | counts', function (hooks) {
       };
     });
     await visit('/vault/clients/counts/overview');
-    assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText('February 2023');
+    assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText('April 2023');
     assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText('April 2023');
-    assert.dom(CLIENT_COUNT.counts.startDiscrepancy).exists();
   });
 });

@@ -16,9 +16,15 @@
 </div>
 
 <div class="has-top-bottom-margin">
+  <Hds::Text::Body @tag="p" @size="100">
+    This is the dashboard for your overall client count usages. Review Vault's
+    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}} @isHrefExternal={{true}}>
+      client counting documentation</Hds::Link::Inline>
+    for more information.
+  </Hds::Text::Body>
 
   {{#if (eq @activity.id "no-data")}}
-    <Clients::NoData @config={{@config}} @dateRangeMessage={{this.dateRangeMessage}} />
+    <Clients::NoData @config={{@config}} />
   {{else if @activityError}}
     <Clients::Counts::Error @error={{@activityError}} />
   {{else}}
@@ -63,14 +69,6 @@
         </Hds::Alert>
       {{/if}}
 
-      {{#if this.startTimeDiscrepancy}}
-        <Hds::Alert data-test-counts-start-discrepancy @type="inline" @color="neutral" class="has-bottom-margin-s" as |A|>
-          <A.Description data-test-counts-start-discrepancy>
-            {{this.startTimeDiscrepancy}}
-          </A.Description>
-        </Hds::Alert>
-      {{/if}}
-
       {{#if this.version.isEnterprise}}
         {{! The "Client list" tab only renders for enterprise versions so there is no need for the nav bar }}
         <Clients::Counts::NavBar />
@@ -86,7 +84,7 @@
       />
     {{else}}
       <EmptyState
-        @title="No data received {{if this.dateRangeMessage this.dateRangeMessage}}"
+        @title="No data received"
         @message={{if
           this.version.isCommunity
           "Select a start and end date above to query client count data."

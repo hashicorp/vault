@@ -10,8 +10,17 @@
 
   {{#if @activityTimestamp}}
     <PH.Subtitle>
-      Last Updated:
+      Dashboard last updated:
       {{date-format @activityTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
+      <Hds::Button
+        @color="tertiary"
+        @icon="reload"
+        @isIconOnly={{true}}
+        @size="small"
+        @text="Refresh page"
+        data-test-button="Refresh page"
+        {{on "click" this.refreshRoute}}
+      />
     </PH.Subtitle>
   {{/if}}
   {{#if this.version.isEnterprise}}
@@ -25,10 +34,6 @@
     </PH.Description>
   {{/if}}
   <PH.Description>
-    This is the dashboard for your overall client count usages. Review Vault's
-    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>client counting documentation
-    </Hds::Link::Inline>for more information.
-
     {{#if this.showCommunity}}
       <div class="has-top-padding-m">
         <Hds::Text::Display @tag="h3">Client counting period</Hds::Text::Display>
@@ -65,8 +70,8 @@
       />
     {{/if}}
     <Clients::DateRange
-      @startTime={{@startTimestamp}}
-      @endTime={{@endTimestamp}}
+      @startTimestamp={{@startTimestamp}}
+      @endTimestamp={{@endTimestamp}}
       @billingStartTime={{@billingStartTime}}
       @retentionMonths={{@retentionMonths}}
       @onChange={{@onChange}}

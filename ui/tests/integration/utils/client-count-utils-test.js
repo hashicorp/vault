@@ -173,8 +173,8 @@ module('Integration | Util | client count utils', function (hooks) {
 
   test('formatByNamespace: it formats namespace array with mounts', async function (assert) {
     const original = [...RESPONSE.by_namespace];
-    const expectedNs1 = SERIALIZED_ACTIVITY_RESPONSE.by_namespace.find((ns) => ns.label === 'ns1');
-    const formattedNs1 = formatByNamespace(RESPONSE.by_namespace).find((ns) => ns.label === 'ns1');
+    const expectedNs1 = SERIALIZED_ACTIVITY_RESPONSE.by_namespace.find((ns) => ns.label === 'ns1/');
+    const formattedNs1 = formatByNamespace(RESPONSE.by_namespace).find((ns) => ns.label === 'ns1/');
     assert.expect(2 + formattedNs1.mounts.length);
 
     assert.propEqual(formattedNs1, expectedNs1, 'it formats ns1/ namespace');
@@ -295,8 +295,8 @@ module('Integration | Util | client count utils', function (hooks) {
               acme_clients: 0,
               clients: 1,
               entity_clients: 1,
-              label: 'auth/userpass/0',
-              mount_path: 'auth/userpass/0',
+              label: 'auth/userpass/0/',
+              mount_path: 'auth/userpass/0/',
               mount_type: 'userpass',
               namespace_path: 'root',
               non_entity_clients: 0,
@@ -338,8 +338,8 @@ module('Integration | Util | client count utils', function (hooks) {
                 acme_clients: 0,
                 clients: 1,
                 entity_clients: 1,
-                label: 'auth/userpass/0',
-                mount_path: 'auth/userpass/0',
+                label: 'auth/userpass/0/',
+                mount_path: 'auth/userpass/0/',
                 mount_type: 'userpass',
                 namespace_path: 'root',
                 non_entity_clients: 0,
@@ -398,10 +398,10 @@ module('Integration | Util | client count utils', function (hooks) {
 
       const mountPathFilter = filterTableData(this.mockMountData, {
         namespace_path: '',
-        mount_path: 'acme/pki/0',
+        mount_path: 'acme/pki/0/',
         mount_type: '',
       });
-      const expectedMountPathFilter = this.mockMountData.filter((m) => m.mount_path === 'acme/pki/0');
+      const expectedMountPathFilter = this.mockMountData.filter((m) => m.mount_path === 'acme/pki/0/');
       assert.propEqual(mountPathFilter, expectedMountPathFilter, 'it filters by mount_path');
       this.assertOriginal(assert);
 
@@ -429,13 +429,13 @@ module('Integration | Util | client count utils', function (hooks) {
 
       const allFilters = filterTableData(this.mockMountData, {
         namespace_path: 'root',
-        mount_path: 'auth/userpass/0',
+        mount_path: 'auth/userpass/0/',
         mount_type: 'userpass',
       });
       const expectedAllFilters = [
         {
-          label: 'auth/userpass/0',
-          mount_path: 'auth/userpass/0',
+          label: 'auth/userpass/0/',
+          mount_path: 'auth/userpass/0/',
           mount_type: 'userpass',
           namespace_path: 'root',
           acme_clients: 0,
@@ -476,8 +476,8 @@ module('Integration | Util | client count utils', function (hooks) {
           acme_clients: 0,
           clients: 8091,
           entity_clients: 4002,
-          label: 'auth/userpass/0',
-          mount_path: 'auth/userpass/0',
+          label: 'auth/userpass/0/',
+          mount_path: 'auth/userpass/0/',
           mount_type: 'userpass',
           namespace_path: 'root',
           non_entity_clients: 4089,
@@ -487,8 +487,8 @@ module('Integration | Util | client count utils', function (hooks) {
           acme_clients: 0,
           clients: 4290,
           entity_clients: 0,
-          label: 'secrets/kv/0',
-          mount_path: 'secrets/kv/0',
+          label: 'secrets/kv/0/',
+          mount_path: 'secrets/kv/0/',
           mount_type: 'kv',
           namespace_path: 'root',
           non_entity_clients: 0,
@@ -498,16 +498,16 @@ module('Integration | Util | client count utils', function (hooks) {
           acme_clients: 4003,
           clients: 4003,
           entity_clients: 0,
-          label: 'acme/pki/0',
-          mount_path: 'acme/pki/0',
+          label: 'acme/pki/0/',
+          mount_path: 'acme/pki/0/',
           mount_type: 'pki',
           namespace_path: 'root',
           non_entity_clients: 0,
           secret_syncs: 0,
         },
         {
-          client_first_used_time: '2025-08-15T23:48:09Z',
-          client_id: '5692c6ef-c871-128e-fb06-df2be7bfc0db',
+          client_first_used_time: '2025-07-15T23:48:09Z',
+          client_id: 'daf8420c-0b6b-34e6-ff38-ee1ed093bea9',
           client_type: 'entity',
           entity_alias_custom_metadata: {},
           entity_alias_metadata: {},
@@ -522,7 +522,7 @@ module('Integration | Util | client count utils', function (hooks) {
           namespace_id: 'root',
           namespace_path: '',
           policies: [],
-          token_creation_time: '2025-08-15T23:48:09Z',
+          token_creation_time: '2020-08-15T23:48:09Z',
         },
         {
           client_first_used_time: '2025-08-15T23:53:19Z',
@@ -546,10 +546,10 @@ module('Integration | Util | client count utils', function (hooks) {
           namespace_id: 'root',
           namespace_path: '',
           policies: ['base'],
-          token_creation_time: '2025-08-15T23:52:38Z',
+          token_creation_time: '2020-08-15T23:52:38Z',
         },
         {
-          client_first_used_time: '2025-08-16T09:16:03Z',
+          client_first_used_time: '2025-09-16T09:16:03Z',
           client_id: 'a7c8d912-4f61-23b5-88e4-627a3dcf2b92',
           client_type: 'entity',
           entity_alias_custom_metadata: {
@@ -573,10 +573,10 @@ module('Integration | Util | client count utils', function (hooks) {
           namespace_id: 'root',
           namespace_path: '',
           policies: ['admin', 'audit'],
-          token_creation_time: '2025-08-16T09:15:42Z',
+          token_creation_time: '2020-08-16T09:15:42Z',
         },
         {
-          client_first_used_time: '2025-08-17T16:44:12Z',
+          client_first_used_time: '2025-12-17T16:44:12Z',
           client_id: 'c6b9d248-5a71-39e4-c7f2-951d8eaf6b95',
           client_type: 'entity',
           entity_alias_custom_metadata: {
@@ -602,14 +602,14 @@ module('Integration | Util | client count utils', function (hooks) {
           namespace_id: 'root',
           namespace_path: '',
           policies: ['operations', 'monitoring'],
-          token_creation_time: '2025-08-17T16:43:28Z',
+          token_creation_time: '2020-08-17T16:43:28Z',
         },
       ];
-      assert.propEqual(
-        filteredData,
-        expected,
-        "filtered data includes items with namespace_path equal to either 'root' or an empty string"
-      );
+
+      filteredData.forEach((d, idx) => {
+        const identifier = idx < 3 ? `label: ${d.label}` : `client_id: ${d.client_id}`;
+        assert.propEqual(d, expected[idx], `filtered data contains ${identifier}`);
+      });
       this.assertOriginal(assert);
     });
   });

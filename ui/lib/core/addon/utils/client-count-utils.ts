@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
+import { isSameMonthUTC, parseAPITimestamp } from 'core/utils/date-formatters';
+import { compareAsc, isWithinInterval } from 'date-fns';
+import { ROOT_NAMESPACE } from 'vault/services/namespace';
+import { sanitizePath } from './sanitize-path';
 
 import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 
@@ -31,6 +33,8 @@ export enum ClientFilters {
   NAMESPACE = 'namespace_path',
   MOUNT_PATH = 'mount_path',
   MOUNT_TYPE = 'mount_type',
+  // this filter/query param does not map to a key in either API response and is handled ~special~
+  MONTH = 'month',
 }
 
 export type ClientFilterTypes = (typeof ClientFilters)[keyof typeof ClientFilters];
@@ -81,13 +85,6 @@ export const filterVersionHistory = (
 };
 
 // METHODS FOR SERIALIZING ACTIVITY RESPONSE
-export const formatDateObject = (dateObj: { monthIdx: number; year: number }, isEnd: boolean) => {
-  const { year, monthIdx } = dateObj;
-  // day=0 for Date.UTC() returns the last day of the month before
-  // increase monthIdx by one to get last day of queried month
-  const utc = isEnd ? Date.UTC(year, monthIdx + 1, 0) : Date.UTC(year, monthIdx, 1);
-  return getUnixTime(utc);
-};
 
 export const formatByMonths = (monthsArray: ActivityMonthBlock[]): ByMonthNewClients[] => {
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
@@ -133,7 +130,8 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByN
         label: m.mount_path,
         namespace_path: nsLabel,
         mount_path: m.mount_path,
-        mount_type: m.mount_type,
+        // sanitized so it matches activity export data because mount_type there does NOT have a trailing slash
+        mount_type: sanitizePath(m.mount_type),
         ...destructureClientCounts(m.counts),
       }));
     }
@@ -192,17 +190,24 @@ export function filterTableData(
 }
 
 const matchesFilter = (
-  datum: MountClients | ActivityExportData,
+  datum: ActivityExportData | MountClients,
   filterKey: ClientFilterTypes,
   filterValue: string
 ) => {
+  // Only ActivityExportData data is ever filtered by 'client_first_used_time' (not MountClients)
+  if (filterKey === ClientFilters.MONTH) {
+    return 'client_first_used_time' in datum
+      ? isSameMonthUTC(datum.client_first_used_time, filterValue)
+      : false;
+  }
+
   const datumValue = datum[filterKey];
   // The API returns and empty string as the namespace_path for the "root" namespace.
   // When a user selects "root" as a namespace filter we need to match the datum value
   // as either an empty string (for the activity export data) OR as "root"
   // (the by_namespace data is serialized to make "root" the namespace_path).
-  if (filterKey === 'namespace_path' && filterValue === 'root') {
-    return datumValue === '' || datumValue === filterValue;
+  if (filterKey === ClientFilters.NAMESPACE && filterValue === 'root') {
+    return datumValue === ROOT_NAMESPACE || datumValue === filterValue;
   }
   return datumValue === filterValue;
 };

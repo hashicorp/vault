@@ -11,10 +11,12 @@ export const CLIENT_COUNT = {
     configDisabled: '[data-test-counts-disabled]',
     namespaces: '[data-test-counts-namespaces]',
     mountPaths: '[data-test-counts-auth-mounts]',
-    startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
   dateRange: {
-    dropdownOption: (idx = 0) => `[data-test-date-range-billing-start="${idx}"]`,
+    dropdownOption: (idx: number | null) =>
+      typeof idx === 'number'
+        ? `[data-test-date-range-billing-start="${idx}"]`
+        : '[data-test-date-range-billing-start]',
     dateDisplay: (name: string) => (name ? `[data-test-date-range="${name}"]` : '[data-test-date-range]'),
     edit: '[data-test-date-range-edit]',
     editModal: '[data-test-date-range-edit-modal]',

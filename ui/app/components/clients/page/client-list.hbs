@@ -3,6 +3,18 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
+<Hds::Text::Body class="has-top-margin-l has-bottom-margin-m" @tag="p" @size="100" @color="faint">The client list data below
+  comes from the
+  <Hds::Link::Inline
+    @icon="docs-link"
+    @iconPosition="trailing"
+    @isHrefExternal={{true}}
+    @href={{doc-link "/vault/api-docs/system/internal-counters#activity-export"}}
+  >
+    Activity Export API
+  </Hds::Link::Inline>. It may take up to ten minutes for new client IDs to appear in the export data.
+</Hds::Text::Body>
+
 <Clients::CountsCard data-test-card="Export activity data">
   <:subheader>
     <Clients::FilterToolbar
@@ -19,7 +31,7 @@
           <T.Tab @count={{or tableData.length "0"}} data-test-tab={{tabName}}>{{tabName}}</T.Tab>
           <T.Panel>
             <div class="has-top-margin-xs">
-              {{#if this.anyFilters}}
+              {{#if this.filtersAreApplied}}
                 <Hds::Text::Body @tag="p" @color="faint" class="has-bottom-margin-xs" data-test-table-summary={{tabName}}>
                   Summary:
                   {{pluralize tableData.length "client"}}
@@ -38,11 +50,33 @@
                   @setPageSize={{50}}
                   @showPaginationSizeSelector={{true}}
                 >
+
                   <:emptyState>
-                    <Hds::ApplicationState as |A|>
-                      <A.Header @title="No data found" />
-                      <A.Body @text="Clear or change filters to view client count data." />
-                    </Hds::ApplicationState>
+                    {{#if (and (eq tabName "Secret sync") (not this.flags.secretsSyncIsActivated))}}
+                      <Hds::ApplicationState as |A|>
+                        <A.Header @title="No secret sync clients" />
+                        <A.Body @text="No data is available because Secrets Sync has not been activated." />
+                        <A.Body>
+                          <Hds::Link::Standalone
+                            @icon="chevron-right"
+                            @iconPosition="trailing"
+                            @text="Activate Secrets Sync"
+                            @route="vault.cluster.sync.secrets.overview"
+                          />
+                        </A.Body>
+                      </Hds::ApplicationState>
+                    {{else}}
+                      <Hds::ApplicationState as |A|>
+                        <A.Header @title="No data found" />
+                        <A.Body
+                          @text="Select another client type {{if
+                            this.filtersAreApplied
+                            'or update filters'
+                            ''
+                          }} to view client count data."
+                        />
+                      </Hds::ApplicationState>
+                    {{/if}}
                   </:emptyState>
                 </Clients::Table>
               {{/if}}

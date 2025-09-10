@@ -44,6 +44,7 @@ variable "ports" {
 
 variable "integration_host_state" {
   description = "The state of the test server from the 'backend_test_servers' module"
+  default     = null
 }
 
 variable "hosts" {

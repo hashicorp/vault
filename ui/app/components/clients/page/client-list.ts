@@ -3,12 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import ActivityComponent, { Args } from '../activity';
+import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { HTMLElementEvent } from 'vault/forms';
-
-import { filterIsSupported, filterTableData, type ActivityExportData } from 'core/utils/client-count-utils';
+import {
+  filterIsSupported,
+  filterTableData,
+  type ClientFilterTypes,
+  type ActivityExportData,
+} from 'core/utils/client-count-utils';
+import { service } from '@ember/service';
+import FlagsService from 'vault/services/flags';
 
 // Define the base mapping to derive types from
 const CLIENT_TYPE_MAP = {
@@ -21,24 +27,30 @@ const CLIENT_TYPE_MAP = {
 // Dynamically derive the tab values from the mapping
 type ClientListTabs = (typeof CLIENT_TYPE_MAP)[keyof typeof CLIENT_TYPE_MAP];
 
-export default class ClientsClientListPageComponent extends ActivityComponent {
-  @tracked selectedTab: ClientListTabs;
-  @tracked exportDataByTab;
+export interface Args {
+  exportData: ActivityExportData[];
+  onFilterChange: CallableFunction;
+  filterQueryParams: Record<ClientFilterTypes, string>;
+}
+
+export default class ClientsClientListPageComponent extends Component<Args> {
+  @service declare readonly flags: FlagsService;
+
+  @tracked selectedTab: ClientListTabs = 'Entity';
+  @tracked exportDataByTab: Record<ClientListTabs, ActivityExportData[]> = {
+    Entity: [],
+    'Non-entity': [],
+    ACME: [],
+    'Secret sync': [],
+  };
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
 
-    this.exportDataByTab = this.args.exportData.reduce(
-      (obj, data) => {
-        const clientLabel = CLIENT_TYPE_MAP[data.client_type];
-        if (!obj[clientLabel]) {
-          obj[clientLabel] = [];
-        }
-        obj[clientLabel].push(data);
-        return obj;
-      },
-      {} as Record<ClientListTabs, ActivityExportData[]>
-    );
+    this.args.exportData.forEach((data: ActivityExportData) => {
+      const tabName = CLIENT_TYPE_MAP[data.client_type];
+      this.exportDataByTab[tabName].push(data);
+    });
 
     const firstTab = Object.keys(this.exportDataByTab)[0] as ClientListTabs;
     this.selectedTab = firstTab;
@@ -54,12 +66,17 @@ export default class ClientsClientListPageComponent extends ActivityComponent {
   }
 
   @action
+  handleFilter(filters: Record<ClientFilterTypes, string>) {
+    this.args.onFilterChange(filters);
+  }
+
+  @action
   onClickTab(_event: HTMLElementEvent<HTMLInputElement>, idx: number) {
     const tab = this.tabs[idx];
     this.selectedTab = tab ?? this.tabs[0]!;
   }
 
-  get anyFilters() {
+  get filtersAreApplied() {
     return (
       Object.keys(this.args.filterQueryParams).every((f) => filterIsSupported(f)) &&
       Object.values(this.args.filterQueryParams).some((v) => !!v)
