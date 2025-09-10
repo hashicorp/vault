@@ -36,7 +36,7 @@ func runListGithubChangedFilesCmd(cmd *cobra.Command, args []string) error {
 
 	res, err := listGithubChangedFiles.Run(context.TODO(), githubCmdState.Github)
 	if err != nil {
-		return fmt.Errorf("listing github workflow failures: %w", err)
+		return fmt.Errorf("listing changed files: %w", err)
 	}
 
 	switch rootCfg.format {

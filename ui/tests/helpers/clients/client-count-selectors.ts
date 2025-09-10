@@ -11,7 +11,6 @@ export const CLIENT_COUNT = {
     configDisabled: '[data-test-counts-disabled]',
     namespaces: '[data-test-counts-namespaces]',
     mountPaths: '[data-test-counts-auth-mounts]',
-    startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
   dateRange: {
     dropdownOption: (idx = 0) => `[data-test-date-range-billing-start="${idx}"]`,

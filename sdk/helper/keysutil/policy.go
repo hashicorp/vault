@@ -2876,3 +2876,14 @@ func generateECDSAKey(keyType KeyType, entry *KeyEntry) error {
 
 	return nil
 }
+
+func (p *Policy) setKDF(ctx context.Context, storage logical.Storage, kdf int) error {
+	p.KDF = kdf
+
+	err := p.Persist(ctx, storage)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

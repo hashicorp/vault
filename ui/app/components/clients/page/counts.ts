@@ -6,7 +6,6 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { isSameMonth, isAfter } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { filterVersionHistory } from 'core/utils/client-count-utils';
 
@@ -43,21 +42,6 @@ export default class ClientsCountsPageComponent extends Component<Args> {
 
   get formattedBillingStartDate() {
     return this.args.config.billingStartTimestamp.toISOString();
-  }
-
-  // returns text for empty state message if noActivityData
-  get dateRangeMessage() {
-    if (this.args.startTimestamp && this.args.endTimestamp) {
-      const endMonth = isSameMonth(
-        parseAPITimestamp(this.args.startTimestamp) as Date,
-        parseAPITimestamp(this.args.endTimestamp) as Date
-      )
-        ? ''
-        : `to ${parseAPITimestamp(this.args.endTimestamp, 'MMMM yyyy')}`;
-      // completes the message 'No data received from { dateRangeMessage }'
-      return `from ${parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy')} ${endMonth}`;
-    }
-    return null;
   }
 
   // passed into page-header for the export modal alert
@@ -107,34 +91,13 @@ export default class ClientsCountsPageComponent extends Component<Args> {
         };
   }
 
-  // banner contents shown if startTime returned from activity API (which matches the first month with data) is after the queried startTime
-  get startTimeDiscrepancy() {
-    const { activity, config } = this.args;
-    const activityStartDateObject = parseAPITimestamp(activity.startTime) as Date;
-    const queryStartDateObject = parseAPITimestamp(this.args.startTimestamp) as Date;
-    const isEnterprise =
-      this.args.startTimestamp === config.billingStartTimestamp?.toISOString() && this.version.isEnterprise;
-    const message = isEnterprise ? 'Your license start date is' : 'You requested data from';
-
-    if (
-      isAfter(activityStartDateObject, queryStartDateObject) &&
-      !isSameMonth(activityStartDateObject, queryStartDateObject)
-    ) {
-      return `${message} ${this.formattedStartDate}.
-        We only have data from ${parseAPITimestamp(activity.startTime, 'MMMM yyyy')},
-        and that is what is being shown here.`;
-    } else {
-      return null;
-    }
-  }
-
   // the dashboard should show sync tab if the flag is on or there's data
   get hasSecretsSyncClients(): boolean {
     return this.args.activity?.total?.secret_syncs > 0;
   }
 
   @action
-  onDateChange(params: { start_time: number | undefined; end_time: number | undefined }) {
+  onDateChange(params: { start_time: string; end_time: string }) {
     this.args.onFilterChange(params);
   }
 }

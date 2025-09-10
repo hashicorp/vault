@@ -13,6 +13,8 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { ClientFilters } from 'core/utils/client-count-utils';
 import { CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { ACTIVITY_EXPORT_STUB } from 'vault/tests/helpers/clients/client-count-helpers';
+import timestamp from 'core/utils/timestamp';
+import clientsHandler, { STATIC_NOW } from 'vault/mirage/handlers/clients';
 
 // integration test handle general display assertions, acceptance handles nav + filtering
 module('Acceptance | clients | counts | client list', function (hooks) {
@@ -20,9 +22,14 @@ module('Acceptance | clients | counts | client list', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    // This tab is hidden on community so the version is stubbed for consistent test running on either version
+    //* Community version setup
+    // This tab is hidden on community this setup is stubbed for consistent test running on either version
     this.version = this.owner.lookup('service:version');
     this.version.type = 'enterprise';
+    // Return a consistent billing start timestamp for community versions
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
+    clientsHandler(this.server);
+    //* End CE setup
 
     // The activity export endpoint returns a ReadableStream of json lines, this is not easily mocked using mirage.
     // Stubbing the adapter method return instead.
@@ -100,13 +107,25 @@ module('Acceptance | clients | counts | client list', function (hooks) {
     assert.strictEqual(currentURL(), url, '"Clear filters" resets URL query params');
   });
 
-  test('it renders error message if export fails', async function (assert) {
+  test('it renders error message if export has no data', async function (assert) {
     this.exportDataStub.throws(new Error('No data to export in provided time range.'));
     await visit('/vault/clients/counts/client-list');
     await click(CLIENT_COUNT.dateRange.edit);
     await click(CLIENT_COUNT.dateRange.dropdownOption(4));
+    assert.dom(GENERAL.emptyStateTitle).hasText('No data found');
+    assert.dom(GENERAL.emptyStateMessage).hasText('No data to export in provided time range.');
+    // Assert the empty state message renders below the page header so user can query other dates
+    assert.dom(GENERAL.tab('overview')).exists('Overview tab still renders');
+    assert.dom(GENERAL.tab('client list')).exists('Client list tab still renders');
+  });
+
+  test('it renders error message for permission denied', async function (assert) {
+    this.exportDataStub.throws(new Error('permission denied'));
+    await visit('/vault/clients/counts/client-list');
+    await click(CLIENT_COUNT.dateRange.edit);
+    await click(CLIENT_COUNT.dateRange.dropdownOption(4));
     assert.dom(GENERAL.emptyStateTitle).hasText('Error');
-    assert.dom(GENERAL.emptyStateActions).hasText('No data to export in provided time range.');
+    assert.dom(GENERAL.emptyStateMessage).hasText('permission denied');
     // Assert the empty state message renders below the page header so user can query other dates
     assert.dom(GENERAL.tab('overview')).exists('Overview tab still renders');
     assert.dom(GENERAL.tab('client list')).exists('Client list tab still renders');

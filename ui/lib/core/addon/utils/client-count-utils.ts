@@ -4,7 +4,7 @@
  */
 
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
+import { compareAsc, isWithinInterval } from 'date-fns';
 
 import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 
@@ -81,13 +81,6 @@ export const filterVersionHistory = (
 };
 
 // METHODS FOR SERIALIZING ACTIVITY RESPONSE
-export const formatDateObject = (dateObj: { monthIdx: number; year: number }, isEnd: boolean) => {
-  const { year, monthIdx } = dateObj;
-  // day=0 for Date.UTC() returns the last day of the month before
-  // increase monthIdx by one to get last day of queried month
-  const utc = isEnd ? Date.UTC(year, monthIdx + 1, 0) : Date.UTC(year, monthIdx, 1);
-  return getUnixTime(utc);
-};
 
 export const formatByMonths = (monthsArray: ActivityMonthBlock[]): ByMonthNewClients[] => {
   const sortedPayload = sortMonthsByTimestamp(monthsArray);

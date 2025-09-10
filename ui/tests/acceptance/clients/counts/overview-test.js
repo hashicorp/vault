@@ -152,17 +152,6 @@ module('Acceptance | clients | overview', function (hooks) {
       assert
         .dom(xAxisLabels[xAxisLabels.length - 1])
         .hasText('12/23', 'x-axis labels end with queried end month');
-
-      // query month older than count start date
-      await click(CLIENT_COUNT.dateRange.edit);
-      await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2020-07');
-      await click(GENERAL.submitButton);
-      assert
-        .dom(CLIENT_COUNT.counts.startDiscrepancy)
-        .hasTextContaining(
-          'You requested data from July 2020. We only have data from January 2023, and that is what is being shown here.',
-          'warning banner displays that date queried was prior to count start date'
-        );
     });
   });
 
