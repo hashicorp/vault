@@ -94,10 +94,10 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       .hasText('Tracking is disabled', 'Config disabled alert renders');
   });
 
-  const jan23start = '2023-01-01T00:00:00.000Z';
+  const jan23start = '2023-01-01T00:00:00Z';
   // license start is July 2, 2024 on date change it recalculates start to beginning of the month
-  const july23start = '2023-07-01T00:00:00.000Z';
-  const dec23end = '2023-12-31T23:59:59.000Z';
+  const july23start = '2023-07-01T00:00:00Z';
+  const dec23end = '2023-12-31T23:59:59Z';
   const testCases = [
     {
       scenario: 'changing start only',
@@ -123,7 +123,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     },
   ];
   testCases.forEach((testCase) => {
-    test(`it should send correct millis value on filter change when ${testCase.scenario}`, async function (assert) {
+    test(`it should send correct timestamp on filter change when ${testCase.scenario}`, async function (assert) {
       assert.expect(5);
       this.owner.lookup('service:version').type = 'community';
       this.onFilterChange = (params) => {

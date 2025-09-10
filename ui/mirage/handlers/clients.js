@@ -5,7 +5,6 @@
 
 import {
   addMonths,
-  differenceInCalendarMonths,
   endOfMonth,
   formatRFC3339,
   fromUnixTime,
@@ -13,7 +12,6 @@ import {
   isBefore,
   isSameMonth,
   isWithinInterval,
-  startOfMonth,
   subMonths,
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
@@ -30,7 +28,7 @@ export const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
 export const STATIC_PREVIOUS_MONTH = new Date('2023-12-25T23:59:59Z');
 const COUNTS_START = subMonths(STATIC_NOW, 12); // user started Vault cluster on 2023-01-25
 // upgrade happened 2 month after license start
-export const UPGRADE_DATE = addMonths(LICENSE_START, 2); // monthly attribution added
+export const UPGRADE_DATE = new Date('2023-09-01T00:00:00Z'); // monthly attribution added
 
 // exported so that tests not using this scenario can use the same response
 export const CONFIG_RESPONSE = {
@@ -67,7 +65,8 @@ function generateMountBlock(path, counts) {
     return obj;
   }, {});
   // this logic is random nonsense just to have some mounts be "deleted"
-  const setMountType = () => (counts.clients % 5 <= 1 ? 'deleted mount' : path.split('/')[1]);
+  // "mount_type" from /sys/internal/counters/activity ends in a trailing slash (but in the export activity data it does not)
+  const setMountType = () => (counts.clients % 5 <= 1 ? 'deleted mount' : `${path.split('/')[1]}/`);
   return {
     mount_path: path,
     mount_type: setMountType(),
@@ -100,13 +99,13 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns, skipCounts =
 
     // each mount type generates a different type of client
     return [
-      generateMountBlock(`auth/token/${idx}`, {
+      generateMountBlock(`auth/token/${idx}/`, {
         clients: non_entity_clients + entity_clients,
         non_entity_clients,
         entity_clients,
       }),
-      generateMountBlock(`secrets/kv/${idx}`, { clients: secret_syncs, secret_syncs }),
-      generateMountBlock(`acme/pki/${idx}`, { clients: acme_clients, acme_clients }),
+      generateMountBlock(`secrets/kv/${idx}/`, { clients: secret_syncs, secret_syncs }),
+      generateMountBlock(`acme/pki/${idx}/`, { clients: acme_clients, acme_clients }),
     ];
   };
 
@@ -122,19 +121,23 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns, skipCounts =
 function generateMonths(startDate, endDate, namespaces) {
   const startDateObject = parseAPITimestamp(startDate);
   const endDateObject = parseAPITimestamp(endDate);
-  const numberOfMonths = differenceInCalendarMonths(endDateObject, startDateObject) + 1;
+  const startMonth = startDateObject.getUTCMonth() + startDateObject.getUTCFullYear() * 12;
+  const endMonth = endDateObject.getUTCMonth() + endDateObject.getUTCFullYear() * 12;
+  const numberOfMonths = endMonth - startMonth + 1;
   const months = [];
 
   // only generate monthly block if queried dates span or follow upgrade to 1.10
   const upgradeWithin = isWithinInterval(UPGRADE_DATE, { start: startDateObject, end: endDateObject });
   const upgradeAfter = isAfter(startDateObject, UPGRADE_DATE);
+
   if (upgradeWithin || upgradeAfter) {
     for (let i = 0; i < numberOfMonths; i++) {
-      const month = addMonths(startOfMonth(startDateObject), i);
+      const month = new Date(Date.UTC(startDateObject.getUTCFullYear(), startDateObject.getUTCMonth() + i));
+
       const hasNoData = isBefore(month, UPGRADE_DATE) && !isSameMonth(month, UPGRADE_DATE);
       if (hasNoData) {
         months.push({
-          timestamp: formatRFC3339(month),
+          timestamp: month.toISOString(),
           counts: null,
           namespaces: null,
           new_clients: null,
@@ -145,7 +148,7 @@ function generateMonths(startDate, endDate, namespaces) {
       const monthNs = namespaces.map((ns, idx) => generateNamespaceBlock(idx, false, ns));
       const newClients = namespaces.map((ns, idx) => generateNamespaceBlock(idx, true, ns));
       months.push({
-        timestamp: formatRFC3339(month),
+        timestamp: month.toISOString(),
         counts: getTotalCounts(monthNs),
         namespaces: monthNs.sort((a, b) => b.counts.clients - a.counts.clients),
         new_clients: {
@@ -155,7 +158,6 @@ function generateMonths(startDate, endDate, namespaces) {
       });
     }
   }
-
   return months;
 }
 
@@ -295,6 +297,7 @@ export default function (server) {
     const activities = schema['clients/activities'];
     const namespace = req.requestHeaders['X-Vault-Namespace'];
     let { start_time, end_time } = req.queryParams;
+
     if (!start_time) {
       // if there are no date query params, the activity log default behavior
       // queries from the builtin license start timestamp to the current month

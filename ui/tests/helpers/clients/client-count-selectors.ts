@@ -13,7 +13,10 @@ export const CLIENT_COUNT = {
     mountPaths: '[data-test-counts-auth-mounts]',
   },
   dateRange: {
-    dropdownOption: (idx = 0) => `[data-test-date-range-billing-start="${idx}"]`,
+    dropdownOption: (idx: number | null) =>
+      typeof idx === 'number'
+        ? `[data-test-date-range-billing-start="${idx}"]`
+        : '[data-test-date-range-billing-start]',
     dateDisplay: (name: string) => (name ? `[data-test-date-range="${name}"]` : '[data-test-date-range]'),
     edit: '[data-test-date-range-edit]',
     editModal: '[data-test-date-range-edit-modal]',
