@@ -69,6 +69,13 @@ func (b *backend) loginPathWrapper(wrappedOp func(ctx context.Context, req *logi
 }
 
 func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Quota role rule creates send a probe to test if the backend returns
+	// ErrUnsupportedOperation for ResolveRole, and there's no req.Storage populated
+	// for these.  So just return a non-ErrUnsupportedOperation error.
+	if req.Storage == nil {
+		return logical.ErrorResponse("no storage"), logical.ErrMissingRequiredState
+	}
+
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
