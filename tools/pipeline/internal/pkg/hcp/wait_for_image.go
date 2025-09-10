@@ -65,8 +65,11 @@ func (r *WaitForImageReq) Run(ctx context.Context, client *Client) (*WaitForImag
 
 			return err
 		},
+		retry.UntilSucceeded(),
 		retry.Context(ctx),
+		retry.WrapContextErrorWithLastError(true),
 		retry.Delay(r.Delay),
+		retry.DelayType(retry.FixedDelay),
 	)
 
 	return res, err
