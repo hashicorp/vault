@@ -81,13 +81,13 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - uses: hashicorp/action-setup-enos@b9fa53484a1e8fdcc7b02a118bcf01d65b9414c9 # v1.37
+      - uses: hashicorp/action-setup-enos@39a8f388434bea5eeba6649b99aa9949a55a1150 # v1.38
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Set Up Git
         run: git config --global url."https://${{ secrets.elevated_github_token }}:@github.com".insteadOf "https://github.com"
       - name: Set Up Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version-file: './ui/package.json'
       - name: Set Up Terraform
@@ -118,7 +118,7 @@ jobs:
         run: |
           echo "Installed Chrome Version = [$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null)]"
       - name: Configure AWS credentials from Test account
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
