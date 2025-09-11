@@ -130,8 +130,8 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/artifactory bearer-token | ARTIFACTORY_BEARER_TOKEN;
-            kv/data/github/${{ github.repository }}/aws access-key-id | AWS_ACCESS_KEY_ID_CI_09042025;
-            kv/data/github/${{ github.repository }}/aws secret-access-key | AWS_SECRET_ACCESS_KEY_CI_09042025;
+            kv/data/github/${{ github.repository }}/aws access-key-id_09042025 | AWS_ACCESS_KEY_ID_CI_09042025;
+            kv/data/github/${{ github.repository }}/aws secret-access-key_09042025 | AWS_SECRET_ACCESS_KEY_CI_09042025;
             kv/data/github/${{ github.repository }}/aws role-arn | AWS_ROLE_ARN_CI;
             kv/data/github/${{ github.repository }}/consul license | CONSUL_LICENSE;
             kv/data/github/${{ github.repository }}/vault-radar license | RADAR_LICENSE;
