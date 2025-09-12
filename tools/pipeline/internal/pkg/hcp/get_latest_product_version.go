@@ -37,8 +37,8 @@ type GetLatestProductVersionAvailability string
 // GetLatestProductVersionRes is a response from a request to get the latest
 // image from the HCP image service.
 type GetLatestProductVersionRes struct {
-	Response *http.Response
-	Image    *HCPImage `json:"image,omitempty"`
+	Response *http.Response `json:"-"`
+	Image    *HCPImage      `json:"image,omitempty"`
 }
 
 // HCPRegion is a cloud region for the image.
