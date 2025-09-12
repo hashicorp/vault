@@ -1590,8 +1590,8 @@ github.com/hashicorp/vault-plugin-secrets-azure v0.22.0 h1:/Ywf4qnr0GRhgiApQ8Pqv
 github.com/hashicorp/vault-plugin-secrets-azure v0.22.0/go.mod h1:UQkeiTw06SkmE99l8/TssnZolq3I+vlL00Trbp+Rlt0=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.22.0 h1:lD3eMet+T2DK+7rhwRiEnPEvVrP32QKvc02YKafPeWU=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.22.0/go.mod h1:eaea7uVPm89dZyMNYiSpkT9ChKjD0skqfFgJqkZ2JBk=
-github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0 h1:gK2PNyQulWM31gPN1Pm9PWIbR2a83lveDwuDLcWhNWs=
-github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0/go.mod h1:qn7kl/rhe3VN8+9LVjJfGfoSocC9EQyntVHvYSSkIk8=
+github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.1-0.20250901001715-749a56937c57 h1:Jmu/nnLl1yg9jslz6DmYNIZOoNjItV2Bw0cQv0IiV5Q=
+github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.1-0.20250901001715-749a56937c57/go.mod h1:+FgoIsnCxaZWBDn2exTH+ewvJLtHeNzhBhtXc1VJIMY=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.11.0 h1:MHG9/kUkV41ZIEM3O4HCFzW7mvu9f17ADGTHhuXxFZY=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.11.0/go.mod h1:Kl1Qnw0z6Rl047aIqWJwxVvb3fliXR32urY0QpEQKDQ=
 github.com/hashicorp/vault-plugin-secrets-kv v0.24.3 h1:7RLEUJjR7kEcxj0Kbym4qOrkO1Ud//8HDntXX7p7FSc=
@@ -3001,8 +3001,8 @@ google.golang.org/genproto v0.0.0-20230323212658-478b75c54725/go.mod h1:UUQDJDOl
 google.golang.org/genproto v0.0.0-20230330154414-c0448cd141ea/go.mod h1:UUQDJDOlWu4KYeJZffbWgBkS1YFobzKbLVfK69pe0Ak=
 google.golang.org/genproto v0.0.0-20230331144136-dcfb400f0633/go.mod h1:UUQDJDOlWu4KYeJZffbWgBkS1YFobzKbLVfK69pe0Ak=
 google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1/go.mod h1:nKE/iIaLqn2bQwXBg8f1g2Ylh6r5MN5CmZvuzZCgsCU=
-google.golang.org/genproto v0.0.0-20250825161204-c5933d9347a5 h1:vGazBMHJAHThktKQD4FGUA1UtLjxsW+1APgW0/U17dc=
-google.golang.org/genproto v0.0.0-20250825161204-c5933d9347a5/go.mod h1:ehkTb4BKCh0XKRcZMkWCOvlpcMeZokV584a9hlKmH3k=
+google.golang.org/genproto v0.0.0-20250826171959-ef028d996bc1 h1:Nm5SEGIguOIBDXs5rhfz2aKwEVWlgwC58UcmEnLDc8Y=
+google.golang.org/genproto v0.0.0-20250826171959-ef028d996bc1/go.mod h1:Jz9LrroM7Mcm+a0QrLh4UpZ1B/WhjIbqwEcUf4y08nQ=
 google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 h1:BIRfGDEjiHRrk0QKZe3Xv2ieMhtgRGeLcZQ0mIVn4EY=
 google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5/go.mod h1:j3QtIyytwqGr1JUDtYXwtMXWPKsEa5LtzIFN1Wn5WvE=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20250825161204-c5933d9347a5 h1:eaY8u2EuxbRv7c3NiGK0/NedzVsCcV6hDuU5qPX5EGE=
