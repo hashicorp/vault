@@ -55,4 +55,8 @@ from the environment or a file.  Two URL style forms are supported:
   `path`.  Path may be absolute or relative, and if relative, is relative to
   the working directory of the Vault process.
 
+Note that indirect value references are not whitespace pruned, so in
+particular with the file method care to eliminate trailing newlines is
+required.
+
 [sealwrap]: /vault/docs/enterprise/sealwrap
