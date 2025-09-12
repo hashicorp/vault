@@ -1037,6 +1037,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	conf["plugin_type"] = consts.PluginTypeCredential.String()
 	conf["plugin_version"] = pluginVersion
+	pluginOptionsVersion := entry.Options["version"]
 
 	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
 	c.AddLogger(authLogger)
@@ -1046,7 +1047,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		MountPath:     entry.Path,
 		Plugin:        entry.Type,
 		PluginVersion: pluginVersion,
-		Version:       entry.Options["version"],
+		Version:       pluginOptionsVersion,
 	})
 	if err != nil {
 		return nil, err
@@ -1064,7 +1065,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		Plugin:               entry.Type,
 		PluginVersion:        pluginVersion,
 		RunningPluginVersion: pluginRunningVersion,
-		Version:              entry.Options["version"],
+		Version:              pluginOptionsVersion,
 		Local:                entry.Local,
 	})
 	if err != nil {

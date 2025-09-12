@@ -347,9 +347,9 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	return acl, te, entity, identityPolicies, nil
 }
 
-// CheckTokenWithLock calls CheckToken after grabbing the internal stateLock, and also checking that we aren't in the
-// process of shutting down.
-func (c *Core) CheckTokenWithLock(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
+// CheckTokenWithLock calls CheckToken after grabbing the internal stateLock,
+// and also checking that we aren't in the process of shutting down.
+func (c *Core) CheckTokenWithLock(ctx context.Context, req *logical.Request) (*logical.Auth, *logical.TokenEntry, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	// first check that we aren't shutting down
@@ -358,7 +358,7 @@ func (c *Core) CheckTokenWithLock(ctx context.Context, req *logical.Request, una
 	} else if c.activeContext != nil && c.activeContext.Err() != nil {
 		return nil, nil, c.activeContext.Err()
 	}
-	return c.CheckToken(ctx, req, unauth)
+	return c.CheckToken(ctx, req, false)
 }
 
 func (c *Core) existenceCheck(ctx context.Context, req *logical.Request) (*logical.Operation, error) {
@@ -399,6 +399,22 @@ func (c *Core) existenceCheck(ctx context.Context, req *logical.Request) (*logic
 	return &existenceCheckOp, nil
 }
 
+// CheckToken returns information about the state of authentication for a request.
+// The unauth flag should be set true for "login" requests; these are requests to
+// logical.Paths.Unauthenticated endpoints that are not deleted auth requests,
+// though note that despite being called login requests, not all of them are actually
+// login requests, as in attempts to authenticate and get back a token.
+//
+// Generally speaking, if CheckToken return an error, the request should fail,
+// but there are exceptions, e.g. ErrPerfStandbyPleaseForward may just result in
+// the request being forwarded to the active node.  A returned error does not
+// necessarily mean that the other return values will be nil; often they are
+// useful e.g. for auditing failing requests.
+//
+// When unauth is true, fail root path requests, don't worry about regular
+// ACL policy checks (though sentinel checks may still apply), and don't do
+// client counting.  When unauth is false, an invalid token or a lack of ACL
+// perms will result in an error, and client counting applies.
 func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
@@ -441,11 +457,17 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	}
 
 	// At this point we won't be forwarding a raw request; we should delete
-	// authorization headers as appropriate
-	switch req.ClientTokenSource {
-	case logical.ClientTokenFromVaultHeader:
+	// authorization headers as appropriate.  Don't delete Authorization headers
+	// if this is an unauth (login) request, as that precludes things like spiffe
+	// auth handling login requests with the payload in the Authorization header.
+	// However, if we did find a valid vault token in the header, we'll still
+	// suppress the header even if unauth is true, on the principle that we
+	// don't want to expose vault tokens to plugins which might do something
+	// nefarious with them.
+	switch {
+	case req.ClientTokenSource == logical.ClientTokenFromVaultHeader:
 		delete(req.Headers, consts.AuthHeaderName)
-	case logical.ClientTokenFromAuthzHeader:
+	case req.ClientTokenSource == logical.ClientTokenFromAuthzHeader && !unauth && te == nil:
 		if headers, ok := req.Headers["Authorization"]; ok {
 			retHeaders := make([]string, 0, len(headers))
 			for _, v := range headers {

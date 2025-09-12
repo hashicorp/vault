@@ -16,6 +16,12 @@
 </div>
 
 <div class="has-top-bottom-margin">
+  <Hds::Text::Body @tag="p" @size="100">
+    This is the dashboard for your overall client count usages. Review Vault's
+    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}} @isHrefExternal={{true}}>
+      client counting documentation</Hds::Link::Inline>
+    for more information.
+  </Hds::Text::Body>
 
   {{#if (eq @activity.id "no-data")}}
     <Clients::NoData @config={{@config}} />

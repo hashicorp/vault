@@ -7161,6 +7161,11 @@ This path responds to the following HTTP methods.
 		"Count of active clients so far this month.",
 		"Count of active clients so far this month.",
 	},
+	"activity-cumulative": {
+		"Cumulative count of clients under each namespace.",
+		`Cumulative count of clients under each namespace.
+		A cumulative count is the sum of the clients belonging to a namespace and all its child namespaces.`,
+	},
 	"activity-config": {
 		"Control the collection and reporting of client counts.",
 		"Control the collection and reporting of client counts.",

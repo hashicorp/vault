@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, fillIn, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
@@ -22,7 +22,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
     this.now = timestamp.now();
     this.startTimestamp = '2018-01-01T14:15:30';
     this.endTimestamp = '2019-01-31T14:15:30';
-    this.billingStartTime = '2018-01-01T14:15:30';
+    this.billingStartTime = '';
     this.retentionMonths = 48;
     this.onChange = Sinon.spy();
     this.setEditModalVisible = Sinon.stub().callsFake((visible) => {
@@ -51,8 +51,8 @@ module('Integration | Component | clients/date-range', function (hooks) {
     await fillIn(DATE_RANGE.editDate('end'), '2018-03');
     await click(GENERAL.submitButton);
     const { start_time, end_time } = this.onChange.lastCall.args[0];
-    assert.strictEqual(start_time, '2018-01-01T00:00:00.000Z', 'it formats start_time param');
-    assert.strictEqual(end_time, '2018-03-31T23:59:59.000Z', 'it formats end_time param');
+    assert.strictEqual(start_time, '2018-01-01T00:00:00Z', 'it formats start_time param');
+    assert.strictEqual(end_time, '2018-03-31T23:59:59Z', 'it formats end_time param');
     assert.dom(DATE_RANGE.editModal).doesNotExist('closes modal');
   });
 
@@ -100,5 +100,30 @@ module('Integration | Component | clients/date-range', function (hooks) {
     await fillIn(DATE_RANGE.editDate('end'), currentMonth);
     await click(GENERAL.submitButton);
     assert.false(this.onChange.called);
+  });
+
+  module('enterprise', function (hooks) {
+    hooks.beforeEach(function () {
+      this.version = this.owner.lookup('service:version');
+      this.version.type = 'enterprise';
+      this.billingStartTime = '2018-01-01T14:15:30';
+    });
+
+    test('it billing start date dropdown for enterprise', async function (assert) {
+      await this.renderComponent();
+      await click(DATE_RANGE.edit);
+      const expectedPeriods = [
+        'January 2018',
+        'January 2017',
+        'January 2016',
+        'January 2015',
+        'January 2014',
+      ];
+      const dropdownList = findAll(DATE_RANGE.dropdownOption(null));
+      dropdownList.forEach((item, idx) => {
+        const month = expectedPeriods[idx];
+        assert.dom(item).hasText(month, `dropdown index: ${idx} renders ${month}`);
+      });
+    });
   });
 });

@@ -33,6 +33,7 @@ import { task } from 'ember-concurrency';
 export default class ClientsPageHeaderComponent extends Component {
   @service download;
   @service namespace;
+  @service router;
   @service store;
   @service version;
 
@@ -120,9 +121,8 @@ export default class ClientsPageHeaderComponent extends Component {
   });
 
   @action
-  setExportFormat(evt) {
-    const { value } = evt.target;
-    this.exportFormat = value;
+  refreshRoute() {
+    this.router.refresh();
   }
 
   @action
@@ -134,6 +134,12 @@ export default class ClientsPageHeaderComponent extends Component {
   @action
   setEditModalVisible(visible) {
     this.showEditModal = visible;
+  }
+
+  @action
+  setExportFormat(evt) {
+    const { value } = evt.target;
+    this.exportFormat = value;
   }
 
   // LOCAL TEMPLATE HELPERS

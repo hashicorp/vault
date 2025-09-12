@@ -8,15 +8,21 @@ import { cached, tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { debounce } from '@ember/runloop';
 import { capitalize } from '@ember/string';
+import { buildISOTimestamp, parseAPITimestamp } from 'core/utils/date-formatters';
 
-import { ClientFilters, type ClientFilterTypes } from 'core/utils/client-count-utils';
+import {
+  ActivityExportData,
+  ClientFilters,
+  MountClients,
+  type ClientFilterTypes,
+} from 'core/utils/client-count-utils';
 import type { HTMLElementEvent } from 'vault/forms';
 
 interface Args {
   filterQueryParams: Record<ClientFilterTypes, string>;
-  // Dataset objects technically have more keys than the client filter types, but at minimum they contain ClientFilterTypes
-  dataset: Record<ClientFilterTypes, string>[];
+  dataset: ActivityExportData[] | MountClients[];
   onFilter: CallableFunction;
+  dropdownMonths?: string[];
 }
 
 // Correspond to each search input's tracked variable in the component class
@@ -29,18 +35,21 @@ export default class ClientsFilterToolbar extends Component<Args> {
   @tracked namespace_path: string;
   @tracked mount_path: string;
   @tracked mount_type: string;
+  @tracked month: string;
 
   // Tracked search inputs
   @tracked namespacePathSearch = '';
   @tracked mountPathSearch = '';
   @tracked mountTypeSearch = '';
+  @tracked monthSearch = '';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    const { namespace_path, mount_path, mount_type } = this.args.filterQueryParams;
+    const { namespace_path, mount_path, mount_type, month } = this.args.filterQueryParams;
     this.namespace_path = namespace_path || '';
     this.mount_path = mount_path || '';
     this.mount_type = mount_type || '';
+    this.month = month || '';
   }
 
   get anyFilters() {
@@ -52,6 +61,7 @@ export default class ClientsFilterToolbar extends Component<Args> {
     const namespacePaths = new Set<string>();
     const mountPaths = new Set<string>();
     const mountTypes = new Set<string>();
+    const months = new Set<string>();
 
     // iterate over dataset once to get dropdown items
     this.args.dataset.forEach((d) => {
@@ -60,12 +70,24 @@ export default class ClientsFilterToolbar extends Component<Args> {
       if (namespace) namespacePaths.add(namespace);
       if (d.mount_path) mountPaths.add(d.mount_path);
       if (d.mount_type) mountTypes.add(d.mount_type);
+      // `client_first_used_time` only exists for the dataset rendered in the "Client list" tab (ActivityExportData)
+      // the "Overview tab" manually passes an array of months
+      if ('client_first_used_time' in d && d.client_first_used_time) {
+        // for now, we're only concerned with month granularity so we want the dropdown filter to contain an ISO timestamp
+        // of the first of the month for each client_first_used_time
+        const date = parseAPITimestamp(d.client_first_used_time) as Date;
+        const year = date.getUTCFullYear();
+        const monthIdx = date.getUTCMonth();
+        const timestamp = buildISOTimestamp({ year, monthIdx, isEndDate: false });
+        months.add(timestamp);
+      }
     });
 
     return {
       [ClientFilters.NAMESPACE]: [...namespacePaths],
       [ClientFilters.MOUNT_PATH]: [...mountPaths],
       [ClientFilters.MOUNT_TYPE]: [...mountTypes],
+      [ClientFilters.MONTH]: this.args.dropdownMonths || [...months],
     };
   }
 
@@ -87,6 +109,11 @@ export default class ClientsFilterToolbar extends Component<Args> {
         dropdownItems: this.dropdownItems[ClientFilters.MOUNT_TYPE],
         searchProperty: 'mountTypeSearch',
       },
+      [ClientFilters.MONTH]: {
+        label: 'month',
+        dropdownItems: this.dropdownItems[ClientFilters.MONTH],
+        searchProperty: 'monthSearch',
+      },
     };
   }
 
@@ -98,6 +125,8 @@ export default class ClientsFilterToolbar extends Component<Args> {
       .flatMap((f: ClientFilters) => {
         const filterValue = this.filterProps[f];
         const inDropdown = this.dropdownItems[f].includes(filterValue);
+        // Don't show an alert for the "Month" filter because it doesn't match dataset values one to one
+        if (ClientFilters.MONTH === f) return [];
         return !inDropdown && filterValue ? [alert(this.dropdownConfig[f].label, filterValue)] : [];
       })
       .join(' ');
@@ -137,6 +166,7 @@ export default class ClientsFilterToolbar extends Component<Args> {
       this.namespace_path = '';
       this.mount_path = '';
       this.mount_type = '';
+      this.month = '';
     }
     this.applyFilters();
   }
@@ -159,6 +189,8 @@ export default class ClientsFilterToolbar extends Component<Args> {
   }
 
   // TEMPLATE HELPERS
+  formatTimestamp = (isoTimestamp: string) => parseAPITimestamp(isoTimestamp, 'MMMM yyyy');
+
   searchDropdown = (dropdownItems: string[], searchProperty: SearchProperty) => {
     const searchInput = this[searchProperty];
     return searchInput

@@ -13,7 +13,6 @@ import type Store from '@ember-data/store';
 export default class ClientsCountsClientListRoute extends Route {
   @service declare readonly store: Store;
 
-  // TODO - will there always be a start/end timestamp? What's the error scenario
   async fetchAndFormatExportData(startTimestamp: string | undefined, endTimestamp: string | undefined) {
     const adapter = this.store.adapterFor('clients/activity');
     let exportData, exportError;

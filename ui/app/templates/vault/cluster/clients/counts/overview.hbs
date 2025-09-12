@@ -6,9 +6,5 @@
 <Clients::Page::Overview
   @activity={{this.model.activity}}
   @onFilterChange={{this.countsController.updateQueryParams}}
-  @filterQueryParams={{hash
-    namespace_path=this.countsController.namespace_path
-    mount_path=this.countsController.mount_path
-    mount_type=this.countsController.mount_type
-  }}
+  @filterQueryParams={{this.countsController.filterQueryParams}}
 />

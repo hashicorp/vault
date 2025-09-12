@@ -21,6 +21,7 @@ export interface ClientsCountsRouteParams {
   namespace_path?: string;
   mount_path?: string;
   mount_type?: string;
+  month?: string;
 }
 
 interface ActivityAdapterQuery {
@@ -44,6 +45,7 @@ export default class ClientsCountsRoute extends Route {
     namespace_path: { refreshModel: false, replace: true },
     mount_path: { refreshModel: false, replace: true },
     mount_type: { refreshModel: false, replace: true },
+    month: { refreshModel: false, replace: true },
   };
 
   beforeModel() {
@@ -92,11 +94,12 @@ export default class ClientsCountsRoute extends Route {
   resetController(controller: ClientsCountsController, isExiting: boolean) {
     if (isExiting) {
       controller.setProperties({
-        start_time: undefined,
-        end_time: undefined,
+        start_time: '',
+        end_time: '',
         namespace_path: '',
         mount_path: '',
         mount_type: '',
+        month: '',
       });
     }
   }
