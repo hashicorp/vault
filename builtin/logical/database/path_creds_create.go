@@ -139,6 +139,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			UsernameConfig: v5.UsernameMetadata{
 				DisplayName: req.DisplayName,
 				RoleName:    name,
+				UsernameTemplateMetadata: role.UsernameTemplateMetadata,
 			},
 			Statements: v5.Statements{
 				Commands: role.Statements.Creation,
