@@ -21,7 +21,7 @@
     {{yield to="authSelectOptions"}}
     {{yield to="error"}}
 
-    <Auth::Fields @loginFields={{this.loginFields}} />
+    <Auth::Fields @loginFields={{this.loginFields}} @formQueryParams={{@formQueryParams}} />
 
     {{#unless this.isOIDC}}
       <Hds::Form::TextInput::Field @type="password" class="has-bottom-margin-m" name="jwt" data-test-input="jwt" as |F|>
