@@ -161,7 +161,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.24.3
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-terraform v0.12.0
+	github.com/hashicorp/vault-plugin-secrets-terraform v0.12.1-0.20250901002337-50a375c6a971
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
 	github.com/hashicorp/vault/api v1.20.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
@@ -206,7 +206,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tink-crypto/tink-go/v2 v2.2.0
 	go.etcd.io/bbolt v1.4.0-beta.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.17
@@ -412,8 +412,8 @@ require (
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.2 // indirect
-	github.com/hashicorp/go-slug v0.16.4 // indirect
-	github.com/hashicorp/go-tfe v1.81.0 // indirect
+	github.com/hashicorp/go-slug v0.16.7 // indirect
+	github.com/hashicorp/go-tfe v1.91.1 // indirect
 	github.com/hashicorp/jsonapi v1.4.3-0.20250220162346-81a76b606f3e // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/mdns v1.0.4 // indirect
