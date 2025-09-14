@@ -27,10 +27,11 @@ func newRootCmd() *cobra.Command {
 	}
 
 	rootCmd.PersistentFlags().StringVar(&rootCfg.logLevel, "log", "warn", "Set the log level. One of 'debug', 'info', 'warn', 'error'")
-	rootCmd.PersistentFlags().StringVarP(&rootCfg.format, "format", "f", "table", "The output format. Can be 'json' or 'table'")
+	rootCmd.PersistentFlags().StringVarP(&rootCfg.format, "format", "f", "table", "The output format. Can be 'json', 'table', and sometimes 'markdown'")
 
 	rootCmd.AddCommand(newGenerateCmd())
 	rootCmd.AddCommand(newGithubCmd())
+	rootCmd.AddCommand(newHCPCmd())
 	rootCmd.AddCommand(newReleasesCmd())
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
@@ -51,7 +52,7 @@ func newRootCmd() *cobra.Command {
 		slog.SetDefault(slog.New(h))
 
 		switch rootCfg.format {
-		case "json", "table":
+		case "json", "table", "markdown":
 		default:
 			return fmt.Errorf("unsupported format: %s", rootCfg.format)
 		}

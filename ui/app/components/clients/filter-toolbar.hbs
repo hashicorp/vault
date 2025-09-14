@@ -3,61 +3,66 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::SegmentedGroup as |SG|>
-  {{#if @namespaces}}
-    <SG.Dropdown data-test-dropdown={{this.filterTypes.NAMESPACE}} as |D|>
-      <D.ToggleButton @color="secondary" @text="Namespace" />
-      {{#each @namespaces as |namespace|}}
-        <D.Checkmark
-          {{on "click" (fn this.updateFilter this.filterTypes.NAMESPACE namespace D.close)}}
-          @selected={{eq namespace this.nsLabel}}
-          data-test-dropdown-item={{namespace}}
-        >{{namespace}}</D.Checkmark>
-      {{/each}}
-    </SG.Dropdown>
-  {{/if}}
-  {{#if @mountPaths}}
-    <SG.Dropdown data-test-dropdown={{this.filterTypes.MOUNT_PATH}} as |D|>
-      <D.ToggleButton @color="secondary" @text="Mount path" />
-      {{#each @mountPaths as |mountPath|}}
-        <D.Checkmark
-          {{on "click" (fn this.updateFilter this.filterTypes.MOUNT_PATH mountPath D.close)}}
-          @selected={{eq mountPath this.mountPath}}
-          data-test-dropdown-item={{mountPath}}
-        >{{mountPath}}</D.Checkmark>
-      {{/each}}
-    </SG.Dropdown>
-  {{/if}}
-  {{#if @mountTypes}}
-    <SG.Dropdown data-test-dropdown={{this.filterTypes.MOUNT_TYPE}} as |D|>
-      <D.ToggleButton @color="secondary" @text="Mount type" />
-      {{#each @mountTypes as |mountType|}}
-        <D.Checkmark
-          {{on "click" (fn this.updateFilter this.filterTypes.MOUNT_TYPE mountType D.close)}}
-          @selected={{eq mountType this.mountType}}
-          data-test-dropdown-item={{mountType}}
-        >{{mountType}}</D.Checkmark>
-      {{/each}}
-    </SG.Dropdown>
-  {{/if}}
+<Hds::ButtonSet>
+  <Hds::SegmentedGroup as |SG|>
+    {{! "filterProperty" is the tracked variable in the component class that corresponds to the filter type }}
+    {{#each-in this.dropdownConfig as |filterProperty d|}}
+      {{! "searchProperty" is the tracked variable in the component class that corresponds to the search input }}
+      {{#let d.label d.dropdownItems d.searchProperty as |label dropdownItems searchProperty|}}
+        <SG.Dropdown data-test-dropdown={{filterProperty}} @onClose={{fn this.handleDropdownClose searchProperty}} as |D|>
+          <D.ToggleButton @color="secondary" @text={{capitalize label}} />
+          <D.Header>
+            <Hds::Form::TextInput::Base
+              type="search"
+              placeholder="Search"
+              id={{searchProperty}}
+              autocomplete="off"
+              @value={{get this searchProperty}}
+              {{on "input" this.handleSearch}}
+            />
+          </D.Header>
+          <D.Separator />
+          {{#let (this.searchDropdown dropdownItems searchProperty) as |matchingItems|}}
+            {{#each matchingItems as |item|}}
+              <D.Checkmark
+                {{! Select dropdown item and set as tracked property to update URL query params }}
+                {{on "click" (fn this.handleFilterSelect filterProperty item D.close)}}
+                {{! (get this filterProperty) returns the tracked filter value }}
+                @selected={{eq item (get this filterProperty)}}
+                data-test-dropdown-item={{item}}
+              >
+                {{if (eq filterProperty "month") (this.formatTimestamp item) item}}
+              </D.Checkmark>
+            {{else}}
+              <D.Description
+                class="has-top-padding-xs"
+                {{! (get this searchProperty) returns the tracked search value }}
+                @text={{this.noItemsMessage (get this searchProperty) (pluralize label)}}
+              />
+            {{/each}}
+          {{/let}}
+        </SG.Dropdown>
+      {{/let}}
+    {{/each-in}}
+  </Hds::SegmentedGroup>
   <Hds::Button
-    @icon="filter"
-    @text="Apply filters"
-    @color="primary"
-    {{on "click" this.applyFilters}}
-    data-test-button="Apply filters"
+    @icon="x-circle"
+    @text="Clear filters"
+    @color="tertiary"
+    {{on "click" (fn this.clearFilters "")}}
+    data-test-button="Clear filters"
   />
-</Hds::SegmentedGroup>
+</Hds::ButtonSet>
 
-<Hds::Layout::Flex class="has-top-margin-s" @gap="8" @align="center">
+<Hds::Layout::Flex class="has-top-margin-s" @gap="8" @align="center" data-test-filter-tag-container>
+  <Hds::Text::Body @color="faint">Filters applied:</Hds::Text::Body>
   {{#if this.anyFilters}}
-    <Hds::Text::Body @color="faint">Filters applied:</Hds::Text::Body>
-    {{! render tags based on applied @filters and not the internally tracked properties }}
-    {{#each-in @appliedFilters as |filter value|}}
-      {{#if (and (this.supportedFilter filter) value)}}
+    {{#each-in this.filterProps as |filter value|}}
+      {{#if value}}
         <div>
           <Hds::Tag
-            @text={{value}}
+            @text={{if (eq filter "month") (this.formatTimestamp value) value}}
+            {{! Filter renders in a tooltip if exceeds 20 characters  }}
             @tooltipPlacement="bottom"
             @onDismiss={{fn this.clearFilters filter}}
             data-test-filter-tag="{{filter}} {{value}}"
@@ -65,12 +70,13 @@
         </div>
       {{/if}}
     {{/each-in}}
-    <Hds::Button
-      @icon="x-circle"
-      @text="Clear filters"
-      @color="tertiary"
-      {{on "click" (fn this.clearFilters "")}}
-      data-test-button="Clear filters"
-    />
+  {{else}}
+    <Hds::Text::Body @color="faint">None</Hds::Text::Body>
   {{/if}}
 </Hds::Layout::Flex>
+
+{{#if this.filterAlert}}
+  <Hds::Alert @type="compact" class="has-top-padding-xs" data-test-inline-alert as |A|>
+    <A.Description>{{this.filterAlert}}</A.Description>
+  </Hds::Alert>
+{{/if}}

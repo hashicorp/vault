@@ -10,6 +10,8 @@ import { click, fillIn, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+import AuthMethodForm from 'vault/forms/auth/method';
+import sinon from 'sinon';
 
 const userLockoutSupported = ['approle', 'ldap', 'userpass'];
 const userLockoutUnsupported = filterEnginesByMountCategory({ mountCategory: 'auth', isEnterprise: false })
@@ -23,28 +25,26 @@ module('Integration | Component | auth-config-form options', function (hooks) {
   hooks.beforeEach(function () {
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
     this.router = this.owner.lookup('service:router');
-    this.store = this.owner.lookup('service:store');
-    this.createModel = (path, type) => {
-      this.model = this.store.createRecord('auth-method', { path, type });
-      this.model.set('config', this.store.createRecord('mount-config'));
+    this.transitionStub = sinon
+      .stub(this.router, 'transitionTo')
+      .returns({ followRedirects: () => Promise.resolve() });
+
+    this.renderComponent = (path, type) => {
+      this.form = new AuthMethodForm({
+        path,
+        config: { listing_visibility: false },
+        user_lockout_config: {},
+      });
+      this.form.type = type;
+      return render(hbs`<AuthConfigForm::Options @form={{this.form}} />`);
     };
   });
 
   for (const type of userLockoutSupported) {
     test(`it submits data correctly for ${type} method (supports user_lockout_config)`, async function (assert) {
       assert.expect(3);
-      const path = `my-${type}-auth/`;
-      this.createModel(path, type);
 
-      this.router.reopen({
-        transitionTo() {
-          return {
-            followRedirects() {
-              assert.ok(true, `saving ${type} calls transitionTo on save`);
-            },
-          };
-        },
-      });
+      const path = `my-${type}-auth`;
 
       this.server.post(`sys/mounts/auth/${path}/tune`, (schema, req) => {
         const payload = JSON.parse(req.requestBody);
@@ -62,30 +62,36 @@ module('Integration | Component | auth-config-form options', function (hooks) {
         assert.propEqual(payload, expected, `${type} method payload contains tune parameters`);
         return { payload };
       });
-      await render(hbs`<AuthConfigForm::Options @model={{this.model}} />`);
+
+      await this.renderComponent(path, type);
 
       assert.dom('[data-test-user-lockout-section]').hasText('User lockout configuration');
 
-      await click(GENERAL.toggleInput('toggle-config.listingVisibility'));
-      await fillIn(GENERAL.inputByAttr('config.tokenType'), 'default-batch');
+      await click(GENERAL.toggleInput('toggle-config.listing_visibility'));
+      await fillIn(GENERAL.inputByAttr('config.token_type'), 'default-batch');
 
       await click(GENERAL.ttl.toggle('Default Lease TTL'));
       await fillIn(GENERAL.ttl.input('Default Lease TTL'), '30');
 
-      await fillIn(GENERAL.inputByAttr('config.lockoutThreshold'), '7');
+      await fillIn(GENERAL.inputByAttr('user_lockout_config.lockout_threshold'), '7');
 
       await click(GENERAL.ttl.toggle('Lockout duration'));
       await fillIn(GENERAL.ttl.input('Lockout duration'), '10');
       await fillIn(
-        `${GENERAL.inputByAttr('config.lockoutDuration')} ${GENERAL.selectByAttr('ttl-unit')}`,
+        `${GENERAL.inputByAttr('user_lockout_config.lockout_duration')} ${GENERAL.selectByAttr('ttl-unit')}`,
         'm'
       );
       await click(GENERAL.ttl.toggle('Lockout counter reset'));
       await fillIn(GENERAL.ttl.input('Lockout counter reset'), '5');
 
-      await click(GENERAL.inputByAttr('config.lockoutDisable'));
+      await click(GENERAL.inputByAttr('user_lockout_config.lockout_disable'));
 
       await click(GENERAL.submitButton);
+
+      assert.true(
+        this.transitionStub.calledWith('vault.cluster.access.methods'),
+        'transitions to access methods list on save'
+      );
     });
   }
 
@@ -95,18 +101,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
     test(`it submits data correctly for ${type} auth method`, async function (assert) {
       assert.expect(7);
 
-      const path = `my-${type}-auth/`;
-      this.createModel(path, type);
-
-      this.router.reopen({
-        transitionTo() {
-          return {
-            followRedirects() {
-              assert.ok(true, `saving ${type} calls transitionTo on save`);
-            },
-          };
-        },
-      });
+      const path = `my-${type}-auth`;
 
       this.server.post(`sys/mounts/auth/${path}/tune`, (schema, req) => {
         const payload = JSON.parse(req.requestBody);
@@ -118,20 +113,21 @@ module('Integration | Component | auth-config-form options', function (hooks) {
         assert.propEqual(payload, expected, `${type} method payload contains tune parameters`);
         return { payload };
       });
-      await render(hbs`<AuthConfigForm::Options @model={{this.model}} />`);
+
+      await this.renderComponent(path, type);
 
       assert
         .dom('[data-test-user-lockout-section]')
         .doesNotExist(`${type} method does not render user lockout section`);
 
-      await click(GENERAL.toggleInput('toggle-config.listingVisibility'));
-      await fillIn(GENERAL.inputByAttr('config.tokenType'), 'default-batch');
+      await click(GENERAL.toggleInput('toggle-config.listing_visibility'));
+      await fillIn(GENERAL.inputByAttr('config.token_type'), 'default-batch');
 
       await click(GENERAL.ttl.toggle('Default Lease TTL'));
       await fillIn(GENERAL.ttl.input('Default Lease TTL'), '30');
 
       assert
-        .dom(GENERAL.inputByAttr('config.lockoutThreshold'))
+        .dom(GENERAL.inputByAttr('user_lockout_config.lockout_threshold'))
         .doesNotExist(`${type} method does not render lockout threshold`);
       assert
         .dom(GENERAL.ttl.toggle('Lockout duration'))
@@ -140,28 +136,23 @@ module('Integration | Component | auth-config-form options', function (hooks) {
         .dom(GENERAL.ttl.toggle('Lockout counter reset'))
         .doesNotExist(`${type} method does not render lockout counter reset`);
       assert
-        .dom(GENERAL.inputByAttr('config.lockoutDisable'))
+        .dom(GENERAL.inputByAttr('user_lockout_config.lockout_disable'))
         .doesNotExist(`${type} method does not render lockout disable`);
 
       await click(GENERAL.submitButton);
+
+      assert.true(
+        this.transitionStub.calledWith('vault.cluster.access.methods'),
+        'transitions to access methods list on save'
+      );
     });
   }
 
   test('it submits data correctly for token auth method', async function (assert) {
     assert.expect(8);
-    const type = 'token';
-    const path = `my-${type}-auth/`;
-    this.createModel(path, type);
 
-    this.router.reopen({
-      transitionTo() {
-        return {
-          followRedirects() {
-            assert.ok(true, `saving token calls transitionTo on save`);
-          },
-        };
-      },
-    });
+    const type = 'token';
+    const path = `my-${type}-auth`;
 
     this.server.post(`sys/mounts/auth/${path}/tune`, (schema, req) => {
       const payload = JSON.parse(req.requestBody);
@@ -172,19 +163,20 @@ module('Integration | Component | auth-config-form options', function (hooks) {
       assert.propEqual(payload, expected, `${type} method payload contains tune parameters`);
       return { payload };
     });
-    await render(hbs`<AuthConfigForm::Options @model={{this.model}} />`);
+
+    await this.renderComponent(path, type);
 
     assert
-      .dom(GENERAL.inputByAttr('config.tokenType'))
-      .doesNotExist('does not render tokenType for token auth method');
+      .dom(GENERAL.inputByAttr('config.token_type'))
+      .doesNotExist('does not render token_type for token auth method');
 
-    await click(GENERAL.toggleInput('toggle-config.listingVisibility'));
+    await click(GENERAL.toggleInput('toggle-config.listing_visibility'));
     await click(GENERAL.ttl.toggle('Default Lease TTL'));
     await fillIn(GENERAL.ttl.input('Default Lease TTL'), '30');
 
     assert.dom('[data-test-user-lockout-section]').doesNotExist('token does not render user lockout section');
     assert
-      .dom(GENERAL.inputByAttr('config.lockoutThreshold'))
+      .dom(GENERAL.inputByAttr('user_lockout_config.lockout_threshold'))
       .doesNotExist('token method does not render lockout threshold');
     assert
       .dom(GENERAL.ttl.toggle('Lockout duration'))
@@ -193,9 +185,14 @@ module('Integration | Component | auth-config-form options', function (hooks) {
       .dom(GENERAL.ttl.toggle('Lockout counter reset'))
       .doesNotExist('token method does not render lockout counter reset');
     assert
-      .dom(GENERAL.inputByAttr('config.lockoutDisable'))
+      .dom(GENERAL.inputByAttr('user_lockout_config.lockout_disable'))
       .doesNotExist('token method does not render lockout disable');
 
     await click(GENERAL.submitButton);
+
+    assert.true(
+      this.transitionStub.calledWith('vault.cluster.access.methods'),
+      'transitions to access methods list on save'
+    );
   });
 });

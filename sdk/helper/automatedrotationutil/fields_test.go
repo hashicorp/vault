@@ -10,24 +10,37 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/stretchr/testify/assert"
 )
 
 var schemaMap = map[string]*framework.FieldSchema{
 	"rotation_schedule": {
 		Type:        framework.TypeString,
 		Description: "CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with rotation_period",
+		DisplayAttrs: &framework.DisplayAttributes{
+			Group: "default",
+		},
 	},
 	"rotation_window": {
 		Type:        framework.TypeDurationSecond,
 		Description: "Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule",
+		DisplayAttrs: &framework.DisplayAttributes{
+			Group: "default",
+		},
 	},
 	"rotation_period": {
 		Type:        framework.TypeDurationSecond,
 		Description: "TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule",
+		DisplayAttrs: &framework.DisplayAttributes{
+			Group: "default",
+		},
 	},
 	"disable_automated_rotation": {
 		Type:        framework.TypeBool,
 		Description: "If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.",
+		DisplayAttrs: &framework.DisplayAttributes{
+			Group: "default",
+		},
 	},
 }
 
@@ -365,6 +378,61 @@ func TestShouldDeregisterRotationJob(t *testing.T) {
 			if out != tt.expected {
 				t.Errorf("ShouldRegisterRotationJob() output = %v, expected: %v", out, tt.expected)
 			}
+		})
+	}
+}
+
+func TestAddAutomatedRotationFieldsWithGroup(t *testing.T) {
+	expectedSchemaMap := make(map[string]*framework.FieldSchema)
+	for k, v := range schemaMap {
+		newField := *v
+		newDisplayAttrs := *v.DisplayAttrs
+		newDisplayAttrs.Group = "Automated Rotation"
+		newField.DisplayAttrs = &newDisplayAttrs
+		expectedSchemaMap[k] = &newField
+	}
+	testcases := []struct {
+		name  string
+		group string
+		input map[string]*framework.FieldSchema
+		want  map[string]*framework.FieldSchema
+	}{
+		{
+			name:  "basic",
+			input: map[string]*framework.FieldSchema{},
+			group: "Automated Rotation",
+			want:  expectedSchemaMap,
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.input
+			AddAutomatedRotationFieldsWithGroup(got, tt.group)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestAddAutomatedRotationFields(t *testing.T) {
+	testcases := []struct {
+		name  string
+		group string
+		input map[string]*framework.FieldSchema
+		want  map[string]*framework.FieldSchema
+	}{
+		{
+			name:  "basic",
+			input: map[string]*framework.FieldSchema{},
+			want:  schemaMap,
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.input
+			AddAutomatedRotationFields(got)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

@@ -2,17 +2,21 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
-<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-s has-top-bottom-margin-12" ...attributes>
+<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-m has-top-bottom-margin" ...attributes>
   <Hds::Form::Toggle::Group as |G|>
     <G.Legend>
-      <Hds::Text::Display @size="300">Security</Hds::Text::Display>
+      <Hds::Text::Display
+        @size="300"
+        @tag="h2"
+        class="has-bottom-margin-s hds-foreground-strong"
+      >Security</Hds::Text::Display>
     </G.Legend>
-    {{! TODO: Toggle fields here are currently hardcoded, will be replaced with actual data from model once wired into parent component }}
-    <G.ToggleField name="local" checked={{@model.secretsEngine.local}} as |F|>
+    {{! TODO: Confirm with design to see if we want these two fields to be disabled }}
+    <G.ToggleField name="local" checked={{@model.secretsEngine.local}} disabled as |F|>
       <F.Label>Local</F.Label>
       <F.HelperText>Secrets stay in one cluster and are not replicated.</F.HelperText>
     </G.ToggleField>
-    <G.ToggleField name="seal-wrap" checked={{@model.secretsEngine.seal_wrap}} as |F|>
+    <G.ToggleField name="seal-wrap" checked={{@model.secretsEngine.seal_wrap}} disabled as |F|>
       <F.Label>Seal wrap</F.Label>
       <F.HelperText>Wrap secrets with an additional encryption layer using a seal.</F.HelperText>
     </G.ToggleField>

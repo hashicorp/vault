@@ -48,8 +48,8 @@ type TokenParams struct {
 	// The TTL to user for the token
 	TokenTTL time.Duration `json:"token_ttl" mapstructure:"token_ttl"`
 
-	// The metadata to attach to the authentication information.
-	TokenAuthMetadata map[string]string `json:"token_auth_metadata" mapstructure:"token_auth_metadata"`
+	// The metadata to attach to the alias.
+	AliasMetadata map[string]string `json:"alias_metadata" mapstructure:"alias_metadata"`
 }
 
 // AddTokenFields adds fields to an existing role. It panics if it would

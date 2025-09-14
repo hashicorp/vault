@@ -636,7 +636,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	}
 
 	if constants.IsEnterprise {
-		expected["token_auth_metadata"] = map[string]string{}
+		expected["alias_metadata"] = map[string]string{}
 	}
 
 	if resp.Data["role_id"] == nil {

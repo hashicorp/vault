@@ -19,6 +19,73 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// computeClientsInBillingPeriod computes the clients in a billing period given a start and end time.
+// It retrieves the precomputed query data for the specified period, and if the current month is included,
+// it computes the current month's data by aggregating the activity log fragments. It returns the counts
+// separated by namespace as well as the total counts for the billing period.
+func (a *ActivityLog) computeClientsInBillingPeriod(ctx context.Context, startTime time.Time, endTime time.Time) (*activity.PrecomputedQuery, error) {
+	var computePartial bool
+
+	// If the endTime of the query is the current month, request data from the queryStore
+	// with the endTime equal to the end of the last month, and add in the current month
+	// data.
+	precomputedQueryEndTime := endTime
+	if timeutil.IsCurrentMonth(endTime, a.clock.Now().UTC()) {
+		precomputedQueryEndTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(endTime)))
+		computePartial = true
+	}
+
+	pq := &activity.PrecomputedQuery{}
+	if startTime.After(precomputedQueryEndTime) && timeutil.IsCurrentMonth(startTime, a.clock.Now().UTC()) {
+		// We're only calculating the partial month client count. Skip the precomputation
+		// get call.
+		pq = &activity.PrecomputedQuery{
+			StartTime:  startTime,
+			EndTime:    endTime,
+			Namespaces: make([]*activity.NamespaceRecord, 0),
+			Months:     make([]*activity.MonthRecord, 0),
+		}
+	} else {
+		storedQuery, err := a.queryStore.Get(ctx, startTime, precomputedQueryEndTime)
+		if err != nil {
+			return nil, err
+		}
+		if storedQuery == nil {
+			// If the storedQuery is nil, that means there's no historical data to process. But, it's possible there's
+			// still current month data to process, so rather than returning a 204, let's proceed along like we're
+			// just querying the current month.
+			storedQuery = &activity.PrecomputedQuery{
+				StartTime:  startTime,
+				EndTime:    endTime,
+				Namespaces: make([]*activity.NamespaceRecord, 0),
+				Months:     make([]*activity.MonthRecord, 0),
+			}
+		}
+		pq = storedQuery
+	}
+
+	var partialByMonth map[int64]*processMonth
+	if computePartial {
+		// Traverse through current month's activitylog data and group clients
+		// into months and namespaces
+		a.fragmentLock.RLock()
+		partialByMonth, _ = a.populateNamespaceAndMonthlyBreakdowns()
+		a.fragmentLock.RUnlock()
+
+		// Estimate the current month totals. These record contains is complete with all the
+		// current month data, grouped by namespace and mounts
+		currentMonth, err := a.computeCurrentMonthForBillingPeriod(partialByMonth, startTime, endTime)
+		if err != nil {
+			return nil, err
+		}
+
+		// Combine the existing months precomputed query with the current month data
+		pq.CombineWithCurrentMonth(currentMonth)
+	}
+
+	return pq, nil
+}
+
 // computeCurrentMonthForBillingPeriod computes the current month's data with respect
 // to a billing period.
 func (a *ActivityLog) computeCurrentMonthForBillingPeriod(byMonth map[int64]*processMonth, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {

@@ -1496,7 +1496,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 		},
 	}
 	if constants.IsEnterprise {
-		exp.TokenParams.TokenAuthMetadata = make(map[string]string)
+		exp.TokenParams.AliasMetadata = make(map[string]string)
 	}
 
 	configEntry, err := b.Config(ctx, configReq)

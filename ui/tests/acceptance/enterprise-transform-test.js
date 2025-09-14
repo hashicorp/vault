@@ -102,7 +102,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
   test('it can create a transformation and add itself to the role attached', async function (assert) {
     await visit('/vault/secrets/mounts');
     const backend = `transform-${uuidv4()}`;
-    await click('[data-test-mount-type="transform"]');
+    await click(GENERAL.cardContainer('transform'));
     await fillIn(GENERAL.inputByAttr('path'), backend);
     await click(GENERAL.submitButton);
     const transformationName = 'foo';

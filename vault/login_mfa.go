@@ -744,10 +744,31 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 		return nil, fmt.Errorf("found nil or empty MFAEnforcement configuration")
 	}
 
+	potentialMFASecret := cachedResponseAuth.SelfEnrollmentMFASecret
+
 	for _, eConfig := range matchedMfaEnforcementList {
-		err = b.Core.validateLoginMFA(ctx, eConfig, entity, req.Connection.RemoteAddr, mfaCreds)
+		err = b.Core.validateLoginMFA(ctx, eConfig, entity, req.Connection.RemoteAddr, mfaCreds, potentialMFASecret)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("failed to satisfy enforcement %s. error: %s", eConfig.Name, err.Error())), logical.ErrPermissionDenied
+		}
+		if cachedResponseAuth.SelfEnrollmentMFASecret != nil {
+			// If we have a self-enrollment secret, and we successfully validated against
+			// the MFA enforcement, then persist the secret on the entity and the key in
+			// storage and clear the secret on the cached auth.
+			entity.MFASecrets[potentialMFASecret.MethodID] = potentialMFASecret.Secret
+			err = b.Core.identityStore.upsertEntity(ctx, entity, nil, true)
+			if err != nil {
+				b.mfaLogger.Error("failed to persist self-enrollment MFA secret in entity", "error", err, "entity_id", entity.ID)
+				return nil, fmt.Errorf("failed to persist self-enrollment MFA secret in entity: %w", err)
+			}
+			err = b.Core.PersistTOTPKey(ctx, potentialMFASecret.MethodID, entity.ID, potentialMFASecret.Key)
+			if err != nil {
+				// Best effort attempt to delete the new MFA secret from the entity when persisting the key fails.
+				delete(entity.MFASecrets, potentialMFASecret.MethodID)
+				_ = b.Core.identityStore.upsertEntity(ctx, entity, nil, true)
+				b.mfaLogger.Error("failed to persist self-enrollment MFA secret key in storage", "error", err, "entity_id", entity.ID)
+				return nil, fmt.Errorf("failed to persist self-enrollment MFA secret key: %w", err)
+			}
 		}
 	}
 
@@ -1640,7 +1661,7 @@ func parseOktaConfig(mConfig *mfa.Config, d *framework.FieldData) error {
 	return nil
 }
 
-func (c *Core) validateLoginMFA(ctx context.Context, eConfig *mfa.MFAEnforcementConfig, entity *identity.Entity, requestConnRemoteAddr string, mfaCredsMap logical.MFACreds) error {
+func (c *Core) validateLoginMFA(ctx context.Context, eConfig *mfa.MFAEnforcementConfig, entity *identity.Entity, requestConnRemoteAddr string, mfaCredsMap logical.MFACreds, potentialTOTPSecret *selfEnrollmentPendingMFASecret) error {
 	sanitizedMfaCreds, err := c.loginMFABackend.sanitizeMFACredsWithLoginEnforcementMethodIDs(ctx, mfaCredsMap, eConfig.MFAMethodIDs)
 	if err != nil {
 		return fmt.Errorf("failed to sanitize MFA creds, %w", err)
@@ -1658,7 +1679,7 @@ func (c *Core) validateLoginMFA(ctx context.Context, eConfig *mfa.MFAEnforcement
 			continue
 		}
 
-		err := c.validateLoginMFAInternal(ctx, methodID, entity, requestConnRemoteAddr, mfaCreds)
+		err := c.validateLoginMFAInternal(ctx, methodID, entity, requestConnRemoteAddr, mfaCreds, potentialTOTPSecret)
 		if err != nil {
 			retErr = multierror.Append(retErr, err)
 			continue
@@ -1669,7 +1690,7 @@ func (c *Core) validateLoginMFA(ctx context.Context, eConfig *mfa.MFAEnforcement
 	return multierror.Append(retErr, fmt.Errorf("login MFA validation failed for methodID: %v", eConfig.MFAMethodIDs))
 }
 
-func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, entity *identity.Entity, reqConnectionRemoteAddress string, mfaCreds []string) (retErr error) {
+func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, entity *identity.Entity, reqConnectionRemoteAddress string, mfaCreds []string, potentialTOTPSecret *selfEnrollmentPendingMFASecret) (retErr error) {
 	if entity == nil {
 		return fmt.Errorf("entity is nil")
 	}
@@ -1717,15 +1738,20 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 	switch mConfig.Type {
 	case mfaMethodTypeTOTP:
 		// Get the MFA secret data required to validate the supplied credentials
-		if entity.MFASecrets == nil {
-			return fmt.Errorf("MFA secret for method ID %q not present in entity %q", mConfig.ID, entity.ID)
+		var entityMFASecret *mfa.Secret
+		var mfaSecretKey string
+		switch {
+		case potentialTOTPSecret != nil && potentialTOTPSecret.MethodID == methodID && potentialTOTPSecret.Secret != nil && potentialTOTPSecret.Key != "":
+			// Use the self-enrollment secret generated during this login request
+			entityMFASecret = potentialTOTPSecret.Secret
+			mfaSecretKey = potentialTOTPSecret.Key
+		case entity.MFASecrets != nil && entity.MFASecrets[mConfig.ID] != nil:
+			// Use the existing secret stored on the entity
+			entityMFASecret = entity.MFASecrets[mConfig.ID]
+		default:
+			return fmt.Errorf("MFA secret for method ID %q not present in entity %q or cached MFA auth response", mConfig.ID, entity.ID)
 		}
-		entityMFASecret := entity.MFASecrets[mConfig.ID]
-		if entityMFASecret == nil {
-			return fmt.Errorf("MFA secret for method name %q not present in entity %q", mConfig.Name, entity.ID)
-		}
-
-		return c.validateTOTP(ctx, mfaFactors, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
+		return c.validateTOTP(ctx, mfaFactors, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts, mfaSecretKey)
 
 	case mfaMethodTypeOkta:
 		return c.validateOkta(ctx, mConfig, finalUsername)
@@ -2348,7 +2374,7 @@ func (c *Core) validatePingID(ctx context.Context, mConfig *mfa.Config, username
 	return nil
 }
 
-func (c *Core) validateTOTP(ctx context.Context, mfaFactors *MFAFactor, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
+func (c *Core) validateTOTP(ctx context.Context, mfaFactors *MFAFactor, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32, key string) error {
 	if mfaFactors == nil || mfaFactors.passcode == "" {
 		return fmt.Errorf("MFA credentials not supplied")
 	}
@@ -2394,13 +2420,15 @@ func (c *Core) validateTOTP(ctx context.Context, mfaFactors *MFAFactor, entityMe
 		}
 	}
 
-	key, err := c.fetchTOTPKey(ctx, configID, entityID)
-	if err != nil {
-		return errwrap.Wrapf("error fetching TOTP key: {{err}}", err)
-	}
-
 	if key == "" {
-		return fmt.Errorf("empty key for entity's TOTP secret")
+		var err error
+		key, err = c.fetchTOTPKey(ctx, configID, entityID)
+		if err != nil {
+			return fmt.Errorf("error fetching TOTP key: %w", err)
+		}
+		if key == "" {
+			return fmt.Errorf("empty key for entity's TOTP secret")
+		}
 	}
 
 	validateOpts := totplib.ValidateOpts{

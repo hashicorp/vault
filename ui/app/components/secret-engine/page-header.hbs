@@ -9,13 +9,13 @@
     <PH.Description>{{get engineData "displayName"}}</PH.Description>
     <PH.Breadcrumb>
       <Hds::Breadcrumb>
-        <Hds::Breadcrumb::Item @text="Secrets" />
+        <Hds::Breadcrumb::Item @text="Secrets" @route="vault.cluster.secrets" />
         <Hds::Breadcrumb::Item
           @text={{@model.secretsEngine.id}}
           @route="vault.cluster.secrets.backend.list-root"
           @model={{@model.secretsEngine.id}}
         />
-        <Hds::Breadcrumb::Item @text="Configuration" />
+        <Hds::Breadcrumb::Item @text="Configuration" @current={{true}} />
       </Hds::Breadcrumb>
     </PH.Breadcrumb>
     <PH.IconTile @icon={{get engineData "glyph"}} />
@@ -31,6 +31,18 @@
               General settings
             </LinkTo>
           </li>
+          {{! If engine is not configurable, hide plugin settings link }}
+          {{#if (get (engines-display-data @model.secretsEngine.type) "isConfigurable")}}
+            <li>
+              <LinkTo
+                @route="vault.cluster.secrets.backend.configuration.plugin-settings"
+                @model={{@model.secretsEngine.id}}
+              >
+                {{get (engines-display-data @model.secretsEngine.type) "displayName"}}
+                settings
+              </LinkTo>
+            </li>
+          {{/if}}
         </ul>
       </nav>
     </div>

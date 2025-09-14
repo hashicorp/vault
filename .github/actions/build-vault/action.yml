@@ -90,9 +90,11 @@ runs:
         if [[ '${{ inputs.vault-edition }}' =~ 'ce' ]]; then
           build_step_name='Vault ${{ inputs.goos }} ${{ inputs.goarch }} v${{ inputs.vault-version }}'
           package_version='${{ inputs.vault-version }}'
+          linux_package_license='BUSL-1.1'
         else
           build_step_name='Vault ${{ inputs.goos }} ${{ inputs.goarch }} v${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
           package_version='${{ inputs.vault-version }}+ent' # this should always be +ent here regardless of enterprise edition
+          linux_package_license='IPLA'
         fi
         # Generate a builder cache key that considers anything that might change
         # our build container, including:
@@ -110,7 +112,13 @@ runs:
           echo "build-step-name=${build_step_name}"
           echo "vault-builder-cache-key=${docker_sha}-${build_sha}-${tools_sha}-${github_sha}-$(cat .go-version)"
           echo "package-version=${package_version}"
+          echo "linux_package_license=${linux_package_license}"
         } | tee -a "$GITHUB_OUTPUT"
+    - if: inputs.vault-edition != 'ce'
+      id: build-vault-select-license
+      uses: hashicorp-forge/actions-pao-tool/select-license@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
+      with:
+        arch: ${{ matrix.goarch }}
     - if: inputs.cgo-enabled == '0'
       name: ${{ steps.metadata.outputs.build-step-name }}
       env:
@@ -132,8 +140,32 @@ runs:
     - if: inputs.cgo-enabled == '1'
       shell: bash
       run: docker run -d -p 5000:5000 --restart always --name registry registry:2
-    - if: inputs.cgo-enabled == '1'
-      name: Build CGO builder image
+    - name: Build CGO builder image
+      if: inputs.cgo-enabled == '1'
+      id: build-push-action-attempt-1
+      continue-on-error: true # we will retry this if it fails
+      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+      env:
+        DOCKER_BUILD_SUMMARY: false
+      with:
+        context: .
+        build-args: |
+          GO_VERSION=${{ steps.set-up-go.outputs.go-version }}
+        # Only build a container for the host OS since the same container
+        # handles cross building.
+        platforms: linux/amd64
+        push: true
+        target: builder
+        tags: localhost:5000/vault-builder:${{ steps.metadata.outputs.vault-builder-cache-key }}
+        # Upload the resulting minimal image to actions cache. This could
+        # be a problem if the resulting images are too big.
+        cache-from: type=gha,scope=vault-builder-${{ steps.metadata.outputs.vault-builder-cache-key }}
+        cache-to: type=gha,mode=min,scope=vault-builder-${{ steps.metadata.outputs.vault-builder-cache-key }}
+        github-token: ${{ inputs.github-token }}
+    - name: Build CGO builder image
+      id: build-push-action-attempt-2
+      continue-on-error: false
+      if: inputs.cgo-enabled == '1' && steps.build-push-action-attempt-1.outcome != 'success'
       uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
       env:
         DOCKER_BUILD_SUMMARY: false
@@ -176,6 +208,8 @@ runs:
     - if: inputs.vault-edition != 'ce'
       shell: bash
       run: make ci-prepare-ent-legal
+      env:
+        LICENSE_DIR: "${{ steps.build-vault-select-license.outputs.license-path }}/Softcopy"
     - if: inputs.vault-edition == 'ce'
       shell: bash
       run: make ci-prepare-ce-legal
@@ -198,7 +232,7 @@ runs:
         version: ${{ steps.metadata.outputs.package-version }}
         maintainer: HashiCorp
         homepage: https://github.com/hashicorp/vault
-        license: BUSL-1.1
+        license: ${{ steps.metadata.outputs.linux_package_license }}
         binary: ${{ steps.metadata.outputs.binary-path }}
         deb_depends: openssl
         rpm_depends: openssl

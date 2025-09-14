@@ -70,7 +70,7 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
-      - uses: hashicorp/action-setup-enos@b9fa53484a1e8fdcc7b02a118bcf01d65b9414c9 # v1.37
+      - uses: hashicorp/action-setup-enos@39a8f388434bea5eeba6649b99aa9949a55a1150 # v1.38
         with:
           github-token: ${{ github.repository == 'hashicorp/vault' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/create-dynamic-config
@@ -130,8 +130,8 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/artifactory bearer-token | ARTIFACTORY_BEARER_TOKEN;
-            kv/data/github/${{ github.repository }}/aws access-key-id | AWS_ACCESS_KEY_ID_CI;
-            kv/data/github/${{ github.repository }}/aws secret-access-key | AWS_SECRET_ACCESS_KEY_CI;
+            kv/data/github/${{ github.repository }}/aws access-key-id_09042025 | AWS_ACCESS_KEY_ID_CI_09042025;
+            kv/data/github/${{ github.repository }}/aws secret-access-key_09042025 | AWS_SECRET_ACCESS_KEY_CI_09042025;
             kv/data/github/${{ github.repository }}/aws role-arn | AWS_ROLE_ARN_CI;
             kv/data/github/${{ github.repository }}/consul license | CONSUL_LICENSE;
             kv/data/github/${{ github.repository }}/vault-radar license | RADAR_LICENSE;
@@ -144,8 +144,8 @@ jobs:
           if [[ "${{ needs.metadata.outputs.is-ent-repo }}" != 'true' ]]; then
             {
               echo 'artifactory-token=${{ secrets.ARTIFACTORY_BEARER_TOKEN }}'
-              echo 'aws-access-key-id=${{ secrets.AWS_ACCESS_KEY_ID_CI }}'
-              echo 'aws-secret-access-key=${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}'
+              echo 'aws-access-key-id=${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}'
+              echo 'aws-secret-access-key=${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}'
               echo 'aws-role-arn=${{ secrets.AWS_ROLE_ARN_CI }}'
               echo 'consul-license=${{ secrets.CONSUL_LICENSE }}'
               echo 'github-token=${{ secrets.ELEVATED_GITHUB_TOKEN }}'
@@ -159,8 +159,8 @@ jobs:
           else
             {
               echo 'artifactory-token=${{ steps.vault-secrets.outputs.ARTIFACTORY_BEARER_TOKEN }}'
-              echo 'aws-access-key-id=${{ steps.vault-secrets.outputs.AWS_ACCESS_KEY_ID_CI }}'
-              echo 'aws-secret-access-key=${{ steps.vault-secrets.outputs.AWS_SECRET_ACCESS_KEY_CI }}'
+              echo 'aws-access-key-id=${{ steps.vault-secrets.outputs.AWS_ACCESS_KEY_ID_CI_09042025 }}'
+              echo 'aws-secret-access-key=${{ steps.vault-secrets.outputs.AWS_SECRET_ACCESS_KEY_CI_09042025 }}'
               echo 'aws-role-arn=${{ steps.vault-secrets.outputs.AWS_ROLE_ARN_CI }}'
               echo 'consul-license=${{ steps.vault-secrets.outputs.CONSUL_LICENSE }}'
               echo 'github-token=${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}'
@@ -197,7 +197,7 @@ jobs:
             echo 'ENOS_VAR_vault_revision=${{ inputs.vault-revision }}'
             echo 'ENOS_VAR_vault_upgrade_initial_version=${{ matrix.attributes.upgrade_initial_version }}'
             echo 'ENOS_VAR_verify_aws_secrets_engine=false'
-            echo 'ENOS_VAR_verify_ldap_secrets_engine=true'
+            echo 'ENOS_VAR_verify_ldap_secrets_engine=false'
             echo 'ENOS_VAR_verify_log_secrets=true'
           } | tee -a "$GITHUB_ENV"
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
@@ -205,7 +205,7 @@ jobs:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
-      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+      - uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
         with:
           aws-access-key-id: ${{ steps.secrets.outputs.aws-access-key-id }}
           aws-secret-access-key: ${{ steps.secrets.outputs.aws-secret-access-key }}
@@ -213,7 +213,7 @@ jobs:
           role-to-assume: ${{ steps.secrets.outputs.aws-role-arn }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
-      - uses: hashicorp/action-setup-enos@b9fa53484a1e8fdcc7b02a118bcf01d65b9414c9 # v1.37
+      - uses: hashicorp/action-setup-enos@39a8f388434bea5eeba6649b99aa9949a55a1150 # v1.38
         with:
           github-token: ${{ steps.secrets.outputs.github-token }}
       - uses: ./.github/actions/create-dynamic-config

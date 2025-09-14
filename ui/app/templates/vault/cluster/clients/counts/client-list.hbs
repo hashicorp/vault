@@ -3,12 +3,32 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Clients::Page::ClientList
-  @activity={{this.model.activity}}
-  @onFilterChange={{this.countsController.updateQueryParams}}
-  @filterQueryParams={{hash
-    nsLabel=this.countsController.nsLabel
-    mountPath=this.countsController.mountPath
-    mountType=this.countsController.mountType
-  }}
-/>
+{{#if this.model.exportError}}
+  <Clients::Counts::Error
+    @title={{if (eq this.model.exportError.message "No data to export in provided time range.") "No data found"}}
+    @error={{this.model.exportError}}
+  >
+    <:actions>
+      {{#if (eq this.model.exportError.httpStatus 403)}}
+        <Hds::Text::Body @tag="p" @color="faint">
+          Viewing export data requires
+          <Hds::Text::Code class="code-in-text">sudo</Hds::Text::Code>
+          permissions.
+          <Hds::Link::Standalone
+            @icon="docs-link"
+            @iconPosition="trailing"
+            @text="Client Export Documentation"
+            @isHrefExternal={{true}}
+            @href={{doc-link "/vault/api-docs/system/internal-counters#activity-export"}}
+          />
+        </Hds::Text::Body>
+      {{/if}}
+    </:actions>
+  </Clients::Counts::Error>
+{{else}}
+  <Clients::Page::ClientList
+    @exportData={{this.model.exportData}}
+    @onFilterChange={{this.countsController.updateQueryParams}}
+    @filterQueryParams={{this.countsController.filterQueryParams}}
+  />
+{{/if}}

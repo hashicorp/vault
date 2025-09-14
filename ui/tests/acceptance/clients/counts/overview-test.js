@@ -17,12 +17,14 @@ import sinon from 'sinon';
 import { visit, click, findAll, fillIn, currentURL } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
-import { formatNumber } from 'core/helpers/format-number';
+import { CHARTS, CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
 import timestamp from 'core/utils/timestamp';
-import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
-import { selectChoose } from 'ember-power-select/test-support';
-import { format } from 'date-fns';
+import {
+  ACTIVITY_EXPORT_STUB,
+  ACTIVITY_RESPONSE_STUB,
+} from 'vault/tests/helpers/clients/client-count-helpers';
+import { ClientFilters, flattenMounts } from 'core/utils/client-count-utils';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 module('Acceptance | clients | overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -30,218 +32,10 @@ module('Acceptance | clients | overview', function (hooks) {
 
   hooks.beforeEach(async function () {
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
+    // These tests use the clientsHandler which dynamically generates activity data, used for asserting date querying, etc
     clientsHandler(this.server);
-    // stub secrets sync being activated
-    this.server.get('/sys/activation-flags', function () {
-      return {
-        data: {
-          activated: ['secrets-sync'],
-          unactivated: [],
-        },
-      };
-    });
     this.store = this.owner.lookup('service:store');
-    await login();
-    return visit('/vault/clients/counts/overview');
-  });
-
-  test('it should render charts', async function (assert) {
-    assert
-      .dom(`${GENERAL.flashMessage}.is-info`)
-      .includesText(
-        'counts returned in this usage period are an estimate',
-        'Shows warning from API about client count estimations'
-      );
-    assert
-      .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
-      .hasText('July 2023', 'billing start month is correctly parsed from license');
-    assert
-      .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
-      .hasText('January 2024', 'billing start month is correctly parsed from license');
-    assert
-      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
-      .exists('Shows running totals with monthly breakdown charts');
-    assert
-      .dom(`${CLIENT_COUNT.card('Client usage trends for selected billing period')} ${CHARTS.xAxisLabel}`)
-      .hasText('7/23', 'x-axis labels start with billing start date');
-    assert.dom(CHARTS.xAxisLabel).exists({ count: 7 }, 'chart months matches query');
-  });
-
-  test('it should update charts when querying date ranges', async function (assert) {
-    // query for single, historical month with no new counts (July 2023)
-    const service = this.owner.lookup('service:version');
-    service.type = 'community';
-
-    const licenseStartMonth = format(LICENSE_START, 'yyyy-MM');
-    const upgradeMonth = format(UPGRADE_DATE, 'yyyy-MM');
-    const endMonth = format(STATIC_PREVIOUS_MONTH, 'yyyy-MM');
-    await click(CLIENT_COUNT.dateRange.edit);
-    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), licenseStartMonth);
-    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), licenseStartMonth);
-
-    await click(GENERAL.submitButton);
-    assert
-      .dom(CLIENT_COUNT.usageStats('Vault client counts'))
-      .doesNotExist('running total single month stat boxes do not show');
-    assert
-      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
-      .doesNotExist('running total month over month charts do not show');
-
-    // change to start on month/year of upgrade to 1.10
-    await click(CLIENT_COUNT.dateRange.edit);
-    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
-    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), endMonth);
-    await click(GENERAL.submitButton);
-    assert
-      .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
-      .hasText('September 2023', 'billing start month is correctly parsed from license');
-    assert
-      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
-      .exists('Shows running totals with monthly breakdown charts');
-    assert
-      .dom(`${CLIENT_COUNT.card('Client usage trends for selected billing period')} ${CHARTS.xAxisLabel}`)
-      .hasText('9/23', 'x-axis labels start with queried start month (upgrade date)');
-    assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
-
-    // query for single, historical month (upgrade month)
-    await click(CLIENT_COUNT.dateRange.edit);
-    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
-    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), upgradeMonth);
-    await click(GENERAL.submitButton);
-
-    assert
-      .dom(CLIENT_COUNT.usageStats('Vault client counts'))
-      .exists('running total single month usage stats show');
-    assert
-      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
-      .doesNotExist('running total month over month charts do not show');
-
-    // query historical date range (from September 2023 to December 2023)
-    await click(CLIENT_COUNT.dateRange.edit);
-    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-09');
-    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-12');
-    await click(GENERAL.submitButton);
-
-    assert
-      .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
-      .hasText('September 2023', 'billing start month is correctly parsed from license');
-    assert
-      .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
-      .hasText('December 2023', 'billing start month is correctly parsed from license');
-    assert
-      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
-      .exists('Shows running totals with monthly breakdown charts');
-
-    assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
-    const xAxisLabels = findAll(CHARTS.xAxisLabel);
-    assert
-      .dom(xAxisLabels[xAxisLabels.length - 1])
-      .hasText('12/23', 'x-axis labels end with queried end month');
-
-    // query month older than count start date
-    await click(CLIENT_COUNT.dateRange.edit);
-    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2020-07');
-    await click(GENERAL.submitButton);
-    assert
-      .dom(CLIENT_COUNT.counts.startDiscrepancy)
-      .hasTextContaining(
-        'You requested data from July 2020. We only have data from January 2023, and that is what is being shown here.',
-        'warning banner displays that date queried was prior to count start date'
-      );
-  });
-
-  test('totals filter correctly with full data', async function (assert) {
-    assert
-      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
-      .exists('Shows running totals with monthly breakdown charts');
-
-    const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
-    const orderedNs = response.byNamespace.sort((a, b) => b.clients - a.clients);
-    const topNamespace = orderedNs[0];
-    // the namespace dropdown excludes the current namespace, so use second-largest if that's the case
-    const filterNamespace = topNamespace.label === 'root' ? orderedNs[1] : topNamespace;
-    const topMount = filterNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
-
-    // Filter by top namespace
-    await selectChoose(CLIENT_COUNT.nsFilter, filterNamespace.label);
-    assert.dom(CLIENT_COUNT.selectedNs).hasText(filterNamespace.label, 'selects top namespace');
-
-    let expectedStats = {
-      Entity: formatNumber([filterNamespace.entity_clients]),
-      'Non-entity': formatNumber([filterNamespace.non_entity_clients]),
-      ACME: formatNumber([filterNamespace.acme_clients]),
-      'Secret sync': formatNumber([filterNamespace.secret_syncs]),
-    };
-    for (const label in expectedStats) {
-      assert
-        .dom(CLIENT_COUNT.statTextValue(label))
-        .includesText(`${expectedStats[label]}`, `label: ${label} renders accurate namespace client counts`);
-    }
-
-    // FILTER BY AUTH METHOD
-    await selectChoose(CLIENT_COUNT.mountFilter, topMount.label);
-    assert.dom(CLIENT_COUNT.selectedAuthMount).hasText(topMount.label, 'selects top mount');
-
-    expectedStats = {
-      Entity: formatNumber([topMount.entity_clients]),
-      'Non-entity': formatNumber([topMount.non_entity_clients]),
-      ACME: formatNumber([topMount.acme_clients]),
-      'Secret sync': formatNumber([topMount.secret_syncs]),
-    };
-    for (const label in expectedStats) {
-      assert
-        .dom(CLIENT_COUNT.statTextValue(label))
-        .includesText(`${expectedStats[label]}`, `label: "${label} "renders accurate mount client counts`);
-    }
-
-    // Remove namespace filter without first removing auth method filter
-    await click(GENERAL.searchSelect.removeSelected);
-    assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'removes both query params');
-
-    expectedStats = {
-      Entity: formatNumber([response.total.entity_clients]),
-      'Non-entity': formatNumber([response.total.non_entity_clients]),
-      ACME: formatNumber([response.total.acme_clients]),
-      'Secret sync': formatNumber([response.total.secret_syncs]),
-    };
-    for (const label in expectedStats) {
-      assert
-        .dom(CLIENT_COUNT.statTextValue(label))
-        .includesText(`${expectedStats[label]}`, `label: ${label} is back to unfiltered value`);
-    }
-  });
-
-  test('it updates export button visibility as namespace is filtered', async function (assert) {
-    const ns = 'ns7';
-    // create a user that only has export access for specific namespace
-    const userToken = await runCmd(
-      tokenWithPolicyCmd(
-        'cc-export',
-        `
-    path "${ns}/sys/internal/counters/activity/export" {
-        capabilities = ["sudo"]
-    }
-  `
-      )
-    );
-    await login(userToken);
-    await visit('/vault/clients/counts/overview');
-    assert.dom(CLIENT_COUNT.exportButton).doesNotExist();
-
-    // FILTER BY ALLOWED NAMESPACE
-    await selectChoose('#namespace-search-select', ns);
-
-    assert.dom(CLIENT_COUNT.exportButton).exists();
-  });
-});
-
-module('Acceptance | clients | overview | secrets sync', function (hooks) {
-  setupApplicationTest(hooks);
-  setupMirage(hooks);
-
-  hooks.beforeEach(async function () {
-    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
-    clientsHandler(this.server);
+    this.version = this.owner.lookup('service:version');
   });
 
   test('it should hide secrets sync stats when feature is NOT on license', async function (assert) {
@@ -253,21 +47,269 @@ module('Acceptance | clients | overview | secrets sync', function (hooks) {
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist();
     assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
     await click(GENERAL.inputByAttr('toggle view'));
-    assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Acme clients');
+    assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients ACME clients');
   });
 
-  module('feature is on license', function (hooks) {
+  test('it should render charts', async function (assert) {
+    await login();
+    await visit('/vault/clients/counts/overview');
+    assert
+      .dom(`${GENERAL.flashMessage}.is-info`)
+      .includesText(
+        'counts returned in this usage period are an estimate',
+        'Shows warning from API about client count estimations'
+      );
+    assert
+      .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
+      .hasText('July 2023', 'start month is correctly parsed from license');
+    assert
+      .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
+      .hasText('January 2024', 'end month is correctly parsed from STATIC_NOW');
+    assert
+      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
+      .exists('Shows running totals with monthly breakdown charts');
+    assert
+      .dom(`${CLIENT_COUNT.card('Client usage trends for selected billing period')} ${CHARTS.xAxisLabel}`)
+      .hasText('7/23', 'x-axis labels start with billing start date');
+    assert.dom(CHARTS.xAxisLabel).exists({ count: 7 }, 'chart months matches query');
+  });
+
+  module('community', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.version.type = 'community';
+      await login();
+      return await visit('/vault/clients/counts/overview');
+    });
+
+    test('it should update charts when querying date ranges', async function (assert) {
+      // Use parseAPITimestamp because we want a date string that is timezone agnostic (so it stays in UTC)
+      const clientCountingStartDate = parseAPITimestamp(LICENSE_START.toISOString(), 'yyyy-MM');
+      const upgradeMonth = parseAPITimestamp(UPGRADE_DATE.toISOString(), 'yyyy-MM');
+      const endMonth = parseAPITimestamp(STATIC_PREVIOUS_MONTH.toISOString(), 'yyyy-MM');
+      await click(CLIENT_COUNT.dateRange.edit);
+      await fillIn(CLIENT_COUNT.dateRange.editDate('start'), clientCountingStartDate);
+      await fillIn(CLIENT_COUNT.dateRange.editDate('end'), clientCountingStartDate);
+      await click(GENERAL.submitButton);
+      assert
+        .dom(CLIENT_COUNT.usageStats('Client usage'))
+        .exists('running total single month usage stats show');
+      assert
+        .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
+        .doesNotExist('running total month over month charts do not show');
+
+      // change to start on month/year of upgrade to 1.10
+      await click(CLIENT_COUNT.dateRange.edit);
+      await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
+      await fillIn(CLIENT_COUNT.dateRange.editDate('end'), endMonth);
+      await click(GENERAL.submitButton);
+
+      assert
+        .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
+        .hasText('September 2023', 'client count start month is correctly parsed from start query');
+      assert
+        .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
+        .exists('Shows running totals with monthly breakdown charts');
+      assert
+        .dom(`${CLIENT_COUNT.card('Client usage trends for selected billing period')} ${CHARTS.xAxisLabel}`)
+        .hasText('9/23', 'x-axis labels start with queried start month (upgrade date)');
+      assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
+
+      // query for single, historical month (upgrade month)
+      await click(CLIENT_COUNT.dateRange.edit);
+      await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
+      await fillIn(CLIENT_COUNT.dateRange.editDate('end'), upgradeMonth);
+      await click(GENERAL.submitButton);
+      assert
+        .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
+        .exists('running total month over month charts show');
+
+      // query historical date range (from September 2023 to December 2023)
+      await click(CLIENT_COUNT.dateRange.edit);
+      await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-09');
+      await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-12');
+      await click(GENERAL.submitButton);
+
+      assert
+        .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
+        .hasText('September 2023', 'it displays correct start time');
+      assert
+        .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
+        .hasText('December 2023', 'it displays correct end time');
+      assert
+        .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
+        .exists('Shows running totals with monthly breakdown charts');
+
+      assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
+      const xAxisLabels = findAll(CHARTS.xAxisLabel);
+      assert
+        .dom(xAxisLabels[xAxisLabels.length - 1])
+        .hasText('12/23', 'x-axis labels end with queried end month');
+    });
+
+    test('it does not render client list links for community versions', async function (assert) {
+      assert
+        .dom(`${GENERAL.tableData(0, 'clients')} a`)
+        .doesNotExist('client counts do not render as hyperlinks');
+    });
+  });
+
+  // * FILTERING ASSERTIONS
+  // These tests use the static data from the ACTIVITY_RESPONSE_STUB to assert filtering
+  // Filtering tests are split between integration and acceptance tests
+  // because changing filters updates the URL query params.
+  module('static data', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.server.get('sys/internal/counters/activity', () => {
+        return {
+          request_id: 'some-activity-id',
+          data: ACTIVITY_RESPONSE_STUB,
+        };
+      });
+      const staticActivity = await this.store.findRecord('clients/activity', 'some-activity-id');
+      this.staticMostRecentMonth = staticActivity.byMonth[staticActivity.byMonth.length - 1];
+      await login();
+      return visit('/vault/clients/counts/overview');
+    });
+
+    test('it filters attribution table when filters are applied', async function (assert) {
+      const url = '/vault/clients/counts/overview';
+      const topMount = flattenMounts(this.staticMostRecentMonth.new_clients.namespaces)[0];
+      const timestamp = this.staticMostRecentMonth.timestamp;
+      const { namespace_path, mount_type, mount_path } = topMount;
+      assert.strictEqual(currentURL(), url, 'URL does not contain query params');
+      await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+      await click(FILTERS.dropdownItem(timestamp));
+      await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+      await click(FILTERS.dropdownItem(namespace_path));
+      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+      await click(FILTERS.dropdownItem(mount_path));
+      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+      await click(FILTERS.dropdownItem(mount_type));
+      assert.strictEqual(
+        currentURL(),
+        `${url}?month=${encodeURIComponent(timestamp)}&mount_path=${encodeURIComponent(
+          mount_path
+        )}&mount_type=${mount_type}&namespace_path=${namespace_path}`,
+        'url query params match filters'
+      );
+      assert.dom(FILTERS.tag()).exists({ count: 4 }, '4 filter tags render');
+      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'it only renders the filtered table row');
+      assert.dom(GENERAL.tableData(0, 'namespace_path')).hasText(namespace_path);
+      assert.dom(GENERAL.tableData(0, 'mount_type')).hasText(mount_type);
+      assert.dom(GENERAL.tableData(0, 'mount_path')).hasText(mount_path);
+    });
+
+    test('it updates table when filters are cleared', async function (assert) {
+      const url = '/vault/clients/counts/overview';
+      const mounts = flattenMounts(this.staticMostRecentMonth.new_clients.namespaces);
+      const timestamp = this.staticMostRecentMonth.timestamp;
+      const { namespace_path, mount_type, mount_path } = mounts[0];
+      await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+      await click(FILTERS.dropdownItem(timestamp));
+      await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+      await click(FILTERS.dropdownItem(namespace_path));
+      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+      await click(FILTERS.dropdownItem(mount_path));
+      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+      await click(FILTERS.dropdownItem(mount_type));
+      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'it only renders the filtered table row');
+      await click(FILTERS.clearTag(namespace_path));
+      assert.strictEqual(
+        currentURL(),
+        `${url}?month=${encodeURIComponent(timestamp)}&mount_path=${encodeURIComponent(
+          mount_path
+        )}&mount_type=${mount_type}`,
+        'url does not have namespace_path query param'
+      );
+      assert.dom(GENERAL.tableRow()).exists({ count: 2 }, 'it renders 2 data rows that match filters');
+      assert.dom(GENERAL.tableData(0, 'namespace_path')).hasText('root');
+      assert.dom(GENERAL.tableData(0, 'mount_type')).hasText(mount_type);
+      assert.dom(GENERAL.tableData(1, 'namespace_path')).hasText('ns1/');
+      assert.dom(GENERAL.tableData(1, 'mount_type')).hasText(mount_type);
+      assert.dom(GENERAL.tableData(1, 'mount_path')).hasText(mount_path);
+      await click(GENERAL.button('Clear filters'));
+      assert.strictEqual(currentURL(), url, 'url does not have any query params');
+      assert
+        .dom(GENERAL.tableRow())
+        .exists({ count: mounts.length }, 'it renders all data when filters are cleared');
+    });
+
+    test('it renders client counts for full billing period when month is unselected', async function (assert) {
+      const url = '/vault/clients/counts/overview';
+      const mounts = flattenMounts(this.staticMostRecentMonth.new_clients.namespaces);
+      const timestamp = this.staticMostRecentMonth.timestamp;
+      const { namespace_path, mount_type, mount_path } = mounts[0];
+      await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+      await click(FILTERS.dropdownItem(timestamp));
+      await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+      await click(FILTERS.dropdownItem(namespace_path));
+      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+      await click(FILTERS.dropdownItem(mount_path));
+      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+      await click(FILTERS.dropdownItem(mount_type));
+      assert.strictEqual(
+        currentURL(),
+        `${url}?month=${encodeURIComponent(timestamp)}&mount_path=${encodeURIComponent(
+          mount_path
+        )}&mount_type=${mount_type}&namespace_path=${namespace_path}`,
+        'url query params match filters'
+      );
+      await click(FILTERS.clearTag('September 2023'));
+      assert
+        .dom(GENERAL.tableData(0, 'clients'))
+        .hasText('4003', 'the table renders clients for the full billing period (not September)');
+      assert.strictEqual(
+        currentURL(),
+        `${url}?mount_path=${encodeURIComponent(
+          mount_path
+        )}&mount_type=${mount_type}&namespace_path=${namespace_path}`,
+        'url does not include month'
+      );
+    });
+
+    test('enterprise: it navigates to the client list page when clicking the client count hyperlink', async function (assert) {
+      const mockResponse = {
+        status: 200,
+        ok: true,
+        text: () => Promise.resolve(ACTIVITY_EXPORT_STUB.trim()),
+      };
+      const adapter = this.store.adapterFor('clients/activity');
+      const exportDataStub = sinon.stub(adapter, 'exportData');
+      exportDataStub.resolves(mockResponse);
+      const timestamp = this.staticMostRecentMonth.timestamp;
+      await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+      await click(FILTERS.dropdownItem(timestamp));
+      await click(`${GENERAL.tableData(0, 'clients')} a`);
+      const url = '/vault/clients/counts/client-list';
+      const monthQp = encodeURIComponent(timestamp);
+      const ns = encodeURIComponent('ns1/');
+      const mPath = encodeURIComponent('auth/userpass/0/');
+      const mType = 'userpass';
+      assert.strictEqual(
+        currentURL(),
+        `${url}?month=${monthQp}&mount_path=${mPath}&mount_type=${mType}&namespace_path=${ns}`,
+        'url query params match filters'
+      );
+      exportDataStub.restore();
+    });
+  });
+
+  module('license includes secrets sync feature', function (hooks) {
     hooks.beforeEach(async function () {
       syncHandler(this.server);
     });
 
     test('it should show secrets sync stats when the feature is activated', async function (assert) {
-      syncHandler(this.server);
       await login();
       await visit('/vault/clients/counts/overview');
       assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
       await click(GENERAL.inputByAttr('toggle view'));
-      assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Secret sync clients Acme clients');
+      assert
+        .dom(CHARTS.legend)
+        .hasText(
+          'Entity clients Non-entity clients ACME clients Secret sync clients',
+          'it renders legend in order that matches the stacked bar data'
+        );
     });
 
     test('it should hide secrets sync stats when feature is NOT activated', async function (assert) {
@@ -285,7 +327,12 @@ module('Acceptance | clients | overview | secrets sync', function (hooks) {
         .doesNotExist('stat is hidden because feature is not activated');
       assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
       await click(GENERAL.inputByAttr('toggle view'));
-      assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Acme clients');
+      assert
+        .dom(CHARTS.legend)
+        .hasText(
+          'Entity clients Non-entity clients ACME clients',
+          'it renders legend in order that matches the stacked bar data and does not include secret sync'
+        );
     });
 
     test('it should show secrets sync stats for HVD managed clusters', async function (assert) {
@@ -296,7 +343,12 @@ module('Acceptance | clients | overview | secrets sync', function (hooks) {
       await visit('/vault/clients/counts/overview');
       assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
       await click(GENERAL.inputByAttr('toggle view'));
-      assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Secret sync clients Acme clients');
+      assert
+        .dom(CHARTS.legend)
+        .hasText(
+          'Entity clients Non-entity clients ACME clients Secret sync clients',
+          'it renders legend in order that matches the stacked bar data'
+        );
     });
   });
 });

@@ -12,6 +12,7 @@
     @sortBy={{this.sortColumn}}
     @sortOrder={{this.sortDirection}}
     @onSort={{this.updateSort}}
+    {{did-update this.resetPagination @data}}
     ...attributes
   >
     <:body as |B|>
@@ -20,8 +21,22 @@
           {{#let (get B.data key) as |value|}}
             {{#if (and (eq key "mount_type") (eq value "deleted mount"))}}
               <B.Td data-test-table-data={{key}}><Hds::Badge @text="Deleted" @type="outlined" /></B.Td>
+            {{else if (eq key "client_id")}}
+              <B.Td data-test-table-data={{key}} class="white-space-nowrap">
+                <Hds::Copy::Snippet @textToCopy={{value}} @color="secondary" />
+              </B.Td>
+            {{else if (and (eq key "clients") this.version.isEnterprise)}}
+              <B.Td data-test-table-data={{key}} class="white-space-nowrap">
+                <Hds::Link::Inline
+                  @route="vault.cluster.clients.counts.client-list"
+                  @query={{this.generateQueryParams B.data}}
+                >{{value}}</Hds::Link::Inline>
+              </B.Td>
             {{else}}
-              <B.Td data-test-table-data={{key}}>{{value}}</B.Td>
+              <B.Td class="white-space-nowrap" data-test-table-data={{key}}>
+                {{! stringify value if it is an array or object, otherwise render directly }}
+                {{if (this.isObject value) (stringify value) value}}
+              </B.Td>
             {{/if}}
           {{/let}}
         {{/each}}
@@ -29,17 +44,21 @@
     </:body>
   </Hds::AdvancedTable>
 
-  <Hds::Pagination::Numbered
-    @currentPage={{this.currentPage}}
-    @currentPageSize={{this.pageSize}}
-    @onPageChange={{fn this.handlePaginationChange "currentPage"}}
-    @onPageSizeChange={{fn this.handlePaginationChange "pageSize"}}
-    @pageSizes={{array 5 10 50 100}}
-    @showSizeSelector={{or @showPaginationSizeSelector false}}
-    @totalItems={{@data.length}}
-    data-test-pagination
-    class="has-top-margin-m"
-  />
+  {{! WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage }}
+  {{#if this.renderPagination}}
+    <Hds::Pagination::Numbered
+      @currentPage={{this.currentPage}}
+      @currentPageSize={{this.pageSize}}
+      @onPageChange={{fn this.handlePaginationChange "currentPage"}}
+      @onPageSizeChange={{fn this.handlePaginationChange "pageSize"}}
+      @pageSizes={{array 5 10 50 100}}
+      @showSizeSelector={{or @showPaginationSizeSelector false}}
+      @totalItems={{@data.length}}
+      data-test-pagination
+      class="has-top-margin-m"
+    />
+  {{/if}}
+
 {{else}}
   <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l" data-test-card="table empty state">
     {{#if (has-block "emptyState")}}

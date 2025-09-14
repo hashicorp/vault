@@ -13,16 +13,14 @@ import clientsHandler, {
   STATIC_NOW,
   STATIC_PREVIOUS_MONTH,
 } from 'vault/mirage/handlers/clients';
-import { fromUnixTime, getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
-import { selectChoose } from 'ember-power-select/test-support';
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
-const START_TIME = getUnixTime(LICENSE_START);
-const END_TIME = getUnixTime(STATIC_PREVIOUS_MONTH);
+const START_TIME = LICENSE_START.toISOString();
+const END_TIME = STATIC_PREVIOUS_MONTH.toISOString();
 const START_ISO = LICENSE_START.toISOString();
 const END_ISO = STATIC_PREVIOUS_MONTH.toISOString();
 
@@ -36,8 +34,8 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.store = this.owner.lookup('service:store');
     const activityQuery = {
-      start_time: { timestamp: START_TIME },
-      end_time: { timestamp: END_TIME },
+      start_time: START_TIME,
+      end_time: END_TIME,
     };
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
     this.config = await this.store.queryRecord('clients/config', {});
@@ -53,8 +51,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
         @versionHistory={{this.versionHistory}}
         @startTimestamp={{this.startTimestamp}}
         @endTimestamp={{this.endTimestamp}}
-        @namespace={{this.namespace}}
-        @mountPath={{this.mountPath}}
         @onFilterChange={{this.onFilterChange}}
       >
         <div data-test-yield>Yield block</div>
@@ -74,9 +70,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     await this.renderComponent();
 
-    assert
-      .dom(GENERAL.emptyStateTitle)
-      .hasText('No data received from July 2023 to December 2023', 'No data empty state renders');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No data received', 'No data empty state renders');
   });
 
   test('it should render activity error', async function (assert) {
@@ -100,11 +94,11 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       .hasText('Tracking is disabled', 'Config disabled alert renders');
   });
 
-  const jan23start = getUnixTime(new Date('2023-01-01T00:00:00Z'));
+  const jan23start = '2023-01-01T00:00:00Z';
   // license start is July 2, 2024 on date change it recalculates start to beginning of the month
-  const july23start = getUnixTime(new Date('2023-07-01T00:00:00Z'));
-  const dec23end = getUnixTime(new Date('2023-12-31T00:00:00Z'));
-  [
+  const july23start = '2023-07-01T00:00:00Z';
+  const dec23end = '2023-12-31T23:59:59Z';
+  const testCases = [
     {
       scenario: 'changing start only',
       expected: { start_time: jan23start, end_time: dec23end },
@@ -127,20 +121,15 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       expectedStart: 'January 2023',
       expectedEnd: 'December 2023',
     },
-  ].forEach((testCase) => {
-    test(`it should send correct millis value on filter change when ${testCase.scenario}`, async function (assert) {
+  ];
+  testCases.forEach((testCase) => {
+    test(`it should send correct timestamp on filter change when ${testCase.scenario}`, async function (assert) {
       assert.expect(5);
       this.owner.lookup('service:version').type = 'community';
       this.onFilterChange = (params) => {
         assert.deepEqual(params, testCase.expected, 'Correct values sent on filter change');
-        // in the app, the timestamp choices trigger a qp refresh as millis from epoch,
-        // but in the model they are translated from millis to ISO timestamps before being
-        // passed to this component. Mock that behavior here.
-        this.set(
-          'startTimestamp',
-          params?.start_time ? fromUnixTime(params.start_time).toISOString() : START_ISO
-        );
-        this.set('endTimestamp', params?.end_time ? fromUnixTime(params.end_time).toISOString() : END_ISO);
+        this.set('startTimestamp', params?.start_time ? params.start_time : START_ISO);
+        this.set('endTimestamp', params?.end_time ? params.end_time : END_ISO);
       };
       await this.renderComponent();
       await click(CLIENT_COUNT.dateRange.edit);
@@ -162,54 +151,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText(testCase.expectedStart);
       assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText(testCase.expectedEnd);
     });
-  });
-
-  test('it should render namespace and auth mount filters', async function (assert) {
-    assert.expect(5);
-
-    this.namespace = 'root';
-    this.mountPath = 'auth/authid0';
-
-    let assertion = (params) =>
-      assert.deepEqual(params, { ns: undefined, mountPath: '' }, 'Auth mount cleared with namespace');
-    this.onFilterChange = (params) => {
-      if (assertion) {
-        assertion(params);
-      }
-      const keys = Object.keys(params);
-      this.namespace = keys.includes('ns') ? params.ns : this.namespace;
-      this.mountPath = keys.includes('mountPath') ? params.mountPath : this.mountPath;
-    };
-
-    await this.renderComponent();
-
-    assert.dom(CLIENT_COUNT.counts.namespaces).includesText(this.namespace, 'Selected namespace renders');
-    assert.dom(CLIENT_COUNT.counts.mountPaths).includesText(this.mountPath, 'Selected auth mount renders');
-
-    await click(`${CLIENT_COUNT.counts.namespaces} button`);
-    // this is only necessary in tests since SearchSelect does not respond to initialValue changes
-    // in the app the component is rerender on query param change
-    assertion = null;
-    await click(`${CLIENT_COUNT.counts.mountPaths} button`);
-    assertion = (params) => assert.true(params.ns.includes('ns'), 'Namespace value sent on change');
-    await selectChoose(CLIENT_COUNT.counts.namespaces, '.ember-power-select-option', 0);
-
-    assertion = (params) =>
-      assert.true(params.mountPath.includes('auth/'), 'Auth mount value sent on change');
-    await selectChoose(CLIENT_COUNT.counts.mountPaths, 'auth/authid0');
-  });
-
-  test('it should render start time discrepancy alert', async function (assert) {
-    this.startTimestamp = new Date('2022-06-01T00:00:00Z').toISOString();
-
-    await this.renderComponent();
-
-    assert
-      .dom(CLIENT_COUNT.counts.startDiscrepancy)
-      .hasText(
-        'You requested data from June 2022. We only have data from July 2023, and that is what is being shown here.',
-        'Start discrepancy alert renders'
-      );
   });
 
   test('it renders alert if upgrade happened within queried activity', async function (assert) {
@@ -278,9 +219,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     await this.renderComponent();
 
-    assert
-      .dom(GENERAL.emptyStateTitle)
-      .hasText('No data received from July 2023 to December 2023', 'Empty state renders');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No data received', 'Empty state renders');
   });
 
   test('it resets the tracked values on close', async function (assert) {

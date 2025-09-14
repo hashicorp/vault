@@ -11,10 +11,12 @@ export const CLIENT_COUNT = {
     configDisabled: '[data-test-counts-disabled]',
     namespaces: '[data-test-counts-namespaces]',
     mountPaths: '[data-test-counts-auth-mounts]',
-    startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
   dateRange: {
-    dropdownOption: (idx = 0) => `[data-test-date-range-billing-start="${idx}"]`,
+    dropdownOption: (idx: number | null) =>
+      typeof idx === 'number'
+        ? `[data-test-date-range-billing-start="${idx}"]`
+        : '[data-test-date-range-billing-start]',
     dateDisplay: (name: string) => (name ? `[data-test-date-range="${name}"]` : '[data-test-date-range]'),
     edit: '[data-test-date-range-edit]',
     editModal: '[data-test-date-range-edit-modal]',
@@ -27,11 +29,7 @@ export const CLIENT_COUNT = {
   statTextValue: (label: string) =>
     label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
   usageStats: (title: string) => `[data-test-usage-stats="${title}"]`,
-  filterBar: '[data-test-clients-filter-bar]',
-  nsFilter: '#namespace-search-select',
-  mountFilter: '#mounts-search-select',
-  selectedAuthMount: 'div#mounts-search-select [data-test-selected-option] div',
-  selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
+  tableSummary: (tabName: string) => `[data-test-table-summary="${tabName}"]`,
   upgradeWarning: '[data-test-clients-upgrade-warning]',
   exportButton: '[data-test-export-button]',
 };
@@ -54,9 +52,12 @@ export const CHARTS = {
 };
 
 export const FILTERS = {
+  dropdown: (name: string) => `[data-test-dropdown="${name}"]`,
   dropdownToggle: (name: string) => `[data-test-dropdown="${name}"] button`,
   dropdownItem: (name: string) => `[data-test-dropdown-item="${name}"]`,
+  dropdownSearch: (name: string) => `[data-test-dropdown="${name}"] input`,
   tag: (filter?: string, value?: string) =>
     filter && value ? `[data-test-filter-tag="${filter} ${value}"]` : '[data-test-filter-tag]',
+  tagContainer: '[data-test-filter-tag-container]',
   clearTag: (value: string) => `[aria-label="Dismiss ${value}"]`,
 };

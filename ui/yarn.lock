@@ -2783,8 +2783,8 @@ __metadata:
 
 "@hashicorp/vault-client-typescript@hashicorp/vault-client-typescript":
   version: 0.0.0
-  resolution: "@hashicorp/vault-client-typescript@https://github.com/hashicorp/vault-client-typescript.git#commit=93a0740c07e014899ed948a893d4fde2fdaeaccf"
-  checksum: b360333bd99e4d94dee7f82655185e6daf20bafb424fd36a77133e6b3d7c2adfb6d485b694e044dd51281e6a52190cebf0a96b4f9ec2d4830388a21fe47128a7
+  resolution: "@hashicorp/vault-client-typescript@https://github.com/hashicorp/vault-client-typescript.git#commit=159865331f4ff0219264ab243b2e30a0087f972f"
+  checksum: ae044d2a927c2d351330690ecedb36a6321106ce9383a77495f03a785e39bfd469a385274ef3248c21b5e5540da975297dd42949e66c5ce31b090128b822bce7
   languageName: node
   linkType: hard
 

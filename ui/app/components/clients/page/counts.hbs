@@ -9,17 +9,22 @@
     @activityTimestamp={{@activity.responseTimestamp}}
     @startTimestamp={{@startTimestamp}}
     @endTimestamp={{@endTimestamp}}
-    @namespace={{@namespace}}
     @upgradesDuringActivity={{this.upgradesDuringActivity}}
     @noData={{not @activity.total.clients}}
     @onChange={{this.onDateChange}}
   />
 </div>
 
-<div class="box is-sideless is-fullwidth is-marginless is-bottomless is-shadowless">
+<div class="has-top-bottom-margin">
+  <Hds::Text::Body @tag="p" @size="100">
+    This is the dashboard for your overall client count usages. Review Vault's
+    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}} @isHrefExternal={{true}}>
+      client counting documentation</Hds::Link::Inline>
+    for more information.
+  </Hds::Text::Body>
 
   {{#if (eq @activity.id "no-data")}}
-    <Clients::NoData @config={{@config}} @dateRangeMessage={{this.dateRangeMessage}} />
+    <Clients::NoData @config={{@config}} />
   {{else if @activityError}}
     <Clients::Counts::Error @error={{@activityError}} />
   {{else}}
@@ -35,52 +40,7 @@
       </Hds::Alert>
     {{/if}}
 
-    {{#if (or @namespace this.namespaces @mountPath this.mountPaths)}}
-      <Hds::Text::Display @tag="p">
-        Filters
-      </Hds::Text::Display>
-      <Hds::Text::Body @tag="p" @color="faint">
-        Apply a filter to look at data from a specific namespace and drill down by mount. The mount filter includes auth
-        methods, KV engines, and PKI engines. Each mount type generates a different type of client and will not be applicable
-        to every tab.
-      </Hds::Text::Body>
-      <Toolbar aria-label="toolbar for filtering client count data" class="has-bottom-margin-m" data-test-clients-filter-bar>
-        <ToolbarFilters>
-          {{#if (or @namespace this.namespaces)}}
-            <SearchSelect
-              @id="namespace-search-select"
-              @options={{this.namespaces}}
-              @inputValue={{if @namespace (array @namespace)}}
-              @selectLimit="1"
-              @disallowNewItems={{true}}
-              @fallbackComponent="input-search"
-              @onChange={{fn this.setFilterValue "ns"}}
-              @placeholder="Namespace within {{this.namespacePathForFilter}}"
-              @displayInherit={{true}}
-              class="is-marginless"
-              data-test-counts-namespaces
-            />
-            <div class="has-left-margin-xs"></div>
-          {{/if}}
-          {{#if (or @mountPath this.mountPaths)}}
-            <SearchSelect
-              @id="mounts-search-select"
-              @options={{this.mountPaths}}
-              @inputValue={{if @mountPath (array @mountPath)}}
-              @selectLimit="1"
-              @disallowNewItems={{true}}
-              @fallbackComponent="input-search"
-              @onChange={{fn this.setFilterValue "mountPath"}}
-              @placeholder="Mount path within {{this.namespacePathForFilter}}"
-              @displayInherit={{true}}
-              data-test-counts-auth-mounts
-            />
-          {{/if}}
-        </ToolbarFilters>
-      </Toolbar>
-    {{/if}}
-
-    {{#if this.totalUsageCounts}}
+    {{#if @activity.total}}
       {{#if this.upgradeExplanations}}
         <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-m" as |A|>
           <A.Title>
@@ -109,15 +69,10 @@
         </Hds::Alert>
       {{/if}}
 
-      {{#if this.startTimeDiscrepancy}}
-        <Hds::Alert data-test-counts-start-discrepancy @type="inline" @color="neutral" class="has-bottom-margin-s" as |A|>
-          <A.Description data-test-counts-start-discrepancy>
-            {{this.startTimeDiscrepancy}}
-          </A.Description>
-        </Hds::Alert>
+      {{#if this.version.isEnterprise}}
+        {{! The "Client list" tab only renders for enterprise versions so there is no need for the nav bar }}
+        <Clients::Counts::NavBar />
       {{/if}}
-
-      <Clients::Counts::NavBar />
 
       {{! CLIENT COUNT PAGE COMPONENTS RENDER HERE }}
       {{yield}}
@@ -129,15 +84,13 @@
       />
     {{else}}
       <EmptyState
-        @title="No data received {{if this.dateRangeMessage this.dateRangeMessage}}"
+        @title="No data received"
         @message={{if
           this.version.isCommunity
           "Select a start and end date above to query client count data."
-          "Update the filter values or click the button to reset them."
+          "Select a different date range to view client count data."
         }}
-      >
-        <Hds::Button @text="Reset filters" @color="tertiary" @icon="reload" {{on "click" this.resetFilters}} />
-      </EmptyState>
+      />
     {{/if}}
   {{/if}}
 </div>

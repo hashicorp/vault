@@ -4,11 +4,10 @@
  */
 
 import { fillIn, click } from '@ember/test-helpers';
-import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 export const mountBackend = async (type, path) => {
-  await click(MOUNT_BACKEND_FORM.mountType(type));
+  await click(GENERAL.cardContainer(type));
   if (path) {
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.submitButton);

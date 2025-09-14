@@ -7,12 +7,7 @@
   <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
 
   <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
-  <Nav.Link
-    @route="vault.cluster.secrets"
-    @current-when="vault.cluster.secrets vault.cluster.secrets.mounts vault.cluster.secrets.backend.configuration.edit"
-    @text="Secrets Engines"
-    data-test-sidebar-nav-link="Secrets Engines"
-  />
+  <Nav.Link @route="vault.cluster.secrets" @text="Secrets Engines" data-test-sidebar-nav-link="Secrets Engines" />
   {{#if this.showSecretsSync}}
     <Nav.Link
       @route="vault.cluster.sync"
@@ -21,7 +16,7 @@
       data-test-sidebar-nav-link="Secrets Sync"
     />
   {{/if}}
-  {{#if this.isNotProduction}}
+  {{#if (and this.isNotProduction (not this.cluster.dr.isSecondary))}}
     <Nav.Link
       @route="vault.cluster.recovery.snapshots"
       @text="Secrets Recovery"

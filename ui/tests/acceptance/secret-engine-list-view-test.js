@@ -19,7 +19,6 @@ import {
   tokenWithPolicyCmd,
 } from 'vault/tests/helpers/commands';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
-import { MOUNT_BACKEND_FORM } from '../helpers/components/mount-backend-form-selectors';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | secret-engine list view', function (hooks) {
@@ -43,7 +42,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   test('it does not camelize the secret mount path', async function (assert) {
     await visit('/vault/secrets');
     await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('aws'));
+    await click(GENERAL.cardContainer('aws'));
     await fillIn(GENERAL.inputByAttr('path'), 'aws_engine');
     await click(GENERAL.submitButton);
     await click(GENERAL.breadcrumbLink('Secrets'));
@@ -60,7 +59,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   test('after enabling an unsupported engine it takes you to list page', async function (assert) {
     await visit('/vault/secrets');
     await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('nomad'));
+    await click(GENERAL.cardContainer('nomad'));
     await click(GENERAL.submitButton);
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'navigates to the list page');
@@ -71,7 +70,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   test('after enabling a supported engine it takes you to mount page, can see configure and clicking breadcrumb takes you back to list page', async function (assert) {
     await visit('/vault/secrets');
     await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('aws'));
+    await click(GENERAL.cardContainer('aws'));
     await click(GENERAL.submitButton);
 
     assert.dom(SES.configTab).exists();

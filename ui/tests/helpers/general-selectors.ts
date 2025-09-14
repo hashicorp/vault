@@ -153,6 +153,12 @@ export const GENERAL = {
     actionLink: (label: string) => `[data-test-overview-card="${label}"] a`,
   },
 
+  /* ────── Cards ────── */
+  cardContainer: (title: string) => `[data-test-card-container="${title}"]`,
+
+  /* ────── Modals & Flyouts ────── */
+  flyout: '[data-test-flyout]',
+
   /* ────── Misc ────── */
-  icon: (name: string) => `[data-test-icon="${name}"]`,
+  icon: (name: string) => (name ? `[data-test-icon="${name}"]` : '[data-test-icon]'),
 };
