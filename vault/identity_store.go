@@ -118,12 +118,12 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		InitializeFunc: iStore.initialize,
 		ActivationFunc: iStore.activateDeduplication,
 		PathsSpecial: &logical.Paths{
-			Unauthenticated: []string{
+			Unauthenticated: append([]string{
 				"oidc/.well-known/*",
 				"oidc/+/.well-known/*",
 				"oidc/provider/+/.well-known/*",
 				"oidc/provider/+/token",
-			},
+			}, identityStoreLoginMFAEntUnauthedPaths()...),
 			LocalStorage: []string{
 				localAliasesBucketsPrefix,
 			},
