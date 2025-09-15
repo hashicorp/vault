@@ -56,7 +56,8 @@ function getTotalCounts(array) {
 }
 
 function randomBetween(min, max) {
-  return Math.floor(Math.random() * (max - min + 1) + min);
+  const secureRandom = crypto.getRandomValues(new Uint32Array(1))[0] * Math.pow(2, -32);
+  return Math.floor(secureRandom * (max - min + 1) + min);
 }
 
 function generateMountBlock(path, counts) {
