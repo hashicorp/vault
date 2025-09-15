@@ -4,8 +4,8 @@
  */
 
 import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
-import { settled } from '@ember/test-helpers';
-import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import { visit, click, fillIn } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 export default create({
   visit: visitable('/vault/secrets/mounts'),
@@ -18,9 +18,15 @@ export default create({
   defaultTTLVal: fillable('input[data-test-ttl-value="Default Lease TTL"]'),
   defaultTTLUnit: fillable('[data-test-ttl-unit="Default Lease TTL"] [data-test-select="ttl-unit"]'),
   enable: async function (type, path) {
-    await this.visit();
-    await settled();
-    await mountBackend(type, path);
-    await settled();
+    // Navigate to the secrets engines catalog
+    await visit('/vault/secrets/mounts');
+    // Click the engine type card to proceed to configuration
+    await click(GENERAL.cardContainer(type));
+    // Fill in the path if provided
+    if (path) {
+      await fillIn(GENERAL.inputByAttr('path'), path);
+    }
+    // Submit the form to mount the engine
+    await click(GENERAL.submitButton);
   },
 });

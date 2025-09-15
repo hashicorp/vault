@@ -9,49 +9,34 @@ import { service } from '@ember/service';
 import { action, set } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { presence } from 'vault/utils/forms/validators';
-import { filterEnginesByMountCategory, isAddonEngine } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import { MOUNT_CATEGORIES } from 'vault/utils/plugin-catalog-helpers';
-import { assert } from '@ember/debug';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
 import type AuthMethodForm from 'vault/forms/auth/method';
-import type SecretsEngineForm from 'vault/forms/secrets/engine';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type ApiService from 'vault/services/api';
 import type { ApiError } from '@ember-data/adapter/error';
 import type { ValidationMap } from 'vault/vault/app-types';
-import type { EnhancedPluginCatalogData } from 'vault/services/plugin-catalog';
 
 /**
  * @module MountBackendForm
- * The `MountBackendForm` is used to mount either a secret or auth backend.
+ * The `MountBackendForm` is used to mount authentication methods.
  *
  * @example ```js
- *   <MountBackendForm @mountModel={{this.model}} @mountCategory="secret" @onMountSuccess={{this.onMountSuccess}} />```
+ *   <MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />```
  *
- * @param {object|Form} mountModel - Either a model object containing form and plugin data (secrets), or the form directly (auth).
+ * @param {AuthMethodForm} mountModel - The authentication method form.
  * @param {function} onMountSuccess - A function that transitions once the Mount has been successfully posted.
- * @param {string} mountCategory - The type of engine to mount, either 'secret' or 'auth'.
  *
  */
 
-type MountModel =
-  | {
-      form: SecretsEngineForm;
-      pluginCatalogData?: EnhancedPluginCatalogData | null;
-      pluginCatalogError?: boolean;
-    }
-  | AuthMethodForm;
-
 interface Args {
-  mountModel: MountModel;
-  mountCategory: 'secret' | 'auth';
+  mountModel: AuthMethodForm;
   onMountSuccess: (type: string, path: string, useEngineRoute: boolean) => void;
 }
 
-const SECRET_MOUNT_CATEGORY = MOUNT_CATEGORIES.SECRET;
 const AUTH_MOUNT_CATEGORY = MOUNT_CATEGORIES.AUTH;
 
 export default class MountBackendForm extends Component<Args> {
@@ -66,13 +51,8 @@ export default class MountBackendForm extends Component<Args> {
 
   @tracked errorMessage: string | string[] = '';
 
-  get mountForm(): SecretsEngineForm | AuthMethodForm {
-    // Check if mountModel has form property (secrets route)
-    if (typeof this.args.mountModel === 'object' && 'form' in this.args.mountModel) {
-      return this.args.mountModel.form;
-    }
-    // Otherwise, assume the model IS the form (auth route)
-    return this.args.mountModel as SecretsEngineForm | AuthMethodForm;
+  get mountForm(): AuthMethodForm {
+    return this.args.mountModel;
   }
 
   get showEnable(): boolean {
@@ -81,16 +61,14 @@ export default class MountBackendForm extends Component<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    assert(`@mountCategory is required. Must be "auth" or "secret".`, presence(this.args.mountCategory));
   }
 
   checkPathChange(backendType: string) {
     if (!backendType) return;
     const { data } = this.mountForm;
-    // mountCategory is usually 'secret' or 'auth', but sometimes an empty string is passed in (like when we click the cancel button).
-    // In these cases, we should default to returning auth methods.
+    // Always use auth mount category since this component only handles auth methods
     const mountsByType = filterEnginesByMountCategory({
-      mountCategory: this.args.mountCategory ?? AUTH_MOUNT_CATEGORY,
+      mountCategory: AUTH_MOUNT_CATEGORY,
       isEnterprise: true,
     }).map((engine) => engine.type);
 
@@ -98,13 +76,6 @@ export default class MountBackendForm extends Component<Args> {
     // change it here to match the new type
     if (!data.path || mountsByType.includes(data.path)) {
       data.path = backendType;
-    }
-  }
-
-  typeChangeSideEffect(type: string) {
-    // If type PKI, set max lease to ~10years
-    if (this.args.mountCategory === SECRET_MOUNT_CATEGORY) {
-      this.mountForm.data.config.max_lease_ttl = type === 'pki' ? '3650d' : 0;
     }
   }
 
@@ -122,35 +93,10 @@ export default class MountBackendForm extends Component<Args> {
     this.invalidFormAlert = null;
   }
 
-  async saveKvConfig(path: string, formData: SecretsEngineForm['data']) {
-    const { options, kv_config = {} } = formData;
-    const { max_versions, cas_required, delete_version_after } = kv_config;
-    const isKvV2 = options?.version === 2 && ['kv', 'generic'].includes(this.mountForm.normalizedType);
-    const hasConfig = max_versions || cas_required || delete_version_after;
-
-    if (isKvV2 && hasConfig) {
-      try {
-        const { canUpdate } = await this.capabilities.for('kvConfig', { path });
-        if (canUpdate) {
-          await this.api.secrets.kvV2Configure(path, kv_config);
-        } else {
-          this.flashMessages.warning(
-            'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
-          );
-        }
-      } catch (e) {
-        const { message } = await this.api.parseError(e);
-        this.flashMessages.warning(
-          `The secret engine was mounted, but the configuration settings were not saved. ${message}`
-        );
-      }
-    }
-  }
-
   async onMountError(status: number, errors: ApiError[], message: string) {
     if (status === 403) {
       this.flashMessages.danger(
-        'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
+        'You do not have access to the sys/auth endpoint. The auth method was not mounted.'
       );
     } else if (errors) {
       this.errorMessage = errors.map((e) => {
@@ -168,7 +114,6 @@ export default class MountBackendForm extends Component<Args> {
   @waitFor
   *mountBackend(event: Event) {
     event.preventDefault();
-    const { mountCategory } = this.args;
     const mountModel = this.mountForm;
     const { type } = mountModel;
     const { path } = mountModel.data;
@@ -181,21 +126,9 @@ export default class MountBackendForm extends Component<Args> {
     }
 
     try {
-      if (mountCategory === SECRET_MOUNT_CATEGORY) {
-        yield this.api.sys.mountsEnableSecretsEngine(path, data);
-        yield this.saveKvConfig(path, data as SecretsEngineForm['data']);
-      } else {
-        yield this.api.sys.authEnableMethod(path, data);
-      }
-      this.flashMessages.success(
-        `Successfully mounted the ${mountModel.type} ${
-          mountCategory === SECRET_MOUNT_CATEGORY ? 'secrets engine' : 'auth method'
-        } at ${path}.`
-      );
-      // check whether to use the Ember engine route
-      const version = (data as SecretsEngineForm['data']).options?.version;
-      const useEngineRoute = isAddonEngine(mountModel.normalizedType, Number(version));
-      this.args.onMountSuccess(type, path, useEngineRoute);
+      yield this.api.sys.authEnableMethod(path, data);
+      this.flashMessages.success(`Successfully mounted the ${mountModel.type} auth method at ${path}.`);
+      this.args.onMountSuccess(type, path, false);
     } catch (error) {
       const { status, response, message } = yield this.api.parseError(error);
       this.onMountError(status, response.errors, message);
@@ -211,7 +144,6 @@ export default class MountBackendForm extends Component<Args> {
   @action
   setMountType(value: string) {
     this.mountForm.type = value;
-    this.typeChangeSideEffect(value);
     this.checkPathChange(value);
   }
 

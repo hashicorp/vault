@@ -5,7 +5,6 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
 import SecretsEngineForm from 'vault/forms/secrets/engine';
 import Router from 'vault/router';
 import type PluginCatalogService from 'vault/services/plugin-catalog';
@@ -34,10 +33,10 @@ export default class VaultClusterSecretsMountsIndexRouter extends Route {
     // Fetch plugin catalog data to enhance the secret engines list
     const pluginCatalogResponse = await this.pluginCatalog.fetchPluginCatalog();
 
-    return hash({
+    return {
       form: secretEngineForm,
       pluginCatalogData: pluginCatalogResponse.data,
       pluginCatalogError: pluginCatalogResponse.error,
-    });
+    };
   }
 }

@@ -22,6 +22,20 @@ export default class SecretsEngineForm extends MountForm<SecretsEngineFormData> 
     ];
   }
 
+  // Method to apply type-specific side effects - called when type changes
+  applyTypeSpecificDefaults() {
+    // PKI side effect: set max lease to ~10 years to match PKI certificate lifespans
+    if (this.normalizedType === 'pki') {
+      if (!this.data.config) {
+        this.data.config = {};
+      }
+      // Only set default if not already specified
+      if (!this.data.config.max_lease_ttl) {
+        this.data.config.max_lease_ttl = '3650d';
+      }
+    }
+  }
+
   coreOptionFields = [this.fields.description, this.fields.local, this.fields.sealWrap];
 
   leaseConfigFields = [
@@ -41,7 +55,7 @@ export default class SecretsEngineForm extends MountForm<SecretsEngineFormData> 
   ];
 
   get defaultFields() {
-    const fields = [new FormField('path', 'string')];
+    const fields = [this.fields.path];
     if (this.normalizedType === 'kv') {
       fields.push(
         new FormField('kv_config.max_versions', 'number', {
