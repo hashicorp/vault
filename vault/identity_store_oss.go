@@ -20,6 +20,10 @@ func (c *Core) CreateEntity(ctx context.Context) (*identity.Entity, error) {
 	return nil, nil
 }
 
+func identityStoreLoginMFAEntUnauthedPaths() []string {
+	return []string{}
+}
+
 func mfaLoginEnterprisePaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{}
 }
