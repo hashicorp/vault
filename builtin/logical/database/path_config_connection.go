@@ -671,8 +671,14 @@ see the Vault documentation for details on the removal of this feature. More inf
 available at https://www.snowflake.com/en/blog/blocking-single-factor-password-authentification`)
 		}
 
+		var rotationPeriodString string
+		if config.RotationPeriod != 0 {
+			rotationPeriodString = config.RotationPeriod.String()
+		}
 		b.dbEvent(ctx, "config-write", req.Path, name, true)
-		recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseConfigWrite)
+		recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseConfigWrite,
+			AdditionalDatabaseMetadata{key: "root_rotation_period", value: rotationPeriodString},
+			AdditionalDatabaseMetadata{key: "root_rotation_schedule", value: config.RotationSchedule})
 
 		if len(resp.Warnings) == 0 {
 			return nil, nil
