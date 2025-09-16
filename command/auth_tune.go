@@ -311,7 +311,7 @@ func (c *AuthTuneCommand) Run(args []string) int {
 		}
 
 		if fl.Name == flagNameIdentityTokenKey {
-			mountConfigParamInput[transformFlagNameToParamName(fl.Name)] = c.flagPluginVersion
+			mountConfigParamInput[transformFlagNameToParamName(fl.Name)] = c.flagIdentityTokenKey
 		}
 
 		if fl.Name == flagNameTrimRequestTrailingSlashes && c.flagTrimRequestTrailingSlashes.IsSet() {
