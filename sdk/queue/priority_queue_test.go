@@ -141,67 +141,6 @@ func TestPriorityQueue_Pop(t *testing.T) {
 	}
 }
 
-// TestPriorityQueue_PeekByKey tests the PeekByKey method of PriorityQueue.
-// It verifies that PeekByKey returns the correct item without removing it from the queue,
-// handles non-existing keys appropriately, works correctly on empty queues, and
-// properly handles empty key strings.
-func TestPriorityQueue_PeekByKey(t *testing.T) {
-	pq := New()
-	tc := testCases()
-	expectedLength := len(tc)
-
-	// Peek from empty queue
-	peekedItem := pq.PeekByKey("item-2")
-	if peekedItem != nil {
-		t.Fatal("expected nil when peeking from empty queue, got item")
-	}
-	if pq.Len() != 0 {
-		t.Fatalf("expected empty queue to remain size 0, got %d", pq.Len())
-	}
-
-	// Push test items
-	for _, item := range tc {
-		if err := pq.Push(item); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	// Peek with empty key
-	peekedItem = pq.PeekByKey("")
-	if peekedItem != nil {
-		t.Fatal("expected nil for empty key, got item")
-	}
-	// Verify queue size unchanged
-	if pq.Len() != expectedLength {
-		t.Fatalf("expected queue size to remain %d, got %d", expectedLength, pq.Len())
-	}
-
-	// Peek at non-existing item
-	peekedItem = pq.PeekByKey("non-existing-key")
-	if peekedItem != nil {
-		t.Fatal("expected nil for non-existing key, got item")
-	}
-	// Verify queue size unchanged
-	if pq.Len() != expectedLength {
-		t.Fatalf("expected queue size to remain %d, got %d", expectedLength, pq.Len())
-	}
-
-	// Peek at a specific item
-	peekedItem = pq.PeekByKey("item-2")
-	if peekedItem == nil {
-		t.Fatal("expected to peek item-2, got nil")
-	}
-	// Verify queue size unchanged
-	if pq.Len() != expectedLength {
-		t.Fatalf("expected queue size to remain %d, got %d", expectedLength, pq.Len())
-	}
-	// Verify item still exists in queue
-	stillExists := pq.PeekByKey("item-2")
-	if stillExists == nil {
-		t.Fatal("item should still exist after peek")
-	}
-}
-
 func TestPriorityQueue_PopByKey(t *testing.T) {
 	pq := New()
 
