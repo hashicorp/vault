@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/cli"
-	"github.com/hashicorp/vault/api"
 	"github.com/posener/complete"
 )
 
@@ -251,83 +250,98 @@ func (c *AuthTuneCommand) Run(args []string) int {
 		c.flagOptions["version"] = strconv.Itoa(c.flagVersion)
 	}
 
-	mountConfigInput := api.MountConfigInput{
-		DefaultLeaseTTL: ttlToAPI(c.flagDefaultLeaseTTL),
-		MaxLeaseTTL:     ttlToAPI(c.flagMaxLeaseTTL),
-		Options:         c.flagOptions,
+	mountConfigParamInput := map[string]interface{}{
+		"default_lease_ttl": ttlToAPI(c.flagDefaultLeaseTTL),
+		"max_lease_ttl":     ttlToAPI(c.flagMaxLeaseTTL),
+		"options":           c.flagOptions,
 	}
+
+	userLockoutConfig := map[string]interface{}{}
+	userLockoutConfigSet := false
 
 	// Set these values only if they are provided in the CLI
 	f.Visit(func(fl *flag.Flag) {
 		if fl.Name == flagNameAuditNonHMACRequestKeys {
-			mountConfigInput.AuditNonHMACRequestKeys = c.flagAuditNonHMACRequestKeys
+			mountConfigParamInput[transformFlagNameToParamName(fl.Name)] = c.flagAuditNonHMACRequestKeys
 		}
 
 		if fl.Name == flagNameAuditNonHMACResponseKeys {
-			mountConfigInput.AuditNonHMACResponseKeys = c.flagAuditNonHMACResponseKeys
+			mountConfigParamInput[transformFlagNameToParamName(fl.Name)] = c.flagAuditNonHMACResponseKeys
 		}
 
 		if fl.Name == flagNameDescription {
-			mountConfigInput.Description = &c.flagDescription
+			mountConfigParamInput[transformFlagNameToParamName(fl.Name)] = c.flagDescription
 		}
 
 		if fl.Name == flagNameListingVisibility {
-			mountConfigInput.ListingVisibility = c.flagListingVisibility
+			mountConfigParamInput[transformFlagNameToParamName(fl.Name)] = c.flagListingVisibility
 		}
 
 		if fl.Name == flagNamePassthroughRequestHeaders {
-			mountConfigInput.PassthroughRequestHeaders = c.flagPassthroughRequestHeaders
+			mountConfigParamInput[transformFlagNameToParamName(fl.Name)] = c.flagPassthroughRequestHeaders
 		}
 
 		if fl.Name == flagNameAllowedResponseHeaders {
-			mountConfigInput.AllowedResponseHeaders = c.flagAllowedResponseHeaders
+			mountConfigParamInput[transformFlagNameToParamName(fl.Name)] = c.flagAllowedResponseHeaders
 		}
 
 		if fl.Name == flagNameTokenType {
-			mountConfigInput.TokenType = c.flagTokenType
+			mountConfigParamInput[transformFlagNameToParamName(fl.Name)] = c.flagTokenType
 		}
-		switch fl.Name {
+
+		switch fl.Name { // TODO HELP
 		case flagNameUserLockoutThreshold, flagNameUserLockoutDuration, flagNameUserLockoutCounterResetDuration, flagNameUserLockoutDisable:
-			if mountConfigInput.UserLockoutConfig == nil {
-				mountConfigInput.UserLockoutConfig = &api.UserLockoutConfigInput{}
-			}
+			userLockoutConfigSet = true
 		}
 		if fl.Name == flagNameUserLockoutThreshold {
-			mountConfigInput.UserLockoutConfig.LockoutThreshold = strconv.FormatUint(uint64(c.flagUserLockoutThreshold), 10)
+			userLockoutConfig[transformUserFlagNameToParamName(fl.Name)] = strconv.FormatUint(uint64(c.flagUserLockoutThreshold), 10)
 		}
 		if fl.Name == flagNameUserLockoutDuration {
-			mountConfigInput.UserLockoutConfig.LockoutDuration = ttlToAPI(c.flagUserLockoutDuration)
+			userLockoutConfig[transformUserFlagNameToParamName(fl.Name)] = ttlToAPI(c.flagUserLockoutDuration)
 		}
 		if fl.Name == flagNameUserLockoutCounterResetDuration {
-			mountConfigInput.UserLockoutConfig.LockoutCounterResetDuration = ttlToAPI(c.flagUserLockoutCounterResetDuration)
+			userLockoutConfig[transformUserFlagNameToParamName(fl.Name)] = c.flagUserLockoutCounterResetDuration
 		}
 		if fl.Name == flagNameUserLockoutDisable {
-			mountConfigInput.UserLockoutConfig.DisableLockout = &c.flagUserLockoutDisable
+			userLockoutConfig[transformUserFlagNameToParamName(fl.Name)] = c.flagUserLockoutDisable
 		}
 
 		if fl.Name == flagNamePluginVersion {
-			mountConfigInput.PluginVersion = c.flagPluginVersion
+			mountConfigParamInput[transformFlagNameToParamName(fl.Name)] = c.flagPluginVersion
 		}
 
 		if fl.Name == flagNameIdentityTokenKey {
-			mountConfigInput.IdentityTokenKey = c.flagIdentityTokenKey
+			mountConfigParamInput[transformFlagNameToParamName(fl.Name)] = c.flagPluginVersion
 		}
 
 		if fl.Name == flagNameTrimRequestTrailingSlashes && c.flagTrimRequestTrailingSlashes.IsSet() {
 			val := c.flagTrimRequestTrailingSlashes.Get()
-			mountConfigInput.TrimRequestTrailingSlashes = &val
+			mountConfigParamInput[transformFlagNameToParamName(fl.Name)] = &val
 		}
 	})
+
+	if userLockoutConfigSet {
+		mountConfigParamInput["user_lockout_config"] = userLockoutConfig
+	}
 
 	// Append /auth (since that's where auths live) and a trailing slash to
 	// indicate it's a path in output
 	mountPath := ensureTrailingSlash(sanitizePath(args[0]))
 
-	if err := client.Sys().TuneMount("/auth/"+mountPath, mountConfigInput); err != nil {
+	if err := client.Sys().TuneMountAllowNil("/auth/"+mountPath, mountConfigParamInput); err != nil {
 		c.UI.Error(fmt.Sprintf("Error tuning auth method %s: %s", mountPath, err))
 		return 2
 	}
 
 	c.UI.Output(fmt.Sprintf("Success! Tuned the auth method at: %s", mountPath))
 	return 0
+}
+
+func transformFlagNameToParamName(flagName string) string {
+	return strings.ReplaceAll(flagName, "-", "_")
+}
+
+func transformUserFlagNameToParamName(flagName string) string {
+	trimUserName, _ := strings.CutPrefix(flagName, "user-")
+	return strings.ReplaceAll(trimUserName, "-", "_")
 }
