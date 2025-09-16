@@ -87,18 +87,20 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 		}
 
-		defer func() {
+		defer func(credType *v5.CredentialType) {
 			if err == nil && (resp == nil || !resp.IsError()) {
 				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseCredentialCreateSuccess,
 					AdditionalDatabaseMetadata{key: "role_name", value: name},
-					AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
+					AdditionalDatabaseMetadata{key: "credential_type", value: credType.String()},
+					AdditionalDatabaseMetadata{key: "default_ttl", value: role.DefaultTTL.String()},
+					AdditionalDatabaseMetadata{key: "max_ttl", value: role.MaxTTL.String()})
 			} else {
 				b.dbEvent(ctx, "creds-create-fail", req.Path, name, modified)
 				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseCredentialCreateFail,
 					AdditionalDatabaseMetadata{key: "role_name", value: name},
-					AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
+					AdditionalDatabaseMetadata{key: "credential_type", value: credType.String()})
 			}
-		}()
+		}(&role.CredentialType) // argument is evaluated now, but since it's a pointer should refer correctly to updated values
 
 		dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
 		if err != nil {

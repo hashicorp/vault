@@ -268,14 +268,24 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 
 	// send an event indicating if the rotation was a success or failure
 	rotated := false
-	defer func(s *staticAccount) {
+	defer func(s *staticAccount, credType *v5.CredentialType) {
 		if rotated {
-			b.Logger().Info("succesfully rotated static role", "name", roleName, "ttl", s.CredentialTTL().Seconds())
+			b.Logger().Info("successfully rotated static role", "name", roleName, "ttl", s.CredentialTTL().Seconds())
 			b.dbEvent(ctx, "rotate", "", roleName, true)
+			recordDatabaseObservation(ctx, b, nil, role.DBName, ObservationTypeDatabaseRotateStaticRoleSuccess,
+				AdditionalDatabaseMetadata{key: "role_name", value: roleName},
+				AdditionalDatabaseMetadata{key: "credential_type", value: credType.String()},
+				AdditionalDatabaseMetadata{key: "credential_ttl", value: s.CredentialTTL().String()},
+				AdditionalDatabaseMetadata{key: "rotation_period", value: s.RotationPeriod.String()},
+				AdditionalDatabaseMetadata{key: "rotation_schedule", value: s.RotationSchedule},
+				AdditionalDatabaseMetadata{key: "next_vault_rotation", value: s.NextVaultRotation.String()})
 		} else {
 			b.dbEvent(ctx, "rotate-fail", "", roleName, false)
+			recordDatabaseObservation(ctx, b, nil, role.DBName, ObservationTypeDatabaseRotateStaticRoleFailure,
+				AdditionalDatabaseMetadata{key: "role_name", value: roleName},
+				AdditionalDatabaseMetadata{key: "credential_type", value: credType.String()})
 		}
-	}(role.StaticAccount) // argument is evaluated now, but since it's a pointer should refer correctly to updated values
+	}(role.StaticAccount, &role.CredentialType) // argument is evaluated now, but since it's a pointer should refer correctly to updated values
 
 	// If there is a WAL entry related to this Role, the corresponding WAL ID
 	// should be stored in the Item's Value field.
@@ -316,6 +326,7 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 	if err := b.pushItem(item); err != nil {
 		logger.Warn("unable to push item on to queue", "error", err)
 	}
+
 	rotated = true
 	return true
 }

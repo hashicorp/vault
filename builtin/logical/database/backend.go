@@ -505,11 +505,13 @@ type AdditionalDatabaseMetadata struct {
 func recordDatabaseObservation(ctx context.Context, b *databaseBackend, req *logical.Request, connectionName string, observationType string,
 	additionalMetadata ...AdditionalDatabaseMetadata,
 ) {
-	metadata := map[string]interface{}{
-		"path":       req.Path,
-		"client_id":  req.ClientID,
-		"entity_id":  req.EntityID,
-		"request_id": req.ID,
+	metadata := map[string]interface{}{}
+
+	if req != nil {
+		metadata["path"] = req.Path
+		metadata["client_id"] = req.ClientID
+		metadata["entity_id"] = req.EntityID
+		metadata["request_id"] = req.ID
 	}
 
 	if connectionName != "" {

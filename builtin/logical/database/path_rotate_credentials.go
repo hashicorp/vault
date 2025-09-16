@@ -96,10 +96,8 @@ func (b *databaseBackend) rotateRootCredentials(ctx context.Context, req *logica
 	defer func() {
 		if err == nil {
 			b.dbEvent(ctx, "rotate-root", req.Path, name, modified)
-			recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseRotateRootSuccess)
 		} else {
 			b.dbEvent(ctx, "rotate-root-fail", req.Path, name, modified)
-			recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseRotateRootFailure)
 		}
 	}()
 
@@ -107,6 +105,18 @@ func (b *databaseBackend) rotateRootCredentials(ctx context.Context, req *logica
 	if err != nil {
 		return nil, err
 	}
+
+	defer func() {
+		if err == nil {
+			recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseRotateRootSuccess,
+				AdditionalDatabaseMetadata{key: "rotation_period", value: config.RotationPeriod.String()},
+				AdditionalDatabaseMetadata{key: "rotation_schedule", value: config.RotationSchedule})
+		} else {
+			recordDatabaseObservation(ctx, b, req, name, ObservationTypeDatabaseRotateRootFailure,
+				AdditionalDatabaseMetadata{key: "rotation_period", value: config.RotationPeriod.String()},
+				AdditionalDatabaseMetadata{key: "rotation_schedule", value: config.RotationSchedule})
+		}
+	}()
 
 	rootUsername, ok := config.ConnectionDetails["username"].(string)
 	if !ok || rootUsername == "" {
@@ -225,17 +235,21 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 
 		// We defer after we've found that the static role exists, otherwise it's not really fair to say
 		// that the rotation failed.
-		defer func() {
+		defer func(s *staticAccount, credType *v5.CredentialType) {
 			if err == nil {
 				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRotateStaticRoleSuccess,
 					AdditionalDatabaseMetadata{key: "role_name", value: name},
-					AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
+					AdditionalDatabaseMetadata{key: "credential_type", value: credType.String()},
+					AdditionalDatabaseMetadata{key: "credential_ttl", value: s.CredentialTTL().String()},
+					AdditionalDatabaseMetadata{key: "rotation_period", value: s.RotationPeriod.String()},
+					AdditionalDatabaseMetadata{key: "rotation_schedule", value: s.RotationSchedule},
+					AdditionalDatabaseMetadata{key: "next_vault_rotation", value: s.NextVaultRotation.String()})
 			} else {
 				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRotateStaticRoleFailure,
 					AdditionalDatabaseMetadata{key: "role_name", value: name},
-					AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
+					AdditionalDatabaseMetadata{key: "credential_type", value: credType.String()})
 			}
-		}()
+		}(role.StaticAccount, &role.CredentialType) // argument is evaluated now, but since it's a pointer should refer correctly to updated values
 
 		// In create/update of static accounts, we only care if the operation
 		// err'd , and this call does not return credentials
