@@ -297,3 +297,240 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 		assertNoTabs(t, cmd)
 	})
 }
+
+/*func TestUnsetFieldsAuthTune(t *testing.T) {
+	t.Parallel()
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	_, cmdSet := testAuthTuneCommand(t)
+	cmdSet.client = client
+
+	// Mount
+	if err := client.Sys().EnableAuthWithOptions("my-auth", &api.EnableAuthOptions{
+		Type:        "userpass",
+		Description: "initial description",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Set Many Fields
+	cmdSet.flagAuditNonHMACRequestKeys = []string{"foo", "bar"}
+	cmdSet.flagAuditNonHMACResponseKeys = []string{"foo", "bar", "baz"}
+	cmdSet.flagDescription = "new fancy description"
+	cmdSet.flagPassthroughRequestHeaders = []string{"authorization", "authentication"}
+	cmdSet.flagAllowedResponseHeaders = []string{"authorization", "authentication", "www"}
+	cmdSet.flagTokenType = "typeyType"
+	cmdSet.flagUserLockoutThreshold = 343
+	cmdSet.flagUserLockoutDuration = time.Hour
+	cmdSet.flagUserLockoutCounterResetDuration = time.Hour
+	cmdSet.flagUserLockoutDisable = false
+	cmdSet.flagIdentityTokenKey = "someKey"
+	code := cmdSet.Run([]string{
+		// Skipped Listing Visibility and Plugin Version and Bool Pointer of Trim trailing slash
+		"my-auth/",
+	})
+	if exp := 0; code != exp {
+		t.Errorf("expected %d to be %d", code, exp)
+	}
+
+	_, cmdUnset := testAuthTuneCommand(t)
+	cmdUnset.client = client
+
+	// Unset Many Fields
+	// Set Many Fields
+	cmdSet.flagAuditNonHMACRequestKeys = []string{}
+	cmdSet.flagAuditNonHMACResponseKeys = []string{}
+	cmdSet.flagDescription = ""
+	cmdSet.flagPassthroughRequestHeaders = []string{}
+	cmdSet.flagAllowedResponseHeaders = []string{}
+	cmdSet.flagTokenType = ""
+	cmdSet.flagUserLockoutThreshold = 0
+	cmdSet.flagUserLockoutDuration = 0 * time.Hour
+	cmdSet.flagUserLockoutCounterResetDuration = 0 * time.Hour
+	cmdSet.flagUserLockoutDisable = true
+	cmdSet.flagIdentityTokenKey = ""
+	code = cmdUnset.Run([]string{
+		// Skipped Listing Visibility and Plugin Version and Trim Trailing Slash
+		"my-auth/",
+	})
+	if exp := 0; code != exp {
+		t.Errorf("expected %d to be %d", code, exp)
+	}
+
+	// Check fields were unset:
+	mount, err := client.Sys().GetMount("my-auth")
+	if err != nil {
+		t.Fatalf("expected to be able to fetch auth mount")
+	}
+
+	t.Errorf("some error to show mount %v", mount)
+
+	if mount.Description != "" {
+		t.Errorf("expected %q to be empty", mount.Description)
+	}
+	if mount.Options != nil {
+		newError := "old" + "error"
+		t.Errorf("expected %q to be nil %v", mount.Options, newError)
+	}
+
+}
+*/
+
+func TestUnsetFieldsAuthTune(t *testing.T) {
+	t.Parallel()
+	pluginDir := corehelpers.MakeTestPluginDir(t)
+
+	client, _, closer := testVaultServerPluginDir(t, pluginDir)
+	defer closer()
+
+	// Mount
+	if err := client.Sys().EnableAuthWithOptions("my-auth", &api.EnableAuthOptions{
+		Type: "userpass",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mountInfo, ok := auths["my-auth/"]
+	if !ok {
+		t.Fatalf("expected mount to exist: %#v", auths)
+	}
+
+	if exp := ""; mountInfo.PluginVersion != exp {
+		t.Errorf("expected %q to be %q", mountInfo.PluginVersion, exp)
+	}
+
+	_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, "userpass", api.PluginTypeCredential)
+
+	ui, cmdSet := testAuthTuneCommand(t)
+	cmdSet.client = client
+
+	code := cmdSet.Run([]string{
+		"-description", "new description",
+		"-default-lease-ttl", "30m",
+		"-max-lease-ttl", "1h",
+		"-audit-non-hmac-request-keys", "foo,bar",
+		"-audit-non-hmac-response-keys", "foo,bar",
+		"-passthrough-request-headers", "authorization",
+		"-allowed-response-headers", "authorization,www-authentication",
+		"-listing-visibility", "unauth",
+		"-plugin-version", version,
+		"-identity-token-key", "default",
+		"-trim-request-trailing-slashes=true",
+		"my-auth/",
+	})
+	if exp := 0; code != exp {
+		t.Errorf("expected %d to be %d", code, exp)
+	}
+
+	expected := "Success! Tuned the auth method at: my-auth/"
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	if !strings.Contains(combined, expected) {
+		t.Errorf("expected %q to contain %q", combined, expected)
+	}
+
+	auths, err = client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mountInfo, ok = auths["my-auth/"]
+	if !ok {
+		t.Fatalf("expected auth to exist")
+	}
+	if exp := "new description"; mountInfo.Description != exp {
+		t.Errorf("expected %q to be %q", mountInfo.Description, exp)
+	}
+	if exp := "userpass"; mountInfo.Type != exp {
+		t.Errorf("expected %q to be %q", mountInfo.Type, exp)
+	}
+	if exp := version; mountInfo.PluginVersion != exp {
+		t.Errorf("expected %q to be %q", mountInfo.PluginVersion, exp)
+	}
+	if exp := 1800; mountInfo.Config.DefaultLeaseTTL != exp {
+		t.Errorf("expected %d to be %d", mountInfo.Config.DefaultLeaseTTL, exp)
+	}
+	if exp := 3600; mountInfo.Config.MaxLeaseTTL != exp {
+		t.Errorf("expected %d to be %d", mountInfo.Config.MaxLeaseTTL, exp)
+	}
+	if !mountInfo.Config.TrimRequestTrailingSlashes {
+		t.Errorf("expected trim_request_trailing_slashes to be enabled")
+	}
+	if diff := deep.Equal([]string{"authorization"}, mountInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
+		t.Errorf("Failed to find expected values in PassthroughRequestHeaders. Difference is: %v", diff)
+	}
+	if diff := deep.Equal([]string{"authorization,www-authentication"}, mountInfo.Config.AllowedResponseHeaders); len(diff) > 0 {
+		t.Errorf("Failed to find expected values in AllowedResponseHeaders. Difference is: %v", diff)
+	}
+	if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACRequestKeys); len(diff) > 0 {
+		t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys. Difference is: %v", diff)
+	}
+	if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
+		t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
+	}
+	if diff := deep.Equal("default", mountInfo.Config.IdentityTokenKey); len(diff) > 0 {
+		t.Errorf("Failed to find expected values in IdentityTokenKey. Difference is: %v", diff)
+	}
+
+	uiNew, cmdUnset := testAuthTuneCommand(t)
+	cmdUnset.client = client
+
+	unsetCode := cmdUnset.Run([]string{
+		"-description", "",
+		"-default-lease-ttl", "30m",
+		"-max-lease-ttl", "1h",
+		"-audit-non-hmac-request-keys", "",
+		"-audit-non-hmac-response-keys", "",
+		"-passthrough-request-headers", "",
+		"-allowed-response-headers", "",
+		"-listing-visibility", "unauth",
+		"-plugin-version", version,
+		"-identity-token-key", "",
+		"-trim-request-trailing-slashes=false",
+		"my-auth/",
+	})
+	if exp := 0; unsetCode != exp {
+		t.Errorf("expected %d to be %d", unsetCode, exp)
+	}
+
+	combined = uiNew.OutputWriter.String() + uiNew.ErrorWriter.String()
+	if !strings.Contains(combined, expected) {
+		t.Errorf("expected %q to contain %q", combined, expected)
+	}
+
+	auths, err = client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mountInfo, ok = auths["my-auth/"]
+	if !ok {
+		t.Fatalf("expected auth to exist")
+	}
+	if exp := ""; mountInfo.Description != exp {
+		t.Errorf("expected %q to be %q", mountInfo.Description, exp)
+	}
+	if mountInfo.Config.TrimRequestTrailingSlashes {
+		t.Errorf("expected trim_request_trailing_slashes to be disabled")
+	}
+	if diff := deep.Equal([]string{""}, mountInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
+		t.Errorf("Failed to find expected values in PassthroughRequestHeaders. Difference is: %v", diff)
+	}
+	if diff := deep.Equal([]string{""}, mountInfo.Config.AllowedResponseHeaders); len(diff) > 0 {
+		t.Errorf("Failed to find expected values in AllowedResponseHeaders. Difference is: %v", diff)
+	}
+	if diff := deep.Equal([]string{""}, mountInfo.Config.AuditNonHMACRequestKeys); len(diff) > 0 {
+		t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys. Difference is: %v", diff)
+	}
+	if diff := deep.Equal([]string{""}, mountInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
+		t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
+	}
+	if diff := deep.Equal("", mountInfo.Config.IdentityTokenKey); len(diff) > 0 {
+		t.Errorf("Failed to find expected values in IdentityTokenKey. Difference is: %v", diff)
+	}
+}
