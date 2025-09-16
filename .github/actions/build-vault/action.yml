@@ -63,8 +63,6 @@ runs:
       uses: ./.github/actions/set-up-go
       with:
         github-token: ${{ inputs.github-token }}
-    - if: inputs.cgo-enabled == '0'
-      uses: ./.github/actions/install-external-tools
     - if: inputs.vault-edition != 'ce'
       name: Configure Git
       shell: bash
@@ -119,29 +117,12 @@ runs:
       uses: hashicorp-forge/actions-pao-tool/select-license@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
       with:
         arch: ${{ matrix.goarch }}
-    - if: inputs.cgo-enabled == '0'
-      name: ${{ steps.metadata.outputs.build-step-name }}
-      env:
-        CGO_ENABLED: 0
-        GO_TAGS: ${{ inputs.go-tags }}
-        GOARCH: ${{ inputs.goarch }}
-        GOARM: ${{ inputs.goarm }}
-        GOOS: ${{ inputs.goos }}
-        GOEXPERIMENT: ${{ inputs.goexperiment }}
-        GOPRIVATE: github.com/hashicorp
-        VERSION: ${{ inputs.version }}
-        VERSION_METADATA: ${{ inputs.vault-edition != 'ce' && inputs.vault-edition || '' }}
-      shell: bash
-      run: make ci-build
-    - if: inputs.cgo-enabled == '1'
-      uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+    - uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
       with:
         driver-opts: network=host # So we can run our own little registry
-    - if: inputs.cgo-enabled == '1'
-      shell: bash
+    - shell: bash
       run: docker run -d -p 5000:5000 --restart always --name registry registry:2
     - name: Build CGO builder image
-      if: inputs.cgo-enabled == '1'
       id: build-push-action-attempt-1
       continue-on-error: true # we will retry this if it fails
       uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
@@ -165,7 +146,7 @@ runs:
     - name: Build CGO builder image
       id: build-push-action-attempt-2
       continue-on-error: false
-      if: inputs.cgo-enabled == '1' && steps.build-push-action-attempt-1.outcome != 'success'
+      if: steps.build-push-action-attempt-1.outcome != 'success'
       uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
       env:
         DOCKER_BUILD_SUMMARY: false
@@ -184,8 +165,7 @@ runs:
         cache-from: type=gha,scope=vault-builder-${{ steps.metadata.outputs.vault-builder-cache-key }}
         cache-to: type=gha,mode=min,scope=vault-builder-${{ steps.metadata.outputs.vault-builder-cache-key }}
         github-token: ${{ inputs.github-token }}
-    - if: inputs.cgo-enabled == '1'
-      name: ${{ steps.metadata.outputs.build-step-name }}
+    - name: ${{ steps.metadata.outputs.build-step-name }}
       shell: bash
       run: |
         mkdir -p dist
@@ -194,7 +174,7 @@ runs:
           -v $(pwd):/build \
           -v $(go env GOMODCACHE):/go-mod-cache \
             --env GITHUB_TOKEN='${{ inputs.github-token }}' \
-            --env CGO_ENABLED=1 \
+            --env CGO_ENABLED=${{ inputs.cgo-enabled }} \
             --env GO_TAGS='${{ inputs.go-tags }}' \
             --env GOARCH='${{ inputs.goarch }}' \
             --env GOARM='${{ inputs.goarm }}' \
