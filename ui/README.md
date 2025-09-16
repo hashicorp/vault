@@ -165,6 +165,18 @@ Hello and thank you for contributing to the Vault UI! Below is a list of pattern
 - [css](docs/css.md)
 - [ember engines](docs/engines.md)
 
+### Updating @hashicorp-internal/vault-reporting
+
+Code regarding vault-reporting module lives in the [shared-secure-ui](https://github.com/hashicorp/shared-secure-ui) repo, and it is being used as a tarball in this repo.
+
+We use the script [update-vault-reporting-addon.sh](scripts/update-vault-reporting-addon.sh) to fetch the latest tarball from artifactory and update `package.json` accordingly. To run the script, you'll need to have [Doormat CLI](https://docs.prod.secops.hashicorp.services/doormat/cli/) and [jq](https://formulae.brew.sh/formula/jq) installed locally.
+
+Example:
+
+```
+./scripts/update-vault-reporting-addon.sh
+```
+
 ## Further Reading / Useful Links
 
 - [ember.js](https://emberjs.com/)

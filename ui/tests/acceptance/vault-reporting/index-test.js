@@ -56,7 +56,7 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
       .dom('[data-test-vault-reporting-dashboard-counters]')
       .exists('renders the counters dashboard block');
 
-    const expectedCounters = ['Child namespaces', 'KV secrets', 'Secrets sync', 'PKI roles'];
+    const expectedCounters = ['Child namespaces', 'KV secrets', 'PKI roles'];
 
     expectedCounters.forEach((counterLabel) => {
       assert
@@ -164,6 +164,34 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
     assert
       .dom('[data-test-vault-reporting-global-lease-count-text]')
       .hasText('210K / 420K', 'lease count is correct');
+  });
+
+  test('dashboard card: Secrets sync', async function (assert) {
+    this.server.get('sys/utilization-report', () => mockedResponseWithData);
+    await visit('/vault/usage-reporting');
+    await waitFor('[data-test-vault-reporting-dashboard-secrets-sync]');
+
+    assert.dom('[data-test-vault-reporting-dashboard-secrets-sync]').exists('renders Secrets sync card');
+    assert
+      .dom(
+        '[data-test-vault-reporting-dashboard-secrets-sync] [data-test-vault-reporting-dashboard-card-title]'
+      )
+      .hasText('Secrets sync', 'title is correct');
+
+    assert
+      .dom(
+        '[data-test-vault-reporting-dashboard-secrets-sync] [data-test-vault-reporting-dashboard-card-description]'
+      )
+      .hasText(
+        'Total number of destinations (e.g. third-party integrations) synced with secrets',
+        'description is correct'
+      );
+    assert
+      .dom('[data-test-vault-reporting-secrets-sync-destinations-row]')
+      .includesText('Destination', 'Destinations header is present');
+    assert
+      .dom('[data-test-vault-reporting-secrets-sync-destinations-row]')
+      .includesText('aws: 1', 'aws destination is present');
   });
 
   test('dashboard card: Cluster replication status', async function (assert) {

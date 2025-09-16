@@ -7,7 +7,7 @@ import type { GenerateUtilizationReportResponse } from '@hashicorp/vault-client-
 import type {
   REPLICATION_ENABLED_STATE,
   REPLICATION_DISABLED_STATE,
-} from '@hashicorp/vault-reporting/types/index';
+} from '@hashicorp-internal/vault-reporting/types/index';
 
 export type GlobalLeaseCountQuota = {
   capacity: number;
@@ -22,6 +22,7 @@ export type LeaseCountQuotas = {
 
 export type SecretSync = {
   total_destinations: number;
+  destinations: Record<string, number>;
 };
 
 export type Pki = {

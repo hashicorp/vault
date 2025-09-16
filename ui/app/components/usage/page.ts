@@ -8,7 +8,10 @@ import { service } from '@ember/service';
 
 import type FlagsService from 'vault/services/flags';
 import type ApiService from 'vault/services/api';
-import type { getUsageDataFunction, UsageDashboardData } from '@hashicorp/vault-reporting/types/index';
+import type {
+  getUsageDataFunction,
+  UsageDashboardData,
+} from '@hashicorp-internal/vault-reporting/types/index';
 import type { UtilizationReport } from 'vault/usage';
 
 /**
@@ -65,6 +68,7 @@ export default class UsagePage extends Component {
         totalRoles: pki?.total_roles || 0,
       },
       secretSync: {
+        destinations: secret_sync?.destinations || {},
         totalDestinations: secret_sync?.total_destinations || 0,
       },
     };
