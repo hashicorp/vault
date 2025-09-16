@@ -2653,9 +2653,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp-internal/vault-reporting@file:vault-reporting/0.5.1.tgz::locator=vault%40workspace%3A.":
-  version: 0.5.1
-  resolution: "@hashicorp-internal/vault-reporting@file:vault-reporting/0.5.1.tgz::locator=vault%40workspace%3A."
+"@hashicorp-internal/vault-reporting@file:vault-reporting/0.8.0.tgz::locator=vault%40workspace%3A.":
+  version: 0.8.0
+  resolution: "@hashicorp-internal/vault-reporting@file:vault-reporting/0.8.0.tgz::locator=vault%40workspace%3A."
   dependencies:
     "@embroider/macros": ^1.18.1
     "@lineal-viz/lineal": ^0.5.1
@@ -2663,7 +2663,7 @@ __metadata:
     ember-modifier: ^4.2.2
   peerDependencies:
     "@hashicorp/design-system-components": ^4.22.1
-  checksum: 843d5ba280ed8df1d1e67eb81499b20b90b2c813c6ec4e758a090dd0102f840a518c4d990f79d72757a931a0788d82f27ccc3f79d76c7903e4366837ee00ddea
+  checksum: d5292fcd60b27553d71b765dc7be31800858e8f3c03931a68672b257473b8914dd3bfecbf5f5ac1efabb1055f3ffdf637fe3104d17b1afbbfb45478447e147df
   languageName: node
   linkType: hard
 
@@ -18473,7 +18473,7 @@ __metadata:
     "@ember/test-waiters": ~4.1.0
     "@glimmer/component": ~1.1.2
     "@glimmer/tracking": ~1.1.2
-    "@hashicorp-internal/vault-reporting": "file:vault-reporting/0.5.1.tgz"
+    "@hashicorp-internal/vault-reporting": "file:vault-reporting/0.8.0.tgz"
     "@hashicorp/design-system-components": 4.20.1
     "@hashicorp/vault-client-typescript": hashicorp/vault-client-typescript
     "@icholy/duration": ~5.1.0

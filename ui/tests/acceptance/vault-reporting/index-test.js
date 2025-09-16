@@ -80,12 +80,13 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
       )
       .exists('title is present')
       .hasText('Secret engines', 'title is correct');
+
     assert
       .dom(
         '[data-test-vault-reporting-dashboard-secret-engines] [data-test-vault-reporting-dashboard-card-title-link]'
       )
       .exists('title link is present')
-      .hasAttribute('href', 'secrets', 'link points to secrets');
+      .hasAttribute('href', '/ui/vault/secrets', 'link points to secrets');
     assert
       .dom(
         '[data-test-vault-reporting-dashboard-secret-engines] [data-test-vault-reporting-dashboard-card-description]'
@@ -116,7 +117,7 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
         '[data-test-vault-reporting-dashboard-auth-methods] [data-test-vault-reporting-dashboard-card-title-link]'
       )
       .exists('title link is present')
-      .hasAttribute('href', 'access', 'link points to access');
+      .hasAttribute('href', '/ui/vault/access', 'link points to access');
     assert
       .dom(
         '[data-test-vault-reporting-dashboard-auth-methods] [data-test-vault-reporting-dashboard-card-description]'
@@ -177,7 +178,12 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
         '[data-test-vault-reporting-dashboard-secrets-sync] [data-test-vault-reporting-dashboard-card-title]'
       )
       .hasText('Secrets sync', 'title is correct');
-
+    assert
+      .dom(
+        '[data-test-vault-reporting-dashboard-secrets-sync] [data-test-vault-reporting-dashboard-card-title-link]'
+      )
+      .exists('title link is present')
+      .hasAttribute('href', '/ui/vault/sync', 'link points to sync');
     assert
       .dom(
         '[data-test-vault-reporting-dashboard-secrets-sync] [data-test-vault-reporting-dashboard-card-description]'
@@ -208,12 +214,13 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
       )
       .exists('title is present')
       .hasText('Cluster replication', 'title is correct');
+
     assert
       .dom(
         '[data-test-vault-reporting-dashboard-cluster-replication] [data-test-vault-reporting-dashboard-card-title-link]'
       )
       .exists('title link is present')
-      .hasAttribute('href', 'replication', 'link points to replication');
+      .hasAttribute('href', '/ui/vault/replication', 'link points to replication');
     assert
       .dom(
         '[data-test-vault-reporting-dashboard-cluster-replication] [data-test-vault-reporting-dashboard-card-description]'
