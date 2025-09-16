@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { visit, currentURL, waitFor, click } from '@ember/test-helpers';
+import { visit, currentURL, waitFor, click, fillIn } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { mockedResponseWithData, mockedEmptyResponse } from 'vault/tests/helpers/vault-usage/mocks';
@@ -264,5 +264,83 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
     assert
       .dom('[data-test-vault-reporting-dashboard-lease-count]')
       .includesText('Global lease count quota', 'Lease quota empty state: docs link is shown');
+  });
+
+  test('namespace lookup functionality', async function (assert) {
+    this.server.get('sys/internal/ui/namespaces', {
+      data: {
+        keys: ['child-ns1/', 'child-ns2/'],
+      },
+    });
+
+    // Mock different responses for different namespaces
+    const defaultMockResponse = mockedResponseWithData;
+    const childNs1MockResponse = {
+      data: {
+        ...mockedResponseWithData.data,
+        kvv2_secrets: 200,
+        kvv1_secrets: 50,
+      },
+    };
+
+    // Initially load default data
+    this.server.get('sys/utilization-report', () => defaultMockResponse);
+
+    const namespaceService = this.owner.lookup('service:namespace');
+    namespaceService.set('accessibleNamespaces', ['child-ns1/', 'child-ns2/']);
+    namespaceService.set('path', 'parent-ns');
+
+    await visit('/vault/usage-reporting');
+
+    // Verify initial KV secrets count (should be 40 from default mock)
+    await waitFor('[data-test-vault-reporting-counter="KV secrets"]');
+    assert
+      .dom('[data-test-vault-reporting-counter="KV secrets"]')
+      .includesText('100', 'Initial KV secrets count is 100');
+
+    // Update mock to return different data for child-ns1
+    this.server.get('sys/utilization-report', () => childNs1MockResponse);
+
+    // Click the namespace picker dropdown to open it
+    await click('.hds-dropdown.ssu-namespace-picker button');
+
+    // Verify all namespaces are visible initially
+    assert.dom('[data-test-vault-reporting-namespace-menu-item="root"]').exists('root namespace is visible');
+    assert
+      .dom('[data-test-vault-reporting-namespace-menu-item="child-ns1"]')
+      .exists('child-ns1 namespace is visible');
+    assert
+      .dom('[data-test-vault-reporting-namespace-menu-item="child-ns2"]')
+      .exists('child-ns2 namespace is visible');
+
+    // Use the search bar to search for "ns1"
+    await fillIn('[data-test-vault-reporting-namespace-search]', 'ns1');
+
+    // Verify only child-ns1 is visible after search
+    assert
+      .dom('[data-test-vault-reporting-namespace-menu-item="child-ns1"]')
+      .exists('child-ns1 is visible after search');
+
+    // Verify root and child-ns2 are filtered out
+    assert
+      .dom('[data-test-vault-reporting-namespace-menu-item="root"]')
+      .doesNotExist('root namespace is filtered out');
+    assert
+      .dom('[data-test-vault-reporting-namespace-menu-item="child-ns2"]')
+      .doesNotExist('child-ns2 namespace is filtered out');
+
+    // Click on child-ns1 to select it
+    await click('[data-test-vault-reporting-namespace-menu-item="child-ns1"]');
+
+    // Verify that child-ns1 is now displayed as the selected namespace in the closed dropdown
+    assert
+      .dom('.hds-dropdown.ssu-namespace-picker')
+      .includesText('child-ns1', 'child-ns1 is displayed as the selected namespace');
+
+    // Wait for data to be refetched and verify the KV secrets count has changed
+    await waitFor('[data-test-vault-reporting-counter="KV secrets"]');
+    assert
+      .dom('[data-test-vault-reporting-counter="KV secrets"]')
+      .includesText('250', 'KV secrets count updated to 250 after selecting child-ns1');
   });
 });
