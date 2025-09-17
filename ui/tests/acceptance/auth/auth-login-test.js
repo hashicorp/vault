@@ -54,6 +54,13 @@ module('Acceptance | auth login', function (hooks) {
     assert.dom(AUTH_FORM.selectMethod).hasValue('userpass');
   });
 
+  test('it pre-fills OIDC role if specified in query param', async function (assert) {
+    const role = AUTH_METHOD_LOGIN_DATA.oidc.role;
+    await visit(`/vault/auth?with=oidc&role=${role}`);
+    assert.dom(AUTH_FORM.selectMethod).hasValue('oidc');
+    assert.dom(GENERAL.inputByAttr('role')).hasValue(role);
+  });
+
   test('it selects auth method if "with" query param ends in an encoded slash and matches an auth type', async function (assert) {
     await visit('/vault/auth?with=userpass%2F');
     assert.dom(AUTH_FORM.selectMethod).hasValue('userpass');
