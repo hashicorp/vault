@@ -13,6 +13,8 @@ export const GENERAL = {
   breadcrumbs: '[data-test-breadcrumbs]',
   headerContainer: 'header.page-header',
   title: '[data-test-page-title]',
+  hdsPageHeaderTitle: '.hds-page-header__title',
+  hdsPageHeaderDescription: '.hds-page-header__description',
 
   /* ────── Tabs & Navigation ────── */
   tab: (name: string) => `[data-test-tab="${name}"]`,
@@ -73,6 +75,7 @@ export const GENERAL = {
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
   textToggle: '[data-test-text-toggle]',
   filter: (name: string) => `[data-test-filter="${name}"]`,
+  textareaByAttr: (attr: string) => `textarea[name="${attr}"]`,
 
   /* ────── Code Blocks / Editor ────── */
   codemirror: `[data-test-component="code-mirror-modifier"]`,
@@ -159,6 +162,11 @@ export const GENERAL = {
 
   /* ────── Modals & Flyouts ────── */
   flyout: '[data-test-flyout]',
+  modal: {
+    container: (title: string) => `[data-test-modal=${title}]`,
+    header: (title: string) => `[data-test-modal-header=${title}]`,
+    body: (title: string) => `[data-test-modal-body=${title}]`,
+  },
 
   /* ────── Misc ────── */
   icon: (name: string) => (name ? `[data-test-icon="${name}"]` : '[data-test-icon]'),

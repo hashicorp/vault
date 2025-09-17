@@ -2,7 +2,13 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
-<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-m has-top-bottom-margin-12" ...attributes>
+<Hds::Card::Container
+  @level="mid"
+  @hasBorder={{true}}
+  class="has-padding-m has-top-bottom-margin-12"
+  data-test-card-container="metadata"
+  ...attributes
+>
   <Hds::Text::Display @size="300" @tag="h2" class="has-bottom-margin-s hds-foreground-strong">Metadata</Hds::Text::Display>
 
   <div class="flex gap-16 is-flex-column has-top-padding-s">
@@ -13,6 +19,7 @@
         <Hds::Layout::Flex @gap="8">
           <Hds::Form::TextInput::Field
             @value={{@model.secretsEngine.path}}
+            aria-label="Secret engine path"
             autocomplete="off"
             disabled
             class="path-input-text"
@@ -31,6 +38,7 @@
         <Hds::Layout::Flex @gap="8">
           <Hds::Form::TextInput::Field
             @value={{@model.secretsEngine.accessor}}
+            aria-label="Secret engine accessor"
             autocomplete="off"
             disabled
             name="Accessor"
