@@ -33,6 +33,17 @@ export default class RunningTotal extends Component<Args> {
     }));
   }
 
+  get donutChartData() {
+    return [
+      { value: this.args.runningTotals.entity_clients, label: 'Entity clients' },
+      { value: this.args.runningTotals.non_entity_clients, label: 'Non-entity clients' },
+      { value: this.args.runningTotals.acme_clients, label: 'ACME clients' },
+      ...(this.flags.secretsSyncIsActivated
+        ? [{ value: this.args.runningTotals.secret_syncs, label: 'Secret sync clients' }]
+        : []),
+    ];
+  }
+
   get chartLegend() {
     if (this.showStacked) {
       return [

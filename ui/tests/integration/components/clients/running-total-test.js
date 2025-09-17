@@ -60,17 +60,16 @@ module('Integration | Component | clients/running-total', function (hooks) {
     assert.strictEqual(color, expectedColor, `actual color: ${color}, expected color: ${expectedColor}`);
 
     const expectedValues = {
-      'New client total and type distribution': formatNumber([this.activity.total.clients]),
-      Entity: formatNumber([this.activity.total.entity_clients]),
-      'Non-entity': formatNumber([this.activity.total.non_entity_clients]),
-      ACME: formatNumber([this.activity.total.acme_clients]),
-      'Secret sync': formatNumber([this.activity.total.secret_syncs]),
+      'Entity clients': formatNumber([this.activity.total.entity_clients]),
+      'Non-entity clients': formatNumber([this.activity.total.non_entity_clients]),
+      'ACME clients': formatNumber([this.activity.total.acme_clients]),
+      'Secret sync clients': formatNumber([this.activity.total.secret_syncs]),
     };
     for (const label in expectedValues) {
       assert
-        .dom(CLIENT_COUNT.statTextValue(label))
+        .dom(CLIENT_COUNT.statLegendValue(label))
         .hasText(
-          `${expectedValues[label]}`,
+          `${expectedValues[label]} ${label}`,
           `stat label: ${label} renders correct total: ${expectedValues[label]}`
         );
     }
@@ -162,9 +161,11 @@ module('Integration | Component | clients/running-total', function (hooks) {
       .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
       .exists('running total component renders');
     assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
-    assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists();
-    assert.dom(CLIENT_COUNT.statTextValue('Non-entity')).exists();
-    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist('does not render secret syncs');
+    assert.dom(CLIENT_COUNT.statLegendValue('Entity clients')).exists();
+    assert.dom(CLIENT_COUNT.statLegendValue('Non-entity clients')).exists();
+    assert
+      .dom(CLIENT_COUNT.statLegendValue('Secret sync clients'))
+      .doesNotExist('does not render secret syncs');
 
     // check toggle view
     await click(GENERAL.inputByAttr('toggle view'));

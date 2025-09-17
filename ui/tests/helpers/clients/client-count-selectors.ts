@@ -25,6 +25,8 @@ export const CLIENT_COUNT = {
     defaultRangeAlert: '[data-test-range-default-alert]',
     validation: '[data-test-date-range-validation]',
   },
+  statLegendValue: (label: string) =>
+    label ? `[data-test-vault-reporting-legend-item="${label}"]` : '[data-test-vault-reporting-legend-item',
   statText: (label: string) => `[data-test-stat-text="${label}"]`,
   statTextValue: (label: string) =>
     label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
