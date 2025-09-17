@@ -3,15 +3,39 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if this.displayErrors}}
+{{#if this.formattedError}}
+  {{#let this.formattedError.message this.formattedError.details as |message details|}}
+    <Hds::Alert
+      @type="inline"
+      @color="critical"
+      @onDismiss={{@onDismiss}}
+      class="has-top-margin-s has-bottom-margin-s"
+      data-test-message-error
+      ...attributes
+      as |A|
+    >
+      <A.Title>Error</A.Title>
+      <A.Description data-test-message-error-description>
+        {{message}}
+        <ul class="bullet">
+          {{#each details as |detail|}}
+            <li>
+              {{detail}}
+            </li>
+          {{/each}}
+        </ul>
+      </A.Description>
+    </Hds::Alert>
+  {{/let}}
+{{else if this.displayErrors}}
   {{#each this.displayErrors as |error|}}
     <Hds::Alert
-      data-test-message-error
       @type="inline"
       @color="critical"
       @onDismiss={{@onDismiss}}
       class="has-top-margin-s has-bottom-margin-s"
       ...attributes
+      data-test-message-error
       as |A|
     >
       <A.Title>Error</A.Title>
