@@ -153,19 +153,6 @@ func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
 	return nil, nil
 }
 
-// PeekByKey returns the item with the given key without removing it from the queue.
-func (pq *PriorityQueue) PeekByKey(id string) *Item {
-	pq.lock.RLock()
-	defer pq.lock.RUnlock()
-
-	item, ok := pq.dataMap[id]
-	if !ok {
-		return nil
-	}
-
-	return item
-}
-
 // Len returns the number of items in the queue data structure. Do not use this
 // method directly on the queue, use PriorityQueue.Len() instead.
 func (q queue) Len() int { return len(q) }

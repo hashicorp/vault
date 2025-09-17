@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { visit, currentURL, waitFor, click } from '@ember/test-helpers';
+import { visit, currentURL, waitFor, click, fillIn } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { mockedResponseWithData, mockedEmptyResponse } from 'vault/tests/helpers/vault-usage/mocks';
@@ -56,7 +56,7 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
       .dom('[data-test-vault-reporting-dashboard-counters]')
       .exists('renders the counters dashboard block');
 
-    const expectedCounters = ['Child namespaces', 'KV secrets', 'Secrets sync', 'PKI roles'];
+    const expectedCounters = ['Child namespaces', 'KV secrets', 'PKI roles'];
 
     expectedCounters.forEach((counterLabel) => {
       assert
@@ -80,12 +80,13 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
       )
       .exists('title is present')
       .hasText('Secret engines', 'title is correct');
+
     assert
       .dom(
         '[data-test-vault-reporting-dashboard-secret-engines] [data-test-vault-reporting-dashboard-card-title-link]'
       )
       .exists('title link is present')
-      .hasAttribute('href', 'secrets', 'link points to secrets');
+      .hasAttribute('href', '/ui/vault/secrets', 'link points to secrets');
     assert
       .dom(
         '[data-test-vault-reporting-dashboard-secret-engines] [data-test-vault-reporting-dashboard-card-description]'
@@ -116,7 +117,7 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
         '[data-test-vault-reporting-dashboard-auth-methods] [data-test-vault-reporting-dashboard-card-title-link]'
       )
       .exists('title link is present')
-      .hasAttribute('href', 'access', 'link points to access');
+      .hasAttribute('href', '/ui/vault/access', 'link points to access');
     assert
       .dom(
         '[data-test-vault-reporting-dashboard-auth-methods] [data-test-vault-reporting-dashboard-card-description]'
@@ -166,6 +167,39 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
       .hasText('210K / 420K', 'lease count is correct');
   });
 
+  test('dashboard card: Secrets sync', async function (assert) {
+    this.server.get('sys/utilization-report', () => mockedResponseWithData);
+    await visit('/vault/usage-reporting');
+    await waitFor('[data-test-vault-reporting-dashboard-secrets-sync]');
+
+    assert.dom('[data-test-vault-reporting-dashboard-secrets-sync]').exists('renders Secrets sync card');
+    assert
+      .dom(
+        '[data-test-vault-reporting-dashboard-secrets-sync] [data-test-vault-reporting-dashboard-card-title]'
+      )
+      .hasText('Secrets sync', 'title is correct');
+    assert
+      .dom(
+        '[data-test-vault-reporting-dashboard-secrets-sync] [data-test-vault-reporting-dashboard-card-title-link]'
+      )
+      .exists('title link is present')
+      .hasAttribute('href', '/ui/vault/sync', 'link points to sync');
+    assert
+      .dom(
+        '[data-test-vault-reporting-dashboard-secrets-sync] [data-test-vault-reporting-dashboard-card-description]'
+      )
+      .hasText(
+        'Total number of destinations (e.g. third-party integrations) synced with secrets',
+        'description is correct'
+      );
+    assert
+      .dom('[data-test-vault-reporting-secrets-sync-destinations-row]')
+      .includesText('Destination', 'Destinations header is present');
+    assert
+      .dom('[data-test-vault-reporting-secrets-sync-destinations-row]')
+      .includesText('aws: 1', 'aws destination is present');
+  });
+
   test('dashboard card: Cluster replication status', async function (assert) {
     this.server.get('sys/utilization-report', () => mockedResponseWithData);
     await visit('/vault/usage-reporting');
@@ -180,12 +214,13 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
       )
       .exists('title is present')
       .hasText('Cluster replication', 'title is correct');
+
     assert
       .dom(
         '[data-test-vault-reporting-dashboard-cluster-replication] [data-test-vault-reporting-dashboard-card-title-link]'
       )
       .exists('title link is present')
-      .hasAttribute('href', 'replication', 'link points to replication');
+      .hasAttribute('href', '/ui/vault/replication', 'link points to replication');
     assert
       .dom(
         '[data-test-vault-reporting-dashboard-cluster-replication] [data-test-vault-reporting-dashboard-card-description]'
@@ -236,5 +271,83 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
     assert
       .dom('[data-test-vault-reporting-dashboard-lease-count]')
       .includesText('Global lease count quota', 'Lease quota empty state: docs link is shown');
+  });
+
+  test('namespace lookup functionality', async function (assert) {
+    this.server.get('sys/internal/ui/namespaces', {
+      data: {
+        keys: ['child-ns1/', 'child-ns2/'],
+      },
+    });
+
+    // Mock different responses for different namespaces
+    const defaultMockResponse = mockedResponseWithData;
+    const childNs1MockResponse = {
+      data: {
+        ...mockedResponseWithData.data,
+        kvv2_secrets: 200,
+        kvv1_secrets: 50,
+      },
+    };
+
+    // Initially load default data
+    this.server.get('sys/utilization-report', () => defaultMockResponse);
+
+    const namespaceService = this.owner.lookup('service:namespace');
+    namespaceService.set('accessibleNamespaces', ['child-ns1/', 'child-ns2/']);
+    namespaceService.set('path', 'parent-ns');
+
+    await visit('/vault/usage-reporting');
+
+    // Verify initial KV secrets count (should be 40 from default mock)
+    await waitFor('[data-test-vault-reporting-counter="KV secrets"]');
+    assert
+      .dom('[data-test-vault-reporting-counter="KV secrets"]')
+      .includesText('100', 'Initial KV secrets count is 100');
+
+    // Update mock to return different data for child-ns1
+    this.server.get('sys/utilization-report', () => childNs1MockResponse);
+
+    // Click the namespace picker dropdown to open it
+    await click('.hds-dropdown.ssu-namespace-picker button');
+
+    // Verify all namespaces are visible initially
+    assert.dom('[data-test-vault-reporting-namespace-menu-item="root"]').exists('root namespace is visible');
+    assert
+      .dom('[data-test-vault-reporting-namespace-menu-item="child-ns1"]')
+      .exists('child-ns1 namespace is visible');
+    assert
+      .dom('[data-test-vault-reporting-namespace-menu-item="child-ns2"]')
+      .exists('child-ns2 namespace is visible');
+
+    // Use the search bar to search for "ns1"
+    await fillIn('[data-test-vault-reporting-namespace-search]', 'ns1');
+
+    // Verify only child-ns1 is visible after search
+    assert
+      .dom('[data-test-vault-reporting-namespace-menu-item="child-ns1"]')
+      .exists('child-ns1 is visible after search');
+
+    // Verify root and child-ns2 are filtered out
+    assert
+      .dom('[data-test-vault-reporting-namespace-menu-item="root"]')
+      .doesNotExist('root namespace is filtered out');
+    assert
+      .dom('[data-test-vault-reporting-namespace-menu-item="child-ns2"]')
+      .doesNotExist('child-ns2 namespace is filtered out');
+
+    // Click on child-ns1 to select it
+    await click('[data-test-vault-reporting-namespace-menu-item="child-ns1"]');
+
+    // Verify that child-ns1 is now displayed as the selected namespace in the closed dropdown
+    assert
+      .dom('.hds-dropdown.ssu-namespace-picker')
+      .includesText('child-ns1', 'child-ns1 is displayed as the selected namespace');
+
+    // Wait for data to be refetched and verify the KV secrets count has changed
+    await waitFor('[data-test-vault-reporting-counter="KV secrets"]');
+    assert
+      .dom('[data-test-vault-reporting-counter="KV secrets"]')
+      .includesText('250', 'KV secrets count updated to 250 after selecting child-ns1');
   });
 });

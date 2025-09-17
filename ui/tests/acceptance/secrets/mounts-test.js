@@ -134,7 +134,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
     await mountBackend('kv', path);
     await waitFor('[data-test-message-error-description]');
     assert.dom('[data-test-message-error-description]').containsText(`path is already in use at ${path}`);
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.create');
 
     await page.secretList();
     await settled();

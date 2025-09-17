@@ -97,10 +97,14 @@ export default class SnapshotDetails extends Component<Args> {
 
   onPollError = async () => {
     this.snapshotStatus = 'error';
+    // Update the model directly for reactive updates across routes
+    this.args.model.snapshot.status = 'error';
   };
 
   onPollSuccess = async (status: string) => {
     this.snapshotStatus = status;
+    // Update the model directly for reactive updates across routes
+    this.args.model.snapshot.status = status as 'ready' | 'error' | 'loading';
   };
 
   @action

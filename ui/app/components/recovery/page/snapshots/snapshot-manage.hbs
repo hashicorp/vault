@@ -37,16 +37,21 @@
 {{#if this.recoveryData}}
   <Hds::Alert @type="inline" @color="success" class="has-top-margin-m has-bottom-margin-m" data-test-inline-alert as |A|>
     <A.Title>Success</A.Title>
-    <A.Description>Secret at
-      <Hds::Link::Inline
-        @route="vault.cluster.secrets.backend.show"
-        @models={{this.recoveryData.models}}
-        @query={{this.recoveryData.query}}
-        data-test-link-to="details"
-      >
-        {{this.resourcePath}}
-      </Hds::Link::Inline>
-      has been successfully recovered.</A.Description>
+    {{#let
+      this.recoveryData.query.namespace (get this.recoveryData.models 0) (get this.recoveryData.models 1)
+      as |ns mount resource|
+    }}
+      <A.Description>Secret at
+        <Hds::Link::Inline
+          @route="vault.cluster.secrets.backend.show"
+          @models={{this.recoveryData.models}}
+          @query={{this.recoveryData.query}}
+          data-test-link-to="details"
+        >
+          {{mount}}/{{resource}}</Hds::Link::Inline>
+        has been successfully recovered{{#if ns}} in namespace <strong>{{ns}}</strong>{{/if}}.
+      </A.Description>
+    {{/let}}
   </Hds::Alert>
 {{/if}}
 

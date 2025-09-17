@@ -73,8 +73,8 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     assert
       .dom('.hds-tooltip-container')
       .hasText(
-        'This plugin is not supported by the UI. Please use the CLI to manage this engine.',
-        'shows tooltip text for unsupported engine'
+        `This engine's type is not recognized by the UI. Please use the CLI to manage this engine.`,
+        'shows tooltip text for unknown engine'
       );
   });
 

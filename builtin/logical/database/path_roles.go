@@ -534,14 +534,14 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRoleCreate,
 			AdditionalDatabaseMetadata{key: "role_name", value: name},
 			AdditionalDatabaseMetadata{key: "credential_type", value: credentialType},
-			AdditionalDatabaseMetadata{key: "default_ttl", value: role.DefaultTTL},
-			AdditionalDatabaseMetadata{key: "max_ttl", value: role.MaxTTL})
+			AdditionalDatabaseMetadata{key: "default_ttl", value: role.DefaultTTL.String()},
+			AdditionalDatabaseMetadata{key: "max_ttl", value: role.MaxTTL.String()})
 	} else {
 		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRoleUpdate,
 			AdditionalDatabaseMetadata{key: "role_name", value: name},
 			AdditionalDatabaseMetadata{key: "credential_type", value: credentialType},
-			AdditionalDatabaseMetadata{key: "default_ttl", value: role.DefaultTTL},
-			AdditionalDatabaseMetadata{key: "max_ttl", value: role.MaxTTL})
+			AdditionalDatabaseMetadata{key: "default_ttl", value: role.DefaultTTL.String()},
+			AdditionalDatabaseMetadata{key: "max_ttl", value: role.MaxTTL.String()})
 	}
 
 	return nil, nil
@@ -868,18 +868,29 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 	b.dbEvent(ctx, fmt.Sprintf("static-role-%s", req.Operation), req.Path, name, true)
 
+	var nextVaultRotation time.Time
+	var rotationPeriod time.Duration
+	if role.StaticAccount != nil {
+		nextVaultRotation = role.StaticAccount.NextVaultRotation
+		rotationPeriod = role.StaticAccount.RotationPeriod
+	}
+
 	if req.Operation == logical.CreateOperation {
 		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseStaticRoleCreate,
 			AdditionalDatabaseMetadata{key: "role_name", value: name},
-			AdditionalDatabaseMetadata{key: "credential_type", value: credentialType},
-			AdditionalDatabaseMetadata{key: "default_ttl", value: role.DefaultTTL},
-			AdditionalDatabaseMetadata{key: "max_ttl", value: role.MaxTTL})
+			AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()},
+			AdditionalDatabaseMetadata{key: "rotation_period", value: rotationPeriod.String()},
+			AdditionalDatabaseMetadata{key: "rotation_schedule", value: rotationScheduleRaw},
+			AdditionalDatabaseMetadata{key: "next_vault_rotation", value: nextVaultRotation.String()},
+		)
 	} else {
 		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseStaticRoleUpdate,
 			AdditionalDatabaseMetadata{key: "role_name", value: name},
-			AdditionalDatabaseMetadata{key: "credential_type", value: credentialType},
-			AdditionalDatabaseMetadata{key: "default_ttl", value: role.DefaultTTL},
-			AdditionalDatabaseMetadata{key: "max_ttl", value: role.MaxTTL})
+			AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()},
+			AdditionalDatabaseMetadata{key: "rotation_period", value: rotationPeriod.String()},
+			AdditionalDatabaseMetadata{key: "rotation_schedule", value: rotationScheduleRaw},
+			AdditionalDatabaseMetadata{key: "next_vault_rotation", value: nextVaultRotation.String()},
+		)
 	}
 
 	if len(response.Warnings) == 0 {

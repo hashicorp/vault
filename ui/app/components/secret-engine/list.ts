@@ -80,10 +80,10 @@ export default class SecretEngineList extends Component<Args> {
       } else {
         return `${displayData.displayName}`;
       }
-    } else if (displayData.type === 'generic') {
-      // If a mounted engine type doesn't match any known type, the type is returned as 'generic' and set this tooltip.
+    } else if (displayData.type === 'unknown') {
+      // If a mounted engine type doesn't match any known type, the type is returned as 'unknown' and set this tooltip.
       // Handles issue when a user externally mounts an engine that doesn't follow the expected naming conventions for what's in the binary, despite being a valid engine.
-      return 'This plugin is not supported by the UI. Please use the CLI to manage this engine.';
+      return `This engine's type is not recognized by the UI. Please use the CLI to manage this engine.`;
     } else {
       // If the engine type is recognized but not supported, we only show configuration view and set this tooltip.
       return 'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.';

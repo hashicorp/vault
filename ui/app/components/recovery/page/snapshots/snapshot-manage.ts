@@ -89,12 +89,6 @@ export default class SnapshotManage extends Component<Args> {
     return !!(this.mountError || this.resourcePathError);
   }
 
-  get mountPath() {
-    if (this.selectedMount) {
-      return sanitizePath(this.selectedMount.path);
-    }
-  }
-
   // Form secret data to display in accordance with <SecretFormShow/> expectations
   get modelForData() {
     return {
@@ -105,8 +99,10 @@ export default class SnapshotManage extends Component<Args> {
 
   get namespaceOptions() {
     const { namespaces } = this.args.model;
+    // Remove slashes as query param does not expect them
+    const sanitized = namespaces.map((ns) => sanitizePath(ns));
     // Add the root namespace because `sys/internal/ui/namespaces` does not include it.
-    return ['root', ...namespaces];
+    return ['root', ...sanitized];
   }
 
   get secretKeyAndValue() {
@@ -130,10 +126,14 @@ export default class SnapshotManage extends Component<Args> {
     const error = await this.api.parseError(e);
     this.bannerError = `Snapshot load error: ${error.message}`;
     this.snapshotStatus = 'error';
+    // Update the model directly for reactive updates across routes
+    this.args.model.snapshot.status = 'error';
   };
 
   onPollSuccess = async (status: string) => {
     this.snapshotStatus = status;
+    // Update the model directly for reactive updates across routes
+    this.args.model.snapshot.status = status as 'ready' | 'error' | 'loading';
   };
 
   fetchMounts = restartableTask(async () => {
@@ -153,7 +153,7 @@ export default class SnapshotManage extends Component<Args> {
         return eng.supportsRecovery
           ? [
               {
-                path: eng.path,
+                path: sanitizePath(eng.path),
                 type: eng.engineType,
               } as MountOption,
             ]
@@ -215,13 +215,14 @@ export default class SnapshotManage extends Component<Args> {
 
       const { snapshot_id } = this.args.model.snapshot as { snapshot_id: string };
       const mountType = this.selectedMount?.type;
+      const mountPath = this.selectedMount?.path as string;
       const namespace = this.selectedNamespace === 'root' ? ROOT_NAMESPACE : this.selectedNamespace;
       const headers = this.api.buildHeaders({ namespace });
       switch (mountType) {
         case SupportedSecretBackendsEnum.KV: {
           const { data } = await this.api.secrets.kvV1Read(
             this.resourcePath,
-            this.mountPath,
+            mountPath,
             snapshot_id,
             headers
           );
@@ -252,23 +253,16 @@ export default class SnapshotManage extends Component<Args> {
     if (!isValid) {
       return;
     }
-
     try {
       this.bannerError = '';
       const { snapshot_id } = this.args.model.snapshot as { snapshot_id: string };
       const mountType = this.selectedMount?.type;
+      const mountPath = this.selectedMount?.path as string;
       const namespace = this.selectedNamespace === 'root' ? ROOT_NAMESPACE : this.selectedNamespace;
       const headers = this.api.buildHeaders({ namespace });
       switch (mountType) {
         case SupportedSecretBackendsEnum.KV: {
-          await this.api.secrets.kvV1Write(
-            this.resourcePath,
-            this.mountPath,
-            {},
-            snapshot_id,
-            undefined,
-            headers
-          );
+          await this.api.secrets.kvV1Write(this.resourcePath, mountPath, {}, snapshot_id, undefined, headers);
           break;
         }
         case SupportedSecretBackendsEnum.CUBBYHOLE: {
@@ -283,7 +277,7 @@ export default class SnapshotManage extends Component<Args> {
       }
 
       this.recoveryData = {
-        models: [this.mountPath, this.resourcePath],
+        models: [mountPath, this.resourcePath],
       };
       if (namespace && namespace !== this.namespace.path) {
         this.recoveryData.query = { namespace };
