@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Format multiline API error messages to render as bulleted lists.
+```

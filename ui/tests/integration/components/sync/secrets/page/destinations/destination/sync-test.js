@@ -134,7 +134,6 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     await click(kvSuggestion.input);
     await click(searchSelect.option(1));
     await click(GENERAL.submitButton);
-
     assert.dom(messageError).hasTextContaining(error, 'Error renders in alert banner');
   });
 });

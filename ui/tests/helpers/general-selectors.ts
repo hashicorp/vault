@@ -124,6 +124,7 @@ export const GENERAL = {
   inlineAlert: '[data-test-inline-alert]',
   inlineError: '[data-test-inline-error-message]',
   messageError: '[data-test-message-error]',
+  messageDescription: '[data-test-message-error-description]',
   notFound: '[data-test-not-found]',
   validationErrorByAttr: (attr: string) => `[data-test-validation-error=${attr}]`,
   validationWarningByAttr: (attr: string) => `[data-test-validation-warning=${attr}]`,
