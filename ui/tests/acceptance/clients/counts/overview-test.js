@@ -44,8 +44,9 @@ module('Acceptance | clients | overview', function (hooks) {
 
     await login();
     await visit('/vault/clients/counts/overview');
-    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist();
-    assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
+    assert.dom(CLIENT_COUNT.statLegendValue('Secret sync clients')).doesNotExist();
+    assert.dom(CLIENT_COUNT.statLegendValue('Entity clients')).exists('other stats are still visible');
+
     await click(GENERAL.inputByAttr('toggle view'));
     assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients ACME clients');
   });
@@ -302,7 +303,9 @@ module('Acceptance | clients | overview', function (hooks) {
     test('it should show secrets sync stats when the feature is activated', async function (assert) {
       await login();
       await visit('/vault/clients/counts/overview');
-      assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
+      assert
+        .dom(CLIENT_COUNT.statLegendValue('Secret sync clients'))
+        .exists('shows secret sync data on overview');
       await click(GENERAL.inputByAttr('toggle view'));
       assert
         .dom(CHARTS.legend)
@@ -321,11 +324,10 @@ module('Acceptance | clients | overview', function (hooks) {
 
       await login();
       await visit('/vault/clients/counts/overview');
-
       assert
-        .dom(CLIENT_COUNT.statTextValue('Secret sync'))
+        .dom(CLIENT_COUNT.statLegendValue('Secret sync clients'))
         .doesNotExist('stat is hidden because feature is not activated');
-      assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
+      assert.dom(CLIENT_COUNT.statLegendValue('Entity clients')).exists('other stats are still visible');
       await click(GENERAL.inputByAttr('toggle view'));
       assert
         .dom(CHARTS.legend)
@@ -341,7 +343,7 @@ module('Acceptance | clients | overview', function (hooks) {
 
       await login();
       await visit('/vault/clients/counts/overview');
-      assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
+      assert.dom(CLIENT_COUNT.statLegendValue('Secret sync clients')).exists();
       await click(GENERAL.inputByAttr('toggle view'));
       assert
         .dom(CHARTS.legend)

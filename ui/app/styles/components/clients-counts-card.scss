@@ -29,10 +29,23 @@
     gap: 1rem;
 
     .item-left {
-      flex: 1 1 33.3333%;
+      flex: 1 1 40%;
+      min-width: 0;
     }
     .item-right {
-      flex: 2 1 66.6666%;
+      flex: 2 1 60%;
+      min-width: 0;
+    }
+
+    // Stack vertically on smaller screens
+    @media (max-width: 1024px) {
+      flex-direction: column;
+
+      .item-left,
+      .item-right {
+        flex: 1 1 100%;
+        width: 100%;
+      }
     }
   }
 }

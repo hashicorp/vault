@@ -11,24 +11,8 @@
   >
 
     <:dataLeft>
-      <StatText
-        @label="New client total and type distribution"
-        @subText="The number of new clients which interacted with Vault during the selected period."
-        @value={{@runningTotals.clients}}
-        @size="m"
-        @tooltipText="This number is the total for the queried date range. The chart displays a monthly breakdown of total new clients per month."
-      />
-
-      <div class="has-top-padding-l is-flex-row gap-16">
-        <StatText @label="Entity" @value={{@runningTotals.entity_clients}} @size="m" />
-        <StatText @label="Non-entity" @value={{@runningTotals.non_entity_clients}} @size="m" />
-      </div>
-      <div class="has-top-padding-m is-flex-row gap-16">
-        <StatText @label="ACME" @value={{@runningTotals.acme_clients}} @size="m" />
-        {{#if this.flags.secretsSyncIsActivated}}
-          <StatText @label="Secret sync" @value={{@runningTotals.secret_syncs}} @size="m" />
-        {{/if}}
-      </div>
+      <Hds::Text::Body @tag="p">Client count and type distribution</Hds::Text::Body>
+      <VaultReporting::DonutChart @data={{this.donutChartData}} @title="Total Clients" class="donut-chart" />
     </:dataLeft>
 
     <:dataRight>
