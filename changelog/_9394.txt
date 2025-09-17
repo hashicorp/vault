@@ -1,0 +1,3 @@
+```release-note:improvement
+ui/auth: the role field on the SAML login form now auto-fills from the `role` URL query string parameter
+```

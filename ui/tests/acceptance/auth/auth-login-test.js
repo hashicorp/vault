@@ -61,6 +61,13 @@ module('Acceptance | auth login', function (hooks) {
     assert.dom(GENERAL.inputByAttr('role')).hasValue(role);
   });
 
+  test('enterprise: it pre-fills SAML role if specified in query param', async function (assert) {
+    const role = AUTH_METHOD_LOGIN_DATA.oidc.role;
+    await visit(`/vault/auth?with=saml&role=${role}`);
+    assert.dom(AUTH_FORM.selectMethod).hasValue('saml');
+    assert.dom(GENERAL.inputByAttr('role')).hasValue(role);
+  });
+
   test('it selects auth method if "with" query param ends in an encoded slash and matches an auth type', async function (assert) {
     await visit('/vault/auth?with=userpass%2F');
     assert.dom(AUTH_FORM.selectMethod).hasValue('userpass');

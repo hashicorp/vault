@@ -63,6 +63,12 @@ variable "aws_enabled" {
   default     = false
 }
 
+variable "kmip_enabled" {
+  type        = bool
+  description = "Whether or not we'll verify the KMIP secrets engine"
+  default     = false
+}
+
 variable "ldap_enabled" {
   type        = bool
   description = "Whether or not we'll verify the LDAP secrets engine"

@@ -28,6 +28,12 @@ variable "ldap_enabled" {
   default     = false
 }
 
+variable "kmip_enabled" {
+  type        = bool
+  description = "Whether or not we'll verify the KMIP secrets engine"
+  default     = false
+}
+
 variable "ipv4_cidr" {
   type        = string
   description = "The CIDR block for the VPC when using IPv4 mode"

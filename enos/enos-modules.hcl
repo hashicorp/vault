@@ -333,6 +333,7 @@ module "vault_verify_secrets_engines_create" {
 
   aws_enabled       = var.verify_aws_secrets_engine
   ldap_enabled      = var.verify_ldap_secrets_engine
+  kmip_enabled      = var.verify_kmip_secrets_engine
   vault_install_dir = var.vault_install_dir
 }
 
@@ -341,6 +342,7 @@ module "vault_verify_secrets_engines_read" {
 
   aws_enabled       = var.verify_aws_secrets_engine
   ldap_enabled      = var.verify_ldap_secrets_engine
+  kmip_enabled      = var.verify_kmip_secrets_engine
   vault_install_dir = var.vault_install_dir
 }
 
