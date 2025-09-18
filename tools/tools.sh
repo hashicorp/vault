@@ -49,8 +49,8 @@ install_external() {
     golang.org/x/tools/cmd/goimports@v0.30.0
     google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.5
     google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
-    gotest.tools/gotestsum@v1.12.0
-    mvdan.cc/gofumpt@v0.7.0
+    gotest.tools/gotestsum@v1.12.3
+    mvdan.cc/gofumpt@v0.8.0
     mvdan.cc/sh/v3/cmd/shfmt@v3.10.0
   )
 
@@ -156,34 +156,34 @@ check() {
 
 main() {
   case $1 in
-  install-external)
-    install_external
-  ;;
-  install-internal)
-    install_internal
-  ;;
-  install-pipeline)
-    install_pipeline
-  ;;
-  check-external)
-    check_external
-  ;;
-  check-internal)
-    check_internal
-  ;;
-  check-pipeline)
-    check_pipeline
-  ;;
-  install)
-    install
-  ;;
-  check)
-    check
-  ;;
-  *)
-    echo "unknown sub-command" >&2
-    exit 1
-  ;;
+    install-external)
+      install_external
+      ;;
+    install-internal)
+      install_internal
+      ;;
+    install-pipeline)
+      install_pipeline
+      ;;
+    check-external)
+      check_external
+      ;;
+    check-internal)
+      check_internal
+      ;;
+    check-pipeline)
+      check_pipeline
+      ;;
+    install)
+      install
+      ;;
+    check)
+      check
+      ;;
+    *)
+      echo "unknown sub-command" >&2
+      exit 1
+      ;;
   esac
 }
 

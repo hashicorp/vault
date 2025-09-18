@@ -5,11 +5,12 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
+import { click, fillIn, render, settled, triggerEvent, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 
 const SELECTORS = {
   nameInput: '[data-test-policy-input="name"]',
@@ -29,6 +30,13 @@ const SELECTORS = {
   fields: (name) => `[data-test-field=${name}]`,
   pathsInput: (index) => `[data-test-string-list-input="${index}"]`,
 };
+
+async function setEditorValue(value) {
+  await waitFor('.cm-editor');
+  const editor = codemirror(SELECTORS.policyEditor);
+  setCodeEditorValue(editor, value);
+  return settled();
+}
 
 module('Integration | Component | policy-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -67,7 +75,7 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.dom(SELECTORS.uploadFileToggle).exists({ count: 1 }, 'Upload file toggle exists');
     await fillIn(SELECTORS.nameInput, 'Foo');
     assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
-    await fillIn(`${SELECTORS.policyEditor} textarea`, policy);
+    await setEditorValue(policy);
     assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
     assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.saveButton).hasText('Create policy');
@@ -95,7 +103,7 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.dom(SELECTORS.uploadFileToggle).exists({ count: 1 }, 'Upload file toggle exists');
     await fillIn(SELECTORS.nameInput, 'Foo');
     assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
-    await fillIn(`${SELECTORS.policyEditor} textarea`, policy);
+    await setEditorValue(policy);
     assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
     assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.saveButton).hasText('Create policy');
@@ -123,7 +131,7 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.dom(SELECTORS.uploadFileToggle).exists({ count: 1 }, 'Upload file toggle exists');
     await fillIn(SELECTORS.nameInput, 'Foo');
     assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
-    await fillIn(`${SELECTORS.policyEditor} textarea`, policy);
+    await setEditorValue(policy);
     assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
     assert.dom(SELECTORS.fields('paths')).exists('Paths field exists');
     assert.dom(SELECTORS.pathsInput('0')).exists('0 field exists');
@@ -159,22 +167,6 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.propEqual(this.onSave.lastCall.args[0].policy, policy, 'policy content saves in correct format');
   });
 
-  test('it shows alt + tab message only when json editor is visible', async function (assert) {
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
-    assert.dom(SELECTORS.altTabMessage).exists({ count: 1 }, 'Alt tab message shows');
-    assert.dom(SELECTORS.policyEditor).exists({ count: 1 }, 'Policy editor is shown');
-
-    await click(SELECTORS.uploadFileToggle);
-    assert.dom(SELECTORS.policyUpload).exists({ count: 1 }, 'Policy upload is shown after toggle');
-    assert.dom(SELECTORS.altTabMessage).doesNotExist('Alt tab message is not shown');
-  });
-
   test('it renders the form to edit existing ACL policy', async function (assert) {
     const model = this.store.createRecord('policy/acl', {
       name: 'bar',
@@ -193,12 +185,8 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.dom(SELECTORS.nameInput).doesNotExist('Name input is not rendered');
     assert.dom(SELECTORS.uploadFileToggle).doesNotExist('Upload file toggle does not exist');
 
-    await fillIn(`${SELECTORS.policyEditor} textarea`, 'updated-');
-    assert.strictEqual(
-      this.model.policy,
-      'updated-some policy content',
-      'Policy editor updates policy value on model'
-    );
+    await setEditorValue('updated');
+    assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
     assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.saveButton).hasText('Save', 'Save button text is correct');
     await click(SELECTORS.saveButton);
@@ -223,12 +211,8 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.dom(SELECTORS.nameInput).doesNotExist('Name input is not rendered');
     assert.dom(SELECTORS.uploadFileToggle).doesNotExist('Upload file toggle does not exist');
 
-    await fillIn(`${SELECTORS.policyEditor} textarea`, 'updated-');
-    assert.strictEqual(
-      this.model.policy,
-      'updated-some policy content',
-      'Policy editor updates policy value on model'
-    );
+    await setEditorValue('updated');
+    assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
     assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.saveButton).hasText('Save', 'Save button text is correct');
     await click(SELECTORS.saveButton);
@@ -253,12 +237,8 @@ module('Integration | Component | policy-form', function (hooks) {
     `);
     assert.dom(SELECTORS.nameInput).doesNotExist('Name input is not rendered');
     assert.dom(SELECTORS.uploadFileToggle).doesNotExist('Upload file toggle does not exist');
-    await fillIn(`${SELECTORS.policyEditor} textarea`, 'updated-');
-    assert.strictEqual(
-      this.model.policy,
-      'updated-some policy content',
-      'Policy editor updates policy value on model'
-    );
+    await setEditorValue('updated');
+    assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
     await fillIn(SELECTORS.pathsInput('1'), 'second path');
     assert.strictEqual(
       JSON.stringify(this.model.paths),
@@ -305,7 +285,7 @@ module('Integration | Component | policy-form', function (hooks) {
     `);
     await fillIn(SELECTORS.nameInput, 'Foo');
     assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
-    await fillIn(`${SELECTORS.policyEditor} textarea`, policy);
+    await setEditorValue(policy);
     assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
 
     await click(SELECTORS.cancelButton);
@@ -328,12 +308,9 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
     />
     `);
-    await fillIn(`${SELECTORS.policyEditor} textarea`, 'updated-');
-    assert.strictEqual(
-      this.model.policy,
-      'updated-some policy content',
-      'Policy editor updates policy value on model'
-    );
+    await setEditorValue('updated');
+    assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
+
     await click(SELECTORS.cancelButton);
     assert.ok(this.onSave.notCalled);
     assert.ok(this.onCancel.calledOnce, 'Form calls onCancel');

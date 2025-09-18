@@ -1,27 +1,56 @@
 name: Bench
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+  # This has been disabled due to excessive flakiness. The GHA is left here for easier re-implementation in case
+  # we wanted to iterate on this in the future, or if we find benchmark tests that are more stable.
+  # To re-enable, uncomment the pull request section and delete the workflow_dispatch line.
+  workflow_dispatch:
+  #  pull_request:
+  #    types: [opened, synchronize, reopened, ready_for_review]
+  #    branches:
+  #      - main
 
 jobs:
   bench:
     name: Bench
-    if: github.base_ref == 'main'
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
           fetch-tags: false
+      - uses: ./.github/actions/metadata
+        id: metadata
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      - id: github-token
+        run: |
+          {
+            echo 'elevated=${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}'
+          } | tee -a "$GITHUB_OUTPUT"
       - name: Set up go
         uses: ./.github/actions/set-up-go
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ steps.github-token.outputs.elevated }}
       - name: Configure Git
-        run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}:@github.com".insteadOf "https://github.com"
+        run: git config --global url."https://${{ steps.github-token.outputs.elevated }}:@github.com".insteadOf "https://github.com"
       - name: Install cob
         run: sh -s -- -b /usr/local/bin -d v0.0.8 < ./.github/scripts/install-cob.sh
       - name: Run Benchmark
-        run: cob --base ${{ github.event.pull_request.base.sha }} -threshold 0.1 -bench-args "test -bench . -benchtime 3s -benchmem -v ./vault/bench ${{ github.repository == 'hashicorp/vault-enterprise' && '-tags testonly,enterprise' || '-tags testonly'  }}"
+        run: |
+          cob --base ${{ github.event.pull_request.base.sha }} \
+            -threshold 0.1 \
+            -bench-args "test -bench . -benchtime 3s -benchmem -v ./vault/bench ${{ steps.metadata.outputs.is-ent-branch == 'true' && '-tags testonly,enterprise' || '-tags testonly'  }}"

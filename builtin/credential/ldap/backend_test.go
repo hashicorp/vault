@@ -948,6 +948,121 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 	})
 }
 
+// TestLdapAuthBackend_AliasLookaheadDefault will test the alias lookahead functionality
+// for the LDAP auth backend with a default configuration (i.e. case insensitive if the flag is
+// not set or is set to false).
+func TestLdapAuthBackend_AliasLookaheadDefault(t *testing.T) {
+	// create config and storage
+	b, storage := createBackendWithStorage(t)
+
+	// Create user "testuser"
+	resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "users/testuser",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"policies": []string{"default"},
+			"groups":   "testgroup,nested/testgroup",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// List users
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "users/",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	expected := []string{"testuser"}
+	if !reflect.DeepEqual(expected, resp.Data["keys"].([]string)) {
+		t.Fatalf("bad: listed users; expected: %#v actual: %#v", expected, resp.Data["keys"].([]string))
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.AliasLookaheadOperation,
+		Storage:   storage,
+		Path:      "login/testuser",
+		Data: map[string]interface{}{
+			"Raw": map[string]interface{}{
+				"username": "testuser",
+			},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp.Auth.Alias.Name != "testuser" {
+		t.Fatalf("bad: alias lookahead did not return expected alias name; expected: 'testuser', actual: '%s'", resp.Auth.Alias.Name)
+	}
+}
+
+// TestLdapAuthBackend_AliasLookaheadCaseSensitive will test the alias lookahead functionality
+// for the LDAP auth backend when a case sensitive configuration flag is set
+func TestLdapAuthBackend_AliasLookaheadCaseSensitive(t *testing.T) {
+	// create config and storage
+	b, storage := createBackendWithStorage(t)
+
+	// make the backend case sensitive
+	resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			"case_sensitive_names": true,
+		},
+		Storage: storage,
+	})
+
+	// Create user "teSTuser"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "users/teSTuser",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"policies": []string{"default"},
+			"groups":   "testgroup,nested/testgroup",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// List users
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "users/",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	expected := []string{"teSTuser"}
+	if !reflect.DeepEqual(expected, resp.Data["keys"].([]string)) {
+		t.Fatalf("bad: listed users; expected: %#v actual: %#v", expected, resp.Data["keys"].([]string))
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.AliasLookaheadOperation,
+		Storage:   storage,
+		Path:      "login/teSTuser",
+		Data: map[string]interface{}{
+			"Raw": map[string]interface{}{
+				"username": "teSTuser",
+			},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp.Auth.Alias.Name != "teSTuser" {
+		t.Fatalf("bad: alias lookahead did not return expected alias name; expected: 'teSTuser', actual: '%s'", resp.Auth.Alias.Name)
+	}
+}
+
 func testAccStepConfigUrl(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,

@@ -228,16 +228,18 @@ export default class FormFieldComponent extends Component {
     this.setAndBroadcast(`${valueToSet}`);
   }
   @action
-  codemirrorUpdated(isString, value, codemirror) {
-    codemirror.performLint();
-    const hasErrors = codemirror.state.lint.marked.length > 0;
-    const valToSet = isString ? value : JSON.parse(value);
+  editorUpdated(isString, value) {
+    try {
+      const valToSet = isString ? value : JSON.parse(value);
 
-    if (!hasErrors) {
       this.args.model.set(this.valuePath, valToSet);
+
       this.onChange(this.valuePath, valToSet);
+    } catch {
+      // if the value is not valid JSON, we don't want to set it on the model
     }
   }
+
   @action
   toggleTextShow() {
     const value = !this.showToggleTextInput;

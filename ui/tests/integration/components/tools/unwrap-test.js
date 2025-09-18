@@ -7,10 +7,10 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
-import { click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, find, render, settled, waitFor, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import codemirror from 'vault/tests/helpers/codemirror';
+import { assertCodeBlockValue } from 'vault/tests/helpers/codemirror';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
 import sinon from 'sinon';
 
@@ -73,11 +73,11 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     // test submit
     await fillIn(TS.toolsInput('unwrap-token'), data.token);
     await click(TS.submit);
-
-    await waitUntil(() => find('.CodeMirror'));
+    await waitFor('.hds-code-block');
     assert.true(flashSpy.calledWith('Unwrap was successful.'), 'it renders success flash');
-    assert.dom('label').hasText('Unwrapped Data');
-    assert.strictEqual(codemirror().getValue(' '), '{   "foo_test": "bar" }', 'it renders unwrapped data');
+    assert.dom('.hds-code-block__title').hasText('Unwrapped Data');
+    await settled();
+    assertCodeBlockValue(assert, '.hds-code-block__code', '{   "foo_test": "bar" }');
     assert.dom(GENERAL.hdsTab('data')).hasAttribute('aria-selected', 'true');
 
     await click(GENERAL.hdsTab('details'));
@@ -120,9 +120,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
 
     await fillIn(TS.toolsInput('unwrap-token'), data.token);
     await click(TS.submit);
-
-    await waitUntil(() => find('.CodeMirror'));
-    await click(GENERAL.hdsTab('details'));
+    await waitFor('.hds-code-block');
     assert
       .dom(`${GENERAL.infoRowValue('Renewable')} ${GENERAL.icon('check-circle')}`)
       .exists('renders truthy icon for renewable');

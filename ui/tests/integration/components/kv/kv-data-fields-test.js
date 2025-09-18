@@ -8,12 +8,11 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { hbs } from 'ember-cli-htmlbars';
-import { fillIn, render, click } from '@ember/test-helpers';
-import codemirror from 'vault/tests/helpers/codemirror';
+import { fillIn, render, click, waitFor, findAll } from '@ember/test-helpers';
+import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { PAGE, FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { createLongJson } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
 module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
   setupRenderingTest(hooks);
@@ -50,14 +49,22 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     assert.expect(3);
 
     await render(hbs`<KvDataFields @showJson={{true}} @secret={{this.secret}} />`, { owner: this.engine });
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    const editorValue = getCodeEditorValue(editor);
     assert.strictEqual(
-      codemirror().getValue(' '),
-      `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
+      editorValue,
+      `{
+  "": ""
+}`,
       'json editor initializes with empty object that includes whitespace'
     );
-    await fillIn(`${FORM.jsonEditor} textarea`, 'blah');
-    assert.strictEqual(codemirror().state.lint.marked.length, 1, 'codemirror lints input');
-    codemirror().setValue(`{ "hello": "there"}`);
+    setCodeEditorValue(editor, 'blah');
+
+    await waitFor('.cm-lint-marker');
+    const lintMarkers = findAll('.cm-lint-marker');
+    assert.strictEqual(lintMarkers.length, 1, 'codemirror lints input');
+    setCodeEditorValue(editor, `{ "hello": "there"}`);
     assert.propEqual(this.secret.secretData, { hello: 'there' }, 'json editor updates secret data');
   });
 
@@ -113,20 +120,5 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     assert
       .dom(GENERAL.codeBlock('secret-data'))
       .hasText(`Version data { "foo": { "bar": "baz" } } `, 'Json data is displayed');
-  });
-
-  test('it defaults to a viewportMargin 10 when there is no secret data', async function (assert) {
-    await render(hbs`<KvDataFields @showJson={{true}} @secret={{this.secret}} />`, { owner: this.engine });
-    assert.strictEqual(codemirror().options.viewportMargin, 10, 'viewportMargin defaults to 10');
-  });
-
-  test('it calculates viewportMargin based on secret size', async function (assert) {
-    this.secret.secretData = createLongJson(100);
-    await render(hbs`<KvDataFields @showJson={{true}} @secret={{this.secret}} />`, { owner: this.engine });
-    assert.strictEqual(
-      codemirror().options.viewportMargin,
-      100,
-      'viewportMargin is set to 100 matching the height of the json'
-    );
   });
 });

@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"sync"
 
-	gh "github.com/google/go-github/v68/github"
+	gh "github.com/google/go-github/v74/github"
 )
 
 // PerPageMax is the maximum number of entities to request for enpoints that
@@ -75,7 +75,7 @@ func (r *ListWorkflowRunsReq) Run(ctx context.Context, client *gh.Client) (*List
 		return nil, fmt.Errorf("validating request: %w", err)
 	}
 
-	res.Workflow, err = r.getWorkflow(ctx, client)
+	res.Workflow, err = getWorkflow(ctx, client, r.Owner, r.Repo, r.WorkflowName)
 	if err != nil {
 		return nil, fmt.Errorf("getting workflow: %w", err)
 	}
@@ -141,32 +141,8 @@ func (r *ListWorkflowRunsReq) validate() error {
 	return nil
 }
 
-// getWorkflow attempts to locate the workflow associated with our workflow name.
-func (r *ListWorkflowRunsReq) getWorkflow(ctx context.Context, client *gh.Client) (*gh.Workflow, error) {
-	opts := &gh.ListOptions{PerPage: PerPageMax}
-	for {
-		wfs, res, err := client.Actions.ListWorkflows(ctx, r.Owner, r.Repo, opts)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, wf := range wfs.Workflows {
-			if wf.GetName() == r.WorkflowName {
-				return wf, nil
-			}
-		}
-
-		if res.NextPage == 0 {
-			return nil, fmt.Errorf("no workflow matching %s could be found", r.WorkflowName)
-		}
-
-		opts.Page = res.NextPage
-	}
-}
-
 // getWorkflowRuns gets teh workflow runs associated with a workflow ID.
 func (r *ListWorkflowRunsReq) getWorkflowRuns(ctx context.Context, client *gh.Client, id int64) ([]*WorkflowRun, error) {
-	var runs []*WorkflowRun
 	opts := &gh.ListWorkflowRunsOptions{
 		Actor:               r.Actor,
 		Branch:              r.Branch,
@@ -182,22 +158,7 @@ func (r *ListWorkflowRunsReq) getWorkflowRuns(ctx context.Context, client *gh.Cl
 		opts.CheckSuiteID = r.CheckSuiteID
 	}
 
-	for {
-		wfrs, res, err := client.Actions.ListWorkflowRunsByID(ctx, r.Owner, r.Repo, id, opts)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, r := range wfrs.WorkflowRuns {
-			runs = append(runs, &WorkflowRun{Run: r})
-		}
-
-		if res.NextPage == 0 {
-			return runs, nil
-		}
-
-		opts.ListOptions.Page = res.NextPage
-	}
+	return getWorkflowRuns(ctx, client, r.Owner, r.Repo, id, opts)
 }
 
 // getWorkflowCheckRuns gets the check suite runs associated with the workflow runs.

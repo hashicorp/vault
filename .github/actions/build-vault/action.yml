@@ -70,7 +70,7 @@ runs:
       shell: bash
       run: git config --global url."https://${{ inputs.github-token }}:@github.com".insteadOf "https://github.com"
     - name: Restore UI from cache
-      uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
       with:
         # Restore the UI asset from the UI build workflow. Never use a partial restore key.
         enableCrossOsArchive: true
@@ -126,14 +126,38 @@ runs:
       shell: bash
       run: make ci-build
     - if: inputs.cgo-enabled == '1'
-      uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+      uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
       with:
         driver-opts: network=host # So we can run our own little registry
     - if: inputs.cgo-enabled == '1'
       shell: bash
       run: docker run -d -p 5000:5000 --restart always --name registry registry:2
-    - if: inputs.cgo-enabled == '1'
-      name: Build CGO builder image
+    - name: Build CGO builder image
+      if: inputs.cgo-enabled == '1'
+      id: build-push-action-attempt-1
+      continue-on-error: true # we will retry this if it fails
+      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+      env:
+        DOCKER_BUILD_SUMMARY: false
+      with:
+        context: .
+        build-args: |
+          GO_VERSION=${{ steps.set-up-go.outputs.go-version }}
+        # Only build a container for the host OS since the same container
+        # handles cross building.
+        platforms: linux/amd64
+        push: true
+        target: builder
+        tags: localhost:5000/vault-builder:${{ steps.metadata.outputs.vault-builder-cache-key }}
+        # Upload the resulting minimal image to actions cache. This could
+        # be a problem if the resulting images are too big.
+        cache-from: type=gha,scope=vault-builder-${{ steps.metadata.outputs.vault-builder-cache-key }}
+        cache-to: type=gha,mode=min,scope=vault-builder-${{ steps.metadata.outputs.vault-builder-cache-key }}
+        github-token: ${{ inputs.github-token }}
+    - name: Build CGO builder image
+      id: build-push-action-attempt-2
+      continue-on-error: false
+      if: inputs.cgo-enabled == '1' && steps.build-push-action-attempt-1.outcome != 'success'
       uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
       env:
         DOCKER_BUILD_SUMMARY: false

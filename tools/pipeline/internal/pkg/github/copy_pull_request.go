@@ -15,7 +15,7 @@ import (
 	"slices"
 	"strings"
 
-	libgithub "github.com/google/go-github/v68/github"
+	libgithub "github.com/google/go-github/v74/github"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
@@ -155,7 +155,7 @@ func (r *CopyPullRequestReq) Run(
 		Track:   []string{prBranch},
 		Fetch:   true,
 		Name:    r.FromOrigin,
-		URL:     fmt.Sprintf("https://github.com/%s/%s.git", r.FromOwner, r.FromRepo),
+		URL:     res.OriginPullRequest.GetHead().GetRepo().GetCloneURL(),
 	})
 	if err != nil {
 		err = fmt.Errorf("fetching target branch base ref: %s, %w", remoteRes.String(), err)
@@ -400,11 +400,11 @@ func (r *CopyPullRequestRes) ToTable(err error) table.Writer {
 	if r.Request != nil {
 		from := r.Request.FromOwner + "/" + r.Request.FromRepo
 		if pr := r.OriginPullRequest; pr != nil {
-			from = fmt.Sprintf("[%s#%d](%s)", from, pr.GetID(), pr.GetHTMLURL())
+			from = fmt.Sprintf("[%s#%d](%s)", from, pr.GetNumber(), pr.GetHTMLURL())
 		}
 		to := r.Request.ToOwner + "/" + r.Request.ToRepo
 		if pr := r.PullRequest; pr != nil {
-			to = fmt.Sprintf("[%s#%d](%s)", to, pr.GetID(), pr.GetHTMLURL())
+			to = fmt.Sprintf("[%s#%d](%s)", to, pr.GetNumber(), pr.GetHTMLURL())
 		}
 		row = table.Row{from, to}
 	}

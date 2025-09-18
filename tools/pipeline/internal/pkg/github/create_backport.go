@@ -15,7 +15,7 @@ import (
 	"slices"
 	"strings"
 
-	libgithub "github.com/google/go-github/v68/github"
+	libgithub "github.com/google/go-github/v74/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
@@ -128,8 +128,6 @@ func NewCreateBackportReq(opts ...NewCreateBackportReqOpt) *CreateBackportReq {
 		CEBranchPrefix:      "ce",
 		CEAllowInactiveGroups: changed.FileGroups{
 			changed.FileGroupChangelog,
-			changed.FileGroupDocs,
-			changed.FileGroupPipeline,
 		},
 		BaseOrigin:          "origin",
 		BackportLabelPrefix: "backport",
@@ -657,7 +655,7 @@ func (r *CreateBackportReq) backportRef(
 			Commit:   commitSHA,
 			Strategy: libgit.MergeStrategyORT,
 			StrategyOptions: []libgit.MergeStrategyOption{
-				libgit.MergeStrategyOptionOurs,
+				libgit.MergeStrategyOptionTheirs,
 				libgit.MergeStrategyOptionIgnoreSpaceChange,
 			},
 		})

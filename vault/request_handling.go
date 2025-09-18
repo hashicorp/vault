@@ -1895,7 +1895,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// for new role-based quotas upon creation, rather than counting old leases toward
 		// the total.
 		if reqRole == nil && requiresLease && !c.impreciseLeaseRoleTracking {
-			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data)
+			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data, req.Connection, req.Headers)
 		}
 
 		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, role, resp)

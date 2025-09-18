@@ -1,0 +1,4 @@
+```release-note:bug
+replication (enterprise): Fix bug where group updates fail when processed on a
+standby node in a PR secondary cluster.
+```

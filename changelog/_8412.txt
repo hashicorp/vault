@@ -1,0 +1,3 @@
+```release-note:improvement
+core (enterprise): improve rotation manager logging to include specific lines for rotation success and failure
+```

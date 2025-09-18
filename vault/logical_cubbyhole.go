@@ -79,7 +79,7 @@ func (b *CubbyholeBackend) paths() []*framework.Path {
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "write",
 					},
-					Summary: "Store a secret at the specified location.",
+					Summary: "Store a secret at the specified location, or (enterprise-only) recover it from given snapshot Id.",
 				},
 				logical.CreateOperation: &framework.PathOperation{
 					Callback: b.handleWrite,
@@ -104,10 +104,8 @@ func (b *CubbyholeBackend) paths() []*framework.Path {
 				},
 				logical.RecoverOperation: &framework.PathOperation{
 					Callback: b.handleWrite,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "recover",
-					},
-					Summary: "Recover a secret at the specified location.",
+					// just like CreateOperation, recover is folded into update for OpenAPI documentation purposes, so
+					// no operation verb or summary is set
 				},
 			},
 

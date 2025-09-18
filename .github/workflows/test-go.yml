@@ -64,15 +64,20 @@ on:
         required: false
         default: false
         type: boolean
-      test-timing-cache-enabled:
-        description: Cache the gotestsum test timing data.
+      test-timing-cache-restore:
+        description: Restore the gotestsum test timing data from cache.
+        required: false
+        default: true
+        type: boolean
+      test-timing-cache-save:
+        description: Upload the gotestsum test timing data to cache.
         required: false
         default: true
         type: boolean
       test-timing-cache-key:
         description: The cache key to use for gotestsum test timing data.
         required: false
-        default: go-test-reports
+        default: go-test-timing-
         type: string
       checkout-ref:
         description: The ref to use for checkout.
@@ -91,26 +96,30 @@ env: ${{ fromJSON(inputs.env-vars) }}
 
 jobs:
   test-matrix:
-    permissions:
-      id-token: write  # Note: this permission is explicitly required for Vault auth
-      contents: read
+    permissions: write-all # vault-auth
     runs-on: ${{ fromJSON(inputs.runs-on-small) }}
     outputs:
-      go-test-dir: ${{ steps.metadata.outputs.go-test-dir }}
+      is-ent-branch: ${{ steps.global-metadata.outputs.is-ent-branch }}
+      is-ent-repo: ${{ steps.global-metadata.outputs.is-ent-repo }}
+      go-test-dir: ${{ steps.local-metadata.outputs.go-test-dir }}
       matrix: ${{ steps.build.outputs.matrix }}
       matrix_ids: ${{ steps.build.outputs.matrix_ids }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ inputs.checkout-ref }}
-      - name: Authenticate to Vault
+      - uses: ./.github/actions/metadata
+        id: global-metadata
+      - id: local-metadata
+        run: echo "go-test-dir=test-results/go-test" | tee -a "$GITHUB_OUTPUT"
+      - if: steps.global-metadata.outputs.is-ent-repo == 'true'
+        name: Authenticate to Vault
         id: vault-auth
-        if: github.repository == 'hashicorp/vault-enterprise'
         run: vault-auth
-      - name: Fetch Secrets
+      - if: steps.global-metadata.outputs.is-ent-repo == 'true'
+        name: Fetch Secrets
         id: secrets
-        if: github.repository == 'hashicorp/vault-enterprise'
-        uses: hashicorp/vault-action@v3
+        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -120,42 +129,40 @@ jobs:
             kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
-      - id: setup-git-private
+      - if: steps.global-metadata.outputs.is-ent-repo == 'true'
         name: Setup Git configuration (private)
-        if: github.repository == 'hashicorp/vault-enterprise'
+        id: setup-git-private
         run: |
           git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
-      - id: setup-git-public
+      - if: steps.global-metadata.outputs.is-ent-repo != 'true'
         name: Setup Git configuration (public)
-        if: github.repository != 'hashicorp/vault-enterprise'
+        id: setup-git-public
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/set-up-go
         with:
-          github-token: ${{ github.repository == 'hashicorp/vault-enterprise' && steps.secrets.outputs.github-token || secrets.ELEVATED_GITHUB_TOKEN }}
-      - id: metadata
-        name: Set up metadata
-        run: echo "go-test-dir=test-results/go-test" | tee -a "$GITHUB_OUTPUT"
+          github-token: ${{ steps.global-metadata.outputs.is-ent-repo == 'true' && steps.secrets.outputs.github-token || secrets.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/set-up-gotestsum
-      - run: mkdir -p ${{ steps.metadata.outputs.go-test-dir }}
-      - uses: actions/cache/restore@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
-        if: inputs.test-timing-cache-enabled
+      - run: mkdir -p ${{ steps.local-metadata.outputs.go-test-dir }}
+      - if: inputs.test-timing-cache-restore || inputs.test-timing-cache-save
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
-          path: ${{ steps.metadata.outputs.go-test-dir }}
+          path: ${{ steps.local-metadata.outputs.go-test-dir }}
           key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
           restore-keys: |
             ${{ inputs.test-timing-cache-key }}-
+            go-test-timing-
       - name: Sanitize timing files
         id: sanitize-timing-files
         run: |
           # Prune invalid timing files
-          find '${{ steps.metadata.outputs.go-test-dir }}' -mindepth 1 -type f -name "*.json" -exec sh -c '
+          find '${{ steps.local-metadata.outputs.go-test-dir }}' -mindepth 1 -type f -name "*.json" -exec sh -c '
             file="$1";
             jq . "$file" || rm "$file"
           ' shell {} \; > /dev/null 2>&1
-      - name: Build matrix excluding binary, integration, and testonly tests
+      - if: ${{ !inputs.testonly }}
+        name: Build matrix excluding binary, integration, and testonly tests
         id: build-non-binary
-        if: ${{ !inputs.testonly }}
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: |
@@ -163,10 +170,10 @@ jobs:
           (
             make all-packages | grep -v "_binary" | grep -v "vault/integ" | grep -v "testonly" | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
-              --timing-files '${{ steps.metadata.outputs.go-test-dir }}/*.json' > matrix.json
+              --timing-files '${{ steps.local-metadata.outputs.go-test-dir }}/*.json' > matrix.json
           )
-      - name: Build matrix for tests tagged with testonly
-        if: ${{ inputs.testonly }}
+      - if: ${{ inputs.testonly }}
+        name: Build matrix for tests tagged with testonly
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: |
@@ -178,12 +185,12 @@ jobs:
           (
             go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./command/*testonly* ./vault/ | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
-              --timing-files '${{ steps.metadata.outputs.go-test-dir }}/*.json' > matrix.json
+              --timing-files '${{ steps.local-metadata.outputs.go-test-dir }}/*.json' > matrix.json
           )
           # disable glob expansion
           shopt -u nullglob
-      - name: Capture list of binary tests
-        if: inputs.binary-tests
+      - if: inputs.binary-tests
+        name: Capture list of binary tests
         id: list-binary-tests
         run: |
           LIST="$(make all-packages | grep "_binary" | xargs)"
@@ -235,7 +242,7 @@ jobs:
       go-test-results-download-pattern: ${{ steps.metadata.outputs.go-test-results-download-pattern }}
       data-race-log-download-pattern: ${{ steps.metadata.outputs.data-race-log-download-pattern }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
@@ -285,14 +292,14 @@ jobs:
             echo "gotestsum-results-prefix=${gotestsum_results_prefix}"
             echo "gotestsum-timing-events=${gotestsum_timing_events}"
           } | tee -a "$GITHUB_OUTPUT"
-      - name: Authenticate to Vault
+      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
+        name: Authenticate to Vault
         id: vault-auth
-        if: github.repository == 'hashicorp/vault-enterprise'
         run: vault-auth
-      - name: Fetch Secrets
+      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
+        name: Fetch Secrets
         id: secrets
-        if: github.repository == 'hashicorp/vault-enterprise'
-        uses: hashicorp/vault-action@v3
+        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -302,19 +309,19 @@ jobs:
             kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
-      - id: setup-git-private
+      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
+        id: setup-git-private
         name: Setup Git configuration (private)
-        if: github.repository == 'hashicorp/vault-enterprise'
         run: |
           git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
-      - id: setup-git-public
+      - if: needs.test-matrix.outputs.is-ent-repo != 'true'
+        id: setup-git-public
         name: Setup Git configuration (public)
-        if: github.repository != 'hashicorp/vault-enterprise'
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/install-external-tools
-      - name: Build Vault HSM binary for tests
-        if: inputs.binary-tests && matrix.id == inputs.total-runners && github.repository == 'hashicorp/vault-enterprise'
+      - if: inputs.binary-tests && matrix.id == inputs.total-runners && needs.test-matrix.outputs.is-ent-branch == 'true'
+        name: Build Vault HSM binary for tests
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: |
@@ -328,9 +335,9 @@ jobs:
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: time make prep dev
-      - name: Install gVisor
+      - if: needs.test-matrix.outputs.is-ent-repo != 'true'
         # Enterprise repo runners do not allow sudo, so can't install gVisor there yet.
-        if: github.repository != 'hashicorp/vault-enterprise'
+        name: Install gVisor
         run: |
           (
             set -e
@@ -427,8 +434,8 @@ jobs:
               -timeout=${{ inputs.go-test-timeout }} \
               -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
-      - name: Prepare datadog-ci
-        if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
+      - if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
+        name: Prepare datadog-ci
         continue-on-error: true
         run: |
           if type datadog-ci > /dev/null 2>&1; then
@@ -443,7 +450,8 @@ jobs:
             printf "failed to download datadog-ci: %s" "$out"
           fi
           chmod +x /usr/local/bin/datadog-ci
-      - name: Upload test results to DataDog
+      - if: success() || failure()
+        name: Upload test results to DataDog
         continue-on-error: true
         env:
           DD_ENV: ci
@@ -452,23 +460,22 @@ jobs:
             export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
           fi
           datadog-ci junit upload --service "$GITHUB_REPOSITORY" '${{ steps.metadata.outputs.gotestsum-junitfile }}'
-        if: success() || failure()
-      - name: Archive test logs
-        if: always()
+      - if: success() || failure()
+        name: Archive test logs
         id: archive-test-logs
         # actions/upload-artifact will compress the artifact for us. We create a tarball to preserve
         # permissions and to support file names with special characters.
         run: |
           tar -cvf '${{ steps.metadata.outputs.go-test-log-archive-name }}' -C "${{ steps.metadata.outputs.go-test-log-dir }}" .
-      - name: Upload test logs archives
+      - if: success() || failure()
+        name: Upload test logs archives
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ steps.metadata.outputs.go-test-log-archive-name }}
           path: ${{ steps.metadata.outputs.go-test-log-archive-name }}
           retention-days: 7
-        if: success() || failure()
-      - name: Upload test results
-        if: success() || failure()
+      - if: success() || failure()
+        name: Upload test results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ steps.metadata.outputs.go-test-results-upload-key }}
@@ -477,8 +484,8 @@ jobs:
             ${{ steps.metadata.outputs.go-test-dir }}/${{ steps.metadata.outputs.gotestsum-results-prefix}}*.xml
           # We cache relevant timing data with actions/cache later so we can let the file expire quickly
           retention-days: 1
-      - name: Check for data race failures
-        if: success() || failure()
+      - if: success() || failure()
+        name: Check for data race failures
         id: data-race-check
         working-directory: ${{ needs.test-matrix.outputs.go-test-dir }}
         run: |
@@ -505,10 +512,8 @@ jobs:
             result="failure"
           fi
           echo "data-race-result=${result}" | tee -a "$GITHUB_OUTPUT"
-      - name: Upload data race detector failure log
-        if: |
-          (success() || failure()) &&
-          steps.data-race-check.outputs.data-race-result == 'failure'
+      - if: (success() || failure()) && steps.data-race-check.outputs.data-race-result == 'failure'
+        name: Upload data race detector failure log
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ steps.metadata.outputs.data-race-log-upload-key }}
@@ -519,9 +524,9 @@ jobs:
           if-no-files-found: error # Make sure we always upload the data race logs if it failed
       # GitHub Actions doesn't expose the job ID or the URL to the job execution,
       # so we have to fetch it from the API
-      - name: Fetch job logs URL
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        if: success() || failure()
+      - if: success() || failure()
+        name: Fetch job logs URL
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         continue-on-error: true
         with:
           retries: 3
@@ -568,8 +573,8 @@ jobs:
               console.log("Error: " + error);
               return
             }
-      - name: Prepare failure summary
-        if: success() || failure()
+      - if: success() || failure()
+        name: Prepare failure summary
         continue-on-error: true
         run: |
           # This jq query filters out successful tests, leaving only the failures.
@@ -581,9 +586,9 @@ jobs:
           | "| ${{inputs.name}} | \(.Package) | \(.Test // "-") | \(.Elapsed) | ${{ matrix.id }} | [view test results :scroll:](${{ env.GH_JOB_URL }}) |"' \
           '${{ steps.metadata.outputs.gotestsum-timing-events }}' \
           >> '${{ steps.metadata.outputs.failure-summary-file-name }}'
-      - name: Upload failure summary
+      - if: success() || failure()
+        name: Upload failure summary
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: success() || failure()
         with:
           name: ${{ steps.metadata.outputs.failure-summary-file-name }}
           path: ${{ steps.metadata.outputs.failure-summary-file-name }}
@@ -600,7 +605,7 @@ jobs:
       data-race-output: ${{ steps.status.outputs.data-race-output }}
       data-race-result: ${{ steps.status.outputs.data-race-result }}
     steps:
-      - uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           pattern: ${{ needs.test-go.outputs.data-race-log-download-pattern }}
           path: data-race-logs
@@ -641,20 +646,21 @@ jobs:
             echo "test-go-results=${test_go_results}"
           } | tee -a "$GITHUB_OUTPUT"
       # Aggregate, prune, and cache our timing data
-      - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-enabled }}
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+      - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-save }}
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: ${{ needs.test-matrix.outputs.go-test-dir }}
           key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
           restore-keys: |
             ${{ inputs.test-timing-cache-key }}-
-      - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-enabled }}
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+            go-test-timing-
+      - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-save }}
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: ${{ needs.test-matrix.outputs.go-test-dir }}
           pattern: ${{ needs.test-go.outputs.go-test-results-download-pattern }}
           merge-multiple: true
-      - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-enabled }}
+      - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-save }}
         name: Prune any invalid timing files
         run: |
           ls -lhR '${{ needs.test-matrix.outputs.go-test-dir }}'

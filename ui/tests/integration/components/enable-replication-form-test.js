@@ -11,6 +11,7 @@ import { render, fillIn, click, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const ENABLE_FORM = {
   clusterMode: '[data-test-replication-cluster-mode-select]',
@@ -19,7 +20,6 @@ const ENABLE_FORM = {
   primaryAddr: '[data-test-input="primary_api_addr"]',
   caFile: '[data-test-input="ca_file"]',
   caPath: '[data-test-input="ca_path"]',
-  submitButton: '[data-test-replication-enable]',
   notAllowed: '[data-test-not-allowed]',
   inlineMessage: '[data-test-inline-error-message]',
   cannotEnable: '[data-test-disable-to-continue]',
@@ -55,17 +55,17 @@ module('Integration | Component | enable-replication-form', function (hooks) {
       ['clusterAddr'].forEach((field) => {
         assert.dom(ENABLE_FORM[field]).hasNoValue();
       });
-      assert.dom(ENABLE_FORM.submitButton).isNotDisabled();
+      assert.dom(GENERAL.saveButton).isNotDisabled();
 
       await fillIn(ENABLE_FORM.clusterMode, 'secondary');
       assert.dom(ENABLE_FORM.inlineMessage).hasText('This will immediately clear all data in this cluster!');
       ['secondaryToken', 'primaryAddr', 'caFile', 'caPath'].forEach((field) => {
         assert.dom(ENABLE_FORM[field]).hasNoValue();
       });
-      assert.dom(ENABLE_FORM.submitButton).isDisabled();
+      assert.dom(GENERAL.saveButton).isDisabled();
       await fillIn(ENABLE_FORM.secondaryToken, 'some-token');
       await fillIn(ENABLE_FORM.primaryAddr, 'some-addr');
-      assert.dom(ENABLE_FORM.submitButton).isNotDisabled();
+      assert.dom(GENERAL.saveButton).isNotDisabled();
     });
     test(`it shows warning when capabilities restricted for ${replicationMode} replication mode`, async function (assert) {
       assert.expect(10);
@@ -84,17 +84,19 @@ module('Integration | Component | enable-replication-form', function (hooks) {
       assert
         .dom(ENABLE_FORM.notAllowed)
         .hasText('The token you are using is not authorized to enable primary replication.');
-      ['clusterAddr', 'submitButton'].forEach((field) => {
-        assert.dom(ENABLE_FORM[field]).doesNotExist();
-      });
+      assert
+        .dom('[data-test-input="primary_cluster_addr"]')
+        .doesNotExist('primary cluster addr does not exists');
+      assert.dom(GENERAL.saveButton).doesNotExist('save button does not show');
 
       await fillIn(ENABLE_FORM.clusterMode, 'secondary');
       assert
         .dom(ENABLE_FORM.notAllowed)
         .hasText('The token you are using is not authorized to enable secondary replication.');
-      ['secondaryToken', 'primaryAddr', 'caFile', 'caPath', 'submitButton'].forEach((field) => {
+      ['secondaryToken', 'primaryAddr', 'caFile', 'caPath'].forEach((field) => {
         assert.dom(ENABLE_FORM[field]).doesNotExist();
       });
+      assert.dom(GENERAL.saveButton).doesNotExist('save button does not show');
     });
   });
 
@@ -115,7 +117,7 @@ module('Integration | Component | enable-replication-form', function (hooks) {
     ['clusterAddr'].forEach((field) => {
       assert.dom(ENABLE_FORM[field]).hasNoValue();
     });
-    assert.dom(ENABLE_FORM.submitButton).isNotDisabled();
+    assert.dom(GENERAL.saveButton).isNotDisabled();
 
     await fillIn(ENABLE_FORM.clusterMode, 'secondary');
     assert
@@ -127,7 +129,7 @@ module('Integration | Component | enable-replication-form', function (hooks) {
       .hasText(
         "When running as a DR Secondary Vault is read only. For this reason, we don't allow other Replication modes to operate at the same time. This cluster is also currently operating as a Performance Primary."
       );
-    assert.dom(ENABLE_FORM.submitButton).isDisabled();
+    assert.dom(GENERAL.saveButton).isDisabled();
 
     this.set('performanceMode', 'secondary');
     await settled();
@@ -152,7 +154,7 @@ module('Integration | Component | enable-replication-form', function (hooks) {
         />`,
         this.context
       );
-      assert.dom(ENABLE_FORM.submitButton).isDisabled();
+      assert.dom(GENERAL.saveButton).isDisabled();
     });
   });
 
@@ -187,7 +189,7 @@ module('Integration | Component | enable-replication-form', function (hooks) {
           this.context
         );
         await fillIn(ENABLE_FORM.clusterAddr, 'some-addr');
-        await click(ENABLE_FORM.submitButton);
+        await click(GENERAL.saveButton);
         // after success
         assert.dom(ENABLE_FORM.clusterAddr).hasNoValue();
         assert.true(this.successSpy.calledOnce, 'called once');
@@ -231,7 +233,7 @@ module('Integration | Component | enable-replication-form', function (hooks) {
         // Fill in then clear ca path
         await fillIn(ENABLE_FORM.caPath, 'some-path');
         await fillIn(ENABLE_FORM.caPath, '');
-        await click(ENABLE_FORM.submitButton);
+        await click(GENERAL.saveButton);
         // after success
         assert.dom(ENABLE_FORM.secondaryToken).hasValue('');
         assert.dom(ENABLE_FORM.primaryAddr).hasNoValue();
@@ -266,7 +268,7 @@ module('Integration | Component | enable-replication-form', function (hooks) {
           this.context
         );
         await fillIn(ENABLE_FORM.clusterAddr, 'some-addr');
-        await click(ENABLE_FORM.submitButton);
+        await click(GENERAL.saveButton);
         assert.dom(ENABLE_FORM.error).hasText('permission denied', 'shows error returned from API');
         assert.dom(ENABLE_FORM.clusterAddr).hasValue('some-addr', 'does not clear form');
         assert.false(this.successSpy.calledOnce, 'success spy not called');
@@ -287,7 +289,7 @@ module('Integration | Component | enable-replication-form', function (hooks) {
         await fillIn(ENABLE_FORM.clusterMode, 'secondary');
         await fillIn(ENABLE_FORM.secondaryToken, 'some-token-value');
         await fillIn(ENABLE_FORM.primaryAddr, 'http://127.0.0.1:8200');
-        await click(ENABLE_FORM.submitButton);
+        await click(GENERAL.saveButton);
         // after error
         assert.dom(ENABLE_FORM.error).hasText('permission denied', 'shows error returned from API');
         assert.dom(ENABLE_FORM.secondaryToken).hasValue('some-token-value', 'does not clear form');

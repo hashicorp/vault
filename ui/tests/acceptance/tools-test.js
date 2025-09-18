@@ -3,13 +3,15 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, find, findAll, currentURL, visit, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, find, findAll, currentURL, visit, waitUntil, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
+
 import { capitalize } from '@ember/string';
-import codemirror from 'vault/tests/helpers/codemirror';
+import codemirror, { assertCodeBlockValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
+
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
@@ -48,8 +50,10 @@ module('Acceptance | tools', function (hooks) {
     test('it wraps data, performs lookup, rewraps and then unwraps data', async function (assert) {
       const tokenStore = createTokenStore();
 
-      await waitUntil(() => find('.CodeMirror'));
-      codemirror().setValue(DATA_TO_WRAP);
+      await waitUntil(() => find('.cm-editor'));
+
+      const editor = codemirror();
+      setCodeEditorValue(editor, DATA_TO_WRAP);
 
       await click(TS.submit);
       const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
@@ -79,23 +83,17 @@ module('Acceptance | tools', function (hooks) {
 
       // unwrap
       await click(GENERAL.navLink('Unwrap'));
-
       await fillIn(TS.toolsInput('unwrap-token'), tokenStore.get());
       await click(TS.submit);
-      await waitUntil(() => find('.CodeMirror'));
-      assert.deepEqual(
-        JSON.parse(codemirror().getValue()),
-        JSON.parse(DATA_TO_WRAP),
-        'unwrapped data equals input data'
-      );
+
+      await waitUntil(() => find('.hds-code-block__code'));
+      await settled();
+      assertCodeBlockValue(assert, '.hds-code-block__code', DATA_TO_WRAP);
+
       await waitUntil(() => find(GENERAL.hdsTab('details')));
       await click(GENERAL.hdsTab('details'));
       await click(GENERAL.hdsTab('data'));
-      assert.deepEqual(
-        JSON.parse(codemirror().getValue()),
-        JSON.parse(DATA_TO_WRAP),
-        'data tab still has unwrapped data'
-      );
+      assertCodeBlockValue(assert, '.hds-code-block__code', DATA_TO_WRAP);
     });
   });
 
@@ -164,13 +162,10 @@ module('Acceptance | tools', function (hooks) {
 
       await fillIn(TS.toolsInput('unwrap-token'), 'sometoken');
       await click(TS.submit);
-      await waitUntil(() => find('.CodeMirror'));
 
-      assert.deepEqual(
-        JSON.parse(codemirror().getValue()),
-        AUTH_RESPONSE.auth,
-        'unwrapped data equals input data'
-      );
+      await waitUntil(() => find('.hds-code-block__code'));
+      await settled();
+      assertCodeBlockValue(assert, '.hds-code-block__code', AUTH_RESPONSE.auth);
     });
   });
 
@@ -179,8 +174,9 @@ module('Acceptance | tools', function (hooks) {
       const tokenStore = createTokenStore();
       await visit('/vault/tools/wrap');
 
-      await waitUntil(() => find('.CodeMirror'));
-      codemirror().setValue(DATA_TO_WRAP);
+      await waitUntil(() => find('.cm-editor'));
+      const editor = codemirror();
+      setCodeEditorValue(editor, DATA_TO_WRAP);
 
       // initial wrap
       await click(TS.submit);
@@ -199,16 +195,19 @@ module('Acceptance | tools', function (hooks) {
       await click(GENERAL.navLink('Unwrap'));
       await fillIn(TS.toolsInput('unwrap-token'), tokenStore.get());
       await click(TS.submit);
-      await waitUntil(() => find('.CodeMirror'));
-      assert.strictEqual(codemirror().getValue(' '), '{   "tools": "tests" }', 'it renders unwrapped data');
+
+      await waitUntil(() => find('.hds-code-block__code'));
+      await settled();
+      assertCodeBlockValue(assert, '.hds-code-block__code', '{   "tools": "tests" }');
     });
 
     test('it sends wrap ttl', async function (assert) {
       const tokenStore = createTokenStore();
       await visit('/vault/tools/wrap');
 
-      await waitUntil(() => find('.CodeMirror'));
-      codemirror().setValue(DATA_TO_WRAP);
+      await waitUntil(() => find('.cm-editor'));
+      const editor = codemirror();
+      setCodeEditorValue(editor, DATA_TO_WRAP);
 
       // update to non-default ttl
       await click(GENERAL.toggleInput('Wrap TTL'));

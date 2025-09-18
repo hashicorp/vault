@@ -9,11 +9,14 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
-import { click, fillIn, findAll, render, typeIn } from '@ember/test-helpers';
-import codemirror from 'vault/tests/helpers/codemirror';
+
+import { click, fillIn, findAll, render, typeIn, waitFor, settled } from '@ember/test-helpers';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
+
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hooks) {
   setupRenderingTest(hooks);
@@ -95,8 +98,8 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     await fillIn(FORM.maskedValueInput(), 'bar');
 
     await click(FORM.toggleMetadata);
-    await fillIn(`[data-test-field="customMetadata"] ${FORM.keyInput()}`, 'my-custom');
-    await fillIn(`[data-test-field="customMetadata"] ${FORM.valueInput()}`, 'metadata');
+    await fillIn(`${GENERAL.fieldByAttr('customMetadata')} ${FORM.keyInput()}`, 'my-custom');
+    await fillIn(`${GENERAL.fieldByAttr('customMetadata')} ${FORM.valueInput()}`, 'metadata');
     await fillIn(FORM.inputByAttr('maxVersions'), this.maxVersions);
 
     await click(FORM.saveBtn);
@@ -248,13 +251,17 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       .dom(FORM.validation('path'))
       .doesNotExist('it removes validation on key up when secret contains slash but does not end in one');
 
-    await click(FORM.toggleJson);
-    codemirror().setValue('i am a string and not JSON');
+    await click(GENERAL.toggleInput('json'));
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, 'i am a string and not JSON');
+    await settled();
     assert
       .dom(FORM.inlineAlert)
       .hasText('JSON is unparsable. Fix linting errors to avoid data discrepancies.');
 
-    codemirror().setValue('{}'); // clear linting error
+    setCodeEditorValue(editor, '{}');
+    await settled();
     await fillIn(FORM.inputByAttr('path'), '');
     await click(FORM.saveBtn);
     const [pathValidation, formAlert] = findAll(FORM.inlineAlert);
@@ -296,7 +303,9 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     await click(FORM.toggleJson);
     assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Secret data');
 
-    codemirror().setValue(`{ "hello": "there"}`);
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, `{ "hello": "there"}`);
     await fillIn(FORM.inputByAttr('path'), this.path);
     await click(FORM.saveBtn);
   });

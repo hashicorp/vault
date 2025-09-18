@@ -25,34 +25,42 @@ jobs:
   plugin-update:
     runs-on: ubuntu-latest
     env:
+      GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      GOPRIVATE: github.com/hashicorp/*
       VAULT_BRANCH: ${{ inputs.branch }}
       REVIEWER: ${{ inputs.reviewer || github.actor }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           # We don't use the default token so that checks are executed on the resulting PR
           # https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
           token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
 
-      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
-        with:
-          cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
-          go-version-file: .go-version
+      - uses: ./.github/actions/metadata
+        id: metadata
 
-      - name: Update plugin
-        if: github.repository == 'hashicorp/vault'
+      - uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          no-restore: true
+          no-save: true
+
+      - id: configure-git
+        name: Configure git
+        run: |
+          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          git config user.name hc-github-team-secure-vault-ecosystem
+          git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
+
+      - if: steps.metadata.outputs.is-ent-branch != 'true'
+        name: Update plugin
         run: |
           go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}"
           go mod tidy
 
-      - name: Update Enterprise-only plugin
-        if: github.repository == 'hashicorp/vault-enterprise'
-        env:
-          # Use elevated token to read private repos.
-          GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
-          GOPRIVATE: github.com/hashicorp/*
+      - if: steps.metadata.outputs.is-ent-branch == 'true'
+        name: Update Enterprise-only plugin
         run: |
-          git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
           (cd vault_ent && go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}" && go mod tidy)
           go mod tidy
 
@@ -66,16 +74,12 @@ jobs:
 
       - name: Commit and push
         run: |
-          git config user.name hc-github-team-secure-vault-ecosystem
-          git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
-          git add go.mod go.sum
+          git add ./\*go.mod ./\*go.sum
           git commit -m "Update ${{ inputs.plugin }} to v${{ inputs.version }}"
           git push -f origin ${{ github.ref_name }}:"$VAULT_BRANCH"
 
       - name: Open pull request if needed
         id: pr
-        env:
-          GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
         # Only open a PR if the branch is not attached to an existing one
         run: |
           PR=$(gh pr list --head "$VAULT_BRANCH" --json number -q '.[0].number')
@@ -107,9 +111,17 @@ jobs:
           PLUGIN_SERVICE=$(echo "$PLUGIN" | cut -d- -f 4-)
           echo "::debug::plugin service: $PLUGIN_SERVICE"
 
+          # changelog filename is the PR number with a .txt extension
+          # if the repo is vault-enterprise, the filename should start with an underscore
+          CHANGELOG_FILENAME="${{ steps.pr.outputs.vault_pr_num }}.txt"
+          if [[ '${{ steps.metadata.outputs.is-ent-branch }}' == 'true' ]]; then
+            CHANGELOG_FILENAME="_${{ steps.pr.outputs.vault_pr_num }}.txt"
+          fi
+          echo "::debug::changelog filename: $CHANGELOG_FILENAME"
+
           echo "\`\`\`release-note:change
           ${PLUGIN_TYPE}/${PLUGIN_SERVICE}: Update plugin to v${{ inputs.version }}
-          \`\`\`" > "changelog/${{ steps.pr.outputs.vault_pr_num }}.txt"
+          \`\`\`" > "changelog/$CHANGELOG_FILENAME"
 
           git add changelog/
           git commit -m "Add changelog"
@@ -124,5 +136,4 @@ jobs:
         continue-on-error: true
         run: |
           gh pr edit "${{ steps.pr.outputs.vault_pr_num }}" \
-            --add-label "dependencies" \
-            --repo hashicorp/vault
+            --add-label "dependencies"

@@ -1,0 +1,3 @@
+```release-note:change
+sdk: Upgrade to go-secure-stdlib/plugincontainer@v0.4.2, which also bumps github.com/docker/docker to v28.3.3+incompatible
+```

@@ -622,7 +622,7 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 }
 
 // EscapeLDAPValue is exported because a plugin uses it outside this package.
-// EscapeLDAPValue will properly escape the input string as an ldap value
+// EscapeLDAPValue will properly escape the input string as a ldap value
 // rfc4514 states the following must be escaped:
 // - leading space or hash
 // - trailing space

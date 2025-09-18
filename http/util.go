@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/limits"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/quotas"
@@ -24,23 +25,78 @@ var nonVotersAllowed = false
 
 func wrapMaxRequestSizeHandler(handler http.Handler, props *vault.HandlerProperties) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var maxRequestSize int64
+		var maxRequestSize, maxJSONDepth, maxStringValueLength, maxObjectEntryCount, maxArrayElementCount int64
+
 		if props.ListenerConfig != nil {
 			maxRequestSize = props.ListenerConfig.MaxRequestSize
+			maxJSONDepth = props.ListenerConfig.CustomMaxJSONDepth
+			maxStringValueLength = props.ListenerConfig.CustomMaxJSONStringValueLength
+			maxObjectEntryCount = props.ListenerConfig.CustomMaxJSONObjectEntryCount
+			maxArrayElementCount = props.ListenerConfig.CustomMaxJSONArrayElementCount
 		}
+
 		if maxRequestSize == 0 {
 			maxRequestSize = DefaultMaxRequestSize
 		}
-		ctx := r.Context()
-		originalBody := r.Body
+		if maxJSONDepth == 0 {
+			maxJSONDepth = CustomMaxJSONDepth
+		}
+		if maxStringValueLength == 0 {
+			maxStringValueLength = CustomMaxJSONStringValueLength
+		}
+		if maxObjectEntryCount == 0 {
+			maxObjectEntryCount = CustomMaxJSONObjectEntryCount
+		}
+		if maxArrayElementCount == 0 {
+			maxArrayElementCount = CustomMaxJSONArrayElementCount
+		}
+
+		jsonLimits := jsonutil.JSONLimits{
+			MaxDepth:             int(maxJSONDepth),
+			MaxStringValueLength: int(maxStringValueLength),
+			MaxObjectEntryCount:  int(maxObjectEntryCount),
+			MaxArrayElementCount: int(maxArrayElementCount),
+		}
+
+		// If the payload is JSON, the VerifyMaxDepthStreaming function will perform validations.
+		buf, err := jsonLimitsValidation(w, r, maxRequestSize, jsonLimits)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		// Replace the body and update the context.
+		// This ensures the request object is in a consistent state for all downstream handlers.
+		// Because the original request body stream has been fully consumed by io.ReadAll,
+		// we must replace it so that subsequent handlers can read the content.
+		r.Body = newMultiReaderCloser(buf, r.Body)
+		contextBody := r.Body
+		ctx := logical.CreateContextOriginalBody(r.Context(), contextBody)
+
 		if maxRequestSize > 0 {
 			r.Body = http.MaxBytesReader(w, r.Body, maxRequestSize)
 		}
-		ctx = logical.CreateContextOriginalBody(ctx, originalBody)
 		r = r.WithContext(ctx)
 
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func jsonLimitsValidation(w http.ResponseWriter, r *http.Request, maxRequestSize int64, jsonLimits jsonutil.JSONLimits) (*bytes.Buffer, error) {
+	// The TeeReader reads from the original body and writes a copy to our buffer.
+	// We wrap the original body with a MaxBytesReader first to enforce the hard size limit.
+	var limitedTeeReader io.Reader
+	buf := &bytes.Buffer{}
+	bodyReader := r.Body
+	if maxRequestSize > 0 {
+		bodyReader = http.MaxBytesReader(w, r.Body, maxRequestSize)
+	}
+	limitedTeeReader = io.TeeReader(bodyReader, buf)
+	_, err := jsonutil.VerifyMaxDepthStreaming(limitedTeeReader, jsonLimits)
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
 }
 
 func wrapRequestLimiterHandler(handler http.Handler, props *vault.HandlerProperties) http.Handler {
@@ -97,7 +153,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		if requiresResolveRole {
 			buf := bytes.Buffer{}
 			teeReader := io.TeeReader(r.Body, &buf)
-			role := core.DetermineRoleFromLoginRequestFromReader(r.Context(), mountPath, teeReader)
+			role := core.DetermineRoleFromLoginRequestFromReader(r.Context(), mountPath, teeReader, getConnection(r), r.Header)
 
 			// Reset the body if it was read
 			if buf.Len() > 0 {
