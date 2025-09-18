@@ -18,6 +18,7 @@ import {
 } from 'vault/components/recovery/page/snapshots/snapshot-utils';
 
 import type ApiService from 'vault/services/api';
+import type AuthService from 'vault/vault/services/auth';
 import type NamespaceService from 'vault/services/namespace';
 import type { SnapshotManageModel } from 'vault/routes/vault/cluster/recovery/snapshots/snapshot/manage';
 
@@ -29,12 +30,15 @@ type SecretData = { [key: string]: unknown };
 
 type RecoveryData = {
   models: string[];
-  query?: { namespace: string };
+  query?: { [key: string]: string };
 };
 
 type MountOption = { type: RecoverySupportedEngines; path: string };
+type GroupedOption = { groupName: string; options: MountOption[] };
 
 export default class SnapshotManage extends Component<Args> {
+  // TODO remove once endpoint is updated to accepted `read_snapshot_id`
+  @service declare readonly auth: AuthService;
   @service declare readonly api: ApiService;
   @service declare readonly currentCluster: any;
   @service declare readonly namespace: NamespaceService;
@@ -43,7 +47,7 @@ export default class SnapshotManage extends Component<Args> {
   @tracked selectedMount?: MountOption;
   @tracked resourcePath = '';
 
-  @tracked mountOptions: MountOption[] = [];
+  @tracked mountOptions: GroupedOption[] = [];
   @tracked secretData: SecretData | undefined;
 
   @tracked mountError = '';
@@ -59,6 +63,7 @@ export default class SnapshotManage extends Component<Args> {
   private pollingController: { start: () => Promise<void>; cancel: () => void } | null = null;
 
   recoverySupportedEngines = [
+    { display: 'Database', value: SupportedSecretBackendsEnum.DATABASE },
     { display: 'Cubbyhole', value: SupportedSecretBackendsEnum.CUBBYHOLE },
     { display: 'KV v1', value: SupportedSecretBackendsEnum.KV },
   ];
@@ -142,7 +147,7 @@ export default class SnapshotManage extends Component<Args> {
       const headers = this.api.buildHeaders({ namespace });
       const { secret } = await this.api.sys.internalUiListEnabledVisibleMounts(headers);
 
-      this.mountOptions = this.api.responseObjectToArray(secret, 'path').flatMap((engine) => {
+      const mounts = this.api.responseObjectToArray(secret, 'path').flatMap((engine) => {
         const eng = new SecretsEngineResource(engine);
 
         // performance secondaries cannot perform snapshot operations on shared paths
@@ -159,6 +164,16 @@ export default class SnapshotManage extends Component<Args> {
             ]
           : [];
       });
+
+      const databases: MountOption[] = mounts.filter((m) => m.type === SupportedSecretBackendsEnum.DATABASE);
+      const secretEngines: MountOption[] = mounts.filter(
+        (m) => m.type !== SupportedSecretBackendsEnum.DATABASE
+      );
+
+      this.mountOptions = [
+        ...(databases.length ? [{ groupName: 'Databases', options: databases }] : []),
+        { groupName: 'Secret Engines', options: secretEngines },
+      ];
     } catch {
       this.mountOptions = [];
     }
@@ -218,6 +233,7 @@ export default class SnapshotManage extends Component<Args> {
       const mountPath = this.selectedMount?.path as string;
       const namespace = this.selectedNamespace === 'root' ? ROOT_NAMESPACE : this.selectedNamespace;
       const headers = this.api.buildHeaders({ namespace });
+
       switch (mountType) {
         case SupportedSecretBackendsEnum.KV: {
           const { data } = await this.api.secrets.kvV1Read(
@@ -231,6 +247,25 @@ export default class SnapshotManage extends Component<Args> {
         }
         case SupportedSecretBackendsEnum.CUBBYHOLE: {
           const { data } = await this.api.secrets.cubbyholeRead(this.resourcePath, snapshot_id, headers);
+          this.secretData = data as SecretData;
+          break;
+        }
+        case SupportedSecretBackendsEnum.DATABASE: {
+          // TODO remove once endpoint is updated to accept `read_snapshot_id`
+          const { currentToken } = this.auth;
+
+          const resp = await fetch(
+            `/v1/${mountPath}/static-roles/${this.resourcePath}?read_snapshot_id=${snapshot_id}`,
+            {
+              method: 'GET',
+              headers: {
+                'X-Vault-Namespace': namespace,
+                'X-Vault-Token': currentToken,
+              },
+            }
+          );
+
+          const { data } = await resp.json();
           this.secretData = data as SecretData;
           break;
         }
@@ -258,16 +293,34 @@ export default class SnapshotManage extends Component<Args> {
       const { snapshot_id } = this.args.model.snapshot as { snapshot_id: string };
       const mountType = this.selectedMount?.type;
       const mountPath = this.selectedMount?.path as string;
+
       const namespace = this.selectedNamespace === 'root' ? ROOT_NAMESPACE : this.selectedNamespace;
-      const headers = this.api.buildHeaders({ namespace });
+      const headers = this.api.buildHeaders({ namespace, recoverSnapshotId: snapshot_id });
+
+      // this query is used to build the recovered resource link in the success message
+      let query: { [key: string]: string } = {};
+      if (namespace && namespace !== this.namespace.path) {
+        query = { namespace };
+      }
+
+      // Certain backends have a prefix which is needed for the recovery link we show to the user
+      let modelPrefix = '';
       switch (mountType) {
         case SupportedSecretBackendsEnum.KV: {
           await this.api.secrets.kvV1Write(this.resourcePath, mountPath, {}, snapshot_id, undefined, headers);
           break;
         }
         case SupportedSecretBackendsEnum.CUBBYHOLE: {
-          this.api.buildHeaders({ namespace: namespace || this.namespace.path });
           await this.api.secrets.cubbyholeWrite(this.resourcePath, {}, snapshot_id, undefined, headers);
+          break;
+        }
+        case SupportedSecretBackendsEnum.DATABASE: {
+          await this.api.secrets.databaseWriteStaticRole(this.resourcePath, mountPath, {}, headers);
+          modelPrefix = 'role/';
+          query = {
+            ...query,
+            type: 'static',
+          };
           break;
         }
         default: {
@@ -277,11 +330,9 @@ export default class SnapshotManage extends Component<Args> {
       }
 
       this.recoveryData = {
-        models: [mountPath, this.resourcePath],
+        models: [mountPath, modelPrefix + this.resourcePath],
+        query,
       };
-      if (namespace && namespace !== this.namespace.path) {
-        this.recoveryData.query = { namespace };
-      }
     } catch (e) {
       const error = await this.api.parseError(e);
       this.bannerError = `Snapshot recovery error: ${error.message}`;

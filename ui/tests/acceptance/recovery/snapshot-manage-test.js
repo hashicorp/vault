@@ -36,7 +36,7 @@ module('Acceptance | recovery | snapshot-manage', function (hooks) {
     await visit('/vault/recovery/snapshots');
 
     await click(GENERAL.selectByAttr('mount'));
-    await click('[data-option-index]');
+    await click('[data-option-index="1.0"]');
     await fillIn(GENERAL.inputByAttr('resourcePath'), 'recovered-secret');
 
     await click(GENERAL.button('recover'));
@@ -57,7 +57,7 @@ module('Acceptance | recovery | snapshot-manage', function (hooks) {
     await click(GENERAL.selectByAttr('namespace'));
     await click('[data-option-index="1"]');
     await click(GENERAL.selectByAttr('mount'));
-    await click('[data-option-index]');
+    await click('[data-option-index="1.0"]');
     await fillIn(GENERAL.inputByAttr('resourcePath'), 'recovered-secret');
 
     await click(GENERAL.button('recover'));
@@ -78,7 +78,7 @@ module('Acceptance | recovery | snapshot-manage', function (hooks) {
     await click(GENERAL.selectByAttr('namespace'));
     await click('[data-option-index="2"]');
     await click(GENERAL.selectByAttr('mount'));
-    await click('[data-option-index]');
+    await click('[data-option-index="1.0"]');
     await fillIn(GENERAL.inputByAttr('resourcePath'), 'recovered-secret');
 
     await click(GENERAL.button('recover'));

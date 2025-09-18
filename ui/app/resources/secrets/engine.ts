@@ -16,9 +16,9 @@ import type { Mount } from 'vault/mount';
 export const SUPPORTS_RECOVERY = [
   SupportedSecretBackendsEnum.CUBBYHOLE,
   SupportedSecretBackendsEnum.KV, // only kv v1
+  SupportedSecretBackendsEnum.DATABASE,
 ] as const;
 
-// TODO: Add "database" when once that is supported later in 1.21 feature work
 export type RecoverySupportedEngines = (typeof SUPPORTS_RECOVERY)[number];
 
 export default class SecretsEngineResource extends baseResourceFactory<Mount>() {

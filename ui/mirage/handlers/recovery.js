@@ -63,28 +63,18 @@ export default function (server) {
       secret: {
         'cubbyhole/': {
           type: 'cubbyhole',
-          description: 'per-token private secret storage',
           local: true,
-          seal_wrap: false,
-          external_entropy_access: false,
-          config: {
-            default_lease_ttl: 0,
-            max_lease_ttl: 0,
-            force_no_cache: false,
-          },
+          path: 'cubbyhole/',
         },
         'kv/': {
           type: 'kv',
-          description: 'key/value secret storage',
-          options: { version: '1' },
           local: false,
-          seal_wrap: false,
-          external_entropy_access: false,
-          config: {
-            default_lease_ttl: 0,
-            max_lease_ttl: 0,
-            force_no_cache: false,
-          },
+          path: 'kv/',
+        },
+        'database/': {
+          type: 'database',
+          local: true,
+          path: 'database/',
         },
       },
     },
@@ -139,8 +129,25 @@ export default function (server) {
     };
   });
 
+  server.get('/database/static-roles/:path', () => {
+    return {
+      data: {
+        credential_type: 'password',
+        db_name: 'test-db',
+        rotation_period: 86400,
+        rotation_statements: [],
+        skip_import_rotation: true,
+        username: 'super-user',
+      },
+    };
+  });
+
   // RECOVER SECRET HANDLERS
   server.post('/cubbyhole/:path', () => ({
+    data: {},
+  }));
+
+  server.post('/database/static-roles/:path', () => ({
     data: {},
   }));
 

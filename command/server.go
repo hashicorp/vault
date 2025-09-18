@@ -2162,6 +2162,9 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	if !c.flagDevNoKV {
+		if !core.IsMountTypeAllowed("kv") {
+			return nil, fmt.Errorf("license does not allow for KV mounts, consider using -dev-no-kv flag")
+		}
 		kvVer := "2"
 		if c.flagDevKVV1 || c.flagDevLeasedKV {
 			kvVer = "1"
