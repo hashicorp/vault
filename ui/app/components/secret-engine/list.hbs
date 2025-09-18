@@ -3,10 +3,24 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<div class="top-right-absolute has-top-margin-s">
-  <Hds::Button @text="Enable new engine" @icon="plus" @route="vault.cluster.secrets.mounts" data-test-enable-engine />
-</div>
-<Toolbar>
+<Hds::PageHeader class="page-header" as |PH|>
+  <PH.Breadcrumb>
+    <Hds::Breadcrumb data-test-breadcrumbs>
+      <Hds::Breadcrumb::Item @text="Vault" @route="vault.cluster.dashboard" @icon="vault" />
+      <Hds::Breadcrumb::Item @text="Secrets engines" @current={{true}} />
+    </Hds::Breadcrumb>
+  </PH.Breadcrumb>
+  <PH.IconTile @icon="key" />
+
+  <PH.Title>Secrets engines</PH.Title>
+  <PH.Subtitle>Secrets engines available in {{this.clusterName}} Vault cluster.</PH.Subtitle>
+
+  <PH.Actions>
+    <Hds::Button @text="Enable new engine" @icon="plus" @route="vault.cluster.secrets.mounts" data-test-enable-engine />
+  </PH.Actions>
+</Hds::PageHeader>
+
+<Toolbar class="has-top-margin-m">
   <ToolbarFilters>
     <SearchSelect
       @id="filter-by-engine-type"
