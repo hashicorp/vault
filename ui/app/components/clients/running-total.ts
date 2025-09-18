@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 
-import type { ByMonthNewClients, TotalClients } from 'core/utils/client-count-utils';
+import type { ByMonthNewClients, TotalClients } from 'vault/vault/client-counts/activity-api';
 import type FlagsService from 'vault/services/flags';
 
 interface Args {

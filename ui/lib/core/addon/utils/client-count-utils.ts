@@ -9,6 +9,21 @@ import { ROOT_NAMESPACE } from 'vault/services/namespace';
 import { sanitizePath } from './sanitize-path';
 
 import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
+import type {
+  ActivityExportData,
+  ActivityMonthBlock,
+  ActivityMonthEmpty,
+  ActivityMonthStandard,
+  ByMonthNewClients,
+  ByNamespaceClients,
+  ClientFilterTypes,
+  ClientTypes,
+  Counts,
+  MountClients,
+  MountNewClients,
+  NamespaceNewClients,
+  NamespaceObject,
+} from 'vault/vault/client-counts/activity-api';
 
 /*
 The client count utils are responsible for serializing the sys/internal/counters/activity API response
@@ -17,7 +32,7 @@ The initial API response shape and serialized types are defined below.
 To help visualize there are sample responses in ui/tests/helpers/clients.js
 */
 
-// add new types here
+// Add new sys/activity/counters client count types here
 export const CLIENT_TYPES = [
   'acme_clients',
   'clients', // summation of total clients
@@ -25,8 +40,6 @@ export const CLIENT_TYPES = [
   'non_entity_clients',
   'secret_syncs',
 ] as const;
-
-export type ClientTypes = (typeof CLIENT_TYPES)[number];
 
 // map to dropdowns for filtering client count tables
 export enum ClientFilters {
@@ -37,13 +50,9 @@ export enum ClientFilters {
   MONTH = 'month',
 }
 
-export type ClientFilterTypes = (typeof ClientFilters)[keyof typeof ClientFilters];
-
 // client_type in the exported activity data differs slightly from the types of client keys
 // returned by sys/internal/counters/activity endpoint (:
 export const EXPORT_CLIENT_TYPES = ['non-entity-token', 'pki-acme', 'secret-sync', 'entity'] as const;
-
-export type ActivityExportClientTypes = (typeof EXPORT_CLIENT_TYPES)[number];
 
 // returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
 // that occurred between timestamps (i.e. queried activity data)
@@ -238,134 +247,4 @@ export function hasNamespacesKey(
   obj: ByMonthNewClients | NamespaceNewClients | MountNewClients
 ): obj is ByMonthNewClients {
   return 'namespaces' in obj;
-}
-
-// TYPES RETURNED BY UTILS (serialized)
-export interface TotalClients {
-  clients: number;
-  entity_clients: number;
-  non_entity_clients: number;
-  secret_syncs: number;
-  acme_clients: number;
-}
-
-// extend this type when the counts are optional (eg for new clients)
-interface TotalClientsSometimes {
-  clients?: number;
-  entity_clients?: number;
-  non_entity_clients?: number;
-  secret_syncs?: number;
-  acme_clients?: number;
-}
-
-export interface ByNamespaceClients extends TotalClients {
-  label: string;
-  mounts: MountClients[];
-}
-
-export interface MountClients extends TotalClients {
-  label: string;
-  mount_path: string;
-  mount_type: string;
-  namespace_path: string;
-}
-
-export interface ByMonthClients extends TotalClients {
-  timestamp: string;
-  namespaces: ByNamespaceClients[];
-  new_clients: ByMonthNewClients;
-}
-
-export interface ByMonthNewClients extends TotalClientsSometimes {
-  timestamp: string;
-  namespaces: ByNamespaceClients[];
-}
-
-export interface NamespaceByKey extends TotalClients {
-  timestamp: string;
-  new_clients: NamespaceNewClients;
-}
-
-export interface NamespaceNewClients extends TotalClientsSometimes {
-  timestamp: string;
-  label: string;
-  mounts: MountClients[];
-}
-
-export interface MountByKey extends TotalClients {
-  timestamp: string;
-  label: string;
-  new_clients: MountNewClients;
-}
-
-export interface MountNewClients extends TotalClientsSometimes {
-  timestamp: string;
-  label: string;
-}
-
-// Serialized data from activity/export API
-export interface ActivityExportData {
-  client_id: string;
-  client_type: ActivityExportClientTypes;
-  namespace_id: string;
-  namespace_path: string;
-  mount_accessor: string;
-  mount_type: string;
-  mount_path: string;
-  token_creation_time: string;
-  client_first_used_time: string;
-}
-export interface EntityClients extends ActivityExportData {
-  entity_name: string;
-  entity_alias_name: string;
-  local_entity_alias: boolean;
-  policies: string[];
-  entity_metadata: Record<string, any>;
-  entity_alias_metadata: Record<string, any>;
-  entity_alias_custom_metadata: Record<string, any>;
-  entity_group_ids: string[];
-}
-
-// API RESPONSE SHAPE (prior to serialization)
-
-export interface NamespaceObject {
-  namespace_id: string;
-  namespace_path: string;
-  counts: Counts;
-  mounts: { mount_path: string; counts: Counts; mount_type: string }[];
-}
-
-type ActivityMonthStandard = {
-  timestamp: string; // YYYY-MM-01T00:00:00Z (always the first day of the month)
-  counts: Counts;
-  namespaces: NamespaceObject[];
-  new_clients: {
-    counts: Counts;
-    namespaces: NamespaceObject[];
-    timestamp: string;
-  };
-};
-type ActivityMonthNoNewClients = {
-  timestamp: string; // YYYY-MM-01T00:00:00Z (always the first day of the month)
-  counts: Counts;
-  namespaces: NamespaceObject[];
-  new_clients: {
-    counts: null;
-    namespaces: null;
-  };
-};
-type ActivityMonthEmpty = {
-  timestamp: string; // YYYY-MM-01T00:00:00Z (always the first day of the month)
-  counts: null;
-  namespaces: null;
-  new_clients: null;
-};
-export type ActivityMonthBlock = ActivityMonthEmpty | ActivityMonthNoNewClients | ActivityMonthStandard;
-
-export interface Counts {
-  acme_clients: number;
-  clients: number;
-  entity_clients: number;
-  non_entity_clients: number;
-  secret_syncs: number;
 }

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import type { TotalClients } from 'core/utils/client-count-utils';
+import type { TotalClients } from './activity-api';
 
 // TotalClients and EmptyCount are mutually exclusive
 // but that's hard to represent in an interface

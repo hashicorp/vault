@@ -8,10 +8,10 @@ import { action } from '@ember/object';
 import { cached, tracked } from '@glimmer/tracking';
 import { paginate } from 'core/utils/paginate-list';
 import { next } from '@ember/runloop';
-
-import type { ClientFilterTypes } from 'core/utils/client-count-utils';
 import { service } from '@ember/service';
-import VersionService from 'vault/services/version';
+
+import type VersionService from 'vault/services/version';
+import type { ClientFilterTypes } from 'vault/vault/client-counts/activity-api';
 
 /**
  * @module ClientsTable
