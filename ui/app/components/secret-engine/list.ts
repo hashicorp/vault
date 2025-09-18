@@ -13,6 +13,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type ApiService from 'vault/services/api';
 import type RouterService from '@ember/routing/router-service';
+import type VersionService from 'vault/services/version';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
 /**
@@ -34,11 +35,16 @@ export default class SecretEngineList extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
+  @service declare readonly version: VersionService;
 
   @tracked secretEngineOptions: Array<string> | [] = [];
   @tracked selectedEngineType = '';
   @tracked selectedEngineName = '';
   @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
+
+  get clusterName() {
+    return this.version.clusterName;
+  }
 
   get displayableBackends() {
     return this.args.secretEngines.filter((backend) => backend.shouldIncludeInList);

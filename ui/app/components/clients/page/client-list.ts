@@ -7,14 +7,11 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { HTMLElementEvent } from 'vault/forms';
-import {
-  filterIsSupported,
-  filterTableData,
-  type ClientFilterTypes,
-  type ActivityExportData,
-} from 'core/utils/client-count-utils';
+import { filterIsSupported, filterTableData } from 'core/utils/client-count-utils';
 import { service } from '@ember/service';
 import FlagsService from 'vault/services/flags';
+
+import type { ActivityExportData, ClientFilterTypes } from 'vault/vault/client-counts/activity-api';
 
 // Define the base mapping to derive types from
 const CLIENT_TYPE_MAP = {

@@ -3,73 +3,29 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::Card::Container @level="high" @hasBorder={{true}} class="has-padding-l overflow-auto" data-test-mfa-form>
-  <Hds::Button @text="Back" @icon="arrow-left" @color="tertiary" {{on "click" @onCancel}} data-test-back-button />
-  <p data-test-mfa-description class="has-top-margin-m">
-    {{this.description}}
-  </p>
-  <form id="auth-form" {{on "submit" this.submit}}>
-    <MessageError @errorMessage={{this.error}} />
-    <div class="field has-top-margin-l">
-      {{#each this.constraints as |constraint index|}}
-        {{#if index}}
-          <hr />
-        {{/if}}
-        {{#if (gt constraint.methods.length 1)}}
-          <Select
-            @label="Multi-factor authentication method"
-            @options={{constraint.methods}}
-            @valueAttribute={{"id"}}
-            @labelAttribute={{"label"}}
-            @isFullwidth={{true}}
-            @noDefault={{true}}
-            @selectedValue={{constraint.selectedId}}
-            @onChange={{fn this.onSelect constraint}}
-            data-test-mfa-select={{index}}
-          />
-        {{else}}
-          <label for="passcode" class="is-label" data-test-mfa-label>
-            {{constraint.selectedMethod.label}}
-          </label>
-        {{/if}}
-        {{#if constraint.selectedMethod.uses_passcode}}
-          <div class="control">
-            {{! template-lint-disable no-autofocus-attribute}}
-            <Input
-              id="passcode"
-              name="passcode"
-              class="input"
-              autocomplete="off"
-              placeholder={{if (gt constraint.methods.length 1) "Enter passcode"}}
-              spellcheck="false"
-              autofocus="true"
-              disabled={{or this.validate.isRunning this.countdown}}
-              @value={{constraint.passcode}}
-              data-test-mfa-passcode={{index}}
-            />
-            {{! template-lint-enable no-autofocus-attribute}}
-          </div>
-        {{else if (eq constraint.methods.length 1)}}
-          <p class="has-text-grey-light" data-test-mfa-push-instruction>
-            Check device for push notification
-          </p>
-        {{/if}}
-      {{/each}}
-    </div>
-    {{#if this.countdown}}
-      <AlertInline @type="danger" class="has-bottom-padding-m" @message={{this.codeDelayMessage}} />
-    {{/if}}
-    <Hds::Button
-      @text="Verify"
-      @icon={{if this.validate.isRunning "loading"}}
-      id="validate"
-      type="submit"
-      disabled={{or this.validate.isRunning this.countdown}}
-      data-test-mfa-validate
-    />
-    {{#if this.countdown}}
-      <Icon @name="delay" class="has-text-grey" />
-      <span class="has-text-grey is-v-centered" data-test-mfa-countdown>{{this.countdown}}</span>
-    {{/if}}
-  </form>
-</Hds::Card::Container>
+{{#if this.fetchQrCode.isRunning}}
+  <Mfa::SplashCard @header="Redirecting..." @isLoading={{true}} data-test-mfa-form />
+{{else if this.currentSelfEnrollConstraint.qrCode}}
+  {{! Clicking "Continue" clears this.currentSelfEnrollConstraint.qrCode }}
+  <Mfa::Form::SelfEnroll
+    @constraints={{this.constraints}}
+    @onCancel={{@onCancel}}
+    @onVerify={{this.checkStateAndValidate}}
+  />
+{{else if (and (not this.validate.isRunning) this.needsToChoose)}}
+  {{! This component only renders when one enforcement with multiple methods is configured
+  Or there are multiple enforcements and each one has methods that support self-enrollment }}
+  <Mfa::Form::ChooseMethod @constraints={{this.constraints}} @onCancel={{@onCancel}} @onSelect={{this.onSelect}} />
+{{else}}
+  <Mfa::Form::Verify
+    @codeDelayMessage={{this.codeDelayMessage}}
+    @constraints={{this.constraints}}
+    @countdown={{this.countdown}}
+    @error={{this.error}}
+    @isLoading={{this.validate.isRunning}}
+    @methodAlreadyEnrolled={{this.methodAlreadyEnrolled}}
+    @onCancel={{@onCancel}}
+    @onSelect={{this.onSelect}}
+    @onVerify={{this.checkStateAndValidate}}
+  />
+{{/if}}

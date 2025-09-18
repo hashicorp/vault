@@ -7,6 +7,14 @@ export interface MfaRequirementApiResponse {
   mfa_request_id: string;
   mfa_constraints: MfaConstraints;
 }
+interface MfaTotpSelfEnrollApiResponse {
+  data: SelfEnrollmentData;
+}
+
+interface SelfEnrollmentData {
+  barcode: string;
+  url: string;
+}
 
 interface MfaConstraint {
   type: string;
@@ -20,22 +28,39 @@ interface MfaConstraints {
   };
 }
 
-export interface ParsedMfaRequirement {
-  mfaRequirement: {
-    mfa_request_id: string;
-    mfa_constraints: MfaConstraint[];
-  };
+interface ParsedMfaRequirement {
+  mfa_request_id: string;
+  mfa_constraints: ParsedMfaConstraint[];
 }
 
-interface MfaMethod {
+interface ParsedMfaConstraint {
+  name: string;
+  methods: ParsedMfaMethod[];
+  selectedMethod: ParsedMfaMethod | null;
+  passcode?: string; // DUMB
+}
+interface ParsedMfaMethod {
   type: string;
   id: string;
   uses_passcode: boolean;
   label: string;
+  self_enrollment_enabled?: boolean;
 }
 
-interface MfaConstraint {
+interface MfaAuthData {
+  mfaRequirement: ParsedMfaRequirement;
+  authMethodType: string;
+  authMountPath: string;
+}
+
+interface MfaConstraintState {
+  methods: ParsedMfaMethod[];
   name: string;
-  methods: MfaMethod[];
-  selectedMethod: MfaMethod;
+  passcode: string;
+  qrCode?: string;
+  selectedMethod?: ParsedMfaMethod;
+  selfEnrollMethod: ParsedMfaMethod | null;
+  isSatisfied: boolean;
+  setPasscode(value: string): void;
+  setSelectedMethod(value: string): void;
 }

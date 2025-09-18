@@ -9,13 +9,13 @@ import { action } from '@ember/object';
 import { debounce } from '@ember/runloop';
 import { capitalize } from '@ember/string';
 import { buildISOTimestamp, parseAPITimestamp } from 'core/utils/date-formatters';
+import { ClientFilters } from 'core/utils/client-count-utils';
 
-import {
+import type {
   ActivityExportData,
-  ClientFilters,
+  ClientFilterTypes,
   MountClients,
-  type ClientFilterTypes,
-} from 'core/utils/client-count-utils';
+} from 'vault/vault/client-counts/activity-api';
 import type { HTMLElementEvent } from 'vault/forms';
 
 interface Args {

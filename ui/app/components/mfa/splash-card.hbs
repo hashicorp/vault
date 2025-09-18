@@ -1,0 +1,66 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{! Display only template so all MFA steps are styled the same inside the SplashPage component }}
+
+<SplashPage class="wide-content" ...attributes>
+  <:header>
+    {{#if @renderLogo}}
+      <div class="is-flex-v-centered has-bottom-margin-xxl">
+        <div class="brand-icon-large">
+          <Icon @name="vault" @size="24" @stretched={{true}} />
+        </div>
+      </div>
+    {{/if}}
+    <h1 class="title is-4" data-test-page-title>{{@header}}</h1>
+    {{#if @subheader}}
+      <Hds::Text::Body @tag="h2" class="has-top-bottom-margin-xxs" data-test-mfa-subheader>
+        {{@subheader}}
+      </Hds::Text::Body>
+    {{/if}}
+  </:header>
+
+  <:content>
+    <div class="has-padding-l">
+
+      {{#if @isLoading}}
+        <Hds::Layout::Flex @justify="center" @align="center" class="is-medium-height">
+          <VaultLogoSpinner />
+        </Hds::Layout::Flex>
+      {{else}}
+        {{#if @subtitle}}
+          <Hds::Text::Body @tag="p" @weight="semibold" class="has-top-bottom-margin-xxs" data-test-mfa-subtitle>
+            {{@subtitle}}
+          </Hds::Text::Body>
+        {{/if}}
+
+        {{#if @description}}
+          <Hds::Text::Body @tag="p" class="has-bottom-margin-l" data-test-mfa-description>
+            {{@description}}
+          </Hds::Text::Body>
+        {{/if}}
+
+        {{#if (has-block "alerts")}}
+          {{yield to="alerts"}}
+        {{/if}}
+
+        {{#if (has-block "qrCode")}}
+          {{yield to="qrCode"}}
+        {{/if}}
+
+        {{#if (has-block "additionalContent")}}
+          {{yield to="additionalContent"}}
+        {{/if}}
+      {{/if}}
+    </div>
+  </:content>
+
+  <:footer>
+    <Hds::ButtonSet class="has-top-padding-m">
+      {{yield to="actions"}}
+    </Hds::ButtonSet>
+  </:footer>
+
+</SplashPage>
