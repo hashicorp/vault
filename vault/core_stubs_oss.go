@@ -139,3 +139,10 @@ func (c *Core) entGetPluginRuntimeDir() (string, error) {
 func (c *Core) entJoinPluginDir(_ string) (string, error) {
 	return "", fmt.Errorf("enterprise only feature")
 }
+
+// IsMountTypeAllowed returns true if a given secret engine mount type is permitted.
+// Forbidden mount types should be refused in mount requests, and any existing mounts
+// of that type should return an error on any routed external requests.
+func (c *Core) IsMountTypeAllowed(mountType string) bool {
+	return true
+}

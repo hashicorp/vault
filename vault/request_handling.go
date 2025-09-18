@@ -687,6 +687,10 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	var entry *MountEntry
 	req.MountPoint, entry = c.router.MatchingMountAndEntry(ctx, req.Path)
 
+	if entry != nil && entry.Table == mountTableType && !c.IsMountTypeAllowed(entry.Type) {
+		return logical.ErrorResponse("mounts of type %q aren't supported by license", entry.Type), logical.ErrInvalidRequest
+	}
+
 	// If the request requires a snapshot ID, we need to perform checks to
 	// ensure the request is valid and lock the snapshot, so it doesn't get
 	// unloaded while the request is being processed.

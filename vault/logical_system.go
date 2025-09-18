@@ -1525,6 +1525,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
 
+	if !b.Core.IsMountTypeAllowed(logicalType) {
+		return logical.ErrorResponse("mounts of type %q are not supported by license", logicalType),
+			logical.ErrInvalidRequest
+	}
+
 	var config MountConfig
 	var apiConfig APIMountConfig
 
