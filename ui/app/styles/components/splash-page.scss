@@ -32,3 +32,11 @@
 .splash-page-header {
   padding: size_variables.$spacing-14 0;
 }
+
+// Override default SplashPage styling which uses styles in columns.scss
+.wide-content {
+  .column.is-4-desktop {
+    max-width: 640px;
+    width: 75%;
+  }
+}

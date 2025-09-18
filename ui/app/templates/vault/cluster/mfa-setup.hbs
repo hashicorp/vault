@@ -3,31 +3,24 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<SplashPage>
-  <:header>
-    <h1 class="title is-4">MFA setup</h1>
-  </:header>
-  <:content>
-    <div class="has-padding-l" data-test-mfa-form>
-      {{#if (eq this.onStep 1)}}
-        <Mfa::MfaSetupStepOne
-          @isUUIDVerified={{this.isUUIDVerified}}
-          @restartFlow={{this.restartFlow}}
-          @saveUUIDandQrCode={{this.saveUUIDandQrCode}}
-          @showWarning={{this.showWarning}}
-          data-test-step-one
-        />
-      {{/if}}
-      {{#if (eq this.onStep 2)}}
-        <Mfa::MfaSetupStepTwo
-          @entityId={{this.entityId}}
-          @uuid={{this.uuid}}
-          @qrCode={{this.qrCode}}
-          @restartFlow={{this.restartFlow}}
-          @warning={{this.warning}}
-          data-test-step-two
-        />
-      {{/if}}
-    </div>
-  </:content>
-</SplashPage>
+{{#if (eq this.onStep 1)}}
+  <Mfa::MfaSetupStepOne
+    @header={{this.header}}
+    @description={{this.description}}
+    @isUUIDVerified={{this.isUUIDVerified}}
+    @restartFlow={{this.restartFlow}}
+    @saveUUIDandQrCode={{this.saveUUIDandQrCode}}
+    @showWarning={{this.showWarning}}
+  />
+{{/if}}
+{{#if (eq this.onStep 2)}}
+  <Mfa::MfaSetupStepTwo
+    @header={{this.header}}
+    @description={{this.description}}
+    @entityId={{this.entityId}}
+    @uuid={{this.uuid}}
+    @qrCode={{this.qrCode}}
+    @restartFlow={{this.restartFlow}}
+    @warning={{this.warning}}
+  />
+{{/if}}

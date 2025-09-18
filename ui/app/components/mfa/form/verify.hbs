@@ -1,0 +1,101 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Mfa::SplashCard
+  @header="Sign in to Vault"
+  @subheader={{this.headerText.subheader}}
+  @description={{this.description}}
+  @renderLogo={{true}}
+  data-test-mfa-form
+>
+
+  <:alerts>
+    <MessageError @errorMessage={{@error}} />
+  </:alerts>
+
+  <:additionalContent>
+    <form id="mfa-form" {{on "submit" this.handleSubmit}}>
+      {{#each (this.sortConstraints @constraints) as |constraint index|}}
+        {{#if index}}
+          <hr class="has-background-gray-300" />
+        {{/if}}
+        {{! Only render the select if there is more than one constraint
+        because otherwise the method is selected in Mfa::Form::ChooseMethod }}
+        {{#if (gt @constraints.length 1)}}
+          <Mfa::Form::MfaField
+            @fieldType="select"
+            @constraint={{constraint}}
+            @index={{index}}
+            @onSelect={{@onSelect}}
+            @disabled={{@methodAlreadyEnrolled constraint.selectedMethod.id}}
+          />
+        {{/if}}
+
+        {{#if constraint.selectedMethod.uses_passcode}}
+          {{#if (and (@methodAlreadyEnrolled constraint.selectedMethod.id) (not @error))}}
+            <Mfa::Form::MfaField
+              @fieldType="verified"
+              @label={{constraint.selectedMethod.label}}
+              @isInvalid={{this.hasValidationError constraint.selectedMethod.id}}
+            />
+          {{else}}
+            <Mfa::Form::MfaField
+              @fieldType="passcode"
+              @constraint={{constraint}}
+              @disabled={{or @isLoading @countdown}}
+              @index={{index}}
+              @isInvalid={{this.hasValidationError constraint.selectedMethod.id}}
+              @label={{constraint.selectedMethod.label}}
+            />
+          {{/if}}
+        {{else if (or (eq constraint.methods.length 1) @isLoading)}}
+          <Mfa::Form::MfaField
+            @fieldType="push"
+            @label={{constraint.selectedMethod.label}}
+            @isInvalid={{this.hasValidationError constraint.selectedMethod.id}}
+          />
+        {{/if}}
+
+      {{/each}}
+    </form>
+
+    {{#if @countdown}}
+      <AlertInline @type="danger" class="has-top-padding-m" @message={{@codeDelayMessage}} />
+    {{/if}}
+  </:additionalContent>
+
+  <:actions>
+    <Hds::Button
+      @icon={{if @isLoading "loading"}}
+      @text="Verify"
+      disabled={{or @isLoading @countdown}}
+      form="mfa-form"
+      id="validate"
+      type="submit"
+      data-test-button="Verify"
+    />
+
+    {{#if (and (gt this.singleConstraint.methods.length 1) (not @isLoading))}}
+      <Hds::Button
+        {{on "click" (fn @onSelect this.singleConstraint "")}}
+        @color="tertiary"
+        @icon="arrow-right"
+        @iconPosition="trailing"
+        @text="Try another method"
+        disabled={{@countdown}}
+        data-test-button="Try another method"
+      />
+    {{else}}
+      <Hds::Button {{on "click" @onCancel}} @color="secondary" @text="Cancel" disabled={{@countdown}} data-test-cancel />
+    {{/if}}
+
+    {{#if @countdown}}
+      <Hds::Alert @type="compact" @icon="delay" class="align-self-center" as |A|>
+        <A.Description data-test-mfa-countdown>{{@countdown}}</A.Description>
+      </Hds::Alert>
+    {{/if}}
+  </:actions>
+
+</Mfa::SplashCard>

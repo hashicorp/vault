@@ -1,0 +1,64 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{! This component renders when there are either multiple constraints with self-enroll methods or a single constraint with multiple methods }}
+<Mfa::SplashCard
+  @header="Verify your identity"
+  @subheader="Multi-factor authentication is enabled for your account. Choose one of the following methods to continue:"
+  @renderLogo={{true}}
+  data-test-mfa-form
+>
+  <:additionalContent>
+    {{#if this.singleConstraint}}
+      {{#each this.nonSelfEnrollMethods as |method|}}
+        <Hds::Button
+          {{on "click" (fn @onSelect this.singleConstraint method.id)}}
+          @color="secondary"
+          @icon={{this.displayIcon method.type}}
+          @isFullWidth={{true}}
+          @text="Verify with {{this.displayLabel method.type}}"
+          class="has-top-margin-s has-bottom-margin-xs"
+          data-test-button="Verify with {{this.displayLabel method.type}}"
+        />
+      {{/each}}
+
+      {{! Only one self-enroll method is supported per constraint right now }}
+      {{#if this.singleConstraint.selfEnrollMethod}}
+        <Hds::Layout::Flex @gap="16" @justify="center" @align="center">
+          <hr class="has-background-gray-300 is-flex-1" />
+          <Hds::Text::Body @color="faint">
+            Or
+          </Hds::Text::Body>
+          <hr class="has-background-gray-300 is-flex-1" />
+        </Hds::Layout::Flex>
+
+        {{#let this.singleConstraint.selfEnrollMethod as |method|}}
+          <Hds::Button
+            {{on "click" (fn @onSelect this.singleConstraint method.id)}}
+            @color="secondary"
+            @icon={{this.displayIcon method.type}}
+            @isFullWidth={{true}}
+            @text="Setup to verify with {{this.displayLabel method.type}}"
+            class="has-top-margin-xxs has-bottom-margin-xs"
+            data-test-button="Setup to verify with {{this.displayLabel method.type}}"
+          />
+        {{/let}}
+      {{/if}}
+    {{else}}
+      {{! If there are multiple constraints that support self-enrollment, the user needs to choose 
+      if they want to verify with a self-enroll method or another method for each one }}
+      {{#each this.selfEnrollConstraints as |constraint index|}}
+        {{#if index}}
+          <hr class="has-background-gray-300" />
+        {{/if}}
+        <Mfa::Form::MfaField @fieldType="select" @constraint={{constraint}} @index={{index}} @onSelect={{@onSelect}} />
+      {{/each}}
+    {{/if}}
+  </:additionalContent>
+
+  <:actions>
+    <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-cancel />
+  </:actions>
+</Mfa::SplashCard>

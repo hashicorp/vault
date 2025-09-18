@@ -1,0 +1,20 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Layout::Flex @justify="space-between" @align="center">
+  <Hds::Card::Container @hasBorder={{true}} class="has-padding-l">
+    <QrCode @text={{@qrCode}} @colorLight="#F7F7F7" @width={{175}} @height={{175}} @correctLevel="L" data-test-qrcode />
+  </Hds::Card::Container>
+  <Hds::Text::Body @tag="p" @weight="semibold">
+    Or
+  </Hds::Text::Body>
+  <Hds::Copy::Button @text="Copy TOTP setup URL" @textToCopy={{@qrCode}} data-test-copy-button />
+</Hds::Layout::Flex>
+
+<Hds::Alert @color="warning" @type="compact" class="has-top-padding-s" as |A|>
+  <A.Description>
+    For your security, this code is only shown once. Please scan or copy the setup URL into your authenticator app now.
+  </A.Description>
+</Hds::Alert>

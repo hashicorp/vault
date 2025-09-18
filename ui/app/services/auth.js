@@ -428,18 +428,12 @@ export default Service.extend({
       const constraints = [];
       for (const key in mfa_constraints) {
         const methods = mfa_constraints[key].any;
-        const isMulti = methods.length > 1;
-
         // friendly label for display in MfaForm
         methods.forEach((m) => {
           const typeFormatted = m.type === 'totp' ? m.type.toUpperCase() : capitalize(m.type);
           m.label = `${typeFormatted} ${m.uses_passcode ? 'passcode' : 'push notification'}`;
         });
-        constraints.push({
-          name: key,
-          methods,
-          selectedMethod: isMulti ? null : methods[0],
-        });
+        constraints.push({ name: key, methods });
       }
       return { mfa_request_id, mfa_constraints: constraints };
     }

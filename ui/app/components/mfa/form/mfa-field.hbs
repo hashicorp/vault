@@ -1,0 +1,80 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if (eq @fieldType "passcode")}}
+  {{! PASSCODE INPUT }}
+  <Hds::Form::TextInput::Field
+    {{on "input" (fn this.setPasscode @constraint)}}
+    @isInvalid={{@isInvalid}}
+    @value={{@constraint.passcode}}
+    autocomplete="off"
+    disabled={{@disabled}}
+    name="passcode"
+    placeholder="Enter passcode"
+    data-test-mfa-passcode={{or @index 0}}
+    as |F|
+  >
+    <F.Label data-test-mfa-label>
+      {{@label}}
+    </F.Label>
+  </Hds::Form::TextInput::Field>
+
+{{else if (eq @fieldType "select")}}
+  {{! SELECT METHOD DROPDOWN }}
+  {{#if (gt @constraint.methods.length 1)}}
+    <Hds::Form::Select::Field
+      {{on "change" (fn this.handleSelect @constraint)}}
+      class="has-bottom-margin-m"
+      name={{@constraint.name}}
+      data-test-mfa-select={{@index}}
+      disabled={{@disabled}}
+      as |F|
+    >
+      <F.Label>Multi-factor Login Enforcement</F.Label>
+      <F.HelperText>Select which method you would like to verify with.</F.HelperText>
+      <F.Options>
+        <option value="">Select one</option>
+        {{#each @constraint.methods as |method|}}
+          <option selected={{eq method.id @constraint.selectedMethod.id}} value={{method.id}}>
+            {{method.label}}
+            {{#if method.self_enrollment_enabled}}
+              (supports self-enrollment)
+            {{/if}}
+          </option>
+        {{/each}}
+      </F.Options>
+    </Hds::Form::Select::Field>
+  {{/if}}
+
+{{else if (eq @fieldType "verified")}}
+  {{! PENDING VERIFICATION }}
+  <Hds::Text::Body @tag="p" @weight="semibold" class="has-top-bottom-margin-xxs" data-test-mfa-verified={{@label}}>
+    {{@label}}
+  </Hds::Text::Body>
+  <Hds::Text::Body @tag="p" @color="faint" @size="100" class="has-top-bottom-margin-xxs">
+    Your recently enrolled device will be verified along with any other MFA methods.
+  </Hds::Text::Body>
+  <Hds::Badge @text="Verification pending" />
+
+{{else if (eq @fieldType "push")}}
+  {{! PUSH NOTIFICATION }}
+  <Hds::Text::Body @tag="p" @weight="semibold" class="has-top-bottom-margin-xxs" data-test-mfa-label>
+    {{@label}}
+  </Hds::Text::Body>
+
+  {{#unless @isInvalid}}
+    <Hds::Text::Body @tag="p" @color="faint" @size="100" class="has-top-bottom-margin-xxs" data-test-mfa-push-instruction>
+      Check device for push notification
+    </Hds::Text::Body>
+  {{/unless}}
+
+{{/if}}
+
+{{! Renders method specific validation error }}
+{{#if @isInvalid}}
+  <Hds::Alert @type="compact" @color="critical" class="has-top-margin-xs" as |A|>
+    <A.Description>Validation failed.</A.Description>
+  </Hds::Alert>
+{{/if}}

@@ -1,0 +1,44 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Mfa::SplashCard
+  @header="Set up MFA TOTP to continue"
+  @subheader="Your organization has enforced MFA TOTP to protect your accounts. Set up to continue."
+  @subtitle={{unless this.hasScannedQrCode "Scan the QR code to continue"}}
+  @description={{this.description}}
+  @renderLogo={{true}}
+  data-test-mfa-form
+>
+
+  {{! Step One: Scan QR Code }}
+  <:qrCode>
+    {{#unless this.hasScannedQrCode}}
+      <Mfa::QrCodeCard @qrCode={{this.selfEnrollConstraint.qrCode}} />
+    {{/unless}}
+  </:qrCode>
+
+  {{! Step Two: Validate TOTP }}
+  <:additionalContent>
+    {{#if this.hasScannedQrCode}}
+      <form id="mfa-enroll-form" {{on "submit" this.handleSubmit}}>
+        <Mfa::Form::MfaField
+          @fieldType="passcode"
+          @constraint={{this.selfEnrollConstraint}}
+          @label="Enter your one-time code"
+        />
+      </form>
+    {{/if}}
+  </:additionalContent>
+
+  <:actions>
+    {{#if this.hasScannedQrCode}}
+      <Hds::Button @text="Verify" form="mfa-enroll-form" id="validate" type="submit" data-test-button="Verify" />
+    {{else}}
+      <Hds::Button @text="Continue" {{on "click" (fn (mut this.hasScannedQrCode) true)}} data-test-button="Continue" />
+    {{/if}}
+    <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-cancel />
+  </:actions>
+
+</Mfa::SplashCard>

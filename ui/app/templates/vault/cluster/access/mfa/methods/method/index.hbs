@@ -21,11 +21,17 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs" aria-label="tabs">
     <ul>
-      <LinkTo @route="vault.cluster.access.mfa.methods.method" @query={{hash tab="config"}} data-test-tab="config">
+      <LinkTo
+        @route="vault.cluster.access.mfa.methods.method"
+        @model={{this.model.method.id}}
+        @query={{hash tab="config"}}
+        data-test-tab="config"
+      >
         Configuration
       </LinkTo>
       <LinkTo
         @route="vault.cluster.access.mfa.methods.method"
+        @model={{this.model.method.id}}
         @query={{hash tab="enforcements"}}
         data-test-tab="enforcements"
       >

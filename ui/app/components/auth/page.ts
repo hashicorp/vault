@@ -13,6 +13,7 @@ import type { NormalizedAuthData, UnauthMountsByType, UnauthMountsResponse } fro
 import type AuthService from 'vault/vault/services/auth';
 import type ClusterModel from 'vault/models/cluster';
 import type CspEventService from 'vault/services/csp-event';
+import type { MfaAuthData } from 'vault/vault/auth/mfa';
 
 /**
  * @module AuthPage
@@ -87,12 +88,6 @@ interface Args {
   onAuthSuccess: CallableFunction;
   visibleAuthMounts: UnauthMountsResponse;
   roleQueryParam?: string;
-}
-
-interface MfaAuthData {
-  mfaRequirement: object;
-  authMethodType: string;
-  authMountPath: string;
 }
 
 enum FormView {

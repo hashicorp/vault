@@ -40,9 +40,9 @@ const mfaTests = (test) => {
     assert
       .dom(MFA_SELECTORS.mfaForm)
       .hasText(
-        'Back Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
+        'Sign in to Vault Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify Cancel'
       );
-    await click(GENERAL.backButton);
+    await click(GENERAL.cancelButton);
     assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
     assert.dom(AUTH_FORM.selectMethod).hasValue(this.authType, 'preserves method type on back');
     for (const field of loginKeys) {
@@ -72,9 +72,9 @@ const mfaTests = (test) => {
     assert
       .dom(MFA_SELECTORS.mfaForm)
       .hasText(
-        'Back Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
+        'Sign in to Vault Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify Cancel'
       );
-    await click(GENERAL.backButton);
+    await click(GENERAL.cancelButton);
     assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
     assert.dom(AUTH_FORM.selectMethod).hasValue(this.authType, 'preserves method type on back');
     for (const field of loginKeys) {
@@ -106,7 +106,7 @@ const mfaTests = (test) => {
     await click(GENERAL.submitButton);
     await waitFor(MFA_SELECTORS.mfaForm);
     await fillIn(MFA_SELECTORS.passcode(0), expectedOtp);
-    await click(MFA_SELECTORS.validate);
+    await click(GENERAL.button('Verify'));
   });
 
   test('it submits mfa requirement for custom paths', async function (assert) {
@@ -134,7 +134,7 @@ const mfaTests = (test) => {
     await click(GENERAL.submitButton);
     await waitFor(MFA_SELECTORS.mfaForm);
     await fillIn(MFA_SELECTORS.passcode(0), expectedOtp);
-    await click(MFA_SELECTORS.validate);
+    await click(GENERAL.button('Verify'));
   });
 };
 
