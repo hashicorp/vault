@@ -3,9 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::Form::Field @layout="vertical" @isInvalid={{this.errorMessage}} as |F|>
-  <F.Label>{{this.formField.label}}</F.Label>
-  <F.HelperText>{{this.formField.helperText}}</F.HelperText>
+<Hds::Form::Field @layout="vertical" @isInvalid={{this.errorMessage}} data-test-ttl-picker-v2 as |F|>
+  <F.Label data-test-form-field-label={{@ttlKey}}>{{this.formField.label}}</F.Label>
+  <F.HelperText data-test-help-text={{@ttlKey}}>{{this.formField.helperText}}</F.HelperText>
   <F.Control>
     <Hds::SegmentedGroup as |SG|>
       <SG.TextInput
@@ -14,9 +14,18 @@
         @value={{this.time}}
         {{on "input" this.setTtlTime}}
         name="{{@ttlKey}}-time"
+        aria-label={{concat this.formField.label "time"}}
         autocomplete="off"
+        data-test-input={{@ttlKey}}
       />
-      <SG.Select @width="100px" name="{{@ttlKey}}-unit" {{on "input" this.setUnit}} as |S|>
+      <SG.Select
+        @width="100px"
+        name="{{@ttlKey}}-unit"
+        {{on "input" this.setUnit}}
+        aria-label={{concat this.formField.label "unit"}}
+        data-test-select={{@ttlKey}}
+        as |S|
+      >
         <S.Options>
           {{#each this.unitOptions as |unit|}}
             <option value={{unit.value}} selected={{eq unit.value this.selectedUnit}}>{{unit.label}}</option>
@@ -26,6 +35,6 @@
     </Hds::SegmentedGroup>
   </F.Control>
   {{#if this.errorMessage}}
-    <F.Error>{{this.errorMessage}}</F.Error>
+    <F.Error data-test-message-error>{{this.errorMessage}}</F.Error>
   {{/if}}
 </Hds::Form::Field>

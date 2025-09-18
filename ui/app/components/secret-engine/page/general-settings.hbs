@@ -2,7 +2,6 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
-
 <SecretEngine::PageHeader @model={{@model}} />
 
 {{#if this.saveGeneralSettings.isRunning}}
@@ -46,11 +45,11 @@
 {{/if}}
 
 {{#if this.showUnsavedChangesModal}}
-  <Hds::Modal id="unsavedChangesModal" @onClose={{this.closeUnsavedChangesModal}} as |M|>
-    <M.Header>
+  <Hds::Modal id="unsavedChangesModal" @onClose={{this.closeUnsavedChangesModal}} data-test-modal="unsaved-changes" as |M|>
+    <M.Header data-test-modal-header="unsaved-changes">
       Unsaved changes
     </M.Header>
-    <M.Body>
+    <M.Body data-test-modal-body="unsaved-changes">
       <p class="hds-typography-body-300 hds-foreground-primary">You've made changes to the following
         <Hds::Text::Display>{{@model.secretsEngine.id}}</Hds::Text::Display>
         settings:</p>
@@ -64,8 +63,19 @@
     </M.Body>
     <M.Footer>
       <Hds::ButtonSet>
-        <Hds::Button type="button" @text="Save changes" {{on "click" (perform this.saveGeneralSettings)}} />
-        <Hds::Button type="button" @text="Discard changes" @color="secondary" {{on "click" this.discardChanges}} />
+        <Hds::Button
+          type="button"
+          @text="Save changes"
+          data-test-button="save"
+          {{on "click" (perform this.saveGeneralSettings)}}
+        />
+        <Hds::Button
+          type="button"
+          @text="Discard changes"
+          @color="secondary"
+          data-test-button="discard"
+          {{on "click" this.discardChanges}}
+        />
       </Hds::ButtonSet>
     </M.Footer>
   </Hds::Modal>

@@ -2,7 +2,13 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
-<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-m has-top-bottom-margin" ...attributes>
+<Hds::Card::Container
+  @level="mid"
+  @hasBorder={{true}}
+  class="has-padding-m has-top-bottom-margin"
+  data-test-card-container="version"
+  ...attributes
+>
   <Hds::Text::Display @size="300" @tag="h2" class="has-bottom-margin-s hds-foreground-strong">Version</Hds::Text::Display>
 
   <Hds::Layout::Grid @columnMinWidth="10%" @gap="12" {{style height="100%" grid-template-rows="min-content"}} as |LG|>
@@ -15,9 +21,13 @@
       <Hds::Text::Body
         @tag="p"
         class="hds-border-strong has-side-padding-8 border-radius-4 is-inline-block has-bottom-margin-s"
+        data-test-engine-type
       >{{@model.secretsEngine.type}}</Hds::Text::Body>
       {{! TODO: Verify if we want to display the full version or chop down ie. v0.17.1 vs v0.17.1-0.230942309423094... }}
-      <Hds::Text::Body @tag="p">{{@model.secretsEngine.running_plugin_version}}</Hds::Text::Body>
+      <Hds::Text::Body
+        @tag="p"
+        data-test-engine-current-version
+      >{{@model.secretsEngine.running_plugin_version}}</Hds::Text::Body>
     </LG.Item>
   </Hds::Layout::Grid>
 
@@ -25,7 +35,7 @@
     <Hds::Separator />
 
     <Hds::Layout::Flex @isInline="true">
-      <Hds::Form::Select::Field name="plugin-version" as |F|>
+      <Hds::Form::Select::Field name="plugin-version" data-test-versions-dropdown as |F|>
         <F.Label>Update version to:</F.Label>
         <F.Options>
           <option value="">Select version</option>

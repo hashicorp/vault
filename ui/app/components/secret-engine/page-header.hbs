@@ -26,14 +26,14 @@
     <div class="tabs-container box is-marginless is-fullwidth is-paddingless">
       <nav class="tabs" aria-label={{@model.secretsEngine.id}}>
         <ul>
-          <li>
+          <li data-test-tab="general-settings">
             <LinkTo @route="vault.cluster.secrets.backend.configuration.general-settings" @model={{@model.secretsEngine.id}}>
               General settings
             </LinkTo>
           </li>
           {{! If engine is not configurable, hide plugin settings link }}
           {{#if (get (engines-display-data @model.secretsEngine.type) "isConfigurable")}}
-            <li>
+            <li data-test-tab="plugin-settings">
               <LinkTo
                 @route="vault.cluster.secrets.backend.configuration.plugin-settings"
                 @model={{@model.secretsEngine.id}}

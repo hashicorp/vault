@@ -2,7 +2,13 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
-<Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-m has-top-bottom-margin" ...attributes>
+<Hds::Card::Container
+  @level="mid"
+  @hasBorder={{true}}
+  class="has-padding-m has-top-bottom-margin"
+  data-test-card-container="lease-duration"
+  ...attributes
+>
   <Hds::Text::Display @size="300" @tag="h2" class="has-bottom-margin-s hds-foreground-strong">Lease Duration</Hds::Text::Display>
 
   <Hds::Layout::Flex @align="start" @gap="16" class="has-bottom-margin-m">
