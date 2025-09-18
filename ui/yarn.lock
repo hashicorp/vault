@@ -14300,17 +14300,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-notifier@npm:8.0.2":
-  version: 8.0.2
-  resolution: "node-notifier@npm:8.0.2"
+"node-notifier@npm:^10.0.0":
+  version: 10.0.1
+  resolution: "node-notifier@npm:10.0.1"
   dependencies:
     growly: ^1.3.0
     is-wsl: ^2.2.0
-    semver: ^7.3.2
+    semver: ^7.3.5
     shellwords: ^0.1.1
-    uuid: ^8.3.0
+    uuid: ^8.3.2
     which: ^2.0.2
-  checksum: 7db1683003f6aaa4324959dfa663cd56e301ccc0165977a9e7737989ffe3b4763297f9fc85f44d0662b63a4fd85516eda43411b492a4d2fae207afb23773f912
+  checksum: ac09456152e433462dd3ca277048de7a60c6d63fc657e00ac72805841baf9bb2573e8d3f64c4b64af73546d1ed39733af6b0036c38b57a83c883aa33fff35a2e
   languageName: node
   linkType: hard
 
@@ -18401,7 +18401,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:^8.3.0":
+"uuid@npm:^8.3.2":
   version: 8.3.2
   resolution: "uuid@npm:8.3.2"
   bin:
@@ -18563,7 +18563,6 @@ __metadata:
     lint-staged: ~16.0.0
     loader.js: ~4.7.0
     miragejs: ~0.1.48
-    node-notifier: 8.0.2
     pkijs: ~2.4.0
     posthog-js: ^1.202.2
     prettier: 3.0.3
