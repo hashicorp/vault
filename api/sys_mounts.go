@@ -222,11 +222,16 @@ func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) 
 	return &result, err
 }
 
+func (c *Sys) TuneMountAllowNil(path string, config map[string]interface{}) error {
+	return c.TuneMountAllowNilWithContext(context.Background(), path, config)
+}
+
+// Deprecated: newer functionality should use TuneMountAllowNil instead so that parameters can be set to the nil value
 func (c *Sys) TuneMount(path string, config MountConfigInput) error {
 	return c.TuneMountWithContext(context.Background(), path, config)
 }
 
-func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config MountConfigInput) error {
+func (c *Sys) TuneMountAllowNilWithContext(ctx context.Context, path string, config map[string]interface{}) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
@@ -240,6 +245,76 @@ func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config Moun
 		defer resp.Body.Close()
 	}
 	return err
+}
+
+// Deprecated: newer functionality should use TuneMountAllowNilWithContext instead, so that configuration can be set to
+// a nil value.
+func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config MountConfigInput) error {
+	mapConfig := map[string]interface{}{}
+
+	mapConfig["options"] = config.Options
+	mapConfig["default_lease_ttl"] = config.DefaultLeaseTTL
+
+	if config.Description != nil { // Because omitempty in the JSON
+		mapConfig["description"] = config.Description
+	}
+
+	mapConfig["max_lease_ttl"] = config.MaxLeaseTTL
+	mapConfig["force_no_cache"] = config.ForceNoCache
+
+	if len(config.AuditNonHMACRequestKeys) != 0 { // Because omitempty in the JSON
+		mapConfig["audit_non_hmac_request_keys"] = config.AuditNonHMACRequestKeys
+	}
+
+	if len(config.AuditNonHMACResponseKeys) != 0 { // Because omitempty in the JSON
+		mapConfig["audit_non_hmac_response_keys"] = config.AuditNonHMACResponseKeys
+	}
+
+	if config.ListingVisibility != "" { // Because omitempty in the JSON
+		mapConfig["listing_visibility"] = config.ListingVisibility
+	}
+
+	if len(config.PassthroughRequestHeaders) != 0 { // Because omitempty in the JSON
+		mapConfig["passthrough_request_headers"] = config.PassthroughRequestHeaders
+	}
+
+	if len(config.AllowedResponseHeaders) != 0 { // Because omitempty in the JSON
+		mapConfig["allowed_response_headers"] = config.AllowedResponseHeaders
+	}
+
+	if config.TokenType != "" { // Because omitempty in the JSON
+		mapConfig["token_type"] = config.TokenType
+	}
+
+	if len(config.AllowedManagedKeys) != 0 { // Because omitempty in the JSON
+		mapConfig["allowed_managed_keys"] = config.AllowedManagedKeys
+	}
+
+	if config.PluginVersion != "" { // Because omitempty in the JSON
+		mapConfig["plugin_version"] = config.PluginVersion
+	}
+
+	if config.UserLockoutConfig != nil { // Because omitempty in the JSON
+		mapConfig["user_lockout_config"] = config.UserLockoutConfig
+	}
+
+	if len(config.DelegatedAuthAccessors) != 0 { // Because omitempty in the JSON
+		mapConfig["delegated_auth_accessors"] = config.DelegatedAuthAccessors
+	}
+
+	if config.IdentityTokenKey != "" { // Because omitempty in the JSON
+		mapConfig["identity_token_key"] = config.IdentityTokenKey
+	}
+
+	if config.TrimRequestTrailingSlashes != nil { // Because omitempty in the JSON
+		mapConfig["trim_request_trailing_slashes"] = config.TrimRequestTrailingSlashes
+	}
+
+	if config.PluginName != "" { // Because omitempty in the JSON
+		mapConfig["plugin_name"] = config.PluginName
+	}
+
+	return c.TuneMountAllowNilWithContext(ctx, path, mapConfig)
 }
 
 func (c *Sys) MountConfig(path string) (*MountConfigOutput, error) {
