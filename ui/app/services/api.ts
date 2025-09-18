@@ -137,6 +137,8 @@ export default class ApiService extends Service {
         namespace: 'X-Vault-Namespace',
         token: 'X-Vault-Token',
         wrap: 'X-Vault-Wrap-TTL',
+        recoverSnapshotId: 'X-Vault-Recover-Snapshot-Id',
+        recoverSourcePath: 'X-Vault-Recover-Source-Path',
       }[key] as keyof XVaultHeaders;
 
       headers[headerKey] = headerMap[key as keyof HeaderMap];

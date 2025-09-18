@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, find, render } from '@ember/test-helpers';
+import { click, fillIn, find, render, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -78,23 +78,43 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
     assert.strictEqual(nsSelect.textContent.trim(), 'root', 'namespace was reset');
 
     const mountSelect = find(GENERAL.selectByAttr('mount'));
-    assert.strictEqual(mountSelect.textContent.trim(), '', 'mount is cleared');
+    assert.strictEqual(mountSelect.textContent.trim(), 'Select a mount here', 'mount is cleared');
 
     assert.dom(GENERAL.inputByAttr('resourcePath')).hasValue('', 'resource path is cleared');
   });
 
-  test('it performs read operation successfully in root namespace', async function (assert) {
+  test('it performs read operation successfully in root namespace - secret engine', async function (assert) {
     await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
 
     await click(GENERAL.selectByAttr('mount'));
-    await click('[data-option-index]');
+    await click('[data-option-index="1.0"]');
     await fillIn(GENERAL.inputByAttr('resourcePath'), 'my-path');
 
     await click(GENERAL.button('read'));
+    await waitFor('[data-test-read-secrets]');
 
     // Open modal
     assert.dom('[data-test-read-secrets]').exists('renders read modal');
     assert.dom(GENERAL.infoRowLabel('secret_key')).exists('renders secret data');
+
+    // Close modal
+    await click(GENERAL.button('close'));
+    assert.dom('[data-test-read-secrets]').doesNotExist('read modal closed');
+  });
+
+  test('it performs read operation successfully in root namespace - database', async function (assert) {
+    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
+
+    await click(GENERAL.selectByAttr('mount'));
+    await click('[data-option-index="0.0"]');
+    await fillIn(GENERAL.inputByAttr('resourcePath'), 'test-static-role');
+
+    await click(GENERAL.button('read'));
+    await waitFor('[data-test-read-secrets]');
+
+    // Open modal
+    assert.dom('[data-test-read-secrets]').exists('renders read modal');
+    assert.dom(GENERAL.infoRowLabel('db_name')).exists('renders role data');
 
     // Close modal
     await click(GENERAL.button('close'));
@@ -107,7 +127,7 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
     await click(GENERAL.selectByAttr('namespace'));
     await click('[data-option-index="1"]');
     await click(GENERAL.selectByAttr('mount'));
-    await click('[data-option-index]');
+    await click('[data-option-index="1.0"]');
     await fillIn(GENERAL.inputByAttr('resourcePath'), 'my-path');
 
     await click(GENERAL.button('read'));
@@ -121,17 +141,29 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
     assert.dom('[data-test-read-secrets]').doesNotExist('read modal closed');
   });
 
-  test('it performs recover operation successfully in root namespace', async function (assert) {
+  test('it performs recover operation successfully in root namespace - secret engine', async function (assert) {
     await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
 
     await click(GENERAL.selectByAttr('mount'));
-    await click('[data-option-index]');
+    await click('[data-option-index="1.0"]');
     await fillIn(GENERAL.inputByAttr('resourcePath'), 'recovered-secret');
 
     await click(GENERAL.button('recover'));
 
     assert.dom(GENERAL.inlineAlert).containsText('Success', 'shows success message');
     assert.dom(GENERAL.inlineAlert).containsText('recovered-secret', 'shows the recovered path');
+  });
+
+  test('it performs recover operation successfully in root namespace - database', async function (assert) {
+    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
+    await click(GENERAL.selectByAttr('mount'));
+    await click('[data-option-index="0.0"]');
+    await fillIn(GENERAL.inputByAttr('resourcePath'), 'test-static-role');
+
+    await click(GENERAL.button('recover'));
+
+    assert.dom(GENERAL.inlineAlert).containsText('Success', 'shows success message');
+    assert.dom(GENERAL.inlineAlert).containsText('test-static-role', 'shows the recovered path');
   });
 
   test('it performs recover operation successfully for child namespace while in root context', async function (assert) {
@@ -154,7 +186,7 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
 
     await fillIn(GENERAL.inputByAttr('resourcePath'), 'nonexistent-secret');
     await click(GENERAL.selectByAttr('mount'));
-    await click('[data-option-index]');
+    await click('[data-option-index="1.0"]');
     await click(GENERAL.button('read'));
 
     assert.dom(GENERAL.inlineAlert).containsText('Error', 'shows error alert');
@@ -167,6 +199,7 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
     await click(GENERAL.selectByAttr('mount'));
     await click('[data-option-index]');
     await click(GENERAL.button('read'));
+    await waitFor('[data-test-read-secrets]');
 
     assert.dom('[data-test-read-secrets]').exists('read modal opens');
 

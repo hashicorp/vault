@@ -88,8 +88,10 @@
       @selected={{this.selectedMount}}
       @options={{this.mountOptions}}
       @searchEnabled={{true}}
+      @searchField="path"
       @isInvalid={{this.mountError}}
       @selectedItemComponent={{component "recovery/snapshot-mount-selected-item"}}
+      @placeholder="Select a mount here"
       data-test-select="mount"
       as |F|
     >
@@ -111,7 +113,7 @@
       <F.Label>Mount Path</F.Label>
       <F.Control>
         <Hds::SegmentedGroup as |SG|>
-          <SG.Dropdown as |D|>
+          <SG.Dropdown @listPosition="bottom-left" as |D|>
             <D.ToggleButton @color="secondary" @text={{or this.selectedMount.type "Type"}} />
             {{#each this.recoverySupportedEngines as |engine|}}
               <D.Radio
@@ -147,6 +149,7 @@
   <Hds::Form::TextInput::Field
     @value={{this.resourcePath}}
     @isInvalid={{this.resourcePathError}}
+    placeholder="Enter the resource path..."
     {{on "input" this.updateResourcePath}}
     data-test-input="resourcePath"
     as |F|

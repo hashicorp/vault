@@ -80,6 +80,9 @@
               endpoint.
             </F.HelperText>
             <F.Options>{{F.options}}</F.Options>
+            {{#if this.configError}}
+              <F.Error data-test-validation-error="config">{{this.configError}}</F.Error>
+            {{/if}}
           </Hds::Form::SuperSelect::Single::Field>
         {{else}}
           <Hds::Form::TextInput::Field
