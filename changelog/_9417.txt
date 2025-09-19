@@ -1,0 +1,3 @@
+```release-note:change
+database/snowflake: Update plugin to [v0.14.2](https://github.com/hashicorp/vault-plugin-database-snowflake/releases/tag/v0.14.2)
+```
