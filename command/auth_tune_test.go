@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 )
 
 func testAuthTuneCommand(tb testing.TB) (*cli.MockUi, *AuthTuneCommand) {
@@ -296,4 +297,140 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 		_, cmd := testAuthTuneCommand(t)
 		assertNoTabs(t, cmd)
 	})
+}
+
+// TestUnsetFieldsAuthTune first sets the array and string values on the auth mount, then in a second call sets those
+// fields back to the original empty list or empty string.  Then the new values are read to check that they are in fact
+// 'unset' properly.  This is a regression test (VAULT-34426).
+func TestUnsetFieldsAuthTune(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	// Mount
+	if err := client.Sys().EnableAuthWithOptions("my-auth", &api.EnableAuthOptions{
+		Type: "userpass",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	mountInfo, err := client.Sys().GetAuth("my-auth/")
+	if err != nil {
+		t.Fatalf("expected my-auth endpoint to exist: %v", err)
+	}
+
+	ui, cmdSet := testAuthTuneCommand(t)
+	cmdSet.client = client
+
+	code := cmdSet.Run([]string{
+		"-description", "new description",
+		"-default-lease-ttl", "30m",
+		"-max-lease-ttl", "1h",
+		"-audit-non-hmac-request-keys", "foo,bar",
+		"-audit-non-hmac-response-keys", "foo,bar",
+		"-passthrough-request-headers", "authorization",
+		"-allowed-response-headers", "authorization,www-authentication",
+		"-listing-visibility", "unauth",
+		"-identity-token-key", "default",
+		"-trim-request-trailing-slashes=true",
+		"my-auth/",
+	})
+	if exp := 0; code != exp {
+		t.Fatalf("expected %d to be %d", code, exp)
+	}
+
+	expected := "Success! Tuned the auth method at: my-auth/"
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	if !strings.Contains(combined, expected) {
+		t.Fatalf("expected %q to contain %q", combined, expected)
+	}
+
+	mountInfo, err = client.Sys().GetAuth("my-auth/")
+	if err != nil {
+		t.Fatalf("expected my-auth endpoint to exist: %v", err)
+	}
+
+	if exp := "new description"; mountInfo.Description != exp {
+		t.Fatalf("expected %q to be %q", mountInfo.Description, exp)
+	}
+	if exp := "userpass"; mountInfo.Type != exp {
+		t.Fatalf("expected %q to be %q", mountInfo.Type, exp)
+	}
+	if exp := 1800; mountInfo.Config.DefaultLeaseTTL != exp {
+		t.Fatalf("expected %d to be %d", mountInfo.Config.DefaultLeaseTTL, exp)
+	}
+	if exp := 3600; mountInfo.Config.MaxLeaseTTL != exp {
+		t.Fatalf("expected %d to be %d", mountInfo.Config.MaxLeaseTTL, exp)
+	}
+	if !mountInfo.Config.TrimRequestTrailingSlashes {
+		t.Fatalf("expected trim_request_trailing_slashes to be enabled")
+	}
+	if diff := deep.Equal([]string{"authorization"}, mountInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
+		t.Fatalf("Failed to find expected values in PassthroughRequestHeaders. Difference is: %v", diff)
+	}
+	if diff := deep.Equal([]string{"authorization,www-authentication"}, mountInfo.Config.AllowedResponseHeaders); len(diff) > 0 {
+		t.Fatalf("Failed to find expected values in AllowedResponseHeaders. Difference is: %v", diff)
+	}
+	if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACRequestKeys); len(diff) > 0 {
+		t.Fatalf("Failed to find expected values in AuditNonHMACRequestKeys. Difference is: %v", diff)
+	}
+	if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
+		t.Fatalf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
+	}
+	if diff := deep.Equal("default", mountInfo.Config.IdentityTokenKey); len(diff) > 0 {
+		t.Fatalf("Failed to find expected values in IdentityTokenKey. Difference is: %v", diff)
+	}
+
+	uiNew, cmdUnset := testAuthTuneCommand(t)
+	cmdUnset.client = client
+
+	unsetCode := cmdUnset.Run([]string{
+		"-description", "",
+		"-default-lease-ttl", "30m",
+		"-max-lease-ttl", "1h",
+		"-audit-non-hmac-request-keys", "",
+		"-audit-non-hmac-response-keys", "",
+		"-passthrough-request-headers", "",
+		"-allowed-response-headers", "",
+		"-listing-visibility", "unauth",
+		"-identity-token-key", "",
+		"-trim-request-trailing-slashes=false",
+		"my-auth/",
+	})
+	if exp := 0; unsetCode != exp {
+		t.Fatalf("expected %d to be %d", unsetCode, exp)
+	}
+
+	combined = uiNew.OutputWriter.String() + uiNew.ErrorWriter.String()
+	if !strings.Contains(combined, expected) {
+		t.Fatalf("expected %q to contain %q", combined, expected)
+	}
+
+	mountInfo, err = client.Sys().GetAuth("my-auth/")
+	if err != nil {
+		t.Fatalf("expected to be able to fetch auth: %v", err)
+	}
+
+	if exp := ""; mountInfo.Description != exp {
+		t.Fatalf("expected %q to be %q", mountInfo.Description, exp)
+	}
+	if mountInfo.Config.TrimRequestTrailingSlashes {
+		t.Fatalf("expected trim_request_trailing_slashes to be disabled")
+	}
+	if mountInfo.Config.PassthroughRequestHeaders != nil {
+		t.Fatalf("Failed to find expected values in PassthroughRequestHeaders. Expected nil slice got: %v", mountInfo.Config.PassthroughRequestHeaders)
+	}
+	if mountInfo.Config.AllowedResponseHeaders != nil {
+		t.Fatalf("Failed to find expected values in AllowedResponseHeaders. Expected nil slice got: %v", mountInfo.Config.AllowedResponseHeaders)
+	}
+	if mountInfo.Config.AuditNonHMACRequestKeys != nil {
+		t.Fatalf("Failed to find expected values in AuditNonHMACRequestKeys. Expected nil slice got: %v", mountInfo.Config.AuditNonHMACRequestKeys)
+	}
+	if mountInfo.Config.AuditNonHMACResponseKeys != nil {
+		t.Fatalf("Failed to find expected values in AuditNonHMACResponseKeys. Expected nil slice got: %v", mountInfo.Config.AuditNonHMACResponseKeys)
+	}
+	if diff := deep.Equal("", mountInfo.Config.IdentityTokenKey); len(diff) > 0 {
+		t.Fatalf("Failed to find expected values in IdentityTokenKey. Difference is: %v", diff)
+	}
 }
