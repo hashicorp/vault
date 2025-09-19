@@ -80,7 +80,7 @@ func (r *FindWorkflowArtifactReq) Run(ctx context.Context, client *gh.Client) (*
 	}
 
 	if len(runs) < 1 {
-		return nil, fmt.Errorf("no matching workflow runs are associated with the pull request: %w", err)
+		return nil, fmt.Errorf("no matching workflow runs are associated with the pull request")
 	}
 
 	// In instances where we have more than one run we want to get the artifact

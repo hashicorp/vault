@@ -1,0 +1,24 @@
+name: build-hcp-image
+
+on:
+  workflow_call:
+    inputs:
+      pull-request:
+        type: number
+      create-azure-image:
+        type: boolean
+      create-aws-image:
+        type: boolean
+      hcp-environment:
+        type: string
+    outputs:
+      artifact:
+        value: shim
+      image:
+        value: shim
+
+jobs:
+  create-image:
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 0
