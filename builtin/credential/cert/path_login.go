@@ -432,6 +432,7 @@ func (b *backend) matchesConstraints(ctx context.Context, clientCert *x509.Certi
 		b.matchesEmailSANs(clientCert, config) &&
 		b.matchesURISANs(clientCert, config) &&
 		b.matchesOrganizationalUnits(clientCert, config) &&
+		b.matchesOrganizations(clientCert, config) &&
 		b.matchesCertificateExtensions(clientCert, config)
 	if config.Entry.OcspEnabled {
 		ocspGood, err := b.checkForCertInOCSP(ctx, clientCert, trustedChain, conf)
@@ -546,7 +547,7 @@ func (b *backend) matchesURISANs(clientCert *x509.Certificate, config *ParsedCer
 	return false
 }
 
-// matchesOrganizationalUnits verifies that the certificate matches at least one configurd allowed OU
+// matchesOrganizationalUnits verifies that the certificate matches at least one configured allowed OU
 func (b *backend) matchesOrganizationalUnits(clientCert *x509.Certificate, config *ParsedCert) bool {
 	// Default behavior (no OUs) is to allow all OUs
 	if len(config.Entry.AllowedOrganizationalUnits) == 0 {
@@ -557,6 +558,25 @@ func (b *backend) matchesOrganizationalUnits(clientCert *x509.Certificate, confi
 	for _, allowedOrganizationalUnits := range config.Entry.AllowedOrganizationalUnits {
 		for _, ou := range clientCert.Subject.OrganizationalUnit {
 			if glob.Glob(allowedOrganizationalUnits, ou) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// matchesOrganizations verifies that the certificate matches at least one configured allowed organization (O)
+func (b *backend) matchesOrganizations(clientCert *x509.Certificate, config *ParsedCert) bool {
+	// Default behavior (no Organizations (Os)) is to allow all organizations (Os)
+	if len(config.Entry.AllowedOrganizations) == 0 {
+		return true
+	}
+
+	// At least one pattern must match at least one name if any patterns are specified
+	for _, allowedOrganization := range config.Entry.AllowedOrganizations {
+		for _, o := range clientCert.Subject.Organization {
+			if glob.Glob(allowedOrganization, o) {
 				return true
 			}
 		}
