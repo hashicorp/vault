@@ -5,6 +5,8 @@ package hcp
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -15,8 +17,9 @@ import (
 // WaitForImageReq is a request to wait for an image to be available in the
 // image service.
 type WaitForImageReq struct {
-	Req   *GetLatestProductVersionReq `json:"req,omitempty"`
-	Delay time.Duration               `json:"delay,omitempty"`
+	Req                 *GetLatestProductVersionReq `json:"req,omitempty"`
+	Delay               time.Duration               `json:"delay,omitempty"`
+	WriteToGithubOutput bool                        `json:"write_to_github_output,omitempty"`
 }
 
 // WaitForImageRes is a response to a WaitForImageReq.
@@ -73,4 +76,18 @@ func (r *WaitForImageReq) Run(ctx context.Context, client *Client) (*WaitForImag
 	)
 
 	return res, err
+}
+
+// ToGithubOutput marshals just the artifact response to JSON.
+func (r *WaitForImageRes) ToGithubOutput() ([]byte, error) {
+	if r == nil || r.Res == nil {
+		return nil, fmt.Errorf("unable to marshal unitialized response to GITHUB_OUTPUT")
+	}
+
+	b, err := json.Marshal(r.Res.Image)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling wait-image to GITHUB_OUTPUT JSON: %w", err)
+	}
+
+	return b, nil
 }
