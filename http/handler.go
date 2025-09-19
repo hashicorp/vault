@@ -698,6 +698,9 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 								return
 							}
 							v = string(decoded.Bytes[:])
+						case "MULTILINE":
+							v = strings.Replace(v, "-----BEGIN CERTIFICATE-----", "-----BEGIN CERTIFICATE-----\n", 1)
+							v = strings.Replace(v, "-----END CERTIFICATE-----", "\n-----END CERTIFICATE-----", 1)
 						default:
 							respondError(w, http.StatusBadRequest, fmt.Errorf("unknown decode option specified: %s", action))
 							return
