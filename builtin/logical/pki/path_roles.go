@@ -373,7 +373,7 @@ non-Hostname, non-Email address CNs.`,
 			Type: framework.TypeCommaStringSlice,
 			Description: `A comma-separated string or list of policy OIDs, or a JSON list of qualified policy
 information, which must include an oid, and may include a notice and/or cps url, using the form 
-[{"oid"="1.3.6.1.4.1.7.8","notice"="I am a user Notice"}, {"oid"="1.3.6.1.4.1.44947.1.2.4 ","cps"="https://example.com"}].`,
+[{"oid"="1.3.6.1.4.1.7.8","notice"="I am a user Notice"}, {"oid"="1.3.6.1.4.1.32473.1.2.4","cps"="https://example.com"}].`,
 		},
 
 		"basic_constraints_valid_for_non_ca": {
@@ -801,7 +801,7 @@ non-Hostname, non-Email address CNs.`,
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or list of policy OIDs, or a JSON list of qualified policy
 information, which must include an oid, and may include a notice and/or cps url, using the form 
-[{"oid"="1.3.6.1.4.1.7.8","notice"="I am a user Notice"}, {"oid"="1.3.6.1.4.1.44947.1.2.4 ","cps"="https://example.com"}].`,
+[{"oid"="1.3.6.1.4.1.7.8","notice"="I am a user Notice"}, {"oid"="1.3.6.1.4.1.32473.1.2.4","cps"="https://example.com"}].`,
 			},
 
 			"basic_constraints_valid_for_non_ca": {
