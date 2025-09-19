@@ -291,6 +291,24 @@ jobs:
       web-ui-cache-key: ${{ needs.ui.outputs.cache-key }}
     secrets: inherit
 
+  hcp-image:
+    if: |
+      needs.setup.outputs.is-ent-branch == 'true' &&
+      needs.setup.outputs.workflow-trigger == 'pull_request' &&
+      (
+        contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') ||
+        contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+      )
+    needs:
+      - setup
+      - artifacts-ent
+    uses: ./.github/workflows/build-hcp-image.yml
+    with:
+      pull-request: ${{ github.event.pull_request.number }}
+      create-aws-image: true
+      create-azure-image: false
+      hcp-environment: int
+
   test:
     # Test all of the testable artifacts if our repo isn't a fork. We don't test when the PR is
     # created from a fork because secrets are not passed in and they are required.
@@ -347,6 +365,23 @@ jobs:
       vault-version: ${{ needs.setup.outputs.vault-version-metadata }}
     secrets: inherit
 
+  test-hcp-image:
+    # Test our custom HCP image if our image build was successful and we've
+    # been configured with the correct label.
+    if: |
+      needs.setup.outputs.is-ent-branch == 'true' &&
+      needs.setup.outputs.workflow-trigger == 'pull_request' &&
+      needs.artifacts-ent.result == 'success' &&
+      needs.hcp-image.result == 'success' &&
+      contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+    needs:
+      - setup
+      - artifacts-ent
+      - hcp-image
+    uses: ./.github/workflows/test-run-enos-scenario-cloud.yml
+    with:
+      product-version: ${{ fromJSON(needs.hcp-image.outputs.image).product_version }}
+
   completed-successfully:
     # build/completed-successfully is the only build workflow that must pass in order to merge
     # a pull request. This workflow is used to determine the overall status of all the prior
@@ -369,8 +404,10 @@ jobs:
       - ui
       - artifacts-ce
       - artifacts-ent
+      - hcp-image
       - test
       - test-containers
+      - test-hcp-image
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - id: disallow-merge-on-ce

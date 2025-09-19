@@ -62,13 +62,14 @@ func getWorkflowRuns(
 	// By default our status will be "success" which elimates in_progress runs.
 	// Instead, we'll try both so that we're sure to include what's actually
 	// running along with historical runs.
-	for _, status := range []string{"success", "in_progress"} {
+	for _, status := range []string{"", "success", "in_progress"} {
+		var runsForStatus []*WorkflowRun
 		for {
 			opts.Status = status
 			slog.Default().DebugContext(slogctx.Append(ctx,
 				slog.String("owner", owner),
 				slog.String("repo", repo),
-				slog.Int64("id", id),
+				slog.Int64("workflow-id", id),
 				slog.String("query-status", opts.Status),
 			), "getting github actions workflow runs")
 
@@ -78,10 +79,27 @@ func getWorkflowRuns(
 			}
 
 			for _, r := range wfrs.WorkflowRuns {
-				runs = append(runs, &WorkflowRun{Run: r})
+				runsForStatus = append(runsForStatus, &WorkflowRun{Run: r})
 			}
 
 			if res.NextPage == 0 {
+				if len(runsForStatus) > 0 {
+					slog.Default().DebugContext(slogctx.Append(ctx,
+						slog.String("owner", owner),
+						slog.String("repo", repo),
+						slog.Int64("workflow-id", id),
+						slog.String("query-status", opts.Status),
+						slog.Int("count", len(runsForStatus)),
+					), "found github actions workflow runs")
+				} else {
+					slog.Default().DebugContext(slogctx.Append(ctx,
+						slog.String("owner", owner),
+						slog.String("repo", repo),
+						slog.Int64("workflow-id", id),
+						slog.String("query-status", opts.Status),
+					), "no github actions workflow runs found for status")
+				}
+				runs = append(runs, runsForStatus...)
 				break
 			}
 
@@ -103,11 +121,28 @@ func getWorkflowRunArtifacts(
 	slog.Default().DebugContext(slogctx.Append(ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
-		slog.Int64("id", id),
+		slog.Int64("run-id", id),
 	), "getting github actions workflow run artifacts")
 
 	opts := &gh.ListOptions{PerPage: PerPageMax}
 	artifacts := gh.ArtifactList{}
+
+	defer func() {
+		if count := artifacts.GetTotalCount(); count > 0 {
+			slog.Default().DebugContext(slogctx.Append(ctx,
+				slog.String("owner", owner),
+				slog.String("repo", repo),
+				slog.Int64("run-id", id),
+				slog.Int64("count", count),
+			), "found workflow run artifacts")
+		} else {
+			slog.Default().DebugContext(slogctx.Append(ctx,
+				slog.String("owner", owner),
+				slog.String("repo", repo),
+				slog.Int64("run-id", id),
+			), "no workflow run artifacts found")
+		}
+	}()
 
 	for {
 		arts, res, err := client.Actions.ListWorkflowRunArtifacts(ctx, owner, repo, id, opts)
