@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki (enterprise): add integrations/guardium configuration endpoint.
+```
