@@ -26,7 +26,10 @@ LABEL name="Vault" \
       release=${PRODUCT_REVISION} \
       revision=${PRODUCT_REVISION} \
       summary="Vault is a tool for securely accessing secrets." \
-      description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log."
+      description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log." \
+      org.opencontainers.image.source="https://github.com/hashicorp/vault" \
+      org.opencontainers.image.version=${PRODUCT_VERSION} \
+      org.opencontainers.image.revision=${PRODUCT_REVISION}
 
 # Copy the license file as per Legal requirement
 COPY ${LICENSE_SOURCE} ${LICENSE_DEST}
