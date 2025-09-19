@@ -10,16 +10,14 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task, timeout } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
+import MfaConstraint from 'vault/resources/mfa/constraint';
 
 import type AuthService from 'vault/vault/services/auth';
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
-import type {
-  MfaAuthData,
-  MfaConstraintState,
-  ParsedMfaConstraint,
-  ParsedMfaMethod,
-} from 'vault/vault/auth/mfa';
+import type { AuthSuccessResponse } from 'vault/vault/services/auth';
+import type { Task } from 'ember-concurrency';
+import type { MfaAuthData } from 'vault/vault/auth/mfa';
 
 /**
  * @module MfaForm
@@ -31,8 +29,8 @@ import type {
  * ```
  * @param {string} clusterId - id of selected cluster
  * @param {object} authData - data from initial auth request -- { mfaRequirement, backend, data }
- * @param {function} onSuccess - fired when passcode passes validation
- * @param {function} onError - fired for multi-method or non-passcode method validation errors
+ * @param {function} loginAndTransition - fired when passcode passes validation
+ * @param {function} onCancel - callback that clears @authData which resets MFA and returns to the login form
  */
 
 export const TOTP_VALIDATION_ERROR =
@@ -41,64 +39,8 @@ export const TOTP_VALIDATION_ERROR =
 interface Args {
   authData: MfaAuthData;
   clusterId: string;
-  onSuccess: CallableFunction;
-  onError: CallableFunction;
+  loginAndTransition: Task<AuthSuccessResponse, [AuthSuccessResponse]>;
   onCancel: CallableFunction;
-}
-
-class MfaLoginEnforcement implements MfaConstraintState {
-  @tracked name: string;
-  @tracked methods: ParsedMfaMethod[] = [];
-  @tracked selectedMethod: ParsedMfaMethod | undefined = undefined;
-  // These are set on the login enforcement and not the MFA method
-  // because they only correspond to the selectedMethod.
-  @tracked passcode = '';
-  @tracked qrCode = '';
-
-  constructor(constraint: ParsedMfaConstraint) {
-    const { name, methods } = constraint;
-    this.name = name;
-    this.methods = methods;
-    // Only set selectedMethod if there is only one method.
-    // Otherwise, the user must select which method they want to verify with.
-    this.selectedMethod = this.methods.length === 1 ? methods[0] : undefined;
-  }
-
-  @action
-  setPasscode(value: string) {
-    this.passcode = value;
-  }
-
-  @action
-  setSelectedMethod(id: string) {
-    const method = this.methods.find((m) => m.id === id);
-    this.selectedMethod = method;
-  }
-
-  // To be "true", the login enforcement must have a selected method set
-  // and passcode, if applicable.
-  get isSatisfied() {
-    if (this.selectedMethod) {
-      return this.selectedMethod.uses_passcode ? !!this.passcode : true;
-    }
-    return false;
-  }
-
-  get selfEnrollMethod(): ParsedMfaMethod | null {
-    // Self-enrollment is an enterprise only feature and self_enrollment_enabled will always be false for CE
-    // It also returns false if the user already has an MFA secret (meaning they have already enrolled.)
-    const selfEnroll = this.methods.filter((m) => m?.self_enrollment_enabled);
-    // At this time we just support one self-enroll method per constraint
-    return selfEnroll.length === 1 && selfEnroll[0] ? selfEnroll[0] : null;
-  }
-
-  get validateData() {
-    return {
-      methods: this.methods,
-      passcode: this.passcode,
-      selectedMethod: this.selectedMethod,
-    };
-  }
 }
 
 export default class MfaForm extends Component<Args> {
@@ -106,7 +48,7 @@ export default class MfaForm extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
-  @tracked constraints: MfaLoginEnforcement[] = [];
+  @tracked constraints: MfaConstraint[] = [];
   @tracked codeDelayMessage = '';
   @tracked countdown = 0;
   @tracked error = '';
@@ -118,7 +60,7 @@ export default class MfaForm extends Component<Args> {
     super(owner, args);
 
     const { mfa_constraints = [] } = this.args.authData.mfaRequirement;
-    this.constraints = mfa_constraints.map((constraint) => new MfaLoginEnforcement(constraint));
+    this.constraints = mfa_constraints.map((constraint) => new MfaConstraint(constraint));
 
     // Trigger validation immediately if passcode or user selection is not required
     this.checkStateAndValidate();
@@ -175,8 +117,9 @@ export default class MfaForm extends Component<Args> {
         authMountPath,
         mfaRequirement: submitData,
       });
-      // calls onMfaSuccess in auth/page.js
-      this.args.onSuccess(response);
+
+      // calls loginAndTransition in auth.js controller
+      this.args.loginAndTransition.perform(response);
     } catch (error) {
       // Reset enrolled methods if there's an error
       this.enrolledMethods = new Set<string>();
@@ -196,7 +139,7 @@ export default class MfaForm extends Component<Args> {
     }
   });
 
-  fetchQrCode = task(async (mfa_method_id: string, constraint: MfaLoginEnforcement) => {
+  fetchQrCode = task(async (mfa_method_id: string, constraint: MfaConstraint) => {
     // Self-enrollment is an enterprise only feature
     if (this.version.isCommunity) return;
 
@@ -244,8 +187,8 @@ export default class MfaForm extends Component<Args> {
   });
 
   @action
-  async onSelect(constraint: MfaLoginEnforcement, methodId: string) {
-    // Set selectedMethod on the MfaLoginEnforcement class
+  async onSelect(constraint: MfaConstraint, methodId: string) {
+    // Set selectedMethod on the MfaConstraint class
     // If id is an empty string, it clears the selected method
     constraint.setSelectedMethod(methodId);
 

@@ -10,8 +10,9 @@
       @authType={{this.selectedAuthMethod}}
       @cluster={{@cluster}}
       @formQueryParams={{@formQueryParams}}
+      @handleAuthResponse={{@handleAuthResponse}}
+      @loginTransitionIsRunning={{@loginTransitionIsRunning}}
       @onError={{this.handleError}}
-      @onSuccess={{@onSuccess}}
     >
       <:namespace>
         {{yield}}

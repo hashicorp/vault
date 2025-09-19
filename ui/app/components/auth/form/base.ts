@@ -27,14 +27,14 @@ import type AuthService from 'vault/services/auth';
  * @param {string} authType - chosen login method type
  * @param {object} cluster - The cluster model which contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {function} onError - callback if there is a login error
- * @param {function} onSuccess - calls onAuthResponse in auth/page redirects if successful
+ * @param {function} handleAuthResponse - calls onAuthResponse in auth/page redirects if successful
  */
 
 interface Args {
   authType: string;
   cluster: ClusterModel;
+  handleAuthResponse: CallableFunction;
   onError: CallableFunction;
-  onSuccess: CallableFunction;
 }
 
 // This an "abstract" class because it is not meant to be instantiated directly and should be extended from by each auth method type.
@@ -59,7 +59,7 @@ export default abstract class AuthBase extends Component<Args> {
       try {
         const normalizedAuthData = await this.loginRequest(formData);
         // calls onAuthResponse in parent auth/page.js component
-        this.args.onSuccess(normalizedAuthData);
+        this.args.handleAuthResponse(normalizedAuthData);
       } catch (error) {
         this.onError(error as ResponseError);
       }

@@ -8,10 +8,10 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { HTMLElementEvent } from 'vault/forms';
 
-import type { MfaConstraintState } from 'vault/vault/auth/mfa';
+import type MfaConstraint from 'vault/resources/mfa/constraint';
 
 interface Args {
-  constraints: MfaConstraintState[];
+  constraints: MfaConstraint[];
   onVerify: CallableFunction;
   onCancel: CallableFunction;
 }

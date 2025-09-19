@@ -38,14 +38,14 @@ export default (test) => {
     assert.strictEqual(actual, 'Authentication failed: uh oh!', 'it calls onError');
   });
 
-  test('it fires onSuccess callback', async function (assert) {
+  test('it fires handleAuthResponse callback', async function (assert) {
     this.authenticateStub.resolves(this.authResponse);
     await this.renderComponent();
     await click(GENERAL.submitButton);
 
-    // Only checking for authMethodType because this test just asserts the onSuccess callback fires.
-    const [{ authMethodType }] = this.onSuccess.lastCall.args;
-    assert.strictEqual(authMethodType, this.authType, 'it calls onSuccess');
+    // Only checking for authMethodType because this test just asserts the handleAuthResponse callback fires.
+    const [{ authMethodType }] = this.handleAuthResponse.lastCall.args;
+    assert.strictEqual(authMethodType, this.authType, 'it calls handleAuthResponse');
   });
 
   test('it submits form data with defaults', async function (assert) {

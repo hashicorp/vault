@@ -29,7 +29,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     this.alternateView = null;
     this.defaultView = { view: 'dropdown', tabData: null };
     this.initialFormState = { initialAuthType: 'token', showAlternate: false };
-    this.onSuccess = sinon.spy();
+    this.handleAuthResponse = sinon.spy();
     this.visibleMountTypes = null;
 
     this.renderComponent = () => {
@@ -39,7 +39,7 @@ module('Integration | Component | auth | form template', function (hooks) {
           @cluster={{this.cluster}}
           @defaultView={{this.defaultView}}
           @initialFormState={{this.initialFormState}}
-          @onSuccess={{this.onSuccess}}
+          @handleAuthResponse={{this.handleAuthResponse}}
           @visibleMountTypes={{this.visibleMountTypes}}
         />`);
     };

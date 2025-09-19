@@ -21,7 +21,8 @@ module('Integration | Component | mfa-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.onCancel = sinon.spy();
-    this.onSuccess = sinon.spy();
+    // mocking as an object with the `perform()` method because loginAndTransition is a concurrency task
+    this.loginAndTransition = { perform: sinon.spy() };
     this.onError = sinon.spy();
     this.authService = this.owner.lookup('service:auth');
     // setup basic totp mfaRequirement
@@ -39,7 +40,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     @clusterId="123456"
     @onCancel={{this.onCancel}}
     @onError={{this.onError}}
-    @onSuccess={{this.onSuccess}}
+    @loginAndTransition={{this.loginAndTransition}}
   />`);
     };
     this.setMfaAuthData = (mfaRequirement) => {
@@ -140,8 +141,10 @@ module('Integration | Component | mfa-form', function (hooks) {
       },
     });
 
-    this.onSuccess = (resp) =>
-      assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
+    this.loginAndTransition = {
+      perform: (resp) =>
+        assert.strictEqual(resp, 'test response', 'Response is returned in loginAndTransition callback'),
+    };
 
     await this.renderComponent();
     await fillIn(MFA_SELECTORS.select(0), oktaConstraint.id);
@@ -190,8 +193,10 @@ module('Integration | Component | mfa-form', function (hooks) {
       },
     });
 
-    this.onSuccess = (resp) =>
-      assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
+    this.loginAndTransition = {
+      perform: (resp) =>
+        assert.strictEqual(resp, 'test response', 'Response is returned in loginAndTransition callback'),
+    };
 
     await this.renderComponent();
 

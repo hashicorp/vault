@@ -18,7 +18,10 @@
 
       {{yield to="advancedSettings"}}
 
-      <Auth::SignInButton @text="Sign in with SAML provider" @icon={{if this.login.isRunning "loading"}} />
+      <Auth::SignInButton
+        @text="Sign in with SAML provider"
+        @icon={{if (or this.login.isRunning @loginTransitionIsRunning) "loading"}}
+      />
 
     {{else}}
       <Hds::Alert @type="inline" @color="warning" data-test-saml-auth-not-allowed class="has-bottom-margin-m" as |A|>

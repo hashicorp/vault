@@ -9,24 +9,12 @@
   </Hds::Alert>
 {{/if}}
 
-{{#if this.mfaErrors}}
-  <Hds::ApplicationState class="has-top-margin-xxl" data-test-page-error as |A|>
-    <A.Header @title="Authentication error" />
-    <A.Body
-      @text="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
-    />
-    <A.Body @text="Error: {{this.mfaErrors}}" />
-    <A.Footer as |F|>
-      <F.Button @icon="arrow-left" @color="tertiary" @text="Go back" {{on "click" this.onMfaErrorDismiss}} />
-    </A.Footer>
-  </Hds::ApplicationState>
-{{else if this.mfaAuthData}}
+{{#if this.mfaAuthData}}
   <Mfa::MfaForm
-    @clusterId={{@cluster.id}}
     @authData={{this.mfaAuthData}}
-    @onSuccess={{this.onMfaSuccess}}
+    @clusterId={{@cluster.id}}
+    @loginAndTransition={{@loginAndTransition}}
     @onCancel={{this.onCancelMfa}}
-    @onError={{fn (mut this.mfaErrors)}}
   />
 {{else}}
   <SplashPage>
@@ -53,8 +41,9 @@
         @cluster={{@cluster}}
         @defaultView={{this.formViews.defaultView}}
         @formQueryParams={{this.formQueryParams}}
+        @handleAuthResponse={{this.onAuthResponse}}
         @initialFormState={{this.initialFormState}}
-        @onSuccess={{this.onAuthResponse}}
+        @loginTransitionIsRunning={{@loginAndTransition.isRunning}}
         @visibleMountTypes={{this.visibleMountTypes}}
       >
         {{! yielded for accessibility so namespace submits as an input of the <form> element }}

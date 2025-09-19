@@ -16,13 +16,13 @@
   <Auth::Page
     @cluster={{this.model.clusterModel}}
     @directLinkData={{this.model.directLinkData}}
+    @loginAndTransition={{this.loginAndTransition}}
     @loginSettings={{this.model.loginSettings}}
     @namespaceQueryParam={{this.namespaceQueryParam}}
     @oidcProviderQueryParam={{this.oidcProvider}}
-    @roleQueryParam={{this.role}}
-    @onAuthSuccess={{action "authSuccess"}}
     @onNamespaceUpdate={{perform this.updateNamespace}}
-    @visibleAuthMounts={{this.model.visibleAuthMounts}}
+    @roleQueryParam={{this.role}}
     @shouldRefocusNamespaceInput={{this.shouldRefocusNamespaceInput}}
+    @visibleAuthMounts={{this.model.visibleAuthMounts}}
   />
 {{/if}}

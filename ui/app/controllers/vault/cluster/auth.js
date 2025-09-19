@@ -47,32 +47,33 @@ export default Controller.extend({
     this.set('shouldRefocusNamespaceInput', true);
   }).restartable(),
 
-  actions: {
-    // TODO CMB move to auth service?
-    authSuccess({ isRoot, namespace }) {
-      let transition;
-      this.version.fetchVersion();
-      if (this.redirectTo) {
-        // here we don't need the namespace because it will be encoded in redirectTo
-        transition = this.router.transitionTo(this.redirectTo);
-        // reset the value on the controller because it's bound here
-        this.set('redirectTo', '');
-      } else {
-        transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
-      }
-      transition.followRedirects().then(() => {
-        if (this.version.isEnterprise) {
-          this.customMessages.fetchMessages();
-        }
+  // TODO CMB move to auth service?
+  loginAndTransition: task(function* ({ isRoot, namespace }) {
+    let transition;
+    this.version.fetchVersion();
 
-        if (isRoot) {
-          this.auth.set('isRootToken', true);
-          this.flashMessages.warning(
-            'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
-          );
-        }
-      });
-    },
+    if (this.redirectTo) {
+      transition = this.router.transitionTo(this.redirectTo);
+      this.set('redirectTo', '');
+    } else {
+      transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
+    }
+
+    yield transition.followRedirects();
+
+    if (this.version.isEnterprise) {
+      yield this.customMessages.fetchMessages();
+    }
+
+    if (isRoot) {
+      this.auth.set('isRootToken', true);
+      this.flashMessages.warning(
+        'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
+      );
+    }
+  }),
+
+  actions: {
     backToLogin() {
       // reset error
       this.set('unwrapTokenError', '');
