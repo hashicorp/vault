@@ -158,15 +158,12 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
 
-	// Look for matching name
-	for _, ent := range c.audit.Entries {
-		switch {
-		// Existing is sql/mysql/ new is sql/ or
-		// existing is sql/ and new is sql/mysql/
-		case strings.HasPrefix(ent.Path, entry.Path):
-			fallthrough
-		case strings.HasPrefix(entry.Path, ent.Path):
-			return fmt.Errorf("path already in use: %w", audit.ErrExternalOptions)
+	// Ensure distinctness.
+	proposed := entry.toAuditEntryMinimal()
+	for _, existing := range c.audit.Entries {
+		existing := existing.toAuditEntryMinimal()
+		if ok, err := audit.IsDistinct(proposed, existing); !ok {
+			return err
 		}
 
 		// Ensure that the provided file_path argument isn't already used for another audit device's file_path.
@@ -704,4 +701,37 @@ func (g genericAuditor) AuditResponse(ctx context.Context, input *logical.LogInp
 		return consts.ErrSealed
 	}
 	return auditBroker.LogResponse(ctx, &logInput)
+}
+
+// auditEntryMinimal represents a minimal version of a MountEntry which would be
+// required by the audit system in order to compare two entries and establish if
+// they are distinct.
+type auditEntryMinimal struct {
+	path       string
+	deviceType string
+	options    map[string]string
+}
+
+// Type returns the device type of the entry.
+func (m *auditEntryMinimal) Type() string {
+	return m.deviceType
+}
+
+// Path returns the device mount path of the entry.
+func (m *auditEntryMinimal) Path() string {
+	return m.path
+}
+
+// Options returns the specified option given a key.
+func (m *auditEntryMinimal) Options(key string) string {
+	return m.options[key]
+}
+
+// toAuditEntryMinimal converts a MountEntry to an auditEntryMinimal.
+func (e *MountEntry) toAuditEntryMinimal() *auditEntryMinimal {
+	return &auditEntryMinimal{
+		options:    e.Options,
+		deviceType: e.Type,
+		path:       e.Path,
+	}
 }
