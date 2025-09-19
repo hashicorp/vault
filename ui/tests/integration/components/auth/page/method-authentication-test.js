@@ -49,7 +49,7 @@ const methodAuthenticationTests = (test) => {
     assert.strictEqual(persistedTokenData.entity_id, entity_id, 'setTokenData has expected entity_id');
   });
 
-  test('it calls onAuthSuccess on submit for custom path', async function (assert) {
+  test('it calls loginAndTransition on submit for custom path', async function (assert) {
     assert.expect(1);
     // Setup
     this.path = `${this.authType}-custom`;
@@ -65,10 +65,10 @@ const methodAuthenticationTests = (test) => {
     }
     await click(GENERAL.submitButton);
 
-    await waitUntil(() => this.onAuthSuccess.calledOnce);
-    const [actual] = this.onAuthSuccess.lastCall.args;
+    await waitUntil(() => this.loginAndTransition.perform.calledOnce);
+    const [actual] = this.loginAndTransition.perform.lastCall.args;
     const expected = { namespace: '', token: this.tokenName, isRoot: false };
-    assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
+    assert.propEqual(actual, expected, `loginAndTransition task called with: ${JSON.stringify(actual)}`);
   });
 };
 
@@ -210,16 +210,16 @@ module('Integration | Component | auth | page | method authentication', function
       this.server.get('/auth/token/lookup-self', () => RESPONSE_STUBS.token);
     });
 
-    test('it sets token data and calls onAuthSuccess', async function (assert) {
+    test('it sets token data and calls loginAndTransition', async function (assert) {
       assert.expect(6);
       await this.renderComponent();
       await fillIn(AUTH_FORM.selectMethod, this.authType);
       await fillInLoginFields({ token: 'mysupersecuretoken' });
       await click(GENERAL.submitButton);
-      await waitUntil(() => this.onAuthSuccess.calledOnce);
-      const [actual] = this.onAuthSuccess.lastCall.args;
+      await waitUntil(() => this.loginAndTransition.perform.calledOnce);
+      const [actual] = this.loginAndTransition.perform.lastCall.args;
       const expected = { namespace: '', token: this.tokenName, isRoot: false };
-      assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
+      assert.propEqual(actual, expected, `loginAndTransition task called with: ${JSON.stringify(actual)}`);
 
       const [tokenName, persistedTokenData] = this.setTokenDataSpy.lastCall.args;
       const expectedTokenData = {

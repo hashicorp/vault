@@ -23,7 +23,7 @@
 
       {{yield to="advancedSettings"}}
 
-      <Auth::SignInButton @text="Sign in" @icon={{if this.login.isRunning "loading"}} />
+      <Auth::SignInButton @text="Sign in" @icon={{if (or this.login.isRunning @loginTransitionIsRunning) "loading"}} />
 
       {{yield to="footer"}}
     </div>

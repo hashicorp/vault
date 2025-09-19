@@ -52,15 +52,3 @@ interface MfaAuthData {
   authMethodType: string;
   authMountPath: string;
 }
-
-interface MfaConstraintState {
-  methods: ParsedMfaMethod[];
-  name: string;
-  passcode: string;
-  qrCode?: string;
-  selectedMethod?: ParsedMfaMethod;
-  selfEnrollMethod: ParsedMfaMethod | null;
-  isSatisfied: boolean;
-  setPasscode(value: string): void;
-  setSelectedMethod(value: string): void;
-}

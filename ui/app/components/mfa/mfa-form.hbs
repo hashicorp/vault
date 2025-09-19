@@ -22,7 +22,8 @@
     @constraints={{this.constraints}}
     @countdown={{this.countdown}}
     @error={{this.error}}
-    @isLoading={{this.validate.isRunning}}
+    {{! Only this component renders whenever validate.isRunning (even if the user verified in the SelfEnroll component) }}
+    @isLoading={{or this.validate.isRunning @loginAndTransition.isRunning}}
     @methodAlreadyEnrolled={{this.methodAlreadyEnrolled}}
     @onCancel={{@onCancel}}
     @onSelect={{this.onSelect}}

@@ -14,6 +14,7 @@ import type AuthService from 'vault/vault/services/auth';
 import type ClusterModel from 'vault/models/cluster';
 import type CspEventService from 'vault/services/csp-event';
 import type { MfaAuthData } from 'vault/vault/auth/mfa';
+import type { Task } from 'ember-concurrency';
 
 /**
  * @module AuthPage
@@ -63,7 +64,7 @@ import type { MfaAuthData } from 'vault/vault/auth/mfa';
  *  @loginSettings={{this.model.loginSettings}}
  *  @namespaceQueryParam={{this.namespaceQueryParam}}
  *  @oidcProviderQueryParam={{this.oidcProvider}}
- *  @onAuthSuccess={{action "authSuccess"}}
+ *  @loginAndTransition={{this.loginAndTransition}}
  *  @onNamespaceUpdate={{perform this.updateNamespace}}
  *  @visibleAuthMounts={{this.model.visibleAuthMounts}}
  * />
@@ -73,7 +74,7 @@ import type { MfaAuthData } from 'vault/vault/auth/mfa';
  * @param {object} loginSettings - * enterprise only * login settings configured for the namespace. If set, specifies a default auth method type and/or backup method types
  * @param {string} namespaceQueryParam - namespace to login with, updated by typing in to the namespace input
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
- * @param {function} onAuthSuccess - callback task in controller that receives the auth response (after MFA, if enabled) when login is successful
+ * @param {function} loginAndTransition - callback task in controller that receives the auth response (after MFA, if enabled) when login is successful
  * @param {function} onNamespaceUpdate - callback task that passes user input to the controller to update the login namespace in the url query params
  * @param {object} visibleAuthMounts - response from unauthenticated request to sys/internal/ui/mounts which returns mount paths tuned with `listing_visibility="unauth"`. keys are the mount path, values are mount data such as "type" or "description," if it exists
  * */
@@ -84,10 +85,10 @@ export const CSP_ERROR =
 interface Args {
   cluster: ClusterModel;
   directLinkData: { type: string; path?: string } | null; // if "path" key is present then mount data is visible
+  loginAndTransition: Task<AuthSuccessResponse, [AuthSuccessResponse]>;
   loginSettings: { defaultType: string; backupTypes: string[] | null }; // enterprise only
-  onAuthSuccess: CallableFunction;
-  visibleAuthMounts: UnauthMountsResponse;
   roleQueryParam?: string;
+  visibleAuthMounts: UnauthMountsResponse;
 }
 
 enum FormView {
@@ -101,7 +102,6 @@ export default class AuthPage extends Component<Args> {
 
   @tracked canceledMfaAuth = '';
   @tracked mfaAuthData: MfaAuthData | null = null;
-  @tracked mfaErrors = '';
 
   get cspError() {
     const isStandby = this.args.cluster.standby;
@@ -246,8 +246,8 @@ export default class AuthPage extends Component<Args> {
     } else {
       // Persist auth data in local storage
       const resp = await this.auth.authSuccess(this.args.cluster.id, normalizedAuthData);
-      // calls authSuccess in auth.js controller
-      this.args.onAuthSuccess(resp);
+      // calls loginAndTransition in auth.js controller
+      this.args.loginAndTransition.perform(resp);
     }
   }
 
@@ -256,18 +256,6 @@ export default class AuthPage extends Component<Args> {
     // before resetting mfaAuthData, preserve auth type
     this.canceledMfaAuth = this.mfaAuthData?.authMethodType ?? '';
     this.mfaAuthData = null;
-  }
-
-  @action
-  onMfaSuccess(authSuccessData: AuthSuccessResponse) {
-    // calls authSuccess in auth.js controller
-    this.args.onAuthSuccess(authSuccessData);
-  }
-
-  @action
-  onMfaErrorDismiss() {
-    this.mfaAuthData = null;
-    this.mfaErrors = '';
   }
 
   // HELPERS

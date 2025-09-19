@@ -21,18 +21,6 @@ variable "cloud_region" {
   default     = "us-west-2"
 }
 
-variable "cluster_id" {
-  description = "The ID of the HCP Vault cluster."
-  type        = string
-  default     = "enos"
-}
-
-variable "hvn_id" {
-  description = "The ID of the HCP HVN."
-  type        = string
-  default     = "default"
-}
-
 variable "maintenance_window_day" {
   description = "The maintenance window day"
   type        = string
@@ -48,13 +36,14 @@ variable "maintenance_window_time" {
 variable "min_vault_version" {
   description = "The minimum vault version. This also corresponds to the image id"
   type        = string
-  default     = "default"
+  default     = null
 }
 
 variable "tier" {
   description = "Tier of the HCP Vault cluster. Valid options for tiers."
   type        = string
-  default     = "dev"
+  // NOTE: we can't use dev for custom images
+  default = "plus_small"
 }
 
 variable "upgrade_type" {
@@ -65,17 +54,38 @@ variable "upgrade_type" {
 
 data "enos_environment" "localhost" {}
 
+resource "random_string" "id" {
+  length  = 4
+  lower   = true
+  upper   = false
+  numeric = false
+  special = false
+}
+
+locals {
+  // Generate a unique identifier for our scenario. If we've been given a
+  // min_vault_version we'll use that as it will likely be the version and
+  // a SHA of a custom image. Make sure it doesn't have special characters.
+  // Otherwise, just use a random string.
+  id = var.min_vault_version != null ? try(replace(var.min_vault_version, "/[^0-9A-Za-z]/", "-"), random_string.id.result) : random_string.id.result
+}
+
 resource "hcp_hvn" "default" {
-  hvn_id         = var.hvn_id
+  hvn_id         = local.id
   cloud_provider = var.cloud_provider
   region         = var.cloud_region
 }
 
 resource "hcp_vault_cluster" "enos" {
-  hvn_id          = hcp_hvn.default.id
-  cluster_id      = var.cluster_id
-  tier            = var.tier
-  public_endpoint = true
+  depends_on = [
+    hcp_hvn.default,
+  ]
+
+  hvn_id            = local.id
+  cluster_id        = "enos-${local.id}"
+  tier              = var.tier
+  public_endpoint   = true
+  min_vault_version = var.min_vault_version
 
   dynamic "ip_allowlist" {
     for_each = data.enos_environment.localhost.public_ipv4_addresses
@@ -84,11 +94,13 @@ resource "hcp_vault_cluster" "enos" {
     }
   }
 
+  /*
   major_version_upgrade_config {
     maintenance_window_day  = var.maintenance_window_day
     maintenance_window_time = var.maintenance_window_time
     upgrade_type            = var.upgrade_type
   }
+  */
 }
 
 output "cloud_provider" {

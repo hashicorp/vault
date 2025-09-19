@@ -7,12 +7,12 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { numberToWord } from 'vault/helpers/number-to-word';
 
-import type { MfaConstraintState } from 'vault/vault/auth/mfa';
+import type MfaConstraint from 'vault/resources/mfa/constraint';
 import type { HTMLElementEvent } from 'vault/forms';
 
 interface Args {
   codeDelayMessage: string;
-  constraints: MfaConstraintState[];
+  constraints: MfaConstraint[];
   countdown: string;
   error: string;
   isLoading: boolean;
@@ -27,8 +27,7 @@ export default class MfaFormVerify extends Component<Args> {
     const base = 'Multi-factor authentication is enabled for your account.';
     if (this.args.constraints.length > 1) {
       const num = this.args.constraints.length;
-      const word = num === 1 ? 'method' : 'methods';
-      return base + ` ${numberToWord(num, true)} ${word} are required for successful authentication.`;
+      return base + ` ${numberToWord(num, true)} methods are required for successful authentication.`;
     }
     if (this.singleConstraint?.selectedMethod?.uses_passcode) {
       return base + ' Enter your authentication code to log in.';
@@ -47,7 +46,7 @@ export default class MfaFormVerify extends Component<Args> {
   }
 
   // Template helper
-  sortConstraints = (constraints: MfaConstraintState[]) => {
+  sortConstraints = (constraints: MfaConstraint[]) => {
     const userInteraction = constraints.filter((c) => !c.selectedMethod);
     const others = constraints.filter((c) => c.selectedMethod);
     return [...userInteraction, ...others];

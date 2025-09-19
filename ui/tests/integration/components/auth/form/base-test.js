@@ -22,7 +22,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
   hooks.beforeEach(function () {
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
-    this.onSuccess = sinon.spy();
+    this.handleAuthResponse = sinon.spy();
     const api = this.owner.lookup('service:api');
     this.setup = (authType, loginMethod) => {
       this.authType = authType;
@@ -49,7 +49,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
               @authType={{this.authType}} 
               @cluster={{this.cluster}}
               @onError={{this.onError}}
-              @onSuccess={{this.onSuccess}}
+              @handleAuthResponse={{this.handleAuthResponse}}
             >
              <:advancedSettings>
              <label for="path">Mount path</label>
@@ -62,7 +62,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
             @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}
-            @onSuccess={{this.onSuccess}}
+            @handleAuthResponse={{this.handleAuthResponse}}
           />`);
       };
     });
@@ -98,7 +98,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
               @authType={{this.authType}} 
               @cluster={{this.cluster}}
               @onError={{this.onError}}
-              @onSuccess={{this.onSuccess}}
+              @handleAuthResponse={{this.handleAuthResponse}}
             >
              <:advancedSettings>
              <label for="path">Mount path</label>
@@ -111,7 +111,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
             @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}
-            @onSuccess={{this.onSuccess}}
+            @handleAuthResponse={{this.handleAuthResponse}}
           />`);
       };
     });
@@ -141,7 +141,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
               @authType={{this.authType}} 
               @cluster={{this.cluster}}
               @onError={{this.onError}}
-              @onSuccess={{this.onSuccess}}
+              @handleAuthResponse={{this.handleAuthResponse}}
             >
              <:advancedSettings>
               <label for="path">Mount path</label>
@@ -154,7 +154,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
             @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}
-            @onSuccess={{this.onSuccess}}
+            @handleAuthResponse={{this.handleAuthResponse}}
           />`);
       };
     });
@@ -180,7 +180,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
               @authType={{this.authType}} 
               @cluster={{this.cluster}}
               @onError={{this.onError}}
-              @onSuccess={{this.onSuccess}}
+              @handleAuthResponse={{this.handleAuthResponse}}
             >
              <:advancedSettings>
                 <label for="path">Mount path</label>
@@ -193,7 +193,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
             @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}
-            @onSuccess={{this.onSuccess}}
+            @handleAuthResponse={{this.handleAuthResponse}}
           />`);
       };
     });
@@ -223,7 +223,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
               @authType={{this.authType}} 
               @cluster={{this.cluster}}
               @onError={{this.onError}}
-              @onSuccess={{this.onSuccess}}
+              @handleAuthResponse={{this.handleAuthResponse}}
             >
              <:advancedSettings>
               <label for="path">Mount path</label>
@@ -236,7 +236,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
             @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}
-            @onSuccess={{this.onSuccess}}
+            @handleAuthResponse={{this.handleAuthResponse}}
           />`);
       };
     });
