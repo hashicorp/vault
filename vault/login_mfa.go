@@ -729,7 +729,7 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 		return nil, fmt.Errorf("original request was issued in a different namesapce %v, current namespace is %v", cachedResponseAuth.RequestNSPath, ns.Path)
 	}
 
-	entity, _, err := b.Core.fetchEntityAndDerivedPolicies(ctx, ns, cachedResponseAuth.CachedAuth.EntityID, true)
+	entity, err := b.Core.fetchEntity(cachedResponseAuth.CachedAuth.EntityID, false)
 	if err != nil || entity == nil {
 		return nil, fmt.Errorf("MFA validation failed. entity not found: %v", err)
 	}
@@ -751,10 +751,13 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("failed to satisfy enforcement %s. error: %s", eConfig.Name, err.Error())), logical.ErrPermissionDenied
 		}
-		if cachedResponseAuth.SelfEnrollmentMFASecret != nil {
+		if cachedResponseAuth.SelfEnrollmentMFASecret != nil && entity.MFASecrets[potentialMFASecret.MethodID] == nil {
 			// If we have a self-enrollment secret, and we successfully validated against
 			// the MFA enforcement, then persist the secret on the entity and the key in
 			// storage and clear the secret on the cached auth.
+			if entity.MFASecrets == nil {
+				entity.MFASecrets = map[string]*mfa.Secret{}
+			}
 			entity.MFASecrets[potentialMFASecret.MethodID] = potentialMFASecret.Secret
 			err = b.Core.identityStore.upsertEntity(ctx, entity, nil, true)
 			if err != nil {
@@ -1741,13 +1744,14 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 		var entityMFASecret *mfa.Secret
 		var mfaSecretKey string
 		switch {
-		case potentialTOTPSecret != nil && potentialTOTPSecret.MethodID == methodID && potentialTOTPSecret.Secret != nil && potentialTOTPSecret.Key != "":
-			// Use the self-enrollment secret generated during this login request
-			entityMFASecret = potentialTOTPSecret.Secret
-			mfaSecretKey = potentialTOTPSecret.Key
 		case entity.MFASecrets != nil && entity.MFASecrets[mConfig.ID] != nil:
 			// Use the existing secret stored on the entity
 			entityMFASecret = entity.MFASecrets[mConfig.ID]
+		case (entity.MFASecrets == nil || entity.MFASecrets[mConfig.ID] == nil) && potentialTOTPSecret != nil &&
+			potentialTOTPSecret.MethodID == methodID && potentialTOTPSecret.Secret != nil && potentialTOTPSecret.Key != "":
+			// Use the self-enrollment secret generated during this login request
+			entityMFASecret = potentialTOTPSecret.Secret
+			mfaSecretKey = potentialTOTPSecret.Key
 		default:
 			return fmt.Errorf("MFA secret for method ID %q not present in entity %q or cached MFA auth response", mConfig.ID, entity.ID)
 		}
