@@ -1031,8 +1031,8 @@ func TestPki_RolePatch(t *testing.T) {
 func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
 	t.Parallel()
 	type TestCase struct {
-		Input   interface{}
-		ASN     interface{}
+		Input   string
+		ASN     string
 		OidList []string
 	}
 
@@ -1051,9 +1051,9 @@ func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
 			OidList: expectedSimpleOidList,
 		},
 		{
-			Input:   "[{\"oid\":\"1.3.6.1.4.1.7.8\",\"notice\":\"I am a user Notice\"},{\"oid\":\"1.3.6.1.44947.1.2.4\",\"cps\":\"https://example.com\"}]",
-			ASN:     "MF8wLQYHKwYBBAEHCDAiMCAGCCsGAQUFBwICMBQMEkkgYW0gYSB1c2VyIE5vdGljZTAuBgkrBgGC3xMBAgQwITAfBggrBgEFBQcCARYTaHR0cHM6Ly9leGFtcGxlLmNvbQ==",
-			OidList: append(*new([]string), "1.3.6.1.4.1.7.8", "1.3.6.1.44947.1.2.4"),
+			Input:   "[{\"oid\":\"1.3.6.1.4.1.7.8\",\"notice\":\"I am a user Notice\"},{\"oid\":\"1.3.6.1.32473.1.2.4\",\"cps\":\"https://example.com\"}]",
+			ASN:     "MF8wLQYHKwYBBAEHCDAiMCAGCCsGAQUFBwICMBQMEkkgYW0gYSB1c2VyIE5vdGljZTAuBgkrBgGB/VkBAgQwITAfBggrBgEFBQcCARYTaHR0cHM6Ly9leGFtcGxlLmNvbQ==",
+			OidList: append(*new([]string), "1.3.6.1.4.1.7.8", "1.3.6.1.32473.1.2.4"),
 		},
 	}
 
@@ -1076,10 +1076,6 @@ func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
 	}
 
 	for index, testCase := range testCases {
-		var roleResp *logical.Response
-		var issueResp *logical.Response
-		var err error
-
 		// Create/update the role
 		roleData := map[string]interface{}{}
 		roleData[policyIdentifiersParam] = testCase.Input
@@ -1091,15 +1087,16 @@ func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
 			Data:      roleData,
 		}
 
-		roleResp, err = b.HandleRequest(context.Background(), roleReq)
+		roleResp, err := b.HandleRequest(context.Background(), roleReq)
 		if err != nil || (roleResp != nil && roleResp.IsError()) {
 			t.Fatalf("bad [%d], setting policy identifier %v err: %v resp: %#v", index, testCase.Input, err, roleResp)
 		}
 
 		// Issue Using this role
-		issueData := map[string]interface{}{}
-		issueData["common_name"] = "localhost"
-		issueData["ttl"] = "2s"
+		issueData := map[string]interface{}{
+			"common_name": "localhost",
+			"ttl":         "2s",
+		}
 
 		issueReq := &logical.Request{
 			Operation: logical.UpdateOperation,
@@ -1108,9 +1105,12 @@ func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
 			Data:      issueData,
 		}
 
-		issueResp, err = b.HandleRequest(context.Background(), issueReq)
+		issueResp, err := b.HandleRequest(context.Background(), issueReq)
 		if err != nil || (issueResp != nil && issueResp.IsError()) {
 			t.Fatalf("bad [%d], setting policy identifier %v err: %v resp: %#v", index, testCase.Input, err, issueResp)
+		}
+		if issueResp == nil || issueResp.Data == nil {
+			t.Fatalf("bad [%d], setting policy identifier %v no response", index, testCase.Input)
 		}
 
 		// Validate the OIDs
@@ -1131,10 +1131,8 @@ func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
 		if err != nil {
 			t.Fatalf("bad [%d], getting extension from %v err: %v resp: %#v", index, testCase.Input, err, issueResp)
 		}
-		certificateB64 := make([]byte, len(certificateAsn)*2)
-		base64.StdEncoding.Encode(certificateB64, certificateAsn)
-		certificateString := string(certificateB64[:])
-		assert.Contains(t, certificateString, testCase.ASN)
+		certificateString := base64.StdEncoding.EncodeToString(certificateAsn)
+		assert.Equal(t, certificateString, testCase.ASN)
 	}
 }
 
