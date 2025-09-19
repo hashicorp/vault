@@ -13,8 +13,11 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"math"
+	"math/rand"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
@@ -679,8 +682,8 @@ func (b *backend) certificateExtensionsMetadata(clientCert *x509.Certificate, co
 
 func (b *backend) getTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
 	if !b.trustedCacheDisabled.Load() {
-		trusted, found := b.getTrustedCertsFromCache(certName)
-		if found {
+		trusted, complete := b.getTrustedCertsFromCache(certName)
+		if complete {
 			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
 		}
 	}
@@ -688,15 +691,21 @@ func (b *backend) getTrustedCerts(ctx context.Context, storage logical.Storage, 
 }
 
 func (b *backend) getTrustedCertsFromCache(certName string) (*trusted, bool) {
+	var trusted *trusted
 	if certName == "" {
-		trusted := b.trustedCacheFull.Load()
-		if trusted != nil {
-			return trusted, true
-		}
-	} else if trusted, found := b.trustedCache.Get(certName); found {
-		return trusted, true
+		trusted = b.trustedCacheFull.Load()
+	} else {
+		trusted, _ = b.trustedCache.Get(certName)
 	}
-	return nil, false
+
+	if trusted == nil {
+		return nil, false
+	}
+
+	// We're complete (for our purposes here) if we're really complete
+	// (because retry is nil) or if it's just not time to retry the load yet.
+	complete := (trusted.retry == nil) || time.Now().Before(trusted.retry.deadline)
+	return trusted, complete
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
@@ -705,16 +714,31 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 	lock.Lock()
 	defer lock.Unlock()
 
+	var cache *trusted
 	if !b.trustedCacheDisabled.Load() {
-		trusted, found := b.getTrustedCertsFromCache(certName)
-		if found {
-			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
+		var complete bool
+		cache, complete = b.getTrustedCertsFromCache(certName)
+		if complete {
+			return cache.pool, cache.trusted, cache.trustedNonCAs, cache.ocspConf
 		}
 	}
 
-	pool = x509.NewCertPool()
-	trustedCerts = make([]*ParsedCert, 0)
-	trustedNonCAs = make([]*ParsedCert, 0)
+	if cache == nil {
+		cache = &trusted{
+			pool:          x509.NewCertPool(),
+			trusted:       make([]*ParsedCert, 0),
+			trustedNonCAs: make([]*ParsedCert, 0),
+			loaded:        make(map[string]struct{}),
+			ocspConf:      &ocsp.VerifyConfig{},
+		}
+	} else {
+		cache = cache.clone()
+	}
+
+	pool = cache.pool
+	trustedCerts = cache.trusted
+	trustedNonCAs = cache.trustedNonCAs
+	conf = cache.ocspConf
 
 	var names []string
 	if certName != "" {
@@ -728,25 +752,23 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 		}
 	}
 
-	conf = &ocsp.VerifyConfig{}
+	anyErrors := false
 	for _, name := range names {
-		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, trustedCertPath))
-		if err != nil {
-			b.Logger().Error("failed to load trusted cert", "name", name, "error", err)
-			continue
-		}
-		if entry == nil {
-			// This could happen when the certName was provided and the cert doesn'log exist,
-			// or just if between the LIST and the GET the cert was deleted.
+		if _, found := cache.loaded[name]; found {
 			continue
 		}
 
-		parsed := parsePEM([]byte(entry.Certificate))
-		if len(parsed) == 0 {
-			b.Logger().Error("failed to parse certificate", "name", name)
+		entry, parsed, ocsp_ca_certs := b.loadTrustedCert(ctx, storage, name)
+		if entry == nil {
+			anyErrors = true
 			continue
 		}
-		parsed = append(parsed, parsePEM([]byte(entry.OcspCaCertificates))...)
+		parsed = append(parsed, ocsp_ca_certs...)
+
+		// NOTE: From this point on please finish adding the cert to all the
+		// appropriate lists and pools and configuration! Perform any error
+		// checking above this line.
+		cache.loaded[name] = struct{}{}
 
 		if !parsed[0].IsCA {
 			trustedNonCAs = append(trustedNonCAs, &ParsedCert{
@@ -758,12 +780,12 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 				pool.AddCert(p)
 			}
 
-			// Create a ParsedCert entry
 			trustedCerts = append(trustedCerts, &ParsedCert{
 				Entry:        entry,
 				Certificates: parsed,
 			})
 		}
+
 		if entry.OcspEnabled {
 			conf.OcspEnabled = true
 			conf.OcspServersOverride = append(conf.OcspServersOverride, entry.OcspServersOverride...)
@@ -776,31 +798,80 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			conf.OcspThisUpdateMaxAge = entry.OcspThisUpdateMaxAge
 			conf.OcspMaxRetries = entry.OcspMaxRetries
 
-			if len(entry.OcspCaCertificates) > 0 {
-				certs, err := certutil.ParseCertsPEM([]byte(entry.OcspCaCertificates))
-				if err != nil {
-					b.Logger().Error("failed to parse ocsp_ca_certificates", "name", name, "error", err)
-					continue
-				}
-				conf.ExtraCas = certs
+			if len(ocsp_ca_certs) > 0 {
+				conf.ExtraCas = ocsp_ca_certs
 			}
 		}
 	}
 
 	if !b.trustedCacheDisabled.Load() {
-		entry := &trusted{
-			pool:          pool,
-			trusted:       trustedCerts,
-			trustedNonCAs: trustedNonCAs,
-			ocspConf:      conf,
-		}
-		if certName == "" {
-			b.trustedCacheFull.Store(entry)
+		if anyErrors {
+			// If something went wrong then we are going to set up for an
+			// exponential backoff on reloading the certificates.
+			if cache.retry == nil {
+				cache.retry = &trustedRetry{}
+			}
+
+			// Limits are arbitrary. Max of 2^55 backoff just so that delay
+			// and the the jitter fits into a double. Is that silly? Yes.
+			// 2^55 seconds is more years than the computer will keep
+			// running.
+			if cache.retry.attempt < 55 {
+				cache.retry.attempt += 1
+			}
+
+			d := 1 << cache.retry.attempt
+			pct := (rand.Float64() * 2.0) - 1.0      // between -100% and +100%
+			d += int(math.Floor(float64(d/4) * pct)) // between -25% and +25%
+			cache.retry.deadline = time.Now().Add(time.Duration(d) * time.Second)
 		} else {
-			b.trustedCache.Add(certName, entry)
+			// No problems, cache is complete, no need to retry.
+			cache.retry = nil
+		}
+
+		cache.trustedNonCAs = trustedNonCAs
+		cache.trusted = trustedCerts
+		if certName == "" {
+			b.trustedCacheFull.Store(cache)
+		} else {
+			b.trustedCache.Add(certName, cache)
 		}
 	}
 	return
+}
+
+func (b *backend) loadTrustedCert(ctx context.Context, storage logical.Storage, name string) (*CertEntry, []*x509.Certificate, []*x509.Certificate) {
+	entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, trustedCertPath))
+	if err != nil {
+		b.Logger().Error("failed to load trusted cert", "name", name, "error", err)
+		return nil, nil, nil
+	}
+
+	if entry == nil {
+		// This could happen when the certName was provided and the cert doesn't exist,
+		// or just if between the LIST and the GET the cert was deleted.
+		b.Logger().Error("loaded a nil trusted cert", "name", name)
+		return nil, nil, nil
+	}
+
+	parsed := parsePEM([]byte(entry.Certificate))
+	if len(parsed) == 0 {
+		b.Logger().Error("failed to parse certificate", "name", name)
+		return nil, nil, nil
+	}
+
+	var ocsp_ca_certs []*x509.Certificate = nil
+	if len(entry.OcspCaCertificates) > 0 {
+		ocsp_ca_certs, err = certutil.ParseCertsPEM([]byte(entry.OcspCaCertificates))
+		if err != nil {
+			// NOTE: For compatibility, failure to parse the OcspCaCertificates
+			// is never actually fatal to loading the broader file
+			b.Logger().Error("failed to parse ocsp_ca_certificates", "name", name, "error", err)
+			ocsp_ca_certs = nil
+		}
+	}
+
+	return entry, parsed, ocsp_ca_certs
 }
 
 func (b *backend) checkForCertInOCSP(ctx context.Context, clientCert *x509.Certificate, chain []*x509.Certificate, conf *ocsp.VerifyConfig) (bool, error) {
