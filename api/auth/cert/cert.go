@@ -124,7 +124,7 @@ func NewDefaultCertAuthClient(address string, tlsConfig *api.TLSConfig) (*api.Cl
 
 // NewCertAuthClient initializes a new client based on the passed in client
 // with the provided TLS configuration. The TLSConfig must have the ClientCert and ClientKey
-// fields set.
+// fields set. TPMDevice can optionally be set for TPM-backed keys (Linux only).
 func NewCertAuthClient(c *api.Client, config *api.TLSConfig) (*api.Client, error) {
 	if c == nil {
 		return nil, errors.New("base client is required for cert auth client")

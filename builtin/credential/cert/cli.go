@@ -54,6 +54,14 @@ Usage: vault login -method=cert [CONFIG K=V...]
 
       $ vault login -method=cert -client-cert=cert.pem -client-key=key.pem
 
+  Authenticate using a TPM-backed client certificate (Linux only):
+
+      $ vault login -method=cert -client-cert=cert.pem -client-key=tss2_key.pem
+      $ vault login -method=cert -client-cert=cert.pem -client-key=tss2_key.pem -tmp-device=/dev/tpm1
+
+  TPM support automatically detects TSS2 format private keys and uses the TPM
+  device for cryptographic operations. This requires Linux with TPM 2.0 hardware.
+
 Configuration:
 
   name=<string>
