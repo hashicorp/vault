@@ -91,28 +91,16 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 		return nil, nil, nil
 	}
 
-	// c.logger.Debug("entity set on the token", "entity_id", te.EntityID)
-
-	// Fetch the entity
-	entity, err := c.identityStore.MemDBEntityByID(entityID, false)
+	entity, err := c.fetchEntity(entityID, false)
+	if entity == nil && err == nil {
+		return nil, nil, nil
+	}
 	if err != nil {
-		c.logger.Error("failed to lookup entity using its ID", "error", err)
 		return nil, nil, err
 	}
 
-	if entity == nil {
-		// If there was no corresponding entity object found, it is
-		// possible that the entity got merged into another entity. Try
-		// finding entity based on the merged entity index.
-		entity, err = c.identityStore.MemDBEntityByMergedEntityID(entityID, false)
-		if err != nil {
-			c.logger.Error("failed to lookup entity in merged entity ID index", "error", err)
-			return nil, nil, err
-		}
-	}
-
 	policies := make(map[string][]string)
-	if entity != nil && !skipDeriveEntityPolicies {
+	if !skipDeriveEntityPolicies {
 		// c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
 
 		// Attach the policies on the entity
@@ -136,6 +124,34 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 	}
 
 	return entity, policies, err
+}
+
+// fetchEntity returns the entity object for the given entity
+// ID. If the entity is merged into a different entity object, the entity into
+// which the given entity ID is merged into will be returned.
+func (c *Core) fetchEntity(entityID string, clone bool) (*identity.Entity, error) {
+	if entityID == "" || c.identityStore == nil {
+		return nil, nil
+	}
+
+	// Fetch the entity
+	entity, err := c.identityStore.MemDBEntityByID(entityID, clone)
+	if err != nil {
+		c.logger.Error("failed to lookup entity using its ID", "error", err)
+		return nil, err
+	}
+
+	if entity == nil {
+		// If there was no corresponding entity object found, it is
+		// possible that the entity got merged into another entity. Try
+		// finding entity based on the merged entity index.
+		entity, err = c.identityStore.MemDBEntityByMergedEntityID(entityID, clone)
+		if err != nil {
+			c.logger.Error("failed to lookup entity in merged entity ID index", "error", err)
+			return nil, err
+		}
+	}
+	return entity, nil
 }
 
 // filterGroupPoliciesByNS takes a context, token namespace, and a map of
@@ -1906,7 +1922,8 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					MFAConstraints: make(map[string]*logical.MFAConstraintAny),
 				}
 				for _, eConfig := range matchedMfaEnforcementList {
-					mfaAny, err := c.buildMfaEnforcementResponse(eConfig, entity)
+					onlyMFAEnforcement := len(matchedMfaEnforcementList) == 1
+					mfaAny, err := c.buildMfaEnforcementResponse(eConfig, entity, onlyMFAEnforcement)
 					if err != nil {
 						return nil, nil, err
 					}
@@ -2488,7 +2505,7 @@ func (c *Core) getUserLockoutFromConfig(mountType string) UserLockoutConfig {
 	return defaultUserLockoutConfig
 }
 
-func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig, entity *identity.Entity) (*logical.MFAConstraintAny, error) {
+func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig, entity *identity.Entity, onlyMFAEnforcement bool) (*logical.MFAConstraintAny, error) {
 	if eConfig == nil {
 		return nil, fmt.Errorf("MFA enforcement config is nil")
 	}
@@ -2520,10 +2537,11 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig, en
 			}
 			enrollmentEnabled := totpConf.TOTPConfig.GetEnableSelfEnrollment()
 			_, entityHasMFASecretForMethodID := entity.MFASecrets[methodID]
-			if enrollmentEnabled && !entityHasMFASecretForMethodID {
+			if enrollmentEnabled && !entityHasMFASecretForMethodID && onlyMFAEnforcement {
 				// If enable_self_enrollment setting on the TOTP MFA method config is set to
 				// true and the entity does not have an MFA secret yet, we will allow
-				// self-service enrollment.
+				// self-service enrollment as long as only a single MFA enforcement applies to
+				// this login request.
 				allowSelfEnrollment = true
 			}
 		}
