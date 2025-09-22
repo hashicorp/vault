@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"slices"
 	"sort"
@@ -526,26 +527,25 @@ CHECK:
 			return
 		}
 
-		if len(permissions.DeniedParameters) == 0 {
-			goto ALLOWED_PARAMETERS
-		}
+		useLegacyMatching := os.Getenv("VAULT_LEGACY_EXACT_MATCHING_ON_LIST") != ""
 
-		// Check if all parameters have been denied
-		if _, ok := permissions.DeniedParameters["*"]; ok {
-			return
-		}
+		if len(permissions.DeniedParameters) > 0 {
+			// Check if all parameters have been denied
+			if _, ok := permissions.DeniedParameters["*"]; ok {
+				return
+			}
 
-		for parameter, value := range req.Data {
-			// Check if parameter has been explicitly denied
-			if valueSlice, ok := permissions.DeniedParameters[strings.ToLower(parameter)]; ok {
-				// If the value exists in denied values slice, deny
-				if valueInParameterList(value, valueSlice) {
-					return
+			for parameter, value := range req.Data {
+				// Check if parameter has been explicitly denied
+				if valueSlice, ok := permissions.DeniedParameters[strings.ToLower(parameter)]; ok {
+					// If the value exists in denied values slice, deny
+					if valueInDeniedParameterList(value, valueSlice, useLegacyMatching) {
+						return
+					}
 				}
 			}
 		}
 
-	ALLOWED_PARAMETERS:
 		// If we don't have any allowed parameters set, allow
 		if len(permissions.AllowedParameters) == 0 {
 			ret.Allowed = true
@@ -565,9 +565,9 @@ CHECK:
 				return
 			}
 
-			// If the value doesn't exists in the allowed values slice,
+			// If the value doesn't exist in the allowed values slice,
 			// deny
-			if ok && !valueInParameterList(value, valueSlice) {
+			if ok && !valueInAllowedParameterList(value, valueSlice, useLegacyMatching) {
 				return
 			}
 		}
@@ -812,16 +812,54 @@ func (c *Core) performPolicyChecksSinglePath(ctx context.Context, acl *ACL, te *
 	return ret
 }
 
-func valueInParameterList(v interface{}, list []interface{}) bool {
+func valueInAllowedParameterList(v interface{}, list []interface{}, useLegacyMatching bool) bool {
 	// Empty list is equivalent to the item always existing in the list
 	if len(list) == 0 {
 		return true
 	}
 
-	return valueInSlice(v, list)
+	var oneByOneMissingMatch bool
+	if vSlice, ok := v.([]interface{}); ok && !useLegacyMatching {
+		// when not running in legacy mode, we run a relaxed check for slices that verifies if all
+		// elements in the slice exist in the allowed list, as opposed to checking if the allowed
+		// list contains a single element that matches the entire slice (but this whole-slice match
+		// is still supported)
+		for _, v := range vSlice {
+			if !valueInParameterList(v, list) {
+				oneByOneMissingMatch = true
+				break
+			}
+		}
+
+		if !oneByOneMissingMatch {
+			// no missing match means all elements in the slice were found in the allowed list, so allow it
+			return true
+		}
+	}
+
+	return valueInParameterList(v, list)
 }
 
-func valueInSlice(v interface{}, list []interface{}) bool {
+func valueInDeniedParameterList(v interface{}, list []interface{}, useLegacyMatching bool) bool {
+	// Empty list is equivalent to the item always existing in the list
+	if len(list) == 0 {
+		return true
+	}
+
+	if vSlice, ok := v.([]interface{}); ok && !useLegacyMatching {
+		// The new behaviour is that if any value in the slice is in the denied list, we deny.
+		// Always execute it in order to log a warning in case we find a breaking change while using the legacy mode.
+		for _, v := range vSlice {
+			if valueInParameterList(v, list) {
+				return true
+			}
+		}
+	}
+
+	return valueInParameterList(v, list)
+}
+
+func valueInParameterList(v interface{}, list []interface{}) bool {
 	for _, el := range list {
 		if el == nil || v == nil {
 			// It doesn't seem possible to set up a nil entry in the list, but it is possible
@@ -830,11 +868,8 @@ func valueInSlice(v interface{}, list []interface{}) bool {
 			if el == v {
 				return true
 			}
-		} else if reflect.TypeOf(el).String() == "string" && reflect.TypeOf(v).String() == "string" {
-			item := el.(string)
-			val := v.(string)
-
-			if strutil.GlobbedStringsMatch(item, val) {
+		} else if elStr, ok := el.(string); ok {
+			if vStr, ok := v.(string); ok && strutil.GlobbedStringsMatch(elStr, vStr) {
 				return true
 			}
 		} else if reflect.DeepEqual(el, v) {
