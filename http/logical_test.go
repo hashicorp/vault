@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -283,12 +284,24 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	// Write a very large object, should fail. This test works because Go will
-	// convert the byte slice to base64, which makes it significantly larger
-	// than the default max request size.
-	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
-		"data": make([]byte, DefaultMaxRequestSize),
-	})
+	// To test the server's max request size limit (which returns 413),
+	// we must create a payload that is larger than the limit in total, but
+	// does not violate any of the JSON parser's individual limits (like max
+	// string length), which would return a 500 error first.
+	//
+	// We do this by creating many key-value pairs, where each value is a
+	// moderately sized string.
+	const valueSize = 4096 // 4KB, well under the 1MB string limit
+	numEntries := (DefaultMaxRequestSize / valueSize) + 1
+	valueString := strings.Repeat("a", valueSize)
+
+	payload := make(map[string]interface{}, numEntries)
+	for i := 0; i < numEntries; i++ {
+		key := fmt.Sprintf("key_%d", i)
+		payload[key] = valueString
+	}
+	resp := testHttpPut(t, token, addr+"/v1/secret/foo", payload)
+
 	testResponseStatus(t, resp, http.StatusRequestEntityTooLarge)
 }
 
