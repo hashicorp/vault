@@ -1,0 +1,30 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Recovery::Page::Header
+  @title="Secrets Recovery"
+  @subtitle="Recover lost or deleted data from a raft snapshot. Supported data includes KV v1 and Cubbyhole secrets or Database static roles."
+/>
+
+<hr class="has-background-gray-300" />
+
+{{#if (eq this.model.message "raft storage is not in use")}}
+  <Hds::ApplicationState as |A|>
+    <A.Header @title="Raft storage required" @icon="info" />
+    <A.Body @text="Raft storage must be used in order to recover data from a snapshot." />
+    <A.Footer as |F|>
+      <F.LinkStandalone
+        @text="Snapshot management"
+        @icon="docs-link"
+        @iconPosition="trailing"
+        @href={{doc-link "/vault/docs/sysadmin/snapshots"}}
+        @isHrefExternal={{true}}
+      />
+    </A.Footer>
+
+  </Hds::ApplicationState>
+{{else}}
+  <Page::Error @error={{this.model}} />
+{{/if}}
