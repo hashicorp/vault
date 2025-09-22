@@ -163,6 +163,9 @@ jobs:
           # Don't download them on a cache hit during setup, just make sure they're cached before
           # subsequent workflows are run.
           no-restore: true
+      - if: steps.metadata.outputs.is-ent-branch == 'true'
+        name: Generate PAO metadata
+        uses: hashicorp-forge/actions-pao-tool/collect@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
 
   ui:
     # The Web UI workflow is a prerequisite workflow for building our artifacts. If the application

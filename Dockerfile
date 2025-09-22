@@ -12,6 +12,10 @@ ARG PRODUCT_VERSION
 ARG PRODUCT_REVISION
 # TARGETARCH and TARGETOS are set automatically when --platform is provided.
 ARG TARGETOS TARGETARCH
+# LICENSE_SOURCE is the path to IBM license documents, which may be architecture-specific.
+ARG LICENSE_SOURCE
+# LICENSE_DEST is the path where license files are installed in the container
+ARG LICENSE_DEST
 
 # Additional metadata labels used by container registries, platforms
 # and certification scanners.
@@ -25,7 +29,7 @@ LABEL name="Vault" \
       description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log."
 
 # Copy the license file as per Legal requirement
-COPY LICENSE /usr/share/doc/$NAME/LICENSE.txt
+COPY ${LICENSE_SOURCE} ${LICENSE_DEST}
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
@@ -34,11 +38,7 @@ ENV VERSION=$VERSION
 # Create a non-root user to run the software.
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 
-RUN apk add --no-cache libcap su-exec dumb-init tzdata curl && \
-    mkdir -p /usr/share/doc/vault && \
-    curl -o /usr/share/doc/vault/EULA.txt https://eula.hashicorp.com/EULA.txt && \
-    curl -o /usr/share/doc/vault/TermsOfEvaluation.txt https://eula.hashicorp.com/TermsOfEvaluation.txt && \
-    apk del curl
+RUN apk add --no-cache libcap su-exec dumb-init tzdata
 
 COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/
 
@@ -89,6 +89,10 @@ ARG PRODUCT_VERSION
 ARG PRODUCT_REVISION
 # TARGETARCH and TARGETOS are set automatically when --platform is provided.
 ARG TARGETOS TARGETARCH
+# LICENSE_SOURCE is the path to IBM license documents, which may be architecture-specific.
+ARG LICENSE_SOURCE
+# LICENSE_DEST is the path where license files are installed in the container
+ARG LICENSE_DEST
 
 # Additional metadata labels used by container registries, platforms
 # and certification scanners.
@@ -106,10 +110,11 @@ ENV NAME=$NAME
 ENV VERSION=$VERSION
 
 # Copy the license file as per Legal requirement
-COPY LICENSE /usr/share/doc/$NAME/LICENSE.txt
+COPY ${LICENSE_SOURCE} ${LICENSE_DEST}/
 
 # We must have a copy of the license in this directory to comply with the HasLicense Redhat requirement
-COPY LICENSE /licenses/LICENSE.txt
+# Note the trailing slash on the first argument -- plain files meet the requirement but directories do not.
+COPY ${LICENSE_SOURCE}/ /licenses/
 
 # Set up certificates, our base tools, and Vault. Unlike the other version of
 # this (https://github.com/hashicorp/docker-vault/blob/master/ubi/Dockerfile),
@@ -139,11 +144,6 @@ RUN mkdir -p /vault/logs && \
     chown -R vault /vault && chown -R vault $HOME && \
     chgrp -R 0 $HOME && chmod -R g+rwX $HOME && \
     chgrp -R 0 /vault && chmod -R g+rwX /vault
-
-# Include EULA and Terms of Eval
-RUN mkdir -p /usr/share/doc/vault && \
-    curl -o /usr/share/doc/vault/EULA.txt https://eula.hashicorp.com/EULA.txt && \
-    curl -o /usr/share/doc/vault/TermsOfEvaluation.txt https://eula.hashicorp.com/TermsOfEvaluation.txt
 
 # Expose the logs directory as a volume since there's potentially long-running
 # state in there
