@@ -679,7 +679,7 @@ func (b *backend) getTrustedCertsFromCache(certName string) (*trusted, bool) {
 	}
 
 	if trusted == nil {
-	return nil, false
+		return nil, false
 	}
 
 	// We're complete (for our purposes here) if we're really complete
@@ -790,7 +790,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			// exponential backoff on reloading the certificates.
 			if cache.retry == nil {
 				cache.retry = &trustedRetry{}
-		}
+			}
 
 			// Limits are arbitrary. Max of 2^55 backoff just so that delay
 			// and the the jitter fits into a double. Is that silly? Yes.
