@@ -23,6 +23,7 @@ var DefaultFileGroupCheckers = []FileGroupCheck{
 	FileGroupCheckerDocs,
 	FileGroupCheckerEnos,
 	FileGroupCheckerEnterprise,
+	FileGroupCheckerGithub,
 	FileGroupCheckerGoToolchain,
 	FileGroupCheckerPipeline,
 	FileGroupCheckerProto,
@@ -204,6 +205,15 @@ func FileGroupCheckerEnterprise(ctx context.Context, file *File) FileGroups {
 	return nil
 }
 
+// FileGroupCheckerGithub is a file group checker that groups Github files
+func FileGroupCheckerGithub(ctx context.Context, file *File) FileGroups {
+	if hasBaseDir(file.Name(), ".github") {
+		return FileGroups{FileGroupGithub}
+	}
+
+	return nil
+}
+
 // FileGroupCheckerGoToolchain is a file group checker that groups based on the file modifying the
 // Go toolchain or dependencies.
 func FileGroupCheckerGoToolchain(ctx context.Context, file *File) FileGroups {
@@ -227,10 +237,11 @@ func FileGroupCheckerPipeline(ctx context.Context, file *File) FileGroups {
 	switch {
 	case
 		hasBaseDir(name, ".build"),
-		hasBaseDir(name, ".github"),
+		hasBaseDir(name, filepath.Join(".github", "workflows")),
+		hasBaseDir(name, filepath.Join(".github", "actions")),
+		hasBaseDir(name, filepath.Join(".github", "scripts")),
 		hasBaseDir(name, "scripts"),
 		hasBaseDir(name, filepath.Join("tools", "pipeline")),
-		name == "CODEOWNERS",
 		name == "Dockerfile",
 		name == "Makefile":
 		return FileGroups{FileGroupPipeline}
