@@ -160,7 +160,8 @@ func FileGroupCheckerEnterprise(ctx context.Context, file *File) FileGroups {
 		hasBaseDir(name, "vault_ent"),
 		hasBaseDir(name, filepath.Join("scripts", "dev", "hsm")),
 		hasBaseDir(name, filepath.Join("scripts", "testing")),
-		hasBaseDir(name, filepath.Join("specs")):
+		hasBaseDir(name, filepath.Join("specs")),
+		hasBaseDir(name, filepath.Join(".release", "ibm-pao")):
 		return FileGroups{FileGroupEnterprise}
 	}
 
