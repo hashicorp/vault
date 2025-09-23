@@ -56,13 +56,13 @@ jobs:
           git config user.name hc-github-team-secure-vault-ecosystem
           git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
 
-      - if: ! inputs.ent-only
+      - if: inputs.ent-only != 'true'
         name: Update plugin
         run: |
           go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}"
           go mod tidy
 
-      - if: inputs.ent-only
+      - if: inputs.ent-only == 'true'
         name: Update Enterprise-only plugin
         run: |
           (cd vault_ent && go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}" && go mod tidy)
@@ -124,7 +124,7 @@ jobs:
           echo "::debug::changelog filename: $CHANGELOG_FILENAME"
 
           echo "\`\`\`release-note:change
-          ${PLUGIN_TYPE}/${PLUGIN_SERVICE}: Update plugin to v${{ inputs.version }}
+          ${PLUGIN_TYPE}/${PLUGIN_SERVICE}: Update plugin to [v${{ inputs.version }}](https://github.com/hashicorp/${{ inputs.plugin }}/releases/tag/v${{ inputs.version }})
           \`\`\`" > "changelog/$CHANGELOG_FILENAME"
 
           git add changelog/
