@@ -12,10 +12,6 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-const SELECTORS = {
-  badge: (name) => `[data-test-badge="${name}"]`,
-};
-
 module('Integration | Component | recovery/snapshots', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
@@ -25,12 +21,12 @@ module('Integration | Component | recovery/snapshots', function (hooks) {
       snapshots: [],
       canLoadSnapshot: false,
     };
-    this.version = this.owner.lookup('service:version');
-    this.version.type = 'enterprise';
+    this.renderComponent = () => render(hbs`<Recovery::Page::Snapshots @model={{this.model}}/>`);
   });
 
   test('it displays empty state in CE', async function (assert) {
-    this.version.type = 'community';
+    this.model = { snapshots: [], showCommunityMessage: true };
+
     await render(hbs`<Recovery::Page::Snapshots @model={{this.model}}/>`);
     assert
       .dom(GENERAL.emptyStateTitle)
@@ -45,14 +41,14 @@ module('Integration | Component | recovery/snapshots', function (hooks) {
       .dom(GENERAL.emptyStateActions)
       .hasText('Learn more about upgrading', 'CE empty state action renders');
 
-    assert.dom(SELECTORS.badge('enterprise')).exists();
+    assert.dom(GENERAL.badge('enterprise')).exists();
   });
 
   test('it displays empty state in non root namespace', async function (assert) {
     const nsService = this.owner.lookup('service:namespace');
     nsService.setNamespace('test-ns');
 
-    await render(hbs`<Recovery::Page::Snapshots @model={{this.model}}/>`);
+    await this.renderComponent();
 
     assert
       .dom(GENERAL.emptyStateTitle)
@@ -69,7 +65,7 @@ module('Integration | Component | recovery/snapshots', function (hooks) {
   });
 
   test('it displays empty state when user cannot load snapshot', async function (assert) {
-    await render(hbs`<Recovery::Page::Snapshots @model={{this.model}}/>`);
+    await this.renderComponent();
     assert.dom(GENERAL.emptyStateTitle).hasText('No snapshot available', 'empty state title renders');
     assert
       .dom(GENERAL.emptyStateMessage)
@@ -84,7 +80,7 @@ module('Integration | Component | recovery/snapshots', function (hooks) {
 
   test('it displays empty state when user can load snapshot', async function (assert) {
     this.model.canLoadSnapshot = true;
-    await render(hbs`<Recovery::Page::Snapshots @model={{this.model}}/>`);
+    await this.renderComponent();
     assert
       .dom(GENERAL.emptyStateTitle)
       .hasText('Upload a snapshot to get started', 'empty state title renders');
