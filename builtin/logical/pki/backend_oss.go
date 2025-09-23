@@ -25,4 +25,4 @@ func (b *backend) periodicFuncEnt(_ *storageContext, _ *logical.Request) error {
 
 func (b *backend) cleanupEnt(_ *storageContext) {}
 
-func (b *backend) SetupEnt() {}
+func (b *backend) SetupEnt(conf *logical.BackendConfig) {}

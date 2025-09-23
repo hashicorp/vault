@@ -311,9 +311,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.acmeState = NewACMEState()
 	b.certificateCounter = NewCertificateCounter(b.backendUUID)
 
+	b.pkiCertificateCounter = logical.NewNullPkiCertificateCounter()
+
 	// It is important that we call SetupEnt at the very end as
 	// some ENT backends need access to the member vars initialized above.
-	b.SetupEnt()
+	b.SetupEnt(conf)
 	return &b
 }
 
@@ -340,7 +342,12 @@ type backend struct {
 
 	unifiedTransferStatus *UnifiedTransferStatus
 
+	// certificateCounter emits metrics about the number of stored certificates.
 	certificateCounter *CertificateCounter
+
+	// pkiCertificateCounter keeps track of issued and stored certificate counts
+	// for the purposes of PKI-only billing.
+	pkiCertificateCounter logical.PkiCertificateCounter
 
 	pkiStorageVersion atomic.Value
 	crlBuilder        *CrlBuilder
