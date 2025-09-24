@@ -634,6 +634,10 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	// Adjust the path to exclude the routing prefix
 	originalPath := req.Path
 	req.Path = strings.TrimPrefix(ns.Path+req.Path, mount)
+	originalRecoverSourcePath := req.RecoverSourcePath
+	if req.RecoverSourcePath != "" {
+		req.RecoverSourcePath = strings.TrimPrefix(ns.Path+req.RecoverSourcePath, mount)
+	}
 	req.MountPoint = mount
 	req.MountType = re.mountEntry.Type
 	req.SetMountRunningSha256(re.mountEntry.RunningSha256)
@@ -754,6 +758,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	// Reset the request before returning
 	defer func() {
 		req.Path = originalPath
+		req.RecoverSourcePath = originalRecoverSourcePath
 		req.MountPoint = mount
 		req.MountType = re.mountEntry.Type
 		req.SetMountRunningSha256(re.mountEntry.RunningSha256)
