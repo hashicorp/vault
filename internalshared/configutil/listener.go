@@ -167,6 +167,10 @@ type Listener struct {
 	// CustomMaxJSONArrayElementCount determines the maximum number of elements in a JSON array.
 	CustomMaxJSONArrayElementCountRaw interface{} `hcl:"max_json_array_element_count"`
 	CustomMaxJSONArrayElementCount    int64       `hcl:"-"`
+
+	// CustomMaxJSONToken determines the maximum number of tokens in a JSON.
+	CustomMaxJSONTokenRaw interface{} `hcl:"max_json_token"`
+	CustomMaxJSONToken    int64       `hcl:"-"`
 }
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
@@ -760,6 +764,13 @@ func (l *Listener) parseJSONLimitsSettings() error {
 	}
 	if l.CustomMaxJSONArrayElementCount < 0 {
 		return fmt.Errorf("max_json_array_element_count cannot be negative")
+	}
+
+	if err := parseAndClearInt(&l.CustomMaxJSONTokenRaw, &l.CustomMaxJSONToken); err != nil {
+		return fmt.Errorf("error parsing max_json_token: %w", err)
+	}
+	if l.CustomMaxJSONToken < 0 {
+		return fmt.Errorf("max_json_token cannot be negative")
 	}
 
 	return nil
