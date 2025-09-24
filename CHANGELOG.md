@@ -3,6 +3,32 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.20.4
+### September 24, 2025
+
+SECURITY:
+
+* core: Update github.com/ulikunitz/xz to fix security vulnerability GHSA-25xm-hr59-7c27. ([ce4b4264](https://github.com/hashicorp/vault/commit/ce4b42642403f30370dde0a39e9a04991c387291))
+
+CHANGES:
+
+* database/snowflake: Update plugin to [v0.14.2](https://github.com/hashicorp/vault-plugin-database-snowflake/releases/tag/v0.14.2) ([9f06df77](https://github.com/hashicorp/vault/commit/9f06df77b48024350fbc67b7d9a7eaaa5d0022fa))
+
+IMPROVEMENTS:
+
+* Raft: Auto-join will now allow you to enforce IPv4 on networks that allow IPv6 and dual-stack enablement, which is on by default in certain regions. ([1fd38796](https://github.com/hashicorp/vault/commit/1fd38796639ed861fc2fa1b58f138caad8fc0950))
+* auth/cert: Support RFC 9440 colon-wrapped Base64 certificates in `x_forwarded_for_client_cert_header`, to fix TLS certificate auth errors with Google Cloud Application Load Balancer. [[GH-31501](https://github.com/hashicorp/vault/pull/31501)]
+* secrets/database (enterprise): Add support for reading, listing, and recovering static roles from a loaded snapshot. Also add support for reading static credentials from a loaded snapshot. ([24cd1aa5](https://github.com/hashicorp/vault/commit/24cd1aa5961bfbed396251aebd3490dcfc7a106f))
+* secrets/ssh: Add support for recovering the SSH plugin CA from a loaded snapshot (enterprise only). ([0087af9d](https://github.com/hashicorp/vault/commit/0087af9da59692351e7a3c3f5269af9de082a52e))
+
+BUG FIXES:
+
+* auth/cert: Recover from partially populated caches of trusted certificates if one or more certificates fails to load. [[GH-31438](https://github.com/hashicorp/vault/pull/31438)]
+* core: Role based quotas now work for cert auth ([fc775dea](https://github.com/hashicorp/vault/commit/fc775deacee3ab2dd956b8ab7ab64847601c1685))
+* sys/mounts: enable unsetting allowed_response_headers [[GH-31555](https://github.com/hashicorp/vault/pull/31555)]
+* ui: Fix page loading error when users navigate away from identity entities and groups list views. ([81170963](https://github.com/hashicorp/vault/commit/8117096364d5fbb541124a6e057cd11b24eaa6f3))
+
+
 ## 1.20.3
 ### August 28, 2025
 
@@ -281,6 +307,33 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.10 Enterprise
+### September 24, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* core: Update github.com/ulikunitz/xz to fix security vulnerability GHSA-25xm-hr59-7c27.
+
+CHANGES:
+
+* core: Updates post-install script to print updated license information
+* database/snowflake: Update plugin to [v0.13.3](https://github.com/hashicorp/vault-plugin-database-snowflake/releases/tag/v0.13.3)
+
+IMPROVEMENTS:
+
+* Raft: Auto-join will now allow you to enforce IPv4 on networks that allow IPv6 and dual-stack enablement, which is on by default in certain regions.
+* auth/cert: Support RFC 9440 colon-wrapped Base64 certificates in `x_forwarded_for_client_cert_header`, to fix TLS certificate auth errors with Google Cloud Application Load Balancer.
+
+BUG FIXES:
+
+* auth/cert: Recover from partially populated caches of trusted certificates if one or more certificates fails to load.
+* core: Fixed issue where under certain circumstances the rotation manager would spawn goroutines indefinitely.
+* core: Role based quotas now work for cert auth
+* secrets/transit: Fix error when using ed25519 keys that were imported with derivation enabled
+* sys/mounts: enable unsetting allowed_response_headers
 
 ## 1.19.9 Enterprise
 ### August 28, 2025
@@ -766,6 +819,33 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
 * vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
+
+## 1.18.15 Enterprise
+### September 24, 2025
+
+SECURITY:
+
+* core: Update github.com/hashicorp/go-getter to fix security vulnerability GHSA-wjrx-6529-hcj3.
+* core: Update github.com/ulikunitz/xz to fix security vulnerability GHSA-25xm-hr59-7c27.
+
+CHANGES:
+
+* core: Bump Go version to 1.24.7.
+* core: Updates post-install script to print updated license information
+* database/snowflake: Update plugin to [v0.12.3](https://github.com/hashicorp/vault-plugin-database-snowflake/releases/tag/v0.12.3)
+* sdk: Upgrade to go-secure-stdlib/plugincontainer@v0.4.2, which also bumps github.com/docker/docker to v28.3.3+incompatible
+
+IMPROVEMENTS:
+
+* Raft: Auto-join will now allow you to enforce IPv4 on networks that allow IPv6 and dual-stack enablement, which is on by default in certain regions.
+* auth/cert: Support RFC 9440 colon-wrapped Base64 certificates in `x_forwarded_for_client_cert_header`, to fix TLS certificate auth errors with Google Cloud Application Load Balancer.
+* core (enterprise): Updated code to support FIPS 140-3 compliant algorithms.
+
+BUG FIXES:
+
+* auth/cert: Recover from partially populated caches of trusted certificates if one or more certificates fails to load.
+* secrets/transit: Fix error when using ed25519 keys that were imported with derivation enabled
+* sys/mounts: enable unsetting allowed_response_headers
 
 ## 1.18.14 Enterprise
 ### August 28, 2025
@@ -1954,6 +2034,34 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.26 Enterprise
+### September 24, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* core: Update github.com/hashicorp/go-getter to fix security vulnerability GHSA-wjrx-6529-hcj3.
+* core: Update github.com/ulikunitz/xz to fix security vulnerability GHSA-25xm-hr59-7c27.
+
+CHANGES:
+
+* core: Bump Go version to 1.24.7.
+* core: Updates post-install script to print updated license information
+* database/snowflake: Update plugin to [v0.10.4](https://github.com/hashicorp/vault-plugin-database-snowflake/releases/tag/v0.10.4)
+* sdk: Upgrade to go-secure-stdlib/plugincontainer@v0.4.2, which also bumps github.com/docker/docker to v28.3.3+incompatible
+
+IMPROVEMENTS:
+
+* core (enterprise): Updated code to support FIPS 140-3 compliant algorithms.
+
+BUG FIXES:
+
+* auth/cert: Recover from partially populated caches of trusted certificates if one or more certificates fails to load.
+* secrets/transit: Fix error when using ed25519 keys that were imported with derivation enabled
+* sys/mounts: enable unsetting allowed_response_headers
+
 
 ## 1.16.25 Enterprise
 ### August 28, 2025
