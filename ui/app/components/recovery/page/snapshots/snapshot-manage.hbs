@@ -33,7 +33,7 @@
 
 <hr class="has-background-gray-300" />
 
-<Hds::Text::Display @tag="h3" class="has-top-padding-m">Recover or read data</Hds::Text::Display>
+<Hds::Text::Display @tag="h3" class="has-top-padding-m has-bottom-margin-l">Recover or read data</Hds::Text::Display>
 {{#if this.recoveryData}}
   <Hds::Alert @type="inline" @color="success" class="has-top-margin-m has-bottom-margin-m" data-test-inline-alert as |A|>
     <A.Title>Success</A.Title>
@@ -82,6 +82,7 @@
   {{/if}}
 
   {{! Allow for manual entry of mount paths if no mounts are returned (such as when the user does not have LIST permissions) }}
+  {{!-- {{#if (or this.mountOptions this.fetchMounts.isRunning)}} --}}
   {{#if this.mountOptions}}
     <Hds::Form::SuperSelect::Single::Field
       @onChange={{this.handleSelectMount}}

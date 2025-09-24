@@ -11,7 +11,7 @@ import type ApiService from 'vault/services/api';
 import type Capabilities from 'vault/services/capabilities';
 import type { ModelFrom } from 'vault/vault/route';
 import type RouterService from '@ember/routing/router-service';
-import type Transition from '@ember/routing/transition';
+import type VersionService from 'vault/services/version';
 
 export type SnapshotsRouteModel = ModelFrom<RecoverySnapshotsRoute>;
 
@@ -19,24 +19,26 @@ export default class RecoverySnapshotsRoute extends Route {
   @service declare readonly api: ApiService;
   @service declare readonly capabilities: Capabilities;
   @service declare readonly router: RouterService;
+  @service declare readonly version: VersionService;
 
   async model() {
-    const { canUpdate } = await this.capabilities.fetchPathCapabilities(
-      'sys/storage/raft/snapshot/snapshot-load'
-    );
+    if (this.version.isEnterprise) {
+      const { canUpdate } = await this.capabilities.fetchPathCapabilities(
+        'sys/storage/raft/snapshot/snapshot-load'
+      );
 
-    const snapshots = await this.fetchSnapshots();
+      const snapshots = await this.fetchSnapshots();
 
-    return {
-      snapshots,
-      canLoadSnapshot: canUpdate,
-    };
+      return {
+        snapshots,
+        canLoadSnapshot: canUpdate,
+      };
+    }
+    return { snapshots: [], showCommunityMessage: true };
   }
 
-  afterModel(model: SnapshotsRouteModel, transition: Transition) {
-    // Don't redirect if we're already on details route
-    const toRoute = transition.to?.name;
-    if (model.snapshots.length === 1 && toRoute !== 'vault.cluster.recovery.snapshots.snapshot.details') {
+  redirect(model: SnapshotsRouteModel) {
+    if (model.snapshots.length === 1) {
       const snapshot_id = model.snapshots[0];
       this.router.transitionTo('vault.cluster.recovery.snapshots.snapshot.manage', snapshot_id);
     }

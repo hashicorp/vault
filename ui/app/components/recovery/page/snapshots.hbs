@@ -8,9 +8,24 @@
   @subtitle="Recover lost or deleted data from a raft snapshot. Supported data includes KV v1 and Cubbyhole secrets or Database static roles."
 />
 
-{{! Currently, only a single snapshot is supported. In the future, this may change to support multiple loaded snapshots
-and a LIST view will be used then. }}
-{{#unless @model.snapshots}}
+{{#if @model.showCommunityMessage}}
+  <EmptyState
+    @title="Secrets Recovery is an enterprise feature"
+    @icon="sync-reverse"
+    @message="Secrets Recovery allows you to restore accidentally deleted or lost secrets from a snapshot. The snapshots can be provided via upload or loaded from external storage."
+  >
+    <Hds::Button
+      @text="Learn more about upgrading"
+      @color="tertiary"
+      @icon="docs-link"
+      @iconPosition="trailing"
+      @href={{doc-link "/vault/docs/enterprise"}}
+      @isHrefExternal={{true}}
+    />
+  </EmptyState>
+{{else if (not @model.snapshots)}}
+  {{! Currently, only a single snapshot is supported and the UI automatically redirects users to "recovery.snapshots.snapshot.manage" if one exists.
+  In the future, this may change to support multiple loaded snapshots and a LIST view will be built then. }}
   {{#let (get this.emptyStateDetails this.state) as |d|}}
     <EmptyState @title={{d.title}} @icon={{d.icon}} @message={{d.message}}>
 
@@ -30,4 +45,4 @@ and a LIST view will be used then. }}
       {{/if}}
     </EmptyState>
   {{/let}}
-{{/unless}}
+{{/if}}

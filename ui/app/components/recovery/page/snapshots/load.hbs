@@ -14,13 +14,11 @@
   </div>
 {{/if}}
 
-<form {{on "submit" this.loadSnapshot}}>
-  <Hds::Form::Legend>
-    Choose how to provide the snapshot
-  </Hds::Form::Legend>
-  <div class="has-top-padding-s">
-    <Hds::Form::Radio::Field
-      name="data-center-radio"
+<form {{on "submit" this.loadSnapshot}} class="has-top-margin-xl">
+  <Hds::Form::Radio::Group @name="snapshot-load-method" as |G|>
+    <G.Legend>Choose how to provide the snapshot</G.Legend>
+    <G.RadioField
+      name={{this.loadMethods.AUTOMATED}}
       checked={{eq this.selectedLoadMethod this.loadMethods.AUTOMATED}}
       disabled={{eq @model.configError.status 404}}
       @value={{this.loadMethods.AUTOMATED}}
@@ -43,11 +41,9 @@
       <F.HelperText>
         Provide the snapshot URL from a configured cloud storage
       </F.HelperText>
-    </Hds::Form::Radio::Field>
-  </div>
-  <div class="has-top-padding-s has-bottom-padding-m">
-    <Hds::Form::Radio::Field
-      name="data-center-radio"
+    </G.RadioField>
+    <G.RadioField
+      name={{this.loadMethods.MANUAL}}
       checked={{eq this.selectedLoadMethod this.loadMethods.MANUAL}}
       @value={{this.loadMethods.MANUAL}}
       {{on "change" this.selectLoadMethod}}
@@ -58,9 +54,11 @@
       <F.HelperText>
         Upload a new snapshot to the disk
       </F.HelperText>
-    </Hds::Form::Radio::Field>
-  </div>
-  <div class="has-left-padding-l">
+    </G.RadioField>
+
+  </Hds::Form::Radio::Group>
+
+  <div class="has-top-margin-l has-left-padding-l">
 
     {{#if (eq this.selectedLoadMethod this.loadMethods.AUTOMATED)}}
       <div class="has-bottom-padding-m">
@@ -76,7 +74,13 @@
           >
             <F.Label>Snapshot configuration name</F.Label>
             <F.HelperText>
-              Name of the configuration that created the snapshot. Existing automated snapshots should be configured via /sys
+              Name of the configuration that created the snapshot. Existing automated snapshots should be configured via the
+              <Hds::Link::Inline
+                @href={{doc-link
+                  "/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config"
+                }}
+                @isHrefExternal={{true}}
+              >automated snapshots config</Hds::Link::Inline>
               endpoint.
             </F.HelperText>
             <F.Options>{{F.options}}</F.Options>
@@ -94,7 +98,13 @@
           >
             <F.Label>Snapshot configuration name</F.Label>
             <F.HelperText>
-              Name of the configuration that created the snapshot. Existing automated snapshots should be configured via /sys
+              Name of the configuration that created the snapshot. Existing automated snapshots should be configured via the
+              <Hds::Link::Inline
+                @href={{doc-link
+                  "/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config"
+                }}
+                @isHrefExternal={{true}}
+              >automated snapshots config</Hds::Link::Inline>
               endpoint.
             </F.HelperText>
             {{#if this.configError}}
@@ -123,7 +133,7 @@
       </div>
     {{else}}
       <FileToArrayBuffer
-        class="hsa-left-padding-l"
+        class="has-left-padding-l"
         @error={{this.fileError}}
         @label="Please choose a snapshot file"
         @onChange={{fn (mut this.file)}}

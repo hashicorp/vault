@@ -170,4 +170,5 @@ export const GENERAL = {
 
   /* ────── Misc ────── */
   icon: (name: string) => (name ? `[data-test-icon="${name}"]` : '[data-test-icon]'),
+  badge: (name: string) => (name ? `[data-test-badge="${name}"]` : '[data-test-badge]'),
 };

@@ -12,10 +12,6 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import recoveryHandler from 'vault/mirage/handlers/recovery';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-const SELECTORS = {
-  badge: (name) => `[data-test-badge="${name}"]`,
-};
-
 module('Integration | Component | recovery/snapshots/snapshot-manage', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
@@ -45,7 +41,7 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
 
   test('it displays loaded snapshot card', async function (assert) {
     await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
-    assert.dom(SELECTORS.badge('status')).hasText('Ready', 'status badge renders');
+    assert.dom(GENERAL.badge('status')).hasText('Ready', 'status badge renders');
   });
 
   test('it displays namespace selector for root namespace', async function (assert) {

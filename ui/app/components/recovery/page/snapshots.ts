@@ -7,10 +7,8 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 
 import type NamespaceService from 'vault/services/namespace';
-import type VersionService from 'vault/services/version';
 
 enum State {
-  COMMUNITY_VERSION = 'community',
   NON_ROOT_NAMESPACE = 'non-root-namespace',
   ALLOW_UPLOAD = 'default',
   CANNOT_UPLOAD = 'cannot-upload',
@@ -21,22 +19,11 @@ interface Args {
 }
 
 export default class Index extends Component<Args> {
-  @service declare readonly version: VersionService;
   @service declare readonly namespace: NamespaceService;
 
   viewState = State;
 
   emptyStateDetails = {
-    [this.viewState.COMMUNITY_VERSION]: {
-      title: 'Secrets Recovery is an enterprise feature',
-      icon: 'sync-reverse',
-      message:
-        'Secrets Recovery allows you to restore accidentally deleted or lost secrets from a snapshot. The snapshots can be provided via upload or loaded from external storage.',
-      buttonText: 'Learn more about upgrading',
-      buttonHref: '/vault/docs/enterprise',
-      buttonIcon: 'docs-link',
-      buttonColor: 'tertiary',
-    },
     [this.viewState.NON_ROOT_NAMESPACE]: {
       title: 'Snapshot upload is restricted',
       icon: 'sync-reverse',
@@ -70,9 +57,7 @@ export default class Index extends Component<Args> {
   get state() {
     const { canLoadSnapshot } = this.args.model;
 
-    if (this.version.isCommunity) {
-      return this.viewState.COMMUNITY_VERSION;
-    } else if (!this.namespace.inRootNamespace) {
+    if (!this.namespace.inRootNamespace) {
       return this.viewState.NON_ROOT_NAMESPACE;
     } else if (!canLoadSnapshot) {
       return this.viewState.CANNOT_UPLOAD;
