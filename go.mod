@@ -88,7 +88,6 @@ require (
 	github.com/hashicorp/eventlogger v0.2.10
 	github.com/hashicorp/go-bexpr v0.1.12
 	github.com/hashicorp/go-cleanhttp v0.5.2
-	github.com/hashicorp/go-cmp v0.0.0-20250414215908-521c6e5d9c1c
 	github.com/hashicorp/go-discover v1.1.1-0.20250922102917-55e5010ad859
 	github.com/hashicorp/go-gcp-common v0.9.2
 	github.com/hashicorp/go-hclog v1.6.3
