@@ -25,7 +25,7 @@ var nonVotersAllowed = false
 
 func wrapMaxRequestSizeHandler(handler http.Handler, props *vault.HandlerProperties) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var maxRequestSize, maxJSONDepth, maxStringValueLength, maxObjectEntryCount, maxArrayElementCount int64
+		var maxRequestSize, maxJSONDepth, maxStringValueLength, maxObjectEntryCount, maxArrayElementCount, maxToken int64
 
 		if props.ListenerConfig != nil {
 			maxRequestSize = props.ListenerConfig.MaxRequestSize
@@ -33,6 +33,7 @@ func wrapMaxRequestSizeHandler(handler http.Handler, props *vault.HandlerPropert
 			maxStringValueLength = props.ListenerConfig.CustomMaxJSONStringValueLength
 			maxObjectEntryCount = props.ListenerConfig.CustomMaxJSONObjectEntryCount
 			maxArrayElementCount = props.ListenerConfig.CustomMaxJSONArrayElementCount
+			maxToken = props.ListenerConfig.CustomMaxJSONToken
 		}
 
 		if maxRequestSize == 0 {
@@ -50,12 +51,16 @@ func wrapMaxRequestSizeHandler(handler http.Handler, props *vault.HandlerPropert
 		if maxArrayElementCount == 0 {
 			maxArrayElementCount = CustomMaxJSONArrayElementCount
 		}
+		if maxToken == 0 {
+			maxToken = CustomMaxJSONToken
+		}
 
 		jsonLimits := jsonutil.JSONLimits{
 			MaxDepth:             int(maxJSONDepth),
 			MaxStringValueLength: int(maxStringValueLength),
 			MaxObjectEntryCount:  int(maxObjectEntryCount),
 			MaxArrayElementCount: int(maxArrayElementCount),
+			MaxTokens:            int(maxToken),
 		}
 
 		// If the payload is JSON, the VerifyMaxDepthStreaming function will perform validations.

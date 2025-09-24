@@ -93,6 +93,7 @@ const (
 	// recover from snapshot operation. This replaces the use of query parameters
 	// to pass the snapshot ID
 	VaultSnapshotRecoverHeader = "X-Vault-Recover-Snapshot-Id"
+
 	// CustomMaxJSONDepth specifies the maximum nesting depth of a JSON object.
 	// This limit is designed to prevent stack exhaustion attacks from deeply
 	// nested JSON payloads, which could otherwise lead to a denial-of-service
@@ -129,6 +130,15 @@ const (
 	// systems that require handling larger datasets, though pagination is the
 	// recommended practice for such cases.
 	CustomMaxJSONArrayElementCount = 10000
+
+	// CustomMaxJSONToken sets the maximum total number of tokens (e.g., keys, values,
+	// braces, brackets) permitted in a single JSON payload. This limit is a crucial
+	// defense against complexity-based denial-of-service (DoS) attacks, where a
+	// payload could exhaust CPU and memory with an enormous number of small elements,
+	// even while respecting all other individual limits. The default of 500,000
+	// tokens provides a robust safeguard against malicious inputs without interfering
+	// with legitimate, large-scale API operations. This value is configurable.
+	CustomMaxJSONToken = 500000
 )
 
 var (

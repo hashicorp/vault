@@ -183,7 +183,7 @@ func TestJSONUtil_DecodeJSONFromReader(t *testing.T) {
 	}
 }
 
-func TestJSONUtil_Limits(t *testing.T) {
+func TestJSONUtil_Limits_DefaultLimits(t *testing.T) {
 	tests := []struct {
 		name        string
 		jsonInput   string
@@ -213,7 +213,7 @@ func TestJSONUtil_Limits(t *testing.T) {
 			name:        "Malformed - Unmatched closing brace",
 			jsonInput:   `{}}`,
 			expectError: true,
-			errorMsg:    "error reading JSON token: invalid character '}' looking for beginning of value",
+			errorMsg:    "invalid character '}' after top-level value",
 		},
 		// String Length Limits
 		{
@@ -270,6 +270,464 @@ func TestJSONUtil_Limits(t *testing.T) {
 			} else {
 				require.NoError(t, err, "did not expect an error but got one")
 			}
+		})
+	}
+}
+
+func TestJSONUtil_Limits_ConfiguredLimits(t *testing.T) {
+	limits := JSONLimits{
+		MaxDepth:             64,
+		MaxStringValueLength: 1024,
+		MaxObjectEntryCount:  3,
+		MaxArrayElementCount: 3,
+		MaxTokens:            20,
+	}
+
+	bom := []byte{0xEF, 0xBB, 0xBF}
+
+	tests := []struct {
+		name     string
+		payload  []byte
+		errorMsg string
+	}{
+		{
+			name:     "object entries with string values",
+			payload:  []byte(`{"k0":"v0","k1":"v1","k2":"v2","k3":"v3"}`),
+			errorMsg: "JSON object exceeds allowed entry count",
+		},
+		{
+			name:     "object entries with array values",
+			payload:  []byte(`{"k0":[],"k1":[],"k2":[],"k3":[]}`),
+			errorMsg: "JSON object exceeds allowed entry count",
+		},
+		{
+			name:     "object entries with object values",
+			payload:  []byte(`{"k0":{},"k1":{},"k2":{},"k3":{}}`),
+			errorMsg: "JSON object exceeds allowed entry count",
+		},
+		{
+			name:     "array elements as objects",
+			payload:  []byte(`[{}, {}, {}, {}]`),
+			errorMsg: "JSON array exceeds allowed element count",
+		},
+		{
+			name:     "BOM-prefixed over-limit object",
+			payload:  append(bom, []byte(`{"k0":"v0","k1":"v1","k2":"v2","k3":"v3"}`)...),
+			errorMsg: "JSON object exceeds allowed entry count",
+		},
+		{
+			name:     "object key exceeds string length limit",
+			payload:  []byte(fmt.Sprintf(`{"%s": 0}`, strings.Repeat("a", limits.MaxStringValueLength+1))),
+			errorMsg: "JSON string value exceeds allowed length",
+		},
+		{
+			name:     "trailing data after valid JSON",
+			payload:  []byte(`{"k0":"v0"} "invalid"`),
+			errorMsg: "invalid character '\"' after top-level value",
+		},
+		{
+			name:     "object with embedded null byte in key",
+			payload:  []byte(`{"k0\u0000":0, "k1":1, "k2":2, "k3":3}`),
+			errorMsg: "JSON object exceeds allowed entry count",
+		},
+		{
+			name:     "incomplete JSON stream",
+			payload:  []byte(`{"k0":"v0",`),
+			errorMsg: "malformed JSON, unclosed containers",
+		},
+		{
+			name:     "deeply nested object exceeds depth limit",
+			payload:  []byte(strings.Repeat(`{"a":`, limits.MaxDepth+1) + "null" + strings.Repeat(`}`, limits.MaxDepth+1)),
+			errorMsg: "JSON payload exceeds allowed token count",
+		},
+		{
+			name:     "payload exceeds token limit",
+			payload:  []byte(`{"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10}`),
+			errorMsg: "JSON object exceeds allowed entry count",
+		},
+		{
+			name:     "string with many escapes exceeds length limit",
+			payload:  []byte(fmt.Sprintf(`{"k":"%s"}`, strings.Repeat(`\"`, limits.MaxStringValueLength/2+1))),
+			errorMsg: "JSON string value exceeds allowed length",
+		},
+		{
+			name: "deeply nested string exceeds length limit",
+			payload: []byte(fmt.Sprintf(`%s{"key":"%s"}%s`,
+				strings.Repeat(`{"a":`, 60),
+				strings.Repeat("b", limits.MaxStringValueLength+1),
+				strings.Repeat(`}`, 60))),
+			errorMsg: "JSON payload exceeds allowed token count",
+		},
+		{
+			name:     "very long number exceeds length limit",
+			payload:  []byte(fmt.Sprintf(`{"key":%s}`, strings.Repeat("1", limits.MaxStringValueLength+1))),
+			errorMsg: "JSON number value exceeds allowed length",
+		},
+		{
+			name: "string with invalid unicode escape",
+			// 'X' is not a valid hex digit
+			payload:  []byte(`{"key":"\u123X"}`),
+			errorMsg: "invalid character 'X' in string escape code",
+		},
+		{
+			name:     "object with trailing comma",
+			payload:  []byte(`{"k0":"v0",}`),
+			errorMsg: "invalid character '}' after object key-value pair",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := VerifyMaxDepthStreaming(bytes.NewReader(tt.payload), limits)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.errorMsg)
+		})
+	}
+}
+
+func TestVerifyMaxDepthStreaming_MaxTokens(t *testing.T) {
+	t.Run("payload exceeds limit", func(t *testing.T) {
+		limits := JSONLimits{
+			MaxTokens:            5, // Set a small, specific limit.
+			MaxDepth:             CustomMaxJSONDepth,
+			MaxStringValueLength: CustomMaxJSONStringValueLength,
+			MaxObjectEntryCount:  CustomMaxJSONObjectEntryCount,
+			MaxArrayElementCount: CustomMaxJSONArrayElementCount,
+		}
+
+		// This payload contains 6 tokens: {, "k0", "v0", "k1", "v1", }
+		payload := []byte(`{"k0":"v0","k1":"v1"}`)
+		expectedErrorMsg := "JSON payload exceeds allowed token count"
+
+		_, err := VerifyMaxDepthStreaming(bytes.NewReader(payload), limits)
+
+		// We expect an error because the token count (6) is greater than the limit (5).
+		require.Error(t, err)
+		require.Contains(t, err.Error(), expectedErrorMsg)
+	})
+
+	t.Run("payload within limit", func(t *testing.T) {
+		limits := JSONLimits{
+			MaxTokens:            5,
+			MaxDepth:             CustomMaxJSONDepth,
+			MaxStringValueLength: CustomMaxJSONStringValueLength,
+			MaxObjectEntryCount:  CustomMaxJSONObjectEntryCount,
+			MaxArrayElementCount: CustomMaxJSONArrayElementCount,
+		}
+
+		// This payload contains 3 tokens: {, "key", }
+		payload := []byte(`{"key":null}`)
+
+		_, err := VerifyMaxDepthStreaming(bytes.NewReader(payload), limits)
+
+		// We expect no error because the token count (3) is less than the limit (5).
+		require.NoError(t, err)
+	})
+}
+
+// TestJSONUtil_Limits_Strictness adds tests for cases that a lenient parser
+// might accept but a security-focused one should reject.
+func TestJSONUtil_Limits_Strictness(t *testing.T) {
+	limits := JSONLimits{
+		MaxDepth:             64,
+		MaxStringValueLength: 1024,
+		MaxObjectEntryCount:  3,
+		MaxArrayElementCount: 3,
+		MaxTokens:            100,
+	}
+
+	tests := []struct {
+		name     string
+		payload  []byte
+		errorMsg string
+	}{
+		// RFC 8259 states that object key names SHOULD be unique, but doesn't
+		// require it. A strict parser should reject duplicates to prevent ambiguity.
+		{
+			name:     "object with duplicate keys",
+			payload:  []byte(`{"key":"v1", "key":"v2"}`),
+			errorMsg: "duplicate key 'key' in object",
+		},
+		{
+			name:     "array with trailing comma",
+			payload:  []byte(`[1, 2, 3,]`),
+			errorMsg: "invalid character ']' after array element",
+		},
+		// A robust parser should reject any invalid escape sequence, not just unicode.
+		{
+			name:     "string with invalid escape sequence",
+			payload:  []byte(`{"key":"\q"}`),
+			errorMsg: "invalid character 'q' in string escape code",
+		},
+		// A key must be followed by a colon and a value.
+		{
+			name:     "object with missing value after key",
+			payload:  []byte(`{"key":}`),
+			errorMsg: "invalid character '}' after object key",
+		},
+		// Numbers starting with zero (unless they are just "0") are not standard.
+		{
+			name:     "number with leading zero",
+			payload:  []byte(`[0123]`),
+			errorMsg: "invalid character '1' after top-level value",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := VerifyMaxDepthStreaming(bytes.NewReader(tt.payload), limits)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.errorMsg)
+		})
+	}
+}
+
+// TestVerifyMaxDepthStreaming_NonContainerBypass ensures that top-level values
+// that are not objects or arrays are correctly ignored, as the limits are not
+// intended to apply to them.
+func TestVerifyMaxDepthStreaming_NonContainerBypass(t *testing.T) {
+	limits := JSONLimits{MaxDepth: 1, MaxTokens: 1}
+
+	tests := map[string][]byte{
+		"top-level string": []byte(`"this is a string"`),
+		"top-level number": []byte(`12345`),
+		"top-level bool":   []byte(`true`),
+		"top-level null":   []byte(`null`),
+	}
+
+	for name, payload := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := VerifyMaxDepthStreaming(bytes.NewReader(payload), limits)
+			require.NoError(t, err, "expected no error for non-container top-level value")
+		})
+	}
+}
+
+// TestVerifyMaxDepthStreaming_ValidVaultPayloads ensures the parser
+// correctly accepts legitimate, common JSON payloads from the Vault ecosystem.
+func TestVerifyMaxDepthStreaming_ValidVaultPayloads(t *testing.T) {
+	// Use reasonable limits that are well above what these payloads require,
+	// ensuring that the parser doesn't fail on valid structures.
+	limits := JSONLimits{
+		MaxDepth:             10,
+		MaxStringValueLength: 4096,
+		MaxObjectEntryCount:  100,
+		MaxArrayElementCount: 100,
+		MaxTokens:            500,
+	}
+
+	tests := map[string]string{
+		"KVv2 secret read response": `{
+			"request_id": "a5a1c058-305f-3576-2f1d-f8f9a46a742c",
+			"lease_id": "",
+			"lease_duration": 0,
+			"renewable": false,
+			"data": {
+				"data": {
+					"foo": "bar"
+				},
+				"metadata": {
+					"created_time": "2025-09-19T08:10:00.123456789Z",
+					"custom_metadata": null,
+					"deletion_time": "",
+					"destroyed": false,
+					"version": 1
+				}
+			},
+			"warnings": null,
+			"wrap_info": null
+		}`,
+		"Auth token lookup response": `{
+			"request_id": "6d1f2b3e-7c3a-4e2b-8c6a-1b7d5f0e3a1b",
+			"data": {
+				"accessor": "St8oY1x3x6z5y9p6q3r8s7t2",
+				"creation_time": 1663242230,
+				"display_name": "userpass-user",
+				"entity_id": "e-12345-67890-abcdef",
+				"expire_time": "2025-10-19T10:10:00.000Z",
+				"explicit_max_ttl": 0,
+				"id": "h.123abcde456fghij789klmno",
+				"identity_policies": ["default", "dev-policy"],
+				"issue_time": "2025-09-19T10:10:00.000Z",
+				"meta": {
+					"username": "test-user"
+				},
+				"num_uses": 0,
+				"orphan": true,
+				"path": "auth/userpass/login/test-user",
+				"policies": ["default", "dev-policy"],
+				"renewable": true,
+				"ttl": 2764799,
+				"type": "service"
+			}
+		}`,
+		"LIST operation response": `{
+			"request_id": "c1a2b3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6",
+			"data": {
+				"keys": [
+					"secret1",
+					"secret2/",
+					"another-secret"
+				]
+			}
+		}`,
+		"Policy write request": `{
+			"policy": "path \"secret/data/foo\" {\n  capabilities = [\"read\", \"list\"]\n}\n\npath \"secret/data/bar\" {\n  capabilities = [\"create\", \"update\"]\n}"
+		}`,
+		"Transit batch encryption request": `{
+			"batch_input": [
+				{
+					"plaintext": "aGVsbG8gd29ybGQ=",
+					"context": "Y29udGV4dDE="
+				},
+				{
+					"plaintext": "dGhpcyBpcyBhIHRlc3Q="
+				}
+			]
+		}`,
+	}
+
+	for name, payload := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := VerifyMaxDepthStreaming(bytes.NewReader([]byte(payload)), limits)
+			require.NoError(t, err, "expected valid Vault payload to parse without error")
+		})
+	}
+}
+
+// TestVerifyMaxDepthStreaming_InvalidVaultPayloads ensures the parser correctly
+// rejects real-world Vault payloads that have been crafted to violate specific
+// security limits.
+func TestVerifyMaxDepthStreaming_InvalidVaultPayloads(t *testing.T) {
+	tests := []struct {
+		name     string
+		payload  []byte
+		errorMsg string
+		limits   JSONLimits
+	}{
+		// This KVv2 secret is valid, but the metadata object contains 5 keys.
+		// It should be rejected by the MaxObjectEntryCount limit of 4.
+		{
+			name: "KVv2 secret with too many metadata entries",
+			payload: []byte(`{
+				"data": {
+					"data": {"foo": "bar"},
+					"metadata": {
+						"created_time": "2025-09-19T08:10:00.123456789Z",
+						"custom_metadata": null,
+						"deletion_time": "",
+						"destroyed": false,
+						"version": 1
+					}
+				}
+			}`),
+			errorMsg: "JSON input exceeds allowed nesting depth",
+			limits: JSONLimits{
+				MaxDepth:             2,
+				MaxStringValueLength: 100,
+				MaxObjectEntryCount:  4,
+				MaxArrayElementCount: 2,
+				MaxTokens:            40,
+			},
+		},
+		// This auth token response is flat but contains many key-value pairs,
+		// resulting in over 50 tokens. It should be rejected by the MaxTokens limit of 40.
+		{
+			name: "Auth token response with too many tokens",
+			payload: []byte(`{
+				"data": {
+					"accessor": "St8oY1x3x6z5y9p6q3r8s7t2",
+					"creation_time": 1663242230,
+					"display_name": "userpass-user",
+					"entity_id": "e-12345-67890-abcdef",
+					"expire_time": "2025-10-19T10:10:00.000Z",
+					"explicit_max_ttl": 0,
+					"id": "h.123abcde456fghij789klmno",
+					"identity_policies": ["default", "dev-policy"],
+					"issue_time": "2025-09-19T10:10:00.000Z",
+					"meta": {"username": "test-user"},
+					"num_uses": 0,
+					"orphan": true,
+					"path": "auth/userpass/login/test-user",
+					"policies": ["default", "dev-policy"],
+					"renewable": true,
+					"ttl": 2764799,
+					"type": "service"
+				}
+			}`),
+			errorMsg: "JSON payload exceeds allowed token count",
+			limits: JSONLimits{
+				MaxDepth:             100,
+				MaxStringValueLength: 100,
+				MaxObjectEntryCount:  50,
+				MaxArrayElementCount: 2,
+				MaxTokens:            40,
+			},
+		},
+		// This LIST response is valid but contains 3 elements in the "keys" array.
+		// It should be rejected by the MaxArrayElementCount limit of 2.
+		{
+			name: "LIST response with too many keys in array",
+			payload: []byte(`{
+				"data": {
+					"keys": [
+						"secret1",
+						"secret2/",
+						"another-secret"
+					]
+				}
+			}`),
+			errorMsg: "JSON input exceeds allowed nesting depth",
+			limits: JSONLimits{
+				MaxDepth:             2,
+				MaxStringValueLength: 100,
+				MaxObjectEntryCount:  4,
+				MaxArrayElementCount: 2,
+				MaxTokens:            40,
+			},
+		},
+		// The policy string in this payload is over 100 bytes long.
+		// It should be rejected by the MaxStringValueLength limit of 100.
+		{
+			name: "Policy write request with oversized policy string",
+			payload: []byte(`{
+				"policy": "path \"secret/data/foo\" {\n  capabilities = [\"read\", \"list\"]\n}\n\npath \"secret/data/bar\" {\n  capabilities = [\"create\", \"update\"]\n}"
+			}`),
+			errorMsg: "JSON string value exceeds allowed length",
+			limits: JSONLimits{
+				MaxDepth:             2,
+				MaxStringValueLength: 100,
+				MaxObjectEntryCount:  4,
+				MaxArrayElementCount: 2,
+				MaxTokens:            40,
+			},
+		},
+		// This transit request has a nesting depth of 3 ({ -> [ -> {).
+		// It should be rejected by the MaxDepth limit of 2.
+		{
+			name: "Transit batch request with excessive depth",
+			payload: []byte(`{
+				"batch_input": [
+					{
+						"plaintext": "aGVsbG8gd29ybGQ="
+					}
+				]
+			}`),
+			errorMsg: "JSON input exceeds allowed nesting depth",
+			limits: JSONLimits{
+				MaxDepth:             2,
+				MaxStringValueLength: 100,
+				MaxObjectEntryCount:  4,
+				MaxArrayElementCount: 2,
+				MaxTokens:            40,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := VerifyMaxDepthStreaming(bytes.NewReader(tt.payload), tt.limits)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.errorMsg)
 		})
 	}
 }
