@@ -57,6 +57,14 @@ module('Integration | Component | recovery/snapshots-load', function (hooks) {
   });
 
   test('it loads a manual snapshot successfully', async function (assert) {
+    assert.expect(3);
+    this.server.post('sys/storage/raft/snapshot-load', (schema, req) => {
+      assert.true(true, 'request is made to expected endpoint');
+      const decoder = new TextDecoder();
+      const bodyContent = decoder.decode(req.requestBody);
+      assert.strictEqual(bodyContent, 'some content for a file', 'payload contains file data');
+      return { data: {} };
+    });
     const file = new Blob([['some content for a file']], { type: 'text/plain' });
     file.name = 'snapshot.snap';
 
@@ -77,6 +85,14 @@ module('Integration | Component | recovery/snapshots-load', function (hooks) {
   });
 
   test('it loads an automated snapshot successfully', async function (assert) {
+    assert.expect(3);
+    this.server.post('sys/storage/raft/snapshot-auto/snapshot-load/:config_name', (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      assert.strictEqual(payload.url, 'test-snapshot-url', 'payload contains url');
+      assert.strictEqual(req.params.config_name, 'test-config', 'request url is correct');
+      return { data: {} };
+    });
+
     this.model.configs = ['test-config'];
 
     await render(

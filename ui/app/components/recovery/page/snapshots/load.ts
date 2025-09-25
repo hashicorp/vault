@@ -11,9 +11,7 @@ import { HTMLElementEvent } from 'vault/forms';
 import { SnapshotsLoadModel } from 'vault/routes/vault/cluster/recovery/snapshots/load';
 
 import type ApiService from 'vault/services/api';
-import type AuthService from 'vault/vault/services/auth';
 import type RouterService from '@ember/routing/router-service';
-import { ResponseError } from '@hashicorp/vault-client-typescript';
 
 interface Args {
   model: SnapshotsLoadModel;
@@ -26,7 +24,6 @@ enum Methods {
 
 export default class Index extends Component<Args> {
   @service declare readonly api: ApiService;
-  @service('auth') declare readonly authService: AuthService;
   @service declare readonly router: RouterService;
 
   @tracked selectedLoadMethod: Methods;
@@ -118,7 +115,6 @@ export default class Index extends Component<Args> {
 
     if (!isValid) return;
     try {
-      const { currentToken } = this.authService;
       switch (this.selectedLoadMethod) {
         case Methods.AUTOMATED: {
           await this.api.sys.systemWriteStorageRaftSnapshotAutoSnapshotLoadName(this.selectedConfig, {
@@ -128,17 +124,7 @@ export default class Index extends Component<Args> {
           break;
         }
         case Methods.MANUAL: {
-          const result = await fetch('/v1/sys/storage/raft/snapshot-load', {
-            method: 'POST',
-            headers: {
-              'X-Vault-Token': currentToken,
-            },
-            body: this.file,
-          });
-
-          if (!result.ok) {
-            throw new ResponseError(result);
-          }
+          await this.api.sys.systemWriteStorageRaftSnapshotLoad({ body: this.file });
           break;
         }
         default: {

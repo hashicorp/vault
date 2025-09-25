@@ -325,9 +325,9 @@ export default class SnapshotManage extends Component<Args> {
       const namespace = this.selectedNamespace === 'root' ? ROOT_NAMESPACE : this.selectedNamespace;
       const mountType = this.selectedMount?.type;
       const mountPath = this.selectedMount?.path as string;
-      // if recovering to a copy, the new path (the copy input) becomes the target path
+      // if recovering to a copy, the new path (the copy path input) becomes the target path
       // and the original path (the resource path input) becomes the source path header
-      const path = this.recoverToCopy ? this.copyPath : this.resourcePath;
+      const targetPath = this.recoverToCopy ? this.copyPath : this.resourcePath;
       const recoverSourcePath =
         mountType === SupportedSecretBackendsEnum.DATABASE
           ? mountPath + '/static-roles/' + this.resourcePath
@@ -347,22 +347,20 @@ export default class SnapshotManage extends Component<Args> {
 
       // Certain backends have a prefix which is needed for the recovery link we show to the user
       let modelPrefix = '';
+
       switch (mountType) {
         case SupportedSecretBackendsEnum.KV: {
-          await this.api.secrets.kvV1Write(path, mountPath, {}, snapshot_id, undefined, headers);
+          await this.recoverKvv1(targetPath, mountPath, headers);
           break;
         }
         case SupportedSecretBackendsEnum.CUBBYHOLE: {
-          await this.api.secrets.cubbyholeWrite(path, {}, snapshot_id, undefined, headers);
+          await this.recoverCubbyhole(targetPath, headers);
           break;
         }
         case SupportedSecretBackendsEnum.DATABASE: {
-          await this.api.secrets.databaseWriteStaticRole(path, mountPath, {}, headers);
+          await this.recoverDatabaseStaticRoles(targetPath, mountPath, headers);
           modelPrefix = 'role/';
-          query = {
-            ...query,
-            type: 'static',
-          };
+          query = { ...query, type: 'static' };
           break;
         }
         default: {
@@ -372,7 +370,7 @@ export default class SnapshotManage extends Component<Args> {
       }
 
       this.recoveryData = {
-        models: [mountPath, modelPrefix + path],
+        models: [mountPath, modelPrefix + targetPath],
         query,
       };
     } catch (e) {
@@ -416,5 +414,27 @@ export default class SnapshotManage extends Component<Args> {
     }
 
     return !hasErrors;
+  }
+
+  // The requests below received "undefined" because the typescript client expects those args to be request headers.
+  // However, that is not how our middleware is setup to handle headers and we must pass them in the "headers" object instead.
+  private async recoverCubbyhole(targetPath: string, headers: object) {
+    await this.api.secrets.cubbyholeWrite(targetPath, {}, undefined, undefined, undefined, headers);
+  }
+
+  private async recoverKvv1(targetPath: string, mountPath: string, headers: object) {
+    await this.api.secrets.kvV1Write(targetPath, mountPath, {}, undefined, undefined, undefined, headers);
+  }
+
+  private async recoverDatabaseStaticRoles(targetPath: string, mountPath: string, headers: object) {
+    await this.api.secrets.databaseWriteStaticRole(
+      targetPath,
+      mountPath,
+      {},
+      undefined,
+      undefined,
+      undefined,
+      headers
+    );
   }
 }

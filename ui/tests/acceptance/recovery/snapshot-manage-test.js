@@ -11,76 +11,127 @@ import recoveryHandler from 'vault/mirage/handlers/recovery';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Acceptance | recovery | snapshot-manage', function (hooks) {
-  setupApplicationTest(hooks);
-  setupMirage(hooks);
-
-  hooks.beforeEach(function () {
-    recoveryHandler(this.server);
-
-    this.snapshot = this.server.create('snapshot');
-
-    return login();
-  });
-
+const requestTests = (test) => {
   test('it makes the recovery requests in the root namespace', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
 
-    this.server.post('/cubbyhole/:path', (schema, req) => {
-      assert.propEqual(req.queryParams, {
-        recover_snapshot_id: this.snapshot.snapshot_id,
+    this.server.post(`/${this.resourceType}/:path`, (schema, req) => {
+      assert.strictEqual(
+        req.params.path,
+        `${this.resourceType}-recovered-data`,
+        'url param has expected resource path'
+      );
+
+      const expectedHeaders = {
+        'x-vault-recover-snapshot-id': this.snapshot_id,
+        'x-vault-namespace': '',
+      };
+
+      Object.entries(expectedHeaders).forEach(([key, value]) => {
+        assert.strictEqual(req.requestHeaders[key], value, `"${key}" header has expected value "${value}"`);
       });
-      assert.strictEqual(req.requestHeaders['x-vault-namespace'], '');
     });
 
-    await visit('/vault/recovery/snapshots');
-
     await click(GENERAL.selectByAttr('mount'));
-    await click('[data-option-index="1.0"]');
-    await fillIn(GENERAL.inputByAttr('resourcePath'), 'recovered-secret');
-
+    await click(`[data-option-index="${this.mountIdx}"]`);
+    await fillIn(GENERAL.inputByAttr('resourcePath'), `${this.resourceType}-recovered-data`);
     await click(GENERAL.button('recover'));
   });
 
   test('it makes the recovery requests in the child namespace', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
 
-    this.server.post('/cubbyhole/:path', (schema, req) => {
-      assert.propEqual(req.queryParams, {
-        recover_snapshot_id: this.snapshot.snapshot_id,
+    this.server.post(`/${this.resourceType}/:path`, (schema, req) => {
+      assert.strictEqual(
+        req.params.path,
+        `${this.resourceType}-recovered-data`,
+        'url param has expected resource path'
+      );
+
+      const expectedHeaders = {
+        'x-vault-recover-snapshot-id': this.snapshot_id,
+        'x-vault-namespace': 'child-ns-1',
+      };
+
+      Object.entries(expectedHeaders).forEach(([key, value]) => {
+        assert.strictEqual(req.requestHeaders[key], value, `"${key}" header has expected value "${value}"`);
       });
-      assert.strictEqual(req.requestHeaders['x-vault-namespace'], 'child-ns-1');
     });
-
-    await visit('/vault/recovery/snapshots');
 
     await click(GENERAL.selectByAttr('namespace'));
     await click('[data-option-index="1"]');
     await click(GENERAL.selectByAttr('mount'));
-    await click('[data-option-index="1.0"]');
-    await fillIn(GENERAL.inputByAttr('resourcePath'), 'recovered-secret');
-
+    await click(`[data-option-index="${this.mountIdx}"]`);
+    await fillIn(GENERAL.inputByAttr('resourcePath'), `${this.resourceType}-recovered-data`);
     await click(GENERAL.button('recover'));
   });
 
   test('it makes the recovery requests in the grandchild namespace', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
 
-    this.server.post('/cubbyhole/:path', (schema, req) => {
-      assert.propEqual(req.queryParams, {
-        recover_snapshot_id: this.snapshot.snapshot_id,
+    this.server.post(`/${this.resourceType}/:path`, (schema, req) => {
+      assert.strictEqual(
+        req.params.path,
+        `${this.resourceType}-recovered-data`,
+        'url param has expected resource path'
+      );
+
+      const expectedHeaders = {
+        'x-vault-recover-snapshot-id': this.snapshot_id,
+        'x-vault-namespace': 'child-ns-1/nested',
+      };
+
+      Object.entries(expectedHeaders).forEach(([key, value]) => {
+        assert.strictEqual(req.requestHeaders[key], value, `"${key}" header has expected value "${value}"`);
       });
-      assert.strictEqual(req.requestHeaders['x-vault-namespace'], 'child-ns-1/nested');
     });
-
-    await visit('/vault/recovery/snapshots');
 
     await click(GENERAL.selectByAttr('namespace'));
     await click('[data-option-index="2"]');
     await click(GENERAL.selectByAttr('mount'));
-    await click('[data-option-index="1.0"]');
-    await fillIn(GENERAL.inputByAttr('resourcePath'), 'recovered-secret');
-
+    await click(`[data-option-index="${this.mountIdx}"]`);
+    await fillIn(GENERAL.inputByAttr('resourcePath'), `${this.resourceType}-recovered-data`);
     await click(GENERAL.button('recover'));
+  });
+};
+
+module('Acceptance | recovery | snapshot-manage', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    recoveryHandler(this.server);
+
+    const snapshot = this.server.create('snapshot');
+    this.snapshot_id = snapshot.snapshot_id;
+    await login();
+    await visit('/vault/recovery/snapshots');
+  });
+
+  module('cubbyhole', function (hooks) {
+    hooks.beforeEach(function () {
+      this.resourceType = 'cubbyhole';
+      this.mountIdx = '1.0';
+    });
+
+    requestTests(test);
+  });
+
+  module('kvv1', function (hooks) {
+    hooks.beforeEach(function () {
+      this.resourceType = 'kv';
+      this.mountIdx = '1.1';
+    });
+
+    requestTests(test);
+  });
+
+  module('database static-roles', function (hooks) {
+    hooks.beforeEach(function () {
+      this.resourceType = 'database/static-roles';
+      this.mountIdx = '0.0';
+    });
+
+    requestTests(test);
   });
 });
