@@ -142,7 +142,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ steps.global-metadata.outputs.is-ent-repo == 'true' && steps.secrets.outputs.github-token || secrets.ELEVATED_GITHUB_TOKEN }}
-      - uses: ./.github/actions/set-up-gotestsum
+      - uses: ./.github/actions/install-tools # for gotestsum
       - run: mkdir -p ${{ steps.local-metadata.outputs.go-test-dir }}
       - if: inputs.test-timing-cache-restore || inputs.test-timing-cache-save
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -319,7 +319,7 @@ jobs:
         name: Setup Git configuration (public)
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
-      - uses: ./.github/actions/install-external-tools
+      - uses: ./.github/actions/install-tools
       - if: inputs.binary-tests && matrix.id == inputs.total-runners && needs.test-matrix.outputs.is-ent-branch == 'true'
         name: Build Vault HSM binary for tests
         env:

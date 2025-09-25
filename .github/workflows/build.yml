@@ -163,9 +163,14 @@ jobs:
           # Don't download them on a cache hit during setup, just make sure they're cached before
           # subsequent workflows are run.
           no-restore: true
-      - if: steps.metadata.outputs.is-ent-branch == 'true'
-        name: Generate PAO metadata
-        uses: hashicorp-forge/actions-pao-tool/collect@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
+      # Make sure all required vault tools are cached at this point. We don't want all of the Go
+      # tests and build jobs to build the tools and race to upload them to the cache.
+      - uses: ./.github/actions/install-tools
+        name: Ensure Vault tools are cached
+        with:
+          # Don't download them on a cache hit during setup, just make sure they're cached before
+          # subsequent workflows are run.
+          no-restore: true
 
   ui:
     # The Web UI workflow is a prerequisite workflow for building our artifacts. If the application
@@ -509,7 +514,7 @@ jobs:
 
       - uses: hashicorp/actions-generate-metadata@f1d852525201cb7bbbf031dd2e985fb4c22307fc # v1.1.3
         # create build metadata if we successfully created artifacts
-        if: needs.setup.outputs.is-ent-branch == 'true' && needs.artifacts-ent.result == 'success' || needs.artifacts-ce.result == 'success'
+        if: needs.artifacts-ent.result == 'success' || needs.artifacts-ce.result == 'success'
         id: generate-metadata-file
         with:
           version: ${{ needs.setup.outputs.vault-version-metadata }}
@@ -520,6 +525,9 @@ jobs:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
           if-no-files-found: error
+      - if: needs.setup.outputs.is-ent-branch == 'true' && needs.artifacts-ent.result == 'success'
+        id: generate-pao-metadata
+        uses: hashicorp-forge/actions-pao-tool/collect@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
       - if: always() && steps.status.outputs.result != 'success'
         name: Check for failed status
         run: |
