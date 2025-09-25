@@ -12,6 +12,10 @@ on:
         description: 'Git branch name to use'
         required: true
         type: string
+      base-branch:
+        description: 'Base git branch to use'
+        required: true
+        type: string
       version:
         description: 'Version of the plugin with *NO* "v", e.g., 1.2.3'
         required: true
@@ -39,6 +43,7 @@ jobs:
           # We don't use the default token so that checks are executed on the resulting PR
           # https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
           token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          ref: ${{ inputs.base-branch }}
 
       - uses: ./.github/actions/metadata
         id: metadata
