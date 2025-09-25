@@ -36,6 +36,11 @@ if [[ "$host_arch" != "$GOARCH" ]]; then
   esac
 fi
 
+# Install our tools if necessary
+if ! ./tools.sh check-external; then
+  ./tools.sh install-external
+fi
+
 # Assume that /build is where we've mounted the vault repo.
 git config --global --add safe.directory /build
 git config --global url."https://${GITHUB_TOKEN}@github.com".insteadOf "https://github.com"

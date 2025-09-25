@@ -70,6 +70,14 @@ jobs:
         with:
           github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
+      # Make sure all required vault tools are cached at this point. We don't want all of the Go
+      # tests and build jobs to build the tools and race to upload them to the cache.
+      - uses: ./.github/actions/install-tools
+        name: Ensure Vault tools are cached
+        with:
+          # Don't download them on a cache hit during setup, just make sure they're cached before
+          # subsequent workflows are run.
+          no-restore: true
 
   test-autopilot-upgrade:
     name: Run Autopilot upgrade tool
@@ -308,7 +316,7 @@ jobs:
       - if: needs.setup.outputs.is-ent-repo == 'true'
         name: Set up Git
         run: git config --global url."https://${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
-      - uses: ./.github/actions/install-external-tools
+      - uses: ./.github/actions/install-tools
       - name: build-go-dev
         run: |
           rm -rf ./pkg

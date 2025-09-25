@@ -63,8 +63,7 @@ runs:
       uses: ./.github/actions/set-up-go
       with:
         github-token: ${{ inputs.github-token }}
-    - if: inputs.cgo-enabled == '0'
-      uses: ./.github/actions/install-external-tools
+    - uses: ./.github/actions/install-tools # sets env.VAULT_TOOLS_PATH
     - if: inputs.vault-edition != 'ce'
       name: Configure Git
       shell: bash
@@ -192,6 +191,7 @@ runs:
         mkdir -p out
         docker run \
           -v $(pwd):/build \
+          -v ${VAULT_TOOLS_PATH}:/opt/tools/bin \
           -v $(go env GOMODCACHE):/go-mod-cache \
             --env GITHUB_TOKEN='${{ inputs.github-token }}' \
             --env CGO_ENABLED=1 \
