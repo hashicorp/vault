@@ -77,13 +77,18 @@
       as |F|
     >
       <F.Label>Namespace</F.Label>
-      <F.Options>{{F.options}}</F.Options>
+      <F.Options>
+        {{#let F.options as |option|}}
+          <div data-test-option={{option}}>
+            {{F.options}}
+          </div>
+        {{/let}}
+      </F.Options>
     </Hds::Form::SuperSelect::Single::Field>
   {{/if}}
 
   {{! Allow for manual entry of mount paths if no mounts are returned (such as when the user does not have LIST permissions) }}
-  {{!-- {{#if (or this.mountOptions this.fetchMounts.isRunning)}} --}}
-  {{#if this.mountOptions}}
+  {{#if (or this.mountOptions this.fetchMounts.isRunning)}}
     <Hds::Form::SuperSelect::Single::Field
       @onChange={{this.handleSelectMount}}
       @selected={{this.selectedMount}}
@@ -99,7 +104,7 @@
       <F.Label>Secret mount</F.Label>
       <F.Options>
         {{#let F.options as |option|}}
-          <div>
+          <div data-test-option={{option.path}}>
             <strong>{{option.path}}</strong>
           </div>
           {{option.type}}
@@ -171,6 +176,43 @@
     />
   </div>
 </Hds::Layout::Flex>
+
+<Hds::Layout::Flex @align="start" class="has-bottom-padding-m">
+  <Hds::Form::Radio::Group @name="recover-method" as |G|>
+    <G.Legend>Recover options</G.Legend>
+    {{#each this.recoverMethods as |method|}}
+      <G.RadioField
+        @value={{method.value}}
+        {{on "change" this.handleSelectRecoverMethod}}
+        checked={{eq this.recoverMethod method.value}}
+        data-test-input={{method.value}}
+        as |F|
+      >
+        <F.Label>{{method.label}}</F.Label>
+      </G.RadioField>
+    {{/each}}
+  </Hds::Form::Radio::Group>
+</Hds::Layout::Flex>
+
+{{#if (eq this.recoverMethod "copy")}}
+  <Hds::Layout::Flex @align="start" class="has-bottom-padding-m">
+    <Hds::Form::TextInput::Field
+      @value={{this.copyPath}}
+      @isInvalid={{this.copyPathError}}
+      placeholder="Enter new path"
+      {{on "input" this.updateCopyPath}}
+      data-test-input="copyPath"
+      as |F|
+    >
+      <F.Label>Copy Path</F.Label>
+      <F.HelperText>Recover to the new path below. The original resource path will not be affected.</F.HelperText>
+      {{#if this.copyPathError}}
+        <F.Error data-test-validation-error="copyPath">{{this.copyPathError}}</F.Error>
+      {{/if}}
+    </Hds::Form::TextInput::Field>
+
+  </Hds::Layout::Flex>
+{{/if}}
 
 <hr class="has-background-gray-300" />
 

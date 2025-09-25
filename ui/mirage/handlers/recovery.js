@@ -147,11 +147,11 @@ export default function (server) {
     data: {},
   }));
 
-  server.post('/database/static-roles/:path', () => ({
+  server.post('/kv/:path', () => ({
     data: {},
   }));
 
-  // server.post('/kv/:path', () => ({
-  //   data: {},
-  // }));
+  server.post('/database/static-roles/:path', () => ({
+    data: {},
+  }));
 }
