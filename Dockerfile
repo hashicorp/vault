@@ -180,43 +180,47 @@ FROM ubi AS ubi-hsm-fips
 
 ## Builder:
 #
-# A build container used to build the Vault binary. We use focal because the
-# version of glibc is old enough for all of our supported distros for editions
-# that require CGO.
+#  A build container used to build the Vault binary. We use focal because the
+#  version of glibc is old enough for all of our supported distros for editions
+#  that require CGO. This container is used in CI to build all binaries that
+#  require CGO.
 #
-# You can build the builder container like so:
-#   docker build -t builder --build-arg GO_VERSION=$(cat .go-version) .
+#  To run it locally, first build the builder container:
+#    docker build -t builder --build-arg GO_VERSION=$(cat .go-version) .
 #
-# To can build Vault using the builder container like so:
-#   docker run -it -v $(pwd):/build -v $(go env GOMODCACHE):/go-mod-cache --env GITHUB_TOKEN=$GITHUB_TOKEN --env GO_TAGS='ui enterprise cgo hsm venthsm' --env GOARCH=s390x --env GOOS=linux --env VERSION=1.20.0-beta1 --env VERSION_METADATA=ent.hsm --env GOMODCACHE=/go-mod-cache --env CGO_ENABLED=1 builder make ci-build
+#  Then build Vault using the builder container:
+#    docker run -it -v $(pwd):/build -v GITHUB_TOKEN=$GITHUB_TOKEN --env GO_TAGS='ui enterprise cgo hsm venthsm' --env GOARCH=s390x --env GOOS=linux --env VERSION=1.20.0-beta1 --env VERSION_METADATA=ent.hsm --env CGO_ENABLED=1 builder make ci-build
 #
-# Note that the container is automatically built in CI
+#  You can also share your local Go modules with the container to avoid downloading
+#  them every time:
+#    docker run -it -v $(pwd):/build -v $(go env GOMODCACHE):/go-mod-cache --env GITHUB_TOKEN=$GITHUB_TOKEN --env GO_TAGS='ui enterprise cgo hsm venthsm' --env GOARCH=s390x --env GOOS=linux --env VERSION=1.20.0-beta1 --env VERSION_METADATA=ent.hsm --env GOMODCACHE=/go-mod-cache --env CGO_ENABLED=1 builder make ci-build
+#
+#  If you have a linux machine you can also share the tools
+#    GOBIN="$(go env GOPATH)/bin" make tools
+#    docker run -it -v $(pwd):/build -v $(go env GOMODCACHE):/go-mod-cache -v "$(go env GOPATH)/bin":/opt/tools/bin --env GITHUB_TOKEN=$GITHUB_TOKEN --env GO_TAGS='ui enterprise cgo hsm venthsm' --env GOARCH=s390x --env GOOS=linux --env VERSION=1.20.0-beta1 --env VERSION_METADATA=ent.hsm --env GOMODCACHE=/go-mod-cache --env CGO_ENABLED=1 builder make ci-build
 FROM ubuntu:focal AS builder
 
 # Pass in the GO_VERSION as a build-arg
 ARG GO_VERSION
 
 # Set our environment
-ENV PATH="/root/go/bin:/opt/go/bin:$PATH"
+ENV PATH="/root/go/bin:/opt/go/bin:/opt/tools/bin:$PATH"
 ENV GOPRIVATE='github.com/hashicorp/*'
 
 # Install the necessary system tooling to cross compile vault for our various
 # CGO targets. Do this separately from branch specific Go and build toolchains
 # so our various builder image layers can share cache.
 COPY .build/system.sh .
-RUN chmod +x system.sh
-RUN ./system.sh
+RUN chmod +x system.sh && ./system.sh && rm -rf system.sh
 
 # Install the correct Go toolchain
 COPY .build/go.sh .
-RUN chmod +x go.sh
-RUN ./go.sh
+RUN chmod +x go.sh && ./go.sh && rm -rf go.sh
 
-# Install the vault build tools. Clean up after ourselves so our layer is
-# minimal.
+# Install the vault tools installer. It might be required during build if the
+# pre-build tools are not mounted into the container.
 COPY tools/tools.sh .
 RUN chmod +x tools.sh
-RUN ./tools.sh install-external && rm -rf "$(go env GOCACHE)" && rm -rf "$(go env GOMODCACHE)"
 
 # Run the build
 COPY .build/entrypoint.sh .
