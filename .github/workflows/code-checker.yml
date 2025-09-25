@@ -23,6 +23,10 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
+      - uses: ./.github/actions/install-tools
+        name: Ensure Vault tools are cached
+        with:
+          no-restore: true # don't download them on a cache hit
 
   deprecations:
     name: Deprecated functions
@@ -36,7 +40,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - uses: ./.github/actions/install-external-tools # for staticcheck
+      - uses: ./.github/actions/install-tools # for staticcheck
       - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - run: make ci-deprecations
         name: Check deprecations
@@ -53,7 +57,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - uses: ./.github/actions/install-external-tools # for buf
+      - uses: ./.github/actions/install-tools # for buf
       - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
         # Note: if there is a function we want to ignore the nilnil check for,
         # You can add 'ignore-nil-nil-function-check' somewhere in the
@@ -72,7 +76,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - uses: ./.github/actions/install-external-tools # for buf and protoc-*
+      - uses: ./.github/actions/install-tools # for buf and protoc-*
       - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - name: Check generate delta
         run: make prep check-proto-delta
@@ -86,7 +90,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - uses: ./.github/actions/install-external-tools # for buf and gofumpt
+      - uses: ./.github/actions/install-tools # for buf and gofumpt
       - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - name: Go format
         run: make prep check-go-fmt

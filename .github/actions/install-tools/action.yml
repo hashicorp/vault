@@ -1,0 +1,71 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Install all of the developer tools
+description: |
+  Install all of the developer tools that are defined in tools/tools.sh. When
+  possible we'll restore the tools from prior build that was cached. On a cache
+  miss we'll rebuild the tools. After the tools are restored the `cache-path`
+  will be added to the GITHUB_PATH.
+
+inputs:
+  no-restore:
+    description: Whether or not to restore the Go module cache on a cache hit
+    default: "false"
+  no-save:
+    description: Whether or not to create a Go module cache on cache miss
+    default: "false"
+  destination:
+    description: "Where to install the tools (default: $HOME/bin/vault-tools)"
+    default: "$HOME/bin/vault-tools"
+
+runs:
+  using: composite
+  steps:
+    - id: metadata
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.destination }}"
+        destination="$(readlink -f "${{ inputs.destination }}")"
+        echo "${destination}" >> "$GITHUB_PATH"
+
+        # Cache restore have some surprising relative pathing behavior we need
+        # to deal with. When actions/cache restores something it does it
+        # realtive to the check working directory. Since that can be different
+        # depending on our self-hosted vs Github hosted runners
+        #   /home/runner/actions-runner/_work vs. /home/runner/work
+        # we need to factor in the absolute path of our working directory in our
+        # cache key. If we don't then cache restores will be incompatible on one
+        # or the other runner.
+        #
+        # See: https://github.com/actions/cache/issues/1127
+        wd_hash=$(realpath . | sha256sum | head -c 7)
+        tools_hash=$(git ls-tree HEAD tools --object-only | head -c 7)
+
+        # Uses GITHUB_ENV instead of GITHUB_OUTPUT because composite actions are
+        # broken if you embed them into another composite actions, see:
+        # https://github.com/actions/cache/issues/803#issuecomment-1793565071
+        {
+          echo "VAULT_TOOLS_PATH=${destination}"
+          echo "VAULT_TOOLS_CACHE_KEY=tools-${wd_hash}-${tools_hash}"
+        } | tee -a "$GITHUB_ENV"
+    - id: cache-tools
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        lookup-only: ${{ inputs.no-restore }}
+        path: ${{ env.VAULT_TOOLS_PATH }}
+        key: ${{ env.VAULT_TOOLS_CACHE_KEY }}
+    - if: steps.cache-tools.outputs.cache-hit != 'true' && inputs.no-save != 'true'
+      name: Install tools
+      shell: bash
+      env:
+        GOPRIVATE: github.com/hashicorp/*
+        # `go install` to our vault tool cache
+        GOBIN: ${{ env.VAULT_TOOLS_PATH }}
+        # Don't use the global mod cache because we don't want to pollute it
+        # with tool modules.
+        GOMODCACHE: /home/runner/.cache/vault-tool-mod-cache
+      run: |
+        make tools
+        du -h -d 1 ${{ env.VAULT_TOOLS_PATH }}
