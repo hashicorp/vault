@@ -21,6 +21,7 @@ import type ApiService from 'vault/services/api';
 import type AuthService from 'vault/vault/services/auth';
 import type NamespaceService from 'vault/services/namespace';
 import type { SnapshotManageModel } from 'vault/routes/vault/cluster/recovery/snapshots/snapshot/manage';
+import { ResponseError } from '@hashicorp/vault-client-typescript';
 
 interface Args {
   model: SnapshotManageModel;
@@ -46,17 +47,20 @@ export default class SnapshotManage extends Component<Args> {
   @tracked selectedNamespace: string;
   @tracked selectedMount?: MountOption;
   @tracked resourcePath = '';
+  @tracked copyPath = '';
 
   @tracked mountOptions: GroupedOption[] = [];
   @tracked secretData: SecretData | undefined;
 
   @tracked mountError = '';
   @tracked resourcePathError = '';
+  @tracked copyPathError = '';
   @tracked bannerError = '';
 
   @tracked showReadModal = false;
   @tracked showJson = false;
   @tracked recoveryData?: RecoveryData;
+  @tracked recoverMethod = 'original';
 
   @tracked snapshotStatus: string | null = null;
 
@@ -66,6 +70,11 @@ export default class SnapshotManage extends Component<Args> {
     { display: 'Database', value: SupportedSecretBackendsEnum.DATABASE },
     { display: 'Cubbyhole', value: SupportedSecretBackendsEnum.CUBBYHOLE },
     { display: 'KV v1', value: SupportedSecretBackendsEnum.KV },
+  ];
+
+  recoverMethods = [
+    { label: 'Recover to original path (recover in place)', value: 'original' },
+    { label: 'Recover to a new path (copy)', value: 'copy' },
   ];
 
   constructor(owner: unknown, args: Args) {
@@ -108,6 +117,10 @@ export default class SnapshotManage extends Component<Args> {
     const sanitized = namespaces.map((ns) => sanitizePath(ns));
     // Add the root namespace because `sys/internal/ui/namespaces` does not include it.
     return ['root', ...sanitized];
+  }
+
+  get recoverToCopy() {
+    return this.recoverMethod === 'copy';
   }
 
   get secretKeyAndValue() {
@@ -184,6 +197,7 @@ export default class SnapshotManage extends Component<Args> {
     this.selectedNamespace = this.namespace.inRootNamespace ? 'root' : this.namespace.path;
     this.selectedMount = undefined;
     this.resourcePath = '';
+    this.copyPath = '';
     this.mountError = '';
     this.resourcePathError = '';
     this.secretData = undefined;
@@ -210,6 +224,19 @@ export default class SnapshotManage extends Component<Args> {
     if (this.selectedMount.type === SupportedSecretBackendsEnum.CUBBYHOLE) {
       this.selectedMount.path = 'cubbyhole';
     }
+  }
+
+  @action
+  handleSelectRecoverMethod({ target }: { target: HTMLInputElement }) {
+    this.recoverMethod = target.value;
+    if (this.recoverToCopy && this.resourcePath) {
+      this.copyPath = this.resourcePath + '-copy';
+    }
+  }
+
+  @action
+  updateCopyPath({ target }: { target: HTMLInputElement }) {
+    this.copyPath = target.value.trim();
   }
 
   @action
@@ -265,6 +292,10 @@ export default class SnapshotManage extends Component<Args> {
             }
           );
 
+          if (!resp.ok) {
+            throw new ResponseError(resp);
+          }
+
           const { data } = await resp.json();
           this.secretData = data as SecretData;
           break;
@@ -284,18 +315,29 @@ export default class SnapshotManage extends Component<Args> {
 
   @action
   async recover() {
-    const isValid = this.validateFields();
+    const isValid = this.validateFields(true);
     if (!isValid) {
       return;
     }
     try {
       this.bannerError = '';
       const { snapshot_id } = this.args.model.snapshot as { snapshot_id: string };
+      const namespace = this.selectedNamespace === 'root' ? ROOT_NAMESPACE : this.selectedNamespace;
       const mountType = this.selectedMount?.type;
       const mountPath = this.selectedMount?.path as string;
+      // if recovering to a copy, the new path (the copy input) becomes the target path
+      // and the original path (the resource path input) becomes the source path header
+      const path = this.recoverToCopy ? this.copyPath : this.resourcePath;
+      const recoverSourcePath =
+        mountType === SupportedSecretBackendsEnum.DATABASE
+          ? mountPath + '/static-roles/' + this.resourcePath
+          : mountPath + '/' + this.resourcePath;
 
-      const namespace = this.selectedNamespace === 'root' ? ROOT_NAMESPACE : this.selectedNamespace;
-      const headers = this.api.buildHeaders({ namespace, recoverSnapshotId: snapshot_id });
+      const headers = this.api.buildHeaders({
+        namespace,
+        recoverSnapshotId: snapshot_id,
+        ...(this.recoverToCopy && { recoverSourcePath }),
+      });
 
       // this query is used to build the recovered resource link in the success message
       let query: { [key: string]: string } = {};
@@ -307,15 +349,15 @@ export default class SnapshotManage extends Component<Args> {
       let modelPrefix = '';
       switch (mountType) {
         case SupportedSecretBackendsEnum.KV: {
-          await this.api.secrets.kvV1Write(this.resourcePath, mountPath, {}, snapshot_id, undefined, headers);
+          await this.api.secrets.kvV1Write(path, mountPath, {}, snapshot_id, undefined, headers);
           break;
         }
         case SupportedSecretBackendsEnum.CUBBYHOLE: {
-          await this.api.secrets.cubbyholeWrite(this.resourcePath, {}, snapshot_id, undefined, headers);
+          await this.api.secrets.cubbyholeWrite(path, {}, snapshot_id, undefined, headers);
           break;
         }
         case SupportedSecretBackendsEnum.DATABASE: {
-          await this.api.secrets.databaseWriteStaticRole(this.resourcePath, mountPath, {}, headers);
+          await this.api.secrets.databaseWriteStaticRole(path, mountPath, {}, headers);
           modelPrefix = 'role/';
           query = {
             ...query,
@@ -330,7 +372,7 @@ export default class SnapshotManage extends Component<Args> {
       }
 
       this.recoveryData = {
-        models: [mountPath, modelPrefix + this.resourcePath],
+        models: [mountPath, modelPrefix + path],
         query,
       };
     } catch (e) {
@@ -351,9 +393,11 @@ export default class SnapshotManage extends Component<Args> {
   }
 
   @action
-  validateFields(): boolean {
+  validateFields(isRecover = false): boolean {
     this.mountError = '';
     this.resourcePathError = '';
+    this.copyPathError = '';
+
     let hasErrors = false;
 
     if (!this.selectedMount) {
@@ -363,6 +407,11 @@ export default class SnapshotManage extends Component<Args> {
 
     if (!this.resourcePath) {
       this.resourcePathError = 'Please enter a resource path';
+      hasErrors = true;
+    }
+
+    if (isRecover && this.recoverToCopy && !this.copyPath) {
+      this.copyPathError = 'Please enter a copy path';
       hasErrors = true;
     }
 
