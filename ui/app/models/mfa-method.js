@@ -144,11 +144,13 @@ export default class MfaMethod extends Model {
   @attr('number', {
     label: 'Key size',
     subText: 'The size in bytes of the Vault generated key.',
+    helperText: 'Byte size of the generated key.',
   })
   key_size;
   @attr('number', {
     label: 'QR size',
     subText: 'The pixel size of the generated square QR code.',
+    helperText: 'Pixel size of the QR code.',
   })
   qr_size;
   @attr('string', {
@@ -163,6 +165,7 @@ export default class MfaMethod extends Model {
     editType: 'radio',
     possibleValues: [6, 8],
     subText: 'The number digits in the generated TOTP code.',
+    helperText: 'TOTP code length.',
   })
   digits;
   @attr('number', {

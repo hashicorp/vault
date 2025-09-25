@@ -6,7 +6,8 @@
 {{! This component renders when there are either multiple constraints with self-enroll methods or a single constraint with multiple methods }}
 <Mfa::SplashCard
   @header="Verify your identity"
-  @subheader="Multi-factor authentication is enabled for your account. Choose one of the following methods to continue:"
+  @subheader="Multi-factor authentication is enabled for your account."
+  @description={{this.description}}
   @renderLogo={{true}}
   data-test-mfa-form
 >

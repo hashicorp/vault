@@ -79,6 +79,8 @@
           @alwaysRender={{not (is-empty-value (get this.model.method attr.name))}}
           @label={{or attr.options.label (to-label attr.name)}}
           @value={{get this.model.method attr.name}}
+          @formatTtl={{eq attr.options.editType "ttl"}}
+          @helperText={{attr.options.helperText}}
         />
       {{/if}}
     {{/each}}
