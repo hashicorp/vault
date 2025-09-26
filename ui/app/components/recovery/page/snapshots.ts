@@ -18,7 +18,7 @@ interface Args {
   model: { canLoadSnapshot: boolean; snapshots: Record<string, unknown>[] };
 }
 
-export default class Index extends Component<Args> {
+export default class Snapshots extends Component<Args> {
   @service declare readonly namespace: NamespaceService;
 
   viewState = State;

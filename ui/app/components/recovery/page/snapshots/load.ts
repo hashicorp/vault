@@ -22,7 +22,7 @@ enum Methods {
   MANUAL = 'manual',
 }
 
-export default class Index extends Component<Args> {
+export default class SnapshotsLoad extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
 

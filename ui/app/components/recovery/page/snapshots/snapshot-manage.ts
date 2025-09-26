@@ -18,10 +18,8 @@ import {
 } from 'vault/components/recovery/page/snapshots/snapshot-utils';
 
 import type ApiService from 'vault/services/api';
-import type AuthService from 'vault/vault/services/auth';
 import type NamespaceService from 'vault/services/namespace';
 import type { SnapshotManageModel } from 'vault/routes/vault/cluster/recovery/snapshots/snapshot/manage';
-import { ResponseError } from '@hashicorp/vault-client-typescript';
 
 interface Args {
   model: SnapshotManageModel;
@@ -38,8 +36,6 @@ type MountOption = { type: RecoverySupportedEngines; path: string };
 type GroupedOption = { groupName: string; options: MountOption[] };
 
 export default class SnapshotManage extends Component<Args> {
-  // TODO remove once endpoint is updated to accepted `read_snapshot_id`
-  @service declare readonly auth: AuthService;
   @service declare readonly api: ApiService;
   @service declare readonly currentCluster: any;
   @service declare readonly namespace: NamespaceService;
@@ -66,11 +62,11 @@ export default class SnapshotManage extends Component<Args> {
 
   private pollingController: { start: () => Promise<void>; cancel: () => void } | null = null;
 
-  recoverySupportedEngines = [
-    { display: 'Database', value: SupportedSecretBackendsEnum.DATABASE },
-    { display: 'Cubbyhole', value: SupportedSecretBackendsEnum.CUBBYHOLE },
-    { display: 'KV v1', value: SupportedSecretBackendsEnum.KV },
-  ];
+  recoverySupportedEngines = {
+    [SupportedSecretBackendsEnum.DATABASE]: 'Database',
+    [SupportedSecretBackendsEnum.CUBBYHOLE]: 'Cubbyhole',
+    [SupportedSecretBackendsEnum.KV]: 'KV v1',
+  };
 
   recoverMethods = [
     { label: 'Recover to original path (recover in place)', value: 'original' },
@@ -160,7 +156,7 @@ export default class SnapshotManage extends Component<Args> {
       const headers = this.api.buildHeaders({ namespace });
       const { secret } = await this.api.sys.internalUiListEnabledVisibleMounts(headers);
 
-      const mounts = this.api.responseObjectToArray(secret, 'path').flatMap((engine) => {
+      const supportedMounts = this.api.responseObjectToArray(secret, 'path').flatMap((engine) => {
         const eng = new SecretsEngineResource(engine);
 
         // performance secondaries cannot perform snapshot operations on shared paths
@@ -169,24 +165,25 @@ export default class SnapshotManage extends Component<Args> {
 
         // Use `engineType` as it is the normalized version of `type`
         return eng.supportsRecovery
-          ? [
-              {
-                path: sanitizePath(eng.path),
-                type: eng.engineType,
-              } as MountOption,
-            ]
+          ? [{ path: sanitizePath(eng.path), type: eng.engineType } as MountOption]
           : [];
       });
 
-      const databases: MountOption[] = mounts.filter((m) => m.type === SupportedSecretBackendsEnum.DATABASE);
-      const secretEngines: MountOption[] = mounts.filter(
+      const databases: MountOption[] = supportedMounts.filter(
+        (m) => m.type === SupportedSecretBackendsEnum.DATABASE
+      );
+      const secretEngines: MountOption[] = supportedMounts.filter(
         (m) => m.type !== SupportedSecretBackendsEnum.DATABASE
       );
 
-      this.mountOptions = [
-        ...(databases.length ? [{ groupName: 'Databases', options: databases }] : []),
-        { groupName: 'Secret Engines', options: secretEngines },
-      ];
+      // Cubbyhole is enabled by default and cannot be disabled so supportedMounts should always
+      // have values if the request was successful, but handling just in case.
+      this.mountOptions = supportedMounts.length
+        ? [
+            ...(databases.length ? [{ groupName: 'Databases', options: databases }] : []),
+            { groupName: 'Secret Engines', options: secretEngines },
+          ]
+        : [];
     } catch {
       this.mountOptions = [];
     }
@@ -209,6 +206,14 @@ export default class SnapshotManage extends Component<Args> {
   }
 
   @action
+  handlePathInput({ target }: { target: HTMLInputElement }) {
+    if (this.selectedMount) {
+      const { type } = this.selectedMount;
+      this.selectedMount = { type, path: target.value };
+    }
+  }
+
+  @action
   handleSelectNamespace(selection: string) {
     this.selectedMount = undefined;
     this.selectedNamespace = selection as string;
@@ -224,6 +229,16 @@ export default class SnapshotManage extends Component<Args> {
     if (this.selectedMount.type === SupportedSecretBackendsEnum.CUBBYHOLE) {
       this.selectedMount.path = 'cubbyhole';
     }
+  }
+
+  @action
+  handleSelectRadio(close: CallableFunction, { target }: { target: HTMLInputElement }) {
+    const selection: MountOption = {
+      type: target.name as RecoverySupportedEngines,
+      path: '', // reset path to an empty string whenever an engine type is selected
+    };
+    this.handleSelectMount(selection);
+    close();
   }
 
   @action
@@ -278,25 +293,12 @@ export default class SnapshotManage extends Component<Args> {
           break;
         }
         case SupportedSecretBackendsEnum.DATABASE: {
-          // TODO remove once endpoint is updated to accept `read_snapshot_id`
-          const { currentToken } = this.auth;
-
-          const resp = await fetch(
-            `/v1/${mountPath}/static-roles/${this.resourcePath}?read_snapshot_id=${snapshot_id}`,
-            {
-              method: 'GET',
-              headers: {
-                'X-Vault-Namespace': namespace,
-                'X-Vault-Token': currentToken,
-              },
-            }
+          const { data } = await this.api.secrets.databaseReadStaticRole(
+            this.resourcePath,
+            mountPath,
+            snapshot_id,
+            headers
           );
-
-          if (!resp.ok) {
-            throw new ResponseError(resp);
-          }
-
-          const { data } = await resp.json();
           this.secretData = data as SecretData;
           break;
         }
