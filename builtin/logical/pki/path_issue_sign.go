@@ -454,6 +454,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		if err != nil {
 			return nil, err
 		}
+		b.pkiCertificateCounter.IncrementCount(0, 1)
 	}
 
 	if metadataInRequest {
@@ -468,6 +469,9 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			return nil, err
 		}
 	}
+
+	// Note that we have already incremented the stored count above, if necessary
+	b.pkiCertificateCounter.IncrementCount(1, 0)
 
 	if useCSR {
 		if role.UseCSRCommonName && data.Get("common_name").(string) != "" {
