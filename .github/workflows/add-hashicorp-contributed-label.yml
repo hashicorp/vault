@@ -17,7 +17,7 @@ jobs:
   add-hashicorp-contributed-label:
     # Only run if this is NOT coming from a fork of hashicorp/vault (if this is not true, it's community contributed)
     if: ${{ github.repository == 'hashicorp/vault' && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     steps:
       # gh pr edit needs a .git directory so we'll do a shallow checkout
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
