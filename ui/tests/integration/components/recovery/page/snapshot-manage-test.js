@@ -11,6 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import recoveryHandler from 'vault/mirage/handlers/recovery';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | recovery/snapshots/snapshot-manage', function (hooks) {
   setupRenderingTest(hooks);
@@ -109,6 +110,54 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
       assert.dom(GENERAL.inlineAlert).containsText('Success', 'shows success message');
       assert.dom(GENERAL.inlineAlert).containsText(scenario.path + '-copy', 'shows the recovered copy path');
     });
+  });
+
+  test('it renders manual input if mounts request does not have data', async function (assert) {
+    assert.expect(2);
+    this.server.get('/sys/internal/ui/mounts', () => ({
+      // Cubbyhole is enabled by default and cannot be disabled so supportedMounts should always
+      // have values if the request was successful, but handling just in case.
+      data: { secret: {} },
+    }));
+    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
+    assert.dom(GENERAL.inputByAttr('manual-mount-path')).exists();
+    assert.dom(GENERAL.selectByAttr('mount')).doesNotExist();
+  });
+
+  test('it renders manual input if mounts request errors', async function (assert) {
+    assert.expect(14);
+    this.server.get('/sys/internal/ui/mounts', () => overrideResponse(403));
+    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
+    assert.dom(GENERAL.button('Type')).exists().hasText('Type');
+    assert.dom(GENERAL.inputByAttr('manual-mount-path')).exists().isDisabled();
+    assert.dom(GENERAL.selectByAttr('mount')).doesNotExist();
+    await click(GENERAL.button('Type'));
+    assert.dom(GENERAL.button('Type')).hasAttribute('aria-expanded', 'true');
+    // Select kv
+    await click(GENERAL.radioByAttr('kv'));
+    assert
+      .dom(GENERAL.button('Type'))
+      .hasAttribute('aria-expanded', 'false', 'toggle closes after selecting type');
+    assert
+      .dom(GENERAL.inputByAttr('manual-mount-path'))
+      .isNotDisabled('input is enabled after selecting a type');
+    assert.dom(GENERAL.button('Type')).hasText('KV v1');
+    await fillIn(GENERAL.inputByAttr('manual-mount-path'), 'kv-mount');
+    // Select cubbyhole
+    await click(GENERAL.button('Type'));
+    await click(GENERAL.radioByAttr('cubbyhole'));
+    assert
+      .dom(GENERAL.inputByAttr('manual-mount-path'))
+      .hasAttribute('readonly', '', 'cubbyhole input is readonly')
+      .hasValue('cubbyhole', 'input has default cubbyhole path');
+    assert.dom(GENERAL.button('Type')).hasText('Cubbyhole');
+    // Select database
+    await click(GENERAL.button('Type'));
+    await click(GENERAL.radioByAttr('database'));
+    assert
+      .dom(GENERAL.inputByAttr('manual-mount-path'))
+      .hasValue('', 'input clears when selecting a new type');
+    assert.dom(GENERAL.button('Type')).hasText('Database');
   });
 
   test('it displays loaded snapshot card', async function (assert) {

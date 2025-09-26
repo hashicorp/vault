@@ -120,17 +120,22 @@
       <F.Control>
         <Hds::SegmentedGroup as |SG|>
           <SG.Dropdown @listPosition="bottom-left" as |D|>
-            <D.ToggleButton @color="secondary" @text={{or this.selectedMount.type "Type"}} />
-            {{#each this.recoverySupportedEngines as |engine|}}
+            <D.ToggleButton
+              @color="secondary"
+              @text={{or (get this.recoverySupportedEngines this.selectedMount.type) "Type"}}
+              class="white-space-nowrap"
+              data-test-button="Type"
+            />
+            {{#each-in this.recoverySupportedEngines as |type displayName|}}
               <D.Radio
-                name="mount-type"
-                checked={{eq this.selectedMount.type engine.value}}
-                {{on "change" (fn this.handleSelectMount (hash type=engine.value path=""))}}
-                data-test-radio={{engine.value}}
+                name={{type}}
+                checked={{eq this.selectedMount.type type}}
+                {{on "change" (fn this.handleSelectRadio D.close)}}
+                data-test-radio={{type}}
               >
-                {{engine.display}}
+                {{displayName}}
               </D.Radio>
-            {{/each}}
+            {{/each-in}}
           </SG.Dropdown>
           <SG.TextInput
             @isInvalid={{this.mountError}}
@@ -138,10 +143,10 @@
             id={{F.id}}
             aria-describedby={{F.ariaDescribedBy}}
             size="32"
-            placeholder="Enter mount path..."
+            placeholder={{if this.selectedMount "Enter mount path..." "Select a type to enter a path"}}
             disabled={{not this.selectedMount.type}}
             readonly={{eq this.selectedMount.type "cubbyhole"}}
-            {{on "input" (pipe (pick "target.value") (fn (mut this.selectedMount.path)))}}
+            {{on "input" this.handlePathInput}}
             data-test-input="manual-mount-path"
           />
         </Hds::SegmentedGroup>
