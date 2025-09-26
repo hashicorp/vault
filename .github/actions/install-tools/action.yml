@@ -26,29 +26,47 @@ runs:
     - id: metadata
       shell: bash
       run: |
+        # Create the tool cache directory if it doesn't exist and add it to the
+        # GITHUB_PATH to make them available to other actions.
         mkdir -p "${{ inputs.destination }}"
         destination="$(readlink -f "${{ inputs.destination }}")"
         echo "${destination}" >> "$GITHUB_PATH"
 
-        # Cache restore have some surprising relative pathing behavior we need
-        # to deal with. When actions/cache restores something it does it
-        # realtive to the check working directory. Since that can be different
-        # depending on our self-hosted vs Github hosted runners
+        # actions/cache restore has some surprising relative pathing behavior we
+        # need to deal with. When it restores something it does it relative to
+        # the check working directory. Since that can be different depending on
+        # our self-hosted vs Github hosted runners, i.e.
         #   /home/runner/actions-runner/_work vs. /home/runner/work
         # we need to factor in the absolute path of our working directory in our
-        # cache key. If we don't then cache restores will be incompatible on one
-        # or the other runner.
+        # cache key. If we don't then caches created on one runner type will be
+        # incompatible on the other.
         #
         # See: https://github.com/actions/cache/issues/1127
         wd_hash=$(realpath . | sha256sum | head -c 7)
+
+        # Caches automatically prevent cross distro but not cross arch. We'll
+        # include the os and arch in the key to make it easy to grok which cache
+        # is for which platform.
+        os="$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
+        arch="$(echo "$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
+        if [ "${arch}" = "x64" ]; then
+          arch="amd64"
+        fi
+
+        # Hash the tools directory so that we update our cache automatically
+        # if a dep caches.
         tools_hash=$(git ls-tree HEAD tools --object-only | head -c 7)
 
-        # Uses GITHUB_ENV instead of GITHUB_OUTPUT because composite actions are
-        # broken if you embed them into another composite actions, see:
-        # https://github.com/actions/cache/issues/803#issuecomment-1793565071
+        # Build the unique cache key
+        cache_key="tools-${os}-${arch}-${wd_hash}-${tools_hash}"
+
+        # Use GITHUB_ENV instead of GITHUB_OUTPUT because composite actions are
+        # broken if you embed them into another composite actions.
+        #
+        # See: https://github.com/actions/cache/issues/803#issuecomment-1793565071
         {
           echo "VAULT_TOOLS_PATH=${destination}"
-          echo "VAULT_TOOLS_CACHE_KEY=tools-${wd_hash}-${tools_hash}"
+          echo "VAULT_TOOLS_CACHE_KEY=${cache_key}"
         } | tee -a "$GITHUB_ENV"
     - id: cache-tools
       uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
