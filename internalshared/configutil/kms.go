@@ -413,7 +413,21 @@ func GetAzureKeyVaultKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrappe
 
 func GetGCPCKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := gcpckms.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
+	localOpts := []wrapping.Option{
+		wrapping.WithDisallowEnvVars(true),
+		wrapping.WithConfigMap(kms.Config),
+	}
+	// Support optional "universe_domain" config to allow using non-standard GCP
+	// endpoints (sovereign clouds / custom GCP-like endpoints).
+	//
+	// This is intentionally opt-in: we only append WithUniverseDomain when a
+	// "universe_domain" value is present in the KMS config. Default behavior
+	// (no config) uses the public GCP domain (googleapis.com).
+	if ud, ok := kms.Config["universe_domain"]; ok && ud != "" {
+		localOpts = append(localOpts, gcpckms.WithUniverseDomain(ud))
+	}
+
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, localOpts...)...)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
