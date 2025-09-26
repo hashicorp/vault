@@ -486,7 +486,7 @@ func (j *WorkflowJob) UnsuccessfulSteps() []*gh.TaskStep {
 	return res
 }
 
-// UnsuccessfulSteps returns the names of any unsuccesful steps in the workflow job.
+// UnsuccessfulStepNames returns the names of any unsuccesful steps in the workflow job.
 func (j *WorkflowJob) UnsuccessfulStepNames() []string {
 	steps := j.UnsuccessfulSteps()
 	if len(steps) < 1 {

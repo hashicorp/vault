@@ -148,7 +148,7 @@ func (r *SyncBranchReq) Run(
 	return res, nil
 }
 
-// validate ensures that we've been given the minimum filter arguments necessary to complete a
+// Validate ensures that we've been given the minimum filter arguments necessary to complete a
 // request. It is always recommended that additional fitlers be given to reduce the response size
 // and not exhaust API limits.
 func (r *SyncBranchReq) Validate(ctx context.Context) error {
