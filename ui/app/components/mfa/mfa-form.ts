@@ -34,7 +34,7 @@ import type { MfaAuthData } from 'vault/vault/auth/mfa';
  */
 
 export const TOTP_VALIDATION_ERROR =
-  'The passcode failed to validate. If you entered the correct passcode, contact your administrator.';
+  'The passcode failed to validate. If you entered the correct passcode, please wait for a new code and try again. If the problem persists contact your administrator.';
 
 interface Args {
   authData: MfaAuthData;

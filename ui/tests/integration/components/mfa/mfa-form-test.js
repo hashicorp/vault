@@ -61,14 +61,25 @@ module('Integration | Component | mfa-form', function (hooks) {
     });
 
     await this.renderComponent();
-    assert
-      .dom(MFA_SELECTORS.description)
-      .hasText(
-        'Multi-factor authentication is enabled for your account. Enter your authentication code to log in.'
-      );
+    assert.dom(GENERAL.title).hasText('Verify your identity');
+    assert.dom(MFA_SELECTORS.subheader).hasText('Multi-factor authentication is enabled for your account.');
+    assert.dom(MFA_SELECTORS.description).hasText('Enter your authentication code to log in.');
   });
 
-  test('it renders correct text for multiple methods', async function (assert) {
+  test('it renders correct text for single push notification', async function (assert) {
+    const oktaConstraint = this.server.create('mfa-method', { type: 'okta' });
+    this.mfaAuthData.mfaRequirement = this.authService.parseMfaResponse({
+      mfa_request_id: 'test-mfa-id',
+      mfa_constraints: { test_mfa_1: { any: [oktaConstraint] } },
+    });
+
+    await this.renderComponent();
+    assert.dom(GENERAL.title).hasText('Verify your identity');
+    assert.dom(MFA_SELECTORS.subheader).hasText('Multi-factor authentication is enabled for your account.');
+    assert.dom(MFA_SELECTORS.description).doesNotExist();
+  });
+
+  test('it renders correct text for a single constraint with multiple methods', async function (assert) {
     const oktaConstraint = this.server.create('mfa-method', { type: 'okta' });
     const duoConstraint = this.server.create('mfa-method', { type: 'duo' });
     this.mfaAuthData.mfaRequirement = this.authService.parseMfaResponse({
@@ -77,11 +88,9 @@ module('Integration | Component | mfa-form', function (hooks) {
     });
 
     await this.renderComponent();
-    assert
-      .dom(MFA_SELECTORS.subheader)
-      .hasText(
-        'Multi-factor authentication is enabled for your account. Choose one of the following methods to continue:'
-      );
+    assert.dom(GENERAL.title).hasText('Verify your identity');
+    assert.dom(MFA_SELECTORS.subheader).hasText('Multi-factor authentication is enabled for your account.');
+    assert.dom(MFA_SELECTORS.description).hasText('Choose one of the following methods to continue:');
   });
 
   test('it renders correct text for multiple constraints', async function (assert) {
@@ -93,11 +102,8 @@ module('Integration | Component | mfa-form', function (hooks) {
     });
 
     await this.renderComponent();
-    assert
-      .dom(MFA_SELECTORS.description)
-      .hasText(
-        'Multi-factor authentication is enabled for your account. Two methods are required for successful authentication.'
-      );
+    assert.dom(MFA_SELECTORS.subheader).hasText('Multi-factor authentication is enabled for your account.');
+    assert.dom(MFA_SELECTORS.description).hasText('Two methods are required for successful authentication.');
   });
 
   test('it should render a submit button', async function (assert) {
@@ -296,6 +302,35 @@ module('Integration | Component | mfa-form', function (hooks) {
       });
     });
 
+    test('it should render qr code and copy button', async function (assert) {
+      const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
+      const totpConstraint = this.server.create('mfa-method', {
+        type: 'totp',
+        self_enrollment_enabled: true,
+      });
+      const mfaRequirement = this.authService.parseMfaResponse({
+        mfa_request_id: 'test-mfa-id',
+        mfa_constraints: { test_mfa: { any: [totpConstraint] } },
+      });
+      this.setMfaAuthData(mfaRequirement);
+      await this.renderComponent();
+      await waitFor(MFA_SELECTORS.qrCode);
+      assert
+        .dom(MFA_SELECTORS.mfaForm)
+        .hasText(
+          'Set up MFA TOTP to continue Your organization has enforced MFA TOTP to protect your accounts. Set up to continue. Scan the QR code to continue Scan the QR code with your authenticator app. If you currently do not have a device on hand, you can copy the MFA secret below and enter it manually. Or Copy TOTP setup URL For your security, this code is only shown once. Please scan or copy the setup URL into your authenticator app now. Continue Cancel',
+          'it renders self-enrollment text'
+        );
+      assert.dom(MFA_SELECTORS.qrCode).exists('it renders qr code');
+      assert.dom(GENERAL.cancelButton).exists();
+      assert.dom(MFA_SELECTORS.verifyForm).doesNotExist('it does not render input field for TOTP code');
+      assert.dom(GENERAL.button('Verify')).doesNotExist('it does not render Validate button');
+      await click(GENERAL.copyButton);
+      assert.strictEqual(clipboardSpy.firstCall.args[0], QR_CODE_URL, 'copy value is qr code URL');
+      // Restore original clipboard
+      clipboardSpy.restore(); // cleanup
+    });
+
     test('it makes request to self-enroll endpoint when self_enrollment_enabled is true', async function (assert) {
       assert.expect(3);
       const request_id = crypto.randomUUID();
@@ -351,7 +386,7 @@ module('Integration | Component | mfa-form', function (hooks) {
       assert.dom(GENERAL.button('Continue')).exists();
       assert.dom(GENERAL.cancelButton).exists();
 
-      // Go on to next step
+      // Go on to next step which is input code to verify device
       await click(GENERAL.button('Continue'));
       assert.dom(GENERAL.title).hasText('Set up MFA TOTP to continue');
       assert
@@ -378,11 +413,8 @@ module('Integration | Component | mfa-form', function (hooks) {
       });
       await this.renderComponent();
       assert.dom(GENERAL.title).hasText('Verify your identity');
-      assert
-        .dom(MFA_SELECTORS.subheader)
-        .hasText(
-          'Multi-factor authentication is enabled for your account. Choose one of the following methods to continue:'
-        );
+      assert.dom(MFA_SELECTORS.subheader).hasText('Multi-factor authentication is enabled for your account.');
+      assert.dom(MFA_SELECTORS.description).hasText('Choose one of the following methods to continue:');
       assert.dom(MFA_SELECTORS.subtitle).doesNotExist();
       assert.dom(GENERAL.button('Verify')).doesNotExist();
       assert.dom(GENERAL.cancelButton).exists();
@@ -431,11 +463,8 @@ module('Integration | Component | mfa-form', function (hooks) {
       });
       await this.renderComponent();
       assert.dom(GENERAL.title).hasText('Verify your identity');
-      assert
-        .dom(MFA_SELECTORS.subheader)
-        .hasText(
-          'Multi-factor authentication is enabled for your account. Choose one of the following methods to continue:'
-        );
+      assert.dom(MFA_SELECTORS.subheader).hasText('Multi-factor authentication is enabled for your account.');
+      assert.dom(MFA_SELECTORS.description).hasText('Choose one of the following methods to continue:');
       assert.dom(MFA_SELECTORS.subtitle).doesNotExist();
       assert.dom(GENERAL.button('Verify')).doesNotExist();
       assert.dom(GENERAL.cancelButton).exists();
@@ -472,33 +501,68 @@ module('Integration | Component | mfa-form', function (hooks) {
       assert.dom(GENERAL.cancelButton).exists('it renders "Cancel" after self-enroll workflow');
     });
 
-    test('it should render qr code and copy button', async function (assert) {
-      const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
+    test('it renders correct text for multiple constraints (1 passcode 1 push)', async function (assert) {
+      const oktaConstraint = this.server.create('mfa-method', { type: 'okta' });
       const totpConstraint = this.server.create('mfa-method', {
         type: 'totp',
         self_enrollment_enabled: true,
       });
-      const mfaRequirement = this.authService.parseMfaResponse({
+      this.mfaAuthData.mfaRequirement = this.authService.parseMfaResponse({
         mfa_request_id: 'test-mfa-id',
-        mfa_constraints: { test_mfa: { any: [totpConstraint] } },
+        mfa_constraints: { test_mfa_1: { any: [oktaConstraint] }, test_mfa_2: { any: [totpConstraint] } },
       });
-      this.setMfaAuthData(mfaRequirement);
+
       await this.renderComponent();
       await waitFor(MFA_SELECTORS.qrCode);
-      assert
-        .dom(MFA_SELECTORS.mfaForm)
-        .hasText(
-          'Set up MFA TOTP to continue Your organization has enforced MFA TOTP to protect your accounts. Set up to continue. Scan the QR code to continue Scan the QR code with your authenticator app. If you currently do not have a device on hand, you can copy the MFA secret below and enter it manually. Or Copy TOTP setup URL For your security, this code is only shown once. Please scan or copy the setup URL into your authenticator app now. Continue Cancel',
-          'it renders self-enrollment text'
-        );
-      assert.dom(MFA_SELECTORS.qrCode).exists('it renders qr code');
+      assert.dom(MFA_SELECTORS.qrCode).exists('it renders QR code');
+      assert.dom(GENERAL.title).hasText('Set up MFA TOTP to continue');
+      assert.dom(GENERAL.button('Verify')).doesNotExist();
       assert.dom(GENERAL.cancelButton).exists();
-      assert.dom(MFA_SELECTORS.verifyForm).doesNotExist('it does not render input field for TOTP code');
-      assert.dom(GENERAL.button('Verify')).doesNotExist('it does not render Validate button');
-      await click(GENERAL.copyButton);
-      assert.strictEqual(clipboardSpy.firstCall.args[0], QR_CODE_URL, 'copy value is qr code URL');
-      // Restore original clipboard
-      clipboardSpy.restore(); // cleanup
+
+      // Click "Continue" for second setup step to verify passcode
+      await click(GENERAL.button('Continue'));
+      assert.dom(GENERAL.button('Continue')).doesNotExist('"Continue" button is replaced by "Verify"');
+      assert.dom(MFA_SELECTORS.qrCode).doesNotExist('Clicking "Continue" removes QR code');
+      assert.dom(GENERAL.title).hasText('Set up MFA TOTP to continue');
+      assert
+        .dom(MFA_SELECTORS.description)
+        .hasText('To verify your device, enter the code generated from your authenticator.');
+      await click(GENERAL.button('Verify'));
+
+      // Final view which manages the loading state while validate task runs
+      assert.dom(GENERAL.title).hasText('Verify your identity');
+      assert.dom(MFA_SELECTORS.subheader).hasText('Multi-factor authentication is enabled for your account.');
+      assert
+        .dom(MFA_SELECTORS.description)
+        .hasText('Two methods are required for successful authentication.');
+      assert.dom(MFA_SELECTORS.label).hasText('Okta push notification');
+      assert.dom(MFA_SELECTORS.push).hasText('Check device for push notification');
+      assert.dom(MFA_SELECTORS.verifyBadge('TOTP passcode')).hasText('TOTP passcode');
+    });
+
+    // Unlikely in the real-world, but test coverage just in case
+    test('it renders correct text for multiple constraints, one with multiple methods including self-enroll', async function (assert) {
+      const oktaConstraint = this.server.create('mfa-method', { type: 'okta' });
+      const duoConstraint = this.server.create('mfa-method', { type: 'duo' });
+      const totpConstraint = this.server.create('mfa-method', {
+        type: 'totp',
+        self_enrollment_enabled: true,
+      });
+      this.mfaAuthData.mfaRequirement = this.authService.parseMfaResponse({
+        mfa_request_id: 'test-mfa-id',
+        mfa_constraints: {
+          test_mfa_1: { any: [oktaConstraint, totpConstraint] },
+          test_mfa_2: { any: [totpConstraint, duoConstraint] },
+        },
+      });
+
+      await this.renderComponent();
+      assert.dom(MFA_SELECTORS.subheader).hasText('Multi-factor authentication is enabled for your account.');
+      assert
+        .dom(MFA_SELECTORS.description)
+        .hasText(
+          'Select a method for each enforcement to continue. Choosing a self-enroll method will redirect you to setup your device.'
+        );
     });
   });
 });

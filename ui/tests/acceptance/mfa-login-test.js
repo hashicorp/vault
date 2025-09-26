@@ -40,6 +40,7 @@ module('Acceptance | mfa-login', function (hooks) {
     await fillIn(GENERAL.inputByAttr('password'), 'test');
     await click(GENERAL.submitButton);
   };
+
   const didLogin = async (assert) => {
     await waitFor('[data-test-dashboard-card-header]', {
       timeout: 5000,
@@ -47,6 +48,7 @@ module('Acceptance | mfa-login', function (hooks) {
     });
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'Route transitions after login');
   };
+
   const validate = async (multi) => {
     await fillIn(MFA_SELECTORS.passcode(0), 'test');
     if (multi) {
@@ -55,24 +57,25 @@ module('Acceptance | mfa-login', function (hooks) {
     await click(GENERAL.button('Verify'));
   };
 
+  // 7 assertions
   const assertSelfEnroll = async (assert) => {
+    // Wait for QR code
     await waitFor(MFA_SELECTORS.qrCode);
     assert.dom(MFA_SELECTORS.qrCode).exists('it renders a QR code');
+    assert.dom(GENERAL.title).hasText('Set up MFA TOTP to continue');
+    // Click "Continue" to go onto next step and verify code
     await click(GENERAL.button('Continue'));
+    assert.dom(GENERAL.button('Continue')).doesNotExist('"Continue" button is replaced by "Verify"');
+    assert.dom(MFA_SELECTORS.qrCode).doesNotExist('Clicking "Continue" removes QR code');
     assert.dom(MFA_SELECTORS.label).hasText('Enter your one-time code');
     assert.dom(MFA_SELECTORS.passcode()).exists({ count: 1 }, '1 passcode inputs renders');
+    assert.dom(GENERAL.button('Verify')).exists();
   };
 
   test('it should handle single constraint with passcode method', async function (assert) {
-    assert.expect(5);
+    assert.expect(4);
     await login('mfa-a');
-    assert.dom(GENERAL.title).hasText('Sign in to Vault');
-    assert
-      .dom(MFA_SELECTORS.description)
-      .includesText(
-        'Enter your authentication code to log in.',
-        'Mfa form displays with correct description'
-      );
+    assert.dom(GENERAL.title).hasText('Verify your identity');
     assert.dom(MFA_SELECTORS.select()).doesNotExist('Select is hidden for single method');
     assert.dom(MFA_SELECTORS.passcode()).exists({ count: 1 }, 'Single passcode input renders');
     await validate();
@@ -81,15 +84,9 @@ module('Acceptance | mfa-login', function (hooks) {
 
   test('it should handle single constraint with push method', async function (assert) {
     assert.expect(6);
-
-    server.post('/sys/mfa/validate', async (schema, req) => {
-      await waitUntil(() => find(MFA_SELECTORS.description));
-      assert
-        .dom(MFA_SELECTORS.description)
-        .hasText(
-          'Multi-factor authentication is enabled for your account.',
-          'Mfa form displays with correct description'
-        );
+    this.server.post('/sys/mfa/validate', async (schema, req) => {
+      await waitUntil(() => find(MFA_SELECTORS.verifyForm));
+      assert.dom(GENERAL.title).hasText('Verify your identity');
       assert.dom(MFA_SELECTORS.label).hasText('Okta push notification', 'Correct method renders');
       assert
         .dom(MFA_SELECTORS.push)
@@ -106,15 +103,9 @@ module('Acceptance | mfa-login', function (hooks) {
   });
 
   test('it should handle single constraint with 2 passcode methods', async function (assert) {
-    assert.expect(6);
+    assert.expect(5);
     await login('mfa-c');
     assert.dom(GENERAL.title).hasText('Verify your identity');
-    assert
-      .dom(MFA_SELECTORS.subheader)
-      .hasText(
-        'Multi-factor authentication is enabled for your account. Choose one of the following methods to continue:',
-        'Mfa form displays with correct description'
-      );
     assert.dom(GENERAL.button('Verify with Duo')).exists('It renders button for Duo');
     assert.dom(GENERAL.button('Verify with TOTP')).exists('It renders button for TOTP');
     assert.dom(MFA_SELECTORS.passcode()).doesNotExist('Passcode input hidden until selection is made');
@@ -124,8 +115,9 @@ module('Acceptance | mfa-login', function (hooks) {
   });
 
   test('it should handle single constraint with 2 push methods', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     await login('mfa-d');
+    assert.dom(GENERAL.title).hasText('Verify your identity');
     assert.dom(GENERAL.button('Verify with Okta')).exists('It renders button for Okta');
     assert.dom(GENERAL.button('Verify with Duo')).exists('It renders button for Duo');
     await click(GENERAL.button('Verify with Okta'));
@@ -145,14 +137,8 @@ module('Acceptance | mfa-login', function (hooks) {
   });
 
   test('it should handle multiple constraints with 1 passcode method each', async function (assert) {
-    assert.expect(3);
+    assert.expect(2);
     await login('mfa-f');
-    assert
-      .dom(MFA_SELECTORS.description)
-      .includesText(
-        'Two methods are required for successful authentication.',
-        'Mfa form displays with correct description'
-      );
     assert.dom(MFA_SELECTORS.select()).doesNotExist('Selects do not render for single methods');
     await validate(true);
     await didLogin(assert);
@@ -165,14 +151,8 @@ module('Acceptance | mfa-login', function (hooks) {
   });
 
   test('it should handle multiple constraints with 1 passcode and 1 push method', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
     await login('mfa-h');
-    assert
-      .dom(MFA_SELECTORS.description)
-      .includesText(
-        'Two methods are required for successful authentication.',
-        'Mfa form displays with correct description'
-      );
     assert.dom(MFA_SELECTORS.select()).doesNotExist('Select is hidden for single method');
     assert.dom(MFA_SELECTORS.passcode()).exists({ count: 1 }, 'Passcode input renders');
     await validate();
@@ -180,14 +160,8 @@ module('Acceptance | mfa-login', function (hooks) {
   });
 
   test('it should handle multiple constraints with multiple mixed methods', async function (assert) {
-    assert.expect(2);
+    assert.expect(1);
     await login('mfa-i');
-    assert
-      .dom(MFA_SELECTORS.description)
-      .includesText(
-        'Two methods are required for successful authentication.',
-        'Mfa form displays with correct description'
-      );
     await this.select();
     await fillIn(MFA_SELECTORS.passcode(1), 'test');
     await click(GENERAL.button('Verify'));
@@ -213,64 +187,32 @@ module('Acceptance | mfa-login', function (hooks) {
    * Even though self-enrollment is an enterprise-only feature, these tests use Mirage so we don't need to filter them out of CE test runs
    */
   test('self-enroll: single constraint with one TOTP passcode', async function (assert) {
+    assert.expect(8);
     await login('mfa-a-self');
-    await waitFor(MFA_SELECTORS.qrCode);
-    assert.dom(MFA_SELECTORS.qrCode).exists('it renders QR code');
-    assert.dom(GENERAL.title).hasText('Set up MFA TOTP to continue');
-    await click(GENERAL.button('Continue'));
-    assert.dom(GENERAL.button('Continue')).doesNotExist('"Continue" button is replaced by "Verify"');
-    assert.dom(MFA_SELECTORS.qrCode).doesNotExist('Clicking "Continue" removes QR code');
-    assert.dom(GENERAL.button('Verify')).exists();
-    assert.dom(MFA_SELECTORS.qrCode).doesNotExist('Clicking "Continue" removes QR code');
-    assert.dom(MFA_SELECTORS.passcode()).exists({ count: 1 }, 'Single passcode input renders');
+    await assertSelfEnroll(assert);
     await validate();
     await didLogin(assert);
   });
 
   test('self-enroll: single constraint with 2 passcode methods', async function (assert) {
+    assert.expect(10);
     await login('mfa-c-self');
     // Buttons render for both Duo and TOTP, we want to click TOTP to initiate self-enrollment flow
     assert.dom(GENERAL.title).hasText('Verify your identity');
     assert.dom(GENERAL.button('Verify with Duo')).exists();
     await click(GENERAL.button('Setup to verify with TOTP'));
-    await waitFor(MFA_SELECTORS.qrCode);
-    assert.dom(MFA_SELECTORS.qrCode).exists('it renders QR code');
-    assert.dom(GENERAL.title).hasText('Set up MFA TOTP to continue');
-    // Click "Continue" for second setup step to verify passcode
-    await click(GENERAL.button('Continue'));
-    assert
-      .dom(MFA_SELECTORS.description)
-      .hasText('To verify your device, enter the code generated from your authenticator.');
-    assert.dom(GENERAL.button('Continue')).doesNotExist('"Continue" button is replaced by "Verify"');
-    assert.dom(MFA_SELECTORS.qrCode).doesNotExist('Clicking "Continue" removes QR code');
-    assert.dom(GENERAL.button('Verify')).exists();
-    assert.dom(MFA_SELECTORS.passcode()).exists({ count: 1 }, 'Passcode input renders');
+    await assertSelfEnroll(assert);
     await validate();
     await didLogin(assert);
   });
 
   test('self-enroll: multiple constraints with 1 passcode method each', async function (assert) {
+    assert.expect(13);
     await login('mfa-f-self');
-    await waitFor(MFA_SELECTORS.qrCode);
-    assert.dom(MFA_SELECTORS.qrCode).exists('it renders QR code');
-    assert.dom(GENERAL.title).hasText('Set up MFA TOTP to continue');
-    // Click "Continue" for second setup step to verify passcode
-    await click(GENERAL.button('Continue'));
-    assert.dom(GENERAL.button('Continue')).doesNotExist('"Continue" button is replaced by "Verify"');
-    assert.dom(MFA_SELECTORS.qrCode).doesNotExist('Clicking "Continue" removes QR code');
-    assert
-      .dom(MFA_SELECTORS.description)
-      .hasText('To verify your device, enter the code generated from your authenticator.');
-    assert.dom(MFA_SELECTORS.label).hasText('Enter your one-time code');
-    assert.dom(MFA_SELECTORS.passcode()).exists({ count: 1 }, '1 passcode inputs renders');
+    await assertSelfEnroll(assert);
     // Fill in and click "Verify" which should render passcode for second constraint
     await fillIn(MFA_SELECTORS.passcode(0), 'test');
     await click(GENERAL.button('Verify'));
-    assert
-      .dom(MFA_SELECTORS.description)
-      .hasText(
-        'Multi-factor authentication is enabled for your account. Two methods are required for successful authentication.'
-      );
     assert.dom(MFA_SELECTORS.verifyBadge('TOTP passcode')).hasText('TOTP passcode');
     assert.dom(GENERAL.button('Verify')).exists();
     assert.dom(MFA_SELECTORS.label).hasText('Duo passcode');
@@ -282,19 +224,9 @@ module('Acceptance | mfa-login', function (hooks) {
   });
 
   test('self-enroll: multiple constraints with 1 passcode and 1 push method', async function (assert) {
+    assert.expect(8);
     await login('mfa-h-self');
-    await waitFor(MFA_SELECTORS.qrCode);
-    assert.dom(MFA_SELECTORS.qrCode).exists('it renders QR code');
-    assert.dom(GENERAL.title).hasText('Set up MFA TOTP to continue');
-    // Click "Continue" for second setup step to verify passcode
-    await click(GENERAL.button('Continue'));
-    assert.dom(GENERAL.button('Continue')).doesNotExist('"Continue" button is replaced by "Verify"');
-    assert.dom(MFA_SELECTORS.qrCode).doesNotExist('Clicking "Continue" removes QR code');
-    assert
-      .dom(MFA_SELECTORS.description)
-      .hasText('To verify your device, enter the code generated from your authenticator.');
-    assert.dom(MFA_SELECTORS.label).hasText('Enter your one-time code');
-    assert.dom(MFA_SELECTORS.passcode()).exists({ count: 1 }, '1 passcode inputs renders');
+    await assertSelfEnroll(assert);
     // Fill in and click "Verify" which should immediately trigger MFA validation because the
     // second constraint is a push notification and no user input is required.
     await fillIn(MFA_SELECTORS.passcode(0), 'test');
@@ -303,27 +235,12 @@ module('Acceptance | mfa-login', function (hooks) {
   });
 
   test('self-enroll: multiple constraints with multiple mixed methods', async function (assert) {
+    assert.expect(14);
     await login('mfa-i-self');
     assert.dom(GENERAL.title).hasText('Verify your identity');
-    assert
-      .dom(MFA_SELECTORS.subheader)
-      .hasText(
-        'Multi-factor authentication is enabled for your account. Choose one of the following methods to continue:'
-      );
     assert.dom(GENERAL.button('Verify with Okta')).exists();
     await click(GENERAL.button('Setup to verify with TOTP'));
-    await waitFor(MFA_SELECTORS.qrCode);
-    assert.dom(MFA_SELECTORS.qrCode).exists('it renders QR code');
-    assert.dom(GENERAL.title).hasText('Set up MFA TOTP to continue');
-    // Click "Continue" to validate TOTP
-    await click(GENERAL.button('Continue'));
-    assert.dom(GENERAL.button('Continue')).doesNotExist('"Continue" button is replaced by "Verify"');
-    assert.dom(MFA_SELECTORS.qrCode).doesNotExist('Clicking "Continue" removes QR code');
-    assert
-      .dom(MFA_SELECTORS.description)
-      .hasText('To verify your device, enter the code generated from your authenticator.');
-    assert.dom(MFA_SELECTORS.label).hasText('Enter your one-time code');
-    assert.dom(MFA_SELECTORS.passcode()).exists({ count: 1 }, '1 passcode inputs renders');
+    await assertSelfEnroll(assert);
     // Fill in and click "Verify" which should render passcode for second constraint
     await fillIn(MFA_SELECTORS.passcode(0), 'test');
     await click(GENERAL.button('Verify'));
@@ -337,6 +254,7 @@ module('Acceptance | mfa-login', function (hooks) {
   });
 
   test('self-enroll: multiple constraints, 1 with 2 methods (one that supports self-enroll), 1 with push method', async function (assert) {
+    assert.expect(17);
     await login('mfa-z-self');
     // For the constraint that supports self-enrollment, user must select it first.
     assert.dom(MFA_SELECTORS.select(0)).exists();
@@ -351,7 +269,7 @@ module('Acceptance | mfa-login', function (hooks) {
       .hasText('TOTP passcode (supports self-enrollment)', 'TOTP is pre-selected for the first constraint');
     await this.select(1, 2);
     // On second selection we are redirected
-    assert.dom(GENERAL.title).hasText('Sign in to Vault');
+    assert.dom(GENERAL.title).hasText('Verify your identity');
     assert.dom(MFA_SELECTORS.verifyForm).exists('it renders mfa validation form');
     assert.dom(MFA_SELECTORS.select(0)).isDisabled();
     assert.dom(MFA_SELECTORS.verifyBadge('TOTP passcode')).exists('pending verification badge exists');
@@ -373,7 +291,6 @@ module('Acceptance | mfa-login', function (hooks) {
 
   module('error handling', function (hooks) {
     hooks.beforeEach(function () {
-      // TODO confirm with backend what errors could be returned
       this.server.post('/identity/mfa/method/totp/self-enroll', async () => {
         return overrideResponse(500, JSON.stringify({ errors: ['uh oh!'] }));
       });

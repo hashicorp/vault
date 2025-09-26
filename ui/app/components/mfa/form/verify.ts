@@ -24,15 +24,15 @@ interface Args {
 
 export default class MfaFormVerify extends Component<Args> {
   get description() {
-    const base = 'Multi-factor authentication is enabled for your account.';
     if (this.args.constraints.length > 1) {
-      const num = this.args.constraints.length;
-      return base + ` ${numberToWord(num, true)} methods are required for successful authentication.`;
+      const num = numberToWord(this.args.constraints.length, true);
+      return `${num} methods are required for successful authentication.`;
     }
     if (this.singleConstraint?.selectedMethod?.uses_passcode) {
-      return base + ' Enter your authentication code to log in.';
+      return 'Enter your authentication code to log in.';
     }
-    return base;
+    // Otherwise it's a single push notification and we do not need a description.
+    return '';
   }
 
   get singleConstraint() {

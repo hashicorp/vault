@@ -20,6 +20,12 @@ const METHOD_MAP = {
 };
 
 export default class MfaFormChooseMethod extends Component<Args> {
+  get description() {
+    return this.singleConstraint
+      ? 'Choose one of the following methods to continue:'
+      : 'Select a method for each enforcement to continue. Choosing a self-enroll method will redirect you to setup your device.';
+  }
+
   get nonSelfEnrollMethods() {
     return this.singleConstraint?.methods.filter((m) => !m.self_enrollment_enabled);
   }

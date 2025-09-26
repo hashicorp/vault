@@ -12,6 +12,7 @@ import mfaConfigHandler from 'vault/mirage/handlers/mfa-config';
 import { Response } from 'miragejs';
 import { underscore } from '@ember/string';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { duration } from 'vault/helpers/format-duration';
 
 module('Acceptance | mfa-method', function (hooks) {
   setupApplicationTest(hooks);
@@ -147,7 +148,10 @@ module('Acceptance | mfa-method', function (hooks) {
             'Passcode reminder': 'use_passcode',
             'Organization name': 'org_name',
           }[label] || underscore(label);
-        const value = typeof model[key] === 'boolean' ? (model[key] ? 'Yes' : 'No') : model[key].toString();
+        let value = typeof model[key] === 'boolean' ? (model[key] ? 'Yes' : 'No') : model[key].toString();
+        if (key === 'period') {
+          value = duration([Number(value)]);
+        }
         assert.dom(GENERAL.infoRowValue(label)).hasText(value, `${label} value renders`);
       });
       await click('.hds-breadcrumb a');
