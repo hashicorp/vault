@@ -20,35 +20,84 @@
   </PH.Actions>
 </Hds::PageHeader>
 
-<Toolbar class="has-top-margin-m">
-  <ToolbarFilters>
-    <SearchSelect
-      @id="filter-by-engine-type"
-      @options={{this.secretEngineArrayByType}}
-      @selectLimit="1"
-      @disallowNewItems={{true}}
-      @fallbackComponent="input-search"
-      @onChange={{this.filterEngineType}}
-      @placeholder="Filter by engine type"
-      @displayInherit={{true}}
-      @inputValue={{if this.selectedEngineType (array this.selectedEngineType)}}
-      @disabled={{if this.selectedEngineName true false}}
-      class="is-marginless"
+<Hds::SegmentedGroup class="has-top-margin-m" as |SG|>
+  <SG.TextInput
+    @width="300px"
+    @type="search"
+    placeholder="Search by path"
+    aria-label="Search"
+    data-test-input-search="secret-engine-path"
+    {{on "input" (fn this.setSearchText "path")}}
+  />
+  <SG.Dropdown @width="175px" as |D|>
+    <D.Header @hasDivider={{true}}>
+      <SG.TextInput @type="search" placeholder="Search" aria-label="Search" {{on "input" (fn this.setSearchText "type")}} />
+    </D.Header>
+    <D.ToggleButton @color="secondary" @text="Engine type" data-test-toggle-input="filter-by-engine-type" />
+    {{#each this.secretEngineArrayByType as |type|}}
+      <D.Checkbox
+        value={{type.name}}
+        checked={{includes type.name this.engineTypeFilters}}
+        {{on "click" (fn this.filterByEngineType type.name)}}
+        data-test-checkbox={{type.name}}
+      ><Hds::Icon @name={{type.icon}} @isInline={{true}} /> {{type.name}}</D.Checkbox>
+    {{/each}}
+  </SG.Dropdown>
+  <SG.Dropdown @width="250px" as |D|>
+    <D.ToggleButton @color="secondary" @text="Version" data-test-toggle-input="filter-by-engine-version" />
+    {{#if this.engineTypeFilters.length}}
+      <D.Header @hasDivider={{true}}>
+        <SG.TextInput
+          @type="search"
+          placeholder="Search"
+          aria-label="Search"
+          {{on "input" (fn this.setSearchText "version")}}
+        />
+      </D.Header>
+      {{#each this.secretEngineArrayByVersions as |backend|}}
+        <D.Checkbox
+          value={{backend.version}}
+          checked={{includes backend.version this.engineVersionFilters}}
+          {{on "click" (fn this.filterByEngineVersion backend.version)}}
+          data-test-checkbox={{backend.version}}
+        >
+          {{backend.version}}
+        </D.Checkbox>
+      {{/each}}
+    {{else}}
+      <D.Description class="has-top-padding-s" @text="Select an engine type first to filter by versions." />
+    {{/if}}
+  </SG.Dropdown>
+</Hds::SegmentedGroup>
+
+<Hds::Layout::Flex @gap="8" class="has-top-margin-xs has-bottom-margin-m" @align="center">
+  {{#if (and (not this.engineTypeFilters) (not this.engineVersionFilters))}}
+    <Hds::Text::Body>No filters applied:</Hds::Text::Body>
+    <Hds::TooltipButton
+      @text="Select the desired filters in the dropdowns above to narrow your search."
+      aria-label="More information"
+      data-test-tooltip="Filter info"
+    >
+      <Hds::Icon @name="info" />
+    </Hds::TooltipButton>
+  {{else}}
+    <Hds::Text::Body>Filters applied:</Hds::Text::Body>
+    {{#each this.engineTypeFilters as |type|}}
+      <Hds::Tag @text={{type}} @onDismiss={{fn this.filterByEngineType type}} data-test-button={{type}} />
+    {{/each}}
+    {{#each this.engineVersionFilters as |version|}}
+      <Hds::Tag @text={{version}} @onDismiss={{fn this.filterByEngineVersion version}} data-test-button={{version}} />
+    {{/each}}
+    <Hds::Button
+      @text="Clear all"
+      @color="tertiary"
+      @icon="x"
+      @size="small"
+      data-test-button="Clear all"
+      {{on "click" this.clearAllFilters}}
     />
-    <SearchSelect
-      @id="filter-by-engine-name"
-      @options={{this.secretEngineArrayByName}}
-      @selectLimit="1"
-      @disallowNewItems={{true}}
-      @fallbackComponent="input-search"
-      @onChange={{this.filterEngineName}}
-      @placeholder="Filter by engine name"
-      @displayInherit={{true}}
-      @inputValue={{if this.selectedEngineName (array this.selectedEngineName)}}
-      class="is-marginless has-left-padding-s"
-    />
-  </ToolbarFilters>
-</Toolbar>
+  {{/if}}
+</Hds::Layout::Flex>
 
 {{#each this.sortedDisplayableBackends as |backend|}}
   <LinkedBlock
@@ -60,7 +109,11 @@
     <div>
       <div class="has-text-grey is-grid align-items-center linked-block-title">
         {{#if backend.icon}}
-          <Hds::TooltipButton aria-label="Type of backend" @text={{this.generateToolTipText backend}}>
+          <Hds::TooltipButton
+            aria-label="Type of backend"
+            @text={{this.generateToolTipText backend}}
+            data-test-tooltip="Backend type"
+          >
             <Icon @name={{backend.icon}} class="has-text-grey-light" />
           </Hds::TooltipButton>
         {{/if}}
