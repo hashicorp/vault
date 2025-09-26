@@ -15,7 +15,7 @@ concurrency:
 jobs:
   setup:
     name: Setup
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Ensure Go modules are cached
@@ -30,7 +30,7 @@ jobs:
 
   deprecations:
     name: Deprecated functions
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     needs: setup
     if: github.base_ref == 'main'
     steps:
@@ -47,7 +47,7 @@ jobs:
 
   codechecker:
     name: Code checks
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     needs: setup
     if: github.base_ref == 'main'
     steps:
@@ -69,7 +69,7 @@ jobs:
 
   generate-delta:
     name: Protobuf generate delta
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     needs: setup
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -83,7 +83,7 @@ jobs:
 
   format:
     name: Format
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     needs: setup
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -101,7 +101,7 @@ jobs:
 
   semgrep:
     name: Semgrep
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     container:
       image: returntocorp/semgrep@sha256:cfad18cfb6536aa48ad5a71017207a10320b4e17e3b2bd7b7de27b42dc9651e7 #v1.58
     steps:
