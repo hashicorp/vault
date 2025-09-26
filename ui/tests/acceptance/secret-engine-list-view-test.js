@@ -4,7 +4,6 @@
  */
 
 import { click, fillIn, currentRouteName, visit, currentURL } from '@ember/test-helpers';
-import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -162,7 +161,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await runCmd(mountEngineCmd('alicloud', enginePath));
     await visit('/vault/secrets');
     // to reduce flakiness, searching by engine name first in case there are pagination issues
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), enginePath);
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), enginePath);
     assert.dom(SES.secretsBackendLink(enginePath)).exists('the alicloud engine is mounted');
 
     await click(GENERAL.menuTrigger);

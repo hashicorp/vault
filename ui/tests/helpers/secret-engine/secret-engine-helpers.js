@@ -19,13 +19,14 @@ export async function createSecret(path, key, value) {
   return;
 }
 
-export const createSecretsEngine = (store, type, path) => {
+export const createSecretsEngine = (store, type, path, version) => {
   if (store) {
     store.pushPayload('secret-engine', {
       modelName: 'secret-engine',
       id: path,
       path: `${path}/`,
       type: type,
+      running_plugin_version: version,
       data: {
         type: type,
       },
@@ -36,6 +37,7 @@ export const createSecretsEngine = (store, type, path) => {
   return new SecretsEngineResource({
     path: `${path}/`,
     type,
+    running_plugin_version: version,
   });
 };
 /* Create configurations methods

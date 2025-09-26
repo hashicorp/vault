@@ -4,7 +4,6 @@
  */
 
 import { currentURL, visit, click, fillIn } from '@ember/test-helpers';
-import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -56,7 +55,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await visit('/vault/secrets/mounts');
     await runCmd(mountEngineCmd(type, path), false);
     await visit('/vault/secrets');
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), path);
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('view-configuration'));
     assert.strictEqual(
@@ -75,7 +74,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await visit('/vault/secrets/mounts');
     await runCmd(mountEngineCmd(type, path), false);
     await visit('/vault/secrets');
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), path);
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('view-configuration'));
     assert.strictEqual(
