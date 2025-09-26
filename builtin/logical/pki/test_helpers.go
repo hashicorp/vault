@@ -40,6 +40,7 @@ func CreateBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 
 	var err error
 	b := Backend(config)
+	b.pkiCertificateCounter = &testingPkiCertificateCounter{}
 	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -504,4 +505,30 @@ func findOpenSSL() (string, string, bool) {
 	}
 
 	return "", "", false
+}
+
+type testingPkiCertificateCounter struct {
+	IssuedCount uint64
+	StoredCount uint64
+}
+
+var _ logical.PkiCertificateCounter = (*testingPkiCertificateCounter)(nil)
+
+func (c *testingPkiCertificateCounter) Reset() {
+	c.IssuedCount = 0
+	c.StoredCount = 0
+}
+
+func (c *testingPkiCertificateCounter) IncrementCount(issuedCerts, storedCerts uint64) {
+	c.IssuedCount += issuedCerts
+	c.StoredCount += storedCerts
+}
+
+func (c *testingPkiCertificateCounter) RequireCount(t require.TestingT, issuedCerts, storedCerts uint64) {
+	require.Equal(t, issuedCerts, c.IssuedCount, "issued certificates count mismatch %s")
+	require.Equal(t, storedCerts, c.StoredCount, "stored certificates count mismatch %s")
+}
+
+func (c *testingPkiCertificateCounter) RequireZero(t require.TestingT) {
+	c.RequireCount(t, 0, 0)
 }
