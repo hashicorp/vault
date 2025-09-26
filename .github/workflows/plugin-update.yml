@@ -85,7 +85,7 @@ jobs:
         run: |
           git add ./\*go.mod ./\*go.sum
           git commit -m "Update ${{ inputs.plugin }} to v${{ inputs.version }}"
-          git push -f origin ${{ github.ref_name }}:"$VAULT_BRANCH"
+          git push -f origin ${{ inputs.base-branch }}:"$VAULT_BRANCH"
 
       - name: Open pull request if needed
         id: pr
@@ -134,7 +134,7 @@ jobs:
 
           git add changelog/
           git commit -m "Add changelog"
-          git push origin ${{ github.ref_name }}:"$VAULT_BRANCH"
+          git push origin ${{ inputs.base-branch }}:"$VAULT_BRANCH"
 
       - name: Add labels to Vault PR
         if: steps.pr.outputs.vault_pr_num != ''
