@@ -276,6 +276,7 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 		if err != nil {
 			return nil, err
 		}
+		b.pkiCertificateCounter.AddIssuedCertificate(true)
 	}
 	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)
 
