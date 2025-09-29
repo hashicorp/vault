@@ -726,6 +726,21 @@ func (r *CreateBackportReq) backportRef(
 		return res
 	}
 
+	// Copy non-backport labels from the original PR to the backport PR
+	labelsToAdd := filterNonBackportLabels(pr.Labels, r.BackportLabelPrefix)
+	err = addLabelsToIssue(
+		ctx,
+		github,
+		r.Owner,
+		r.Repo,
+		int(res.PullRequest.GetNumber()),
+		labelsToAdd,
+	)
+	if err != nil {
+		res.Error = fmt.Errorf("adding labels to backport PR: %w", err)
+		return res
+	}
+
 	return res
 }
 
