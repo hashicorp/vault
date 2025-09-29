@@ -1,0 +1,3 @@
+```release-note:bug
+core: resultant-acl now merges segment-wildcard (`+`) paths with existing prefix rules in `glob_paths`, so clients receive a complete view of glob-style permissions. This unblocks UI sidebar navigation checks and namespace access banners.
+```

@@ -5337,16 +5337,18 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		walkFn(exact, s, v)
 		return false
 	}
+	acl.exactRules.Walk(exactWalkFn)
+	resp.Data["exact_paths"] = exact
 
+	// Combine glob (prefix) and segment wildcard (+) paths into glob_paths
 	globWalkFn := func(s string, v interface{}) bool {
 		walkFn(glob, s, v)
 		return false
 	}
-
-	acl.exactRules.Walk(exactWalkFn)
 	acl.prefixRules.Walk(globWalkFn)
-
-	resp.Data["exact_paths"] = exact
+	for s, v := range acl.segmentWildcardPaths {
+		walkFn(glob, s, v)
+	}
 	resp.Data["glob_paths"] = glob
 
 	return resp, nil
