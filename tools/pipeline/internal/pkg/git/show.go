@@ -40,6 +40,7 @@ type ShowOpts struct {
 	NoPatch       bool            // --no-patch
 	Patch         bool            // --patch
 	Output        string          // --output=<file>
+	Quiet         bool            // --quiet
 	Raw           bool            // --raw
 
 	// Targets
@@ -91,6 +92,10 @@ func (o *ShowOpts) Strings() []string {
 
 	if o.Patch {
 		opts = append(opts, "--patch")
+	}
+
+	if o.Quiet {
+		opts = append(opts, "--quiet")
 	}
 
 	if o.Raw {

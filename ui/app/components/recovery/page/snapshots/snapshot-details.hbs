@@ -48,7 +48,9 @@
             @route="vault.cluster.recovery.snapshots.snapshot.manage"
             @models={{array @model.snapshot.snapshot_id}}
           >Manage secrets</dd.Interactive>
-          <dd.Interactive @color="critical" @icon="trash" {{on "click" this.unloadSnapshot}}>Unload snapshot</dd.Interactive>
+          {{#if this.namespace.inRootNamespace}}
+            <dd.Interactive @color="critical" @icon="trash" {{on "click" this.unloadSnapshot}}>Unload snapshot</dd.Interactive>
+          {{/if}}
         </Hds::Dropdown>
       </B.Td>
     </B.Tr>
