@@ -19,3 +19,10 @@ func testAdjustUnderlyingStorage(tcc *TestClusterCore) {
 	tcc.UnderlyingStorage = tcc.physical
 }
 func testApplyEntBaseConfig(coreConfig, base *CoreConfig) {}
+
+// The following are stubs for PKI certificate counting, which is an enterprise feature.
+
+func (c *TestClusterCore) StopPkiCertificateCountConsumerJob() {}
+func (c *TestClusterCore) ResetPkiCertificateCounts()          {}
+func (c *TestClusterCore) RequirePkiCertificateCounts(t testing.TB, expectedIssuedCount, expectedStoredCount int) {
+}

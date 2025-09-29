@@ -305,6 +305,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, err
 	}
+	b.pkiCertificateCounter.AddIssuedCertificate(true)
 
 	// Build a fresh CRL
 	warnings, err = b.CrlBuilder().Rebuild(sc, true)
@@ -440,6 +441,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
+	b.pkiCertificateCounter.AddIssuedCertificate(true)
 
 	if warnAboutTruncate &&
 		signingBundle.Certificate.NotAfter.Equal(parsedBundle.Certificate.NotAfter) {

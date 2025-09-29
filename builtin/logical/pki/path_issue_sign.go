@@ -469,6 +469,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
+	b.pkiCertificateCounter.AddIssuedCertificate(!role.NoStore)
+
 	if useCSR {
 		if role.UseCSRCommonName && data.Get("common_name").(string) != "" {
 			resp.AddWarning("the common_name field was provided but the role is set with \"use_csr_common_name\" set to true")
