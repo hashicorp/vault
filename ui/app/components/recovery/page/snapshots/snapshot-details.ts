@@ -14,6 +14,7 @@ import { dateFormat } from 'core/helpers/date-format';
 import { tracked } from '@glimmer/tracking';
 
 import type ApiService from 'vault/services/api';
+import type NamespaceService from 'vault/services/namespace';
 import type RouterService from '@ember/routing/router-service';
 import type { SnapshotManageModel } from 'vault/routes/vault/cluster/recovery/snapshots/snapshot/manage';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -25,6 +26,7 @@ interface Args {
 export default class SnapshotDetails extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly namespace: NamespaceService;
   @service declare readonly router: RouterService;
 
   @tracked snapshotStatus?: string = '';
