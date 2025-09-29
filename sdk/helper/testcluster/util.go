@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -35,12 +36,40 @@ func SealNode(ctx context.Context, cluster VaultCluster, nodeIdx int) error {
 }
 
 func SealAllNodes(ctx context.Context, cluster VaultCluster) error {
-	for i := range cluster.Nodes() {
-		if err := SealNode(ctx, cluster, i); err != nil {
-			return err
+	sealedNodes := make([]bool, len(cluster.Nodes()))
+
+	// Iteratively seal the leader until all nodes are sealed. This is to handle
+	// the case where standbys do not accept seal requests.
+	// We put an arbitrary limit on the number of iterations to avoid infinite
+	// loops in case something goes wrong.
+	var errors error
+	for range len(cluster.Nodes()) * 3 {
+		leaderIdx, err := LeaderNode(ctx, cluster)
+		if err != nil {
+			errors = multierror.Append(errors, err)
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+		if err = SealNode(ctx, cluster, leaderIdx); err != nil {
+			errors = multierror.Append(errors, err)
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+		sealedNodes[leaderIdx] = true
+
+		if !slices.Contains(sealedNodes, false) {
+			return nil
 		}
 	}
-	return nil
+
+	// If we get here, something is wrong
+	var unsealedNodes []int
+	for i, isSealed := range sealedNodes {
+		if !isSealed {
+			unsealedNodes = append(unsealedNodes, i)
+		}
+	}
+	return fmt.Errorf("not all nodes sealed, unsealed nodes remaining: %v: %w", unsealedNodes, errors)
 }
 
 func UnsealNode(ctx context.Context, cluster VaultCluster, nodeIdx int) error {
