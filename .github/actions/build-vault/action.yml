@@ -63,14 +63,13 @@ runs:
       uses: ./.github/actions/set-up-go
       with:
         github-token: ${{ inputs.github-token }}
-    - if: inputs.cgo-enabled == '0'
-      uses: ./.github/actions/install-external-tools
+    - uses: ./.github/actions/install-tools # sets env.VAULT_TOOLS_PATH
     - if: inputs.vault-edition != 'ce'
       name: Configure Git
       shell: bash
       run: git config --global url."https://${{ inputs.github-token }}:@github.com".insteadOf "https://github.com"
     - name: Restore UI from cache
-      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         # Restore the UI asset from the UI build workflow. Never use a partial restore key.
         enableCrossOsArchive: true
@@ -90,9 +89,11 @@ runs:
         if [[ '${{ inputs.vault-edition }}' =~ 'ce' ]]; then
           build_step_name='Vault ${{ inputs.goos }} ${{ inputs.goarch }} v${{ inputs.vault-version }}'
           package_version='${{ inputs.vault-version }}'
+          linux_package_license='BUSL-1.1'
         else
           build_step_name='Vault ${{ inputs.goos }} ${{ inputs.goarch }} v${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
           package_version='${{ inputs.vault-version }}+ent' # this should always be +ent here regardless of enterprise edition
+          linux_package_license='IPLA'
         fi
         # Generate a builder cache key that considers anything that might change
         # our build container, including:
@@ -110,7 +111,13 @@ runs:
           echo "build-step-name=${build_step_name}"
           echo "vault-builder-cache-key=${docker_sha}-${build_sha}-${tools_sha}-${github_sha}-$(cat .go-version)"
           echo "package-version=${package_version}"
+          echo "linux_package_license=${linux_package_license}"
         } | tee -a "$GITHUB_OUTPUT"
+    - if: inputs.vault-edition != 'ce'
+      id: build-vault-select-license
+      uses: hashicorp-forge/actions-pao-tool/select-license@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
+      with:
+        arch: ${{ matrix.goarch }}
     - if: inputs.cgo-enabled == '0'
       name: ${{ steps.metadata.outputs.build-step-name }}
       env:
@@ -184,6 +191,7 @@ runs:
         mkdir -p out
         docker run \
           -v $(pwd):/build \
+          -v ${VAULT_TOOLS_PATH}:/opt/tools/bin \
           -v $(go env GOMODCACHE):/go-mod-cache \
             --env GITHUB_TOKEN='${{ inputs.github-token }}' \
             --env CGO_ENABLED=1 \
@@ -200,6 +208,8 @@ runs:
     - if: inputs.vault-edition != 'ce'
       shell: bash
       run: make ci-prepare-ent-legal
+      env:
+        LICENSE_DIR: "${{ steps.build-vault-select-license.outputs.license-path }}/Softcopy"
     - if: inputs.vault-edition == 'ce'
       shell: bash
       run: make ci-prepare-ce-legal
@@ -222,7 +232,7 @@ runs:
         version: ${{ steps.metadata.outputs.package-version }}
         maintainer: HashiCorp
         homepage: https://github.com/hashicorp/vault
-        license: BUSL-1.1
+        license: ${{ steps.metadata.outputs.linux_package_license }}
         binary: ${{ steps.metadata.outputs.binary-path }}
         deb_depends: openssl
         rpm_depends: openssl

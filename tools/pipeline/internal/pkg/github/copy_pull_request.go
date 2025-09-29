@@ -129,7 +129,7 @@ func (r *CopyPullRequestReq) Run(
 	}
 
 	// Clone the remote repository and fetch the base ref, which is the branch our
-	// pull request was created against. These will change our working directory
+	// pull request was created against. This will change our working directory
 	// into RepoDir
 	_, err = os.Stat(filepath.Join(r.RepoDir, ".git"))
 	if err == nil {
@@ -146,7 +146,6 @@ func (r *CopyPullRequestReq) Run(
 	}
 
 	prBranch := res.OriginPullRequest.GetHead().GetRef()
-	prBranchRef := "remotes/" + r.FromOrigin + "/" + prBranch
 
 	// Add our from upstream as a remote and fetch our PR branch
 	slog.Default().DebugContext(ctx, "adding CE upstream and fetching PR branch")
@@ -175,16 +174,15 @@ func (r *CopyPullRequestReq) Run(
 		return res, fmt.Errorf("checking out new copy branch: %s: %w", checkoutRes.String(), err)
 	}
 
-	// Generate a merge commit message. While git is able to generate a nice merge
-	// commit with a summary of all commit headers, we create our own that
-	// includes 'Co-Authored-By:' trailers in the commit message. As we always
-	// squash all commits into a single merge commit this helps to retain
-	// attribution for our source author.
+	// Get a list of commits we're going to cherry-pick into our new branch.
 	commits, err := listPullRequestCommits(ctx, github, r.FromOwner, r.FromRepo, int(r.PullNumber))
 	if err != nil {
 		return res, err
 	}
 
+	// Generate an empty commit message that includes 'Co-Authored-By:' trailers
+	// in the commit message. As we always squash all commits into a single merge
+	// commit this helps to retain attribution for our source author(s).
 	commitMessageFile, err := renderEmbeddedTemplateToTmpFile("copy-pr-commit-message.tmpl", struct {
 		CoAuthoredByTrailers []string
 		OriginPullRequest    *libgithub.PullRequest
@@ -195,39 +193,57 @@ func (r *CopyPullRequestReq) Run(
 		baseRef,
 	})
 	if err != nil {
-		return res, fmt.Errorf("creating merge commit message: %w", err)
+		return res, fmt.Errorf("creating copy attribution commit message: %w", err)
 	}
 	defer func() {
 		commitMessageFile.Close()
 		_ = os.Remove(commitMessageFile.Name())
 	}()
 
-	slog.Default().DebugContext(ctx, "merging CE PR branch into new copy branch")
-	mergeRes, mergeErr := git.Merge(ctx, &libgit.MergeOpts{
-		File:     commitMessageFile.Name(),
-		NoVerify: true,
-		Strategy: libgit.MergeStrategyORT,
-		StrategyOptions: []libgit.MergeStrategyOption{
-			libgit.MergeStrategyOptionTheirs,
-			libgit.MergeStrategyOptionIgnoreSpaceChange,
-		},
-		IntoName: baseRef,
-		Commit:   prBranchRef,
+	attrCommitRes, err := git.Commit(ctx, &libgit.CommitOpts{
+		AllowEmpty: true,
+		File:       commitMessageFile.Name(),
+		NoVerify:   true,
+		NoEdit:     true,
 	})
-	if mergeErr != nil {
-		mergeErr = fmt.Errorf("merging CE PR branch into new copy branch: %s: %w", mergeRes.String(), mergeErr)
+	if err != nil {
+		return res, fmt.Errorf("committing attribution: %s: %w", attrCommitRes.String(), err)
 	}
 
-	// If our merge failed we still want to create a pull request for our
-	// failed copy so that a manual fix can be performed.
-	if mergeErr != nil {
-		err := resetAndCreateNOOPCommit(ctx, git, baseBranch)
-		if err != nil {
-			err = errors.Join(mergeErr, err)
+	slog.Default().DebugContext(ctx, "cherry-picking CE PR branch commits into new copy branch")
+	var cherryPickErr error
+	var cherryPickRes *libgit.ExecResponse
 
-			// Something wen't wrong trying to create our no-op commit. There's
-			// nothing more we can do but return our error at this point.
-			return res, err
+	for _, commit := range commits {
+		cherryPickRes, cherryPickErr = git.CherryPick(ctx, &libgit.CherryPickOpts{
+			FF:       true,
+			Empty:    libgit.EmptyCommitKeep,
+			Commit:   commit.GetSHA(),
+			Strategy: libgit.MergeStrategyORT,
+			StrategyOptions: []libgit.MergeStrategyOption{
+				libgit.MergeStrategyOptionTheirs,
+				libgit.MergeStrategyOptionIgnoreSpaceChange,
+			},
+		})
+		if cherryPickErr != nil {
+			cherryPickErr = fmt.Errorf(
+				"cherry-picking CE PR branch commits into new copy branch: %s: %w",
+				cherryPickRes.String(),
+				cherryPickErr,
+			)
+		}
+
+		// If our merge failed we still want to create a pull request for our
+		// failed copy so that a manual fix can be performed.
+		if cherryPickErr != nil {
+			err := resetAndCreateNOOPCommit(ctx, git, baseBranch)
+			if err != nil {
+				err = errors.Join(cherryPickErr, err)
+
+				// Something wen't wrong trying to create our no-op commit. There's
+				// nothing more we can do but return our error at this point.
+				return res, err
+			}
 		}
 	}
 
@@ -238,7 +254,7 @@ func (r *CopyPullRequestReq) Run(
 	})
 	if err != nil {
 		err = fmt.Errorf("pushing copied branch: %s: %w", pushRes.String(), err)
-		return res, errors.Join(mergeErr, err)
+		return res, errors.Join(cherryPickErr, err)
 	}
 
 	prTitle := fmt.Sprintf("Copy %s into %s", res.OriginPullRequest.GetTitle(), baseRef)
@@ -247,13 +263,13 @@ func (r *CopyPullRequestReq) Run(
 		OriginPullRequest *libgithub.PullRequest
 		TargetRef         string
 	}{
-		mergeErr,
+		cherryPickErr,
 		res.OriginPullRequest,
 		baseRef,
 	})
 	if err != nil {
 		err = fmt.Errorf("creating copy pull request body %w", err)
-		return res, errors.Join(mergeErr, err)
+		return res, errors.Join(cherryPickErr, err)
 	}
 
 	res.PullRequest, _, err = github.PullRequests.Create(
@@ -267,7 +283,7 @@ func (r *CopyPullRequestReq) Run(
 	)
 	if err != nil {
 		err = fmt.Errorf("creating copy pull request %w", err)
-		return res, errors.Join(mergeErr, err)
+		return res, errors.Join(cherryPickErr, err)
 	}
 
 	// Assign the pull request to the actor that was assigned the original
@@ -286,7 +302,7 @@ func (r *CopyPullRequestReq) Run(
 	)
 	if err != nil {
 		err = fmt.Errorf("assigning ownership to copy pull request %w", err)
-		return res, errors.Join(mergeErr, err)
+		return res, errors.Join(cherryPickErr, err)
 	}
 
 	return res, nil
@@ -307,7 +323,7 @@ func (r CopyPullRequestReq) copyBranchNameForRef(
 	return name
 }
 
-// validate ensures that we've been given the minimum filter arguments necessary to complete a
+// Validate ensures that we've been given the minimum filter arguments necessary to complete a
 // request. It is always recommended that additional fitlers be given to reduce the response size
 // and not exhaust API limits.
 func (r *CopyPullRequestReq) Validate(ctx context.Context) error {
