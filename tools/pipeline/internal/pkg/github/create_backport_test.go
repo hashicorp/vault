@@ -663,3 +663,76 @@ func TestCreateBackportRes_Err(t *testing.T) {
 		})
 	}
 }
+
+// Test_filterNonBackportLabels tests the label filtering functionality
+func Test_filterNonBackportLabels(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		backportPrefix string
+		sourceLabels   Labels
+		expectedLabels []string
+	}{
+		"no labels": {
+			backportPrefix: "backport",
+			sourceLabels:   Labels{},
+			expectedLabels: nil,
+		},
+		"only backport labels": {
+			backportPrefix: "backport",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("backport/1.18.x")},
+				&libgithub.Label{Name: libgithub.Ptr("backport/1.19.x")},
+			},
+			expectedLabels: nil,
+		},
+		"mixed labels": {
+			backportPrefix: "backport",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("bug")},
+				&libgithub.Label{Name: libgithub.Ptr("backport/1.18.x")},
+				&libgithub.Label{Name: libgithub.Ptr("enhancement")},
+				&libgithub.Label{Name: libgithub.Ptr("backport/ce/main")},
+				&libgithub.Label{Name: libgithub.Ptr("docs")},
+			},
+			expectedLabels: []string{"bug", "enhancement", "docs"},
+		},
+		"no backport labels": {
+			backportPrefix: "backport",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("bug")},
+				&libgithub.Label{Name: libgithub.Ptr("enhancement")},
+				&libgithub.Label{Name: libgithub.Ptr("docs")},
+				&libgithub.Label{Name: libgithub.Ptr("priority/high")},
+			},
+			expectedLabels: []string{"bug", "enhancement", "docs", "priority/high"},
+		},
+		"custom backport prefix": {
+			backportPrefix: "cherry-pick",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("bug")},
+				&libgithub.Label{Name: libgithub.Ptr("cherry-pick/1.18.x")},
+				&libgithub.Label{Name: libgithub.Ptr("enhancement")},
+			},
+			expectedLabels: []string{"bug", "enhancement"},
+		},
+		"backport-like but different prefix": {
+			backportPrefix: "backport",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("backup/daily")},
+				&libgithub.Label{Name: libgithub.Ptr("backport/1.18.x")},
+				&libgithub.Label{Name: libgithub.Ptr("enhancement")},
+			},
+			expectedLabels: []string{"backup/daily", "enhancement"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			filteredLabels := filterNonBackportLabels(test.sourceLabels, test.backportPrefix)
+
+			require.Equal(t, test.expectedLabels, filteredLabels,
+				"filtered labels should match expected labels")
+		})
+	}
+}
