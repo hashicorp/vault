@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -651,6 +652,12 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	b.GetRevokeStorageLock().Lock()
 	defer b.GetRevokeStorageLock().Unlock()
 
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIRevoke,
+		observe.NewAdditionalPKIMetadata("issuer_name", cert.Issuer.String()),
+		observe.NewAdditionalPKIMetadata("is_ca", cert.IsCA),
+		observe.NewAdditionalPKIMetadata("serial_number", cert.SerialNumber.String()),
+	)
+
 	return revokeCert(sc, config, cert)
 }
 
@@ -678,6 +685,8 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _
 	for index, warning := range warnings {
 		resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIRotateCRL)
 
 	return resp, nil
 }
@@ -714,6 +723,8 @@ func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Reque
 	for index, warning := range warnings {
 		resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIRotateDeltaCRL)
 
 	return resp, nil
 }

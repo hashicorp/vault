@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/asaskevich/govalidator"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -143,6 +144,8 @@ func (b *backend) pathReadCluster(ctx context.Context, req *logical.Request, _ *
 		},
 	}
 
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIConfigClusterRead)
+
 	return resp, nil
 }
 
@@ -180,6 +183,11 @@ func (b *backend) pathWriteCluster(ctx context.Context, req *logical.Request, da
 			"aia_path": cfg.AIAPath,
 		},
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIConfigClusterWrite,
+		observe.NewAdditionalPKIMetadata("path", cfg.Path),
+		observe.NewAdditionalPKIMetadata("aia_path", cfg.AIAPath),
+	)
 
 	return resp, nil
 }

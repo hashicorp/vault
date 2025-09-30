@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -128,13 +129,14 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 	exportPrivateKey := false
 	var keyBundle certutil.KeyBundle
 	var actualPrivateKeyType certutil.PrivateKeyType
+	var keyBits int
 	switch {
 	case strings.HasSuffix(req.Path, "/exported"):
 		exportPrivateKey = true
 		fallthrough
 	case strings.HasSuffix(req.Path, "/internal"):
 		keyType := data.Get(keyTypeParam).(string)
-		keyBits := data.Get(keyBitsParam).(int)
+		keyBits = data.Get(keyBitsParam).(int)
 
 		keyBits, _, err := certutil.ValidateDefaultOrValueKeyTypeSignatureLength(keyType, keyBits, 0)
 		if err != nil {
@@ -179,6 +181,14 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 	if exportPrivateKey {
 		responseData["private_key"] = privateKeyPemString
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIKeysGenerate,
+		observe.NewAdditionalPKIMetadata("key_type", string(actualPrivateKeyType)),
+		observe.NewAdditionalPKIMetadata("key_bits", keyBits),
+		observe.NewAdditionalPKIMetadata("key_id", key.ID),
+		observe.NewAdditionalPKIMetadata("key_name", key.Name),
+	)
+
 	return &logical.Response{
 		Data: responseData,
 	}, nil
@@ -315,6 +325,13 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 	if existed {
 		resp.AddWarning("Key already imported, use key/ endpoint to update name.")
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIKeysImport,
+		observe.NewAdditionalPKIMetadata("existed", existed),
+		observe.NewAdditionalPKIMetadata("key_type", key.PrivateKeyType),
+		observe.NewAdditionalPKIMetadata("key_id", key.ID),
+		observe.NewAdditionalPKIMetadata("key_name", key.Name),
+	)
 
 	return &resp, nil
 }

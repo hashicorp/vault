@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -223,6 +224,10 @@ func (b *backend) pathCAIssuersRead(ctx context.Context, req *logical.Request, _
 		return logical.ErrorResponse("Error loading issuers configuration: " + err.Error()), nil
 	}
 
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIConfigIssuersRead,
+		observe.NewAdditionalPKIMetadata("default_issuer_id", config.DefaultIssuerId),
+		observe.NewAdditionalPKIMetadata("default_follows_latest_issuer", config.DefaultFollowsLatestIssuer))
+
 	return b.formatCAIssuerConfigRead(config), nil
 }
 
@@ -290,6 +295,10 @@ func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, 
 	if err := sc.setIssuersConfig(config); err != nil {
 		return logical.ErrorResponse("Error updating issuer configuration: " + err.Error()), nil
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIConfigIssuersWrite,
+		observe.NewAdditionalPKIMetadata("default_issuer_id", config.DefaultIssuerId),
+		observe.NewAdditionalPKIMetadata("default_follows_latest_issuer", config.DefaultFollowsLatestIssuer))
 
 	return response, nil
 }
@@ -381,6 +390,9 @@ func (b *backend) pathKeyDefaultRead(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("Error loading keys configuration: " + err.Error()), nil
 	}
 
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIConfigKeysRead,
+		observe.NewAdditionalPKIMetadata("default_key_id", config.DefaultKeyId))
+
 	return &logical.Response{
 		Data: map[string]interface{}{
 			defaultRef: config.DefaultKeyId,
@@ -413,6 +425,10 @@ func (b *backend) pathKeyDefaultWrite(ctx context.Context, req *logical.Request,
 	if err != nil {
 		return logical.ErrorResponse("Error updating issuer configuration: " + err.Error()), nil
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIConfigKeysWrite,
+		observe.NewAdditionalPKIMetadata("default_key_id", parsedKey),
+	)
 
 	return &logical.Response{
 		Data: map[string]interface{}{

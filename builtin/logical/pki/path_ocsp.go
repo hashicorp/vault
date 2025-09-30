@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -203,6 +204,18 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 	if err != nil {
 		return logAndReturnInternalError(b.Logger(), err), nil
 	}
+
+	var serialNumber string
+	if ocspStatus.serialNumber != nil {
+		serialNumber = ocspStatus.serialNumber.String()
+	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, request, observe.ObservationTypePKIOCSP,
+		observe.NewAdditionalPKIMetadata("issuer_id", ocspStatus.issuerID),
+		observe.NewAdditionalPKIMetadata("unified", useUnifiedStorage),
+		observe.NewAdditionalPKIMetadata("serial_number", serialNumber),
+		observe.NewAdditionalPKIMetadata("ocsp_status", ocspStatus.ocspStatus),
+	)
 
 	return &logical.Response{
 		Data: map[string]interface{}{

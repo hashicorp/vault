@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -290,6 +291,13 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 	}
 	respData[skidParam] = certutil.GetHexFormatted([]byte(skid), ":")
 
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIKeyRead,
+		observe.NewAdditionalPKIMetadata("key_id", key.ID),
+		observe.NewAdditionalPKIMetadata("key_name", key.Name),
+		observe.NewAdditionalPKIMetadata("key_type", key.PrivateKeyType),
+		observe.NewAdditionalPKIMetadata("key_ref", keyRef),
+	)
+
 	return &logical.Response{Data: respData}, nil
 }
 
@@ -348,6 +356,13 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 		resp.AddWarning("Name successfully deleted, you will now need to reference this key by it's Id: " + string(key.ID))
 	}
 
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIKeyWrite,
+		observe.NewAdditionalPKIMetadata("key_id", key.ID),
+		observe.NewAdditionalPKIMetadata("key_name", key.Name),
+		observe.NewAdditionalPKIMetadata("key_type", key.PrivateKeyType),
+		observe.NewAdditionalPKIMetadata("key_ref", keyRef),
+	)
+
 	return resp, nil
 }
 
@@ -396,6 +411,11 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 		response = &logical.Response{}
 		response.AddWarning(msg)
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIKeyDelete,
+		observe.NewAdditionalPKIMetadata("was_default", wasDefault),
+		observe.NewAdditionalPKIMetadata("key_ref", keyRef),
+	)
 
 	return response, nil
 }

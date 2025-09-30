@@ -96,6 +96,7 @@ jobs:
           if [ -z "$PR" ]; then
             gh pr create \
             --head "$VAULT_BRANCH" \
+            --base "${{ inputs.base-branch }}" \
             --reviewer "$REVIEWER" \
             --assignee "$REVIEWER" \
             --title "Update ${{ inputs.plugin }} to v${{ inputs.version }}" \
