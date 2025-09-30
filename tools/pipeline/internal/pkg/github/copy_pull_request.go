@@ -37,11 +37,12 @@ type CopyPullRequestReq struct {
 
 // CopyPullRequestRes is a copy pull request response.
 type CopyPullRequestRes struct {
-	Error             error                   `json:"error,omitempty"`
-	Request           *CopyPullRequestReq     `json:"request,omitempty"`
-	OriginPullRequest *libgithub.PullRequest  `json:"origin_pull_request,omitempty"`
-	PullRequest       *libgithub.PullRequest  `json:"pull_request,omitempty"`
-	Comment           *libgithub.IssueComment `json:"comment,omitempty"`
+	Error             error                         `json:"error,omitempty"`
+	Request           *CopyPullRequestReq           `json:"request,omitempty"`
+	OriginPullRequest *libgithub.PullRequest        `json:"origin_pull_request,omitempty"`
+	PullRequest       *libgithub.PullRequest        `json:"pull_request,omitempty"`
+	Comment           *libgithub.IssueComment       `json:"comment,omitempty"`
+	SkippedCommits    []*libgithub.RepositoryCommit `json:"skipped_commits,omitempty"`
 }
 
 // Run runs the request to copy a pull request from the CE repo to the Ent repo.
@@ -51,7 +52,10 @@ func (r *CopyPullRequestReq) Run(
 	git *libgit.Client,
 ) (*CopyPullRequestRes, error) {
 	var err error
-	res := &CopyPullRequestRes{Request: r}
+	res := &CopyPullRequestRes{
+		Request:        r,
+		SkippedCommits: []*libgithub.RepositoryCommit{},
+	}
 
 	slog.Default().DebugContext(slogctx.Append(ctx,
 		slog.String("from-owner", r.FromOwner),
@@ -213,8 +217,30 @@ func (r *CopyPullRequestReq) Run(
 	slog.Default().DebugContext(ctx, "cherry-picking CE PR branch commits into new copy branch")
 	var cherryPickErr error
 	var cherryPickRes *libgit.ExecResponse
-
 	for _, commit := range commits {
+		// We only want to cherry-pick non-merge commits. To determine that we'll
+		// see if the commit has more than one parent and skip it if it does.
+		cherryPickRes, cherryPickErr = git.Show(ctx, &libgit.ShowOpts{
+			Format: "%ph",
+			Quiet:  true,
+			Object: commit.GetSHA(),
+		})
+		if cherryPickErr != nil {
+			break
+		}
+
+		parents := strings.TrimSpace(string(cherryPickRes.Stdout))
+		if len(strings.Split(parents, " ")) > 1 {
+			slog.Default().DebugContext(slogctx.Append(ctx,
+				slog.String("sha", commit.GetSHA()),
+				slog.String("parents", parents),
+			), "skipping merge commit")
+
+			res.SkippedCommits = append(res.SkippedCommits, commit)
+
+			continue
+		}
+
 		cherryPickRes, cherryPickErr = git.CherryPick(ctx, &libgit.CherryPickOpts{
 			FF:       true,
 			Empty:    libgit.EmptyCommitKeep,
@@ -226,24 +252,28 @@ func (r *CopyPullRequestReq) Run(
 			},
 		})
 		if cherryPickErr != nil {
-			cherryPickErr = fmt.Errorf(
-				"cherry-picking CE PR branch commits into new copy branch: %s: %w",
-				cherryPickRes.String(),
-				cherryPickErr,
-			)
+			break
 		}
+	}
 
-		// If our merge failed we still want to create a pull request for our
-		// failed copy so that a manual fix can be performed.
-		if cherryPickErr != nil {
-			err := resetAndCreateNOOPCommit(ctx, git, baseBranch)
-			if err != nil {
-				err = errors.Join(cherryPickErr, err)
+	if cherryPickErr != nil {
+		cherryPickErr = fmt.Errorf(
+			"cherry-picking CE PR branch commits into new copy branch: %s: %w",
+			cherryPickRes.String(),
+			cherryPickErr,
+		)
+	}
 
-				// Something wen't wrong trying to create our no-op commit. There's
-				// nothing more we can do but return our error at this point.
-				return res, err
-			}
+	// If our merge failed we still want to create a pull request for our
+	// failed copy so that a manual fix can be performed.
+	if cherryPickErr != nil {
+		err := resetAndCreateNOOPCommit(ctx, git, baseBranch)
+		if err != nil {
+			err = errors.Join(cherryPickErr, err)
+
+			// Something wen't wrong trying to create our no-op commit. There's
+			// nothing more we can do but return our error at this point.
+			return res, err
 		}
 	}
 
@@ -409,7 +439,7 @@ func (r *CopyPullRequestRes) ToTable(err error) table.Writer {
 	t.Style().Options.SeparateHeader = false
 	t.Style().Options.SeparateRows = false
 	t.AppendHeader(table.Row{
-		"From", "To", "Error",
+		"From", "To", "Skipped Merge Commits", "Error",
 	})
 
 	row := table.Row{nil, nil}
@@ -422,7 +452,7 @@ func (r *CopyPullRequestRes) ToTable(err error) table.Writer {
 		if pr := r.PullRequest; pr != nil {
 			to = fmt.Sprintf("[%s#%d](%s)", to, pr.GetNumber(), pr.GetHTMLURL())
 		}
-		row = table.Row{from, to}
+		row = table.Row{from, to, len(r.SkippedCommits)}
 	}
 	if err != nil {
 		row = append(row, err.Error())
