@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -445,6 +446,12 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 		return nil, err
 	}
 
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuerRead,
+		observe.NewAdditionalPKIMetadata("issuer_name", issuer.Name),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuer.ID),
+		observe.NewAdditionalPKIMetadata("last_modified", issuer.LastModified.String()),
+		observe.NewAdditionalPKIMetadata("revoked", issuer.Revoked))
+
 	return respondReadIssuer(issuer)
 }
 
@@ -796,6 +803,12 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		}
 	}
 
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuerWrite,
+		observe.NewAdditionalPKIMetadata("issuer_name", issuer.Name),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuer.ID),
+		observe.NewAdditionalPKIMetadata("last_modified", issuer.LastModified.String()),
+		observe.NewAdditionalPKIMetadata("revoked", issuer.Revoked))
+
 	return response, err
 }
 
@@ -1099,6 +1112,12 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		response.AddWarning(fmt.Sprintf("delta crl distribution points were set: %v but no base crl distribution point was set, consider setting base crl distribution point.", strings.Join(issuer.AIAURIs.DeltaCRLDistributionPoints, ", ")))
 	}
 
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuerPatch,
+		observe.NewAdditionalPKIMetadata("issuer_name", issuer.Name),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuer.ID),
+		observe.NewAdditionalPKIMetadata("last_modified", issuer.LastModified.String()),
+		observe.NewAdditionalPKIMetadata("revoked", issuer.Revoked))
+
 	return response, err
 }
 
@@ -1256,6 +1275,11 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	for index, warning := range warnings {
 		response.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuerDelete,
+		observe.NewAdditionalPKIMetadata("issuer_name", issuer.Name),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuer.ID),
+		observe.NewAdditionalPKIMetadata("was_default", wasDefault))
 
 	return response, nil
 }

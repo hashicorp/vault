@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -313,6 +314,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.pkiCertificateCounter = logical.NewNullPkiCertificateCounter()
 
+	b.pkiObserver = observe.NewPkiCeObserver(b.Logger(), b)
+
 	// It is important that we call SetupEnt at the very end as
 	// some ENT backends need access to the member vars initialized above.
 	b.SetupEnt(conf)
@@ -361,6 +364,8 @@ type backend struct {
 
 	// Track when this mount was started.
 	mountStartup time.Time
+
+	pkiObserver observe.PkiObserver
 }
 
 // BackendOps a bridge/legacy interface until we can further

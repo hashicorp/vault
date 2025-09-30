@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -509,6 +510,13 @@ reply:
 			response.Data["ca_chain"] = string(fullChain)
 		}
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIReadIssuerCertificate,
+		observe.NewAdditionalPKIMetadata("pem_type", pemType),
+		observe.NewAdditionalPKIMetadata("content_type", contentType),
+		observe.NewAdditionalPKIMetadata("revocation_time", revocationTimeRfc3339),
+		observe.NewAdditionalPKIMetadata("serial_number", serial),
+	)
 
 	return
 }

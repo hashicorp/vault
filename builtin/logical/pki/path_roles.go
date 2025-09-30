@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -920,10 +921,15 @@ func (b *backend) GetRole(ctx context.Context, s logical.Storage, n string) (*is
 }
 
 func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
+	roleName := data.Get("name").(string)
+	err := req.Storage.Delete(ctx, "role/"+roleName)
 	if err != nil {
 		return nil, err
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIRoleDelete,
+		observe.NewAdditionalPKIMetadata("role_name", roleName),
+	)
 
 	return nil, nil
 }
@@ -945,6 +951,12 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	resp := &logical.Response{
 		Data: role.ToResponseData(),
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIRoleRead,
+		observe.NewAdditionalPKIMetadata("issuer_name", role.Issuer),
+		observe.NewAdditionalPKIMetadata("role_name", role.Name),
+	)
+
 	return resp, nil
 }
 
@@ -1066,6 +1078,16 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIRoleWrite,
+		observe.NewAdditionalPKIMetadata("issuer_name", entry.Issuer),
+		observe.NewAdditionalPKIMetadata("role_name", entry.Name),
+		observe.NewAdditionalPKIMetadata("max_ttl", entry.MaxTTL.String()),
+		observe.NewAdditionalPKIMetadata("ttl", entry.TTL.String()),
+		observe.NewAdditionalPKIMetadata("no_store", entry.NoStore),
+		observe.NewAdditionalPKIMetadata("not_after", entry.NotAfter),
+		observe.NewAdditionalPKIMetadata("not_before", entry.NotBeforeDuration.String()),
+	)
 
 	return resp, nil
 }
@@ -1281,6 +1303,16 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIRolePatch,
+		observe.NewAdditionalPKIMetadata("issuer_name", entry.Issuer),
+		observe.NewAdditionalPKIMetadata("role_name", entry.Name),
+		observe.NewAdditionalPKIMetadata("max_ttl", entry.MaxTTL.String()),
+		observe.NewAdditionalPKIMetadata("ttl", entry.TTL.String()),
+		observe.NewAdditionalPKIMetadata("no_store", entry.NoStore),
+		observe.NewAdditionalPKIMetadata("not_after", entry.NotAfter),
+		observe.NewAdditionalPKIMetadata("not_before", entry.NotBeforeDuration.String()),
+	)
 
 	return resp, nil
 }

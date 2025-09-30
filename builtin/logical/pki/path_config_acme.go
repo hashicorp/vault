@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -183,6 +184,10 @@ func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *fra
 			warnings = append(warnings, err.Error())
 		}
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIConfigACMERead,
+		observe.NewAdditionalPKIMetadata("enabled", config.Enabled),
+	)
 
 	return genResponseFromAcmeConfig(config, warnings), nil
 }
@@ -363,6 +368,13 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 	if _, err := b.GetAcmeState().writeConfig(sc, config); err != nil {
 		return nil, fmt.Errorf("failed persisting: %w", err)
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIConfigACMEWrite,
+		observe.NewAdditionalPKIMetadata("enabled", config.Enabled),
+		observe.NewAdditionalPKIMetadata("default_directory_policy_type", defaultDirectoryPolicyType),
+		observe.NewAdditionalPKIMetadata("max_ttl", config.MaxTTL),
+		observe.NewAdditionalPKIMetadata("eab_policy_name", config.EabPolicyName),
+	)
 
 	return genResponseFromAcmeConfig(config, warnings), nil
 }

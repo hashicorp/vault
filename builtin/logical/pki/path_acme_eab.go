@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -243,6 +244,13 @@ func (b *backend) pathAcmeCreateEab(ctx context.Context, r *logical.Request, dat
 	}
 
 	encodedKey := base64.RawURLEncoding.EncodeToString(eab.PrivateBytes)
+
+	b.pkiObserver.RecordPKIObservation(ctx, r, observe.ObservationTypePKIAcmeNewEab,
+		observe.NewAdditionalPKIMetadata("id", eab.KeyID),
+		observe.NewAdditionalPKIMetadata("key_type", eab.KeyType),
+		observe.NewAdditionalPKIMetadata("acme_directory", path.Join(eab.AcmeDirectory, "directory")),
+		observe.NewAdditionalPKIMetadata("created_on", eab.CreatedOn.Format(time.RFC3339)),
+	)
 
 	return &logical.Response{
 		Data: map[string]interface{}{

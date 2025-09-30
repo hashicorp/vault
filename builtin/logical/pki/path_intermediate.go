@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -209,6 +210,13 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	resp.Data["key_id"] = myKey.ID
 
 	resp = addWarnings(resp, warnings)
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIGenerateIntermediate,
+		observe.NewAdditionalPKIMetadata("key_id", myKey.ID),
+		observe.NewAdditionalPKIMetadata("key_name", myKey.Name),
+		observe.NewAdditionalPKIMetadata("role", role.Name),
+		observe.NewAdditionalPKIMetadata("exported", exported),
+		observe.NewAdditionalPKIMetadata("type", format))
 
 	return resp, nil
 }
