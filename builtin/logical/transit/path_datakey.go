@@ -17,6 +17,14 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+type DataKeyParams struct {
+	keyVersion int
+	bits       int
+	context    []byte
+	nonce      []byte
+	factories  []any
+}
+
 func (b *backend) pathDatakey() *framework.Path {
 	return &framework.Path{
 		Pattern: "datakey/" + framework.GenericNameRegex("plaintext") + "/" + framework.GenericNameRegex("name"),
@@ -81,8 +89,12 @@ min_encryption_version configured on the key.`,
 }
 
 func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	params, err := getDataKeyParams(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
 	name := d.Get("name").(string)
-	ver := d.Get("key_version").(int)
 
 	plaintext := d.Get("plaintext").(string)
 	plaintextAllowed := false
@@ -92,28 +104,6 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	case "wrapped":
 	default:
 		return logical.ErrorResponse("Invalid path, must be 'plaintext' or 'wrapped'"), logical.ErrInvalidRequest
-	}
-
-	var err error
-
-	// Decode the context if any
-	contextRaw := d.Get("context").(string)
-	var context []byte
-	if len(contextRaw) != 0 {
-		context, err = base64.StdEncoding.DecodeString(contextRaw)
-		if err != nil {
-			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
-		}
-	}
-
-	// Decode the nonce if any
-	nonceRaw := d.Get("nonce").(string)
-	var nonce []byte
-	if len(nonceRaw) != 0 {
-		nonce, err = base64.StdEncoding.DecodeString(nonceRaw)
-		if err != nil {
-			return logical.ErrorResponse("failed to base64-decode nonce"), logical.ErrInvalidRequest
-		}
 	}
 
 	// Get the policy
@@ -132,53 +122,36 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	}
 	defer p.Unlock()
 
-	newKey := make([]byte, 32)
-	bits := d.Get("bits").(int)
-	switch bits {
-	case 512:
-		newKey = make([]byte, 64)
-	case 256:
-	case 128:
-		newKey = make([]byte, 16)
-	default:
-		return logical.ErrorResponse("invalid bit length"), logical.ErrInvalidRequest
-	}
-	_, err = rand.Read(newKey)
-	if err != nil {
-		return nil, err
-	}
-
-	factories := make([]any, 0)
+	params.factories = make([]any, 0)
 	if ps, ok := d.GetOk("padding_scheme"); ok {
 		paddingScheme, err := parsePaddingSchemeArg(p.Type, ps)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("padding_scheme argument invalid: %s", err.Error())), logical.ErrInvalidRequest
 		}
-		factories = append(factories, paddingScheme)
+		params.factories = append(params.factories, paddingScheme)
 
 	}
-	if p.Type == keysutil.KeyType_MANAGED_KEY {
-		managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
-		if !ok {
-			return nil, errors.New("unsupported system view")
-		}
 
-		factories = append(factories, ManagedKeyFactory{
-			managedKeyParams: keysutil.ManagedKeyParameters{
-				ManagedKeySystemView: managedKeySystemView,
-				BackendUUID:          b.backendUUID,
-				Context:              ctx,
-			},
-		})
+	keyVersion := params.keyVersion
+	if params.keyVersion == 0 {
+		keyVersion = p.LatestVersion
 	}
 
-	opts := keysutil.EncryptionOptions{
-		KeyVersion: ver,
-		Context:    context,
-		Nonce:      nonce,
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"key_version": keyVersion,
+		},
 	}
 
-	ciphertext, err := p.EncryptWithOptions(opts, base64.StdEncoding.EncodeToString(newKey), factories...)
+	if len(params.nonce) > 0 && !nonceAllowed(p) {
+		return nil, ErrNonceNotAllowed
+	}
+
+	if constants.IsFIPS() && shouldWarnAboutNonceUsage(p, params.nonce) {
+		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
+	}
+
+	ciphertext, plaintext, err := b.generateDataKey(ctx, p, params)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -190,36 +163,89 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	if ciphertext == "" {
-		return nil, fmt.Errorf("empty ciphertext returned")
-	}
-
-	keyVersion := ver
-	if keyVersion == 0 {
-		keyVersion = p.LatestVersion
-	}
-
-	// Generate the response
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"ciphertext":  ciphertext,
-			"key_version": keyVersion,
-		},
-	}
-
-	if len(nonce) > 0 && !nonceAllowed(p) {
-		return nil, ErrNonceNotAllowed
-	}
-
-	if constants.IsFIPS() && shouldWarnAboutNonceUsage(p, nonce) {
-		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
-	}
+	resp.Data["ciphertext"] = ciphertext
 
 	if plaintextAllowed {
-		resp.Data["plaintext"] = base64.StdEncoding.EncodeToString(newKey)
+		resp.Data["plaintext"] = plaintext
 	}
 
 	return resp, nil
+}
+
+func (b *backend) generateDataKey(ctx context.Context, p *keysutil.Policy, params *DataKeyParams) (string, string, error) {
+	factories := params.factories
+	if p.Type == keysutil.KeyType_MANAGED_KEY {
+		managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+		if !ok {
+			return "", "", errors.New("unsupported system view")
+		}
+
+		factories = append(params.factories, ManagedKeyFactory{
+			managedKeyParams: keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			},
+		})
+	}
+
+	newKey := make([]byte, params.bits/8)
+
+	_, err := rand.Read(newKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	opts := keysutil.EncryptionOptions{
+		KeyVersion: params.keyVersion,
+		Context:    params.context,
+		Nonce:      params.nonce,
+	}
+
+	ciphertext, err := p.EncryptWithOptions(opts, base64.StdEncoding.EncodeToString(newKey), factories...)
+	if err != nil {
+		return "", "", err
+	}
+
+	if ciphertext == "" {
+		return "", "", fmt.Errorf("empty ciphertext returned")
+	}
+
+	return ciphertext, base64.StdEncoding.EncodeToString(newKey), nil
+}
+
+func getDataKeyParams(d *framework.FieldData) (*DataKeyParams, error) {
+	params := &DataKeyParams{}
+
+	var err error
+	params.keyVersion = d.Get("key_version").(int)
+
+	// Decode the context if any
+	if contextRaw, ok := d.GetOk("context"); ok {
+		if context, ok := contextRaw.(string); ok && len(context) != 0 {
+			params.context, err = base64.StdEncoding.DecodeString(context)
+			if err != nil {
+				return nil, errors.New("failed to base64-decode context")
+			}
+		}
+	}
+
+	// Decode the nonce if any
+	if nonceRaw, ok := d.GetOk("nonce"); ok {
+		if nonce, ok := nonceRaw.(string); ok && len(nonce) != 0 {
+			params.nonce, err = base64.StdEncoding.DecodeString(nonce)
+			if err != nil {
+				return nil, errors.New("failed to base64-decode nonce")
+			}
+		}
+	}
+
+	params.bits = d.Get("bits").(int)
+	if params.bits != 128 && params.bits != 256 && params.bits != 512 {
+		return nil, errors.New("invalid bit length")
+	}
+
+	return params, nil
 }
 
 const pathDatakeyHelpSyn = `Generate a data key`
