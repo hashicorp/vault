@@ -753,6 +753,7 @@ type Core struct {
 
 	// Activation flags for enterprise features that require a one-time activation
 	FeatureActivationFlags *activationflags.FeatureActivationFlags
+	licenseReloadCh        chan error
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -941,6 +942,7 @@ type CoreConfig struct {
 	PeriodicLeaderRefreshInterval time.Duration
 
 	ClusterAddrBridge *raft.ClusterAddrBridge
+	LicenseReload     chan error
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1402,6 +1404,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	c.clusterAddrBridge = conf.ClusterAddrBridge
+	c.licenseReloadCh = conf.LicenseReload
 	return c, nil
 }
 
