@@ -142,6 +142,7 @@ type ServerCommand struct {
 	flagTestServerConfig   bool
 	flagDevConsul          bool
 	flagExitOnCoreShutdown bool
+	ignoreLicenseEnvVar    bool
 
 	sealsToFinalize []*vault.Seal
 }
@@ -1192,7 +1193,7 @@ func (c *ServerCommand) Run(args []string) int {
 	if envLicensePath := os.Getenv(EnvVaultLicensePath); envLicensePath != "" {
 		config.LicensePath = envLicensePath
 	}
-	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
+	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" && !c.ignoreLicenseEnvVar {
 		config.License = envLicense
 	}
 
@@ -1754,11 +1755,6 @@ func (c *ServerCommand) Run(args []string) int {
 			// Reload license file
 			if err = core.EntReloadLicense(); err != nil {
 				c.UI.Error(err.Error())
-			}
-
-			select {
-			case c.licenseReloadedCh <- err:
-			default:
 			}
 
 			// Let the managedKeyRegistry react to configuration changes (i.e.
@@ -2988,6 +2984,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
 		License:                        config.License,
 		LicensePath:                    config.LicensePath,
+		LicenseReload:                  c.licenseReloadedCh,
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
