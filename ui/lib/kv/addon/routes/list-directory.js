@@ -5,13 +5,15 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
 import { pathIsDirectory, breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
+import { paginate } from 'core/utils/paginate-list';
 
 export default class KvSecretsListRoute extends Route {
   @service pagination;
   @service('app-router') router;
   @service secretMountPath;
+  @service api;
+  @service capabilities;
 
   queryParams = {
     pageFilter: {
@@ -23,24 +25,19 @@ export default class KvSecretsListRoute extends Route {
   };
 
   async fetchMetadata(backend, pathToSecret, params) {
-    return await this.pagination
-      .lazyPaginatedQuery('kv/metadata', {
-        backend,
-        responsePath: 'data.keys',
-        page: Number(params.page) || 1,
-        pageFilter: params.pageFilter,
-        pathToSecret,
-      })
-      .catch((err) => {
-        if (err.httpStatus === 403) {
-          return 403;
-        }
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
-      });
+    try {
+      const { keys } = await this.api.secrets.kvV2List(pathToSecret, backend, true);
+      return paginate(keys, { page: Number(params.page) || 1, filter: params.pageFilter });
+    } catch (error) {
+      const { status, response } = await this.api.parseError(error);
+      if (status === 403 && !response.isControlGroupError) {
+        return 403;
+      }
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
   }
 
   getPathToSecret(pathParam) {
@@ -51,18 +48,22 @@ export default class KvSecretsListRoute extends Route {
     return pathIsDirectory(pathParam) ? pathParam : `${pathParam}/`;
   }
 
-  model(params) {
+  async model(params) {
     const { pageFilter, path_to_secret } = params;
     const pathToSecret = this.getPathToSecret(path_to_secret);
     const backend = this.secretMountPath.currentPath;
     const filterValue = pathToSecret ? (pageFilter ? pathToSecret + pageFilter : pathToSecret) : pageFilter;
-    return hash({
-      secrets: this.fetchMetadata(backend, pathToSecret, params),
+    const secrets = await this.fetchMetadata(backend, pathToSecret, params);
+    const capabilities = await this.capabilities.for('kvMetadata', { backend, path: path_to_secret });
+
+    return {
+      secrets,
       backend,
       pathToSecret,
       filterValue,
       pageFilter,
-    });
+      capabilities,
+    };
   }
 
   setupController(controller, resolvedModel) {

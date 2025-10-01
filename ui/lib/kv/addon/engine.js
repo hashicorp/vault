@@ -17,6 +17,7 @@ export default class KvEngine extends Engine {
   Resolver = Resolver;
   dependencies = {
     services: [
+      'api',
       'capabilities',
       'control-group',
       'download',

@@ -18,7 +18,7 @@ import {
   ResponseError,
 } from '@hashicorp/vault-client-typescript';
 import config from 'vault/config/environment';
-import { waitForPromise } from '@ember/test-waiters';
+import { waitForPromise, waitFor } from '@ember/test-waiters';
 
 import type AuthService from 'vault/services/auth';
 import type NamespaceService from 'vault/services/namespace';
@@ -84,7 +84,7 @@ export default class ApiService extends Service {
   };
 
   // -- Post Request Middleware --
-  showWarnings = async (context: ResponseContext) => {
+  showWarnings = waitFor(async (context: ResponseContext) => {
     const response = context.response.clone();
     // if the response is empty, don't try to parse it
     if (response.headers.get('Content-Length')) {
@@ -96,15 +96,35 @@ export default class ApiService extends Service {
         });
       }
     }
-  };
+  });
 
-  deleteControlGroupToken = async (context: ResponseContext) => {
+  checkControlGroup = waitFor(async (context: ResponseContext) => {
     const { url } = context;
+    const response = context.response.clone();
+    const { headers } = response;
+
     const controlGroupToken = this.controlGroup.tokenForUrl(url);
     if (controlGroupToken) {
       this.controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
     }
-  };
+    // if the requested path is locked by a control group we need to create a new error response
+    if (headers.get('Content-Length')) {
+      const json = await response.json();
+      const wrapTtl = headers.get('X-Vault-Wrap-TTL');
+      const isLockedByControlGroup = this.controlGroup.isRequestedPathLocked(json, wrapTtl);
+
+      if (isLockedByControlGroup) {
+        const error = {
+          message: 'Control Group encountered',
+          isControlGroupError: true,
+          ...json.wrap_info,
+        };
+        return new Response(JSON.stringify(error), { headers, status: 403, statusText: 'Forbidden' });
+      }
+    }
+
+    return;
+  });
   // --- End Middleware ---
 
   configuration = new Configuration({
@@ -114,7 +134,7 @@ export default class ApiService extends Service {
       { pre: this.getControlGroupToken },
       { pre: this.setHeaders },
       { post: this.showWarnings },
-      { post: this.deleteControlGroupToken },
+      { post: this.checkControlGroup },
     ],
     fetchApi: (...args: [Request]) => {
       return waitForPromise(window.fetch(...args));
@@ -165,7 +185,10 @@ export default class ApiService extends Service {
   async parseError(e: unknown, fallbackMessage = 'An error occurred, please try again') {
     if (e instanceof ResponseError) {
       const { status, url } = e.response;
-      const error = await e.response.json();
+      // instances where an error is thrown multiple times could result in the body already being read
+      // this will result in a readable stream failure and we can't parse the body
+      // to avoid this, clone the response so we can access the body consistently
+      const error = await e.response.clone().json();
       // typically the Vault API error response looks like { errors: ['some error message'] }
       // but sometimes (eg RespondWithStatusCode) it's { data: { error: 'some error message' } }
       const errors = error.data?.error && !error.errors ? [error.data.error] : error.errors;

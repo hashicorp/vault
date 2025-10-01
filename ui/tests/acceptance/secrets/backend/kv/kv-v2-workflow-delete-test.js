@@ -420,7 +420,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // correct popup menu items appear on list view
       const popupSelector = `${PAGE.list.item('bad-secret')} ${PAGE.popup}`;
       await click(popupSelector);
-      assert.dom(PAGE.list.listMenuDelete).exists('shows the option to permanently delete');
+      assert.dom(PAGE.list.menuItem('Permanently delete')).exists('shows the option to permanently delete');
     });
     test('can not delete all secret versions from root list view (snc)', async function (assert) {
       assert.expect(1);

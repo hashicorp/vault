@@ -86,7 +86,7 @@ export default Service.extend({
     return null;
   },
 
-  checkForControlGroup(callbackArgs, response, wasWrapTTLRequested) {
+  isRequestedPathLocked(response, wasWrapTTLRequested) {
     const creationPath = response && response?.wrap_info?.creation_path;
     if (
       this.version.isCommunity ||
@@ -95,10 +95,18 @@ export default Service.extend({
       (creationPath && WRAPPED_RESPONSE_PATHS.includes(creationPath)) ||
       !response.wrap_info
     ) {
-      return RSVP.resolve(...callbackArgs);
+      return false;
     }
-    const error = new ControlGroupError(response.wrap_info);
-    return RSVP.reject(error);
+    return true;
+  },
+
+  checkForControlGroup(callbackArgs, response, wasWrapTTLRequested) {
+    const isLocked = this.isRequestedPathLocked(response, wasWrapTTLRequested);
+    if (isLocked) {
+      const error = new ControlGroupError(response.wrap_info);
+      return RSVP.reject(error);
+    }
+    return RSVP.resolve(...callbackArgs);
   },
 
   handleError(error) {
