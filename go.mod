@@ -146,7 +146,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.15.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.2
 	github.com/hashicorp/vault-plugin-auth-oci v0.19.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.14.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.14.1-0.20251001182615-4e38c9ff3168
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.15.0
 	github.com/hashicorp/vault-plugin-database-redis v0.6.1
@@ -206,7 +206,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tink-crypto/tink-go/v2 v2.2.0
 	go.etcd.io/bbolt v1.4.0-beta.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.17
@@ -226,7 +226,7 @@ require (
 	golang.org/x/sys v0.35.0
 	golang.org/x/term v0.34.0
 	golang.org/x/text v0.28.0
-	golang.org/x/tools v0.35.0
+	golang.org/x/tools v0.36.0
 	google.golang.org/api v0.248.0
 	google.golang.org/grpc v1.75.0
 	google.golang.org/protobuf v1.36.8
@@ -336,11 +336,11 @@ require (
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf // indirect
-	github.com/couchbase/gocb/v2 v2.10.0 // indirect
-	github.com/couchbase/gocbcore/v10 v10.7.0 // indirect
-	github.com/couchbase/gocbcoreps v0.1.3 // indirect
+	github.com/couchbase/gocb/v2 v2.11.1 // indirect
+	github.com/couchbase/gocbcore/v10 v10.8.1 // indirect
+	github.com/couchbase/gocbcoreps v0.1.4 // indirect
 	github.com/couchbase/goprotostellar v1.0.2 // indirect
-	github.com/couchbaselabs/gocbconnstr/v2 v2.0.0-20240607131231-fb385523de28 // indirect
+	github.com/couchbaselabs/gocbconnstr/v2 v2.0.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -389,7 +389,7 @@ require (
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
+	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/flatbuffers v24.12.23+incompatible // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
@@ -549,7 +549,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.37.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/time v0.12.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20250825161204-c5933d9347a5 // indirect
