@@ -26,6 +26,7 @@ module('Unit | Service | api', function (hooks) {
     this.wrapInfo = { token: 'ctrl-group', accessor: '84tfdfd5pQ5vOOEMxC2o3Ymt' };
     this.tokenForUrl = sinon.stub(controlGroupService, 'tokenForUrl').returns(this.wrapInfo);
     this.deleteControlGroupToken = sinon.spy(controlGroupService, 'deleteControlGroupToken');
+    this.isRequestedPathLocked = sinon.stub(controlGroupService, 'isRequestedPathLocked').returns(true);
 
     const flashMessageService = this.owner.lookup('service:flash-messages');
     this.info = sinon.spy(flashMessageService, 'info');
@@ -128,14 +129,28 @@ module('Unit | Service | api', function (hooks) {
     assert.true(this.info.notCalled, 'No warning messages are shown');
   });
 
-  test('it should delete control group token', async function (assert) {
-    await this.apiService.deleteControlGroupToken({ url: this.url });
+  test('it should check for control group', async function (assert) {
+    const headers = new Headers({ 'Content-Length': '100', 'X-Vault-Wrap-TTL': 1800 });
+    const body = { data: null, wrap_info: this.wrapInfo };
+    const apiResponse = new Response(JSON.stringify(body), { headers });
+
+    const response = await this.apiService.checkControlGroup({ url: this.url, response: apiResponse });
 
     assert.true(this.tokenForUrl.calledWith(this.url), 'Url is passed to tokenForUrl method');
     assert.true(
       this.deleteControlGroupToken.calledWith(this.wrapInfo.accessor),
       'Control group token is deleted'
     );
+    assert.true(this.isRequestedPathLocked.calledWith(body, '1800'), 'isRequestedPathLocked called');
+
+    assert.strictEqual(response.status, 403, 'Response status is updated to 403 for control group error');
+    const ctrlError = await response.json();
+    const expectedError = {
+      message: 'Control Group encountered',
+      isControlGroupError: true,
+      ...this.wrapInfo,
+    };
+    assert.deepEqual(ctrlError, expectedError, 'Control group error is returned in response body');
   });
 
   test('it should build headers', async function (assert) {
