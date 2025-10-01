@@ -97,6 +97,7 @@ export default class App extends Application {
     kv: {
       dependencies: {
         services: [
+          'api',
           'capabilities',
           'control-group',
           'download',

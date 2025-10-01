@@ -9,7 +9,6 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/owner';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
-import errorMessage from 'vault/utils/error-message';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 /**
@@ -22,15 +21,22 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
  * @param {string} filterValue - The concatenation of the pathToSecret and pageFilter ex: beep/boop/my-
  * @param {boolean} failedDirectoryQuery - true if the query was a 403 and the search was for a directory. Used to display inline alert message on the overview card.
  * @param {array} breadcrumbs - Breadcrumbs as an array of objects that contain label, route, and modelId. They are updated via the util kv-breadcrumbs to handle dynamic *pathToSecret on the list-directory route.
+ * @param {object} capabilities - capabilities for metadata path
  */
 
 export default class KvListPageComponent extends Component {
   @service flashMessages;
   @service('app-router') router;
   @service pagination;
+  @service api;
 
   @tracked secretPath;
   @tracked metadataToDelete = null; // set to the metadata intended to delete
+
+  // used for KV list and list-directory view
+  // ex: beep/
+  isDirectory = (path) => pathIsDirectory(path);
+  fullSecretPath = (secret) => `${this.args.pathToSecret}${secret}`;
 
   get mountPoint() {
     // mountPoint tells transition where to start. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
@@ -53,16 +59,15 @@ export default class KvListPageComponent extends Component {
   }
 
   @action
-  async onDelete(model) {
+  async onDelete(secretPath) {
     try {
-      // The model passed in is a kv/metadata model
-      await model.destroyRecord();
-      this.pagination.clearDataset('kv/metadata'); // Clear out the pagination cache so that the metadata/list view is updated.
-      const message = `Successfully deleted the metadata and all version data of the secret ${model.fullSecretPath}.`;
+      const fullSecretPath = this.fullSecretPath(secretPath);
+      await this.api.secrets.kvV2DeleteMetadataAndAllVersions(fullSecretPath, this.args.backend);
+      const message = `Successfully deleted the metadata and all version data of the secret ${fullSecretPath}.`;
       this.flashMessages.success(message);
       // if you've deleted a secret from within a directory, transition to its parent directory.
       if (this.router.currentRoute.localName === 'list-directory') {
-        const ancestors = ancestorKeysForKey(model.fullSecretPath);
+        const ancestors = ancestorKeysForKey(fullSecretPath);
         const nearest = ancestors.pop();
         this.router.transitionTo(`${this.mountPoint}.list-directory`, nearest);
       } else {
@@ -70,7 +75,10 @@ export default class KvListPageComponent extends Component {
         this.router.transitionTo(`${this.mountPoint}.list`);
       }
     } catch (error) {
-      const message = errorMessage(error, 'Error deleting secret. Please try again or contact support.');
+      const { message } = await this.api.parseError(
+        error,
+        'Error deleting secret. Please try again or contact support.'
+      );
       this.flashMessages.danger(message);
     } finally {
       this.metadataToDelete = null;
