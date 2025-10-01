@@ -1572,8 +1572,8 @@ github.com/hashicorp/vault-plugin-auth-oci v0.19.0 h1:S0ZyVhcgxe8tCVTCXKvs5B5/RP
 github.com/hashicorp/vault-plugin-auth-oci v0.19.0/go.mod h1:O09a7mLRDEJpSsg+ECiQ7+Lb3VYkCoIqEet6YDWytDg=
 github.com/hashicorp/vault-plugin-database-couchbase v0.14.0 h1:0uy7F3QbkXzabSaZqNJwZDi+L+C8c2yBLtj5T0UDa/s=
 github.com/hashicorp/vault-plugin-database-couchbase v0.14.0/go.mod h1:lfOkkAPl6uFpnMBj8DgoAaBgSKLaYu1+F4wfdnxNeao=
-github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0 h1:INg3iO7VYnV4XE/nYYifEWEsqUUi/zRykFyublY6NqE=
-github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0/go.mod h1:OjFVO/ACKW2tzNxbYjvkwucWlRzSP/f8khBeoBNVdUk=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.1-0.20251001180743-363bd8ef8815 h1:nOtiAoHYTW5bzdEK94QD/DOUxQNxkK9wHR3wKzHl4Kg=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.1-0.20251001180743-363bd8ef8815/go.mod h1:CbxK6a52v3ZjjpvBqy95sZT+c7dngdDWTFSaC0K8WPw=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.15.0 h1:jT3Ukxvp/ntdnn+0LtEW9YNh1TtDk0N8DxyuZJiz53c=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.15.0/go.mod h1:4BMe1h2hMZNNZav4H4UrVjnT+GDOuFHwTA1bDF+6qZw=
 github.com/hashicorp/vault-plugin-database-redis v0.6.1 h1:ZA9L13dwxHQMkO7/QwF277ryMxBcjiedF6jbMdRHT7k=
@@ -2171,8 +2171,8 @@ github.com/stretchr/testify v1.8.2/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o
 github.com/stretchr/testify v1.8.3/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
-github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
+github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/tencentcloud/tencentcloud-sdk-go v1.0.162 h1:8fDzz4GuVg4skjY2B0nMN7h6uN61EDVkuLyI2+qGHhI=
 github.com/tencentcloud/tencentcloud-sdk-go v1.0.162/go.mod h1:asUz5BPXxgoPGaRgZaVm1iGcUAuHyYUo1nXqKa83cvI=
 github.com/testcontainers/testcontainers-go v0.37.0 h1:L2Qc0vkTw2EHWQ08djon0D2uw7Z/PtHS/QzZZ5Ra/hg=

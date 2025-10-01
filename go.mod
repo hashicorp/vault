@@ -147,7 +147,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.2
 	github.com/hashicorp/vault-plugin-auth-oci v0.19.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.14.0
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.1-0.20251001180743-363bd8ef8815
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.15.0
 	github.com/hashicorp/vault-plugin-database-redis v0.6.1
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.7.0
@@ -206,7 +206,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tink-crypto/tink-go/v2 v2.2.0
 	go.etcd.io/bbolt v1.4.0-beta.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.17
