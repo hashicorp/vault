@@ -148,7 +148,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-oci v0.19.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.14.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.15.0
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.15.1-0.20251001002337-3664eb721030
 	github.com/hashicorp/vault-plugin-database-redis v0.6.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.7.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.14.2
@@ -206,14 +206,14 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tink-crypto/tink-go/v2 v2.2.0
 	go.etcd.io/bbolt v1.4.0-beta.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.17
 	go.etcd.io/etcd/client/v2 v2.305.17
 	go.etcd.io/etcd/client/v3 v3.5.17
 	go.mongodb.org/atlas v0.38.0
-	go.mongodb.org/mongo-driver v1.17.3
+	go.mongodb.org/mongo-driver v1.17.4
 	go.opentelemetry.io/otel v1.37.0
 	go.opentelemetry.io/otel/sdk v1.37.0
 	go.opentelemetry.io/otel/trace v1.37.0
