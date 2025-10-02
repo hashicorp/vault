@@ -147,9 +147,11 @@ module('Integration | Component | mfa-form', function (hooks) {
       },
     });
 
+    const callbackAssertion = (resp) =>
+      assert.strictEqual(resp, 'test response', 'Response is returned in loginAndTransition callback');
+
     this.loginAndTransition = {
-      perform: (resp) =>
-        assert.strictEqual(resp, 'test response', 'Response is returned in loginAndTransition callback'),
+      unlinked: () => ({ perform: callbackAssertion }),
     };
 
     await this.renderComponent();
@@ -199,9 +201,11 @@ module('Integration | Component | mfa-form', function (hooks) {
       },
     });
 
+    const callbackAssertion = (resp) =>
+      assert.strictEqual(resp, 'test response', 'Response is returned in loginAndTransition callback');
+
     this.loginAndTransition = {
-      perform: (resp) =>
-        assert.strictEqual(resp, 'test response', 'Response is returned in loginAndTransition callback'),
+      unlinked: () => ({ perform: callbackAssertion }),
     };
 
     await this.renderComponent();

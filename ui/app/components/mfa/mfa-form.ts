@@ -119,7 +119,7 @@ export default class MfaForm extends Component<Args> {
       });
 
       // calls loginAndTransition in auth.js controller
-      this.args.loginAndTransition.perform(response);
+      await this.args.loginAndTransition.unlinked().perform(response);
     } catch (error) {
       // Reset enrolled methods if there's an error
       this.enrolledMethods = new Set<string>();
