@@ -1,0 +1,3 @@
+```release-note:change
+secrets/terraform: Update plugin to [v0.13.0](https://github.com/hashicorp/vault-plugin-secrets-terraform/releases/tag/v0.13.0)
+```
