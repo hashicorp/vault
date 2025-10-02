@@ -1596,8 +1596,8 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0 h1:gK2PNyQulWM31gPN1Pm9
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0/go.mod h1:qn7kl/rhe3VN8+9LVjJfGfoSocC9EQyntVHvYSSkIk8=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.11.0 h1:MHG9/kUkV41ZIEM3O4HCFzW7mvu9f17ADGTHhuXxFZY=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.11.0/go.mod h1:Kl1Qnw0z6Rl047aIqWJwxVvb3fliXR32urY0QpEQKDQ=
-github.com/hashicorp/vault-plugin-secrets-kv v0.24.3 h1:7RLEUJjR7kEcxj0Kbym4qOrkO1Ud//8HDntXX7p7FSc=
-github.com/hashicorp/vault-plugin-secrets-kv v0.24.3/go.mod h1:U+aKQtbJH78mP/X6k/nxaPXIzdqLyNfo1LaP9570yAQ=
+github.com/hashicorp/vault-plugin-secrets-kv v0.24.4-0.20251001221328-d6a3731883ec h1:2LUpA+CtUjjpzF8ri5V0qanEIngcA0roF53L0NejT+c=
+github.com/hashicorp/vault-plugin-secrets-kv v0.24.4-0.20251001221328-d6a3731883ec/go.mod h1:df2lUw+/Mcor705LYJi+FAuZcg8YQV3m4PL7jy68GyQ=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.15.0 h1:U/7KNMLj6voIswIyIGMUB3MdQNQlNxe6uK/rw6cju7U=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.15.0/go.mod h1:dJcwyr8tHFJEET32dKEIgGp1PBp5EMDOI9n4HaEruy8=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.16.1 h1:w16jlhZgXx4joUNMOaa7zsckF/3i/8axbbOej8+lyj8=
@@ -3070,8 +3070,8 @@ google.golang.org/protobuf v1.28.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqw
 google.golang.org/protobuf v1.28.1/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
 google.golang.org/protobuf v1.29.1/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
 google.golang.org/protobuf v1.30.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
-google.golang.org/protobuf v1.36.8 h1:xHScyCOEuuwZEc6UtSOvPbAT4zRh0xcNRYekJwfqyMc=
-google.golang.org/protobuf v1.36.8/go.mod h1:fuxRtAxBytpl4zzqUh6/eyUujkJdNiuEkXntxiD/uRU=
+google.golang.org/protobuf v1.36.9 h1:w2gp2mA27hUeUzj9Ex9FBjsBm40zfaDtEWow293U7Iw=
+google.golang.org/protobuf v1.36.9/go.mod h1:fuxRtAxBytpl4zzqUh6/eyUujkJdNiuEkXntxiD/uRU=
 gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
