@@ -23,7 +23,53 @@ import (
 
 var nonVotersAllowed = false
 
+// ctxKeyRoleBasedQuota is used to signal that role-based quota resolution
+// is needed for the request.
+type ctxKeyRoleBasedQuota struct{}
+
+func (c ctxKeyRoleBasedQuota) String() string {
+	return "role-based-quota"
+}
+
+// resetBodyIfRead deals with creating a new body for the request if a portion
+// of it has been read into buf. This function handles both the main body and
+// the full, non-limited original body stored in the context.
+func resetBodyIfRead(r *http.Request, buf *bytes.Buffer) *http.Request {
+	if buf.Len() > 0 {
+		r.Body = newMultiReaderCloser(buf, r.Body)
+		originalBody, ok := logical.ContextOriginalBodyValue(r.Context())
+		if ok {
+			r = r.WithContext(logical.CreateContextOriginalBody(r.Context(), newMultiReaderCloser(buf, originalBody)))
+		}
+	}
+	return r
+}
+
+// wrapMaxRequestSizeHandler limits the size of the request body to the
+// configured size
 func wrapMaxRequestSizeHandler(handler http.Handler, props *vault.HandlerProperties) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var maxRequestSize int64
+		if props.ListenerConfig != nil {
+			maxRequestSize = props.ListenerConfig.MaxRequestSize
+		}
+		if maxRequestSize == 0 {
+			maxRequestSize = DefaultMaxRequestSize
+		}
+		ctx := r.Context()
+		originalBody := r.Body
+		if maxRequestSize > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, maxRequestSize)
+		}
+		ctx = logical.CreateContextOriginalBody(ctx, originalBody)
+		r = r.WithContext(ctx)
+
+		handler.ServeHTTP(w, r)
+	})
+}
+
+// wrapJSONLimitsHandler enforces limits on JSON request bodies
+func wrapJSONLimitsHandler(handler http.Handler, props *vault.HandlerProperties) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var maxRequestSize, maxJSONDepth, maxStringValueLength, maxObjectEntryCount, maxArrayElementCount, maxToken int64
 
@@ -54,7 +100,6 @@ func wrapMaxRequestSizeHandler(handler http.Handler, props *vault.HandlerPropert
 		if maxToken == 0 {
 			maxToken = CustomMaxJSONToken
 		}
-
 		jsonLimits := jsonutil.JSONLimits{
 			MaxDepth:             int(maxJSONDepth),
 			MaxStringValueLength: int(maxStringValueLength),
@@ -64,40 +109,29 @@ func wrapMaxRequestSizeHandler(handler http.Handler, props *vault.HandlerPropert
 		}
 
 		// If the payload is JSON, the VerifyMaxDepthStreaming function will perform validations.
-		buf, err := jsonLimitsValidation(w, r, maxRequestSize, jsonLimits)
+		buf, err := jsonLimitsValidation(r, maxRequestSize, jsonLimits)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		// Replace the body and update the context.
-		// This ensures the request object is in a consistent state for all downstream handlers.
-		// Because the original request body stream has been fully consumed by io.ReadAll,
-		// we must replace it so that subsequent handlers can read the content.
-		r.Body = newMultiReaderCloser(buf, r.Body)
-		contextBody := r.Body
-		ctx := logical.CreateContextOriginalBody(r.Context(), contextBody)
-
-		if maxRequestSize > 0 {
-			r.Body = http.MaxBytesReader(w, r.Body, maxRequestSize)
-		}
-		r = r.WithContext(ctx)
+		r = resetBodyIfRead(r, buf)
 
 		handler.ServeHTTP(w, r)
 	})
 }
 
-func jsonLimitsValidation(w http.ResponseWriter, r *http.Request, maxRequestSize int64, jsonLimits jsonutil.JSONLimits) (*bytes.Buffer, error) {
+func jsonLimitsValidation(r *http.Request, maxRequestSize int64, jsonLimits jsonutil.JSONLimits) (*bytes.Buffer, error) {
 	// The TeeReader reads from the original body and writes a copy to our buffer.
-	// We wrap the original body with a MaxBytesReader first to enforce the hard size limit.
 	var limitedTeeReader io.Reader
 	buf := &bytes.Buffer{}
 	bodyReader := r.Body
-	if maxRequestSize > 0 {
-		bodyReader = http.MaxBytesReader(w, r.Body, maxRequestSize)
-	}
 	limitedTeeReader = io.TeeReader(bodyReader, buf)
-	_, err := jsonutil.VerifyMaxDepthStreaming(limitedTeeReader, jsonLimits)
+	var maxSize *int64
+	if maxRequestSize > 0 {
+		maxSize = &maxRequestSize
+	}
+	_, err := jsonutil.VerifyMaxDepthStreaming(limitedTeeReader, jsonLimits, maxSize)
 	if err != nil {
 		return nil, err
 	}
@@ -117,6 +151,44 @@ func wrapRequestLimiterHandler(handler http.Handler, props *vault.HandlerPropert
 	})
 }
 
+// withRoleRateLimitQuotaWrapping performs any quota checking for request
+// that require role resolution
+func withRoleRateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// if there's a quota that requires role resolution, it will be in the
+		// context
+		// if the context value is nil, then no role-based quota resolution is
+		// needed and we can continue handling the request
+		quotaReqValue := r.Context().Value(ctxKeyRoleBasedQuota{})
+		if quotaReqValue == nil {
+			handler.ServeHTTP(w, r)
+			return
+		}
+
+		quotaReq := quotaReqValue.(*quotas.Request)
+
+		buf := bytes.Buffer{}
+		teeReader := io.TeeReader(r.Body, &buf)
+		role := core.DetermineRoleFromLoginRequestFromReader(r.Context(), quotaReq.MountPath, teeReader, getConnection(r), r.Header)
+
+		// Reset the body if it was read
+		r = resetBodyIfRead(r, &buf)
+
+		// add an entry to the context to prevent recalculating request role unnecessarily
+		r = r.WithContext(context.WithValue(r.Context(), logical.CtxKeyRequestRole{}, role))
+		quotaReq.Role = role
+
+		if hitRateLimitQuota(core, r, quotaReq, w) {
+			return
+		}
+
+		handler.ServeHTTP(w, r)
+	})
+}
+
+// rateLimitQuotaWrapping performs quota checking for requests that do not
+// require role resolution. If the request does require role resolution, the
+// quota request is added to the context and handled by withRoleRateLimitQuotaWrapping
 func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ns, err := namespace.FromContext(r.Context())
@@ -153,69 +225,71 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			return
 		}
 
-		// If any role-based quotas are enabled for this namespace/mount, just
-		// do the role resolution once here.
+		// If any role-based quotas are enabled for this namespace/mount, wait until after the
+		// json limits checks to perform it
 		if requiresResolveRole {
-			buf := bytes.Buffer{}
-			teeReader := io.TeeReader(r.Body, &buf)
-			role := core.DetermineRoleFromLoginRequestFromReader(r.Context(), mountPath, teeReader, getConnection(r), r.Header)
-
-			// Reset the body if it was read
-			if buf.Len() > 0 {
-				r.Body = io.NopCloser(&buf)
-				originalBody, ok := logical.ContextOriginalBodyValue(r.Context())
-				if ok {
-					r = r.WithContext(logical.CreateContextOriginalBody(r.Context(), newMultiReaderCloser(&buf, originalBody)))
-				}
-			}
-			// add an entry to the context to prevent recalculating request role unnecessarily
-			r = r.WithContext(context.WithValue(r.Context(), logical.CtxKeyRequestRole{}, role))
-			quotaReq.Role = role
-		}
-
-		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), quotaReq)
-		if err != nil {
-			core.Logger().Error("failed to apply quota", "path", path, "error", err)
-			respondError(w, http.StatusInternalServerError, err)
+			// Add a context entry to indicate that role-based quota resolution
+			// is needed downstream
+			r = r.WithContext(context.WithValue(r.Context(), ctxKeyRoleBasedQuota{}, quotaReq))
+			handler.ServeHTTP(w, r)
 			return
 		}
 
-		if core.RateLimitResponseHeadersEnabled() {
-			for h, v := range quotaResp.Headers {
-				w.Header().Set(h, v)
-			}
-		}
-
-		if !quotaResp.Allowed {
-			quotaErr := fmt.Errorf("request path %q: %w", path, quotas.ErrRateLimitQuotaExceeded)
-			respondError(w, http.StatusTooManyRequests, quotaErr)
-
-			if core.Logger().IsTrace() {
-				core.Logger().Trace("request rejected due to rate limit quota violation", "request_path", path)
-			}
-
-			if core.RateLimitAuditLoggingEnabled() {
-				req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
-				if err != nil || status != 0 {
-					respondError(w, status, err)
-					return
-				}
-
-				err = core.AuditLogger().AuditRequest(r.Context(), &logical.LogInput{
-					Request:  req,
-					OuterErr: quotaErr,
-				})
-				if err != nil {
-					core.Logger().Warn("failed to audit log request rejection caused by rate limit quota violation", "error", err)
-				}
-			}
-
+		if hitRateLimitQuota(core, r, quotaReq, w) {
 			return
 		}
 
 		handler.ServeHTTP(w, r)
 		return
 	})
+}
+
+// hitRateLimitQuota checks the applies the rate limit quota and handles writing
+// headers, as well as any auditing and logging if the quota is exceeded. The
+// function returns true if the quota was exceeded and the request should not
+// be processed further.
+func hitRateLimitQuota(core *vault.Core, r *http.Request, quotaReq *quotas.Request, w http.ResponseWriter) bool {
+	path := quotaReq.Path
+	quotaResp, err := core.ApplyRateLimitQuota(r.Context(), quotaReq)
+	if err != nil {
+		core.Logger().Error("failed to apply quota", "path", path, "error", err)
+		respondError(w, http.StatusInternalServerError, err)
+		return true
+	}
+
+	if core.RateLimitResponseHeadersEnabled() {
+		for h, v := range quotaResp.Headers {
+			w.Header().Set(h, v)
+		}
+	}
+
+	if !quotaResp.Allowed {
+		quotaErr := fmt.Errorf("request path %q: %w", path, quotas.ErrRateLimitQuotaExceeded)
+		respondError(w, http.StatusTooManyRequests, quotaErr)
+
+		if core.Logger().IsTrace() {
+			core.Logger().Trace("request rejected due to rate limit quota violation", "request_path", path)
+		}
+
+		if core.RateLimitAuditLoggingEnabled() {
+			req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
+			if err != nil || status != 0 {
+				respondError(w, status, err)
+				return true
+			}
+
+			err = core.AuditLogger().AuditRequest(r.Context(), &logical.LogInput{
+				Request:  req,
+				OuterErr: quotaErr,
+			})
+			if err != nil {
+				core.Logger().Warn("failed to audit log request rejection caused by rate limit quota violation", "error", err)
+			}
+		}
+
+		return true
+	}
+	return false
 }
 
 func disableReplicationStatusEndpointWrapping(h http.Handler) http.Handler {
