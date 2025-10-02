@@ -1,0 +1,3 @@
+```release-note:change
+auth/alicloud: Update plugin to [v0.22.0](https://github.com/hashicorp/vault-plugin-auth-alicloud/releases/tag/v0.22.0)
+```
