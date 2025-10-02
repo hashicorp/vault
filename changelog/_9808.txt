@@ -1,0 +1,3 @@
+```release-note:change
+secrets/kubernetes: Update plugin to [v0.12.0](https://github.com/hashicorp/vault-plugin-secrets-kubernetes/releases/tag/v0.12.0)
+```
