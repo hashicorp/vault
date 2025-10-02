@@ -5,9 +5,11 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import AuthMethodResource from 'vault/resources/auth/method';
 
 import type ApiService from 'vault/services/api';
 import type { ModelFrom } from 'vault/route';
+import type { Mount } from 'vault/vault/mount';
 
 export type ClusterSettingsAuthConfigureRouteModel = ModelFrom<ClusterSettingsAuthConfigureRoute>;
 
@@ -16,12 +18,11 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
 
   async model(params: { method: string }) {
     const path = params.method;
-    const methodOptions = await this.api.sys.authReadConfiguration(path);
-
+    const methodOptions = (await this.api.sys.authReadConfiguration(path)) as Mount;
+    const method = new AuthMethodResource({ ...methodOptions, path }, this);
     return {
       methodOptions,
-      type: methodOptions.type as string,
-      id: path,
+      method,
     };
   }
 }

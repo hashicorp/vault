@@ -12,6 +12,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import AuthMethodForm from 'vault/forms/auth/method';
 import sinon from 'sinon';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 const userLockoutSupported = ['approle', 'ldap', 'userpass'];
 const userLockoutUnsupported = filterEnginesByMountCategory({ mountCategory: 'auth', isEnterprise: false })
@@ -23,7 +24,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.owner.lookup('service:flash-messages').registerTypes(['success']);
+    this.flashSuccessSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
     this.router = this.owner.lookup('service:router');
     this.transitionStub = sinon
       .stub(this.router, 'transitionTo')
@@ -38,6 +39,53 @@ module('Integration | Component | auth-config-form options', function (hooks) {
       this.form.type = type;
       return render(hbs`<AuthConfigForm::Options @form={{this.form}} />`);
     };
+  });
+
+  test('it submits data correctly for token auth method', async function (assert) {
+    assert.expect(8);
+
+    const type = 'token';
+    const path = `my-${type}-auth`;
+
+    this.server.post(`sys/mounts/auth/${path}/tune`, (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      const expected = {
+        default_lease_ttl: '30s',
+        listing_visibility: 'unauth',
+      };
+      assert.propEqual(payload, expected, `${type} method payload contains tune parameters`);
+      return { payload };
+    });
+
+    await this.renderComponent(path, type);
+    assert
+      .dom(GENERAL.inputByAttr('config.token_type'))
+      .doesNotExist('does not render token_type for token auth method');
+
+    await click(GENERAL.toggleInput('toggle-config.listing_visibility'));
+    await click(GENERAL.ttl.toggle('Default Lease TTL'));
+    await fillIn(GENERAL.ttl.input('Default Lease TTL'), '30');
+
+    assert.dom('[data-test-user-lockout-section]').doesNotExist('token does not render user lockout section');
+    assert
+      .dom(GENERAL.inputByAttr('user_lockout_config.lockout_threshold'))
+      .doesNotExist('token method does not render lockout threshold');
+    assert
+      .dom(GENERAL.ttl.toggle('Lockout duration'))
+      .doesNotExist('token method does not render lockout duration ');
+    assert
+      .dom(GENERAL.ttl.toggle('Lockout counter reset'))
+      .doesNotExist('token method does not render lockout counter reset');
+    assert
+      .dom(GENERAL.inputByAttr('user_lockout_config.lockout_disable'))
+      .doesNotExist('token method does not render lockout disable');
+
+    await click(GENERAL.submitButton);
+
+    assert.true(
+      this.transitionStub.calledWith('vault.cluster.access.methods'),
+      'transitions to access methods list on save'
+    );
   });
 
   for (const type of userLockoutSupported) {
@@ -93,6 +141,19 @@ module('Integration | Component | auth-config-form options', function (hooks) {
         'transitions to access methods list on save'
       );
     });
+
+    test(`${type}: it renders error banner`, async function (assert) {
+      assert.expect(3);
+      const path = `my-${type}-auth`;
+      this.server.post(`sys/mounts/auth/${path}/tune`, () => {
+        return overrideResponse(400, { errors: ['uh oh'] });
+      });
+      await this.renderComponent(path, type);
+      await click(GENERAL.submitButton);
+      assert.false(this.flashSuccessSpy.calledOnce, 'flash success is NOT called');
+      assert.false(this.transitionStub.calledOnce, 'transitionTo is NOT called');
+      assert.dom(GENERAL.messageError).hasText('Error uh oh');
+    });
   }
 
   for (const type of userLockoutUnsupported) {
@@ -146,53 +207,18 @@ module('Integration | Component | auth-config-form options', function (hooks) {
         'transitions to access methods list on save'
       );
     });
-  }
 
-  test('it submits data correctly for token auth method', async function (assert) {
-    assert.expect(8);
-
-    const type = 'token';
-    const path = `my-${type}-auth`;
-
-    this.server.post(`sys/mounts/auth/${path}/tune`, (schema, req) => {
-      const payload = JSON.parse(req.requestBody);
-      const expected = {
-        default_lease_ttl: '30s',
-        listing_visibility: 'unauth',
-      };
-      assert.propEqual(payload, expected, `${type} method payload contains tune parameters`);
-      return { payload };
+    test(`${type}: it renders error banner`, async function (assert) {
+      assert.expect(3);
+      const path = `my-${type}-auth`;
+      this.server.post(`sys/mounts/auth/${path}/tune`, () => {
+        return overrideResponse(400, { errors: ['uh oh'] });
+      });
+      await this.renderComponent(path, type);
+      await click(GENERAL.submitButton);
+      assert.false(this.flashSuccessSpy.calledOnce, 'flash success is NOT called');
+      assert.false(this.transitionStub.calledOnce, 'transitionTo is NOT called');
+      assert.dom(GENERAL.messageError).hasText('Error uh oh');
     });
-
-    await this.renderComponent(path, type);
-
-    assert
-      .dom(GENERAL.inputByAttr('config.token_type'))
-      .doesNotExist('does not render token_type for token auth method');
-
-    await click(GENERAL.toggleInput('toggle-config.listing_visibility'));
-    await click(GENERAL.ttl.toggle('Default Lease TTL'));
-    await fillIn(GENERAL.ttl.input('Default Lease TTL'), '30');
-
-    assert.dom('[data-test-user-lockout-section]').doesNotExist('token does not render user lockout section');
-    assert
-      .dom(GENERAL.inputByAttr('user_lockout_config.lockout_threshold'))
-      .doesNotExist('token method does not render lockout threshold');
-    assert
-      .dom(GENERAL.ttl.toggle('Lockout duration'))
-      .doesNotExist('token method does not render lockout duration ');
-    assert
-      .dom(GENERAL.ttl.toggle('Lockout counter reset'))
-      .doesNotExist('token method does not render lockout counter reset');
-    assert
-      .dom(GENERAL.inputByAttr('user_lockout_config.lockout_disable'))
-      .doesNotExist('token method does not render lockout disable');
-
-    await click(GENERAL.submitButton);
-
-    assert.true(
-      this.transitionStub.calledWith('vault.cluster.access.methods'),
-      'transitions to access methods list on save'
-    );
-  });
+  }
 });
