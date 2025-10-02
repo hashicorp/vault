@@ -10,9 +10,9 @@ import { action } from '@ember/object';
 import { guidFor } from '@ember/object/internals';
 import { run } from '@ember/runloop';
 import { keyIsFolder, parentKeyForKey, keyWithoutParentKey } from 'core/utils/key-utils';
+import { KvV2ListListEnum } from '@hashicorp/vault-client-typescript';
 
-import type Store from '@ember-data/store';
-import type KvSecretMetadataModel from 'vault/models/kv/metadata';
+import type ApiService from 'vault/services/api';
 
 /**
  * @module KvSuggestionInput
@@ -49,12 +49,13 @@ interface PowerSelectAPI {
 }
 
 export default class KvSuggestionInputComponent extends Component<Args> {
-  @service declare readonly store: Store;
+  @service declare readonly api: ApiService;
 
-  @tracked secrets: KvSecretMetadataModel[] = [];
+  @tracked secrets: string[] = [];
   powerSelectAPI: PowerSelectAPI | undefined;
-  _cachedSecrets: KvSecretMetadataModel[] = []; // cache the response for filtering purposes
+  _cachedSecrets: string[] = []; // cache the response for filtering purposes
   inputId = `suggestion-input-${guidFor(this)}`; // add unique segment to id in case multiple instances of component are used on the same page
+  pathToSecret = ''; // keeps track of the full path to the secret as user builds it out
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -63,18 +64,19 @@ export default class KvSuggestionInputComponent extends Component<Args> {
     }
   }
 
-  async fetchSecrets(isDirectory: boolean) {
-    const { mountPath } = this.args;
+  get isDirectory() {
+    return keyIsFolder(this.args.value);
+  }
+
+  async fetchSecrets() {
     try {
+      const { mountPath } = this.args;
       const backend = keyIsFolder(mountPath) ? mountPath.slice(0, -1) : mountPath;
       const parentDirectory = parentKeyForKey(this.args.value);
-      const pathToSecret = isDirectory ? this.args.value : parentDirectory;
-      const kvModels = (await this.store.query('kv/metadata', {
-        backend,
-        pathToSecret,
-      })) as unknown;
+      this.pathToSecret = this.isDirectory ? this.args.value : parentDirectory;
+      const { keys } = await this.api.secrets.kvV2List(this.pathToSecret, backend, KvV2ListListEnum.TRUE);
       // this will be used to filter the existing result set when the search term changes within the same path
-      this._cachedSecrets = kvModels as KvSecretMetadataModel[];
+      this._cachedSecrets = keys || [];
       return this._cachedSecrets;
     } catch (error) {
       console.log(error); // eslint-disable-line
@@ -82,33 +84,32 @@ export default class KvSuggestionInputComponent extends Component<Args> {
     }
   }
 
-  filterSecrets(kvModels: KvSecretMetadataModel[] | undefined = [], isDirectory: boolean) {
+  filterSecrets(secrets: string[] | undefined = []) {
     const { value } = this.args;
     const secretName = keyWithoutParentKey(value) || '';
-    return kvModels.filter((model) => {
-      if (!value || isDirectory) {
+    return secrets.filter((path) => {
+      if (!value || this.isDirectory) {
         return true;
       }
-      if (value === model.fullSecretPath) {
+      if (secretName === path) {
         // don't show suggestion if it's currently selected
         return false;
       }
-      return model.path.toLowerCase().includes(secretName.toLowerCase());
+      return path.toLowerCase().includes(secretName.toLowerCase());
     });
   }
 
   @action
   async updateSuggestions() {
     const isFirstUpdate = !this._cachedSecrets.length;
-    const isDirectory = keyIsFolder(this.args.value);
     if (!this.args.mountPath) {
       this.secrets = [];
-    } else if (this.args.value && !isDirectory && this.secrets) {
+    } else if (this.args.value && !this.isDirectory && this.secrets) {
       // if we don't need to fetch from a new path, filter the previous result set with the updated search term
-      this.secrets = this.filterSecrets(this._cachedSecrets, isDirectory);
+      this.secrets = this.filterSecrets(this._cachedSecrets);
     } else {
-      const kvModels = await this.fetchSecrets(isDirectory);
-      this.secrets = this.filterSecrets(kvModels, isDirectory);
+      const secrets = await this.fetchSecrets();
+      this.secrets = this.filterSecrets(secrets);
     }
     // don't do anything on first update -- allow dropdown to open on input click
     if (!isFirstUpdate) {
@@ -131,11 +132,11 @@ export default class KvSuggestionInputComponent extends Component<Args> {
   }
 
   @action
-  onSuggestionSelect(secret: KvSecretMetadataModel) {
+  onSuggestionSelect(secret: string) {
     // user may partially type a value to filter result set and then select a suggestion
     // in this case the partially typed value must be replaced with suggestion value
-    // the fullSecretPath contains the previous selections or typed path segments
-    this.args.onChange(secret.fullSecretPath);
+    // pathToSecret contains the previous selections or typed path segments
+    this.args.onChange(`${this.pathToSecret}${secret}`);
     this.updateSuggestions();
     // refocus the input after selection
     run(() => document.getElementById(this.inputId)?.focus());

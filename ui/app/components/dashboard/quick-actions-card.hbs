@@ -39,16 +39,16 @@
         @ariaLabel="Action"
       />
 
-      {{#if this.searchSelectParams.model}}
+      {{#if this.selectedAction}}
         {{! use special input to allow searching for KVv2 secrets inside a directory }}
-        {{#if (eq this.selectedEngine.type "kv")}}
+        {{#if this.searchSelectParams.isKV}}
           <KvSuggestionInput
             @label="Secret Path"
             @value={{this.paramValue}}
             @mountPath={{this.selectedEngine.id}}
             @onChange={{fn (mut this.paramValue)}}
           />
-        {{else}}
+        {{else if this.searchSelectParams.model}}
           <h3 class="title is-6" data-test-card-subtitle="param">{{this.searchSelectParams.title}}</h3>
 
           <SearchSelect

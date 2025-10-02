@@ -14,6 +14,7 @@ import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { selectChoose } from 'ember-power-select/test-support';
 import { Response } from 'miragejs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
 
 const { destinations, searchSelect, messageError, kvSuggestion } = PAGE;
 const { mountSelect, mountInput, successMessage } = destinations.sync;
@@ -25,15 +26,12 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
   setupDataStubs(hooks);
 
   hooks.beforeEach(async function () {
-    this.server.get('/sys/internal/ui/mounts', () => ({
-      data: { secret: { 'my-kv/': { type: 'kv', options: { version: '2' } } } },
-    }));
-    this.server.get('/my-kv/metadata', () => ({
-      data: { keys: ['my-path/', 'my-secret'] },
-    }));
-    this.server.get('/my-kv/metadata/my-path', () => ({
-      data: { keys: ['nested-secret'] },
-    }));
+    const api = this.owner.lookup('service:api');
+    this.mountsStub = sinon
+      .stub(api.sys, 'internalUiListEnabledVisibleMounts')
+      .resolves({ secret: { 'my-kv/': { type: 'kv', options: { version: '2' } } } });
+
+    this.secretsStub = sinon.stub(api.secrets, 'kvV2List').resolves({ keys: ['my-path/', 'my-secret'] });
 
     await render(
       hbs`<Secrets::Page::Destinations::Destination::Sync @destination={{this.destination}} @capabilities={{this.capabilities}} />`,
@@ -62,6 +60,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
 
   test('it should render secret suggestions for nested paths', async function (assert) {
     await selectChoose(mountSelect, '.ember-power-select-option', 1);
+    this.secretsStub.resolves({ keys: ['nested-secret'] });
     await click(kvSuggestion.input);
     await click(searchSelect.option());
     assert
@@ -99,9 +98,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
   test('it should allow manual mount path input if kv mounts are not returned', async function (assert) {
     assert.expect(1);
 
-    this.server.get('/sys/internal/ui/mounts', () => ({
-      data: { secret: { 'cubbyhole/': { type: 'cubbyhole' } } },
-    }));
+    this.mountsStub.resolves({ secret: { 'cubbyhole/': { type: 'cubbyhole' } } });
 
     const { type, name } = this.destination;
     this.server.post(`/sys/sync/destinations/${type}/${name}/associations/set`, (schema, req) => {

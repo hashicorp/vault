@@ -25,7 +25,6 @@ export default class KvEngine extends Engine {
       'namespace',
       'app-router',
       'secret-mount-path',
-      'store',
       'pagination',
       'version',
     ],

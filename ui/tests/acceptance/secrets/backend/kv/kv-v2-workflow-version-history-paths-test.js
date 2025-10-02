@@ -10,7 +10,6 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import {
-  clearRecords,
   deleteVersionCmd,
   destroyVersionCmd,
   writeVersionedSecret,
@@ -56,8 +55,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(makeToken('admin', this.backend, personas.admin));
-      await login(token);
-      clearRecords(this.store);
+      return login(token);
     });
     test('can navigate to the version history page (a)', async function (assert) {
       await this.navToSecret();
@@ -105,8 +103,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
   module('data-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(makeToken('data-reader', this.backend, personas.dataReader));
-      await login(token);
-      clearRecords(this.store);
+      return login(token);
     });
     test('cannot navigate to the version history page (dr)', async function (assert) {
       await this.navToSecret();
@@ -132,8 +129,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
   module('data-list-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(makeToken('data-list-reader', this.backend, personas.dataListReader));
-      await login(token);
-      clearRecords(this.store);
+      return login(token);
     });
     test('cannot navigate to the version history page (dlr)', async function (assert) {
       await this.navToSecret();
@@ -159,8 +155,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
   module('metadata-maintainer persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(makeToken('metadata-maintainer', this.backend, personas.metadataMaintainer));
-      await login(token);
-      clearRecords(this.store);
+      return login(token);
     });
     test('can navigate to the version history page (mm)', async function (assert) {
       await this.navToSecret();
@@ -208,8 +203,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
   module('secret-creator persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(makeToken('secret-creator', this.backend, personas.secretCreator));
-      await login(token);
-      clearRecords(this.store);
+      return login(token);
     });
     test('cannot navigate to the version history page (sc)', async function (assert) {
       await this.navToSecret();
@@ -255,8 +249,7 @@ path "${this.backend}/*" {
 `;
       const { userToken } = await setupControlGroup({ userPolicy, backend: this.backend });
       this.userToken = userToken;
-      await login(userToken);
-      clearRecords(this.store);
+      return login(userToken);
     });
     test('can navigate to the version history page (cg)', async function (assert) {
       await this.navToSecret();

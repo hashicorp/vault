@@ -8,8 +8,6 @@ import Adapter from 'ember-data/adapter';
 import ModelRegistry from 'ember-data/types/registries/model';
 
 import ClientsActivityAdapter from 'vault/vault/adapters/clients/activity';
-import KvDataAdapter from 'vault/adapters/kv/data';
-import KvMetadataAdapter from 'vault/adapters/kv/metadata';
 import LdapLibraryAdapter from 'vault/adapters/ldap/library';
 import LdapRoleAdapter from 'vault/adapters/ldap/role';
 import PkiIssuerAdapter from 'vault/adapters/pki/issuer';
@@ -26,8 +24,6 @@ export default interface AdapterRegistry {
   'ldap/role': LdapRoleAdapter;
   'pki/issuer': PkiIssuerAdapter;
   'pki/tidy': PkiTidyAdapter;
-  'kv/data': KvDataAdapterAdapter;
-  'kv/metadata': KvMetadataAdapter;
   'sync/destination': SyncDestinationAdapter;
   'sync/association': SyncAssociationAdapter;
   application: Application;

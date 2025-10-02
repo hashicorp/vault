@@ -9,7 +9,7 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
-import { clearRecords, deleteLatestCmd, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { deleteLatestCmd, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { setupControlGroup } from 'vault/tests/helpers/control-groups';
 import { click, currentRouteName, currentURL, waitUntil, visit } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
@@ -63,9 +63,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // patch actions exist before/after deletion can run on both CE and ent repos
       this.version = this.owner.lookup('service:version').type = 'enterprise';
       const token = await runCmd(makeToken('admin', this.backend, personas.admin));
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('can delete and undelete the latest secret version (a)', async function (assert) {
       assert.expect(21);
@@ -194,9 +192,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await runCmd(deleteLatestCmd(this.backend, 'nuke'));
       // login as data-reader persona
       const token = await runCmd(makeToken('data-reader', this.backend, personas.dataReader));
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cannot delete and undelete the latest secret version (dr)', async function (assert) {
       assert.expect(9);
@@ -246,9 +242,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await runCmd(deleteLatestCmd(this.backend, 'nuke'));
       // login as data-list-reader persona
       const token = await runCmd(makeToken('data-list-reader', this.backend, personas.dataListReader));
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('can delete and cannot undelete the latest secret version (dlr)', async function (assert) {
       assert.expect(12);
@@ -310,9 +304,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await runCmd(deleteLatestCmd(this.backend, 'nuke'));
       // login as metadata-maintainer persona
       const token = await runCmd(makeToken('metadata-maintainer', this.backend, personas.metadataMaintainer));
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cannot delete but can undelete the latest secret version (mm)', async function (assert) {
       assert.expect(18);
@@ -409,9 +401,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       const token = await runCmd(
         makeToken('secret-nested-creator', this.backend, personas.secretNestedCreator)
       );
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('can delete all secret versions from the nested list view (snc)', async function (assert) {
       assert.expect(1);
@@ -434,9 +424,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
   module('secret-creator persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(makeToken('secret-creator', this.backend, personas.secretCreator));
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cannot delete and undelete the latest secret version (sc)', async function (assert) {
       assert.expect(9);
@@ -520,9 +508,7 @@ path "sys/control-group/request" {
 
       const { userToken } = await setupControlGroup({ userPolicy, backend: this.backend });
       this.userToken = userToken;
-      await login(userToken);
-      clearRecords(this.store);
-      return;
+      return login(userToken);
     });
     // Copy test outline from admin persona
   });

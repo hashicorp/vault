@@ -8,9 +8,10 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
+import { waitFor } from '@ember/test-waiters';
 
 /**
- * @module KvSecretMetadataDetails renders the details view for kv/metadata and button to delete (which deletes the whole secret) or edit metadata.
+ * @module KvSecretMetadataDetails renders the details view for kv metadata and button to delete (which deletes the whole secret) or edit metadata.
  * <Page::Secret::Metadata::Details
  *   @backend={{this.model.backend}}
  *   @breadcrumbs={{this.breadcrumbs}}
@@ -63,6 +64,7 @@ export default class KvSecretMetadataDetails extends Component {
   }
 
   @action
+  @waitFor
   async requestData() {
     const { backend, path } = this.args;
     try {

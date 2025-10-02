@@ -11,7 +11,7 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
-import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { grantAccessForWrite, setupControlGroup } from 'vault/tests/helpers/control-groups';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -40,9 +40,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(tokenWithPolicyCmd(`admin-${this.backend}`, personas.admin(this.backend)));
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cancel on create clears model (a)', async function (assert) {
       const backend = this.backend;
@@ -346,9 +344,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const token = await runCmd(
         tokenWithPolicyCmd(`data-reader-${this.backend}`, personas.dataReader(this.backend))
       );
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cancel on create clears model (dr)', async function (assert) {
       const backend = this.backend;
@@ -492,9 +488,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const token = await runCmd(
         tokenWithPolicyCmd(`data-list-reader-${this.backend}`, personas.dataListReader(this.backend))
       );
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cancel on create clears model (dlr)', async function (assert) {
       const backend = this.backend;
@@ -641,9 +635,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const token = await runCmd(
         tokenWithPolicyCmd(`data-list-reader-${this.backend}`, personas.metadataMaintainer(this.backend))
       );
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cancel on create clears model (mm)', async function (assert) {
       const backend = this.backend;
@@ -838,9 +830,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const token = await runCmd(
         tokenWithPolicyCmd(`secret-creator-${this.backend}`, personas.secretCreator(this.backend))
       );
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cancel on create clears model (sc)', async function (assert) {
       const backend = this.backend;
@@ -1090,9 +1080,7 @@ path "${this.backend}/metadata/*" {
         backend: this.backend,
       });
       this.userToken = userToken;
-      await login(userToken);
-      clearRecords(this.store);
-      return;
+      return login(userToken);
     });
     test('create & update root secret with default metadata (cg)', async function (assert) {
       const backend = this.backend;
