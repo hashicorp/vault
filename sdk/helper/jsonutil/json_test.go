@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"io"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -262,7 +264,7 @@ func TestJSONUtil_Limits_DefaultLimits(t *testing.T) {
 				MaxArrayElementCount: CustomMaxJSONArrayElementCount,
 			}
 
-			_, err := VerifyMaxDepthStreaming(bytes.NewReader([]byte(tt.jsonInput)), limits)
+			_, err := VerifyMaxDepthStreaming(bytes.NewReader([]byte(tt.jsonInput)), limits, nil)
 
 			if tt.expectError {
 				require.Error(t, err, "expected an error but got nil")
@@ -378,7 +380,7 @@ func TestJSONUtil_Limits_ConfiguredLimits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := VerifyMaxDepthStreaming(bytes.NewReader(tt.payload), limits)
+			_, err := VerifyMaxDepthStreaming(bytes.NewReader(tt.payload), limits, nil)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.errorMsg)
 		})
@@ -399,7 +401,7 @@ func TestVerifyMaxDepthStreaming_MaxTokens(t *testing.T) {
 		payload := []byte(`{"k0":"v0","k1":"v1"}`)
 		expectedErrorMsg := "JSON payload exceeds allowed token count"
 
-		_, err := VerifyMaxDepthStreaming(bytes.NewReader(payload), limits)
+		_, err := VerifyMaxDepthStreaming(bytes.NewReader(payload), limits, nil)
 
 		// We expect an error because the token count (6) is greater than the limit (5).
 		require.Error(t, err)
@@ -418,7 +420,7 @@ func TestVerifyMaxDepthStreaming_MaxTokens(t *testing.T) {
 		// This payload contains 3 tokens: {, "key", }
 		payload := []byte(`{"key":null}`)
 
-		_, err := VerifyMaxDepthStreaming(bytes.NewReader(payload), limits)
+		_, err := VerifyMaxDepthStreaming(bytes.NewReader(payload), limits, nil)
 
 		// We expect no error because the token count (3) is less than the limit (5).
 		require.NoError(t, err)
@@ -474,7 +476,7 @@ func TestJSONUtil_Limits_Strictness(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := VerifyMaxDepthStreaming(bytes.NewReader(tt.payload), limits)
+			_, err := VerifyMaxDepthStreaming(bytes.NewReader(tt.payload), limits, nil)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.errorMsg)
 		})
@@ -496,7 +498,7 @@ func TestVerifyMaxDepthStreaming_NonContainerBypass(t *testing.T) {
 
 	for name, payload := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := VerifyMaxDepthStreaming(bytes.NewReader(payload), limits)
+			_, err := VerifyMaxDepthStreaming(bytes.NewReader(payload), limits, nil)
 			require.NoError(t, err, "expected no error for non-container top-level value")
 		})
 	}
@@ -588,7 +590,7 @@ func TestVerifyMaxDepthStreaming_ValidVaultPayloads(t *testing.T) {
 
 	for name, payload := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := VerifyMaxDepthStreaming(bytes.NewReader([]byte(payload)), limits)
+			_, err := VerifyMaxDepthStreaming(bytes.NewReader([]byte(payload)), limits, nil)
 			require.NoError(t, err, "expected valid Vault payload to parse without error")
 		})
 	}
@@ -725,11 +727,37 @@ func TestVerifyMaxDepthStreaming_InvalidVaultPayloads(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := VerifyMaxDepthStreaming(bytes.NewReader(tt.payload), tt.limits)
+			_, err := VerifyMaxDepthStreaming(bytes.NewReader(tt.payload), tt.limits, nil)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.errorMsg)
 		})
 	}
+}
+
+// TestVerifyMaxDepthStreaming_MaxRequestSize ensures that the buffered reader
+// used in VerifyMaxDepthStreaming correctly enforces the maxRequestSize limit.
+// The test checks that a non-JSON payload can be processed without error and
+// that no more than the maxRequestSize bytes are read from the reader.
+func TestVerifyMaxDepthStreaming_MaxRequestSize(t *testing.T) {
+	input := `this is test data that isn't json`
+	bodyReader := strings.NewReader(input)
+	read := new(bytes.Buffer)
+	maxRequestSize := new(int64)
+	*maxRequestSize = 16
+	// this is meant to mimic http request body reading
+	// the TeeReader will capture what is read from the bodyReader
+	reader := io.TeeReader(http.MaxBytesReader(nil, io.NopCloser(bodyReader), *maxRequestSize), read)
+	_, err := VerifyMaxDepthStreaming(reader, JSONLimits{MaxDepth: 5, MaxTokens: 5}, maxRequestSize)
+	require.NoError(t, err)
+	// then, check to see that combining the read buffer and the remaining body
+	// results in the original input
+	// if VerifyMaxDepthStreaming tried to read more than the
+	// maxRequestSize, this check will fail because the http.MaxBytesReader will
+	// have read an extra byte without writing it to the read buffer
+	full := io.MultiReader(read, bodyReader)
+	all, err := io.ReadAll(full)
+	require.NoError(t, err)
+	require.Equal(t, input, string(all))
 }
 
 // generateComplexJSON generates a valid JSON string with a specified nesting depth.

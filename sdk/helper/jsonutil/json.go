@@ -144,11 +144,20 @@ func isWhitespace(b byte) bool {
 	return false
 }
 
+// defaultBufferSize is the default size for the bufio.Reader buffer
+const defaultBufferSize = int64(4096)
+
 // VerifyMaxDepthStreaming scans the JSON stream to enforce nesting depth, counts,
 // and other limits without decoding the full structure into memory.
-func VerifyMaxDepthStreaming(jsonReader io.Reader, limits JSONLimits) (int, error) {
-	// Use a buffered reader to peek at the stream without consuming it from the original reader.
-	bufReader := bufio.NewReader(jsonReader)
+func VerifyMaxDepthStreaming(jsonReader io.Reader, limits JSONLimits, maxRequestSize *int64) (int, error) {
+	// If the default buffer size is larger than the max request size, use the max request size
+	// for the buffer to avoid over-reading.
+	bufferSize := defaultBufferSize
+	if maxRequestSize != nil && *maxRequestSize < defaultBufferSize {
+		bufferSize = *maxRequestSize
+	}
+	// Use a buffered reader to peek at the stream
+	bufReader := bufio.NewReaderSize(jsonReader, int(bufferSize))
 
 	bom, err := bufReader.Peek(3)
 	if err == nil && bytes.Equal(bom, []byte{0xEF, 0xBB, 0xBF}) {

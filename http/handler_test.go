@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -1024,6 +1025,186 @@ func Test_requiresSnapshot(t *testing.T) {
 				},
 			}
 			require.Equal(t, tc.expected, requiresSnapshot(req))
+		})
+	}
+}
+
+// TestHandler_JSONLimitQuotaWrappers verifies that the handler properly orders
+// the normal quota checks, JSON size limits checks, and role-based quota checks
+func TestHandler_JSONLimitQuotaWrappers(t *testing.T) {
+	testCases := []struct {
+		name           string
+		setup          func(t *testing.T, client *api.Client, roleID string)
+		jsonStringSize int
+		wantError      string
+	}{
+		{
+			// set up a role-based rate limit, but don't exceed the rate
+			// because the JSON is too big the request will error with
+			// the JSON size error
+			name: "too big json with role quota",
+			setup: func(t *testing.T, client *api.Client, _ string) {
+				_, err := client.Logical().Write("sys/quotas/rate-limit/my-role-quota", map[string]interface{}{
+					"path": "auth/approle",
+					"role": "my-role",
+					"rate": 5,
+				})
+				require.NoError(t, err)
+			},
+			jsonStringSize: 5001,
+			wantError:      "JSON string value exceeds allowed length",
+		},
+		{
+			// set up a rate limit, but don't exceed the rate
+			// because the JSON is too big the request will error with
+			// the JSON size error
+			name: "too big json with non role quota",
+			setup: func(t *testing.T, client *api.Client, _ string) {
+				_, err := client.Logical().Write("sys/quotas/rate-limit/my-quota", map[string]interface{}{
+					"path": "auth/approle",
+					"rate": 5,
+				})
+				require.NoError(t, err)
+			},
+			jsonStringSize: 5001,
+			wantError:      "JSON string value exceeds allowed length",
+		},
+		{
+			// set up a rate limit without a role and exceed it
+			// even though the JSON is too big, the request will be blocked by
+			// the rate limit first
+			name: "too big json with non role quota blocked",
+			setup: func(t *testing.T, client *api.Client, roleID string) {
+				_, err := client.Logical().Write("sys/quotas/rate-limit/my-quota", map[string]interface{}{
+					"path":     "auth/approle",
+					"rate":     1,
+					"interval": "60",
+				})
+				require.NoError(t, err)
+			},
+			jsonStringSize: 5001,
+			wantError:      "rate limit quota exceeded",
+		},
+		{
+			// set up a rate limit with a role and exceed it
+			// the JSON is too big and the JSON check will trigger before
+			// the role-based quota check, so we'll get a JSON size error
+			name: "too big json with role quota blocked",
+			setup: func(t *testing.T, client *api.Client, roleID string) {
+				_, err := client.Logical().Write("sys/quotas/rate-limit/my-role-quota", map[string]interface{}{
+					"path":     "auth/approle",
+					"role":     "my-role",
+					"rate":     1,
+					"interval": "60",
+				})
+				require.NoError(t, err)
+
+				// log in for the role to use up the quota
+				r, err := client.Logical().Write("auth/approle/role/my-role/secret-id", nil)
+				require.NoError(t, err)
+				secretID := r.Data["secret_id"].(string)
+
+				_, err = client.Logical().Write("auth/approle/login", map[string]interface{}{
+					"role_id":   roleID,
+					"secret_id": secretID,
+				})
+				require.NoError(t, err)
+			},
+			jsonStringSize: 5001,
+			wantError:      "JSON string value exceeds allowed length",
+		},
+		{
+			// set up a rate limit with a role and exceed it
+			// the JSON is an ok size, so the role-based quota check will
+			// trigger
+			name: "normal json with role quota blocked",
+			setup: func(t *testing.T, client *api.Client, roleID string) {
+				_, err := client.Logical().Write("sys/quotas/rate-limit/my-role-quota", map[string]interface{}{
+					"path":     "auth/approle",
+					"role":     "my-role",
+					"rate":     1,
+					"interval": "60",
+				})
+				require.NoError(t, err)
+
+				// log in for the role to use up the quota
+				r, err := client.Logical().Write("auth/approle/role/my-role/secret-id", nil)
+				require.NoError(t, err)
+				secretID := r.Data["secret_id"].(string)
+
+				_, err = client.Logical().Write("auth/approle/login", map[string]interface{}{
+					"role_id":   roleID,
+					"secret_id": secretID,
+				})
+				require.NoError(t, err)
+			},
+			jsonStringSize: 5,
+			wantError:      "rate limit quota exceeded",
+		},
+		{
+			// set up a rate limit with a role but don't exceed it
+			// the JSON is an ok size, so the request will succeed
+			name: "normal json with role quota allowed",
+			setup: func(t *testing.T, client *api.Client, roleID string) {
+				_, err := client.Logical().Write("sys/quotas/rate-limit/my-role-quota", map[string]interface{}{
+					"path":     "auth/approle",
+					"role":     "my-role",
+					"rate":     1,
+					"interval": "60",
+				})
+				require.NoError(t, err)
+			},
+			jsonStringSize: 5,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+				HandlerFunc: Handler,
+				DefaultHandlerProperties: vault.HandlerProperties{
+					ListenerConfig: &configutil.Listener{
+						CustomMaxJSONStringValueLength: 5000,
+					},
+				},
+			})
+			cluster.Start()
+			defer cluster.Cleanup()
+
+			client := cluster.Cores[0].Client
+			client.SetToken(cluster.RootToken)
+
+			err := client.Sys().EnableAuthWithOptions("approle", &api.EnableAuthOptions{
+				Type: "approle",
+			})
+			require.NoError(t, err)
+
+			_, err = client.Logical().Write("auth/approle/role/my-role", map[string]interface{}{
+				"token_policies": "default",
+				"token_ttl":      "1h",
+				"token_max_ttl":  "4h",
+			})
+			r, err := client.Logical().Read("auth/approle/role/my-role/role-id")
+			require.NoError(t, err)
+			roleID := r.Data["role_id"].(string)
+			require.NoError(t, err)
+			if tc.setup != nil {
+				tc.setup(t, client, roleID)
+			}
+			r, err = client.Logical().Write("auth/approle/role/my-role/secret-id", nil)
+			require.NoError(t, err)
+			secretID := r.Data["secret_id"].(string)
+
+			resp, err := client.Logical().Write("auth/approle/login", map[string]interface{}{
+				"role_id":         roleID,
+				"secret_id":       secretID,
+				"additional_data": strings.Repeat("a", tc.jsonStringSize),
+			})
+			if tc.wantError != "" {
+				require.ErrorContains(t, err, tc.wantError)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, resp)
 		})
 	}
 }

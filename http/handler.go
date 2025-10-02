@@ -299,6 +299,8 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	// Build up a chain of wrapping handlers.
 	wrappedHandler := wrapHelpHandler(mux, core)
 	wrappedHandler = wrapCORSHandler(wrappedHandler, core)
+	wrappedHandler = withRoleRateLimitQuotaWrapping(wrappedHandler, core)
+	wrappedHandler = wrapJSONLimitsHandler(wrappedHandler, props)
 	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
 	wrappedHandler = entWrapGenericHandler(core, wrappedHandler, props)
 	wrappedHandler = wrapMaxRequestSizeHandler(wrappedHandler, props)
