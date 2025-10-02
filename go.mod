@@ -34,8 +34,8 @@ require (
 	cloud.google.com/go/monitoring v1.24.2
 	cloud.google.com/go/spanner v1.84.1
 	cloud.google.com/go/storage v1.56.1
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.18.0
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.9.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.12.0
 	github.com/Azure/azure-storage-blob-go v0.15.0
 	github.com/Azure/go-autorest/autorest v0.11.29
 	github.com/Azure/go-autorest/autorest/adal v0.9.23
@@ -154,7 +154,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-snowflake v0.14.2
 	github.com/hashicorp/vault-plugin-secrets-ad v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.20.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.22.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.22.1-0.20251001001530-e7e2c5cc4b80
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.22.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.11.0
@@ -163,7 +163,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.12.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
-	github.com/hashicorp/vault/api v1.20.0
+	github.com/hashicorp/vault/api v1.21.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
 	github.com/hashicorp/vault/sdk v0.19.1-0.20250916230224-4fdc2b677763
@@ -206,7 +206,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tink-crypto/tink-go/v2 v2.2.0
 	go.etcd.io/bbolt v1.4.0-beta.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.17
@@ -258,7 +258,7 @@ require (
 	github.com/99designs/keyring v1.2.2 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.1 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.2 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/azkeys v0.10.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal v0.7.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v2 v2.2.0 // indirect
@@ -276,7 +276,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.4.2 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.5.0 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/DataDog/datadog-go v3.2.0+incompatible // indirect
 	github.com/GoogleCloudPlatform/grpc-gcp-go/grpcgcp v1.5.3 // indirect
@@ -385,7 +385,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/goccy/go-json v0.10.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
@@ -458,15 +458,15 @@ require (
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
 	github.com/mediocregopher/radix/v4 v4.1.4 // indirect
-	github.com/microsoft/kiota-abstractions-go v1.9.2 // indirect
-	github.com/microsoft/kiota-authentication-azure-go v1.3.0 // indirect
-	github.com/microsoft/kiota-http-go v1.5.2 // indirect
+	github.com/microsoft/kiota-abstractions-go v1.9.3 // indirect
+	github.com/microsoft/kiota-authentication-azure-go v1.3.1 // indirect
+	github.com/microsoft/kiota-http-go v1.5.4 // indirect
 	github.com/microsoft/kiota-serialization-form-go v1.1.2 // indirect
 	github.com/microsoft/kiota-serialization-json-go v1.1.2 // indirect
 	github.com/microsoft/kiota-serialization-multipart-go v1.1.2 // indirect
 	github.com/microsoft/kiota-serialization-text-go v1.1.2 // indirect
-	github.com/microsoftgraph/msgraph-sdk-go v1.69.0 // indirect
-	github.com/microsoftgraph/msgraph-sdk-go-core v1.3.2 // indirect
+	github.com/microsoftgraph/msgraph-sdk-go v1.86.0 // indirect
+	github.com/microsoftgraph/msgraph-sdk-go-core v1.4.0 // indirect
 	github.com/miekg/dns v1.1.50 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
