@@ -6,8 +6,8 @@
 <form {{on "submit" (perform this.saveModel)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="save" @noun="Auth Method" />
-    <MessageError @model={{@form}} />
-    <FormFieldGroups @model={{@form}} @groupName="formFieldGroups" @mode={{this.mode}} />
+    <MessageError @model={{@form}} @errorMessage={{this.errorMessage}} />
+    <FormFieldGroups @model={{@form}} @groupName="formFieldGroups" />
   </div>
 
   <div class="field is-grouped box is-fullwidth is-bottomless">

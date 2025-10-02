@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+import { ALL_ENGINES, type EngineDisplayData } from 'vault/utils/all-engines-metadata';
 
 /**
  * Helper function to retrieve engine metadata for a given `methodType`.
@@ -21,12 +21,11 @@ import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
  * @returns {Object|undefined} - The engine metadata, which includes information about its mount type (e.g., secret or auth)
  *   and whether it requires an enterprise license. Returns undefined if no match is found.
  */
-export default function engineDisplayData(methodType: string) {
+export default function engineDisplayData(methodType: string): EngineDisplayData {
   const engine = ALL_ENGINES?.find((t) => t.type === methodType);
-  if (!engine && methodType) {
-    // Fallback to a unknown engine if no match found but type is provided
+  if (!engine) {
     return {
-      displayName: 'Unknown plugin',
+      displayName: methodType || 'Unknown plugin',
       type: 'unknown',
       isOldEngine: true,
       glyph: 'lock',

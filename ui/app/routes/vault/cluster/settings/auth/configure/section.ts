@@ -26,17 +26,19 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
   }
 
   modelForOptions() {
-    const { methodOptions, id, type } = this.configRouteModel;
+    const { methodOptions, method } = this.configRouteModel;
     const config = methodOptions.config as MountConfig;
     const listing_visibility = config.listing_visibility === 'unauth' ? true : false;
 
     const form = new AuthMethodForm({
       ...methodOptions,
-      path: id,
-      config: { ...methodOptions.config, listing_visibility },
+      path: method.id,
+      config: { ...config, listing_visibility },
       user_lockout_config: {},
     });
-    form.type = type;
+    // `type` is a tracked property on the form class and not a field param
+    // so we need to set it here even though it is spread in methodOptions above.
+    form.type = methodOptions.type;
 
     return {
       form,
@@ -45,13 +47,13 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
   }
 
   get configFieldGroupsMap() {
-    const { type } = this.configRouteModel;
+    const { method } = this.configRouteModel;
     return {
       kubernetes: {
         default: ['kubernetes_host', 'kubernetes_ca_cert', 'disable_local_ca_jwt'],
         'Kubernetes Options': ['token_reviewer_jwt', 'pem_keys', 'use_annotations_as_alias_metadata'],
       },
-    }[type];
+    }[method.methodType];
   }
 
   fetchConfig(type: string, section: string, path: string, help = false) {
@@ -95,13 +97,13 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
   }
 
   async modelForConfiguration(section: string) {
-    const { id: path, type } = this.configRouteModel;
+    const { path, methodType } = this.configRouteModel.method;
 
     const formOptions = { isNew: false };
     let formData;
     // make request to fetch configuration data for method
     try {
-      const { data } = await this.fetchConfig(type, section, path);
+      const { data } = await this.fetchConfig(methodType, section, path);
       formData = data as object;
     } catch (e) {
       const { message, status } = await this.api.parseError(e);
@@ -113,7 +115,7 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
     }
     // make request to fetch OpenAPI properties with help query param
     const helpResponse = (await this.fetchConfig(
-      type,
+      methodType,
       section,
       path,
       true
@@ -121,7 +123,7 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
     const form = new OpenApiForm(helpResponse, formData, formOptions);
     // for jwt and oidc types, the jwks_pairs field is not deprecated but we do not render it in the UI
     // remove the field from the group before rendering the form
-    if (['jwt', 'oidc'].includes(type)) {
+    if (['jwt', 'oidc'].includes(methodType)) {
       const defaultGroup = form.formFieldGroups[0]?.['default'] || [];
       const index = defaultGroup.findIndex((field) => field.name === 'jwks_pairs');
       if (index !== undefined && index >= 0) {
@@ -131,7 +133,8 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
 
     return {
       form,
-      section: 'configuration',
+      section,
+      method: this.configRouteModel.method,
     };
   }
 

@@ -66,6 +66,7 @@ export default class AuthConfigOptions extends Component<Args> {
         const {
           data: { description, config, user_lockout_config },
         } = form.toJSON();
+
         const payload = {
           description,
           ...config,
@@ -75,13 +76,18 @@ export default class AuthConfigOptions extends Component<Args> {
           payload.user_lockout_config = user_lockout_config;
         }
 
+        // 'token_type' cannot be set for the 'token' auth mount
+        if (form.normalizedType === 'token' && payload?.token_type) {
+          delete payload.token_type;
+        }
+
         await this.api.sys.mountsAuthTuneConfigurationParameters(form.data.path, payload);
+        this.router.transitionTo('vault.cluster.access.methods').followRedirects();
+        this.flashMessages.success('The configuration was saved successfully.');
       } catch (err) {
         const { message } = await this.api.parseError(err);
         this.errorMessage = message;
       }
-      this.router.transitionTo('vault.cluster.access.methods').followRedirects();
-      this.flashMessages.success('The configuration was saved successfully.');
     })
   );
 }

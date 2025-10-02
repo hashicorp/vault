@@ -102,7 +102,11 @@
                 (has-capability this.model.capabilities "delete" pathKey="authMethodDelete" params=method.id)
               )
             }}
-              <dd.Interactive @color="critical" {{on "click" (fn (mut this.methodToDisable) method)}}>
+              <dd.Interactive
+                @color="critical"
+                {{on "click" (fn (mut this.methodToDisable) method)}}
+                data-test-button="Disable auth method"
+              >
                 Disable
               </dd.Interactive>
             {{/if}}

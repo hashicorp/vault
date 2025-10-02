@@ -91,4 +91,17 @@ module('Acceptance | auth-methods list view', function (hooks) {
         .exists({ count: 1 }, `auth method ${key} appears in list view after navigating from OIDC Provider`);
     }
   });
+
+  test('it should disable an auth method', async function (assert) {
+    const authPath1 = `userpass-1-${this.uid}`;
+    const type = 'userpass';
+    await visit('/vault/settings/auth/enable');
+    await runCmd(mountAuthCmd(type, authPath1));
+    await visit('/vault/access/');
+    await click(`${GENERAL.linkedBlock(authPath1)} ${GENERAL.menuTrigger}`);
+    await click(GENERAL.button('Disable auth method'));
+    await click(GENERAL.confirmButton);
+    assert.dom(GENERAL.linkedBlock(authPath1)).doesNotExist('auth mount disabled');
+    await runCmd(`delete sys/auth/${authPath1}`);
+  });
 });

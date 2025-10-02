@@ -13,10 +13,16 @@ import { deleteAuthCmd, runCmd } from 'vault/tests/helpers/commands';
 import testHelper from './test-helper';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
+// * There are different groups of configuration parameters
+// 1) Auth mount parameters or tune settings - parameters configured when an auth method is enabled in Vault and can be modified via the /tune endpoint (or "tuned").
+//    These params are typically the same across all auth mounts, e.g. `default_lease_ttl`.
+// 2) Method specific configuration settings - additional parameters, e.g. `client_id` that need to be configured to setup the auth method. Only
+//    some methods require these (e.g. AWS or OIDC)
+
 // These models use openAPI so we assert the form inputs using an acceptance test
 // The default selector is to use GENERAL.inputByAttr()
-// custom fields should be added to the this.customSelectorss object
-module('Acceptance | auth enable tune form test', function (hooks) {
+// custom fields should be added to the this.customSelectors object
+module('Acceptance | auth config form', function (hooks) {
   setupApplicationTest(hooks);
   hooks.beforeEach(async function () {
     // these tend to be the same across models because they share the same mount-config model
@@ -65,7 +71,7 @@ module('Acceptance | auth enable tune form test', function (hooks) {
     hooks.beforeEach(async function () {
       this.type = 'azure';
       this.path = `${this.type}-${uuidv4()}`;
-      this.tuneFields = [
+      this.configFields = [
         'environment',
         'identity_token_audience',
         'identity_token_ttl',
@@ -78,8 +84,8 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       ];
       // until the vault-plugin-auth-azure changes are released, these fields will be in the default group
       // this test should then fail and the following line can be removed and the next line uncommented
-      this.tuneFields.push('client_id', 'client_secret');
-      // this.tuneToggles = { 'Azure Options': ['client_id', 'client_secret'] };
+      this.configFields.push('client_id', 'client_secret');
+      // this.configToggles = { 'Azure Options': ['client_id', 'client_secret'] };
       await login();
       return visit('/vault/settings/auth/enable');
     });
@@ -96,7 +102,7 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       this.customSelectors = {
         provider_config: `${GENERAL.fieldByAttr('provider_config')} .cm-editor`,
       };
-      this.tuneFields = [
+      this.configFields = [
         'default_role',
         'jwks_ca_pem',
         'jwks_url',
@@ -111,8 +117,8 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       ];
       // until the vault-plugin-auth-jwt changes are released, these fields will be in the default group
       // this test should then fail and the following line can be removed and the next line uncommented
-      this.tuneFields.push(...this.oidcJwtGroup['OIDC/JWT Options']);
-      // this.tuneToggles = this.oidcJwtGroup;
+      this.configFields.push(...this.oidcJwtGroup['OIDC/JWT Options']);
+      // this.configToggles = this.oidcJwtGroup;
       await login();
       return visit('/vault/settings/auth/enable');
     });
@@ -126,7 +132,7 @@ module('Acceptance | auth enable tune form test', function (hooks) {
     hooks.beforeEach(async function () {
       this.type = 'ldap';
       this.path = `${this.type}-${uuidv4()}`;
-      this.tuneFields = [
+      this.configFields = [
         'url',
         'case_sensitive_names',
         'connection_timeout',
@@ -137,7 +143,7 @@ module('Acceptance | auth enable tune form test', function (hooks) {
         'use_pre111_group_cn_behavior',
         'username_as_alias',
       ];
-      this.tuneToggles = {
+      this.configToggles = {
         'LDAP Options': [
           'starttls',
           'insecure_tls',
@@ -172,7 +178,7 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       this.customSelectors = {
         provider_config: `${GENERAL.fieldByAttr('provider_config')} .cm-editor`,
       };
-      this.tuneFields = [
+      this.configFields = [
         'oidc_discovery_url',
         'default_role',
         'jwks_ca_pem',
@@ -185,8 +191,8 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       ];
       // until the vault-plugin-auth-jwt changes are released, these fields will be in the default group
       // this test should then fail and the following line can be removed and the next line uncommented
-      this.tuneFields.push(...this.oidcJwtGroup['OIDC/JWT Options']);
-      // this.tuneToggles = this.oidcJwtGroup;
+      this.configFields.push(...this.oidcJwtGroup['OIDC/JWT Options']);
+      // this.configToggles = this.oidcJwtGroup;
       await login();
       return visit('/vault/settings/auth/enable');
     });
@@ -200,8 +206,8 @@ module('Acceptance | auth enable tune form test', function (hooks) {
     hooks.beforeEach(async function () {
       this.type = 'okta';
       this.path = `${this.type}-${uuidv4()}`;
-      this.tuneFields = ['org_name', 'api_token', 'base_url', 'bypass_okta_mfa'];
-      this.tuneToggles = this.tokensGroup;
+      this.configFields = ['org_name', 'api_token', 'base_url', 'bypass_okta_mfa'];
+      this.configToggles = this.tokensGroup;
       await login();
       return visit('/vault/settings/auth/enable');
     });

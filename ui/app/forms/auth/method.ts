@@ -39,9 +39,12 @@ export default class AuthMethodForm extends MountForm<AuthMethodFormData> {
 
   get tuneFields() {
     const readOnly = ['local', 'seal_wrap'];
+    // 'token_type' cannot be set for the 'token' auth method
+    if (this.normalizedType === 'token') {
+      readOnly.push('config.token_type');
+    }
     return this.formFieldGroups[1]?.['Method Options']?.filter((field) => {
-      const isTuneable = !readOnly.includes(field.name);
-      return isTuneable || (field.name === 'token_type' && this.normalizedType === 'token');
+      return !readOnly.includes(field.name);
     });
   }
 
