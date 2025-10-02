@@ -99,13 +99,18 @@ export default class ApiService extends Service {
   });
 
   checkControlGroup = waitFor(async (context: ResponseContext) => {
-    const { url } = context;
     const response = context.response.clone();
     const { headers } = response;
 
-    const controlGroupToken = this.controlGroup.tokenForUrl(url);
-    if (controlGroupToken) {
-      this.controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
+    // since control group requests are forwarded to /v1/sys/wrapping/unwrap we cannot use controlGroup.tokenForUrl here
+    // instead, we can check if tokenToUnwrap exists on the service and compare the token value with the request header value
+    if (this.controlGroup.tokenToUnwrap) {
+      const { token, accessor } = this.controlGroup.tokenToUnwrap || {};
+      const requestHeaders = context.init.headers as Headers;
+
+      if (requestHeaders.get('X-Vault-Token') === token) {
+        this.controlGroup.deleteControlGroupToken(accessor);
+      }
     }
     // if the requested path is locked by a control group we need to create a new error response
     if (headers.get('Content-Length')) {
@@ -182,7 +187,7 @@ export default class ApiService extends Service {
   // accepts an error response and returns { status, message, response, path }
   // message is built as error.errors joined with a comma, error.message or a fallback message
   // path is the url of the request, minus the origin -> /v1/sys/wrapping/unwrap
-  async parseError(e: unknown, fallbackMessage = 'An error occurred, please try again') {
+  parseError = waitFor(async (e: unknown, fallbackMessage = 'An error occurred, please try again') => {
     if (e instanceof ResponseError) {
       const { status, url } = e.response;
       // instances where an error is thrown multiple times could result in the body already being read
@@ -197,7 +202,7 @@ export default class ApiService extends Service {
       return {
         message: message || fallbackMessage,
         status,
-        path: url.replace(document.location.origin, ''),
+        path: decodeURIComponent(url.replace(document.location.origin, '')),
         response: error,
       };
     }
@@ -210,7 +215,7 @@ export default class ApiService extends Service {
     return {
       message: (e as Error)?.message || fallbackMessage,
     };
-  }
+  });
 
   // accepts a list response as { keyInfo, keys } and returns a flat array of the keyInfo datum
   // to preserve the keys (unique identifiers) the value will be set on the datum as id

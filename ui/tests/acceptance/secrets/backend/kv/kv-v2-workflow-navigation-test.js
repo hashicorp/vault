@@ -1549,7 +1549,7 @@ path "${this.backend}/subkeys/*" {
         'redirects to access control group route'
       );
       await grantAccess({
-        apiPath: `${backend}/data/${encodeURIComponent(secretPath)}`,
+        apiPath: `${backend}/data/${secretPath}`,
         originUrl: `/vault/secrets/${backend}/kv/list`,
         userToken: this.userToken,
         backend: this.backend,
@@ -1605,7 +1605,7 @@ path "${this.backend}/subkeys/*" {
       const url = find('[data-test-control-error="href"]').innerText;
       await visit(url);
       await grantAccess({
-        apiPath: `${backend}/data/${encodeURIComponent(secretPath)}`,
+        apiPath: `${backend}/data/${secretPath}`,
         originUrl: `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata`,
         userToken: this.userToken,
         backend: this.backend,
@@ -1636,7 +1636,7 @@ path "${this.backend}/subkeys/*" {
       const url = find('[data-test-control-error="href"]').innerText;
       await visit(url);
       await grantAccess({
-        apiPath: `${backend}/data/${encodeURIComponent(secretPath)}`,
+        apiPath: `${backend}/data/${secretPath}`,
         originUrl: `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/patch`,
         userToken: this.userToken,
         backend: this.backend,
@@ -1675,7 +1675,7 @@ path "${this.backend}/subkeys/*" {
       const url = find('[data-test-control-error="href"]').innerText;
       await visit(url);
       await grantAccess({
-        apiPath: `${backend}/data/${encodeURIComponent(secretPath)}`,
+        apiPath: `${backend}/data/${secretPath}`,
         originUrl: `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata`,
         userToken: this.userToken,
         backend: this.backend,

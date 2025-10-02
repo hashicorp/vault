@@ -23,6 +23,7 @@ export interface FieldOptions {
   helperTextEnabled?: string;
   placeholder?: string;
   noDefault?: boolean;
+  isSectionHeader?: boolean;
 }
 
 export default class FormField {

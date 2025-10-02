@@ -6,14 +6,12 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { dateFormat } from 'core/helpers/date-format';
 import { dateFromNow } from 'core/helpers/date-from-now';
-import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
 
 const { overviewCard } = GENERAL;
 
@@ -21,15 +19,31 @@ const { overviewCard } = GENERAL;
 module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
-  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    baseSetup(this);
+    this.backend = 'kv-engine';
+    this.path = 'my-secret';
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
       { label: this.path },
     ];
+    this.metadata = {
+      current_version: 1,
+      updated_time: '2023-07-21T03:11:58.095971Z',
+      versions: {
+        1: {
+          created_time: '2018-03-22T02:24:06.945319214Z',
+          deletion_time: '',
+          destroyed: false,
+        },
+        2: {
+          created_time: '2023-07-20T02:15:35.86465Z',
+          deletion_time: '2023-07-25T00:36:19.950545Z',
+          destroyed: false,
+        },
+      },
+    };
     this.subkeys = {
       subkeys: {
         foo: null,
@@ -46,22 +60,23 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
         version: 1,
       },
     };
-    this.canReadMetadata = true;
-    this.canUpdateData = true;
+    this.capabilities = { canReadMetadata: true, canUpdateData: true };
+    this.isPatchAllowed = false;
 
     this.format = (time) => dateFormat([time, 'MMM d yyyy, h:mm:ss aa'], {});
     this.renderComponent = async () => {
       return render(
         hbs`
-        <Page::Secret::Overview
-          @backend={{this.backend}}
-          @breadcrumbs={{this.breadcrumbs}}
-          @canReadMetadata={{this.canReadMetadata}}
-          @canUpdateData={{this.canUpdateData}}
-          @metadata={{this.metadata}}
-          @path={{this.path}}
-          @subkeys={{this.subkeys}}
-        />`,
+          <Page::Secret::Overview
+            @backend={{this.backend}}
+            @breadcrumbs={{this.breadcrumbs}}
+            @capabilities={{this.capabilities}}
+            @isPatchAllowed={{this.isPatchAllowed}}
+            @metadata={{this.metadata}}
+            @path={{this.path}}
+            @subkeys={{this.subkeys}}
+          />
+        `,
         { owner: this.engine }
       );
     };
@@ -84,18 +99,18 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
 
     test('it renders with full permissions', async function (assert) {
       await this.renderComponent();
-      const fromNow = dateFromNow([this.metadata.updatedTime]); // uses date-fns so can't stub timestamp util
+      const fromNow = dateFromNow([this.metadata.updated_time]); // uses date-fns so can't stub timestamp util
       assert.dom(`${overviewCard.container('Current version')} .hds-badge`).doesNotExist();
       assert
         .dom(overviewCard.container('Current version'))
         .hasText(
-          `Current version Create new The current version of this secret. ${this.metadata.currentVersion}`
+          `Current version Create new The current version of this secret. ${this.metadata.current_version}`
         );
       assert
         .dom(overviewCard.container('Secret age'))
         .hasText(
           `Secret age View metadata Current secret version age. Last updated on ${this.format(
-            this.metadata.updatedTime
+            this.metadata.updated_time
           )}. ${fromNow}`
         );
       assert
@@ -116,19 +131,19 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       // creating a new version of a secret is updating a secret
       // the overview only exists after an initial version is created
       // which is why we just check for update and not also create
-      this.canUpdateData = false;
+      this.capabilities.canUpdateData = false;
       await this.renderComponent();
       assert
         .dom(`${overviewCard.container('Current version')} a`)
         .doesNotExist('create link does not render');
       assert
         .dom(overviewCard.container('Current version'))
-        .hasText(`Current version The current version of this secret. ${this.metadata.currentVersion}`);
+        .hasText(`Current version The current version of this secret. ${this.metadata.current_version}`);
     });
 
     test('it renders with no metadata permissions', async function (assert) {
       this.metadata = null;
-      this.canReadMetadata = false;
+      this.capabilities.canReadMetadata = false;
       // all secret metadata instead comes from subkeys endpoint
       const subkeyMeta = this.subkeys.metadata;
       await this.renderComponent();
@@ -161,12 +176,12 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
     test('it renders with no subkeys permissions', async function (assert) {
       this.subkeys = null;
       await this.renderComponent();
-      const fromNow = dateFromNow([this.metadata.updatedTime]); // uses date-fns so can't stub timestamp util
-      const expectedTime = this.format(this.metadata.updatedTime);
+      const fromNow = dateFromNow([this.metadata.updated_time]); // uses date-fns so can't stub timestamp util
+      const expectedTime = this.format(this.metadata.updated_time);
       assert
         .dom(overviewCard.container('Current version'))
         .hasText(
-          `Current version Create new The current version of this secret. ${this.metadata.currentVersion}`
+          `Current version Create new The current version of this secret. ${this.metadata.current_version}`
         );
       assert
         .dom(overviewCard.container('Secret age'))
@@ -204,12 +219,12 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
         metadata: {
           created_time: '2021-12-14T20:28:00.773477Z',
           custom_metadata: null,
-          deletion_time: '2022-02-14T20:28:00.773477Z',
+          deletion_time: '2023-07-25T00:36:19.950545Z',
           destroyed: false,
           version: 1,
         },
       };
-      this.metadata.versions[4].deletion_time = '2024-08-15T23:01:08.312332Z';
+      this.metadata.current_version = 2;
       this.assertBadge = (assert) => {
         assert
           .dom(`${overviewCard.container('Current version')} .hds-badge`)
@@ -222,13 +237,13 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
     });
 
     test('with full permissions', async function (assert) {
-      const expectedTime = this.format(this.metadata.versions[4].deletion_time);
+      const expectedTime = this.format(this.metadata.versions[2].deletion_time);
       await this.renderComponent();
       this.assertBadge(assert);
       assert
         .dom(overviewCard.container('Current version'))
         .hasText(
-          `Current version Deleted Create new The current version of this secret was deleted ${expectedTime}. ${this.metadata.currentVersion}`
+          `Current version Deleted Create new The current version of this secret was deleted ${expectedTime}. ${this.metadata.current_version}`
         );
       assert.dom(overviewCard.container('Secret age')).doesNotExist();
       assert.dom(overviewCard.container('Subkeys')).doesNotExist();
@@ -253,13 +268,13 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
 
     test('with no subkey permissions', async function (assert) {
       this.subkeys = null;
-      const expectedTime = this.format(this.metadata.versions[4].deletion_time);
+      const expectedTime = this.format(this.metadata.versions[2].deletion_time);
       await this.renderComponent();
       this.assertBadge(assert);
       assert
         .dom(overviewCard.container('Current version'))
         .hasText(
-          `Current version Deleted Create new The current version of this secret was deleted ${expectedTime}. ${this.metadata.currentVersion}`
+          `Current version Deleted Create new The current version of this secret was deleted ${expectedTime}. ${this.metadata.current_version}`
         );
       assert.dom(overviewCard.container('Subkeys')).doesNotExist();
     });
@@ -285,7 +300,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
           version: 1,
         },
       };
-      this.metadata.versions[4].destroyed = true;
+      this.metadata.versions[2].destroyed = true;
+      this.metadata.current_version = 2;
       this.assertBadge = (assert) => {
         assert
           .dom(`${overviewCard.container('Current version')} .hds-badge`)
@@ -303,7 +319,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       assert
         .dom(overviewCard.container('Current version'))
         .hasText(
-          `Current version Destroyed Create new The current version of this secret has been permanently deleted and cannot be restored. ${this.metadata.currentVersion}`
+          `Current version Destroyed Create new The current version of this secret has been permanently deleted and cannot be restored. ${this.metadata.current_version}`
         );
       assert.dom(overviewCard.container('Secret age')).doesNotExist();
       assert.dom(overviewCard.container('Subkeys')).doesNotExist();
@@ -332,7 +348,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       assert
         .dom(overviewCard.container('Current version'))
         .hasText(
-          `Current version Destroyed Create new The current version of this secret has been permanently deleted and cannot be restored. ${this.metadata.currentVersion}`
+          `Current version Destroyed Create new The current version of this secret has been permanently deleted and cannot be restored. ${this.metadata.current_version}`
         );
       assert.dom(overviewCard.container('Subkeys')).doesNotExist();
     });

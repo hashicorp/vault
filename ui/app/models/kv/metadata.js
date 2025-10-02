@@ -8,7 +8,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { keyIsFolder } from 'core/utils/key-utils';
-import { isDeleted } from 'kv/utils/kv-deleted';
+import { isDeleted } from 'kv/helpers/is-deleted';
 
 const validations = {
   maxVersions: [

@@ -176,20 +176,20 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.toggleMetadata);
       assert.dom(PAGE.create.metadataSection).exists('Shows metadata section after toggled');
       // Check initial values
-      assert.dom(FORM.inputByAttr('maxVersions')).hasValue('0');
-      assert.dom(FORM.inputByAttr('casRequired')).isNotChecked();
+      assert.dom(FORM.inputByAttr('max_versions')).hasValue('0');
+      assert.dom(FORM.inputByAttr('cas_required')).isNotChecked();
       assert.dom(FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
-      // MaxVersions validation
-      await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
+      // max_versions validation
+      await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '7');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
-      await click(FORM.inputByAttr('casRequired'));
+      await click(FORM.inputByAttr('cas_required'));
       await click(FORM.toggleByLabel('Automate secret deletion'));
       await fillIn(FORM.ttlValue('Automate secret deletion'), '1000');
 
@@ -434,20 +434,20 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.toggleMetadata);
       assert.dom(PAGE.create.metadataSection).exists('Shows metadata section after toggled');
       // Check initial values
-      assert.dom(FORM.inputByAttr('maxVersions')).hasValue('0');
-      assert.dom(FORM.inputByAttr('casRequired')).isNotChecked();
+      assert.dom(FORM.inputByAttr('max_versions')).hasValue('0');
+      assert.dom(FORM.inputByAttr('cas_required')).isNotChecked();
       assert.dom(FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
-      // MaxVersions validation
-      await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
+      // max_versions validation
+      await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '7');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
-      await click(FORM.inputByAttr('casRequired'));
+      await click(FORM.inputByAttr('cas_required'));
       await click(FORM.toggleByLabel('Automate secret deletion'));
       await fillIn(FORM.ttlValue('Automate secret deletion'), '1000');
 
@@ -583,20 +583,20 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.toggleMetadata);
       assert.dom(PAGE.create.metadataSection).exists('Shows metadata section after toggled');
       // Check initial values
-      assert.dom(FORM.inputByAttr('maxVersions')).hasValue('0');
-      assert.dom(FORM.inputByAttr('casRequired')).isNotChecked();
+      assert.dom(FORM.inputByAttr('max_versions')).hasValue('0');
+      assert.dom(FORM.inputByAttr('cas_required')).isNotChecked();
       assert.dom(FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
-      // MaxVersions validation
-      await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
+      // max_versions validation
+      await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '7');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
-      await click(FORM.inputByAttr('casRequired'));
+      await click(FORM.inputByAttr('cas_required'));
       await click(FORM.toggleByLabel('Automate secret deletion'));
       await fillIn(FORM.ttlValue('Automate secret deletion'), '1000');
 
@@ -752,20 +752,20 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.toggleMetadata);
       assert.dom(PAGE.create.metadataSection).exists('Shows metadata section after toggled');
       // Check initial values
-      assert.dom(FORM.inputByAttr('maxVersions')).hasValue('0');
-      assert.dom(FORM.inputByAttr('casRequired')).isNotChecked();
+      assert.dom(FORM.inputByAttr('max_versions')).hasValue('0');
+      assert.dom(FORM.inputByAttr('cas_required')).isNotChecked();
       assert.dom(FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
-      // MaxVersions validation
-      await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
+      // max_versions validation
+      await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '7');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
-      await click(FORM.inputByAttr('casRequired'));
+      await click(FORM.inputByAttr('cas_required'));
       await click(FORM.toggleByLabel('Automate secret deletion'));
       await fillIn(FORM.ttlValue('Automate secret deletion'), '1000');
 
@@ -980,20 +980,20 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.toggleMetadata);
       assert.dom(PAGE.create.metadataSection).exists('Shows metadata section after toggled');
       // Check initial values
-      assert.dom(FORM.inputByAttr('maxVersions')).hasValue('0');
-      assert.dom(FORM.inputByAttr('casRequired')).isNotChecked();
+      assert.dom(FORM.inputByAttr('max_versions')).hasValue('0');
+      assert.dom(FORM.inputByAttr('cas_required')).isNotChecked();
       assert.dom(FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
-      // MaxVersions validation
-      await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
+      // max_versions validation
+      await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '7');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
-      await click(FORM.inputByAttr('casRequired'));
+      await click(FORM.inputByAttr('cas_required'));
       await click(FORM.toggleByLabel('Automate secret deletion'));
       await fillIn(FORM.ttlValue('Automate secret deletion'), '1000');
 

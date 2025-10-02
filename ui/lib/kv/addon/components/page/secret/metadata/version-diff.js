@@ -7,7 +7,9 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { kvDataPath } from 'vault/utils/kv-path';
+import sortedVersions from 'kv/helpers/sorted-versions';
+import getCurrentSecret from 'kv/helpers/current-secret';
+import isDeleted from 'kv/helpers/is-deleted';
 
 /**
  * @module KvSecretMetadataVersionDiff renders the version diff comparison
@@ -18,7 +20,7 @@ import { kvDataPath } from 'vault/utils/kv-path';
  *  @breadcrumbs={{this.breadcrumbs}}
  * />
  *
- * @param {model} metadata - Ember data model: 'kv/metadata'
+ * @param {object} metadata - secret metadata
  * @param {string} path - path to request secret data for selected version
  * @param {string} backend - kv secret mount to make network request
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
@@ -26,7 +28,8 @@ import { kvDataPath } from 'vault/utils/kv-path';
 
 /* eslint-disable no-undef */
 export default class KvSecretMetadataVersionDiff extends Component {
-  @service store;
+  @service api;
+
   @tracked leftVersion;
   @tracked rightVersion;
   @tracked visualDiff;
@@ -36,20 +39,25 @@ export default class KvSecretMetadataVersionDiff extends Component {
     super(...arguments);
 
     // initialize with most recently (before current), active version on left
-    const olderVersions = this.args.metadata.sortedVersions.slice(1);
-    const recentlyActive = olderVersions.find((v) => !v.destroyed && !v.isSecretDeleted);
+    const olderVersions = this.sortedVersions.slice(1);
+    const recentlyActive = olderVersions.find((v) => !v.destroyed && !isDeleted(v.deletion_time));
     this.leftVersion = Number(recentlyActive?.version);
-    this.rightVersion = this.args.metadata.currentVersion;
+    this.rightVersion = this.args.metadata.current_version;
 
     // this diff is from older to newer (current) secret data
     this.createVisualDiff();
   }
 
+  get sortedVersions() {
+    return sortedVersions(this.args.metadata.versions);
+  }
+
   // this can only be true on initialization if the current version is inactive
   // selecting a deleted/destroyed version is otherwise disabled
   get deactivatedState() {
-    const { currentVersion, currentSecret } = this.args.metadata;
-    return this.rightVersion === currentVersion && currentSecret.isDeactivated ? currentSecret.state : '';
+    const { current_version } = this.args.metadata;
+    const currentSecret = getCurrentSecret(this.args.metadata);
+    return this.rightVersion === current_version && currentSecret.isDeactivated ? currentSecret.state : '';
   }
 
   @action
@@ -73,10 +81,12 @@ export default class KvSecretMetadataVersionDiff extends Component {
 
   async fetchSecretData(version) {
     const { backend, path } = this.args;
-    // check the store first, avoiding an extra network request if possible.
-    const storeData = await this.store.peekRecord('kv/data', kvDataPath(backend, path, version));
-    const data = storeData ? storeData : await this.store.queryRecord('kv/data', { backend, path, version });
-
-    return data?.secretData;
+    const initOverride = version ? (context) => this.api.addQueryParams(context, { version }) : undefined;
+    try {
+      const { data } = await this.api.secrets.kvV2Read(path, backend, initOverride);
+      return data;
+    } catch (e) {
+      // capabilities checks are higher up the tree so this request should not fail
+    }
   }
 }
