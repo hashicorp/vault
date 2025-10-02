@@ -27,7 +27,6 @@
  */
 
 import Component from '@glimmer/component';
-import ControlGroupError from 'vault/lib/control-group-error';
 import Ember from 'ember';
 import keys from 'core/utils/keys';
 import { action, set } from '@ember/object';
@@ -124,10 +123,10 @@ export default class SecretCreateOrUpdate extends Component {
         }
       })
       .catch((error) => {
-        if (error instanceof ControlGroupError) {
+        if (error.isControlGroupError) {
+          this.controlGroup.saveTokenFromError(error);
           const errorMessage = this.controlGroup.logFromError(error);
           this.error = errorMessage.content;
-          this.controlGroup.saveTokenFromError(error);
         }
         throw error;
       });

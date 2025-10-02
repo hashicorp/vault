@@ -7,7 +7,7 @@ import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-import { isDeleted } from 'kv/utils/kv-deleted';
+import { isDeleted } from 'kv/helpers/is-deleted';
 import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 
 /* sample response

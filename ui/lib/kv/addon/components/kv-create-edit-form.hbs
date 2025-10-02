@@ -1,0 +1,83 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<form {{on "submit" (perform this.save)}}>
+  <div class="box is-sideless is-fullwidth is-bottomless">
+    <NamespaceReminder @mode="create" @noun="secret" />
+    <MessageError @errorMessage={{this.errorMessage}} />
+
+    {{#each @form.secretFields as |field|}}
+      {{! path is readonly when editing a secret }}
+      {{#if (and (not @form.isNew) (eq field.name "path"))}}
+        <ReadonlyFormField @attr={{field}} @value={{@form.data.path}} />
+      {{else}}
+        <FormField
+          @attr={{field}}
+          @model={{@form}}
+          @modelValidations={{this.modelValidations}}
+          @onKeyUp={{this.pathValidations}}
+        />
+      {{/if}}
+    {{/each}}
+
+    <hr class="is-marginless has-background-gray-200" />
+    {{#if @showJson}}
+      <JsonEditor
+        @title="{{if @form.isNew 'Secret' 'Version'}} data"
+        @value={{stringified-secret-data @form.data.secretData}}
+        @valueUpdated={{this.onJsonChange}}
+      />
+      {{#if (or this.modelValidations.secretData.errors this.lintingErrors)}}
+        <AlertInline
+          @color={{if this.lintingErrors "warning" "critical"}}
+          class="has-top-padding-s"
+          @message={{or
+            this.modelValidations.secretData.errors
+            "JSON is unparsable. Fix linting errors to avoid data discrepancies."
+          }}
+        />
+      {{/if}}
+    {{else}}
+      <KvObjectEditor
+        class="has-top-margin-m"
+        @label="{{if @form.isNew 'Secret' 'Version'}} data"
+        @value={{@form.data.secretData}}
+        @onChange={{this.onKvObjectChange}}
+        @isMasked={{true}}
+        @warnNonStringValues={{true}}
+      />
+    {{/if}}
+
+    {{! edit page renders version diff and create page renders metadata form }}
+    {{yield this.modelValidations}}
+  </div>
+
+  <div class="box is-fullwidth is-bottomless">
+    <div class="control">
+      <Hds::Button
+        @text="Save"
+        @icon={{if this.save.isRunning "loading"}}
+        type="submit"
+        disabled={{this.save.isRunning}}
+        data-test-kv-save
+      />
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
+        class="has-left-margin-s"
+        disabled={{this.save.isRunning}}
+        {{on "click" this.onCancel}}
+        data-test-kv-cancel
+      />
+    </div>
+    {{#if this.invalidFormAlert}}
+      <AlertInline
+        data-test-invalid-form-alert
+        class="has-top-padding-s"
+        @type="danger"
+        @message={{this.invalidFormAlert}}
+      />
+    {{/if}}
+  </div>
+</form>

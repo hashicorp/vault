@@ -9,7 +9,6 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module KvSecretPatch
@@ -28,7 +27,7 @@ import errorMessage from 'vault/utils/error-message';
  *
  * @param {model} path - Secret path
  * @param {string} backend - Mount backend path
- * @param {model} metadata - Ember data model: 'kv/metadata'
+ * @param {model} metadata - secret metadata
  * @param {object} subkeys - subkeys (leaf keys with null values) of kv v2 secret
  * @param {object} subkeysMeta - metadata object returned from the /subkeys endpoint, contains: version, created_time, custom_metadata, deletion status and time
  * @param {array} breadcrumbs - breadcrumb objects to render in page header
@@ -38,7 +37,7 @@ export default class KvSecretPatch extends Component {
   @service controlGroup;
   @service flashMessages;
   @service('app-router') router;
-  @service store;
+  @service api;
 
   @tracked controlGroupError;
   @tracked errorMessage;
@@ -52,28 +51,29 @@ export default class KvSecretPatch extends Component {
 
   @task
   @waitFor
-  *save(patchData) {
-    const isEmpty = this.isEmpty(patchData);
+  *save(data) {
+    const isEmpty = this.isEmpty(data);
     if (isEmpty) {
       this.flashMessages.info(`No changes to submit. No updates made to "${this.args.path}".`);
       return this.onCancel();
     }
 
-    const { backend, path, metadata, subkeysMeta } = this.args;
-    // if no metadata permission, use subkey metadata as backup
-    const version = metadata?.currentVersion || subkeysMeta?.version;
-    const adapter = this.store.adapterFor('kv/data');
     try {
-      yield adapter.patchSecret(backend, path, patchData, version);
+      const { backend, path, metadata, subkeysMeta } = this.args;
+      // if no metadata permission, use subkey metadata as backup
+      const version = metadata?.current_version || subkeysMeta?.version;
+      const payload = { options: { cas: version }, data };
+      yield this.api.secrets.kvV2Patch(path, backend, payload);
       this.flashMessages.success(`Successfully patched new version of ${path}.`);
       this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
     } catch (error) {
-      if (error.message === 'Control Group encountered') {
-        this.controlGroup.saveTokenFromError(error);
-        this.controlGroupError = this.controlGroup.logFromError(error);
+      const { message, response } = yield this.api.parseError(error);
+      if (response.isControlGroupError) {
+        this.controlGroup.saveTokenFromError(response);
+        this.controlGroupError = this.controlGroup.logFromError(response);
         return;
       }
-      this.errorMessage = errorMessage(error);
+      this.errorMessage = message;
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }

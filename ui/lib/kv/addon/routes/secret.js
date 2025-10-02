@@ -5,47 +5,54 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
 import { action } from '@ember/object';
-import { isDeleted } from 'kv/utils/kv-deleted';
+import isDeleted from 'kv/helpers/is-deleted';
+import { kvErrorHandler } from 'kv/utils/kv-error-handler';
 
 export default class KvSecretRoute extends Route {
+  @service api;
   @service secretMountPath;
-  @service store;
   @service capabilities;
   @service version;
 
-  fetchSecretMetadata(backend, path) {
+  async fetchSecretMetadata(backend, path) {
     // catch error and only return 404 which indicates the secret truly does not exist.
     // control group error is handled by the metadata route
-    return this.store.queryRecord('kv/metadata', { backend, path }).catch((e) => {
-      if (e.httpStatus === 404) {
-        throw e;
+    try {
+      return await this.api.secrets.kvV2ReadMetadata(path, backend);
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        throw error;
       }
       return null;
-    });
+    }
   }
 
   // this request always returns subkeys for the latest version
-  fetchSubkeys(backend, path) {
+  async fetchSubkeys(backend, path) {
     if (this.version.isEnterprise) {
-      const adapter = this.store.adapterFor('kv/data');
-      // metadata will throw if the secret does not exist
-      // always return here so we get deletion state and relevant metadata
-      return adapter.fetchSubkeys(backend, path);
+      try {
+        return await this.api.secrets.kvV2ReadSubkeys(path, backend);
+      } catch (error) {
+        // metadata will throw if the secret does not exist
+        // kvErrorHandler will extract deletion state and relevant metadata from error
+        const { status, response } = await this.api.parseError(error);
+        return kvErrorHandler(status, response);
+      }
     }
     return null;
   }
 
   isPatchAllowed({ capabilities, subkeysMeta = {} }) {
-    if (!this.version.isEnterprise) return false;
-    const canReadSubkeys = capabilities.subkeys.canRead;
-    const canPatchData = capabilities.data.canPatch;
-    if (canReadSubkeys && canPatchData && subkeysMeta) {
-      const { deletion_time, destroyed } = subkeysMeta;
-      const isLatestActive = isDeleted(deletion_time) || destroyed ? false : true;
-      // only the latest secret version can be patched and it must not be deleted or destroyed
-      return isLatestActive;
+    if (this.version.isEnterprise) {
+      const { canReadSubkeys, canPatchData } = capabilities;
+      if (canReadSubkeys && canPatchData && subkeysMeta) {
+        const { deletion_time, destroyed } = subkeysMeta;
+        const isLatestActive = isDeleted(deletion_time) || destroyed ? false : true;
+        // only the latest secret version can be patched and it must not be deleted or destroyed
+        return isLatestActive;
+      }
     }
     return false;
   }
@@ -54,11 +61,32 @@ export default class KvSecretRoute extends Route {
     const metadataPath = `${backend}/metadata/${path}`;
     const dataPath = `${backend}/data/${path}`;
     const subkeysPath = `${backend}/subkeys/${path}`;
-    const perms = await this.capabilities.fetch([metadataPath, dataPath, subkeysPath]);
+    const deletePath = `${backend}/delete/${path}`;
+    const undeletePath = `${backend}/undelete/${path}`;
+    const destroyPath = `${backend}/destroy/${path}`;
+
+    const perms = await this.capabilities.fetch([
+      metadataPath,
+      dataPath,
+      subkeysPath,
+      deletePath,
+      undeletePath,
+      destroyPath,
+    ]);
+
     return {
-      metadata: perms[metadataPath],
-      data: perms[dataPath],
-      subkeys: perms[subkeysPath],
+      canReadData: perms[dataPath].canRead,
+      canUpdateData: perms[dataPath].canUpdate,
+      canPatchData: perms[dataPath].canPatch,
+      canCreateVersionData: perms[dataPath].canUpdate,
+      canDeleteVersion: perms[deletePath].canUpdate,
+      canDeleteLatestVersion: perms[dataPath].canDelete,
+      canDestroyVersion: perms[destroyPath].canUpdate,
+      canReadMetadata: perms[metadataPath].canRead,
+      canDeleteMetadata: perms[metadataPath].canDelete,
+      canUpdateMetadata: perms[metadataPath].canUpdate,
+      canUndelete: perms[undeletePath].canUpdate,
+      canReadSubkeys: perms[subkeysPath].canRead,
     };
   }
 
@@ -67,18 +95,16 @@ export default class KvSecretRoute extends Route {
     const { name: path } = this.paramsFor('secret');
     const capabilities = await this.fetchCapabilities(backend, path);
     const subkeys = await this.fetchSubkeys(backend, path);
-    return hash({
+    const metadata = await this.fetchSecretMetadata(backend, path);
+
+    return {
       path,
       backend,
       subkeys,
-      metadata: this.fetchSecretMetadata(backend, path),
+      metadata,
       isPatchAllowed: this.isPatchAllowed({ capabilities, subkeysMeta: subkeys?.metadata }),
-      canUpdateData: capabilities.data.canUpdate,
-      canReadData: capabilities.data.canRead,
-      canReadMetadata: capabilities.metadata.canRead,
-      canDeleteMetadata: capabilities.metadata.canDelete,
-      canUpdateMetadata: capabilities.metadata.canUpdate,
-    });
+      capabilities,
+    };
   }
 
   @action

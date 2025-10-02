@@ -9,11 +9,10 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { kvMetadataPath, kvDataPath } from 'vault/utils/kv-path';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import sinon from 'sinon';
 
-module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', function (hooks) {
+module('Integration | Component | kv-v2 | Page::Secret::Metadata::VersionDiff', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
   setupMirage(hooks);
@@ -21,51 +20,82 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
   hooks.beforeEach(async function () {
     this.backend = 'kv-engine';
     this.path = 'my-secret';
+    this.metadata = {
+      current_version: 4,
+      updated_time: '2023-07-21T03:11:58.095971Z',
+      versions: {
+        1: {
+          created_time: '2018-03-22T02:24:06.945319214Z',
+          deletion_time: '',
+          destroyed: false,
+        },
+        2: {
+          created_time: '2023-07-20T02:15:35.86465Z',
+          deletion_time: '2023-07-25T00:36:19.950545Z',
+          destroyed: false,
+        },
+        3: {
+          created_time: '2023-07-20T02:15:40.164549Z',
+          deletion_time: '',
+          destroyed: true,
+        },
+        4: {
+          created_time: '2023-07-21T03:11:58.095971Z',
+          deletion_time: '',
+          destroyed: false,
+        },
+      },
+    };
     this.breadcrumbs = [{ label: 'Version History', route: 'secret.metadata.versions' }, { label: 'Diff' }];
 
-    this.store = this.owner.lookup('service:store');
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
+    this.renderComponent = () =>
+      render(
+        hbs`
+          <Page::Secret::Metadata::VersionDiff
+            @metadata={{this.metadata}}
+            @path={{this.path}}
+            @backend={{this.backend}}
+            @breadcrumbs={{this.breadcrumbs}}
+          />
+        `,
+        { owner: this.engine }
+      );
 
-    const metadata = this.server.create('kv-metadatum');
-    metadata.id = kvMetadataPath(this.backend, this.path);
-    this.store.pushPayload('kv/metadata', { modelName: 'kv/metadata', ...metadata });
-    this.metadata = this.store.peekRecord('kv/metadata', metadata.id);
-    // push current secret version record into the store to assert only one request is made
-    const dataId = kvDataPath(this.backend, this.path, 4);
-    this.store.pushPayload('kv/data', {
-      modelName: 'kv/data',
-      id: dataId,
-      secret_data: { foo: 'bar' },
-      version: this.metadata.currentVersion,
+    this.api = this.owner.lookup('service:api');
+    this.queryParamsStub = sinon.stub(this.api, 'addQueryParams');
+    this.fetchStub = sinon.stub(this.api.secrets, 'kvV2Read').callsFake((path, backend, initOverride) => {
+      initOverride();
+      return Promise.resolve({});
     });
   });
 
   test('it renders empty states when current version is deleted or destroyed', async function (assert) {
-    assert.expect(4);
-    this.server.get(`/${this.backend}/data/${this.path}`, () => {});
-    const { currentVersion } = this.metadata;
+    assert.expect(7);
 
+    const { current_version } = this.metadata;
     // destroyed
-    this.metadata.versions[currentVersion].destroyed = true;
-    await render(
-      hbs`
-       <Page::Secret::Metadata::VersionDiff
-        @metadata={{this.metadata}} 
-        @path={{this.path}}
-        @backend={{this.backend}}
-        @breadcrumbs={{this.breadcrumbs}}
-      />
-      `,
-      { owner: this.engine }
+    this.metadata.versions[current_version].destroyed = true;
+    await this.renderComponent();
+
+    assert.true(this.fetchStub.calledWith(this.path, this.backend));
+    assert.deepEqual(
+      this.queryParamsStub.firstCall.args[1],
+      { version: 1 },
+      'correct version passed as query param to first request'
     );
-    assert.dom(PAGE.emptyStateTitle).hasText(`Version ${currentVersion} has been destroyed`);
+    assert.deepEqual(
+      this.queryParamsStub.secondCall.args[1],
+      { version: 4 },
+      'correct version passed as query param to second request'
+    );
+    assert.dom(PAGE.emptyStateTitle).hasText(`Version ${current_version} has been destroyed`);
     assert
       .dom(PAGE.emptyStateMessage)
       .hasText('The current version of this secret has been destroyed. Select another version to compare.');
 
     // deleted
-    this.metadata.versions[currentVersion].destroyed = false;
-    this.metadata.versions[currentVersion].deletion_time = '2023-07-25T00:36:19.950545Z';
+    this.metadata.versions[current_version].destroyed = false;
+    this.metadata.versions[current_version].deletion_time = '2023-07-25T00:36:19.950545Z';
     await render(
       hbs`
        <Page::Secret::Metadata::VersionDiff
@@ -78,44 +108,19 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.emptyStateTitle).hasText(`Version ${currentVersion} has been deleted`);
+    assert.dom(PAGE.emptyStateTitle).hasText(`Version ${current_version} has been deleted`);
     assert
       .dom(PAGE.emptyStateMessage)
       .hasText('The current version of this secret has been deleted. Select another version to compare.');
   });
 
   test('it renders compared data of the two versions and shows icons for deleted, destroyed and current', async function (assert) {
-    assert.expect(14);
-    this.server.get(`/${this.backend}/data/${this.path}`, (schema, req) => {
-      assert.ok('request made to the fetch version 1 data.');
-      // request should not be made for version 4 (current version) because that record already exists in the store
-      assert.strictEqual(req.queryParams.version, '1', 'request includes version param');
-      return {
-        request_id: 'foobar',
-        data: {
-          data: { hello: 'world' },
-          metadata: {
-            created_time: '2023-06-20T21:26:47.592306Z',
-            custom_metadata: null,
-            deletion_time: '',
-            destroyed: false,
-            version: 1,
-          },
-        },
-      };
-    });
+    assert.expect(12);
 
-    await render(
-      hbs`
-       <Page::Secret::Metadata::VersionDiff
-        @metadata={{this.metadata}} 
-        @path={{this.path}}
-        @backend={{this.backend}}
-        @breadcrumbs={{this.breadcrumbs}}
-      />
-      `,
-      { owner: this.engine }
-    );
+    this.fetchStub.onFirstCall().resolves({ data: { hello: 'world' } }); // version 1
+    this.fetchStub.onSecondCall().resolves({ data: { foo: 'bar' } }); // version 4 (current version)
+
+    await this.renderComponent();
 
     const [left, right] = findAll(PAGE.detail.versionDropdown);
     assert.dom(PAGE.diff.visualDiff).hasText(

@@ -182,7 +182,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.expect(7);
       const backend = this.backend;
       const [root, subdirectory] = this.fullSecretPath.split('/');
-      setupOnerror((error) => assert.strictEqual(error.httpStatus, 404), '404 error is thrown'); // catches error so qunit test doesn't fail
+      setupOnerror((error) => assert.strictEqual(error.response.status, 404), '404 error is thrown'); // catches error so qunit test doesn't fail
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/${subdirectory}`); // intentionally leave out trailing slash

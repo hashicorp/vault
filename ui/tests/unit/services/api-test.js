@@ -25,6 +25,7 @@ module('Unit | Service | api', function (hooks) {
     const controlGroupService = this.owner.lookup('service:control-group');
     this.wrapInfo = { token: 'ctrl-group', accessor: '84tfdfd5pQ5vOOEMxC2o3Ymt' };
     this.tokenForUrl = sinon.stub(controlGroupService, 'tokenForUrl').returns(this.wrapInfo);
+    this.tokenToUnwrap = sinon.stub(controlGroupService, 'tokenToUnwrap').value(this.wrapInfo);
     this.deleteControlGroupToken = sinon.spy(controlGroupService, 'deleteControlGroupToken');
     this.isRequestedPathLocked = sinon.stub(controlGroupService, 'isRequestedPathLocked').returns(true);
 
@@ -132,11 +133,11 @@ module('Unit | Service | api', function (hooks) {
   test('it should check for control group', async function (assert) {
     const headers = new Headers({ 'Content-Length': '100', 'X-Vault-Wrap-TTL': 1800 });
     const body = { data: null, wrap_info: this.wrapInfo };
+    const init = { headers: new Headers({ 'X-Vault-Token': this.wrapInfo.token }) };
     const apiResponse = new Response(JSON.stringify(body), { headers });
 
-    const response = await this.apiService.checkControlGroup({ url: this.url, response: apiResponse });
+    const response = await this.apiService.checkControlGroup({ url: this.url, response: apiResponse, init });
 
-    assert.true(this.tokenForUrl.calledWith(this.url), 'Url is passed to tokenForUrl method');
     assert.true(
       this.deleteControlGroupToken.calledWith(this.wrapInfo.accessor),
       'Control group token is deleted'

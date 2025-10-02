@@ -77,7 +77,7 @@ export default Service.extend({
       return null;
     }
     let pathForUrl = parseURL(url).pathname;
-    pathForUrl = pathForUrl.replace('/v1/', '');
+    pathForUrl = decodeURIComponent(pathForUrl.replace('/v1/', ''));
     const tokenInfo = this.tokenToUnwrap;
     if (tokenInfo && tokenInfo.creation_path === pathForUrl) {
       const { token, accessor, creation_time } = tokenInfo;

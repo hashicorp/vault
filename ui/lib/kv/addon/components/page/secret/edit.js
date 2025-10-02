@@ -3,46 +3,41 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { task } from 'ember-concurrency';
-import { service } from '@ember/service';
-import errorMessage from 'vault/utils/error-message';
 import { isAdvancedSecret } from 'core/utils/advanced-secret';
 
 /**
  * @module KvSecretEdit is used for creating a new version of a secret
  *
  * <Page::Secret::Edit
+ *  @form={{this.model.form}}
  *  @secret={{this.model.newVersion}}
- *  @previousVersion={{this.model.secret.version}}
- *  @currentVersion={{this.model.metadata.currentVersion}}
+ *  @metadata={{this.model.metadata}}
+ *  @path={{this.model.path}}
+ *  @backend={{this.model.backend}}
  *  @breadcrumbs={{this.breadcrumbs}
  * />
  *
- * @param {model} secret - Ember data model: 'kv/data', the new record for the new secret version saved by the form
- * @param {number} previousVersion - previous secret version number
- * @param {number} currentVersion - current secret version, comes from the metadata endpoint
+ * @param {Form} form - kv form
+ * @param {object} secret - secret data
+ * @param {object} metadata - secret metadata
+ * @param {string} path - secret path
+ * @param {string} backend - secret mount path
  * @param {array} breadcrumbs - breadcrumb objects to render in page header
  */
 
 /* eslint-disable no-undef */
 export default class KvSecretEdit extends Component {
-  @service controlGroup;
-  @service flashMessages;
-  @service('app-router') router;
-
   @tracked showJsonView = false;
   @tracked showDiff = false;
-  @tracked errorMessage;
-  @tracked modelValidations;
-  @tracked invalidFormAlert;
-  originalSecret;
+  @tracked updatedSecret;
 
   constructor() {
     super(...arguments);
-    this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
+    this.originalSecret = JSON.stringify(this.args.form.data.secretData || {});
+    this.updatedSecret = this.args.form.data.secretData || {};
     if (isAdvancedSecret(this.originalSecret)) {
       // Default to JSON view if advanced
       this.showJsonView = true;
@@ -50,56 +45,31 @@ export default class KvSecretEdit extends Component {
   }
 
   get showOldVersionAlert() {
-    const { currentVersion, previousVersion } = this.args;
+    const { secret, metadata } = this.args;
     // isNew check prevents alert from flashing after save but before route transitions
-    if (!currentVersion || !previousVersion || !this.args.secret.isNew) return false;
-    if (currentVersion !== previousVersion) return true;
+    if (metadata?.current_version && secret?.version) {
+      return metadata.current_version !== secret.version;
+    }
     return false;
   }
 
   get diffDelta() {
     const oldData = JSON.parse(this.originalSecret);
-    const newData = this.args.secret.secretData;
-
     const diffpatcher = jsondiffpatch.create({});
-    return diffpatcher.diff(oldData, newData);
+    return diffpatcher.diff(oldData, this.updatedSecret);
   }
 
   get visualDiff() {
-    if (!this.showDiff) return null;
-    const newData = this.args.secret.secretData;
-    return this.diffDelta
-      ? jsondiffpatch.formatters.html.format(this.diffDelta, newData)
-      : JSON.stringify(newData, undefined, 2);
-  }
-
-  @task
-  *save(event) {
-    event.preventDefault();
-    try {
-      const { isValid, state, invalidFormMessage } = this.args.secret.validate();
-      this.modelValidations = isValid ? null : state;
-      this.invalidFormAlert = invalidFormMessage;
-      if (isValid) {
-        const { secret } = this.args;
-        yield secret.save();
-        this.flashMessages.success(`Successfully created new version of ${secret.path}.`);
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
-      }
-    } catch (error) {
-      let message = errorMessage(error);
-      if (error.message === 'Control Group encountered') {
-        this.controlGroup.saveTokenFromError(error);
-        const err = this.controlGroup.logFromError(error);
-        message = err.content;
-      }
-      this.errorMessage = message;
-      this.invalidFormAlert = 'There was an error submitting this form.';
+    if (this.showDiff) {
+      return this.diffDelta
+        ? jsondiffpatch.formatters.html.format(this.diffDelta, this.updatedSecret)
+        : JSON.stringify(this.updatedSecret, undefined, 2);
     }
+    return null;
   }
 
   @action
-  onCancel() {
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
+  onSecretDataUpdate(value) {
+    this.updatedSecret = value;
   }
 }

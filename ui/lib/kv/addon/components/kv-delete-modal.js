@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { assert } from '@ember/debug';
+import currentSecret from 'kv/helpers/current-secret';
 
 /**
  * @module KvDeleteModal displays a button for a delete type and launches a modal. Undelete is the only mode that does not launch the modal and is not handled in this component.
@@ -15,13 +16,15 @@ import { assert } from '@ember/debug';
  *  @mode="destroy"
  *  @secret={{this.model.secret}}
  *  @metadata={{this.model.metadata}}
+ *  @capabilities={{this.model.capabilities}}
  *  @onDelete={{this.handleDestruction}}
  * />
  *
  * @param {string} mode - delete, delete-metadata, or destroy.
- * @param {object} secret - The kv/data model.
- * @param {object} [metadata] - The kv/metadata model. It is only required when mode is "delete".
+ * @param {object} secret - secret data.
+ * @param {object} [metadata] - secret metadata. It is only required when mode is "delete".
  * @param {string} [text] - Button text that renders in KV v2 toolbar, defaults to capitalize @mode
+ * @param {object} capabilities - capabilities for data, metadata, subkeys, delete and undelete paths
  * @param {callback} onDelete - callback function fired to handle delete event.
  */
 
@@ -57,24 +60,29 @@ export default class KvDeleteModal extends Component {
     }
   }
 
+  get currentSecret() {
+    return currentSecret(this.args.metadata);
+  }
+
   get deleteOptions() {
-    const { secret, metadata, version } = this.args;
-    const isDeactivated = secret.canReadMetadata ? metadata?.currentSecret?.isDeactivated : false;
+    const { capabilities, secret, version } = this.args;
+    const { canDeleteVersion, canDeleteLatestVersion } = capabilities;
+    const isDeactivated = this.currentSecret?.isDeactivated || false;
     return [
       {
         key: 'delete-version',
         label: 'Delete this version',
         description: `This deletes ${version ? `Version ${version}` : `a specific version`} of the secret.`,
-        disabled: !secret.canDeleteVersion,
+        disabled: !canDeleteVersion,
         tooltipMessage: `Deleting a specific version requires "update" capabilities to ${secret.backend}/delete/${secret.path}.`,
       },
       {
         key: 'delete-latest-version',
         label: 'Delete latest version',
         description: 'This deletes the most recent version of the secret.',
-        disabled: !secret.canDeleteLatestVersion || isDeactivated,
+        disabled: !canDeleteLatestVersion || isDeactivated,
         tooltipMessage: isDeactivated
-          ? `The latest version of the secret is already ${metadata.currentSecret.state}.`
+          ? `The latest version of the secret is already ${this.currentSecret.state}.`
           : `Deleting the latest version of this secret requires "delete" capabilities to ${secret.backend}/data/${secret.path}.`,
       },
     ];

@@ -4,33 +4,28 @@
  */
 
 import Route from '@ember/routing/route';
-import { service } from '@ember/service';
-import { hash } from 'rsvp';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
+import KvForm from 'vault/forms/secrets/kv';
 
-@withConfirmLeave('model.newVersion')
 export default class KvSecretDetailsEditRoute extends Route {
-  @service store;
-
   model() {
     const parentModel = this.modelFor('secret.details');
-    const { backend, path, secret, metadata } = parentModel;
-    return hash({
-      secret,
-      metadata,
-      backend,
-      path,
-      newVersion: this.store.createRecord('kv/data', {
-        backend,
-        path,
-        secretData: secret?.secretData,
-        // see serializer for logic behind setting casVersion
-        casVersion: metadata?.currentVersion || secret?.version,
-      }),
-    });
+    const { metadata, secret } = parentModel;
+    const formData = {
+      path: parentModel.path,
+      max_versions: 0,
+      options: {
+        cas: metadata?.current_version || secret.version,
+      },
+    };
+    if (!parentModel.secret.failReadErrorCode) {
+      formData.secretData = parentModel.secret.secretData;
+    }
+    return {
+      ...parentModel,
+      form: new KvForm(formData),
+    };
   }
-
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
 

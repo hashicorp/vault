@@ -268,7 +268,7 @@ export default function (server) {
     schema.db.syncAssociations.update({ type, name }, { sync_status: 'UNSYNCED' });
     return associationsResponse(schema, req);
   });
-  server.get('sys/sync/associations/:mount/*name', (schema, req) => {
+  server.get('sys/sync/associations/destinations', (schema, req) => {
     return syncStatusResponse(schema, req);
   });
 
