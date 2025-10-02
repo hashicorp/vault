@@ -13,9 +13,9 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 /**
  * @module List
- * ListPage component is a component to show a list of kv/metadata secrets.
+ * ListPage component is a component to show a list of secrets.
  *
- * @param {array} secrets - An array of models generated form kv/metadata query.
+ * @param {array} secrets - An array of secrets
  * @param {string} backend - The name of the kv secret engine.
  * @param {string} pathToSecret - The directory name that the secret belongs to ex: beep/boop/
  * @param {string} filterValue - The concatenation of the pathToSecret and pageFilter ex: beep/boop/my-

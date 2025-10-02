@@ -32,7 +32,7 @@ import {
   metadataListPolicy,
   metadataPolicy,
 } from 'vault/tests/helpers/kv/policy-generator';
-import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
@@ -429,9 +429,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         ),
         createTokenCmd(`secret-patcher-${this.backend}`),
       ]);
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
 
     test('it patches a secret from the overview page', async function (assert) {
@@ -560,9 +558,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
     hooks.beforeEach(async function () {
       await loginNs(this.namespace);
       // mount engine within namespace
-      await runCmd(mountEngineCmd('kv-v2', this.backend), false);
-      clearRecords(this.store);
-      return;
+      return runCmd(mountEngineCmd('kv-v2', this.backend), false);
     });
     hooks.afterEach(async function () {
       // visit logout with namespace query param because we're transitioning from within an engine

@@ -29,7 +29,6 @@ import {
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import {
   addSecretMetadataCmd,
-  clearRecords,
   writeSecret,
   writeVersionedSecret,
 } from 'vault/tests/helpers/kv/kv-run-commands';
@@ -242,9 +241,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const token = await runCmd(
         tokenWithPolicyCmd('admin', personas.admin(this.backend) + personas.admin(this.emptyBackend))
       );
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('empty backend - breadcrumbs, title, tabs, emptyState (a)', async function (assert) {
       assert.expect(23);
@@ -599,9 +596,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         ),
         createTokenCmd(`data-reader-${this.backend}`),
       ]);
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('empty backend - breadcrumbs, title, tabs, emptyState (dr)', async function (assert) {
       assert.expect(16);
@@ -792,9 +787,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         createTokenCmd(`data-reader-list-${this.backend}`),
       ]);
 
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('empty backend - breadcrumbs, title, tabs, emptyState (dlr)', async function (assert) {
       assert.expect(15);
@@ -985,9 +978,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         ),
         createTokenCmd(`metadata-maintainer-${this.backend}`),
       ]);
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('empty backend - breadcrumbs, title, tabs, emptyState (mm)', async function (assert) {
       assert.expect(15);
@@ -1208,9 +1199,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         ),
         createTokenCmd(`secret-creator-${this.backend}`),
       ]);
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('empty backend - breadcrumbs, title, tabs, emptyState (sc)', async function (assert) {
       assert.expect(15);
@@ -1444,9 +1433,7 @@ path "${this.backend}/subkeys/*" {
 `;
       const { userToken } = await setupControlGroup({ userPolicy, backend: this.backend });
       this.userToken = userToken;
-      await login(userToken);
-      clearRecords(this.store);
-      return;
+      return login(userToken);
     });
     test('can access nested secret (cg)', async function (assert) {
       assert.expect(44);
@@ -1695,9 +1682,7 @@ path "${this.backend}/subkeys/*" {
         ),
         createTokenCmd(`secret-patcher-${this.backend}`),
       ]);
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
 
     test('it navigates to patch a secret from overview', async function (assert) {
