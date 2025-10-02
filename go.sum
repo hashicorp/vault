@@ -1369,8 +1369,10 @@ github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
 github.com/hashicorp/cap v0.9.0 h1:B5IZT7VL1ruSCtVBXSIyWDpkAFiEZt4bQFk1e2WwCb0=
 github.com/hashicorp/cap v0.9.0/go.mod h1:J00roe8PFFYXfedm3WcO6sGVaKeYElmNOuqfi8Uero4=
-github.com/hashicorp/cap/ldap v0.0.0-20250106213447-9047b8b3240f h1:iixO0KNqHfSMImUgaHnMHTzmu0FVLwk7VzIZf6++wak=
-github.com/hashicorp/cap/ldap v0.0.0-20250106213447-9047b8b3240f/go.mod h1:vGqAhHKOR5gadKWjwhoWp3RKto/tmhVOtH8gcD0c8ss=
+github.com/hashicorp/cap/ldap v0.0.0-20250911140431-44d01434c285 h1:vwg2CDaWTJJkr+5ivc2KUYx877gPAUEgq5QIPA/bKjw=
+github.com/hashicorp/cap/ldap v0.0.0-20250911140431-44d01434c285/go.mod h1:La1zaRmx2oqz79W9SpwQAPMfDUdBxZeoN2IaAQ8D4ow=
+github.com/hashicorp/cap/saml v0.0.0-20250416233735-2f0c768acb74 h1:H0RYZdkAMalCRYC78olO3Xc0k7qp8FHFArf0zznF9UU=
+github.com/hashicorp/cap/saml v0.0.0-20250416233735-2f0c768acb74/go.mod h1:M+cteyPnLprmhCixxUuLkn4uBS/ZbZO2acY+OZG78Ms=
 github.com/hashicorp/cli v1.1.7 h1:/fZJ+hNdwfTSfsxMBa9WWMlfjUZbX8/LnUxgAd7lCVU=
 github.com/hashicorp/cli v1.1.7/go.mod h1:e6Mfpga9OCT1vqzFuoGZiiF/KaG9CbUfO5s3ghU3YgU=
 github.com/hashicorp/consul-template v0.41.1 h1:6VM6kzyBt7xpHfeSjuSRFO6X0/pPdIy+AJpNlM8PekM=
