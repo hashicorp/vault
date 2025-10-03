@@ -173,7 +173,7 @@ func TestBackend_Roles_CredentialTypes(t *testing.T) {
 				Storage:   config.StorageView,
 				Data: map[string]interface{}{
 					"db_name":             "test-database",
-					"creation_statements": "CREATE USER {{name}}",
+					"creation_statements": `CREATE USER "{{name}}"`,
 					"credential_type":     tt.args.credentialType.String(),
 					"credential_config":   tt.args.credentialConfig,
 				},

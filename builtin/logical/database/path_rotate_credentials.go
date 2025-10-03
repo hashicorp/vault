@@ -74,10 +74,21 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 	}
 }
 
+func (b *databaseBackend) rotateRootCredential(ctx context.Context, req *logical.Request) error {
+	name, err := b.getDatabaseConfigNameFromRotationID(req.RotationID)
+	if err != nil {
+		return err
+	}
+
+	_, err = b.performRootRotation(ctx, req, name)
+
+	return err
+}
+
 func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
 		name := data.Get("name").(string)
-		resp, err = b.rotateRootCredentials(ctx, req, name)
+		resp, err = b.performRootRotation(ctx, req, name)
 		if err != nil {
 			b.Logger().Error("failed to rotate root credential on user request", "path", req.Path, "error", err.Error())
 		} else {
@@ -87,7 +98,7 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 	}
 }
 
-func (b *databaseBackend) rotateRootCredentials(ctx context.Context, req *logical.Request, name string) (resp *logical.Response, err error) {
+func (b *databaseBackend) performRootRotation(ctx context.Context, req *logical.Request, name string) (resp *logical.Response, err error) {
 	if name == "" {
 		return logical.ErrorResponse(respErrEmptyName), nil
 	}
@@ -106,19 +117,35 @@ func (b *databaseBackend) rotateRootCredentials(ctx context.Context, req *logica
 		return nil, err
 	}
 
-	rootUsername, ok := config.ConnectionDetails["username"].(string)
-	if !ok || rootUsername == "" {
+	rootUsername, userOk := config.ConnectionDetails["username"].(string)
+	if !userOk || rootUsername == "" {
 		return nil, fmt.Errorf("unable to rotate root credentials: no username in configuration")
-	}
-
-	rootPassword, ok := config.ConnectionDetails["password"].(string)
-	if !ok || rootPassword == "" {
-		return nil, fmt.Errorf("unable to rotate root credentials: no password in configuration")
 	}
 
 	dbi, err := b.GetConnection(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
+	}
+
+	dbType, err := dbi.database.Type()
+	if err != nil {
+		return nil, fmt.Errorf("unable to determine database type: %w", err)
+	}
+
+	rootPassword, passOk := config.ConnectionDetails["password"].(string)
+	isPasswordSet := passOk && rootPassword != ""
+
+	rootPrivateKey, pkeyOk := config.ConnectionDetails["private_key"].(string)
+	isPrivateKeySet := pkeyOk && rootPrivateKey != ""
+
+	// If both are unset, return an error. If we get past this, we know at least one is set.
+	if !isPasswordSet && !isPrivateKeySet {
+		return nil, fmt.Errorf("unable to rotate root credentials: both private_key and password fields are missing from the configuration")
+	}
+
+	// If both are set, return an error.
+	if isPasswordSet && isPrivateKeySet {
+		return nil, fmt.Errorf("unable to rotate root credentials: both private_key and password fields are set in the configuration")
 	}
 
 	// Take the write lock on the instance
@@ -136,42 +163,67 @@ func (b *databaseBackend) rotateRootCredentials(ctx context.Context, req *logica
 		}
 	}()
 
-	generator, err := newPasswordGenerator(nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to construct credential generator: %s", err)
-	}
-	generator.PasswordPolicy = config.PasswordPolicy
+	var walEntry *rotateRootCredentialsWAL
+	var updateReq v5.UpdateUserRequest
+	// If private key is set, use it. This takes precedence over password.
+	if isPrivateKeySet {
+		// For now snowflake is the only database type to support private key rotation.
+		if dbType == "snowflake" {
+			newKeypairCredentialConfig := map[string]interface{}{
+				"format":   "pkcs8",
+				"key_bits": 4096,
+			}
+			newPublicKey, newPrivateKey, err := b.generateNewKeypair(newKeypairCredentialConfig)
+			if err != nil {
+				return nil, err
+			}
+			config.ConnectionDetails["private_key"] = string(newPrivateKey)
 
-	// Generate new credentials
-	oldPassword := config.ConnectionDetails["password"].(string)
-	newPassword, err := generator.generate(ctx, b, dbi.database)
-	if err != nil {
-		b.CloseIfShutdown(dbi, err)
-		return nil, fmt.Errorf("failed to generate password: %s", err)
+			oldPrivateKey := config.ConnectionDetails["private_key"].(string)
+			walEntry = NewRotateRootCredentialsWALPrivateKeyEntry(name, rootUsername, string(newPublicKey), string(newPrivateKey), oldPrivateKey)
+			updateReq = v5.UpdateUserRequest{
+				Username:       rootUsername,
+				CredentialType: v5.CredentialTypeRSAPrivateKey,
+				PublicKey: &v5.ChangePublicKey{
+					NewPublicKey: newPublicKey,
+					Statements: v5.Statements{
+						Commands: config.RootCredentialsRotateStatements,
+					},
+				},
+			}
+		}
+	} else {
+		// Private key isn't set so we're using the password field.
+		newPassword, err := b.generateNewPassword(ctx, nil, config.PasswordPolicy, dbi)
+		if err != nil {
+			return nil, err
+		}
+		config.ConnectionDetails["password"] = newPassword
+
+		oldPassword := config.ConnectionDetails["password"].(string)
+		walEntry = NewRotateRootCredentialsWALPasswordEntry(name, rootUsername, newPassword, oldPassword)
+		updateReq = v5.UpdateUserRequest{
+			Username:       rootUsername,
+			CredentialType: v5.CredentialTypePassword,
+			Password: &v5.ChangePassword{
+				NewPassword: newPassword,
+				Statements: v5.Statements{
+					Commands: config.RootCredentialsRotateStatements,
+				},
+			},
+		}
 	}
-	config.ConnectionDetails["password"] = newPassword
+
+	if walEntry == nil {
+		return nil, fmt.Errorf("unable to rotate root credentials: no valid credential type found")
+	}
 
 	// Write a WAL entry
-	walID, err := framework.PutWAL(ctx, req.Storage, rotateRootWALKey, &rotateRootCredentialsWAL{
-		ConnectionName: name,
-		UserName:       rootUsername,
-		OldPassword:    oldPassword,
-		NewPassword:    newPassword,
-	})
+	walID, err := framework.PutWAL(ctx, req.Storage, rotateRootWALKey, walEntry)
 	if err != nil {
 		return nil, err
 	}
 
-	updateReq := v5.UpdateUserRequest{
-		Username:       rootUsername,
-		CredentialType: v5.CredentialTypePassword,
-		Password: &v5.ChangePassword{
-			NewPassword: newPassword,
-			Statements: v5.Statements{
-				Commands: config.RootCredentialsRotateStatements,
-			},
-		},
-	}
 	newConfigDetails, err := dbi.database.UpdateUser(ctx, updateReq, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
