@@ -498,21 +498,9 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 
 		switch input.Role.CredentialType {
 		case v5.CredentialTypePassword:
-			generator, err := newPasswordGenerator(input.Role.CredentialConfig)
+			newPassword, err := b.generateNewPassword(ctx, input.Role.CredentialConfig, dbConfig.PasswordPolicy, dbi)
 			if err != nil {
-				return output, fmt.Errorf("failed to construct credential generator: %s", err)
-			}
-
-			// Fall back to database config-level password policy if not set on role
-			if generator.PasswordPolicy == "" {
-				generator.PasswordPolicy = dbConfig.PasswordPolicy
-			}
-
-			// Generate the password
-			newPassword, err := generator.generate(ctx, b, dbi.database)
-			if err != nil {
-				b.CloseIfShutdown(dbi, err)
-				return output, fmt.Errorf("failed to generate password: %s", err)
+				return output, err
 			}
 
 			// Set new credential in WAL entry and update user request
@@ -526,15 +514,9 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 			// Set new credential in static account
 			input.Role.StaticAccount.Password = newPassword
 		case v5.CredentialTypeRSAPrivateKey:
-			generator, err := newRSAKeyGenerator(input.Role.CredentialConfig)
+			public, private, err := b.generateNewKeypair(input.Role.CredentialConfig)
 			if err != nil {
-				return output, fmt.Errorf("failed to construct credential generator: %s", err)
-			}
-
-			// Generate the RSA key pair
-			public, private, err := generator.generate(b.GetRandomReader())
-			if err != nil {
-				return output, fmt.Errorf("failed to generate RSA key pair: %s", err)
+				return output, err
 			}
 
 			// Set new credential in WAL entry and update user request
@@ -598,6 +580,44 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 
 	// The WAL has been deleted, return new setStaticAccountOutput without it
 	return &setStaticAccountOutput{RotationTime: lvr}, nil
+}
+
+// Returns a new password, error.
+func (b *databaseBackend) generateNewPassword(ctx context.Context, credentialConfig map[string]interface{}, passwordPolicy string, dbi *dbPluginInstance) (string, error) {
+	generator, err := newPasswordGenerator(credentialConfig)
+	if err != nil {
+		return "", fmt.Errorf("failed to construct credential generator: %s", err)
+	}
+
+	// Fall back to database config-level password policy if not set on role
+	if generator.PasswordPolicy == "" {
+		generator.PasswordPolicy = passwordPolicy
+	}
+
+	// Generate the password
+	newPassword, err := generator.generate(ctx, b, dbi.database)
+	if err != nil {
+		b.CloseIfShutdown(dbi, err)
+		return "", fmt.Errorf("failed to generate password: %s", err)
+	}
+
+	return newPassword, nil
+}
+
+// Returns a new public key, private key, error.
+func (b *databaseBackend) generateNewKeypair(credentialConfig map[string]interface{}) ([]byte, []byte, error) {
+	generator, err := newRSAKeyGenerator(credentialConfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to construct credential generator: %s", err)
+	}
+
+	// Generate the RSA key pair
+	public, private, err := generator.generate(b.GetRandomReader())
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to generate RSA key pair: %s", err)
+	}
+
+	return public, private, nil
 }
 
 // initQueue preforms the necessary checks and initializations needed to perform
