@@ -141,21 +141,9 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// Generate the credential based on the role's credential type
 		switch role.CredentialType {
 		case v5.CredentialTypePassword:
-			generator, err := newPasswordGenerator(role.CredentialConfig)
+			password, err := b.generateNewPassword(ctx, role.CredentialConfig, dbConfig.PasswordPolicy, dbi)
 			if err != nil {
-				return nil, fmt.Errorf("failed to construct credential generator: %s", err)
-			}
-
-			// Fall back to database config-level password policy if not set on role
-			if generator.PasswordPolicy == "" {
-				generator.PasswordPolicy = dbConfig.PasswordPolicy
-			}
-
-			// Generate the password
-			password, err := generator.generate(ctx, b, dbi.database)
-			if err != nil {
-				b.CloseIfShutdown(dbi, err)
-				return nil, fmt.Errorf("failed to generate password: %s", err)
+				return nil, err
 			}
 
 			// Set input credential
@@ -163,15 +151,9 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			newUserReq.Password = password
 
 		case v5.CredentialTypeRSAPrivateKey:
-			generator, err := newRSAKeyGenerator(role.CredentialConfig)
+			public, private, err := b.generateNewKeypair(role.CredentialConfig)
 			if err != nil {
-				return nil, fmt.Errorf("failed to construct credential generator: %s", err)
-			}
-
-			// Generate the RSA key pair
-			public, private, err := generator.generate(b.GetRandomReader())
-			if err != nil {
-				return nil, fmt.Errorf("failed to generate RSA key pair: %s", err)
+				return nil, err
 			}
 
 			// Set input credential
