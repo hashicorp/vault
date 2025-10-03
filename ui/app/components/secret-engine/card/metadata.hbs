@@ -49,12 +49,18 @@
         </Hds::Layout::Flex>
       </F.Control>
     </Hds::Form::Fieldset>
-
-    <Hds::Form::Textarea::Field name="description" @value={{@model.secretsEngine.description}} as |F|>
+    <Hds::Form::Textarea::Field
+      name="description"
+      @value={{@model.secretsEngine.description}}
+      @isInvalid={{(gt @model.secretsEngine.description.length 500)}}
+      as |F|
+    >
       <F.Label>Description</F.Label>
       <F.HelperText>A short description of the secrets engine's purpose.</F.HelperText>
-      {{! TODO: Confirm with Design - Is there a length limit for descriptions? Design has it around 765 characters, but not sure theres a backend limit? }}
       <F.CharacterCount @maxLength={{500}} />
+      {{#if (gt @model.secretsEngine.description.length 500)}}
+        <F.Error>Description exceeds character limit.</F.Error>
+      {{/if}}
     </Hds::Form::Textarea::Field>
   </div>
 </Hds::Card::Container>

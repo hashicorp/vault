@@ -17,6 +17,7 @@ import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 export const CUSTOM = 'Custom';
 export const SYSTEM_DEFAULT = 'System default';
+const CHARACTER_LIMIT = 500;
 
 /**
  * @module GeneralSettingsComponent is used to configure the SSH secret engine.
@@ -44,7 +45,8 @@ export default class GeneralSettingsComponent extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
 
-  @tracked errorMessage: string | null = null;
+  @tracked errorMessage: string | string[] | null = null;
+  @tracked errors: string[] = [];
   @tracked invalidFormAlert: string | null = null;
   @tracked showUnsavedChangesModal = false;
   @tracked changedFields: string[] = [];
@@ -88,10 +90,33 @@ export default class GeneralSettingsComponent extends Component<Args> {
 
   validateTtl(ttlValue: FormDataEntryValue | number | null) {
     if (isNaN(Number(ttlValue))) {
-      this.errorMessage = 'Only use numbers for this setting.';
       return false;
     }
 
+    return true;
+  }
+
+  validateDescription(description: FormDataEntryValue | string) {
+    return description?.toString().length <= CHARACTER_LIMIT;
+  }
+
+  validateForm() {
+    const { defaultLeaseTime, maxLeaseTime, description } = this.getFormData();
+
+    const errorMessages = [];
+
+    if (!this.validateTtl(defaultLeaseTime) || !this.validateTtl(maxLeaseTime)) {
+      errorMessages.push('TTL should only contain numbers.');
+    }
+
+    if (description && !this.validateDescription(description)) {
+      const charactersExceedBy = description?.toString().length - CHARACTER_LIMIT;
+      errorMessages.push(`Engine description exceeds character limit by ${charactersExceedBy}.`);
+    }
+
+    this.errors = errorMessages;
+
+    if (errorMessages.length) return false;
     return true;
   }
 
@@ -208,14 +233,7 @@ export default class GeneralSettingsComponent extends Component<Args> {
     // There are instances where we will save in the modal where that doesn't require an event.
     if (event) event.preventDefault();
 
-    const { defaultLeaseTime, defaultLeaseUnit, maxLeaseTime, maxLeaseUnit } = this.getFormData();
-    this.defaultLeaseUnit = defaultLeaseUnit;
-    this.maxLeaseUnit = maxLeaseUnit;
-
-    if (!this.validateTtl(defaultLeaseTime) || !this.validateTtl(maxLeaseTime)) {
-      this.errorMessage = 'Only use numbers for this setting.';
-      return;
-    }
+    if (!this.validateForm()) return;
 
     try {
       const { defaultLeaseTtl, maxLeaseTtl, pluginVersion, pluginDescription } = this.formatTuneParams();
