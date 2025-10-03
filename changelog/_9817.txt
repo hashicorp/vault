@@ -1,0 +1,3 @@
+```release-note:change
+secrets/mongodbatlas: Update plugin to [v0.16.0](https://github.com/hashicorp/vault-plugin-secrets-mongodbatlas/releases/tag/v0.16.0)
+```
