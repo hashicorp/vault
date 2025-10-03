@@ -49,6 +49,9 @@ export default class GeneralSettingsComponent extends Component<Args> {
   @tracked showUnsavedChangesModal = false;
   @tracked changedFields: string[] = [];
 
+  @tracked defaultLeaseUnit = '';
+  @tracked maxLeaseUnit = '';
+
   originalModel = JSON.parse(JSON.stringify(this.args.model));
 
   getUnsavedChanges(newModel: SecretsEngineResource, originalModel: SecretsEngineResource) {
@@ -183,20 +186,31 @@ export default class GeneralSettingsComponent extends Component<Args> {
 
   @action
   closeUnsavedChangesModal() {
-    this.showUnsavedChangesModal = !this.showUnsavedChangesModal;
+    this.showUnsavedChangesModal = false;
     this.changedFields = [];
   }
 
   @action
-  discardChanges() {
-    this.closeUnsavedChangesModal();
-    this.router.transitionTo(this.args?.model?.secretsEngine?.backendConfigurationLink);
+  closeAndHandle(close: () => void, action: 'save' | 'discard') {
+    close();
+
+    if (action === 'save') {
+      this.saveGeneralSettings.perform();
+    }
+
+    if (action === 'discard') {
+      this.router.transitionTo(this.args?.model?.secretsEngine?.backendConfigurationLink);
+    }
   }
 
-  saveGeneralSettings = task(async (event) => {
-    event.preventDefault();
+  saveGeneralSettings = task(async (event?) => {
+    // event is an optional arg because saveGeneralSettings can be called in the closeAndHandle function.
+    // There are instances where we will save in the modal where that doesn't require an event.
+    if (event) event.preventDefault();
 
-    const { defaultLeaseTime, maxLeaseTime } = this.getFormData();
+    const { defaultLeaseTime, defaultLeaseUnit, maxLeaseTime, maxLeaseUnit } = this.getFormData();
+    this.defaultLeaseUnit = defaultLeaseUnit;
+    this.maxLeaseUnit = maxLeaseUnit;
 
     if (!this.validateTtl(defaultLeaseTime) || !this.validateTtl(maxLeaseTime)) {
       this.errorMessage = 'Only use numbers for this setting.';
@@ -214,11 +228,11 @@ export default class GeneralSettingsComponent extends Component<Args> {
       });
 
       this.flashMessages.success('Engine settings successfully updated.');
+
       this.router.transitionTo(this.args?.model?.secretsEngine?.backendConfigurationLink);
     } catch (e) {
       const { message } = await this.api.parseError(e);
       this.errorMessage = message;
-      this.flashMessages.danger(`Try again or check your network connection. ${message}`);
     }
   });
 }

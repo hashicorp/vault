@@ -43,7 +43,7 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     assert.dom(SELECTORS.versionCard.engineType).hasText(keymgmtType, 'shows keymgmt engine type');
     assert.dom(GENERAL.cardContainer('metadata')).exists('metadata card exists');
     assert.dom(GENERAL.inputByAttr('path')).hasValue(`${keymgmtType}/`, 'show path value');
-    assert.dom(GENERAL.cardContainer('lease-duration')).exists('lease-duration card exists');
+    assert.dom(GENERAL.cardContainer('secrets duration')).exists('secrets duration card exists');
     assert.dom(GENERAL.cardContainer('security')).exists('security card exists');
 
     // fill in values to tune

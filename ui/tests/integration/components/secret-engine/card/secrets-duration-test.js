@@ -21,12 +21,16 @@ module('Integration | Component | SecretEngine::Card::LeaseDuration', function (
   test('it shows default and max ttl pickers', async function (assert) {
     assert.expect(5);
     await render(hbs`
-      <SecretEngine::Card::LeaseDuration @model={{this.model}} />
+      <SecretEngine::Card::SecretsDuration @model={{this.model}} />
     `);
     assert.dom(SELECTORS.ttlPickerV2).exists({ count: 2 });
-    assert.dom(GENERAL.fieldLabelbyAttr('default_lease_ttl')).hasText('Time-to-live (TTL)');
-    assert.dom(GENERAL.fieldLabelbyAttr('max_lease_ttl')).hasText('Maximum Time-to-live (TTL)');
-    assert.dom(GENERAL.helpTextByAttr('default_lease_ttl')).hasText('Standard expiry deadline.');
-    assert.dom(GENERAL.helpTextByAttr('max_lease_ttl')).hasText('Maximum possible extension for expiry.');
+    assert.dom(GENERAL.fieldLabelbyAttr('default_lease_ttl')).hasText('Default time-to-live (TTL)');
+    assert.dom(GENERAL.fieldLabelbyAttr('max_lease_ttl')).hasText('Maximum time-to-live (TTL)');
+    assert
+      .dom(GENERAL.helpTextByAttr('default_lease_ttl'))
+      .hasText('How long secrets in this engine stay valid.');
+    assert
+      .dom(GENERAL.helpTextByAttr('max_lease_ttl'))
+      .hasText('Maximum extension for the secrets life beyond default.');
   });
 });
