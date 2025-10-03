@@ -220,7 +220,7 @@ type hashWalker struct {
 // we can quickly compare in hashWalker.Struct. We create an empty/invalid
 // time.Time{} so we don't need to incur any additional startup cost vs.
 // Now() or Unix().
-var hashTimeType = reflect.TypeOf(time.Time{})
+var hashTimeType = reflect.TypeFor[time.Time]()
 
 func (w *hashWalker) Enter(loc reflectwalk.Location) error {
 	w.loc = append(w.loc, loc)
