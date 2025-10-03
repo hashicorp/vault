@@ -23,7 +23,7 @@
       Mount parameters that you can tune to fit required engine behavior.
     </Hds::Text::Body>
 
-    <MessageError @errorMessage={{this.errorMessage}} />
+    <MessageError @errorMessage={{this.errorMessage}} @errors={{this.errors}} />
 
     <Hds::Layout::Grid @columnMinWidth="32%" @gap="32" as |LG|>
       <LG.Item @colspan={{1}}>
