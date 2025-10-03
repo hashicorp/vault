@@ -1,0 +1,3 @@
+```release-note:change
+database/redis-elasticache: Update plugin to [v0.8.0](https://github.com/hashicorp/vault-plugin-database-redis-elasticache/releases/tag/v0.8.0)
+```
