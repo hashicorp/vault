@@ -23,8 +23,8 @@ module('Integration | Component | SecretEngine::TtlPickerV2', function (hooks) {
     await render(hbs`
       <SecretEngine::TtlPickerV2 @model={{this.model}} @ttlKey={{this.ttlKey}} />
     `);
-    assert.dom(GENERAL.fieldLabelbyAttr(this.ttlKey)).hasText('Time-to-live (TTL)');
-    assert.dom(GENERAL.helpTextByAttr(this.ttlKey)).hasText('Standard expiry deadline.');
+    assert.dom(GENERAL.fieldLabelbyAttr(this.ttlKey)).hasText('Default time-to-live (TTL)');
+    assert.dom(GENERAL.helpTextByAttr(this.ttlKey)).hasText('How long secrets in this engine stay valid.');
     await fillIn(GENERAL.inputByAttr(this.ttlKey), 5);
     await fillIn(GENERAL.selectByAttr(this.ttlKey), 'm');
     assert.dom(GENERAL.inputByAttr(this.ttlKey)).hasValue('5');
@@ -37,8 +37,10 @@ module('Integration | Component | SecretEngine::TtlPickerV2', function (hooks) {
     await render(hbs`
       <SecretEngine::TtlPickerV2 @model={{this.model}} @ttlKey={{this.ttlKey}} />
     `);
-    assert.dom(GENERAL.fieldLabelbyAttr(this.ttlKey)).hasText('Maximum Time-to-live (TTL)');
-    assert.dom(GENERAL.helpTextByAttr(this.ttlKey)).hasText('Maximum possible extension for expiry.');
+    assert.dom(GENERAL.fieldLabelbyAttr(this.ttlKey)).hasText('Maximum time-to-live (TTL)');
+    assert
+      .dom(GENERAL.helpTextByAttr(this.ttlKey))
+      .hasText('Maximum extension for the secrets life beyond default.');
     await fillIn(GENERAL.inputByAttr(this.ttlKey), 10);
     await fillIn(GENERAL.selectByAttr(this.ttlKey), 'm');
     assert.dom(GENERAL.inputByAttr(this.ttlKey)).hasValue('10');

@@ -33,6 +33,7 @@ interface Args {
   model: {
     secretsEngine: SecretsEngineResource;
   };
+  initialUnit: string;
   ttlKey: 'default_lease_ttl' | 'max_lease_ttl';
 }
 
@@ -66,7 +67,11 @@ export default class TtlPickerV2 extends Component<Args> {
     } else {
       const parseDuration = durationToSeconds(ttlValue || '');
       // if parsing fails leave it empty
-      if (parseDuration === null) return;
+      if (parseDuration === null) {
+        this.time = ttlValue || '';
+        this.selectedUnit = this.args.initialUnit;
+        return;
+      }
       seconds = parseDuration;
     }
 
@@ -87,11 +92,14 @@ export default class TtlPickerV2 extends Component<Args> {
 
   get formField() {
     return {
-      label: this.args?.ttlKey === 'default_lease_ttl' ? 'Time-to-live (TTL)' : 'Maximum Time-to-live (TTL)',
+      label:
+        this.args?.ttlKey === 'default_lease_ttl'
+          ? 'Default time-to-live (TTL)'
+          : 'Maximum time-to-live (TTL)',
       helperText:
         this.args?.ttlKey === 'default_lease_ttl'
-          ? 'Standard expiry deadline.'
-          : 'Maximum possible extension for expiry.',
+          ? 'How long secrets in this engine stay valid.'
+          : 'Maximum extension for the secrets life beyond default.',
     };
   }
 

@@ -31,7 +31,12 @@
         <SecretEngine::Card::Metadata @model={{@model}} class="is-fullwidth" />
       </LG.Item>
       <LG.Item @colspan={{1}}>
-        <SecretEngine::Card::LeaseDuration @model={{@model}} class="is-fullwidth" />
+        <SecretEngine::Card::SecretsDuration
+          @model={{@model}}
+          @defaultLeaseUnit={{this.defaultLeaseUnit}}
+          @maxLeaseUnit={{this.maxLeaseUnit}}
+          class="is-fullwidth"
+        />
         <SecretEngine::Card::Security @model={{@model}} class="is-fullwidth" />
       </LG.Item>
     </Hds::Layout::Grid>
@@ -61,20 +66,20 @@
       <br />
       Would you like to apply them?
     </M.Body>
-    <M.Footer>
+    <M.Footer as |F|>
       <Hds::ButtonSet>
         <Hds::Button
           type="button"
           @text="Save changes"
           data-test-button="save"
-          {{on "click" (perform this.saveGeneralSettings)}}
+          {{on "click" (fn this.closeAndHandle F.close "save")}}
         />
         <Hds::Button
           type="button"
           @text="Discard changes"
           @color="secondary"
           data-test-button="discard"
-          {{on "click" this.discardChanges}}
+          {{on "click" (fn this.closeAndHandle F.close "discard")}}
         />
       </Hds::ButtonSet>
     </M.Footer>

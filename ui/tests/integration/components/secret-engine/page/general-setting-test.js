@@ -48,7 +48,7 @@ module('Integration | Component | SecretEngine::Page::GeneralSettings', function
     await render(hbs`
       <SecretEngine::Page::GeneralSettings @model={{this.model}} />
     `);
-    assert.dom(GENERAL.cardContainer('lease-duration')).exists(`Lease duration card exists`);
+    assert.dom(GENERAL.cardContainer('secrets duration')).exists(`Lease duration card exists`);
     assert.dom(GENERAL.cardContainer('security')).exists(`Security card exists`);
     assert.dom(GENERAL.cardContainer('version')).exists(`Version card exists`);
     assert.dom(GENERAL.cardContainer('metadata')).exists(`Metadata card exists`);
