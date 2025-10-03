@@ -140,17 +140,17 @@ require (
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.22.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.22.0
-	github.com/hashicorp/vault-plugin-auth-cf v0.21.0
+	github.com/hashicorp/vault-plugin-auth-cf v0.22.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.22.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.24.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.16.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.2
-	github.com/hashicorp/vault-plugin-auth-oci v0.19.0
+	github.com/hashicorp/vault-plugin-auth-oci v0.20.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.14.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.15.0
 	github.com/hashicorp/vault-plugin-database-redis v0.6.1
-	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.7.0
+	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.8.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.14.2
 	github.com/hashicorp/vault-plugin-secrets-ad v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.20.0
@@ -158,7 +158,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.22.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.12.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.24.3
+	github.com/hashicorp/vault-plugin-secrets-kv v0.25.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.13.0

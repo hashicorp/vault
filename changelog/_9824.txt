@@ -1,0 +1,3 @@
+```release-note:change
+auth/oci: Update plugin to [v0.20.0](https://github.com/hashicorp/vault-plugin-auth-oci/releases/tag/v0.20.0)
+```
