@@ -1,0 +1,3 @@
+```release-note:change
+secrets/kv: Update plugin to [v0.25.0](https://github.com/hashicorp/vault-plugin-secrets-kv/releases/tag/v0.25.0)
+```
