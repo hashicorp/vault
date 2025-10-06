@@ -343,8 +343,8 @@ cloud.google.com/go/kms v1.8.0/go.mod h1:4xFEhYFqvW+4VMELtZyxomGSYtSQKzM178ylFW4
 cloud.google.com/go/kms v1.9.0/go.mod h1:qb1tPTgfF9RQP8e1wq4cLFErVuTJv7UsSC915J8dh3w=
 cloud.google.com/go/kms v1.10.0/go.mod h1:ng3KTUtQQU9bPX3+QGLsflZIHlkbn8amFAMY63m8d24=
 cloud.google.com/go/kms v1.10.1/go.mod h1:rIWk/TryCkR59GMC3YtHtXeLzd634lBbKenvyySAyYI=
-cloud.google.com/go/kms v1.22.0 h1:dBRIj7+GDeeEvatJeTB19oYZNV0aj6wEqSIT/7gLqtk=
-cloud.google.com/go/kms v1.22.0/go.mod h1:U7mf8Sva5jpOb4bxYZdtw/9zsbIjrklYwPcvMk34AL8=
+cloud.google.com/go/kms v1.23.0 h1:WaqAZsUptyHwOo9II8rFC1Kd2I+yvNsNP2IJ14H2sUw=
+cloud.google.com/go/kms v1.23.0/go.mod h1:rZ5kK0I7Kn9W4erhYVoIRPtpizjunlrfU4fUkumUp8g=
 cloud.google.com/go/language v1.4.0/go.mod h1:F9dRpNFQmJbkaop6g0JhSBXCNlO90e1KWx5iDdxbWic=
 cloud.google.com/go/language v1.6.0/go.mod h1:6dJ8t3B+lUYfStgls25GusK04NLh3eDLQnWM3mdEbhI=
 cloud.google.com/go/language v1.7.0/go.mod h1:DJ6dYN/W+SQOjF8e1hLQXMF21AkH2w9wiPzPCJa2MIE=
@@ -533,8 +533,8 @@ cloud.google.com/go/shell v1.6.0/go.mod h1:oHO8QACS90luWgxP3N9iZVuEiSF84zNyLytb+
 cloud.google.com/go/spanner v1.41.0/go.mod h1:MLYDBJR/dY4Wt7ZaMIQ7rXOTLjYrmxLE/5ve9vFfWos=
 cloud.google.com/go/spanner v1.44.0/go.mod h1:G8XIgYdOK+Fbcpbs7p2fiprDw4CaZX63whnSMLVBxjk=
 cloud.google.com/go/spanner v1.45.0/go.mod h1:FIws5LowYz8YAE1J8fOS7DJup8ff7xJeetWEo5REA2M=
-cloud.google.com/go/spanner v1.84.1 h1:ShH4Y3YeDtmHa55dFiSS3YtQ0dmCuP0okfAoHp/d68w=
-cloud.google.com/go/spanner v1.84.1/go.mod h1:3GMEIjOcXINJSvb42H3M6TdlGCDzaCFpiiNQpjHPlCM=
+cloud.google.com/go/spanner v1.85.1 h1:cJx1ZD//C2QIfFQl8hSTn4twL8amAXtnayyflRIjj40=
+cloud.google.com/go/spanner v1.85.1/go.mod h1:bbwCXbM+zljwSPLZ44wZOdzcdmy89hbUGmM/r9sD0ws=
 cloud.google.com/go/speech v1.6.0/go.mod h1:79tcr4FHCimOp56lwC01xnt/WPJZc4v3gzyT7FoBkCM=
 cloud.google.com/go/speech v1.7.0/go.mod h1:KptqL+BAQIhMsj1kOP2la5DSEEerPDuOP/2mmkhHhZQ=
 cloud.google.com/go/speech v1.8.0/go.mod h1:9bYIl1/tjsAnMgKGHKmBZzXKEkGgtU+MpdDPTE9f7y0=
@@ -1589,8 +1589,8 @@ github.com/hashicorp/vault-plugin-secrets-azure v0.23.0 h1:oetvEJqXP+2jGM9CfT/Lj
 github.com/hashicorp/vault-plugin-secrets-azure v0.23.0/go.mod h1:QkmR0rnexjc330oUzoiuXFsA6OnxmI56h4jnDb1PKbY=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.22.0 h1:lD3eMet+T2DK+7rhwRiEnPEvVrP32QKvc02YKafPeWU=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.22.0/go.mod h1:eaea7uVPm89dZyMNYiSpkT9ChKjD0skqfFgJqkZ2JBk=
-github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0 h1:gK2PNyQulWM31gPN1Pm9PWIbR2a83lveDwuDLcWhNWs=
-github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0/go.mod h1:qn7kl/rhe3VN8+9LVjJfGfoSocC9EQyntVHvYSSkIk8=
+github.com/hashicorp/vault-plugin-secrets-gcpkms v0.22.0 h1:z4loMjsAyTKiT4mYMmPNyVxQpetj9vD6dGEtTRxOV5A=
+github.com/hashicorp/vault-plugin-secrets-gcpkms v0.22.0/go.mod h1:pPaA7AchrBQ2i62x33vPRTux7wKZiKSfU6jayuv9hLI=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.12.0 h1:xYuLtQHKvaZtmr6JXPqC4tH9n7zXoOWnpXrHcVTLqbo=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.12.0/go.mod h1:k8eNkBBNHJwWKVo+WP/iM5xrlvPt65oPNPGwbgQQf14=
 github.com/hashicorp/vault-plugin-secrets-kv v0.25.0 h1:5Xx8Hub0nAoFLIHZ4d9tMpPG+MACHXLzed5i7hViKTk=
@@ -3004,10 +3004,10 @@ google.golang.org/genproto v0.0.0-20230323212658-478b75c54725/go.mod h1:UUQDJDOl
 google.golang.org/genproto v0.0.0-20230330154414-c0448cd141ea/go.mod h1:UUQDJDOlWu4KYeJZffbWgBkS1YFobzKbLVfK69pe0Ak=
 google.golang.org/genproto v0.0.0-20230331144136-dcfb400f0633/go.mod h1:UUQDJDOlWu4KYeJZffbWgBkS1YFobzKbLVfK69pe0Ak=
 google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1/go.mod h1:nKE/iIaLqn2bQwXBg8f1g2Ylh6r5MN5CmZvuzZCgsCU=
-google.golang.org/genproto v0.0.0-20250825161204-c5933d9347a5 h1:vGazBMHJAHThktKQD4FGUA1UtLjxsW+1APgW0/U17dc=
-google.golang.org/genproto v0.0.0-20250825161204-c5933d9347a5/go.mod h1:ehkTb4BKCh0XKRcZMkWCOvlpcMeZokV584a9hlKmH3k=
-google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 h1:BIRfGDEjiHRrk0QKZe3Xv2ieMhtgRGeLcZQ0mIVn4EY=
-google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5/go.mod h1:j3QtIyytwqGr1JUDtYXwtMXWPKsEa5LtzIFN1Wn5WvE=
+google.golang.org/genproto v0.0.0-20250929231259-57b25ae835d4 h1:HmI33/XNQ1jVwhb5ZUgot40oiwFHa2l5ZNkQpj8VaEg=
+google.golang.org/genproto v0.0.0-20250929231259-57b25ae835d4/go.mod h1:OqVwZqqGV3h7k+YCVWXoTtwC2cs55RnDEUVMMadhxrc=
+google.golang.org/genproto/googleapis/api v0.0.0-20250922171735-9219d122eba9 h1:jm6v6kMRpTYKxBRrDkYAitNJegUeO1Mf3Kt80obv0gg=
+google.golang.org/genproto/googleapis/api v0.0.0-20250922171735-9219d122eba9/go.mod h1:LmwNphe5Afor5V3R5BppOULHOnt2mCIf+NxMd4XiygE=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20250929231259-57b25ae835d4 h1:i8QOKZfYg6AbGVZzUAY3LrNWCKF8O6zFisU9Wl9RER4=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20250929231259-57b25ae835d4/go.mod h1:HSkG/KdJWusxU1F6CNrwNDjBMgisKxGnc5dAZfT0mjQ=
 google.golang.org/grpc v1.19.0/go.mod h1:mqu4LbDTu4XGKhr4mRzUsmM4RtVoemTSY81AxZiDr8c=
