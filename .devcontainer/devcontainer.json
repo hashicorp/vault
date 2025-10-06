@@ -3,18 +3,18 @@
 	"name": "Hashicorp - Vault",
   
 	// Docker image to use
-  "image": "hashicorp/vault",
+	"image": "hashicorp/vault",
 	
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  // "build": {
-  //   // Path is relative to the devcontainer.json file.
-  //   "dockerfile": "../Dockerfile"
-  // }
+	// "build": {
+	//   // Path is relative to the devcontainer.json file.
+	//   "dockerfile": "../Dockerfile"
+	// }
 	
 	// Environment variables
 	// https://code.visualstudio.com/remote/advancedcontainers/environment-variables
 	"containerEnv": {
-    "VAULT_ADDR": "http://127.0.0.1:8200"
+		"VAULT_ADDR": "http://127.0.0.1:8200"
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
@@ -24,8 +24,19 @@
 	// "postCreateCommand": "vault status",
 
 	// Use 'postStartCommand' to run commands after the container is created like starting vault.
-	"postStartCommand": "vault server -dev"
+	"postStartCommand": "sh -c 'vault server -dev'",
 
+	"forwardPorts": [8200, 8201],
+	"portsAttributes": {
+		"8200": {
+			"label": "Vault UI",
+			"onAutoForward": "notify"
+		},
+		"8201": {
+			"label": "Vault API",
+			"onAutoForward": "notify"
+		}
+	}
 	// Configure tool-specific properties.
 	// "customizations": {},
 
