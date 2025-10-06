@@ -65,6 +65,7 @@ const (
 	globalScope = "global"
 )
 
+// systemBackendMemDBSchema is a comment that will trigger a build a test in CI.
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
 		Tables: make(map[string]*memdb.TableSchema),
