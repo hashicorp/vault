@@ -29,7 +29,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     this.tokenPollId = '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8';
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
-    this.onSuccess = sinon.spy();
+    this.handleAuthResponse = sinon.spy();
     // Window stub
     this.windowStub = windowStub();
     sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
@@ -67,7 +67,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
             @authType={{this.authType}} 
             @cluster={{this.cluster}}
             @onError={{this.onError}}
-            @onSuccess={{this.onSuccess}}
+            @handleAuthResponse={{this.handleAuthResponse}}
           >
             <:advancedSettings>
               <label for="path">Mount path</label>
@@ -80,7 +80,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
         @authType={{this.authType}}
         @cluster={{this.cluster}}
         @onError={{this.onError}}
-        @onSuccess={{this.onSuccess}}
+        @handleAuthResponse={{this.handleAuthResponse}}
       />`);
     };
   });

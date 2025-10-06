@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -214,6 +215,8 @@ func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *fram
 		},
 	}
 
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIConfigURLsRead)
+
 	return resp, nil
 }
 
@@ -297,6 +300,10 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 	if err := writeURLs(ctx, req.Storage, entries); err != nil {
 		return nil, err
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIConfigURLsWrite,
+		observe.NewAdditionalPKIMetadata("enable_templating", entries.EnableTemplating),
+	)
 
 	return resp, nil
 }

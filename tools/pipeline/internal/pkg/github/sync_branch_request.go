@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	libgithub "github.com/google/go-github/v68/github"
+	libgithub "github.com/google/go-github/v74/github"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
@@ -148,7 +148,7 @@ func (r *SyncBranchReq) Run(
 	return res, nil
 }
 
-// validate ensures that we've been given the minimum filter arguments necessary to complete a
+// Validate ensures that we've been given the minimum filter arguments necessary to complete a
 // request. It is always recommended that additional fitlers be given to reduce the response size
 // and not exhaust API limits.
 func (r *SyncBranchReq) Validate(ctx context.Context) error {

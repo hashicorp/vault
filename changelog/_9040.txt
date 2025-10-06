@@ -1,0 +1,4 @@
+```release-note:improvement
+**ui/activity**: Updates running total stats to be displayed via a donut chart.
+```
+

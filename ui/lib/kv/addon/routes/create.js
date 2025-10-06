@@ -5,26 +5,30 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
+import KvForm from 'vault/forms/secrets/kv';
 
-@withConfirmLeave('model.secret', ['model.metadata'])
 export default class KvSecretsCreateRoute extends Route {
-  @service store;
   @service secretMountPath;
 
   model(params) {
     const backend = this.secretMountPath.currentPath;
     const { initialKey: path } = params;
 
-    return hash({
+    return {
       backend,
       path,
-      // see serializer for logic behind setting casVersion
-      secret: this.store.createRecord('kv/data', { backend, path, casVersion: 0 }),
-      metadata: this.store.createRecord('kv/metadata', { backend, path }),
-    });
+      form: new KvForm(
+        {
+          path,
+          max_versions: 0,
+          delete_version_after: '0s',
+          cas_required: false,
+          options: { cas: 0 },
+        },
+        { isNew: true }
+      ),
+    };
   }
 
   setupController(controller, resolvedModel) {

@@ -23,6 +23,7 @@ export const PATH_MAP = {
   syncSetAssociation: apiPath`sys/sync/destinations/${'type'}/${'name'}/associations/set`,
   syncRemoveAssociation: apiPath`sys/sync/destinations/${'type'}/${'name'}/associations/remove`,
   kvConfig: apiPath`${'path'}/config`,
+  kvMetadata: apiPath`${'backend'}/metadata/${'path'}`,
   authMethodConfig: apiPath`auth/${'path'}/config`,
   authMethodConfigAws: apiPath`auth/${'path'}/config/client`,
   authMethodDelete: apiPath`sys/auth/${'path'}`,

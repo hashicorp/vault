@@ -44,4 +44,21 @@ export default class MessageError extends Component {
     }
     return null;
   }
+
+  get formattedError() {
+    if (this.args.errorMessage?.includes('*') && this.args.errorMessage?.includes('error: ')) {
+      try {
+        const lines = this.args.errorMessage.split('\n');
+        const [message] = lines[0].split('. error:');
+        const details = lines
+          .filter((line) => line.includes('* '))
+          .map((line) => line.replace(/\t\* /, ''))
+          .filter(Boolean);
+        return message && details ? { message, details } : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
 }

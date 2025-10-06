@@ -373,7 +373,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 		// because we don't know if the parameters match.
 
 		switch req.KeyType {
-		case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+		case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_AES128_CBC, KeyType_AES256_CBC:
 			if req.Convergent && !req.Derived {
 				cleanup()
 				return nil, false, fmt.Errorf("convergent encryption requires derivation to be enabled")
@@ -495,6 +495,13 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 		}
 	}
 
+	if p.Imported && p.Derived && p.KDF == Kdf_hmac_sha256_counter {
+		if err := p.setKDF(ctx, req.Storage, Kdf_hkdf_sha256); err != nil {
+			cleanup()
+			return nil, false, err
+		}
+	}
+
 	if lm.useCache {
 		lm.cache.Store(req.Name, p)
 	} else {
@@ -548,6 +555,19 @@ func (lm *LockManager) ImportPolicy(ctx context.Context, req PolicyRequest, key 
 			AutoRotatePeriod:         req.AutoRotatePeriod,
 			AllowImportedKeyRotation: req.AllowImportedKeyRotation,
 			Imported:                 true,
+		}
+	}
+
+	if req.Derived {
+		p.KDF = Kdf_hkdf_sha256
+		if req.Convergent {
+			p.ConvergentEncryption = true
+			// As of version 3 we store the version within each key, so we
+			// set to -1 to indicate that the value in the policy has no
+			// meaning. We still, for backwards compatibility, fall back to
+			// this value if the key doesn't have one, which means it will
+			// only be -1 in the case where every key version is >= 3
+			p.ConvergentVersion = -1
 		}
 	}
 

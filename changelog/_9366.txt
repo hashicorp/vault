@@ -1,0 +1,3 @@
+```release-note:improvement
+core (enterprise): add support for new pki-only license feature
+```

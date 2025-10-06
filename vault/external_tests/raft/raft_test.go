@@ -1614,3 +1614,48 @@ func TestCore_RaftDataDirPath(t *testing.T) {
 		require.Empty(t, path)
 	})
 }
+
+// TestRaft_SnapshotLargerMaxRequestSize sets the max request size to 1KB and
+// creates a bunch of secrets. The test takes a snapshot and verifies that the
+// snapshot (larger than the max request size) can be restored successfully.
+func TestRaft_SnapshotLargerMaxRequestSize(t *testing.T) {
+	t.Parallel()
+	conf, opts := raftClusterBuilder(t, &RaftClusterOpts{
+		InmemCluster: true,
+		NumCores:     1,
+	})
+	opts.DefaultHandlerProperties = vault.HandlerProperties{
+		ListenerConfig: &configutil.Listener{
+			MaxRequestSize: 1024,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, conf, &opts)
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	for i := 0; i < 4096; i++ {
+		path, err := uuid.GenerateUUID()
+		require.NoError(t, err)
+		content, err := uuid.GenerateUUID()
+		require.NoError(t, err)
+
+		_, err = client.KVv2("secret").Put(context.Background(), path, map[string]interface{}{
+			"data": content,
+		})
+	}
+	buf := new(bytes.Buffer)
+	err := client.Sys().RaftSnapshot(buf)
+	snap, err := io.ReadAll(buf)
+	require.NoError(t, err)
+	if len(snap) < 1024 {
+		// maybe possible if we get super unlucky with uuids and compression is
+		// amazing?
+		t.Fatalf("expected snapshot to be larger than max request size, got %d", len(snap))
+	}
+
+	err = client.Sys().RaftSnapshotRestore(bytes.NewReader(snap), false)
+	require.NoError(t, err)
+	testhelpers.WaitForActiveNode(t, cluster)
+}

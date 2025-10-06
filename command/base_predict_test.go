@@ -392,6 +392,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"saml",
 				"scep",
 				"snowflake-database-plugin",
+				"spiffe",
 				"ssh",
 				"terraform",
 				"totp",
@@ -448,6 +449,14 @@ func TestPredict_Plugins(t *testing.T) {
 				if !strutil.StrListContains(act, "scep") {
 					for i, v := range tc.exp {
 						if v == "scep" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
+				if !strutil.StrListContains(act, "spiffe") {
+					for i, v := range tc.exp {
+						if v == "spiffe" {
 							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
 							break
 						}

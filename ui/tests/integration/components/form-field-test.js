@@ -14,6 +14,7 @@ import formFields from '../../pages/components/form-field';
 import { format, startOfDay } from 'date-fns';
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import AuthMethodForm from 'vault/forms/auth/method';
 
 const component = create(formFields);
 
@@ -301,14 +302,10 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it should show validation warning', async function (assert) {
-    const model = this.owner.lookup('service:store').createRecord('auth-method');
-    model.path = 'foo bar';
-    this.validations = model.validate().state;
-    this.setProperties({
-      model,
-      attr: createAttr('path', 'string'),
-      onChange: () => {},
-    });
+    this.model = new AuthMethodForm({ path: 'foo bar' });
+    this.attr = createAttr('path', 'string');
+    this.onChange = () => {};
+    this.validations = this.model.toJSON().state;
 
     await render(
       hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.validations}} @onChange={{this.onChange}} />`

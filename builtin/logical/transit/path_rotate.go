@@ -56,9 +56,12 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 		Name:    name,
 	}, b.GetRandomReader())
 	if err != nil {
+		// the error here will be something about "couldn't get policy")
+		b.Logger().Error("failed to rotate key on user request", "name", name, "error", err.Error())
 		return nil, err
 	}
 	if p == nil {
+		b.Logger().Error("failed to rotate key on user request", "name", name, "error", "key not found")
 		return logical.ErrorResponse("key not found"), logical.ErrInvalidRequest
 	}
 	if !b.System().CachingDisabled() {
@@ -70,6 +73,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 		var keyId string
 		keyId, err = GetManagedKeyUUID(ctx, b, managedKeyName, managedKeyId)
 		if err != nil {
+			b.Logger().Error("failed to rotate key", "name", name, "error", err.Error())
 			return nil, err
 		}
 		err = p.RotateManagedKey(ctx, req.Storage, keyId)
@@ -79,10 +83,18 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	if err != nil {
+		b.Logger().Error("failed to rotate key on user request", "name", name, "error", err.Error())
 		return nil, err
 	}
 
-	return b.formatKeyPolicy(p, nil)
+	resp, err := b.formatKeyPolicy(p, nil)
+	if err != nil {
+		b.Logger().Error("failed to rotate key on user request", "name", name, "error", err.Error())
+	} else {
+		b.Logger().Info("succesfully rotated key on user request", "name", name)
+	}
+	// formatKeyPolicy returns a response even on error so be sure to return both.
+	return resp, err
 }
 
 const pathRotateHelpSyn = `Rotate named encryption key`

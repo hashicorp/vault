@@ -11,8 +11,8 @@ export default class SettingsAuthConfigureRoute extends Route {
   @service router;
 
   beforeModel() {
-    const model = this.modelFor('vault.cluster.settings.auth.configure');
-    const section = tabsForAuthSection([model])[0].routeParams.slice().pop();
+    const { method } = this.modelFor('vault.cluster.settings.auth.configure');
+    const section = tabsForAuthSection([method])[0].routeParams.slice().pop();
     return this.router.transitionTo('vault.cluster.settings.auth.configure.section', section);
   }
 }

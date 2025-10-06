@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	goldap "github.com/go-ldap/ldap/v3"
 	"github.com/hashicorp/cap/ldap"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -69,6 +70,14 @@ type backend struct {
 	mu sync.RWMutex
 }
 
+func (b *backend) maybeLogDebug(msg string, args ...interface{}) {
+	if b.Logger().IsDebug() {
+		b.Logger().Debug(msg, args...)
+	}
+}
+
+// Login authenticates a user against the LDAP server using the provided username and password.
+// It returns the effective username, policies associated with the user, a response containing
 func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string, usernameAsAlias bool) (string, []string, *logical.Response, []string, error) {
 	cfg, err := b.Config(ctx, req)
 	if err != nil {
@@ -84,9 +93,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	ldapClient, err := ldap.NewClient(ctx, ldaputil.ConvertConfig(cfg.ConfigEntry))
 	if err != nil {
-		if b.Logger().IsDebug() {
-			b.Logger().Debug("error creating client", "error", err)
-		}
+		b.maybeLogDebug("error creating client", "error", err)
 		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 
@@ -97,17 +104,16 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	if err != nil {
 		if strings.Contains(err.Error(), "discovery of user bind DN failed") ||
 			strings.Contains(err.Error(), "unable to bind user") {
-			if b.Logger().IsDebug() {
-				b.Logger().Debug("error getting user bind DN", "error", err)
-			}
+			b.maybeLogDebug("error getting user bind DN", username, "error", err)
 			return "", nil, logical.ErrorResponse(errUserBindFailed), nil, logical.ErrInvalidCredentials
 		}
 
 		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 
-	if b.Logger().IsDebug() {
-		b.Logger().Debug("user binddn fetched", "username", username, "binddn", c.UserDN)
+	b.maybeLogDebug("user binddn fetched", "username", username, "binddn", c.UserDN)
+	if c.UserDN == "" {
+		return "", nil, logical.ErrorResponse("user bind DN is empty after authentication"), nil, nil
 	}
 
 	ldapGroups := c.Groups
@@ -119,36 +125,59 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 			"no LDAP groups found in groupDN %q; only policies from locally-defined groups available",
 			cfg.GroupDN)
 
-		if b.Logger().IsDebug() {
-			b.Logger().Debug(errString)
-		}
+		b.maybeLogDebug(errString)
 	}
 
 	for _, warning := range c.Warnings {
-		if b.Logger().IsDebug() {
-			b.Logger().Debug(string(warning))
+		b.maybeLogDebug(string(warning))
+	}
+
+	canonicalUsername := username
+	if usernameAsAlias {
+		// expect to get the username from UserDN in the case where we are setting the
+		// entity alias to be the username.
+		parsed, err := goldap.ParseDN(c.UserDN)
+		if err != nil {
+			b.Logger().Error("Invalid DN after authentication", "user_dn", c.UserDN, "error", err)
+			return "", nil, logical.ErrorResponse("invalid DN after authentication"), nil, nil
+		}
+
+		b.maybeLogDebug("User DN parsed", "parsed", parsed, "username", username)
+		var found bool
+		for _, rdn := range parsed.RDNs {
+			if found {
+				b.maybeLogDebug("Found canonical username", "canonicalUsername", canonicalUsername, "cfg.userAttr", cfg.UserAttr)
+				break
+			}
+			for _, attr := range rdn.Attributes {
+				b.maybeLogDebug("Handling RDN", "attr.Type", attr.Type, "attr.Value", attr.Value, "cfg.UserAttr", cfg.UserAttr)
+				if strings.EqualFold(attr.Type, cfg.UserAttr) {
+					b.maybeLogDebug("Found user attribute in RDN", "attr.Type", attr.Type, "attr.Value", attr.Value)
+					canonicalUsername = attr.Value
+					found = true
+					break
+				}
+			}
 		}
 	}
 
 	var allGroups []string
-	canonicalUsername := username
-	cs := *cfg.CaseSensitiveNames
+
+	cs := cfg.CaseSensitiveNames != nil && *cfg.CaseSensitiveNames
 	if !cs {
-		canonicalUsername = strings.ToLower(username)
+		canonicalUsername = strings.ToLower(canonicalUsername)
 	}
+
 	// Import the custom added groups from ldap backend
 	user, err := b.User(ctx, req.Storage, canonicalUsername)
 	if err == nil && user != nil && user.Groups != nil {
-		if b.Logger().IsDebug() {
-			b.Logger().Debug("adding local groups", "num_local_groups", len(user.Groups), "local_groups", user.Groups)
-		}
 		allGroups = append(allGroups, user.Groups...)
 	}
 	// Merge local and LDAP groups
 	allGroups = append(allGroups, ldapGroups...)
 
 	canonicalGroups := allGroups
-	// If not case sensitive, lowercase all
+	// If not case-sensitive, lowercase all
 	if !cs {
 		canonicalGroups = make([]string, len(allGroups))
 		for i, v := range allGroups {
@@ -171,19 +200,23 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	policies = strutil.RemoveDuplicates(policies, true)
 
 	if usernameAsAlias {
-		return username, policies, ldapResponse, allGroups, nil
+		b.maybeLogDebug("UsernameAlias is set", "canonicalUsername", canonicalUsername, "policies", policies, "groups", allGroups)
+		return canonicalUsername, policies, ldapResponse, allGroups, nil
 	}
 
 	userAttrValues := c.UserAttributes[cfg.UserAttr]
 	if len(userAttrValues) == 0 {
-		if b.Logger().IsDebug() {
-			b.Logger().Debug("missing entity alias attribute value")
-		}
+		b.Logger().Error("missing entity alias attribute value")
 		return "", nil, logical.ErrorResponse("missing entity alias attribute value"), nil, nil
 	}
-	entityAliasAttribute := userAttrValues[0]
 
-	return entityAliasAttribute, policies, ldapResponse, allGroups, nil
+	effectiveUsername := userAttrValues[0]
+	if effectiveUsername == "" {
+		b.Logger().Error("empty entity alias attribute value")
+		return "", nil, logical.ErrorResponse("empty entity alias attribute value"), nil, nil
+	}
+
+	return effectiveUsername, policies, ldapResponse, allGroups, nil
 }
 
 const backendHelp = `

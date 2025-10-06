@@ -8,8 +8,19 @@ import { service } from '@ember/service';
 
 import type FlagsService from 'vault/services/flags';
 import type ApiService from 'vault/services/api';
-import type { getUsageDataFunction, UsageDashboardData } from '@hashicorp/vault-reporting/types/index';
+import type NamespaceService from 'vault/services/namespace';
+import type AuthService from 'vault/vault/services/auth';
+import type {
+  getUsageDataFunction,
+  getNamespaceDataFunction,
+  UsageDashboardData,
+} from '@hashicorp-internal/vault-reporting/types/index';
 import type { UtilizationReport } from 'vault/usage';
+
+interface NamespaceOption {
+  path: string;
+  label: string;
+}
 
 /**
  * @module UsagePage
@@ -28,15 +39,21 @@ import type { UtilizationReport } from 'vault/usage';
 export default class UsagePage extends Component {
   @service declare readonly api: ApiService;
   @service declare readonly flags: FlagsService;
+  @service declare readonly namespace: NamespaceService;
+  @service declare readonly auth: AuthService;
 
-  handleFetchUsageData: getUsageDataFunction = async () => {
+  handleFetchUsageData: getUsageDataFunction = async (namespace?: string) => {
     /**
      * We get a partially typed response from the API client, but only 1 level deep.
      * Casting the nested types here and falling back to defaults in the mappings.
      * We should get typescript errors if top level interfaces in the API client or
      * the vault-reporting addon change.
      */
-    const response = (await this.api.sys.generateUtilizationReport()) as UtilizationReport;
+
+    // Convert "root" display value back to empty string for API calls
+    const apiNamespace = namespace === 'root' ? undefined : namespace;
+    const response = (await this.api.sys.generateUtilizationReport(apiNamespace)) as UtilizationReport;
+
     const { lease_count_quotas, replication_status, pki, secret_sync } = response;
 
     const data: UsageDashboardData = {
@@ -65,9 +82,55 @@ export default class UsagePage extends Component {
         totalRoles: pki?.total_roles || 0,
       },
       secretSync: {
+        destinations: secret_sync?.destinations || {},
         totalDestinations: secret_sync?.total_destinations || 0,
       },
     };
     return data;
   };
+
+  handleFetchNamespaceData: getNamespaceDataFunction = async () => {
+    await this.namespace?.findNamespacesForUser?.perform();
+    const options = this.getOptions(this.namespace?.accessibleNamespaces);
+    const data = {
+      keys: options.map((option) => option.label),
+    };
+    return data;
+  };
+
+  /**
+   * getOptions from ui/app/components/namespace-picker.ts
+   * We might consider moving this into a util function and sharing it across both files
+   */
+  private getOptions(accessibleNamespaces: string[]): NamespaceOption[] {
+    /* Each namespace option has 2 properties: { path and label }
+     *   - path: full namespace path (used to navigate to the namespace)
+     *   - label: text displayed inside the namespace picker dropdown (if root, then path is "", else label = path)
+     *
+     *  Example:
+     *   | path           | label          |
+     *   | ----           | -----          |
+     *   | ''             | 'root'         |
+     *   | 'parent'       | 'parent'       |
+     *   | 'parent/child' | 'parent/child' |
+     */
+    const options = (accessibleNamespaces || []).map((ns: string) => ({ path: ns, label: ns }));
+
+    // Add the user's root namespace because `sys/internal/ui/namespaces` does not include it.
+    const userRootNamespace = this.auth.authData?.userRootNamespace;
+    if (!options?.find((o) => o.path === userRootNamespace)) {
+      // the 'root' namespace is technically an empty string so we manually add the 'root' label.
+      const label = userRootNamespace === '' ? 'root' : userRootNamespace;
+      options.unshift({ path: userRootNamespace, label });
+    }
+
+    // If there are no namespaces returned by the internal endpoint, add the current namespace
+    // to the list of options. This is a fallback for when the user has access to a single namespace.
+    if (options.length === 0) {
+      // 'path' defined in the namespace service is the full namespace path
+      options.push({ path: this.namespace.path, label: this.namespace.path });
+    }
+
+    return options;
+  }
 }

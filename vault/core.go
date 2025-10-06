@@ -753,6 +753,7 @@ type Core struct {
 
 	// Activation flags for enterprise features that require a one-time activation
 	FeatureActivationFlags *activationflags.FeatureActivationFlags
+	licenseReloadCh        chan error
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -941,6 +942,7 @@ type CoreConfig struct {
 	PeriodicLeaderRefreshInterval time.Duration
 
 	ClusterAddrBridge *raft.ClusterAddrBridge
+	LicenseReload     chan error
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1402,6 +1404,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	c.clusterAddrBridge = conf.ClusterAddrBridge
+	c.licenseReloadCh = conf.LicenseReload
 	return c, nil
 }
 
@@ -3993,14 +3996,45 @@ func (c *Core) loadLoginMFAConfigs(ctx context.Context) error {
 	return nil
 }
 
+// MFACachedAuthResponse represents an authentication response that has been
+// temporarily cached during a two-phase MFA (Multi-Factor Authentication) login flow.
+//
+// This struct is used when an MFA enforcement is configured and a login request
+// lacks MFA credentials. Instead of completing the authentication immediately,
+// Vault caches the auth response and returns an MFARequirement to the client.
+// The client must then complete MFA validation using the mfa/validate endpoint
+// to retrieve the cached authentication and receive their token.
+//
+// The cached response includes the original authentication details along with
+// request metadata needed for MFA validation, such as the client's IP address
+// for methods like Duo that require connection information.
+//
+// This struct is also used to cache self-enrollment TOTP MFA secrets generated
+// during login when self-enrollment is enabled. This allows Vault to avoid
+// persisting the newly generated MFA secret until it has been successfully used
+// for validating an MFA-enforced login request.
 type MFACachedAuthResponse struct {
-	CachedAuth            *logical.Auth
-	RequestPath           string
-	RequestNSID           string
-	RequestNSPath         string
-	RequestConnRemoteAddr string
-	TimeOfStorage         time.Time
-	RequestID             string
+	CachedAuth              *logical.Auth
+	RequestPath             string
+	RequestNSID             string
+	RequestNSPath           string
+	RequestConnRemoteAddr   string
+	TimeOfStorage           time.Time
+	RequestID               string
+	SelfEnrollmentMFASecret *selfEnrollmentPendingMFASecret
+}
+
+// selfEnrollmentPendingMFASecret holds information about a TOTP Login MFA secret
+// that has been generated during a login request with self-enrollment enabled.
+// This secret is temporarily stored in memory until the user successfully
+// completes the MFA validation step. It is not persisted to avoid storing
+// unverified secrets.
+type selfEnrollmentPendingMFASecret struct {
+	// Fields here need to be exported because copystructure is used to copy this object.
+	MethodID string
+	Secret   *mfa.Secret
+	// Store the secret key string separately to avoid anyone accidentally persisting it on an Entity.
+	Key string
 }
 
 func (c *Core) setupCachedMFAResponseAuth() {
@@ -4391,48 +4425,53 @@ func (c *Core) LoadNodeID() (string, error) {
 
 // DetermineRoleFromLoginRequest will determine the role that should be applied to a quota for a given
 // login request
-func (c *Core) DetermineRoleFromLoginRequest(ctx context.Context, mountPoint string, data map[string]interface{}) string {
+func (c *Core) DetermineRoleFromLoginRequest(ctx context.Context, mountPoint string, data map[string]interface{}, conn *logical.Connection, headers map[string][]string) string {
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
-	matchingBackend := c.router.MatchingBackend(ctx, mountPoint)
-	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
-		// Role based quotas do not apply to this request
-		return ""
-	}
-	return c.doResolveRoleLocked(ctx, mountPoint, matchingBackend, data)
+	return c.doResolveRoleLocked(ctx, mountPoint, data, conn, headers)
 }
 
 // DetermineRoleFromLoginRequestFromReader will determine the role that should
 // be applied to a quota for a given login request. The reader will only be
 // consumed if the matching backend for the mount point exists and is a secret
 // backend
-func (c *Core) DetermineRoleFromLoginRequestFromReader(ctx context.Context, mountPoint string, reader io.Reader) string {
+func (c *Core) DetermineRoleFromLoginRequestFromReader(ctx context.Context, mountPoint string, reader io.Reader, conn *logical.Connection, header http.Header) string {
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
-	matchingBackend := c.router.MatchingBackend(ctx, mountPoint)
-	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
-		// Role based quotas do not apply to this request
-		return ""
-	}
-
 	data := make(map[string]interface{})
 	err := jsonutil.DecodeJSONFromReader(reader, &data)
 	if err != nil {
 		return ""
 	}
-	return c.doResolveRoleLocked(ctx, mountPoint, matchingBackend, data)
+	return c.doResolveRoleLocked(ctx, mountPoint, data, conn, header)
 }
 
-// doResolveRoleLocked does a login and resolve role request on the matching
-// backend. Callers should have a read lock on c.authLock
-func (c *Core) doResolveRoleLocked(ctx context.Context, mountPoint string, matchingBackend logical.Backend, data map[string]interface{}) string {
-	resp, err := matchingBackend.HandleRequest(ctx, &logical.Request{
+// doResolveRoleLocked does a resolve role request on the matching backend.
+// Callers should have a read lock on c.authLock.
+func (c *Core) doResolveRoleLocked(ctx context.Context, mountPoint string, data map[string]interface{}, conn *logical.Connection, headers http.Header) string {
+	be, me := c.router.MatchingBackendAndMountEntry(ctx, mountPoint)
+	if be == nil || be.Type() != logical.TypeCredential {
+		// Role based quotas do not apply to this request
+		return ""
+	}
+
+	var passthroughRequestHeaders []string
+	if rawVal, ok := me.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
+		passthroughRequestHeaders = rawVal.([]string)
+	}
+
+	req := &logical.Request{
 		MountPoint: mountPoint,
 		Path:       "login",
 		Operation:  logical.ResolveRoleOperation,
 		Data:       data,
 		Storage:    c.router.MatchingStorageByAPIPath(ctx, mountPoint+"login"),
-	})
+		Connection: conn,
+	}
+	if len(passthroughRequestHeaders) > 0 {
+		req.Headers = filteredHeaders(headers, passthroughRequestHeaders, deniedPassthroughRequestHeaders)
+	}
+	resp, err := be.HandleRequest(ctx, req)
 	if err != nil || resp.Data["role"] == nil {
 		return ""
 	}

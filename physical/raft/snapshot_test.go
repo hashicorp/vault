@@ -994,7 +994,7 @@ func TestLoadReadOnlySnapshot(t *testing.T) {
 	// Create an FSM to load the snapshot data into.
 	fsm, err := NewFSM(dir, "test-fsm", logger)
 
-	err = LoadReadOnlySnapshot(fsm, snapshotFile, toExclude, logger)
+	err = LoadReadOnlySnapshot(context.Background(), fsm, snapshotFile, toExclude, logger)
 	require.NoError(t, err)
 	value, err := fsm.Get(context.Background(), "/path/to/exclude/1")
 	require.NoError(t, err)

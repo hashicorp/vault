@@ -1,0 +1,9 @@
+```release-note:change
+ui: Remove namespace context filter for activity in client count dashboard
+```
+```release-note:change
+ui: Add client count attribution for the full billing period to the client counts overview table 
+```
+```release-note:improvement
+ui: Add `namespace_path`, `mount_path` and `mount_type` filters to attribution table  
+```

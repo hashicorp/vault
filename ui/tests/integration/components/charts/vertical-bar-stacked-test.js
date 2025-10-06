@@ -16,6 +16,7 @@ const EXAMPLE = [
     fuji_apples: null,
     gala_apples: null,
     red_delicious: null,
+    honey_crisp: null,
   },
   {
     timestamp: '2022-10-01T00:00:00',
@@ -23,6 +24,7 @@ const EXAMPLE = [
     fuji_apples: 1471,
     gala_apples: 4389,
     red_delicious: 4207,
+    honey_crisp: 1234,
   },
   {
     timestamp: '2022-11-01T00:00:00',
@@ -30,6 +32,7 @@ const EXAMPLE = [
     fuji_apples: 149,
     gala_apples: 20,
     red_delicious: 5802,
+    honey_crisp: 134,
   },
 ];
 
@@ -42,13 +45,42 @@ module('Integration | Component | clients/charts/vertical-bar-stacked', function
       { key: 'fuji_apples', label: 'Fuji counts' },
       { key: 'gala_apples', label: 'Gala counts' },
     ];
+    this.showTable = false;
+    this.renderComponent = async () => {
+      await render(
+        hbs`<Clients::Charts::VerticalBarStacked @data={{this.data}} @chartLegend={{this.legend}} @chartTitle="My chart" @showTable={{this.showTable}} />`
+      );
+    };
+  });
+
+  test('it renders bars the expected color', async function (assert) {
+    this.legend = [
+      { key: 'fuji_apples', label: 'Fuji counts' },
+      { key: 'gala_apples', label: 'Gala counts' },
+      { key: 'red_delicious', label: 'Red Delicious counts' },
+      { key: 'honey_crisp', label: 'Honey Crisp counts' },
+    ];
+    await this.renderComponent();
+    const barClasses = ['.stacked-bar-1', '.stacked-bar-2', '.stacked-bar-3', '.stacked-bar-4'];
+    const expectedFills = [
+      'rgb(66, 105, 208)',
+      'rgb(239, 177, 23)',
+      'rgb(255, 114, 92)',
+      'rgb(108, 197, 176)',
+    ];
+    barClasses.forEach((className, idx) => {
+      const bars = findAll(className);
+      // Skip the first set of bars because they have no data
+      const bar = bars[1];
+      const actual = getComputedStyle(bar).fill;
+      const expected = expectedFills[idx];
+      assert.strictEqual(actual, expected, `${className} has expected fill color: ${expected}`);
+    });
   });
 
   test('it renders when some months have no data', async function (assert) {
     assert.expect(10);
-    await render(
-      hbs`<Clients::Charts::VerticalBarStacked @data={{this.data}} @chartLegend={{this.legend}} @chartTitle="My chart"/>`
-    );
+    await this.renderComponent();
 
     assert.dom(CHARTS.chart('My chart')).exists('renders chart container');
 
@@ -106,10 +138,7 @@ module('Integration | Component | clients/charts/vertical-bar-stacked', function
         red_delicious: 180,
       },
     ];
-    await render(
-      hbs`<Clients::Charts::VerticalBarStacked @data={{this.data}} @chartLegend={{this.legend}} @chartTitle="My chart"/>`
-    );
-
+    await this.renderComponent();
     assert.dom(CHARTS.chart('My chart')).exists('renders chart container');
     findAll(CHARTS.verticalBar).forEach((b, idx) =>
       assert.dom(b).isNotVisible(`bar: ${idx} does not render`)
@@ -132,9 +161,8 @@ module('Integration | Component | clients/charts/vertical-bar-stacked', function
 
   test('it renders underlying data', async function (assert) {
     assert.expect(3);
-    await render(
-      hbs`<Clients::Charts::VerticalBarStacked @data={{this.data}} @chartLegend={{this.legend}} @showTable={{true}} @chartTitle="My chart"/>`
-    );
+    this.showTable = true;
+    await this.renderComponent();
     assert.dom(CHARTS.chart('My chart')).exists('renders chart container');
     assert.dom(CHARTS.table).exists('renders underlying data when showTable=true');
     assert

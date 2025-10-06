@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/go-github/v68/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,19 +15,22 @@ func TestFileGroupDefaultCheckers(t *testing.T) {
 	t.Parallel()
 
 	for filename, groups := range map[string]FileGroups{
-		".build/entrypoint.sh":                      {FileGroupPipeline},
-		".github/actions/changed-files/actions.yml": {FileGroupPipeline},
-		".github/workflows/build.yml":               {FileGroupPipeline},
-		".github/workflows/build-artifacts-ce.yml":  {FileGroupCommunity, FileGroupPipeline},
-		".github/workflows/build-artifacts-ent.yml": {FileGroupEnterprise, FileGroupPipeline},
-		".github/workflows/backport-ce-ent.yml":     {FileGroupCommunity, FileGroupPipeline},
-		".go-version":                               {FileGroupGoToolchain},
-		"audit/backend_ce.go":                       {FileGroupGoApp, FileGroupCommunity},
-		"audit/backend_config_ent.go":               {FileGroupGoApp, FileGroupEnterprise},
-		"builtin/logical/transit/something_ent.go":  {FileGroupGoApp, FileGroupEnterprise},
+		".build/entrypoint.sh":                           {FileGroupPipeline},
+		".github/actions/changed-files/actions.yml":      {FileGroupGithub, FileGroupPipeline},
+		".github/workflows/build.yml":                    {FileGroupGithub, FileGroupPipeline},
+		".github/workflows/build-artifacts-ce.yml":       {FileGroupCommunity, FileGroupGithub, FileGroupPipeline},
+		".github/workflows/build-artifacts-ent.yml":      {FileGroupEnterprise, FileGroupGithub, FileGroupPipeline},
+		".github/workflows/backport-ce-ent.yml":          {FileGroupCommunity, FileGroupGithub, FileGroupPipeline},
+		".github/scripts/pr_comment.sh":                  {FileGroupGithub, FileGroupPipeline},
+		".github/CODEOWNERS":                             {FileGroupGithub},
+		".go-version":                                    {FileGroupGoToolchain},
+		".release/ibm-pao/eboms/5900-BJ8.essentials.csv": {FileGroupEnterprise},
+		"audit/backend_ce.go":                            {FileGroupGoApp, FileGroupCommunity},
+		"audit/backend_config_ent.go":                    {FileGroupGoApp, FileGroupEnterprise},
+		"builtin/logical/transit/something_ent.go":       {FileGroupGoApp, FileGroupEnterprise},
 		"buf.yml":                                           {FileGroupProto},
 		"changelog/1726.txt":                                {FileGroupChangelog},
-		"changelog/_1726.txt":                               {FileGroupChangelog, FileGroupEnterprise},
+		"changelog/_1726.txt":                               {FileGroupChangelog},
 		"command/server/config.go":                          {FileGroupGoApp},
 		"command/operator_raft_autopilot_state.go":          {FileGroupGoApp, FileGroupAutopilot},
 		"command/agent_ent_test.go":                         {FileGroupGoApp, FileGroupEnterprise},
@@ -61,7 +64,6 @@ func TestFileGroupDefaultCheckers(t *testing.T) {
 		"vault_ent/requires_ent.go":                         {FileGroupGoApp, FileGroupEnterprise},
 		"website/content/api-docs/index.mdx":                {FileGroupDocs},
 		"CHANGELOG.md":                                      {FileGroupChangelog},
-		"CODEOWNERS":                                        {FileGroupPipeline},
 		"Dockerfile":                                        {FileGroupPipeline},
 		"Makefile":                                          {FileGroupPipeline},
 		"README.md":                                         {FileGroupDocs},

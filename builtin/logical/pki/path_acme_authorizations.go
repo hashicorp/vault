@@ -6,6 +6,7 @@ package pki
 import (
 	"fmt"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -62,6 +63,11 @@ func (b *backend) acmeAuthorizationHandler(acmeCtx *acmeContext, r *logical.Requ
 			return nil, fmt.Errorf("bad type (%T) for value 'status': %w", rawStatus, ErrMalformed)
 		}
 	}
+
+	b.pkiObserver.RecordPKIObservation(acmeCtx, r, observe.ObservationTypePKIAcmeAuthorization,
+		observe.NewAdditionalPKIMetadata("auth_id", authId),
+		observe.NewAdditionalPKIMetadata("status", status),
+	)
 
 	if len(data) == 0 {
 		return b.acmeAuthorizationFetchHandler(acmeCtx, r, fields, userCtx, data, authz)

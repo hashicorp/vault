@@ -138,6 +138,9 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 					"update",
 				},
 			},
+			"identity/oidc/provider/+/authorize": map[string]interface{}{
+				"capabilities": []interface{}{"read", "update"},
+			},
 		},
 		"root":             false,
 		"chroot_namespace": "",

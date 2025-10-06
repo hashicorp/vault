@@ -5,15 +5,18 @@
 
 // TODO: separate nested into distinct exported consts
 export const CLIENT_COUNT = {
+  card: (name: string) => `[data-test-card="${name}"]`,
   counts: {
     description: '[data-test-counts-description]',
     configDisabled: '[data-test-counts-disabled]',
     namespaces: '[data-test-counts-namespaces]',
     mountPaths: '[data-test-counts-auth-mounts]',
-    startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
   dateRange: {
-    dropdownOption: (idx = 0) => `[data-test-date-range-billing-start="${idx}"]`,
+    dropdownOption: (idx: number | null) =>
+      typeof idx === 'number'
+        ? `[data-test-date-range-billing-start="${idx}"]`
+        : '[data-test-date-range-billing-start]',
     dateDisplay: (name: string) => (name ? `[data-test-date-range="${name}"]` : '[data-test-date-range]'),
     edit: '[data-test-date-range-edit]',
     editModal: '[data-test-date-range-edit-modal]',
@@ -22,32 +25,20 @@ export const CLIENT_COUNT = {
     defaultRangeAlert: '[data-test-range-default-alert]',
     validation: '[data-test-date-range-validation]',
   },
+  statLegendValue: (label: string) =>
+    label ? `[data-test-vault-reporting-legend-item="${label}"]` : '[data-test-vault-reporting-legend-item',
   statText: (label: string) => `[data-test-stat-text="${label}"]`,
   statTextValue: (label: string) =>
     label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
   usageStats: (title: string) => `[data-test-usage-stats="${title}"]`,
-  attribution: {
-    card: '[data-test-card="attribution"]',
-    table: '[data-test-clients-attribution-table]',
-    row: '[data-test-attribution-table-row',
-    counts: (index: number) => `[data-test-attribution-table-counts="${index}"]`,
-    pagination: '[data-test-pagination',
-    paginationInfo: '.hds-pagination-info',
-  },
-  filterBar: '[data-test-clients-filter-bar]',
-  nsFilter: '#namespace-search-select',
-  mountFilter: '#mounts-search-select',
-  selectedAuthMount: 'div#mounts-search-select [data-test-selected-option] div',
-  selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
+  tableSummary: (tabName: string) => `[data-test-table-summary="${tabName}"]`,
   upgradeWarning: '[data-test-clients-upgrade-warning]',
   exportButton: '[data-test-export-button]',
 };
 
 export const CHARTS = {
   // container
-  container: (title: string) => `[data-test-chart-container="${title}"]`,
-  timestamp: '[data-test-chart-container-timestamp]',
-  legend: '[data-test-chart-container-legend]',
+  legend: '[data-test-counts-card-legend]',
   legendDot: (nth: number) => `.legend-item:nth-child(${nth}) > span`,
 
   // chart elements
@@ -60,4 +51,15 @@ export const CHARTS = {
   yAxis: '[data-test-y-axis]',
   xAxisLabel: '[data-test-x-axis] text',
   plotPoint: '[data-test-plot-point]',
+};
+
+export const FILTERS = {
+  dropdown: (name: string) => `[data-test-dropdown="${name}"]`,
+  dropdownToggle: (name: string) => `[data-test-dropdown="${name}"] button`,
+  dropdownItem: (name: string) => `[data-test-dropdown-item="${name}"]`,
+  dropdownSearch: (name: string) => `[data-test-dropdown="${name}"] input`,
+  tag: (filter?: string, value?: string) =>
+    filter && value ? `[data-test-filter-tag="${filter} ${value}"]` : '[data-test-filter-tag]',
+  tagContainer: '[data-test-filter-tag-container]',
+  clearTag: (value: string) => `[aria-label="Dismiss ${value}"]`,
 };

@@ -25,7 +25,7 @@ module('Integration | Component | auth | form | okta', function (hooks) {
     this.authType = 'okta';
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
-    this.onSuccess = sinon.spy();
+    this.handleAuthResponse = sinon.spy();
 
     // stub uuid so auth/okta/verify request can be stubbed using mirage
     this.nonce = '12345';
@@ -58,7 +58,7 @@ module('Integration | Component | auth | form | okta', function (hooks) {
             @authType={{this.authType}} 
             @cluster={{this.cluster}}
             @onError={{this.onError}}
-            @onSuccess={{this.onSuccess}}
+            @handleAuthResponse={{this.handleAuthResponse}}
           >
             <:advancedSettings>
               <label for="path">Mount path</label>
@@ -71,7 +71,7 @@ module('Integration | Component | auth | form | okta', function (hooks) {
         @authType={{this.authType}}
         @cluster={{this.cluster}}
         @onError={{this.onError}}
-        @onSuccess={{this.onSuccess}}
+        @handleAuthResponse={{this.handleAuthResponse}}
       />`);
     };
   });

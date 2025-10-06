@@ -1525,6 +1525,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
 
+	if !b.Core.IsMountTypeAllowed(logicalType) {
+		return logical.ErrorResponse("mounts of type %q are not supported by license", logicalType),
+			logical.ErrInvalidRequest
+	}
+
 	var config MountConfig
 	var apiConfig APIMountConfig
 
@@ -5332,16 +5337,18 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		walkFn(exact, s, v)
 		return false
 	}
+	acl.exactRules.Walk(exactWalkFn)
+	resp.Data["exact_paths"] = exact
 
+	// Combine glob (prefix) and segment wildcard (+) paths into glob_paths
 	globWalkFn := func(s string, v interface{}) bool {
 		walkFn(glob, s, v)
 		return false
 	}
-
-	acl.exactRules.Walk(exactWalkFn)
 	acl.prefixRules.Walk(globWalkFn)
-
-	resp.Data["exact_paths"] = exact
+	for s, v := range acl.segmentWildcardPaths {
+		walkFn(glob, s, v)
+	}
 	resp.Data["glob_paths"] = glob
 
 	return resp, nil
@@ -7160,6 +7167,11 @@ This path responds to the following HTTP methods.
 	"activity-monthly": {
 		"Count of active clients so far this month.",
 		"Count of active clients so far this month.",
+	},
+	"activity-cumulative": {
+		"Cumulative count of clients under each namespace.",
+		`Cumulative count of clients under each namespace.
+		A cumulative count is the sum of the clients belonging to a namespace and all its child namespaces.`,
 	},
 	"activity-config": {
 		"Control the collection and reporting of client counts.",

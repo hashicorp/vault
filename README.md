@@ -12,6 +12,7 @@
 - Documentation: [https://developer.hashicorp.com/vault/docs](https://developer.hashicorp.com/vault/docs)
 - Tutorials: [https://developer.hashicorp.com/vault/tutorials](https://developer.hashicorp.com/vault/tutorials)
 - Certification exam: [https://developer.hashicorp.com/certifications/security-automation](https://developer.hashicorp.com/certifications/security-automation)
+- Documentation source: [https://github.com/hashicorp/web-unified-docs](https://github.com/hashicorp/web-unified-docs)
 
 <img width="300" alt="Vault Logo" src="https://github.com/hashicorp/vault/blob/f22d202cde2018f9455dec755118a9b84586e082/Vault_PrimaryLogo_Black.png">
 

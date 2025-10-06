@@ -142,6 +142,7 @@ type ServerCommand struct {
 	flagTestServerConfig   bool
 	flagDevConsul          bool
 	flagExitOnCoreShutdown bool
+	ignoreLicenseEnvVar    bool
 
 	sealsToFinalize []*vault.Seal
 }
@@ -899,6 +900,26 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		}
 		props["max_request_size"] = fmt.Sprintf("%d", lnConfig.MaxRequestSize)
 
+		if lnConfig.CustomMaxJSONDepth == 0 {
+			lnConfig.CustomMaxJSONDepth = vaulthttp.CustomMaxJSONDepth
+		}
+		props["max_json_depth"] = fmt.Sprintf("%d", lnConfig.CustomMaxJSONDepth)
+
+		if lnConfig.CustomMaxJSONStringValueLength == 0 {
+			lnConfig.CustomMaxJSONStringValueLength = vaulthttp.CustomMaxJSONStringValueLength
+		}
+		props["max_json_string_value_length"] = fmt.Sprintf("%d", lnConfig.CustomMaxJSONStringValueLength)
+
+		if lnConfig.CustomMaxJSONObjectEntryCount == 0 {
+			lnConfig.CustomMaxJSONObjectEntryCount = vaulthttp.CustomMaxJSONObjectEntryCount
+		}
+		props["max_json_object_entry_count"] = fmt.Sprintf("%d", lnConfig.CustomMaxJSONObjectEntryCount)
+
+		if lnConfig.CustomMaxJSONArrayElementCount == 0 {
+			lnConfig.CustomMaxJSONArrayElementCount = vaulthttp.CustomMaxJSONArrayElementCount
+		}
+		props["max_json_array_element_count"] = fmt.Sprintf("%d", lnConfig.CustomMaxJSONArrayElementCount)
+
 		if lnConfig.MaxRequestDuration == 0 {
 			lnConfig.MaxRequestDuration = vault.DefaultMaxRequestDuration
 		}
@@ -1172,7 +1193,7 @@ func (c *ServerCommand) Run(args []string) int {
 	if envLicensePath := os.Getenv(EnvVaultLicensePath); envLicensePath != "" {
 		config.LicensePath = envLicensePath
 	}
-	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
+	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" && !c.ignoreLicenseEnvVar {
 		config.License = envLicense
 	}
 
@@ -1736,11 +1757,6 @@ func (c *ServerCommand) Run(args []string) int {
 				c.UI.Error(err.Error())
 			}
 
-			select {
-			case c.licenseReloadedCh <- err:
-			default:
-			}
-
 			// Let the managedKeyRegistry react to configuration changes (i.e.
 			// changes in kms_libraries)
 			core.ReloadManagedKeyRegistryConfig()
@@ -2142,6 +2158,9 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	if !c.flagDevNoKV {
+		if !core.IsMountTypeAllowed("kv") {
+			return nil, fmt.Errorf("license does not allow for KV mounts, consider using -dev-no-kv flag")
+		}
 		kvVer := "2"
 		if c.flagDevKVV1 || c.flagDevLeasedKV {
 			kvVer = "1"
@@ -2965,6 +2984,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
 		License:                        config.License,
 		LicensePath:                    config.LicensePath,
+		LicenseReload:                  c.licenseReloadedCh,
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,

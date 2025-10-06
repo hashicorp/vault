@@ -4,16 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import {
-  visit,
-  currentURL,
-  settled,
-  fillIn,
-  click,
-  waitUntil,
-  find,
-  currentRouteName,
-} from '@ember/test-helpers';
+import { visit, currentURL, settled, fillIn, click, waitFor, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { selectChoose } from 'ember-power-select/test-support';
@@ -401,6 +392,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       this.store = this.owner.lookup('service:store');
 
       await login();
+      this.response = await this.store.findRecord('clients/activity', 'clients/activity');
     });
 
     test('shows the client count card for enterprise', async function (assert) {
@@ -408,17 +400,19 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.true(version.isEnterprise, 'version is enterprise');
       assert.strictEqual(currentURL(), '/vault/dashboard');
       assert.dom(DASHBOARD.cardName('client-count')).exists();
-      const response = await this.store.peekRecord('clients/activity', 'clients/activity');
       assert.dom('[data-test-client-count-title]').hasText('Client count');
+      await waitFor('[data-test-stat-text="Total"] .stat-label');
       assert.dom('[data-test-stat-text="Total"] .stat-label').hasText('Total');
-      assert.dom('[data-test-stat-text="Total"] .stat-value').hasText(formatNumber([response.total.clients]));
+      assert
+        .dom('[data-test-stat-text="Total"] .stat-value')
+        .hasText(formatNumber([this.response.total.clients]));
       assert.dom('[data-test-stat-text="New"] .stat-label').hasText('New');
       assert
         .dom('[data-test-stat-text="New"] .stat-text')
         .hasText('The number of clients new to Vault in the current month.');
       assert
         .dom('[data-test-stat-text="New"] .stat-value')
-        .hasText(formatNumber([response.byMonth.lastObject.new_clients.clients]));
+        .hasText(formatNumber([this.response.byMonth.lastObject.new_clients.clients]));
       assert
         .dom(`${GENERAL.flashMessage}.is-info`)
         .doesNotExist('Does not show warning about client count estimations');
@@ -471,10 +465,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
       await click(GENERAL.submitButton);
       await pollCluster(this.owner);
-      assert.ok(
-        await waitUntil(() => find('[data-test-replication-dashboard]')),
-        'details dashboard is shown'
-      );
+      await waitFor('[data-test-replication-dashboard]');
       await visit('/vault/dashboard');
       assert.dom(DASHBOARD.title('DR primary')).hasText('DR primary');
       assert.dom(DASHBOARD.tooltipTitle('DR primary')).hasText('not set up');

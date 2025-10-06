@@ -108,7 +108,7 @@ export default Route.extend({
       // if it's KV v2 but not registered as an addon, it's type generic
       return this.router.transitionTo('vault.cluster.secrets.backend.kv.list', backend);
     }
-    const modelType = this.getModelType(secretEngine.type, tab);
+    const modelType = this.getModelType(type, tab);
     return this.pathHelp.hydrateModel(modelType, backend).then(() => {
       this.store.unloadAll('capabilities');
     });
@@ -134,7 +134,7 @@ export default Route.extend({
     const secret = this.secretParam() || '';
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
-    const modelType = this.getModelType(backendModel.type, params.tab);
+    const modelType = this.getModelType(backendModel.engineType, params.tab);
 
     return hash({
       secret,

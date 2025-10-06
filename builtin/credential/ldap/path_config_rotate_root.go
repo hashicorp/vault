@@ -39,6 +39,14 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 
 func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	err := b.rotateRootCredential(ctx, req)
+	if err != nil {
+		// log here instead of inside the actual rotate call because the rotation manager also logs, so this is
+		// the "equivalent" place for manual rotations.
+		b.Logger().Error("failed to rotate root credential on user request", "path", req.Path, "error", err.Error())
+	} else {
+		// err is nil in this case
+		b.Logger().Info("succesfully rotated root credential on user request", "path", req.Path)
+	}
 	var responseError responseError
 	if errors.As(err, &responseError) {
 		return logical.ErrorResponse(responseError.Error()), nil
@@ -81,7 +89,12 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 		LDAP:   ldaputil.NewLDAP(),
 	}
 
-	conn, err := client.DialLDAP(cfg.ConfigEntry)
+	// Create a copy of the config to modify for rotation
+	rotateConfig := *cfg.ConfigEntry
+	if cfg.RotationUrl != "" {
+		rotateConfig.Url = cfg.RotationUrl
+	}
+	conn, err := client.DialLDAP(&rotateConfig)
 	if err != nil {
 		return err
 	}

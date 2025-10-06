@@ -4738,6 +4738,91 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_InternalUIResultantACL verifies that segment wildcard and prefix glob ACLs are emitted correctly in the internal UI resultant-acl endpoint.
+func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	core, b, rootToken := testCoreSystemBackend(t)
+
+	// Define a policy that includes a segment wildcard and a prefix glob.
+	rules := `
+name = "ui-res-acl-test"
+path "+/auth/*" {
+  capabilities = ["read"]
+}
+path "sys/*" {
+  capabilities = ["update"]
+}`
+
+	pol, err := ParseACLPolicy(namespace.RootNamespace, rules)
+	require.NoError(t, err)
+	require.NoError(t, core.policyStore.SetPolicy(ctx, pol))
+
+	// Create a non-root token that has this policy attached
+	testMakeServiceTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"ui-res-acl-test"})
+
+	// Call the endpoint as the non-root token; this endpoint evaluates the caller.
+	req := logical.TestRequest(t, logical.ReadOperation, "internal/ui/resultant-acl")
+	req.ClientToken = "tokenid"
+
+	resp, err := b.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Validate response shape.
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Basic flags we expect back for a non-root token we’re inspecting.
+	if v, ok := resp.Data["root"].(bool); ok {
+		require.False(t, v, "expected non-root token")
+	}
+
+	// Extract glob paths and ensure both entries are present with expected caps.
+	globPaths, ok := resp.Data["glob_paths"].(map[string]interface{})
+	require.True(t, ok, "glob_paths missing or wrong type")
+
+	getCaps := func(m map[string]interface{}) []string {
+		raw := m["capabilities"]
+		switch a := raw.(type) {
+		case []string:
+			return a
+		case []interface{}:
+			out := make([]string, 0, len(a))
+			for _, x := range a {
+				if s, ok := x.(string); ok {
+					out = append(out, s)
+				}
+			}
+			return out
+		default:
+			return nil
+		}
+	}
+
+	// 1) segment wildcard preserved
+	segRaw, ok := globPaths["+/auth/*"]
+	require.True(t, ok, "segment wildcard path not found")
+	seg, ok := segRaw.(map[string]interface{})
+	require.True(t, ok, "segment wildcard value wrong type")
+	require.Equal(t, []string{"read"}, getCaps(seg))
+
+	// 2) prefix glob preserved (the backend may normalize to "sys/*" or "sys/")
+	prefixKey := "sys/*"
+	if _, ok := globPaths["sys/"]; ok {
+		prefixKey = "sys/"
+	}
+	prefRaw, ok := globPaths[prefixKey]
+	require.True(t, ok, "prefix glob path not found")
+	pref, ok := prefRaw.(map[string]interface{})
+	require.True(t, ok, "prefix glob value wrong type")
+	require.Contains(t, getCaps(pref), "update")
+}
+
 func TestSystemBackend_OpenAPI(t *testing.T) {
 	coreConfig := &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{

@@ -4,8 +4,11 @@
 package cache
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"sync"
 	syncatomic "sync/atomic"
@@ -600,7 +603,7 @@ func TestUpdateStaticSecret(t *testing.T) {
 	require.NoError(t, err)
 
 	// attempt the update
-	err = updater.updateStaticSecret(context.Background(), path)
+	err = updater.updateStaticSecret(context.Background(), path, "")
 	require.NoError(t, err)
 
 	newIndex, err := leaseCache.db.Get(cachememdb.IndexNameID, indexId)
@@ -611,6 +614,14 @@ func TestUpdateStaticSecret(t *testing.T) {
 	require.Equal(t, index.RequestPath, newIndex.RequestPath)
 	require.Equal(t, index.Tokens, newIndex.Tokens)
 	require.Len(t, newIndex.Versions, 0)
+
+	reader := bufio.NewReader(bytes.NewReader(newIndex.Response))
+	resp, err := http.ReadResponse(reader, nil)
+	require.NoError(t, err)
+
+	secret, err := api.ParseSecret(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, secretData, secret.Data)
 }
 
 // TestUpdateStaticSecret_KVv2 tests that updateStaticSecret works as expected, reaching out
@@ -662,7 +673,7 @@ func TestUpdateStaticSecret_KVv2(t *testing.T) {
 	require.NoError(t, err)
 
 	// attempt the update
-	err = updater.updateStaticSecret(context.Background(), path)
+	err = updater.updateStaticSecret(context.Background(), path, "")
 	require.NoError(t, err)
 
 	newIndex, err := leaseCache.db.Get(cachememdb.IndexNameID, indexId)
@@ -677,6 +688,16 @@ func TestUpdateStaticSecret_KVv2(t *testing.T) {
 	require.Len(t, newIndex.Versions, 1)
 	require.NotNil(t, newIndex.Versions[1])
 	require.Equal(t, newIndex.Versions[1], newIndex.Response)
+
+	reader := bufio.NewReader(bytes.NewReader(newIndex.Response))
+	resp, err := http.ReadResponse(reader, nil)
+	require.NoError(t, err)
+
+	secret, err := api.ParseSecret(resp.Body)
+	require.NoError(t, err)
+	data, ok := secret.Data["data"]
+	require.True(t, ok)
+	require.Equal(t, secretData, data)
 }
 
 // TestUpdateStaticSecret_EvictsIfInvalidTokens tests that updateStaticSecret will
@@ -717,7 +738,7 @@ func TestUpdateStaticSecret_EvictsIfInvalidTokens(t *testing.T) {
 	require.NoError(t, err)
 
 	// attempt the update
-	err = updater.updateStaticSecret(context.Background(), path)
+	err = updater.updateStaticSecret(context.Background(), path, "")
 	require.NoError(t, err)
 
 	newIndex, err := leaseCache.db.Get(cachememdb.IndexNameID, indexId)
@@ -740,7 +761,7 @@ func TestUpdateStaticSecret_HandlesNonCachedPaths(t *testing.T) {
 	path := "secret/foo"
 
 	// Attempt the update
-	err := updater.updateStaticSecret(context.Background(), path)
+	err := updater.updateStaticSecret(context.Background(), path, "")
 	require.NoError(t, err)
 	require.Nil(t, err)
 }

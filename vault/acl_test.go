@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"reflect"
@@ -12,7 +13,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestACL_NewACL(t *testing.T) {
@@ -1334,3 +1337,728 @@ path "test/star" {
 	}
 }
 `
+
+// TestAllowedAndDeniedParameters tests allowed_parameters and denied_parameters against both new and old behaviors
+func TestAllowedAndDeniedParameters(t *testing.T) {
+	type testReq struct {
+		path       string // defaults to "test/path"
+		parameters string // JSON string representation of parameters
+		allowed    bool
+
+		// for behaviors that differ between legacy exact matching and new slice matching one of the following must
+		// be set, otherwise the same test is executed for both modes and must pass in both
+		onlyLegacyExactMatching bool
+		onlyNewSliceMatching    bool
+	}
+
+	// Define test cases
+	testCases := map[string]struct {
+		policy   string
+		requests map[string]testReq
+	}{
+		"neither_allowed_nor_denied_parameters_sets_no_restrictions": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+				}
+			`,
+			requests: map[string]testReq{
+				"update_with_arbitrary_param_is_allowed": {
+					parameters: `{"arbitrary": "value"}`,
+					allowed:    true,
+				},
+			},
+		},
+		"simple_allowed_parameters": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"allowedParam" = ["allowedValue"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"explicitly_allowed": {
+					parameters: `{"allowedParam": "allowedValue"}`,
+					allowed:    true,
+				},
+				"implicitly_disallowed": {
+					parameters: `{"allowedParam": "disallowedValue"}`,
+					allowed:    false,
+				},
+				"some_other_param_disallowed": {
+					parameters: `{"someOtherParam": "someValue"}`,
+					allowed:    false,
+				},
+				"list_with_allowed_value_denied_on_legacy": {
+					parameters:              `{"allowedParam": ["allowedValue"]}`,
+					allowed:                 false,
+					onlyLegacyExactMatching: true,
+				},
+				"list_with_allowed_value_allowed_on_new": {
+					parameters:           `{"allowedParam": ["allowedValue"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+				"lower_level_not_affected_by_allow": {
+					parameters: `{"allowedParam": {"allowedParam": "allowedValue"}}`,
+					allowed:    false,
+				},
+				"empty_parameters_allowed": {
+					parameters: `{}`,
+					allowed:    true,
+				},
+				"case_insensitive_param_matching": {
+					parameters: `{"ALLOWEDPARAM": "allowedValue"}`,
+					allowed:    true,
+				},
+				"case_sensitive_value_matching": {
+					parameters: `{"allowedParam": "ALLOWEDVALUE"}`,
+					allowed:    false,
+				},
+			},
+		},
+		"simple_denied_parameters": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"deniedParam" = ["deniedValue"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"explicitly_denied": {
+					parameters: `{"deniedParam": "deniedValue"}`,
+					allowed:    false,
+				},
+				"implicitly_allowed": {
+					parameters: `{"deniedParam": "notdeniedValue"}`,
+					allowed:    true,
+				},
+				"some_other_param_allowed": {
+					parameters: `{"someOtherParam": "someValue"}`,
+					allowed:    true,
+				},
+				"list_with_denied_value_allowed_on_legacy_exact_matching": {
+					parameters:              `{"deniedParam": ["deniedValue"]}`,
+					allowed:                 true,
+					onlyLegacyExactMatching: true,
+				},
+				"list_with_denied_value_denied_on_new_slice_matching": {
+					parameters:           `{"deniedParam": ["deniedValue"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"lower_level_not_affected_by_denial": {
+					parameters: `{"deniedParam": {"deniedParam": "deniedValue"}}`,
+					allowed:    true,
+				},
+				"empty_parameters_allowed": {
+					parameters: `{}`,
+					allowed:    true,
+				},
+				"case_insensitive_param_matching": {
+					parameters: `{"DENIEDPARAM": "deniedValue"}`,
+					allowed:    false,
+				},
+				"case_sensitive_value_matching": {
+					parameters: `{"deniedParam": "DENIEDVALUE"}`,
+					allowed:    true,
+				},
+			},
+		},
+		"allow_and_deny_any_value": {
+			policy: `
+				path "test/allow_all" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"any" = []
+					}
+				}
+				path "test/deny_all" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"none" = []
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"any_param_is_allowed": {
+					path:       "test/allow_all",
+					parameters: `{"any": "thing"}`,
+					allowed:    true,
+				},
+				"all_values_denied": {
+					path:       "test/deny_all",
+					parameters: `{"none": "thing"}`,
+					allowed:    false,
+				},
+				"other_param_is_allowed": {
+					path:       "test/deny_all",
+					parameters: `{"other": "thing"}`,
+					allowed:    true,
+				},
+			},
+		},
+		"different_allowed_and_denied_simple_params": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"allowedParam" = ["allowed"]
+					}
+					denied_parameters = {
+						"deniedParam" = ["denied"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"param_in_allowed_parameters_is_allowed": {
+					parameters: `{"allowedParam": "allowed"}`,
+					allowed:    true,
+				},
+				"param_in_denied_parameters_is_denied": {
+					parameters: `{"deniedParam": "denied"}`,
+					allowed:    false,
+				},
+				"denied_param_is_denied_even_if_value_not_denied": {
+					parameters: `{"deniedParam": "notDenied"}`,
+					// this is the expected behavior because allowed_parameters is an allowlist, rendering the deny list moot
+					allowed: false,
+				},
+			},
+		},
+		"same_simple_param_allowed_and_denied": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"allowedAndDeniedParam" = ["allowed"]
+					}
+					denied_parameters = {
+						"allowedAndDeniedParam" = ["denied"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"allowed_value": {
+					parameters: `{"allowedAndDeniedParam": "allowed"}`,
+					allowed:    true,
+				},
+				"denied_value": {
+					parameters: `{"allowedAndDeniedParam": "denied"}`,
+					allowed:    false,
+				},
+				"other_value_denied": {
+					parameters: `{"allowedAndDeniedParam": "other"}`,
+					allowed:    false,
+				},
+				"other_param_denied": {
+					parameters: `{"otherParam": "value"}`,
+					allowed:    false,
+				},
+			},
+		},
+		"same_simple_param_allowed_and_denied_same_value": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"allowedAndDeniedParam" = ["allowedAndDenied"]
+					}
+					denied_parameters = {
+						"allowedAndDeniedParam" = ["allowedAndDenied"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"deny_takes_precedence": {
+					parameters: `{"allowedAndDeniedParam": "allowedAndDenied"}`,
+					allowed:    false,
+				},
+			},
+		},
+		"simple_allowed_and_denied_parameters_with_splat": {
+			// we call the "*" = [] thing "splat" in the docs, not sure why but let's be consistent
+			policy: `
+				path "test/all_allowed" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"*" = []
+					}
+				}
+				path "test/all_allowed_with_exceptions" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"*" = []
+						"except" = ["onlyThisValue"]
+					}
+				}
+				path "test/all_denied" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"*" = []
+					}
+				}
+				path "test/all_denied_exception_doesnt_work'" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"except" = ["onlyThisValue"]
+						"*" = []
+					}
+				}
+				path "test/all_allowed_with_denied" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"*" = []
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"any_param_is_allowed": {
+					path:       "test/all_allowed",
+					parameters: `{"1": "1", "2": [2], "3": {"4": "4"}}`,
+					allowed:    true,
+				},
+				"splat_allowed_params_allows_empty": {
+					path:       "test/all_allowed",
+					parameters: `{}`,
+					allowed:    true,
+				},
+				"most_params_allowed": {
+					path:       "test/all_allowed_with_exceptions",
+					parameters: `{"1": "1", "2": [2], "3": {"4": "4"}, "except": "onlyThisValue"}`,
+					allowed:    true,
+				},
+				"most_params_allowed_exception": {
+					path:       "test/all_allowed_with_exceptions",
+					parameters: `{"1": "1", "2": [2], "3": {"4": "4"}, "except": "wrongValue"}`,
+					allowed:    false,
+				},
+				"any_param_is_denied": {
+					path:       "test/all_denied",
+					parameters: `{"any": "thing"}`,
+					allowed:    false,
+				},
+				"any_param_is_denied_empty_allowed": {
+					path:       "test/all_denied",
+					parameters: `{}`,
+					allowed:    true,
+				},
+				"exception_doesnt_work_for_splat_denied_parameters": {
+					path:       "test/all_denied_exception_doesnt_work",
+					parameters: `{"except": "onlyThisValue"}`,
+					allowed:    false,
+				},
+			},
+		},
+		"splat_with_non_empty_list_same_as_empty_list": {
+			policy: `
+				path "test/splat_allowed_with_value" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"*" = ["allowedValue"]
+					}
+				}
+				path "test/splat_denied_with_value" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"*" = ["deniedValue"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"any_allowed": {
+					path:       "test/splat_allowed_with_value",
+					parameters: `{"anyParam": "anyValue"}`,
+					allowed:    true,
+				},
+				"all_denied": {
+					path:       "test/splat_denied_with_value",
+					parameters: `{"param": "deniedValue"}`,
+					allowed:    false,
+				},
+			},
+		},
+		"glob_patterns": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"*" = []
+						"globParam" = ["allowed1*", "allowed2*"]
+					}
+					denied_parameters = {
+						"globParamDeny" = ["denied1*", "denied2*"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"match_allowed": {
+					parameters: `{"globParam": "allowed11111"}`,
+					allowed:    true,
+				},
+				"no_match_denied": {
+					parameters: `{"globParam": "otherValue"}`,
+					allowed:    false,
+				},
+				"match_denied": {
+					parameters: `{"globParamDeny": "denied1111"}`,
+					allowed:    false,
+				},
+				"no_match_allowed": {
+					parameters: `{"globParamDeny": "otherValue"}`,
+					allowed:    true,
+				},
+				"list_with_match_denied_on_new_slice_matching": {
+					parameters:           `{"globParamDeny": ["denied1111", "otherValue"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"list_with_match_allowed_on_legacy_exact_matching": {
+					parameters:              `{"globParamDeny": ["denied11111", "otherValue"]}`,
+					allowed:                 true,
+					onlyLegacyExactMatching: true,
+				},
+			},
+		},
+		"splat_allow_and_specific_deny": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"*" = []
+					}
+					denied_parameters = {
+						"specificParam" = ["specificValue"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"splat_allows_any_param_except_specific": {
+					parameters: `{"anyParam": "anyValue"}`,
+					allowed:    true,
+				},
+				"specific_param_denied": {
+					parameters: `{"specificParam": "specificValue"}`,
+					allowed:    false,
+				},
+				"specific_param_with_other_value_allowed": {
+					parameters: `{"specificParam": "otherValue"}`,
+					allowed:    true,
+				},
+			},
+		},
+		"simple_merge": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"*" = []
+						"mergeParam" = ["value1"]
+					}
+					denied_parameters = {
+						"mergeParamDeny" = ["value3"]
+					}
+				}
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"mergeParam" = ["value2"]
+					}
+					denied_parameters = {
+						"mergeParamDeny" = ["value4"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"merged_allowed_values": {
+					parameters: `{"mergeParam": "value1"}`,
+					allowed:    true,
+				},
+				"merged_allowed_values_other": {
+					parameters: `{"mergeParam": "value2"}`,
+					allowed:    true,
+				},
+				"merged_disallowed_values": {
+					parameters: `{"mergeParam": "value3"}`,
+					allowed:    false,
+				},
+				"merged_both_vales_denied_on_legacy_exact_matching": {
+					parameters:              `{"mergeParam": ["value1", "value2"]}`,
+					allowed:                 false,
+					onlyLegacyExactMatching: true,
+				},
+				"merged_both_values_allowed_on_new_slice_matching": {
+					parameters:           `{"mergeParam": ["value1", "value2"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+				"merged_denied_values": {
+					parameters: `{"mergeParamDeny": "value3"}`,
+					allowed:    false,
+				},
+				"merged_denied_values_other": {
+					parameters: `{"mergeParamDeny": "value4"}`,
+					allowed:    false,
+				},
+				"merged_allowed_values_not_denied": {
+					parameters: `{"mergeParamDeny": "value5"}`,
+					allowed:    true,
+				},
+				"merged_both_denied_values_denied_on_new_slice_matching": {
+					parameters:           `{"mergeParamDeny": ["value3", "value4"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"merged_both_denied_values_allowed_on_legacy_exact_matching": {
+					parameters:              `{"mergeParamDeny": ["value3", "value4"]}`,
+					allowed:                 true,
+					onlyLegacyExactMatching: true,
+				},
+			},
+		},
+		"multiple_allowed_values": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"allowed_param" = ["allowedValue1", "allowedValue2"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"single_value_allowed": {
+					parameters: `{"allowed_param": "allowedValue1"}`,
+					allowed:    true,
+				},
+				"other_single_value_allowed": {
+					parameters: `{"allowed_param": "allowedValue2"}`,
+					allowed:    true,
+				},
+				"multiple_values_denied_with_legacy_exact_matching": {
+					parameters:              `{"allowed_param": ["allowedValue1", "allowedValue2"]}`,
+					allowed:                 false,
+					onlyLegacyExactMatching: true,
+				},
+				"multiple_values_allowed_with_new_slice_matching": {
+					parameters:           `{"allowed_param": ["allowedValue1", "allowedValue2"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+			},
+		},
+		"multiple_denied_values": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"denied_param" = ["deniedValue1", "deniedValue2"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"single_value_denied": {
+					parameters: `{"denied_param": "deniedValue1"}`,
+					allowed:    false,
+				},
+				"other_single_value_denied": {
+					parameters: `{"denied_param": "deniedValue2"}`,
+					allowed:    false,
+				},
+				"multiple_values_allowed_under_legacy_matching": {
+					parameters:              `{"denied_param": ["deniedValue1", "deniedValue2"]}`,
+					allowed:                 true,
+					onlyLegacyExactMatching: true,
+				},
+				"multiple_values_denied_with_new_slice_matching": {
+					parameters:           `{"denied_param": ["deniedValue1", "deniedValue2"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+			},
+		},
+		"multiple_allowed_values_list": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"allowed_param" = ["allowedValue1", ["allowedValue1", "allowedValue2"]]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"single_value_allowed": {
+					parameters: `{"allowed_param": "allowedValue1"}`,
+					allowed:    true,
+				},
+				"other_single_value_disallowed": {
+					parameters: `{"allowed_param": "allowedValue2"}`,
+					allowed:    false,
+				},
+				"multiple_values_allowed": {
+					parameters: `{"allowed_param": ["allowedValue1", "allowedValue2"]}`,
+					allowed:    true,
+				},
+			},
+		},
+		"multiple_denied_values_list": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"denied_param" = ["deniedValue1", ["deniedValue1", "deniedValue2"]]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"single_value_denied": {
+					parameters: `{"denied_param": "deniedValue1"}`,
+					allowed:    false,
+				},
+				"other_single_value_allowed": {
+					parameters: `{"denied_param": "deniedValue2"}`,
+					allowed:    true,
+				},
+				"multiple_values_denied": {
+					parameters: `{"denied_param": ["deniedValue1", "deniedValue2"]}`,
+					allowed:    false,
+				},
+			},
+		},
+		"complex_value_types": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"map_param" = [{"key1" = "value1", "key2" = "value2"}]
+						"int_param" = [1, 2, 3]
+						"bool_param" = [true, false]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"map_param_allowed": {
+					parameters: `{"map_param": {"key1": "value1", "key2": "value2"}}`,
+					allowed:    true,
+				},
+				"map_additional_fields_disallowed": {
+					parameters: `{"map_param": {"key1": "value1", "key2": "value2", "key3": "value3"}}`,
+					allowed:    false,
+				},
+				"map_fewer_fields_disallowed": {
+					parameters: `{"map_param": {"key1": "value1"}}`,
+					allowed:    false,
+				},
+				"map_keys_case_sensitive": {
+					parameters: `{"map_param": {"KEY1": "value1", "key2": "value2"}}`,
+					allowed:    false,
+				},
+				"int_param_doesnt_work": {
+					parameters: `{"int_param": 2}`,
+					allowed:    false,
+				},
+				"bool_param_allowed": {
+					parameters: `{"bool_param": false}`,
+					allowed:    true,
+				},
+				"bool_param_disallowed": {
+					parameters: `{"bool_param": "false"}`,
+					allowed:    false,
+				},
+			},
+		},
+		"VAULT-35716_use_case": {
+			policy: `
+				path "identity/group" {
+					capabilities = ["create", "update", "list", "read"]
+					denied_parameters = {
+						"name" = ["admin_group_*", "ADMIN_GROUP_*", "admin_automation", "ADMIN_AUTOMATION"]
+						"policies" = ["*admin-automation-policy*", "*admin-policy*"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"assignment_of_both_policies_and_name_allowed_on_legacy_exact_matching": {
+					path: "identity/group",
+					parameters: `{
+						"name": "test_policy_list",
+						"policies": ["admin-policy", "admin-automation-policy"],
+						"type": "external"
+					}`,
+					allowed:                 true,
+					onlyLegacyExactMatching: true,
+				},
+				"assignment_of_both_policies_and_name_denied_on_new_slice_matching": {
+					path: "identity/group",
+					parameters: `{
+						"name": "test_policy_list",
+						"policies": ["admin-policy", "admin-automation-policy"],
+						"type": "external"
+					}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+			},
+		},
+	}
+
+	ns := namespace.RootNamespace
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			r := require.New(t)
+			policy, err := ParseACLPolicy(ns, tc.policy)
+			r.NoError(err)
+
+			acl, err := NewACL(ctx, []*Policy{policy})
+			r.NoError(err)
+
+			for reqName, req := range tc.requests {
+				if req.onlyNewSliceMatching && req.onlyLegacyExactMatching {
+					t.Fatalf("test case %q cannot be both onlyNewSliceMatching and onlyLegacyExactMatching", reqName)
+				}
+				t.Run(reqName, func(t *testing.T) {
+					test := func(t *testing.T) {
+						r := require.New(t)
+						path := req.path
+						if path == "" {
+							path = "test/path"
+						}
+
+						// Decode JSON string into a map
+						var parameters map[string]any
+						reader := bytes.NewReader([]byte(req.parameters))
+						err := jsonutil.DecodeJSONFromReader(reader, &parameters)
+						r.NoError(err)
+
+						request := &logical.Request{
+							Path:      path,
+							Data:      parameters,
+							Operation: logical.UpdateOperation,
+						}
+
+						authResults := acl.AllowOperation(ctx, request, false)
+						require.Equal(t, req.allowed, authResults.Allowed)
+					}
+					if !req.onlyNewSliceMatching && !req.onlyLegacyExactMatching {
+						t.Setenv("VAULT_LEGACY_EXACT_MATCHING_ON_LIST", "true")
+						t.Run("legacy_exact_matching", test)
+						t.Setenv("VAULT_LEGACY_EXACT_MATCHING_ON_LIST", "")
+						t.Run("new_slice_matching", test)
+					} else {
+						if req.onlyLegacyExactMatching {
+							t.Setenv("VAULT_LEGACY_EXACT_MATCHING_ON_LIST", "true")
+						} else {
+							t.Setenv("VAULT_LEGACY_EXACT_MATCHING_ON_LIST", "")
+						}
+						test(t)
+					}
+				})
+			}
+		})
+	}
+}

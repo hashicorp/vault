@@ -49,12 +49,12 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     });
   });
 
-  test('it should hide links and headings user does not have access too', async function (assert) {
+  test('it should hide links and headings user does not have access to', async function (assert) {
     await renderComponent();
 
     assert
       .dom('[data-test-sidebar-nav-link]')
-      .exists({ count: 2 }, 'Nav links are hidden other than secrets and dashboard');
+      .exists({ count: 3 }, 'Nav links are hidden other than secrets, recovery and dashboard');
     assert
       .dom('[data-test-sidebar-nav-heading]')
       .exists({ count: 1 }, 'Headings are hidden other than Vault');
@@ -65,6 +65,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Dashboard',
       'Secrets Engines',
       'Secrets Sync',
+      'Secrets Recovery',
       'Access',
       'Policies',
       'Tools',

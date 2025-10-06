@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentRouteName, settled, visit } from '@ember/test-helpers';
-import { selectChoose } from 'ember-power-select/test-support';
+import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -20,6 +19,7 @@ import { createSecret } from 'vault/tests/helpers/secret-engine/secret-engine-he
 
 import { create } from 'ember-cli-page-object';
 import { deleteEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const cli = create(consolePanel);
 
@@ -66,8 +66,7 @@ module('Acceptance | secrets/generic/create', function (hooks) {
       `write sys/mounts/${path}/tune options=version=2`,
     ]);
     await visit('/vault/secrets');
-    await selectChoose('[data-test-component="search-select"]#filter-by-engine-name', path);
-    await settled();
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(SES.secretsBackendLink(path));
     assert.strictEqual(
       currentRouteName(),

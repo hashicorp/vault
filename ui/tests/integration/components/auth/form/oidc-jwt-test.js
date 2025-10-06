@@ -180,7 +180,7 @@ const oidcLoginTests = (test) => {
 
     cancelTimers();
     await settled();
-    assert.false(this.onSuccess.called, 'onSuccess is not called');
+    assert.false(this.handleAuthResponse.called, 'handleAuthResponse is not called');
 
     // Cleanup
     window.removeEventListener('message', assertEvent);
@@ -213,7 +213,7 @@ const oidcLoginTests = (test) => {
     window.dispatchEvent(new MessageEvent('message', message));
     cancelTimers();
     await settled();
-    assert.false(this.onSuccess.called, 'onSuccess is not called');
+    assert.false(this.handleAuthResponse.called, 'handleAuthResponse is not called');
 
     // Cleanup
     window.removeEventListener('message', assertEvent);
@@ -228,7 +228,7 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
   hooks.beforeEach(function () {
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
-    this.onSuccess = sinon.spy();
+    this.handleAuthResponse = sinon.spy();
     this.routerStub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
     const api = this.owner.lookup('service:api');
 
@@ -270,7 +270,7 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
             @authType={{this.authType}} 
             @cluster={{this.cluster}}
             @onError={{this.onError}}
-            @onSuccess={{this.onSuccess}}
+            @handleAuthResponse={{this.handleAuthResponse}}
           >
             <:advancedSettings>
               <label for="path">Mount path</label>
@@ -283,7 +283,7 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
         @authType={{this.authType}}
         @cluster={{this.cluster}}
         @onError={{this.onError}}
-        @onSuccess={{this.onSuccess}}
+        @handleAuthResponse={{this.handleAuthResponse}}
         />
         `);
     };

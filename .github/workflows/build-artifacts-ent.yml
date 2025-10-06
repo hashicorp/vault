@@ -1,0 +1,47 @@
+name: ent
+
+# This is a CE shim to allow the build.yml workflow to compile on CE.
+
+on:
+  workflow_call:
+    inputs:
+      build-all:
+        type: boolean
+        default: false
+      build-date:
+        type: string
+        required: true
+      checkout-ref:
+        type: string
+        default: ""
+      compute-build:
+        type: string # JSON encoded to support passing arrays
+        description: A JSON encoded "runs-on" for build worfkflows
+        required: true
+      compute-small:
+        type: string # JSON encoded to support passing arrays
+        description: A JSON encoded "runs-on" for non-resource-intensive workflows
+        required: true
+      vault-revision:
+        type: string
+        required: true
+      vault-version:
+        type: string
+        required: true
+      vault-version-package:
+        type: string
+        required: true
+      web-ui-cache-key:
+        type: string
+        required: true
+    outputs:
+      testable-containers:
+        value: '"[]"'
+      testable-packages:
+        value: '"[]"'
+
+jobs:
+  shim:
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 0

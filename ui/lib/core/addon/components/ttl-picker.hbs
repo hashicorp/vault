@@ -73,6 +73,7 @@
       @checked={{this.enableTTL}}
       @hideLabel={{true}}
       data-test-ttl-toggle={{this.label}}
+      aria-describedby={{concat (dasherize this.label) "-helper-text"}}
     >
       <fieldset class="field is-grouped is-marginless is-borderless">
         {{#if (has-block)}}
@@ -83,7 +84,10 @@
             <span class="ttl-picker-label is-large" data-test-ttl-form-label={{this.label}}>{{this.label}}</span><br />
             {{#if this.helperText}}
               <div class="sub-text">
-                <span data-test-ttl-form-subtext>{{this.helperText}}</span>
+                <span
+                  id={{concat (dasherize this.label) "-helper-text"}}
+                  data-test-ttl-form-subtext
+                >{{this.helperText}}</span>
                 {{#if @description}}
                   <ToolTip @verticalPosition="below" as |T|>
                     <T.Trigger data-test-tooltip-trigger tabindex="-1">

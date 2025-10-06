@@ -1,4 +1,4 @@
-Merge {{ .OriginPullRequest.HTMLURL }}{{ if .TargetRef }} into {{ .TargetRef }}{{ end }}
+Copy {{ .OriginPullRequest.HTMLURL }}{{ if .TargetRef }} into {{ .TargetRef }}{{ end }}
 
 {{ range $i, $t := .CoAuthoredByTrailers -}}
 {{ $t }}

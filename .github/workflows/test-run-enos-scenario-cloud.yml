@@ -1,0 +1,14 @@
+---
+name: enos-cloud
+
+on:
+  workflow_call:
+    inputs:
+      product-version:
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 0

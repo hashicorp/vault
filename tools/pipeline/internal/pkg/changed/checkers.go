@@ -23,6 +23,7 @@ var DefaultFileGroupCheckers = []FileGroupCheck{
 	FileGroupCheckerDocs,
 	FileGroupCheckerEnos,
 	FileGroupCheckerEnterprise,
+	FileGroupCheckerGithub,
 	FileGroupCheckerGoToolchain,
 	FileGroupCheckerPipeline,
 	FileGroupCheckerProto,
@@ -160,7 +161,8 @@ func FileGroupCheckerEnterprise(ctx context.Context, file *File) FileGroups {
 		hasBaseDir(name, "vault_ent"),
 		hasBaseDir(name, filepath.Join("scripts", "dev", "hsm")),
 		hasBaseDir(name, filepath.Join("scripts", "testing")),
-		hasBaseDir(name, filepath.Join("specs")):
+		hasBaseDir(name, filepath.Join("specs")),
+		hasBaseDir(name, filepath.Join(".release", "ibm-pao")):
 		return FileGroups{FileGroupEnterprise}
 	}
 
@@ -182,10 +184,6 @@ func FileGroupCheckerEnterprise(ctx context.Context, file *File) FileGroups {
 			strings.Contains(name, "_ent") && strings.HasSuffix(name, ".pb.go"):
 			return FileGroups{FileGroupEnterprise}
 		}
-	case ".txt":
-		if hasBaseDir(name, "changelog") && strings.HasPrefix(filepath.Base(name), "_") {
-			return FileGroups{FileGroupEnterprise}
-		}
 	case
 		".proto",
 		".hcl",
@@ -202,6 +200,15 @@ func FileGroupCheckerEnterprise(ctx context.Context, file *File) FileGroups {
 			strings.Contains(name, "merkle-tree"):
 			return FileGroups{FileGroupEnterprise}
 		}
+	}
+
+	return nil
+}
+
+// FileGroupCheckerGithub is a file group checker that groups Github files
+func FileGroupCheckerGithub(ctx context.Context, file *File) FileGroups {
+	if hasBaseDir(file.Name(), ".github") {
+		return FileGroups{FileGroupGithub}
 	}
 
 	return nil
@@ -230,10 +237,11 @@ func FileGroupCheckerPipeline(ctx context.Context, file *File) FileGroups {
 	switch {
 	case
 		hasBaseDir(name, ".build"),
-		hasBaseDir(name, ".github"),
+		hasBaseDir(name, filepath.Join(".github", "workflows")),
+		hasBaseDir(name, filepath.Join(".github", "actions")),
+		hasBaseDir(name, filepath.Join(".github", "scripts")),
 		hasBaseDir(name, "scripts"),
 		hasBaseDir(name, filepath.Join("tools", "pipeline")),
-		name == "CODEOWNERS",
 		name == "Dockerfile",
 		name == "Makefile":
 		return FileGroups{FileGroupPipeline}

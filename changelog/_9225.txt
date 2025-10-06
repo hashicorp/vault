@@ -1,0 +1,3 @@
+```release-note:feature
+**UI Secrets Recovery (Enterprise)**: Allows end users to recover single KV v1 secrets, Cubbyhole secrets, or Database static roles from a loaded snapshot if the secrets were changed or deleted in error. Automatic snapshot configurations can now automatically load the snapshot to Vault itself, making it available for recovery. Snapshot management permissions are separated from recovery permissions so that recovery operations can be delegated but controlled.
+```

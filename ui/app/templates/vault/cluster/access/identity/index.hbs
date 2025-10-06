@@ -88,6 +88,8 @@
     @currentPage={{this.model.meta.currentPage}}
     @currentPageSize={{this.model.meta.pageSize}}
     @route="vault.cluster.access.identity.index"
+    {{! The identity routes expect the dynamic URL segment for identity/:item_type to be plural }}
+    @model={{pluralize this.identityType}}
     @showSizeSelector={{false}}
     @totalItems={{this.model.meta.total}}
     @queryFunction={{this.paginationQueryParams}}

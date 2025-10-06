@@ -565,7 +565,8 @@ func createKeyTypeToMapKey(keyType string, keyBits int) map[string][]string {
 func (b *backend) getCASigner(ctx context.Context, s logical.Storage) (ssh.Signer, error) {
 	var signer ssh.Signer
 
-	storedKey, err := readStoredKey(ctx, s, caPrivateKey)
+	const allowMigration = true // migration from deprecated paths is allowed when signing
+	storedKey, err := readStoredKey(ctx, s, caPrivateKey, allowMigration)
 	if err != nil {
 		return nil, fmt.Errorf("error reading stored key: %w", err)
 	}

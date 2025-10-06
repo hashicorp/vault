@@ -474,26 +474,20 @@ func (r *Router) matchingStorage(ctx context.Context, path string, apiPath bool)
 
 // MatchingMountEntry returns the MountEntry used for a path
 func (r *Router) MatchingMountEntry(ctx context.Context, path string) *MountEntry {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil
-	}
-	path = ns.Path + path
-
-	r.l.RLock()
-	_, raw, ok := r.root.LongestPrefix(path)
-	r.l.RUnlock()
-	if !ok {
-		return nil
-	}
-	return raw.(*routeEntry).mountEntry
+	_, mountEntry := r.MatchingBackendAndMountEntry(ctx, path)
+	return mountEntry
 }
 
 // MatchingBackend returns the backend used for a path
 func (r *Router) MatchingBackend(ctx context.Context, path string) logical.Backend {
+	be, _ := r.MatchingBackendAndMountEntry(ctx, path)
+	return be
+}
+
+func (r *Router) MatchingBackendAndMountEntry(ctx context.Context, path string) (logical.Backend, *MountEntry) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	path = ns.Path + path
 
@@ -501,14 +495,15 @@ func (r *Router) MatchingBackend(ctx context.Context, path string) logical.Backe
 	_, raw, ok := r.root.LongestPrefix(path)
 	r.l.RUnlock()
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	re := raw.(*routeEntry)
+
 	re.l.RLock()
 	defer re.l.RUnlock()
 
-	return re.backend
+	return re.backend, re.mountEntry
 }
 
 // MatchingSystemView returns the SystemView used for a path
@@ -639,6 +634,10 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	// Adjust the path to exclude the routing prefix
 	originalPath := req.Path
 	req.Path = strings.TrimPrefix(ns.Path+req.Path, mount)
+	originalRecoverSourcePath := req.RecoverSourcePath
+	if req.RecoverSourcePath != "" {
+		req.RecoverSourcePath = strings.TrimPrefix(ns.Path+req.RecoverSourcePath, mount)
+	}
 	req.MountPoint = mount
 	req.MountType = re.mountEntry.Type
 	req.SetMountRunningSha256(re.mountEntry.RunningSha256)
@@ -759,6 +758,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	// Reset the request before returning
 	defer func() {
 		req.Path = originalPath
+		req.RecoverSourcePath = originalRecoverSourcePath
 		req.MountPoint = mount
 		req.MountType = re.mountEntry.Type
 		req.SetMountRunningSha256(re.mountEntry.RunningSha256)

@@ -5,34 +5,18 @@
 
 import queryParamString from 'vault/utils/query-param-string';
 import ApplicationAdapter from '../application';
-import { formatDateObject } from 'core/utils/client-count-utils';
 import { debug } from '@ember/debug';
+import { parseJSON, isValid } from 'date-fns';
 
 export default class ActivityAdapter extends ApplicationAdapter {
-  formatTimeParam(dateObj, isEnd = false) {
-    let formatted;
-    if (dateObj) {
-      try {
-        const iso = dateObj.timestamp || formatDateObject(dateObj, isEnd);
-        formatted = iso;
-      } catch (e) {
-        // carry on
-      }
-    }
-    return formatted;
-  }
-  // javascript localizes new Date() objects but all activity log data is stored in UTC
-  // create date object from user's input using Date.UTC() then send to backend as unix
-  // time params from the backend are formatted as a zulu timestamp
-  formatQueryParams(queryParams) {
+  formatQueryParams({ start_time, end_time }) {
     const query = {};
-    const start = this.formatTimeParam(queryParams?.start_time);
-    const end = this.formatTimeParam(queryParams?.end_time, true);
-    if (start) {
-      query.start_time = start;
+
+    if (start_time && isValid(parseJSON(start_time))) {
+      query.start_time = start_time;
     }
-    if (end) {
-      query.end_time = end;
+    if (end_time && isValid(parseJSON(end_time))) {
+      query.end_time = end_time;
     }
     return query;
   }
@@ -60,7 +44,7 @@ export default class ActivityAdapter extends ApplicationAdapter {
       start_time: query?.start_time ?? undefined,
       end_time: query?.end_time ?? undefined,
     })}`;
-    let errorMsg;
+    let errorMsg, httpStatus;
     try {
       const options = query?.namespace ? { namespace: query.namespace } : {};
       const resp = await this.rawRequest(url, 'GET', options);
@@ -68,13 +52,19 @@ export default class ActivityAdapter extends ApplicationAdapter {
         return resp.blob();
       }
       // If it's an empty response (eg 204), there's no data so return an error
-      errorMsg = 'no data to export in provided time range.';
+      errorMsg = 'No data to export in provided time range.';
+      httpStatus = resp.status;
     } catch (e) {
       const { errors } = await e.json();
       errorMsg = errors?.join('. ');
+      httpStatus = e.status;
     }
+    // counters/activity/export returns a ReadableStream so we manually handle errors here
+    // hopefully this can be improved when this file is migrated to use the api service.
     if (errorMsg) {
-      throw new Error(errorMsg);
+      const error = new Error(errorMsg);
+      error.httpStatus = httpStatus;
+      throw error;
     }
   }
 

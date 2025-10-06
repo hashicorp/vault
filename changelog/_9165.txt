@@ -1,0 +1,3 @@
+```release-note:improvement
+proxy/cache (enterprise): Vault Proxy will now use vault_index on events to be able to update cached static secrets from performance secondaries without needing to be forwarded. This will take precedence over attempting to forward the request to the primary.
+```

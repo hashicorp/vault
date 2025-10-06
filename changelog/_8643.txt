@@ -1,0 +1,3 @@
+```release-note:bug
+secrets-sync (enterprise): GCP locational KMS keys are no longer incorrectly removed when the location name is all lowercase.
+```

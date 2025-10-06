@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault/seal"
 	"go.uber.org/atomic"
 )
 
@@ -278,6 +279,7 @@ func (b *AESGCMBarrier) persistKeyringInternal(ctx context.Context, keyring *Key
 		Value: value,
 	}
 
+	ctx = seal.ContextWithFullRewrapRequired(ctx)
 	ctxKeyring := ctx
 
 	if bestEffort {

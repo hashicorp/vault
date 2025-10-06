@@ -15,7 +15,7 @@ import (
 	"slices"
 	"strings"
 
-	libgithub "github.com/google/go-github/v68/github"
+	libgithub "github.com/google/go-github/v74/github"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
@@ -37,11 +37,12 @@ type CopyPullRequestReq struct {
 
 // CopyPullRequestRes is a copy pull request response.
 type CopyPullRequestRes struct {
-	Error             error                   `json:"error,omitempty"`
-	Request           *CopyPullRequestReq     `json:"request,omitempty"`
-	OriginPullRequest *libgithub.PullRequest  `json:"origin_pull_request,omitempty"`
-	PullRequest       *libgithub.PullRequest  `json:"pull_request,omitempty"`
-	Comment           *libgithub.IssueComment `json:"comment,omitempty"`
+	Error             error                         `json:"error,omitempty"`
+	Request           *CopyPullRequestReq           `json:"request,omitempty"`
+	OriginPullRequest *libgithub.PullRequest        `json:"origin_pull_request,omitempty"`
+	PullRequest       *libgithub.PullRequest        `json:"pull_request,omitempty"`
+	Comment           *libgithub.IssueComment       `json:"comment,omitempty"`
+	SkippedCommits    []*libgithub.RepositoryCommit `json:"skipped_commits,omitempty"`
 }
 
 // Run runs the request to copy a pull request from the CE repo to the Ent repo.
@@ -51,7 +52,10 @@ func (r *CopyPullRequestReq) Run(
 	git *libgit.Client,
 ) (*CopyPullRequestRes, error) {
 	var err error
-	res := &CopyPullRequestRes{Request: r}
+	res := &CopyPullRequestRes{
+		Request:        r,
+		SkippedCommits: []*libgithub.RepositoryCommit{},
+	}
 
 	slog.Default().DebugContext(slogctx.Append(ctx,
 		slog.String("from-owner", r.FromOwner),
@@ -129,7 +133,7 @@ func (r *CopyPullRequestReq) Run(
 	}
 
 	// Clone the remote repository and fetch the base ref, which is the branch our
-	// pull request was created against. These will change our working directory
+	// pull request was created against. This will change our working directory
 	// into RepoDir
 	_, err = os.Stat(filepath.Join(r.RepoDir, ".git"))
 	if err == nil {
@@ -146,7 +150,6 @@ func (r *CopyPullRequestReq) Run(
 	}
 
 	prBranch := res.OriginPullRequest.GetHead().GetRef()
-	prBranchRef := "remotes/" + r.FromOrigin + "/" + prBranch
 
 	// Add our from upstream as a remote and fetch our PR branch
 	slog.Default().DebugContext(ctx, "adding CE upstream and fetching PR branch")
@@ -155,7 +158,7 @@ func (r *CopyPullRequestReq) Run(
 		Track:   []string{prBranch},
 		Fetch:   true,
 		Name:    r.FromOrigin,
-		URL:     fmt.Sprintf("https://github.com/%s/%s.git", r.FromOwner, r.FromRepo),
+		URL:     res.OriginPullRequest.GetHead().GetRepo().GetCloneURL(),
 	})
 	if err != nil {
 		err = fmt.Errorf("fetching target branch base ref: %s, %w", remoteRes.String(), err)
@@ -175,16 +178,15 @@ func (r *CopyPullRequestReq) Run(
 		return res, fmt.Errorf("checking out new copy branch: %s: %w", checkoutRes.String(), err)
 	}
 
-	// Generate a merge commit message. While git is able to generate a nice merge
-	// commit with a summary of all commit headers, we create our own that
-	// includes 'Co-Authored-By:' trailers in the commit message. As we always
-	// squash all commits into a single merge commit this helps to retain
-	// attribution for our source author.
+	// Get a list of commits we're going to cherry-pick into our new branch.
 	commits, err := listPullRequestCommits(ctx, github, r.FromOwner, r.FromRepo, int(r.PullNumber))
 	if err != nil {
 		return res, err
 	}
 
+	// Generate an empty commit message that includes 'Co-Authored-By:' trailers
+	// in the commit message. As we always squash all commits into a single merge
+	// commit this helps to retain attribution for our source author(s).
 	commitMessageFile, err := renderEmbeddedTemplateToTmpFile("copy-pr-commit-message.tmpl", struct {
 		CoAuthoredByTrailers []string
 		OriginPullRequest    *libgithub.PullRequest
@@ -195,35 +197,79 @@ func (r *CopyPullRequestReq) Run(
 		baseRef,
 	})
 	if err != nil {
-		return res, fmt.Errorf("creating merge commit message: %w", err)
+		return res, fmt.Errorf("creating copy attribution commit message: %w", err)
 	}
 	defer func() {
 		commitMessageFile.Close()
 		_ = os.Remove(commitMessageFile.Name())
 	}()
 
-	slog.Default().DebugContext(ctx, "merging CE PR branch into new copy branch")
-	mergeRes, mergeErr := git.Merge(ctx, &libgit.MergeOpts{
-		File:     commitMessageFile.Name(),
-		NoVerify: true,
-		Strategy: libgit.MergeStrategyORT,
-		StrategyOptions: []libgit.MergeStrategyOption{
-			libgit.MergeStrategyOptionTheirs,
-			libgit.MergeStrategyOptionIgnoreSpaceChange,
-		},
-		IntoName: baseRef,
-		Commit:   prBranchRef,
+	attrCommitRes, err := git.Commit(ctx, &libgit.CommitOpts{
+		AllowEmpty: true,
+		File:       commitMessageFile.Name(),
+		NoVerify:   true,
+		NoEdit:     true,
 	})
-	if mergeErr != nil {
-		mergeErr = fmt.Errorf("merging CE PR branch into new copy branch: %s: %w", mergeRes.String(), mergeErr)
+	if err != nil {
+		return res, fmt.Errorf("committing attribution: %s: %w", attrCommitRes.String(), err)
+	}
+
+	slog.Default().DebugContext(ctx, "cherry-picking CE PR branch commits into new copy branch")
+	var cherryPickErr error
+	var cherryPickRes *libgit.ExecResponse
+	for _, commit := range commits {
+		// We only want to cherry-pick non-merge commits. To determine that we'll
+		// see if the commit has more than one parent and skip it if it does.
+		cherryPickRes, cherryPickErr = git.Show(ctx, &libgit.ShowOpts{
+			Format: "%ph",
+			Quiet:  true,
+			Object: commit.GetSHA(),
+		})
+		if cherryPickErr != nil {
+			break
+		}
+
+		parents := strings.TrimSpace(string(cherryPickRes.Stdout))
+		if len(strings.Split(parents, " ")) > 1 {
+			slog.Default().DebugContext(slogctx.Append(ctx,
+				slog.String("sha", commit.GetSHA()),
+				slog.String("parents", parents),
+			), "skipping merge commit")
+
+			res.SkippedCommits = append(res.SkippedCommits, commit)
+
+			continue
+		}
+
+		cherryPickRes, cherryPickErr = git.CherryPick(ctx, &libgit.CherryPickOpts{
+			FF:       true,
+			Empty:    libgit.EmptyCommitKeep,
+			Commit:   commit.GetSHA(),
+			Strategy: libgit.MergeStrategyORT,
+			StrategyOptions: []libgit.MergeStrategyOption{
+				libgit.MergeStrategyOptionTheirs,
+				libgit.MergeStrategyOptionIgnoreSpaceChange,
+			},
+		})
+		if cherryPickErr != nil {
+			break
+		}
+	}
+
+	if cherryPickErr != nil {
+		cherryPickErr = fmt.Errorf(
+			"cherry-picking CE PR branch commits into new copy branch: %s: %w",
+			cherryPickRes.String(),
+			cherryPickErr,
+		)
 	}
 
 	// If our merge failed we still want to create a pull request for our
 	// failed copy so that a manual fix can be performed.
-	if mergeErr != nil {
+	if cherryPickErr != nil {
 		err := resetAndCreateNOOPCommit(ctx, git, baseBranch)
 		if err != nil {
-			err = errors.Join(mergeErr, err)
+			err = errors.Join(cherryPickErr, err)
 
 			// Something wen't wrong trying to create our no-op commit. There's
 			// nothing more we can do but return our error at this point.
@@ -238,7 +284,7 @@ func (r *CopyPullRequestReq) Run(
 	})
 	if err != nil {
 		err = fmt.Errorf("pushing copied branch: %s: %w", pushRes.String(), err)
-		return res, errors.Join(mergeErr, err)
+		return res, errors.Join(cherryPickErr, err)
 	}
 
 	prTitle := fmt.Sprintf("Copy %s into %s", res.OriginPullRequest.GetTitle(), baseRef)
@@ -247,13 +293,13 @@ func (r *CopyPullRequestReq) Run(
 		OriginPullRequest *libgithub.PullRequest
 		TargetRef         string
 	}{
-		mergeErr,
+		cherryPickErr,
 		res.OriginPullRequest,
 		baseRef,
 	})
 	if err != nil {
 		err = fmt.Errorf("creating copy pull request body %w", err)
-		return res, errors.Join(mergeErr, err)
+		return res, errors.Join(cherryPickErr, err)
 	}
 
 	res.PullRequest, _, err = github.PullRequests.Create(
@@ -267,7 +313,7 @@ func (r *CopyPullRequestReq) Run(
 	)
 	if err != nil {
 		err = fmt.Errorf("creating copy pull request %w", err)
-		return res, errors.Join(mergeErr, err)
+		return res, errors.Join(cherryPickErr, err)
 	}
 
 	// Assign the pull request to the actor that was assigned the original
@@ -286,7 +332,7 @@ func (r *CopyPullRequestReq) Run(
 	)
 	if err != nil {
 		err = fmt.Errorf("assigning ownership to copy pull request %w", err)
-		return res, errors.Join(mergeErr, err)
+		return res, errors.Join(cherryPickErr, err)
 	}
 
 	return res, nil
@@ -307,7 +353,7 @@ func (r CopyPullRequestReq) copyBranchNameForRef(
 	return name
 }
 
-// validate ensures that we've been given the minimum filter arguments necessary to complete a
+// Validate ensures that we've been given the minimum filter arguments necessary to complete a
 // request. It is always recommended that additional fitlers be given to reduce the response size
 // and not exhaust API limits.
 func (r *CopyPullRequestReq) Validate(ctx context.Context) error {
@@ -393,20 +439,20 @@ func (r *CopyPullRequestRes) ToTable(err error) table.Writer {
 	t.Style().Options.SeparateHeader = false
 	t.Style().Options.SeparateRows = false
 	t.AppendHeader(table.Row{
-		"From", "To", "Error",
+		"From", "To", "Skipped Merge Commits", "Error",
 	})
 
 	row := table.Row{nil, nil}
 	if r.Request != nil {
 		from := r.Request.FromOwner + "/" + r.Request.FromRepo
 		if pr := r.OriginPullRequest; pr != nil {
-			from = fmt.Sprintf("[%s#%d](%s)", from, pr.GetID(), pr.GetHTMLURL())
+			from = fmt.Sprintf("[%s#%d](%s)", from, pr.GetNumber(), pr.GetHTMLURL())
 		}
 		to := r.Request.ToOwner + "/" + r.Request.ToRepo
 		if pr := r.PullRequest; pr != nil {
-			to = fmt.Sprintf("[%s#%d](%s)", to, pr.GetID(), pr.GetHTMLURL())
+			to = fmt.Sprintf("[%s#%d](%s)", to, pr.GetNumber(), pr.GetHTMLURL())
 		}
-		row = table.Row{from, to}
+		row = table.Row{from, to, len(r.SkippedCommits)}
 	}
 	if err != nil {
 		row = append(row, err.Error())

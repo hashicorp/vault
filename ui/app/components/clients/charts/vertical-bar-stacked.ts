@@ -9,8 +9,9 @@ import { BAR_WIDTH, numericalAxisLabel } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { flatGroup } from 'd3-array';
-import type { MonthlyChartData } from 'vault/vault/charts/client-counts';
-import type { ClientTypes } from 'core/utils/client-count-utils';
+
+import type { MonthlyChartData } from 'vault/vault/client-counts/charts';
+import type { ClientTypes } from 'vault/vault/client-counts/activity-api';
 
 interface Args {
   chartHeight?: number;

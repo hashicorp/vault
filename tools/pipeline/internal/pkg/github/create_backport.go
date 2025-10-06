@@ -15,7 +15,7 @@ import (
 	"slices"
 	"strings"
 
-	libgithub "github.com/google/go-github/v68/github"
+	libgithub "github.com/google/go-github/v74/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
@@ -128,8 +128,6 @@ func NewCreateBackportReq(opts ...NewCreateBackportReqOpt) *CreateBackportReq {
 		CEBranchPrefix:      "ce",
 		CEAllowInactiveGroups: changed.FileGroups{
 			changed.FileGroupChangelog,
-			changed.FileGroupDocs,
-			changed.FileGroupPipeline,
 		},
 		BaseOrigin:          "origin",
 		BackportLabelPrefix: "backport",
@@ -657,7 +655,7 @@ func (r *CreateBackportReq) backportRef(
 			Commit:   commitSHA,
 			Strategy: libgit.MergeStrategyORT,
 			StrategyOptions: []libgit.MergeStrategyOption{
-				libgit.MergeStrategyOptionOurs,
+				libgit.MergeStrategyOptionTheirs,
 				libgit.MergeStrategyOptionIgnoreSpaceChange,
 			},
 		})
@@ -835,8 +833,11 @@ func (r *CreateBackportReq) determineBackportRefs(
 	baseRef string,
 	labels Labels,
 ) (res []string) {
+	baseRefVersion := r.baseRefVersion(baseRef)
 	slog.Default().DebugContext(slogctx.Append(ctx,
 		slog.String("labels", strings.Join(labels.Names(), " ")),
+		slog.String("base-ref", baseRef),
+		slog.String("base-ref-version", baseRefVersion),
 	), "determining backport base references from pull request labels")
 
 	defer func() {
@@ -845,8 +846,7 @@ func (r *CreateBackportReq) determineBackportRefs(
 		}
 	}()
 
-	baseRefVersion := r.baseRefVersion(baseRef)
-	if r.isEnt(baseRef) {
+	if r.isEntRef(baseRef) {
 		// We're dealing an enterprise PR. Always backport to the corresponding
 		// CE branch if it's active.
 		if baseRefVersion == "main" {
@@ -982,9 +982,9 @@ func (r *CreateBackportReq) hasEntPrefix(ref string) bool {
 	return strings.HasPrefix(ref, r.EntBranchPrefix+"/")
 }
 
-// isEnt takes a branch reference and determines whether or not it refers to
+// isEntRef takes a branch reference and determines whether or not it refers to
 // an enterprise branch.
-func (r *CreateBackportReq) isEnt(ref string) bool {
+func (r *CreateBackportReq) isEntRef(ref string) bool {
 	return !r.hasCEPrefix(ref)
 }
 
@@ -1015,7 +1015,7 @@ func (r *CreateBackportReq) shouldSkipRef(
 		return "missing fef", true
 	}
 
-	if !r.hasCEPrefix(ref) {
+	if r.isEntRef(ref) {
 		// It's an enterprise backport so we'll always do it.
 		return "references to enterprise branches always backported", false
 	}
@@ -1042,11 +1042,18 @@ func (r *CreateBackportReq) shouldSkipRef(
 	}
 
 	// Check if ce branch is active or not
-	if ver, ok := activeVersions[baseRefVersion]; ok {
-		if ver.CEActive {
-			return "CE branch is active", false
+	prefix := "release/"
+	if r.EntBranchPrefix != "" {
+		prefix = r.EntBranchPrefix + "/"
+	}
+	version, ok := strings.CutPrefix(baseRefVersion, prefix)
+	if ok {
+		if ver, ok := activeVersions[version]; ok {
+			if ver.CEActive {
+				return "CE branch is active", false
+			}
+			return "CE branch is inactive", true
 		}
-		return "CE branch is inactive", true
 	}
 
 	return fmt.Sprintf(

@@ -395,10 +395,11 @@
         @checked={{if @attr.options.isOppositeValue (not this.toggleInputEnabled) this.toggleInputEnabled}}
         data-test-toggle={{@attr.name}}
         disabled={{this.disabled}}
+        aria-describedby={{concat @attr.name "-helper-text"}}
       >
         <span class="has-text-weight-bold is-large">{{this.labelString}}</span><br />
         <div class="description has-text-grey" data-test-toggle-subtext>
-          <span>
+          <span id={{concat @attr.name "-helper-text"}}>
             {{#if this.toggleInputEnabled}}
               {{if @attr.options.isOppositeValue @attr.options.helperTextDisabled @attr.options.helperTextEnabled}}
             {{else}}
@@ -414,8 +415,9 @@
         @onChange={{this.toggleTextShow}}
         @checked={{this.showToggleTextInput}}
         data-test-toggle={{@attr.name}}
+        aria-describedby={{concat @attr.name "-helper-text"}}
       >
-        <span class="ttl-picker-label is-large">{{this.labelString}}</span><br />
+        <span class="ttl-picker-label is-large" id={{concat @attr.name "-helper-text"}}>{{this.labelString}}</span><br />
         <div class="description has-text-grey">
           {{#if this.showToggleTextInput}}
             <span>

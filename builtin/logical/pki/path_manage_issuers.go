@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -504,6 +505,13 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			response.AddWarning("delta crl distribution points were set, but no base crl distribution points were set.")
 		}
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuersImport,
+		observe.NewAdditionalPKIMetadata("mapping", issuerKeyMap),
+		observe.NewAdditionalPKIMetadata("imported_keys", createdKeys),
+		observe.NewAdditionalPKIMetadata("imported_issuers", createdIssuers),
+		observe.NewAdditionalPKIMetadata("existing_keys", existingKeys),
+		observe.NewAdditionalPKIMetadata("existing_issuers", existingIssuers))
 
 	return response, nil
 }

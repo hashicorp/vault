@@ -3,19 +3,18 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<div ...attributes>
-  <p>
-    TOTP Multi-factor authentication (MFA) can be enabled here if it is required by your administrator. This will ensure that
-    you are not prevented from logging into Vault in the future, once MFA is fully enforced.
-  </p>
-  <form id="mfa-setup-step-one" {{on "submit" this.verifyUUID}}>
+<Mfa::SplashCard @header={{@header}} @description={{@description}} data-test-step-one>
+
+  <:alerts>
     <MessageError @errorMessage={{this.error}} />
-    <div class="field has-top-margin-l">
+  </:alerts>
+
+  <:additionalContent>
+    <form id="mfa-setup-step-one" {{on "submit" this.verifyUUID}}>
       <label class="is-label">
         Method ID
       </label>
 
-      {{! template-lint-disable no-autofocus-attribute}}
       <p class="sub-text">Enter the UUID for your multi-factor authentication method. This can be provided to you by your
         administrator.</p>
       <Input
@@ -24,15 +23,22 @@
         class="input"
         autocomplete="off"
         spellcheck="false"
-        autofocus="true"
         @value={{this.UUID}}
         data-test-input="uuid"
       />
-    </div>
+    </form>
+  </:additionalContent>
 
-    <Hds::ButtonSet>
-      <Hds::Button @text="Verify" id="continue" type="submit" disabled={{(is-empty-value this.UUID)}} data-test-verify />
-      <Hds::Button @text="Cancel" @color="secondary" id="cancel" {{on "click" this.redirectPreviousPage}} />
-    </Hds::ButtonSet>
-  </form>
-</div>
+  <:actions>
+    <Hds::Button
+      @text="Verify"
+      id="continue"
+      type="submit"
+      form="mfa-setup-step-one"
+      disabled={{is-empty-value this.UUID}}
+      data-test-verify
+    />
+    <Hds::Button @text="Cancel" @color="secondary" id="cancel" {{on "click" this.redirectPreviousPage}} />
+  </:actions>
+
+</Mfa::SplashCard>

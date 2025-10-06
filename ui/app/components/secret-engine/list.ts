@@ -13,6 +13,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type ApiService from 'vault/services/api';
 import type RouterService from '@ember/routing/router-service';
+import type VersionService from 'vault/services/version';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
 /**
@@ -34,11 +35,22 @@ export default class SecretEngineList extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
+  @service declare readonly version: VersionService;
 
   @tracked secretEngineOptions: Array<string> | [] = [];
-  @tracked selectedEngineType = '';
-  @tracked selectedEngineName = '';
   @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
+
+  @tracked engineTypeFilters: Array<string> = [];
+  @tracked engineVersionFilters: Array<string> = [];
+  @tracked searchText = '';
+
+  // search text for dropdown filters
+  @tracked typeSearchText = '';
+  @tracked versionSearchText = '';
+
+  get clusterName() {
+    return this.version.clusterName;
+  }
 
   get displayableBackends() {
     return this.args.secretEngines.filter((backend) => backend.shouldIncludeInList);
@@ -46,26 +58,84 @@ export default class SecretEngineList extends Component<Args> {
 
   get sortedDisplayableBackends() {
     // show supported secret engines first and then organize those by id.
-    const sortedBackends = this.displayableBackends.sort(
-      (a, b) => Number(b.isSupportedBackend) - Number(a.isSupportedBackend) || a.id.localeCompare(b.id)
-    );
+    let sortedBackends = this.displayableBackends
+      .slice()
+      .sort(
+        (a, b) => Number(b.isSupportedBackend) - Number(a.isSupportedBackend) || a.id.localeCompare(b.id)
+      );
 
-    // return an options list to filter by engine type, ex: 'kv'
-    if (this.selectedEngineType) {
-      // check first if the user has also filtered by name.
-      if (this.selectedEngineName) {
-        return sortedBackends.filter((backend) => this.selectedEngineName === backend.id);
-      }
-      // otherwise filter by engine type
-      return sortedBackends.filter((backend) => this.selectedEngineType === backend.engineType);
+    // filters by engine type, ex: 'kv'
+    if (this.engineTypeFilters.length > 0) {
+      sortedBackends = sortedBackends.filter((backend) =>
+        this.engineTypeFilters.includes(backend.engineType)
+      );
     }
 
-    // return an options list to filter by engine name, ex: 'secret'
-    if (this.selectedEngineName) {
-      return sortedBackends.filter((backend) => this.selectedEngineName === backend.id);
+    // filters by engine version, ex: 'v1.21.0...'
+    if (this.engineVersionFilters.length > 0) {
+      sortedBackends = sortedBackends.filter((backend) =>
+        this.engineVersionFilters.includes(backend.running_plugin_version)
+      );
+    }
+
+    // if there is search text, filter path name by that
+    if (this.searchText.trim() !== '') {
+      sortedBackends = sortedBackends.filter((backend) =>
+        backend.path.toLowerCase().includes(this.searchText.toLowerCase())
+      );
     }
     // no filters, return full sorted list.
     return sortedBackends;
+  }
+
+  // Returns filter options for engine type dropdown
+  get typeFilterOptions() {
+    // if there is search text, filter types by that
+    if (this.typeSearchText.trim() !== '') {
+      return this.displayableBackends.filter((backend) =>
+        backend.engineType.toLowerCase().includes(this.typeSearchText.toLowerCase())
+      );
+    }
+
+    return this.displayableBackends;
+  }
+
+  // Returns filter options for version dropdown
+  get versionFilterOptions() {
+    // if there is search text, filter versions by that
+    if (this.versionSearchText.trim() !== '') {
+      // filtered by sorted backends array since an engine type filter has to be selected first
+      return this.sortedDisplayableBackends.filter((backend) =>
+        backend.running_plugin_version.toLowerCase().includes(this.versionSearchText.toLowerCase())
+      );
+    }
+    return this.sortedDisplayableBackends;
+  }
+
+  // Returns filtered engines list by type
+  get secretEngineArrayByType() {
+    const arrayOfAllEngineTypes = this.typeFilterOptions.map((modelObject) => modelObject.engineType);
+    // filter out repeated engineTypes (e.g. [kv, kv] => [kv])
+    const arrayOfUniqueEngineTypes = [...new Set(arrayOfAllEngineTypes)];
+
+    return arrayOfUniqueEngineTypes.map((engineType) => ({
+      name: engineType,
+      id: engineType,
+      icon: engineDisplayData(engineType)?.glyph ?? 'lock',
+    }));
+  }
+
+  // Returns filtered engines list by version
+  get secretEngineArrayByVersions() {
+    const arrayOfAllEngineVersions = this.versionFilterOptions.map(
+      (modelObject) => modelObject.running_plugin_version
+    );
+    // filter out repeated engineVersions (e.g. [1.0, 1.0] => [1.0])
+    const arrayOfUniqueEngineVersions = [...new Set(arrayOfAllEngineVersions)];
+    return arrayOfUniqueEngineVersions.map((version) => ({
+      version,
+      id: version,
+    }));
   }
 
   generateToolTipText = (backend: SecretsEngineResource) => {
@@ -80,45 +150,50 @@ export default class SecretEngineList extends Component<Args> {
       } else {
         return `${displayData.displayName}`;
       }
-    } else if (displayData.type === 'generic') {
-      // If a mounted engine type doesn't match any known type, the type is returned as 'generic' and set this tooltip.
+    } else if (displayData.type === 'unknown') {
+      // If a mounted engine type doesn't match any known type, the type is returned as 'unknown' and set this tooltip.
       // Handles issue when a user externally mounts an engine that doesn't follow the expected naming conventions for what's in the binary, despite being a valid engine.
-      return 'This plugin is not supported by the UI. Please use the CLI to manage this engine.';
+      return `This engine's type is not recognized by the UI. Please use the CLI to manage this engine.`;
     } else {
       // If the engine type is recognized but not supported, we only show configuration view and set this tooltip.
       return 'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.';
     }
   };
 
-  // Filtering & searching
-  get secretEngineArrayByType() {
-    const arrayOfAllEngineTypes = this.sortedDisplayableBackends.map((modelObject) => modelObject.engineType);
-    // filter out repeated engineTypes (e.g. [kv, kv] => [kv])
-    const arrayOfUniqueEngineTypes = [...new Set(arrayOfAllEngineTypes)];
-
-    return arrayOfUniqueEngineTypes.map((engineType) => ({
-      name: engineType,
-      id: engineType,
-    }));
-  }
-
-  get secretEngineArrayByName() {
-    return this.sortedDisplayableBackends.map((modelObject) => ({
-      name: modelObject.id,
-      id: modelObject.id,
-    }));
+  @action
+  setSearchText(type: string, event: Event) {
+    const target = event.target as HTMLInputElement;
+    if (type === 'type') {
+      this.typeSearchText = target.value;
+    } else if (type === 'version') {
+      this.versionSearchText = target.value;
+    } else {
+      this.searchText = target.value;
+    }
   }
 
   @action
-  filterEngineType(type: string[]) {
-    const [selectedType] = type;
-    this.selectedEngineType = selectedType || '';
+  filterByEngineType(type: string) {
+    if (this.engineTypeFilters.includes(type)) {
+      this.engineTypeFilters = this.engineTypeFilters.filter((t) => t !== type);
+    } else {
+      this.engineTypeFilters = [...this.engineTypeFilters, type];
+    }
   }
 
   @action
-  filterEngineName(name: string[]) {
-    const [selectedName] = name;
-    this.selectedEngineName = selectedName || '';
+  filterByEngineVersion(version: string) {
+    if (this.engineVersionFilters.includes(version)) {
+      this.engineVersionFilters = this.engineVersionFilters.filter((v) => v !== version);
+    } else {
+      this.engineVersionFilters = [...this.engineVersionFilters, version];
+    }
+  }
+
+  @action
+  clearAllFilters() {
+    this.engineTypeFilters = [];
+    this.engineVersionFilters = [];
   }
 
   @dropTask

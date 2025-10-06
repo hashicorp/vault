@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/cert: Add allowed_organizations support
+```

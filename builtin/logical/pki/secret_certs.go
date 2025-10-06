@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -82,6 +83,12 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 	if err != nil {
 		return nil, fmt.Errorf("error revoking serial: %s: failed reading config: %w", serial, err)
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIRevoke,
+		observe.NewAdditionalPKIMetadata("issuer_name", cert.Issuer.String()),
+		observe.NewAdditionalPKIMetadata("is_ca", cert.IsCA),
+		observe.NewAdditionalPKIMetadata("serial_number", cert.SerialNumber.String()),
+	)
 
 	return revokeCert(sc, config, cert)
 }

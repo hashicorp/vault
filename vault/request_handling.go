@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -90,28 +91,16 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 		return nil, nil, nil
 	}
 
-	// c.logger.Debug("entity set on the token", "entity_id", te.EntityID)
-
-	// Fetch the entity
-	entity, err := c.identityStore.MemDBEntityByID(entityID, false)
+	entity, err := c.fetchEntity(entityID, false)
+	if entity == nil && err == nil {
+		return nil, nil, nil
+	}
 	if err != nil {
-		c.logger.Error("failed to lookup entity using its ID", "error", err)
 		return nil, nil, err
 	}
 
-	if entity == nil {
-		// If there was no corresponding entity object found, it is
-		// possible that the entity got merged into another entity. Try
-		// finding entity based on the merged entity index.
-		entity, err = c.identityStore.MemDBEntityByMergedEntityID(entityID, false)
-		if err != nil {
-			c.logger.Error("failed to lookup entity in merged entity ID index", "error", err)
-			return nil, nil, err
-		}
-	}
-
 	policies := make(map[string][]string)
-	if entity != nil && !skipDeriveEntityPolicies {
+	if !skipDeriveEntityPolicies {
 		// c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
 
 		// Attach the policies on the entity
@@ -135,6 +124,34 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 	}
 
 	return entity, policies, err
+}
+
+// fetchEntity returns the entity object for the given entity
+// ID. If the entity is merged into a different entity object, the entity into
+// which the given entity ID is merged into will be returned.
+func (c *Core) fetchEntity(entityID string, clone bool) (*identity.Entity, error) {
+	if entityID == "" || c.identityStore == nil {
+		return nil, nil
+	}
+
+	// Fetch the entity
+	entity, err := c.identityStore.MemDBEntityByID(entityID, clone)
+	if err != nil {
+		c.logger.Error("failed to lookup entity using its ID", "error", err)
+		return nil, err
+	}
+
+	if entity == nil {
+		// If there was no corresponding entity object found, it is
+		// possible that the entity got merged into another entity. Try
+		// finding entity based on the merged entity index.
+		entity, err = c.identityStore.MemDBEntityByMergedEntityID(entityID, clone)
+		if err != nil {
+			c.logger.Error("failed to lookup entity in merged entity ID index", "error", err)
+			return nil, err
+		}
+	}
+	return entity, nil
 }
 
 // filterGroupPoliciesByNS takes a context, token namespace, and a map of
@@ -346,9 +363,9 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	return acl, te, entity, identityPolicies, nil
 }
 
-// CheckTokenWithLock calls CheckToken after grabbing the internal stateLock, and also checking that we aren't in the
-// process of shutting down.
-func (c *Core) CheckTokenWithLock(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
+// CheckTokenWithLock calls CheckToken after grabbing the internal stateLock,
+// and also checking that we aren't in the process of shutting down.
+func (c *Core) CheckTokenWithLock(ctx context.Context, req *logical.Request) (*logical.Auth, *logical.TokenEntry, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	// first check that we aren't shutting down
@@ -357,9 +374,63 @@ func (c *Core) CheckTokenWithLock(ctx context.Context, req *logical.Request, una
 	} else if c.activeContext != nil && c.activeContext.Err() != nil {
 		return nil, nil, c.activeContext.Err()
 	}
-	return c.CheckToken(ctx, req, unauth)
+	return c.CheckToken(ctx, req, false)
 }
 
+func (c *Core) existenceCheck(ctx context.Context, req *logical.Request) (*logical.Operation, error) {
+	existsResp, checkExists, resourceExists, err := c.router.RouteExistenceCheck(ctx, req)
+	switch err {
+	case logical.ErrUnsupportedPath:
+		// fail later via bad path to avoid confusing items in the log
+		checkExists = false
+	case logical.ErrRelativePath:
+		return nil, errutil.UserError{Err: err.Error()}
+	case nil:
+		if existsResp != nil && existsResp.IsError() {
+			return nil, existsResp.Error()
+		}
+		// Otherwise, continue on
+	default:
+		c.logger.Error("failed to run existence check", "error", err)
+		if _, ok := err.(errutil.UserError); ok {
+			return nil, err
+		} else {
+			return nil, ErrInternalError
+		}
+	}
+	var existenceCheckOp logical.Operation
+	switch {
+	case !checkExists:
+		// No existence check, so always treat it as an update operation, which is how it is pre 0.5
+		existenceCheckOp = logical.UpdateOperation
+	case resourceExists:
+		// It exists, so force an update operation
+		existenceCheckOp = logical.UpdateOperation
+	case !resourceExists:
+		// It doesn't exist, force a create operation
+		existenceCheckOp = logical.CreateOperation
+	default:
+		panic("unreachable code")
+	}
+	return &existenceCheckOp, nil
+}
+
+// CheckToken returns information about the state of authentication for a request.
+// The unauth flag should be set true for "login" requests; these are requests to
+// logical.Paths.Unauthenticated endpoints that are not deleted auth requests,
+// though note that despite being called login requests, not all of them are actually
+// login requests, as in attempts to authenticate and get back a token.
+//
+// Generally speaking, if CheckToken return an error, the request should fail,
+// but there are exceptions, e.g. ErrPerfStandbyPleaseForward may just result in
+// the request being forwarded to the active node.  A returned error does not
+// necessarily mean that the other return values will be nil; often they are
+// useful e.g. for auditing failing requests.
+//
+// When unauth is true, fail root path requests, don't worry about regular
+// ACL policy checks (though sentinel checks may still apply), and don't do
+// client counting.  When unauth is false, an invalid token or a lack of ACL
+// perms will result in an error, and client counting applies.
 func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
@@ -402,11 +473,17 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	}
 
 	// At this point we won't be forwarding a raw request; we should delete
-	// authorization headers as appropriate
-	switch req.ClientTokenSource {
-	case logical.ClientTokenFromVaultHeader:
+	// authorization headers as appropriate.  Don't delete Authorization headers
+	// if this is an unauth (login) request, as that precludes things like spiffe
+	// auth handling login requests with the payload in the Authorization header.
+	// However, if we did find a valid vault token in the header, we'll still
+	// suppress the header even if unauth is true, on the principle that we
+	// don't want to expose vault tokens to plugins which might do something
+	// nefarious with them.
+	switch {
+	case req.ClientTokenSource == logical.ClientTokenFromVaultHeader:
 		delete(req.Headers, consts.AuthHeaderName)
-	case logical.ClientTokenFromAuthzHeader:
+	case req.ClientTokenSource == logical.ClientTokenFromAuthzHeader && !unauth && te == nil:
 		if headers, ok := req.Headers["Authorization"]; ok {
 			retHeaders := make([]string, 0, len(headers))
 			for _, v := range headers {
@@ -425,41 +502,13 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	// whether a particular resource exists. Then we can mark it as an update
 	// or creation as appropriate.
 	if req.Operation == logical.CreateOperation || req.Operation == logical.UpdateOperation {
-		existsResp, checkExists, resourceExists, err := c.router.RouteExistenceCheck(ctx, req)
-		switch err {
-		case logical.ErrUnsupportedPath:
-			// fail later via bad path to avoid confusing items in the log
-			checkExists = false
-		case logical.ErrRelativePath:
-			return nil, te, errutil.UserError{Err: err.Error()}
-		case nil:
-			if existsResp != nil && existsResp.IsError() {
-				return nil, te, existsResp.Error()
-			}
-			// Otherwise, continue on
-		default:
-			c.logger.Error("failed to run existence check", "error", err)
-			if _, ok := err.(errutil.UserError); ok {
-				return nil, te, err
-			} else {
-				return nil, te, ErrInternalError
-			}
+		op, err := c.existenceCheck(ctx, req)
+		if err != nil {
+			return nil, te, err
 		}
-
-		switch {
-		case !checkExists:
-			// No existence check, so always treat it as an update operation, which is how it is pre 0.5
-			req.Operation = logical.UpdateOperation
-		case resourceExists:
-			// It exists, so force an update operation
-			req.Operation = logical.UpdateOperation
-		case !resourceExists:
-			// It doesn't exist, force a create operation
-			req.Operation = logical.CreateOperation
-		default:
-			panic("unreachable code")
-		}
+		req.Operation = *op
 	}
+
 	// Create the auth response
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
@@ -488,11 +537,28 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		req.ClientID = clientID
 	}
 
+	twoStepRecover := req.Operation == logical.RecoverOperation && req.RecoverSourcePath != "" && req.RecoverSourcePath != req.Path
+	var alternateRecoverCapability *logical.Operation
+	if twoStepRecover {
+		// An existence check call requires the operation to be set to either
+		// create or update. We set it to create here, then switch it back once
+		// the existence check is done.
+		req.Operation = logical.CreateOperation
+		op, err := c.existenceCheck(ctx, req)
+		req.Operation = logical.RecoverOperation
+		if err != nil {
+			return nil, te, err
+		}
+		alternateRecoverCapability = op
+	}
+
 	// Check the standard non-root ACLs. Return the token entry if it's not
 	// allowed so we can decrement the use count.
 	authResults := c.performPolicyChecks(ctx, acl, te, req, entity, &PolicyCheckOpts{
-		Unauth:            unauth,
-		RootPrivsRequired: rootPath,
+		Unauth:                     unauth,
+		RootPrivsRequired:          rootPath,
+		CheckSourcePath:            twoStepRecover,
+		RecoverAlternateCapability: alternateRecoverCapability,
 	})
 
 	// Assign the sudo path priority if the request is issued against a sudo path.
@@ -636,6 +702,10 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	// functionality (e.g. quotas)
 	var entry *MountEntry
 	req.MountPoint, entry = c.router.MatchingMountAndEntry(ctx, req.Path)
+
+	if entry != nil && entry.Table == mountTableType && !c.IsMountTypeAllowed(entry.Type) {
+		return logical.ErrorResponse("mounts of type %q aren't supported by license", entry.Type), logical.ErrInvalidRequest
+	}
 
 	// If the request requires a snapshot ID, we need to perform checks to
 	// ensure the request is valid and lock the snapshot, so it doesn't get
@@ -1213,7 +1283,11 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	if req.Operation == logical.RecoverOperation {
 		// first do a read operation
 		// this will use the snapshot's storage
+		originalPath := req.Path
 		req.Operation = logical.ReadOperation
+		if req.RecoverSourcePath != "" {
+			req.Path = req.RecoverSourcePath
+		}
 		resp, err := c.doRouting(ctx, req)
 		if err != nil {
 			return nil, auth, err
@@ -1228,6 +1302,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// set the snapshot ID context value to the empty string to ensure that
 		// the write goes to the real storage
 		req.Operation = logical.RecoverOperation
+		req.Path = originalPath
 		req.Data = resp.Data
 		ctx = logical.CreateContextWithSnapshotID(ctx, "")
 	}
@@ -1831,7 +1906,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			// run single-phase login MFA check, else run two-phase login MFA check
 			if len(matchedMfaEnforcementList) > 0 && len(req.MFACreds) > 0 {
 				for _, eConfig := range matchedMfaEnforcementList {
-					err = c.validateLoginMFA(ctx, eConfig, entity, req.Connection.RemoteAddr, req.MFACreds)
+					err = c.validateLoginMFA(ctx, eConfig, entity, req.Connection.RemoteAddr, req.MFACreds, nil)
 					if err != nil {
 						return nil, nil, logical.ErrPermissionDenied
 					}
@@ -1847,7 +1922,8 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					MFAConstraints: make(map[string]*logical.MFAConstraintAny),
 				}
 				for _, eConfig := range matchedMfaEnforcementList {
-					mfaAny, err := c.buildMfaEnforcementResponse(eConfig)
+					onlyMFAEnforcement := len(matchedMfaEnforcementList) == 1
+					mfaAny, err := c.buildMfaEnforcementResponse(eConfig, entity, onlyMFAEnforcement)
 					if err != nil {
 						return nil, nil, err
 					}
@@ -1895,7 +1971,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// for new role-based quotas upon creation, rather than counting old leases toward
 		// the total.
 		if reqRole == nil && requiresLease && !c.impreciseLeaseRoleTracking {
-			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data)
+			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data, req.Connection, req.Headers)
 		}
 
 		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, role, resp)
@@ -2429,7 +2505,13 @@ func (c *Core) getUserLockoutFromConfig(mountType string) UserLockoutConfig {
 	return defaultUserLockoutConfig
 }
 
-func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*logical.MFAConstraintAny, error) {
+func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig, entity *identity.Entity, onlyMFAEnforcement bool) (*logical.MFAConstraintAny, error) {
+	if eConfig == nil {
+		return nil, fmt.Errorf("MFA enforcement config is nil")
+	}
+	if entity == nil {
+		return nil, fmt.Errorf("entity is nil")
+	}
 	mfaAny := &logical.MFAConstraintAny{
 		Any: []*logical.MFAMethodID{},
 	}
@@ -2442,15 +2524,36 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*
 		if mConfig.Type == mfaMethodTypeDuo {
 			duoConf, ok := mConfig.Config.(*mfa.Config_DuoConfig)
 			if !ok {
-				return nil, fmt.Errorf("invalid MFA configuration type")
+				return nil, fmt.Errorf("invalid MFA configuration type, expected DuoConfig")
 			}
 			duoUsePasscode = duoConf.DuoConfig.UsePasscode
 		}
+
+		allowSelfEnrollment := false
+		if mConfig.Type == mfaMethodTypeTOTP && constants.IsEnterprise {
+			totpConf, ok := mConfig.Config.(*mfa.Config_TOTPConfig)
+			if !ok {
+				return nil, fmt.Errorf("invalid MFA configuration type, expected TOTPConfig")
+			}
+			enrollmentEnabled := totpConf.TOTPConfig.GetEnableSelfEnrollment()
+			_, entityHasMFASecretForMethodID := entity.MFASecrets[methodID]
+			if enrollmentEnabled && !entityHasMFASecretForMethodID && onlyMFAEnforcement {
+				// If enable_self_enrollment setting on the TOTP MFA method config is set to
+				// true and the entity does not have an MFA secret yet, we will allow
+				// self-service enrollment as long as only a single MFA enforcement applies to
+				// this login request.
+				allowSelfEnrollment = true
+			}
+		}
+
 		mfaMethod := &logical.MFAMethodID{
 			Type:         mConfig.Type,
 			ID:           methodID,
 			UsesPasscode: mConfig.Type == mfaMethodTypeTOTP || duoUsePasscode,
 			Name:         mConfig.Name,
+			// This will be used by the client to determine whether it should offer the user
+			// a way to generate an MFA secret for this method.
+			SelfEnrollmentEnabled: allowSelfEnrollment,
 		}
 		mfaAny.Any = append(mfaAny.Any, mfaMethod)
 	}

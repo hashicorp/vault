@@ -30,7 +30,8 @@ globals {
     }
     rhel = {
       "8.10" = ["nc", "openldap-clients"]
-      "9.5"  = ["nc", "openldap-clients"]
+      "9.6"  = ["nc", "openldap-clients"]
+      "10.0" = ["nc", "openldap-clients"]
     }
     sles = {
       // When installing Vault RPM packages on a SLES AMI, the openssl package provided
@@ -39,7 +40,6 @@ globals {
       "15.6" = ["netcat-openbsd", "openssl", "openldap2-client"]
     }
     ubuntu = {
-      "20.04" = ["netcat", "ldap-utils"]
       "22.04" = ["netcat", "ldap-utils"]
       "24.04" = ["netcat-openbsd", "ldap-utils"]
     }

@@ -8,7 +8,9 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -73,11 +75,40 @@ func Backend() *backend {
 	return &b
 }
 
+type trustedRetry struct {
+	attempt  int
+	deadline time.Time
+}
+
 type trusted struct {
 	pool          *x509.CertPool
 	trusted       []*ParsedCert
 	trustedNonCAs []*ParsedCert
 	ocspConf      *ocsp.VerifyConfig
+	loaded        map[string]struct{}
+	retry         *trustedRetry
+}
+
+func (t *trusted) clone() *trusted {
+	return &trusted{
+		pool:          t.pool.Clone(),
+		trusted:       slices.Clone(t.trusted),
+		trustedNonCAs: slices.Clone(t.trustedNonCAs),
+		ocspConf: &ocsp.VerifyConfig{
+			OcspEnabled:          t.ocspConf.OcspEnabled,
+			ExtraCas:             slices.Clone(t.ocspConf.ExtraCas),
+			OcspServersOverride:  slices.Clone(t.ocspConf.OcspServersOverride),
+			OcspFailureMode:      t.ocspConf.OcspFailureMode,
+			QueryAllServers:      t.ocspConf.QueryAllServers,
+			OcspThisUpdateMaxAge: t.ocspConf.OcspThisUpdateMaxAge,
+			OcspMaxRetries:       t.ocspConf.OcspMaxRetries,
+		},
+		loaded: maps.Clone(t.loaded),
+		retry: &trustedRetry{
+			attempt:  t.retry.attempt,
+			deadline: t.retry.deadline,
+		},
+	}
 }
 
 type backend struct {

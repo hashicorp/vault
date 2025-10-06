@@ -7,12 +7,14 @@
   <p.levelLeft>
     <h1 class="title is-3 title-with-icon" data-test-page-title>
       {{#if this.showEnable}}
-        {{#let (find-by "type" @mountModel.type @mountTypes) as |typeInfo|}}
-          <Icon @name={{typeInfo.glyph}} @size="24" class="has-text-grey-light" />
+        {{#let (find-by "type" this.mountForm.type @mountTypes) as |typeInfo|}}
+          {{#if typeInfo.glyph}}
+            <Icon @name={{typeInfo.glyph}} @size="24" class="has-text-grey-light" />
+          {{/if}}
           {{#if (eq @mountCategory "secret")}}
-            {{concat "Enable " typeInfo.displayName " Secrets Engine"}}
+            {{concat "Enable " (or typeInfo.displayName this.mountForm.type) " Secrets Engine"}}
           {{else}}
-            {{concat "Enable " typeInfo.displayName " Authentication Method"}}
+            {{concat "Enable " (or typeInfo.displayName this.mountForm.type) " Authentication Method"}}
           {{/if}}
         {{/let}}
       {{else if (eq @mountCategory "secret")}}
@@ -27,22 +29,22 @@
 <div class="box is-sideless is-bottomless is-fullwidth is-marginless">
   <NamespaceReminder @mode="enable" @noun={{if (eq @mountCategory "secret") "Secret Engine" "Auth Method"}} />
   <MessageError @errorMessage={{this.errorMessage}} />
-  {{#if @mountModel.type}}
+  {{#if this.mountForm.type}}
     <form {{on "submit" (perform this.mountBackend)}}>
       <FormFieldGroups
-        @model={{@mountModel}}
+        @model={{this.mountForm}}
         @groupName="formFieldGroups"
         @renderGroup="default"
         @modelValidations={{this.modelValidations}}
         @onKeyUp={{this.onKeyUp}}
       />
 
-      <FormFieldGroups @model={{@mountModel}} @renderGroup="Method Options" @groupName="formFieldGroups">
+      <FormFieldGroups @model={{this.mountForm}} @renderGroup="Method Options" @groupName="formFieldGroups">
         <:identityTokenKey>
           <SearchSelectWithModal
             @id="key"
             @fallbackComponent="input-search"
-            @inputValue={{@mountModel.data.config.identity_token_key}}
+            @inputValue={{this.mountForm.data.config.identity_token_key}}
             @onChange={{this.handleIdentityTokenKeyChange}}
             @models={{array "oidc/key"}}
             @selectLimit="1"
@@ -76,6 +78,11 @@
     </form>
   {{else}}
     {{!  Type not yet set, show type options }}
-    <MountBackend::TypeForm @setMountType={{this.setMountType}} @mountCategory={{@mountCategory}} />
+    <MountBackend::TypeForm
+      @setMountType={{this.setMountType}}
+      @mountCategory={{@mountCategory}}
+      @pluginCatalogData={{@mountModel.pluginCatalogData}}
+      @pluginCatalogError={{@mountModel.pluginCatalogError}}
+    />
   {{/if}}
 </div>

@@ -21,7 +21,7 @@ import { click, fillIn, waitFor } from '@ember/test-helpers';
 const mfaTests = (test) => {
   test('it displays mfa requirement for default paths', async function (assert) {
     const loginKeys = Object.keys(this.loginData);
-    assert.expect(3 + loginKeys.length);
+    assert.expect(5 + loginKeys.length);
     this.stubRequests();
     await this.renderComponent();
 
@@ -37,12 +37,10 @@ const mfaTests = (test) => {
 
     await click(GENERAL.submitButton);
     await waitFor(MFA_SELECTORS.mfaForm);
-    assert
-      .dom(MFA_SELECTORS.mfaForm)
-      .hasText(
-        'Back Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
-      );
-    await click(GENERAL.backButton);
+    assert.dom(GENERAL.title).hasText('Verify your identity');
+    assert.dom(MFA_SELECTORS.subheader).hasText('Multi-factor authentication is enabled for your account.');
+    assert.dom(MFA_SELECTORS.description).hasText('Enter your authentication code to log in.');
+    await click(GENERAL.cancelButton);
     assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
     assert.dom(AUTH_FORM.selectMethod).hasValue(this.authType, 'preserves method type on back');
     for (const field of loginKeys) {
@@ -53,7 +51,7 @@ const mfaTests = (test) => {
   test('it displays mfa requirement for custom paths', async function (assert) {
     this.path = `${this.authType}-custom`;
     const loginKeys = Object.keys(this.loginData);
-    assert.expect(3 + loginKeys.length);
+    assert.expect(5 + loginKeys.length);
     this.stubRequests();
     await this.renderComponent();
 
@@ -69,12 +67,10 @@ const mfaTests = (test) => {
 
     await click(GENERAL.submitButton);
     await waitFor(MFA_SELECTORS.mfaForm);
-    assert
-      .dom(MFA_SELECTORS.mfaForm)
-      .hasText(
-        'Back Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
-      );
-    await click(GENERAL.backButton);
+    assert.dom(GENERAL.title).hasText('Verify your identity');
+    assert.dom(MFA_SELECTORS.subheader).hasText('Multi-factor authentication is enabled for your account.');
+    assert.dom(MFA_SELECTORS.description).hasText('Enter your authentication code to log in.');
+    await click(GENERAL.cancelButton);
     assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
     assert.dom(AUTH_FORM.selectMethod).hasValue(this.authType, 'preserves method type on back');
     for (const field of loginKeys) {
@@ -106,7 +102,7 @@ const mfaTests = (test) => {
     await click(GENERAL.submitButton);
     await waitFor(MFA_SELECTORS.mfaForm);
     await fillIn(MFA_SELECTORS.passcode(0), expectedOtp);
-    await click(MFA_SELECTORS.validate);
+    await click(GENERAL.button('Verify'));
   });
 
   test('it submits mfa requirement for custom paths', async function (assert) {
@@ -134,7 +130,7 @@ const mfaTests = (test) => {
     await click(GENERAL.submitButton);
     await waitFor(MFA_SELECTORS.mfaForm);
     await fillIn(MFA_SELECTORS.passcode(0), expectedOtp);
-    await click(MFA_SELECTORS.validate);
+    await click(GENERAL.button('Verify'));
   });
 };
 

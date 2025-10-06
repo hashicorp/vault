@@ -563,7 +563,31 @@ func TestOpenAPI_Paths(t *testing.T) {
 		}
 		testPath(t, p, sp, expected("operations"))
 	})
+	t.Run("Operations - Recover no path fields", func(t *testing.T) {
+		p := &Path{
+			Pattern: "foo",
+			Fields: map[string]*FieldSchema{
+				"name": {
+					Type:        TypeNameString,
+					Default:     "Larry",
+					Description: "the name",
+				},
+			},
+			Operations: map[logical.Operation]OperationHandler{
+				logical.RecoverOperation: &PathOperation{},
+				logical.ReadOperation:    &PathOperation{},
+				logical.UpdateOperation:  &PathOperation{},
+			},
+			DisplayAttrs: &DisplayAttributes{
+				Navigation: true,
+			},
+		}
 
+		sp := &logical.Paths{
+			AllowSnapshotRead: []string{"*"},
+		}
+		testPath(t, p, sp, expected("operations_recover"))
+	})
 	t.Run("Operations - List Only", func(t *testing.T) {
 		p := &Path{
 			Pattern: "foo/" + GenericNameRegex("id"),

@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -132,6 +133,8 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 	if err != nil {
 		return nil, fmt.Errorf("failed fetching CRL config: %w", err)
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIConfigCRLRead)
 
 	return genResponseFromCrlConfig(config), nil
 }
@@ -297,6 +300,22 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 			resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 		}
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIConfigCRLWrite,
+		observe.NewAdditionalPKIMetadata("version", config.Version),
+		observe.NewAdditionalPKIMetadata("expiry", config.Expiry),
+		observe.NewAdditionalPKIMetadata("disable", config.Disable),
+		observe.NewAdditionalPKIMetadata("ocsp_disable", config.OcspDisable),
+		observe.NewAdditionalPKIMetadata("auto_rebuild", config.AutoRebuild),
+		observe.NewAdditionalPKIMetadata("auto_rebuild_grace_period", config.AutoRebuildGracePeriod),
+		observe.NewAdditionalPKIMetadata("ocsp_expiry", config.OcspExpiry),
+		observe.NewAdditionalPKIMetadata("enable_delta", config.EnableDelta),
+		observe.NewAdditionalPKIMetadata("delta_rebuild_interval", config.DeltaRebuildInterval),
+		observe.NewAdditionalPKIMetadata("cross_cluster_revocation", config.UseGlobalQueue),
+		observe.NewAdditionalPKIMetadata("unified_crl", config.UnifiedCRL),
+		observe.NewAdditionalPKIMetadata("unified_crl_on_existing_paths", config.UnifiedCRLOnExistingPaths),
+		observe.NewAdditionalPKIMetadata("max_crl_entries", config.MaxCRLEntries),
+	)
 
 	return resp, nil
 }

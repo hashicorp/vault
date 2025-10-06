@@ -10,6 +10,44 @@ import FormFieldGroup from 'vault/utils/forms/field-group';
 import type { AuthMethodFormData } from 'vault/auth/methods';
 
 export default class AuthMethodForm extends MountForm<AuthMethodFormData> {
+  fieldProps = ['tuneFields', 'userLockoutConfigFields'];
+
+  userLockoutConfigFields = [
+    new FormField('user_lockout_config.lockout_threshold', 'string', {
+      label: 'Lockout threshold',
+      subText: 'Specifies the number of failed login attempts after which the user is locked out, e.g. 15.',
+    }),
+    new FormField('user_lockout_config.lockout_duration', undefined, {
+      label: 'Lockout duration',
+      helperTextEnabled: 'The duration for which a user will be locked out, e.g. "5s" or "30m".',
+      editType: 'ttl',
+      helperTextDisabled: 'No lockout duration configured.',
+    }),
+
+    new FormField('user_lockout_config.lockout_counter_reset', undefined, {
+      label: 'Lockout counter reset',
+      helperTextEnabled:
+        'The duration after which the lockout counter is reset with no failed login attempts, e.g. "5s" or "30m".',
+      editType: 'ttl',
+      helperTextDisabled: 'No reset duration configured.',
+    }),
+    new FormField('user_lockout_config.lockout_disable', 'boolean', {
+      label: 'Disable lockout for this mount',
+      subText: 'If checked, disables the user lockout feature for this mount.',
+    }),
+  ];
+
+  get tuneFields() {
+    const readOnly = ['local', 'seal_wrap'];
+    // 'token_type' cannot be set for the 'token' auth method
+    if (this.normalizedType === 'token') {
+      readOnly.push('config.token_type');
+    }
+    return this.formFieldGroups[1]?.['Method Options']?.filter((field) => {
+      return !readOnly.includes(field.name);
+    });
+  }
+
   formFieldGroups = [
     new FormFieldGroup('default', [this.fields.path]),
     new FormFieldGroup('Method Options', [

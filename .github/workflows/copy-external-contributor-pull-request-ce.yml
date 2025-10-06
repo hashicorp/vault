@@ -4,17 +4,16 @@ name: copy-external-contributor-pull-request-ce
 # be cancelled.
 
 on:
-  #  TODO: VAULT-34830: Enable the external contributor job for community pull requests
-  #  pull_request:
-  #    types:
-  #      # We only need to trigger this on opened as it will have a manual
-  #      # deployment approval that is good for 30 days. If we exhaust that there
-  #      # are two courses of action:
-  #      #   * Close and re-open the PR and it will trigger it again.
-  #      #   * Manually run this workflow from the actions UI and provide the
-  #      #     pull request number
-  #      - opened
-  #      - reopened
+  pull_request:
+    types:
+      # We only need to trigger this on opened as it will have a manual
+      # deployment approval that is good for 30 days. If we exhaust that there
+      # are two courses of action:
+      #   * Close and re-open the PR and it will trigger it again.
+      #   * Manually run this workflow from the actions UI and provide the
+      #     pull request number
+      - opened
+      - reopened
   workflow_dispatch:
     inputs:
       number:

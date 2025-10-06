@@ -44,10 +44,10 @@ locals {
     }
     rhel = {
       "8.10" = ["softhsm", "opensc"]
-      "9.5"  = ["softhsm", "opensc"]
+      "9.6"  = ["softhsm", "opensc"]
+      "10.0" = ["softhsm", "opensc"]
     }
     ubuntu = {
-      "20.04" = ["softhsm", "opensc"]
       "22.04" = ["softhsm", "opensc"]
       "24.04" = ["softhsm2", "opensc"]
     }
@@ -57,10 +57,10 @@ locals {
     }
     rhel = {
       "8.10" = ["softhsm"]
-      "9.5"  = ["softhsm"]
+      "9.6"  = ["softhsm"]
+      "10.0" = ["softhsm"]
     }
     ubuntu = {
-      "20.04" = ["softhsm"]
       "22.04" = ["softhsm"]
       "24.04" = ["softhsm2"]
     }

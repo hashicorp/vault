@@ -6,6 +6,8 @@ package api
 import (
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -150,3 +152,54 @@ const listMountsResponse = `{
     }
   }
 }`
+
+// TestMountUpdateConfigStructFields ensures that the type MountConfigInput (the struct used to setup a new mount) has
+// all the same fields as type TuneMountConfigInput (the struct used to tune an existing mount):
+func TestMountUpdateConfigStructFields(t *testing.T) {
+	tuneStruct := TuneMountConfigInput{}
+	initialStruct := MountConfigInput{}
+
+	tuneReflect := reflect.ValueOf(tuneStruct).Type()
+	initialReflect := reflect.ValueOf(initialStruct).Type()
+
+	for i := 0; i < tuneReflect.NumField(); i++ {
+		tuneField := tuneReflect.Field(i)
+		foundMatch := false
+		// Now Find the field in initial Reflect
+		for j := 0; j < initialReflect.NumField(); j++ {
+			initialField := initialReflect.Field(j)
+			if tuneField.Name == initialField.Name {
+				jsonTuneFieldTag := tuneField.Tag.Get("json")
+				jsonTuneFieldName := strings.Split(jsonTuneFieldTag, ",")[0]
+				jsonInitialFieldTag := tuneField.Tag.Get("json")
+				jsonInitialFieldName := strings.Split(jsonInitialFieldTag, ",")[0]
+				if jsonTuneFieldName != jsonInitialFieldName {
+					t.Fatalf("TuneMountConfigInput and MountConfigInput struct fields %v do not have same json names: %v, %v", tuneField.Name, jsonTuneFieldName, jsonInitialFieldName)
+				}
+				foundMatch = true
+				break
+			}
+		}
+		if !foundMatch {
+			t.Fatalf("Field %s in TuneMountConfigInput not found in MountConfigInput", tuneField.Name)
+		}
+	}
+
+	if tuneReflect.NumField() != initialReflect.NumField() {
+		for i := 0; i < initialReflect.NumField(); i++ {
+			initialField := initialReflect.Field(i)
+			foundMatch := false
+			for j := 0; j < tuneReflect.NumField(); j++ {
+				tuneField := tuneReflect.Field(j)
+				if tuneField.Name == initialField.Name {
+					foundMatch = true
+					break
+				}
+			}
+			if !foundMatch {
+				t.Fatalf("Field %s in MountConfigInput not found in TuneMountConfigInput", initialField.Name)
+			}
+		}
+		t.Fatalf("Different number of TuneMountConfigInput fields found in MountConfigInput")
+	}
+}

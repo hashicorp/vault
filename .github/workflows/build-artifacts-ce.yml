@@ -97,7 +97,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     name: (${{ matrix.goos }}, ${{ matrix.goarch }})
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
@@ -110,6 +110,7 @@ jobs:
           goarch: ${{ matrix.goarch }}
           goos: ${{ matrix.goos }}
           go-tags: ui
+          package-name: vault
           vault-binary-name: vault
           vault-edition: ce
           vault-version: ${{ inputs.vault-version }}
@@ -120,22 +121,22 @@ jobs:
         [
           {
             "sample": "ce_default_linux_amd64_ent_docker",
-            "artifact": "${{ github.event.repository.name }}_default_linux_amd64_${{ inputs.vault-version }}_${{ inputs.vault-revision }}.docker.tar",
+            "artifact": "vault_default_linux_amd64_${{ inputs.vault-version }}_${{ inputs.vault-revision }}.docker.tar",
             "edition": "ce"
           },
           {
             "sample": "ce_default_linux_arm64_ce_docker",
-            "artifact": "${{ github.event.repository.name }}_default_linux_arm64_${{ inputs.vault-version }}_${{ inputs.vault-revision }}.docker.tar",
+            "artifact": "vault_default_linux_arm64_${{ inputs.vault-version }}_${{ inputs.vault-revision }}.docker.tar",
             "edition": "ce"
           },
           {
             "sample": "ce_ubi_linux_amd64_ce_redhat",
-            "artifact": "${{ github.event.repository.name}}_ubi_linux_amd64_${{ inputs.vault-version}}_${{ inputs.vault-revision }}.docker.redhat.tar",
+            "artifact": "vault_ubi_linux_amd64_${{ inputs.vault-version}}_${{ inputs.vault-revision }}.docker.redhat.tar",
             "edition": "ce"
           },
           {
             "sample": "ce_ubi_linux_arm64_ce_redhat",
-            "artifact": "${{ github.event.repository.name}}_ubi_linux_arm64_${{ inputs.vault-version}}_${{ inputs.vault-revision }}.docker.redhat.tar",
+            "artifact": "vault_ubi_linux_arm64_${{ inputs.vault-version}}_${{ inputs.vault-revision }}.docker.redhat.tar",
             "edition": "ce"
           }
         ]
@@ -218,7 +219,7 @@ jobs:
     name: (${{ matrix.goos }}, ${{ matrix.goarch }}${{ matrix.goarm && ' ' || '' }}${{ matrix.goarm }})
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
@@ -246,7 +247,7 @@ jobs:
       - core
       - extended
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Determine status

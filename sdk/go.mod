@@ -1,14 +1,12 @@
 module github.com/hashicorp/vault/sdk
 
-go 1.24.0
-
-toolchain go1.24.1
+go 1.25.0
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
 	github.com/armon/go-radix v1.0.0
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/docker/docker v27.2.1+incompatible
+	github.com/docker/docker v28.3.3+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/evanphx/json-patch/v5 v5.6.0
 	github.com/fatih/structs v1.1.0
@@ -17,7 +15,7 @@ require (
 	github.com/golang/protobuf v1.5.4
 	github.com/golang/snappy v0.0.4
 	github.com/google/certificate-transparency-go v1.3.1
-	github.com/hashicorp/cap/ldap v0.0.0-20250106213447-9047b8b3240f
+	github.com/hashicorp/cap/ldap v0.0.0-20250911140431-44d01434c285
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-hclog v1.6.3
@@ -34,7 +32,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0
 	github.com/hashicorp/go-secure-stdlib/password v0.1.4
 	github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0
-	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1
+	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.2
 	github.com/hashicorp/go-secure-stdlib/regexp v1.0.0
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.3
@@ -60,10 +58,15 @@ require (
 )
 
 require (
+	github.com/containerd/errdefs v1.0.0 // indirect
+	github.com/containerd/errdefs/pkg v0.3.0 // indirect
+	github.com/moby/go-archive v0.1.0 // indirect
+)
+
+require (
 	cloud.google.com/go/auth v0.14.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.7 // indirect
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
-	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
 	github.com/Masterminds/semver/v3 v3.3.1 // indirect
@@ -101,22 +104,22 @@ require (
 	github.com/jackc/pgtype v1.14.3 // indirect
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/joshlf/go-acl v0.0.0-20200411065538-eae00ae38531 // indirect
-	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
-	github.com/moby/patternmatcher v0.5.0 // indirect
-	github.com/moby/sys/sequential v0.5.0 // indirect
-	github.com/moby/sys/user v0.3.0 // indirect
+	github.com/moby/patternmatcher v0.6.0 // indirect
+	github.com/moby/sys/sequential v0.6.0 // indirect
+	github.com/moby/sys/user v0.4.0 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
-	github.com/petermattis/goid v0.0.0-20240813172612-4fcff4a6cae7 // indirect
+	github.com/petermattis/goid v0.0.0-20250721140440-ea1c0173183e // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.20.5 // indirect

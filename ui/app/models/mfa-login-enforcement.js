@@ -36,7 +36,8 @@ const validations = {
 
 @withModelValidations(validations)
 export default class MfaLoginEnforcementModel extends Model {
-  @service store;
+  @service api;
+
   @attr('string') name;
   @hasMany('mfa-method', { async: true, inverse: null }) mfa_methods;
   @attr('string') namespace_id;
@@ -58,8 +59,8 @@ export default class MfaLoginEnforcementModel extends Model {
     if (this.auth_method_accessors.length || this.auth_method_types.length) {
       // fetch all auth methods and lookup by accessor to get mount path and type
       try {
-        const { data } = await this.store.adapterFor('auth-method').findAll();
-        authMethods = Object.keys(data).map((key) => ({ path: key, ...data[key] }));
+        const { data } = await this.api.sys.authListEnabledMethods();
+        authMethods = this.api.responseObjectToArray(data, 'path');
       } catch (error) {
         // swallow this error
       }

@@ -35,7 +35,7 @@ const appConfig = {
     throwUnlessParallelizable: true,
   },
   hinting: isTest,
-  tests: isTest,
+  tests: !isProd,
   sourcemaps: {
     enabled: !isProd,
   },
@@ -49,7 +49,7 @@ const appConfig = {
       './node_modules/@hashicorp/design-system-tokens/dist/products/css',
       './node_modules/ember-basic-dropdown/',
       './node_modules/ember-power-select/',
-      './node_modules/@hashicorp/vault-reporting/dist/styles',
+      './node_modules/@hashicorp-internal/vault-reporting/dist/styles',
     ],
   },
   minifyCSS: {

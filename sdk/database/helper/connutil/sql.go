@@ -143,6 +143,7 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 
 	var username string
 	var password string
+
 	if !c.SelfManaged {
 		// Default behavior
 		username = c.Username
@@ -154,6 +155,9 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		if !c.DisableEscaping {
 			username = url.PathEscape(c.Username)
 		}
+
+		// The exception for MySQL passwords specifically comes from https://github.com/hashicorp/vault/issues/7834
+		// Due, presumably, to uneveness in the way different sql engines handle the pseudo-URLs of DSNs.
 		if (c.Type != "mysql") && !c.DisableEscaping {
 			password = url.PathEscape(c.Password)
 		}

@@ -29,3 +29,11 @@ func entVerifySignatureWithOptions(p *Policy, input, context []byte, sigBytes []
 func entRotateInMemory(p *Policy, entry *KeyEntry, rand io.Reader) error {
 	return fmt.Errorf("unsupported key type %v", p.Type)
 }
+
+func entEncryptWithOptions(p *Policy, opts EncryptionOptions, value []byte) ([]byte, error) {
+	return nil, fmt.Errorf("unsupported key type %v", p.Type)
+}
+
+func entDecryptWithOptions(p *Policy, opts EncryptionOptions, value []byte) ([]byte, error) {
+	return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
+}

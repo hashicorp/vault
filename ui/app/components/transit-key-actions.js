@@ -169,6 +169,16 @@ export default class TransitKeyActions extends Component {
     this.props.encodedBase64 = !this.props.encodedBase64;
   }
 
+  @action updateContext(newValue) {
+    this.props.context = newValue;
+    this.props = { ...this.props }; // Trigger reactivity
+  }
+
+  @action updateNonce(newValue) {
+    this.props.nonce = newValue;
+    this.props = { ...this.props }; // Trigger reactivity
+  }
+
   @action clearSpecificProps(arrayToClear) {
     arrayToClear.forEach((prop) => (this.props[prop] = null));
   }

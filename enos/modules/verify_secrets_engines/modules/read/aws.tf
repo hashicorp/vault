@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 module "verify_aws_secrets_engine" {
-  count  = var.verify_aws_secrets_engine ? 1 : 0
+  count  = var.aws_enabled ? 1 : 0
   source = "./aws"
 
   create_state            = var.create_state

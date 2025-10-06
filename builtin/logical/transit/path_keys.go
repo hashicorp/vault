@@ -299,6 +299,10 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("invalid parameter set %s for key type %s", parameterSet, keyType)), logical.ErrInvalidRequest
 		}
+	case "aes128-cbc":
+		polReq.KeyType = keysutil.KeyType_AES128_CBC
+	case "aes256-cbc":
+		polReq.KeyType = keysutil.KeyType_AES256_CBC
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -321,12 +325,8 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.ManagedKeyUUID = keyId
 	}
 
-	if polReq.KeyType.CMACSupported() && !constants.IsEnterprise {
-		return logical.ErrorResponse(ErrCmacEntOnly.Error()), logical.ErrInvalidRequest
-	}
-
-	if polReq.KeyType.IsPQC() && !constants.IsEnterprise {
-		return logical.ErrorResponse(ErrPQCEntOnly.Error()), logical.ErrInvalidRequest
+	if polReq.KeyType.IsEnterpriseOnly() && !constants.IsEnterprise {
+		return logical.ErrorResponse(fmt.Sprintf(ErrKeyTypeEntOnly, polReq.KeyType)), logical.ErrInvalidRequest
 	}
 
 	p, upserted, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
@@ -457,7 +457,7 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 	}
 
 	switch p.Type {
-	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
+	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305, keysutil.KeyType_AES128_CBC, keysutil.KeyType_AES256_CBC:
 		retKeys := map[string]int64{}
 		for k, v := range p.Keys {
 			retKeys[k] = v.DeprecatedCreationTime

@@ -268,13 +268,24 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 
 	// send an event indicating if the rotation was a success or failure
 	rotated := false
-	defer func() {
+	defer func(s *staticAccount, credType *v5.CredentialType) {
 		if rotated {
+			b.Logger().Info("successfully rotated static role", "name", roleName, "ttl", s.CredentialTTL().Seconds())
 			b.dbEvent(ctx, "rotate", "", roleName, true)
+			recordDatabaseObservation(ctx, b, nil, role.DBName, ObservationTypeDatabaseRotateStaticRoleSuccess,
+				AdditionalDatabaseMetadata{key: "role_name", value: roleName},
+				AdditionalDatabaseMetadata{key: "credential_type", value: credType.String()},
+				AdditionalDatabaseMetadata{key: "credential_ttl", value: s.CredentialTTL().String()},
+				AdditionalDatabaseMetadata{key: "rotation_period", value: s.RotationPeriod.String()},
+				AdditionalDatabaseMetadata{key: "rotation_schedule", value: s.RotationSchedule},
+				AdditionalDatabaseMetadata{key: "next_vault_rotation", value: s.NextVaultRotation.String()})
 		} else {
 			b.dbEvent(ctx, "rotate-fail", "", roleName, false)
+			recordDatabaseObservation(ctx, b, nil, role.DBName, ObservationTypeDatabaseRotateStaticRoleFailure,
+				AdditionalDatabaseMetadata{key: "role_name", value: roleName},
+				AdditionalDatabaseMetadata{key: "credential_type", value: credType.String()})
 		}
-	}()
+	}(role.StaticAccount, &role.CredentialType) // argument is evaluated now, but since it's a pointer should refer correctly to updated values
 
 	// If there is a WAL entry related to this Role, the corresponding WAL ID
 	// should be stored in the Item's Value field.
@@ -284,7 +295,7 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 
 	resp, err := b.setStaticAccount(ctx, s, input)
 	if err != nil {
-		logger.Error("unable to rotate credentials in periodic function", "error", err)
+		logger.Error("unable to rotate credentials in periodic function", "name", roleName, "error", err.Error())
 
 		// Increment the priority enough so that the next call to this method
 		// likely will not attempt to rotate it, as a back-off of sorts
@@ -315,6 +326,7 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 	if err := b.pushItem(item); err != nil {
 		logger.Warn("unable to push item on to queue", "error", err)
 	}
+
 	rotated = true
 	return true
 }
@@ -486,21 +498,9 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 
 		switch input.Role.CredentialType {
 		case v5.CredentialTypePassword:
-			generator, err := newPasswordGenerator(input.Role.CredentialConfig)
+			newPassword, err := b.generateNewPassword(ctx, input.Role.CredentialConfig, dbConfig.PasswordPolicy, dbi)
 			if err != nil {
-				return output, fmt.Errorf("failed to construct credential generator: %s", err)
-			}
-
-			// Fall back to database config-level password policy if not set on role
-			if generator.PasswordPolicy == "" {
-				generator.PasswordPolicy = dbConfig.PasswordPolicy
-			}
-
-			// Generate the password
-			newPassword, err := generator.generate(ctx, b, dbi.database)
-			if err != nil {
-				b.CloseIfShutdown(dbi, err)
-				return output, fmt.Errorf("failed to generate password: %s", err)
+				return output, err
 			}
 
 			// Set new credential in WAL entry and update user request
@@ -514,15 +514,9 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 			// Set new credential in static account
 			input.Role.StaticAccount.Password = newPassword
 		case v5.CredentialTypeRSAPrivateKey:
-			generator, err := newRSAKeyGenerator(input.Role.CredentialConfig)
+			public, private, err := b.generateNewKeypair(input.Role.CredentialConfig)
 			if err != nil {
-				return output, fmt.Errorf("failed to construct credential generator: %s", err)
-			}
-
-			// Generate the RSA key pair
-			public, private, err := generator.generate(b.GetRandomReader())
-			if err != nil {
-				return output, fmt.Errorf("failed to generate RSA key pair: %s", err)
+				return output, err
 			}
 
 			// Set new credential in WAL entry and update user request
@@ -586,6 +580,44 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 
 	// The WAL has been deleted, return new setStaticAccountOutput without it
 	return &setStaticAccountOutput{RotationTime: lvr}, nil
+}
+
+// Returns a new password, error.
+func (b *databaseBackend) generateNewPassword(ctx context.Context, credentialConfig map[string]interface{}, passwordPolicy string, dbi *dbPluginInstance) (string, error) {
+	generator, err := newPasswordGenerator(credentialConfig)
+	if err != nil {
+		return "", fmt.Errorf("failed to construct credential generator: %s", err)
+	}
+
+	// Fall back to database config-level password policy if not set on role
+	if generator.PasswordPolicy == "" {
+		generator.PasswordPolicy = passwordPolicy
+	}
+
+	// Generate the password
+	newPassword, err := generator.generate(ctx, b, dbi.database)
+	if err != nil {
+		b.CloseIfShutdown(dbi, err)
+		return "", fmt.Errorf("failed to generate password: %s", err)
+	}
+
+	return newPassword, nil
+}
+
+// Returns a new public key, private key, error.
+func (b *databaseBackend) generateNewKeypair(credentialConfig map[string]interface{}) ([]byte, []byte, error) {
+	generator, err := newRSAKeyGenerator(credentialConfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to construct credential generator: %s", err)
+	}
+
+	// Generate the RSA key pair
+	public, private, err := generator.generate(b.GetRandomReader())
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to generate RSA key pair: %s", err)
+	}
+
+	return public, private, nil
 }
 
 // initQueue preforms the necessary checks and initializations needed to perform

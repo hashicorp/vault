@@ -3141,7 +3141,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	sysView := ts.System().(extendedSystemView)
+	sysView := ts.core.router.MatchingSystemView(ctx, fmt.Sprintf("auth/token/%s", req.Path))
+	if sysView == nil {
+		return logical.ErrorResponse("got nil system view"), ErrInternalError
+	}
 
 	var backendMaxTTL time.Duration
 

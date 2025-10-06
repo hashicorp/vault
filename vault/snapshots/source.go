@@ -30,6 +30,18 @@ func (m *manualUploadSource) Type(_ context.Context) string {
 	return "manual"
 }
 
-func (m *manualUploadSource) ReadCloser(_ context.Context) (io.ReadCloser, error) {
-	return m.r, nil
+func (m *manualUploadSource) ReadCloser(ctx context.Context) (io.ReadCloser, error) {
+	return &ctxAwareReadCloser{ctx, m.r}, nil
+}
+
+type ctxAwareReadCloser struct {
+	ctx context.Context
+	io.ReadCloser
+}
+
+func (c *ctxAwareReadCloser) Read(p []byte) (n int, err error) {
+	if c.ctx.Err() != nil {
+		return 0, c.ctx.Err()
+	}
+	return c.ReadCloser.Read(p)
 }

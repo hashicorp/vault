@@ -871,3 +871,98 @@ func TestFieldTypeMethods(t *testing.T) {
 		})
 	}
 }
+
+// TestRecoverSourcePathFieldData verifies that source path data is correctly
+// extracted from the path
+func TestRecoverSourcePathFieldData(t *testing.T) {
+	backend := &Backend{
+		Paths: []*Path{
+			{
+				Pattern: "path/" + GenericNameRegex("name") + "/type/" + GenericNameRegex("type"),
+				Fields: map[string]*FieldSchema{
+					"name": {
+						Type:     TypeString,
+						Required: true,
+					},
+					"type": {
+						Type:     TypeString,
+						Required: true,
+					},
+					// content won't be present in the path
+					"content": {
+						Type:     TypeString,
+						Required: true,
+					},
+				},
+			},
+		},
+	}
+	testCases := []struct {
+		name       string
+		path       string
+		sourcePath string
+		wantName   string
+		wantType   string
+		wantError  bool
+	}{
+		{
+			name:      "no source path errors",
+			path:      "path/foo/type/bar",
+			wantError: true,
+		},
+		{
+			name:       "non matching paths errors",
+			path:       "path/foo/type/bar",
+			sourcePath: "other/baz/type/qux",
+			wantError:  true,
+		},
+		{
+			name:       "missing path element errors",
+			path:       "path/foo/type/bar",
+			sourcePath: "path/foo/type",
+			wantError:  true,
+		},
+		{
+			name:       "different name",
+			path:       "path/foo/type/bar",
+			sourcePath: "path/other/type/bar",
+			wantName:   "other",
+			wantType:   "bar",
+		},
+		{
+			name:       "different type",
+			path:       "path/foo/type/bar",
+			sourcePath: "path/foo/type/other",
+			wantName:   "foo",
+			wantType:   "other",
+		},
+		{
+			name:       "different name and type",
+			path:       "path/foo/type/bar",
+			sourcePath: "path/other/type/qux",
+			wantName:   "other",
+			wantType:   "qux",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := &logical.Request{
+				Operation:         logical.RecoverOperation,
+				Path:              tc.path,
+				RecoverSourcePath: tc.sourcePath,
+			}
+			data, err := backend.RecoverSourcePathFieldData(req)
+			if tc.wantError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			if tc.wantName != "" {
+				require.Equal(t, tc.wantName, data.Get("name"))
+			}
+			if tc.wantType != "" {
+				require.Equal(t, tc.wantType, data.Get("type"))
+			}
+		})
+	}
+}

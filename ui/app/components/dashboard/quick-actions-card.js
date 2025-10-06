@@ -45,14 +45,9 @@ export default class DashboardQuickActionsCard extends Component {
     switch (this.selectedAction) {
       case 'Find KV secrets':
         return {
-          title: 'Secret path',
-          subText: 'Path of the secret you want to read.',
+          isKV: true,
           buttonText: 'Read secrets',
-          model: 'kv/metadata',
           route: 'vault.cluster.secrets.backend.kv.secret.index',
-          nameKey: 'path',
-          queryObject: { pathToSecret: '', backend: this.selectedEngine.id },
-          objectKeys: ['path', 'id'],
         };
       case 'Generate credentials for database':
         return {

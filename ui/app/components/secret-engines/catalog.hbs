@@ -1,0 +1,77 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::PageHeader class="page-header" as |PH|>
+  <PH.Breadcrumb>
+    <Hds::Breadcrumb data-test-breadcrumbs>
+      <Hds::Breadcrumb::Item @text="Secrets" @route="vault.cluster.secrets.backends" />
+      <Hds::Breadcrumb::Item @text="Enable secret engine" @current={{true}} />
+    </Hds::Breadcrumb>
+  </PH.Breadcrumb>
+</Hds::PageHeader>
+
+{{#if @pluginCatalogError}}
+  <div class="has-bottom-padding-m">
+    <Hds::Alert @type="inline" @color="warning" data-test-inline-alert as |A|>
+      <A.Title>Plugin information unavailable</A.Title>
+      <A.Description>
+        Unable to fetch current plugin information. Using static plugin data instead. Some plugins may not show current
+        details.
+      </A.Description>
+    </Hds::Alert>
+  </div>
+{{/if}}
+
+{{#each this.pluginCategoriesList as |category|}}
+  {{#let (this.getMountTypesByCategory category) as |categorized|}}
+    {{! Only display the category if it has any enabled or disabled plugins }}
+    {{#if (or categorized.enabled.length categorized.disabled.length)}}
+      <div class="has-top-padding-m has-bottom-padding-s">
+        <Hds::Text::Display @tag="h2" size="400" class="is-flex align-items-center">
+          {{capitalize category}}
+          {{#if (eq category "external")}}
+            <Hds::Button
+              @text=""
+              @color="tertiary"
+              @icon="info"
+              @size="small"
+              @isIconOnly={{true}}
+              @ariaLabel="Information about external plugins"
+              class="has-left-margin-xs"
+              {{on "click" this.openExternalPluginsHelp}}
+            />
+          {{/if}}
+        </Hds::Text::Display>
+      </div>
+      <div class="flex row-wrap row-gap-16 column-gap-16 has-bottom-padding-m">
+        {{! Enabled plugins }}
+        {{#each categorized.enabled as |type|}}
+          <EnabledPluginCard @type={{type}} @setMountType={{@setMountType}} />
+        {{/each}}
+
+        {{! Vertical separator if both enabled and disabled plugins exist }}
+        {{#if (and categorized.enabled.length categorized.disabled.length)}}
+          <div class="selectable-engines-vertical-divider has-top-bottom-margin-12"></div>
+        {{/if}}
+
+        {{! Disabled plugins }}
+        {{#each categorized.disabled as |type|}}
+          <DisabledPluginCard
+            @type={{type}}
+            @handleDisabledPluginClick={{this.handleDisabledPluginClick}}
+            @handleDisabledPluginKeyDown={{this.handleDisabledPluginKeyDown}}
+          />
+        {{/each}}
+      </div>
+    {{/if}}
+  {{/let}}
+{{/each}}
+
+<PluginDocumentationFlyout
+  @isOpen={{this.showFlyout}}
+  @plugin={{this.flyoutPlugin}}
+  @pluginType={{this.flyoutPluginType}}
+  @onClose={{this.closeFlyout}}
+/>

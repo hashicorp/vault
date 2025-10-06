@@ -63,19 +63,23 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 				Deprecated:  true,
 				Type:        framework.TypeBool,
 				Description: "Query utilization for configured billing period",
+				Query:       true,
 			},
 			"start_time": {
 				Type:        framework.TypeTime,
 				Description: "Start of query interval",
+				Query:       true,
 			},
 			"end_time": {
 				Type:        framework.TypeTime,
 				Description: "End of query interval",
+				Query:       true,
 			},
 			"limit_namespaces": {
 				Type:        framework.TypeInt,
 				Default:     0,
 				Description: "Limit query output by namespaces",
+				Query:       true,
 			},
 		},
 		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-query"][0]),
@@ -85,6 +89,42 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.handleClientMetricQuery,
 				Summary:  "Report the client count metrics, for this namespace and all child namespaces.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+						Fields: map[string]*framework.FieldSchema{
+							"start_time": {
+								Type:        framework.TypeTime,
+								Description: "The start time of the query interval.",
+							},
+							"end_time": {
+								Type:        framework.TypeTime,
+								Description: "The end time of the query interval.",
+							},
+							"by_namespace": {
+								Type:        framework.TypeSlice,
+								Description: "A list of usage counts broken down by namespace. Each element is an object containing namespace name, counts, and mounts.",
+							},
+							"total": {
+								Type:        framework.TypeMap,
+								Description: "Aggregated usage counts across all namespaces.",
+							},
+							"months": {
+								Type:        framework.TypeSlice,
+								Description: "A list of objects, each representing monthly client count data.",
+							},
+						},
+					}},
+					http.StatusNoContent: {{
+						Description: http.StatusText(http.StatusNoContent),
+					}},
+					http.StatusBadRequest: {{
+						Description: http.StatusText(http.StatusBadRequest),
+					}},
+					http.StatusInternalServerError: {{
+						Description: http.StatusText(http.StatusInternalServerError),
+					}},
+				},
 			},
 		},
 	}
@@ -107,6 +147,50 @@ func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.handleMonthlyActivityCount,
 				Summary:  "Report the number of clients for this month, for this namespace and all child namespaces.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+						Fields: map[string]*framework.FieldSchema{
+							"by_namespace": {
+								Type:        framework.TypeSlice,
+								Description: "A list of usage counts broken down by namespace. Each element is an object containing namespace name, counts, and mounts.",
+							},
+							"entity_clients": {
+								Type:        framework.TypeInt,
+								Description: "The number of unique entity clients for the month.",
+							},
+							"non_entity_clients": {
+								Type:        framework.TypeInt,
+								Description: "The number of unique non-entity clients for the month.",
+							},
+							"clients": {
+								Type:        framework.TypeInt,
+								Description: "The total number of unique clients for the month.",
+							},
+							"secret_syncs": {
+								Type:        framework.TypeInt,
+								Description: "The number of secret synchronizations for the month.",
+							},
+							"acme_clients": {
+								Type:        framework.TypeInt,
+								Description: "The number of ACME clients for the month.",
+							},
+							"months": {
+								Type:        framework.TypeSlice,
+								Description: "A list of objects, each representing monthly client count data.",
+							},
+						},
+					}},
+					http.StatusNoContent: {{
+						Description: http.StatusText(http.StatusNoContent),
+					}},
+					http.StatusBadRequest: {{
+						Description: http.StatusText(http.StatusBadRequest),
+					}},
+					http.StatusInternalServerError: {{
+						Description: http.StatusText(http.StatusInternalServerError),
+					}},
+				},
 			},
 		},
 	}
@@ -128,15 +212,18 @@ func (b *SystemBackend) activityPaths() []*framework.Path {
 				"start_time": {
 					Type:        framework.TypeTime,
 					Description: "Start of query interval",
+					Query:       true,
 				},
 				"end_time": {
 					Type:        framework.TypeTime,
 					Description: "End of query interval",
+					Query:       true,
 				},
 				"format": {
 					Type:        framework.TypeString,
 					Description: "Format of the file. Either a CSV or a JSON file with an object per line.",
 					Default:     "json",
+					Query:       true,
 				},
 			},
 
@@ -147,6 +234,20 @@ func (b *SystemBackend) activityPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleClientExport,
 					Summary:  "Returns a deduplicated export of all clients that had activity within the provided start and end times for this namespace and all child namespaces.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: http.StatusText(http.StatusOK),
+						}},
+						http.StatusNoContent: {{
+							Description: http.StatusText(http.StatusNoContent),
+						}},
+						http.StatusBadRequest: {{
+							Description: http.StatusText(http.StatusBadRequest),
+						}},
+						http.StatusInternalServerError: {{
+							Description: http.StatusText(http.StatusInternalServerError),
+						}},
+					},
 				},
 			},
 		},
@@ -171,16 +272,19 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 					Default:     12,
 					Description: "Number of months to report if no start date specified.",
 					Deprecated:  true,
+					Query:       true,
 				},
 				"retention_months": {
 					Type:        framework.TypeInt,
 					Default:     ActivityLogMinimumRetentionMonths,
 					Description: "Number of months of client data to retain. Setting to 0 will clear all existing data.",
+					Query:       true,
 				},
 				"enabled": {
 					Type:        framework.TypeString,
 					Default:     "default",
 					Description: "Enable or disable collection of client count: enable, disable, or default.",
+					Query:       true,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["activity-config"][0]),
@@ -193,6 +297,43 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 						OperationSuffix: "configuration",
 					},
 					Summary: "Read the client count tracking configuration.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: http.StatusText(http.StatusOK),
+							Fields: map[string]*framework.FieldSchema{
+								"retention_months": {
+									Type:        framework.TypeInt,
+									Description: "The number of months of client data to retain.",
+								},
+								"enabled": {
+									Type:        framework.TypeString,
+									Description: "The current state of client count collection.",
+								},
+								"queries_available": {
+									Type:        framework.TypeBool,
+									Description: "Indicates if activity queries are available.",
+								},
+								"reporting_enabled": {
+									Type:        framework.TypeBool,
+									Description: "Indicates if automated license reporting is enabled.",
+								},
+								"billing_start_timestamp": {
+									Type:        framework.TypeTime,
+									Description: "The timestamp for the start of the billing period.",
+								},
+								"minimum_retention_months": {
+									Type:        framework.TypeInt,
+									Description: "The minimum retention period required.",
+								},
+							},
+						}},
+						http.StatusBadRequest: {{
+							Description: http.StatusText(http.StatusBadRequest),
+						}},
+						http.StatusInternalServerError: {{
+							Description: http.StatusText(http.StatusInternalServerError),
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleActivityConfigUpdate,
@@ -200,6 +341,17 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 						OperationVerb: "configure",
 					},
 					Summary: "Enable or disable collection of client count, set retention period, or set default reporting period.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: http.StatusText(http.StatusOK),
+						}},
+						http.StatusBadRequest: {{
+							Description: http.StatusText(http.StatusBadRequest),
+						}},
+						http.StatusInternalServerError: {{
+							Description: http.StatusText(http.StatusInternalServerError),
+						}},
+					},
 				},
 			},
 		},
@@ -215,15 +367,18 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 				"start_time": {
 					Type:        framework.TypeTime,
 					Description: "Start of query interval",
+					Query:       true,
 				},
 				"end_time": {
 					Type:        framework.TypeTime,
 					Description: "End of query interval",
+					Query:       true,
 				},
 				"format": {
 					Type:        framework.TypeString,
 					Description: "Format of the file. Either a CSV or a JSON file with an object per line.",
 					Default:     "json",
+					Query:       true,
 				},
 			},
 
@@ -234,6 +389,20 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleClientExport,
 					Summary:  "Report the client count metrics, for this namespace and all child namespaces.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: http.StatusText(http.StatusOK),
+						}},
+						http.StatusNoContent: {{
+							Description: http.StatusText(http.StatusNoContent),
+						}},
+						http.StatusBadRequest: {{
+							Description: http.StatusText(http.StatusBadRequest),
+						}},
+						http.StatusInternalServerError: {{
+							Description: http.StatusText(http.StatusInternalServerError),
+						}},
+					},
 				},
 			},
 		},

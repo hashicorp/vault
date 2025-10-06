@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -178,7 +179,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 		return b.acmeNewAccountCreateHandler(acmeCtx, userCtx, contacts, termsOfServiceAgreed, r, eabData)
 	}
 
-	return b.acmeNewAccountUpdateHandler(acmeCtx, userCtx, contacts, status, eabData)
+	return b.acmeNewAccountUpdateHandler(acmeCtx, userCtx, contacts, status, r, eabData)
 }
 
 func formatNewAccountResponse(acmeCtx *acmeContext, acct *acmeAccount, eabData map[string]interface{}) *logical.Response {
@@ -316,10 +317,15 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 	// > The server returns this account object in a 201 (Created) response,
 	// > with the account URL in a Location header field.
 	resp.Data[logical.HTTPStatusCode] = http.StatusCreated
+
+	b.pkiObserver.RecordPKIObservation(acmeCtx, r, observe.ObservationTypePKIAcmeNewAccount,
+		observe.NewAdditionalPKIMetadata("key_id", userCtx.Kid),
+	)
+
 	return resp, nil
 }
 
-func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, status string, eabData map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, status string, r *logical.Request, eabData map[string]interface{}) (*logical.Response, error) {
 	if !userCtx.Existing {
 		return nil, fmt.Errorf("cannot submit to account updates without a 'kid': %w", ErrMalformed)
 	}
@@ -369,6 +375,12 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 	}
 
 	resp := formatAccountResponse(acmeCtx, account)
+
+	b.pkiObserver.RecordPKIObservation(acmeCtx, r, observe.ObservationTypePKIAcmeUpdateAccount,
+		observe.NewAdditionalPKIMetadata("key_id", account.KeyId),
+		observe.NewAdditionalPKIMetadata("status", account.Status),
+	)
+
 	return resp, nil
 }
 

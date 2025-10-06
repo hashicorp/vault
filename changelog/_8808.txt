@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Add new logical client request interfaces for read, write, delete, list operations.
+```

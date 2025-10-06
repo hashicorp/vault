@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -704,6 +705,14 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 			resp.AddWarning("tidy_revocation_queue=true and tidy_cross_cluster_revoked_certs=true can only be set on the active node of the primary cluster unless a local mount is used; this option has been ignored.")
 		}
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKITidy,
+		observe.NewAdditionalPKIMetadata("tidy_cert_store", tidyCertStore),
+		observe.NewAdditionalPKIMetadata("tidy_revoked_certs", tidyRevokedCerts),
+		observe.NewAdditionalPKIMetadata("tidy_revoked_cert_issuer_associations", tidyRevokedAssocs),
+		observe.NewAdditionalPKIMetadata("tidy_expired_issuers", tidyExpiredIssuers),
+		observe.NewAdditionalPKIMetadata("tidy_backup_bundle", tidyBackupBundle),
+	)
 
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }

@@ -4808,6 +4808,192 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 		},
 
 		{
+			Pattern: "mounts/auth/(?P<path>.+?)/tune$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mounts-auth",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"path": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["auth_tune"][0]),
+				},
+				"default_lease_ttl": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
+				},
+				"max_lease_ttl": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
+				},
+				"description": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
+				},
+				"audit_non_hmac_request_keys": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_request_keys"][0]),
+				},
+				"audit_non_hmac_response_keys": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
+				},
+				"options": {
+					Type:        framework.TypeKVPairs,
+					Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
+				},
+				"listing_visibility": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
+				},
+				"passthrough_request_headers": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
+				},
+				"allowed_response_headers": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
+				},
+				"token_type": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["token_type"][0]),
+				},
+				"user_lockout_config": {
+					Type:        framework.TypeMap,
+					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
+				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+				},
+				"identity_token_key": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
+					Required:    false,
+				},
+				"trim_request_trailing_slashes": {
+					Type:     framework.TypeBool,
+					Required: false,
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleAuthTuneRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "tuning-information",
+					},
+					Summary:     "Reads the given auth path's configuration.",
+					Description: "This endpoint does NOT require sudo capability. For the sudo-required alternative, use the endpoint at `sys/auth/[auth-path]/tune`.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"description": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"default_lease_ttl": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"max_lease_ttl": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"force_no_cache": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"external_entropy_access": {
+									Type:     framework.TypeBool,
+									Required: false,
+								},
+								"token_type": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"audit_non_hmac_request_keys": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"audit_non_hmac_response_keys": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"listing_visibility": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"passthrough_request_headers": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"allowed_response_headers": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"allowed_managed_keys": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"user_lockout_counter_reset_duration": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+								"user_lockout_threshold": {
+									Type:     framework.TypeInt64, // uint64
+									Required: false,
+								},
+								"user_lockout_duration": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+								"user_lockout_disable": {
+									Type:     framework.TypeBool,
+									Required: false,
+								},
+								"options": {
+									Type:     framework.TypeMap,
+									Required: false,
+								},
+								"plugin_version": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"identity_token_key": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"trim_request_trailing_slashes": {
+									Type:     framework.TypeBool,
+									Required: false,
+								},
+							},
+						}},
+					},
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleAuthTuneWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "tune",
+						OperationSuffix: "configuration-parameters",
+					},
+					Summary:     "Tune configuration parameters for a given auth path.",
+					Description: "This endpoint does NOT require sudo capability. The same functionality can be achieved with sudo via the `sys/auth/[auth-path]/tune` endpoint.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["auth_tune"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["auth_tune"][1]),
+		},
+
+		{
 			Pattern: "mounts/(?P<path>.+?)",
 
 			DisplayAttrs: &framework.DisplayAttributes{

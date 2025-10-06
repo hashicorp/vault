@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki (enterprise): add new batch/certs endpoint to allow multiple certificates to be fetched at once.
+```

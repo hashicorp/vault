@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -764,4 +765,56 @@ func TestRouter_AllowSnapshotReadPaths(t *testing.T) {
 			require.Equal(t, tc.expect, r.AllowSnapshotReadPath(ctx, "foo/"+tc.queryPath))
 		})
 	}
+}
+
+// TestRouter_StripPrefix_RecoverSourcePath tests that when a request is made
+// with a RecoverSourcePath set, the router will strip the namespace and mount
+// prefix from that path before sending the request to the RecoverOperation
+// callback
+func TestRouter_StripPrefix_RecoverSourcePath(t *testing.T) {
+	b := &framework.Backend{
+		PathsSpecial: &logical.Paths{
+			AllowSnapshotRead: []string{"foo/*"},
+		},
+	}
+	b.Paths = []*framework.Path{
+		{
+			Pattern: "foo/" + framework.GenericNameWithAtRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type: framework.TypeString,
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.RecoverOperation: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+					// return the name from the path, unless RecoverSourcePath is set, in which
+					// case return the name from the recover source path.
+					name := data.Get("name").(string)
+					if req.RecoverSourcePath != "" {
+						d, err := b.RecoverSourcePathFieldData(req)
+						if err != nil {
+							return nil, err
+						}
+						name = d.Get("name").(string)
+					}
+					return &logical.Response{Data: map[string]interface{}{"name": name}}, nil
+				},
+			},
+		},
+	}
+
+	r := NewRouter()
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+
+	meUUID, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	err = r.Mount(b, "test/", &MountEntry{UUID: meUUID, Accessor: "testaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace}, view)
+	resp, err := r.Route(namespace.RootContext(context.Background()), &logical.Request{
+		Path:              "test/foo/new-path",
+		Operation:         logical.RecoverOperation,
+		RecoverSourcePath: "test/foo/old-path",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "old-path", resp.Data["name"])
 }

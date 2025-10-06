@@ -6,25 +6,24 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { blur, click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
 import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
-  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    baseSetup(this);
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
+    this.backend = 'kv-engine';
+    this.path = 'my-secret';
+    this.metadata = { current_version: 4 };
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
@@ -113,26 +112,13 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
 
     hooks.beforeEach(async function () {
       this.endpoint = `${encodePath(this.backend)}/data/${encodePath(this.path)}`;
+      this.patchStub = sinon
+        .stub(this.owner.lookup('service:api').secrets, 'kvV2Patch')
+        .resolves(EXAMPLE_KV_DATA_CREATE_RESPONSE);
     });
 
     test('patch data from kv editor form', async function (assert) {
-      assert.expect(3);
-      this.server.patch(this.endpoint, (schema, req) => {
-        const payload = JSON.parse(req.requestBody);
-        const expected = {
-          data: { bar: null, foo: 'foovalue', aKey: '1', bKey: 'null' },
-          options: {
-            cas: this.metadata.currentVersion,
-          },
-        };
-        assert.true(true, `PATCH request made to ${this.endpoint}`);
-        assert.propEqual(
-          payload,
-          expected,
-          `payload: ${JSON.stringify(payload)} matches expected: ${JSON.stringify(payload)}`
-        );
-        return EXAMPLE_KV_DATA_CREATE_RESPONSE;
-      });
+      assert.expect(2);
 
       await this.renderComponent();
       // patch existing, delete and create a new key key
@@ -147,64 +133,52 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       await fillIn(FORM.keyInput('new'), 'bKey');
       await fillIn(FORM.valueInput('new'), 'null');
       await click(FORM.saveBtn);
-      const [route] = this.transitionStub.lastCall.args;
-      assert.strictEqual(
-        route,
-        'vault.cluster.secrets.backend.kv.secret.index',
-        `it transitions on save to: ${route}`
+
+      const payload = {
+        data: { bar: null, foo: 'foovalue', aKey: '1', bKey: 'null' },
+        options: {
+          cas: this.metadata.current_version,
+        },
+      };
+      assert.true(
+        this.patchStub.calledWith(this.path, this.backend, payload),
+        'Patch request made with correct args'
+      );
+      assert.true(
+        this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.index'),
+        'transitions to overview route on save'
       );
     });
 
     test('patch data from json form', async function (assert) {
-      assert.expect(3);
-      this.server.patch(this.endpoint, (schema, req) => {
-        const payload = JSON.parse(req.requestBody);
-        const expected = {
-          data: { foo: 'foovalue', bar: null, number: 1 },
-          options: {
-            cas: 4,
-          },
-        };
-        assert.true(true, `PATCH request made to ${this.endpoint}`);
-        assert.propEqual(
-          payload,
-          expected,
-          `payload: ${JSON.stringify(payload)} matches expected: ${JSON.stringify(payload)}`
-        );
-        return EXAMPLE_KV_DATA_CREATE_RESPONSE;
-      });
+      assert.expect(2);
+
       await this.renderComponent();
       await click(GENERAL.inputByAttr('JSON'));
       await waitUntil(() => find('.cm-editor'));
       const editor = codemirror();
       setCodeEditorValue(editor, '{ "foo": "foovalue", "bar":null, "number":1 }');
       await click(FORM.saveBtn);
-      const [route] = this.transitionStub.lastCall.args;
-      assert.strictEqual(
-        route,
-        'vault.cluster.secrets.backend.kv.secret.index',
-        `it transitions on save to: ${route}`
+
+      const payload = {
+        data: { foo: 'foovalue', bar: null, number: 1 },
+        options: {
+          cas: this.metadata.current_version,
+        },
+      };
+      assert.true(
+        this.patchStub.calledWith(this.path, this.backend, payload),
+        'Patch request made with correct args'
+      );
+      assert.true(
+        this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.index'),
+        'transitions to overview route on save'
       );
     });
 
     // this assertion confirms submit allows empty values
     test('empty string values from kv editor form', async function (assert) {
       assert.expect(1);
-      this.server.patch(this.endpoint, (schema, req) => {
-        const payload = JSON.parse(req.requestBody);
-        const expected = {
-          data: { foo: '', aKey: '', bKey: '' },
-          options: {
-            cas: this.metadata.currentVersion,
-          },
-        };
-        assert.propEqual(
-          payload,
-          expected,
-          `payload: ${JSON.stringify(payload)} matches expected: ${JSON.stringify(payload)}`
-        );
-        return EXAMPLE_KV_DATA_CREATE_RESPONSE;
-      });
 
       await this.renderComponent();
       await click(FORM.patchEdit());
@@ -218,26 +192,22 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       await fillIn(FORM.keyInput('new'), 'bKey');
       await fillIn(FORM.valueInput('new'), '');
       await click(FORM.saveBtn);
+
+      const payload = {
+        data: { foo: '', aKey: '', bKey: '' },
+        options: {
+          cas: this.metadata.current_version,
+        },
+      };
+      assert.true(
+        this.patchStub.calledWith(this.path, this.backend, payload),
+        'Patch request made with correct args'
+      );
     });
 
     // this assertion confirms submit allows empty values
     test('empty string value from json form', async function (assert) {
       assert.expect(1);
-      this.server.patch(this.endpoint, (schema, req) => {
-        const payload = JSON.parse(req.requestBody);
-        const expected = {
-          data: { foo: '' },
-          options: {
-            cas: this.metadata.currentVersion,
-          },
-        };
-        assert.propEqual(
-          payload,
-          expected,
-          `payload: ${JSON.stringify(payload)} matches expected: ${JSON.stringify(payload)}`
-        );
-        return EXAMPLE_KV_DATA_CREATE_RESPONSE;
-      });
 
       await this.renderComponent();
       await click(GENERAL.inputByAttr('JSON'));
@@ -245,37 +215,41 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const editor = codemirror();
       setCodeEditorValue(editor, '{ "foo": "" }');
       await click(FORM.saveBtn);
+
+      const payload = {
+        data: { foo: '' },
+        options: {
+          cas: this.metadata.current_version,
+        },
+      };
+      assert.true(
+        this.patchStub.calledWith(this.path, this.backend, payload),
+        'Patch request made with correct args'
+      );
     });
 
     test('patch data without metadata permissions', async function (assert) {
-      assert.expect(3);
+      assert.expect(2);
       this.metadata = null;
-      this.server.patch(this.endpoint, (schema, req) => {
-        const payload = JSON.parse(req.requestBody);
-        const expected = {
-          data: { aKey: '1' },
-          options: {
-            cas: this.subkeysMeta.version,
-          },
-        };
-        assert.true(true, `PATCH request made to ${this.endpoint}`);
-        assert.propEqual(
-          payload,
-          expected,
-          `payload: ${JSON.stringify(payload)} matches expected: ${JSON.stringify(payload)}`
-        );
-        return EXAMPLE_KV_DATA_CREATE_RESPONSE;
-      });
 
       await this.renderComponent();
       await fillIn(FORM.keyInput('new'), 'aKey');
       await fillIn(FORM.valueInput('new'), '1');
       await click(FORM.saveBtn);
-      const [route] = this.transitionStub.lastCall.args;
-      assert.strictEqual(
-        route,
-        'vault.cluster.secrets.backend.kv.secret.index',
-        `it transitions on save to: ${route}`
+
+      const payload = {
+        data: { aKey: '1' },
+        options: {
+          cas: this.subkeysMeta.version,
+        },
+      };
+      assert.true(
+        this.patchStub.calledWith(this.path, this.backend, payload),
+        'Patch request made with correct args'
+      );
+      assert.true(
+        this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.index'),
+        'transitions to overview route on save'
       );
     });
   });
@@ -284,13 +258,15 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
     hooks.beforeEach(async function () {
       this.endpoint = `${encodePath(this.backend)}/data/${encodePath(this.path)}`;
       this.flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'info');
+      const errors = { errors: ['Something went wrong. This should not have happened!'] };
+      this.patchStub = sinon
+        .stub(this.owner.lookup('service:api').secrets, 'kvV2Patch')
+        .rejects(getErrorResponse(errors, 500));
     });
 
     test('if no changes from kv editor form', async function (assert) {
       assert.expect(3);
-      this.server.patch(this.endpoint, () =>
-        overrideResponse(500, `Request made to: ${this.endpoint}. This should not have happened!`)
-      );
+
       await this.renderComponent();
       await click(FORM.saveBtn);
       assert.dom(GENERAL.messageError).doesNotExist('PATCH request is not made');
@@ -310,9 +286,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
 
     test('if no changes from json form', async function (assert) {
       assert.expect(3);
-      this.server.patch(this.endpoint, () =>
-        overrideResponse(500, `Request made to: ${this.endpoint}. This should not have happened!`)
-      );
+
       await this.renderComponent();
       await click(GENERAL.inputByAttr('JSON'));
       await waitUntil(() => find('.cm-editor'));
@@ -335,10 +309,10 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
 
   module('it passes error', function (hooks) {
     hooks.beforeEach(async function () {
-      this.endpoint = `${encodePath(this.backend)}/data/${encodePath(this.path)}`;
-      this.server.patch(this.endpoint, () => {
-        return overrideResponse(403);
-      });
+      const errors = { errors: ['permission denied'] };
+      this.patchStub = sinon
+        .stub(this.owner.lookup('service:api').secrets, 'kvV2Patch')
+        .rejects(getErrorResponse(errors, 403));
     });
 
     test('to kv editor form', async function (assert) {

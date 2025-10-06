@@ -64,3 +64,63 @@ func TestRotateRoot(t *testing.T) {
 		t.Fatalf("the password should have changed, but it didn't")
 	}
 }
+
+// TestRotateRootWithRotationUrl relies on a docker ldap server with a suitable person object (cn=admin,dc=planetexpress,dc=com)
+// with bindpassword "admin". `PrepareTestContainer` does this for us. - see the backend_test for more details
+// It checks that rotation url is being used instead of the main URL and assures that setting rotation url does't
+// replace main URL
+func TestRotateRootWithRotationUrl(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip("skipping rotate root tests because VAULT_ACC is unset")
+	}
+	ctx := context.Background()
+
+	b, store := createBackendWithStorage(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	defer cleanup()
+	const mainDummyUrl = "ldap://example.com:389"
+	// set up auth config
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Storage:   store,
+		Data: map[string]interface{}{
+			"url":          mainDummyUrl,
+			"binddn":       cfg.BindDN,
+			"bindpass":     cfg.BindPassword,
+			"userdn":       cfg.UserDN,
+			"rotation_url": cfg.Url,
+		},
+	}
+
+	resp, err := b.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("failed to initialize ldap auth config: %s", err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to initialize ldap auth config: %s", resp.Data["error"])
+	}
+
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/rotate-root",
+		Storage:   store,
+	}
+
+	_, err = b.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("failed to rotate password: %s", err)
+	}
+
+	newCFG, err := b.Config(ctx, req)
+	if newCFG.BindDN != cfg.BindDN {
+		t.Fatalf("BindDN %q changed unexpectedly, found new value %q", cfg.BindDN, newCFG.BindDN)
+	}
+	if newCFG.BindPassword == cfg.BindPassword {
+		t.Fatalf("the password should have changed, but it didn't")
+	}
+	// expecting the newCFG url to be "ldap://example.com:389"
+	if newCFG.Url != mainDummyUrl {
+		t.Fatalf("URL %q changed unexpectedly, found new value %q", mainDummyUrl, newCFG.Url)
+	}
+}

@@ -24,10 +24,6 @@ export default Model.extend(KeyMixin, {
     });
   }),
 
-  dataAsJSONString: computed('secretData', function () {
-    return JSON.stringify(this.secretData, null, 2);
-  }),
-
   isAdvancedFormat: computed('secretData', function () {
     const data = this.secretData;
     return data && Object.keys(data).some((key) => typeof data[key] !== 'string');

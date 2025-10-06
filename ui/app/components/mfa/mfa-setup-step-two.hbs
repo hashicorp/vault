@@ -3,51 +3,27 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<div ...attributes>
-  <p>
-    TOTP Multi-factor authentication (MFA) can be enabled here if it is required by your administrator. This will ensure that
-    you are not prevented from logging into Vault in the future, once MFA is fully enforced.
-  </p>
-  <div class="field has-top-margin-l">
+<Mfa::SplashCard @header={{@header}} @description={{@description}} data-test-step-two>
+
+  <:alerts>
     <MessageError @errorMessage={{this.error}} />
     {{#if @warning}}
-      <Hds::Alert
-        @type="inline"
-        @color="highlight"
-        class="has-bottom-margin-s has-top-margin-l"
-        data-test-mfa-enabled-warning
-        as |A|
-      >
+      <Hds::Alert @type="inline" @color="highlight" class="has-bottom-margin-s" data-test-mfa-enabled-warning as |A|>
         <A.Title>MFA enabled</A.Title>
         <A.Description>{{@warning}}</A.Description>
       </Hds::Alert>
-    {{else}}
-      <div class="list-item-row">
-        <div class="center-display">
-          <QrCode
-            @text={{@qrCode}}
-            @colorLight="#F7F7F7"
-            @width={{155}}
-            @height={{155}}
-            @correctLevel="L"
-            data-test-qrcode
-          />
-        </div>
-      </div>
-      <div class="has-top-margin-s">
-        <div class="info-table-row has-no-shadow">
-          <div class="column info-table-row-edit"><Icon @name="alert-triangle-fill" class="has-text-highlight" /></div>
-          <p class="is-size-8">
-            After you leave this page, this QR code will be removed and
-            <strong>cannot</strong>
-            be regenerated.
-          </p>
-        </div>
-      </div>
     {{/if}}
-    <div class="is-flex-start has-gap has-top-margin-l">
-      <Hds::Button @text="Restart setup" @color="critical" id="restart" {{on "click" this.restartSetup}} data-test-restart />
-      <Hds::Button @text="Done" id="cancel" {{on "click" this.redirectPreviousPage}} data-test-done />
-    </div>
-  </div>
-</div>
+  </:alerts>
+
+  <:qrCode>
+    {{#if @qrCode}}
+      <Mfa::QrCodeCard @qrCode={{@qrCode}} />
+    {{/if}}
+  </:qrCode>
+
+  <:actions>
+    <Hds::Button @text="Restart setup" @color="critical" id="restart" {{on "click" this.restartSetup}} data-test-restart />
+    <Hds::Button @text="Done" id="cancel" {{on "click" this.redirectPreviousPage}} data-test-done />
+  </:actions>
+
+</Mfa::SplashCard>

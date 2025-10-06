@@ -174,7 +174,6 @@
     "ini": "1.3.8",
     "kind-of": "6.0.3",
     "micromatch": "4.0.8",
-    "node-notifier": "8.0.2",
     "nth-check": "2.0.1",
     "prismjs": "1.30.0",
     "rollup": "2.79.2",
@@ -214,13 +213,12 @@
   },
   "dependencies": {
     "@babel/core": "7.26.10",
-    "@hashicorp/design-system-components": "4.18.2",
+    "@hashicorp-internal/vault-reporting": "file:vault-reporting/0.8.0.tgz",
+    "@hashicorp/design-system-components": "4.20.1",
     "@hashicorp/vault-client-typescript": "hashicorp/vault-client-typescript",
-    "@hashicorp/vault-reporting": "portal:./vault-reporting",
     "ember-auto-import": "2.10.0",
     "handlebars": "4.7.8",
     "highlight.js": "10.7.3",
-    "node-notifier": "8.0.2",
     "posthog-js": "^1.202.2",
     "uuid": "9.0.1"
   },

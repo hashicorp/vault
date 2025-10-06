@@ -30,7 +30,7 @@ import type { HTMLElementEvent } from 'vault/forms';
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {object} defaultView - The `FormView` (see the interface below) data to render the initial view.
  * @param {object} initialFormState - sets selectedAuthMethod and showAlternateView based on the login form configuration computed in parent component
- * @param {function} onSuccess - callback after the initial authentication request, if an mfaRequirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
+ * @param {function} handleAuthResponse - callback after the initial authentication request, if an mfaRequirement exists the parent renders the mfa form otherwise it fires the loginAndTransition task in the auth controller
  * @param {array} visibleMountTypes - array of auth method types that have mounts with listing_visibility="unauth"
  * */
 
@@ -38,8 +38,8 @@ interface Args {
   alternateView: FormView | null;
   cluster: ClusterModel;
   defaultView: FormView;
+  handleAuthResponse: CallableFunction;
   initialFormState: { initialAuthType: string; showAlternate: boolean };
-  onSuccess: CallableFunction;
   visibleMountTypes: string[];
 }
 

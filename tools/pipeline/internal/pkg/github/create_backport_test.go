@@ -8,7 +8,7 @@ import (
 	"errors"
 	"testing"
 
-	libgithub "github.com/google/go-github/v68/github"
+	libgithub "github.com/google/go-github/v74/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
 	"github.com/stretchr/testify/require"
@@ -276,13 +276,77 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 
 	defaultActiveVersions := map[string]*releases.Version{
 		// main is never going to be in here as it's assumed it's always active
-		"1.19.x": {CEActive: true, LTS: true},
+		"1.20.x": {CEActive: true},
+		"1.19.x": {CEActive: false, LTS: true},
 		"1.18.x": {CEActive: false},
-		"1.17.x": {CEActive: false},
 		"1.16.x": {CEActive: true, LTS: true},
 	}
 
-	defaultChangedFiles := &ListChangedFilesRes{
+	noChangedFiles := &ListChangedFilesRes{
+		Files:  changed.Files{},
+		Groups: changed.FileGroups{},
+	}
+
+	allowedInactiveCEChangedFiles := &ListChangedFilesRes{
+		Files: changed.Files{
+			{
+				File: &libgithub.CommitFile{
+					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
+					Filename: libgithub.Ptr("changelog/_2837.md"),
+				},
+				Groups: changed.FileGroups{"changelog"},
+			},
+		},
+		Groups: changed.FileGroups{
+			"changelog",
+		},
+	}
+
+	onlyEnterpriseChangedFiles := &ListChangedFilesRes{
+		Files: changed.Files{
+			{
+				File: &libgithub.CommitFile{
+					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
+					Filename: libgithub.Ptr(".github/workflows/build-artifacts-ent.yml"),
+				},
+				Groups: changed.FileGroups{"enterprise", "pipeline"},
+			},
+			{
+				File: &libgithub.CommitFile{
+					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
+					Filename: libgithub.Ptr("vault/vault_ent/go.mod"),
+				},
+				Groups: changed.FileGroups{"app", "enterprise", "gotoolchain"},
+			},
+		},
+		Groups: changed.FileGroups{
+			"app", "enterprise", "gotoolchain", "pipeline",
+		},
+	}
+
+	mixedCEAndEnterpriseChangedFiles := &ListChangedFilesRes{
+		Files: changed.Files{
+			{
+				File: &libgithub.CommitFile{
+					SHA:      libgithub.Ptr("e1c10eae02e13f5a090b9c29b0b1a3003e8ca7f6"),
+					Filename: libgithub.Ptr("go.mod"),
+				},
+				Groups: changed.FileGroups{"app", "gotoolchain"},
+			},
+			{
+				File: &libgithub.CommitFile{
+					SHA:      libgithub.Ptr("a6397662ea1d5fdde744ff3e4246377cf369197a"),
+					Filename: libgithub.Ptr("vault_ent/go.mod"),
+				},
+				Groups: changed.FileGroups{"app", "enterprise", "gotoolchain"},
+			},
+		},
+		Groups: changed.FileGroups{
+			"app", "enterprise", "gotoolchain",
+		},
+	}
+
+	allCEChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
 				File: &libgithub.CommitFile{
@@ -311,280 +375,191 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 		changedFiles   *ListChangedFilesRes
 		skip           bool
 	}{
-		"main to ce/main": {
+		// main -> ce/main
+		"main to ce/main with no changed files": {
 			baseRefVersion: "main",
 			ref:            "ce/main",
 			activeVersions: defaultActiveVersions,
-			changedFiles:   defaultChangedFiles,
-			skip:           false,
+			changedFiles:   noChangedFiles,
+			skip:           true,
 		},
-		"main to ce/main with ent and ce only files": {
+		"main to ce/main with mixed changed files": {
 			baseRefVersion: "main",
 			ref:            "ce/main",
 			activeVersions: defaultActiveVersions,
-			changedFiles: &ListChangedFilesRes{
-				Files: changed.Files{
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("e1c10eae02e13f5a090b9c29b0b1a3003e8ca7f6"),
-							Filename: libgithub.Ptr("go.mod"),
-						},
-						Groups: changed.FileGroups{"app", "gotoolchain"},
-					},
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("a6397662ea1d5fdde744ff3e4246377cf369197a"),
-							Filename: libgithub.Ptr("vault_ent/go.mod"),
-						},
-						Groups: changed.FileGroups{"app", "enterprise", "gotoolchain"},
-					},
-				},
-				Groups: changed.FileGroups{
-					"app", "enterprise", "gotoolchain",
-				},
-			},
-			skip: false,
-		},
-		"main to active release/1.19.x+ent": {
-			baseRefVersion: "1.19.x",
-			ref:            "release/1.19.x+ent",
-			activeVersions: defaultActiveVersions,
-			changedFiles:   defaultChangedFiles,
+			changedFiles:   mixedCEAndEnterpriseChangedFiles,
 			skip:           false,
 		},
-		"main to release/1.18.x+ent (inactive CE)": {
-			baseRefVersion: "1.18.x",
-			ref:            "release/1.18.x+ent",
+		"main to ce/main with enterprise only changed files": {
+			baseRefVersion: "main",
+			ref:            "ce/main",
 			activeVersions: defaultActiveVersions,
-			changedFiles:   defaultChangedFiles,
+			changedFiles:   onlyEnterpriseChangedFiles,
+			skip:           true,
+		},
+		"main to ce/main with all CE changed files": {
+			baseRefVersion: "main",
+			ref:            "ce/main",
+			activeVersions: defaultActiveVersions,
+			changedFiles:   allCEChangedFiles,
 			skip:           false,
 		},
-		"active release branch with app changes": {
-			baseRefVersion: "1.19.x",
+		"main to ce/main with allowed inactive changed files": {
+			baseRefVersion: "main",
+			ref:            "ce/main",
+			activeVersions: defaultActiveVersions,
+			changedFiles:   allowedInactiveCEChangedFiles,
+			skip:           false,
+		},
+		// main -> release branch
+		"main to release with no changed files": {
+			baseRefVersion: "main",
+			ref:            "release/1.20.x+ent",
+			activeVersions: defaultActiveVersions,
+			changedFiles:   noChangedFiles,
+			skip:           true,
+		},
+		"main to release with mixed changed files": {
+			baseRefVersion: "main",
+			ref:            "release/1.20.x+ent",
+			activeVersions: defaultActiveVersions,
+			changedFiles:   mixedCEAndEnterpriseChangedFiles,
+			skip:           false,
+		},
+		"main to release with enterprise only changed files": {
+			baseRefVersion: "main",
+			ref:            "release/1.20.x+ent",
+			activeVersions: defaultActiveVersions,
+			changedFiles:   onlyEnterpriseChangedFiles,
+			skip:           false,
+		},
+		"main to release with all CE changed files": {
+			baseRefVersion: "main",
+			ref:            "release/1.20.x+ent",
+			activeVersions: defaultActiveVersions,
+			changedFiles:   allCEChangedFiles,
+			skip:           false,
+		},
+		"main to release with allowed inactive changed files": {
+			baseRefVersion: "main",
+			ref:            "release/1.20.x+ent",
+			activeVersions: defaultActiveVersions,
+			changedFiles:   allowedInactiveCEChangedFiles,
+			skip:           false,
+		},
+		// release -> active ce/release
+		"release to ce/release with no changed files": {
+			baseRefVersion: "release/1.20.x",
+			ref:            "ce/release/1.20.x",
+			activeVersions: defaultActiveVersions,
+			changedFiles:   noChangedFiles,
+			skip:           true,
+		},
+		"release to ce/release with mixed changed files": {
+			baseRefVersion: "release/1.20.x",
+			ref:            "ce/release/1.20.x",
+			activeVersions: defaultActiveVersions,
+			changedFiles:   mixedCEAndEnterpriseChangedFiles,
+			skip:           false,
+		},
+		"release to ce/release with enterprise only changed files": {
+			baseRefVersion: "release/1.20.x",
+			ref:            "ce/release/1.20.x",
+			activeVersions: defaultActiveVersions,
+			changedFiles:   onlyEnterpriseChangedFiles,
+			skip:           true,
+		},
+		"release to ce/release with all CE changed files": {
+			baseRefVersion: "release/1.20.x",
+			ref:            "ce/release/1.20.x",
+			activeVersions: defaultActiveVersions,
+			changedFiles:   allCEChangedFiles,
+			skip:           false,
+		},
+		"release to ce/release with allowed inactive changed files": {
+			baseRefVersion: "release/1.20.x",
+			ref:            "ce/release/1.20.x",
+			activeVersions: defaultActiveVersions,
+			changedFiles:   allowedInactiveCEChangedFiles,
+			skip:           false,
+		},
+		// release -> inactive ce/release
+		"release to inactive ce/release with no changed files": {
+			baseRefVersion: "release/1.19.x",
 			ref:            "ce/release/1.19.x",
 			activeVersions: defaultActiveVersions,
-			changedFiles:   defaultChangedFiles,
-			skip:           false,
+			changedFiles:   noChangedFiles,
+			skip:           true,
 		},
-		"active release branch to CE with only ent changes": {
-			baseRefVersion: "1.19.x",
+		"release to inactive ce/release with mixed changed files": {
+			baseRefVersion: "release/1.19.x",
 			ref:            "ce/release/1.19.x",
 			activeVersions: defaultActiveVersions,
-			changedFiles: &ListChangedFilesRes{
-				Files: changed.Files{
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr(".github/workflows/build-artifacts-ent.yml"),
-						},
-						Groups: changed.FileGroups{"enterprise", "pipeline"},
-					},
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr("vault/vault_ent/go.mod"),
-						},
-						Groups: changed.FileGroups{"app", "enterprise", "gotoolchain"},
-					},
-				},
-				Groups: changed.FileGroups{
-					"app", "enterprise", "gotoolchain", "pipeline",
-				},
-			},
-			skip: true,
+			changedFiles:   mixedCEAndEnterpriseChangedFiles,
+			skip:           true,
 		},
-		"inactive ce branch with no allowed group changes": {
-			baseRefVersion: "1.18.x",
-			ref:            "ce/release/1.18.x",
+		"release to inactive ce/release with enterprise only changed files": {
+			baseRefVersion: "release/1.19.x",
+			ref:            "ce/release/1.19.x",
 			activeVersions: defaultActiveVersions,
-			changedFiles: &ListChangedFilesRes{
-				Files: changed.Files{
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr("vault/go.mod"),
-						},
-						Groups: changed.FileGroups{"app", "gotoolchain"},
-					},
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr("vault/vault_ent/go.mod"),
-						},
-						Groups: changed.FileGroups{"app", "enterprise", "gotoolchain"},
-					},
-				},
-				Groups: changed.FileGroups{
-					"app", "enterprise", "gotoolchain",
-				},
-			},
-
-			skip: true,
+			changedFiles:   onlyEnterpriseChangedFiles,
+			skip:           true,
 		},
-		"inactive ce with with pipeline changes": {
-			baseRefVersion: "1.18.x",
-			ref:            "ce/release/1.18.x",
+		"release to inactive ce/release with all CE changed files": {
+			baseRefVersion: "release/1.19.x",
+			ref:            "ce/release/1.19.x",
 			activeVersions: defaultActiveVersions,
-			changedFiles: &ListChangedFilesRes{
-				Files: changed.Files{
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr(".github/workflows/build.yml"),
-						},
-						Groups: changed.FileGroups{"pipeline"},
-					},
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr("vault/go.mod"),
-						},
-						Groups: changed.FileGroups{"app", "gotoolchain"},
-					},
-				},
-				Groups: changed.FileGroups{
-					"app", "gotoolchain", "pipeline",
-				},
-			},
-
-			skip: false,
+			changedFiles:   allCEChangedFiles,
+			skip:           true,
 		},
-		"inactive ce with with docs changes": {
-			baseRefVersion: "1.17.x",
-			ref:            "ce/release/1.17.x",
+		"release to inactive ce/release with allowed inactive changed files": {
+			baseRefVersion: "release/1.19.x",
+			ref:            "ce/release/1.19.x",
 			activeVersions: defaultActiveVersions,
-			changedFiles: &ListChangedFilesRes{
-				Files: changed.Files{
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr("website/content/docs/index.mdx"),
-						},
-						Groups: changed.FileGroups{"docs"},
-					},
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr("vault/go.mod"),
-						},
-						Groups: changed.FileGroups{"app", "gotoolchain"},
-					},
-				},
-				Groups: changed.FileGroups{
-					"app", "gotoolchain", "pipeline",
-				},
-			},
-
-			skip: false,
+			changedFiles:   allowedInactiveCEChangedFiles,
+			skip:           false,
 		},
-		"inactive ce with with changelog changes": {
-			baseRefVersion: "1.17.x",
-			ref:            "ce/release/1.17.x",
-			activeVersions: defaultActiveVersions,
-			changedFiles: &ListChangedFilesRes{
-				Files: changed.Files{
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr("changelog/1234.txt"),
-						},
-						Groups: changed.FileGroups{"changelog"},
-					},
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr("vault/go.mod"),
-						},
-						Groups: changed.FileGroups{"app", "gotoolchain"},
-					},
-				},
-				Groups: changed.FileGroups{
-					"app", "gotoolchain", "pipeline",
-				},
-			},
-
-			skip: false,
-		},
+		// Various corner cases
 		"empty changed files list is skipped": {
-			baseRefVersion: "1.19.x",
+			baseRefVersion: "release/1.19.x",
 			ref:            "ce/release/1.19.x",
 			activeVersions: defaultActiveVersions,
-			changedFiles: &ListChangedFilesRes{
-				Files:  changed.Files{},
-				Groups: changed.FileGroups{},
-			},
-			skip: true,
+			changedFiles:   noChangedFiles,
+			skip:           true,
 		},
 		"nil changed files list is skipped": {
-			baseRefVersion: "1.19.x",
+			baseRefVersion: "release/1.19.x",
 			ref:            "ce/release/1.19.x",
 			activeVersions: defaultActiveVersions,
 			changedFiles:   nil,
 			skip:           true,
 		},
 		"release branch with no active versions": {
-			baseRefVersion: "1.19.x",
+			baseRefVersion: "release/1.19.x",
 			ref:            "ce/release/1.19.x",
 			activeVersions: map[string]*releases.Version{},
-			changedFiles: &ListChangedFilesRes{
-				Files: changed.Files{
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr("vault/go.mod"),
-						},
-						Groups: changed.FileGroups{"app", "gotoolchain"},
-					},
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr("vault/vault_ent/go.mod"),
-						},
-						Groups: changed.FileGroups{"app", "enterprise", "gotoolchain"},
-					},
-				},
-				Groups: changed.FileGroups{
-					"app", "enterprise", "gotoolchain",
-				},
-			},
-			skip: true,
+			changedFiles:   mixedCEAndEnterpriseChangedFiles,
+			skip:           true,
 		},
 		"release branch with nil active versions": {
-			baseRefVersion: "1.19.x",
+			baseRefVersion: "release/1.19.x",
 			ref:            "ce/release/1.19.x",
 			activeVersions: nil,
-			changedFiles: &ListChangedFilesRes{
-				Files: changed.Files{
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr("vault/go.mod"),
-						},
-						Groups: changed.FileGroups{"app", "gotoolchain"},
-					},
-					{
-						File: &libgithub.CommitFile{
-							SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
-							Filename: libgithub.Ptr("vault/vault_ent/go.mod"),
-						},
-						Groups: changed.FileGroups{"app", "enterprise", "gotoolchain"},
-					},
-				},
-			},
-			skip: true,
+			changedFiles:   mixedCEAndEnterpriseChangedFiles,
+			skip:           true,
 		},
 		"missing base ref version": {
 			baseRefVersion: "",
 			ref:            "ce/main",
 			activeVersions: defaultActiveVersions,
-			changedFiles:   defaultChangedFiles,
+			changedFiles:   allCEChangedFiles,
 			skip:           true,
 		},
 		"missing ref version": {
 			baseRefVersion: "main",
 			ref:            "",
 			activeVersions: defaultActiveVersions,
-			changedFiles:   defaultChangedFiles,
+			changedFiles:   allCEChangedFiles,
 			skip:           true,
 		},
 	} {

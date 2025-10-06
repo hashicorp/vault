@@ -23,21 +23,21 @@ jobs:
       github.actor != 'dependabot[bot]' &&
       github.actor != 'hc-github-team-secure-vault-core'
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
     - name: Set up Go
-      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+      uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
       with:
         cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
         go-version-file: .go-version
 
     - name: Set up Python
-      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+      uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
       with:
         python-version: 3.x
 
     - name: Set up Security Scanner
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         repository: hashicorp/security-scanner
         token: ${{ secrets.PRODSEC_SCANNER_READ_ONLY }}

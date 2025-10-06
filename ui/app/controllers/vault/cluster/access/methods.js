@@ -12,6 +12,8 @@ import sortObjects from 'vault/utils/sort-objects';
 
 export default class VaultClusterAccessMethodsController extends Controller {
   @service flashMessages;
+  @service api;
+  @service router;
 
   @tracked authMethodOptions = [];
   @tracked selectedAuthType = null;
@@ -78,12 +80,12 @@ export default class VaultClusterAccessMethodsController extends Controller {
   *disableMethod(method) {
     const { type, path } = method;
     try {
-      yield method.destroyRecord();
+      yield this.api.sys.authDisableMethod(path);
       this.flashMessages.success(`The ${type} Auth Method at ${path} has been disabled.`);
+      this.router.transitionTo('vault.cluster.access.methods');
     } catch (err) {
-      this.flashMessages.danger(
-        `There was an error disabling Auth Method at ${path}: ${err.errors.join(' ')}.`
-      );
+      const { message } = yield this.api.parseError(err);
+      this.flashMessages.danger(`There was an error disabling Auth Method at ${path}: ${message}.`);
     } finally {
       this.methodToDisable = null;
     }

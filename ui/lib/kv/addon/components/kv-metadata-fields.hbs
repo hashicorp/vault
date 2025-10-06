@@ -3,13 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#each @metadata.formFields as |attr|}}
-  {{#if (eq attr.name "customMetadata")}}
-    <FormField @attr={{attr}} @model={{@metadata}} @modelValidations={{@modelValidations}} />
+{{#each @form.metadataFields as |field|}}
+  <FormField @attr={{field}} @model={{@form}} @modelValidations={{@modelValidations}} />
+  {{#if (eq field.name "custom_metadata")}}
     <label class="title has-top-padding-m is-4">
       Additional options
     </label>
-  {{else}}
-    <FormField @attr={{attr}} @model={{@metadata}} @modelValidations={{@modelValidations}} />
   {{/if}}
 {{/each}}

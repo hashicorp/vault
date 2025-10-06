@@ -5,7 +5,6 @@
 
 import { click, currentURL } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 const assertFields = (assert, fields, customSelectors = {}) => {
@@ -21,7 +20,8 @@ const assertFields = (assert, fields, customSelectors = {}) => {
 };
 export default (test) => {
   test('it renders mount fields', async function (assert) {
-    await click(MOUNT_BACKEND_FORM.mountType(this.type));
+    await click(GENERAL.cardContainer(this.type));
+    // This is where the "tune" parameters are rendered.
     await click(GENERAL.button('Method Options'));
     assertFields(assert, this.mountFields, this.customSelectors);
   });
@@ -32,13 +32,13 @@ export default (test) => {
     assert.strictEqual(
       currentURL(),
       `/vault/settings/auth/configure/${this.path}/configuration`,
-      `${this.type}: it mounts navigates to tune form`
+      `${this.type}: it mounts and navigates to configuration form`
     );
 
-    assertFields(assert, this.tuneFields, this.customSelectors);
+    assertFields(assert, this.configFields, this.customSelectors);
 
-    for (const toggle in this.tuneToggles) {
-      const fields = this.tuneToggles[toggle];
+    for (const toggle in this.configToggles) {
+      const fields = this.configToggles[toggle];
       await click(GENERAL.button(toggle));
       assertFields(assert, fields, this.customSelectors);
     }

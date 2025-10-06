@@ -108,6 +108,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 				"config/*",
 				"static-role/*",
 			},
+			AllowSnapshotRead: []string{"static-roles/*", "static-roles", "static-creds/*"},
 		},
 		Paths: framework.PathAppend(
 			[]*framework.Path{
@@ -130,14 +131,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minRootCredRollbackAge,
 		BackendType:       logical.TypeLogical,
-		RotateCredential: func(ctx context.Context, request *logical.Request) error {
-			name, err := b.getDatabaseConfigNameFromRotationID(request.RotationID)
-			if err != nil {
-				return err
-			}
-			_, err = b.rotateRootCredentials(ctx, request, name)
-			return err
-		},
+		RotateCredential:  b.rotateRootCredential,
 	}
 
 	b.logger = conf.Logger
@@ -493,6 +487,38 @@ func (b *databaseBackend) dbEvent(ctx context.Context,
 	err := logical.SendEvent(ctx, b, fmt.Sprintf("database/%s", operation), metadata...)
 	if err != nil && !errors.Is(err, framework.ErrNoEvents) {
 		b.Logger().Error("Error sending event", "error", err)
+	}
+}
+
+type AdditionalDatabaseMetadata struct {
+	key   string
+	value interface{}
+}
+
+func recordDatabaseObservation(ctx context.Context, b *databaseBackend, req *logical.Request, connectionName string, observationType string,
+	additionalMetadata ...AdditionalDatabaseMetadata,
+) {
+	metadata := map[string]interface{}{}
+
+	if req != nil {
+		metadata["path"] = req.Path
+		metadata["client_id"] = req.ClientID
+		metadata["entity_id"] = req.EntityID
+		metadata["request_id"] = req.ID
+	}
+
+	if connectionName != "" {
+		metadata["connection_name"] = connectionName
+	}
+
+	for _, meta := range additionalMetadata {
+		metadata[meta.key] = meta.value
+	}
+
+	err := b.RecordObservation(ctx, observationType, metadata)
+
+	if err != nil && !errors.Is(err, framework.ErrNoObservations) {
+		b.Logger().Error("error recording observation", "observationType", observationType, "error", err)
 	}
 }
 

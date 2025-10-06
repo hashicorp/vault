@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Enhanced secret engine selection dynamically displays all available plugins from the plugin catalog.
+```

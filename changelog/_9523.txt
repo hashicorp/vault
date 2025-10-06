@@ -1,0 +1,3 @@
+```release-note:improvement
+Raft: Auto-join will now allow you to enforce IPv4 on networks that allow IPv6 and dual-stack enablement, which is on by default in certain regions.
+```

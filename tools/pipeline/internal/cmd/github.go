@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/go-github/v68/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	"github.com/spf13/cobra"
 )
@@ -39,6 +39,7 @@ func newGithubCmd() *cobra.Command {
 	}
 	githubCmd.AddCommand(newGithubCopyCmd())
 	githubCmd.AddCommand(newGithubCreateCmd())
+	githubCmd.AddCommand(newGithubFindCmd())
 	githubCmd.AddCommand(newGithubListCmd())
 	githubCmd.AddCommand(newGithubSyncCmd())
 

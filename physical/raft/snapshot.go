@@ -364,7 +364,7 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 		defer close(s.doneWritingCh)
 		defer boltDB.Close()
 
-		err := loadSnapshot(boltDB, s.logger, reader, nil, false)
+		err := loadSnapshot(context.Background(), boltDB, s.logger, reader, nil, false)
 		if err != nil {
 			s.writeError = err
 			return
@@ -503,8 +503,8 @@ func snapshotName(term, index uint64) string {
 // FSM. The caller is responsible for closing the reader.
 // If pathsToFilter is not nil, the function will filter out any keys that are
 // found in the pathsToFilter tree.
-func LoadReadOnlySnapshot(fsm *FSM, snapshotFile io.ReadCloser, filterKey func(key string) bool, logger log.Logger) error {
-	return loadSnapshot(fsm.db, logger, snapshotFile, filterKey, true)
+func LoadReadOnlySnapshot(ctx context.Context, fsm *FSM, snapshotFile io.ReadCloser, filterKey func(key string) bool, logger log.Logger) error {
+	return loadSnapshot(ctx, fsm.db, logger, snapshotFile, filterKey, true)
 }
 
 // loadSnapshot loads a snapshot from a file into the supplied boltDB database.
@@ -514,7 +514,7 @@ func LoadReadOnlySnapshot(fsm *FSM, snapshotFile io.ReadCloser, filterKey func(k
 // to 1.0.
 // If pathsToFilter is not nil, the function will filter out any keys that are
 // found in the pathsToFilter tree.
-func loadSnapshot(db *bolt.DB, logger log.Logger, snapshotFile io.ReadCloser, filterKey func(key string) bool, readOnly bool) error {
+func loadSnapshot(ctx context.Context, db *bolt.DB, logger log.Logger, snapshotFile io.ReadCloser, filterKey func(key string) bool, readOnly bool) error {
 	// The delimited reader will parse full proto messages from the snapshot data.
 	protoReader := NewDelimitedReader(snapshotFile, math.MaxInt32)
 	defer protoReader.Close()
@@ -524,6 +524,11 @@ func loadSnapshot(db *bolt.DB, logger log.Logger, snapshotFile io.ReadCloser, fi
 	entry := new(pb.StorageEntry)
 	for !done {
 		err := db.Update(func(tx *bolt.Tx) error {
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("context canceled while loading snapshot: %w", ctx.Err())
+			default:
+			}
 			b, err := tx.CreateBucketIfNotExists(dataBucketName)
 			if readOnly {
 				b.FillPercent = 1.0

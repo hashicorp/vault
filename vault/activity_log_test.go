@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/mitchellh/mapstructure"
@@ -5080,5 +5081,51 @@ func TestActivityLog_partialMonthClientCountUsingWriteExport(t *testing.T) {
 				require.Equal(t, expectedCurrentMonthClients[i].ClientType, results[i].ClientType)
 			}
 		})
+	}
+}
+
+// TestValidate_CountersResponses validates the responses schema of counters endpoints
+func TestValidate_CountersResponses(t *testing.T) {
+	core, b, _ := testCoreSystemBackend(t)
+	view := core.systemBarrierView
+
+	testCases := []struct {
+		operationType string
+		path          string
+	}{
+		{
+			operationType: logical.UpdateOperation,
+			path:          "internal/counters/config",
+		},
+		{
+			operationType: logical.ReadOperation,
+			path:          "internal/counters/config",
+		},
+		{
+			operationType: logical.ReadOperation,
+			path:          "internal/counters/activity",
+		},
+		{
+			operationType: logical.ReadOperation,
+			path:          "internal/counters/activity/export",
+		},
+		{
+			operationType: logical.ReadOperation,
+			path:          "internal/counters/activity/monthly",
+		},
+	}
+
+	for _, tc := range testCases {
+		// validate the schema definition of responses
+		req := logical.TestRequest(t, logical.Operation(tc.operationType), tc.path)
+		req.Storage = view
+		resp, err := b.HandleRequest(namespace.RootContext(context.TODO()), req)
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
+		require.NoError(t, err)
 	}
 }

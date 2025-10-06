@@ -42,16 +42,87 @@ interface DisplayAttrs {
   sensitive?: boolean;
 }
 interface OpenApiAction {
+  operationId: string;
+  tags?: string[];
+  responses: Record<string, { description: string }>;
+  requestBody?: {
+    content: Record<string, { schema: { $ref: string } }>;
+    required: boolean;
+  };
   parameters: Array<{ name: string }>;
 }
 interface OpenApiPath {
   description?: string;
-  parameters: OpenApiParameter[];
+  parameters?: OpenApiParameter[];
   'x-vault-displayAttrs': DisplayAttrs;
   get?: OpenApiAction;
   post?: OpenApiAction;
   delete?: OpenApiAction;
 }
+interface Attribute {
+  name: string;
+  type: string | undefined;
+  options: {
+    editType?: string;
+    fieldGroup?: string;
+    fieldValue?: string;
+    label?: string;
+    readonly?: boolean;
+  };
+}
+interface OpenApiProp {
+  description: string;
+  type: string;
+  'x-vault-displayAttrs': {
+    name?: string;
+    value?: string | number;
+    group?: string;
+    sensitive?: boolean;
+    editType?: string;
+    description?: string;
+    identifier?: boolean;
+  };
+  items?: { type: string };
+  format?: string;
+  isId?: boolean;
+  deprecated?: boolean;
+  enum?: string[];
+}
+interface MixedAttr {
+  type?: string;
+  helpText?: string;
+  editType?: string;
+  fieldGroup: string;
+  fieldValue?: string;
+  label?: string;
+  readonly?: boolean;
+  possibleValues?: string[];
+  defaultValue?: string | number | (() => string | number);
+  sensitive?: boolean;
+  readOnly?: boolean;
+  name?: string;
+  identifier?: boolean;
+  [key: string]: unknown;
+}
+
+export type OpenApiProps = Record<string, OpenApiProp>;
+
+export type OpenApiHelpResponse = {
+  help: string;
+  openapi: {
+    paths: OpenApiPath[];
+    components: {
+      schemas: Record<string, { properties: OpenApiProps; type: string }>;
+    };
+    info: {
+      title: string;
+      version: string;
+      description: string;
+      license: { name: string; url: string };
+    };
+    openapi: string;
+  };
+};
 
 // Take object entries from the OpenAPI response and consolidate them into an object which includes itemTypes, operations, and paths
 export function reducePathsByPathName(pathsInfo: PathInfo, currentPath: [string, OpenApiPath]): PathInfo {
@@ -137,16 +208,6 @@ export function filterPathsByItemType(pathInfo: PathInfo, itemType: string): Pat
  * This object maps model names to the openAPI path that hydrates the model, given the backend path.
  */
 const OPENAPI_POWERED_MODELS = {
-  'auth-config/azure': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/cert': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/gcp': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/github': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/jwt': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/kubernetes': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/ldap': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/oidc': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/okta': (backend: string) => `/v1/auth/${backend}/config?help=1`,
-  'auth-config/radius': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'kmip/config': (backend: string) => `/v1/${backend}/config?help=1`,
   'kmip/role': (backend: string) => `/v1/${backend}/scope/example/role/example?help=1`,
   'pki/certificate/generate': (backend: string) => `/v1/${backend}/issue/example?help=1`,
@@ -160,59 +221,18 @@ const OPENAPI_POWERED_MODELS = {
   'role-ssh': (backend: string) => `/v1/${backend}/roles/example?help=1`,
 };
 
-export function getHelpUrlForModel(modelType: string, backend: string) {
-  const urlFn = OPENAPI_POWERED_MODELS[modelType as keyof typeof OPENAPI_POWERED_MODELS] as (
-    backend: string
-  ) => string;
-  if (!urlFn) return null;
-  return urlFn(backend);
+export function getHelpUrlForModel(modelType: string, backend?: string) {
+  if (modelType in OPENAPI_POWERED_MODELS && backend) {
+    const urlFn = OPENAPI_POWERED_MODELS[modelType as keyof typeof OPENAPI_POWERED_MODELS];
+    return urlFn(backend);
+  }
+  return null;
 }
 
-interface Attribute {
-  name: string;
-  type: string | undefined;
-  options: {
-    editType?: string;
-    fieldGroup?: string;
-    fieldValue?: string;
-    label?: string;
-    readonly?: boolean;
-  };
-}
-
-interface OpenApiProp {
-  description: string;
-  type: string;
-  'x-vault-displayAttrs': {
-    name: string;
-    value: string | number;
-    group: string;
-    sensitive: boolean;
-    editType?: string;
-    description?: string;
-  };
-  items?: { type: string };
-  format?: string;
-  isId?: boolean;
-  deprecated?: boolean;
-  enum?: string[];
-}
-interface MixedAttr {
-  type?: string;
-  helpText?: string;
-  editType?: string;
-  fieldGroup: string;
-  fieldValue?: string;
-  label?: string;
-  readonly?: boolean;
-  possibleValues?: string[];
-  defaultValue?: string | number | (() => string | number);
-  sensitive?: boolean;
-  readOnly?: boolean;
-  [key: string]: unknown;
-}
-
-export const expandOpenApiProps = function (props: Record<string, OpenApiProp>): Record<string, MixedAttr> {
+export const expandOpenApiProps = function (
+  props: OpenApiProps,
+  outputFormat: 'model' | 'form' = 'model'
+): Record<string, MixedAttr> {
   const attrs: Record<string, MixedAttr> = {};
   // expand all attributes
   for (const propName in props) {
@@ -229,6 +249,7 @@ export const expandOpenApiProps = function (props: Record<string, OpenApiProp>):
       sensitive,
       editType,
       description: displayDescription,
+      identifier,
     } = prop['x-vault-displayAttrs'] || {};
 
     if (type === 'integer') {
@@ -255,9 +276,10 @@ export const expandOpenApiProps = function (props: Record<string, OpenApiProp>):
       fieldGroup: group || 'default',
       readOnly: isId,
       defaultValue: value || undefined,
+      identifier,
     };
 
-    if (type === 'object' && !!value) {
+    if (type === 'object' && !!value && outputFormat !== 'form') {
       attrDefn.defaultValue = () => {
         return value;
       };
@@ -285,9 +307,31 @@ export const expandOpenApiProps = function (props: Record<string, OpenApiProp>):
         delete attrDefn[attrProp];
       }
     }
-    attrs[camelize(propName)] = attrDefn;
+
+    const key = outputFormat === 'model' ? camelize(propName) : propName;
+    attrs[key] = attrDefn;
   }
   return attrs;
+};
+
+/*
+ * extract props for post request schema from OpenAPI help response
+ * returns expanded OpenAPI props to be used in forms
+ */
+export const propsForSchema = function (helpResponse: OpenApiHelpResponse) {
+  const { openapi } = helpResponse;
+  // paths is an array but it will have a single entry with the scope we're in
+  const path = Object.values(openapi.paths)[0];
+  const schema = path?.post?.requestBody?.content['application/json']?.schema;
+  if (schema?.$ref) {
+    // $ref will be shaped like `#/components/schemas/MyResponseType
+    // this maps to the location of the item in openapi.components.schemas
+    const schemaRef = schema.$ref.replace('#/components/schemas/', '');
+    const props = openapi.components.schemas[schemaRef]?.['properties'] as OpenApiProps;
+    return expandOpenApiProps(props, 'form');
+  }
+
+  return {};
 };
 
 /**

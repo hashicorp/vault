@@ -1,0 +1,4 @@
+```release-note:improvement
+activity (enterprise): Add a cumulative namespace client count API at `sys/internal/counters/activity/cumulative`.
+For each namespace in the response it returns the sum of its own client counts and that of all its child namespaces.
+```

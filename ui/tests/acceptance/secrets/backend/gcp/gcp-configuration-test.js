@@ -42,7 +42,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
   });
 
   test('it should prompt configuration after mounting the GCP engine', async function (assert) {
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     await mountBackend(this.type, this.path);
 
     assert.strictEqual(

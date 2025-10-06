@@ -4,16 +4,17 @@
  */
 
 export type MountConfig = {
-  force_no_cache?: boolean;
-  listing_visibility?: string | boolean;
-  default_lease_ttl?: number | string;
-  max_lease_ttl?: number | string;
   allowed_managed_keys?: string[];
+  allowed_response_headers?: string[];
   audit_non_hmac_request_keys?: string[];
   audit_non_hmac_response_keys?: string[];
-  passthrough_request_headers?: string[];
-  allowed_response_headers?: string[];
+  default_lease_ttl?: number | string;
+  force_no_cache?: boolean;
   identity_token_key?: string;
+  listing_visibility?: string | boolean;
+  max_lease_ttl?: number | string;
+  passthrough_request_headers?: string[];
+  token_type?: string;
 };
 
 export type MountOptions = {

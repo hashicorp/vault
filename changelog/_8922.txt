@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/database (enterprise): Add support for reading, listing, and recovering static roles from a loaded snapshot. Also add support for reading static credentials from a loaded snapshot.
+```

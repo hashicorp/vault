@@ -15,9 +15,10 @@ import filesize from 'filesize';
  *
  * @example
  * ```js
- *   <FileToArrayBuffer @onChange={{action (mut file)}} />
+ *   <FileToArrayBuffer @onChange={{fn (mut file)}} />
  * ```
  * @param {function} onChange - The function to call when the file read is complete. Receives the file as a JS ArrayBuffer
+ * @param {string} [error] - Text to use as the error message for the file input
  * @param {string} [label] - Text to use as the label for the file input
  * @param {string} [fileHelpText] - Text to use as help under the file input
  *

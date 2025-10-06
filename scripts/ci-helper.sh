@@ -133,13 +133,16 @@ function build() {
 function prepare_ent_legal() {
   : "${PKG_NAME:="vault"}"
 
+  if [ -z "${LICENSE_DIR:-}" ]; then
+      echo "You must set LICENSE_DIR; example: export LICENSE_DIR=.release/ibm-pao/license/default" 1>&2
+      return 1
+  fi
+
   pushd "$(repo_root)"
   mkdir -p dist
-  curl -o dist/EULA.txt https://eula.hashicorp.com/EULA.txt
-  curl -o dist/TermsOfEvaluation.txt https://eula.hashicorp.com/TermsOfEvaluation.txt
+  cp -R "$LICENSE_DIR" dist/
   mkdir -p ".release/linux/package/usr/share/doc/$PKG_NAME"
-  cp dist/EULA.txt ".release/linux/package/usr/share/doc/$PKG_NAME/EULA.txt"
-  cp dist/TermsOfEvaluation.txt ".release/linux/package/usr/share/doc/$PKG_NAME/TermsOfEvaluation.txt"
+  cp -R "$LICENSE_DIR" ".release/linux/package/usr/share/doc/$PKG_NAME/"
   popd
 }
 

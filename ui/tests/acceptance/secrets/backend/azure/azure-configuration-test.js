@@ -41,7 +41,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
   test('it should prompt configuration after mounting the azure engine', async function (assert) {
     const path = `azure-${this.uid}`;
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     await mountBackend(this.type, path);
 
     assert.strictEqual(

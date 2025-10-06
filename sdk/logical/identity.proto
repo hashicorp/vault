@@ -83,6 +83,7 @@ message MFAMethodID {
   string id = 2;
   bool uses_passcode = 3;
   string name = 4;
+  bool self_enrollment_enabled = 5;
 }
 
 message MFAConstraintAny {

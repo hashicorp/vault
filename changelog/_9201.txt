@@ -1,0 +1,3 @@
+```release-note:bug
+core: Role based quotas now work for cert auth
+```

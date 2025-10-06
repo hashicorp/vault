@@ -8,8 +8,8 @@
 import base from './base';
 import chrootNamespace from './chroot-namespace';
 import clients from './clients';
-import customMessages from './custom-messages';
 import customLogin from './custom-login';
+import customMessages from './custom-messages';
 import database from './database';
 import hcpLink from './hcp-link';
 import kms from './kms';
@@ -18,6 +18,7 @@ import ldap from './ldap';
 import mfaConfig from './mfa-config';
 import mfaLogin from './mfa-login';
 import oidcConfig from './oidc-config';
+import recovery from './recovery';
 import reducedDisclosure from './reduced-disclosure';
 import replication from './replication';
 import sync from './sync';
@@ -36,6 +37,7 @@ export {
   mfaConfig,
   mfaLogin,
   oidcConfig,
+  recovery,
   reducedDisclosure,
   replication,
   sync,

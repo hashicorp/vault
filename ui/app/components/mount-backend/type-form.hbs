@@ -3,29 +3,62 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#each (array "generic" "cloud" "infra") as |category|}}
-  <Hds::Text::Display class="has-top-padding-m has-bottom-padding-s" @tag="h2" size="400">
-    {{capitalize category}}
-  </Hds::Text::Display>
-  <div class="flex row-wrap row-gap-8 column-gap-16 has-bottom-padding-m">
-    {{#each (filter-by "pluginCategory" category this.mountTypes) as |type|}}
-      <SelectableCard
-        id={{type.type}}
-        class="has-top-padding-l has-text-centered small-card"
-        @onClick={{fn @setMountType type.type}}
-        @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
-        data-test-mount-type={{type.type}}
-      >
-        <Icon @name={{type.glyph}} @size="24" class="has-bottom-margin-xs" />
-        <Hds::Text::Body @tag="h3" @size="300">
-          {{type.displayName}}
-        </Hds::Text::Body>
-        {{#if (and type.requiredFeature (not (has-feature type.requiredFeature)))}}
-          <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
-        {{/if}}
-      </SelectableCard>
-    {{/each}}
+{{! TODO: utilize plugin catalog for auth engines (currently only implemented for secret engines) }}
+{{#if (and @pluginCatalogError (eq @mountCategory this.secretMountCategory))}}
+  <div class="has-bottom-padding-m">
+    <Hds::Alert @type="inline" @color="warning" as |A|>
+      <A.Title>Plugin information unavailable</A.Title>
+      <A.Description>
+        Unable to fetch current plugin information. Using static plugin data instead. Some plugins may not show current
+        details.
+      </A.Description>
+    </Hds::Alert>
   </div>
+{{/if}}
+
+{{#each this.pluginCategoriesList as |category|}}
+  {{#let (this.getMountTypesByCategory category) as |categorized|}}
+    {{! Only display the category if it has any enabled or disabled plugins }}
+    {{#if (or categorized.enabled.length categorized.disabled.length)}}
+      <div class="has-top-padding-m has-bottom-padding-s">
+        <Hds::Text::Display @tag="h2" size="400" class="is-flex align-items-center">
+          {{capitalize category}}
+          {{#if (eq category "external")}}
+            <Hds::Button
+              @text=""
+              @color="tertiary"
+              @icon="info"
+              @size="small"
+              @isIconOnly={{true}}
+              @ariaLabel="Information about external plugins"
+              class="has-left-margin-xs"
+              {{on "click" this.openExternalPluginsHelp}}
+            />
+          {{/if}}
+        </Hds::Text::Display>
+      </div>
+      <div class="flex row-wrap row-gap-16 column-gap-16 has-bottom-padding-m">
+        {{! Display enabled plugins first }}
+        {{#each categorized.enabled as |type|}}
+          <EnabledPluginCard @type={{type}} @setMountType={{@setMountType}} />
+        {{/each}}
+
+        {{! Display vertical separator if both enabled and disabled plugins exist }}
+        {{#if (and categorized.enabled.length categorized.disabled.length)}}
+          <div class="selectable-engines-vertical-divider has-top-bottom-margin-12"></div>
+        {{/if}}
+
+        {{! Display disabled plugins at the end }}
+        {{#each categorized.disabled as |type|}}
+          <DisabledPluginCard
+            @type={{type}}
+            @handleDisabledPluginClick={{this.handleDisabledPluginClick}}
+            @handleDisabledPluginKeyDown={{this.handleDisabledPluginKeyDown}}
+          />
+        {{/each}}
+      </div>
+    {{/if}}
+  {{/let}}
 {{/each}}
 
 <div class="field is-grouped box is-fullwidth is-bottomless">
@@ -36,3 +69,11 @@
     data-test-cancel
   />
 </div>
+
+{{! Plugin Documentation Flyout }}
+<PluginDocumentationFlyout
+  @isOpen={{this.showFlyout}}
+  @plugin={{this.flyoutPlugin}}
+  @pluginType={{this.flyoutPluginType}}
+  @onClose={{this.closeFlyout}}
+/>

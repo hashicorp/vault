@@ -12,12 +12,12 @@
   <D.Content @defaultClass="popup-menu-content">
     <nav class="box menu">
       <ul class="menu-list">
-        {{#each @metadata.sortedVersions as |versionData|}}
+        {{#each (sorted-versions @metadata.versions) as |versionData|}}
           <li data-test-version={{versionData.version}}>
             {{#if @onSelect}}
               {{! TODO use Hds::Dropdown instead https://helios.hashicorp.design/components/dropdown }}
               <button
-                disabled={{or versionData.destroyed versionData.isSecretDeleted}}
+                disabled={{or versionData.destroyed (is-deleted versionData.deletion_time)}}
                 {{on "click" (fn @onSelect versionData.version D.actions)}}
                 type="button"
                 class="link {{if (loose-equal versionData.version @displayVersion) 'is-active'}}"
@@ -28,7 +28,7 @@
                   <Icon @name="x-square-fill" class="has-text-danger is-pulled-right" />
                 {{else if versionData.isSecretDeleted}}
                   <Icon @name="x-square-fill" class="has-text-grey is-pulled-right" />
-                {{else if (loose-equal versionData.version @metadata.currentVersion)}}
+                {{else if (loose-equal versionData.version @metadata.current_version)}}
                   <Icon @name="check-circle" class="has-text-success is-pulled-right" />
                 {{/if}}
               </button>
@@ -40,7 +40,7 @@
                   <Icon @name="x-square-fill" class="has-text-danger is-pulled-right" />
                 {{else if versionData.isSecretDeleted}}
                   <Icon @name="x-square-fill" class="has-text-grey is-pulled-right" />
-                {{else if (loose-equal versionData.version @metadata.currentVersion)}}
+                {{else if (loose-equal versionData.version @metadata.current_version)}}
                   <Icon @name="check-circle" class="has-text-success is-pulled-right" />
                 {{/if}}
               </LinkTo>

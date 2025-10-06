@@ -1,0 +1,3 @@
+```release-note:improvement
+api (sys/utilization-report): Added namespace filter and more granularity for secret sync data in the response.
+```

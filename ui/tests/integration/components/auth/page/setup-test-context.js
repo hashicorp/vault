@@ -14,7 +14,8 @@ export default (context) => {
   context.loginSettings = null;
   context.namespaceQueryParam = '';
   context.oidcProviderQueryParam = '';
-  context.onAuthSuccess = sinon.spy();
+  // mocking as an object with the `perform()` method because loginAndTransition is a concurrency task
+  context.loginAndTransition = { perform: sinon.spy() };
   context.onNamespaceUpdate = sinon.spy();
   context.visibleAuthMounts = false;
 
@@ -25,7 +26,7 @@ export default (context) => {
   @loginSettings={{this.loginSettings}}
   @namespaceQueryParam={{this.namespaceQueryParam}}
   @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
-  @onAuthSuccess={{this.onAuthSuccess}}
+  @loginAndTransition={{this.loginAndTransition}}
   @onNamespaceUpdate={{this.onNamespaceUpdate}}
   @visibleAuthMounts={{this.visibleAuthMounts}}
 />`);

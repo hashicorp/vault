@@ -10,7 +10,7 @@ scenario "dev_pr_replication" {
     non-dev scenario.
 
     For a full tutorial for this scenario, see here:
-    https://eng-handbook.hashicorp.services/internal-tools/enos/tutorial-vault-dev-scenario-pr-replication/
+    https://hashicorp.atlassian.net/wiki/spaces/VAULT/pages/4163469313/Enos+Tutorial
   EOF
 
   // The matrix is where we define all the baseline combinations that enos can utilize to customize
@@ -679,6 +679,8 @@ scenario "dev_pr_replication" {
     }
 
     variables {
+      ports             = global.ports
+      ipv4_cidr         = step.create_vpc.ipv4_cidr
       hosts             = step.create_primary_cluster_targets.hosts
       leader_host       = step.get_primary_cluster_ips.leader_host
       vault_addr        = step.create_primary_cluster.api_addr_localhost

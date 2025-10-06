@@ -16,6 +16,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
@@ -109,6 +110,12 @@ func CompilePlugin(t testing.TB, typ consts.PluginType, pluginVersion string, pl
 		line := []string{"build"}
 		if pluginVersion != "" {
 			line = append(line, "-ldflags", fmt.Sprintf("-X %s=%s", pluginVersionLocation, pluginVersion))
+		}
+		if constants.IsEnterprise {
+			// Under VAULT-38008, tokenutil.go got stubs, which means we now need to
+			// set the enterprise tag to avoid compiling both the _ent.go and the _stubs_oss.go
+			// files.
+			line = append(line, "-tags", "enterprise")
 		}
 		line = append(line, "-o", pluginPath, pluginMain)
 		cmd := exec.Command("go", line...)

@@ -1,13 +1,14 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
+// Package changed is a package for inspecting and categorizing changed files into groups
 package changed
 
 import (
 	"slices"
 	"strings"
 
-	gh "github.com/google/go-github/v68/github"
+	gh "github.com/google/go-github/v74/github"
 )
 
 type (
@@ -20,7 +21,7 @@ type (
 	Files []*File
 	// FileGroup is group name describing a class of file the changed file belongs to
 	FileGroup string
-	// FileGroup is a set of groups a changed file belongs to. Use FileGroups.Add() instead of append()
+	// FileGroups is a set of groups a changed file belongs to. Use FileGroups.Add() instead of append()
 	// to ensure uniqueness and ordering
 	FileGroups []FileGroup
 )
@@ -32,6 +33,7 @@ const (
 	FileGroupDocs        FileGroup = "docs"
 	FileGroupEnos        FileGroup = "enos"
 	FileGroupEnterprise  FileGroup = "enterprise"
+	FileGroupGithub      FileGroup = "github"
 	FileGroupGoApp       FileGroup = "app"
 	FileGroupGoToolchain FileGroup = "gotoolchain"
 	FileGroupPipeline    FileGroup = "pipeline"

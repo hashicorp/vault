@@ -1,0 +1,66 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Hds::Card::Container
+  @level="mid"
+  @hasBorder={{true}}
+  class="has-padding-m has-top-bottom-margin-12"
+  data-test-card-container="metadata"
+  ...attributes
+>
+  <Hds::Text::Display @size="300" @tag="h2" class="has-bottom-margin-s hds-foreground-strong">Metadata</Hds::Text::Display>
+
+  <div class="flex gap-16 is-flex-column has-top-padding-s">
+    <Hds::Form::Fieldset @layout="vertical" as |F|>
+      <F.Legend>Path</F.Legend>
+      <F.HelperText>The mount path where this secrets engine is accessible.</F.HelperText>
+      <F.Control>
+        <Hds::Layout::Flex @gap="8">
+          <Hds::Form::TextInput::Field
+            @value={{@model.secretsEngine.path}}
+            aria-label="Secret engine path"
+            autocomplete="off"
+            disabled
+            class="path-input-text"
+            name="Path"
+            data-test-input="path"
+          />
+          <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @targetToCopy=".path-input-text" />
+        </Hds::Layout::Flex>
+      </F.Control>
+    </Hds::Form::Fieldset>
+
+    <Hds::Form::Fieldset @layout="vertical" as |F|>
+      <F.Legend>Accessor</F.Legend>
+      <F.HelperText>Internal identifier used by Vault to reference this engine.</F.HelperText>
+      <F.Control>
+        <Hds::Layout::Flex @gap="8">
+          <Hds::Form::TextInput::Field
+            @value={{@model.secretsEngine.accessor}}
+            aria-label="Secret engine accessor"
+            autocomplete="off"
+            disabled
+            name="Accessor"
+            class="accessor-input-text"
+            data-test-input="accessor"
+          />
+          <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @targetToCopy=".accessor-input-text" />
+        </Hds::Layout::Flex>
+      </F.Control>
+    </Hds::Form::Fieldset>
+    <Hds::Form::Textarea::Field
+      name="description"
+      @value={{@model.secretsEngine.description}}
+      @isInvalid={{(gt @model.secretsEngine.description.length 500)}}
+      as |F|
+    >
+      <F.Label>Description</F.Label>
+      <F.HelperText>A short description of the secrets engine's purpose.</F.HelperText>
+      <F.CharacterCount @maxLength={{500}} />
+      {{#if (gt @model.secretsEngine.description.length 500)}}
+        <F.Error>Description exceeds character limit.</F.Error>
+      {{/if}}
+    </Hds::Form::Textarea::Field>
+  </div>
+</Hds::Card::Container>

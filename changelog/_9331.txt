@@ -1,0 +1,3 @@
+```release-note:change
+core: Updates post-install script to print updated license information
+```

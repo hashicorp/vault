@@ -54,4 +54,10 @@ export default class AuthService extends Service {
     authResponse: AuthResponseAuthKey | AuthResponseDataKey,
     normalizedProperties: NormalizedProps
   ): NormalizedAuthData;
+  totpValidate({
+    clusterId: string,
+    mfaRequirement: ParsedMfaRequirement,
+    authMethodType: string,
+    authMountPath: string,
+  }): Promise<AuthSuccessResponse>;
 }

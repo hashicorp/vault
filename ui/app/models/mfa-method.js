@@ -13,7 +13,17 @@ const METHOD_PROPS = {
   common: [],
   duo: ['username_format', 'secret_key', 'integration_key', 'api_hostname', 'push_info', 'use_passcode'],
   okta: ['username_format', 'mount_accessor', 'org_name', 'api_token', 'base_url', 'primary_email'],
-  totp: ['issuer', 'period', 'key_size', 'qr_size', 'algorithm', 'digits', 'skew', 'max_validation_attempts'],
+  totp: [
+    'issuer',
+    'period',
+    'key_size',
+    'qr_size',
+    'algorithm',
+    'digits',
+    'skew',
+    'max_validation_attempts',
+    'enable_self_enrollment',
+  ],
   pingid: [
     'username_format',
     'settings_file_base64',
@@ -134,11 +144,13 @@ export default class MfaMethod extends Model {
   @attr('number', {
     label: 'Key size',
     subText: 'The size in bytes of the Vault generated key.',
+    helperText: 'Byte size of the generated key.',
   })
   key_size;
   @attr('number', {
     label: 'QR size',
     subText: 'The pixel size of the generated square QR code.',
+    helperText: 'Pixel size of the QR code.',
   })
   qr_size;
   @attr('string', {
@@ -153,6 +165,7 @@ export default class MfaMethod extends Model {
     editType: 'radio',
     possibleValues: [6, 8],
     subText: 'The number digits in the generated TOTP code.',
+    helperText: 'TOTP code length.',
   })
   digits;
   @attr('number', {
@@ -163,6 +176,15 @@ export default class MfaMethod extends Model {
   })
   skew;
   @attr('number') max_validation_attempts;
+  @attr('boolean', {
+    label: 'Enable self-enrollment',
+    editType: 'toggleButton',
+    helperTextEnabled:
+      'Let end users enroll in this MFA method on their own. You still control which auth mounts, groups, or entities it applies to.',
+    helperTextDisabled:
+      'Let end users enroll in this MFA method on their own. You still control which auth mounts, groups, or entities it applies to.',
+  })
+  enable_self_enrollment;
 
   get name() {
     return this.type === 'totp' ? this.type.toUpperCase() : capitalize(this.type);

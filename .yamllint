@@ -7,4 +7,4 @@ rules:
   comments-indentation: disable
   line-length: disable
   commas:
-  	max-spaces-after: -1
+    max-spaces-after: -1

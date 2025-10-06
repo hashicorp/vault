@@ -7,11 +7,13 @@ import { service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { underscore } from 'vault/helpers/underscore';
+import AuthMethodResource from 'vault/resources/auth/method';
 
 export default Component.extend({
   store: service(),
   flashMessages: service(),
   router: service(),
+  api: service(),
 
   // Public API - either 'entity' or 'group'
   // this will determine which adapter is used to make the lookup call
@@ -25,7 +27,10 @@ export default Component.extend({
 
   init() {
     this._super(...arguments);
-    this.store.findAll('auth-method').then((methods) => {
+    this.api.sys.authListEnabledMethods().then(({ data }) => {
+      const methods = this.api
+        .responseObjectToArray(data, 'path')
+        .map((method) => new AuthMethodResource(method, this));
       this.set('authMethods', methods);
       this.set('aliasMountAccessor', methods[0].accessor);
     });

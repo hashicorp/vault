@@ -122,8 +122,8 @@ module('Integration | Component | auth | page | listing visibility', function (h
 
     test('it prioritizes auth type from canceled mfa instead of direct link for path', async function (assert) {
       assert.expect(1);
-      this.directLinkData = this.directLinkIsVisibleMount;
-      const authType = 'okta';
+      this.directLinkData = this.directLinkIsVisibleMount; // type is "oidc"
+      const authType = 'okta'; // set to a type that differs from direct link
       this.server.post(`/auth/okta/login/matilda`, () => setupTotpMfaResponse(authType));
       await this.renderComponent();
       await click(GENERAL.button('Sign in with other methods'));
@@ -131,20 +131,21 @@ module('Integration | Component | auth | page | listing visibility', function (h
       await fillInLoginFields({ username: 'matilda', password: 'password' });
       await click(GENERAL.submitButton);
       await waitFor('[data-test-mfa-description]'); // wait until MFA validation renders
-      await click(GENERAL.backButton);
+      await click(GENERAL.cancelButton);
       assert.dom(AUTH_FORM.selectMethod).hasValue(authType, 'Okta is selected in dropdown');
     });
 
     test('it prioritizes auth type from canceled mfa instead of direct link with type', async function (assert) {
       assert.expect(1);
-      this.directLinkData = this.directLinkIsJustType;
-      const authType = 'userpass';
-      this.server.post(`/auth/okta/login/matilda`, () => setupTotpMfaResponse(authType));
+      this.directLinkData = this.directLinkIsJustType; // type is "okta"
+      const authType = 'userpass'; // set to a type that differs from direct link
+      this.server.post(`/auth/userpass/login/matilda`, () => setupTotpMfaResponse(authType));
       await this.renderComponent();
       await fillIn(AUTH_FORM.selectMethod, authType);
       await fillInLoginFields({ username: 'matilda', password: 'password' });
       await click(GENERAL.submitButton);
-      await click(GENERAL.backButton);
+      await waitFor('[data-test-mfa-description]'); // wait until MFA validation renders
+      await click(GENERAL.cancelButton);
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
     });
   });

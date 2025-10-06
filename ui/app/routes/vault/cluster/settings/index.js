@@ -9,10 +9,7 @@ import { service } from '@ember/service';
 export default class SettingsIndexRouter extends Route {
   @service router;
 
-  beforeModel(transition) {
-    if (transition.targetName === this.routeName) {
-      transition.abort();
-      return this.router.replaceWith('vault.cluster.settings.mount-secret-backend');
-    }
+  redirect() {
+    return this.router.replaceWith('vault.cluster.secrets.mounts.index');
   }
 }

@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/transit: Fix error when using ed25519 keys that were imported with derivation enabled
+```

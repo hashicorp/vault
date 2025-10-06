@@ -43,12 +43,6 @@ func regexReplacer(re, repl string) Modifier {
 	}
 }
 
-func init() {
-	if signed := os.Getenv("VAULT_LICENSE_CI"); signed != "" {
-		os.Setenv(EnvVaultLicense, signed)
-	}
-}
-
 func testBaseHCL(tb testing.TB, listenerExtras string, modifiers ...Modifier) string {
 	tb.Helper()
 

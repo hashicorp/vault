@@ -181,7 +181,7 @@ globals {
     EOF
 
     verify_secrets_engines_read = <<-EOF
-      Verify that data that we've created previously is still valid, consistent, and duarable.
+      Verify that data that we've created previously is still valid, consistent, and durable.
       This includes:
         - v1/auth/userpass/*
         - v1/identity/*
@@ -189,6 +189,12 @@ globals {
         - v1/sys/policy/*
         - v1/kmip/*
         - v1/ldap/*
+    EOF
+
+    verify_secrets_engines_delete = <<-EOF
+      Verify that data that we've created previously can be deleted with no errors.
+      This includes:
+        - v1/ssh/*
     EOF
 
     verify_ui = <<-EOF

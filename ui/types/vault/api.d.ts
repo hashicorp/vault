@@ -33,6 +33,12 @@ export type HeaderMap =
     }
   | {
       wrap: string;
+    }
+  | {
+      recoverSnapshotId: string;
+    }
+  | {
+      recoverSourcePath: string;
     };
 
 export type XVaultHeaders =
@@ -44,4 +50,10 @@ export type XVaultHeaders =
     }
   | {
       'X-Vault-Wrap-TTL': string;
+    }
+  | {
+      'X-Vault-Snapshot-Id': string;
+    }
+  | {
+      'X-Vault-Recover-Source-Path': string;
     };

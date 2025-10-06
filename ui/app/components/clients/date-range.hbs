@@ -2,6 +2,7 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
+
 <div ...attributes>
   <div class="is-flex-column align-items-end">
     {{#if this.version.isEnterprise}}
@@ -12,38 +13,36 @@
         <D.ToggleButton @text="Billing start date" @color="secondary" data-test-date-range-edit />
         <D.Description @text="Current period" />
         <D.Checkmark
-          {{on "click" (fn this.updateEnterpriseDateRange @billingStartTime)}}
-          @selected={{eq this.selectedStart (this.formattedDate @billingStartTime)}}
+          {{! Pass an empty string to reset query param because the current billing period is the default }}
+          {{on "click" (fn this.updateEnterpriseDateRange "")}}
+          @selected={{this.isSelected @billingStartTime}}
           data-test-date-range-billing-start="0"
         >
-          {{this.formattedDate @billingStartTime}}
+          {{this.formatDropdownDate @billingStartTime}}
         </D.Checkmark>
         {{#if this.historicalBillingPeriods.length}}
-          <D.Separator />
+          <D.Separator class="has-bottom-margin-xs" />
           <D.Description @text="Historical periods" />
           {{#each this.historicalBillingPeriods as |period idx|}}
             <D.Checkmark
               {{on "click" (fn this.updateEnterpriseDateRange period)}}
               data-test-date-range-billing-start={{add idx 1}}
-              @selected={{eq this.selectedStart (this.formattedDate period)}}
+              @selected={{this.isSelected period}}
             >
-              {{this.formattedDate period}}
+              {{this.formatDropdownDate period}}
             </D.Checkmark>
           {{/each}}
         {{/if}}
       </Hds::Dropdown>
     {{else}}
-      {{#unless (and this.startDate this.endDate)}}
-        <Hds::Button
-          class="has-left-margin-xs"
-          @text="Set date range"
-          @icon="edit"
-          {{on "click" (fn @setEditModalVisible true)}}
-          data-test-date-range-edit
-        />
-      {{/unless}}
+      <Hds::Button
+        class="has-left-margin-xs"
+        @text="Set date range"
+        @icon="edit"
+        {{on "click" (fn @setEditModalVisible true)}}
+        data-test-date-range-edit
+      />
     {{/if}}
-
   </div>
 
   {{#if @showEditModal}}
@@ -78,7 +77,7 @@
                 @value={{this.modalStart}}
                 max={{this.previousMonth}}
                 id="start-month"
-                name="start"
+                name="modalStart"
                 {{on "change" this.updateDate}}
                 data-test-date-edit="start"
                 as |F|
@@ -92,7 +91,7 @@
                 @value={{this.modalEnd}}
                 max={{this.previousMonth}}
                 id="end-month"
-                name="end"
+                name="modalEnd"
                 {{on "change" this.updateDate}}
                 data-test-date-edit="end"
                 as |F|

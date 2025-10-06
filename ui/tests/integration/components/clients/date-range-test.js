@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, fillIn, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
@@ -20,9 +20,9 @@ module('Integration | Component | clients/date-range', function (hooks) {
   hooks.beforeEach(function () {
     Sinon.replace(timestamp, 'now', Sinon.fake.returns(new Date('2018-04-03T14:15:30')));
     this.now = timestamp.now();
-    this.startTime = '2018-01-01T14:15:30';
-    this.endTime = '2019-01-31T14:15:30';
-    this.billingStartTime = '2018-01-01T14:15:30';
+    this.startTimestamp = '2018-01-01T14:15:30';
+    this.endTimestamp = '2019-01-31T14:15:30';
+    this.billingStartTime = '';
     this.retentionMonths = 48;
     this.onChange = Sinon.spy();
     this.setEditModalVisible = Sinon.stub().callsFake((visible) => {
@@ -31,13 +31,13 @@ module('Integration | Component | clients/date-range', function (hooks) {
     this.showEditModal = false;
     this.renderComponent = async () => {
       await render(
-        hbs`<Clients::DateRange @startTime={{this.startTime}} @endTime={{this.endTime}} @onChange={{this.onChange}} @billingStartTime={{this.billingStartTime}} @retentionMonths={{this.retentionMonths}} @setEditModalVisible={{this.setEditModalVisible}} @showEditModal={{this.showEditModal}}/>`
+        hbs`<Clients::DateRange @startTimestamp={{this.startTimestamp}} @endTimestamp={{this.endTimestamp}} @onChange={{this.onChange}} @billingStartTime={{this.billingStartTime}} @retentionMonths={{this.retentionMonths}} @setEditModalVisible={{this.setEditModalVisible}} @showEditModal={{this.showEditModal}}/>`
       );
     };
   });
 
-  test('it renders prompt to set dates if no start time', async function (assert) {
-    this.startTime = undefined;
+  test('it formats modal inputs to ISO string timestamps', async function (assert) {
+    this.startTimestamp = undefined;
     await this.renderComponent();
 
     assert.dom(DATE_RANGE.dateDisplay('start')).doesNotExist();
@@ -50,18 +50,15 @@ module('Integration | Component | clients/date-range', function (hooks) {
     await fillIn(DATE_RANGE.editDate('start'), '2018-01');
     await fillIn(DATE_RANGE.editDate('end'), '2018-03');
     await click(GENERAL.submitButton);
-    assert.deepEqual(this.onChange.args[0], [
-      {
-        end_time: 1522454400,
-        start_time: 1514764800,
-      },
-    ]);
+    const { start_time, end_time } = this.onChange.lastCall.args[0];
+    assert.strictEqual(start_time, '2018-01-01T00:00:00Z', 'it formats start_time param');
+    assert.strictEqual(end_time, '2018-03-31T23:59:59Z', 'it formats end_time param');
     assert.dom(DATE_RANGE.editModal).doesNotExist('closes modal');
   });
 
-  test('it does not trigger onChange if date range invalid', async function (assert) {
+  test('it does not trigger onChange if dates are invalid', async function (assert) {
     this.owner.lookup('service:version').type = 'community';
-    this.endTime = undefined;
+    this.endTimestamp = undefined;
     await this.renderComponent();
     await click(DATE_RANGE.edit);
     await fillIn(DATE_RANGE.editDate('end'), '');
@@ -70,6 +67,8 @@ module('Integration | Component | clients/date-range', function (hooks) {
     assert.false(this.onChange.called);
 
     await fillIn(DATE_RANGE.editDate('start'), '2018-01');
+    await fillIn(DATE_RANGE.editDate('end'), '2018-04');
+    assert.dom(DATE_RANGE.validation).hasText('You cannot select the current month or beyond.');
     await fillIn(DATE_RANGE.editDate('end'), '2017-05');
     assert.dom(DATE_RANGE.validation).hasText('Start date must be before end date.');
     await click(GENERAL.submitButton);
@@ -82,7 +81,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
 
   test('it does not allow the current month to be selected as a start date or as an end date', async function (assert) {
     this.owner.lookup('service:version').type = 'community';
-    this.endTime = undefined;
+    this.endTimestamp = undefined;
     const currentMonth = format(timestamp.now(), 'yyyy-MM');
 
     await this.renderComponent();
@@ -101,5 +100,30 @@ module('Integration | Component | clients/date-range', function (hooks) {
     await fillIn(DATE_RANGE.editDate('end'), currentMonth);
     await click(GENERAL.submitButton);
     assert.false(this.onChange.called);
+  });
+
+  module('enterprise', function (hooks) {
+    hooks.beforeEach(function () {
+      this.version = this.owner.lookup('service:version');
+      this.version.type = 'enterprise';
+      this.billingStartTime = '2018-01-01T14:15:30';
+    });
+
+    test('it billing start date dropdown for enterprise', async function (assert) {
+      await this.renderComponent();
+      await click(DATE_RANGE.edit);
+      const expectedPeriods = [
+        'January 2018',
+        'January 2017',
+        'January 2016',
+        'January 2015',
+        'January 2014',
+      ];
+      const dropdownList = findAll(DATE_RANGE.dropdownOption(null));
+      dropdownList.forEach((item, idx) => {
+        const month = expectedPeriods[idx];
+        assert.dom(item).hasText(month, `dropdown index: ${idx} renders ${month}`);
+      });
+    });
   });
 });

@@ -15,3 +15,7 @@ import (
 func (c *Core) performEntPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts, ret *AuthResults) {
 	ret.Allowed = true
 }
+
+func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) *AuthResults {
+	return c.performPolicyChecksSinglePath(ctx, acl, te, req, inEntity, opts)
+}

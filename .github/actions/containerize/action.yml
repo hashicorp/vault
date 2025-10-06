@@ -38,6 +38,11 @@ outputs:
 runs:
   using: composite
   steps:
+    - if: inputs.vault-edition != 'ce' && (inputs.docker == 'true' || inputs.redhat == 'true')
+      uses: hashicorp-forge/actions-pao-tool/select-license@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
+      id: build-vault-select-license
+      with:
+        arch: ${{ matrix.goarch }}
     - id: vars
       shell: bash
       run: |
@@ -48,6 +53,8 @@ runs:
             docker_container_target='default'
             redhat_container_tags='quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ inputs.vault-version }}-ubi'
             redhat_container_target='ubi'
+            license_source='LICENSE'
+            license_dest='/usr/share/doc/vault/LICENSE.txt'
           ;;
           "ent")
             container_version='${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
@@ -55,6 +62,8 @@ runs:
             docker_container_target='default'
             redhat_container_tags='quay.io/redhat-isv-containers/5f89bb9242e382c85087dce2:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
             redhat_container_target='ubi'
+            license_source='${{ steps.build-vault-select-license.outputs.license-path }}/Softcopy'
+            license_dest='/usr/share/doc/vault/Softcopy/'
           ;;
           "ent.hsm")
             container_version='${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
@@ -62,6 +71,8 @@ runs:
             docker_container_target='ubi-hsm'
             redhat_container_tags='quay.io/redhat-isv-containers/5f89bb9242e382c85087dce2:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
             redhat_container_target='ubi-hsm'
+            license_source='${{ steps.build-vault-select-license.outputs.license-path }}/Softcopy'
+            license_dest='/usr/share/doc/vault/Softcopy/'
           ;;
           "ent.hsm.fips1403")
             container_version='${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
@@ -69,6 +80,8 @@ runs:
             docker_container_target='ubi-hsm-fips'
             redhat_container_tags='quay.io/redhat-isv-containers/5f89bb9242e382c85087dce2:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
             redhat_container_target='ubi-hsm-fips'
+            license_source='${{ steps.build-vault-select-license.outputs.license-path }}/Softcopy'
+            license_dest='/usr/share/doc/vault/Softcopy/'
           ;;
           "ent.fips1403")
             # NOTE: For compatibility we still publish the ent.fips1403 containers to different
@@ -81,6 +94,8 @@ runs:
             docker_container_target='ubi-fips'
             redhat_container_tags='quay.io/redhat-isv-containers/6283f645d02c6b16d9caeb8e:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
             redhat_container_target='ubi-fips'
+            license_source='${{ steps.build-vault-select-license.outputs.license-path }}/Softcopy'
+            license_dest='/usr/share/doc/vault/Softcopy/'
           ;;
           *)
             echo "Cannot generate container tags for unknown vault edition: ${{ inputs.vault-edition }}" 2>&1
@@ -93,6 +108,8 @@ runs:
           echo "docker-container-target=${docker_container_target}"
           echo "redhat-container-tags=${redhat_container_tags}"
           echo "redhat-container-target=${redhat_container_target}"
+          echo "license_source=${license_source}"
+          echo "license_dest=${license_dest}"
           echo "revision=$(make ci-get-revision)"
         } | tee -a "$GITHUB_OUTPUT"
     - if: inputs.docker == 'true' || inputs.redhat == 'true'
@@ -104,20 +121,28 @@ runs:
         [[ ! -d "$dest_dir" ]] && mkdir -p "$dest_dir"
         [[ ! -f "$dest_path" ]] && cp ${{ inputs.vault-binary-path }} "${dest_path}"
     - if: inputs.docker == 'true'
-      uses: hashicorp/actions-docker-build@v2.1.0
+      uses: hashicorp/actions-docker-build@ryan/VAULT-34830-allow-repo-configuration
       with:
         arch: ${{ inputs.goarch }}
         do_zip_extract_step: 'false' # Don't download and extract an already present binary
-        target: ${{ steps.vars.outputs.docker-container-target }}
-        tags: ${{ steps.vars.outputs.docker-container-tags }}
+        extra_build_args: |
+          LICENSE_SOURCE=${{ steps.vars.outputs.license_source }}
+          LICENSE_DEST=${{ steps.vars.outputs.license_dest }}
+        repo_name: ${{ inputs.vault-edition == 'ce' && 'vault' || 'vault-enterprise' }}
         revision: ${{ steps.vars.outputs.revision }}
+        tags: ${{ steps.vars.outputs.docker-container-tags }}
+        target: ${{ steps.vars.outputs.docker-container-target }}
         version: ${{ steps.vars.outputs.container-version }}
     - if: inputs.redhat == 'true'
-      uses: hashicorp/actions-docker-build@v2.1.0
+      uses: hashicorp/actions-docker-build@ryan/VAULT-34830-allow-repo-configuration
       with:
         arch: ${{ inputs.goarch }}
         do_zip_extract_step: 'false' # Don't download and extract an already present binary
+        extra_build_args: |
+          LICENSE_SOURCE=${{ steps.vars.outputs.license_source }}
+          LICENSE_DEST=${{ steps.vars.outputs.license_dest }}
         redhat_tag: ${{ steps.vars.outputs.redhat-container-tags }}
-        target: ${{ steps.vars.outputs.redhat-container-target }}
+        repo_name: ${{ inputs.vault-edition == 'ce' && 'vault' || 'vault-enterprise' }}
         revision: ${{ steps.vars.outputs.revision }}
+        target: ${{ steps.vars.outputs.redhat-container-target }}
         version: ${{ steps.vars.outputs.container-version }}

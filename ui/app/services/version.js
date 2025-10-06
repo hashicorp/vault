@@ -16,6 +16,7 @@ export default class VersionService extends Service {
   @service flags;
   @tracked features = [];
   @tracked version = null;
+  @tracked clusterName = null;
   @tracked type = null;
 
   get isEnterprise() {
@@ -71,6 +72,7 @@ export default class VersionService extends Service {
     // Fetch seal status with token to get version
     const response = yield this.store.adapterFor('cluster').sealStatus(false);
     this.version = response?.version;
+    this.clusterName = response?.cluster_name;
   }
 
   @task

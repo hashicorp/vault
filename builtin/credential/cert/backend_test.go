@@ -1449,6 +1449,40 @@ func TestBackend_organizationalUnit_singleCert(t *testing.T) {
 	})
 }
 
+// TestBackend_organization_singleCert checks validation of the Organization (O) field on a self-signed cert that is
+// trusted
+func TestBackend_organization_singleCert(t *testing.T) {
+	connState, err := testConnState(
+		"test-fixtures/root/rootcawocert.pem",
+		"test-fixtures/root/rootcawokey.pem",
+		"test-fixtures/root/rootcawocert.pem",
+		// These have been generated to last 100 years with the following Vault PKI commands:
+		// $ vault -v secrets enable pki
+		// $ vault secrets tune -max-lease-ttl=876000h pki
+		// $ vault write pki/root/generate/exported common_name=example.com organization="example" ip_sans=127.0.0.1 ttl=875999h
+	)
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcawocert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: testFactory(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepCert(t, "web", ca, "foo", allowed{organizations: "example"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizations: "exa*"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizations: "example,otherspecimen"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizations: "foo"}, false),
+			testAccStepLoginInvalid(t, connState),
+		},
+	})
+}
+
 // Test a self-signed client with URI alt names (root CA) that is trusted
 func TestBackend_uri_singleCert(t *testing.T) {
 	u, err := url.Parse("spiffe://example.com/host")
@@ -2082,6 +2116,7 @@ type allowed struct {
 	emails               string // allowed email names in SAN extension of the certificate
 	uris                 string // allowed uris in SAN extension of the certificate
 	organizational_units string // allowed OUs in the certificate
+	organizations        string // allowed Os in the certificate
 	ext                  string // required extensions in the certificate
 	metadata_ext         string // allowed metadata extensions to add to identity alias
 }
@@ -2118,6 +2153,7 @@ func testAccStepCertWithExtraParams(t *testing.T, name string, cert []byte, poli
 		"allowed_email_sans":           testData.emails,
 		"allowed_uri_sans":             testData.uris,
 		"allowed_organizational_units": testData.organizational_units,
+		"allowed_organizations":        testData.organizations,
 		"required_extensions":          testData.ext,
 		"allowed_metadata_extensions":  testData.metadata_ext,
 		"lease":                        1000,
@@ -3059,8 +3095,8 @@ func TestOcspMaxRetriesUpdate(t *testing.T) {
 						"DisplayName":"test","Policies":null,"TTL":0,"MaxTTL":0,"Period":0,
 						"AllowedNames":null,"AllowedCommonNames":null,"AllowedDNSSANs":null,
 						"AllowedEmailSANs":null,"AllowedURISANs":null,"AllowedOrganizationalUnits":null,
-						"RequiredExtensions":null,"AllowedMetadataExtensions":null,"BoundCIDRs":null,
-						"OcspCaCertificates":"","OcspEnabled":false,"OcspServersOverride":null,
+						"AllowedOrganizations":null,"RequiredExtensions":null,"AllowedMetadataExtensions":null,
+						"BoundCIDRs":null,"OcspCaCertificates":"","OcspEnabled":false,"OcspServersOverride":null,
 						"OcspFailOpen":false,"OcspQueryAllServers":false}`),
 	}
 	err = storage.Put(ctx, entry)
@@ -3074,6 +3110,62 @@ func TestOcspMaxRetriesUpdate(t *testing.T) {
 	require.NoError(t, err, "failed reading role request")
 	require.NotNil(t, resp)
 	require.Equal(t, 4, resp.Data["ocsp_max_retries"], "ocsp config didn't match expectations on legacy entry")
+}
+
+func TestRecoverPartialLoad(t *testing.T) {
+	storage := &logical.InmemStorage{}
+	ctx := context.Background()
+
+	lb, err := Factory(context.Background(), &logical.BackendConfig{
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: 300 * time.Second,
+			MaxLeaseTTLVal:     1800 * time.Second,
+		},
+		StorageView: storage,
+	})
+	require.NoError(t, err, "failed creating backend")
+
+	b, ok := lb.(*backend)
+	require.True(t, ok, "somehow the backend was the wrong type")
+
+	// There a single certificate in storage...
+	nonCACert, err := os.ReadFile(testCertPath1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := logical.StorageEntryJSON("cert/cert_a", CertEntry{
+		Name:        "cert_a",
+		Certificate: string(nonCACert),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = storage.Put(ctx, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// ...but storage doesn't actually work right now....
+	storage.FailGet(true)
+
+	// ...can we load certificates? no.
+	_, _, trustedNonCAs, _ := b.getTrustedCerts(ctx, storage, "")
+	require.Len(t, trustedNonCAs, 0, "should have no non CA certificates yet")
+
+	// We should have a cache, and it should have a retry assocaited with it.
+	trusted, _ /*complete*/ := b.getTrustedCertsFromCache("")
+	require.NotNil(t, trusted, "cache didn't exist")
+	require.NotNil(t, trusted.retry, "cache not marked with a retry")
+	// We can't verify complete because it depends on how fast the test is running (techincally)
+
+	// Make sure that we reload the cache, and repair storage. (It works now!)
+	trusted.retry.deadline = time.Now().Add(-1 * time.Second)
+	storage.FailGet(false)
+
+	// Now when we get the trusted certs, it should actually work!
+	_, _, trustedNonCAs, _ = b.getTrustedCerts(ctx, storage, "")
+	require.Len(t, trustedNonCAs, 1, "should have recovered and loaded a non-CA cert")
+	require.Equal(t, trustedNonCAs[0].Entry.Name, "cert_a", "non-CA cert name didn't match")
 }
 
 func loadCerts(t *testing.T, certFile, certKey string) tls.Certificate {

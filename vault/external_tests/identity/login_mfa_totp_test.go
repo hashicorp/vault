@@ -329,7 +329,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	// let's make sure the configID is not blocked for other users
 	doTwoPhaseLogin(t, userClient2, enginePath2, methodID, testuser2)
 
-	// let's see if user1 is able to login after 3 + 3*2 = 9 seconds
+	// let's see if user1 is able to login after 3 * (2+1) = 9 seconds
 	time.Sleep(9 * time.Second)
 	doTwoPhaseLogin(t, userClient1, enginePath1, methodID, testuser1)
 

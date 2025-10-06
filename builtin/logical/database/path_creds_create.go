@@ -87,6 +87,21 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 		}
 
+		defer func(credType *v5.CredentialType) {
+			if err == nil && (resp == nil || !resp.IsError()) {
+				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseCredentialCreateSuccess,
+					AdditionalDatabaseMetadata{key: "role_name", value: name},
+					AdditionalDatabaseMetadata{key: "credential_type", value: credType.String()},
+					AdditionalDatabaseMetadata{key: "default_ttl", value: role.DefaultTTL.String()},
+					AdditionalDatabaseMetadata{key: "max_ttl", value: role.MaxTTL.String()})
+			} else {
+				b.dbEvent(ctx, "creds-create-fail", req.Path, name, modified)
+				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseCredentialCreateFail,
+					AdditionalDatabaseMetadata{key: "role_name", value: name},
+					AdditionalDatabaseMetadata{key: "credential_type", value: credType.String()})
+			}
+		}(&role.CredentialType) // argument is evaluated now, but since it's a pointer should refer correctly to updated values
+
 		dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
 		if err != nil {
 			return nil, err
@@ -141,21 +156,9 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// Generate the credential based on the role's credential type
 		switch role.CredentialType {
 		case v5.CredentialTypePassword:
-			generator, err := newPasswordGenerator(role.CredentialConfig)
+			password, err := b.generateNewPassword(ctx, role.CredentialConfig, dbConfig.PasswordPolicy, dbi)
 			if err != nil {
-				return nil, fmt.Errorf("failed to construct credential generator: %s", err)
-			}
-
-			// Fall back to database config-level password policy if not set on role
-			if generator.PasswordPolicy == "" {
-				generator.PasswordPolicy = dbConfig.PasswordPolicy
-			}
-
-			// Generate the password
-			password, err := generator.generate(ctx, b, dbi.database)
-			if err != nil {
-				b.CloseIfShutdown(dbi, err)
-				return nil, fmt.Errorf("failed to generate password: %s", err)
+				return nil, err
 			}
 
 			// Set input credential
@@ -163,15 +166,9 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			newUserReq.Password = password
 
 		case v5.CredentialTypeRSAPrivateKey:
-			generator, err := newRSAKeyGenerator(role.CredentialConfig)
+			public, private, err := b.generateNewKeypair(role.CredentialConfig)
 			if err != nil {
-				return nil, fmt.Errorf("failed to construct credential generator: %s", err)
-			}
-
-			// Generate the RSA key pair
-			public, private, err := generator.generate(b.GetRandomReader())
-			if err != nil {
-				return nil, fmt.Errorf("failed to generate RSA key pair: %s", err)
+				return nil, err
 			}
 
 			// Set input credential
@@ -280,6 +277,10 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 		case v5.CredentialTypeRSAPrivateKey:
 			respData["rsa_private_key"] = string(role.StaticAccount.PrivateKey)
 		}
+
+		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseStaticCredentialRead,
+			AdditionalDatabaseMetadata{key: "role_name", value: name},
+			AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()})
 
 		return &logical.Response{
 			Data: respData,

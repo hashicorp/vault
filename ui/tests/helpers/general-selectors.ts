@@ -13,6 +13,8 @@ export const GENERAL = {
   breadcrumbs: '[data-test-breadcrumbs]',
   headerContainer: 'header.page-header',
   title: '[data-test-page-title]',
+  hdsPageHeaderTitle: '.hds-page-header__title',
+  hdsPageHeaderDescription: '.hds-page-header__description',
 
   /* ────── Tabs & Navigation ────── */
   tab: (name: string) => `[data-test-tab="${name}"]`,
@@ -27,7 +29,7 @@ export const GENERAL = {
   confirmButton: '[data-test-confirm-button]', // used most often on modal or confirm popups
   confirmTrigger: '[data-test-confirm-action-trigger]',
   copyButton: '[data-test-copy-button]',
-  // there should only be one save button per view (e.g. one per form) so this does not need to be dynamic
+  // there should only be one submit button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
   button: (label: string) => (label ? `[data-test-button="${label}"]` : '[data-test-button]'),
@@ -38,6 +40,13 @@ export const GENERAL = {
   listItem: (label: string) => `[data-test-list-item="${label}"]`,
   listItemLink: '[data-test-list-item-link]',
   linkedBlock: (item: string) => `[data-test-linked-block="${item}"]`,
+
+  /* ────── Tables ────── */
+  table: (title: string) => `[data-test-table="${title}"]`,
+  tableRow: (idx?: number) => (idx ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]'),
+  tableData: (idx?: number, key?: string) => `[data-test-table-row="${idx}"] [data-test-table-data="${key}"]`,
+  tableColumnHeader: (col: number, { isAdvanced = false } = {}) =>
+    `${isAdvanced ? '.hds-advanced-table__th' : 'hds-table__th'}:nth-child(${col})`, // number is not 0-indexed, first column header is 1
 
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
@@ -66,6 +75,7 @@ export const GENERAL = {
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
   textToggle: '[data-test-text-toggle]',
   filter: (name: string) => `[data-test-filter="${name}"]`,
+  textareaByAttr: (attr: string) => `textarea[name="${attr}"]`,
 
   /* ────── Code Blocks / Editor ────── */
   codemirror: `[data-test-component="code-mirror-modifier"]`,
@@ -117,6 +127,7 @@ export const GENERAL = {
   inlineAlert: '[data-test-inline-alert]',
   inlineError: '[data-test-inline-error-message]',
   messageError: '[data-test-message-error]',
+  messageDescription: '[data-test-message-error-description]',
   notFound: '[data-test-not-found]',
   validationErrorByAttr: (attr: string) => `[data-test-validation-error=${attr}]`,
   validationWarningByAttr: (attr: string) => `[data-test-validation-warning=${attr}]`,
@@ -130,10 +141,11 @@ export const GENERAL = {
   },
 
   /* ────── Pagination ────── */
-  pagination: {
-    next: '.hds-pagination-nav__arrow--direction-next',
-    prev: '.hds-pagination-nav__arrow--direction-prev',
-  },
+  pagination: '[data-test-pagination]',
+  paginationInfo: '.hds-pagination-info',
+  paginationSizeSelector: '.hds-pagination-size-selector select',
+  nextPage: '.hds-pagination-nav__arrow--direction-next',
+  prevPage: '.hds-pagination-nav__arrow--direction-prev',
 
   /* ────── Overview Cards ────── */
   overviewCard: {
@@ -145,6 +157,19 @@ export const GENERAL = {
     actionLink: (label: string) => `[data-test-overview-card="${label}"] a`,
   },
 
+  /* ────── Cards ────── */
+  cardContainer: (title: string) => `[data-test-card-container="${title}"]`,
+
+  /* ────── Modals & Flyouts ────── */
+  flyout: '[data-test-flyout]',
+  modal: {
+    container: (title: string) => `[data-test-modal=${title}]`,
+    header: (title: string) => `[data-test-modal-header=${title}]`,
+    body: (title: string) => `[data-test-modal-body=${title}]`,
+  },
+
   /* ────── Misc ────── */
-  icon: (name: string) => `[data-test-icon="${name}"]`,
+  icon: (name: string) => (name ? `[data-test-icon="${name}"]` : '[data-test-icon]'),
+  badge: (name: string) => (name ? `[data-test-badge="${name}"]` : '[data-test-badge]'),
+  tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
 };

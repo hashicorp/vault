@@ -21,11 +21,9 @@ import { task, timeout } from 'ember-concurrency';
  * route will reload the model and completely refresh the page.
  *  *
  * <KvListFilter
- *  @secrets={{this.model.secrets}}
  *  @mountPoint={{this.model.mountPoint}}
  *  @filterValue="beep/my-"
  * />
- * @param {array} secrets - An array of secret models.
  * @param {string} mountPoint - Where in the router files we're located. For this component it will always be vault.cluster.secrets.backend.kv
  * @param {string} filterValue - Full initial search value. A concatenation between the list-directory's dynamic path "path-to-secret" and the queryParam "pageFilter". For example, if we're inside the beep/ directory searching for any secret that starts with "my-" this value will equal "beep/my-".
  */

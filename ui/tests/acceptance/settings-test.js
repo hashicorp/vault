@@ -4,7 +4,6 @@
  */
 
 import { currentURL, visit, click, fillIn } from '@ember/test-helpers';
-import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,7 +12,6 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 
 module('Acceptance | secret engine mount settings', function (hooks) {
   setupApplicationTest(hooks);
@@ -28,14 +26,10 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     const path = `settings-path-${this.uid}`;
 
     // mount unsupported backend
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
 
-    assert.strictEqual(
-      currentURL(),
-      '/vault/settings/mount-secret-backend',
-      'navigates to the mount secret backend page'
-    );
-    await click(MOUNT_BACKEND_FORM.mountType(type));
+    assert.strictEqual(currentURL(), '/vault/secrets/mounts', 'navigates to the mount secret backend page');
+    await click(GENERAL.cardContainer(type));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
     await click(GENERAL.toggleInput('Default Lease TTL'));
@@ -58,10 +52,10 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     const type = 'ldap';
     const path = `ldap-${this.uid}`;
 
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     await runCmd(mountEngineCmd(type, path), false);
     await visit('/vault/secrets');
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), path);
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('view-configuration'));
     assert.strictEqual(
@@ -77,10 +71,10 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     const type = 'ssh';
     const path = `ssh-${this.uid}`;
 
-    await visit('/vault/settings/mount-secret-backend');
+    await visit('/vault/secrets/mounts');
     await runCmd(mountEngineCmd(type, path), false);
     await visit('/vault/secrets');
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), path);
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('view-configuration'));
     assert.strictEqual(

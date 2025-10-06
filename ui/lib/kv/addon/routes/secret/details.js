@@ -5,10 +5,10 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
+import { kvErrorHandler } from 'kv/utils/kv-error-handler';
 
 export default class KvSecretDetailsRoute extends Route {
-  @service store;
+  @service api;
 
   queryParams = {
     version: {
@@ -16,19 +16,28 @@ export default class KvSecretDetailsRoute extends Route {
     },
   };
 
-  model(params) {
+  async model(params) {
     const parentModel = this.modelFor('secret');
     const { backend, path } = parentModel;
-    const query = { backend, path };
+    let secret;
     // if a version is selected from the dropdown it triggers a model refresh
     // and we fire off new request for that version's secret data
-    if (params.version) {
-      query.version = params.version;
+    try {
+      const initOverride = params.version
+        ? (context) => this.api.addQueryParams(context, { version: params.version })
+        : undefined;
+      const { data, metadata } = await this.api.secrets.kvV2Read(path, backend, initOverride);
+      secret = { secretData: data, ...metadata };
+    } catch (error) {
+      const { status, response } = await this.api.parseError(error);
+      const { data, metadata, failReadErrorCode } = kvErrorHandler(status, response);
+      secret = failReadErrorCode ? { failReadErrorCode } : { secretData: data, ...metadata };
     }
-    return hash({
+
+    return {
       ...parentModel,
-      secret: this.store.queryRecord('kv/data', query),
-    });
+      secret,
+    };
   }
 
   // breadcrumbs are set in details/index.js

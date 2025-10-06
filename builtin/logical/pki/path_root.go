@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -305,6 +306,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, err
 	}
+	b.pkiCertificateCounter.AddIssuedCertificate(true)
 
 	// Build a fresh CRL
 	warnings, err = b.CrlBuilder().Rebuild(sc, true)
@@ -330,6 +332,16 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 
 	resp = addWarnings(resp, warnings)
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIGenerateRoot,
+		observe.NewAdditionalPKIMetadata("issuer_name", myIssuer.Name),
+		observe.NewAdditionalPKIMetadata("issuer_id", myIssuer.ID),
+		observe.NewAdditionalPKIMetadata("key_id", myKey.ID),
+		observe.NewAdditionalPKIMetadata("key_id", myKey.Name),
+		observe.NewAdditionalPKIMetadata("role", role.Name),
+		observe.NewAdditionalPKIMetadata("serial_number", cb.SerialNumber),
+		observe.NewAdditionalPKIMetadata("type", format),
+		observe.NewAdditionalPKIMetadata("expiration", parsedBundle.Certificate.NotAfter.String()))
 
 	return resp, nil
 }
@@ -440,6 +452,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
+	b.pkiCertificateCounter.AddIssuedCertificate(true)
 
 	if warnAboutTruncate &&
 		signingBundle.Certificate.NotAfter.Equal(parsedBundle.Certificate.NotAfter) {

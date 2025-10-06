@@ -303,10 +303,8 @@ scenario "autopilot" {
       packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
         edition = strcontains(matrix.edition, "fips1403") ? (
-          // Our eventual constraint will need to factor in each release branch that is mixed, e.g.
-          // semverconstraint(var.vault_upgrade_initial_version, "<=1.19.4-0,>=1.19.0-0 || <=1.18.10-0,>=1.18.0-0 || <=1.17.17-0,>=1.17.0-0 || <=1.16.21-0")
-          // But for now we've only got to consider before and after 1.19.4
-          semverconstraint(var.vault_upgrade_initial_version, "<1.19.4-0")
+          // Handle mixed fips1402 edition lineages.
+          semverconstraint(var.vault_upgrade_initial_version, "<1.19.4-0,>=1.19.0-0 || <1.18.15-0,>=1.18.0-0 || <1.18.0,>=1.17.0-0 || <1.16.26-0")
           ? replace(matrix.edition, "fips1403", "fips1402")
           : matrix.edition
         ) : matrix.edition
@@ -417,7 +415,8 @@ scenario "autopilot" {
       ip_version             = matrix.ip_version
       integration_host_state = step.set_up_external_integration_target.state
       leader_host            = step.get_vault_cluster_ips.leader_host
-      ports                  = global.integration_host_ports
+      ports                  = global.ports
+      ipv4_cidr              = step.create_vpc.ipv4_cidr
       vault_addr             = step.create_vault_cluster.api_addr_localhost
       vault_edition          = matrix.edition
       vault_install_dir      = local.vault_install_dir
@@ -671,6 +670,32 @@ scenario "autopilot" {
       leader_host         = step.get_updated_vault_cluster_ips.leader_host
       vault_addr          = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_root_token    = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "verify_secrets_engines_delete" {
+    description = global.description.verify_secrets_engines_delete
+    module      = module.vault_verify_secrets_engines_delete
+    depends_on = [
+      step.verify_secrets_engines_create,
+      step.verify_secrets_engines_read
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_ssh_role_delete
+    ]
+
+    variables {
+      create_state      = step.verify_secrets_engines_create.state
+      hosts             = step.get_updated_vault_cluster_ips.follower_hosts
+      leader_host       = step.get_updated_vault_cluster_ips.leader_host
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 

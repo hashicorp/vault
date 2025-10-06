@@ -55,7 +55,7 @@ func runListGithubWorkflowsCmd(cmd *cobra.Command, args []string) error {
 
 	res, err := listGithubWorkflowRuns.Run(context.TODO(), githubCmdState.Github)
 	if err != nil {
-		return fmt.Errorf("listing github workflow failures: %w", err)
+		return fmt.Errorf("listing github workflow runs: %w", err)
 	}
 
 	switch rootCfg.format {
