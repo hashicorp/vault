@@ -1,4 +1,5 @@
 name: test-ci-cleanup
+
 on:
   schedule:
     # * is a special character in YAML so you have to quote this string
@@ -7,10 +8,16 @@ on:
 jobs:
   setup:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    permissions: write-all
     outputs:
       regions: ${{steps.setup.outputs.regions}}
+      is-ent-repo: ${{ steps.metadata.outputs.is-ent-repo }}
     steps:
+      - uses: ./.github/actions/metadata
+        id: metadata
       - name: Configure AWS credentials
+        if: steps.metadata.outputs.is-ent-repo == 'false'
+        id: aws-configure
         uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
@@ -19,6 +26,12 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
+      - name: Doormat AWS Auth
+        if: steps.metadata.outputs.is-ent-repo == 'true'
+        uses: hashicorp/doormat-action@v1
+        with:
+          aws-role-arn: arn:aws:iam::505811019928:role/github_actions-vault_enterprise_ci
+          service-account: github-actions-vault-enterprise-ci@hashicorp.com
       - name: Get all regions
         id: setup
         run: |
@@ -39,6 +52,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Configure AWS credentials
+        if: needs.setup.outputs.is-ent-repo == 'false'
         id: aws-configure
         uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
         with:
@@ -49,11 +63,22 @@ jobs:
           role-skip-session-tagging: true
           role-duration-seconds: 3600
           mask-aws-account-id: false
+      - name: Doormat AWS Auth
+        if: needs.setup.outputs.is-ent-repo == 'true'
+        uses: hashicorp/doormat-action@v1
+        with:
+          aws-role-arn: arn:aws:iam::505811019928:role/github_actions-vault_enterprise_ci
+          service-account: github-actions-vault-enterprise-ci@hashicorp.com
+      - name: Get AWS Account ID
+        id: aws-info
+        run: |
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "aws-account-id=$AWS_ACCOUNT_ID" | tee -a "$GITHUB_OUTPUT"
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Configure
         run: |
           cp enos/ci/aws-nuke.yml .
-          sed -i "s/ACCOUNT_NUM/${{ steps.aws-configure.outputs.aws-account-id }}/g" aws-nuke.yml
+          sed -i "s/ACCOUNT_NUM/${{ steps.aws-info.outputs.aws-account-id }}/g" aws-nuke.yml
           sed -i "s/TIME_LIMIT/${TIME_LIMIT}/g" aws-nuke.yml
       # We don't care if cleanup succeeds or fails, because dependencies be dependenceies,
       # we'll fail on actually actionable things in the quota steep afterwards.
@@ -76,6 +101,8 @@ jobs:
         region: ${{ fromJSON(needs.setup.outputs.regions) }}
     steps:
       - name: Configure AWS credentials
+        if: needs.setup.outputs.is-ent-repo == 'false'
+        id: aws-configure
         uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
@@ -84,6 +111,12 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
+      - name: Doormat AWS Auth
+        if: needs.setup.outputs.is-ent-repo == 'true'
+        uses: hashicorp/doormat-action@v1
+        with:
+          aws-role-arn: arn:aws:iam::505811019928:role/github_actions-vault_enterprise_ci
+          service-account: github-actions-vault-enterprise-ci@hashicorp.com
       # Currently just checking VPC limits across all region, can add more checks here in future
       - name: Check AWS Quotas
         run: awslimitchecker -S "VPC" -r ${{matrix.region}}
