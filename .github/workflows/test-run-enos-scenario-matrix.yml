@@ -206,7 +206,9 @@ jobs:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
-      - uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
+      - name: Configure AWS credentials
+        if: needs.metadata.outputs.is-ent-repo == 'false'
+        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
         with:
           aws-access-key-id: ${{ steps.secrets.outputs.aws-access-key-id }}
           aws-secret-access-key: ${{ steps.secrets.outputs.aws-secret-access-key }}
@@ -214,6 +216,12 @@ jobs:
           role-to-assume: ${{ steps.secrets.outputs.aws-role-arn }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
+      - name: Doormat AWS Auth
+        if: needs.metadata.outputs.is-ent-repo == 'true'
+        uses: hashicorp/doormat-action@v1
+        with:
+          aws-role-arn: arn:aws:iam::505811019928:role/github_actions-vault_enterprise_ci
+          service-account: github-actions-vault-enterprise-ci@hashicorp.com
       - uses: hashicorp/action-setup-enos@39a8f388434bea5eeba6649b99aa9949a55a1150 # v1.38
         with:
           github-token: ${{ steps.secrets.outputs.github-token }}

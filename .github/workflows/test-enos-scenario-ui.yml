@@ -65,6 +65,7 @@ jobs:
     name: Run UI Tests
     needs: get-metadata
     runs-on: ${{ fromJSON(needs.get-metadata.outputs.runs-on) }}
+    permissions: write-all
     timeout-minutes: 90
     env:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -118,6 +119,7 @@ jobs:
         run: |
           echo "Installed Chrome Version = [$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null)]"
       - name: Configure AWS credentials from Test account
+        if: needs.get-metadata.outputs.is-ent-repo == 'false'
         uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
@@ -126,6 +128,12 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
+      - name: Doormat AWS Auth
+        if: needs.get-metadata.outputs.is-ent-repo == 'true'
+        uses: hashicorp/doormat-action@v1
+        with:
+          aws-role-arn: arn:aws:iam::505811019928:role/github_actions-vault_enterprise_ci
+          service-account: github-actions-vault-enterprise-ci@hashicorp.com
       - name: Set Up Cluster
         id: setup_cluster
         env:
