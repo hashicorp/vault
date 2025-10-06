@@ -23,6 +23,7 @@ on:
 jobs:
   bootstrap-ci:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    permissions: write-all
     env:
       TF_WORKSPACE: "${{ github.event.repository.name }}-ci-enos-bootstrap"
       TF_VAR_repository: ${{ github.event.repository.name }}
@@ -30,11 +31,14 @@ jobs:
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: ./.github/actions/metadata
+        id: metadata
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_wrapper: false
       - name: Configure AWS credentials
+        if: steps.metadata.outputs.is-ent-repo == 'false'
         uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
@@ -43,6 +47,12 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
+      - name: Doormat AWS Auth
+        if: steps.metadata.outputs.is-ent-repo == 'true'
+        uses: hashicorp/doormat-action@v1
+        with:
+          aws-role-arn: arn:aws:iam::505811019928:role/github_actions-vault_enterprise_ci
+          service-account: github-actions-vault-enterprise-ci@hashicorp.com
       - name: Init Terraform
         id: tf_init
         run: |
