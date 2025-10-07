@@ -133,25 +133,9 @@ func (c *Core) fetchEntity(entityID string, clone bool) (*identity.Entity, error
 	if entityID == "" || c.identityStore == nil {
 		return nil, nil
 	}
+	txn := c.identityStore.db.Txn(false)
 
-	// Fetch the entity
-	entity, err := c.identityStore.MemDBEntityByID(entityID, clone)
-	if err != nil {
-		c.logger.Error("failed to lookup entity using its ID", "error", err)
-		return nil, err
-	}
-
-	if entity == nil {
-		// If there was no corresponding entity object found, it is
-		// possible that the entity got merged into another entity. Try
-		// finding entity based on the merged entity index.
-		entity, err = c.identityStore.MemDBEntityByMergedEntityID(entityID, clone)
-		if err != nil {
-			c.logger.Error("failed to lookup entity in merged entity ID index", "error", err)
-			return nil, err
-		}
-	}
-	return entity, nil
+	return c.identityStore.fetchEntityInTxn(txn, entityID, clone)
 }
 
 // filterGroupPoliciesByNS takes a context, token namespace, and a map of
