@@ -129,7 +129,7 @@ jobs:
           role-skip-session-tagging: true
           role-duration-seconds: 3600
       - name: Doormat AWS Auth
-        if: needs.get-metadata.outputs.is-ent-repo == 'true'
+        if: github.repository != 'hashicorp/vault'
         uses: hashicorp/doormat-action@v1
         with:
           aws-role-arn: arn:aws:iam::505811019928:role/github_actions-vault_enterprise_ci
