@@ -245,7 +245,7 @@ export default class GeneralSettingsComponent extends Component<Args> {
         plugin_version: pluginVersion as string | undefined,
       });
 
-      this.flashMessages.success('Engine settings successfully updated.');
+      this.flashMessages.success('Engine settings successfully updated.', { title: 'Configuration saved' });
 
       this.router.transitionTo(this.args?.model?.secretsEngine?.backendConfigurationLink);
     } catch (e) {

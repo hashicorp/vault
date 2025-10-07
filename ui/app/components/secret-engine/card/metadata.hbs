@@ -17,16 +17,7 @@
       <F.HelperText>The mount path where this secrets engine is accessible.</F.HelperText>
       <F.Control>
         <Hds::Layout::Flex @gap="8">
-          <Hds::Form::TextInput::Field
-            @value={{@model.secretsEngine.path}}
-            aria-label="Secret engine path"
-            autocomplete="off"
-            disabled
-            class="path-input-text"
-            name="Path"
-            data-test-input="path"
-          />
-          <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @targetToCopy=".path-input-text" />
+          <Hds::Copy::Snippet @textToCopy={{@model.secretsEngine.path}} @color="secondary" data-test-copy-snippet="path" />
         </Hds::Layout::Flex>
       </F.Control>
     </Hds::Form::Fieldset>
@@ -36,16 +27,11 @@
       <F.HelperText>Internal identifier used by Vault to reference this engine.</F.HelperText>
       <F.Control>
         <Hds::Layout::Flex @gap="8">
-          <Hds::Form::TextInput::Field
-            @value={{@model.secretsEngine.accessor}}
-            aria-label="Secret engine accessor"
-            autocomplete="off"
-            disabled
-            name="Accessor"
-            class="accessor-input-text"
-            data-test-input="accessor"
+          <Hds::Copy::Snippet
+            @textToCopy={{@model.secretsEngine.accessor}}
+            @color="secondary"
+            data-test-copy-snippet="accessor"
           />
-          <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @targetToCopy=".accessor-input-text" />
         </Hds::Layout::Flex>
       </F.Control>
     </Hds::Form::Fieldset>
