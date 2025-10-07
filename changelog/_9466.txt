@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): Avoid duplicate seal rewrapping, and ensure that cluster secondaries rewrap after a seal migration.
+```

@@ -323,7 +323,7 @@ type Core struct {
 	// migrationInfo will be populated, which on enterprise may be necessary for
 	// seal rewrap.
 	migrationInfo     *migrationInformation
-	sealMigrationDone *uint32
+	sealMigrationDone atomic.Pointer[time.Time]
 
 	// barrier is the security barrier wrapping the physical backend
 	barrier SecurityBarrier
@@ -1060,7 +1060,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		authLock:             authLock,
 		router:               NewRouter(),
 		sealed:               new(uint32),
-		sealMigrationDone:    new(uint32),
+		sealMigrationDone:    atomic.Pointer[time.Time]{},
 		standby:              true,
 		standbyStopCh:        new(atomic.Value),
 		baseLogger:           conf.Logger,
@@ -1960,7 +1960,8 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 // if the preceding conditions are true but we cannot decrypt the master key
 // in storage using the configured seal.
 func (c *Core) sealMigrated(ctx context.Context) (bool, error) {
-	if atomic.LoadUint32(c.sealMigrationDone) == 1 {
+	sealMigDone := c.sealMigrationDone.Load()
+	if sealMigDone != nil && !sealMigDone.IsZero() {
 		return true, nil
 	}
 
@@ -2102,7 +2103,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 	}
 
 	// Flag migration performed for seal-rewrap later
-	atomic.StoreUint32(c.sealMigrationDone, 1)
+	c.SetSealMigrationDone()
 
 	c.logger.Info("seal migration complete")
 	return nil
@@ -2599,10 +2600,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.runUnsealSetupForPrimary(ctx, logger); err != nil {
 			return err
 		}
-	} else if c.IsMultisealEnabled() {
-		sealGenInfo := c.SealAccess().GetAccess().GetSealGenerationInfo()
-		if sealGenInfo != nil && !sealGenInfo.IsRewrapped() {
-			atomic.StoreUint32(c.sealMigrationDone, 1)
+	}
+
+	if c.IsMultisealEnabled() {
+		if err := c.handleMultisealRewrapping(ctx, logger); err != nil {
+			return err
 		}
 	}
 
@@ -2614,7 +2616,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.startForwarding(ctx); err != nil {
 			return err
 		}
-
 	}
 
 	c.clusterParamsLock.Lock()
@@ -2772,59 +2773,66 @@ func runUnsealSetupFunctions(ctx context.Context, setupFunctions []func(context.
 // runUnsealSetupForPrimary runs some setup code specific to clusters that are
 // in the primary role (as defined by the (*Core).isPrimary method).
 func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) error {
-	if err := c.setupPluginReload(); err != nil {
+	return c.setupPluginReload()
+}
+
+func (c *Core) handleMultisealRewrapping(ctx context.Context, logger log.Logger) error {
+	// Retrieve the seal generation information from storage
+	existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical)
+	if err != nil {
+		logger.Error("cannot read existing seal generation info from storage", "error", err)
 		return err
 	}
 
-	if c.IsMultisealEnabled() {
-		// Retrieve the seal generation information from storage
-		existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical)
-		if err != nil {
-			logger.Error("cannot read existing seal generation info from storage", "error", err)
+	sealGenerationInfo := c.seal.GetAccess().GetSealGenerationInfo()
+	shouldRewrap := !sealGenerationInfo.IsRewrapped()
+	var reason string
+	switch {
+	case existingGenerationInfo == nil:
+		reason = "First time storing seal generation information"
+		fallthrough
+	case existingGenerationInfo.Generation < sealGenerationInfo.Generation:
+		if reason == "" {
+			reason = fmt.Sprintf("Seal generation incremented from %d to %d",
+				existingGenerationInfo.Generation, sealGenerationInfo.Generation)
+		}
+		fallthrough
+	case !existingGenerationInfo.Enabled:
+		if reason == "" {
+			reason = fmt.Sprintf("Seal just become enabled again after previously being disabled")
+		}
+		if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
+			logger.Error("failed to store seal generation info", "error", err)
 			return err
 		}
-
-		sealGenerationInfo := c.seal.GetAccess().GetSealGenerationInfo()
-		shouldRewrap := !sealGenerationInfo.IsRewrapped()
-		switch {
-		case existingGenerationInfo == nil:
-			// This is the first time we store seal generation information
-			fallthrough
-		case existingGenerationInfo.Generation < sealGenerationInfo.Generation || !existingGenerationInfo.Enabled:
-			// We have incremented the seal generation or we've just become enabled again after previously being disabled,
-			// trust the operator in the latter case
+		shouldRewrap = true
+	case existingGenerationInfo.Generation == sealGenerationInfo.Generation:
+		// Same generation, update the rewrapped flag in case the previous active node
+		// changed its value. In other words, a rewrap may have happened, or a rewrap may have been
+		// started but not completed.
+		c.seal.GetAccess().GetSealGenerationInfo().SetRewrapped(existingGenerationInfo.IsRewrapped())
+		if !existingGenerationInfo.Enabled {
+			// Weren't enabled but are now, persist the flag
 			if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
 				logger.Error("failed to store seal generation info", "error", err)
 				return err
 			}
-			shouldRewrap = true
-		case existingGenerationInfo.Generation == sealGenerationInfo.Generation:
-			// Same generation, update the rewrapped flag in case the previous active node
-			// changed its value. In other words, a rewrap may have happened, or a rewrap may have been
-			// started but not completed.
-			c.seal.GetAccess().GetSealGenerationInfo().SetRewrapped(existingGenerationInfo.IsRewrapped())
-			if !existingGenerationInfo.Enabled {
-				// Weren't enabled but are now, persist the flag
-				if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
-					logger.Error("failed to store seal generation info", "error", err)
-					return err
-				}
-			}
-			shouldRewrap = !existingGenerationInfo.IsRewrapped()
-		case existingGenerationInfo.Generation > sealGenerationInfo.Generation:
-			// Our seal information is out of date. The previous active node used a newer generation.
-			logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
-			return errors.New("newer seal generation found in storage, in memory seal configuration is out of date")
 		}
-		if shouldRewrap {
-			// Set the migration done flag so that a seal-rewrap gets triggered later.
-			// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
-			// triggering the rewrap when necessary.
-			logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation)
-			atomic.StoreUint32(c.sealMigrationDone, 1)
-		}
-		startPartialSealRewrapping(c)
+		reason = "A rewrap may have happened, or a rewrap may have been started but not completed"
+		shouldRewrap = !existingGenerationInfo.IsRewrapped()
+	case existingGenerationInfo.Generation > sealGenerationInfo.Generation:
+		// Our seal information is out of date. The previous active node used a newer generation.
+		logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
+		return errors.New("newer seal generation found in storage, in memory seal configuration is out of date")
 	}
+	if shouldRewrap {
+		// Set the migration done flag so that a seal-rewrap gets triggered later.
+		// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
+		// triggering the rewrap when necessary.
+		logger.Info("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation, "reason", reason)
+		c.SetSealMigrationDone()
+	}
+	startPartialSealRewrapping(c)
 
 	return nil
 }
@@ -2932,10 +2940,8 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		close(jobs)
 	}
 
-	if atomic.LoadUint32(c.sealMigrationDone) == 1 {
-		if err := c.postSealMigration(ctx); err != nil {
-			c.logger.Warn("post-unseal post seal migration failed", "error", err)
-		}
+	if err := c.postSealMigration(ctx); err != nil {
+		c.logger.Warn("post-unseal post seal migration failed", "error", err)
 	}
 
 	if os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
@@ -4817,6 +4823,11 @@ func (c *Core) shutdownRemovedNode() {
 	go func() {
 		c.ShutdownCoreError(errRemovedHANode)
 	}()
+}
+
+func (c *Core) SetSealMigrationDone() {
+	now := time.Now()
+	c.sealMigrationDone.Store(&now)
 }
 
 var errRemovedHANode = errors.New("node has been removed from the HA cluster")
