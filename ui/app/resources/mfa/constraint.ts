@@ -46,6 +46,10 @@ export default class MfaConstraint {
     this.selectedMethod = method;
   }
 
+  get hasSelfEnrollMethods(): boolean {
+    return !!this.selfEnrollMethods.length;
+  }
+
   // To be "true", the login enforcement must have a selected method set
   // and passcode, if applicable.
   get isSatisfied() {
@@ -55,12 +59,10 @@ export default class MfaConstraint {
     return false;
   }
 
-  get selfEnrollMethod(): ParsedMfaMethod | null {
+  get selfEnrollMethods(): ParsedMfaMethod[] | [] {
     // Self-enrollment is an enterprise only feature and self_enrollment_enabled will always be false for CE
     // It also returns false if the user already has an MFA secret (meaning they have already enrolled.)
-    const selfEnroll = this.methods.filter((m) => m?.self_enrollment_enabled);
-    // At this time we just support one self-enroll method per constraint
-    return selfEnroll.length === 1 && selfEnroll[0] ? selfEnroll[0] : null;
+    return this.methods.filter((m) => m?.self_enrollment_enabled);
   }
 
   get validateData() {

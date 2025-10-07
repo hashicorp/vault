@@ -253,6 +253,18 @@ module('Acceptance | mfa-login', function (hooks) {
     await didLogin(assert);
   });
 
+  test('self-enroll: single constraint with 2 self-enroll methods', async function (assert) {
+    assert.expect(10);
+    await login('mfa-y-self');
+    // Buttons render for both TOTP methods
+    assert.dom(GENERAL.title).hasText('Verify your identity');
+    assert.dom(GENERAL.button('Setup to verify with TOTP')).exists({ count: 2 });
+    await click(GENERAL.button('Setup to verify with TOTP'));
+    await assertSelfEnroll(assert);
+    await validate();
+    await didLogin(assert);
+  });
+
   test('self-enroll: multiple constraints, 1 with 2 methods (one that supports self-enroll), 1 with push method', async function (assert) {
     assert.expect(17);
     await login('mfa-z-self');
