@@ -17,6 +17,18 @@ func JSONLogNoTimestamp(outlog hclog.Logger, text string) {
 		outlog.Error("failed to decode json output from dev vault", "error", err, "input", text)
 		return
 	}
+	JSONLogNoTimestampFromMap(outlog, "", m)
+}
+
+func JSONLogNoTimestampFromMap(outlog hclog.Logger, min string, m map[string]any) string {
+	timeStamp := ""
+	if ts, ok := m["@timestamp"]; ok {
+		timeStamp = ts.(string)
+		// This works because the time format is ISO8601.
+		if timeStamp < min {
+			return min
+		}
+	}
 
 	delete(m, "@timestamp")
 	message := m["@message"].(string)
@@ -34,4 +46,5 @@ func JSONLogNoTimestamp(outlog hclog.Logger, text string) {
 	}
 
 	outlog.Log(hclog.LevelFromString(level), message, pairs...)
+	return timeStamp
 }
