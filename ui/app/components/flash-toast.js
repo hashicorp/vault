@@ -26,7 +26,7 @@ export default class FlashToastComponent extends Component {
   }
 
   get title() {
-    if (this.args.title) return this.args.title;
+    if (this.args.flash.title) return this.args.flash.title;
     switch (this.args.flash.type) {
       case 'danger':
         return 'Error';

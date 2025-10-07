@@ -14,8 +14,9 @@ func newGithubListCmd() *cobra.Command {
 		Long:  "Github list commands",
 	}
 
-	listCmd.AddCommand(newGithubListRunCmd())
 	listCmd.AddCommand(newGithubListChangedFilesCmd())
+	listCmd.AddCommand(newGithubListCommitStatusesCmd())
+	listCmd.AddCommand(newGithubListWorkflowRunsCmd())
 
 	return listCmd
 }

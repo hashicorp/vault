@@ -33,6 +33,7 @@ export const GENERAL = {
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
   button: (label: string) => (label ? `[data-test-button="${label}"]` : '[data-test-button]'),
+  copySnippet: (name: string) => `[data-test-copy-snippet=${name}]`,
 
   /* ────── Menus & Lists ────── */
   menuTrigger: '[data-test-popup-menu-trigger]',
