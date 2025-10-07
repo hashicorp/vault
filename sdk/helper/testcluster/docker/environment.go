@@ -33,7 +33,6 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/volume"
 	docker "github.com/docker/docker/client"
 	"github.com/hashicorp/go-cleanhttp"
@@ -79,6 +78,7 @@ type DockerCluster struct {
 
 	storage      testcluster.ClusterStorage
 	disableMlock bool
+	disableTLS   bool
 }
 
 func (dc *DockerCluster) NamedLogger(s string) log.Logger {
@@ -134,6 +134,9 @@ func (dc *DockerCluster) SetRecoveryKeys(keys [][]byte) {
 }
 
 func (dc *DockerCluster) GetCACertPEMFile() string {
+	if dc.disableTLS {
+		return ""
+	}
 	return testcluster.DefaultCAFile
 }
 
@@ -449,6 +452,7 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 		CA:           opts.CA,
 		storage:      opts.Storage,
 		disableMlock: opts.DisableMlock,
+		disableTLS:   opts.DisableTLS,
 	}
 
 	if err := dc.setupDockerCluster(ctx, opts); err != nil {
@@ -778,12 +782,23 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		}
 		n.Logger.Trace(s)
 	}
+	// If a container gets restarted, and we reissue a ContainerLogs call using
+	// Follow=true, we'll see all the logs already consumed before we start seeing
+	// new ones.  Use lastTS to avoid duplication.
+	lastTS := ""
 	logStdout := &LogConsumerWriter{logConsumer}
 	logStderr := &LogConsumerWriter{func(s string) {
 		if seenLogs.CAS(false, true) {
 			wg.Done()
 		}
-		testcluster.JSONLogNoTimestamp(n.Logger, s)
+		d := json.NewDecoder(strings.NewReader(s))
+		m := map[string]any{}
+		if err := d.Decode(&m); err != nil {
+			n.Logger.Error("failed to decode json output from dev vault", "error", err, "input", s)
+			return
+		}
+
+		lastTS = testcluster.JSONLogNoTimestampFromMap(n.Logger, lastTS, m)
 	}}
 
 	postStartFunc := func(containerID string, realIP string) error {
@@ -920,7 +935,7 @@ func (n *DockerClusterNode) Pause(ctx context.Context) error {
 
 func (n *DockerClusterNode) Restart(ctx context.Context) error {
 	timeout := 5
-	err := n.DockerAPI.ContainerRestart(ctx, n.Container.ID, container.StopOptions{Timeout: &timeout})
+	err := n.runner.RestartContainerWithTimeout(ctx, n.Container.ID, timeout)
 	if err != nil {
 		return err
 	}
