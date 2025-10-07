@@ -16,7 +16,7 @@ import (
 
 var listGithubWorkflowRuns = &github.ListWorkflowRunsReq{}
 
-func newGithubListRunCmd() *cobra.Command {
+func newGithubListWorkflowRunsCmd() *cobra.Command {
 	listRunsCmd := &cobra.Command{
 		Use:   "workflow-runs [WORKFLOW_NAME]",
 		Short: "List workflow runs",
