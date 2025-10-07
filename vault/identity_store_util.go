@@ -776,6 +776,37 @@ func getAccessorsOnDuplicateAliases(aliases []*identity.Alias) []string {
 	return mountAccessors
 }
 
+// fetchEntityInTxn retrieves an identity entity by its ID within the context of a MemDB transaction.
+// If the entity is not found by its direct ID, it attempts performs a lookup using the merged entity index.
+// The returned entity may be a clone or the original reference, depending on the value of the `clone` parameter.
+func (i *IdentityStore) fetchEntityInTxn(txn *memdb.Txn, entityID string, clone bool) (*identity.Entity, error) {
+	if entityID == "" {
+		return nil, fmt.Errorf("empty entity ID")
+	}
+	if txn == nil {
+		return nil, fmt.Errorf("nil txn")
+	}
+
+	entity, err := i.MemDBEntityByIDInTxn(txn, entityID, clone)
+	if err != nil {
+		i.logger.Error("failed to lookup entity using its ID", "error", err)
+		return nil, err
+	}
+
+	if entity == nil {
+		// If there was no corresponding entity object found, it is
+		// possible that the entity got merged into another entity. Try
+		// finding entity based on the merged entity index.
+		entity, err = i.MemDBEntityByMergedEntityIDInTxn(txn, entityID, clone)
+		if err != nil {
+			i.logger.Error("failed to lookup entity in merged entity ID index", "error", err)
+			return nil, err
+		}
+	}
+
+	return entity, nil
+}
+
 // upsertEntityInTxn either creates or updates an existing entity. The
 // operations will be updated in both MemDB and storage. If 'persist' is set to
 // false, then storage will not be updated. When an alias is transferred from
@@ -1532,6 +1563,19 @@ func (i *IdentityStore) MemDBEntityByMergedEntityID(mergedEntityID string, clone
 	}
 
 	txn := i.db.Txn(false)
+
+	return i.MemDBEntityByMergedEntityIDInTxn(txn, mergedEntityID, clone)
+}
+
+// MemDBEntityByMergedEntityIDInTxn fetches an identity.Entity from MemDB by looking up the provided
+// merged entity ID within the context of the provided transaction. If 'clone' is set to true,
+// a clone of the fetched entity is returned to prevent unintended modifications to the original
+// entity stored in MemDB. If no entity is found with the given merged entity ID, nil is returned.
+// An error is returned if there are issues during the lookup or if the type assertion fails.
+func (i *IdentityStore) MemDBEntityByMergedEntityIDInTxn(txn *memdb.Txn, mergedEntityID string, clone bool) (*identity.Entity, error) {
+	if mergedEntityID == "" {
+		return nil, fmt.Errorf("missing merged entity id")
+	}
 
 	entityRaw, err := txn.First(entitiesTable, "merged_entity_ids", mergedEntityID)
 	if err != nil {
