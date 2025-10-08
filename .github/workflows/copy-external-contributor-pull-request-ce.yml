@@ -37,6 +37,22 @@ jobs:
     environment: community-pull-request
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - id: set-up-pipeline
+        name: Set up the pipeline tool
+        uses: ./.github/actions/set-up-pipeline
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - id: check-cla
+        # Make sure that the license/cla status has successfully run for the PR.
+        # We never want to copy any code to Vault Enterprise unless the CLA
+        # has been run.
+        run: |
+          pipeline github check commit-status \
+            --pr '${{ github.event.number || inputs.number }}' \
+            --context license/cla \
+            --creator hashicorp-cla-app[bot] \
+            --state success
       - id: payload
         run: |
           echo 'payload={"number":"${{ github.event.number || inputs.number }}"}' | tee -a "$GITHUB_OUTPUT"

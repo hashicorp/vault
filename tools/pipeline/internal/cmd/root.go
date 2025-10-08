@@ -1,6 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
+// Package cmd defines the pipeline CLI commands.
 package cmd
 
 import (
