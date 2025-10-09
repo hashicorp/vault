@@ -59,7 +59,7 @@
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 0.2fr 0.2fr 0.2fr;
       padding: size_variables.$spacing-24;
-      line-height: 1.5;
+      line-height: var(--token-typography-body-300-line-height);
 
       &.summary {
         grid-template-rows: 0.2fr 1fr 0.2fr 1fr;

@@ -124,7 +124,7 @@ pre code {
 
 body {
   font-size: var(--token-typography-body-300-font-size);
-  line-height: 1.5;
+  line-height: var(--token-typography-body-300-line-height);
   overflow-x: hidden;
   overflow-y: scroll;
 }
