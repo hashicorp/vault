@@ -10,12 +10,12 @@
 
 .button {
   align-items: center;
-  background-color: var(--token-color-palette-neutral-50);
+  background-color: var(--token-color-surface-faint);
   border: 1px solid var(--token-color-palette-neutral-300);
   border-radius: size_variables.$radius;
   box-shadow: box-shadow_variables.$box-shadow-low;
   cursor: pointer;
-  color: var(--token-color-palette-neutral-600);
+  color: var(--token-color-foreground-primary);
   display: inline-block;
   font-size: size_variables.$size-8;
   font-weight: font_variables.$font-weight-semibold;
@@ -97,7 +97,7 @@
 
   &.is-danger-outlined {
     border: 1px solid var(--token-color-palette-red-200);
-    color: var(--token-color-palette-red-200);
+    color: var(--token-color-foreground-critical);
   }
 
   &.is-flat {
@@ -110,7 +110,7 @@
     background-color: transparent;
     border-color: transparent;
     box-shadow: none;
-    color: var(--token-color-palette-blue-200);
+    color: var(--token-color-foreground-action);
     text-decoration: none;
 
     &:hover {
@@ -145,7 +145,7 @@
   &.is-link {
     background-color: transparent;
     border-color: transparent;
-    color: var(--token-color-palette-blue-200);
+    color: var(--token-color-foreground-action);
     text-decoration: none;
     font-weight: font_variables.$font-weight-semibold;
     box-shadow: none;
@@ -200,13 +200,13 @@
     &.is-outlined {
       background-color: transparent;
       border-color: var(--token-color-palette-blue-200);
-      color: var(--token-color-palette-blue-200);
+      color: var(--token-color-foreground-action);
 
       &:hover,
       &:focus {
         background-color: transparent;
         border-color: color.adjust(#1060ff, $lightness: -10%);
-        color: var(--token-color-palette-blue-200);
+        color: var(--token-color-foreground-action);
       }
 
       &:active,
@@ -221,7 +221,7 @@
       background-color: transparent;
       border-color: var(--token-color-palette-neutral-500);
       box-shadow: none;
-      color: var(--token-color-palette-neutral-500);
+      color: var(--token-color-foreground-faint);
     }
   }
 
@@ -236,7 +236,7 @@
   // End of button types
 
   &.tool-tip-trigger {
-    color: var(--token-color-palette-neutral-500);
+    color: var(--token-color-foreground-faint);
     min-width: auto;
     padding: 0;
   }
@@ -359,7 +359,7 @@ a.button.disabled {
   }
 
   &.secondary {
-    background-color: var(--token-color-palette-neutral-50);
+    background-color: var(--token-color-surface-faint);
     border: 1px solid var(--token-color-palette-neutral-300);
   }
 
@@ -384,8 +384,8 @@ a.button.disabled {
     border: none;
     box-shadow: none;
     &:hover:not(.disabled) {
-      background-color: var(--token-color-palette-neutral-100);
-      color: var(--token-color-palette-blue-200);
+      background-color: var(--token-color-surface-strong);
+      color: var(--token-color-foreground-action);
     }
   }
 }

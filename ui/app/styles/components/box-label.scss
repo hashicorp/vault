@@ -69,6 +69,6 @@ label.box-label {
   color: var(--token-color-palette-neutral-400);
 
   .is-selected & {
-    color: var(--token-color-palette-neutral-600);
+    color: var(--token-color-foreground-primary);
   }
 }

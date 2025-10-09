@@ -19,7 +19,7 @@
 .regex-group {
   font-family: font_variables.$family-monospace;
   font-size: size_variables.$size-8;
-  color: var(--token-color-palette-neutral-500);
+  color: var(--token-color-foreground-faint);
 }
 .regex-group-position {
   background-color: var(--token-color-palette-neutral-200);

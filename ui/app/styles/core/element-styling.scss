@@ -40,7 +40,7 @@ body,
 pre:not(.hds-code-block__code),
 strong,
 table th {
-  color: var(--token-color-palette-neutral-600);
+  color: var(--token-color-foreground-primary);
 }
 
 h1,
@@ -131,7 +131,7 @@ body {
 }
 
 a {
-  color: var(--token-color-palette-blue-200);
+  color: var(--token-color-foreground-action);
   cursor: pointer;
   text-decoration: underline;
 
@@ -143,19 +143,19 @@ a {
 }
 
 a:hover {
-  color: var(--token-color-palette-neutral-600);
+  color: var(--token-color-foreground-primary);
 }
 
 code {
   background-color: transparent;
-  color: var(--token-color-palette-neutral-500);
+  color: var(--token-color-foreground-faint);
   font-size: 1em;
   font-weight: 400;
   padding: 0;
 }
 
 hr {
-  background-color: var(--token-color-palette-neutral-300);
+  background-color: var(--token-color-surface-strong);
   border: none;
   display: block;
   height: 1px;

@@ -96,14 +96,14 @@
 .radio-card-radio-row {
   display: flex;
   justify-content: center;
-  background: var(--token-color-palette-neutral-50);
+  background: var(--token-color-surface-faint);
   padding: size_variables.$spacing-8;
 }
 
 .is-selected {
   &.radio-card {
     border-color: var(--token-color-palette-blue-200);
-    background: var(--token-color-palette-neutral-50);
+    background: var(--token-color-surface-faint);
     box-shadow: box-shadow_variables.$box-shadow-middle;
   }
   .radio-card-icon {
