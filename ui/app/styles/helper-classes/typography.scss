@@ -10,7 +10,7 @@
 
 // font size helpers
 .is-size-4 {
-  font-size: size_variables.$size-4 !important;
+  font-size: var(--token-typography-display-400-font-size) !important;
 }
 
 .is-size-5 {
@@ -18,7 +18,7 @@
 }
 
 .is-size-6 {
-  font-size: size_variables.$size-6 !important;
+  font-size: var(--token-typography-body-300-font-size) !important;
 }
 
 .is-size-7 {
@@ -26,7 +26,7 @@
 }
 
 .is-size-8 {
-  font-size: size_variables.$size-8 !important;
+  font-size: var(--token-typography-body-200-font-size) !important;
 }
 
 .is-size-9 {
@@ -95,7 +95,7 @@
 
 // Text color or styling
 .is-help {
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
   margin-top: size_variables.$size-11;
 }
 
@@ -108,7 +108,7 @@
 .sub-text {
   color: var(--token-color-foreground-faint);
   margin-bottom: size_variables.$size-11;
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
 
   strong {
     color: inherit;

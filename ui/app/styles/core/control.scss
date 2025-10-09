@@ -15,7 +15,7 @@
 }
 
 .control {
-  font-size: 1rem;
+  font-size: var(--token-typography-body-300-font-size);
   max-width: 100%;
   position: relative;
   text-align: left;

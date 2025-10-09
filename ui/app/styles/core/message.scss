@@ -29,7 +29,7 @@
 
   .message-title {
     color: var(--token-color-palette-blue-200);
-    font-size: 16px;
+    font-size: var(--token-typography-body-300-font-size);
     font-weight: var(--token-typography-font-weight-bold);
     line-height: 1.25;
   }

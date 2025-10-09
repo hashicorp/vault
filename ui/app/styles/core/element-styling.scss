@@ -83,7 +83,7 @@ object {
 
 html {
   background-color: hsl(0, 0%, 100%);
-  font-size: size_variables.$base-font-size; // 16px
+  font-size: var(--token-typography-body-300-font-size); // 16px
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   min-width: 300px;
@@ -123,7 +123,7 @@ pre code {
 }
 
 body {
-  font-size: size_variables.$size-6;
+  font-size: var(--token-typography-body-300-font-size);
   line-height: 1.5;
   overflow-x: hidden;
   overflow-y: scroll;

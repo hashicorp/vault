@@ -19,7 +19,7 @@
 }
 
 #docfy-content {
-  font-size: 16px;
+  font-size: var(--token-typography-body-300-font-size);
   font-family: var(--token-typography-font-stack-text);
   margin-left: 1.5rem;
   margin-right: 2rem;

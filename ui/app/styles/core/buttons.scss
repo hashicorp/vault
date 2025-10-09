@@ -16,7 +16,7 @@
   cursor: pointer;
   color: var(--token-color-palette-neutral-600);
   display: inline-block;
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
   font-weight: var(--token-typography-font-weight-semibold);
   min-height: 2.25rem;
   min-width: 6rem;

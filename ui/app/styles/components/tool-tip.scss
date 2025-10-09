@@ -41,7 +41,7 @@
     animation: drop-fade-below 0.15s reverse;
   }
   &.smaller-font {
-    font-size: size_variables.$size-8;
+    font-size: var(--token-typography-body-200-font-size);
   }
 }
 
