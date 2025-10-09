@@ -8,7 +8,7 @@
 }
 
 .ttl-picker-label {
-  font-weight: bold;
+  font-weight: var(--token-typography-font-weight-bold);
 }
 
 input.has-error,

@@ -25,7 +25,7 @@
     width: 50%;
     margin-left: auto;
     font-size: size_variables.$size-8;
-    font-weight: font_variables.$font-weight-semibold;
+    font-weight: var(--token-typography-font-weight-semibold);
     color: var(--token-color-palette-neutral-400);
   }
 

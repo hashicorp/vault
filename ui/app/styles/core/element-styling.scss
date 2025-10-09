@@ -50,7 +50,7 @@ h4,
 h5,
 h6 {
   font-size: 100%;
-  font-weight: normal;
+  font-weight: var(--token-typography-font-weight-regular);
 }
 
 ul {
@@ -107,7 +107,7 @@ button,
 input,
 select,
 textarea {
-  font-family: font_variables.$family-sans;
+  font-family: var(--token-typography-font-stack-text);
 }
 
 code,
@@ -150,7 +150,7 @@ code {
   background-color: transparent;
   color: var(--token-color-palette-neutral-500);
   font-size: 1em;
-  font-weight: 400;
+  font-weight: var(--token-typography-font-weight-regular);
   padding: 0;
 }
 

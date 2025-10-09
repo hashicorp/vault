@@ -50,7 +50,7 @@ $fourth: #6cc5b0;
   width: fit-content;
 
   .bold {
-    font-weight: font_variables.$font-weight-bold;
+    font-weight: var(--token-typography-font-weight-bold);
   }
   // styling below handles tooltip position
   position: absolute;

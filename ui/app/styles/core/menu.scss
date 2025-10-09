@@ -28,7 +28,7 @@
 .column .menu-list a {
   border-radius: 0;
   border-right: 0 solid transparent;
-  font-weight: font_variables.$font-weight-semibold;
+  font-weight: var(--token-typography-font-weight-semibold);
 
   &:hover,
   &.is-active {

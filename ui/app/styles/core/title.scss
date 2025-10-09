@@ -17,7 +17,7 @@
 .title {
   color: hsl(0, 0%, 21%);
   font-size: 2rem;
-  font-weight: font_variables.$font-weight-bold;
+  font-weight: var(--token-typography-font-weight-bold);
   line-height: 1.125;
   word-break: break-word;
 

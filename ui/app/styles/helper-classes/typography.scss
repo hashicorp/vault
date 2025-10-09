@@ -36,15 +36,15 @@
 
 // Font weight
 .has-font-weight-normal {
-  font-weight: font_variables.$font-weight-normal;
+  font-weight: var(--token-typography-font-weight-regular);
 }
 
 .has-text-weight-semibold {
-  font-weight: font_variables.$font-weight-semibold !important;
+  font-weight: var(--token-typography-font-weight-semibold) !important;
 }
 
 .has-text-weight-bold {
-  font-weight: font_variables.$font-weight-bold !important;
+  font-weight: var(--token-typography-font-weight-bold) !important;
 }
 
 // Font family
