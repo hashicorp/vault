@@ -43,7 +43,7 @@ pre.masked-font {
 
 //override bulma's pre styling
 .masked-input .display-only {
-  line-height: 1.5;
+  line-height: var(--token-typography-body-300-line-height);
   font-size: 1rem;
   padding-top: 0;
   padding-bottom: 0;
