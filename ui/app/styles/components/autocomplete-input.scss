@@ -7,7 +7,7 @@
   background: hsl(0, 0%, 100%) !important;
   border: 1px solid var(--token-color-palette-neutral-300);
   box-sizing: border-box;
-  border-radius: 3px;
+  border-radius: var(--token-border-radius-x-small);
   width: 99%;
   padding: 4px 0;
   margin-left: 0.5%;

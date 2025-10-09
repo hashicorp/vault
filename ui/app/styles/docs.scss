@@ -87,7 +87,7 @@
     margin-bottom: 1rem;
     padding: 1rem;
     text-align: left;
-    border-radius: 6px;
+    border-radius: var(--token-border-radius-medium);
   }
 
   table {
@@ -107,7 +107,7 @@
 
   .docfy-demo {
     border: 1px solid var(--token-color-palette-neutral-50);
-    border-radius: 6px;
+    border-radius: var(--token-border-radius-medium);
     padding: 1rem;
     overflow: scroll;
 

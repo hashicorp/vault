@@ -18,7 +18,7 @@ label.box-label {
   @extend .is-centered;
 
   border-color: var(--token-color-palette-neutral-300);
-  border-radius: 3px;
+  border-radius: var(--token-border-radius-x-small);
   box-shadow: box-shadow_variables.$box-link-shadow;
   text-decoration: none;
   transition: box-shadow size_variables.$speed;

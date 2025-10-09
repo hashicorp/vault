@@ -55,7 +55,7 @@
 
 .b-checkbox label::before {
   background-color: hsl(0, 0%, 100%);
-  border-radius: 3px;
+  border-radius: var(--token-border-radius-x-small);
   border: 1px solid var(--token-color-palette-neutral-300);
   content: '';
   height: 17px;
