@@ -47,7 +47,7 @@ func newSyncGithubBranchCmd() *cobra.Command {
 func runSyncGithubBranchCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := syncGithubBranchReq.Run(context.TODO(), githubCmdState.Github, githubCmdState.Git)
+	res, err := syncGithubBranchReq.Run(context.TODO(), githubCmdState.GithubV3, githubCmdState.Git)
 
 	switch rootCfg.format {
 	case "json":

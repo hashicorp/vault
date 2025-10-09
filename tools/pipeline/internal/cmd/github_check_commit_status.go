@@ -41,7 +41,7 @@ func newCheckGithubCommitStatusCmd() *cobra.Command {
 func runCheckGithubCommitStatusCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := checkGithubCommitStatusReq.Run(context.TODO(), githubCmdState.Github)
+	res, err := checkGithubCommitStatusReq.Run(context.TODO(), githubCmdState.GithubV3)
 	if err != nil {
 		return err
 	}
