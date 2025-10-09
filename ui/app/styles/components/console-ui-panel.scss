@@ -63,7 +63,7 @@ $console-close-height: 35px;
     caret-color: hsl(0, 0%, 100%);
     color: hsl(0, 0%, 100%);
     flex: 1 1 auto;
-    font-family: font_variables.$family-monospace;
+    font-family: var(--token-typography-font-stack-code);
     font-size: size_variables.$size-6;
     font-weight: font_variables.$font-weight-bold;
     outline: none;
