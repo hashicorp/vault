@@ -1717,9 +1717,19 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 					allowed:              false,
 					onlyNewSliceMatching: true,
 				},
+				"list_with_match_denied_on_new_slice_matching_comma_string_slice_parsing": {
+					parameters:           `{"globParamDeny": "denied1111,otherValue"}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
 				"list_with_match_allowed_on_legacy_exact_matching": {
 					parameters:              `{"globParamDeny": ["denied11111", "otherValue"]}`,
 					allowed:                 true,
+					onlyLegacyExactMatching: true,
+				},
+				"list_with_match_denied_on_legacy_exact_matching_comma_string_slice_parsing": {
+					parameters:              `{"globParamDeny": "denied11111,otherValue"}`,
+					allowed:                 false,
 					onlyLegacyExactMatching: true,
 				},
 			},
@@ -1791,8 +1801,18 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 					allowed:                 false,
 					onlyLegacyExactMatching: true,
 				},
+				"merged_both_vales_denied_on_legacy_exact_matching_string_slice": {
+					parameters:              `{"mergeParam": "value1,value2"}`,
+					allowed:                 false,
+					onlyLegacyExactMatching: true,
+				},
 				"merged_both_values_allowed_on_new_slice_matching": {
 					parameters:           `{"mergeParam": ["value1", "value2"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+				"merged_both_values_allowed_on_new_slice_matching_string_slice": {
+					parameters:           `{"mergeParam": "value1,value2"}`,
 					allowed:              true,
 					onlyNewSliceMatching: true,
 				},
@@ -1813,8 +1833,18 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 					allowed:              false,
 					onlyNewSliceMatching: true,
 				},
+				"merged_both_denied_values_denied_on_new_slice_matching_string_slice": {
+					parameters:           `{"mergeParamDeny": "value3,value4"}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
 				"merged_both_denied_values_allowed_on_legacy_exact_matching": {
 					parameters:              `{"mergeParamDeny": ["value3", "value4"]}`,
+					allowed:                 true,
+					onlyLegacyExactMatching: true,
+				},
+				"merged_both_denied_values_allowed_on_legacy_exact_matching_string_slice": {
+					parameters:              `{"mergeParamDeny": "value3,value4"}`,
 					allowed:                 true,
 					onlyLegacyExactMatching: true,
 				},
@@ -1843,8 +1873,18 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 					allowed:                 false,
 					onlyLegacyExactMatching: true,
 				},
+				"multiple_values_denied_with_legacy_exact_matching_string_slice": {
+					parameters:              `{"allowed_param": "allowedValue1,allowedValue2"}`,
+					allowed:                 false,
+					onlyLegacyExactMatching: true,
+				},
 				"multiple_values_allowed_with_new_slice_matching": {
 					parameters:           `{"allowed_param": ["allowedValue1", "allowedValue2"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+				"multiple_values_allowed_with_new_slice_matching_string_slice": {
+					parameters:           `{"allowed_param": "allowedValue1,allowedValue2"}`,
 					allowed:              true,
 					onlyNewSliceMatching: true,
 				},
@@ -1873,8 +1913,18 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 					allowed:                 true,
 					onlyLegacyExactMatching: true,
 				},
+				"multiple_values_allowed_under_legacy_matching_string_slice": {
+					parameters:              `{"denied_param": "deniedValue1,deniedValue2"}`,
+					allowed:                 true,
+					onlyLegacyExactMatching: true,
+				},
 				"multiple_values_denied_with_new_slice_matching": {
 					parameters:           `{"denied_param": ["deniedValue1", "deniedValue2"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"multiple_values_denied_with_new_slice_matching_string_slice": {
+					parameters:           `{"denied_param": "deniedValue1,deniedValue2"}`,
 					allowed:              false,
 					onlyNewSliceMatching: true,
 				},
@@ -1902,6 +1952,16 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 					parameters: `{"allowed_param": ["allowedValue1", "allowedValue2"]}`,
 					allowed:    true,
 				},
+				"multiple_values_denied_string_slice_new_matching": {
+					parameters:           `{"allowed_param": "allowedValue1,allowedValue2"}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"multiple_values_disallowed_string_slice_legacy_matching": {
+					parameters:              `{"allowed_param": "allowedValue1,allowedValue2"}`,
+					allowed:                 false,
+					onlyLegacyExactMatching: true,
+				},
 			},
 		},
 		"multiple_denied_values_list": {
@@ -1925,6 +1985,16 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 				"multiple_values_denied": {
 					parameters: `{"denied_param": ["deniedValue1", "deniedValue2"]}`,
 					allowed:    false,
+				},
+				"multiple_values_denied_string_slice_new_matching": {
+					parameters:           `{"denied_param": "deniedValue1,deniedValue2"}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"multiple_values_allowed_string_slice_legacy_matching": {
+					parameters:              `{"denied_param": "deniedValue1,deniedValue2"}`,
+					allowed:                 true,
+					onlyLegacyExactMatching: true,
 				},
 			},
 		},
@@ -2000,6 +2070,90 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 					}`,
 					allowed:              false,
 					onlyNewSliceMatching: true,
+				},
+			},
+		},
+		"string_slice_edge_cases": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"allowed_param" = ["allowedValue1", "allowedValue2"]
+						"*" = []
+					}
+					denied_parameters = {
+						"denied_param" = ["deniedValue1", "deniedValue2"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"denied_string_slice_counts_spaces_legacy_matching": {
+					parameters:              `{"denied_param": "someValue, deniedValue2"}`,
+					allowed:                 true,
+					onlyLegacyExactMatching: true,
+				},
+				"denied_string_slice_disregards_spaces_new_matching": {
+					parameters:           `{"denied_param": "someValue, deniedValue2"}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"allowed_string_slice_counts_spaces_legacy_matching": {
+					parameters:              `{"allowed_param": "allowedValue1, allowedValue2"}`,
+					allowed:                 false,
+					onlyLegacyExactMatching: true,
+				},
+				"allowed_string_slice_disregards_spaces_new_matching": {
+					parameters:           `{"allowed_param": "allowedValue1, allowedValue2"}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+				"denied_string_slice_inside_array_does_not_parse": {
+					parameters: `{"denied_param": ["deniedValue1,deniedValue2"]}`,
+					allowed:    true,
+				},
+				"allowed_string_slice_inside_array_does_not_parse": {
+					parameters: `{"allowed_param": ["allowedValue1,allowedValue2"]}`,
+					allowed:    false,
+				},
+				"denied_string_slice_does_not_merge": {
+					parameters: `{"denied_param": ["deniedValue1,deniedValue2", "someValue"]}`,
+					allowed:    true,
+				},
+				"allowed_string_slice_does_not_merge": {
+					parameters: `{"allowed_param": ["allowedValue1,allowedValue2", "allowedValue1"]}`,
+					allowed:    false,
+				},
+			},
+		},
+		"string_value": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"allowed_param" = ["allowedValue,withComma"]
+						"*" = []
+					}
+					denied_parameters = {
+						"denied_param" = ["deniedValue,withComma"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"substring_does_not_match_allowed": {
+					parameters: `{"allowed_param": "allowedValue"}`,
+					allowed:    false,
+				},
+				"substring_does_not_match_denied": {
+					parameters: `{"denied_param": "deniedValue"}`,
+					allowed:    true,
+				},
+				"full_string_with_comma_matches_allowed": {
+					parameters: `{"allowed_param": "allowedValue,withComma"}`,
+					allowed:    true,
+				},
+				"full_string_with_comma_matches_denied": {
+					parameters: `{"denied_param": "deniedValue,withComma"}`,
+					allowed:    false,
 				},
 			},
 		},
