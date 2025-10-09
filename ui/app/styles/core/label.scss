@@ -11,7 +11,7 @@
 .is-label {
   color: var(--token-color-palette-neutral-600);
   font-size: 14px;
-  font-weight: font_variables.$font-weight-bold;
+  font-weight: var(--token-typography-font-weight-bold);
   display: flex;
   align-items: center;
   gap: size_variables.$spacing-4;

@@ -28,7 +28,7 @@ $dark-gray: #535f73;
 .select-year {
   grid-area: select-year;
   margin: 10px 24px;
-  font-weight: font_variables.$font-weight-bold;
+  font-weight: var(--tokens-typography-font-weight-bold);
   display: flex;
   justify-content: space-between;
   align-items: first baseline;

@@ -23,7 +23,7 @@
   }
 
   .helper-text {
-    font-weight: font_variables.$font-weight-normal;
+    font-weight: var(--token-typography-font-weight-regular);
   }
 
   .title.is-6 {

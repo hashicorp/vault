@@ -45,7 +45,7 @@
     }
 
     .helper-text {
-      font-weight: normal;
+      font-weight: var(--token-typography-font-weight-regular);
     }
     &.justify-right {
       display: flex;
@@ -96,7 +96,7 @@
   margin: 0;
   font-size: size_variables.$size-8;
   color: var(--token-color-palette-neutral-400);
-  font-weight: font_variables.$font-weight-semibold;
+  font-weight: var(--token-typography-font-weight-semibold);
 
   @include mixins.until(size_variables.$mobile) {
     display: none;

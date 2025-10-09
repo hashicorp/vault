@@ -13,7 +13,7 @@
     .menu-label {
       color: hsl(0, 0%, 4%);
       font-size: 14px;
-      font-weight: font_variables.$font-weight-bold;
+      font-weight: var(--token-typography-font-weight-bold);
       text-transform: unset;
     }
     .token-alert {
@@ -23,7 +23,7 @@
 
   .confirm-action-message p {
     padding-top: size_variables.$spacing-4;
-    font-weight: font_variables.$font-weight-semibold;
+    font-weight: var(--token-typography-font-weight-semibold);
     color: hsl(0, 0%, 4%);
   }
 }

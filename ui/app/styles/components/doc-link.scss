@@ -7,7 +7,7 @@
 
 .doc-link {
   color: var(--token-color-palette-blue-200);
-  font-weight: font_variables.$font-weight-semibold;
+  font-weight: var(--tokens-typography-font-weight-semibold);
   &:hover {
     text-decoration: underline !important;
   }
