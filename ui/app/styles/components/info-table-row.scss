@@ -93,7 +93,7 @@
 
 .info-table-row-header {
   margin: 0;
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
   color: var(--token-color-palette-neutral-400);
   font-weight: var(--token-typography-font-weight-semibold);
 

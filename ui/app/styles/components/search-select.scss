@@ -86,7 +86,7 @@
 
     .ember-power-select-option--no-matches-message {
       color: var(--token-color-palette-neutral-400);
-      font-size: size_variables.$size-8;
+      font-size: var(--token-typography-body-200-font-size);
       font-weight: var(--token-typography-font-weight-semibold);
       text-transform: uppercase;
 
@@ -130,7 +130,7 @@
 
 .search-select-list-key {
   color: var(--token-color-foreground-faint);
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
 }
 
 .search-select .search-icon {

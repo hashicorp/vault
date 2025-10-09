@@ -89,7 +89,7 @@
 .radio-card-message-body {
   line-height: 1.2;
   color: var(--token-color-foreground-faint);
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
 }
 
 .radio-card-radio-row {

@@ -6,7 +6,7 @@
  */
 
 .menu {
-  font-size: size_variables.$size-6;
+  font-size: var(--token-typography-body-300-font-size);
 }
 
 .menu a {

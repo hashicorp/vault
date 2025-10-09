@@ -14,13 +14,13 @@
   &.l,
   &.m {
     .stat-label {
-      font-size: size_variables.$size-6;
+      font-size: var(--token-typography-body-300-font-size);
       font-weight: var(--token-typography-font-weight-semibold);
       margin-bottom: size_variables.$spacing-4;
       line-height: inherit;
     }
     .stat-text {
-      font-size: size_variables.$size-8;
+      font-size: var(--token-typography-body-200-font-size);
       font-weight: var(--token-typography-font-weight-regular);
       color: var(--token-color-palette-neutral-500);
       line-height: inherit;
@@ -39,7 +39,7 @@
       line-height: inherit;
     }
     .stat-text {
-      font-size: size_variables.$size-8;
+      font-size: var(--token-typography-body-200-font-size);
       font-weight: var(--token-typography-font-weight-regular);
       color: var(--token-color-palette-neutral-500);
       line-height: inherit;
@@ -58,7 +58,7 @@
       line-height: inherit;
     }
     .stat-text {
-      font-size: size_variables.$size-8;
+      font-size: var(--token-typography-body-200-font-size);
       font-weight: var(--token-typography-font-weight-regular);
       color: var(--token-color-palette-neutral-500);
       line-height: inherit;
@@ -72,12 +72,12 @@
 
   &.m-no-subText {
     .stat-label {
-      font-size: size_variables.$size-8;
+      font-size: var(--token-typography-body-200-font-size);
       font-weight: var(--token-typography-font-weight-bold);
       line-height: inherit;
     }
     .stat-text {
-      font-size: size_variables.$size-8;
+      font-size: var(--token-typography-body-200-font-size);
       font-weight: var(--token-typography-font-weight-regular);
       color: var(--token-color-palette-neutral-500);
       line-height: inherit;
@@ -91,19 +91,19 @@
 
   &.s-no-subText {
     .stat-label {
-      font-size: size_variables.$size-8;
+      font-size: var(--token-typography-body-200-font-size);
       font-weight: var(--token-typography-font-weight-regular);
       color: var(--token-color-palette-neutral-400);
       line-height: inherit;
     }
     .stat-text {
-      font-size: size_variables.$size-8;
+      font-size: var(--token-typography-body-200-font-size);
       font-weight: var(--token-typography-font-weight-regular);
       color: var(--token-color-palette-neutral-500);
       line-height: inherit;
     }
     .stat-value {
-      font-size: size_variables.$size-8;
+      font-size: var(--token-typography-body-200-font-size);
       font-weight: var(--token-typography-font-weight-regular);
       color: var(--token-color-palette-neutral-600);
       line-height: inherit;

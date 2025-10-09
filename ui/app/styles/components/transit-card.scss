@@ -29,7 +29,7 @@
 
   .transit-action-description {
     font-family: var(--token-typography-font-stack-text);
-    font-size: size_variables.$size-8;
+    font-size: var(--token-typography-body-200-font-size);
     color: var(--token-color-palette-neutral-400);
   }
 

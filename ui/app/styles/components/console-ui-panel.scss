@@ -63,7 +63,7 @@ $console-close-height: 35px;
     color: hsl(0, 0%, 100%);
     flex: 1 1 auto;
     font-family: var(--token-typography-font-stack-code);
-    font-size: size_variables.$size-6;
+    font-size: var(--token-typography-body-300-font-size);
     font-weight: var(--tokens-typography-font-weight-bold);
     outline: none;
     padding: size_variables.$spacing-8;

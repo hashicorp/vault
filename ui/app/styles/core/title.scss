@@ -35,7 +35,7 @@
   }
 
   &.is-4 {
-    font-size: size_variables.$size-4;
+    font-size: var(--token-typography-display-400-font-size);
   }
 
   &.is-5 {
@@ -43,7 +43,7 @@
   }
 
   &.is-6 {
-    font-size: size_variables.$size-6;
+    font-size: var(--token-typography-display-200-font-size);
   }
 
   &.is-7 {
@@ -51,7 +51,7 @@
   }
 
   &.is-8 {
-    font-size: size_variables.$size-8;
+    font-size: var(--token-typography-body-200-font-size);
   }
 }
 

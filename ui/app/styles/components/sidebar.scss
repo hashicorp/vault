@@ -11,7 +11,7 @@
   .popup-menu-content {
     .menu-label {
       color: hsl(0, 0%, 4%);
-      font-size: 14px;
+      font-size: var(--token-typography-body-200-font-size);
       font-weight: var(--token-typography-font-weight-bold);
       text-transform: unset;
     }
