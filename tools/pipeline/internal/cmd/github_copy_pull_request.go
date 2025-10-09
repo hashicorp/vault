@@ -67,6 +67,10 @@ func runCopyGithubPullRequestCmd(cmd *cobra.Command, args []string) error {
 			return errors.Join(err, err1)
 		}
 		fmt.Println(string(b))
+	case "markdown":
+		tbl := res.ToTable(err)
+		tbl.SetTitle("Copy Pull Request")
+		fmt.Println(tbl.RenderMarkdown())
 	default:
 		fmt.Println(res.ToTable(err).Render())
 	}

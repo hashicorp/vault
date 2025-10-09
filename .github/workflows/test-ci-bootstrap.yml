@@ -23,6 +23,7 @@ on:
 jobs:
   bootstrap-ci:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    permissions: write-all
     env:
       TF_WORKSPACE: "${{ github.event.repository.name }}-ci-enos-bootstrap"
       TF_VAR_repository: ${{ github.event.repository.name }}

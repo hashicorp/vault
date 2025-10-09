@@ -65,6 +65,7 @@ jobs:
     name: Run UI Tests
     needs: get-metadata
     runs-on: ${{ fromJSON(needs.get-metadata.outputs.runs-on) }}
+    permissions: write-all
     timeout-minutes: 90
     env:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}

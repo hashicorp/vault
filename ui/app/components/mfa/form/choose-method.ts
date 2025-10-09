@@ -31,7 +31,7 @@ export default class MfaFormChooseMethod extends Component<Args> {
   }
 
   get selfEnrollConstraints() {
-    return this.args.constraints.filter((c) => !!c.selfEnrollMethod);
+    return this.args.constraints.filter((c) => c.hasSelfEnrollMethods);
   }
 
   get singleConstraint() {

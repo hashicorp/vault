@@ -59,10 +59,13 @@
         <Hds::Text::Display>{{@model.secretsEngine.id}}</Hds::Text::Display>
         settings:</p>
       <br />
-      {{#each this.changedFields as |changedField|}}
-        <Hds::Text::Display>{{capitalize changedField}}</Hds::Text::Display>
-        <br />
-      {{/each}}
+      <ul class="bullet">
+        {{#each this.changedFields as |changedField|}}
+          <li class="has-left-margin-s">
+            <Hds::Text::Display>{{capitalize changedField}}</Hds::Text::Display>
+          </li>
+        {{/each}}
+      </ul>
       <br />
       Would you like to apply them?
     </M.Body>

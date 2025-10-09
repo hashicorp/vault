@@ -36,6 +36,7 @@ jobs:
   enos-run-vault-interactive-test:
     name:  Enos run Vault interactive test
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    permissions: write-all
     timeout-minutes: 120
     env:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -75,7 +76,8 @@ jobs:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
-      - uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}

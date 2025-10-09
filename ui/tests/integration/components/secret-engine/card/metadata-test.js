@@ -23,8 +23,8 @@ module('Integration | Component | SecretEngine::Card::Metadata', function (hooks
       <SecretEngine::Card::Metadata @model={{this.model}} />
     `);
     assert.dom(`${GENERAL.cardContainer('metadata')} h2`).hasText('Metadata');
-    assert.dom(GENERAL.inputByAttr('path')).hasValue(this.model.secretsEngine.path);
-    assert.dom(GENERAL.inputByAttr('accessor')).hasValue(this.model.secretsEngine.accessor);
+    assert.dom(GENERAL.copySnippet('path')).hasText(this.model.secretsEngine.path);
+    assert.dom(GENERAL.copySnippet('accessor')).hasText(this.model.secretsEngine.accessor);
     await fillIn(GENERAL.textareaByAttr('description'), 'Some awesome description');
     assert.dom(GENERAL.textareaByAttr('description')).hasValue('Some awesome description');
   });
