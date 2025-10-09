@@ -28,7 +28,7 @@ pre.masked-font {
 // need to be the same font and small
 .masked-input.masked .masked-value {
   font-size: 9px;
-  font-family: font_variables.$family-sans;
+  font-family: var(--token-typography-font-stack-text);
   line-height: 2.5;
 }
 

@@ -49,7 +49,7 @@
 
 // Font family
 .is-font-mono {
-  font-family: font_variables.$family-monospace;
+  font-family: var(--token-typography-font-stack-code);
 }
 
 .masked-font {
