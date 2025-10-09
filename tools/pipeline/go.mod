@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/tools/pipeline
 
-go 1.23.2
+go 1.24.0
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -9,10 +9,12 @@ require (
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/hashicorp/releases-api v0.2.3
 	github.com/jedib0t/go-pretty/v6 v6.6.8
+	github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/veqryn/slog-context v0.8.0
 	github.com/zclconf/go-cty v1.16.4
+	golang.org/x/oauth2 v0.31.0
 )
 
 require (
@@ -57,6 +59,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/shurcooL/graphql v0.0.0-20230722043721-ed46e5a46466 // indirect
 	github.com/spf13/pflag v1.0.7 // indirect
 	go.mongodb.org/mongo-driver v1.17.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
