@@ -1,0 +1,3 @@
+```release-note:change
+secrets/azure: Update azure enterprise secrets plugin to include static roles.
+```
