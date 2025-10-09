@@ -9,6 +9,7 @@ import (
 	"log/slog"
 
 	libgithub "github.com/google/go-github/v74/github"
+	"github.com/shurcooL/githubv4"
 	slogctx "github.com/veqryn/slog-context"
 )
 
@@ -62,6 +63,28 @@ func getPullRequest(
 	}
 
 	return pr, nil
+}
+
+// closePullRequest closes a pull request.
+func closePullRequest(
+	ctx context.Context,
+	github *libgithub.Client,
+	owner string,
+	repo string,
+	pullNumber int,
+) error {
+	ctx = slogctx.Append(ctx,
+		slog.String("owner", owner),
+		slog.String("repo", repo),
+		slog.Int("pull-number", pullNumber),
+	)
+	slog.Default().DebugContext(ctx, "closing pull request")
+
+	_, _, err := github.PullRequests.Edit(ctx, owner, repo, pullNumber, &libgithub.PullRequest{
+		State: libgithub.Ptr("closed"),
+	})
+
+	return err
 }
 
 // listPullRequestCommits lists all of the commits associated with a pull request.
@@ -126,4 +149,38 @@ func listPullRequestReviews(
 
 		opts.Page = res.NextPage
 	}
+}
+
+// listPullRequestClosingIssues lists all "closing issues" associated with
+// a pull request. These can be set using keywords associations or manually
+// using the "development" sidebar on either an issue or pull request.
+func listPullRequestClosingIssues(
+	ctx context.Context,
+	github *githubv4.Client,
+	owner string,
+	repo string,
+	pullNumber int,
+) ([]*ClosingIssueRef, error) {
+	slog.Default().DebugContext(slogctx.Append(ctx,
+		slog.String("owner", owner),
+		slog.String("repo", repo),
+		slog.Int("pull-number", pullNumber),
+	), "getting pull request associated issues")
+
+	oai := ClosingIssueRefs{}
+	err := github.Query(ctx, &oai, map[string]any{
+		"owner":  githubv4.String(owner),
+		"repo":   githubv4.String(repo),
+		"number": githubv4.Int(pullNumber),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ais := []*ClosingIssueRef{}
+	for _, ai := range oai.Repository.PullRequest.ClosingIssuesReferences.Edges {
+		ais = append(ais, ai.Node)
+	}
+
+	return ais, nil
 }

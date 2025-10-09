@@ -93,7 +93,7 @@ func runCreateGithubBackportCmd(cmd *cobra.Command, args []string) error {
 		createGithubBackportState.req.CEExclude = createGithubBackportState.req.CEExclude.Add(changed.FileGroup(eg))
 	}
 
-	res := createGithubBackportState.req.Run(context.TODO(), githubCmdState.Github, githubCmdState.Git)
+	res := createGithubBackportState.req.Run(context.TODO(), githubCmdState.GithubV3, githubCmdState.Git)
 	if res == nil {
 		res = &github.CreateBackportRes{}
 	}
