@@ -8,9 +8,10 @@ import { click } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { SYS_INTERNAL_UI_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
+import { formatAuthMounts, SYS_INTERNAL_UI_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
 import setupTestContext from './setup-test-context';
 import sinon from 'sinon';
+import AuthMethodResource from 'vault/resources/auth/method';
 
 /* 
   Login settings are an enterprise only feature but the component is version agnostic (and subsequently so are these tests) 
@@ -118,7 +119,7 @@ module('Integration | Component | auth | page | ent login settings', function (h
         defaultType: 'oidc',
         backupTypes: ['userpass', 'ldap'],
       };
-      this.visibleAuthMounts = SYS_INTERNAL_UI_MOUNTS;
+      this.visibleAuthMounts = formatAuthMounts(this.api);
     });
 
     test('(default+backups): it hides advanced settings for both views', async function (assert) {
@@ -168,11 +169,20 @@ module('Integration | Component | auth | page | ent login settings', function (h
         defaultType: 'oidc',
         backupTypes: ['userpass', 'ldap'],
       };
-      this.mountData = (path) => ({ [path]: SYS_INTERNAL_UI_MOUNTS[path] });
+      this.setVisibleMounts = (...paths) => {
+        // Builds an object in the shape of SYS_INTERNAL_UI_MOUNTS response with only the provided ...paths
+        const mounts = Object.fromEntries(
+          paths
+            .filter((path) => SYS_INTERNAL_UI_MOUNTS[path])
+            .map((path) => [path, SYS_INTERNAL_UI_MOUNTS[path]])
+        );
+        // Format stubbed response the same way the auth route does
+        return formatAuthMounts(this.api, mounts);
+      };
     });
 
     test('(default+backups): it hides advanced settings for default with visible mount but it renders for backups', async function (assert) {
-      this.visibleAuthMounts = { ...this.mountData('my_oidc/') };
+      this.visibleAuthMounts = this.setVisibleMounts('my_oidc/');
       await this.renderComponent();
       this.assertPathInput(assert, { isHidden: true, value: 'my_oidc/' });
       await click(GENERAL.button('Sign in with other methods'));
@@ -184,11 +194,7 @@ module('Integration | Component | auth | page | ent login settings', function (h
 
     test('(default+backups): it only renders advanced settings for method without mounts', async function (assert) {
       // default and only one backup method have visible mounts
-      this.visibleAuthMounts = {
-        ...this.mountData('my_oidc/'),
-        ...this.mountData('userpass/'),
-        ...this.mountData('userpass2/'),
-      };
+      this.visibleAuthMounts = this.setVisibleMounts('my_oidc/', 'userpass/', 'userpass2/');
       await this.renderComponent();
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
       await click(GENERAL.button('Sign in with other methods'));
@@ -200,7 +206,8 @@ module('Integration | Component | auth | page | ent login settings', function (h
     });
 
     test('(default+backups): it hides advanced settings for single backup method with mounts', async function (assert) {
-      this.visibleAuthMounts = { ...this.mountData('ldap/') };
+      this.visibleAuthMounts = this.setVisibleMounts('ldap/');
+
       await this.renderComponent();
       assert.dom(AUTH_FORM.authForm('oidc')).exists();
       assert.dom(AUTH_FORM.advancedSettings).exists();
@@ -213,7 +220,7 @@ module('Integration | Component | auth | page | ent login settings', function (h
 
     test('(backups only): it hides advanced settings for single method with mounts', async function (assert) {
       this.loginSettings.defaultType = '';
-      this.visibleAuthMounts = { ...this.mountData('ldap/') };
+      this.visibleAuthMounts = this.setVisibleMounts('ldap/');
       await this.renderComponent();
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
       assert.dom(AUTH_FORM.advancedSettings).exists();
@@ -224,7 +231,7 @@ module('Integration | Component | auth | page | ent login settings', function (h
 
   module('@directLinkData overrides login settings', function (hooks) {
     hooks.beforeEach(function () {
-      this.mountData = SYS_INTERNAL_UI_MOUNTS;
+      this.mountData = formatAuthMounts(this.api);
     });
 
     module('when there are no visible mounts at all', function (hooks) {
@@ -260,14 +267,10 @@ module('Integration | Component | auth | page | ent login settings', function (h
 
     module('when param matches a visible mount path and other visible mounts exist', function (hooks) {
       hooks.beforeEach(function () {
-        this.visibleAuthMounts = {
+        this.visibleAuthMounts = [
           ...this.mountData,
-          'my-okta/': {
-            description: '',
-            options: null,
-            type: 'okta',
-          },
-        };
+          new AuthMethodResource({ path: 'my-okta/', type: 'okta' }),
+        ];
         this.directLinkData = { path: 'my-okta/', type: 'okta' };
       });
 
