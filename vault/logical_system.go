@@ -7246,4 +7246,8 @@ This path responds to the following HTTP methods.
 		`Whether to trim a trailing slash on incoming requests to this mount`,
 		"",
 	},
+	"pki-certificate-count": {
+		"Count of PKI certificates issued and stored by PKI backends on this cluster",
+		"Count of PKI certificates issued and stored by PKI backends on this cluster",
+	},
 }
