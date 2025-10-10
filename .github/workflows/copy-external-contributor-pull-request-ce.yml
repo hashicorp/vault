@@ -57,7 +57,7 @@ jobs:
         run: |
           echo 'payload={"number":"${{ github.event.number || inputs.number }}"}' | tee -a "$GITHUB_OUTPUT"
       - name: Trigger backport for Enterprise
-        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        uses: peter-evans/repository-dispatch@5fc4efd1a4797ddb68ffd0714a238564e4cc0e6f # v4.0.0
         with:
           token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           repository: hashicorp/vault-enterprise
