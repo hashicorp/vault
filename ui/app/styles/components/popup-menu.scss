@@ -57,7 +57,7 @@
   // so they match other dropdown elements until we replace popup-menu with Hds::Dropdown
   .hds-confirm-action-critical {
     &:hover {
-      background-color: var(--token-color-palette-neutral-50);
+      background-color: var(--token-color-surface-faint);
     }
     div,
     span {
@@ -72,21 +72,21 @@
   .ember-power-select-option[aria-current='true'],
   a {
     background-color: hsl(0, 0%, 100%);
-    color: var(--token-color-palette-neutral-600);
+    color: var(--token-color-foreground-primary);
 
     &:hover {
-      background-color: var(--token-color-palette-neutral-50);
-      color: var(--token-color-palette-neutral-600);
+      background-color: var(--token-color-surface-faint);
+      color: var(--token-color-foreground-primary);
     }
 
     &.active,
     &.is-active {
       background-color: transparent;
-      color: var(--token-color-palette-blue-200);
+      color: var(--token-color-foreground-action);
     }
 
     &.is-destroy {
-      color: var(--token-color-palette-red-200);
+      color: var(--token-color-foreground-critical);
 
       &:hover {
         background-color: var(--token-color-palette-red-200);
@@ -109,7 +109,7 @@
   }
 
   .menu-label {
-    color: var(--token-color-palette-neutral-500);
+    color: var(--token-color-foreground-faint);
     font-size: size_variables.$size-9;
     font-weight: font_variables.$font-weight-normal;
     letter-spacing: 0;

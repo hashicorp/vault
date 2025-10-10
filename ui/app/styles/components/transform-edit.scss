@@ -7,10 +7,10 @@
  */
 
 .copy-text {
-  background: var(--token-color-palette-neutral-50);
+  background: var(--token-color-surface-faint);
 
   & > code {
-    color: var(--token-color-palette-neutral-600);
+    color: var(--token-color-foreground-primary);
     padding: 14px;
   }
 }

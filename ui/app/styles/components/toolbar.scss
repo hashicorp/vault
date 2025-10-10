@@ -13,7 +13,7 @@
 }
 
 .toolbar {
-  background-color: var(--token-color-palette-neutral-50);
+  background-color: var(--token-color-surface-faint);
   border: 1px solid var(--token-color-palette-neutral-100);
   border-bottom-color: var(--token-color-palette-neutral-300);
   border-top-color: var(--token-color-palette-neutral-300);
@@ -62,7 +62,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: var(--token-color-palette-neutral-300);
+    background: var(--token-color-surface-strong);
     border-radius: size_variables.$spacing-4;
   }
 }
@@ -102,9 +102,9 @@
   transition: background-color size_variables.$speed;
 
   &:hover:not(.disabled) {
-    background-color: var(--token-color-palette-neutral-100);
+    background-color: var(--token-color-surface-strong);
     border: 0;
-    color: var(--token-color-palette-blue-200);
+    color: var(--token-color-foreground-action);
   }
 
   &:active {
@@ -133,8 +133,8 @@ a.disabled.toolbar-link {
   background-color: hsl(0, 0%, 100%);
   cursor: not-allowed;
   &:hover {
-    background-color: var(--token-color-palette-neutral-100);
-    color: var(--token-color-palette-blue-200);
+    background-color: var(--token-color-surface-strong);
+    color: var(--token-color-foreground-action);
   }
 }
 
