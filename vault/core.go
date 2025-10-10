@@ -2899,7 +2899,7 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 
 		// Start a periodic but infrequent heartbeat to detect auto-seal backend outages at runtime rather than being
 		// surprised by this at the next need to unseal.
-		seal.StartHealthCheck()
+		seal.StartHealthCheck(ctx)
 	}
 
 	// This is intentionally the last block in this function. We want to allow
