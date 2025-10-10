@@ -10,13 +10,16 @@ import (
 // entry represents an audit entry.
 // It could be an entry for a request or response.
 type entry struct {
+	// Time is the first struct field to ensure it appears first in marshaled JSON,
+	//   aiding accurate timestamp extraction easily by log parsers and forwarders.
+	// Use json/v2's Deterministic to preserve field order when upgrading json package.
+	Time          string    `json:"time,omitempty"`
 	Auth          *auth     `json:"auth,omitempty"`
 	Error         string    `json:"error,omitempty"`
 	Forwarded     bool      `json:"forwarded,omitempty"`
 	ForwardedFrom string    `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
 	Request       *request  `json:"request,omitempty"`
 	Response      *response `json:"response,omitempty"`
-	Time          string    `json:"time,omitempty"`
 	Type          string    `json:"type,omitempty"`
 }
 
