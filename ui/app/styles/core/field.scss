@@ -136,7 +136,7 @@ fieldset.form-fieldset {
     }
 
     &.is-large {
-      font-size: 1.5rem;
+      font-size: var(--token-typography-display-400-font-size);
       padding-top: 0.375em;
     }
   }

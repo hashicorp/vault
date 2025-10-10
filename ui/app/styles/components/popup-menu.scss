@@ -1,5 +1,4 @@
 @use '../utils/box-shadow_variables';
-@use '../utils/font_variables';
 @use '../utils/size_variables';
 
 /**
@@ -46,7 +45,7 @@
     display: block;
     height: auto;
     font-size: size_variables.$size-7;
-    font-weight: font_variables.$font-weight-semibold;
+    font-weight: var(--token-typography-font-weight-semibold);
     padding: size_variables.$spacing-10 size_variables.$spacing-12;
     text-align: left;
     text-decoration: none;
@@ -63,7 +62,7 @@
     span {
       margin-left: -(size_variables.$spacing-4);
       font-size: size_variables.$size-7;
-      font-weight: font_variables.$font-weight-semibold;
+      font-weight: var(--token-typography-font-weight-semibold);
     }
   }
 
@@ -111,7 +110,7 @@
   .menu-label {
     color: var(--token-color-palette-neutral-500);
     font-size: size_variables.$size-9;
-    font-weight: font_variables.$font-weight-normal;
+    font-weight: var(--token-typography-font-weight-regular);
     letter-spacing: 0;
     margin: 0;
     padding: size_variables.$spacing-8 size_variables.$spacing-12 0;
@@ -131,7 +130,7 @@
 .popup-menu-content p {
   box-shadow: none;
   padding-top: size_variables.$spacing-8;
-  font-weight: font_variables.$font-weight-semibold;
+  font-weight: var(--token-typography-font-weight-semibold);
 }
 
 .popup-menu-content .level-left {
