@@ -8,7 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import clientsHandler, { STATIC_NOW } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
-import { visit, currentURL } from '@ember/test-helpers';
+import { visit, currentURL, click } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
@@ -120,5 +120,45 @@ module('Acceptance | clients | counts', function (hooks) {
     await visit('/vault/clients/counts/overview');
     assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText('April 2023');
     assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText('April 2023');
+  });
+
+  module('manual refresh', function (hooks) {
+    hooks.beforeEach(async function () {
+      const router = this.owner.lookup('service:router');
+      this.refreshSpy = sinon.spy(router, 'refresh');
+      return login();
+    });
+
+    // Date querying is different in CE vs Enterprise, but the refresh behaves the same.
+    // For simplicity, just test this action on enterprise versions.
+    test('enterprise: it refreshes the overview route and preserves query params', async function (assert) {
+      await visit('/vault/clients/counts/overview');
+      assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'current view is the overview page');
+      // Change date to add query params
+      await click(CLIENT_COUNT.dateRange.edit);
+      await click(CLIENT_COUNT.dateRange.dropdownOption(1));
+      // Save URL with query params before clicking refresh
+      const url = currentURL();
+      await click(GENERAL.button('Refresh page'));
+      assert.true(this.refreshSpy.calledOnce, 'router.refresh() is called once');
+      assert.strictEqual(currentURL(), url, 'url is the same after clicking refresh');
+    });
+
+    test('enterprise: it refreshes the client-list route and preserves query params', async function (assert) {
+      await visit('/vault/clients/counts/client-list');
+      assert.strictEqual(
+        currentURL(),
+        '/vault/clients/counts/client-list',
+        'current view is the client-list page'
+      );
+      // Change date to add query params
+      await click(CLIENT_COUNT.dateRange.edit);
+      await click(CLIENT_COUNT.dateRange.dropdownOption(1));
+      // Save URL with query params before clicking refresh
+      const url = currentURL();
+      await click(GENERAL.button('Refresh page'));
+      assert.true(this.refreshSpy.calledOnce, 'router.refresh() is called once');
+      assert.strictEqual(currentURL(), url, 'url is the same after clicking refresh');
+    });
   });
 });
