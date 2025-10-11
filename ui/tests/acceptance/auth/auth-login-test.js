@@ -106,6 +106,21 @@ module('Acceptance | auth login', function (hooks) {
     assert.dom(AUTH_FORM.tabs).doesNotExist();
   });
 
+  test('it renders default view if sys/internal/ui/mounts has unsupported type', async function (assert) {
+    this.server.get('/sys/internal/ui/mounts', () => {
+      return { data: { auth: { 'custom-auth/': { type: 'custom-auth' } } } };
+    });
+    await logout();
+    await visit('/vault/auth');
+    await waitFor(AUTH_FORM.form);
+    assert.dom(GENERAL.selectByAttr('auth type')).exists('dropdown renders');
+    assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token', 'dropdown has default "Token" selected');
+    // dropdown could still render in "Sign in with other methods" view, so make sure we're not in a weird state
+    assert.dom(GENERAL.backButton).doesNotExist('it does not render "Back" button');
+    assert.dom(AUTH_FORM.authForm('token')).exists('it renders token form');
+    assert.dom(AUTH_FORM.tabs).doesNotExist('it does not render auth tabs');
+  });
+
   module('listing visibility', function (hooks) {
     hooks.beforeEach(async function () {
       this.server.get('/sys/internal/ui/mounts', () => {
