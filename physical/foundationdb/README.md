@@ -30,7 +30,7 @@ By default, if `--fdbver x.y.z` is not specified, version 5.2.4 will be used.
 
 ## Building Vault
 
-To build Vault the FoundationDB backend, add FDB_ENABLED=1 when invoking
+To build Vault with the FoundationDB backend, add FDB_ENABLED=1 when invoking
 `make`, e.g.
 
 ```
