@@ -174,7 +174,7 @@ else
         golibdir=$(dirname "${GOPATH}/src/${REMOTE}/${FDBREPO}")
         if [[ -z "${destdir}" ]] ; then
             if [[ "${operation}" == "localinstall" ]] ; then
-                # Assume its the local directory.
+                # Assume it's the local directory.
                 destdir=$(cd "${filedir}/../../.." && pwd)
             else
                 destdir="${golibdir}"
