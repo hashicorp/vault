@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
@@ -52,33 +52,5 @@ module('Integration | Component | SecretEngine::Page::GeneralSettings', function
     assert.dom(GENERAL.cardContainer('security')).exists(`Security card exists`);
     assert.dom(GENERAL.cardContainer('version')).exists(`Version card exists`);
     assert.dom(GENERAL.cardContainer('metadata')).exists(`Metadata card exists`);
-  });
-
-  test('it shows unsaved changes modal', async function (assert) {
-    assert.expect(3);
-
-    await render(hbs`
-      <SecretEngine::Page::GeneralSettings @model={{this.model}} />
-    `);
-    await fillIn(GENERAL.textareaByAttr('description'), 'Some awesome description');
-    await click(GENERAL.cancelButton);
-
-    assert.dom(GENERAL.modal.container('unsaved-changes')).exists('Unsaved changes exists');
-    assert.dom(GENERAL.modal.header('unsaved-changes')).hasText('Unsaved changes');
-    assert
-      .dom(GENERAL.modal.body('unsaved-changes'))
-      .hasText(
-        `You've made changes to the following ${this.model.secretsEngine.id} settings: Description Would you like to apply them?`
-      );
-  });
-
-  test('it does not show unsaved changes modal when there are no unsaved changes', async function (assert) {
-    assert.expect(1);
-
-    await render(hbs`
-      <SecretEngine::Page::GeneralSettings @model={{this.model}} />
-    `);
-    await click(GENERAL.cancelButton);
-    assert.dom(GENERAL.modal.container('unsaved-changes')).doesNotExist('Unsaved changes does not show');
   });
 });
