@@ -163,16 +163,16 @@ module('Integration | Component | clients/page-header', function (hooks) {
   });
 
   test('it refreshes route after clicking "Refresh page" button', async function (assert) {
-    const routeName = 'vault.cluster.clients.counts.overview';
+    const routeName = 'vault.cluster.clients.counts';
     const router = this.owner.lookup('service:router');
-    Sinon.stub(router, 'currentRoute').value({ name: routeName });
+    Sinon.stub(router, 'currentRoute').value({ parent: { name: routeName } });
     const refreshStub = Sinon.stub(router, 'refresh');
     this.activityTimestamp = timestamp.now().toISOString();
     await this.renderComponent();
     await click(GENERAL.button('Refresh page'));
     const [transitionRoute] = refreshStub.lastCall.args;
     assert.true(refreshStub.calledOnce, 'clicking "Refresh page" calls refresh()');
-    assert.strictEqual(transitionRoute, routeName, 'it calls refresh() with route name');
+    assert.strictEqual(transitionRoute, routeName, 'it calls refresh() with parent route name');
   });
 
   module('download naming', function () {
