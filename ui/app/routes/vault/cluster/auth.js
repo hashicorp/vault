@@ -7,7 +7,7 @@ import { service } from '@ember/service';
 import ClusterRouteBase from './cluster-route-base';
 import config from 'vault/config/environment';
 import { isEmptyValue } from 'core/helpers/is-empty-value';
-import { supportedTypes } from 'vault/utils/supported-login-methods';
+import { normalizeType, supportedTypes } from 'vault/utils/supported-login-methods';
 import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default class AuthRoute extends ClusterRouteBase {
@@ -123,7 +123,18 @@ export default class AuthRoute extends ClusterRouteBase {
         this.api.buildHeaders({ token: '' })
       );
       // return a falsy value if the object is empty
-      return isEmptyValue(data.auth) ? null : data.auth;
+      if (isEmptyValue(data.auth)) return null;
+
+      // built-in methods, like 'token' have type prefixed with `ns_`
+      // so we want to normalize it
+      const normalizedAuth = {};
+      for (const [path, mountData] of Object.entries(data.auth)) {
+        normalizedAuth[path] = {
+          ...mountData,
+          type: normalizeType(mountData.type),
+        };
+      }
+      return normalizedAuth;
     } catch {
       // catch error if there's a problem fetching mount data (i.e. invalid namespace)
       return null;

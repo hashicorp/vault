@@ -60,3 +60,7 @@ export const supportedTypes = (isEnterprise: boolean) =>
 // this ensures no unexpected params are injected and submitted in the login form
 // 'namespace' and 'path' are intentionally omitted because they are handled explicitly
 export const POSSIBLE_FIELDS = ['role', 'jwt', 'password', 'token', 'username'];
+
+// namespaces introduced types with a `ns_` prefix for built-in engines like 'token'
+// so we need to strip that to normalize the type
+export const normalizeType = (type: string) => type.replace(/^ns_/, '');

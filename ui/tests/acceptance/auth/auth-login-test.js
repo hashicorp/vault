@@ -98,6 +98,22 @@ module('Acceptance | auth login form', function (hooks) {
     assert.dom(AUTH_FORM.tabs).doesNotExist();
   });
 
+  test('it renders default view if sys/internal/ui/mounts has ns_ prefixed type', async function (assert) {
+    this.server.get('/sys/internal/ui/mounts', () => {
+      return { data: { auth: { 'token/': { type: 'ns_token' } } } };
+    });
+    await logout();
+    await visit('/vault/auth');
+    await waitFor(AUTH_FORM.form);
+    assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
+    assert.dom(AUTH_FORM.tabBtn('token')).hasAttribute('aria-selected', 'true', 'token tab renders');
+    assert.dom(GENERAL.inputByAttr('token')).exists('it renders token input');
+    assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
+    await click(AUTH_FORM.otherMethodsBtn);
+    assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token');
+    assert.dom(GENERAL.inputByAttr('token')).exists('it renders token input in fallback view');
+  });
+
   module('listing visibility', function (hooks) {
     hooks.beforeEach(async function () {
       this.server.get('/sys/internal/ui/mounts', () => {
