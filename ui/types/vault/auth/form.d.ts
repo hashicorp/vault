@@ -8,10 +8,6 @@ export interface UnauthMountsByType {
   // if the value is "null" there is no mount data for that type
   [key: string]: AuthTabMountData[] | null;
 }
-export interface UnauthMountsResponse {
-  // key is the mount path
-  [key: string]: { type: string; description?: string; config?: object | null };
-}
 
 interface AuthTabMountData {
   path: string;

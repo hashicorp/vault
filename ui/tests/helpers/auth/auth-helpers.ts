@@ -7,8 +7,10 @@ import { click, currentRouteName, fillIn, visit, waitUntil } from '@ember/test-h
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import AuthMethodResource from 'vault/resources/auth/method';
 
 import type { LoginFields } from 'vault/vault/auth/form';
+import type ApiService from 'vault/services/api';
 
 export const { rootToken } = VAULT_KEYS;
 
@@ -118,3 +120,7 @@ export const SYS_INTERNAL_UI_MOUNTS = {
     type: 'ldap',
   },
 };
+
+// helper function to stub logic in the AuthRoute to format visibleAuthMounts for integration tests
+export const formatAuthMounts = (api: ApiService, mounts = SYS_INTERNAL_UI_MOUNTS) =>
+  api.responseObjectToArray(mounts, 'path').map((method) => new AuthMethodResource(method, this));
