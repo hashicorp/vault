@@ -1,0 +1,2 @@
+```release-note:bug
+ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`

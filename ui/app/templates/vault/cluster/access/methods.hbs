@@ -115,6 +115,8 @@
       </div>
     </div>
   </LinkedBlock>
+{{else}}
+  <EmptyState @title="No Authentication Methods found" />
 {{/each}}
 
 {{#if this.methodToDisable}}
