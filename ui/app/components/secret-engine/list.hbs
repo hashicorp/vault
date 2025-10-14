@@ -167,6 +167,8 @@
       </Hds::Dropdown>
     </div>
   </LinkedBlock>
+{{else}}
+  <EmptyState @title="No Secrets engines found" />
 {{/each}}
 
 {{#if this.engineToDisable}}
