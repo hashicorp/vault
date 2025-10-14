@@ -486,7 +486,7 @@ jobs:
           method: chat.postMessage
           token: ${{ steps.slackbot-token.outputs.slackbot-token }}
           payload: |
-            channel: C05AABYEA9Y
+            channel: C09L3BB542Y
             text: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} build failures on ${{ github.ref_name }}
             blocks:
               - type: header
