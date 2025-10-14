@@ -14,13 +14,15 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import timestamp from 'core/utils/timestamp';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { format } from 'date-fns';
 
 module('Acceptance | clients | counts', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
+    this.timestampStub = sinon.stub(timestamp, 'now');
+    this.timestampStub.returns(STATIC_NOW);
     clientsHandler(this.server);
     this.store = this.owner.lookup('service:store');
     return login();
@@ -36,6 +38,17 @@ module('Acceptance | clients | counts', function (hooks) {
     assert
       .dom(GENERAL.emptyStateMessage)
       .hasText('Only historical data may be queried. No data is available for the current month.');
+  });
+
+  test('it does not make a request to the export api on community versions', async function (assert) {
+    assert.expect(1);
+    this.owner.lookup('service:version').type = 'community';
+    server.get('/sys/internal/counters/activity/export', () => {
+      // passing "false" because a request should NOT be made, so if this assertion is hit we want it to fail
+      assert.true(false, 'it does not make request to export API on community versions ');
+    });
+    await visit('/vault/clients/counts/overview');
+    assert.dom(GENERAL.tab('client list')).doesNotExist();
   });
 
   test('it should redirect to counts overview route for transitions to parent', async function (assert) {
@@ -137,11 +150,21 @@ module('Acceptance | clients | counts', function (hooks) {
       // Change date to add query params
       await click(CLIENT_COUNT.dateRange.edit);
       await click(CLIENT_COUNT.dateRange.dropdownOption(1));
+      assert
+        .dom(CLIENT_COUNT.activityTimestamp)
+        .hasTextContaining(`Dashboard last updated: ${format(STATIC_NOW, 'MMM d yyyy')}`);
       // Save URL with query params before clicking refresh
       const url = currentURL();
+      // re-stub with a completely different year/month/day before clicking refresh
+      // to mock the timestamp updating when page reloads
+      const fakeUpdatedNow = new Date('2025-07-02T23:25:13Z');
+      this.timestampStub.returns(fakeUpdatedNow);
       await click(GENERAL.button('Refresh page'));
       assert.true(this.refreshSpy.calledOnce, 'router.refresh() is called once');
       assert.strictEqual(currentURL(), url, 'url is the same after clicking refresh');
+      assert
+        .dom(CLIENT_COUNT.activityTimestamp)
+        .hasTextContaining(`Dashboard last updated: ${format(fakeUpdatedNow, 'MMM d yyyy')}`);
     });
 
     test('enterprise: it refreshes the client-list route and preserves query params', async function (assert) {
@@ -154,11 +177,21 @@ module('Acceptance | clients | counts', function (hooks) {
       // Change date to add query params
       await click(CLIENT_COUNT.dateRange.edit);
       await click(CLIENT_COUNT.dateRange.dropdownOption(1));
+      assert
+        .dom(CLIENT_COUNT.activityTimestamp)
+        .hasTextContaining(`Dashboard last updated: ${format(STATIC_NOW, 'MMM d yyyy')}`);
       // Save URL with query params before clicking refresh
       const url = currentURL();
+      // re-stub with a completely different year/month/day before clicking refresh
+      // to mock the timestamp updating when page reloads
+      const fakeUpdatedNow = new Date('2025-07-02T23:25:13Z');
+      this.timestampStub.returns(fakeUpdatedNow);
       await click(GENERAL.button('Refresh page'));
       assert.true(this.refreshSpy.calledOnce, 'router.refresh() is called once');
       assert.strictEqual(currentURL(), url, 'url is the same after clicking refresh');
+      assert
+        .dom(CLIENT_COUNT.activityTimestamp)
+        .hasTextContaining(`Dashboard last updated: ${format(fakeUpdatedNow, 'MMM d yyyy')}`);
     });
   });
 });

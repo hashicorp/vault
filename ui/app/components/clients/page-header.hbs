@@ -9,7 +9,7 @@
   </PH.Title>
 
   {{#if @activityTimestamp}}
-    <PH.Subtitle>
+    <PH.Subtitle data-test-activity-timestamp>
       Dashboard last updated:
       {{date-format @activityTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
       <Hds::Button
