@@ -19,14 +19,15 @@ import type {
 import type { HTMLElementEvent } from 'vault/forms';
 
 interface Args {
-  filterQueryParams: Record<ClientFilterTypes, string>;
   dataset: ActivityExportData[] | MountClients[];
-  onFilter: CallableFunction;
   dropdownMonths?: string[];
+  filterQueryParams: Record<ClientFilterTypes, string>;
+  isExportData?: boolean;
+  onFilter: CallableFunction;
 }
 
 // Correspond to each search input's tracked variable in the component class
-type SearchProperty = 'namespacePathSearch' | 'mountPathSearch' | 'mountTypeSearch';
+type SearchProperty = 'namespacePathSearch' | 'mountPathSearch' | 'mountTypeSearch' | 'monthSearch';
 
 export default class ClientsFilterToolbar extends Component<Args> {
   filterTypes = Object.values(ClientFilters);
@@ -63,30 +64,33 @@ export default class ClientsFilterToolbar extends Component<Args> {
     const mountTypes = new Set<string>();
     const months = new Set<string>();
 
-    // iterate over dataset once to get dropdown items
-    this.args.dataset.forEach((d) => {
-      // namespace_path for root is technically an empty string, so convert to 'root'
-      const namespace = d.namespace_path === '' ? 'root' : d.namespace_path;
-      if (namespace) namespacePaths.add(namespace);
-      if (d.mount_path) mountPaths.add(d.mount_path);
-      if (d.mount_type) mountTypes.add(d.mount_type);
-      // `client_first_used_time` only exists for the dataset rendered in the "Client list" tab (ActivityExportData)
-      // the "Overview tab" manually passes an array of months
-      if ('client_first_used_time' in d && d.client_first_used_time) {
-        // for now, we're only concerned with month granularity so we want the dropdown filter to contain an ISO timestamp
-        // of the first of the month for each client_first_used_time
-        const date = parseAPITimestamp(d.client_first_used_time) as Date;
-        const year = date.getUTCFullYear();
-        const monthIdx = date.getUTCMonth();
-        const timestamp = buildISOTimestamp({ year, monthIdx, isEndDate: false });
-        months.add(timestamp);
-      }
-    });
+    if (this.args.dataset) {
+      // iterate over dataset once to get dropdown items
+      this.args.dataset.forEach((d) => {
+        // namespace_path for root is technically an empty string, so convert to 'root'
+        const namespace = d.namespace_path === '' ? 'root' : d.namespace_path;
+        if (namespace) namespacePaths.add(namespace);
+        if (d.mount_path) mountPaths.add(d.mount_path);
+        if (d.mount_type) mountTypes.add(d.mount_type);
+        // `client_first_used_time` only exists for the dataset rendered in the "Client list" tab (ActivityExportData),
+        // and if the client ID was initially used in version 1.21 or later.
+        if ('client_first_used_time' in d && d.client_first_used_time) {
+          // for now, we're only concerned with month granularity so we want the dropdown filter to contain an ISO timestamp
+          // of the first of the month for each client_first_used_time
+          const date = parseAPITimestamp(d.client_first_used_time) as Date;
+          const year = date.getUTCFullYear();
+          const monthIdx = date.getUTCMonth();
+          const timestamp = buildISOTimestamp({ year, monthIdx, isEndDate: false });
+          months.add(timestamp);
+        }
+      });
+    }
 
     return {
       [ClientFilters.NAMESPACE]: [...namespacePaths],
       [ClientFilters.MOUNT_PATH]: [...mountPaths],
       [ClientFilters.MOUNT_TYPE]: [...mountTypes],
+      // The "Overview tab" manually passes an array of months
       [ClientFilters.MONTH]: this.args.dropdownMonths || [...months],
     };
   }
@@ -189,16 +193,29 @@ export default class ClientsFilterToolbar extends Component<Args> {
   }
 
   // TEMPLATE HELPERS
-  formatTimestamp = (isoTimestamp: string) => parseAPITimestamp(isoTimestamp, 'MMMM yyyy');
+  formatTimestamp = (isoTimestamp: string) => parseAPITimestamp(isoTimestamp, 'MMMM yyyy') as string;
 
   searchDropdown = (dropdownItems: string[], searchProperty: SearchProperty) => {
     const searchInput = this[searchProperty];
-    return searchInput
-      ? dropdownItems.filter((i) => i?.toLowerCase().includes(searchInput.toLowerCase()))
-      : dropdownItems;
+
+    if (searchInput) {
+      return dropdownItems.filter((i) => {
+        const isMatch = (item: string) => item?.toLowerCase().includes(searchInput.toLowerCase());
+        // For months, search both the ISO timestamp and formatted display value (e.g., "January 2024")
+        return searchProperty === 'monthSearch' ? isMatch(i) || isMatch(this.formatTimestamp(i)) : isMatch(i);
+      });
+    }
+
+    return dropdownItems;
   };
 
   noItemsMessage = (searchValue: string, label: string) => {
-    return searchValue ? `No matching ${label}` : `No ${label} to filter`;
+    if (searchValue) return `No matching ${label}`;
+
+    // The version upgrade message is only relevant if the toolbar filtering activity export data
+    // because that is when the months dropdown is populated by the `client_first_used_time` key.
+    return label === 'months' && this.args.isExportData
+      ? 'Filtering by month is only available for clients initially used after upgrading to version 1.21.'
+      : `No ${label} to filter`;
   };
 }

@@ -10,7 +10,7 @@
   >
     <:actions>
       {{#if (eq this.model.exportError.httpStatus 403)}}
-        <Hds::Text::Body @tag="p" @color="faint">
+        <Hds::Text::Body @tag="p" @color="faint" class="has-bottom-margin-s">
           Viewing export data requires
           <Hds::Text::Code class="code-in-text">sudo</Hds::Text::Code>
           permissions.
