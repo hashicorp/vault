@@ -20,6 +20,7 @@
   </PH.Actions>
 </Hds::PageHeader>
 
+{{! Filters section }}
 <Hds::SegmentedGroup class="has-top-margin-m" as |SG|>
   <SG.TextInput
     @width="300px"
@@ -70,16 +71,9 @@
   </SG.Dropdown>
 </Hds::SegmentedGroup>
 
-<Hds::Layout::Flex @gap="8" class="has-top-margin-xs has-bottom-margin-m" @align="center">
+<Hds::Layout::Flex @gap="8" class="has-top-margin-xs has-bottom-margin-xs" @align="center">
   {{#if (and (not this.engineTypeFilters) (not this.engineVersionFilters))}}
-    <Hds::Text::Body>No filters applied:</Hds::Text::Body>
-    <Hds::TooltipButton
-      @text="Select the desired filters in the dropdowns above to narrow your search."
-      aria-label="More information"
-      data-test-tooltip="Filter info"
-    >
-      <Hds::Icon @name="info" />
-    </Hds::TooltipButton>
+    <Hds::Text::Body class="has-top-padding-xs">No filters applied.</Hds::Text::Body>
   {{else}}
     <Hds::Text::Body>Filters applied:</Hds::Text::Body>
     {{#each this.engineTypeFilters as |type|}}
@@ -98,78 +92,92 @@
     />
   {{/if}}
 </Hds::Layout::Flex>
+{{! End Filters Section }}
 
-{{#each this.sortedDisplayableBackends as |backend|}}
-  <LinkedBlock
-    @params={{array backend.backendLink backend.id}}
-    class="list-item-row linked-block-item is-no-underline"
-    data-test-secrets-backend-link={{backend.id}}
-    @disabled={{not backend.isSupportedBackend}}
+{{! Table Section }}
+{{#if this.sortedDisplayableBackends}}
+  <ListTable
+    class="has-top-margin-xs"
+    @columns={{this.tableColumns}}
+    @selectionKey="path"
+    @data={{this.sortedDisplayableBackends}}
+    @onSelectionChange={{this.updateSelectedItems}}
   >
-    <div>
-      <div class="has-text-grey is-grid align-items-center linked-block-title">
-        {{#if backend.icon}}
-          <Hds::TooltipButton
-            aria-label="Type of backend"
-            @text={{this.generateToolTipText backend}}
-            data-test-tooltip="Backend type"
-          >
-            <Icon @name={{backend.icon}} class="has-text-grey-light" />
-          </Hds::TooltipButton>
-        {{/if}}
-        {{#if backend.path}}
-          {{#if backend.isSupportedBackend}}
-            <LinkTo
-              @route={{backend.backendLink}}
-              @model={{backend.id}}
-              class="has-text-black has-text-weight-semibold overflow-wrap"
-              data-test-secret-path={{backend.path}}
-            >
-              {{backend.path}}
-            </LinkTo>
-          {{else}}
-            <span data-test-secret-path={{backend.path}}>{{backend.path}}</span>
-          {{/if}}
-        {{/if}}
-      </div>
-      <code class="has-text-grey is-size-8" data-test-engine-accessor>
-        {{backend.accessor}}
-        {{backend.running_plugin_version}}
-      </code>
-      {{#if backend.description}}
-        <ReadMore>
-          {{backend.description}}
-        </ReadMore>
+    <:selectedItems>
+      {{#if this.selectedItems}}
+        <Hds::Layout::Flex
+          @gap="8"
+          @direction="row"
+          @justify="end"
+          @align="center"
+          class="has-bottom-margin-s has-top-margin-negative-xxl"
+          @isInline="true"
+        >
+          <Hds::Text::Body role="status" @tag="p" @size="200" @color="foreground-primary">
+            {{this.selectedItems.length}}
+            selected out of
+            {{this.sortedDisplayableBackends.length}}
+          </Hds::Text::Body>
+          <Hds::Button
+            @text="Disable selected"
+            @color="critical"
+            @icon="trash"
+            {{on "click" (fn (mut this.enginesToDisable) this.selectedItems)}}
+          />
+        </Hds::Layout::Flex>
       {{/if}}
-    </div>
-    <div class="linked-block-popup-menu">
+    </:selectedItems>
+    <:customTableItem as |itemData|>
+      <Hds::TooltipButton
+        aria-label="Type of backend"
+        @text={{this.generateToolTipText itemData}}
+        data-test-tooltip="Backend type"
+        isInline={{true}}
+        class="is-v-centered"
+      >
+        <Hds::Icon @name={{if itemData.icon itemData.icon "lock"}} />
+      </Hds::TooltipButton>
+      {{#if itemData.isSupportedBackend}}
+        <Hds::Link::Inline
+          @route={{itemData.backendLink}}
+          @model={{itemData.id}}
+          @color="secondary"
+          class="has-text-weight-semibold"
+        >{{itemData.path}}</Hds::Link::Inline>
+      {{else}}
+        {{itemData.path}}
+      {{/if}}
+    </:customTableItem>
+
+    <:popupMenu as |rowData|>
       <Hds::Dropdown @isInline={{true}} as |dd|>
         <dd.ToggleIcon
           @icon="more-horizontal"
-          @text="{{if backend.isSupportedBackend 'supported' 'unsupported'}} secrets engine menu"
+          @text="{{if rowData.isSupportedBackend 'supported' 'unsupported'}} secrets engine menu"
           @hasChevron={{false}}
           data-test-popup-menu-trigger
         />
         <dd.Interactive
-          @route={{backend.backendConfigurationLink}}
-          @model={{backend.id}}
+          @route={{rowData.backendConfigurationLink}}
+          @model={{rowData.id}}
           data-test-popup-menu="view-configuration"
-        >
-          View configuration
-        </dd.Interactive>
-        {{#if (not-eq backend.type "cubbyhole")}}
+          @icon="settings"
+        >View configuration</dd.Interactive>
+        {{#if (not-eq rowData.type "cubbyhole")}}
           <dd.Interactive
             @color="critical"
-            {{on "click" (fn (mut this.engineToDisable) backend)}}
+            {{on "click" (fn (mut this.engineToDisable) rowData)}}
             data-test-popup-menu="disable-engine"
+            @icon="trash"
           >Disable</dd.Interactive>
         {{/if}}
       </Hds::Dropdown>
-    </div>
-  </LinkedBlock>
+    </:popupMenu>
+  </ListTable>
 {{else}}
   <EmptyState @title="No Secrets engines found" />
-{{/each}}
+{{/if}}
+{{! End Table Section }}
 
 {{#if this.engineToDisable}}
   <ConfirmModal
@@ -178,5 +186,15 @@
     @confirmTitle="Disable engine?"
     @onClose={{fn (mut this.engineToDisable) null}}
     @onConfirm={{perform this.disableEngine this.engineToDisable}}
+  />
+{{/if}}
+
+{{#if this.enginesToDisable}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="Any data in these engines will be permanently deleted."
+    @confirmTitle="Disable engines?"
+    @onClose={{fn (mut this.enginesToDisable) null}}
+    @onConfirm={{perform this.disableMultipleEngines this.enginesToDisable}}
   />
 {{/if}}

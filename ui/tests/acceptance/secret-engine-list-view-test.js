@@ -50,7 +50,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       'vault.cluster.secrets.backends',
       'breadcrumb navigates to the list page'
     );
-    assert.dom(SES.secretsBackendLink('aws_engine')).hasTextContaining('aws_engine/');
+    assert.dom(GENERAL.tableData('aws_engine/', 'path')).hasTextContaining('aws_engine/');
     // cleanup
     await runCmd(deleteEngineCmd('aws_engine'));
   });
@@ -101,7 +101,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       `/vault/secrets?namespace=${this.namespace}`,
       'Should be on main secret engines list page within namespace.'
     );
-    assert.dom(SES.secretsBackendLink(enginePath1)).doesNotExist(); // without permissions, engine should not show for this user
+    assert.dom(GENERAL.tableData(`${enginePath1}/`, 'path')).doesNotExist(); // without permissions, engine should not show for this user
 
     // cleanup namespace
     await login();
@@ -133,7 +133,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       'Should be on main secret engines list page within namespace.'
     );
 
-    assert.dom(SES.secretsBackendLink(enginePath1)).exists(); // with permissions, able to see the engine in list
+    assert.dom(GENERAL.tableData(`${enginePath1}/`, 'path')).exists(); // with permissions, able to see the engine in list
 
     // cleanup namespace
     await login();
@@ -146,7 +146,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
     await loginNs(this.namespace);
     await visit(`/vault/secrets?namespace=${this.namespace}`);
-    await click(SES.secretsBackendLink('cubbyhole'));
+    await click(`${GENERAL.tableData('cubbyhole/', 'path')} a`);
 
     assert.dom(GENERAL.emptyStateTitle).hasText('No secrets in this backend');
 
@@ -162,7 +162,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await visit('/vault/secrets');
     // to reduce flakiness, searching by engine name first in case there are pagination issues
     await fillIn(GENERAL.inputSearch('secret-engine-path'), enginePath);
-    assert.dom(SES.secretsBackendLink(enginePath)).exists('the alicloud engine is mounted');
+    assert.dom(GENERAL.tableData(`${enginePath}/`, 'path')).exists('the alicloud engine is mounted');
 
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('disable-engine'));
@@ -183,7 +183,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     // check kv1
     await visit('/vault/secrets');
-    await click(SES.secretsBackendLink(enginePath1));
+    await click(`${GENERAL.tableData(`${enginePath1}/`, 'path')} a`);
     for (let i = 0; i <= 15; i++) {
       await createSecret(`secret-${i}`, 'foo', 'bar', enginePath1);
     }
@@ -216,7 +216,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     // check kv1
     await visit('/vault/secrets');
-    await click(SES.secretsBackendLink(enginePath1));
+    await click(`${GENERAL.tableData(`${enginePath1}/`, 'path')} a`);
     for (let i = 0; i <= 15; i++) {
       await createSecret(`${parentPath}/secret-${i}`, 'foo', 'bar', enginePath1);
     }
