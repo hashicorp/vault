@@ -77,25 +77,29 @@ export default class ClientsCountsRoute extends Route {
   }
 
   async fetchAndFormatExportData(startTimestamp: string | undefined, endTimestamp: string | undefined) {
-    const adapter = this.store.adapterFor('clients/activity');
-    let exportData, exportError;
-    try {
-      const resp = await adapter.exportData({
-        // the API only accepts json or csv
-        format: 'json',
-        start_time: startTimestamp,
-        end_time: endTimestamp,
-      });
-      const jsonLines = await resp.text();
-      const lines = jsonLines.trim().split('\n');
-      exportData = lines.map((line: string) => JSON.parse(line));
-    } catch (error) {
-      // Ideally we would not handle errors manually but this is the pattern the other client.counts
-      // route follow since the sys/internal/counters API doesn't always return helpful error messages.
-      // When these routes are migrated away from ember data we should revisit the error handling.
-      exportError = error as AdapterError;
+    // The "Client List" tab is only available on enterprise versions
+    if (this.version.isEnterprise) {
+      const adapter = this.store.adapterFor('clients/activity');
+      let exportData, exportError;
+      try {
+        const resp = await adapter.exportData({
+          // the API only accepts json or csv
+          format: 'json',
+          start_time: startTimestamp,
+          end_time: endTimestamp,
+        });
+        const jsonLines = await resp.text();
+        const lines = jsonLines.trim().split('\n');
+        exportData = lines.map((line: string) => JSON.parse(line));
+      } catch (error) {
+        // Ideally we would not handle errors manually but this is the pattern the other client.counts
+        // route follow since the sys/internal/counters API doesn't always return helpful error messages.
+        // When these routes are migrated away from ember data we should revisit the error handling.
+        exportError = error as AdapterError;
+      }
+      return { exportData, exportError };
     }
-    return { exportData, exportError };
+    return { exportData: null, exportError: null };
   }
 
   async model(params: ClientsCountsRouteParams) {

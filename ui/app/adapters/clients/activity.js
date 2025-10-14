@@ -64,6 +64,7 @@ export default class ActivityAdapter extends ApplicationAdapter {
     if (errorMsg) {
       const error = new Error(errorMsg);
       error.httpStatus = httpStatus;
+      error.path = 'sys/internal/counters/activity/export';
       throw error;
     }
   }

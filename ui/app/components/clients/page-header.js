@@ -122,7 +122,7 @@ export default class ClientsPageHeaderComponent extends Component {
 
   @action
   refreshRoute() {
-    this.router.refresh(this.router.currentRoute.name);
+    this.router.refresh(this.router.currentRoute.parent.name);
   }
 
   @action

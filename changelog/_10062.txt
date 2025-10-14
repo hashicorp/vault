@@ -1,0 +1,6 @@
+```release-note:improvement
+ui/activity (enterprise): Add clarifying text to explain the "Initial Usage" column will only have timestamps for clients initially used after upgrading to version 1.21
+```
+```release-note:improvement
+ui/activity (enterprise): Support filtering months dropdown by ISO timestamp or display value.
+```
