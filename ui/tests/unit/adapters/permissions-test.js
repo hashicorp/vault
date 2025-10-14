@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { RESULTANT_ACL_PATH } from 'vault/services/permissions';
 
 module('Unit | Adapter | permissions', function (hooks) {
   setupTest(hooks);
@@ -21,7 +22,7 @@ module('Unit | Adapter | permissions', function (hooks) {
     auth.set('tokens', ['vault-_root_☃1']);
     auth.setTokenData('vault-_root_☃1', { userRootNamespace: 'admin/bar', backend: { mountPath: 'token' } });
 
-    this.server.get('/sys/internal/ui/resultant-acl', (schema, request) => {
+    this.server.get(`${RESULTANT_ACL_PATH}`, (schema, request) => {
       assert.strictEqual(
         request.requestHeaders['X-Vault-Namespace'],
         'admin/bar',
@@ -46,7 +47,7 @@ module('Unit | Adapter | permissions', function (hooks) {
     auth.set('tokens', ['vault-_root_☃1']);
     auth.setTokenData('vault-_root_☃1', { userRootNamespace: '', backend: { mountPath: 'token' } });
 
-    this.server.get('/sys/internal/ui/resultant-acl', (schema, request) => {
+    this.server.get(`${RESULTANT_ACL_PATH}`, (schema, request) => {
       assert.false(
         Object.keys(request.requestHeaders).includes('X-Vault-Namespace'),
         'request is called without namespace'
