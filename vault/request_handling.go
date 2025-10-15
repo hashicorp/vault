@@ -786,7 +786,8 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		case "sys/leases/lookup", "sys/leases/renew", "sys/leases/revoke", "sys/leases/revoke-force":
 			leaseID, ok := req.Data["lease_id"]
 			// If lease ID is not present, break out and let the backend handle the error
-			if !ok || leaseID == nil {
+			_, isString := leaseID.(string)
+			if !ok || !isString {
 				break
 			}
 			_, nsID := namespace.SplitIDFromString(leaseID.(string))
