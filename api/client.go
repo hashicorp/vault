@@ -313,6 +313,17 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 	foundClientCert := false
 
 	switch {
+	case t.ClientCert == "piv/9a" && t.ClientKey != "":
+		var err error
+		clientCert, _, err = LoadPIVCertAndSigner(PIVConfig{
+			Slot:   "9a",
+			PIN:    t.ClientKey,
+		})
+
+		if err != nil {
+			return fmt.Errorf("PIV failure: %v", err)
+		}
+		foundClientCert = true
 	case t.ClientCert != "" && t.ClientKey != "":
 		var err error
 		clientCert, err = tls.LoadX509KeyPair(t.ClientCert, t.ClientKey)
