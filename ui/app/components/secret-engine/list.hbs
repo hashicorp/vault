@@ -119,7 +119,7 @@
             {{this.sortedDisplayableBackends.length}}
           </Hds::Text::Body>
           <Hds::Button
-            @text="Disable selected"
+            @text="Disable engines"
             @color="critical"
             @icon="trash"
             {{on "click" (fn (mut this.enginesToDisable) this.selectedItems)}}
