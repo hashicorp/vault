@@ -21,7 +21,8 @@ import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
-import { supportedTypes } from 'vault/utils/auth-form-helpers';
+import { ERROR_JWT_LOGIN, supportedTypes } from 'vault/utils/auth-form-helpers';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 const { rootToken } = VAULT_KEYS;
 
@@ -197,7 +198,7 @@ module('Acceptance | auth login', function (hooks) {
   // Assertion count is one for the URL and one for each payload key
   module('it sends the right payload when authenticating', function (hooks) {
     hooks.beforeEach(function () {
-      this.assertAuthRequest = (assert, req, expectedPayload) => {
+      this.assertAuthPayload = (assert, req, expectedPayload) => {
         const body = JSON.parse(req.requestBody);
         assert.true(true, `it calls the correct URL: ${req.url}`);
 
@@ -242,7 +243,7 @@ module('Acceptance | auth login', function (hooks) {
       this.authType = 'github';
       this.expectedPayload = { token: 'mysupersecuretoken' };
       this.server.post('/auth/custom-github/login', (schema, req) => {
-        this.assertAuthRequest(assert, req, this.expectedPayload);
+        this.assertAuthPayload(assert, req, this.expectedPayload);
         req.passthrough();
       });
 
@@ -254,24 +255,30 @@ module('Acceptance | auth login', function (hooks) {
       this.authType = 'ldap';
       this.expectedPayload = { password: 'some-password' };
       this.server.post('/auth/custom-ldap/login/matilda', (schema, req) => {
-        this.assertAuthRequest(assert, req, this.expectedPayload);
+        this.assertAuthPayload(assert, req, this.expectedPayload);
         req.passthrough();
       });
 
       await this.fillAndLogIn();
     });
 
+    // JWT and OIDC use the same request URLs and how the login happens depends on the configuration.
+    // For simplicity, mocking each to be configured as their namesake.
     test('jwt', async function (assert) {
-      // auth_url is hit twice (once when inputs are filled and again on submit)
-      // so the assertion count is doubled
-      assert.expect(6);
+      // assertion for each payload key and request made
+      assert.expect(3);
       this.authType = 'jwt';
       this.expectedPayload = {
-        redirect_uri: 'http://localhost:7357/ui/vault/auth/custom-jwt/oidc/callback',
+        jwt: 'some-jwt-token',
         role: 'some-dev',
       };
-      this.server.post('/auth/custom-jwt/oidc/auth_url', (schema, req) => {
-        this.assertAuthRequest(assert, req, this.expectedPayload);
+      // Additional setup so that JWT method is configured as jwt (not OIDC)
+      this.server.post(`/auth/:path/oidc/auth_url`, () =>
+        overrideResponse(400, { errors: [ERROR_JWT_LOGIN] })
+      );
+
+      this.server.post('/auth/custom-jwt/login', (schema, req) => {
+        this.assertAuthPayload(assert, req, this.expectedPayload); // 1 assertion + 1 for each payload key
         req.passthrough();
       });
 
@@ -288,7 +295,7 @@ module('Acceptance | auth login', function (hooks) {
         role: 'some-dev',
       };
       this.server.post('/auth/custom-oidc/oidc/auth_url', (schema, req) => {
-        this.assertAuthRequest(assert, req, this.expectedPayload);
+        this.assertAuthPayload(assert, req, this.expectedPayload);
         req.passthrough();
       });
 
@@ -300,7 +307,7 @@ module('Acceptance | auth login', function (hooks) {
       this.authType = 'okta';
       this.expectedPayload = { password: 'some-password' };
       this.server.post('/auth/custom-okta/login/matilda', (schema, req) => {
-        this.assertAuthRequest(assert, req, this.expectedPayload);
+        this.assertAuthPayload(assert, req, this.expectedPayload);
         req.passthrough();
       });
 
@@ -312,7 +319,7 @@ module('Acceptance | auth login', function (hooks) {
       this.authType = 'radius';
       this.expectedPayload = { password: 'some-password' };
       this.server.post('/auth/custom-radius/login/matilda', (schema, req) => {
-        this.assertAuthRequest(assert, req, this.expectedPayload);
+        this.assertAuthPayload(assert, req, this.expectedPayload);
         req.passthrough();
       });
 
@@ -324,7 +331,7 @@ module('Acceptance | auth login', function (hooks) {
       this.authType = 'userpass';
       this.expectedPayload = { password: 'some-password' };
       this.server.post('/auth/custom-userpass/login/matilda', (schema, req) => {
-        this.assertAuthRequest(assert, req, this.expectedPayload);
+        this.assertAuthPayload(assert, req, this.expectedPayload);
         req.passthrough();
       });
 
@@ -336,7 +343,7 @@ module('Acceptance | auth login', function (hooks) {
       this.authType = 'saml';
       this.expectedPayload = { role: 'some-dev' };
       this.server.post('/auth/custom-saml/sso_service_url', (schema, req) => {
-        this.assertAuthRequest(assert, req, this.expectedPayload);
+        this.assertAuthPayload(assert, req, this.expectedPayload);
         req.passthrough();
       });
 

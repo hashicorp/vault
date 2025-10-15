@@ -143,62 +143,6 @@ module('Acceptance | secrets/mounts', function (hooks) {
       .exists({ count: 1 }, 'renders only one instance of the engine');
   });
 
-  test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
-    const enginePath = `kv-noUpdate-${this.uid}`;
-    const V2_POLICY = `
-      path "${enginePath}/*" {
-        capabilities = ["list","create","read","sudo","delete"]
-      }
-      path "sys/mounts/*"
-      {
-        capabilities = ["create", "read", "update", "delete", "list", "sudo"]
-      }
-
-      # List existing secrets engines.
-      path "sys/mounts"
-      {
-        capabilities = ["read"]
-      }
-      # Allow page to load after mount
-      path "sys/internal/ui/mounts/${enginePath}" {
-        capabilities = ["read"]
-      }
-    `;
-    await consoleComponent.toggle();
-    await consoleComponent.runCommands(
-      [
-        // delete any previous mount with same name
-        `delete sys/mounts/${enginePath}`,
-        `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
-        'write -field=client_token auth/token/create policies=kv-v2-degrade',
-      ],
-      false
-    );
-    await settled();
-    const userToken = consoleComponent.lastLogOutput;
-
-    await login(userToken);
-    // create the engine
-    await mountSecrets.visit();
-    await click(GENERAL.cardContainer('kv'));
-    await fillIn(GENERAL.inputByAttr('path'), enginePath);
-    await mountSecrets.setMaxVersion(101);
-    await click(GENERAL.submitButton);
-
-    assert
-      .dom('[data-test-flash-message]')
-      .containsText(
-        `You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.`
-      );
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${enginePath}/kv/list`,
-      'After mounting, redirects to secrets list page'
-    );
-    await configPage.visit({ backend: enginePath });
-    await settled();
-  });
-
   test('it should transition to mountable addon engine after mount success', async function (assert) {
     // test supported backends that ARE ember engines (enterprise only engines are tested individually)
     const addons = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false }).filter(

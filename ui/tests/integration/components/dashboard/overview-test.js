@@ -9,6 +9,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 module('Integration | Component | dashboard/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,19 +21,10 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     this.permissions = this.owner.lookup('service:permissions');
     this.store = this.owner.lookup('service:store');
     this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1+ent';
-    this.version.type = 'enterprise';
     this.isRootNamespace = true;
     this.replication = {
-      dr: {
-        clusterId: '123',
-        state: 'running',
-      },
-      performance: {
-        clusterId: 'abc-1',
-        state: 'running',
-        isPrimary: true,
-      },
+      dr: { clusterId: '123', state: 'running' },
+      performance: { clusterId: 'abc-1', state: 'running', isPrimary: true },
     };
     this.store.pushPayload('secret-engine', {
       modelName: 'secret-engine',
@@ -67,7 +59,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     };
     this.refreshModel = () => {};
     this.renderComponent = async () => {
-      return await render(
+      return render(
         hbs`
         <Dashboard::Overview
           @secretsEngines={{this.secretsEngines}}
@@ -100,7 +92,20 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
   });
 
-  module('client count and replication card', function () {
+  test('it renders the secrets engine card', async function (assert) {
+    assert.expect(3);
+    await this.renderComponent();
+    assert.dom(DASHBOARD.cardHeader('Secrets engines')).hasText('Secrets engines');
+    assert.dom(SES.secretPath('kv-1/')).exists();
+    assert.dom(SES.secretPath('kv-test/')).exists();
+  });
+
+  module('client count and replication card', function (hooks) {
+    hooks.beforeEach(function () {
+      this.version.version = '1.13.1+ent';
+      this.version.type = 'enterprise';
+    });
+
     test('it should hide cards on community in root namespace', async function (assert) {
       this.version.version = '1.13.1';
       this.version.type = 'community';
@@ -272,35 +277,35 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     });
   });
 
-  module('learn more card', function () {
-    test('shows the learn more card on community', async function (assert) {
-      this.version.version = '1.13.1';
-      this.version.type = 'community';
-      await this.renderComponent();
+  test('it shows the learn more card on community', async function (assert) {
+    this.version.version = '1.13.1';
+    this.version.type = 'community';
+    await this.renderComponent();
 
-      assert.dom('[data-test-learn-more-title]').hasText('Learn more');
-      assert
-        .dom('[data-test-learn-more-subtext]')
-        .hasText(
-          'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
-        );
-      assert.dom('[data-test-learn-more-links] a').exists({ count: 3 });
-    });
-    test('shows the learn more card on enterprise', async function (assert) {
-      this.version.features = [
-        'Performance Replication',
-        'DR Replication',
-        'Namespaces',
-        'Transform Secrets Engine',
-      ];
-      await this.renderComponent();
-      assert.dom('[data-test-learn-more-title]').hasText('Learn more');
-      assert
-        .dom('[data-test-learn-more-subtext]')
-        .hasText(
-          'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
-        );
-      assert.dom('[data-test-learn-more-links] a').exists({ count: 4 });
-    });
+    assert.dom('[data-test-learn-more-title]').hasText('Learn more');
+    assert
+      .dom('[data-test-learn-more-subtext]')
+      .hasText(
+        'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
+      );
+    assert.dom('[data-test-learn-more-links] a').exists({ count: 3 });
+  });
+
+  test('it shows the learn more card on enterprise', async function (assert) {
+    this.version.type = 'enterprise';
+    this.version.features = [
+      'Performance Replication',
+      'DR Replication',
+      'Namespaces',
+      'Transform Secrets Engine',
+    ];
+    await this.renderComponent();
+    assert.dom('[data-test-learn-more-title]').hasText('Learn more');
+    assert
+      .dom('[data-test-learn-more-subtext]')
+      .hasText(
+        'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
+      );
+    assert.dom('[data-test-learn-more-links] a').exists({ count: 4 });
   });
 });

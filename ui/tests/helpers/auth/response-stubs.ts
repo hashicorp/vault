@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import timestamp from 'core/utils/timestamp';
+import { addDays } from 'date-fns';
+
 /*
 Authentication requests return authentication information in either the "auth" or "data" key, 
 depending on the authentication method. 
@@ -52,14 +55,14 @@ export const RESPONSE_STUBS = {
       ...BASE_REQUEST_DATA,
       data: {
         accessor: 'MkjSR78ducuarJ6ypCDbHhBp',
-        creation_time: 1749659696,
+        creation_time: timestamp.now().getTime(),
         creation_ttl: 2764800,
         display_name: 'jwt-ugaKjSEAKwQkiGh1rbnGkp39oCSe3LQ2@clients',
         entity_id: 'b6061dc8-a19e-195e-43a8-43d37f4625dd',
-        expire_time: '2025-07-13T12:34:56.345108-04:00',
+        expire_time: addDays(timestamp.now(), 1),
         explicit_max_ttl: 0,
         id: 'hvs.myvaultgeneratedjwttoken',
-        issue_time: '2025-06-11T12:34:56.345113-04:00',
+        issue_time: timestamp.now().toISOString(),
         meta: {
           role: 'reader',
         },
@@ -145,14 +148,14 @@ export const RESPONSE_STUBS = {
       ...BASE_REQUEST_DATA,
       data: {
         accessor: 'ew50HTqF2xgsmaKIsdKpJtTc',
-        creation_time: 1749584514,
+        creation_time: timestamp.now().getTime(),
         creation_ttl: 2764800,
         display_name: 'my-oidc-google-oauth2|105299854624506884705',
         entity_id: '18b57edf-acff-3e65-2ff2-6c772ce44924',
-        expire_time: '2025-07-12T15:41:54.961915-04:00',
+        expire_time: addDays(timestamp.now(), 1),
         explicit_max_ttl: 0,
         id: 'hvs.myvaultgeneratedoidctoken',
-        issue_time: '2025-06-10T15:41:54.961919-04:00',
+        issue_time: timestamp.now().toISOString(),
         meta: {
           role: 'reader',
         },
@@ -219,14 +222,14 @@ export const RESPONSE_STUBS = {
     lease_duration: 0,
     data: {
       accessor: '3tl0hAUwdDJVduSEnIca7Tr6',
-      creation_time: 1744649084,
+      creation_time: timestamp.now().getTime(),
       creation_ttl: 2764800,
       display_name: 'token',
       entity_id: '',
-      expire_time: '2025-05-16T09:44:44.837733-07:00',
+      expire_time: addDays(timestamp.now(), 1),
       explicit_max_ttl: 0,
       id: 'hvs.myvaultgeneratedtoken',
-      issue_time: '2025-04-14T09:44:44.837735-07:00',
+      issue_time: timestamp.now().toISOString(),
       meta: null,
       num_uses: 0,
       orphan: false,
@@ -289,14 +292,14 @@ export const RESPONSE_STUBS = {
       ...BASE_REQUEST_DATA,
       data: {
         accessor: 'H4fWtQaYX3aaEg1JIPSWiK9v',
-        creation_time: 1749585309,
+        creation_time: timestamp.now().getTime(),
         creation_ttl: 1800,
         display_name: 'saml-vaultuser@hashicorp.com',
         entity_id: '81fc10e5-49a3-d0a2-9835-ac6b551ee266',
-        expire_time: '2025-06-10T16:25:09.246659-04:00',
+        expire_time: addDays(timestamp.now(), 1),
         explicit_max_ttl: 0,
         id: 'hvs.myvaultgeneratedsamltoken',
-        issue_time: '2025-06-10T15:55:09.246666-04:00',
+        issue_time: timestamp.now().toISOString(),
         meta: {
           role: 'dev',
         },
