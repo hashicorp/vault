@@ -27,7 +27,7 @@
       @isLintingEnabled={{eq this.mode "json"}}
       @value={{or @value @example}}
       @onBlur={{@onBlur}}
-      @onInput={{this.onUpdate}}
+      @onInput={{@valueUpdated}}
       @onLint={{@onLint}}
       @onSetup={{this.onSetup}}
       as |CE|
@@ -37,12 +37,6 @@
           <CE.Title data-test-component="json-editor-title">
             {{@title}}
           </CE.Title>
-        {{/if}}
-
-        {{#if @subTitle}}
-          <CE.Description>
-            {{@subTitle}}
-          </CE.Description>
         {{/if}}
 
         {{#if @helpText}}
@@ -56,7 +50,7 @@
 
           {{#if @example}}
             <Hds::Button
-              class="toolbar-button"
+              @color="secondary"
               @icon="reload"
               @text="Restore example"
               disabled={{not @value}}

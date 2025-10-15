@@ -5,11 +5,10 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, triggerKeyEvent, waitFor } from '@ember/test-helpers';
+import { render, click, triggerKeyEvent, waitFor, setupOnerror } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { SELECTORS } from '../../pages/components/json-editor';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { createLongJson } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 
@@ -30,16 +29,6 @@ module('Integration | Component | json-editor', function (hooks) {
     this.set('bad_json_blob', BAD_JSON_BLOB);
     this.set('long_json', JSON.stringify(createLongJson(), null, `\t`));
     this.set('hashi-read-only-theme', 'hashi-read-only auto-height');
-    setRunOptions({
-      rules: {
-        // CodeMirror has a secret textarea without a label that causes this problem
-        label: { enabled: false },
-        // TODO: investigate and fix Codemirror styling
-        'color-contrast': { enabled: false },
-        // failing on .CodeMirror-scroll
-        'scrollable-region-focusable': { enabled: false },
-      },
-    });
   });
 
   test('it renders', async function (assert) {
@@ -56,6 +45,41 @@ module('Integration | Component | json-editor', function (hooks) {
     assert.dom(SELECTORS.codeBlock).exists('renders the code block');
   });
 
+  test('it requires @valueUpdated arg when component is not @readOnly', async function (assert) {
+    assert.expect(1);
+    // catch error so qunit test doesn't fail
+    setupOnerror((error) => {
+      assert.strictEqual(
+        error.message,
+        'Assertion Failed: @valueUpdated callback is required when component is not @readOnly',
+        'it throws error when component is editable (not @readOnly) and @valueUpdated is not provided'
+      );
+    });
+    await render(hbs`<JsonEditor
+        @value={{"{}"}}
+        @title={{"Test title"}}
+        @showToolbar={{true}}
+      />`);
+  });
+
+  test('onSetup returns instance of codemirror', async function (assert) {
+    let codemirror;
+    this.onSetup = (editor) => {
+      codemirror = editor;
+    };
+    await render(hbs`
+      <JsonEditor
+        @value={{this.value}}
+        @example={{this.example}}
+        @mode="ruby"
+        @valueUpdated={{fn (mut this.value)}}
+        @onSetup={{this.onSetup}}
+      />
+    `);
+    await waitFor('.cm-editor');
+    assert.true(codemirror.viewState.inView, 'onSetup returns instance of codemirror');
+  });
+
   test('it should render example and restore it', async function (assert) {
     this.value = null;
     this.example = 'this is a test example';
@@ -69,8 +93,8 @@ module('Integration | Component | json-editor', function (hooks) {
       />
     `);
 
-    let view = codemirror();
     await waitFor('.cm-editor');
+    let view = codemirror();
 
     let editorValue = getCodeEditorValue(view);
     assert.strictEqual(editorValue, this.example, 'Example renders when there is no value');
