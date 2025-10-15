@@ -26,13 +26,16 @@
         data-test-type="dr-perf"
       >
         <Dashboard::ReplicationStateText
-          @title="DR primary"
+          @title="DR{{if (not-eq @replication.dr.mode 'disabled') (concat ' ' @replication.dr.mode)}}"
           @name="dr"
           @state={{@replication.dr.state}}
           @clusterStates={{cluster-states @replication.dr.state}}
         />
         <Dashboard::ReplicationStateText
-          @title="Performance {{if @replication.performance.isPrimary 'primary' 'secondary'}}"
+          @title="Performance{{if
+            (not-eq @replication.performance.mode 'disabled')
+            (concat ' ' @replication.performance.mode)
+          }}"
           @name="performance"
           @state={{if @replication.performance.clusterId @replication.performance.state "not set up"}}
           @clusterStates={{if @replication.performance.clusterId (cluster-states @replication.performance.state)}}
