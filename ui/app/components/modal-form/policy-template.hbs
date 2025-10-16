@@ -16,7 +16,7 @@
       <PolicyForm @onSave={{this.onSave}} @model={{this.policy}} @onCancel={{@onCancel}} />
     </T.Panel>
     <T.Panel class="has-top-padding-m">
-      <PolicyExample @policyType={{this.policy.policyType}} @container="#search-select-modal" />
+      <PolicyExample @policyType={{this.policy.policyType}} />
     </T.Panel>
   </Hds::Tabs>
 {{else}}
