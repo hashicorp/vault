@@ -4,7 +4,7 @@
  */
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, fillIn, visit, waitFor } from '@ember/test-helpers';
+import { click, fillIn, waitFor } from '@ember/test-helpers';
 import { logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import {
@@ -13,12 +13,12 @@ import {
   triggerMessageEvent,
   windowStub,
 } from 'vault/tests/helpers/oidc-window-stub';
-import { Response } from 'miragejs';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { ERROR_MISSING_PARAMS, ERROR_POPUP_FAILED, ERROR_WINDOW_CLOSED } from 'vault/utils/auth-form-helpers';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 import sinon from 'sinon';
+import { RESPONSE_STUBS } from '../helpers/auth/response-stubs';
 
 module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -27,64 +27,20 @@ module('Acceptance | oidc auth method', function (hooks) {
   hooks.beforeEach(function () {
     this.openStub = windowStub();
 
-    this.setupMocks = (assert) => {
+    this.setupMocks = () => {
       this.server.post('/auth/oidc/oidc/auth_url', () => ({
         data: { auth_url: 'http://example.com' },
       }));
-      // there was a bug that would result in the /auth/:path/login endpoint hit with an empty payload rather than lookup-self
-      // ensure that the correct endpoint is hit after the oidc callback
-      if (assert) {
-        this.server.get('/auth/token/lookup-self', (schema, req) => {
-          assert.ok(true, 'request made to auth/token/lookup-self after oidc callback');
-          return req.passthrough();
-        });
-      }
+      this.server.get(`/auth/oidc/oidc/callback`, () => RESPONSE_STUBS.oidc['oidc/callback']);
+      this.server.get(`/auth/token/lookup-self`, () => RESPONSE_STUBS.oidc['lookup-self']);
     };
-
-    this.server.get('/auth/oidc/oidc/callback', () => ({
-      auth: { client_token: 'root' },
-    }));
-
-    // ensure clean state
-    // Cannot use logout() here because it will hit the internal mount request before the mocks can interrupt it
-    window.localStorage.clear();
   });
 
   hooks.afterEach(async function () {
     this.openStub.restore();
-  });
-
-  test('it should login with oidc when selected from auth methods dropdown', async function (assert) {
-    assert.expect(1);
-    this.setupMocks(assert);
-    await visit('/vault/auth');
-    await fillIn(AUTH_FORM.selectMethod, 'oidc');
-
-    triggerMessageEvent('oidc');
-
-    await click(GENERAL.submitButton);
-  });
-
-  test('it should login with oidc from listed auth mount tab', async function (assert) {
-    assert.expect(3);
-    this.setupMocks(assert); // assert count (1)
-
-    this.server.get('/sys/internal/ui/mounts', () => ({
-      data: {
-        auth: {
-          'test-path/': { description: '', options: {}, type: 'oidc' },
-        },
-      },
-    }));
-
-    // this assertion is hit twice, once on the initial visit to the login form, then again on "Sign in"
-    this.server.post('/auth/test-path/oidc/auth_url', () => {
-      assert.true(true, 'auth_url request made to correct non-standard mount path');
-      return { data: { auth_url: 'http://example.com' } };
-    });
-    await visit('/vault/auth');
-    triggerMessageEvent('oidc');
-    await click(GENERAL.submitButton);
+    // ensure clean state
+    // Cannot use logout() here because it will hit the internal mount request before the mocks can interrupt it
+    localStorage.clear();
   });
 
   // coverage for bug where token was selected as auth method for oidc and jwt
@@ -103,44 +59,6 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     await logout();
     assert.dom(AUTH_FORM.selectMethod).hasValue('oidc', 'Previous auth method selected on logout');
-  });
-
-  test('it should fetch role when switching between oidc/jwt auth methods and changing the mount path', async function (assert) {
-    await logout();
-    let reqCount = 0;
-    this.server.post('/auth/:method/oidc/auth_url', (schema, req) => {
-      reqCount++;
-      const errors =
-        req.params.method === 'jwt' ? ['OIDC login is not configured for this mount'] : ['missing role'];
-      return new Response(400, {}, { errors });
-    });
-
-    await fillIn(AUTH_FORM.selectMethod, 'oidc');
-    assert.dom(GENERAL.inputByAttr('jwt')).doesNotExist('JWT Token input hidden for OIDC');
-    await fillIn(AUTH_FORM.selectMethod, 'jwt');
-    assert.dom(GENERAL.inputByAttr('jwt')).exists('JWT Token input renders for JWT configured method');
-    await click(AUTH_FORM.advancedSettings);
-    await fillIn(GENERAL.inputByAttr('path'), 'foo');
-    assert.strictEqual(reqCount, 3, 'Role is fetched when dependant values are changed');
-  });
-
-  test('it should display role fetch errors when signing in with OIDC', async function (assert) {
-    this.server.post('/auth/:method/oidc/auth_url', (schema, req) => {
-      const { role } = JSON.parse(req.requestBody);
-      const status = role ? 403 : 400;
-      const errors = role ? ['permission denied'] : ['missing role'];
-      return new Response(status, {}, { errors });
-    });
-    await logout();
-    await fillIn(AUTH_FORM.selectMethod, 'oidc');
-    await click(GENERAL.submitButton);
-    assert.dom(GENERAL.messageError).hasText('Error Authentication failed: Invalid role. Please try again.');
-
-    await fillIn(GENERAL.inputByAttr('role'), 'test');
-    await click(GENERAL.submitButton);
-    assert
-      .dom(GENERAL.messageError)
-      .hasText('Error Authentication failed: Error fetching role: permission denied');
   });
 
   // test case for https://github.com/hashicorp/vault/issues/12436

@@ -23,19 +23,29 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
     customLoginHandler(this.server);
     customLoginScenario(this.server);
     // mirage scenario sets:
-    // root namespace with 'okta' as default and 'token' as backup
+    // root namespace with 'token' as default backups are 'userpass' and 'ldap'
     // 'test-ns' with 'ldap' as default and no backups
   });
 
   test('it renders login settings for root namespace', async function (assert) {
     await visit('/vault/auth');
-    await waitFor(AUTH_FORM.tabBtn('okta'));
-    assert.dom(AUTH_FORM.tabBtn('okta')).hasAttribute('aria-selected', 'true');
-    assert.dom(AUTH_FORM.authForm('okta')).exists('it renders default method');
-    assert.dom(AUTH_FORM.advancedSettings).exists();
-
+    await waitFor(AUTH_FORM.tabBtn('token'));
+    assert.dom(AUTH_FORM.tabBtn('token')).hasAttribute('aria-selected', 'true');
+    assert.dom(AUTH_FORM.authForm('token')).exists('it renders default method');
+    assert
+      .dom(AUTH_FORM.advancedSettings)
+      .doesNotExist('it does not render advanced settings for token auth method');
     await click(GENERAL.button('Sign in with other methods'));
-    assert.dom(AUTH_FORM.authForm('token')).exists('it renders backup method');
+    assert
+      .dom(AUTH_FORM.tabBtn('userpass'))
+      .exists('it renders backup "Userpass" method')
+      .hasAttribute('aria-selected', 'true');
+    assert.dom(AUTH_FORM.authForm('userpass')).exists('it renders "Userpass" form when method is selected');
+    assert.dom(AUTH_FORM.advancedSettings).exists('it renders advanced settings for "Userpass"');
+    assert.dom(AUTH_FORM.tabBtn('ldap')).exists('it renders backup "LDAP" method');
+    await click(AUTH_FORM.tabBtn('ldap'));
+    assert.dom(AUTH_FORM.authForm('ldap')).exists('it renders "LDAP" form when method is selected');
+    assert.dom(AUTH_FORM.advancedSettings).exists('it renders advanced settings for "LDAP"');
   });
 
   test('it renders login settings for namespaces', async function (assert) {
@@ -48,10 +58,13 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
       .dom(GENERAL.button('Sign in with other methods'))
       .doesNotExist('it does not render alternate view');
 
-    // type in so that the namespace is "test-ns/child"
+    // All we're testing here is that the form settings update for nested namespaces.
+    // (We're not concerned with what the settings are since the mirage handler is stubbing the API logic)
+    // typeIn so that the text appends to the existing namespace input: "test-ns/child"
     await typeIn(GENERAL.inputByAttr('namespace'), '/child');
-    await waitFor(AUTH_FORM.authForm('okta'));
-    assert.dom(AUTH_FORM.authForm('okta')).exists('it updates to render child namespace settings');
+    await waitFor(AUTH_FORM.authForm('token'));
+    assert.dom(AUTH_FORM.authForm('token')).exists('it updates to render child namespace settings');
+    assert.dom(AUTH_FORM.authForm('ldap')).doesNotExist('it does not render default view for parent');
   });
 
   module('listing visibility', function (hooks) {

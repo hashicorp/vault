@@ -75,6 +75,7 @@ module('Acceptance | mfa-login', function (hooks) {
   test('it should handle single constraint with passcode method', async function (assert) {
     assert.expect(4);
     await login('mfa-a');
+    await waitFor(GENERAL.title);
     assert.dom(GENERAL.title).hasText('Verify your identity');
     assert.dom(MFA_SELECTORS.select()).doesNotExist('Select is hidden for single method');
     assert.dom(MFA_SELECTORS.passcode()).exists({ count: 1 }, 'Single passcode input renders');
@@ -117,6 +118,7 @@ module('Acceptance | mfa-login', function (hooks) {
   test('it should handle single constraint with 2 push methods', async function (assert) {
     assert.expect(4);
     await login('mfa-d');
+    await waitFor(MFA_SELECTORS.mfaForm);
     assert.dom(GENERAL.title).hasText('Verify your identity');
     assert.dom(GENERAL.button('Verify with Okta')).exists('It renders button for Okta');
     assert.dom(GENERAL.button('Verify with Duo')).exists('It renders button for Duo');
@@ -127,6 +129,7 @@ module('Acceptance | mfa-login', function (hooks) {
   test('it should handle single constraint with 1 passcode and 1 push method', async function (assert) {
     assert.expect(3);
     await login('mfa-e');
+    await waitFor(MFA_SELECTORS.mfaForm);
     assert.dom(GENERAL.button('Verify with Okta')).exists('It renders button for Okta');
     await click(GENERAL.button('Verify with TOTP'));
     assert.dom(MFA_SELECTORS.passcode()).exists('Passcode input renders');

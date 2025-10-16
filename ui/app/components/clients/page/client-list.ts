@@ -93,7 +93,8 @@ export default class ClientsClientListPageComponent extends Component<Args> {
       {
         key: 'client_first_used_time',
         label: 'Initial usage',
-        tooltip: 'When the client ID was first used in the selected billing period.',
+        tooltip:
+          'First usage date in the billing period. Vault only provides this data for clients initially used after upgrading to version 1.21.',
       },
       { key: 'mount_path', label: 'Mount path' },
       { key: 'mount_type', label: 'Mount type' },

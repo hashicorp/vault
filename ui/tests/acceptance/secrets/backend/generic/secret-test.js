@@ -67,7 +67,7 @@ module('Acceptance | secrets/generic/create', function (hooks) {
     ]);
     await visit('/vault/secrets');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
-    await click(SES.secretsBackendLink(path));
+    await click(`${GENERAL.tableData(`${path}/`, 'path')} a`);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.kv.list',

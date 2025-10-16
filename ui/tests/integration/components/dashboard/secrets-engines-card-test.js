@@ -15,9 +15,6 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-  });
-
-  test('it should hide show all button', async function (assert) {
     this.store.pushPayload('secret-engine', {
       modelName: 'secret-engine',
       data: {
@@ -26,17 +23,35 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
         type: 'kubernetes',
       },
     });
+  });
 
+  test('it should hide show all button', async function (assert) {
     this.secretsEngines = this.store.peekAll('secret-engine', {});
 
     await render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
 
-    // verify overflow style exists on secret engine text
+    // verify truncate class style exists on secret engine path text
     assert
       .dom(SES.secretPath('kubernetes-test/'))
-      .hasClass('overflow-wrap', 'secret engine name has overflow class ');
+      .hasClass('truncate-first-line', 'secret engine name has truncate class to handle overflow');
 
     assert.dom('[data-test-secrets-engines-card-show-all]').doesNotExist();
+  });
+
+  test('it disables unsupported secret engines', async function (assert) {
+    this.store.pushPayload('secret-engine', {
+      modelName: 'secret-engine',
+      data: {
+        accessor: 'nomad_f3400dee',
+        path: 'nomad-test/',
+        type: 'nomad',
+      },
+    });
+    this.secretsEngines = this.store.peekAll('secret-engine', {});
+
+    await render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
+    assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
+    assert.dom(SES.secretPath('nomad-test/')).hasClass('has-text-grey');
   });
 
   module('secrets engines with 5 or more enabled', function (hooks) {

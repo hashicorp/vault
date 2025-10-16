@@ -490,14 +490,15 @@
               @helpText={{this.helpTextString}}
               @mode={{@attr.options.mode}}
               @example={{@attr.options.example}}
+              @onSetup={{fn (mut this.codemirrorEditor)}}
             >
               {{#if @attr.options.allowReset}}
                 <Hds::Button
                   @text="Clear"
                   @icon="reload"
-                  class="toolbar-button"
+                  @color="secondary"
                   disabled={{not value}}
-                  {{on "click" this.setAndBroadcast}}
+                  {{on "click" (fn this.editorUpdated true "")}}
                   data-test-json-clear-button
                 />
               {{/if}}

@@ -31,8 +31,7 @@ export default class LoginSettingsList extends Component {
     try {
       await this.api.sys.uiLoginDefaultAuthDeleteConfiguration(this.ruleToDelete.id);
       this.flashMessages.success(`Successfully deleted rule ${this.ruleToDelete.id}.`);
-
-      this.router.transitionTo('vault.cluster.config-ui.login-settings');
+      this.router.refresh('vault.cluster.config-ui.login-settings');
     } catch (error) {
       const message = errorMessage(error, 'Error deleting rule. Please try again.');
       this.flashMessages.danger(message);

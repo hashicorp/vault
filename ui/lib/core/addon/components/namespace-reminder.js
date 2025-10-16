@@ -15,7 +15,7 @@ import { service } from '@ember/service';
  * @example
  * <NamespaceReminder @mode="save" @noun="Auth Method" />
  *
- * <p class="namespace-reminder" id="namespace-reminder">
+ * <p id="namespace-reminder">
  *  This Auth Method will be saved in the <span class="tag">admin/</span>namespace.
  * </p>
  *

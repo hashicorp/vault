@@ -19,9 +19,14 @@ import sinon from 'sinon';
 
 const methodAuthenticationTests = (test) => {
   test('it sets token data on login for default path', async function (assert) {
-    assert.expect(5);
+    const count = this.assertTokenLookup ? 6 : 5;
+    assert.expect(count);
     // Setup
     this.stubRequests();
+    if (this.assertTokenLookup) {
+      this.assertTokenLookup(assert);
+    }
+
     // Render and log in
     await this.renderComponent();
     await fillIn(AUTH_FORM.selectMethod, this.authType);
@@ -117,7 +122,12 @@ module('Integration | Component | auth | page | method authentication', function
           overrideResponse(400, { errors: [ERROR_JWT_LOGIN] })
         );
         this.server.post(`/auth/${this.path}/login`, () => this.response);
-        this.server.get(`/auth/token/lookup-self`, () => RESPONSE_STUBS.jwt['lookup-self']);
+      };
+      this.assertTokenLookup = (assert) => {
+        this.server.get(`/auth/token/lookup-self`, () => {
+          assert.true(true, 'request made to auth/token/lookup-self after jwt login');
+          return RESPONSE_STUBS.jwt['lookup-self'];
+        });
       };
     });
 
@@ -157,7 +167,14 @@ module('Integration | Component | auth | page | method authentication', function
           return { data: { auth_url: 'http://dev-foo-bar.com' } };
         });
         this.server.get(`/auth/${this.path}/oidc/callback`, () => this.response);
-        this.server.get(`/auth/token/lookup-self`, () => RESPONSE_STUBS.oidc['lookup-self']);
+      };
+      this.assertTokenLookup = (assert) => {
+        this.server.get(`/auth/token/lookup-self`, () => {
+          // there was a bug that would result in the /auth/:path/login endpoint hit with an empty payload rather than lookup-self
+          // ensure that the correct endpoint is hit after the oidc callback
+          assert.true(true, 'request made to auth/token/lookup-self after oidc callback');
+          return RESPONSE_STUBS.oidc['lookup-self'];
+        });
       };
 
       // additional OIDC setup
@@ -275,7 +292,12 @@ module('Integration | Component | auth | page | method authentication', function
           },
         }));
         this.server.post(`/auth/${this.path}/token`, () => this.response);
-        this.server.get(`/auth/token/lookup-self`, () => RESPONSE_STUBS.saml['lookup-self']);
+      };
+      this.assertTokenLookup = (assert) => {
+        this.server.get(`/auth/token/lookup-self`, () => {
+          assert.true(true, 'request made to auth/token/lookup-self after saml token exchange and login');
+          return RESPONSE_STUBS.saml['lookup-self'];
+        });
       };
       this.windowStub = windowStub();
     });

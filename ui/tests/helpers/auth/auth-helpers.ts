@@ -78,6 +78,7 @@ const LOGIN_DATA = {
   token: { token: 'mysupersecuretoken' },
   username: { username: 'matilda', password: 'some-password' },
   role: { role: 'some-dev' },
+  jwt: { role: 'some-dev', jwt: 'some-jwt-token' },
 };
 // maps auth type to login input data
 export const AUTH_METHOD_LOGIN_DATA = {
@@ -91,7 +92,7 @@ export const AUTH_METHOD_LOGIN_DATA = {
   radius: LOGIN_DATA.username,
   // role
   oidc: LOGIN_DATA.role,
-  jwt: LOGIN_DATA.role,
+  jwt: LOGIN_DATA.jwt,
   saml: LOGIN_DATA.role,
 };
 

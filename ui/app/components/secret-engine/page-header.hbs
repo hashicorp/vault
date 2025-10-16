@@ -8,7 +8,7 @@
     <PH.Title>{{@model.secretsEngine.id}} configuration</PH.Title>
     <PH.Description>{{get engineData "displayName"}}</PH.Description>
     <PH.Breadcrumb>
-      <Hds::Breadcrumb>
+      <Hds::Breadcrumb data-test-breadcrumbs>
         <Hds::Breadcrumb::Item @text="Secrets" @route="vault.cluster.secrets" />
         <Hds::Breadcrumb::Item
           @text={{@model.secretsEngine.id}}

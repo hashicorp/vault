@@ -38,7 +38,7 @@ export const GENERAL = {
   /* ────── Menus & Lists ────── */
   menuTrigger: '[data-test-popup-menu-trigger]',
   menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
-  listItem: (label: string) => `[data-test-list-item="${label}"]`,
+  listItem: (label: string) => (label ? `[data-test-list-item="${label}"]` : '[data-test-list-item]'),
   listItemLink: '[data-test-list-item-link]',
   linkedBlock: (item: string) => `[data-test-linked-block="${item}"]`,
 
