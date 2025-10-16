@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -37,7 +38,7 @@ var allTestKeyTypes = []KeyType{
 	KeyType_AES256_GCM96, KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048,
 	KeyType_RSA4096, KeyType_ChaCha20_Poly1305, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_AES128_GCM96,
 	KeyType_RSA3072, KeyType_MANAGED_KEY, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_ML_DSA,
-	KeyType_HYBRID, KeyType_AES192_CMAC, KeyType_SLH_DSA, KeyType_AES128_CBC, KeyType_AES256_CBC,
+	KeyType_ML_KEM, KeyType_HYBRID, KeyType_AES192_CMAC, KeyType_SLH_DSA, KeyType_AES128_CBC, KeyType_AES256_CBC,
 }
 
 func TestPolicy_KeyTypes(t *testing.T) {
@@ -60,7 +61,7 @@ func TestPolicy_HmacCmacSupported(t *testing.T) {
 	// Test HMAC supported feature
 	for _, keyType := range allTestKeyTypes {
 		switch keyType {
-		case KeyType_MANAGED_KEY:
+		case KeyType_MANAGED_KEY, KeyType_ML_KEM:
 			if keyType.HMACSupported() {
 				t.Fatalf("hmac should not have been not be supported for keytype %s", keyType.String())
 			}
@@ -1262,4 +1263,34 @@ func isUnsupportedGoHashType(hashType HashType, err error) bool {
 	}
 
 	return false
+}
+
+func TestMLKEM_RoundTrip_WithContextAAD(t *testing.T) {
+	for _, pset := range []string{ParameterSet_ML_KEM_768, ParameterSet_ML_KEM_1024} {
+		var entry KeyEntry
+		require.NoError(t, generateMLKEMKey(pset, &entry))
+		pt := bytes.Repeat([]byte("hello world"), 420)
+		aad := []byte("ctx-aad")
+
+		ct, err := encryptWithMLKEM(pset, entry, pt, aad)
+		require.NoError(t, err)
+
+		got, err := decryptWithMLKEM(pset, entry, ct, aad)
+		require.NoError(t, err)
+		require.Equal(t, pt, got)
+	}
+}
+
+func TestMLKEM_BrokenCT(t *testing.T) {
+	var entry KeyEntry
+	require.NoError(t, generateMLKEMKey(ParameterSet_ML_KEM_768, &entry))
+
+	ct, err := encryptWithMLKEM(ParameterSet_ML_KEM_768, entry, []byte("hi"), nil)
+	require.NoError(t, err)
+	require.True(t, len(ct) > 0)
+
+	ct[0] = 69
+	_, err = decryptWithMLKEM(ParameterSet_ML_KEM_768, entry, ct, nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unsupported ml-kem format version")
 }

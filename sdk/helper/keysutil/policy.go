@@ -13,12 +13,14 @@ import (
 	stdlibEd25519 "crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/hmac"
+	"crypto/mlkem"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -73,6 +75,7 @@ const (
 	KeyType_AES128_CMAC
 	KeyType_AES256_CMAC
 	KeyType_ML_DSA
+	KeyType_ML_KEM
 	KeyType_HYBRID
 	KeyType_AES192_CMAC
 	KeyType_SLH_DSA
@@ -85,6 +88,9 @@ const (
 	ParameterSet_ML_DSA_44          = "44"
 	ParameterSet_ML_DSA_65          = "65"
 	ParameterSet_ML_DSA_87          = "87"
+	ParameterSet_ML_KEM_512         = "ml-kem-512"
+	ParameterSet_ML_KEM_768         = "ml-kem-768"
+	ParameterSet_ML_KEM_1024        = "ml-kem-1024"
 	ParameterSet_SLH_DSA_SHA2_128S  = "slh-dsa-sha2-128s"
 	ParameterSet_SLH_DSA_SHAKE_128S = "slh-dsa-shake-128s"
 	ParameterSet_SLH_DSA_SHA2_128F  = "slh-dsa-sha2-128f"
@@ -197,7 +203,7 @@ type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY, KeyType_AES128_CBC, KeyType_AES256_CBC:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY, KeyType_AES128_CBC, KeyType_AES256_CBC, KeyType_ML_KEM:
 		return true
 	}
 	return false
@@ -205,7 +211,7 @@ func (kt KeyType) EncryptionSupported() bool {
 
 func (kt KeyType) DecryptionSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY, KeyType_AES128_CBC, KeyType_AES256_CBC:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY, KeyType_AES128_CBC, KeyType_AES256_CBC, KeyType_ML_KEM:
 		return true
 	}
 	return false
@@ -257,6 +263,8 @@ func (kt KeyType) HMACSupported() bool {
 	case kt.CMACSupported():
 		return false
 	case kt == KeyType_MANAGED_KEY:
+		return false
+	case kt == KeyType_ML_KEM:
 		return false
 	default:
 		return true
@@ -321,6 +329,8 @@ func (kt KeyType) String() string {
 		return "aes256-cmac"
 	case KeyType_ML_DSA:
 		return "ml-dsa"
+	case KeyType_ML_KEM:
+		return "ml-kem"
 	case KeyType_HYBRID:
 		return "hybrid"
 	case KeyType_AES192_CMAC:
@@ -602,7 +612,7 @@ type Policy struct {
 	// AllowImportedKeyRotation indicates whether an imported key may be rotated by Vault
 	AllowImportedKeyRotation bool
 
-	// ParameterSet indicates the parameter set to use with ML-DSA and SLH-DSA keys
+	// ParameterSet indicates the parameter set to use with ML-DSA, ML-KEM and SLH-DSA keys
 	ParameterSet string
 
 	// HybridConfig contains the key types and parameters for hybrid keys
@@ -1200,6 +1210,16 @@ func (p *Policy) DecryptWithOptions(opts EncryptionOptions, value string, factor
 		}
 
 		plain, err = p.decryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, decoded, opts.Nonce, aad)
+		if err != nil {
+			return "", err
+		}
+	case KeyType_ML_KEM:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+		aad := opts.Context
+		plain, err = decryptWithMLKEM(p.ParameterSet, keyEntry, decoded, aad)
 		if err != nil {
 			return "", err
 		}
@@ -1875,6 +1895,11 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		}
 
 		entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
+	case KeyType_ML_KEM:
+		err := generateMLKEMKey(p.ParameterSet, &entry)
+		if err != nil {
+			return err
+		}
 
 	default:
 		if err := entRotateInMemory(p, &entry, randReader); err != nil {
@@ -2294,6 +2319,17 @@ func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factor
 		}
 
 		ciphertext, err = p.encryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, plaintext, opts.Nonce, aad)
+		if err != nil {
+			return "", err
+		}
+
+	case KeyType_ML_KEM:
+		keyEntry, err := p.safeGetKeyEntry(opts.KeyVersion)
+		if err != nil {
+			return "", err
+		}
+		aad := opts.Context
+		ciphertext, err = encryptWithMLKEM(p.ParameterSet, keyEntry, plaintext, aad)
 		if err != nil {
 			return "", err
 		}
@@ -2886,4 +2922,218 @@ func (p *Policy) setKDF(ctx context.Context, storage logical.Storage, kdf int) e
 	}
 
 	return nil
+}
+
+func generateMLKEMKey(parameterSet string, entry *KeyEntry) error {
+	switch parameterSet {
+	case ParameterSet_ML_KEM_512:
+		// TODO change mlkey to lib that supports ml-kem-512
+		priv, err := mlkem.GenerateKey768()
+		if err != nil {
+			return err
+		}
+		pub := priv.EncapsulationKey()
+		entry.Key = priv.Bytes()
+		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pub.Bytes())
+	case ParameterSet_ML_KEM_768:
+		priv, err := mlkem.GenerateKey768()
+		if err != nil {
+			return err
+		}
+		pub := priv.EncapsulationKey()
+		entry.Key = priv.Bytes()
+		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pub.Bytes())
+	case ParameterSet_ML_KEM_1024:
+		priv, err := mlkem.GenerateKey1024()
+		if err != nil {
+			return err
+		}
+		pub := priv.EncapsulationKey()
+		entry.Key = priv.Bytes()
+		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pub.Bytes())
+	default:
+		return fmt.Errorf("unsupported ml-kem parameter set: %s", parameterSet)
+	}
+	return nil
+}
+
+// KEM-DEM encrypt: encapsulate -> KDF -> AES-256-GCM(plaintext)
+func encryptWithMLKEM(parameterSet string, keyEntry KeyEntry, plaintext []byte, aad []byte) ([]byte, error) {
+	pubB64 := keyEntry.FormattedPublicKey
+	if pubB64 == "" {
+		return nil, errors.New("missing public key")
+	}
+	pubBytes, err := base64.StdEncoding.DecodeString(pubB64)
+	if err != nil {
+		return nil, fmt.Errorf("bad public key: %w", err)
+	}
+
+	var sharedKey, cipherText, info []byte
+	switch parameterSet {
+	case ParameterSet_ML_KEM_512:
+		// TODO change mlkey to lib that supports ml-kem-512
+		pk, err := mlkem.NewEncapsulationKey768(pubBytes)
+		if err != nil {
+			return nil, err
+		}
+		sharedKey, cipherText = pk.Encapsulate()
+		info = []byte("ml-kem-512+a256gcm")
+	case ParameterSet_ML_KEM_768:
+		pk, err := mlkem.NewEncapsulationKey768(pubBytes)
+		if err != nil {
+			return nil, err
+		}
+		sharedKey, cipherText = pk.Encapsulate()
+		info = []byte("ml-kem-768+a256gcm")
+	case ParameterSet_ML_KEM_1024:
+		pk, err := mlkem.NewEncapsulationKey1024(pubBytes)
+		if err != nil {
+			return nil, err
+		}
+		sharedKey, cipherText = pk.Encapsulate()
+		info = []byte("ml-kem-1024+a256gcm")
+	default:
+		return nil, fmt.Errorf("unsupported ml-kem parameter set: %s", parameterSet)
+	}
+
+	aeadKey, err := kdf256(sharedKey, info)
+	if err != nil {
+		return nil, err
+	}
+	block, err := aes.NewCipher(aeadKey)
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return nil, err
+	}
+	demCT := gcm.Seal(nil, nonce, plaintext, aad)
+	return pack(cipherText, nonce, demCT), nil
+}
+
+// KEM-DEM decrypt: parse -> decapsulate -> KDF -> AES-256-GCM open
+func decryptWithMLKEM(parameterSet string, keyEntry KeyEntry, blob []byte, aad []byte) ([]byte, error) {
+	kemCT, nonce, demCT, err := unpack(blob)
+	if err != nil {
+		return nil, err
+	}
+	if len(keyEntry.Key) == 0 {
+		return nil, errors.New("missing private key")
+	}
+
+	var sharedKey, info []byte
+	switch parameterSet {
+	case ParameterSet_ML_KEM_512:
+		// TODO change mlkey to lib that supports ml-kem-512
+		sk, err := mlkem.NewDecapsulationKey768(keyEntry.Key)
+		if err != nil {
+			return nil, err
+		}
+		sharedKey, err = sk.Decapsulate(kemCT)
+		if err != nil {
+			return nil, err
+		}
+		info = []byte("ml-kem-512+a256gcm")
+	case ParameterSet_ML_KEM_768:
+		sk, err := mlkem.NewDecapsulationKey768(keyEntry.Key)
+		if err != nil {
+			return nil, err
+		}
+		sharedKey, err = sk.Decapsulate(kemCT)
+		if err != nil {
+			return nil, err
+		}
+		info = []byte("ml-kem-768+a256gcm")
+	case ParameterSet_ML_KEM_1024:
+		sk, err := mlkem.NewDecapsulationKey1024(keyEntry.Key)
+		if err != nil {
+			return nil, err
+		}
+		sharedKey, err = sk.Decapsulate(kemCT)
+		if err != nil {
+			return nil, err
+		}
+		info = []byte("ml-kem-1024+a256gcm")
+	default:
+		return nil, fmt.Errorf("unsupported ml-kem parameter set: %s", parameterSet)
+	}
+
+	aeadKey, err := kdf256(sharedKey, info)
+	if err != nil {
+		return nil, err
+	}
+	block, err := aes.NewCipher(aeadKey)
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	pt, err := gcm.Open(nil, nonce, demCT, aad)
+	if err != nil {
+		return nil, err
+	}
+	return pt, nil
+}
+
+func kdf256(sharedKey, info []byte) ([]byte, error) {
+	r := hkdf.New(sha256.New, sharedKey, nil, info)
+	key := make([]byte, 32)
+	if _, err := r.Read(key); err != nil {
+		return nil, err
+	}
+	return key, nil
+}
+
+const mlkemFormatV1 byte = 1
+
+// package format v1: [u8 ver=1][u32 kemLen][kemCT][u32 nonceLen][nonce][demCT...]
+func pack(kemCT, nonce, demCT []byte) []byte {
+	var b bytes.Buffer
+	b.WriteByte(mlkemFormatV1)
+	_ = binary.Write(&b, binary.BigEndian, uint32(len(kemCT)))
+	b.Write(kemCT)
+	_ = binary.Write(&b, binary.BigEndian, uint32(len(nonce)))
+	b.Write(nonce)
+	b.Write(demCT)
+	return b.Bytes()
+}
+
+func unpack(ct []byte) (kemCT, nonce, demCT []byte, _ error) {
+	if len(ct) < 1+8 {
+		return nil, nil, nil, errors.New("ciphertext too short")
+	}
+	if ct[0] != mlkemFormatV1 {
+		return nil, nil, nil, errors.New("unsupported ml-kem format version")
+	}
+	off := 1
+
+	if off+4 > len(ct) {
+		return nil, nil, nil, errors.New("missing kem length")
+	}
+	kemLen := binary.BigEndian.Uint32(ct[off : off+4])
+	off += 4
+	if off+int(kemLen) > len(ct) {
+		return nil, nil, nil, errors.New("bad kem length")
+	}
+	kemCT = ct[off : off+int(kemLen)]
+	off += int(kemLen)
+
+	if off+4 > len(ct) {
+		return nil, nil, nil, errors.New("missing nonce length")
+	}
+	nonceLen := binary.BigEndian.Uint32(ct[off : off+4])
+	off += 4
+	if off+int(nonceLen) > len(ct) {
+		return nil, nil, nil, errors.New("bad nonce length")
+	}
+	nonce = ct[off : off+int(nonceLen)]
+	demCT = ct[off+int(nonceLen):]
+	return
 }

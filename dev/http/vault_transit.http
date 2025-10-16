@@ -1,0 +1,35 @@
+### Create
+POST http://127.0.0.1:8200/v1/transit/keys/ml-kem-1024-key
+X-Vault-Token: {{VAULT_DEV_ROOT_TOKEN_ID}}
+Content-Type: application/json
+
+{
+  "type": "ml-kem",
+  "parameter_set": "ml-kem-1024"
+}
+###
+
+### Encrypt
+POST http://127.0.0.1:8200/v1/transit/encrypt/ml-kem-1024-key
+X-Vault-Token: {{VAULT_DEV_ROOT_TOKEN_ID}}
+Content-Type: application/json
+
+{
+  "plaintext": "QWxpY2Ugc2F5cyBoZWxsbyB0byBCb2I="
+}
+###
+
+### Decrypt
+POST http://127.0.0.1:8200/v1/transit/decrypt/ml-kem-1024-key
+X-Vault-Token: {{VAULT_DEV_ROOT_TOKEN_ID}}
+Content-Type: application/json
+
+{
+  "ciphertext": "vault:v1:eTDhFgCqxSuHBieXCclRyb78950TcZlO2leOjTBknZGk0NgsZutgaEVqLKsrmKZhKPhl"
+}
+###
+
+### Meta
+GET http://127.0.0.1:8200/v1/transit/keys/ml-kem-1024-key
+X-Vault-Token: {{VAULT_DEV_ROOT_TOKEN_ID}}
+###

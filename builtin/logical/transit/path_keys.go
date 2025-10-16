@@ -61,7 +61,7 @@ func (b *backend) pathKeys() *framework.Path {
 				Description: `
 The type of key to create. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
 (asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-3072"
-(asymmetric), "rsa-4096" (asymmetric), "ml-dsa" (asymmetric), "slh-dsa" (asymmetric) are supported.  Defaults to "aes256-gcm96".
+(asymmetric), "rsa-4096" (asymmetric), "ml-dsa" (asymmetric), "ml-kem" (asymmetric), "slh-dsa" (asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
 			},
 
@@ -133,9 +133,10 @@ key.`,
 			},
 			"parameter_set": {
 				Type: framework.TypeString,
-				Description: `The parameter set to use. Applies to ML-DSA and SLH-DSA key types.
+				Description: `The parameter set to use. Applies to ML-DSA, ML-KEM and SLH-DSA key types.
 For ML-DSA key types, valid values are 44, 65, or 87.
-For SLH-DSA key types, valid values are SLH-DSA-SHA2-128s, SLH-DSA-SHAKE-128s, SLH-DSA-SHA2-128f, SLH-DSA-SHAKE-128f, SLH-DSA-SHA2-192s, SLH-DSA-SHAKE-192s, SLH-DSA-SHA2-192f, SLH-DSA-SHAKE-192f, SLH-DSA-SHA2-256s, SLH-DSA-SHAKE-256s, SLH-DSA-SHA2-256f, SLH-DSA-SHAKE-256f`,
+For ML-KEM key types, valid values are ML-KEM-512, ML-KEM-768, or ML-KEM-1024.
+For SLH-DSA key types, valid values are SLH-DSA-SHA2-128s, SLH-DSA-SHAKE-128s, SLH-DSA-SHA2-128f, SLH-DSA-SHAKE-128f, SLH-DSA-SHA2-192s, SLH-DSA-SHAKE-192s, SLH-DSA-SHA2-192f, SLH-DSA-SHAKE-192f, SLH-DSA-SHA2-256s, SLH-DSA-SHAKE-256s, SLH-DSA-SHA2-256f, SLH-DSA-SHAKE-256f.`,
 			},
 			"hybrid_key_type_pqc": {
 				Type: framework.TypeString,
@@ -264,6 +265,16 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		if parameterSet != keysutil.ParameterSet_ML_DSA_44 &&
 			parameterSet != keysutil.ParameterSet_ML_DSA_65 &&
 			parameterSet != keysutil.ParameterSet_ML_DSA_87 {
+			return logical.ErrorResponse(fmt.Sprintf("invalid parameter set %s for key type %s", parameterSet, keyType)), logical.ErrInvalidRequest
+		}
+
+		polReq.ParameterSet = parameterSet
+	case "ml-kem":
+		polReq.KeyType = keysutil.KeyType_ML_KEM
+
+		if parameterSet != keysutil.ParameterSet_ML_KEM_512 &&
+			parameterSet != keysutil.ParameterSet_ML_KEM_768 &&
+			parameterSet != keysutil.ParameterSet_ML_KEM_1024 {
 			return logical.ErrorResponse(fmt.Sprintf("invalid parameter set %s for key type %s", parameterSet, keyType)), logical.ErrInvalidRequest
 		}
 
@@ -464,7 +475,7 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096, keysutil.KeyType_ML_DSA, keysutil.KeyType_HYBRID, keysutil.KeyType_SLH_DSA:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096, keysutil.KeyType_ML_DSA, keysutil.KeyType_ML_KEM, keysutil.KeyType_HYBRID, keysutil.KeyType_SLH_DSA:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
@@ -529,6 +540,8 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 				key.PublicKey = pubKey
 			case keysutil.KeyType_ML_DSA:
 				key.Name = "ml-dsa-" + p.ParameterSet
+			case keysutil.KeyType_ML_KEM:
+				key.Name = "ml-kem-" + p.ParameterSet
 			}
 
 			retKeys[k] = structs.New(key).Map()
