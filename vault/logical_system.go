@@ -5182,7 +5182,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	fullMountPath := ns.Path + pathWithTable
 	if ns.ID != me.Namespace().ID {
 		resp.Data["path"] = me.Namespace().Path + pathWithTable
-		fullMountPath = ns.Path + me.Namespace().Path + pathWithTable
+		fullMountPath = me.Namespace().Path + pathWithTable
 	}
 
 	if !hasMountAccess(ctx, acl, fullMountPath) {
