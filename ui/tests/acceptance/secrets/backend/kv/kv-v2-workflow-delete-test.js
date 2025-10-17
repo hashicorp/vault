@@ -69,7 +69,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.expect(21);
       const flashSuccess = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
       assertDeleteActions(assert);
       assert.dom(PAGE.detail.patchLatest).exists();
@@ -107,7 +107,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('can soft delete and undelete an older secret version (a)', async function (assert) {
       assert.expect(19);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
       assertDeleteActions(assert);
       assert.dom(PAGE.detail.patchLatest).exists();
@@ -120,7 +120,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(PAGE.detail.deleteOption);
       await click(PAGE.detail.deleteConfirm);
       // we get navigated back to the overview page, so manually go back to deleted version
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=2`);
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
@@ -134,7 +134,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // undelete flow
       await click(PAGE.detail.undelete);
       // details update accordingly
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=2`);
       assert.dom(PAGE.infoRow).exists('shows secret data after undeleting');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       // correct toolbar options
@@ -144,7 +144,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.expect(12);
       const flashSuccess = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=3`);
       // correct toolbar options show
       assertDeleteActions(assert);
       assert.dom(PAGE.detail.patchLatest).exists();
@@ -156,7 +156,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       const [actual] = flashSuccess.lastCall.args;
       assert.strictEqual(actual, expected, 'renders correct flash message');
       // details update accordingly
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=3`);
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('Version 3 of this secret has been permanently destroyed', 'Shows destroyed message');
@@ -170,7 +170,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
     test('can permanently delete all secret versions (a)', async function (assert) {
       await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/metadata`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/nuke/metadata`);
       assert.dom(PAGE.metadata.deleteMetadata).hasText('Permanently delete', 'shows delete metadata button');
       // delete flow
       await click(PAGE.metadata.deleteMetadata);
@@ -180,7 +180,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(PAGE.detail.deleteConfirm);
       await waitUntil(() => currentRouteName() === 'vault.cluster.secrets.backend.kv.list');
       // redirects to list
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/kv/list`, 'redirects to list');
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.backend}/kv/list`, 'redirects to list');
     });
   });
 
@@ -197,13 +197,13 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('cannot delete and undelete the latest secret version (dr)', async function (assert) {
       assert.expect(9);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
       assertDeleteActions(assert, []);
       assert.dom(PAGE.infoRow).exists('shows secret data');
 
       // data-reader can't delete, so check undelete with already-deleted version
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/nuke/details`);
       assertDeleteActions(assert, []);
       assert
         .dom(PAGE.emptyStateTitle)
@@ -213,7 +213,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('cannot soft delete and undelete an older secret version (dr)', async function (assert) {
       assert.expect(4);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
       assertDeleteActions(assert, []);
       assert.dom(PAGE.infoRow).exists('shows secret data');
@@ -221,13 +221,13 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('cannot destroy a secret version (dr)', async function (assert) {
       assert.expect(3);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=3`);
       // correct toolbar options show
       assertDeleteActions(assert, []);
     });
     test('cannot permanently delete all secret versions (dr)', async function (assert) {
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
       assert.dom(PAGE.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
@@ -247,7 +247,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('can delete and cannot undelete the latest secret version (dlr)', async function (assert) {
       assert.expect(12);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
       assertDeleteActions(assert, ['delete']);
       assert.dom(PAGE.infoRow).exists('shows secret data');
@@ -271,7 +271,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('can soft delete and undelete an older secret version (dlr)', async function (assert) {
       assert.expect(6);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
       assertDeleteActions(assert, ['delete']);
       assert.dom(PAGE.infoRow).exists('shows secret data');
@@ -283,13 +283,13 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('cannot destroy a secret version (dlr)', async function (assert) {
       assert.expect(3);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=3`);
       // correct toolbar options show
       assertDeleteActions(assert, ['delete']);
     });
     test('cannot permanently delete all secret versions (dlr)', async function (assert) {
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
       assert.dom(PAGE.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
@@ -309,7 +309,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('cannot delete but can undelete the latest secret version (mm)', async function (assert) {
       assert.expect(18);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
       assertDeleteActions(assert);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
@@ -320,7 +320,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.detail.deleteOptionLatest).isDisabled('delete latest option is disabled');
 
       // Can't delete latest, try with pre-deleted secret
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/nuke/details`);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // updated toolbar options
@@ -341,7 +341,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('can soft delete and undelete an older secret version (mm)', async function (assert) {
       assert.expect(18);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
       assertDeleteActions(assert);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
@@ -354,7 +354,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(PAGE.detail.deleteOption);
       await click(PAGE.detail.deleteConfirm);
       // details update accordingly
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=2`);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // updated toolbar options
@@ -362,7 +362,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // undelete flow
       await click(PAGE.detail.undelete);
       // details update accordingly
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=2`);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // correct toolbar options
@@ -371,7 +371,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('can destroy a secret version (mm)', async function (assert) {
       assert.expect(9);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=3`);
       // correct toolbar options show
       assertDeleteActions(assert);
       // delete flow
@@ -379,7 +379,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.detail.deleteModalTitle).includesText('Destroy version?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
       // details update accordingly
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=3`);
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'Shows permissions message');
@@ -389,7 +389,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     });
     test('cannot permanently delete all secret versions (mm)', async function (assert) {
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
       assert.dom(PAGE.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
@@ -406,7 +406,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('can delete all secret versions from the nested list view (snc)', async function (assert) {
       assert.expect(1);
       // go to nested secret directory list view
-      await visit(`/vault/secrets/${this.backend}/kv/list/app/nested`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/list/app/nested`);
       // correct popup menu items appear on list view
       const popupSelector = `${PAGE.list.item('bad-secret')} ${PAGE.popup}`;
       await click(popupSelector);
@@ -415,7 +415,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('can not delete all secret versions from root list view (snc)', async function (assert) {
       assert.expect(1);
       // go to root secret directory list view
-      await visit(`/vault/secrets/${this.backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/list`);
       // shows overview card and not list view
       assert.dom(PAGE.list.overviewCard).exists('renders overview card');
     });
@@ -429,13 +429,13 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('cannot delete and undelete the latest secret version (sc)', async function (assert) {
       assert.expect(9);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
       assertDeleteActions(assert, []);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
 
       // test with already deleted method
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/nuke/details`);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('version timestamp not rendered');
       // updated toolbar options
@@ -444,7 +444,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('cannot soft delete and undelete an older secret version (sc)', async function (assert) {
       assert.expect(4);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
       assertDeleteActions(assert, []);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
@@ -452,14 +452,14 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     test('cannot destroy a secret version (sc)', async function (assert) {
       assert.expect(3);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.secretPath}/details?version=3`);
       // correct toolbar options show
       assertDeleteActions(assert, []);
     });
     test('can permanently delete all secret versions (sc)', async function (assert) {
       await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
       assert.dom(PAGE.metadata.deleteMetadata).hasText('Permanently delete', 'shows delete metadata button');
@@ -471,7 +471,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(PAGE.detail.deleteConfirm);
       await waitUntil(() => currentRouteName() === 'vault.cluster.secrets.backend.kv.list');
       // redirects to list
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/kv/list`, 'redirects to list');
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.backend}/kv/list`, 'redirects to list');
     });
   });
 

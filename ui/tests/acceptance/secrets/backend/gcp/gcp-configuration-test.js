@@ -42,12 +42,12 @@ module('Acceptance | GCP | configuration', function (hooks) {
   });
 
   test('it should prompt configuration after mounting the GCP engine', async function (assert) {
-    await visit('/vault/secrets/mounts');
+    await visit('/vault/secrets-engines/enable');
     await mountBackend(this.type, this.path);
 
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.path}/configuration`,
+      `/vault/secrets-engines/${this.path}/configuration`,
       'navigated to configuration view'
     );
     assert.dom(GENERAL.emptyStateTitle).hasText('Google Cloud not configured');
@@ -61,7 +61,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
     await click(SES.configure);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.path}/configuration/edit`,
+      `/vault/secrets-engines/${this.path}/configuration/edit`,
       'navigated to configuration edit view'
     );
     // cleanup
@@ -214,7 +214,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
           .hasText('Error my goodness, that did not work!', 'API error shows on form');
         assert.strictEqual(
           currentURL(),
-          `/vault/secrets/${this.path}/configuration/edit`,
+          `/vault/secrets-engines/${this.path}/configuration/edit`,
           'the form did not transition because the save failed.'
         );
         // cleanup

@@ -41,12 +41,12 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
   test('it should prompt configuration after mounting the azure engine', async function (assert) {
     const path = `azure-${this.uid}`;
-    await visit('/vault/secrets/mounts');
+    await visit('/vault/secrets-engines/enable');
     await mountBackend(this.type, path);
 
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${path}/configuration`,
+      `/vault/secrets-engines/${path}/configuration`,
       'navigated to configuration view'
     );
     assert
@@ -63,7 +63,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
     await click(SES.configure);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${path}/configuration/edit`,
+      `/vault/secrets-engines/${path}/configuration/edit`,
       'navigated to configuration edit view'
     );
     // cleanup
@@ -228,7 +228,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         assert.dom(GENERAL.messageError).hasText('Error welp, that did not work!', 'API error shows on form');
         assert.strictEqual(
           currentURL(),
-          `/vault/secrets/${path}/configuration/edit`,
+          `/vault/secrets-engines/${path}/configuration/edit`,
           'the form did not transition because the save failed.'
         );
         // cleanup
@@ -426,7 +426,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         assert.dom(GENERAL.messageError).hasText('Error bad request', 'Error message is displayed.');
         assert.strictEqual(
           currentURL(),
-          `/vault/secrets/${path}/configuration/edit`,
+          `/vault/secrets-engines/${path}/configuration/edit`,
           'stays on the edit page'
         );
         assert

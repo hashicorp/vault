@@ -75,7 +75,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
   const ADMIN_USER = 'authorizer';
   const ADMIN_PASSWORD = 'test';
   const setupControlGroup = async (context) => {
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     const userpassAccessor = await runCmd([
       //enable kv-v1 mount and write a secret
       'write sys/mounts/kv type=kv',
@@ -116,7 +116,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
     await settled();
     await setupControlGroup(this);
     await settled();
-    await visit('/vault/secrets/kv-v2-mount/kv/foo/details');
+    await visit('/vault/secrets-engines/kv-v2-mount/kv/foo/details');
 
     assert.ok(
       await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
@@ -130,7 +130,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
   });
 
   const workflow = async (assert, context, shouldStoreToken) => {
-    const url = '/vault/secrets/kv/show/foo';
+    const url = '/vault/secrets-engines/kv/show/foo';
     await setupControlGroup(context);
     await settled();
     // as the requestor, go to the URL that's blocked by the control group

@@ -55,8 +55,8 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     await click(GENERAL.submitButton);
 
     // after submitting go to list and back to configuration
-    await visit(`/vault/secrets/${keymgmtType}/list`);
-    await visit(`/vault/secrets/${keymgmtType}/configuration`);
+    await visit(`/vault/secrets-engines/${keymgmtType}/list`);
+    await visit(`/vault/secrets-engines/${keymgmtType}/configuration`);
 
     // confirm that submitted values were saved and prepopulated with those saved values
     assert
@@ -85,7 +85,7 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     assert.dom(GENERAL.inputByAttr('default_lease_ttl')).hasValue('11', 'default ttl value was tuned');
     assert.dom(GENERAL.selectByAttr('default_lease_ttl')).hasValue('m', 'default ttl unit was tuned');
 
-    await visit(`/vault/secrets/${keymgmtType}/configuration`);
+    await visit(`/vault/secrets-engines/${keymgmtType}/configuration`);
 
     // show unsaved changes modal and discard
     await fillIn(GENERAL.inputByAttr('default_lease_ttl'), 12);
@@ -109,7 +109,7 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
       .hasValue('m', 'default ttl unit was reset to original values');
 
     // navigate back to keymgmt list view to delete the engine from the manage dropdown
-    await visit(`/vault/secrets/${keymgmtType}/list`);
+    await visit(`/vault/secrets-engines/${keymgmtType}/list`);
     await click(SELECTORS.manageDropdown);
     await click(SELECTORS.manageDropdownItem('Delete'));
     await click(GENERAL.confirmButton);

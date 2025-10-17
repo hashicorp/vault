@@ -20,7 +20,7 @@ module('Acceptance | kubernetes | configuration', function (hooks) {
     kubernetesHandlers(this.server);
     kubernetesScenario(this.server);
     this.visitConfiguration = () => {
-      return visit('/vault/secrets/kubernetes/kubernetes/configuration');
+      return visit('/vault/secrets-engines/kubernetes/kubernetes/configuration');
     };
     this.validateRoute = (assert, route, message) => {
       assert.strictEqual(currentRouteName(), `vault.cluster.secrets.backend.kubernetes.${route}`, message);

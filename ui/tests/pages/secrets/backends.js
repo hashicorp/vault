@@ -8,7 +8,7 @@ import uiPanel from 'vault/tests/pages/components/console/ui-panel';
 
 export default create({
   consoleToggle: clickable('[data-test-console-toggle]'),
-  visit: visitable('/vault/secrets'),
+  visit: visitable('/vault/secrets-engines'),
   rows: collection('[data-test-table-row]', {
     path: text('[data-test-table-data]'),
     menu: clickable('[data-test-popup-menu-trigger]'),
