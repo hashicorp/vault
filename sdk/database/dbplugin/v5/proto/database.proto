@@ -38,6 +38,7 @@ message NewUserRequest {
 message UsernameConfig {
   string display_name = 1;
   string role_name = 2;
+  string username_template_metadata = 3;
 }
 
 message NewUserResponse {
