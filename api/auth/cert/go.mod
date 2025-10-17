@@ -6,7 +6,7 @@ toolchain go1.23.7
 
 require (
 	github.com/hashicorp/go-rootcerts v1.0.2
-	github.com/hashicorp/vault/api v1.20.0
+	github.com/hashicorp/vault/api v1.22.0
 )
 
 require (
