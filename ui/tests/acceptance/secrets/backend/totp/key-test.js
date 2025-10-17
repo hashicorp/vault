@@ -56,21 +56,21 @@ module('Acceptance | totp key backend', function (hooks) {
 
     await login();
     // Setup TOTP engine
-    await visit('/vault/secrets/mounts');
+    await visit('/vault/secrets-engines/enable');
     await mountBackend('totp', this.mountPath);
   });
 
   test('it views a key via menu option', async function (assert) {
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.path}/list`,
+      `/vault/secrets-engines/${this.path}/list`,
       'After enabling totp secrets engine it navigates to keys list'
     );
 
     await click(SES.createSecretLink);
     await createVaultKey(this.keyName, this.issuer, this.accountName);
     await click(GENERAL.backButton);
-    await visit(`/vault/secrets/${this.path}`);
+    await visit(`/vault/secrets-engines/${this.path}`);
     await click(GENERAL.menuTrigger);
     await click(`${GENERAL.menuItem('details')}`);
 
@@ -79,7 +79,7 @@ module('Acceptance | totp key backend', function (hooks) {
 
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.path}/show/${this.keyName}`,
+      `/vault/secrets-engines/${this.path}/show/${this.keyName}`,
       'After clicking details option it navigates to key detail view'
     );
   });
@@ -88,8 +88,8 @@ module('Acceptance | totp key backend', function (hooks) {
     await click(SES.createSecretLink);
     await createVaultKey(this.keyName, this.issuer, this.accountName);
     await click(GENERAL.backButton);
-    await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
-    await visit(`/vault/secrets/${this.path}`);
+    await waitUntil(() => currentURL() === `/vault/secrets-engines/${this.path}/show/${this.keyName}`);
+    await visit(`/vault/secrets-engines/${this.path}`);
     await click(GENERAL.menuTrigger);
     await click(GENERAL.confirmTrigger);
     await click(GENERAL.confirmButton);
@@ -108,10 +108,10 @@ module('Acceptance | totp key backend', function (hooks) {
     assert.dom(GENERAL.infoRowLabel('URL')).exists('URL exists');
 
     await click(GENERAL.backButton);
-    await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
+    await waitUntil(() => currentURL() === `/vault/secrets-engines/${this.path}/show/${this.keyName}`);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.path}/show/${this.keyName}`,
+      `/vault/secrets-engines/${this.path}/show/${this.keyName}`,
       'totp: navigates to the show page on creation'
     );
 
@@ -123,10 +123,10 @@ module('Acceptance | totp key backend', function (hooks) {
     await click(SES.createSecretLink);
     assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
     await createNonVaultKey(this.keyName, this.issuer, this.accountName, this.url);
-    await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
+    await waitUntil(() => currentURL() === `/vault/secrets-engines/${this.path}/show/${this.keyName}`);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.path}/show/${this.keyName}`,
+      `/vault/secrets-engines/${this.path}/show/${this.keyName}`,
       'totp: navigates to the show page on creation'
     );
 
@@ -138,10 +138,10 @@ module('Acceptance | totp key backend', function (hooks) {
     await click(SES.createSecretLink);
     assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
     await createNonVaultKey(this.keyName, this.issuer, this.accountName, undefined, this.key);
-    await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
+    await waitUntil(() => currentURL() === `/vault/secrets-engines/${this.path}/show/${this.keyName}`);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.path}/show/${this.keyName}`,
+      `/vault/secrets-engines/${this.path}/show/${this.keyName}`,
       'totp: navigates to the show page on creation'
     );
 
@@ -152,7 +152,7 @@ module('Acceptance | totp key backend', function (hooks) {
   test('it does not render QR code or URL when exported is false', async function (assert) {
     await click(SES.createSecretLink);
     await createVaultKey(this.keyName, this.issuer, this.accountName, false);
-    await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
+    await waitUntil(() => currentURL() === `/vault/secrets-engines/${this.path}/show/${this.keyName}`);
     assert.dom('[data-test-qrcode]').doesNotExist('QR code is not displayed');
     assert.dom(GENERAL.infoRowLabel('URL')).doesNotExist('URl is not displayed');
   });

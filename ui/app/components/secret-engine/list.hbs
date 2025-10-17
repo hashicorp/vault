@@ -13,10 +13,10 @@
   <PH.IconTile @icon="key" />
 
   <PH.Title>Secrets engines</PH.Title>
-  <PH.Subtitle>Secrets engines available in {{this.clusterName}} Vault cluster.</PH.Subtitle>
+  <PH.Subtitle>Secrets engines available in {{this.clusterName}}.</PH.Subtitle>
 
   <PH.Actions>
-    <Hds::Button @text="Enable new engine" @icon="plus" @route="vault.cluster.secrets.mounts" data-test-enable-engine />
+    <Hds::Button @text="Enable new engine" @icon="plus" @route="vault.cluster.secrets.enable" data-test-enable-engine />
   </PH.Actions>
 </Hds::PageHeader>
 

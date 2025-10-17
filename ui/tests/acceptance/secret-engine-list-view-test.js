@@ -39,7 +39,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
   // the new API service camelizes response keys, so this tests is to assert that does NOT happen when we re-implement it
   test('it does not camelize the secret mount path', async function (assert) {
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     await page.enableEngine();
     await click(GENERAL.cardContainer('aws'));
     await fillIn(GENERAL.inputByAttr('path'), 'aws_engine');
@@ -56,7 +56,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   });
 
   test('after enabling an unsupported engine it takes you to list page', async function (assert) {
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     await page.enableEngine();
     await click(GENERAL.cardContainer('nomad'));
     await click(GENERAL.submitButton);
@@ -67,7 +67,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   });
 
   test('after enabling a supported engine it takes you to mount page, can see configure and clicking breadcrumb takes you back to list page', async function (assert) {
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     await page.enableEngine();
     await click(GENERAL.cardContainer('aws'));
     await click(GENERAL.submitButton);
@@ -95,10 +95,10 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     await loginNs(this.namespace, userDefault); // logs into that same namespace with a default user token
 
-    await visit(`/vault/secrets?namespace=${this.namespace}`); // nav to specified namespace list
+    await visit(`/vault/secrets-engines?namespace=${this.namespace}`); // nav to specified namespace list
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets?namespace=${this.namespace}`,
+      `/vault/secrets-engines?namespace=${this.namespace}`,
       'Should be on main secret engines list page within namespace.'
     );
     assert.dom(GENERAL.tableData(`${enginePath1}/`, 'path')).doesNotExist(); // without permissions, engine should not show for this user
@@ -126,10 +126,10 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     await loginNs(this.namespace); // logs into namespace with root token
 
-    await visit(`/vault/secrets?namespace=${this.namespace}`); // nav to specified namespace list
+    await visit(`/vault/secrets-engines?namespace=${this.namespace}`); // nav to specified namespace list
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets?namespace=${this.namespace}`,
+      `/vault/secrets-engines?namespace=${this.namespace}`,
       'Should be on main secret engines list page within namespace.'
     );
 
@@ -145,7 +145,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
     await loginNs(this.namespace);
-    await visit(`/vault/secrets?namespace=${this.namespace}`);
+    await visit(`/vault/secrets-engines?namespace=${this.namespace}`);
     await click(`${GENERAL.tableData('cubbyhole/', 'path')} a`);
 
     assert.dom(GENERAL.emptyStateTitle).hasText('No secrets in this backend');
@@ -159,7 +159,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     // first mount an engine so we can disable it.
     const enginePath = `alicloud-disable-${this.uid}`;
     await runCmd(mountEngineCmd('alicloud', enginePath));
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     // to reduce flakiness, searching by engine name first in case there are pagination issues
     await fillIn(GENERAL.inputSearch('secret-engine-path'), enginePath);
     assert.dom(GENERAL.tableData(`${enginePath}/`, 'path')).exists('the alicloud engine is mounted');
@@ -182,7 +182,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await runCmd(mountEngineCmd('kv', enginePath1));
 
     // check kv1
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     await click(`${GENERAL.tableData(`${enginePath1}/`, 'path')} a`);
     for (let i = 0; i <= 15; i++) {
       await createSecret(`secret-${i}`, 'foo', 'bar', enginePath1);
@@ -192,13 +192,13 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await click(GENERAL.nextPage);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${enginePath1}/list?page=2`,
+      `/vault/secrets-engines/${enginePath1}/list?page=2`,
       'After clicking next page in navigates to the second page.'
     );
     await click(SES.secretLink(secretPath));
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${enginePath1}/show/${secretPath}`,
+      `/vault/secrets-engines/${enginePath1}/show/${secretPath}`,
       'After clicking a non-nested secret, it navigates to the details view.'
     );
 
@@ -215,7 +215,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await runCmd(mountEngineCmd('kv', enginePath1));
 
     // check kv1
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     await click(`${GENERAL.tableData(`${enginePath1}/`, 'path')} a`);
     for (let i = 0; i <= 15; i++) {
       await createSecret(`${parentPath}/secret-${i}`, 'foo', 'bar', enginePath1);
@@ -226,14 +226,14 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${enginePath1}/list/${parentPath}/`,
+      `/vault/secrets-engines/${enginePath1}/list/${parentPath}/`,
       'After clicking a nested secret it navigates to the children list view.'
     );
 
     await click(GENERAL.nextPage);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${enginePath1}/list/${parentPath}/?page=2`,
+      `/vault/secrets-engines/${enginePath1}/list/${parentPath}/?page=2`,
       'After clicking next page it navigates to the second page.'
     );
 

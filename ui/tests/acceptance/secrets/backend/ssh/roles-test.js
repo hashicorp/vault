@@ -69,7 +69,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       assertAfterGenerate(assert, sshPath) {
         assert.strictEqual(
           currentURL(),
-          `/vault/secrets/${sshPath}/sign/${this.name}`,
+          `/vault/secrets-engines/${sshPath}/sign/${this.name}`,
           'ca sign url is correct'
         );
         assert.dom(GENERAL.infoRowLabel('Signed key')).exists({ count: 1 }, 'renders the signed key');
@@ -94,7 +94,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       assertAfterGenerate(assert, sshPath) {
         assert.strictEqual(
           currentURL(),
-          `/vault/secrets/${sshPath}/credentials/${this.name}`,
+          `/vault/secrets-engines/${sshPath}/credentials/${this.name}`,
           'otp credential url is correct'
         );
         assert.dom(GENERAL.infoRowLabel('Key')).exists({ count: 1 }, 'renders the key');
@@ -128,10 +128,10 @@ module('Acceptance | ssh | roles', function (hooks) {
 
       // save the role
       await click(SES.ssh.createRole);
-      await waitUntil(() => currentURL() === `/vault/secrets/${sshPath}/show/${role.name}`); // flaky without this
+      await waitUntil(() => currentURL() === `/vault/secrets-engines/${sshPath}/show/${role.name}`); // flaky without this
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${sshPath}/show/${role.name}`,
+        `/vault/secrets-engines/${sshPath}/show/${role.name}`,
         `${role.type}: navigates to the show page on creation`
       );
 
@@ -155,7 +155,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       await click(GENERAL.cancelButton);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${sshPath}/list`,
+        `/vault/secrets-engines/${sshPath}/list`,
         `${role.type}: cancel takes you to ssh index`
       );
       assert.dom(SES.secretLink(role.name)).exists(`${role.type}: role shows in the list`);
@@ -187,7 +187,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       const path = `ssh-${this.uid}`;
       await enablePage.enable('ssh', path);
       await settled();
-      await visit(`/vault/secrets/${path}/create`);
+      await visit(`/vault/secrets-engines/${path}/create`);
       await createOTPRole('role');
       await settled();
       await showPage.visit({ backend: path, id: 'role' });
@@ -209,7 +209,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       assert.expect(6);
       const path = `ssh-${this.uid}`;
       await enablePage.enable('ssh', path);
-      await visit(`/vault/secrets/${path}/create`);
+      await visit(`/vault/secrets-engines/${path}/create`);
       await createOTPRole('role');
       await settled();
       assert.strictEqual(

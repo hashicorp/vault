@@ -30,7 +30,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
   test('it should prompt configuration after mounting ssh engine', async function (assert) {
     const sshPath = `ssh-${this.uid}`;
     // in this test go through the full mount process. Bypass this step in later tests.
-    await visit('/vault/secrets/mounts');
+    await visit('/vault/secrets-engines/enable');
     await mountBackend('ssh', sshPath);
     await click(SES.configTab);
     assert.dom(GENERAL.emptyStateTitle).hasText('SSH not configured');
@@ -57,14 +57,14 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await click(SES.configure);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${sshPath}/configuration/edit`,
+      `/vault/secrets-engines/${sshPath}/configuration/edit`,
       'transitions to the configuration page'
     );
     // default has generate CA checked so we just submit the form
     await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${sshPath}/configuration`,
+      `/vault/secrets-engines/${sshPath}/configuration`,
       'navigates to the details page.'
     );
     // There is a delay in the backend for the public key to be generated, wait for it to complete by checking that the public key is displayed
@@ -81,7 +81,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${sshPath}/configuration/edit`,
+      `/vault/secrets-engines/${sshPath}/configuration/edit`,
       'after deleting public key stays on edit page'
     );
     assert.dom(GENERAL.inputByAttr('private_key')).hasNoText('Private key is empty and reset');
@@ -110,7 +110,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
       .dom(GENERAL.validationErrorByAttr('generate_signing_key'))
       .hasText('Provide a Public and Private key or set "Generate Signing Key" to true.');
     // visit the details page and confirm the public key is not shown
-    await visit(`/vault/secrets/${path}/configuration`);
+    await visit(`/vault/secrets-engines/${path}/configuration`);
     assert.dom(GENERAL.infoRowLabel('Public key')).doesNotExist('Public key label does not exist');
     assert.dom(GENERAL.emptyStateTitle).hasText('SSH not configured', 'SSH not configured');
     // cleanup

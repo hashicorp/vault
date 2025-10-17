@@ -65,7 +65,7 @@ module('Acceptance | secrets/generic/create', function (hooks) {
       // upgrade to version 2 generic mount
       `write sys/mounts/${path}/tune options=version=2`,
     ]);
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(`${GENERAL.tableData(`${path}/`, 'path')} a`);
     assert.strictEqual(
@@ -79,14 +79,14 @@ module('Acceptance | secrets/generic/create', function (hooks) {
       .exists('lists secret created under kv1 engine as secret in the kv2 list view');
 
     await writeSecret(path, 'bar', 'key', 'value');
-    await visit(`/vault/secrets/${path}/kv/list`);
+    await visit(`/vault/secrets-engines/${path}/kv/list`);
 
     ['foo', 'bar'].forEach((secret) => {
       assert.dom(PAGE.list.item(secret.path)).exists('lists both records');
     });
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'lists only the two secrets');
 
-    await visit(`/vault/secrets/${path}/list`);
+    await visit(`/vault/secrets-engines/${path}/list`);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.kv.list',

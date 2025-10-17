@@ -134,7 +134,7 @@ module('Unit | Mixin | cluster route', function () {
   });
 
   test('#transitionToTargetRoute', function (assert) {
-    const redirectRouteURL = '/vault/secrets/secret/create';
+    const redirectRouteURL = '/vault/secrets-engines/secret/create';
     const subject = createClusterRoute({ needsInit: false, sealed: false });
     subject.router.currentURL = redirectRouteURL;
     const spy = sinon.spy(subject.router, 'transitionTo');

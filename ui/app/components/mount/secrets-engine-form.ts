@@ -153,6 +153,6 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
 
   @action
   goBack() {
-    this.router.transitionTo('vault.cluster.secrets.mounts');
+    this.router.transitionTo('vault.cluster.secrets.enable');
   }
 }

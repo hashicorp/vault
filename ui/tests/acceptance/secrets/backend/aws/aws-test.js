@@ -75,7 +75,7 @@ module('Acceptance | aws secret backend', function (hooks) {
     await enablePage.enable('aws', path);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${path}/list`,
+      `/vault/secrets-engines/${path}/list`,
       'After enabling aws secrets engine it navigates to roles list'
     );
 
@@ -84,15 +84,15 @@ module('Acceptance | aws secret backend', function (hooks) {
 
     await fillIn(GENERAL.inputByAttr('name'), roleName);
     await click(GENERAL.submitButton);
-    await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
+    await waitUntil(() => currentURL() === `/vault/secrets-engines/${path}/show/${roleName}`); // flaky without this
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${path}/show/${roleName}`,
+      `/vault/secrets-engines/${path}/show/${roleName}`,
       'aws: navigates to the show page on creation'
     );
 
     await click(SES.crumb(path));
-    assert.strictEqual(currentURL(), `/vault/secrets/${path}/list`);
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${path}/list`);
     assert.dom(SES.secretLink(roleName)).exists();
 
     // delete role
@@ -131,13 +131,13 @@ module('Acceptance | aws secret backend', function (hooks) {
       });
       await runCmd(mountEngineCmd('aws', path));
 
-      await visit(`/vault/secrets/${path}/create`);
+      await visit(`/vault/secrets-engines/${path}/create`);
       assert.dom('h1').hasText('Create an AWS Role');
       await fillIn(GENERAL.inputByAttr('name'), roleName);
       await fillIn(GENERAL.inputByAttr('credentialType'), scenario.credentialType);
       await click(GENERAL.submitButton);
-      await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
-      assert.strictEqual(currentURL(), `/vault/secrets/${path}/show/${roleName}`);
+      await waitUntil(() => currentURL() === `/vault/secrets-engines/${path}/show/${roleName}`); // flaky without this
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${path}/show/${roleName}`);
       await click(SES.generateLink);
       assert
         .dom(GENERAL.inputByAttr('credentialType'))
@@ -174,11 +174,11 @@ module('Acceptance | aws secret backend', function (hooks) {
     await runCmd(mountEngineCmd('aws', path));
     await runCmd(`write ${path}/roles/${roleName} credential_type=assumed_role`);
 
-    await visit(`/vault/secrets/${path}/list`);
+    await visit(`/vault/secrets-engines/${path}/list`);
     assert.dom(SES.secretLink(roleName)).exists();
     await click(SES.secretLink(roleName));
 
-    assert.strictEqual(currentURL(), `/vault/secrets/${path}/credentials/${roleName}`);
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${path}/credentials/${roleName}`);
     assert
       .dom(GENERAL.inputByAttr('credentialType'))
       .hasValue('iam_user', 'credentialType defaults to first in list due to no role read permissions');
