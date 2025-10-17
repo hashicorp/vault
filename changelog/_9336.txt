@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fixed issue where under certain circumstances the rotation manager would spawn goroutines indefinitely.
+```
