@@ -1388,13 +1388,14 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 
 		// Create a new alias
 		newAlias := &identity.Alias{
-			CanonicalID:   entity.ID,
-			Name:          alias.Name,
-			MountAccessor: alias.MountAccessor,
-			Metadata:      alias.Metadata,
-			MountPath:     mountValidationResp.MountPath,
-			MountType:     mountValidationResp.MountType,
-			Local:         alias.Local,
+			CanonicalID:    entity.ID,
+			Name:           alias.Name,
+			MountAccessor:  alias.MountAccessor,
+			Metadata:       alias.Metadata,
+			MountPath:      mountValidationResp.MountPath,
+			MountType:      mountValidationResp.MountType,
+			Local:          alias.Local,
+			CustomMetadata: alias.CustomMetadata,
 		}
 
 		err = i.sanitizeAlias(ctx, newAlias)
