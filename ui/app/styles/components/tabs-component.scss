@@ -34,19 +34,19 @@
       }
       &.active {
         border-color: var(--token-color-palette-blue-200);
-        color: var(--token-color-palette-blue-200);
+        color: var(--token-color-foreground-action);
       }
     }
     li {
       // solves for tools -> sub-tabs like "Unwrap data" -> "Data"
       &.is-active {
         border-bottom: 2px solid var(--token-color-palette-blue-200);
-        color: var(--token-color-palette-blue-200);
+        color: var(--token-color-foreground-action);
       }
       // solves for tabs on auth mounts & secrets engines
       > a {
         &.active {
-          color: var(--token-color-palette-blue-200);
+          color: var(--token-color-foreground-action);
           background-color: transparent;
           border-bottom: 2px solid var(--token-color-palette-blue-200);
         }
@@ -61,7 +61,7 @@
     &.active a,
     &.is-active a {
       border-color: var(--token-color-palette-blue-200);
-      color: var(--token-color-palette-blue-200);
+      color: var(--token-color-foreground-action);
     }
   }
   // important for auth tabs in active state, otherwise the border-bottom will not show.
@@ -85,8 +85,8 @@
     }
 
     &:hover {
-      background-color: var(--token-color-palette-neutral-50);
-      color: var(--token-color-palette-neutral-600);
+      background-color: var(--token-color-surface-faint);
+      color: var(--token-color-foreground-primary);
     }
   }
 

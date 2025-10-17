@@ -80,7 +80,7 @@ pre.masked-font {
     &:focus,
     &:hover,
     &:focus:not(:active) {
-      color: var(--token-color-palette-blue-200);
+      color: var(--token-color-foreground-action);
       border: 0;
       box-shadow: none;
     }

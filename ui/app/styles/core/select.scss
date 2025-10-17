@@ -11,11 +11,11 @@ select {
 }
 
 .select select {
-  background-color: var(--token-color-palette-neutral-50);
+  background-color: var(--token-color-surface-faint);
   box-shadow: 0 3px 1px rgba(hsl(0, 0%, 4%), 0.12);
   border: 1px solid var(--token-color-palette-neutral-300);
   border-radius: size_variables.$radius;
-  color: var(--token-color-palette-neutral-500);
+  color: var(--token-color-foreground-faint);
   cursor: pointer;
   display: block;
   font-size: 1em;
@@ -52,7 +52,7 @@ select {
 .select select[disabled] {
   border-color: var(--token-color-palette-neutral-300);
   background-color: var(--token-color-palette-neutral-100);
-  color: var(--token-color-palette-neutral-400);
+  color: var(--token-color-foreground-disabled);
   cursor: not-allowed;
   user-select: none;
   &:hover {
