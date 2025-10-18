@@ -4265,13 +4265,18 @@ func (c *Core) StoreInFlightReqData(reqID string, data InFlightReqData) {
 	c.inFlightReqData.InFlightReqCount.Inc()
 }
 
-// FinalizeInFlightReqData is going log the completed request if the
-// corresponding server config option is enabled. It also removes the
-// request from the inFlightReqMap and decrement the number of in-flight
-// requests by one.
+// FinalizeInFlightReqData logs the completed request if the logRequestsLevel is configured
+// to a value other than `Off`. It then removes the request from the in-flight map
+// and decrements the counter.
 func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
-	if c.logRequestsLevel != nil && c.logRequestsLevel.Load() != 0 {
-		c.LogCompletedRequests(reqID, statusCode)
+	// Only log the request if a log level is set and it's not explicitly `Off`.
+	if c.logRequestsLevel != nil {
+		logLevel := c.logRequestsLevel.Load()
+
+		// Check for valid logging levels, excluding "Off"
+		if logLevel != int32(log.Off) && logLevel > int32(log.NoLevel) {
+			c.LogCompletedRequests(reqID, statusCode)
+		}
 	}
 
 	c.inFlightReqData.InFlightReqMap.Delete(reqID)
@@ -4326,6 +4331,10 @@ func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 		"request_method", reqData.Method)
 }
 
+// ReloadLogRequestsLevel reloads the request logging level. Note that unlike the
+// initial configuration, an empty or missing log level is explicitly treated as
+// `Off` during a reload. This is a defensive measure to ensure that request
+// logging is reliably disabled if the configuration is removed.
 func (c *Core) ReloadLogRequestsLevel() {
 	conf := c.rawConfig.Load()
 	if conf == nil {
@@ -4333,12 +4342,20 @@ func (c *Core) ReloadLogRequestsLevel() {
 	}
 
 	infoLevel := conf.(*server.Config).LogRequestsLevel
-	switch {
-	case log.LevelFromString(infoLevel) > log.NoLevel && log.LevelFromString(infoLevel) < log.Off:
-		c.logRequestsLevel.Store(int32(log.LevelFromString(infoLevel)))
-	case infoLevel != "":
-		c.logger.Warn("invalid log_requests_level", "level", infoLevel)
+	configLogLevel := log.LevelFromString(infoLevel)
+
+	// Accept "off" or empty string as valid disables
+	if configLogLevel == log.Off || infoLevel == "" {
+		c.logRequestsLevel.Store(int32(log.Off))
+		return
 	}
+	// Accept valid levels only
+	if configLogLevel > log.NoLevel && configLogLevel < log.Off {
+		c.logRequestsLevel.Store(int32(configLogLevel))
+		return
+	}
+	// Warn on invalid values
+	c.logger.Warn("invalid log_requests_level", "level", infoLevel)
 }
 
 func (c *Core) ReloadIntrospectionEndpointEnabled() {

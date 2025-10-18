@@ -395,7 +395,7 @@ module('Acceptance | auth login', function (hooks) {
 
       // login with token to reproduce bug
       await loginNs(ns, token);
-      await visit(`/vault/secrets/${db}/overview?namespace=${ns}`);
+      await visit(`/vault/secrets-engines/${db}/overview?namespace=${ns}`);
       assert
         .dom('[data-test-overview-card="Roles"]')
         .hasText('Roles Create new', 'database overview renders');
@@ -418,7 +418,7 @@ module('Acceptance | auth login', function (hooks) {
       await click(GENERAL.tab('overview'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${db}/overview?namespace=${ns}`,
+        `/vault/secrets-engines/${db}/overview?namespace=${ns}`,
         'it navigates to database overview'
       );
 

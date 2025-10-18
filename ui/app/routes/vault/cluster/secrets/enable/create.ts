@@ -6,7 +6,7 @@
 import Route from '@ember/routing/route';
 import SecretsEngineForm from 'vault/forms/secrets/engine';
 
-export default class VaultClusterSecretsMountsCreateRoute extends Route {
+export default class VaultClusterSecretsEnableCreateRoute extends Route {
   model(params: { mount_type: string }) {
     const { mount_type } = params;
 

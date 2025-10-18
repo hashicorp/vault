@@ -10,6 +10,6 @@ export default class SettingsIndexRouter extends Route {
   @service router;
 
   redirect() {
-    return this.router.replaceWith('vault.cluster.secrets.mounts.index');
+    return this.router.replaceWith('vault.cluster.secrets.enable.index');
   }
 }

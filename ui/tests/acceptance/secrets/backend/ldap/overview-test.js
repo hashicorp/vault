@@ -34,13 +34,13 @@ module('Acceptance | ldap | overview', function (hooks) {
 
   test('it should transition to ldap overview on mount success', async function (assert) {
     const backend = 'ldap-test-mount';
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     await click('[data-test-enable-engine]');
     await mountBackend('ldap', backend);
     assert.true(isURL('overview', backend), 'Transitions to ldap overview route on mount success');
     assert.dom('[data-test-header-title]').hasText(backend);
     // cleanup mounted engine
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     await runCmd(deleteEngineCmd(backend));
   });
 

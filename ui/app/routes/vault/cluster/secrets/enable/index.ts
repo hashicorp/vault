@@ -11,9 +11,9 @@ import type PluginCatalogService from 'vault/services/plugin-catalog';
 
 import type { ModelFrom } from 'vault/vault/route';
 
-export type MountSecretBackendModel = ModelFrom<VaultClusterSecretsMountsIndexRouter>;
+export type EnableSecretBackendModel = ModelFrom<VaultClusterSecretsEnableIndexRouter>;
 
-export default class VaultClusterSecretsMountsIndexRouter extends Route {
+export default class VaultClusterSecretsEnableIndexRouter extends Route {
   @service declare router: Router;
   @service('plugin-catalog') declare readonly pluginCatalog: PluginCatalogService;
 

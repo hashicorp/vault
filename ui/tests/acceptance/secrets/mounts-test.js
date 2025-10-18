@@ -39,7 +39,7 @@ const consoleComponent = create(consoleClass);
 
 // enterprise backends are tested separately
 const BACKENDS_WITH_ENGINES = ['kv', 'pki', 'ldap', 'kubernetes'];
-module('Acceptance | secrets/mounts', function (hooks) {
+module('Acceptance | secrets-engines/enable', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
@@ -59,7 +59,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
     const maxTTLHours = 300;
     await page.visit();
 
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.enable.index');
     await click(GENERAL.cardContainer('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
@@ -80,7 +80,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
 
     await page.visit();
 
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index', 'navigates to mount page');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.enable.index', 'navigates to mount page');
     await click(GENERAL.cardContainer('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
@@ -95,7 +95,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
 
   test('it sets the max ttl after pki chosen, resets after', async function (assert) {
     await page.visit();
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.enable.index');
     await click(GENERAL.cardContainer('pki'));
     assert.dom('[data-test-input="config.max_lease_ttl"]').exists();
     assert
@@ -126,7 +126,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
 
     await page.visit();
 
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.enable.index');
     await mountBackend('kv', path);
     await page.secretList();
     await settled();
@@ -134,7 +134,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
     await mountBackend('kv', path);
     await waitFor('[data-test-message-error-description]');
     assert.dom('[data-test-message-error-description]').containsText(`path is already in use at ${path}`);
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.create');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.enable.create');
 
     await page.secretList();
     await settled();
@@ -238,7 +238,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
     ]);
     await mountSecrets.visit();
     await mountBackend('kv', v2);
-    assert.strictEqual(currentURL(), `/vault/secrets/${v2}/kv/list`, `${v2} navigates to list url`);
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${v2}/kv/list`, `${v2} navigates to list url`);
     assert.strictEqual(
       currentRouteName(),
       `vault.cluster.secrets.backend.kv.list`,
@@ -257,7 +257,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
     await mountSecrets.version(1);
     await click(GENERAL.submitButton);
 
-    assert.strictEqual(currentURL(), `/vault/secrets/${v1}/list`, `${v1} navigates to list url`);
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${v1}/list`, `${v1} navigates to list url`);
     assert.strictEqual(
       currentRouteName(),
       `vault.cluster.secrets.backend.list-root`,
@@ -336,7 +336,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
       );
 
       await login(secretsAdminToken);
-      await visit('/vault/secrets/mounts');
+      await visit('/vault/secrets-engines/enable');
       await click(GENERAL.cardContainer(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);
       await click(GENERAL.button('Method Options'));
@@ -354,7 +354,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
       assert.dom(GENERAL.searchSelect.selectedOption()).hasText(newKey, `${newKey} is now selected`);
 
       await click(GENERAL.submitButton);
-      await visit(`/vault/secrets/${path}/configuration`);
+      await visit(`/vault/secrets-engines/${path}/configuration`);
       await click(SES.configurationToggle);
       assert
         .dom(GENERAL.infoRowValue('Identity token key'))
@@ -389,7 +389,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
         .dom(GENERAL.latestFlashContent)
         .hasText(`Successfully mounted the ${engine} secrets engine at ${path}.`);
 
-      await visit(`/vault/secrets/${path}/configuration`);
+      await visit(`/vault/secrets-engines/${path}/configuration`);
 
       await click(SES.configurationToggle);
       assert

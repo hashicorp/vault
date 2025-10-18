@@ -40,12 +40,12 @@ module('Acceptance | not-found', function (hooks) {
   });
 
   test('cluster route not-found', async function (assert) {
-    await visit('/vault/secrets/secret/404/show');
+    await visit('/vault/secrets-engines/secret/404/show');
     assert.dom('[data-test-not-found]').exists('renders the not found component');
   });
 
   test('secret not-found', async function (assert) {
-    await visit('/vault/secrets/cubbyhole/show/404');
+    await visit('/vault/secrets-engines/cubbyhole/show/404');
     assert.dom('[data-test-secret-not-found]').exists('renders the message about the secret not being found');
   });
 });

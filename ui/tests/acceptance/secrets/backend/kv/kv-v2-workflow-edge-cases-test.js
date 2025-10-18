@@ -88,8 +88,12 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       const backend = this.backend;
       const [root, subdirectory, secret] = this.fullSecretPath.split('/');
 
-      await visit(`/vault/secrets/${backend}/kv/list`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list`, 'lands on secrets list page');
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${backend}/kv/list`,
+        'lands on secrets list page'
+      );
 
       await typeIn(PAGE.list.overviewInput, `${root}/no-access/`);
       assert
@@ -98,14 +102,14 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await click(GENERAL.submitButton);
       assert.dom(GENERAL.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
 
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/`); // add slash because this is a directory
       await click(GENERAL.submitButton);
 
       // URL correct
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/list/${root}/`,
+        `/vault/secrets-engines/${backend}/kv/list/${root}/`,
         'visits list-directory of root'
       );
 
@@ -145,13 +149,15 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       const backend = this.backend;
       const [root, subdirectory, secret] = this.fullSecretPath.split('/');
 
-      await visit(`vault/secrets/${backend}/kv/${encodeURIComponent(this.fullSecretPath)}/details?version=1`);
+      await visit(
+        `vault/secrets-engines/${backend}/kv/${encodeURIComponent(this.fullSecretPath)}/details?version=1`
+      );
       // navigate back through crumbs
       let previousCrumb = findAll(GENERAL.breadcrumb).length - 2;
       await click(GENERAL.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/list/${root}/${subdirectory}/`,
+        `/vault/secrets-engines/${backend}/kv/list/${root}/${subdirectory}/`,
         'goes back to subdirectory list'
       );
       assert.dom(PAGE.list.filter).hasValue(`${root}/${subdirectory}/`);
@@ -162,7 +168,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await click(GENERAL.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/list/${root}/`,
+        `/vault/secrets-engines/${backend}/kv/list/${root}/`,
         'goes back to root directory'
       );
       assert.dom(GENERAL.listItem(`${subdirectory}/`)).exists('renders linked block for subdirectory');
@@ -172,7 +178,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await click(GENERAL.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/list`,
+        `/vault/secrets-engines/${backend}/kv/list`,
         'navigates back to engine list from crumbs'
       );
     });
@@ -183,7 +189,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       const [root, subdirectory] = this.fullSecretPath.split('/');
       setupOnerror((error) => assert.strictEqual(error.response.status, 404), '404 error is thrown'); // catches error so qunit test doesn't fail
 
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/${subdirectory}`); // intentionally leave out trailing slash
       await click(GENERAL.submitButton);
       assert.dom(PAGE.error.title).hasText('404 Not Found');
@@ -210,12 +216,12 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         capabilitiesStub(`${this.backend}/subkeys/my_secret`, ['read'])
       );
 
-      await visit(`/vault/secrets/${this.backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, 'my_secret');
       await click(GENERAL.submitButton);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/kv/my_secret`,
+        `/vault/secrets-engines/${this.backend}/kv/my_secret`,
         'it navigates to secret overview'
       );
       assert.dom(GENERAL.overviewCard.container('Paths')).exists();
@@ -253,7 +259,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     test('it renders the delete action and disables delete this version option', async function (assert) {
       assert.expect(4);
       const testSecret = 'data-delete-only';
-      await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${testSecret}/details`);
 
       assert.dom(PAGE.detail.delete).exists('renders delete button');
       await click(PAGE.detail.delete);
@@ -267,7 +273,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     test('it renders the delete action and disables delete latest version option', async function (assert) {
       assert.expect(4);
       const testSecret = 'delete-version-only';
-      await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${testSecret}/details`);
 
       assert.dom(PAGE.detail.delete).exists('renders delete button');
       await click(PAGE.detail.delete);
@@ -282,7 +288,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     test('it hides destroy option without version number', async function (assert) {
       assert.expect(1);
       const testSecret = 'destroy-version-only';
-      await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/details`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${testSecret}/details`);
 
       assert.dom(PAGE.detail.destroy).doesNotExist();
     });
@@ -291,7 +297,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.expect(2);
 
       const testSecret = 'destroy-metadata-only';
-      await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/metadata`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${testSecret}/metadata`);
       assert.dom(PAGE.metadata.deleteMetadata).exists('renders delete metadata button');
       await click(PAGE.metadata.deleteMetadata);
       assert
@@ -303,7 +309,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   test('no ghost item after editing metadata', async function (assert) {
-    await visit(`/vault/secrets/${this.backend}/kv/list/edge/`);
+    await visit(`/vault/secrets-engines/${this.backend}/kv/list/edge/`);
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
     await click(GENERAL.listItem('two'));
     await click(PAGE.secretTab('Metadata'));
@@ -316,7 +322,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   test('advanced secret values default to JSON display', async function (assert) {
-    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await visit(`/vault/secrets-engines/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex');
 
     await click(GENERAL.toggleInput('json'));
@@ -369,7 +375,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     let view;
 
-    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await visit(`/vault/secrets-engines/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
 
     await click(GENERAL.toggleInput('json'));
@@ -402,7 +408,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   test('does not register as advanced when value includes {', async function (assert) {
-    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await visit(`/vault/secrets-engines/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'not-advanced');
 
     await fillIn(FORM.keyInput(), 'foo');
@@ -432,7 +438,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     });
 
     test('it patches a secret from the overview page', async function (assert) {
-      await visit(`/vault/secrets/${this.backend}/kv/${this.patchSecret}`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.patchSecret}`);
       assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo');
 
       await click(GENERAL.overviewCard.actionText('Patch secret'));
@@ -445,7 +451,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     });
 
     test('it patches a secret from the secret details', async function (assert) {
-      await visit(`/vault/secrets/${this.backend}/kv/${this.patchSecret}`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.patchSecret}`);
       assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo');
       await click(PAGE.secretTab('Secret'));
       await click(PAGE.detail.patchLatest);
@@ -459,7 +465,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // testing both adding and deleting a key here because the writeSecret helper only creates a single key/value pair
     test('it adds and deletes a key', async function (assert) {
-      await visit(`/vault/secrets/${this.backend}/kv/${this.patchSecret}`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${this.patchSecret}`);
       // add a new key
       assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo');
       await click(GENERAL.overviewCard.actionText('Patch secret'));
@@ -478,7 +484,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     test('patching a destroyed secret is not allowed', async function (assert) {
       assert.expect(5);
       const secret = 'my-destroyed-secret';
-      await visit(`/vault/secrets/${this.backend}/kv/${secret}`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${secret}`);
       assert.dom(GENERAL.overviewCard.actionText('Patch secret')).exists();
       await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.detail.patchLatest).exists();
@@ -494,10 +500,10 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         .dom(PAGE.detail.patchLatest)
         .doesNotExist('toolbar patch action is hidden for destroyed versions');
       // check navigating directly
-      await visit(`/vault/secrets/${this.backend}/kv/${secret}/patch`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/${secret}/patch`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/kv/${secret}`,
+        `/vault/secrets-engines/${this.backend}/kv/${secret}`,
         'destroyed secrets redirect'
       );
     });
@@ -574,7 +580,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await navToEngine(backend);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/list?namespace=${ns}`,
+        `/vault/secrets-engines/${backend}/kv/list?namespace=${ns}`,
         'navigates to list'
       );
       // Create first version of secret
@@ -606,7 +612,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=2`,
+        `/vault/secrets-engines/${backend}/kv/${secret}/details?namespace=${ns}&version=2`,
         'navigates to details'
       );
       await assertVersionDropdown(assert);
@@ -629,7 +635,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await click(PAGE.list.item(secret));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${secret}?namespace=${ns}`,
+        `/vault/secrets-engines/${backend}/kv/${secret}?namespace=${ns}`,
         'navigates to overview'
       );
 

@@ -26,9 +26,13 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     const path = `settings-path-${this.uid}`;
 
     // mount unsupported backend
-    await visit('/vault/secrets/mounts');
+    await visit('/vault/secrets-engines/enable');
 
-    assert.strictEqual(currentURL(), '/vault/secrets/mounts', 'navigates to the mount secret backend page');
+    assert.strictEqual(
+      currentURL(),
+      '/vault/secrets-engines/enable',
+      'navigates to the mount secret backend page'
+    );
     await click(GENERAL.cardContainer(type));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
@@ -43,7 +47,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
         'flash message is shown after mounting'
       );
 
-    assert.strictEqual(currentURL(), `/vault/secrets`, 'redirects to secrets page');
+    assert.strictEqual(currentURL(), `/vault/secrets-engines`, 'redirects to secrets page');
     // cleanup
     await runCmd(deleteEngineCmd(path));
   });
@@ -52,15 +56,15 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     const type = 'ldap';
     const path = `ldap-${this.uid}`;
 
-    await visit('/vault/secrets/mounts');
+    await visit('/vault/secrets-engines/enable');
     await runCmd(mountEngineCmd(type, path), false);
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('view-configuration'));
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${path}/${type}/configuration`,
+      `/vault/secrets-engines/${path}/${type}/configuration`,
       'navigates to the config page for ember engine'
     );
     // clean up
@@ -71,15 +75,15 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     const type = 'ssh';
     const path = `ssh-${this.uid}`;
 
-    await visit('/vault/secrets/mounts');
+    await visit('/vault/secrets-engines/enable');
     await runCmd(mountEngineCmd(type, path), false);
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('view-configuration'));
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${path}/configuration`,
+      `/vault/secrets-engines/${path}/configuration`,
       'navigates to the config page for non-ember engine'
     );
     // clean up

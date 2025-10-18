@@ -8,8 +8,8 @@ import ListView from 'vault/tests/pages/components/list-view';
 
 export default create({
   ...ListView,
-  visit: visitable('/vault/secrets/:backend/list?tab=alphabet'),
-  visitCreate: visitable('/vault/secrets/:backend/create?itemType=alphabet'),
+  visit: visitable('/vault/secrets-engines/:backend/list?tab=alphabet'),
+  visitCreate: visitable('/vault/secrets-engines/:backend/create?itemType=alphabet'),
   editLink: clickable('[data-test-edit-link]'),
   name: fillable('[data-test-input="name"]'),
   alphabet: fillable('[data-test-input="alphabet"'),

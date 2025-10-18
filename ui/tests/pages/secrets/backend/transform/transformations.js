@@ -8,9 +8,9 @@ import ListView from 'vault/tests/pages/components/list-view';
 
 export default create({
   ...ListView,
-  visit: visitable('/vault/secrets/:backend/list'),
-  visitShow: visitable('/vault/secrets/:backend/show/:id'),
-  visitCreate: visitable('/vault/secrets/:backend/create'),
+  visit: visitable('/vault/secrets-engines/:backend/list'),
+  visitShow: visitable('/vault/secrets-engines/:backend/show/:id'),
+  visitCreate: visitable('/vault/secrets-engines/:backend/create'),
   name: fillable('[data-test-input="name"]'),
   type: fillable('[data-test-input="type"'),
   tweakSource: fillable('[data-test-input="tweak_source"'),

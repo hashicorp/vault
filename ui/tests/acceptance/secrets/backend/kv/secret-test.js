@@ -70,7 +70,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         .dom(PAGE.infoRowValue('Automate secret deletion'))
         .hasText('1 second', 'displays the delete version after set when configuring the secret-engine');
       // [BANDAID] avoid error from missing param for links in SecretEdit > KeyValueHeader
-      await visit('/vault/secrets');
+      await visit('/vault/secrets-engines');
       await deleteEngine(enginePath, assert);
     });
 
@@ -81,7 +81,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await showPage.visit({ backend: 'test', id: 'a' });
       assert.ok(showPage.editIsPresent, 'renders the page properly');
       // [BANDAID] avoid error from missing param for links in SecretEdit > KeyValueHeader
-      await visit('/vault/secrets');
+      await visit('/vault/secrets-engines');
       await deleteEngine('test', assert);
     });
   });
@@ -102,7 +102,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         `Success! Data written to: ${this.backend}/config`,
         'Engine successfully updated'
       );
-      await visit(`/vault/secrets/kv/list`);
+      await visit(`/vault/secrets-engines/kv/list`);
       await writeSecret(this.backend, secretPath, 'foo', 'bar');
       assert.strictEqual(
         currentRouteName(),
@@ -126,7 +126,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/kv/${secretPath}/details?version=2`,
+        `/vault/secrets-engines/${this.backend}/kv/${secretPath}/details?version=2`,
         'redirects to the show page with queryParam version=2'
       );
     });
@@ -169,7 +169,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       ]);
       await settled();
       // navigate to farthest leaf
-      await visit(`/vault/secrets/${enginePath}/list`);
+      await visit(`/vault/secrets-engines/${enginePath}/list`);
       assert.dom('[data-test-component="navigate-input"]').hasNoValue();
       assert.dom(SS.secretLink()).exists({ count: 1 });
       await click(SS.secretLink('1/'));
@@ -187,20 +187,28 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await click(`${SS.secretLink('1/2/3/4')} ${GENERAL.confirmTrigger}`);
       await click(GENERAL.confirmButton);
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list');
-      assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${enginePath}/list/1/2/3/`,
+        'remains on the page'
+      );
       assert.dom(SS.secretLink()).exists({ count: 1 });
 
       await listPage.secrets.objectAt(0).menuToggle();
       await click(GENERAL.confirmTrigger);
       await click(GENERAL.confirmButton);
-      assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${enginePath}/list/1/2/3/`,
+        'remains on the page'
+      );
       assert.dom(GENERAL.emptyStateTitle).hasText('No secrets under "1/2/3/".');
 
       await fillIn('[data-test-component="navigate-input"]', '1/2/');
       assert.dom(GENERAL.emptyStateTitle).hasText('No secrets under "1/2/".');
 
       await click('[data-test-list-root-link]');
-      assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${enginePath}/list`);
       assert.dom(SS.secretLink()).exists({ count: 1 });
     });
 
@@ -255,7 +263,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         );
       }
       // [BANDAID] avoid error from missing param for links in SecretEdit > KeyValueHeader
-      await visit('/vault/secrets');
+      await visit('/vault/secrets-engines');
       await deleteEngine(backend, assert);
     });
 
@@ -273,14 +281,14 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
+        `/vault/secrets-engines/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
         'First part of path is encoded in URL'
       );
       assert.dom(SS.secretLink(secretPath)).exists('Link to secret exists');
       await click(SS.secretLink(secretPath));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${enginePath}/show/${encodeURIComponent(firstPath)}/${encodeURIComponent(
+        `/vault/secrets-engines/${enginePath}/show/${encodeURIComponent(firstPath)}/${encodeURIComponent(
           secondPath
         )}`,
         'secret path is encoded in URL'
@@ -289,7 +297,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await click(SS.crumb(firstPath));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
+        `/vault/secrets-engines/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
         'Breadcrumb link encodes correctly'
       );
     });

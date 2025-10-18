@@ -40,7 +40,7 @@ module('Acceptance | raft storage', function (hooks) {
     await visit('/vault/storage/raft');
     assert.dom('[data-raft-row]').exists({ count: 2 }, '2 raft peers render in table');
     // leave route and return to trigger config fetch
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     await visit('/vault/storage/raft');
     const store = this.owner.lookup('service:store');
     assert.strictEqual(
