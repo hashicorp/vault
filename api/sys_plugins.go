@@ -252,7 +252,7 @@ func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginIn
 	return err
 }
 
-// RegisterPluginDetailed wraps RegisterPluginWtihContextDetailed using context.Background.
+// RegisterPluginDetailed wraps RegisterPluginWithContextDetailed using context.Background.
 func (c *Sys) RegisterPluginDetailed(i *RegisterPluginInput) (*RegisterPluginResponse, error) {
 	return c.RegisterPluginWithContextDetailed(context.Background(), i)
 }
