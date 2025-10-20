@@ -6,7 +6,7 @@ schema = "1"
 project "vault" {
   team = "vault"
   slack {
-    notification_channel = "C03RXFX5M4L" // #feed-vault-releases
+    notification_channel = "C09LD1XT5MX" // #feed-vault-releases
   }
   github {
     organization = "hashicorp"
@@ -63,8 +63,8 @@ event "enos-release-testing-oss" {
 ## after the verify event stanza.
 
 event "trigger-staging" {
-// This event is dispatched by the bob trigger-promotion command
-// and is required - do not delete.
+  // This event is dispatched by the bob trigger-promotion command
+  // and is required - do not delete.
 }
 
 event "promote-staging" {
@@ -95,8 +95,8 @@ event "promote-staging-docker" {
 }
 
 event "trigger-production" {
-// This event is dispatched by the bob trigger-promotion command
-// and is required - do not delete.
+  // This event is dispatched by the bob trigger-promotion command
+  // and is required - do not delete.
 }
 
 event "promote-production" {
