@@ -135,7 +135,7 @@ jobs:
             kv/data/github/${{ github.repository }}/aws role-arn | AWS_ROLE_ARN_CI;
             kv/data/github/${{ github.repository }}/consul license | CONSUL_LICENSE;
             kv/data/github/${{ github.repository }}/vault-radar license | RADAR_LICENSE;
-            kv/data/github/${{ github.repository }}/enos slack-webhook-url | SLACK_WEBHOOK_URL;
+            kv/data/github/${{ github.repository }}/slack feed-vault-enos-failures-webhook-url | SLACK_WEBHOOK_URL;
             kv/data/github/${{ github.repository }}/enos ssh-key | SSH_KEY_PRIVATE_CI;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE;
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
@@ -150,7 +150,7 @@ jobs:
               echo 'consul-license=${{ secrets.CONSUL_LICENSE }}'
               echo 'github-token=${{ secrets.ELEVATED_GITHUB_TOKEN }}'
               echo 'radar-license=${{ secrets.RADAR_LICENSE }}'
-              echo 'slack-webhook-url=${{ secrets.SLACK_WEBHOOK_URL }}'
+              echo 'slack-webhook-url=${{ secrets.FEED_VAULT_ENOS_FAILURES_WEBHOOK_URL }}'
               echo 'ssh-key<<EOFSSHKEYCE'
               echo "${{ secrets.SSH_KEY_PRIVATE_CI }}"
               echo EOFSSHKEYCE
