@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 # Note: in order to use the openSUSE Leap AMIs, the AWS account in use must "subscribe"
