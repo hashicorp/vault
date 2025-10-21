@@ -178,8 +178,9 @@ func FileGroupCheckerEnterprise(ctx context.Context, file *File) FileGroups {
 	switch {
 	case
 		// Short circuit for test and release files
+		hasBaseDir(name, filepath.Join(".release")),
 		hasBaseDir(name, filepath.Join("enos", "modules")),
-		hasBaseDir(name, filepath.Join(".release")):
+		hasBaseDir(name, filepath.Join("scripts", "docker")):
 		return nil
 	}
 
