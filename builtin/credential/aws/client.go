@@ -175,10 +175,7 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 // the cached EC2 client objects will be flushed. Config mutex lock should be
 // acquired for write operation before calling this method.
 func (b *backend) flushCachedEC2Clients() {
-	// deleting items in map during iteration is safe
-	for region := range b.EC2ClientsMap {
-		delete(b.EC2ClientsMap, region)
-	}
+	b.EC2ClientsMap = make(map[clientKey]*ec2.EC2)
 }
 
 // flushCachedIAMClients deletes all the cached iam client objects from the
@@ -186,10 +183,7 @@ func (b *backend) flushCachedEC2Clients() {
 // the backend, all the cached IAM client objects will be flushed. Config mutex
 // lock should be acquired for write operation before calling this method.
 func (b *backend) flushCachedIAMClients() {
-	// deleting items in map during iteration is safe
-	for region := range b.IAMClientsMap {
-		delete(b.IAMClientsMap, region)
-	}
+	b.IAMClientsMap = make(map[clientKey]*iam.IAM)
 }
 
 // Gets an entry out of the user ID cache
@@ -221,6 +215,11 @@ func (b *backend) stsRoleForAccount(ctx context.Context, s logical.Storage, acco
 	if sts != nil {
 		return sts.StsRole, sts.ExternalID, nil
 	}
+
+	// Return an error if there's no STS config for an account which is not the default one
+	if b.defaultAWSAccountID != "" && b.defaultAWSAccountID != accountID {
+		return "", "", fmt.Errorf("no STS configuration found for account ID %q", accountID)
+	}
 	return "", "", nil
 }
 
@@ -231,10 +230,16 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 		return nil, err
 	}
 	b.configMutex.RLock()
-	if b.EC2ClientsMap[region] != nil && b.EC2ClientsMap[region][stsRole] != nil {
+
+	key := clientKey{
+		AccountID: accountID,
+		Region:    region,
+		STSRole:   stsRole,
+	}
+	if cachedClient, ok := b.EC2ClientsMap[key]; ok {
 		defer b.configMutex.RUnlock()
 		// If the client object was already created, return it
-		return b.EC2ClientsMap[region][stsRole], nil
+		return cachedClient, nil
 	}
 
 	// Release the read lock and acquire the write lock
@@ -243,8 +248,8 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 	defer b.configMutex.Unlock()
 
 	// If the client gets created while switching the locks, return it
-	if b.EC2ClientsMap[region] != nil && b.EC2ClientsMap[region][stsRole] != nil {
-		return b.EC2ClientsMap[region][stsRole], nil
+	if cachedClient, ok := b.EC2ClientsMap[key]; ok {
+		return cachedClient, nil
 	}
 
 	// Create an AWS config object using a chain of providers
@@ -267,13 +272,9 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain ec2 client")
 	}
-	if _, ok := b.EC2ClientsMap[region]; !ok {
-		b.EC2ClientsMap[region] = map[string]*ec2.EC2{stsRole: client}
-	} else {
-		b.EC2ClientsMap[region][stsRole] = client
-	}
 
-	return b.EC2ClientsMap[region][stsRole], nil
+	b.EC2ClientsMap[key] = client
+	return b.EC2ClientsMap[key], nil
 }
 
 // clientIAM creates a client to interact with AWS IAM API
@@ -283,18 +284,24 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 		return nil, err
 	}
 	if stsRole == "" {
-		b.Logger().Debug(fmt.Sprintf("no stsRole found for %s", accountID))
+		b.Logger().Debug("no stsRole found for account", "accountID", accountID)
 	} else {
-		b.Logger().Debug(fmt.Sprintf("found stsRole %s for account %s", stsRole, accountID))
+		b.Logger().Debug("found stsRole for account", "stsRole", stsRole, "accountID", accountID)
 	}
 	b.configMutex.RLock()
-	if b.IAMClientsMap[region] != nil && b.IAMClientsMap[region][stsRole] != nil {
+
+	key := clientKey{
+		AccountID: accountID,
+		Region:    region,
+		STSRole:   stsRole,
+	}
+	if cachedClient, ok := b.IAMClientsMap[key]; ok {
 		defer b.configMutex.RUnlock()
 		// If the client object was already created, return it
-		b.Logger().Debug(fmt.Sprintf("returning cached client for region %s and stsRole %s", region, stsRole))
-		return b.IAMClientsMap[region][stsRole], nil
+		b.Logger().Debug("returning cached client for key", "key", key)
+		return cachedClient, nil
 	}
-	b.Logger().Debug(fmt.Sprintf("no cached client for region %s and stsRole %s", region, stsRole))
+	b.Logger().Debug("no cached client for key", "key", key)
 
 	// Release the read lock and acquire the write lock
 	b.configMutex.RUnlock()
@@ -302,8 +309,9 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 	defer b.configMutex.Unlock()
 
 	// If the client gets created while switching the locks, return it
-	if b.IAMClientsMap[region] != nil && b.IAMClientsMap[region][stsRole] != nil {
-		return b.IAMClientsMap[region][stsRole], nil
+	if cachedClient, ok := b.IAMClientsMap[key]; ok {
+		b.Logger().Debug("returning cached client for key", "key", key)
+		return cachedClient, nil
 	}
 
 	// Create an AWS config object using a chain of providers
@@ -326,12 +334,8 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain iam client")
 	}
-	if _, ok := b.IAMClientsMap[region]; !ok {
-		b.IAMClientsMap[region] = map[string]*iam.IAM{stsRole: client}
-	} else {
-		b.IAMClientsMap[region][stsRole] = client
-	}
-	return b.IAMClientsMap[region][stsRole], nil
+	b.IAMClientsMap[key] = client
+	return b.IAMClientsMap[key], nil
 }
 
 // PluginIdentityTokenFetcher fetches plugin identity tokens from Vault. It is provided

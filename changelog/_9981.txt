@@ -1,0 +1,3 @@
+```release-note:security
+auth/aws: fix an issue where a user may be able to bypass authentication to Vault due to incorrect caching of the AWS client
+```
