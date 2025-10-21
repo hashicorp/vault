@@ -59,6 +59,7 @@ func TestFileGroupDefaultCheckers(t *testing.T) {
 		"scripts/cross/Dockerfile-ent-hsm":                  {FileGroupEnterprise, FileGroupPipeline},
 		"scripts/dev/hsm/README.md":                         {FileGroupEnterprise, FileGroupPipeline},
 		"scripts/dist-ent.sh":                               {FileGroupEnterprise, FileGroupPipeline},
+		"scripts/docker/docker-entrypoint.sh":               {FileGroupPipeline},
 		"scripts/testing/test-vault-license.sh":             {FileGroupEnterprise, FileGroupPipeline},
 		"scripts/testing/upgrade/README.md":                 {FileGroupEnterprise, FileGroupPipeline},
 		"sdk/database/dbplugin/v5/proto/database_ent.pb.go": {FileGroupGoApp, FileGroupEnterprise},
