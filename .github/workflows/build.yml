@@ -454,10 +454,10 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
-            kv/data/github/${{ github.repository }}/github_actions_notifications_bot token | SLACK_BOT_TOKEN;
-      - id: slackbot-token
+            kv/data/github/${{ github.repository }}/slack feed-vault-ci-official-webhook-url | slack-webhook-url;
+      - id: slackbot-webhook-url
         run:
-          echo "slackbot-token=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.SLACK_BOT_TOKEN || steps.secrets.outputs.SLACK_BOT_TOKEN }}" >> "$GITHUB_OUTPUT"
+          echo "slackbot-webhook-url=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL || steps.secrets.outputs.slackbot-webhook-url }}" >> "$GITHUB_OUTPUT"
       - if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name &&
@@ -480,13 +480,11 @@ jobs:
           (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
         uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
         with:
-          # send to #feed-vault-ci-official, use "C05Q4D5V89W" as the channel to send to test-vault-ci-slack-integration for testing
           errors: true # exit with an error if the payload is invalid
           retries: rapid # retry if we're being rated limited
-          method: chat.postMessage
-          token: ${{ steps.slackbot-token.outputs.slackbot-token }}
+          webhook: ${{ steps.slackbot-webhook-url.outputs.slackbot-webhook-url }}
+          webhook-type: incoming-webhook
           payload: |
-            channel: C05AABYEA9Y
             text: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} build failures on ${{ github.ref_name }}
             blocks:
               - type: header
