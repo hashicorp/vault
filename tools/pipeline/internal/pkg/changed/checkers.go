@@ -175,6 +175,14 @@ func FileGroupCheckerEnterprise(ctx context.Context, file *File) FileGroups {
 	}
 
 	// File extension checks
+	switch {
+	case
+		// Short circuit for test and release files
+		hasBaseDir(name, filepath.Join("enos", "modules")),
+		hasBaseDir(name, filepath.Join(".release")):
+		return nil
+	}
+
 	switch filepath.Ext(name) {
 	case ".go":
 		switch {
@@ -240,6 +248,7 @@ func FileGroupCheckerPipeline(ctx context.Context, file *File) FileGroups {
 		hasBaseDir(name, filepath.Join(".github", "workflows")),
 		hasBaseDir(name, filepath.Join(".github", "actions")),
 		hasBaseDir(name, filepath.Join(".github", "scripts")),
+		hasBaseDir(name, ".release"),
 		hasBaseDir(name, "scripts"),
 		hasBaseDir(name, filepath.Join("tools", "pipeline")),
 		name == "Dockerfile",
