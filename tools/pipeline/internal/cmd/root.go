@@ -32,6 +32,7 @@ func newRootCmd() *cobra.Command {
 
 	rootCmd.AddCommand(newGenerateCmd())
 	rootCmd.AddCommand(newGithubCmd())
+	rootCmd.AddCommand(newGoCmd())
 	rootCmd.AddCommand(newHCPCmd())
 	rootCmd.AddCommand(newReleasesCmd())
 
