@@ -1,4 +1,3 @@
-@use '../utils/font_variables';
 @use '../utils/mixins';
 @use '../utils/size_variables';
 
@@ -45,7 +44,7 @@
     }
 
     .helper-text {
-      font-weight: normal;
+      font-weight: var(--token-typography-font-weight-regular);
     }
     &.justify-right {
       display: flex;
@@ -94,9 +93,9 @@
 
 .info-table-row-header {
   margin: 0;
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
   color: var(--token-color-palette-neutral-400);
-  font-weight: font_variables.$font-weight-semibold;
+  font-weight: var(--token-typography-font-weight-semibold);
 
   @include mixins.until(size_variables.$mobile) {
     display: none;

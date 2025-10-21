@@ -1,5 +1,4 @@
 @use '../utils/box-shadow_variables';
-@use '../utils/font_variables';
 @use '../utils/size_variables';
 
 /**
@@ -83,14 +82,14 @@
 }
 
 .radio-card-message-title {
-  font-weight: font_variables.$font-weight-semibold;
+  font-weight: var(--token-typography-font-weight-semibold);
   font-size: size_variables.$size-7;
   margin-bottom: size_variables.$spacing-4;
 }
 .radio-card-message-body {
   line-height: 1.2;
   color: var(--token-color-foreground-faint);
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
 }
 
 .radio-card-radio-row {

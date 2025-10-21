@@ -87,7 +87,7 @@
   box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
   display: block;
   font-size: 1em;
-  line-height: 1.5;
+  line-height: var(--token-typography-body-300-line-height);
   overflow: hidden;
   padding-bottom: calc(0.375em - 1px);
   padding-left: 1em;

@@ -70,13 +70,13 @@
 // large grouped css blocks
 .is-hint {
   color: var(--token-color-palette-neutral-400);
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
   padding: size_variables.$spacing-12 0;
 }
 
 .is-optional {
   color: var(--token-color-palette-neutral-400);
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
   text-transform: lowercase;
 }
 

@@ -1,4 +1,3 @@
-@use '../utils/font_variables';
 @use '../utils/size_variables';
 
 /**
@@ -15,7 +14,7 @@
   }
 }
 .transform-pattern-text div:not(:first-child) {
-  font-family: font_variables.$family-monospace;
+  font-family: var(--token-typography-font-stack-code);
 }
 .transform-decode-formats:not(:last-child) {
   margin-bottom: size_variables.$spacing-12;
