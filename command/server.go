@@ -2989,6 +2989,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
 		ObservationSystemConfig:        config.Observations,
+		ReportingScanDirectory:         config.ReportingScanDirectory,
 	}
 
 	if c.flagDev {

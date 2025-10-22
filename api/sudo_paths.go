@@ -56,6 +56,7 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/replication/reindex":                             regexp.MustCompile(`^/sys/replication/reindex$`),
 	"/sys/storage/raft/snapshot-auto/config":               regexp.MustCompile(`^/sys/storage/raft/snapshot-auto/config/?$`),
 	"/sys/storage/raft/snapshot-auto/config/{name}":        regexp.MustCompile(`^/sys/storage/raft/snapshot-auto/config/[^/]+$`),
+	"/sys/reporting/scan":                                  regexp.MustCompile(`^/sys/reporting/scan$`),
 }
 
 func SudoPaths() map[string]*regexp.Regexp {

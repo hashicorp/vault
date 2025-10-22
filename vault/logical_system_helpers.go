@@ -133,6 +133,11 @@ var (
 			"config/group-policy-application$": {operations: []logical.Operation{logical.ReadOperation, logical.UpdateOperation}},
 		})...)
 
+		// reporting paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string]enterprisePathStub{
+			"reporting/scan$": {operations: []logical.Operation{logical.UpdateOperation}},
+		})...)
+
 		// namespaces paths
 		paths = append(paths, buildEnterpriseOnlyPaths(map[string]enterprisePathStub{
 			"namespaces/?$": {operations: []logical.Operation{logical.ListOperation}},
