@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | pki key parameters', function (hooks) {
@@ -19,12 +18,6 @@ module('Integration | Component | pki key parameters', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.model = this.store.createRecord('pki/role', { backend: 'pki' });
     [this.fields] = Object.values(this.model.formFieldGroups.find((g) => g['Key parameters']));
-    // TODO: remove Tooltip/ember-basic-dropdown
-    setRunOptions({
-      rules: {
-        'nested-interactive': { enabled: false },
-      },
-    });
   });
 
   test('it should render the component and display the correct defaults', async function (assert) {

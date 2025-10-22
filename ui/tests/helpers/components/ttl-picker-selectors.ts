@@ -9,7 +9,6 @@ export const TTL_PICKER = {
   toggleByLabel: (label: string) => `[data-test-ttl-toggle="${label}"]`,
   label: '[data-test-ttl-form-label]',
   subtext: '[data-test-ttl-form-subtext]',
-  tooltipTrigger: `[data-test-tooltip-trigger]`,
   ttlValue: '[data-test-ttl-value]',
   ttlUnit: '[data-test-select="ttl-unit"]',
   valueInputByLabel: (label: string) => `[data-test-ttl-value="${label}"]`,

@@ -11,11 +11,9 @@
       <label id="text-file-input-{{this.elementId}}" class="has-text-weight-semibold" data-test-text-file-label>
         {{or @label "File"}}
         {{#if @helpText}}
-          <InfoTooltip>
-            <span data-test-help-text>
-              {{@helpText}}
-            </span>
-          </InfoTooltip>
+          <Hds::TooltipButton @text={{@helpText}} aria-label="More information">
+            <Hds::Icon @name="info" />
+          </Hds::TooltipButton>
         {{/if}}
       </label>
     </div>

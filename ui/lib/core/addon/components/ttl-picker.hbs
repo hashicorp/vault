@@ -16,16 +16,14 @@
             <div class="sub-text">
               <span data-test-ttl-form-subtext>{{this.helperText}}</span>
               {{#if @description}}
-                <ToolTip @verticalPosition="below" as |T|>
-                  <T.Trigger data-test-tooltip-trigger tabindex="-1">
-                    <Icon @name="info" aria-label="description" />
-                  </T.Trigger>
-                  <T.Content @defaultClass="tool-tip">
-                    <div class="box" data-test-hover-copy-tooltip-text>
-                      {{this.description}}
-                    </div>
-                  </T.Content>
-                </ToolTip>
+                <Hds::TooltipButton
+                  @text={{@description}}
+                  @placement="bottom"
+                  aria-label="description"
+                  data-test-tooltip="ttl-picker"
+                >
+                  <Icon @name="info" />
+                </Hds::TooltipButton>
               {{/if}}
             </div>
           {{/if}}
@@ -84,21 +82,17 @@
             <span class="ttl-picker-label is-large" data-test-ttl-form-label={{this.label}}>{{this.label}}</span><br />
             {{#if this.helperText}}
               <div class="sub-text">
-                <span
-                  id={{concat (dasherize this.label) "-helper-text"}}
-                  data-test-ttl-form-subtext
-                >{{this.helperText}}</span>
+                <span id={{concat (dasherize this.label) "-helper-text"}} data-test-ttl-form-subtext>{{this.helperText}}
+                </span>
                 {{#if @description}}
-                  <ToolTip @verticalPosition="below" as |T|>
-                    <T.Trigger data-test-tooltip-trigger tabindex="-1">
-                      <Icon @name="info" aria-label="description" />
-                    </T.Trigger>
-                    <T.Content @defaultClass="tool-tip">
-                      <div class="box" data-test-hover-copy-tooltip-text>
-                        {{this.description}}
-                      </div>
-                    </T.Content>
-                  </ToolTip>
+                  <Hds::TooltipButton
+                    @text={{@description}}
+                    @placement="bottom"
+                    aria-label="description"
+                    data-test-tooltip="ttl-picker"
+                  >
+                    <Icon @name="info" />
+                  </Hds::TooltipButton>
                 {{/if}}
               </div>
             {{/if}}

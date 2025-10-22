@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, triggerEvent } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
@@ -78,33 +78,8 @@ module('Integration | Component | InfoTableRow', function (hooks) {
         @tooltipText={{this.tooltipText}}
       />`);
 
-    await triggerEvent('.ember-basic-dropdown-trigger', 'mouseenter');
-    const tooltip = document.querySelector('div.box').textContent.trim();
-    assert.strictEqual(tooltip, 'Tooltip text!', 'renders tooltip text');
-  });
-
-  test('it should copy tooltip', async function (assert) {
-    assert.expect(3);
-
-    this.set('isCopyable', false);
-
-    await render(hbs`
-      <InfoTableRow
-        @label={{this.label}}
-        @value={{this.value}}
-        @tooltipText="Foo bar"
-        @isTooltipCopyable={{this.isCopyable}}
-      />
-    `);
-
-    await triggerEvent('.ember-basic-dropdown-trigger', 'mouseenter');
-
-    assert.dom('[data-test-tooltip-copy]').doesNotExist('Tooltip has no copy button');
-    this.set('isCopyable', true);
-    assert.dom('[data-test-tooltip-copy]').exists('Tooltip has copy button');
-    assert
-      .dom('[data-test-tooltip-copy]')
-      .hasAttribute('data-test-tooltip-copy', 'Foo bar', 'Copy button will copy the tooltip text');
+    await click(GENERAL.tooltip('info table row'));
+    assert.dom(GENERAL.tooltipText).hasText('Tooltip text!', 'renders tooltip text');
   });
 
   test('it renders a string with no link if isLink is true and the item type is not an array.', async function (assert) {
@@ -213,8 +188,8 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       />
     </div>`);
     assert.dom('[data-test-component="info-table-row"]').exists('Row renders');
-    await triggerEvent('[data-test-row-label]', 'mouseenter');
-    assert.dom('[data-test-label-tooltip]').exists('Label tooltip exists on hover');
+    await click(GENERAL.tooltip('info table row'));
+    assert.dom(GENERAL.tooltipText).exists('Label tooltip exists');
   });
 
   test('Renders if block value and alwaysrender=false', async function (assert) {

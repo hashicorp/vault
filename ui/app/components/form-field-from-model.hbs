@@ -17,7 +17,9 @@
       <label for={{@attr.name}} class="is-label">
         {{capitalize (or @attr.options.label (humanize (dasherize @attr.name)))}}
         {{#if @attr.options.helpText}}
-          <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>
+          <Hds::TooltipButton @text={{@attr.options.helpText}} aria-label="More information">
+            <Hds::Icon @name="info" />
+          </Hds::TooltipButton>
         {{/if}}
       </label>
     {{/unless}}
@@ -71,7 +73,9 @@
       <label for={{@attr.name}} class="is-label">
         {{capitalize (or @attr.options.label (humanize (dasherize @attr.name)))}}
         {{#if @attr.options.helpText}}
-          <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>
+          <Hds::TooltipButton @text={{@attr.options.helpText}} aria-label="More information">
+            <Hds::Icon @name="info" />
+          </Hds::TooltipButton>
         {{/if}}
       </label>
     </div>

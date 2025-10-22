@@ -24,7 +24,9 @@
           <h2 data-test-info-table-label={{column.key}}>
             {{column.label}}
             {{#if column.helpText}}
-              <InfoTooltip @verticalPosition="above" @horizontalPosition="center">{{column.helpText}}</InfoTooltip>
+              <Hds::TooltipButton @text={{column.helpText}} aria-label="More information">
+                <Hds::Icon @name="info" />
+              </Hds::TooltipButton>
             {{/if}}
           </h2>
         </div>

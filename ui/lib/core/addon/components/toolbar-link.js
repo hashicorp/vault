@@ -12,7 +12,7 @@ import Component from '@glimmer/component';
  * @example
  * <Toolbar>
  *   <ToolbarActions>
- *     <ToolbarLink @route="vault" @type="add" @disabled={{true}} @disabledTooltip="This link is disabled">
+ *     <ToolbarLink @route="vault" @type="add">
  *       Create policy
  *     </ToolbarLink>
  *   </ToolbarActions>
@@ -24,8 +24,6 @@ import Component from '@glimmer/component';
  * @param {Object} query - query params to pass to LinkTo
  * @param {boolean} replace - replace arg to pass to LinkTo
  * @param {string} type - Use "add" to change icon to plus sign, or pass in your own kind of icon.
- * @param {boolean} disabled - pass true to disable link
- * @param {string} disabledTooltip - tooltip to display on hover when disabled
  */
 
 export default class ToolbarLinkComponent extends Component {

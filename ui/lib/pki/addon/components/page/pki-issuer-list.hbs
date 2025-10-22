@@ -81,17 +81,17 @@
                 {{/if}}
                 {{#if pkiIssuer.serialNumber}}
                   <span class="is-flex-v-centered has-side-padding-8" data-test-serial-number={{idx}}>
-                    <InfoTooltip>
-                      Serial number
-                    </InfoTooltip>
+                    <Hds::TooltipButton @text="Serial number" aria-label="This is the serial number">
+                      <Hds::Icon @name="info" />
+                    </Hds::TooltipButton>
                     {{pkiIssuer.serialNumber}}
                   </span>
                 {{/if}}
                 {{#if pkiIssuer.parsedCertificate.common_name}}
                   <span class="is-flex-v-centered has-side-padding-8" data-test-common-name={{idx}}>
-                    <InfoTooltip>
-                      Common name
-                    </InfoTooltip>
+                    <Hds::TooltipButton @text="Common name" aria-label="This is the common name">
+                      <Hds::Icon @name="info" />
+                    </Hds::TooltipButton>
                     {{pkiIssuer.parsedCertificate.common_name}}
                   </span>
                 {{/if}}

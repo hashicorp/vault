@@ -57,16 +57,9 @@
     <h2 class="title is-3 grid-item-bottom-left" data-test-state>
       {{this.state}}
       {{#if this.inSyncState}}
-        <ToolTip @verticalPosition="above" as |T|>
-          <T.Trigger>
-            <Icon @name="check-circle" class="has-text-success" data-test-glyph />
-          </T.Trigger>
-          <T.Content @defaultClass="tool-tip">
-            <div class="box">
-              Everything is in sync
-            </div>
-          </T.Content>
-        </ToolTip>
+        <Hds::TooltipButton @text="Everything is in sync" class="is-inline-block" aria-label="Successful sync state">
+          <Icon @name="check-circle" class="has-text-success" />
+        </Hds::TooltipButton>
       {{/if}}
     </h2>
     <p class="title is-3 grid-item-bottom-right" data-test-connection>
