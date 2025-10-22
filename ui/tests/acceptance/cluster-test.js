@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { settled, click, visit } from '@ember/test-helpers';
+import { settled, click, visit, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -106,5 +106,14 @@ module('Acceptance | cluster', function (hooks) {
     assert
       .dom('[data-test-resultant-acl-banner]')
       .includesText(expectedText, 'Resultant ACL banner shows appropriate message for OSS/Enterprise');
+  });
+
+  test('redirects to secret-engines from legacy /secrets path', async function (assert) {
+    await visit('/vault/secrets');
+    assert.strictEqual(
+      currentURL(),
+      '/vault/secrets-engines',
+      'Navigating to /secrets redirects to /secrets-engines'
+    );
   });
 });
