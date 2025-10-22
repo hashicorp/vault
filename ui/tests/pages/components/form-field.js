@@ -5,7 +5,6 @@
 
 import {
   attribute,
-  focusable,
   value,
   clickable,
   isPresent,
@@ -25,7 +24,6 @@ export default {
   hasTextarea: isPresent('textarea'),
   hasMaskedInput: isPresent('[data-test-masked-input]'),
   hasTooltip: isPresent('[data-test-component=info-tooltip]'),
-  tooltipTrigger: focusable('[data-test-tool-tip-trigger]'),
   radioButtons: collection('input[type=radio]', {
     select: clickable(),
     id: attribute('id'),

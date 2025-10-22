@@ -7,9 +7,9 @@
   <label data-test-form-field-label class="is-label" ...attributes>
     {{@label}}
     {{#if @helpText}}
-      <InfoTooltip>
-        <span data-test-help-text>{{@helpText}}</span>
-      </InfoTooltip>
+      <Hds::TooltipButton @text={{@helpText}} aria-label="More information" data-test-tooltip="form field label">
+        <Hds::Icon @name="info" />
+      </Hds::TooltipButton>
     {{/if}}
   </label>
 {{/if}}

@@ -15,7 +15,9 @@
     <label class="is-label" data-test-string-list-label="true">
       {{@label}}
       {{#if @helpText}}
-        <InfoTooltip>{{@helpText}}</InfoTooltip>
+        <Hds::TooltipButton @text={{@helpText}} aria-label="More information" data-test-tooltip="string-list">
+          <Hds::Icon @name="info" />
+        </Hds::TooltipButton>
       {{/if}}
     </label>
     {{#if @subText}}

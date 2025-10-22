@@ -27,7 +27,9 @@
       <label for={{@id}} class={{or @labelClass "is-label"}} data-test-field-label>
         {{@label}}
         {{#if @helpText}}
-          <InfoTooltip>{{@helpText}}</InfoTooltip>
+          <Hds::TooltipButton @text={{@helpText}} aria-label="More information">
+            <Hds::Icon @name="info" />
+          </Hds::TooltipButton>
         {{/if}}
       </label>
     {{/if}}

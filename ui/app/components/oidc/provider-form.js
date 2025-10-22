@@ -37,7 +37,7 @@ export default class OidcProviderForm extends Component {
       : 'limited';
 
   // function passed to search select
-  renderInfoTooltip(selection, dropdownOptions) {
+  renderTooltip(selection, dropdownOptions) {
     // if a client has been deleted it will not exist in dropdownOptions (response from search select's query)
     const clientExists = !!dropdownOptions.find((opt) => opt.clientId === selection);
     return !clientExists ? 'The application associated with this client_id no longer exists' : false;

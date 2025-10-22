@@ -8,9 +8,9 @@
     <label for={{@name}} class="is-label">
       {{@label}}
       {{#if @helpText}}
-        <InfoTooltip>
-          <span data-test-help-text>{{@helpText}}</span>
-        </InfoTooltip>
+        <Hds::TooltipButton @text={{@helpText}} aria-label="More information">
+          <Hds::Icon @name="info" />
+        </Hds::TooltipButton>
       {{/if}}
     </label>
   {{/if}}

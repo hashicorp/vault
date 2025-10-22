@@ -36,7 +36,7 @@ export const PAGE = {
     deleteMetadata: '[data-test-kv-delete="delete-metadata"]',
   },
   detail: {
-    versionTimestamp: '[data-test-kv-version-tooltip-trigger]',
+    versionTimestamp: '[data-test-tooltip="kv-version"]',
     versionDropdown: '[data-test-version-dropdown]',
     version: (number) => `[data-test-version="${number}"]`,
     createNewVersion: '[data-test-create-new-version]',

@@ -6,11 +6,9 @@
 <label for={{@attr.name}} class="is-label" data-test-readonly-label>
   {{this.labelString}}
   {{#if @attr.options.helpText}}
-    <InfoTooltip>
-      <span data-test-help-text>
-        {{@attr.options.helpText}}
-      </span>
-    </InfoTooltip>
+    <Hds::TooltipButton @text={{@attr.options.helpText}} aria-label="More information">
+      <Hds::Icon @name="info" />
+    </Hds::TooltipButton>
   {{/if}}
 </label>
 {{#if @attr.options.subText}}

@@ -12,38 +12,30 @@
         @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
         @subText={{attr.options.subText}}
       />
-      <div class="control is-expanded">
-        <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
-          <T.Trigger tabindex="-1">
-            <div class="select is-fullwidth">
-              <select
-                id={{attr.name}}
-                name={{attr.name}}
-                data-test-input={{attr.name}}
-                disabled={{unless @model.keyType true}}
-                {{on "change" this.onKeyBitsChange}}
-              >
-                {{#if (and attr.options.noDefault (not @model.keyType))}}
-                  <option value="">
-                    Select one
-                  </option>
-                {{/if}}
-                {{#each this.keyBitOptions as |val|}}
-                  <option selected={{loose-equal (get @model "keyBits") val}} value={{val}}>
-                    {{val}}
-                  </option>
-                {{/each}}
-              </select>
-            </div>
-          </T.Trigger>
-          {{#unless @model.keyType}}
-            <T.Content @defaultClass="tool-tip smaller-font">
-              <div class="box">
-                Choose a key type before specifying bit length.
-              </div>
-            </T.Content>
-          {{/unless}}
-        </ToolTip>
+      <div
+        class="select is-fullwidth"
+        {{! these extra parentheses are necessary to conditionally apply the modifier }}
+        {{! TODO: refactor this component and avoid this conditional modifier pattern }}
+        {{(unless @model.keyType (modifier "hds-tooltip" "Choose a key type before specifying bit length."))}}
+      >
+        <select
+          id={{attr.name}}
+          name={{attr.name}}
+          data-test-input={{attr.name}}
+          disabled={{unless @model.keyType true}}
+          {{on "change" this.onKeyBitsChange}}
+        >
+          {{#if (and attr.options.noDefault (not @model.keyType))}}
+            <option value="">
+              Select one
+            </option>
+          {{/if}}
+          {{#each this.keyBitOptions as |val|}}
+            <option selected={{loose-equal (get @model "keyBits") val}} value={{val}}>
+              {{val}}
+            </option>
+          {{/each}}
+        </select>
       </div>
     </div>
   {{else}}
