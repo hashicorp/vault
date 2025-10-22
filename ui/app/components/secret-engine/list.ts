@@ -62,7 +62,7 @@ export default class SecretEngineList extends Component<Args> {
     {
       key: 'accessor',
       label: 'Accessor',
-      width: '150px',
+      width: '175px',
     },
     {
       key: 'description',
