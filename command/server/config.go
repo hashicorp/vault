@@ -130,6 +130,8 @@ type Config struct {
 
 	EnablePostUnsealTrace bool   `hcl:"enable_post_unseal_trace"`
 	PostUnsealTraceDir    string `hcl:"post_unseal_trace_directory"`
+
+	ReportingScanDirectory string `hcl:"reporting_scan_directory"`
 }
 
 const (
@@ -477,6 +479,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.PostUnsealTraceDir = c.PostUnsealTraceDir
 	if c2.PostUnsealTraceDir != "" {
 		result.PostUnsealTraceDir = c2.PostUnsealTraceDir
+	}
+
+	result.ReportingScanDirectory = c.ReportingScanDirectory
+	if c2.ReportingScanDirectory != "" {
+		result.ReportingScanDirectory = c2.ReportingScanDirectory
 	}
 
 	// Use values from top-level configuration for storage if set

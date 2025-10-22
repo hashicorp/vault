@@ -135,6 +135,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 				"leases/lookup/*",
 				"storage/raft/snapshot-auto/config/*",
 				"leases",
+				"reporting/scan",
 				"internal/inspect/*",
 				"internal/counters/activity/export",
 				// sys/seal and sys/step-down actually have their sudo requirement enforced through hardcoding
