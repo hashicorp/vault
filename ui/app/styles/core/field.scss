@@ -10,7 +10,7 @@
 .field {
   // cannot use :read-only selector because tag used for other purposes
   &.is-readOnly {
-    background-color: var(--token-color-palette-neutral-100);
+    background-color: var(--token-color-surface-strong);
     cursor: not-allowed;
   }
 

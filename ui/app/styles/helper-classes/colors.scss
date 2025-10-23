@@ -11,7 +11,7 @@
 }
 
 .has-background-white-bis {
-  background: var(--token-color-palette-neutral-50);
+  background: var(--token-color-surface-faint);
 }
 
 .has-background-gray-100 {
@@ -77,7 +77,7 @@ select.has-error-border,
 }
 
 .has-text-neutral-500 {
-  color: var(--token-color-palette-neutral-500) !important;
+  color: var(--token-color-foreground-faint) !important;
 }
 
 .has-text-white {
@@ -89,25 +89,25 @@ select.has-error-border,
 }
 
 .has-text-info {
-  color: var(--token-color-palette-blue-200) !important;
+  color: var(--token-color-foreground-action) !important;
 }
 // same without the !important
 .has-text-primary {
-  color: var(--token-color-palette-blue-200);
+  color: var(--token-color-foreground-action);
 }
 
 .has-text-success {
-  color: var(--token-color-palette-green-200) !important;
+  color: var(--token-color-foreground-success) !important;
 }
 
 .has-text-highlight {
-  color: var(--token-color-palette-amber-200);
+  color: var(--token-color-foreground-warning);
 }
 
 .has-text-danger {
-  color: var(--token-color-palette-red-200) !important;
+  color: var(--token-color-foreground-critical) !important;
 }
 
 .has-text-primary {
-  color: var(--token-color-palette-blue-200);
+  color: var(--token-color-foreground-action);
 }

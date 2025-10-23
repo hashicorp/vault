@@ -15,7 +15,7 @@
   border-radius: size_variables.$radius;
   border: box-shadow_variables.$base-border;
   box-shadow: 0 4px 1px rgba(hsl(0, 0%, 4%), 0.06) inset;
-  color: var(--token-color-palette-neutral-500);
+  color: var(--token-color-foreground-faint);
   display: inline-flex;
   font-size: size_variables.$size-6;
   height: size_variables.$size-2;
@@ -54,7 +54,7 @@
 .textarea[disabled] {
   border-color: var(--token-color-palette-neutral-300);
   background-color: var(--token-color-palette-neutral-100);
-  color: var(--token-color-palette-neutral-400);
+  color: var(--token-color-foreground-disabled);
   cursor: not-allowed;
 
   &:hover {
