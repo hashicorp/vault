@@ -166,6 +166,17 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 	return err
 }
 
+func (i *IdentityStore) activate(ctx context.Context, _ *logical.Request, featureName string) error {
+	switch featureName {
+	case activationflags.IdentityDeduplication:
+		return i.activateDeduplication(ctx, nil)
+	case activationflags.SCIMEnablement:
+		return nil
+	}
+
+	return nil
+}
+
 // activateDeduplication is called when the identity deduplication feature is
 // enabled via the Activation Flag API. This method holds two high-level locks
 // ([*IdentityStore].lock and [*IdentityStore].groupLock) to prevent concurrent

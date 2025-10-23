@@ -102,6 +102,23 @@ func (b *SystemBackend) activationFlagsPaths() []*framework.Path {
 			HelpSynopsis:    helpSynopsis,
 			HelpDescription: helpDescription,
 		},
+		{
+			Pattern: fmt.Sprintf("%s/%s/%s", prefixActivationFlags, activationflags.SCIMEnablement, verbActivationFlagsActivate),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: prefixActivationFlags,
+				OperationVerb:   verbActivationFlagsActivate,
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                    b.handleActivationFlagsActivate,
+					ForwardPerformanceSecondary: true,
+					ForwardPerformanceStandby:   true,
+					Summary:                     summaryUpdate,
+				},
+			},
+			HelpSynopsis:    helpSynopsis,
+			HelpDescription: helpDescription,
+		},
 	}
 }
 
@@ -158,13 +175,13 @@ func (b *SystemBackend) activationFlagsToResponse(activationFlags []string) *log
 	}
 }
 
-// activateIdentityDeduplication activates the identity deduplication feature.
-func (b *SystemBackend) activateIdentityDeduplication(ctx context.Context, _ *logical.Request) error {
+// activateIdentity activates a feature in the identity backend.
+func (b *SystemBackend) activateIdentity(ctx context.Context, _ *logical.Request, featureName string) error {
 	if b.idStoreBackend == nil || b.idStoreBackend.ActivationFunc == nil {
 		return nil
 	}
 
-	if err := b.idStoreBackend.ActivationFunc(ctx, nil); err != nil {
+	if err := b.idStoreBackend.ActivationFunc(ctx, nil, featureName); err != nil {
 		b.logger.Error("activation flag error", "error", err)
 	}
 
