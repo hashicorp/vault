@@ -135,16 +135,27 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.Equal(t, key1Ref1.ID, key1Ref2.ID)
 	require.Equal(t, key1Ref1.Name, key1Ref2.Name)
 
-	issuer1Ref1, existing, err := sc.importIssuer(issuer1.Certificate, "issuer1")
+	issuer1Ref1, issuerInfo, existing, err := sc.importIssuer(issuer1.Certificate, "issuer1")
 	require.NoError(t, err)
 	require.False(t, existing)
 	require.Equal(t, strings.TrimSpace(issuer1.Certificate), strings.TrimSpace(issuer1Ref1.Certificate))
 	require.Equal(t, key1Ref1.ID, issuer1Ref1.KeyID)
 	require.Equal(t, "issuer1", issuer1Ref1.Name)
 
+	require.NotNil(t, issuerInfo)
+	require.Equal(t, issuerInfo.IssuerName, issuer1Ref1.Name)
+	require.Equal(t, issuerInfo.IssuerId, issuer1Ref1.ID.String())
+	require.NotEmpty(t, issuerInfo.NotAfter)
+	require.NotEmpty(t, issuerInfo.NotBefore)
+	require.NotEmpty(t, issuerInfo.AKID)
+	require.NotEmpty(t, issuerInfo.SKID)
+	// The issuer cert does not have a subject/common name.
+	require.Empty(t, issuerInfo.CommonName)
+	require.Equal(t, "RSA", issuerInfo.PublicKeyAlgorithm)
+
 	// Make sure if we attempt to re-import the same issuer, no import/updates occur.
 	// So the existing flag should be set to true, and we do not update the existing Name field.
-	issuer1Ref2, existing, err := sc.importIssuer(issuer1.Certificate, "ignore-me")
+	issuer1Ref2, _, existing, err := sc.importIssuer(issuer1.Certificate, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, strings.TrimSpace(issuer1.Certificate), strings.TrimSpace(issuer1Ref1.Certificate))
@@ -159,7 +170,7 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.NoError(t, err)
 
 	// Same double import tests as above, but make sure if the previous was created through writeIssuer not importIssuer.
-	issuer2Ref, existing, err := sc.importIssuer(issuer2.Certificate, "ignore-me")
+	issuer2Ref, _, existing, err := sc.importIssuer(issuer2.Certificate, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, strings.TrimSpace(issuer2.Certificate), strings.TrimSpace(issuer2Ref.Certificate))
