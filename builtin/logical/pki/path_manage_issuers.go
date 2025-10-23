@@ -272,6 +272,12 @@ secret-key (optional) and certificates.`,
 	}
 }
 
+// ImportedKeyInfo is a set of information about each key imported.
+type ImportedKeyInfo struct {
+	KeyName string `json:"key_name"`
+	KeyId   string `json:"key_id"`
+}
+
 func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Since we're planning on updating issuers here, grab the lock so we've
 	// got a consistent view.
@@ -372,6 +378,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 
+	importedKeys := make([]*issuing.KeyEntry, 0)
+	importedKeyInfo := make([]*ImportedKeyInfo, 0)
 	for keyIndex, keyPem := range keys {
 		// Handle import of private key.
 		key, existing, err := importKeyFromBytes(sc, keyPem, "")
@@ -381,13 +389,22 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 		if !existing {
 			createdKeys = append(createdKeys, key.ID.String())
+			importedKeys = append(importedKeys, key)
+			keyInfo := &ImportedKeyInfo{
+				KeyName: key.Name,
+				KeyId:   key.ID.String(),
+			}
+			importedKeyInfo = append(importedKeyInfo, keyInfo)
 		} else {
 			existingKeys = append(existingKeys, key.ID.String())
 		}
 	}
 
+	// ImportedIssuerInfo
+	importedIssuers := make([]*issuing.IssuerEntry, 0)
+	importedIssuerInfo := make([]*ImportedIssuerInfo, 0)
 	for certIndex, certPem := range issuers {
-		cert, existing, err := sc.importIssuer(certPem, "")
+		cert, issuerInfo, existing, err := sc.importIssuer(certPem, "")
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing issuer %v: %v\n%v", certIndex, err, certPem)), nil
 		}
@@ -395,6 +412,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		issuerKeyMap[cert.ID.String()] = cert.KeyID.String()
 		if !existing {
 			createdIssuers = append(createdIssuers, cert.ID.String())
+			importedIssuers = append(importedIssuers, cert)
+			importedIssuerInfo = append(importedIssuerInfo, issuerInfo)
 		} else {
 			existingIssuers = append(existingIssuers, cert.ID.String())
 		}
@@ -509,7 +528,9 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuersImport,
 		observe.NewAdditionalPKIMetadata("mapping", issuerKeyMap),
 		observe.NewAdditionalPKIMetadata("imported_keys", createdKeys),
+		observe.NewAdditionalPKIMetadata("imported_key_info", importedKeyInfo),
 		observe.NewAdditionalPKIMetadata("imported_issuers", createdIssuers),
+		observe.NewAdditionalPKIMetadata("imported_issuer_info", importedIssuerInfo),
 		observe.NewAdditionalPKIMetadata("existing_keys", existingKeys),
 		observe.NewAdditionalPKIMetadata("existing_issuers", existingIssuers))
 

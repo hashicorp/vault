@@ -49,6 +49,9 @@ const (
 	// https://developer.hashicorp.com/vault/api-docs/secret/pki#read-issuer-certificate
 	ObservationTypePKIReadIssuerCertificate = "pki/issuer/certificate/read"
 
+	ObservationTypePKIIssuerSignIntermediate = "pki/issuer/sign/intermediate"
+	ObservationTypePKIIssuerSignSelfIssued   = "pki/issuer/sign/self-issued"
+
 	// ---
 	// Role related observations
 

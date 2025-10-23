@@ -484,14 +484,19 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	resp = addWarnings(resp, warnings)
 
 	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssue,
+		observe.NewAdditionalPKIMetadata("issuer_id", issuerId),
 		observe.NewAdditionalPKIMetadata("issuer_name", role.Issuer),
 		observe.NewAdditionalPKIMetadata("signed", useCSR),
 		observe.NewAdditionalPKIMetadata("role_name", role.Name),
 		observe.NewAdditionalPKIMetadata("stored", !role.NoStore),
+		observe.NewAdditionalPKIMetadata("common_name", parsedBundle.Certificate.Subject.CommonName),
 		observe.NewAdditionalPKIMetadata("not_after", parsedBundle.Certificate.NotAfter.String()),
 		observe.NewAdditionalPKIMetadata("not_before", parsedBundle.Certificate.NotBefore.String()),
-		observe.NewAdditionalPKIMetadata("is_ca", parsedBundle.Certificate.IsCA),
+		observe.NewAdditionalPKIMetadata("subject_key_id", parsedBundle.Certificate.SubjectKeyId),
+		observe.NewAdditionalPKIMetadata("authority_key_id", parsedBundle.Certificate.AuthorityKeyId),
 		observe.NewAdditionalPKIMetadata("serial_number", parsedBundle.Certificate.SerialNumber.String()),
+		observe.NewAdditionalPKIMetadata("public_key_algorithm", parsedBundle.Certificate.PublicKeyAlgorithm.String()),
+		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(parsedBundle.Certificate.PublicKey)),
 		observe.NewAdditionalPKIMetadata("lease_generated", generateLease),
 	)
 
