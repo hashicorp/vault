@@ -15,6 +15,12 @@ import type UnsavedChangesService from 'vault/services/unsaved-changes';
 import type Controller from '@ember/controller';
 import type Transition from '@ember/routing/transition';
 import type RouterService from '@ember/routing/router-service';
+import type SecretEngineModel from 'vault/models/secret-engine';
+
+interface RouteModel {
+  secretsEngine: SecretEngineModel;
+  versions: string[];
+}
 
 interface RouteController extends Controller {
   model: Record<string, unknown> | undefined;
@@ -32,14 +38,25 @@ export default class SecretsBackendConfigurationGeneralSettingsRoute extends Rou
   async model() {
     const secretsEngine = this.modelFor('vault.cluster.secrets.backend') as SecretsEngineResource;
     const { data } = await this.pluginCatalog.getRawPluginCatalogData();
-
     const versions = getPluginVersionsFromEngineType(data?.secret, secretsEngine.type);
 
     const model = { secretsEngine, versions };
+    this.unsavedChanges.initialState = JSON.parse(JSON.stringify(model.secretsEngine));
 
-    this.oldModel = JSON.parse(JSON.stringify(model));
+    return { secretsEngine, versions };
+  }
 
-    return model;
+  setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {
+    super.setupController(controller, resolvedModel, transition);
+    const { secretsEngine } = resolvedModel;
+
+    const breadcrumbs = [
+      { label: 'Secrets', route: 'vault.cluster.secrets' },
+      { label: secretsEngine.id, route: 'vault.cluster.secrets.backend.list-root', model: secretsEngine.id },
+      { label: 'Configuration' },
+    ];
+
+    controller.set('breadcrumbs', breadcrumbs);
   }
 
   @action

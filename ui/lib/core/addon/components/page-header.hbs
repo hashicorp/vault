@@ -3,6 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
+{{! DEPRECATED: Use <Page::Header /> instead. <Page::Header> uses the new Hds page header and should be preferred over this component. }}
 <header class="page-header" ...attributes>
   {{yield (hash top=(component "page-header-level"))}}
   <div class="level">

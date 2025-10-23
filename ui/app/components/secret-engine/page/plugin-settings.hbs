@@ -3,7 +3,21 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<SecretEngine::PageHeader @model={{@model}} />
+{{#let (engines-display-data @model.secretsEngine.type) as |engineDisplayData|}}
+  <Page::Header
+    @title="{{@model.secretsEngine.id}} configuration"
+    @description={{engineDisplayData.displayName}}
+    @icon={{engineDisplayData.glyph}}
+    @subtitle={{engineDisplayData.typeDisplay}}
+  >
+    <:breadcrumbs>
+      <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+    </:breadcrumbs>
+    <:tabs>
+      <SecretEngine::ConfigureTabs @secretsEngine={{@model.secretsEngine}} />
+    </:tabs>
+  </Page::Header>
+{{/let}}
 
 {{#if @model.config}}
   {{#each this.displayFields as |field|}}
