@@ -1666,7 +1666,7 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		require.NoError(t, err)
 
 		c.identityStore.MakeDeduplicationDoneChan()
-		err := c.systemBackend.activateIdentityDeduplication(ctx, nil)
+		err := c.systemBackend.activateIdentity(ctx, nil, activationflags.IdentityDeduplication)
 		require.NoError(t, err)
 		err = c.identityStore.WaitForActivateDeduplicationDone(ctx)
 		require.NoError(t, err)

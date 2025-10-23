@@ -116,7 +116,7 @@ type Backend struct {
 
 	// ActivationFunc is the callback function used by ActivationFlags to
 	// communicate with a plugin to activate a feature.
-	ActivationFunc func(context.Context, *logical.Request) error
+	ActivationFunc func(context.Context, *logical.Request, string) error
 
 	logger       log.Logger
 	system       logical.SystemView

@@ -116,7 +116,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		Paths:          iStore.paths(),
 		Invalidate:     iStore.Invalidate,
 		InitializeFunc: iStore.initialize,
-		ActivationFunc: iStore.activateDeduplication,
+		ActivationFunc: iStore.activate,
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: append([]string{
 				"oidc/.well-known/*",

@@ -15,6 +15,7 @@ import (
 const (
 	storagePathActivationFlags = "activation-flags"
 	IdentityDeduplication      = "force-identity-deduplication"
+	SCIMEnablement             = "enable-scim"
 )
 
 // FeatureActivationFlags stores activation flags in a local map and storage.
