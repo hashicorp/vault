@@ -29,7 +29,7 @@ select {
   text-rendering: auto !important;
 
   @include mixins.until(size_variables.$desktop) {
-    font-size: 1rem;
+    font-size: var(--token-typography-body-300-font-size);
   }
 
   &::placeholder {
