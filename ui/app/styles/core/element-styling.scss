@@ -1,4 +1,3 @@
-@use '../utils/font_variables';
 @use '../utils/size_variables';
 
 /**
@@ -50,7 +49,7 @@ h4,
 h5,
 h6 {
   font-size: 100%;
-  font-weight: normal;
+  font-weight: var(--token-typography-font-weight-regular);
 }
 
 ul {
@@ -84,7 +83,7 @@ object {
 
 html {
   background-color: hsl(0, 0%, 100%);
-  font-size: size_variables.$base-font-size; // 16px
+  font-size: var(--token-typography-body-300-font-size); // 16px
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   min-width: 300px;
@@ -107,14 +106,14 @@ button,
 input,
 select,
 textarea {
-  font-family: font_variables.$family-sans;
+  font-family: var(--token-typography-font-stack-text);
 }
 
 code,
 pre {
   -moz-osx-font-smoothing: auto;
   -webkit-font-smoothing: inherit;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  font-family: var(--token-typography-font-stack-code);
   font-smooth: inherit;
 }
 
@@ -124,8 +123,8 @@ pre code {
 }
 
 body {
-  font-size: size_variables.$size-6;
-  line-height: 1.5;
+  font-size: var(--token-typography-body-300-font-size);
+  line-height: var(--token-typography-body-300-line-height);
   overflow-x: hidden;
   overflow-y: scroll;
 }
@@ -150,7 +149,7 @@ code {
   background-color: transparent;
   color: var(--token-color-foreground-faint);
   font-size: 1em;
-  font-weight: 400;
+  font-weight: var(--token-typography-font-weight-regular);
   padding: 0;
 }
 

@@ -17,9 +17,9 @@
   box-shadow: 0 4px 1px rgba(hsl(0, 0%, 4%), 0.06) inset;
   color: var(--token-color-foreground-faint);
   display: inline-flex;
-  font-size: size_variables.$size-6;
+  font-size: var(--token-typography-body-300-font-size);
   height: size_variables.$size-2;
-  line-height: 1.5;
+  line-height: var(--token-typography-body-300-line-height);
   max-width: 100%;
   padding-bottom: calc(0.375em - 1px);
   padding-left: size_variables.$spacing-12;
@@ -42,7 +42,7 @@
   }
 
   @include mixins.until(size_variables.$desktop) {
-    font-size: size_variables.$size-6;
+    font-size: var(--token-typography-body-300-font-size);
   }
 
   &::placeholder {
@@ -84,6 +84,6 @@
 // custom input
 .input-hint {
   padding: 0 size_variables.$spacing-10;
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
   color: var(--token-color-foreground-faint);
 }
