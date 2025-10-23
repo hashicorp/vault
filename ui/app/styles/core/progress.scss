@@ -8,10 +8,10 @@
 
 .progress {
   appearance: none;
-  background: var(--token-color-palette-neutral-50);
+  background: var(--token-color-surface-faint);
   border: none;
   box-shadow: inset box-shadow_variables.$box-link-shadow;
-  border-radius: size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small);
   display: block;
   height: size_variables.$size-6;
   overflow: hidden;
@@ -40,13 +40,13 @@
 // style the bar in chrome
 .progress[value]::-webkit-progress-value {
   background-color: #4a4a4a;
-  border-radius: size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small);
   transition: width 1s size_variables.$easing;
 }
 
 // style the bar in firefox
 .progress[value]::-moz-progress-bar {
-  border-radius: size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small);
   transition: width 1s size_variables.$easing;
 }
 

@@ -17,7 +17,7 @@
 .file-cta {
   align-items: center;
   border: box-shadow_variables.$base-border;
-  border-radius: size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small);
   display: inline-flex;
   height: 2.25em;
   justify-content: flex-start;
@@ -83,7 +83,7 @@
 .file-name {
   @extend .input;
   border: box-shadow_variables.$base-border;
-  border-radius: size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small);
   box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
   display: block;
   font-size: 1em;

@@ -51,8 +51,8 @@ $dark-gray: #535f73;
   grid-template-columns: 1fr;
   grid-template-rows: 0.7fr 3fr;
   box-shadow: box-shadow_variables.$box-shadow, box-shadow_variables.$box-shadow-middle;
-  background-color: white;
-  border-radius: size_variables.$radius;
+  background-color: var(--token-color-surface-primary);
+  border-radius: var(--token-border-radius-x-small);
 }
 
 .calendar-widget-grid {

@@ -42,10 +42,10 @@ $fourth: #6cc5b0;
 
 .chart-tooltip {
   background-color: hsl(0, 0%, 4%);
-  color: white;
+  color: var(--token-color-foreground-high-contrast);
   font-size: size_variables.$size-9;
   padding: 6px;
-  border-radius: size_variables.$radius-large;
+  border-radius: var(--token-border-radius-small);
   flex-wrap: nowrap;
   width: fit-content;
 
