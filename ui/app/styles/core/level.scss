@@ -12,7 +12,7 @@
 }
 
 .level code {
-  border-radius: size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small);
 }
 
 .level:not(:last-child) {

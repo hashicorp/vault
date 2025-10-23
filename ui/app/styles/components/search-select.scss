@@ -20,7 +20,7 @@
 
   .ember-power-select-trigger {
     border: 0;
-    border-radius: size_variables.$radius;
+    border-radius: var(--token-border-radius-x-small);
     padding-right: 0;
 
     &--active {
@@ -81,8 +81,8 @@
     }
 
     .ember-power-select-option[aria-current='true'] {
-      background-color: var(--token-color-palette-neutral-50);
-      color: var(--token-color-palette-neutral-600);
+      background-color: var(--token-color-surface-faint);
+      color: var(--token-color-foreground-primary);
     }
 
     .ember-power-select-option--no-matches-message {
@@ -116,7 +116,7 @@
 
       &:hover,
       &:focus {
-        color: var(--token-color-palette-blue-200);
+        color: var(--token-color-foreground-action);
       }
     }
   }

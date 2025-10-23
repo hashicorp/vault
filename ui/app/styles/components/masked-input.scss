@@ -39,7 +39,7 @@ pre.masked-font {
 // aligns the boxes on the input page
 .masked-input.masked:not(.display-only) .masked-value {
   line-height: 3;
-  border-radius: size_variables.$radius 0 0 size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small) 0 0 var(--token-border-radius-x-small);
 }
 
 //override bulma's pre styling
@@ -60,7 +60,7 @@ pre.masked-font {
 }
 
 .button.masked-input-toggle {
-  border-radius: 0 size_variables.$radius size_variables.$radius 0;
+  border-radius: 0 var(--token-border-radius-x-small) var(--token-border-radius-x-small) 0;
 }
 
 .display-only {
@@ -80,7 +80,7 @@ pre.masked-font {
     &:focus,
     &:hover,
     &:focus:not(:active) {
-      color: var(--token-color-palette-blue-200);
+      color: var(--token-color-foreground-action);
       border: 0;
       box-shadow: none;
     }

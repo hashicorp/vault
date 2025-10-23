@@ -24,12 +24,12 @@
   }
 
   .message-icon {
-    color: var(--token-color-palette-blue-200);
+    color: var(--token-color-foreground-action);
     margin-right: size_variables.$spacing-8;
   }
 
   .message-title {
-    color: var(--token-color-palette-blue-200);
+    color: var(--token-color-foreground-action);
     font-size: 16px;
     font-weight: font_variables.$font-weight-bold;
     line-height: 1.25;
@@ -47,32 +47,32 @@
     border: 1px solid var(--token-color-palette-red-50);
 
     .message-body {
-      color: var(--token-color-palette-red-300);
+      color: var(--token-color-foreground-critical-on-surface);
     }
 
     .message-icon {
-      color: var(--token-color-palette-red-200);
+      color: var(--token-color-foreground-critical);
     }
 
     .message-title {
-      color: var(--token-color-palette-red-300);
+      color: var(--token-color-foreground-critical-on-surface);
     }
   }
 
   &.is-highlight {
     background: var(--token-color-surface-warning);
-    border: 1px solid var(--token-color-palette-amber-100);
+    border: 1px solid var(--token-color-border-warning);
 
     .message-body {
-      color: var(--token-color-palette-neutral-600);
+      color: var(--token-color-foreground-primary);
     }
 
     .message-icon {
-      color: var(--token-color-palette-amber-200);
+      color: var(--token-color-foreground-warning);
     }
 
     .message-title {
-      color: var(--token-color-palette-amber-300);
+      color: var(--token-color-foreground-warning-on-surface);
     }
   }
 
@@ -95,18 +95,18 @@
 
   &.is-success {
     background: var(--token-color-surface-success);
-    border: 1px solid var(--token-color-palette-green-100);
+    border: 1px solid var(--token-color-border-success);
 
     .message-body {
-      color: var(--token-color-palette-green-500);
+      color: var(--token-color-foreground-success-high-contrast);
     }
 
     .message-icon {
-      color: var(--token-color-palette-green-200);
+      color: var(--token-color-foreground-success);
     }
 
     .message-title {
-      color: var(--token-color-palette-green-300);
+      color: var(--token-color-foreground-success-on-surface);
     }
   }
 }
