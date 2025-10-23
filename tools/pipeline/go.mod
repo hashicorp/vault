@@ -2,9 +2,6 @@ module github.com/hashicorp/vault/tools/pipeline
 
 go 1.24.0
 
-// We have test modules in here but they ought to be completely ignored
-ignore internal/pkg/golang/fixtures
-
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/avast/retry-go/v4 v4.6.1
