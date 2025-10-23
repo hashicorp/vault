@@ -14,6 +14,7 @@ export const GENERAL = {
   headerContainer: 'header.page-header',
   title: '[data-test-page-title]',
   hdsPageHeaderTitle: '.hds-page-header__title',
+  hdsPageHeaderSubtitle: '.hds-page-header__subtitle',
   hdsPageHeaderDescription: '.hds-page-header__description',
 
   /* ────── Tabs & Navigation ────── */

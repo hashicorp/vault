@@ -2,7 +2,21 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-<SecretEngine::PageHeader @model={{@model}} />
+{{#let (engines-display-data @model.secretsEngine.type) as |engineDisplayData|}}
+  <Page::Header
+    @title="{{@model.secretsEngine.id}} configuration"
+    @description={{engineDisplayData.displayName}}
+    @icon={{engineDisplayData.glyph}}
+    @subtitle={{engineDisplayData.typeDisplay}}
+  >
+    <:breadcrumbs>
+      <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+    </:breadcrumbs>
+    <:tabs>
+      <SecretEngine::ConfigureTabs @config={{@model.config}} @secretsEngine={{@model.secretsEngine}} />
+    </:tabs>
+  </Page::Header>
+{{/let}}
 
 {{#if this.saveGeneralSettings.isRunning}}
   {{! TODO: Fix loading state styles }}
