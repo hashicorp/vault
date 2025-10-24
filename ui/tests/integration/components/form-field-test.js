@@ -273,8 +273,9 @@ module('Integration | Component | form field', function (hooks) {
       this,
       createAttr('foo', 'string', { editType: 'stringArray', helpText: 'Here is some help text' })
     );
+    assert.dom(GENERAL.tooltipText).hasNoText();
     await click(GENERAL.tooltip('string-list'));
-    assert.dom(GENERAL.tooltipText).exists('renders the tooltip component');
+    assert.dom(GENERAL.tooltipText).hasText('Here is some help text', 'renders the tooltip component');
   });
 
   test('it should not expand and toggle ttl when default 0s value is present', async function (assert) {

@@ -188,8 +188,9 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       />
     </div>`);
     assert.dom('[data-test-component="info-table-row"]').exists('Row renders');
+    assert.dom(GENERAL.tooltipText).hasNoText();
     await click(GENERAL.tooltip('info table row'));
-    assert.dom(GENERAL.tooltipText).exists('Label tooltip exists');
+    assert.dom(GENERAL.tooltipText).hasText(this.label, 'Label tooltip exists');
   });
 
   test('Renders if block value and alwaysrender=false', async function (assert) {

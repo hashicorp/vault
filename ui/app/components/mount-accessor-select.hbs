@@ -5,14 +5,16 @@
 
 <div ...attributes>
   {{#if @label}}
-    <label for={{@name}} class="is-label">
-      {{@label}}
+    <div class="label-row">
+      <label for={{@name}}>
+        {{@label}}
+      </label>
       {{#if @helpText}}
         <Hds::TooltipButton @text={{@helpText}} aria-label="More information">
           <Hds::Icon @name="info" />
         </Hds::TooltipButton>
       {{/if}}
-    </label>
+    </div>
   {{/if}}
   {{#if this.authMethods.isRunning}}
     <div>

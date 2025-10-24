@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn, triggerKeyEvent } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | string list', function (hooks) {
   setupRenderingTest(hooks);
@@ -40,6 +41,21 @@ module('Integration | Component | string list', function (hooks) {
     assert.dom('[data-test-string-list-label]').hasText('foo', 'renders the label when provided');
     await render(hbs`<StringList />`);
     assert.dom('[data-test-string-list-label]').doesNotExist('does not render the label');
+    assertBlank(assert);
+  });
+
+  test('it renders the tooltip', async function (assert) {
+    assert.expect(4);
+    await render(
+      hbs`<StringList @label="CRL distribution points" @helpText="this is my help text" @onChange={{this.spy}} />`
+    );
+
+    await click(GENERAL.tooltip('string-list'));
+    assert
+      .dom(GENERAL.tooltipText)
+      .hasText('this is my help text', 'renders the help text in a tooltip when provided');
+    await render(hbs`<StringList />`);
+    assert.dom(GENERAL.tooltip('string-list')).doesNotExist('does not render the tooltip');
     assertBlank(assert);
   });
 
