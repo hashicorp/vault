@@ -1,6 +1,6 @@
 # Client-side pagination
 
-Our custom `pagination` service allows us to paginate LIST responses while maintaining good performance, particularly when the LIST response includes tens of thousands of keys in the data response. It does this by caching the entire response, and then filtering the full response into the datastore for the client. It was originally a custom method in our `store` service that extended the ember-data `store` but now is it's own `pagination` service.
+Our custom `pagination` service allows us to paginate LIST responses while maintaining good performance, particularly when the LIST response includes tens of thousands of keys in the data response. It does this by caching the entire response, and then filtering the full response into the datastore for the client. It was originally a custom method in our `store` service that extended the ember-data `store` but now is its own `pagination` service.
 
 ## Using pagination
 
