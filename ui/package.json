@@ -217,7 +217,7 @@
   "dependencies": {
     "@babel/core": "7.26.10",
     "@hashicorp-internal/vault-reporting": "file:vault-reporting/0.8.0.tgz",
-    "@hashicorp/design-system-components": "4.20.1",
+    "@hashicorp/design-system-components": "5.0.0-rc-20251013193429",
     "@hashicorp/vault-client-typescript": "hashicorp/vault-client-typescript",
     "ember-auto-import": "2.10.0",
     "handlebars": "4.7.8",
