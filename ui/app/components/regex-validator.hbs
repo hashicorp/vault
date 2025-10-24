@@ -6,25 +6,19 @@
 {{#if @attr}}
   <div class="field" data-test-regex-validator-pattern>
     <div class="regex-label-wrapper">
-      <div class="regex-label">
-        <label for={{@attr.name}} class="is-label">
+      <div class="regex-label label-row">
+        <label for={{@attr.name}}>
           {{@labelString}}
-          {{#if @attr.options.helpText}}
-            <Hds::TooltipButton @text={{@attr.options.helpText}} @placement="bottom" aria-label="More information">
-              <Hds::Icon @name="info" />
-            </Hds::TooltipButton>
-          {{/if}}
         </label>
-        {{#if @attr.options.subText}}
-          <p class="sub-text">
-            {{@attr.options.subText}}
-            {{#if @attr.options.docLink}}
-              <DocLink @path={{@attr.options.docLink}}>
-                See our documentation
-              </DocLink>
-              for help.
-            {{/if}}
-          </p>
+        {{#if @attr.options.helpText}}
+          <Hds::TooltipButton
+            @text={{@attr.options.helpText}}
+            @placement="bottom"
+            aria-label="More information"
+            data-test-tooltip="regex-validator"
+          >
+            <Hds::Icon @name="info" />
+          </Hds::TooltipButton>
         {{/if}}
       </div>
       <div>
@@ -37,6 +31,17 @@
         </Toggle>
       </div>
     </div>
+    {{#if @attr.options.subText}}
+      <p class="sub-text">
+        {{@attr.options.subText}}
+        {{#if @attr.options.docLink}}
+          <DocLink @path={{@attr.options.docLink}}>
+            See our documentation
+          </DocLink>
+          for help.
+        {{/if}}
+      </p>
+    {{/if}}
     <input
       id={{@attr.name}}
       data-test-input={{@attr.name}}

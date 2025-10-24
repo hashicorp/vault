@@ -12,14 +12,16 @@
   ...attributes
 >
   {{#if @label}}
-    <label class="is-label" data-test-string-list-label="true">
-      {{@label}}
+    <div class="label-row">
+      <label data-test-string-list-label="true">
+        {{@label}}
+      </label>
       {{#if @helpText}}
         <Hds::TooltipButton @text={{@helpText}} aria-label="More information" data-test-tooltip="string-list">
           <Hds::Icon @name="info" />
         </Hds::TooltipButton>
       {{/if}}
-    </label>
+    </div>
     {{#if @subText}}
       <p class="sub-text" id={{concat (dasherize @label) "-helper-text"}}>
         {{@subText}}

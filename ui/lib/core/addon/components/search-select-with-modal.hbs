@@ -24,14 +24,16 @@
     }}
   {{else}}
     {{#if @label}}
-      <label for={{@id}} class={{or @labelClass "is-label"}} data-test-field-label>
-        {{@label}}
+      <div class="label-row">
+        <label for={{@id}} class={{@labelClass}} data-test-field-label>
+          {{@label}}
+        </label>
         {{#if @helpText}}
-          <Hds::TooltipButton @text={{@helpText}} aria-label="More information">
+          <Hds::TooltipButton @text={{@helpText}} class={{@labelClass}} aria-label="More information">
             <Hds::Icon @name="info" />
           </Hds::TooltipButton>
         {{/if}}
-      </label>
+      </div>
     {{/if}}
     {{#if @subText}}
       <p data-test-modal-subtext class="sub-text">{{@subText}}</p>

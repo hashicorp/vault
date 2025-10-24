@@ -30,3 +30,16 @@
     border-color: var(--token-color-palette-neutral-300);
   }
 }
+
+.label-row {
+  display: flex;
+  align-items: center;
+  gap: size_variables.$spacing-4;
+  margin-bottom: size_variables.$spacing-4;
+
+  label {
+    color: var(--token-color-palette-neutral-600);
+    font-size: var(--token-typography-body-200-font-size);
+    font-weight: var(--token-typography-font-weight-bold);
+  }
+}

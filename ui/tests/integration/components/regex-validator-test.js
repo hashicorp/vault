@@ -32,7 +32,8 @@ module('Integration | Component | regex-validator', function (hooks) {
         @labelString={{this.labelString}}
       />`
     );
-    assert.dom('.regex-label label').hasText('Regex Example', 'Label is correct');
+
+    assert.dom('label').hasText('Regex Example', 'Label is correct');
     assert.dom(GENERAL.toggleInput('example-validation-toggle')).exists('Validation toggle exists');
     assert.dom('[data-test-regex-validator-test-string]').doesNotExist('Test string input does not show');
 
@@ -71,6 +72,35 @@ module('Integration | Component | regex-validator', function (hooks) {
       );
     await fillIn('[data-test-input="example"]', '(\\d{5})');
     assert.ok(spy.calledOnce, 'Calls the passed onChange function when main input is changed');
+  });
+
+  test('it renders tooltip', async function (assert) {
+    const tooltipText = 'Shows in tooltip';
+    const attr = EmberObject.create({
+      name: 'example',
+      options: {
+        helpText: tooltipText,
+        subText: 'Shows underneath label',
+      },
+    });
+    const spy = sinon.spy();
+    this.set('onChange', spy);
+    this.set('attr', attr);
+    this.set('value', '(\\d{4})');
+    this.set('labelString', 'Regex Example');
+
+    await render(
+      hbs`<RegexValidator
+        @onChange={{this.onChange}}
+        @attr={{this.attr}}
+        @value={{this.value}}
+        @labelString={{this.labelString}}
+      />`
+    );
+
+    assert.dom(GENERAL.tooltipText).hasNoText();
+    await click(GENERAL.tooltip('regex-validator'));
+    assert.dom(GENERAL.tooltipText).hasText(tooltipText, 'Tooltip text is rendered');
   });
 
   test('it renders test input only when attr is not provided', async function (assert) {

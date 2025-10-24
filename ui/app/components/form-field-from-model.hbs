@@ -14,14 +14,16 @@
     )
   }}
     {{#unless (eq @attr.type "object")}}
-      <label for={{@attr.name}} class="is-label">
-        {{capitalize (or @attr.options.label (humanize (dasherize @attr.name)))}}
+      <div class="label-row">
+        <label for={{@attr.name}}>
+          {{capitalize (or @attr.options.label (humanize (dasherize @attr.name)))}}
+        </label>
         {{#if @attr.options.helpText}}
           <Hds::TooltipButton @text={{@attr.options.helpText}} aria-label="More information">
             <Hds::Icon @name="info" />
           </Hds::TooltipButton>
         {{/if}}
-      </label>
+      </div>
     {{/unless}}
   {{/unless}}
   {{#if @attr.options.possibleValues}}
@@ -69,15 +71,16 @@
         onchange={{action (mut (get this.model @attr.name)) value="target.checked"}}
         data-test-input={{@attr.name}}
       />
-
-      <label for={{@attr.name}} class="is-label">
-        {{capitalize (or @attr.options.label (humanize (dasherize @attr.name)))}}
+      <div class="label-row">
+        <label for={{@attr.name}}>
+          {{capitalize (or @attr.options.label (humanize (dasherize @attr.name)))}}
+        </label>
         {{#if @attr.options.helpText}}
           <Hds::TooltipButton @text={{@attr.options.helpText}} aria-label="More information">
             <Hds::Icon @name="info" />
           </Hds::TooltipButton>
         {{/if}}
-      </label>
+      </div>
     </div>
   {{else if (eq @attr.type "object")}}
     <JsonEditor
