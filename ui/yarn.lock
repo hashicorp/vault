@@ -60,7 +60,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/core@npm:^7.0.0, @babel/core@npm:^7.12.0, @babel/core@npm:^7.13.10, @babel/core@npm:^7.16.10, @babel/core@npm:^7.16.7, @babel/core@npm:^7.22.20, @babel/core@npm:^7.23.2, @babel/core@npm:^7.23.6, @babel/core@npm:^7.24.0, @babel/core@npm:^7.25.2, @babel/core@npm:^7.26.0, @babel/core@npm:^7.3.4":
+"@babel/core@npm:^7.0.0, @babel/core@npm:^7.12.0, @babel/core@npm:^7.13.10, @babel/core@npm:^7.16.10, @babel/core@npm:^7.16.7, @babel/core@npm:^7.22.20, @babel/core@npm:^7.23.2, @babel/core@npm:^7.23.6, @babel/core@npm:^7.24.0, @babel/core@npm:^7.25.2, @babel/core@npm:^7.3.4":
   version: 7.27.1
   resolution: "@babel/core@npm:7.27.1"
   dependencies:
@@ -8192,7 +8192,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-htmlbars@npm:^5.3.1, ember-cli-htmlbars@npm:^5.7.1":
+"ember-cli-htmlbars@npm:^5.7.1":
   version: 5.7.2
   resolution: "ember-cli-htmlbars@npm:5.7.2"
   dependencies:
@@ -8810,33 +8810,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-modal-dialog@npm:~4.1.5":
-  version: 4.1.5
-  resolution: "ember-modal-dialog@npm:4.1.5"
-  dependencies:
-    "@babel/core": ^7.26.0
-    "@embroider/macros": ^1.16.9
-    "@embroider/util": ^1.13.2
-    ember-cli-babel: ^8.2.0
-    ember-cli-htmlbars: ^6.3.0
-    ember-cli-version-checker: ^5.1.2
-    ember-wormhole: ^0.6.0
-  peerDependencies:
-    "@ember/string": ^3.0.0 || ^4.0.0
-    ember-tether: ^3.0.0
-    liquid-tether: ^2.0.7
-    liquid-wormhole: ^3.0.1
-  peerDependenciesMeta:
-    ember-tether:
-      optional: true
-    liquid-tether:
-      optional: true
-    liquid-wormhole:
-      optional: true
-  checksum: 0f19d38d1e2dc1649ecc3a5739d68cf858e08943151ccce555c8fc7094d0efa9104f9880e31f79992bf2e990b9db7a622240c6776fc74aab498f01ef7204a9f3
-  languageName: node
-  linkType: hard
-
 "ember-modifier-manager-polyfill@npm:^1.2.0":
   version: 1.2.0
   resolution: "ember-modifier-manager-polyfill@npm:1.2.0"
@@ -9235,16 +9208,6 @@ __metadata:
   peerDependencies:
     ember-source: ">=3.28.0"
   checksum: bcf81ab9848237fa336aa944a928e6894ab9fa50cf1ee37c9bd2721cba4a12728c61f08a52cb635aa9cd625c6451af5704030318e4b5a0b47ed141fe86e6f408
-  languageName: node
-  linkType: hard
-
-"ember-wormhole@npm:^0.6.0":
-  version: 0.6.0
-  resolution: "ember-wormhole@npm:0.6.0"
-  dependencies:
-    ember-cli-babel: ^7.22.1
-    ember-cli-htmlbars: ^5.3.1
-  checksum: e49975babc0d9b79b18bca00916fe2bbb77253948e1074c291e0a2f22b97f049c68a6d5e4ddef703a69e7a390c56fa6e52c128848c75da7507af3f022debb3db
   languageName: node
   linkType: hard
 
@@ -18666,7 +18629,6 @@ __metadata:
     ember-exam: ~9.1.0
     ember-inflector: 4.0.2
     ember-load-initializers: ~3.0.1
-    ember-modal-dialog: ~4.1.5
     ember-modifier: ~4.2.0
     ember-power-select: ~8.7.0
     ember-qrcode-shim: ~0.4.0
