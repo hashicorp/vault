@@ -22,7 +22,9 @@ const ROLE_TYPES = [
     credentialType: 'iam_user',
     async fillOutForm(assert) {
       // nothing to fill out
-      assert.dom('[data-test-field]').exists({ count: 1 });
+      assert
+        .dom(GENERAL.helpText)
+        .hasText('For Vault roles of credential type iam_user, there are no inputs, just submit the form.');
     },
     expectedPayload: {},
   },
@@ -140,8 +142,8 @@ module('Acceptance | aws secret backend', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${path}/show/${roleName}`);
       await click(SES.generateLink);
       assert
-        .dom(GENERAL.inputByAttr('credentialType'))
-        .hasValue(scenario.credentialType, 'credentialType matches backing role');
+        .dom(`[data-test-credential-type=${scenario.credentialType}]`)
+        .exists(scenario.credentialType, 'credentialType matches backing role');
 
       // based on credentialType, fill out form
       await scenario.fillOutForm(assert);
@@ -182,7 +184,6 @@ module('Acceptance | aws secret backend', function (hooks) {
     assert
       .dom(GENERAL.inputByAttr('credentialType'))
       .hasValue('iam_user', 'credentialType defaults to first in list due to no role read permissions');
-
     await fillIn(GENERAL.inputByAttr('credentialType'), 'assumed_role');
 
     await click(GENERAL.submitButton);
