@@ -13,9 +13,9 @@ import (
 type (
 	// RebaseMerges is the strategy for handling merge commits in rebases
 	RebaseMerges = string
-	// RebaseMerges is the strategy for rebasing
+	// RebaseStrategy is the strategy for rebasing
 	RebaseStrategy = string
-	// RebaseMerges is the strategy for handling whitespace during rebasing
+	// WhitespaceAction is the strategy for handling whitespace during rebasing
 	WhitespaceAction = string
 )
 
