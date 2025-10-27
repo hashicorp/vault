@@ -13,7 +13,8 @@ func newGithubCheckCmd() *cobra.Command {
 		Short: "Github check commands",
 		Long:  "Github check commands",
 	}
-	checkCmd.AddCommand(newCheckGithubCommitStatusCmd())
+	checkCmd.AddCommand(newGithubCheckCommitStatusCmd())
+	checkCmd.AddCommand(newGithubCheckGoModDiffCmd())
 
 	return checkCmd
 }

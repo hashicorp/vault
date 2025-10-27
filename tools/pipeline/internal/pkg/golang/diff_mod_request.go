@@ -54,6 +54,9 @@ func (r *DiffModRes) ToTable(err error) (table.Writer, error) {
 			t.AppendHeader(table.Row{"error"})
 			t.AppendRow(table.Row{err.Error()})
 		}
+		t.SuppressEmptyColumns()
+		t.SuppressTrailingSpaces()
+
 		return t, err
 	}
 
