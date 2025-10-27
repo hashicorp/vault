@@ -12,7 +12,7 @@ import (
 type (
 	// MergeStrategy are the merge strategy to use
 	MergeStrategy = string
-	// MergeStrategy are merge strategy options
+	// MergeStrategyOption are merge strategy options
 	MergeStrategyOption = string
 )
 

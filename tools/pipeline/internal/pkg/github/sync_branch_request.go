@@ -58,7 +58,6 @@ func (r *SyncBranchReq) Run(
 		slog.String("to-repo", r.ToRepo),
 		slog.String("to-origin", r.ToOrigin),
 		slog.String("to-branch", r.ToBranch),
-		slog.String("to-owner", r.ToOwner),
 		slog.String("repo-dir", r.RepoDir),
 	), "synchronizing branches")
 
@@ -152,7 +151,6 @@ func (r *SyncBranchReq) Run(
 // request. It is always recommended that additional fitlers be given to reduce the response size
 // and not exhaust API limits.
 func (r *SyncBranchReq) Validate(ctx context.Context) error {
-	// TODO
 	if r == nil {
 		return errors.New("failed to initialize request")
 	}

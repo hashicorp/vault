@@ -14,8 +14,8 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-// CheckCommitStatusReq is a request to list workflows runs. The fields represent
-// various criteria we can use to filter.
+// CheckCommitStatusReq is a request to check commit statuses for an expected
+// state, context, and/or creator.
 type CheckCommitStatusReq struct {
 	Owner   string
 	Repo    string
@@ -35,6 +35,7 @@ type CheckCommitStatusRes struct {
 	Statuses        []*CheckCommitStatus `json:"statuses,omitempty"`
 }
 
+// CheckCommitStatus is an instance of one commit status.
 type CheckCommitStatus struct {
 	Status       *libgithub.RepoStatus `json:"statuses,omitempty"`
 	CheckSuccess bool                  `json:"success,omitempty"`
@@ -51,8 +52,7 @@ func (r *CheckCommitStatusRes) String() string {
 	return b.String()
 }
 
-// Run runs the request to gather all instances of the workflow that match
-// our filter criteria.
+// Run runs the request to check the commit statuses of a Pull Request.
 func (r *CheckCommitStatusReq) Run(ctx context.Context, client *libgithub.Client) (*CheckCommitStatusRes, error) {
 	var err error
 	res := &CheckCommitStatusRes{
@@ -102,9 +102,8 @@ func (r *CheckCommitStatusReq) Run(ctx context.Context, client *libgithub.Client
 	return res, nil
 }
 
-// validate ensures that we've been given the minimum filter arguments necessary to complete a
-// request. It is always recommended that additional fitlers be given to reduce the response size
-// and not exhaust API limits.
+// validate ensures that we've been given the arguments necessary to complete a
+// request.
 func (r *CheckCommitStatusReq) validate() error {
 	if r == nil {
 		return errors.New("failed to initialize request")
