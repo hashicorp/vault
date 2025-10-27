@@ -12,7 +12,7 @@ import (
 type (
 	// IgnoredMode determines how to handle ignored files
 	IgnoredMode = string
-	// IgnoredMode determines how to handle changes to submodules
+	// IgnoreSubmodulesWhen determines how to handle changes to submodules
 	IgnoreSubmodulesWhen = string
 )
 
