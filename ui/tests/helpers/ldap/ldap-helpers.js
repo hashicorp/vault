@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -28,7 +28,7 @@ export const generateBreadcrumbs = (backend, childRoute) => {
   return breadcrumbs;
 };
 
-const baseURL = (backend) => `/vault/secrets/${backend}/ldap/`;
+const baseURL = (backend) => `/vault/secrets-engines/${backend}/ldap/`;
 const stripLeadingSlash = (uri) => (uri.charAt(0) === '/' ? uri.slice(1) : uri);
 
 export const isURL = (uri, backend = 'ldap-test') => {

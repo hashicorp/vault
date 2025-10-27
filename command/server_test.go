@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 //go:build !race && !hsm
@@ -40,12 +40,6 @@ type Modifier func(string) string
 func regexReplacer(re, repl string) Modifier {
 	return func(s string) string {
 		return regexp.MustCompile(re).ReplaceAllString(s, repl)
-	}
-}
-
-func init() {
-	if signed := os.Getenv("VAULT_LICENSE_CI"); signed != "" {
-		os.Setenv(EnvVaultLicense, signed)
 	}
 }
 

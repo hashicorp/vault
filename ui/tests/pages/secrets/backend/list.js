@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -16,8 +16,8 @@ import {
 import { getter } from 'ember-cli-page-object/macros';
 
 export default create({
-  visit: visitable('/vault/secrets/:backend/list/:id'),
-  visitRoot: visitable('/vault/secrets/:backend/list'),
+  visit: visitable('/vault/secrets-engines/:backend/list/:id'),
+  visitRoot: visitable('/vault/secrets-engines/:backend/list'),
   configure: clickable('[data-test-secret-backend-configure]'),
   configureIsPresent: isPresent('[data-test-secret-backend-configure]'),
   tabs: collection('[data-test-secret-list-tab]'),

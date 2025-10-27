@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -66,11 +66,13 @@ export default class MfaForm extends Component<Args> {
     this.checkStateAndValidate();
 
     // Filter for constraints that have only one MFA method and it supports self-enrollment
-    const filteredConstraints = this.constraints.filter((c) => c.selfEnrollMethod && c.methods.length === 1);
+    const filteredConstraints = this.constraints.filter(
+      (c) => c.hasSelfEnrollMethods && c.methods.length === 1
+    );
     // If there is only one then fetch the QR code because self-enrolling is unavoidable.
     if (filteredConstraints.length === 1 && filteredConstraints[0]) {
       const [constraint] = filteredConstraints;
-      const method = constraint.selfEnrollMethod;
+      const method = constraint.selfEnrollMethods[0];
       if (method) this.fetchQrCode.perform(method.id, constraint);
     }
   }
@@ -86,7 +88,7 @@ export default class MfaForm extends Component<Args> {
   get needsToChoose() {
     // If any self-enroll constraints are missing selections
     const missingSelfEnrollSelection = this.constraints
-      .filter((c) => !!c.selfEnrollMethod)
+      .filter((c) => c.hasSelfEnrollMethods)
       .some((c) => !c.selectedMethod);
     // If there is only one constraint but it has multiple methods
     const missingSelection = this.constraints.length === 1 && !this.constraints.some((c) => c.selectedMethod);
@@ -119,7 +121,7 @@ export default class MfaForm extends Component<Args> {
       });
 
       // calls loginAndTransition in auth.js controller
-      this.args.loginAndTransition.perform(response);
+      await this.args.loginAndTransition.unlinked().perform(response);
     } catch (error) {
       // Reset enrolled methods if there's an error
       this.enrolledMethods = new Set<string>();

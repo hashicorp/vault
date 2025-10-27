@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -48,6 +48,6 @@ func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
 		// These prevent us from random sleep guessing...
 		startedCh:         make(chan struct{}, 5),
 		reloadedCh:        make(chan struct{}, 5),
-		licenseReloadedCh: make(chan error),
+		licenseReloadedCh: make(chan error, 1),
 	}
 }

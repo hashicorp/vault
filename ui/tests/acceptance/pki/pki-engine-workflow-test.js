@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -62,7 +62,7 @@ module('Acceptance | pki workflow', function (hooks) {
     test('empty state messages are correct when PKI not configured', async function (assert) {
       assert.expect(21);
       const assertEmptyState = (assert, resource) => {
-        assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
+        assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/${resource}`);
         assert
           .dom(GENERAL.emptyStateTitle)
           .hasText(
@@ -78,8 +78,8 @@ module('Acceptance | pki workflow', function (hooks) {
           );
       };
       await login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
 
       await click(GENERAL.secretTab('Roles'));
       assertEmptyState(assert, 'roles');
@@ -124,52 +124,61 @@ module('Acceptance | pki workflow', function (hooks) {
 
     test('shows correct items if user has all permissions', async function (assert) {
       await login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
       assert.dom(GENERAL.secretTab('Roles')).exists('Roles tab is present');
       await click(GENERAL.secretTab('Roles'));
       assert.dom(PKI_ROLE_DETAILS.createRoleLink).exists({ count: 1 }, 'Create role link is rendered');
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/roles`);
       assert.dom('.linked-block').exists({ count: 1 }, 'One role is in list');
       await click('.linked-block');
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/details`
+      );
 
       assert.dom(PKI_ROLE_DETAILS.generateCertLink).exists('Generate cert link is shown');
       await click(PKI_ROLE_DETAILS.generateCertLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/generate`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/generate`
+      );
 
       // Go back to details and test all the links
-      await visit(`/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(PKI_ROLE_DETAILS.signCertLink).exists('Sign cert link is shown');
       await click(PKI_ROLE_DETAILS.signCertLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/sign`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/sign`);
 
-      await visit(`/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(PKI_ROLE_DETAILS.editRoleLink).exists('Edit link is shown');
       await click(PKI_ROLE_DETAILS.editRoleLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/edit`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/edit`);
 
-      await visit(`/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(PKI_ROLE_DETAILS.deleteRoleButton).exists('Delete role button is shown');
       await click(PKI_ROLE_DETAILS.deleteRoleButton);
       await click(GENERAL.confirmButton);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/roles`,
+        `/vault/secrets-engines/${this.mountPath}/pki/roles`,
         'redirects to roles list after deletion'
       );
     });
 
     test('it does not show toolbar items the user does not have permission to see', async function (assert) {
       await login(this.pkiRoleReader);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       assert.dom(GENERAL.secretTab('Roles')).exists('Roles tab is present');
       await click(GENERAL.secretTab('Roles'));
       assert.dom(PKI_ROLE_DETAILS.createRoleLink).exists({ count: 1 }, 'Create role link is rendered');
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/roles`);
       assert.dom('.linked-block').exists({ count: 1 }, 'One role is in list');
       await click('.linked-block');
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/details`
+      );
       assert.dom(PKI_ROLE_DETAILS.deleteRoleButton).doesNotExist('Delete role button is not shown');
       assert.dom(PKI_ROLE_DETAILS.generateCertLink).doesNotExist('Generate cert link is not shown');
       assert.dom(PKI_ROLE_DETAILS.signCertLink).doesNotExist('Sign cert link is not shown');
@@ -178,14 +187,17 @@ module('Acceptance | pki workflow', function (hooks) {
 
     test('it shows correct toolbar items for the user policy', async function (assert) {
       await login(this.pkiRoleEditor);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       assert.dom(GENERAL.secretTab('Roles')).exists('Roles tab is present');
       await click(GENERAL.secretTab('Roles'));
       assert.dom(PKI_ROLE_DETAILS.createRoleLink).exists({ count: 1 }, 'Create role link is rendered');
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/roles`);
       assert.dom('.linked-block').exists({ count: 1 }, 'One role is in list');
       await click('.linked-block');
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/details`
+      );
       assert.dom(PKI_ROLE_DETAILS.deleteRoleButton).doesNotExist('Delete role button is not shown');
       assert.dom(PKI_ROLE_DETAILS.generateCertLink).exists('Generate cert link is shown');
       assert.dom(PKI_ROLE_DETAILS.signCertLink).exists('Sign cert link is shown');
@@ -193,25 +205,25 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(PKI_ROLE_DETAILS.editRoleLink);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/roles/some-role/edit`,
+        `/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/edit`,
         'Links to edit view'
       );
       await click(GENERAL.cancelButton);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`,
+        `/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/details`,
         'Cancel from edit goes to details'
       );
       await click(PKI_ROLE_DETAILS.generateCertLink);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/roles/some-role/generate`,
+        `/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/generate`,
         'Generate cert button goes to generate page'
       );
       await click(GENERAL.cancelButton);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`,
+        `/vault/secrets-engines/${this.mountPath}/pki/roles/some-role/details`,
         'Cancel from generate goes to details'
       );
     });
@@ -219,13 +231,13 @@ module('Acceptance | pki workflow', function (hooks) {
     test('create role happy path', async function (assert) {
       const roleName = 'another-role';
       await login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
       assert.dom(GENERAL.emptyStateTitle).doesNotExist();
       await click(GENERAL.secretTab('Roles'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/roles`);
       await click(PKI_ROLE_DETAILS.createRoleLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/create`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/roles/create`);
       assert.dom(GENERAL.breadcrumbs).exists({ count: 1 }, 'breadcrumbs are rendered');
       assert.dom(GENERAL.breadcrumb).exists({ count: 4 }, 'Shows 4 breadcrumbs');
       assert.dom(GENERAL.title).hasText('Create a PKI Role');
@@ -237,7 +249,10 @@ module('Acceptance | pki workflow', function (hooks) {
         `Successfully created the role ${roleName}.`,
         'renders success flash upon creation'
       );
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/${roleName}/details`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${this.mountPath}/pki/roles/${roleName}/details`
+      );
       assert.dom(GENERAL.breadcrumb).exists({ count: 4 }, 'Shows 4 breadcrumbs');
       assert.dom(GENERAL.title).hasText(`PKI Role ${roleName}`);
     });
@@ -259,55 +274,55 @@ module('Acceptance | pki workflow', function (hooks) {
 
     test('shows correct items if user has all permissions', async function (assert) {
       await login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Keys'));
       // index page
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys`);
       assert
         .dom(PKI_KEYS.importKey)
         .hasAttribute(
           'href',
-          `/ui/vault/secrets/${this.mountPath}/pki/keys/import`,
+          `/ui/vault/secrets-engines/${this.mountPath}/pki/keys/import`,
           'import link renders with correct url'
         );
       let keyId = find(PKI_KEYS.keyId).innerText;
       assert.dom('.linked-block').exists({ count: 1 }, 'One key is in list');
       await click('.linked-block');
       // details page
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/details`);
       assert.dom(GENERAL.button('Download')).doesNotExist('does not download button for private key');
 
       // edit page
       await click(PKI_KEYS.keyEditLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/edit`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/edit`);
       await click(GENERAL.cancelButton);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`,
+        `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/details`,
         'navigates back to details on cancel'
       );
-      await visit(`/vault/secrets/${this.mountPath}/pki/keys/${keyId}/edit`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/edit`);
       await fillIn(GENERAL.inputByAttr('keyName'), 'test-key');
       await click(GENERAL.submitButton);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`,
+        `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/details`,
         'navigates to details after save'
       );
       assert.dom(GENERAL.infoRowValue('Key name')).hasText('test-key', 'updates key name');
 
       // key generate and delete navigation
-      await visit(`/vault/secrets/${this.mountPath}/pki/keys`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/keys`);
       await click(PKI_KEYS.generateKey);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/create`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/create`);
       await fillIn(GENERAL.inputByAttr('type'), 'exported'); // exported keys generated private_key data
       await fillIn(GENERAL.inputByAttr('keyType'), 'rsa');
       await click(GENERAL.submitButton);
       keyId = find(GENERAL.infoRowValue('Key ID')).textContent?.trim();
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/keys/create`,
+        `/vault/secrets-engines/${this.mountPath}/pki/keys/create`,
         'it does not transition to details private_key data exists'
       );
 
@@ -322,16 +337,16 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(GENERAL.confirmButton);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/keys`,
+        `/vault/secrets-engines/${this.mountPath}/pki/keys`,
         'navigates back to key list view on delete'
       );
     });
 
     test('it hides correct actions for user with read policy', async function (assert) {
       await login(this.pkiKeyReader);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Keys'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys`);
       await isSettled();
       assert.dom(PKI_KEYS.importKey).doesNotExist();
       assert.dom(PKI_KEYS.generateKey).doesNotExist();
@@ -340,16 +355,16 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(GENERAL.menuTrigger);
       assert.dom(PKI_KEYS.popupMenuEdit).doesNotExist('popup menu edit link is not shown');
       await click(PKI_KEYS.popupMenuDetails);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/details`);
       assert.dom(PKI_KEYS.keyDeleteButton).doesNotExist('Delete key button is not shown');
       assert.dom(PKI_KEYS.keyEditLink).doesNotExist('Edit key button does not render');
     });
 
     test('it shows correct toolbar items for the user with update policy', async function (assert) {
       await login(this.pkiKeyEditor);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Keys'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys`);
       await isSettled();
       assert.dom(PKI_KEYS.importKey).exists('import action exists');
       assert.dom(PKI_KEYS.generateKey).exists('generate action exists');
@@ -360,10 +375,10 @@ module('Acceptance | pki workflow', function (hooks) {
       await click('.linked-block');
       assert.dom(PKI_KEYS.keyDeleteButton).doesNotExist('Delete key button is not shown');
       await click(PKI_KEYS.keyEditLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/edit`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/edit`);
       assert.dom(GENERAL.title).hasText('Edit Key');
       await click(GENERAL.cancelButton);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/details`);
     });
   });
 
@@ -380,10 +395,10 @@ module('Acceptance | pki workflow', function (hooks) {
     });
     test('lists the correct issuer metadata info', async function (assert) {
       await login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       assert.dom(GENERAL.secretTab('Issuers')).exists();
       await click(GENERAL.secretTab('Issuers'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/issuers`);
       assert.dom('.linked-block').exists({ count: 1 });
       assert.dom('[data-test-is-root-tag="0"]').hasText('root');
       assert.dom('[data-test-serial-number="0"]').exists({ count: 1 });
@@ -391,7 +406,7 @@ module('Acceptance | pki workflow', function (hooks) {
     });
     test('lists the correct issuer metadata info when user has only read permission', async function (assert) {
       await login();
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
       await click(GENERAL.menuTrigger);
       await click(PKI_ISSUER_LIST.issuerPopupDetails);
@@ -408,7 +423,7 @@ module('Acceptance | pki workflow', function (hooks) {
         tokenWithPolicyCmd(`pki-issuer-denied-policy-${this.mountPath}`, pki_issuer_denied_policy)
       );
       await login(this.token);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
       assert.dom('[data-test-serial-number="0"]').exists({ count: 1 }, 'displays serial number tag');
       assert.dom('[data-test-common-name="0"]').doesNotExist('does not display cert common name tag');
@@ -417,15 +432,15 @@ module('Acceptance | pki workflow', function (hooks) {
     test('details view renders correct number of info items', async function (assert) {
       assert.expect(13);
       await login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       assert.dom(GENERAL.secretTab('Issuers')).exists('Issuers tab is present');
       await click(GENERAL.secretTab('Issuers'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/issuers`);
       assert.dom('.linked-block').exists({ count: 1 }, 'One issuer is in list');
       await click('.linked-block');
       assert.ok(
-        currentURL().match(`/vault/secrets/${this.mountPath}/pki/issuers/.+/details`),
-        `/vault/secrets/${this.mountPath}/pki/issuers/my-issuer/details`
+        currentURL().match(`/vault/secrets-engines/${this.mountPath}/pki/issuers/.+/details`),
+        `/vault/secrets-engines/${this.mountPath}/pki/issuers/my-issuer/details`
       );
       assert.dom(GENERAL.title).hasText('View Issuer Certificate');
 
@@ -444,7 +459,7 @@ module('Acceptance | pki workflow', function (hooks) {
 
     test('toolbar links navigate to expected routes', async function (assert) {
       await login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
       await click(GENERAL.menuTrigger);
       await click(PKI_ISSUER_LIST.issuerPopupDetails);
@@ -452,24 +467,27 @@ module('Acceptance | pki workflow', function (hooks) {
       const issuerId = find(GENERAL.infoRowValue('Issuer ID')).innerText;
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/details`,
+        `/vault/secrets-engines/${this.mountPath}/pki/issuers/${issuerId}/details`,
         'it navigates to details route'
       );
       assert
         .dom(PKI_ISSUER_DETAILS.crossSign)
-        .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/cross-sign`);
+        .hasAttribute(
+          'href',
+          `/ui/vault/secrets-engines/${this.mountPath}/pki/issuers/${issuerId}/cross-sign`
+        );
       assert
         .dom(PKI_ISSUER_DETAILS.signIntermediate)
-        .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/sign`);
+        .hasAttribute('href', `/ui/vault/secrets-engines/${this.mountPath}/pki/issuers/${issuerId}/sign`);
       assert
         .dom(PKI_ISSUER_DETAILS.configure)
-        .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/edit`);
+        .hasAttribute('href', `/ui/vault/secrets-engines/${this.mountPath}/pki/issuers/${issuerId}/edit`);
       await click(PKI_ISSUER_DETAILS.rotateRoot);
       assert.dom(PKI_ISSUER_DETAILS.rotateModal).exists('rotate root modal opens');
       await click(PKI_ISSUER_DETAILS.rotateModalGenerate);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/rotate-root`,
+        `/vault/secrets-engines/${this.mountPath}/pki/issuers/${issuerId}/rotate-root`,
         'it navigates to root rotate form'
       );
       assert
@@ -485,7 +503,7 @@ module('Acceptance | pki workflow', function (hooks) {
     });
     test('it renders a warning banner when parent issuer has unsupported OIDs', async function (assert) {
       await login();
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       await click(GENERAL.textToggle);
       await fillIn(GENERAL.maskedInput, unsupportedPem);
@@ -495,7 +513,7 @@ module('Acceptance | pki workflow', function (hooks) {
 
       // navigating directly to route because the rotate button is not visible for non-root issuers
       // but we're just testing that route model was parsed and passed as expected
-      await visit(`/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/rotate-root`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/issuers/${issuerId}/rotate-root`);
       assert
         .dom('[data-test-parsing-warning]')
         .hasTextContaining(
@@ -527,7 +545,7 @@ module('Acceptance | pki workflow', function (hooks) {
 
     test('it updates config when user only has permission to some endpoints', async function (assert) {
       await login(this.mixedConfigCapabilities);
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration/edit`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/edit`);
       assert
         .dom(`${PKI_CONFIG_EDIT.configEditSection} [data-test-component="empty-state"]`)
         .hasText(
@@ -541,7 +559,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(`${PKI_CONFIG_EDIT.crlEditSection} [data-test-component="empty-state"]`).doesNotExist();
       await click(PKI_CONFIG_EDIT.crlToggleInput('expiry'));
       await click(PKI_CONFIG_EDIT.saveButton);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration`);
       assert
         .dom(GENERAL.infoRowValue('CRL building'))
         .hasText('Disabled', 'Successfully saves config with partial permission');

@@ -1,11 +1,11 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { find, render, waitUntil } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { addMinutes, subMinutes } from 'date-fns';
 
@@ -17,7 +17,6 @@ module('Integration | Component | token-expire-warning', function (hooks) {
     this.set('expirationDate', expirationDate);
 
     await render(hbs`<TokenExpireWarning @expirationDate={{this.expirationDate}}/>`);
-    await waitUntil(() => find('#modal-overlays'));
     assert.dom('[data-test-token-expired-banner]').includesText('Your auth token expired on');
   });
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -39,6 +39,7 @@ export default class SecretEngineList extends Component<Args> {
 
   @tracked secretEngineOptions: Array<string> | [] = [];
   @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
+  @tracked enginesToDisable: Array<SecretsEngineResource> | null = null;
 
   @tracked engineTypeFilters: Array<string> = [];
   @tracked engineVersionFilters: Array<string> = [];
@@ -47,6 +48,39 @@ export default class SecretEngineList extends Component<Args> {
   // search text for dropdown filters
   @tracked typeSearchText = '';
   @tracked versionSearchText = '';
+
+  @tracked selectedItems = Array<string>();
+
+  tableColumns = [
+    {
+      key: 'path',
+      label: 'Engine path',
+      isSortable: true,
+      width: '250px',
+      customTableItem: true,
+    },
+    {
+      key: 'accessor',
+      label: 'Accessor',
+      width: '175px',
+    },
+    {
+      key: 'description',
+      label: 'Description',
+      width: '300px',
+    },
+    {
+      key: 'running_plugin_version',
+      label: 'Version',
+      isSortable: true,
+      width: '150px',
+    },
+    {
+      key: 'popupMenu',
+      label: 'Action',
+      width: '75px',
+    },
+  ];
 
   get clusterName() {
     return this.version.clusterName;
@@ -196,18 +230,46 @@ export default class SecretEngineList extends Component<Args> {
     this.engineVersionFilters = [];
   }
 
-  @dropTask
-  *disableEngine(engine: SecretsEngineResource) {
+  @action
+  updateSelectedItems(tableData: { selectedRowsKeys: string[] }) {
+    this.selectedItems = tableData.selectedRowsKeys;
+  }
+
+  async disableSingleEngine(engine: SecretsEngineResource) {
     const { engineType, id, path } = engine;
     try {
-      yield this.api.sys.mountsDisableSecretsEngine(id);
+      await this.api.sys.mountsDisableSecretsEngine(id);
       this.flashMessages.success(`The ${engineType} Secrets Engine at ${path} has been disabled.`);
-      this.router.transitionTo('vault.cluster.secrets.backends');
     } catch (err) {
-      const { message } = yield this.api.parseError(err);
+      const { message } = await this.api.parseError(err);
       this.flashMessages.danger(
-        `There was an error disabling the ${engineType} Secrets Engines at ${path}: ${message}.`
+        `There was an error disabling the ${engineType} Secrets Engine at ${path}: ${message}.`
       );
+    }
+  }
+
+  @dropTask
+  *disableMultipleEngines(enginePathsToDisable: Array<string>) {
+    const enginesToDisable = this.displayableBackends.filter((engine: SecretsEngineResource) =>
+      enginePathsToDisable.includes(engine.path)
+    );
+    try {
+      for (const engine of enginesToDisable) {
+        yield this.disableSingleEngine(engine);
+      }
+
+      // Navigate once all operations are complete
+      this.router.transitionTo('vault.cluster.secrets.backends');
+    } finally {
+      this.enginesToDisable = null;
+    }
+  }
+
+  @dropTask
+  *disableEngine(engine: SecretsEngineResource) {
+    try {
+      yield this.disableSingleEngine(engine);
+      this.router.transitionTo('vault.cluster.secrets.backends');
     } finally {
       this.engineToDisable = undefined;
     }

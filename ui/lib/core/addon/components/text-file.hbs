@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -7,17 +7,15 @@
   <label id="text-file-input-{{this.elementId}}" class="sr-only">{{or @label "File"}}</label>
 {{else}}
   <div class="level is-mobile">
-    <div class="level-left">
-      <label id="text-file-input-{{this.elementId}}" class="has-text-weight-semibold" data-test-text-file-label>
+    <div class="level-left label-row">
+      <label id="text-file-input-{{this.elementId}}" data-test-text-file-label>
         {{or @label "File"}}
-        {{#if @helpText}}
-          <InfoTooltip>
-            <span data-test-help-text>
-              {{@helpText}}
-            </span>
-          </InfoTooltip>
-        {{/if}}
       </label>
+      {{#if @helpText}}
+        <Hds::TooltipButton @text={{@helpText}} aria-label="More information" data-test-tooltip="text-file">
+          <Hds::Icon @name="info" />
+        </Hds::TooltipButton>
+      {{/if}}
     </div>
     <div class="level-right">
       <Input

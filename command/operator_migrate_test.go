@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -15,7 +15,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/cli"
@@ -28,10 +27,6 @@ import (
 )
 
 const trailing_slash_key = "trailing_slash/"
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 func TestMigration(t *testing.T) {
 	handlers := newVaultHandlers()

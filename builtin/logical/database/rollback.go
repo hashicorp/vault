@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package database
@@ -22,8 +22,32 @@ const rotateRootWALKey = "rotateRootWALKey"
 type rotateRootCredentialsWAL struct {
 	ConnectionName string
 	UserName       string
-	NewPassword    string
-	OldPassword    string
+
+	NewPassword string
+	OldPassword string
+
+	NewPublicKey  string
+	NewPrivateKey string
+	OldPrivateKey string
+}
+
+func NewRotateRootCredentialsWALPasswordEntry(connectionName, userName, newPassword, oldPassword string) *rotateRootCredentialsWAL {
+	return &rotateRootCredentialsWAL{
+		ConnectionName: connectionName,
+		UserName:       userName,
+		NewPassword:    newPassword,
+		OldPassword:    oldPassword,
+	}
+}
+
+func NewRotateRootCredentialsWALPrivateKeyEntry(connectionName, userName, newPublicKey, newPrivateKey, oldPrivateKey string) *rotateRootCredentialsWAL {
+	return &rotateRootCredentialsWAL{
+		ConnectionName: connectionName,
+		UserName:       userName,
+		NewPublicKey:   newPublicKey,
+		NewPrivateKey:  newPrivateKey,
+		OldPrivateKey:  oldPrivateKey,
+	}
 }
 
 // walRollback handles WAL entries that result from partial failures

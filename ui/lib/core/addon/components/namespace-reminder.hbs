@@ -1,15 +1,15 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 {{#if this.showMessage}}
   {{#if (has-block)}}
-    <p class="namespace-reminder" id="namespace-reminder">
+    <p class="has-top-bottom-margin-xxs" id="namespace-reminder">
       {{yield (hash namespace=this.namespace)}}
     </p>
   {{else}}
-    <p class="namespace-reminder" id="namespace-reminder">
+    <p class="has-top-bottom-margin-xxs" id="namespace-reminder">
       This
       {{@noun}}
       will be

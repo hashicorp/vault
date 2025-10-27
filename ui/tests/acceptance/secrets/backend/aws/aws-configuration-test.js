@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -55,7 +55,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     test('it should prompt configuration after mounting the aws engine', async function (assert) {
       const path = `aws-${this.uid}`;
       // in this test go through the full mount process. Bypass this step in later tests.
-      await visit('/vault/secrets/mounts');
+      await visit('/vault/secrets-engines/enable');
       await mountBackend('aws', path);
       await click(SES.configTab);
       assert.dom(GENERAL.emptyStateTitle).hasText('AWS not configured');
@@ -69,7 +69,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await enablePage.enable('aws', path);
       await click(SES.configTab);
       await click(SES.configure);
-      assert.strictEqual(currentURL(), `/vault/secrets/${path}/configuration/edit`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${path}/configuration/edit`);
       assert.dom(SES.configureTitle('aws')).hasText('Configure AWS');
       assert.dom(SES.configureForm).exists('it lands on the configuration form.');
       assert
@@ -277,7 +277,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       );
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${path}/configuration`,
+        `/vault/secrets-engines/${path}/configuration`,
         'the form transitioned as expected to the details page'
       );
       // cleanup
@@ -355,7 +355,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         );
         assert.strictEqual(
           currentURL(),
-          `/vault/secrets/${path}/configuration`,
+          `/vault/secrets-engines/${path}/configuration`,
           'lease configuration failed to save but the component transitioned as expected'
         );
         // cleanup
@@ -378,7 +378,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         assert.dom(GENERAL.messageError).hasText('Error welp, that did not work!', 'API error shows on form');
         assert.strictEqual(
           currentURL(),
-          `/vault/secrets/${path}/configuration/edit`,
+          `/vault/secrets-engines/${path}/configuration/edit`,
           'the form did not transition because the save failed.'
         );
         // cleanup

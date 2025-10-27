@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -39,7 +39,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     localStorage.clear();
   });
   test('redirect to a route after authentication', async function (assert) {
-    const url = '/vault/secrets/secret/kv/create';
+    const url = '/vault/secrets-engines/secret/kv/create';
     await visit(url);
 
     assert.ok(
@@ -50,7 +50,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     // the login method on this page does another visit call that we don't want here
     await fillIn(GENERAL.inputByAttr('token'), 'root');
     await click(GENERAL.submitButton);
-    await waitUntil(() => currentURL().includes('vault/secrets'));
+    await waitUntil(() => currentURL().includes('vault/secrets-engines'));
     assert.strictEqual(currentURL(), url, 'navigates to the redirect_to url after auth');
   });
 
@@ -61,7 +61,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
   });
 
   test('redirect to a route after authentication with a query param', async function (assert) {
-    const url = '/vault/secrets/secret/kv/create?initialKey=hello';
+    const url = '/vault/secrets-engines/secret/kv/create?initialKey=hello';
     await visit(url);
     assert.ok(
       currentURL().includes(`?redirect_to=${encodeURIComponent(url)}`),
@@ -70,16 +70,16 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     await fillIn(AUTH_FORM.selectMethod, 'token');
     await fillIn(GENERAL.inputByAttr('token'), 'root');
     await click(GENERAL.submitButton);
-    await waitUntil(() => currentURL().includes('vault/secrets'));
+    await waitUntil(() => currentURL().includes('vault/secrets-engines'));
     assert.strictEqual(currentURL(), url, 'navigates to the redirect_to with the query param after auth');
   });
 
   test('redirect to logout with wrapped token authenticates you', async function (assert) {
     const wrappedToken = await setupWrapping();
-    const url = '/vault/secrets/cubbyhole/create';
+    const url = '/vault/secrets-engines/cubbyhole/create';
 
     await visit(`/vault/logout?redirect_to=${url}&wrapped_token=${wrappedToken}`);
-    await waitUntil(() => currentURL().includes('vault/secrets'));
+    await waitUntil(() => currentURL().includes('vault/secrets-engines'));
     assert.strictEqual(currentURL(), url, 'authenticates then navigates to the redirect_to url after auth');
   });
 });

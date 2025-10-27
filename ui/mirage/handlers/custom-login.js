@@ -1,7 +1,9 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
+
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default function (server) {
   // LIST, READ and DELETE requests for default-auth (login customizations)
@@ -12,9 +14,8 @@ export default function (server) {
       if (records) {
         const keys = records.map(({ name }) => name);
         const key_info = records.reduce((obj, record) => {
-          const { name, namespace, disable_inheritance } = record;
-          // TBD, but likely only limited information will be returned about the record from the LIST request
-          obj[name] = { namespace, disable_inheritance };
+          const { name, namespace_path, disable_inheritance } = record;
+          obj[name] = { namespace_path, disable_inheritance, name };
           return obj;
         }, {});
         return {
@@ -47,20 +48,21 @@ export default function (server) {
   // UNAUTHENTICATED READ ONLY for login form display logic
   server.get('sys/internal/ui/default-auth-methods', (schema, req) => {
     const nsHeader = req.requestHeaders['X-Vault-Namespace'];
-    // if no namespace is passed, assume root
-    const findRule = (ns = '') => schema.db['loginRules'].findBy({ namespace_path: ns });
-
-    let rule = findRule(nsHeader || '');
+    const findRule = (ns) => schema.db['loginRules'].findBy({ namespace_path: ns });
+    // the namespace header shouldn't have a trailing slash, but sanitize just in case
+    //  if no namespace is passed then it's the root namespace (which does not have a trailing slash)
+    const nsPath = sanitizePath(nsHeader) ? `${nsHeader}/` : 'root';
+    let rule = findRule(nsPath);
 
     if (!rule && nsHeader?.includes('/')) {
-      // for simplicity, tests only nest namespaces one level, e.g. "test-ns/child"
+      // for simplicity, tests only support namespaces nested one level, e.g. "test-ns/child"
       const [parent] = nsHeader.split('/');
-      const parentRule = findRule(parent);
+      const parentRule = findRule(`${parent}/`);
       rule = parentRule?.disable_inheritance ? null : parentRule;
     }
 
     // Fallback to root namespace settings to simulate inheritance if no rule exists or parent has disabled inheritance
-    rule = rule || findRule();
+    rule = rule || findRule('root');
 
     const { default_auth_type, backup_auth_types, disable_inheritance } = rule || {};
     return { data: { default_auth_type, backup_auth_types, disable_inheritance } };

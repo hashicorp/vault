@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -25,7 +25,8 @@ export default class ApplicationRoute extends Route {
   @action
   error(error, transition) {
     const controlGroup = this.controlGroup;
-    if (error instanceof ControlGroupError) {
+    // support both types of control group errors until Ember Data is removed
+    if (error instanceof ControlGroupError || error.isControlGroupError) {
       return controlGroup.handleError(error);
     }
     if (error.path === '/v1/sys/wrapping/unwrap') {

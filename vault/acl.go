@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -14,6 +14,7 @@ import (
 
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -818,26 +819,42 @@ func valueInAllowedParameterList(v interface{}, list []interface{}, useLegacyMat
 		return true
 	}
 
-	var oneByOneMissingMatch bool
-	if vSlice, ok := v.([]interface{}); ok && !useLegacyMatching {
+	if valueInParameterList(v, list) {
+		return true
+	}
+
+	if useLegacyMatching {
+		// prevent execution of the new behaviour if we're in legacy mode
+		return false
+	}
+
+	if vSlice, ok := v.([]interface{}); ok {
 		// when not running in legacy mode, we run a relaxed check for slices that verifies if all
 		// elements in the slice exist in the allowed list, as opposed to checking if the allowed
 		// list contains a single element that matches the entire slice (but this whole-slice match
 		// is still supported)
 		for _, v := range vSlice {
 			if !valueInParameterList(v, list) {
-				oneByOneMissingMatch = true
-				break
+				return false
 			}
 		}
 
-		if !oneByOneMissingMatch {
-			// no missing match means all elements in the slice were found in the allowed list, so allow it
+		return true
+	} else if vString, ok := v.(string); ok {
+		// At this point we don't know if the field is of framework.TypeCommaStringSlice, but we assume it is
+		// because failing to match a value because of it being in a comma-separated string is way more likely
+		// and worse than accidentally matching a substring of a string value.
+		if vSlice, err := parseutil.ParseCommaStringSlice(vString); err == nil {
+			for _, v := range vSlice {
+				if !valueInParameterList(v, list) {
+					return false
+				}
+			}
 			return true
 		}
 	}
 
-	return valueInParameterList(v, list)
+	return false
 }
 
 func valueInDeniedParameterList(v interface{}, list []interface{}, useLegacyMatching bool) bool {
@@ -846,17 +863,36 @@ func valueInDeniedParameterList(v interface{}, list []interface{}, useLegacyMatc
 		return true
 	}
 
-	if vSlice, ok := v.([]interface{}); ok && !useLegacyMatching {
-		// The new behaviour is that if any value in the slice is in the denied list, we deny.
-		// Always execute it in order to log a warning in case we find a breaking change while using the legacy mode.
+	if valueInParameterList(v, list) {
+		return true
+	}
+
+	if useLegacyMatching {
+		// prevent execution of the new behaviour if we're in legacy mode
+		return false
+	}
+
+	// The new behaviour is that if any value in the slice is in the denied list, we deny.
+	if vSlice, ok := v.([]interface{}); ok {
 		for _, v := range vSlice {
 			if valueInParameterList(v, list) {
 				return true
 			}
 		}
+	} else if vString, ok := v.(string); ok {
+		// At this point we don't know if the field is of framework.TypeCommaStringSlice, but we assume it is
+		// because failing to match a value because of it being in a comma-separated string is way more likely
+		// and worse than accidentally matching a substring of a string value.
+		if vSlice, err := parseutil.ParseCommaStringSlice(vString); err == nil {
+			for _, v := range vSlice {
+				if valueInParameterList(v, list) {
+					return true
+				}
+			}
+		}
 	}
 
-	return valueInParameterList(v, list)
+	return false
 }
 
 func valueInParameterList(v interface{}, list []interface{}) bool {

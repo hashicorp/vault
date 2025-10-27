@@ -1,9 +1,9 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { settled, click, visit } from '@ember/test-helpers';
+import { settled, click, visit, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -41,7 +41,7 @@ module('Acceptance | cluster', function (hooks) {
     assert.dom('[data-test-sidebar-nav-link="Policies"]').doesNotExist();
   });
 
-  test('it hides mfa setup if user has not entityId (ex: is a root user)', async function (assert) {
+  test('it hides mfa setup if user does not have entityId (ex: is a root user)', async function (assert) {
     const username = 'end-user';
     const password = 'mypassword';
     const path = `cluster-userpass-${uuidv4()}`;
@@ -76,20 +76,44 @@ module('Acceptance | cluster', function (hooks) {
   });
 
   test('shows error banner if resultant-acl check fails', async function (assert) {
+    const version = this.owner.lookup('service:version');
     const login_only = `
       path "auth/token/lookup-self" {
         capabilities = ["read"]
       },
     `;
+    // note: the default policy is attached to a user unless you add the no_default_policy=true flag
+    // you can confirm this by running `vault token lookup` on the generated token
     const noDefaultPolicyUser = await runCmd([
       `write sys/policies/acl/login-only policy=${btoa(login_only)}`,
       `write -field=client_token auth/token/create no_default_policy=true policies="login-only"`,
     ]);
 
-    assert.dom('[data-test-resultant-acl-banner]').doesNotExist('Resultant ACL banner does not show as root');
+    assert
+      .dom('[data-test-resultant-acl-banner]')
+      .doesNotExist('Resultant ACL banner does not show as root user with access to everything');
+
     await logout();
-    assert.dom('[data-test-resultant-acl-banner]').doesNotExist('Does not show on login page');
+    assert
+      .dom('[data-test-resultant-acl-banner]')
+      .doesNotExist('Resultant ACL banner does not show on login page');
+
     await login(noDefaultPolicyUser);
-    assert.dom('[data-test-resultant-acl-banner]').includesText('Resultant ACL check failed');
+    const expectedText = version.isEnterprise
+      ? "Resultant ACL check failed Links might be shown that you don't have access to. Contact your administrator to update your policy. Log into root namespace"
+      : "Resultant ACL check failed Links might be shown that you don't have access to. Contact your administrator to update your policy.";
+
+    assert
+      .dom('[data-test-resultant-acl-banner]')
+      .includesText(expectedText, 'Resultant ACL banner shows appropriate message for OSS/Enterprise');
+  });
+
+  test('redirects to secret-engines from legacy /secrets path', async function (assert) {
+    await visit('/vault/secrets');
+    assert.strictEqual(
+      currentURL(),
+      '/vault/secrets-engines',
+      'Navigating to /secrets redirects to /secrets-engines'
+    );
   });
 });

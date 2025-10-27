@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -91,7 +91,7 @@ type CreateBackportReq struct {
 // NewCreateBackportPRReq()
 type NewCreateBackportReqOpt func(*CreateBackportReq)
 
-// CreateBackportPRReq is a respose of creating a backport pull request
+// CreateBackportRes is a respose of creating a backport pull request
 type CreateBackportRes struct {
 	OriginPullRequest *libgithub.PullRequest            `json:"origin_pull_request,omitempty"`
 	Branch            string                            `json:"branch,omitempty"`

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -76,8 +76,17 @@ module('Integration | Component | SecretEngine::Page::PluginSettings', function 
   test('it shows empty state when the engine is not configurable', async function (assert) {
     assert.expect(2);
     this.model = this.models['keymgmt'];
+    this.breadcrumbs = [
+      { label: 'Secrets', route: 'vault.cluster.secrets' },
+      {
+        label: this.model.secretsEngine.id,
+        route: 'vault.cluster.secrets.backend.list-root',
+        model: this.model.secretsEngine.id,
+      },
+      { label: 'Configuration' },
+    ];
     await render(hbs`
-      <SecretEngine::Page::PluginSettings @model={{this.model}} />
+      <SecretEngine::Page::PluginSettings @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />
     `);
     assert.dom(GENERAL.emptyStateTitle).hasText(`No configuration details available`);
     assert
@@ -92,8 +101,18 @@ module('Integration | Component | SecretEngine::Page::PluginSettings', function 
   )) {
     test(`${type}: it shows config details if configModel(s) are passed in`, async function (assert) {
       this.model = this.models[type];
-
-      await render(hbs`<SecretEngine::Page::PluginSettings @model={{this.model}} />`);
+      this.breadcrumbs = [
+        { label: 'Secrets', route: 'vault.cluster.secrets' },
+        {
+          label: this.model.secretsEngine.id,
+          route: 'vault.cluster.secrets.backend.list-root',
+          model: this.model.secretsEngine.id,
+        },
+        { label: 'Configuration' },
+      ];
+      await render(
+        hbs`<SecretEngine::Page::PluginSettings @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`
+      );
 
       for (const key of expectedConfigKeys(type)) {
         if (

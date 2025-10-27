@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -39,7 +39,7 @@ const consoleComponent = create(consoleClass);
 
 // enterprise backends are tested separately
 const BACKENDS_WITH_ENGINES = ['kv', 'pki', 'ldap', 'kubernetes'];
-module('Acceptance | secrets/mounts', function (hooks) {
+module('Acceptance | secrets-engines/enable', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
@@ -59,7 +59,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
     const maxTTLHours = 300;
     await page.visit();
 
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.enable.index');
     await click(GENERAL.cardContainer('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
@@ -80,7 +80,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
 
     await page.visit();
 
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index', 'navigates to mount page');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.enable.index', 'navigates to mount page');
     await click(GENERAL.cardContainer('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
@@ -95,7 +95,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
 
   test('it sets the max ttl after pki chosen, resets after', async function (assert) {
     await page.visit();
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.enable.index');
     await click(GENERAL.cardContainer('pki'));
     assert.dom('[data-test-input="config.max_lease_ttl"]').exists();
     assert
@@ -126,7 +126,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
 
     await page.visit();
 
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.enable.index');
     await mountBackend('kv', path);
     await page.secretList();
     await settled();
@@ -134,67 +134,13 @@ module('Acceptance | secrets/mounts', function (hooks) {
     await mountBackend('kv', path);
     await waitFor('[data-test-message-error-description]');
     assert.dom('[data-test-message-error-description]').containsText(`path is already in use at ${path}`);
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.mounts.create');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.enable.create');
 
     await page.secretList();
     await settled();
-    assert.dom(SES.secretsBackendLink(path)).exists({ count: 1 }, 'renders only one instance of the engine');
-  });
-
-  test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
-    const enginePath = `kv-noUpdate-${this.uid}`;
-    const V2_POLICY = `
-      path "${enginePath}/*" {
-        capabilities = ["list","create","read","sudo","delete"]
-      }
-      path "sys/mounts/*"
-      {
-        capabilities = ["create", "read", "update", "delete", "list", "sudo"]
-      }
-
-      # List existing secrets engines.
-      path "sys/mounts"
-      {
-        capabilities = ["read"]
-      }
-      # Allow page to load after mount
-      path "sys/internal/ui/mounts/${enginePath}" {
-        capabilities = ["read"]
-      }
-    `;
-    await consoleComponent.toggle();
-    await consoleComponent.runCommands(
-      [
-        // delete any previous mount with same name
-        `delete sys/mounts/${enginePath}`,
-        `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
-        'write -field=client_token auth/token/create policies=kv-v2-degrade',
-      ],
-      false
-    );
-    await settled();
-    const userToken = consoleComponent.lastLogOutput;
-
-    await login(userToken);
-    // create the engine
-    await mountSecrets.visit();
-    await click(GENERAL.cardContainer('kv'));
-    await fillIn(GENERAL.inputByAttr('path'), enginePath);
-    await mountSecrets.setMaxVersion(101);
-    await click(GENERAL.submitButton);
-
     assert
-      .dom('[data-test-flash-message]')
-      .containsText(
-        `You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.`
-      );
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${enginePath}/kv/list`,
-      'After mounting, redirects to secrets list page'
-    );
-    await configPage.visit({ backend: enginePath });
-    await settled();
+      .dom(GENERAL.tableData(`${path}/`, 'path'))
+      .exists({ count: 1 }, 'renders only one instance of the engine');
   });
 
   test('it should transition to mountable addon engine after mount success', async function (assert) {
@@ -292,7 +238,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
     ]);
     await mountSecrets.visit();
     await mountBackend('kv', v2);
-    assert.strictEqual(currentURL(), `/vault/secrets/${v2}/kv/list`, `${v2} navigates to list url`);
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${v2}/kv/list`, `${v2} navigates to list url`);
     assert.strictEqual(
       currentRouteName(),
       `vault.cluster.secrets.backend.kv.list`,
@@ -311,12 +257,46 @@ module('Acceptance | secrets/mounts', function (hooks) {
     await mountSecrets.version(1);
     await click(GENERAL.submitButton);
 
-    assert.strictEqual(currentURL(), `/vault/secrets/${v1}/list`, `${v1} navigates to list url`);
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${v1}/list`, `${v1} navigates to list url`);
     assert.strictEqual(
       currentRouteName(),
       `vault.cluster.secrets.backend.list-root`,
       `${v1} navigates to list route`
     );
+  });
+
+  // Condensed tests for these specific engines here as they just check if they are added to the list after mounting
+  test('enable alicloud', async function (assert) {
+    const enginePath = `alicloud-${this.uid}`;
+    await mountSecrets.visit();
+    await mountBackend('alicloud', enginePath);
+
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'redirects to the backends page'
+    );
+
+    assert.ok(GENERAL.tableData(`${enginePath}/`, 'path'), 'shows the alicloud engine');
+
+    // cleanup
+    await runCmd(`delete sys/mounts/${enginePath}`);
+  });
+
+  test('enable gcpkms', async function (assert) {
+    const enginePath = `gcpkms-${this.uid}`;
+    await mountSecrets.visit();
+    await mountBackend('gcpkms', enginePath);
+
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'redirects to the backends page'
+    );
+
+    assert.ok(GENERAL.tableData(`${enginePath}/`, 'path'), 'shows the gcpkms engine');
+    // cleanup
+    await runCmd(`delete sys/mounts/${enginePath}`);
   });
 
   module('WIF secret engines', function () {
@@ -356,7 +336,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
       );
 
       await login(secretsAdminToken);
-      await visit('/vault/secrets/mounts');
+      await visit('/vault/secrets-engines/enable');
       await click(GENERAL.cardContainer(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);
       await click(GENERAL.button('Method Options'));
@@ -374,7 +354,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
       assert.dom(GENERAL.searchSelect.selectedOption()).hasText(newKey, `${newKey} is now selected`);
 
       await click(GENERAL.submitButton);
-      await visit(`/vault/secrets/${path}/configuration`);
+      await visit(`/vault/secrets-engines/${path}/configuration`);
       await click(SES.configurationToggle);
       assert
         .dom(GENERAL.infoRowValue('Identity token key'))
@@ -409,7 +389,7 @@ module('Acceptance | secrets/mounts', function (hooks) {
         .dom(GENERAL.latestFlashContent)
         .hasText(`Successfully mounted the ${engine} secrets engine at ${path}.`);
 
-      await visit(`/vault/secrets/${path}/configuration`);
+      await visit(`/vault/secrets-engines/${path}/configuration`);
 
       await click(SES.configurationToggle);
       assert

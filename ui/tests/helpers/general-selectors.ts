@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -14,6 +14,7 @@ export const GENERAL = {
   headerContainer: 'header.page-header',
   title: '[data-test-page-title]',
   hdsPageHeaderTitle: '.hds-page-header__title',
+  hdsPageHeaderSubtitle: '.hds-page-header__subtitle',
   hdsPageHeaderDescription: '.hds-page-header__description',
 
   /* ────── Tabs & Navigation ────── */
@@ -33,11 +34,12 @@ export const GENERAL = {
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
   button: (label: string) => (label ? `[data-test-button="${label}"]` : '[data-test-button]'),
+  copySnippet: (name: string) => `[data-test-copy-snippet=${name}]`,
 
   /* ────── Menus & Lists ────── */
   menuTrigger: '[data-test-popup-menu-trigger]',
   menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
-  listItem: (label: string) => `[data-test-list-item="${label}"]`,
+  listItem: (label: string) => (label ? `[data-test-list-item="${label}"]` : '[data-test-list-item]'),
   listItemLink: '[data-test-list-item-link]',
   linkedBlock: (item: string) => `[data-test-linked-block="${item}"]`,
 
@@ -58,7 +60,7 @@ export const GENERAL = {
   fieldLabel: () => `[data-test-form-field-label]`,
   fieldLabelbyAttr: (attr: string) => `[data-test-form-field-label="${attr}"]`,
   groupControlByIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index})`,
-  helpText: () => `[data-test-help-text]`,
+  helpText: '[data-test-help-text]',
   helpTextByAttr: (attr: string) => `[data-test-help-text="${attr}"]`,
   helpTextByGroupControlIndex: (index: number) =>
     `.hds-form-group__control-field:nth-of-type(${index}) [data-test-help-text]`,
@@ -172,4 +174,5 @@ export const GENERAL = {
   icon: (name: string) => (name ? `[data-test-icon="${name}"]` : '[data-test-icon]'),
   badge: (name: string) => (name ? `[data-test-badge="${name}"]` : '[data-test-badge]'),
   tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
+  tooltipText: '.hds-tooltip-container',
 };

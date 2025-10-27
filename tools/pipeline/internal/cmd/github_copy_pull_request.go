@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
@@ -22,25 +22,7 @@ func newCopyGithubPullRequestCmd() *cobra.Command {
 		Short: "Copy a pull request",
 		Long:  "Copy a pull request from the Community repository to the Enterprise repository",
 		RunE:  runCopyGithubPullRequestCmd,
-		Args: func(cmd *cobra.Command, args []string) error {
-			switch len(args) {
-			case 1:
-				pr, err := strconv.ParseUint(args[0], 10, 0)
-				if err != nil {
-					return fmt.Errorf("invalid pull number: %s: %w", args[0], err)
-				}
-				if pr <= math.MaxUint32 {
-					copyGithubPullRequestReq.PullNumber = uint(pr)
-				} else {
-					return fmt.Errorf("invalid pull number: %s: number is too large", args[0])
-				}
-				return nil
-			case 0:
-				return errors.New("no pull request number has been provided")
-			default:
-				return fmt.Errorf("invalid arguments: only pull request number is expected, received %d arguments: %v", len(args), args)
-			}
-		},
+		Args:  argsOnlyPRNumber(&copyGithubPullRequestReq.PullNumber),
 	}
 
 	copyPRCmd.PersistentFlags().StringVar(&copyGithubPullRequestReq.FromOrigin, "from-origin", "ce", "The name to use for the base remote origin")
@@ -58,7 +40,7 @@ func newCopyGithubPullRequestCmd() *cobra.Command {
 func runCopyGithubPullRequestCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := copyGithubPullRequestReq.Run(context.TODO(), githubCmdState.Github, githubCmdState.Git)
+	res, err := copyGithubPullRequestReq.Run(context.TODO(), githubCmdState.GithubV3, githubCmdState.Git)
 
 	switch rootCfg.format {
 	case "json":
@@ -67,9 +49,35 @@ func runCopyGithubPullRequestCmd(cmd *cobra.Command, args []string) error {
 			return errors.Join(err, err1)
 		}
 		fmt.Println(string(b))
+	case "markdown":
+		tbl := res.ToTable(err)
+		tbl.SetTitle("Copy Pull Request")
+		fmt.Println(tbl.RenderMarkdown())
 	default:
 		fmt.Println(res.ToTable(err).Render())
 	}
 
 	return err
+}
+
+func argsOnlyPRNumber(dest *uint) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		switch len(args) {
+		case 1:
+			pr, err := strconv.ParseUint(args[0], 10, 0)
+			if err != nil {
+				return fmt.Errorf("invalid pull number: %s: %w", args[0], err)
+			}
+			if pr <= math.MaxUint32 {
+				*dest = uint(pr)
+			} else {
+				return fmt.Errorf("invalid pull number: %s: number is too large", args[0])
+			}
+			return nil
+		case 0:
+			return errors.New("no pull request number has been provided")
+		default:
+			return fmt.Errorf("invalid arguments: only pull request number is expected, received %d arguments: %v", len(args), args)
+		}
+	}
 }

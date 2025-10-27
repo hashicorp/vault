@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
@@ -34,7 +34,7 @@ func newGithubListChangedFilesCmd() *cobra.Command {
 func runListGithubChangedFilesCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := listGithubChangedFiles.Run(context.TODO(), githubCmdState.Github)
+	res, err := listGithubChangedFiles.Run(context.TODO(), githubCmdState.GithubV3)
 	if err != nil {
 		return fmt.Errorf("listing changed files: %w", err)
 	}

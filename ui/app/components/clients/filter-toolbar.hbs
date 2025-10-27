@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -45,13 +45,6 @@
       {{/let}}
     {{/each-in}}
   </Hds::SegmentedGroup>
-  <Hds::Button
-    @icon="x-circle"
-    @text="Clear filters"
-    @color="tertiary"
-    {{on "click" (fn this.clearFilters "")}}
-    data-test-button="Clear filters"
-  />
 </Hds::ButtonSet>
 
 <Hds::Layout::Flex class="has-top-margin-s" @gap="8" @align="center" data-test-filter-tag-container>
@@ -70,6 +63,13 @@
         </div>
       {{/if}}
     {{/each-in}}
+    <Hds::Button
+      @icon="x-circle"
+      @text="Clear filters"
+      @color="tertiary"
+      {{on "click" (fn this.clearFilters "")}}
+      data-test-button="Clear filters"
+    />
   {{else}}
     <Hds::Text::Body @color="faint">None</Hds::Text::Body>
   {{/if}}

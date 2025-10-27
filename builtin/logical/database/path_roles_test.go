@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package database
@@ -173,7 +173,7 @@ func TestBackend_Roles_CredentialTypes(t *testing.T) {
 				Storage:   config.StorageView,
 				Data: map[string]interface{}{
 					"db_name":             "test-database",
-					"creation_statements": "CREATE USER {{name}}",
+					"creation_statements": `CREATE USER "{{name}}"`,
 					"credential_type":     tt.args.credentialType.String(),
 					"credential_config":   tt.args.credentialConfig,
 				},

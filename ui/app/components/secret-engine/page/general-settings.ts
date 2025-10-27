@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,16 +7,16 @@ import Component from '@glimmer/component';
 import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
 import { convertToSeconds } from 'core/utils/duration-utils';
+import { action } from '@ember/object';
 
 import type Router from '@ember/routing/router';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type ApiService from 'vault/services/api';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import type UnsavedChangesService from 'vault/services/unsaved-changes';
 
-export const CUSTOM = 'Custom';
-export const SYSTEM_DEFAULT = 'System default';
+const CHARACTER_LIMIT = 500;
 
 /**
  * @module GeneralSettingsComponent is used to configure the SSH secret engine.
@@ -43,52 +43,58 @@ export default class GeneralSettingsComponent extends Component<Args> {
   @service declare readonly router: Router;
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly unsavedChanges: UnsavedChangesService;
 
-  @tracked errorMessage: string | null = null;
+  @tracked errorMessage: string | string[] | null = null;
+  @tracked errors: string[] = [];
   @tracked invalidFormAlert: string | null = null;
   @tracked showUnsavedChangesModal = false;
-  @tracked changedFields: string[] = [];
+
+  @tracked defaultLeaseUnit = '';
+  @tracked maxLeaseUnit = '';
 
   originalModel = JSON.parse(JSON.stringify(this.args.model));
 
-  getUnsavedChanges(newModel: SecretsEngineResource, originalModel: SecretsEngineResource) {
-    for (const key in this.args.model.secretsEngine) {
-      const secretsEngineKeyType = key as keyof typeof this.args.model.secretsEngine;
+  get modalChangedFields() {
+    const changedFieldsCopy = [...this.unsavedChanges.changedFields];
+    const configIndex = this.unsavedChanges.changedFields.indexOf('config');
 
-      if (secretsEngineKeyType === 'options') {
-        return;
-      }
+    if (configIndex === -1) return this.unsavedChanges.changedFields;
 
-      if (secretsEngineKeyType === 'config') {
-        const { defaultLeaseTime, defaultLeaseUnit, maxLeaseTime, maxLeaseUnit } = this.getFormData();
+    changedFieldsCopy[configIndex] = 'Secrets duration';
 
-        const hasDefaultTtlValueChanged = this.hasTtlValueChanged(
-          defaultLeaseTime,
-          defaultLeaseUnit,
-          'default_lease_ttl'
-        );
-        const hasMaxTtlValueChanged = this.hasTtlValueChanged(maxLeaseTime, maxLeaseUnit, 'max_lease_ttl');
-
-        if (
-          (hasDefaultTtlValueChanged || hasMaxTtlValueChanged) &&
-          !this.changedFields.includes('Lease Duration')
-        ) {
-          this.changedFields.push('Lease Duration');
-        }
-      } else {
-        if (newModel[secretsEngineKeyType] !== originalModel[secretsEngineKeyType]) {
-          this.changedFields.push(key);
-        }
-      }
-    }
+    return changedFieldsCopy;
   }
 
   validateTtl(ttlValue: FormDataEntryValue | number | null) {
     if (isNaN(Number(ttlValue))) {
-      this.errorMessage = 'Only use numbers for this setting.';
       return false;
     }
 
+    return true;
+  }
+
+  validateDescription(description: FormDataEntryValue | string) {
+    return description?.toString().length <= CHARACTER_LIMIT;
+  }
+
+  validateForm() {
+    const { defaultLeaseTime, maxLeaseTime, description } = this.formData;
+
+    const errorMessages = [];
+
+    if (!this.validateTtl(defaultLeaseTime) || !this.validateTtl(maxLeaseTime)) {
+      errorMessages.push('TTL should only contain numbers.');
+    }
+
+    if (description && !this.validateDescription(description)) {
+      const charactersExceedBy = description?.toString().length - CHARACTER_LIMIT;
+      errorMessages.push(`Engine description exceeds character limit by ${charactersExceedBy}.`);
+    }
+
+    this.errors = errorMessages;
+
+    if (errorMessages.length) return false;
     return true;
   }
 
@@ -101,15 +107,7 @@ export default class GeneralSettingsComponent extends Component<Args> {
     return true;
   }
 
-  hasDescriptionChanged(description: FormDataEntryValue | null) {
-    return description !== this?.originalModel?.secretsEngine?.description;
-  }
-
-  hasPluginVersionChanged(version: FormDataEntryValue | null) {
-    return version && version !== this?.originalModel?.secretsEngine?.running_plugin_version;
-  }
-
-  getFormData() {
+  get formData() {
     const form = document.getElementById('general-settings-form');
     const fd = new FormData(form as HTMLFormElement);
     const fdDefaultLeaseTime = Number(fd.get('default_lease_ttl-time'));
@@ -127,28 +125,9 @@ export default class GeneralSettingsComponent extends Component<Args> {
     };
   }
 
-  hasUnsavedChanges() {
-    const { defaultLeaseTime, defaultLeaseUnit, maxLeaseTime, maxLeaseUnit, description, version } =
-      this.getFormData();
-
-    const hasDefaultTtlValueChanged = this.hasTtlValueChanged(
-      defaultLeaseTime,
-      defaultLeaseUnit,
-      'default_lease_ttl'
-    );
-    const hasMaxTtlValueChanged = this.hasTtlValueChanged(maxLeaseTime, maxLeaseUnit, 'max_lease_ttl');
-
-    return (
-      hasDefaultTtlValueChanged ||
-      hasMaxTtlValueChanged ||
-      this.hasDescriptionChanged(description) ||
-      this.hasPluginVersionChanged(version)
-    );
-  }
-
   formatTuneParams() {
     const { defaultLeaseTime, defaultLeaseUnit, maxLeaseTime, maxLeaseUnit, description, version } =
-      this.getFormData();
+      this.formData;
 
     const hasDefaultTtlValueChanged = this.hasTtlValueChanged(
       defaultLeaseTime,
@@ -157,11 +136,14 @@ export default class GeneralSettingsComponent extends Component<Args> {
     );
 
     const hasMaxTtlValueChanged = this.hasTtlValueChanged(maxLeaseTime, maxLeaseUnit, 'max_lease_ttl');
+    const hasDescriptionChanged = description !== this?.originalModel?.secretsEngine?.description;
+    const hasPluginVersionChanged =
+      version && version !== this?.originalModel?.secretsEngine?.running_plugin_version;
 
     const defaultLeaseTtl = hasDefaultTtlValueChanged ? `${defaultLeaseTime}${defaultLeaseUnit}` : undefined;
     const maxLeaseTtl = hasMaxTtlValueChanged ? `${maxLeaseTime}${maxLeaseUnit}` : undefined;
-    const pluginVersion = this.hasPluginVersionChanged(version) ? version : undefined;
-    const pluginDescription = this.hasDescriptionChanged(description) ? description : undefined;
+    const pluginVersion = hasPluginVersionChanged ? version : undefined;
+    const pluginDescription = hasDescriptionChanged ? description : undefined;
 
     return {
       defaultLeaseTtl,
@@ -171,37 +153,12 @@ export default class GeneralSettingsComponent extends Component<Args> {
     };
   }
 
-  @action
-  openUnsavedChangesModal() {
-    if (this.hasUnsavedChanges()) {
-      this.getUnsavedChanges(this.args?.model?.secretsEngine, this?.originalModel?.secretsEngine);
-      this.showUnsavedChangesModal = true;
-    } else {
-      this.showUnsavedChangesModal = false;
-    }
-  }
+  saveGeneralSettings = task(async (event?) => {
+    // event is an optional arg because saveGeneralSettings can be called in the closeAndHandle function.
+    // There are instances where we will save in the modal where that doesn't require an event.
+    if (event) event.preventDefault();
 
-  @action
-  closeUnsavedChangesModal() {
-    this.showUnsavedChangesModal = !this.showUnsavedChangesModal;
-    this.changedFields = [];
-  }
-
-  @action
-  discardChanges() {
-    this.closeUnsavedChangesModal();
-    this.router.transitionTo(this.args?.model?.secretsEngine?.backendConfigurationLink);
-  }
-
-  saveGeneralSettings = task(async (event) => {
-    event.preventDefault();
-
-    const { defaultLeaseTime, maxLeaseTime } = this.getFormData();
-
-    if (!this.validateTtl(defaultLeaseTime) || !this.validateTtl(maxLeaseTime)) {
-      this.errorMessage = 'Only use numbers for this setting.';
-      return;
-    }
+    if (!this.validateForm()) return;
 
     try {
       const { defaultLeaseTtl, maxLeaseTtl, pluginVersion, pluginDescription } = this.formatTuneParams();
@@ -213,12 +170,19 @@ export default class GeneralSettingsComponent extends Component<Args> {
         plugin_version: pluginVersion as string | undefined,
       });
 
-      this.flashMessages.success('Engine settings successfully updated.');
-      this.router.transitionTo(this.args?.model?.secretsEngine?.backendConfigurationLink);
+      this.flashMessages.success('Engine settings successfully updated.', { title: 'Configuration saved' });
+
+      this.unsavedChanges.showModal = false;
+      this.router.transitionTo(this.router.currentRouteName);
     } catch (e) {
       const { message } = await this.api.parseError(e);
       this.errorMessage = message;
-      this.flashMessages.danger(`Try again or check your network connection. ${message}`);
     }
   });
+
+  @action
+  discardChanges() {
+    const currentRouteName = this.router.currentRouteName;
+    this.router.transitionTo(currentRouteName);
+  }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -54,7 +54,7 @@ module('Acceptance | ldap | libraries', function (hooks) {
     await click(LDAP_SELECTORS.libraryItem('test-library'));
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.backend}/ldap/libraries/test-library/details/accounts`,
+      `/vault/secrets-engines/${this.backend}/ldap/libraries/test-library/details/accounts`,
       'Transitions to library details accounts route on list item click'
     );
     assert.dom('[data-test-account-name]').exists({ count: 2 }, 'lists the accounts');
@@ -65,14 +65,14 @@ module('Acceptance | ldap | libraries', function (hooks) {
     await click(LDAP_SELECTORS.libraryItem('admin/'));
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.backend}/ldap/libraries/subdirectory/admin/`,
+      `/vault/secrets-engines/${this.backend}/ldap/libraries/subdirectory/admin/`,
       'Transitions to subdirectory list view'
     );
 
     await click(LDAP_SELECTORS.libraryItem('admin/test-library'));
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.backend}/ldap/libraries/admin%2Ftest-library/details/accounts`,
+      `/vault/secrets-engines/${this.backend}/ldap/libraries/admin%2Ftest-library/details/accounts`,
       'Transitions to child library details accounts'
     );
     assert.dom('[data-test-account-name]').exists({ count: 2 }, 'lists the accounts');

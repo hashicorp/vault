@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -23,6 +23,7 @@ export interface FieldOptions {
   helperTextEnabled?: string;
   placeholder?: string;
   noDefault?: boolean;
+  isSectionHeader?: boolean;
 }
 
 export default class FormField {

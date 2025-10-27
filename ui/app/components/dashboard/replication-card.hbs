@@ -1,13 +1,13 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 <Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="replication">
 
   <div class="is-flex-between">
-    <h3 class="title is-4 has-bottom-margin-xxs" data-test-client-count-title>
+    <h2 class="title is-4 has-bottom-margin-xxs" data-test-client-count-title>
       Cluster replication status
-    </h3>
+    </h2>
 
     {{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
       <LinkTo @route="vault.cluster.replication.index">
@@ -26,13 +26,16 @@
         data-test-type="dr-perf"
       >
         <Dashboard::ReplicationStateText
-          @title="DR primary"
+          @title="DR{{if (not-eq @replication.dr.mode 'disabled') (concat ' ' @replication.dr.mode)}}"
           @name="dr"
           @state={{@replication.dr.state}}
           @clusterStates={{cluster-states @replication.dr.state}}
         />
         <Dashboard::ReplicationStateText
-          @title="Performance {{if @replication.performance.isPrimary 'primary' 'secondary'}}"
+          @title="Performance{{if
+            (not-eq @replication.performance.mode 'disabled')
+            (concat ' ' @replication.performance.mode)
+          }}"
           @name="performance"
           @state={{if @replication.performance.clusterId @replication.performance.state "not set up"}}
           @clusterStates={{if @replication.performance.clusterId (cluster-states @replication.performance.state)}}

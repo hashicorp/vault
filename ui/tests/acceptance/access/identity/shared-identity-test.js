@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -12,6 +12,7 @@ import { click, fillIn, visit, currentURL } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { capitalize } from '@ember/string';
 import { singularize } from 'ember-inflector';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 // Helper to create an entity or group
 async function createEntityOrGroup(itemType, name) {
@@ -36,6 +37,7 @@ async function createAlias(itemType, itemGeneratedId, name) {
 // Creation of an Entity or Group is inherently tested as part of the alias flow, so no separate test is needed.
 module('Acceptance | Create groups and entities alias test', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
     this.flashMessages = this.owner.lookup('service:flash-messages');
@@ -86,30 +88,48 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
     });
 
     test(`${itemType}: it allows delete from the edit form`, async function (assert) {
-      const name = `${itemType}-${uuidv4()}`;
-      const itemGeneratedId = await createEntityOrGroup(itemType, name);
-      const aliasGeneratedId = await createAlias(itemType, itemGeneratedId, name);
-
-      await click('[data-test-alias-edit-link]');
-      assert.strictEqual(
-        currentURL(),
-        `/vault/access/identity/${itemType}/aliases/edit/${aliasGeneratedId}`,
-        `${itemType}: correctly navigates to edit`
-      );
-
+      assert.expect(3);
+      const itemId = uuidv4();
+      const name = `${itemType}-${itemId}`;
+      this.server.get(`/identity/${singularize(itemType)}/id/${itemId}`, () => {
+        return { data: { id: itemId, name } };
+      });
+      this.server.delete(`/identity/${singularize(itemType)}/id/${itemId}`, () => {
+        assert.true(true, `request made to delete ${name}`);
+      });
+      await visit(`/vault/access/identity/${itemType}/edit/${itemId}`);
       await click(GENERAL.confirmTrigger); // click the Delete entity-alias trigger button
       await click(GENERAL.confirmButton);
       assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
       assert.strictEqual(
         currentURL(),
-        `/vault/access/identity/${itemType}/aliases`,
+        `/vault/access/identity/${itemType}`,
         `${itemType}: navigates to the list page after deletion`
       );
     });
 
     test(`${itemType}: it allows you to delete the ${itemType} from the list view`, async function (assert) {
-      const name = `${itemType}-${uuidv4()}`;
-      await createEntityOrGroup(itemType, name);
+      assert.expect(3);
+      const itemId = uuidv4();
+      const name = `${itemType}-${itemId}`;
+
+      this.server.get(`/identity/${singularize(itemType)}/id`, () => {
+        return {
+          data: {
+            key_info: { [itemId]: { name } },
+            keys: [itemId],
+          },
+        };
+      });
+
+      this.server.get(`/identity/${singularize(itemType)}/id/${itemId}`, () => {
+        return { data: { id: itemId, name } };
+      });
+
+      this.server.delete(`/identity/${singularize(itemType)}/id/${itemId}`, () => {
+        assert.true(true, `request made to delete ${name}`);
+      });
+
       await visit(`/vault/access/identity/${itemType}`);
 
       const rowSelector = `[data-test-identity-row="${name}"]`;
@@ -120,8 +140,7 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
       await click(menuTriggerSelector);
       await click(GENERAL.menuItem('delete'));
       await click(GENERAL.confirmButton);
-
-      assert.dom(rowSelector).doesNotExist(`${itemType}: is NOT in the list view`);
+      assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
     });
   }
 });

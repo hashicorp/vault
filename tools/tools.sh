@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 set -euo pipefail
@@ -11,7 +11,11 @@ repo_root() {
 
 # Install an external Go tool.
 go_install() {
-  if go install "$1"; then
+  local tags=""
+  if [ "$(go env GOOS)" == "darwin" ]; then
+    tags="netcgo"
+  fi
+  if eval CGO_ENABLED=0 go install "-tags=${tags}" \"-ldflags=-w -s\" "$1"; then
     echo "--> $1 ✔"
   else
     echo "--> $1 ✖"

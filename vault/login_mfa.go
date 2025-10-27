@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -729,7 +729,7 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 		return nil, fmt.Errorf("original request was issued in a different namesapce %v, current namespace is %v", cachedResponseAuth.RequestNSPath, ns.Path)
 	}
 
-	entity, err := b.Core.fetchEntity(cachedResponseAuth.CachedAuth.EntityID, false)
+	entity, err := b.Core.fetchEntity(cachedResponseAuth.CachedAuth.EntityID, true)
 	if err != nil || entity == nil {
 		return nil, fmt.Errorf("MFA validation failed. entity not found: %v", err)
 	}
@@ -752,25 +752,9 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 			return logical.ErrorResponse(fmt.Sprintf("failed to satisfy enforcement %s. error: %s", eConfig.Name, err.Error())), logical.ErrPermissionDenied
 		}
 		if cachedResponseAuth.SelfEnrollmentMFASecret != nil && entity.MFASecrets[potentialMFASecret.MethodID] == nil {
-			// If we have a self-enrollment secret, and we successfully validated against
-			// the MFA enforcement, then persist the secret on the entity and the key in
-			// storage and clear the secret on the cached auth.
-			if entity.MFASecrets == nil {
-				entity.MFASecrets = map[string]*mfa.Secret{}
-			}
-			entity.MFASecrets[potentialMFASecret.MethodID] = potentialMFASecret.Secret
-			err = b.Core.identityStore.upsertEntity(ctx, entity, nil, true)
+			err := possiblyForwardPendingLoginMFASecretWrite(ctx, b.Core, entity.ID, potentialMFASecret)
 			if err != nil {
-				b.mfaLogger.Error("failed to persist self-enrollment MFA secret in entity", "error", err, "entity_id", entity.ID)
-				return nil, fmt.Errorf("failed to persist self-enrollment MFA secret in entity: %w", err)
-			}
-			err = b.Core.PersistTOTPKey(ctx, potentialMFASecret.MethodID, entity.ID, potentialMFASecret.Key)
-			if err != nil {
-				// Best effort attempt to delete the new MFA secret from the entity when persisting the key fails.
-				delete(entity.MFASecrets, potentialMFASecret.MethodID)
-				_ = b.Core.identityStore.upsertEntity(ctx, entity, nil, true)
-				b.mfaLogger.Error("failed to persist self-enrollment MFA secret key in storage", "error", err, "entity_id", entity.ID)
-				return nil, fmt.Errorf("failed to persist self-enrollment MFA secret key: %w", err)
+				return nil, err
 			}
 		}
 	}
@@ -782,6 +766,46 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 	}
 
 	return resp, nil
+}
+
+// writeTOTPMFASecretAndKey persists the pending TOTP MFA secret on the entity
+// and the key in storage. This method should only be called on the active node
+// of the primary cluster, since it attempts to write to storage. Note that this
+// The identity store lock is not used consistently, so this method also opens a
+// transaction to ensure no modifications happen between fetching it and
+// upserting the entity, to avoid unwittingly clobbering changes to it.
+func (c *Core) writeTOTPMFASecretAndKey(ctx context.Context, entityID string, pendingSecret *selfEnrollmentPendingMFASecret) error {
+	if c.identityStore == nil {
+		return fmt.Errorf("identity store is not configured")
+	}
+	c.identityStore.lock.Lock()
+	defer c.identityStore.lock.Unlock()
+	txn := c.identityStore.db.Txn(true)
+	defer txn.Abort()
+
+	entity, err := c.identityStore.fetchEntityInTxn(txn, entityID, false)
+	if err != nil {
+		return fmt.Errorf("failed to find entity with ID %q: error: %w", entityID, err)
+	}
+	if entity.MFASecrets == nil {
+		entity.MFASecrets = map[string]*mfa.Secret{}
+	}
+
+	entity.MFASecrets[pendingSecret.MethodID] = pendingSecret.Secret
+	_, err = c.identityStore.upsertEntityInTxn(ctx, txn, entity, nil, true, true)
+	if err != nil {
+		c.loginMFABackend.mfaLogger.Error("failed to persist self-enrollment MFA secret in entity", "entity_id", entity.ID)
+		return fmt.Errorf("failed to persist self-enrollment MFA secret in entity: %w", err)
+	}
+	err = c.PersistTOTPKey(ctx, pendingSecret.MethodID, entity.ID, pendingSecret.Key)
+	if err != nil {
+		c.loginMFABackend.mfaLogger.Error("failed to persist self-enrollment MFA secret key in storage", "entity_id", entity.ID)
+		return fmt.Errorf("failed to persist self-enrollment MFA secret key: %w", err)
+	}
+
+	// Commit the transaction to persist the entity changes.
+	txn.Commit()
+	return nil
 }
 
 func (c *Core) teardownLoginMFA() error {

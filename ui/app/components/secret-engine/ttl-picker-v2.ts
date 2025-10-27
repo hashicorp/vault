@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,7 +8,6 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { convertFromSeconds, durationToSeconds, largestUnitFromSeconds } from 'core/utils/duration-utils';
-import { CUSTOM, SYSTEM_DEFAULT } from './page/general-settings';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
@@ -33,13 +32,12 @@ interface Args {
   model: {
     secretsEngine: SecretsEngineResource;
   };
+  initialUnit: string;
   ttlKey: 'default_lease_ttl' | 'max_lease_ttl';
 }
 
 export default class TtlPickerV2 extends Component<Args> {
   systemDefaultTtl = 0;
-  systemDefault = SYSTEM_DEFAULT;
-  custom = CUSTOM;
 
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;
@@ -66,7 +64,11 @@ export default class TtlPickerV2 extends Component<Args> {
     } else {
       const parseDuration = durationToSeconds(ttlValue || '');
       // if parsing fails leave it empty
-      if (parseDuration === null) return;
+      if (parseDuration === null) {
+        this.time = ttlValue || '';
+        this.selectedUnit = this.args.initialUnit;
+        return;
+      }
       seconds = parseDuration;
     }
 
@@ -87,11 +89,14 @@ export default class TtlPickerV2 extends Component<Args> {
 
   get formField() {
     return {
-      label: this.args?.ttlKey === 'default_lease_ttl' ? 'Time-to-live (TTL)' : 'Maximum Time-to-live (TTL)',
+      label:
+        this.args?.ttlKey === 'default_lease_ttl'
+          ? 'Default time-to-live (TTL)'
+          : 'Maximum time-to-live (TTL)',
       helperText:
         this.args?.ttlKey === 'default_lease_ttl'
-          ? 'Standard expiry deadline.'
-          : 'Maximum possible extension for expiry.',
+          ? 'How long secrets in this engine stay valid.'
+          : 'Maximum extension for the secrets life beyond default.',
     };
   }
 

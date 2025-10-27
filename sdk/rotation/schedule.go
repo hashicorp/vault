@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package rotation
@@ -52,6 +52,10 @@ func (d *DefaultSchedule) Parse(rotationSchedule string) (*cron.SpecSchedule, er
 	if !ok {
 		return nil, fmt.Errorf("invalid rotation schedule")
 	}
+
+	// override the timezone in all cases, even if was set otherwise
+	sched.Location = time.UTC
+
 	return sched, nil
 }
 

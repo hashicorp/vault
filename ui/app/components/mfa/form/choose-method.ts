@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -31,7 +31,7 @@ export default class MfaFormChooseMethod extends Component<Args> {
   }
 
   get selfEnrollConstraints() {
-    return this.args.constraints.filter((c) => !!c.selfEnrollMethod);
+    return this.args.constraints.filter((c) => c.hasSelfEnrollMethods);
   }
 
   get singleConstraint() {

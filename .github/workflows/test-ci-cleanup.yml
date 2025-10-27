@@ -1,4 +1,5 @@
 name: test-ci-cleanup
+
 on:
   schedule:
     # * is a special character in YAML so you have to quote this string
@@ -7,11 +8,13 @@ on:
 jobs:
   setup:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    permissions: write-all
     outputs:
       regions: ${{steps.setup.outputs.regions}}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
+        id: aws-configure
+        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
@@ -40,7 +43,7 @@ jobs:
     steps:
       - name: Configure AWS credentials
         id: aws-configure
-        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
+        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
@@ -49,11 +52,16 @@ jobs:
           role-skip-session-tagging: true
           role-duration-seconds: 3600
           mask-aws-account-id: false
+      - name: Get AWS Account ID
+        id: aws-info
+        run: |
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "aws-account-id=$AWS_ACCOUNT_ID" | tee -a "$GITHUB_OUTPUT"
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Configure
         run: |
           cp enos/ci/aws-nuke.yml .
-          sed -i "s/ACCOUNT_NUM/${{ steps.aws-configure.outputs.aws-account-id }}/g" aws-nuke.yml
+          sed -i "s/ACCOUNT_NUM/${{ steps.aws-info.outputs.aws-account-id }}/g" aws-nuke.yml
           sed -i "s/TIME_LIMIT/${TIME_LIMIT}/g" aws-nuke.yml
       # We don't care if cleanup succeeds or fails, because dependencies be dependenceies,
       # we'll fail on actually actionable things in the quota steep afterwards.
@@ -76,7 +84,8 @@ jobs:
         region: ${{ fromJSON(needs.setup.outputs.regions) }}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
+        id: aws-configure
+        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}

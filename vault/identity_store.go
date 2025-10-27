@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -116,7 +116,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		Paths:          iStore.paths(),
 		Invalidate:     iStore.Invalidate,
 		InitializeFunc: iStore.initialize,
-		ActivationFunc: iStore.activateDeduplication,
+		ActivationFunc: iStore.activate,
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: append([]string{
 				"oidc/.well-known/*",
@@ -1388,13 +1388,14 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 
 		// Create a new alias
 		newAlias := &identity.Alias{
-			CanonicalID:   entity.ID,
-			Name:          alias.Name,
-			MountAccessor: alias.MountAccessor,
-			Metadata:      alias.Metadata,
-			MountPath:     mountValidationResp.MountPath,
-			MountType:     mountValidationResp.MountType,
-			Local:         alias.Local,
+			CanonicalID:    entity.ID,
+			Name:           alias.Name,
+			MountAccessor:  alias.MountAccessor,
+			Metadata:       alias.Metadata,
+			MountPath:      mountValidationResp.MountPath,
+			MountType:      mountValidationResp.MountType,
+			Local:          alias.Local,
+			CustomMetadata: alias.CustomMetadata,
 		}
 
 		err = i.sanitizeAlias(ctx, newAlias)

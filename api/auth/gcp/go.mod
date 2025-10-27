@@ -7,7 +7,7 @@ toolchain go1.23.7
 require (
 	cloud.google.com/go/compute/metadata v0.7.0
 	cloud.google.com/go/iam v1.5.2
-	github.com/hashicorp/vault/api v1.20.0
+	github.com/hashicorp/vault/api v1.22.0
 	google.golang.org/genproto v0.0.0-20250505200425-f936aa4a68b2
 )
 
@@ -16,7 +16,7 @@ require (
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect

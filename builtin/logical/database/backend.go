@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package database
@@ -131,14 +131,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minRootCredRollbackAge,
 		BackendType:       logical.TypeLogical,
-		RotateCredential: func(ctx context.Context, request *logical.Request) error {
-			name, err := b.getDatabaseConfigNameFromRotationID(request.RotationID)
-			if err != nil {
-				return err
-			}
-			_, err = b.rotateRootCredentials(ctx, request, name)
-			return err
-		},
+		RotateCredential:  b.rotateRootCredential,
 	}
 
 	b.logger = conf.Logger

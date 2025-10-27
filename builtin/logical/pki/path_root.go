@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -332,6 +333,23 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	resp = addWarnings(resp, warnings)
 
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIGenerateRoot,
+		observe.NewAdditionalPKIMetadata("issuer_name", myIssuer.Name),
+		observe.NewAdditionalPKIMetadata("issuer_id", myIssuer.ID),
+		observe.NewAdditionalPKIMetadata("key_id", myKey.ID),
+		observe.NewAdditionalPKIMetadata("key_name", myKey.Name),
+		observe.NewAdditionalPKIMetadata("key_type", myKey.PrivateKeyType),
+		observe.NewAdditionalPKIMetadata("role_name", role.Name),
+		observe.NewAdditionalPKIMetadata("serial_number", cb.SerialNumber),
+		observe.NewAdditionalPKIMetadata("type", format),
+		observe.NewAdditionalPKIMetadata("common_name", parsedBundle.Certificate.Subject.CommonName),
+		observe.NewAdditionalPKIMetadata("subject_key_id", parsedBundle.Certificate.SubjectKeyId),
+		observe.NewAdditionalPKIMetadata("authority_key_id", parsedBundle.Certificate.AuthorityKeyId),
+		observe.NewAdditionalPKIMetadata("public_key_algorithm", parsedBundle.Certificate.PublicKeyAlgorithm.String()),
+		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(parsedBundle.Certificate.PublicKey)),
+		observe.NewAdditionalPKIMetadata("not_after", parsedBundle.Certificate.NotAfter.String()),
+		observe.NewAdditionalPKIMetadata("not_before", parsedBundle.Certificate.NotBefore.String()))
+
 	return resp, nil
 }
 
@@ -455,6 +473,17 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		}
 	}
 
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuerSignIntermediate,
+		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuerId),
+		observe.NewAdditionalPKIMetadata("not_after", parsedBundle.Certificate.NotAfter.String()),
+		observe.NewAdditionalPKIMetadata("not_before", parsedBundle.Certificate.NotBefore.String()),
+		observe.NewAdditionalPKIMetadata("common_name", parsedBundle.Certificate.Subject.CommonName),
+		observe.NewAdditionalPKIMetadata("subject_key_id", parsedBundle.Certificate.SubjectKeyId),
+		observe.NewAdditionalPKIMetadata("authority_key_id", parsedBundle.Certificate.AuthorityKeyId),
+		observe.NewAdditionalPKIMetadata("role_name", role.Name),
+		observe.NewAdditionalPKIMetadata("type", format))
+
 	return resp, nil
 }
 
@@ -567,7 +596,7 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 	}
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, issuing.IssuanceUsage)
+	signingBundle, issuerId, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -633,6 +662,20 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 		Type:  "CERTIFICATE",
 		Bytes: newCert,
 	})
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuerSignSelfIssued,
+		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuerId.String()),
+		observe.NewAdditionalPKIMetadata("issuing_ca", signingCB.IssuingCA),
+		observe.NewAdditionalPKIMetadata("serial_number", cert.SerialNumber),
+		observe.NewAdditionalPKIMetadata("not_after", cert.NotAfter.String()),
+		observe.NewAdditionalPKIMetadata("not_before", cert.NotBefore.String()),
+		observe.NewAdditionalPKIMetadata("common_name", cert.Subject.CommonName),
+		observe.NewAdditionalPKIMetadata("public_key_algorithm", cert.PublicKeyAlgorithm.String()),
+		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(cert.PublicKey)),
+		observe.NewAdditionalPKIMetadata("signing_algorithm", signingAlgorithm.String()),
+		observe.NewAdditionalPKIMetadata("subject_key_id", cert.SubjectKeyId),
+		observe.NewAdditionalPKIMetadata("authority_key_id", cert.AuthorityKeyId))
 
 	return &logical.Response{
 		Data: map[string]interface{}{

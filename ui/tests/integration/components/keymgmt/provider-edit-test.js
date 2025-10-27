@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -41,7 +41,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     this.model = this.store.peekRecord('keymgmt/provider', 'foo-bar');
     this.root = root;
     this.owner.lookup('service:router').reopen({
-      currentURL: '/ui/vault/secrets/keymgmt/show/foo-bar',
+      currentURL: '/ui/vault/secrets-engines/keymgmt/show/foo-bar',
       currentRouteName: 'secrets.keymgmt.provider.show',
       urlFor() {
         return '';

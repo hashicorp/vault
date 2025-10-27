@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -54,11 +54,11 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   });
 
   test('it does not show the option to configure', async function (assert) {
-    await visit(`/vault/secrets/cubbyhole/list`);
+    await visit(`/vault/secrets-engines/cubbyhole/list`);
     await click(SES.configTab);
     assert.dom(SES.configure).doesNotExist('does not show the configure button');
     // try to force it by visiting the URL
-    await visit(`/vault/secrets/cubbyhole/configuration/edit`);
+    await visit(`/vault/secrets-engines/cubbyhole/configuration/edit`);
     assert.dom('[data-test-backend-error-title]').hasText('404 Not Found', 'shows 404 error');
   });
 });

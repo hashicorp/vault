@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -116,7 +116,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/configuration`,
+      `/vault/secrets-engines/${backend}/kmip/configuration`,
       'configuration navigates to the config page'
     );
     assert.ok(scopesPage.isEmpty, 'config page renders empty state');
@@ -125,7 +125,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/configure`,
+      `/vault/secrets-engines/${backend}/kmip/configure`,
       'configuration navigates to the configure page'
     );
     const addr = `127.0.0.1:${getRandomPort()}`;
@@ -133,7 +133,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/configuration`,
+      `/vault/secrets-engines/${backend}/kmip/configuration`,
       'redirects to configuration page after saving config'
     );
     assert.notOk(scopesPage.isEmpty, 'configuration page no longer renders empty state');
@@ -143,7 +143,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   test('it can revoke from the credentials show page', async function (assert) {
     const { backend, scope, role, serial } = await generateCreds(this.backend);
     await settled();
-    await visit(`/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials/${serial}`);
+    await visit(`/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/${role}/credentials/${serial}`);
 
     // Wait for the delete/revoke button to appear
     await waitUntil(() => find(GENERAL.confirmTrigger));
@@ -157,7 +157,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/${role}/credentials`,
       'redirects to the credentials list'
     );
     assert
@@ -173,7 +173,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/create`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/create`,
       'navigates to the kmip scope create page'
     );
 
@@ -183,7 +183,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes`,
+      `/vault/secrets-engines/${backend}/kmip/scopes`,
       'navigates to the kmip scopes page after create'
     );
     assert.strictEqual(scopesPage.listItemLinks.length, 1, 'renders a single scope');
@@ -229,7 +229,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/create`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/create`,
       'links to the role create form'
     );
     // check that the role form looks right
@@ -243,7 +243,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles`,
       'redirects to roles list'
     );
 
@@ -301,20 +301,20 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/edit`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/${role}/edit`,
       'navigates to role edit'
     );
     await click(GENERAL.cancelButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/${role}`,
       'cancel navigates to role show'
     );
     await click(GENERAL.confirmTrigger);
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles`,
       'redirects to the roles list'
     );
     assert.ok(rolesPage.isEmpty, 'renders an empty roles page');
@@ -329,7 +329,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials/generate`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/${role}/credentials/generate`,
       'navigates to generate credentials'
     );
     await click(GENERAL.submitButton);
@@ -361,7 +361,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/${role}/credentials`,
       'redirects to the credentials list'
     );
     assert.true(credentialsPage.isEmpty, 'renders an empty credentials page');
@@ -395,7 +395,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       await rolesPage.visit({ backend: this.backend, scope: this.scope });
       this.setModel = async () => {
         await click(GENERAL.submitButton);
-        await visit(`/vault/secrets/${this.backend}/kmip/scopes/${this.scope}/roles/${this.name}`);
+        await visit(`/vault/secrets-engines/${this.backend}/kmip/scopes/${this.scope}/roles/${this.name}`);
         this.model = this.store.peekRecord('kmip/role', this.name);
       };
     });

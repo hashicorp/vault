@@ -10,7 +10,8 @@
     "ember-cli-babel": "*",
     "ember-concurrency": "*",
     "@ember/test-waiters": "*",
-    "ember-inflector": "*"
+    "ember-inflector": "*",
+    "ember-template-lint": "*"
   },
   "ember-addon": {
     "paths": [

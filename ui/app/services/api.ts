@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -18,7 +18,7 @@ import {
   ResponseError,
 } from '@hashicorp/vault-client-typescript';
 import config from 'vault/config/environment';
-import { waitForPromise } from '@ember/test-waiters';
+import { waitForPromise, waitFor } from '@ember/test-waiters';
 
 import type AuthService from 'vault/services/auth';
 import type NamespaceService from 'vault/services/namespace';
@@ -84,7 +84,7 @@ export default class ApiService extends Service {
   };
 
   // -- Post Request Middleware --
-  showWarnings = async (context: ResponseContext) => {
+  showWarnings = waitFor(async (context: ResponseContext) => {
     const response = context.response.clone();
     // if the response is empty, don't try to parse it
     if (response.headers.get('Content-Length')) {
@@ -96,15 +96,40 @@ export default class ApiService extends Service {
         });
       }
     }
-  };
+  });
 
-  deleteControlGroupToken = async (context: ResponseContext) => {
-    const { url } = context;
-    const controlGroupToken = this.controlGroup.tokenForUrl(url);
-    if (controlGroupToken) {
-      this.controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
+  checkControlGroup = waitFor(async (context: ResponseContext) => {
+    const response = context.response.clone();
+    const { headers } = response;
+
+    // since control group requests are forwarded to /v1/sys/wrapping/unwrap we cannot use controlGroup.tokenForUrl here
+    // instead, we can check if tokenToUnwrap exists on the service and compare the token value with the request header value
+    if (this.controlGroup.tokenToUnwrap) {
+      const { token, accessor } = this.controlGroup.tokenToUnwrap || {};
+      const requestHeaders = context.init.headers as Headers;
+
+      if (requestHeaders.get('X-Vault-Token') === token) {
+        this.controlGroup.deleteControlGroupToken(accessor);
+      }
     }
-  };
+    // if the requested path is locked by a control group we need to create a new error response
+    if (headers.get('Content-Length')) {
+      const json = await response.json();
+      const wrapTtl = headers.get('X-Vault-Wrap-TTL');
+      const isLockedByControlGroup = this.controlGroup.isRequestedPathLocked(json, wrapTtl);
+
+      if (isLockedByControlGroup) {
+        const error = {
+          message: 'Control Group encountered',
+          isControlGroupError: true,
+          ...json.wrap_info,
+        };
+        return new Response(JSON.stringify(error), { headers, status: 403, statusText: 'Forbidden' });
+      }
+    }
+
+    return;
+  });
   // --- End Middleware ---
 
   configuration = new Configuration({
@@ -114,7 +139,7 @@ export default class ApiService extends Service {
       { pre: this.getControlGroupToken },
       { pre: this.setHeaders },
       { post: this.showWarnings },
-      { post: this.deleteControlGroupToken },
+      { post: this.checkControlGroup },
     ],
     fetchApi: (...args: [Request]) => {
       return waitForPromise(window.fetch(...args));
@@ -162,10 +187,13 @@ export default class ApiService extends Service {
   // accepts an error response and returns { status, message, response, path }
   // message is built as error.errors joined with a comma, error.message or a fallback message
   // path is the url of the request, minus the origin -> /v1/sys/wrapping/unwrap
-  async parseError(e: unknown, fallbackMessage = 'An error occurred, please try again') {
+  parseError = waitFor(async (e: unknown, fallbackMessage = 'An error occurred, please try again') => {
     if (e instanceof ResponseError) {
       const { status, url } = e.response;
-      const error = await e.response.json();
+      // instances where an error is thrown multiple times could result in the body already being read
+      // this will result in a readable stream failure and we can't parse the body
+      // to avoid this, clone the response so we can access the body consistently
+      const error = await e.response.clone().json();
       // typically the Vault API error response looks like { errors: ['some error message'] }
       // but sometimes (eg RespondWithStatusCode) it's { data: { error: 'some error message' } }
       const errors = error.data?.error && !error.errors ? [error.data.error] : error.errors;
@@ -174,7 +202,7 @@ export default class ApiService extends Service {
       return {
         message: message || fallbackMessage,
         status,
-        path: url.replace(document.location.origin, ''),
+        path: decodeURIComponent(url.replace(document.location.origin, '')),
         response: error,
       };
     }
@@ -187,7 +215,7 @@ export default class ApiService extends Service {
     return {
       message: (e as Error)?.message || fallbackMessage,
     };
-  }
+  });
 
   // accepts a list response as { keyInfo, keys } and returns a flat array of the keyInfo datum
   // to preserve the keys (unique identifiers) the value will be set on the datum as id

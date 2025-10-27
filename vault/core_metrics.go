@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -410,10 +410,12 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 }
 
 type kvMount struct {
-	Namespace  *namespace.Namespace
-	MountPoint string
-	Version    string
-	NumSecrets int
+	Namespace     *namespace.Namespace
+	MountPoint    string
+	MountAccessor string
+	Version       string
+	Local         bool
+	NumSecrets    int
 }
 
 func (c *Core) findKvMounts() []*kvMount {
@@ -436,10 +438,12 @@ func (c *Core) findKvMounts() []*kvMount {
 				version = "1"
 			}
 			mounts = append(mounts, &kvMount{
-				Namespace:  entry.namespace,
-				MountPoint: entry.Path,
-				Version:    version,
-				NumSecrets: 0,
+				Namespace:     entry.namespace,
+				MountPoint:    entry.Path,
+				MountAccessor: entry.Accessor,
+				Version:       version,
+				NumSecrets:    0,
+				Local:         entry.Local,
 			})
 		}
 	}

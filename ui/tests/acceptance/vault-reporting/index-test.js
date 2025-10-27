@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -86,7 +86,7 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
         '[data-test-vault-reporting-dashboard-secret-engines] [data-test-vault-reporting-dashboard-card-title-link]'
       )
       .exists('title link is present')
-      .hasAttribute('href', '/ui/vault/secrets', 'link points to secrets');
+      .hasAttribute('href', '/ui/vault/secrets-engines', 'link points to secrets');
     assert
       .dom(
         '[data-test-vault-reporting-dashboard-secret-engines] [data-test-vault-reporting-dashboard-card-description]'

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -42,8 +42,8 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     assert.dom(GENERAL.cardContainer('version')).exists('version card exists');
     assert.dom(SELECTORS.versionCard.engineType).hasText(keymgmtType, 'shows keymgmt engine type');
     assert.dom(GENERAL.cardContainer('metadata')).exists('metadata card exists');
-    assert.dom(GENERAL.inputByAttr('path')).hasValue(`${keymgmtType}/`, 'show path value');
-    assert.dom(GENERAL.cardContainer('lease-duration')).exists('lease-duration card exists');
+    assert.dom(GENERAL.copySnippet('path')).hasText(`${keymgmtType}/`, 'show path value');
+    assert.dom(GENERAL.cardContainer('secrets duration')).exists('secrets duration card exists');
     assert.dom(GENERAL.cardContainer('security')).exists('security card exists');
 
     // fill in values to tune
@@ -55,8 +55,8 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     await click(GENERAL.submitButton);
 
     // after submitting go to list and back to configuration
-    await visit(`/vault/secrets/${keymgmtType}/list`);
-    await visit(`/vault/secrets/${keymgmtType}/configuration`);
+    await visit(`/vault/secrets-engines/${keymgmtType}/list`);
+    await visit(`/vault/secrets-engines/${keymgmtType}/configuration`);
 
     // confirm that submitted values were saved and prepopulated with those saved values
     assert
@@ -71,12 +71,49 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
       .dom(GENERAL.selectByAttr('max_lease_ttl'))
       .hasValue('d', 'max ttl value was tuned and shows correct unit');
 
+    // show unsaved changes modal and save
+    await fillIn(GENERAL.inputByAttr('default_lease_ttl'), 11);
+    await fillIn(GENERAL.selectByAttr('default_lease_ttl'), 'm');
+    await fillIn(GENERAL.textareaByAttr('description'), 'Updated awesome description.');
+    await click(GENERAL.breadcrumbAtIdx(0));
+    assert.dom(GENERAL.modal.container('unsaved-changes')).exists('Unsaved changes exists');
+    await click(GENERAL.button('save'));
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.configuration.general-settings');
+    assert
+      .dom(GENERAL.textareaByAttr('description'))
+      .hasValue('Updated awesome description.', 'description was tuned from unsaved changes modal');
+    assert.dom(GENERAL.inputByAttr('default_lease_ttl')).hasValue('11', 'default ttl value was tuned');
+    assert.dom(GENERAL.selectByAttr('default_lease_ttl')).hasValue('m', 'default ttl unit was tuned');
+
+    await visit(`/vault/secrets-engines/${keymgmtType}/configuration`);
+
+    // show unsaved changes modal and discard
+    await fillIn(GENERAL.inputByAttr('default_lease_ttl'), 12);
+    await fillIn(GENERAL.selectByAttr('default_lease_ttl'), 'm');
+    await fillIn(GENERAL.textareaByAttr('description'), 'Some awesome description.');
+    await click(GENERAL.breadcrumbAtIdx(0));
+    assert.dom(GENERAL.modal.container('unsaved-changes')).exists('Unsaved changes exists');
+    await click(GENERAL.button('discard'));
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.configuration.general-settings');
+    assert
+      .dom(GENERAL.textareaByAttr('description'))
+      .hasValue(
+        'Updated awesome description.',
+        'description was reset to original values after discarding from unsaved changes modal'
+      );
+    assert
+      .dom(GENERAL.inputByAttr('default_lease_ttl'))
+      .hasValue('11', 'default ttl value was reset to original values');
+    assert
+      .dom(GENERAL.selectByAttr('default_lease_ttl'))
+      .hasValue('m', 'default ttl unit was reset to original values');
+
     // navigate back to keymgmt list view to delete the engine from the manage dropdown
-    await visit(`/vault/secrets/${keymgmtType}/list`);
+    await visit(`/vault/secrets-engines/${keymgmtType}/list`);
     await click(SELECTORS.manageDropdown);
     await click(SELECTORS.manageDropdownItem('Delete'));
     await click(GENERAL.confirmButton);
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends');
+
     await consoleComponent.runCommands([
       // cleanup after
       'delete sys/mounts/keymgmt',

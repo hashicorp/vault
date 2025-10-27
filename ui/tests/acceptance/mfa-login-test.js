@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -75,6 +75,7 @@ module('Acceptance | mfa-login', function (hooks) {
   test('it should handle single constraint with passcode method', async function (assert) {
     assert.expect(4);
     await login('mfa-a');
+    await waitFor(GENERAL.title);
     assert.dom(GENERAL.title).hasText('Verify your identity');
     assert.dom(MFA_SELECTORS.select()).doesNotExist('Select is hidden for single method');
     assert.dom(MFA_SELECTORS.passcode()).exists({ count: 1 }, 'Single passcode input renders');
@@ -117,6 +118,7 @@ module('Acceptance | mfa-login', function (hooks) {
   test('it should handle single constraint with 2 push methods', async function (assert) {
     assert.expect(4);
     await login('mfa-d');
+    await waitFor(MFA_SELECTORS.mfaForm);
     assert.dom(GENERAL.title).hasText('Verify your identity');
     assert.dom(GENERAL.button('Verify with Okta')).exists('It renders button for Okta');
     assert.dom(GENERAL.button('Verify with Duo')).exists('It renders button for Duo');
@@ -127,6 +129,7 @@ module('Acceptance | mfa-login', function (hooks) {
   test('it should handle single constraint with 1 passcode and 1 push method', async function (assert) {
     assert.expect(3);
     await login('mfa-e');
+    await waitFor(MFA_SELECTORS.mfaForm);
     assert.dom(GENERAL.button('Verify with Okta')).exists('It renders button for Okta');
     await click(GENERAL.button('Verify with TOTP'));
     assert.dom(MFA_SELECTORS.passcode()).exists('Passcode input renders');
@@ -250,6 +253,18 @@ module('Acceptance | mfa-login', function (hooks) {
     assert.dom(MFA_SELECTORS.label).hasText('Duo passcode');
     await fillIn(MFA_SELECTORS.passcode(1), 'test');
     await click(GENERAL.button('Verify'));
+    await didLogin(assert);
+  });
+
+  test('self-enroll: single constraint with 2 self-enroll methods', async function (assert) {
+    assert.expect(10);
+    await login('mfa-y-self');
+    // Buttons render for both TOTP methods
+    assert.dom(GENERAL.title).hasText('Verify your identity');
+    assert.dom(GENERAL.button('Setup to verify with TOTP')).exists({ count: 2 });
+    await click(GENERAL.button('Setup to verify with TOTP'));
+    await assertSelfEnroll(assert);
+    await validate();
     await didLogin(assert);
   });
 

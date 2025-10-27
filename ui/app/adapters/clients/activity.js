@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -64,6 +64,7 @@ export default class ActivityAdapter extends ApplicationAdapter {
     if (errorMsg) {
       const error = new Error(errorMsg);
       error.httpStatus = httpStatus;
+      error.path = 'sys/internal/counters/activity/export';
       throw error;
     }
   }

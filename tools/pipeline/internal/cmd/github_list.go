@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
@@ -14,8 +14,9 @@ func newGithubListCmd() *cobra.Command {
 		Long:  "Github list commands",
 	}
 
-	listCmd.AddCommand(newGithubListRunCmd())
 	listCmd.AddCommand(newGithubListChangedFilesCmd())
+	listCmd.AddCommand(newGithubListCommitStatusesCmd())
+	listCmd.AddCommand(newGithubListWorkflowRunsCmd())
 
 	return listCmd
 }

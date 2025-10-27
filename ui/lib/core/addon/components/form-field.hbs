@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -315,7 +315,7 @@
           @inputValue={{get @model this.valuePath}}
           @wildcardLabel={{@attr.options.wildcardLabel}}
           @label={{this.labelString}}
-          @labelClass={{if @attr.options.isSectionHeader "title is-4" "is-label"}}
+          @labelClass={{if @attr.options.isSectionHeader "title is-4" ""}}
           @subText={{@attr.options.subText}}
           @helpText={{this.helpTextString}}
           @fallbackComponent={{@attr.options.fallbackComponent}}
@@ -490,14 +490,15 @@
               @helpText={{this.helpTextString}}
               @mode={{@attr.options.mode}}
               @example={{@attr.options.example}}
+              @onSetup={{fn (mut this.codemirrorEditor)}}
             >
               {{#if @attr.options.allowReset}}
                 <Hds::Button
                   @text="Clear"
                   @icon="reload"
-                  class="toolbar-button"
+                  @color="secondary"
                   disabled={{not value}}
-                  {{on "click" this.setAndBroadcast}}
+                  {{on "click" (fn this.editorUpdated true "")}}
                   data-test-json-clear-button
                 />
               {{/if}}

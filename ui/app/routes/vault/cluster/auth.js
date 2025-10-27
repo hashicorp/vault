@@ -1,14 +1,14 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { service } from '@ember/service';
 import ClusterRouteBase from './cluster-route-base';
 import config from 'vault/config/environment';
-import { isEmptyValue } from 'core/helpers/is-empty-value';
 import { supportedTypes } from 'vault/utils/auth-form-helpers';
 import { sanitizePath } from 'core/utils/sanitize-path';
+import AuthMethodResource from 'vault/resources/auth/method';
 
 export default class AuthRoute extends ClusterRouteBase {
   queryParams = {
@@ -112,8 +112,11 @@ export default class AuthRoute extends ClusterRouteBase {
       const resp = await this.api.sys.internalUiListEnabledVisibleMounts(
         this.api.buildHeaders({ token: '' })
       );
-      // return a falsy value if the object is empty
-      return isEmptyValue(resp.auth) ? null : resp.auth;
+      const authMounts = this.api.responseObjectToArray(resp.auth, 'path').flatMap((method) => {
+        const resource = new AuthMethodResource(method, this);
+        return this.isSupported(resource.methodType) ? [resource] : [];
+      });
+      return authMounts.length ? authMounts : null;
     } catch {
       // catch error if there's a problem fetching mount data (i.e. invalid namespace)
       return null;
@@ -133,17 +136,18 @@ export default class AuthRoute extends ClusterRouteBase {
     const sanitizedParam = sanitizePath(authMount); // strip leading/trailing slashes
     // mount paths in visibleAuthMounts always end in a slash, so format for consistency
     const formattedPath = `${sanitizedParam}/`;
-    const mountData = visibleAuthMounts?.[formattedPath];
+    const mountData = visibleAuthMounts?.find((a) => a.path === formattedPath);
     if (mountData) {
       return { path: formattedPath, type: mountData.type };
     }
 
-    const types = supportedTypes(this.version.isEnterprise);
-    if (types.includes(sanitizedParam)) {
+    if (this.isSupported(sanitizedParam)) {
       return { type: sanitizedParam };
     }
     // `type` is necessary because it determines which login fields to render.
     // If we can't safely glean it from the query param, ignore it and return null.
     return null;
   }
+
+  isSupported = (type = '') => supportedTypes(this.version.isEnterprise).includes(type);
 }

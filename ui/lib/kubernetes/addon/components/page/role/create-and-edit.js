@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -112,14 +112,21 @@ export default class CreateAndEditRolePageComponent extends Component {
 
   @action
   resetRoleRules() {
+    // Reset tracked rule templates to initial values
     this.roleRulesTemplates = getRules();
+    // Make sure editor renders the reset template
+    this.updateCodeMirror();
+  }
 
+  @action
+  updateCodeMirror() {
+    const template = this.roleRulesTemplates.find((t) => t.id === this.selectedTemplateId);
     this.codemirrorEditor.dispatch({
       changes: [
         {
           from: 0,
           to: this.codemirrorEditor.state.doc.length,
-          insert: this.args.value,
+          insert: template.rules,
         },
       ],
     });
@@ -128,6 +135,8 @@ export default class CreateAndEditRolePageComponent extends Component {
   @action
   selectTemplate(event) {
     this.selectedTemplateId = event.target.value;
+    // Dispatch the event to codemirror so the code editor updates when a template is selected
+    this.updateCodeMirror();
   }
 
   @action

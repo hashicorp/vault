@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -45,10 +45,10 @@ module('Acceptance | pki action forms test', function (hooks) {
 
     test('happy path', async function (assert) {
       await login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(`${GENERAL.emptyStateActions} a`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       assert.dom(GENERAL.title).hasText('Configure PKI');
       assert.dom(GENERAL.emptyStateTitle).exists({ count: 1 }, 'Shows empty state by default');
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
@@ -63,7 +63,7 @@ module('Acceptance | pki action forms test', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/configuration/create`,
+        `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
       assert.dom(GENERAL.title).hasText('View imported items');
@@ -72,7 +72,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click('[data-test-done]');
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/overview`,
+        `/vault/secrets-engines/${this.mountPath}/pki/overview`,
         'redirects to overview when done'
       );
     });
@@ -91,7 +91,7 @@ module('Acceptance | pki action forms test', function (hooks) {
         };
       });
       await login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
       await click(GENERAL.textToggle);
@@ -100,7 +100,7 @@ module('Acceptance | pki action forms test', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/configuration/create`,
+        `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
       assert.dom(GENERAL.title).hasText('View imported items');
@@ -113,7 +113,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click('[data-test-done]');
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/overview`,
+        `/vault/secrets-engines/${this.mountPath}/pki/overview`,
         'redirects to overview when done'
       );
     });
@@ -132,7 +132,7 @@ module('Acceptance | pki action forms test', function (hooks) {
         };
       });
       await login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
       await click(GENERAL.textToggle);
@@ -158,7 +158,7 @@ module('Acceptance | pki action forms test', function (hooks) {
         };
       });
       await login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
       await click(GENERAL.textToggle);
@@ -178,10 +178,10 @@ module('Acceptance | pki action forms test', function (hooks) {
       const issuerName = 'my-first-issuer';
       const keyName = 'my-first-key';
       await login();
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(`${GENERAL.emptyStateActions} a`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       assert.dom(GENERAL.title).hasText('Configure PKI');
       assert.dom(GENERAL.emptyStateTitle).exists({ count: 1 }, 'Shows empty state by default');
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-root'));
@@ -199,7 +199,7 @@ module('Acceptance | pki action forms test', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/configuration/create`,
+        `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
       assert.dom(GENERAL.title).hasText('View Root Certificate');
@@ -218,7 +218,7 @@ module('Acceptance | pki action forms test', function (hooks) {
     test('type=exported', async function (assert) {
       const commonName = 'my-exported-name';
       await login();
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-root'));
       // Fill in form
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
@@ -227,7 +227,7 @@ module('Acceptance | pki action forms test', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/configuration/create`,
+        `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
       assert.dom(GENERAL.title).hasText('View Root Certificate');
@@ -253,7 +253,7 @@ module('Acceptance | pki action forms test', function (hooks) {
   module('generate CSR', function () {
     test('happy path', async function (assert) {
       await login();
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(`${GENERAL.emptyStateActions} a`);
       assert.dom(GENERAL.title).hasText('Configure PKI');
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
@@ -265,13 +265,13 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click('[data-test-done]');
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/overview`,
+        `/vault/secrets-engines/${this.mountPath}/pki/overview`,
         'Transitions to overview after viewing csr details'
       );
     });
     test('type = exported', async function (assert) {
       await login();
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(`${GENERAL.emptyStateActions} a`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
@@ -288,7 +288,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click('[data-test-done]');
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/overview`,
+        `/vault/secrets-engines/${this.mountPath}/pki/overview`,
         'Transitions to overview after viewing csr details'
       );
     });

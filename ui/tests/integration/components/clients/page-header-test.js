@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -13,6 +13,7 @@ import Sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import timestamp from 'core/utils/timestamp';
 
 // this test coverage mostly is around the export button functionality
 // since everything else is static
@@ -37,6 +38,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
           @endTimestamp={{this.endTimestamp}}
           @upgradesDuringActivity={{this.upgradesDuringActivity}}
           @noData={{this.noData}}
+          @activityTimestamp={{this.activityTimestamp}}
         />`);
     };
   });
@@ -158,6 +160,19 @@ module('Integration | Component | clients/page-header', function (hooks) {
     await click(CLIENT_COUNT.exportButton);
     await waitFor('[data-test-export-upgrade-warning]');
     assert.dom('[data-test-export-upgrade-warning]').includesText('1.10.1 (Nov 18, 2021)');
+  });
+
+  test('it refreshes route after clicking "Refresh page" button', async function (assert) {
+    const routeName = 'vault.cluster.clients.counts';
+    const router = this.owner.lookup('service:router');
+    Sinon.stub(router, 'currentRoute').value({ parent: { name: routeName } });
+    const refreshStub = Sinon.stub(router, 'refresh');
+    this.activityTimestamp = timestamp.now().toISOString();
+    await this.renderComponent();
+    await click(GENERAL.button('Refresh page'));
+    const [transitionRoute] = refreshStub.lastCall.args;
+    assert.true(refreshStub.calledOnce, 'clicking "Refresh page" calls refresh()');
+    assert.strictEqual(transitionRoute, routeName, 'it calls refresh() with parent route name');
   });
 
   module('download naming', function () {

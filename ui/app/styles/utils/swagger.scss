@@ -1,7 +1,7 @@
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -28,7 +28,7 @@
     opacity: 1;
 
     .opblock-summary-method {
-      background-color: var(--token-color-palette-neutral-500);
+      background-color: var(--token-color-foreground-faint);
     }
   }
 

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -135,6 +135,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 				"leases/lookup/*",
 				"storage/raft/snapshot-auto/config/*",
 				"leases",
+				"reporting/scan",
 				"internal/inspect/*",
 				"internal/counters/activity/export",
 				// sys/seal and sys/step-down actually have their sudo requirement enforced through hardcoding
@@ -7245,5 +7246,9 @@ This path responds to the following HTTP methods.
 	"trim_request_trailing_slashes": {
 		`Whether to trim a trailing slash on incoming requests to this mount`,
 		"",
+	},
+	"pki-certificate-count": {
+		"Count of PKI certificates issued and stored by PKI backends on this cluster",
+		"Count of PKI certificates issued and stored by PKI backends on this cluster",
 	},
 }

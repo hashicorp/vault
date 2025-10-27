@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -156,6 +156,12 @@ export default function (server) {
         [m('okta'), m('totp', { self_enrollment_enabled: true })],
         [m('duo', { uses_passcode: true })]
       );
+    } else if (user === 'mfa-y-self') {
+      // 1 constraint 2 self-enroll methods
+      [mfa_constraints, methods] = generator([
+        m('totp', { self_enrollment_enabled: true }),
+        m('totp', { self_enrollment_enabled: true }),
+      ]);
     } else if (user === 'mfa-z-self') {
       // We've discussed that this scenario likely won't be allowed in the real-world
       // by having the API restrict self-enrollment so it's only be possible when only ONE

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,6 +9,7 @@ import sinon from 'sinon';
 
 export default (context) => {
   context.version = context.owner.lookup('service:version');
+  context.api = context.owner.lookup('service:api');
   context.cluster = { id: '1' };
   context.directLinkData = null;
   context.loginSettings = null;
@@ -17,7 +18,7 @@ export default (context) => {
   // mocking as an object with the `perform()` method because loginAndTransition is a concurrency task
   context.loginAndTransition = { perform: sinon.spy() };
   context.onNamespaceUpdate = sinon.spy();
-  context.visibleAuthMounts = false;
+  context.visibleAuthMounts = null;
 
   context.renderComponent = () => {
     return render(hbs`<Auth::Page

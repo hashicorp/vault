@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package http
@@ -187,6 +187,7 @@ func init() {
 		"sys/storage/raft/snapshot-force",
 		"!sys/storage/raft/snapshot-auto/config",
 		"sys/storage/raft/snapshot-load",
+		"!sys/storage/raft/snapshot-auto/snapshot-load",
 	})
 	websocketPaths.AddPaths(websocketRawPaths)
 }
@@ -307,6 +308,8 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	// Build up a chain of wrapping handlers.
 	wrappedHandler := wrapHelpHandler(mux, core)
 	wrappedHandler = wrapCORSHandler(wrappedHandler, core)
+	wrappedHandler = withRoleRateLimitQuotaWrapping(wrappedHandler, core)
+	wrappedHandler = wrapJSONLimitsHandler(wrappedHandler, props)
 	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
 	wrappedHandler = entWrapGenericHandler(core, wrappedHandler, props)
 	wrappedHandler = wrapMaxRequestSizeHandler(wrappedHandler, props)

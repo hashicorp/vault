@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -469,7 +469,7 @@ func (d *autoSeal) migrateRecoveryConfig(ctx context.Context) error {
 
 // StartHealthCheck starts a goroutine that tests the health of the auto-unseal backend once every 10 minutes.
 // If unhealthy, logs a warning on the condition and begins testing every one minute until healthy again.
-func (d *autoSeal) StartHealthCheck() {
+func (d *autoSeal) StartHealthCheck(ctx context.Context) {
 	d.StopHealthCheck()
 	d.hcLock.Lock()
 	defer d.hcLock.Unlock()
@@ -548,6 +548,12 @@ error and restart Vault.`)
 		check(time.Now())
 		for {
 			select {
+			case <-ctx.Done():
+				if healthCheck != nil {
+					healthCheck.Stop()
+				}
+				healthCheckStop = nil
+				return
 			case <-healthCheckStop:
 				if healthCheck != nil {
 					healthCheck.Stop()

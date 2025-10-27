@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -6,6 +6,7 @@ package pki
 import (
 	"fmt"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -61,6 +62,11 @@ func (b *backend) acmeChallengeHandler(acmeCtx *acmeContext, r *logical.Request,
 	if err != nil {
 		return nil, fmt.Errorf("failed to load authorization: %w", err)
 	}
+
+	b.pkiObserver.RecordPKIObservation(acmeCtx, r, observe.ObservationTypePKIAcmeChallenge,
+		observe.NewAdditionalPKIMetadata("auth_id", authId),
+		observe.NewAdditionalPKIMetadata("challenge_type", challengeType),
+	)
 
 	return b.acmeChallengeFetchHandler(acmeCtx, r, fields, userCtx, data, authz, challengeType)
 }

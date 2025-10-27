@@ -1,9 +1,9 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-$base-font-size: 16px;
+$base-font-size: var(--token-typography-body-300-font-size); // 16px
 
 /* 
 General sizing in rem values
@@ -34,10 +34,6 @@ $spacing-32: 32px;
 $spacing-36: 36px;
 $spacing-48: 48px;
 $spacing-64: 64px;
-
-/* Border radius */
-$radius: 2px;
-$radius-large: 4px;
 
 /* Responsiveness */
 // 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16

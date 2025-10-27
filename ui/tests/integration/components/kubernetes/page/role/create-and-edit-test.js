@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -12,7 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
+import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 
 module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -151,6 +151,49 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     );
   });
 
+  test('it should update code editor when template selection changes', async function (assert) {
+    await render(
+      hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`,
+      { owner: this.engine }
+    );
+
+    await click('[data-test-radio-card="full"]');
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    const expectedInitialValue = `# The below is an example that you can use as a starting point.
+#
+# rules:
+#   - apiGroups: [""]
+#     resources: ["serviceaccounts", "serviceaccounts/token"]
+#     verbs: ["create", "update", "delete"]
+#   - apiGroups: ["rbac.authorization.k8s.io"]
+#     resources: ["rolebindings", "clusterrolebindings"]
+#     verbs: ["create", "update", "delete"]
+#   - apiGroups: ["rbac.authorization.k8s.io"]
+#     resources: ["roles", "clusterroles"]
+#     verbs: ["bind", "escalate", "create", "update", "delete"]
+`;
+    assert.strictEqual(
+      getCodeEditorValue(editor),
+      expectedInitialValue,
+      'editor initially renders rules from example template'
+    );
+    // Select a different template
+    await fillIn('[data-test-select-template]', '6');
+    const expectedRule = `rules:
+- apiGroups: ['policy']
+  resources: ['podsecuritypolicies']
+  verbs:     ['use']
+  resourceNames:
+  - <list of policies to authorize>
+`;
+    assert.strictEqual(
+      getCodeEditorValue(editor),
+      expectedRule,
+      'code editor updates and renders rules from selected template'
+    );
+  });
+
   test('it should create new role', async function (assert) {
     assert.expect(3);
 
@@ -257,8 +300,16 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     const editor = codemirror();
     setCodeEditorValue(editor, addedText);
     await settled();
+    assert.strictEqual(getCodeEditorValue(editor), addedText, 'code editor contains addedText');
     await click('[data-test-restore-example]');
-    assert.dom('.cm-content').doesNotContainText(addedText, 'Role rules example restored');
+    const expectedValue = `rules:
+- apiGroups: [""]
+  resources: ["secrets", "services"]
+  verbs: ["get", "watch", "list", "create", "delete", "deletecollection", "patch", "update"]
+`;
+    assert.strictEqual(getCodeEditorValue(editor), expectedValue, 'code editor is reset to initial value');
+    assert.strictEqual(this.role.generatedRoleRules, expectedValue, 'model value matches code editor');
+    assert.dom('.cm-content').doesNotContainText(addedText, 'editor does not contain added text');
   });
 
   test('it should set generatedRoleRoles model prop on save', async function (assert) {

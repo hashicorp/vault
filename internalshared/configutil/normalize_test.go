@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package configutil
@@ -70,7 +70,7 @@ func TestNormalizeAddr(t *testing.T) {
 		},
 		"ipv4 invalid URL": {
 			addr:     "https://[10.10.1.10]:8200",
-			expected: "https://10.10.1.10:8200",
+			expected: "https://[10.10.1.10]:8200",
 		},
 		"ipv4 destination address": {
 			addr:     "username@10.10.1.10",

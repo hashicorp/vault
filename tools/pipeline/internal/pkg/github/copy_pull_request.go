@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -165,8 +165,10 @@ func (r *CopyPullRequestReq) Run(
 		return res, err
 	}
 
-	// Create a new branch for our copied changes.
-	branchName := r.copyBranchNameForRef(baseRef, prBranch)
+	// Create a new branch for our copied changes. Encode the details of our origin
+	// pull request into the branch name so that future post-merge operations can
+	// determine the origin PR using only the branch name.
+	branchName := encodeCopyPullRequestBranch(r.FromOwner, r.FromRepo, r.PullNumber, prBranch)
 	// We don't have local references so create a new branch from our tracking branch
 	baseBranch := "remotes/" + r.ToOrigin + "/" + baseRef
 	slog.Default().DebugContext(ctx, "checking out new copy branch")
@@ -336,21 +338,6 @@ func (r *CopyPullRequestReq) Run(
 	}
 
 	return res, nil
-}
-
-// copyBranchNameForRef returns then branch name to use for our PR copy operation.
-// e.g. copy/release/1.19.x+ent/my-feature-branch
-func (r CopyPullRequestReq) copyBranchNameForRef(
-	ref string,
-	prBranch string,
-) string {
-	name := fmt.Sprintf("copy/%s/%s", ref, prBranch)
-	if len(name) > 250 {
-		// Handle Githubs branch name max length
-		name = name[:250]
-	}
-
-	return name
 }
 
 // Validate ensures that we've been given the minimum filter arguments necessary to complete a

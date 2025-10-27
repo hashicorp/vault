@@ -1,10 +1,6 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Configuration
-  @engineConfig={{this.model.engineConfig}}
-  @mountConfig={{this.model.mountConfig}}
-  @breadcrumbs={{this.breadcrumbs}}
-/>
+<Page::Configuration @config={{this.model}} @backend={{this.backend}} @breadcrumbs={{this.breadcrumbs}} />

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,7 +11,7 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
-import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { grantAccessForWrite, setupControlGroup } from 'vault/tests/helpers/control-groups';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -40,13 +40,11 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(tokenWithPolicyCmd(`admin-${this.backend}`, personas.admin(this.backend)));
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cancel on create clears model (a)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'single secret exists on list');
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
@@ -62,7 +60,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (a)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/first')}/details`);
       assert.dom(PAGE.infoRowValue('foo')).exists('key has expected value');
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
@@ -78,7 +76,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create & update root secret with default metadata (a)', async function (assert) {
       const backend = this.backend;
       const secretPath = 'some secret';
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
 
       // Create secret form -- validations
@@ -103,12 +101,12 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}`,
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent(secretPath)}`,
         'Goes to overview after save'
       );
       // Details page
       await click(PAGE.secretTab('Secret'));
-      `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=1`,
+      `/vault/secrets-engines/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=1`,
         'details has version 1 param';
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
@@ -149,7 +147,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`
       );
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(PAGE.infoRow).exists({ count: 2 }, '2 rows of data shows');
@@ -162,7 +160,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create nested secret with metadata (a)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
 
       // Create secret
@@ -176,20 +174,20 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.toggleMetadata);
       assert.dom(PAGE.create.metadataSection).exists('Shows metadata section after toggled');
       // Check initial values
-      assert.dom(FORM.inputByAttr('maxVersions')).hasValue('0');
-      assert.dom(FORM.inputByAttr('casRequired')).isNotChecked();
+      assert.dom(FORM.inputByAttr('max_versions')).hasValue('0');
+      assert.dom(FORM.inputByAttr('cas_required')).isNotChecked();
       assert.dom(FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
-      // MaxVersions validation
-      await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
+      // max_versions validation
+      await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '7');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
-      await click(FORM.inputByAttr('casRequired'));
+      await click(FORM.inputByAttr('cas_required'));
       await click(FORM.toggleByLabel('Automate secret deletion'));
       await fillIn(FORM.ttlValue('Automate secret deletion'), '1000');
 
@@ -200,7 +198,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.saveBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}`,
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('my/secret')}`,
         'goes to overview after save'
       );
 
@@ -208,7 +206,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}/details?version=1`
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('my/secret')}/details?version=1`
       );
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
@@ -234,13 +232,13 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (a)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list/app/`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item('first')).exists('Lists first sub-secret');
       assert.dom(PAGE.list.item('new')).doesNotExist('Does not show new secret');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/create?initialKey=app%2F`,
+        `/vault/secrets-engines/${backend}/kv/create?initialKey=app%2F`,
         'Goes to create page with initialKey'
       );
       await typeIn(FORM.inputByAttr('path'), 'new');
@@ -253,28 +251,28 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/new')}/details?version=1`,
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/new')}/details?version=1`,
         'Details url has version param'
       );
       await click(PAGE.breadcrumbAtIdx(2));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`, 'sub-dir page');
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(PAGE.list.item('new')).exists('Lists new secret in sub-dir');
     });
     test('create new version of secret from older version (a)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
       await click(PAGE.detail.versionDropdown);
       await click(`${PAGE.detail.version(1)} a`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`,
+        `/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=1`,
         'goes to version 1'
       );
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       await click(PAGE.detail.createNewVersion);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`,
+        `/vault/secrets-engines/${backend}/kv/app%2Ffirst/details/edit?version=1`,
         'Goes to new version page'
       );
       assert
@@ -291,14 +289,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.saveBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst`,
+        `/vault/secrets-engines/${backend}/kv/app%2Ffirst`,
         'goes to overview after save'
       );
 
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=3`,
+        `/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=3`,
         'goes to latest version 3'
       );
       await click(PAGE.infoRowToggleMasked('my-key'));
@@ -346,13 +344,11 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const token = await runCmd(
         tokenWithPolicyCmd(`data-reader-${this.backend}`, personas.dataReader(this.backend))
       );
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cancel on create clears model (dr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       assert.dom(PAGE.list.item()).doesNotExist('list view has no items');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'jk');
@@ -365,14 +361,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (dr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/first')}/details`);
       assert.dom(PAGE.infoRowValue('foo')).exists('key has expected value');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist();
     });
     test('create & update root secret with default metadata (dr)', async function (assert) {
       const backend = this.backend;
       const secretPath = 'some secret';
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
 
       // Create secret form -- validations
@@ -394,7 +390,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
 
       // Since this persona can't create a new secret, test update with existing:
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
@@ -420,7 +416,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create nested secret with metadata (dr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
 
       // Create secret
@@ -434,20 +430,20 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.toggleMetadata);
       assert.dom(PAGE.create.metadataSection).exists('Shows metadata section after toggled');
       // Check initial values
-      assert.dom(FORM.inputByAttr('maxVersions')).hasValue('0');
-      assert.dom(FORM.inputByAttr('casRequired')).isNotChecked();
+      assert.dom(FORM.inputByAttr('max_versions')).hasValue('0');
+      assert.dom(FORM.inputByAttr('cas_required')).isNotChecked();
       assert.dom(FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
-      // MaxVersions validation
-      await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
+      // max_versions validation
+      await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '7');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
-      await click(FORM.inputByAttr('casRequired'));
+      await click(FORM.inputByAttr('cas_required'));
       await click(FORM.toggleByLabel('Automate secret deletion'));
       await fillIn(FORM.ttlValue('Automate secret deletion'), '1000');
 
@@ -462,12 +458,12 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (dr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list/app/`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/create?initialKey=app%2F`,
+        `/vault/secrets-engines/${backend}/kv/create?initialKey=app%2F`,
         'Goes to create page with initialKey'
       );
       await typeIn(FORM.inputByAttr('path'), 'new');
@@ -480,7 +476,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create new version of secret from older version (dr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=1`);
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
@@ -492,13 +488,11 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const token = await runCmd(
         tokenWithPolicyCmd(`data-list-reader-${this.backend}`, personas.dataListReader(this.backend))
       );
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cancel on create clears model (dlr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'single secret exists on list');
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
@@ -514,14 +508,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (dlr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/first')}/details`);
       assert.dom(PAGE.infoRowValue('foo')).exists('key has expected value');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
     });
     test('create & update root secret with default metadata (dlr)', async function (assert) {
       const backend = this.backend;
       const secretPath = 'some secret';
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
 
       // Create secret form -- validations
@@ -543,7 +537,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
 
       // Since this persona can't create a new secret, test update with existing:
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
@@ -569,7 +563,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create nested secret with metadata (dlr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
 
       // Create secret
@@ -583,20 +577,20 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.toggleMetadata);
       assert.dom(PAGE.create.metadataSection).exists('Shows metadata section after toggled');
       // Check initial values
-      assert.dom(FORM.inputByAttr('maxVersions')).hasValue('0');
-      assert.dom(FORM.inputByAttr('casRequired')).isNotChecked();
+      assert.dom(FORM.inputByAttr('max_versions')).hasValue('0');
+      assert.dom(FORM.inputByAttr('cas_required')).isNotChecked();
       assert.dom(FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
-      // MaxVersions validation
-      await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
+      // max_versions validation
+      await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '7');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
-      await click(FORM.inputByAttr('casRequired'));
+      await click(FORM.inputByAttr('cas_required'));
       await click(FORM.toggleByLabel('Automate secret deletion'));
       await fillIn(FORM.ttlValue('Automate secret deletion'), '1000');
 
@@ -611,12 +605,12 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (dlr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list/app/`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/create?initialKey=app%2F`,
+        `/vault/secrets-engines/${backend}/kv/create?initialKey=app%2F`,
         'Goes to create page with initialKey'
       );
       await typeIn(FORM.inputByAttr('path'), 'new');
@@ -629,7 +623,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create new version of secret from older version (dlr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=1`);
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
@@ -641,13 +635,11 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const token = await runCmd(
         tokenWithPolicyCmd(`data-list-reader-${this.backend}`, personas.metadataMaintainer(this.backend))
       );
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cancel on create clears model (mm)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'single secret exists on list');
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
@@ -663,7 +655,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (mm)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/first')}/details`);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert
         .dom(PAGE.detail.createNewVersion)
@@ -672,7 +664,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create & update root secret with default metadata (mm)', async function (assert) {
       const backend = this.backend;
       const secretPath = 'some secret';
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
 
       // Create secret form -- validations
@@ -694,7 +686,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
 
       // Since this persona can't create a new secret, test update with existing:
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created tooltip does not show');
       assert.dom(PAGE.infoRow).doesNotExist('secret data not shown');
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
@@ -716,7 +708,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Add new version
       await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('create new version button not rendered');
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details/edit?version=1`);
       assert
         .dom(FORM.noReadAlert)
         .hasText(
@@ -738,7 +730,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create nested secret with metadata (mm)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
 
       // Create secret
@@ -752,20 +744,20 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.toggleMetadata);
       assert.dom(PAGE.create.metadataSection).exists('Shows metadata section after toggled');
       // Check initial values
-      assert.dom(FORM.inputByAttr('maxVersions')).hasValue('0');
-      assert.dom(FORM.inputByAttr('casRequired')).isNotChecked();
+      assert.dom(FORM.inputByAttr('max_versions')).hasValue('0');
+      assert.dom(FORM.inputByAttr('cas_required')).isNotChecked();
       assert.dom(FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
-      // MaxVersions validation
-      await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
+      // max_versions validation
+      await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '7');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
-      await click(FORM.inputByAttr('casRequired'));
+      await click(FORM.inputByAttr('cas_required'));
       await click(FORM.toggleByLabel('Automate secret deletion'));
       await fillIn(FORM.ttlValue('Automate secret deletion'), '1000');
 
@@ -780,13 +772,13 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (mm)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list/app/`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item('first')).exists('Lists first sub-secret');
       assert.dom(PAGE.list.item('new')).doesNotExist('Does not show new secret');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/create?initialKey=app%2F`,
+        `/vault/secrets-engines/${backend}/kv/create?initialKey=app%2F`,
         'Goes to create page with initialKey'
       );
       await typeIn(FORM.inputByAttr('path'), 'new');
@@ -799,19 +791,19 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create new version of secret from older version (mm)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 2');
       await click(PAGE.detail.versionDropdown);
       await click(`${PAGE.detail.version(1)} a`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`,
+        `/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=1`,
         'goes to version 1'
       );
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 1');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('version timestamp not shown');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('create new version button not rendered');
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details/edit?version=1`);
       assert
         .dom(FORM.noReadAlert)
         .hasText(
@@ -838,13 +830,11 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const token = await runCmd(
         tokenWithPolicyCmd(`secret-creator-${this.backend}`, personas.secretCreator(this.backend))
       );
-      await login(token);
-      clearRecords(this.store);
-      return;
+      return login(token);
     });
     test('cancel on create clears model (sc)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       assert.dom(PAGE.list.item()).doesNotExist('list view has no items');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'jk');
@@ -857,7 +847,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (sc)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/first')}/details`);
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'no permissions state shows');
@@ -866,7 +856,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}`,
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/first')}`,
         'cancel goes to overview'
       );
       await click(PAGE.secretTab('Secret'));
@@ -875,14 +865,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.breadcrumbAtIdx(3));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}`,
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/first')}`,
         'breadcrumb goes to overview'
       );
     });
     test('create & update root secret with default metadata (sc)', async function (assert) {
       const backend = this.backend;
       const secretPath = 'some secret';
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
 
       // Create secret form -- validations
@@ -906,7 +896,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.saveBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}`,
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent(secretPath)}`,
         'Goes to overview page after save'
       );
       // Details page
@@ -948,14 +938,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.saveBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}`,
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent(secretPath)}`,
         'goes to overview page'
       );
       // Back to details page
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details`,
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent(secretPath)}/details`,
         'goes to details page'
       );
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created does not show');
@@ -966,7 +956,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create nested secret with metadata (sc)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
 
       // Create secret
@@ -980,20 +970,20 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.toggleMetadata);
       assert.dom(PAGE.create.metadataSection).exists('Shows metadata section after toggled');
       // Check initial values
-      assert.dom(FORM.inputByAttr('maxVersions')).hasValue('0');
-      assert.dom(FORM.inputByAttr('casRequired')).isNotChecked();
+      assert.dom(FORM.inputByAttr('max_versions')).hasValue('0');
+      assert.dom(FORM.inputByAttr('cas_required')).isNotChecked();
       assert.dom(FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
-      // MaxVersions validation
-      await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
+      // max_versions validation
+      await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
-      await fillIn(FORM.inputByAttr('maxVersions'), '7');
+      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
-      await click(FORM.inputByAttr('casRequired'));
+      await click(FORM.inputByAttr('cas_required'));
       await click(FORM.toggleByLabel('Automate secret deletion'));
       await fillIn(FORM.ttlValue('Automate secret deletion'), '1000');
 
@@ -1004,7 +994,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.saveBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}`,
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('my/secret')}`,
         'goes to overview page'
       );
 
@@ -1030,12 +1020,12 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (sc)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list/app/`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/create?initialKey=app%2F`,
+        `/vault/secrets-engines/${backend}/kv/create?initialKey=app%2F`,
         'Goes to create page with initialKey'
       );
       await typeIn(FORM.inputByAttr('path'), 'new');
@@ -1044,17 +1034,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.saveBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/new')}`,
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/new')}`,
         'Redirects to overview after save'
       );
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/new')}/details`,
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/new')}/details`,
         'navigates to details'
       );
       await click(PAGE.breadcrumbAtIdx(2));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`, 'sub-dir page');
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
     });
   });
@@ -1090,15 +1080,13 @@ path "${this.backend}/metadata/*" {
         backend: this.backend,
       });
       this.userToken = userToken;
-      await login(userToken);
-      clearRecords(this.store);
-      return;
+      return login(userToken);
     });
     test('create & update root secret with default metadata (cg)', async function (assert) {
       const backend = this.backend;
       // Known issue: control groups do not work correctly in UI when encodable characters in path
       const secretPath = 'some-secret';
-      await visit(`/vault/secrets/${backend}/kv/list`);
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
 
       // Create secret form -- validations
@@ -1132,7 +1120,7 @@ path "${this.backend}/metadata/*" {
         token: tokenToUnwrap.token,
         accessor: tokenToUnwrap.accessor,
         creation_path: `${backend}/data/${secretPath}`,
-        originUrl: `/vault/secrets/${backend}/kv/create`,
+        originUrl: `/vault/secrets-engines/${backend}/kv/create`,
         userToken: this.userToken,
         backend: this.backend,
       });
@@ -1145,7 +1133,7 @@ path "${this.backend}/metadata/*" {
       assert.strictEqual(this.controlGroup.tokenToUnwrap, null, 'clears tokenToUnwrap after successful save');
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${secretPath}`,
+        `/vault/secrets-engines/${backend}/kv/${secretPath}`,
         'Goes to overview page after save'
       );
       // Details page
@@ -1201,7 +1189,7 @@ path "${this.backend}/metadata/*" {
         accessor: tokenToUnwrap.accessor,
         token: tokenToUnwrap.token,
         creation_path: `${backend}/data/${secretPath}`,
-        originUrl: `/vault/secrets/${backend}/kv/${secretPath}/details/edit`,
+        originUrl: `/vault/secrets-engines/${backend}/kv/${secretPath}/details/edit`,
         userToken: this.userToken,
         backend: this.backend,
       });
@@ -1219,7 +1207,7 @@ path "${this.backend}/metadata/*" {
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`
+        `/vault/secrets-engines/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`
       );
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(PAGE.infoRow).exists({ count: 2 }, '2 rows of data shows');

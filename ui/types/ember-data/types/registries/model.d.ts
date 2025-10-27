@@ -1,11 +1,9 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model from '@ember-data/model';
-import KvSecretDataModel from 'vault/models/kv/data';
-import KvSecretMetadataModel from 'vault/models/kv/metadata';
 import PkiActionModel from 'vault/models/pki/action';
 import PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';
 import PkiConfigAcmeModel from 'vault/models/pki/config/acme';
@@ -24,8 +22,6 @@ declare module 'ember-data/types/registries/model' {
     'pki/config/cluster': PkiConfigClusterModel;
     'pki/config/crl': PkiConfigCrlModel;
     'pki/config/urls': PkiConfigUrlModel;
-    'kv/data': KvSecretDataModel;
-    'kv/metadata': KvSecretMetadataModel;
     'clients/activity': ClientsActivityModel;
     'clients/config': ClientsConfigModel;
     'clients/version-history': ClientsVersionHistoryModel;

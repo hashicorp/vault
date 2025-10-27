@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 # This manifest file describes active branches and is consumed by various
@@ -9,6 +9,10 @@
 
 schema = 1
 active_versions {
+  version "1.21.x" {
+    ce_active = true
+  }
+
   version "1.20.x" {
     ce_active = true
   }

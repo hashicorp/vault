@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -102,7 +102,11 @@
                 (has-capability this.model.capabilities "delete" pathKey="authMethodDelete" params=method.id)
               )
             }}
-              <dd.Interactive @color="critical" {{on "click" (fn (mut this.methodToDisable) method)}}>
+              <dd.Interactive
+                @color="critical"
+                {{on "click" (fn (mut this.methodToDisable) method)}}
+                data-test-button="Disable auth method"
+              >
                 Disable
               </dd.Interactive>
             {{/if}}
@@ -111,6 +115,8 @@
       </div>
     </div>
   </LinkedBlock>
+{{else}}
+  <EmptyState @title="No Authentication Methods found" />
 {{/each}}
 
 {{#if this.methodToDisable}}

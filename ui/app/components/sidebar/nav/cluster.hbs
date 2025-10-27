@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -16,7 +16,7 @@
       data-test-sidebar-nav-link="Secrets Sync"
     />
   {{/if}}
-  {{#unless this.cluster.dr.isSecondary}}
+  {{#unless (or this.cluster.dr.isSecondary this.flags.isHvdManaged)}}
     <Nav.Link
       @route="vault.cluster.recovery.snapshots"
       @text="Secrets Recovery"

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,7 +10,6 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import {
-  clearRecords,
   deleteVersionCmd,
   destroyVersionCmd,
   writeVersionedSecret,
@@ -37,7 +36,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
     this.secretPath = 'app/first-secret';
     this.urlPath = `${this.backend}/kv/${encodeURIComponent(this.secretPath)}`;
     this.navToSecret = async () => {
-      return visit(`/vault/secrets/${this.urlPath}/details?version=4`);
+      return visit(`/vault/secrets-engines/${this.urlPath}/details?version=4`);
     };
     await login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
@@ -56,15 +55,14 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(makeToken('admin', this.backend, personas.admin));
-      await login(token);
-      clearRecords(this.store);
+      return login(token);
     });
     test('can navigate to the version history page (a)', async function (assert) {
       await this.navToSecret();
       await click(PAGE.secretTab('Version History'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/metadata/versions`,
+        `/vault/secrets-engines/${this.urlPath}/metadata/versions`,
         'navigates to version history'
       );
       assert.dom(PAGE.versions.linkedBlock()).exists({ count: 6 });
@@ -81,7 +79,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.versions.linkedBlock(5));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/details?version=5`,
+        `/vault/secrets-engines/${this.urlPath}/details?version=5`,
         'navigates to detail at specific version'
       );
     });
@@ -90,7 +88,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/paths`,
+        `/vault/secrets-engines/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
       assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
@@ -105,8 +103,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
   module('data-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(makeToken('data-reader', this.backend, personas.dataReader));
-      await login(token);
-      clearRecords(this.store);
+      return login(token);
     });
     test('cannot navigate to the version history page (dr)', async function (assert) {
       await this.navToSecret();
@@ -117,7 +114,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/paths`,
+        `/vault/secrets-engines/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
       assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
@@ -132,8 +129,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
   module('data-list-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(makeToken('data-list-reader', this.backend, personas.dataListReader));
-      await login(token);
-      clearRecords(this.store);
+      return login(token);
     });
     test('cannot navigate to the version history page (dlr)', async function (assert) {
       await this.navToSecret();
@@ -144,7 +140,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/paths`,
+        `/vault/secrets-engines/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
       assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
@@ -159,15 +155,14 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
   module('metadata-maintainer persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(makeToken('metadata-maintainer', this.backend, personas.metadataMaintainer));
-      await login(token);
-      clearRecords(this.store);
+      return login(token);
     });
     test('can navigate to the version history page (mm)', async function (assert) {
       await this.navToSecret();
       await click(PAGE.secretTab('Version History'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/metadata/versions`,
+        `/vault/secrets-engines/${this.urlPath}/metadata/versions`,
         'navigates to version history'
       );
       assert.dom(PAGE.versions.linkedBlock()).exists({ count: 6 });
@@ -184,7 +179,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.versions.linkedBlock(5));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/details?version=5`,
+        `/vault/secrets-engines/${this.urlPath}/details?version=5`,
         'navigates to detail at specific version'
       );
     });
@@ -193,7 +188,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/paths`,
+        `/vault/secrets-engines/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
       assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
@@ -208,8 +203,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
   module('secret-creator persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(makeToken('secret-creator', this.backend, personas.secretCreator));
-      await login(token);
-      clearRecords(this.store);
+      return login(token);
     });
     test('cannot navigate to the version history page (sc)', async function (assert) {
       await this.navToSecret();
@@ -220,7 +214,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/paths`,
+        `/vault/secrets-engines/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
       assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
@@ -255,8 +249,7 @@ path "${this.backend}/*" {
 `;
       const { userToken } = await setupControlGroup({ userPolicy, backend: this.backend });
       this.userToken = userToken;
-      await login(userToken);
-      clearRecords(this.store);
+      return login(userToken);
     });
     test('can navigate to the version history page (cg)', async function (assert) {
       await this.navToSecret();
@@ -267,19 +260,19 @@ path "${this.backend}/*" {
       );
       await grantAccess({
         apiPath: `${this.backend}/metadata/${this.secretPath}`,
-        originUrl: `/vault/secrets/${this.urlPath}/details`,
+        originUrl: `/vault/secrets-engines/${this.urlPath}/details`,
         userToken: this.userToken,
         backend: this.backend,
       });
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/details`,
+        `/vault/secrets-engines/${this.urlPath}/details`,
         'navigates back to secret overview after authorized'
       );
       await click(PAGE.secretTab('Version History'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/metadata/versions`,
+        `/vault/secrets-engines/${this.urlPath}/metadata/versions`,
         'goes to version history page'
       );
       assert.dom(PAGE.versions.linkedBlock()).exists({ count: 6 });
@@ -296,7 +289,7 @@ path "${this.backend}/*" {
       await click(PAGE.versions.linkedBlock(5));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/details?version=5`,
+        `/vault/secrets-engines/${this.urlPath}/details?version=5`,
         'navigates to detail at specific version'
       );
     });
@@ -305,7 +298,7 @@ path "${this.backend}/*" {
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/paths`,
+        `/vault/secrets-engines/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
       assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');

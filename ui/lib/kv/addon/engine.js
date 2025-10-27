@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -17,6 +17,7 @@ export default class KvEngine extends Engine {
   Resolver = Resolver;
   dependencies = {
     services: [
+      'api',
       'capabilities',
       'control-group',
       'download',
@@ -24,7 +25,6 @@ export default class KvEngine extends Engine {
       'namespace',
       'app-router',
       'secret-mount-path',
-      'store',
       'pagination',
       'version',
     ],

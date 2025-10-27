@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -25,8 +25,7 @@
         />
       {{/each}}
 
-      {{! Only one self-enroll method is supported per constraint right now }}
-      {{#if this.singleConstraint.selfEnrollMethod}}
+      {{#if (and this.nonSelfEnrollMethods this.singleConstraint.hasSelfEnrollMethods)}}
         <Hds::Layout::Flex @gap="16" @justify="center" @align="center">
           <hr class="has-background-gray-300 is-flex-1" />
           <Hds::Text::Body @color="faint">
@@ -34,19 +33,20 @@
           </Hds::Text::Body>
           <hr class="has-background-gray-300 is-flex-1" />
         </Hds::Layout::Flex>
-
-        {{#let this.singleConstraint.selfEnrollMethod as |method|}}
-          <Hds::Button
-            {{on "click" (fn @onSelect this.singleConstraint method.id)}}
-            @color="secondary"
-            @icon={{this.displayIcon method.type}}
-            @isFullWidth={{true}}
-            @text="Setup to verify with {{this.displayLabel method.type}}"
-            class="has-top-margin-xxs has-bottom-margin-xs"
-            data-test-button="Setup to verify with {{this.displayLabel method.type}}"
-          />
-        {{/let}}
       {{/if}}
+
+      {{#each this.singleConstraint.selfEnrollMethods as |method|}}
+        <Hds::Button
+          {{on "click" (fn @onSelect this.singleConstraint method.id)}}
+          @color="secondary"
+          @icon={{this.displayIcon method.type}}
+          @isFullWidth={{true}}
+          @text="Setup to verify with {{this.displayLabel method.type}}"
+          class="has-top-margin-xxs has-bottom-margin-xs"
+          data-test-button="Setup to verify with {{this.displayLabel method.type}}"
+        />
+      {{/each}}
+
     {{else}}
       {{! If there are multiple constraints that support self-enrollment, the user needs to choose 
       if they want to verify with a self-enroll method or another method for each one }}

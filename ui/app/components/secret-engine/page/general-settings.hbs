@@ -1,8 +1,22 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-<SecretEngine::PageHeader @model={{@model}} />
+{{#let (engines-display-data @model.secretsEngine.type) as |engineDisplayData|}}
+  <Page::Header
+    @title="{{@model.secretsEngine.id}} configuration"
+    @description={{engineDisplayData.displayName}}
+    @icon={{engineDisplayData.glyph}}
+    @subtitle={{engineDisplayData.typeDisplay}}
+  >
+    <:breadcrumbs>
+      <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+    </:breadcrumbs>
+    <:tabs>
+      <SecretEngine::ConfigureTabs @config={{@model.config}} @secretsEngine={{@model.secretsEngine}} />
+    </:tabs>
+  </Page::Header>
+{{/let}}
 
 {{#if this.saveGeneralSettings.isRunning}}
   {{! TODO: Fix loading state styles }}
@@ -23,7 +37,7 @@
       Mount parameters that you can tune to fit required engine behavior.
     </Hds::Text::Body>
 
-    <MessageError @errorMessage={{this.errorMessage}} />
+    <MessageError @errorMessage={{this.errorMessage}} @errors={{this.errors}} />
 
     <Hds::Layout::Grid @columnMinWidth="32%" @gap="32" as |LG|>
       <LG.Item @colspan={{1}}>
@@ -31,52 +45,26 @@
         <SecretEngine::Card::Metadata @model={{@model}} class="is-fullwidth" />
       </LG.Item>
       <LG.Item @colspan={{1}}>
-        <SecretEngine::Card::LeaseDuration @model={{@model}} class="is-fullwidth" />
+        <SecretEngine::Card::SecretsDuration
+          @model={{@model}}
+          @defaultLeaseUnit={{this.defaultLeaseUnit}}
+          @maxLeaseUnit={{this.maxLeaseUnit}}
+          class="is-fullwidth"
+        />
         <SecretEngine::Card::Security @model={{@model}} class="is-fullwidth" />
       </LG.Item>
     </Hds::Layout::Grid>
     <div class="field is-grouped has-top-bottom-margin">
       <Hds::ButtonSet>
         <Hds::Button @text="Save changes" type="submit" disabled={{this.saveGeneralSettings.isRunning}} data-test-submit />
-        <Hds::Button @text="Discard" @color="secondary" data-test-cancel {{on "click" this.openUnsavedChangesModal}} />
+        <Hds::Button @text="Discard" @color="secondary" {{on "click" this.discardChanges}} data-test-cancel />
       </Hds::ButtonSet>
     </div>
   </form>
 {{/if}}
 
-{{#if this.showUnsavedChangesModal}}
-  <Hds::Modal id="unsavedChangesModal" @onClose={{this.closeUnsavedChangesModal}} data-test-modal="unsaved-changes" as |M|>
-    <M.Header data-test-modal-header="unsaved-changes">
-      Unsaved changes
-    </M.Header>
-    <M.Body data-test-modal-body="unsaved-changes">
-      <p class="hds-typography-body-300 hds-foreground-primary">You've made changes to the following
-        <Hds::Text::Display>{{@model.secretsEngine.id}}</Hds::Text::Display>
-        settings:</p>
-      <br />
-      {{#each this.changedFields as |changedField|}}
-        <Hds::Text::Display>{{capitalize changedField}}</Hds::Text::Display>
-        <br />
-      {{/each}}
-      <br />
-      Would you like to apply them?
-    </M.Body>
-    <M.Footer>
-      <Hds::ButtonSet>
-        <Hds::Button
-          type="button"
-          @text="Save changes"
-          data-test-button="save"
-          {{on "click" (perform this.saveGeneralSettings)}}
-        />
-        <Hds::Button
-          type="button"
-          @text="Discard changes"
-          @color="secondary"
-          data-test-button="discard"
-          {{on "click" this.discardChanges}}
-        />
-      </Hds::ButtonSet>
-    </M.Footer>
-  </Hds::Modal>
-{{/if}}
+<UnsavedChangesModal
+  @onSave={{this.saveGeneralSettings}}
+  @onDiscard={{this.discardChanges}}
+  @changedFields={{this.modalChangedFields}}
+/>

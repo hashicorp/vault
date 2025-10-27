@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -12,14 +12,13 @@ import Component from '@glimmer/component';
  * (example below), otherwise the JsonEditor value won't render until it's focused.
  *
  * @example
- * <PolicyExample @policyType="acl" @container="#search-select-modal" />
+ * <PolicyExample @policyType="acl" />
  * @example
  * <PolicyExample @policyType="rgp" />
  * @example
  * <PolicyExample @policyType="egp" />
  *
  * @param {string} policyType - policy type to decide which template to render; can either be "acl" or "rgp"
- * @param {string} container - selector for the container the example renders inside, passed to the copy button in JsonEditor
  */
 
 export default class PolicyExampleComponent extends Component {

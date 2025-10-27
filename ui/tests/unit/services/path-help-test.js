@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -97,7 +97,7 @@ module('Unit | Service | path-help', function (hooks) {
         assert.notOk(true, 'this method should not be called');
         return reject();
       });
-      const modelType = 'kv/data';
+      const modelType = 'totp-key';
       await this.pathHelp.getNewModel(modelType, 'my-kv').then(() => {
         assert.true(true, 'getNewModel resolves');
       });
