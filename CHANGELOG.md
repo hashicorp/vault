@@ -199,6 +199,7 @@ BUG FIXES:
 * ui: Fixes UI login settings list page which was not rendering rules with an underscore in the name.
 * ui: Include user's root namespace in the namespace picker if it's a namespace other than the actual root ("")
 * ui: Revert camelizing of parameters returned from `sys/internal/ui/mounts` so mount paths match serve value
+* ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`
 
 ## 1.20.5 Enterprise
 ### October 22, 2025
@@ -228,6 +229,7 @@ BUG FIXES:
 * secrets/database: respect the escaping/disable_escaping state when using self-managed static roles
 * sentinel (enterprise): Fix a Sentinel bug, where the soft-mandatory policy override would not work in overriding request denial. Now, Vault correctly allows requests when the policy override flag is set. Previously, requests were denied even if an override was explicitly set. Error messaging for denied requests is now clearer and more actionable.
 * ui (enterprise): Fixes login form so input renders correctly when token is a preferred login method for a namespace.
+* ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`
 
 ## 1.20.4
 ### September 24, 2025
@@ -561,6 +563,7 @@ BUG FIXES:
 * core: interpret all new rotation manager rotation_schedules as UTC to avoid inadvertent use of tz-local
 * core: resultant-acl now merges segment-wildcard (`+`) paths with existing prefix rules in `glob_paths`, so clients receive a complete view of glob-style permissions. This unblocks UI sidebar navigation checks and namespace access banners.
 * secrets/database: respect the escaping/disable_escaping state when using self-managed static roles
+* ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`
 
 ## 1.19.10 Enterprise
 ### September 24, 2025
