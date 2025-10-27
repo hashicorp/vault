@@ -40,16 +40,11 @@
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if (eq this.model.keyType "otp")}}
-        <ToolbarSecretLink
-          @secret={{this.model.id}}
-          @mode="credentials"
-          data-test-backend-credentials={{true}}
-          @replace={{true}}
-        >
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="credentials" data-test-backend-credentials @replace={{true}}>
           Generate Credential
         </ToolbarSecretLink>
       {{else}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="sign" data-test-backend-credentials={{true}} @replace={{true}}>
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="sign" data-test-backend-credentials @replace={{true}}>
           Sign Keys
         </ToolbarSecretLink>
       {{/if}}
