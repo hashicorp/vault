@@ -43,7 +43,7 @@ export const GENERAL = {
   fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,
   fieldLabel: () => `[data-test-form-field-label]`,
   fieldLabelbyAttr: (attr: string) => `[data-test-form-field-label="${attr}"]`,
-  helpText: () => `[data-test-help-text]`,
+  helpText: '[data-test-help-text]',
   helpTextByAttr: (attr: string) => `[data-test-help-text="${attr}"]`,
   helpTextByGroupControlIndex: (index: number) =>
     `.hds-form-group__control-field:nth-of-type(${index}) [data-test-help-text]`,

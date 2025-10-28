@@ -41,7 +41,7 @@
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if this.model.canGenerate}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="credentials" data-test-backend-credentials="iam">
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="credentials" data-test-backend-credentials>
           Generate credentials
         </ToolbarSecretLink>
       {{/if}}
