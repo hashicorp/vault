@@ -495,3 +495,86 @@ path "foo" {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to parse policy: failed to parse policy: The argument \"capabilities\" at 61:2 was already set. Each argument can only be defined once")
 }
+
+// TestPolicyStore_AllowedParametersWarning tests that a warning is logged when a policy containing
+// allowed_parameters or denied_parameters is set in the policy store.
+// TODO (DENIED_PARAMETERS_CHANGE): Remove this test after deprecation is done
+func TestPolicyStore_AllowedParametersWarning(t *testing.T) {
+	tests := []struct {
+		name           string
+		policyFragment string
+		expectLog      bool
+	}{
+		{
+			name: "allowed_parameters",
+			policyFragment: `
+path "foo" {
+ allowed_parameters = {
+  "param1" = ["val1", "val2"]
+ }
+ capabilities = ["read"]
+}
+`,
+			expectLog: true,
+		},
+		{
+			name: "denied_parameters",
+			policyFragment: `
+path "foo" {
+ denied_parameters = {
+  "param1" = ["val1", "val2"]
+ }
+ capabilities = ["read"]
+}
+`,
+			expectLog: true,
+		},
+		{
+			name: "no_parameters",
+			policyFragment: `
+path "foo" {
+ capabilities = ["read"]
+}
+`,
+			expectLog: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			logOut := new(bytes.Buffer)
+			conf := &CoreConfig{
+				Logger: log.New(&log.LoggerOptions{
+					Mutex:  &sync.Mutex{},
+					Level:  log.Warn,
+					Output: logOut,
+				}),
+			}
+			core, _, _ := TestCoreUnsealedWithConfig(t, conf)
+			ps := core.policyStore
+
+			// First policy
+			policy := aclPolicy + tc.policyFragment
+			parsedPolicy, err := ParseACLPolicy(namespace.RootNamespace, policy)
+			require.NoError(t, err)
+
+			ctx := namespace.RootContext(context.Background())
+			err = ps.SetPolicy(ctx, parsedPolicy)
+			require.NoError(t, err)
+
+			if tc.expectLog {
+				require.Contains(t, logOut.String(), "you're using 'allowed_parameters' or 'denied_parameters' in one or more policies")
+			} else {
+				require.NotContains(t, logOut.String(), "you're using 'allowed_parameters' or 'denied_parameters' in one or more policies")
+			}
+
+			// Reset log output and add a second policy
+			logOut.Reset()
+			err = ps.SetPolicy(ctx, parsedPolicy)
+			require.NoError(t, err)
+
+			// Ensure no additional log is generated for the second policy
+			require.NotContains(t, logOut.String(), "you're using 'allowed_parameters' or 'denied_parameters' in one or more policies")
+		})
+	}
+}
