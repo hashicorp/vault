@@ -23,6 +23,20 @@
   data-test-key-usage-ext-key-usage-checkboxes
 />
 <div class="has-top-margin-xxl">
+  <div class="has-bottom-margin-s">
+    <FormFieldLabel
+      for="Extended key usage flags"
+      @label="Extended key usage flags"
+      @subText="These flags enable common extended key usages. They are separate from the explicit extended key usage constraints above."
+    />
+  </div>
+
+  {{#each this.keyUsageFlags as |field|}}
+    {{#let (get @model.allByKey field) as |attr|}}
+      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+    {{/let}}
+  {{/each}}
+
   <StringList
     class="is-shadowless"
     data-test-input="extKeyUsageOids"
