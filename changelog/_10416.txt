@@ -1,0 +1,9 @@
+```release-note:bug
+ui/pki: Fixes certificate parsing of the `key_usage` extension so details accurately reflect certificate values.
+```
+```release-note:bug
+ui/pki: Fixes creating and updating a role so `basic_constraints_valid_for_non_ca` is correctly set.
+```
+```release-note:improvement
+ui/pki: Adds support to configure `server_flag`, `client_flag`, `code_signing_flag`, and `email_protection_flag` parameters for creating/updating a role.
+```

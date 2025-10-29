@@ -310,17 +310,19 @@ export function parseExtensions(extensions) {
   }
 
   if (values.key_usage) {
-    // KeyUsage is a big-endian bit-packed enum. Unused right-most bits are
-    // truncated. So, a KeyUsage with CertSign+CRLSign would be "000001100",
-    // with the right two bits truncated, and packed into an 8-bit, one-byte
-    // string ("00000011"), introducing a leading zero. unused indicates that
-    // this bit can be discard, shifting our result over by one, to go back
-    // to its original form (minus trailing zeros).
-    //
-    // We can thus take our enumeration (KEY_USAGE_BITS), check whether the
-    // bits are asserted, and push in our pretty names as appropriate.
-    const unused = values.key_usage.valueBlock.unusedBits;
+    // KeyUsage is a big-endian bit-packed enum encoded as an ASN.1 BIT STRING.
+    // The rightmost bits may be unused padding. For example, a KeyUsage with
+    // CertSign (bit 5) and CRLSign (bit 6) would be encoded as:
+    //   Bits:  0 0 0 0 0 1 1 0 = 0x06
+    //   Unused bits: 1 (the rightmost bit, bit 8, is padding)
+    // This means there is no data stored beyond bit 7.
+    // The byte value has the data bits in their correct positions.
+    // We can take our enumeration (KEY_USAGE_BITS), check whether each
+    // bit is asserted using bitwise masks, and push the pretty names as appropriate.
+
     const keyUsage = new Uint8Array(values.key_usage.valueBlock.valueHex);
+    // DEBUG tip! To inspect key_usage in binary:
+    // console.log(keyUsage[0].toString(2).padStart(8, '0'))
 
     const computedKeyUsages = [];
     for (const enumIndex in KEY_USAGE_BITS) {
@@ -328,19 +330,23 @@ export function parseExtensions(extensions) {
       const byteIndex = parseInt(enumIndex / 8);
       const bitIndex = parseInt(enumIndex % 8);
       const enumName = KEY_USAGE_BITS[enumIndex];
-      const mask = 1 << (8 - bitIndex); // Big endian.
+      // start with 1 (binary 00000001) and << is a "left shift" which moves the 1 bit left by N (7 - bitIndex) positions
+      // so each `mask` sets the bit position as 1 for the corresponding KEY_USAGE_BITS index
+      // For example the `mask` for KeyEncipherment is: 00100000
+      const mask = 1 << (7 - bitIndex); // Big endian.
       if (byteIndex >= keyUsage.length) {
         // DecipherOnly is rare and would push into a second byte, but we
         // don't have one so exit.
         break;
       }
 
-      let enumByte = keyUsage[byteIndex];
-      const needsAdjust = byteIndex + 1 === keyUsage.length && unused > 0;
-      if (needsAdjust) {
-        enumByte = parseInt(enumByte << unused);
-      }
-
+      const enumByte = keyUsage[byteIndex];
+      // bitwise AND (&) operator compares the bit positions between two numbers.
+      // the resulting number has 1 if BOTH numbers have 1 in that bit position.
+      //      00001000  (mask)
+      //    & 10101000  (enumByte)
+      //    ----------
+      //      00001000  (result) => If this equals `mask` isSet is true
       const isSet = (mask & enumByte) === mask;
       if (isSet) {
         computedKeyUsages.push(enumName);
