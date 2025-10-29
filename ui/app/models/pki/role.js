@@ -30,7 +30,7 @@ export default class PkiRoleModel extends Model {
       'generateLease',
       'noStore',
       'noStoreMetadata',
-      'addBasicConstraints',
+      'basicConstraintsValidForNonCa',
     ];
     if (this.version.isCommunity) {
       const entFields = ['noStoreMetadata'];
@@ -163,7 +163,7 @@ export default class PkiRoleModel extends Model {
     detailsLabel: 'Add basic constraints',
     subText: 'Mark Basic Constraints valid when issuing non-CA certificates.',
   })
-  addBasicConstraints;
+  basicConstraintsValidForNonCa;
   /* End of overriding default options */
 
   /* Overriding OpenApi Domain handling options */
