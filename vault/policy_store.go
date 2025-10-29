@@ -196,6 +196,9 @@ type PolicyStore struct {
 
 	// logger is the server logger copied over from core
 	logger log.Logger
+
+	// deniedParamWarn tracks if we've already logged about the system using allowed_parameters or denied_parameters
+	deniedParamWarnOnce sync.Once
 }
 
 // PolicyEntry is used to store a policy by name
@@ -411,6 +414,8 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 		if ps.tokenPoliciesLRU != nil {
 			ps.tokenPoliciesLRU.Add(index, p)
 		}
+
+		ps.logDeniedParamWarning(p)
 
 	case PolicyTypeRGP:
 		aclView := ps.getACLView(p.namespace)
@@ -940,4 +945,28 @@ func (ps *PolicyStore) sanitizeName(name string) string {
 
 func (ps *PolicyStore) cacheKey(ns *namespace.Namespace, name string) string {
 	return path.Join(ns.ID, name)
+}
+
+// logDeniedParamWarning logs a warning if the given policy uses allowed_parameters or denied_parameters
+// TODO (DENIED_PARAMETERS_CHANGE): Remove this function after deprecation is done
+func (ps *PolicyStore) logDeniedParamWarning(p *Policy) {
+	if p == nil {
+		return
+	}
+	// check if the policy uses allowed_parameters or denied_parameters
+	var usesAllowedOrDenied bool
+	for _, path := range p.Paths {
+		if path.Permissions != nil {
+			if len(path.Permissions.AllowedParameters) > 0 || len(path.Permissions.DeniedParameters) > 0 {
+				usesAllowedOrDenied = true
+				break
+			}
+		}
+	}
+
+	if usesAllowedOrDenied {
+		ps.deniedParamWarnOnce.Do(func() {
+			ps.logger.Warn("you're using 'allowed_parameters' or 'denied_parameters' in one or more policies, note that Vault 1.21 introduced a behavior change. For details see https://developer.hashicorp.com/vault/docs/v1.21.x/updates/important-changes#item-by-item-list-comparison-for-allowed_parameters-and-denied_parameters")
+		})
+	}
 }
