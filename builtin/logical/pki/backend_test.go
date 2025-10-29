@@ -2498,6 +2498,134 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	}
 }
 
+func TestBackend_SignVerbatim_WithBasicConstraints(t *testing.T) {
+	// create the backend
+	b, storage := CreateBackendWithStorage(t)
+
+	// generate root
+	rootData := map[string]interface{}{
+		"common_name": "test.com",
+		"not_after":   "9999-12-31T23:59:59Z",
+	}
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "root/generate/internal",
+		Storage:    storage,
+		Data:       rootData,
+		MountPoint: "pki/",
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name      string
+		isCA      bool
+		expectErr bool
+	}{
+		{
+			"isca",
+			true,
+			true,
+		},
+		{
+			"notca",
+			false,
+			false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			key, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			extNonCA, err := certutil.CreateBasicConstraintExtension(tc.isCA, -1)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			csrReq := &x509.CertificateRequest{
+				Subject: pkix.Name{
+					CommonName: "foo.bar.com",
+				},
+				ExtraExtensions: []pkix.Extension{
+					extNonCA,
+				},
+			}
+			csr, err := x509.CreateCertificateRequest(rand.Reader, csrReq, key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(csr) == 0 {
+				t.Fatal("generated csr is empty")
+			}
+			pemCSR := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
+				Type:  "CERTIFICATE REQUEST",
+				Bytes: csr,
+			})))
+			if len(pemCSR) == 0 {
+				t.Fatal("pem csr is empty")
+			}
+
+			signVerbatimData := map[string]interface{}{
+				"csr":            pemCSR,
+				"signature_bits": 512,
+			}
+			resp, err = b.HandleRequest(context.Background(), &logical.Request{
+				Operation:  logical.UpdateOperation,
+				Path:       "sign-verbatim",
+				Storage:    storage,
+				Data:       signVerbatimData,
+				MountPoint: "pki/",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tc.expectErr {
+				if resp.Error() == nil {
+					t.Fatalf("expected error, got none")
+				}
+				return
+			}
+			schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("sign-verbatim"), logical.UpdateOperation), resp, true)
+
+			if resp != nil && resp.IsError() {
+				t.Fatalf("failed to sign-verbatim CSR with basic constraint: %#v", *resp)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			certs, err := certutil.ParseCertsPEM([]byte(resp.Data["certificate"].(string)))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			found := false
+			for _, ext := range certs[0].Extensions {
+				if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+					isCA, _, err := certutil.ParseBasicConstraintExtension(ext)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if isCA {
+						t.Fatal("expected isCA=false")
+					}
+					found = true
+				}
+			}
+			if !found {
+				t.Fatal("no basic constraints extension")
+			}
+		})
+	}
+}
+
 func TestBackend_Root_Idempotency(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
