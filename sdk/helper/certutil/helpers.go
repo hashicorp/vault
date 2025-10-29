@@ -1325,9 +1325,22 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.IPAddresses = data.CSR.IPAddresses
 		certTemplate.URIs = data.CSR.URIs
 
-		for _, name := range data.CSR.Extensions {
-			if !name.Id.Equal(ExtensionBasicConstraintsOID) && !(len(data.Params.OtherSANs) > 0 && name.Id.Equal(ExtensionSubjectAltNameOID)) {
-				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
+		for _, ext := range data.CSR.Extensions {
+			switch {
+			case ext.Id.Equal(ExtensionBasicConstraintsOID):
+				if data.Params.UseCSRValues {
+					isCa, _, err := ParseBasicConstraintExtension(ext)
+					if err != nil {
+						return nil, errutil.UserError{Err: fmt.Sprintf("refusing to accept CSR with invalid Basic Constraints extension: %s", err.Error())}
+					}
+					if isCa {
+						return nil, errutil.UserError{Err: "refusing to accept CSR with Basic Constraints extension setting isCA=true"}
+					}
+					certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, ext)
+				}
+			case len(data.Params.OtherSANs) > 0 && ext.Id.Equal(ExtensionSubjectAltNameOID):
+			default:
+				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, ext)
 			}
 		}
 
