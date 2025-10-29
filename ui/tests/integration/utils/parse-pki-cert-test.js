@@ -17,6 +17,7 @@ import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 
 const {
   certWithoutCN,
+  certWithAllKeyUsage,
   loadedCert,
   pssTrueCert,
   skeletonCert,
@@ -83,6 +84,18 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     );
   });
 
+  test('it parses a certificate with every key usage bit set', async function (assert) {
+    // certificate contains every key usage constraint
+    // Key Usage is manually parsed and relies on the order of KEY_USAGE_BITS
+    // so this test ensures that order is preserved.
+    const { key_usage } = parseCertificate(certWithAllKeyUsage);
+    assert.strictEqual(
+      key_usage,
+      'DigitalSignature, ContentCommitment, KeyEncipherment, DataEncipherment, KeyAgreement, CertSign, CRLSign, EncipherOnly, DecipherOnly',
+      'it contains expected key usage values'
+    );
+  });
+
   test('it parses a certificate with use_pass=true and exclude_cn_from_sans=false', async function (assert) {
     assert.expect(2);
     const parsedPssCert = parseCertificate(pssTrueCert);
@@ -123,6 +136,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
       [
         'certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1',
         'certificate contains unsupported extension OIDs: 2.5.29.37',
+        'unsupported key usage value on issuer certificate: DigitalSignature, KeyEncipherment',
       ],
       'it contains expected error messages'
     );
@@ -204,7 +218,10 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     ({ extValues, extErrors } = unsupportedExt);
     assert.propEqual(
       this.getErrorMessages(extErrors),
-      ['certificate contains unsupported extension OIDs: 2.5.29.37'],
+      [
+        'certificate contains unsupported extension OIDs: 2.5.29.37',
+        'unsupported key usage value on issuer certificate: DigitalSignature, KeyEncipherment',
+      ],
       'it returns extension errors'
     );
     assert.ok(
@@ -271,14 +288,14 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         common_name: null,
         country: null,
         exclude_cn_from_sans: false,
-        key_usage: null,
+        key_usage: 'DigitalSignature, KeyEncipherment',
         locality: null,
         max_path_length: 10,
         not_valid_after: 1989876490,
         not_valid_before: 1674516490,
         organization: null,
         ou: null,
-        parsing_errors: [{}, {}],
+        parsing_errors: [{}, {}, {}],
         postal_code: null,
         province: null,
         subject_serial_number: null,
@@ -295,6 +312,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
       [
         'certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1',
         'certificate contains unsupported extension OIDs: 2.5.29.37',
+        'unsupported key usage value on issuer certificate: DigitalSignature, KeyEncipherment',
       ],
       'it returns correct errors'
     );
