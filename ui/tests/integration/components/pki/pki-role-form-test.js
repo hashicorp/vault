@@ -57,7 +57,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     assert
       .dom(GENERAL.fieldByAttr('noStoreMetadata'))
       .doesNotExist('noStoreMetadata is not shown b/c not enterprise');
-    assert.dom(GENERAL.inputByAttr('addBasicConstraints')).exists();
+    assert.dom(GENERAL.inputByAttr('basicConstraintsValidForNonCa')).exists();
     assert.dom(PKI_ROLE_FORM.domainHandling).exists('shows form-field group add domain handling');
     assert.dom(PKI_ROLE_FORM.keyParams).exists('shows form-field group key params');
     assert.dom(PKI_ROLE_FORM.keyUsage).exists('shows form-field group key usage');
@@ -131,7 +131,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
       .includesText('Name is required.', 'show correct error message');
 
     await fillIn(GENERAL.inputByAttr('name'), 'test-role');
-    await click('[data-test-input="addBasicConstraints"]');
+    await click('[data-test-input="basicConstraintsValidForNonCa"]');
     await click(PKI_ROLE_FORM.domainHandling);
     await click('[data-test-input="allowedDomainsTemplate"]');
     await click(PKI_ROLE_FORM.policyIdentifiers);
