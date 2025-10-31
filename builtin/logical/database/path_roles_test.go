@@ -1087,6 +1087,50 @@ func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	if resp == nil || !resp.IsError() {
 		t.Fatalf("expected error, got none")
 	}
+
+	// create a role with a @ in name expect success
+	data = map[string]interface{}{
+		"name":                  "plugin-role-@test",
+		"db_name":               "plugin-test",
+		"creation_statements":   testRoleStaticCreate,
+		"rotation_statements":   testRoleStaticUpdate,
+		"revocation_statements": defaultRevocationSQL,
+		"default_ttl":           "5m",
+		"max_ttl":               "10m",
+	}
+
+	req = &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "roles/plugin-role-@test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// create a static role with a @ in name expect success
+	data = map[string]interface{}{
+		"name":                "plugin-role-@test-2",
+		"db_name":             "plugin-test",
+		"rotation_statements": testRoleStaticUpdate,
+		"username":            dbUser,
+		"rotation_period":     "1h",
+	}
+
+	req = &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/plugin-role-@test-2",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
 }
 
 // TestStaticRole_NewCredentialGeneration verifies that new
