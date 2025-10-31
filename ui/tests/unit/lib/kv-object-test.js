@@ -64,26 +64,41 @@ module('Unit | Lib | kv object', function () {
     [
       'types',
       false,
+      'key',
       { string: 'string', false: false, zero: 0, number: 1, null: null, true: true, object: { one: 'two' } },
       { false: false, null: null, number: 1, object: { one: 'two' }, string: 'string', true: true, zero: 0 },
     ],
-    ['include blanks = true', true, { string: 'string', '': '' }, { string: 'string', '': '' }],
-    ['include blanks = false', false, { string: 'string', '': '' }, { string: 'string' }],
+    ['include blanks = true', true, 'key', { string: 'string', '': '' }, { string: 'string', '': '' }],
+    ['include blanks = false', false, 'key', { string: 'string', '': '' }, { string: 'string' }],
+    [
+      'empty key with value defaults to "key"',
+      false,
+      'key',
+      { string: 'string', '': 'value' },
+      { string: 'string', key: 'value' },
+    ],
+    [
+      'empty key with value and custom default',
+      false,
+      'custom',
+      { string: 'string', '': 'value' },
+      { string: 'string', custom: 'value' },
+    ],
   ];
 
-  toJSONTests.forEach(function ([name, includeBlanks, input, output]) {
+  toJSONTests.forEach(function ([name, includeBlanks, defaultKey, input, output]) {
     test(`toJSON: ${name}`, function (assert) {
       const data = KVObject.create({ content: [] }).fromJSON(input);
-      const result = data.toJSON(includeBlanks);
+      const result = data.toJSON(includeBlanks, defaultKey);
       assert.deepEqual(result, output, 'has expected output');
     });
   });
 
-  toJSONTests.forEach(function ([name, includeBlanks, input, output]) {
+  toJSONTests.forEach(function ([name, includeBlanks, defaultKey, input, output]) {
     test(`toJSONString: ${name}`, function (assert) {
       const expected = JSON.stringify(output, null, 2);
       const data = KVObject.create({ content: [] }).fromJSON(input);
-      const result = data.toJSONString(includeBlanks);
+      const result = data.toJSONString(includeBlanks, defaultKey);
       assert.strictEqual(result, expected, 'has expected output string');
     });
   });

@@ -38,19 +38,21 @@ export default ArrayProxy.extend({
     return this.fromJSON(JSON.parse(jsonString));
   },
 
-  toJSON(includeBlanks = false) {
+  toJSON(includeBlanks = false, defaultKey = 'key') {
     return this.reduce((obj, item) => {
       if (!includeBlanks && item.value === '' && item.name === '') {
         return obj;
       }
       const val = typeof item.value === 'undefined' ? '' : item.value;
-      obj[item.name || ''] = val;
+      // Use defaultKey if name is empty and value is not empty
+      const keyName = item.name || (val !== '' ? defaultKey : '');
+      obj[keyName] = val;
       return obj;
     }, {});
   },
 
-  toJSONString(includeBlanks) {
-    return JSON.stringify(this.toJSON(includeBlanks), null, 2);
+  toJSONString(includeBlanks, defaultKey) {
+    return JSON.stringify(this.toJSON(includeBlanks, defaultKey), null, 2);
   },
 
   isAdvanced() {
