@@ -120,6 +120,29 @@ func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
 			},
 			waitTime: 20 * time.Second,
 		},
+		"basic with @ path and rotation_period": {
+			account: map[string]interface{}{
+				"username":        dbUser,
+				"rotation_period": "5400s",
+			},
+			path: "plugin-role-@test-1",
+			expected: map[string]interface{}{
+				"username":        dbUser,
+				"rotation_period": float64(5400),
+			},
+		},
+		"@ path and rotation_schedule is set and expires": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "*/10 * * * * *",
+			},
+			path: "plugin-role-@test-@2",
+			expected: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "*/10 * * * * *",
+			},
+			waitTime: 20 * time.Second,
+		},
 	}
 
 	for name, tc := range testCases {
