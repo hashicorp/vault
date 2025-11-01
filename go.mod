@@ -148,7 +148,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.16.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.20.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.15.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.15.1-0.20251101003620-a3fc3549a16e
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.19.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.16.0
 	github.com/hashicorp/vault-plugin-database-redis v0.7.0
@@ -558,7 +558,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.37.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/mod v0.28.0 // indirect
+	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/time v0.13.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20251002232023-7c0ddcbb5797 // indirect
