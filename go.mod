@@ -162,7 +162,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.25.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.16.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.17.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.17.1-0.20251101000237-056f620ab53f
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.13.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
 	github.com/hashicorp/vault/api v1.22.0
@@ -227,7 +227,7 @@ require (
 	golang.org/x/sync v0.17.0
 	golang.org/x/sys v0.36.0
 	golang.org/x/term v0.35.0
-	golang.org/x/text v0.29.0
+	golang.org/x/text v0.30.0
 	golang.org/x/tools v0.37.0
 	google.golang.org/api v0.251.0
 	google.golang.org/grpc v1.75.1
