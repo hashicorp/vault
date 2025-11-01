@@ -142,7 +142,7 @@ require (
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.22.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.22.0
-	github.com/hashicorp/vault-plugin-auth-cf v0.22.0
+	github.com/hashicorp/vault-plugin-auth-cf v0.22.1-0.20251101003441-387e44b90a47
 	github.com/hashicorp/vault-plugin-auth-gcp v0.22.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.25.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.16.0
@@ -220,14 +220,14 @@ require (
 	go.opentelemetry.io/otel/sdk v1.37.0
 	go.opentelemetry.io/otel/trace v1.37.0
 	go.uber.org/atomic v1.11.0
-	golang.org/x/crypto v0.42.0
+	golang.org/x/crypto v0.43.0
 	golang.org/x/exp v0.0.0-20251002181428-27f1f14c8bb9
-	golang.org/x/net v0.44.0
+	golang.org/x/net v0.46.0
 	golang.org/x/oauth2 v0.31.0
 	golang.org/x/sync v0.17.0
-	golang.org/x/sys v0.36.0
-	golang.org/x/term v0.35.0
-	golang.org/x/text v0.29.0
+	golang.org/x/sys v0.37.0
+	golang.org/x/term v0.36.0
+	golang.org/x/text v0.30.0
 	golang.org/x/tools v0.37.0
 	google.golang.org/api v0.251.0
 	google.golang.org/grpc v1.75.1
