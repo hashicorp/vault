@@ -5,6 +5,7 @@ package ldap
 
 import (
 	"context"
+	"maps"
 	"os"
 	"testing"
 
@@ -221,5 +222,101 @@ func TestGetModifyRequest(t *testing.T) {
 	_, err = b.getModifyRequest(cfg, dummyPassword)
 	if err == nil {
 		t.Fatalf("expected error due to invalid schema, got none")
+	}
+}
+
+func TestRotateRootConfigs(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	ctx := context.Background()
+
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	defer cleanup()
+	data := map[string]interface{}{
+		"url":                    cfg.Url,
+		"userattr":               cfg.UserAttr,
+		"userdn":                 cfg.UserDN,
+		"userfilter":             cfg.UserFilter,
+		"groupdn":                cfg.GroupDN,
+		"groupattr":              cfg.GroupAttr,
+		"binddn":                 cfg.BindDN,
+		"bindpass":               cfg.BindPassword,
+		"token_period":           "5m",
+		"token_explicit_max_ttl": "24h",
+		"request_timeout":        cfg.RequestTimeout,
+		"max_page_size":          cfg.MaximumPageSize,
+		"connection_timeout":     cfg.ConnectionTimeout,
+	}
+	testCases := []struct {
+		name           string
+		rotateSchema   string
+		rotateCredType string
+		expectError    bool
+	}{
+		{
+			name:        "Default config",
+			expectError: false,
+		},
+		{
+			name:           "With rotation_schema=openldap and rotation_credential_type=password",
+			rotateSchema:   "openldap",
+			rotateCredType: "password",
+			expectError:    false,
+		},
+		{
+			name:           "With rotation_schema=ad and rotation_credential_type=password",
+			rotateSchema:   "ad",
+			rotateCredType: "password",
+			expectError:    false,
+		},
+		{
+			name:           "With rotation_schema=racf and rotation_credential_type=password",
+			rotateSchema:   "racf",
+			rotateCredType: "password",
+			expectError:    false,
+		},
+		{
+			name:           "With rotation_schema=racf and rotation_credential_type=passphrase",
+			rotateSchema:   "racf",
+			rotateCredType: "passphrase",
+			expectError:    false,
+		},
+		{
+			name:           "With invalid rotation_schema",
+			rotateSchema:   "invalidschema",
+			rotateCredType: "password",
+			expectError:    true,
+		},
+		{
+			name:           "With invalid rotation_credential_type",
+			rotateSchema:   "openldap",
+			rotateCredType: "invalidcredtype",
+			expectError:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := maps.Clone(data)
+			d[rootRotationSchemaKey] = tc.rotateSchema
+			d[rootRotationCredentialTypeKey] = tc.rotateCredType
+			// Configure the backend
+			configReq := &logical.Request{
+				Operation:  logical.UpdateOperation,
+				Path:       "config",
+				Data:       d,
+				Storage:    storage,
+				Connection: &logical.Connection{},
+			}
+			resp, err = b.HandleRequest(ctx, configReq)
+			if tc.expectError && (err == nil && (resp == nil || !resp.IsError())) {
+				t.Fatalf("expected error but got none")
+			}
+			if !tc.expectError && (err != nil || mfg_iballa	(resp != nil && resp.IsError())) {
+				t.Fatalf("did not expect error but got err:%v resp:%#v", err, resp)
+			}
+		})
 	}
 }
