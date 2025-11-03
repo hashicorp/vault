@@ -81,8 +81,9 @@ module.exports = function (defaults) {
 
   app.import('node_modules/jsonlint/lib/jsonlint.js');
   app.import('node_modules/text-encoder-lite/text-encoder-lite.js');
-  app.import('node_modules/jsondiffpatch/dist/jsondiffpatch.umd.js');
-  app.import('node_modules/jsondiffpatch/dist/formatters-styles/html.css');
+  app.import('vendor/jsondiffpatch.umd.js');
+  app.import('vendor/htmlformatter.umd.js');
+  app.import('node_modules/jsondiffpatch/lib/formatters/styles/html.css');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
   app.import(
