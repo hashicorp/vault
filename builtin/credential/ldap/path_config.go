@@ -19,9 +19,17 @@ import (
 
 const userFilterWarning = "userfilter configured does not consider userattr and may result in colliding entity aliases on logins"
 
-const rootRotationJobName = "ldap-auth-root-creds"
-
-const rootRotationUrlKey = "rotation_url"
+const (
+	rootRotationJobName           = "ldap-auth-root-creds"
+	rootRotationUrlKey            = "rotation_url"
+	rootRotationSchemaKey         = "rotation_schema"
+	rootRotationCredentialTypeKey = "rotation_credential_type"
+	SchemaOpenLDAP                = "openldap"
+	SchemaAD                      = "ad"
+	SchemaRACF                    = "racf"
+	CredentialTypePassword        = "password"
+	CredentialTypePhrase          = "phrase"
+)
 
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
@@ -72,6 +80,21 @@ func pathConfig(b *backend) *framework.Path {
 		Required:    false,
 	}
 
+	p.Fields[rootRotationSchemaKey] = &framework.FieldSchema{
+		Type:          framework.TypeString,
+		Description:   "The desired LDAP schema used when modifying user account passwords. Available options are 'openldap', 'ad', and 'racf'. If not specified, 'openldap' will be used.",
+		Default:       SchemaOpenLDAP,
+		Required:      false,
+		AllowedValues: []interface{}{SchemaOpenLDAP, SchemaAD, SchemaRACF},
+	}
+	p.Fields[rootRotationCredentialTypeKey] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: "The type of credential to manage. Options include: " +
+			"'password', 'phrase'. Defaults to 'password'. Will only affect RACF schema.",
+		Default:       CredentialTypePassword,
+		Required:      false,
+		AllowedValues: []interface{}{CredentialTypePassword, CredentialTypePhrase},
+	}
 	return p
 }
 
@@ -159,6 +182,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 
 	data["password_policy"] = cfg.PasswordPolicy
 	data[rootRotationUrlKey] = cfg.RotationUrl
+	data[rootRotationSchemaKey] = cfg.RotationSchema
+	data[rootRotationCredentialTypeKey] = cfg.RotationCredentialType
 
 	resp := &logical.Response{
 		Data: data,
@@ -237,6 +262,12 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	}
 	if rotationUrl, ok := d.GetOk(rootRotationUrlKey); ok {
 		cfg.RotationUrl = rotationUrl.(string)
+	}
+	if rotationSchema, ok := d.GetOk(rootRotationSchemaKey); ok {
+		cfg.RotationSchema = rotationSchema.(string)
+	}
+	if rotationCredentialType, ok := d.GetOk(rootRotationCredentialTypeKey); ok {
+		cfg.RotationCredentialType = rotationCredentialType.(string)
 	}
 
 	var rotOp string
@@ -328,8 +359,10 @@ type ldapConfigEntry struct {
 	*ldaputil.ConfigEntry
 	automatedrotationutil.AutomatedRotationParams
 
-	PasswordPolicy string `json:"password_policy"`
-	RotationUrl    string `json:"rotation_url"`
+	PasswordPolicy         string `json:"password_policy"`
+	RotationUrl            string `json:"rotation_url"`
+	RotationSchema         string `json:"rotation_schema"`
+	RotationCredentialType string `json:"rotation_credential_type"`
 }
 
 const pathConfigHelpSyn = `
