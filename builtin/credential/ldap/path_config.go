@@ -24,11 +24,11 @@ const (
 	rootRotationUrlKey            = "rotation_url"
 	rootRotationSchemaKey         = "rotation_schema"
 	rootRotationCredentialTypeKey = "rotation_credential_type"
-	SchemaOpenLDAP                = "openldap"
-	SchemaAD                      = "ad"
-	SchemaRACF                    = "racf"
-	CredentialTypePassword        = "password"
-	CredentialTypePhrase          = "phrase"
+	schemaOpenLDAP                = "openldap"
+	schemaAD                      = "ad"
+	schemaRACF                    = "racf"
+	credentialTypePassword        = "password"
+	credentialTypePhrase          = "phrase"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -83,17 +83,17 @@ func pathConfig(b *backend) *framework.Path {
 	p.Fields[rootRotationSchemaKey] = &framework.FieldSchema{
 		Type:          framework.TypeString,
 		Description:   "The desired LDAP schema used when modifying user account passwords. Available options are 'openldap', 'ad', and 'racf'. If not specified, 'openldap' will be used.",
-		Default:       SchemaOpenLDAP,
+		Default:       schemaOpenLDAP,
 		Required:      false,
-		AllowedValues: []interface{}{SchemaOpenLDAP, SchemaAD, SchemaRACF},
+		AllowedValues: []interface{}{schemaOpenLDAP, schemaAD, schemaRACF},
 	}
 	p.Fields[rootRotationCredentialTypeKey] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: "The type of credential to manage. Options include: " +
 			"'password', 'phrase'. Defaults to 'password'. Will only affect RACF schema.",
-		Default:       CredentialTypePassword,
+		Default:       credentialTypePassword,
 		Required:      false,
-		AllowedValues: []interface{}{CredentialTypePassword, CredentialTypePhrase},
+		AllowedValues: []interface{}{credentialTypePassword, credentialTypePhrase},
 	}
 	return p
 }
@@ -265,9 +265,13 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	}
 	if rotationSchema, ok := d.GetOk(rootRotationSchemaKey); ok {
 		cfg.RotationSchema = rotationSchema.(string)
+	} else {
+		cfg.RotationSchema = schemaOpenLDAP
 	}
 	if rotationCredentialType, ok := d.GetOk(rootRotationCredentialTypeKey); ok {
 		cfg.RotationCredentialType = rotationCredentialType.(string)
+	} else {
+		cfg.RotationCredentialType = credentialTypePassword
 	}
 
 	var rotOp string

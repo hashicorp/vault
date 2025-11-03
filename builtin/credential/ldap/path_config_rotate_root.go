@@ -141,21 +141,20 @@ func (b *backend) getModifyRequest(cfg *ldapConfigEntry, newPassword string) (*l
 		DN: cfg.BindDN,
 	}
 	switch cfg.RotationSchema {
-	case SchemaOpenLDAP:
+	case schemaOpenLDAP:
 		lreq.Replace("userPassword", []string{newPassword})
-	case SchemaRACF:
+	case schemaRACF:
 		// Password and password phrase management are mutually exclusive
 		// operations. When the system is configured to manage one, it will not
 		// modify the other.
-		if cfg.RotationCredentialType == CredentialTypePhrase {
+		if cfg.RotationCredentialType == credentialTypePhrase {
 			lreq.Replace("racfPassPhrase", []string{newPassword})
 		} else {
 			lreq.Replace("racfPassword", []string{newPassword})
 		}
 		lreq.Replace("racfAttributes", []string{"noexpired"})
-	case SchemaAD:
-		utf16 := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
-		pwdEncoded, err := utf16.NewEncoder().String("\"" + newPassword + "\"")
+	case schemaAD:
+		pwdEncoded, err := formatPassword(newPassword)
 		if err != nil {
 			return nil, err
 		}
@@ -164,6 +163,12 @@ func (b *backend) getModifyRequest(cfg *ldapConfigEntry, newPassword string) (*l
 		return nil, fmt.Errorf("configured schema %s not valid", cfg.RotationSchema)
 	}
 	return lreq, nil
+}
+
+// According to the MS docs, the password needs to be utf16 and enclosed in quotes.
+func formatPassword(original string) (string, error) {
+	utf16 := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
+	return utf16.NewEncoder().String("\"" + original + "\"")
 }
 
 const pathConfigRotateRootHelpSyn = `
