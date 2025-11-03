@@ -62,11 +62,9 @@ locals {
 
 resource "enos_remote_exec" "verify_replication_status_on_primary" {
   environment = {
-    IP_VERSION            = var.ip_version
-    PRIMARY_LEADER_ADDR   = local.primary_leader_addr
-    SECONDARY_LEADER_ADDR = local.secondary_leader_addr
-    VAULT_ADDR            = var.vault_addr
-    VAULT_INSTALL_DIR     = var.vault_install_dir
+    IP_VERSION        = var.ip_version
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
   scripts = [abspath("${path.module}/scripts/verify-replication-status.sh")]
@@ -80,11 +78,9 @@ resource "enos_remote_exec" "verify_replication_status_on_primary" {
 
 resource "enos_remote_exec" "verify_replication_status_on_secondary" {
   environment = {
-    IP_VERSION            = var.ip_version
-    PRIMARY_LEADER_ADDR   = local.primary_leader_addr
-    SECONDARY_LEADER_ADDR = local.secondary_leader_addr
-    VAULT_ADDR            = var.vault_addr
-    VAULT_INSTALL_DIR     = var.vault_install_dir
+    IP_VERSION        = var.ip_version
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
   scripts = [abspath("${path.module}/scripts/verify-replication-status.sh")]
