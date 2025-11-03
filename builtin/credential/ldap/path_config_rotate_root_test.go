@@ -5,7 +5,6 @@ package ldap
 
 import (
 	"context"
-	"maps"
 	"os"
 	"testing"
 
@@ -225,6 +224,8 @@ func TestGetModifyRequest(t *testing.T) {
 	}
 }
 
+// TestRotateRootConfigs tests that the rotate-root configuration options
+// are correctly set and validated.
 func TestRotateRootConfigs(t *testing.T) {
 	var resp *logical.Response
 	var err error
@@ -234,21 +235,6 @@ func TestRotateRootConfigs(t *testing.T) {
 
 	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
-	data := map[string]interface{}{
-		"url":                    cfg.Url,
-		"userattr":               cfg.UserAttr,
-		"userdn":                 cfg.UserDN,
-		"userfilter":             cfg.UserFilter,
-		"groupdn":                cfg.GroupDN,
-		"groupattr":              cfg.GroupAttr,
-		"binddn":                 cfg.BindDN,
-		"bindpass":               cfg.BindPassword,
-		"token_period":           "5m",
-		"token_explicit_max_ttl": "24h",
-		"request_timeout":        cfg.RequestTimeout,
-		"max_page_size":          cfg.MaximumPageSize,
-		"connection_timeout":     cfg.ConnectionTimeout,
-	}
 	testCases := []struct {
 		name           string
 		rotateSchema   string
@@ -256,57 +242,65 @@ func TestRotateRootConfigs(t *testing.T) {
 		expectError    bool
 	}{
 		{
-			name:        "Default config",
-			expectError: false,
-		},
-		{
 			name:           "With rotation_schema=openldap and rotation_credential_type=password",
-			rotateSchema:   "openldap",
-			rotateCredType: "password",
+			rotateSchema:   schemaOpenLDAP,
+			rotateCredType: credentialTypePassword,
 			expectError:    false,
 		},
 		{
 			name:           "With rotation_schema=ad and rotation_credential_type=password",
-			rotateSchema:   "ad",
-			rotateCredType: "password",
+			rotateSchema:   schemaAD,
+			rotateCredType: credentialTypePassword,
 			expectError:    false,
 		},
 		{
 			name:           "With rotation_schema=racf and rotation_credential_type=password",
-			rotateSchema:   "racf",
-			rotateCredType: "password",
+			rotateSchema:   schemaRACF,
+			rotateCredType: credentialTypePassword,
 			expectError:    false,
 		},
 		{
 			name:           "With rotation_schema=racf and rotation_credential_type=passphrase",
-			rotateSchema:   "racf",
-			rotateCredType: "passphrase",
+			rotateSchema:   schemaRACF,
+			rotateCredType: credentialTypePhrase,
 			expectError:    false,
 		},
 		{
 			name:           "With invalid rotation_schema",
 			rotateSchema:   "invalidschema",
-			rotateCredType: "password",
+			rotateCredType: credentialTypePassword,
 			expectError:    true,
 		},
 		{
 			name:           "With invalid rotation_credential_type",
-			rotateSchema:   "openldap",
+			rotateSchema:   schemaOpenLDAP,
 			rotateCredType: "invalidcredtype",
 			expectError:    true,
 		},
 	}
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			d := maps.Clone(data)
-			d[rootRotationSchemaKey] = tc.rotateSchema
-			d[rootRotationCredentialTypeKey] = tc.rotateCredType
 			// Configure the backend
 			configReq := &logical.Request{
-				Operation:  logical.UpdateOperation,
-				Path:       "config",
-				Data:       d,
+				Operation: logical.UpdateOperation,
+				Path:      "config",
+				Data: map[string]interface{}{
+					"url":                         cfg.Url,
+					"userattr":                    cfg.UserAttr,
+					"userdn":                      cfg.UserDN,
+					"userfilter":                  cfg.UserFilter,
+					"groupdn":                     cfg.GroupDN,
+					"groupattr":                   cfg.GroupAttr,
+					"binddn":                      cfg.BindDN,
+					"bindpass":                    cfg.BindPassword,
+					"token_period":                "5m",
+					"token_explicit_max_ttl":      "24h",
+					"request_timeout":             cfg.RequestTimeout,
+					"max_page_size":               cfg.MaximumPageSize,
+					"connection_timeout":          cfg.ConnectionTimeout,
+					rootRotationSchemaKey:         tc.rotateSchema,
+					rootRotationCredentialTypeKey: tc.rotateCredType,
+				},
 				Storage:    storage,
 				Connection: &logical.Connection{},
 			}
@@ -314,9 +308,50 @@ func TestRotateRootConfigs(t *testing.T) {
 			if tc.expectError && (err == nil && (resp == nil || !resp.IsError())) {
 				t.Fatalf("expected error but got none")
 			}
-			if !tc.expectError && (err != nil || mfg_iballa	(resp != nil && resp.IsError())) {
+			if !tc.expectError && (err != nil || (resp != nil && resp.IsError())) {
 				t.Fatalf("did not expect error but got err:%v resp:%#v", err, resp)
 			}
 		})
+	}
+	// test defaults
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			"url":                    cfg.Url,
+			"userattr":               cfg.UserAttr,
+			"userdn":                 cfg.UserDN,
+			"userfilter":             cfg.UserFilter,
+			"groupdn":                cfg.GroupDN,
+			"groupattr":              cfg.GroupAttr,
+			"binddn":                 cfg.BindDN,
+			"bindpass":               cfg.BindPassword,
+			"token_period":           "5m",
+			"token_explicit_max_ttl": "24h",
+			"request_timeout":        cfg.RequestTimeout,
+			"max_page_size":          cfg.MaximumPageSize,
+			"connection_timeout":     cfg.ConnectionTimeout,
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{},
+	}
+	resp, err = b.HandleRequest(ctx, configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("did not expect error but got err:%v resp:%#v", err, resp)
+	}
+	// verify defaults
+	resp, err = b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config",
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("did not expect error but got err:%v resp:%#v", err, resp)
+	}
+	if resp.Data[rootRotationSchemaKey].(string) != schemaOpenLDAP {
+		t.Fatalf("expected default rotation schema to be openldap, got: %s", resp.Data[rootRotationSchemaKey].(string))
+	}
+	if resp.Data[rootRotationCredentialTypeKey].(string) != credentialTypePassword {
+		t.Fatalf("expected default rotation credential type to be password, got: %s", resp.Data[rootRotationCredentialTypeKey].(string))
 	}
 }

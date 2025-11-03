@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -126,7 +127,11 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 		result.UsePre111GroupCNBehavior = new(bool)
 		*result.UsePre111GroupCNBehavior = false
 
-		return &ldapConfigEntry{ConfigEntry: result}, nil
+		return &ldapConfigEntry{
+			ConfigEntry:            result,
+			RotationCredentialType: credentialTypePassword,
+			RotationSchema:         schemaOpenLDAP,
+		}, nil
 	}
 
 	// Deserialize stored configuration.
@@ -148,6 +153,16 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 	if result.UsePre111GroupCNBehavior == nil {
 		result.UsePre111GroupCNBehavior = new(bool)
 		*result.UsePre111GroupCNBehavior = true
+		persistNeeded = true
+	}
+
+	if result.RotationSchema == "" {
+		result.RotationSchema = schemaOpenLDAP
+		persistNeeded = true
+	}
+
+	if result.RotationCredentialType == "" {
+		result.RotationCredentialType = credentialTypePassword
 		persistNeeded = true
 	}
 
@@ -264,12 +279,20 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		cfg.RotationUrl = rotationUrl.(string)
 	}
 	if rotationSchema, ok := d.GetOk(rootRotationSchemaKey); ok {
-		cfg.RotationSchema = rotationSchema.(string)
+		schema := rotationSchema.(string)
+		if !strutil.StrListContains([]string{schemaOpenLDAP, schemaRACF, schemaAD}, schema) {
+			return logical.ErrorResponse("invalid value for %s: %s", rootRotationSchemaKey, schema), logical.ErrInvalidRequest
+		}
+		cfg.RotationSchema = schema
 	} else {
 		cfg.RotationSchema = schemaOpenLDAP
 	}
 	if rotationCredentialType, ok := d.GetOk(rootRotationCredentialTypeKey); ok {
-		cfg.RotationCredentialType = rotationCredentialType.(string)
+		credentialType := rotationCredentialType.(string)
+		if !strutil.StrListContains([]string{credentialTypePassword, credentialTypePhrase}, credentialType) {
+			return logical.ErrorResponse("invalid value for %s: %s", rootRotationCredentialTypeKey, credentialType), logical.ErrInvalidRequest
+		}
+		cfg.RotationCredentialType = credentialType
 	} else {
 		cfg.RotationCredentialType = credentialTypePassword
 	}
