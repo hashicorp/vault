@@ -580,7 +580,7 @@ jobs:
               - type: header
                 text:
                   type: plain_text
-                  text: :rotating_light: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} build failures on ${{ github.ref_name }} :rotating_light:
+                  text: ':rotating_light: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} build failures on ${{ github.ref_name }} :rotating_light:'
                   emoji: true
               - type: divider
               - type: section
