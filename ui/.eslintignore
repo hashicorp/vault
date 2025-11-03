@@ -5,6 +5,7 @@
 /dist/
 /tmp/
 /vault-reporting/
+/vendor/
 
 # dependencies
 /bower_components/

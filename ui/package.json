@@ -9,8 +9,10 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json",
-    "build:dev": "ember build",
+    "postinstall": "yarn build:jsondiffpatch",
+    "build": "yarn build:jsondiffpatch && ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json",
+    "build:dev": "yarn build:jsondiffpatch && ember build",
+    "build:jsondiffpatch": "webpack --config webpack.jsondiffpatch.config.js",
     "docs": "sh scripts/generate-docs.sh",
     "docfy-md": "node scripts/docfy-md.js",
     "lint:css": "stylelint \"**/*.css\"",
@@ -27,8 +29,8 @@
     "fmt:js": "prettier --config .prettierrc.js --write '{app,tests,config,lib}/**/*.js'",
     "fmt:hbs": "prettier --config .prettierrc.js --write '**/*.hbs'",
     "fmt:styles": "prettier --write app/styles/**/*.*",
-    "start": "VAULT_ADDR=http://127.0.0.1:8200; ember server --proxy=$VAULT_ADDR",
-    "start2": "ember server --proxy=http://127.0.0.1:8202 --port=4202",
+    "start": "VAULT_ADDR=http://127.0.0.1:8200; yarn build:jsondiffpatch && ember server --proxy=$VAULT_ADDR",
+    "start2": "yarn build:jsondiffpatch && ember server --proxy=http://127.0.0.1:8202 --port=4202",
     "start:chroot": "ember server --proxy=http://127.0.0.1:8300 --port=4300",
     "test": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,lint:types,vault \"yarn:lint:js:quiet\" \"yarn:lint:hbs:quiet\" \"yarn:lint:types\" \"node scripts/start-vault.js {@}\" --",
     "test:enos": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,lint:types,enos \"yarn:lint:js:quiet\" \"yarn:lint:hbs:quiet\" \"yarn:lint:types\" \"node scripts/enos-test-ember.js {@}\" --",
@@ -140,7 +142,7 @@
     "filesize": "~4.2.1",
     "jsdoc-babel": "~0.5.0",
     "jsdoc-to-markdown": "~8.0.3",
-    "jsondiffpatch": "~0.4.1",
+    "jsondiffpatch": "0.7.3",
     "jsonlint": "~1.6.3",
     "lint-staged": "~16.0.0",
     "loader.js": "~4.7.0",
@@ -161,7 +163,8 @@
     "text-encoder-lite": "2.0.0",
     "tracked-built-ins": "~3.4.0",
     "typescript": "~5.8.3",
-    "webpack": "5.94.0"
+    "webpack": "5.94.0",
+    "webpack-cli": "^6.0.1"
   },
   "resolutions": {
     "ansi-html": "0.0.8",

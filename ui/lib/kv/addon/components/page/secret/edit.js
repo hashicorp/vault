@@ -69,7 +69,7 @@ export default class KvSecretEdit extends Component {
     if (!this.showDiff) return null;
     const newData = this.args.secret.secretData;
     return this.diffDelta
-      ? jsondiffpatch.formatters.html.format(this.diffDelta, newData)
+      ? htmlformatter.format(this.diffDelta, newData)
       : JSON.stringify(newData, undefined, 2);
   }
 
