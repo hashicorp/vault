@@ -883,8 +883,8 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, req *logical.Request, _ *
 		observe.NewAdditionalPKIMetadata("role_name", role),
 		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
 		observe.NewAdditionalPKIMetadata("issuer_id", issuerId),
-		observe.NewAdditionalPKIMetadata("not_before", notBefore),
-		observe.NewAdditionalPKIMetadata("not_after", notAfter),
+		observe.NewAdditionalPKIMetadata("not_before", notBefore.Format(time.RFC3339)),
+		observe.NewAdditionalPKIMetadata("not_after", notAfter.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("order_id", order.OrderId),
 		observe.NewAdditionalPKIMetadata("account_id", order.AccountId),
 	)
