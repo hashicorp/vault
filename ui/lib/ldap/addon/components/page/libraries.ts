@@ -37,6 +37,10 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
     return [route, library.completeLibraryName];
   };
 
+  getEncodedLibraryName = (library: LdapLibraryModel) => {
+    return library.completeLibraryName;
+  };
+
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;
     return owner.mountPoint;
