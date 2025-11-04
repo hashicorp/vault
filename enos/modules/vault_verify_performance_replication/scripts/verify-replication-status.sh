@@ -14,8 +14,6 @@ fail() {
 }
 
 [[ -z "$IP_VERSION" ]] && fail "IP_VERSION env variable has not been set"
-[[ -z "$PRIMARY_LEADER_ADDR" ]] && fail "PRIMARY_LEADER_ADDR env variable has not been set"
-[[ -z "$SECONDARY_LEADER_ADDR" ]] && fail "SECONDARY_LEADER_ADDR env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
 
@@ -49,21 +47,20 @@ check_pr_status() {
   fi
 
   if [[ "$connection_mode" == "primary" ]]; then
+    if [[ "$cluster_state" != "running" ]]; then
+      echo "primary cluster is not running" 1>&2
+      return 1
+    fi
     connection_status=$(jq -r '.data.secondaries[0].connection_status' <<< "$pr_status")
     if [[ "$connection_status" == 'disconnected' ]]; then
       echo ".data.secondaries[0].connection_status from primary node is 'disconnected'" 1>&2
       return 1
     fi
-    if [ "$IP_VERSION" == 4 ]; then
-      secondary_cluster_addr=$(jq -r '.data.secondaries[0].cluster_address | scan("[0-9]+.[0-9]+.[0-9]+.[0-9]+")' <<< "$pr_status")
-    else
-      secondary_cluster_addr=$(jq -r '.data.secondaries[0].cluster_address | scan("\\[(.+)\\]") | .[0]' <<< "$pr_status")
-    fi
-    if [[ "$secondary_cluster_addr" != "$SECONDARY_LEADER_ADDR" ]]; then
-      echo ".data.secondaries[0].cluster_address should have an IP address of $SECONDARY_LEADER_ADDR, got: $secondary_cluster_addr" 1>&2
+  else
+    if [[ "$cluster_state" != "stream-wals" ]]; then
+      echo "secondary cluster is not streaming wals" 1>&2
       return 1
     fi
-  else
     connection_status=$(jq -r '.data.primaries[0].connection_status' <<< "$pr_status")
     if [[ "$connection_status" == 'disconnected' ]]; then
       echo ".data.primaries[0].connection_status from secondary node is 'disconnected'" 1>&2
@@ -74,13 +71,9 @@ check_pr_status() {
     else
       primary_cluster_addr=$(jq -r '.data.primaries[0].cluster_address | scan("\\[(.+)\\]") | .[0]' <<< "$pr_status")
     fi
-    if [[ "$primary_cluster_addr" != "$PRIMARY_LEADER_ADDR" ]]; then
-      echo ".data.primaries[0].cluster_address should have an IP address of $PRIMARY_LEADER_ADDR, got: $primary_cluster_addr" 1>&2
-      return 1
-    fi
     known_primary_cluster_addrs=$(jq -r '.data.known_primary_cluster_addrs' <<< "$pr_status")
-    if ! echo "$known_primary_cluster_addrs" | grep -q "$PRIMARY_LEADER_ADDR"; then
-      echo "$PRIMARY_LEADER_ADDR is not in .data.known_primary_cluster_addrs: $known_primary_cluster_addrs" 1>&2
+    if ! echo "$known_primary_cluster_addrs" | grep -q "$primary_cluster_addr"; then
+      echo "$primary_cluster_addr is not in .data.known_primary_cluster_addrs: $known_primary_cluster_addrs" 1>&2
       return 1
     fi
   fi
