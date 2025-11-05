@@ -3071,12 +3071,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@messageformat/runtime@npm:^3.0.1":
-  version: 3.0.1
-  resolution: "@messageformat/runtime@npm:3.0.1"
+"@messageformat/runtime@npm:3.0.2":
+  version: 3.0.2
+  resolution: "@messageformat/runtime@npm:3.0.2"
   dependencies:
     make-plural: ^7.0.0
-  checksum: e69c3b0b372e15af88c285f6884ac0e3ba5fc7227b8ddc7f4bef94cb5675057126dc0ae9001e2a623d7ec61727d9b5e69b8e61be8618afe0baf40081ad3b0568
+  checksum: df2dd9b5e65701453da2a8609d6fc236941d053d62bc4eb603fcafd4713244eed6582af9d3df9f51ca5f9a77756c86b604b91d1634802194653c6a763fd96ead
   languageName: node
   linkType: hard
 
