@@ -80,13 +80,16 @@ function build_ui() {
 # Build Vault
 function build() {
   local revision
+  local base_version
   local build_date
   local ldflags
   local msg
 
   # Get or set our basic build metadata
   revision=$(build_revision)
-  build_date=$(build_date) #
+  build_date=$(build_date)
+  base_version=$(version_base)
+  version=$(version)
   : "${BIN_PATH:="dist/"}" #if not run by actions-go-build (enos local) then set this explicitly
   : "${GO_TAGS:=""}"
   : "${REMOVE_SYMBOLS:=""}"
@@ -101,7 +104,7 @@ function build() {
   )
 
   # Build our ldflags
-  msg="--> Building Vault revision $revision, built $build_date..."
+  msg="--> Building Vault v$version revision $revision, built $build_date..."
 
   # Keep the symbol and dwarf information by default
   if [ -n "$REMOVE_SYMBOLS" ]; then
@@ -110,7 +113,46 @@ function build() {
     ldflags=""
   fi
 
-  ldflags="${ldflags} -X github.com/hashicorp/vault/version.GitCommit=$revision -X github.com/hashicorp/vault/version.BuildDate=$build_date"
+  # If you read what happens in the "version" package you will see that the
+  # "version.Version" symbol is automatically set from the embedded VERSION
+  # file. So why are we setting it again with linker flags?
+  #
+  # Well, some third party security scanners like Trivy attempt to determine a
+  # Go binaries "version" by reading the embedded debug build info. The main
+  # module "version" reported there has little to do with what we consider
+  # Vaults version and is instead what the Go module system considers the
+  # vault modules "pseudo-version"[0].
+  #
+  # What Go determines as the pseudo-version can be pretty complicated. If you
+  # tag a commit with a semver-ish tag and push it before you build the binary,
+  # the "pseudo-version" will be the tag value. But what if you build the binary
+  # before a commit has an associated tag like we do? Well, it depends. If you
+  # build a Go binary with "-buildvcs" enabled, the "pseudo-version" reported
+  # here looks something like: "<prior release tag>-<timestamp>-<sha>+dirty".
+  # If Go cannot resolve a prior tag you'll get "v0.0.0" in place of
+  # "<prior release tag>". If you disable "-buildvcs" you'll get "devel".
+  #
+  # As we can see, there's quite a lot of variance in this system and a modules
+  # "version" is an unreliable way to reason about a softwares "version". But
+  # that doesn't stop tools from using it and reporting CVEs based on it!
+  #
+  # That's right. If you publish a binary with the "+dirty" style pseudo-version,
+  # and the prior tag that is resolves is associated with a CVE, your binary will
+  # be flagged for the same CVE even if it has nothing to do with the prior tag.
+  # If you disable "buildvcs" (we do) these tools cannot determine a "version"
+  # (because it's always "devel"). When this happens these scanners also fail
+  # because they can't determine a version. Cool.
+  #
+  # So that brings us back to our original query: what's going on with the
+  # ldflags. To work around this problem, Trivy *reads arbitrary ldflags in
+  # the binary build info* to determine the "version"![1] when the main module
+  # does not report a version. And it is because of that, dear reader, that we
+  # inject our version again via linker flags, to please tooling that relies on
+  # the unreliable.
+  #
+  # [1]: https://go.dev/doc/modules/version-numbers#pseudo-version-number
+  # [0]: https://trivy.dev/v0.62/docs/coverage/language/golang/#main-module
+  ldflags="${ldflags} -X github.com/hashicorp/vault/version.GitCommit=$revision -X github.com/hashicorp/vault/version.BuildDate=$build_date -X github.com/hashicorp/vault/version.Version=$base_version"
 
   if [[ ${VERSION_METADATA+x} ]]; then
     msg="${msg}, metadata ${VERSION_METADATA}"
@@ -161,10 +203,28 @@ function prepare_ce_legal() {
   popd
 }
 
+# version returns the $VAULT_VERSION env variable or reads the VERSION file.
+function version() {
+  if [[ -n "${VAULT_VERSION+x}" ]]; then
+    echo "${VAULT_VERSION}"
+    return 0
+  fi
+
+  cat "$(readlink -f "$(dirname "$0")/../version/VERSION")"
+}
+
+# Base version converts a vault version string into the base version, which omits
+# any prerelease or edition metadata.
+function version_base() {
+  local ver
+  ver=$(version)
+  echo "${ver%%-*}"
+}
+
 # Package version converts a vault version string into a compatible representation for system
 # packages.
 function version_package() {
-  awk '{ gsub("-","~",$1); print $1 }' <<<"$VAULT_VERSION"
+  awk '{ gsub("-","~",$1); print $1 }' <<< "$(version)"
 }
 
 # Run the CI Helper
@@ -194,6 +254,12 @@ function main() {
   revision)
     build_revision
     ;;
+    version)
+      version
+      ;;
+     version-base)
+      version_base
+      ;;
   version-package)
     version_package
     ;;
