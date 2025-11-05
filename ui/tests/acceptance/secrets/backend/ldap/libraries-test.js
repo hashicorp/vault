@@ -68,7 +68,7 @@ module('Acceptance | ldap | libraries', function (hooks) {
       'Transitions to subdirectory list view'
     );
 
-    await click(LDAP_SELECTORS.libraryItem('admin/test-library'));
+    await click(LDAP_SELECTORS.libraryItem('test-library'));
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${this.backend}/ldap/libraries/admin%2Ftest-library/details/accounts`,

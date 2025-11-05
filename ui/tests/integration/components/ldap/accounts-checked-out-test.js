@@ -143,4 +143,105 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
     await click('[data-test-checked-out-account-action="foo.bar"]');
     await click('[data-test-check-in-confirm]');
   });
+
+  test('it should show loading state when isLoadingStatuses is true', async function (assert) {
+    this.renderComponent = () => {
+      return render(
+        hbs`
+          <AccountsCheckedOut
+            @libraries={{array this.library}}
+            @statuses={{this.statuses}}
+            @showLibraryColumn={{this.showLibraryColumn}}
+            @onCheckInSuccess={{this.onCheckInSuccess}}
+            @isLoadingStatuses={{true}} />
+        `,
+        {
+          owner: this.engine,
+        }
+      );
+    };
+
+    await this.renderComponent();
+
+    assert
+      .dom('.has-padding-l.flex.is-centered .hds-icon')
+      .exists('Loading icon is displayed when isLoadingStatuses is true');
+    assert.dom('.hds-table').doesNotExist('Table is not rendered while loading');
+  });
+
+  test('it should not show loading state when isLoadingStatuses is false', async function (assert) {
+    this.renderComponent = () => {
+      return render(
+        hbs`
+          <AccountsCheckedOut
+            @libraries={{array this.library}}
+            @statuses={{this.statuses}}
+            @showLibraryColumn={{this.showLibraryColumn}}
+            @onCheckInSuccess={{this.onCheckInSuccess}}
+            @isLoadingStatuses={{false}} />
+        `,
+        {
+          owner: this.engine,
+        }
+      );
+    };
+
+    await this.renderComponent();
+
+    assert
+      .dom('.has-padding-l.flex.is-centered .hds-icon')
+      .doesNotExist('Loading icon is not displayed when isLoadingStatuses is false');
+    assert.dom('.hds-table').exists('Table is rendered when not loading');
+  });
+
+  test('it should find library by completeLibraryName for hierarchical libraries', async function (assert) {
+    // Create a hierarchical library with proper setup
+    this.store.pushPayload('ldap/library', {
+      modelName: 'ldap/library',
+      backend: 'ldap-test',
+      name: 'sa-prod',
+      path_to_library: 'service-account/',
+      disable_check_in_enforcement: 'Disabled', // Allow all accounts to show
+    });
+    const hierarchicalLibrary = this.store.peekRecord('ldap/library', 'sa-prod');
+    this.hierarchicalLibrary = hierarchicalLibrary; // Make available in template scope
+
+    // Mock the auth service to simulate a root user (no entity ID)
+    this.authStub.value({ entityId: '' });
+
+    // Status should reference the complete library name
+    this.statuses = [
+      {
+        account: 'prod@example.com',
+        available: false,
+        library: 'service-account/sa-prod', // Complete hierarchical path
+        borrower_client_token: '123',
+        borrower_entity_id: '', // Root user has no entity ID
+      },
+    ];
+
+    this.renderComponent = () => {
+      return render(
+        hbs`
+          <AccountsCheckedOut
+            @libraries={{array this.hierarchicalLibrary}}
+            @statuses={{this.statuses}}
+            @showLibraryColumn={{true}}
+            @onCheckInSuccess={{this.onCheckInSuccess}} />
+        `,
+        {
+          owner: this.engine,
+        }
+      );
+    };
+
+    await this.renderComponent();
+
+    assert
+      .dom('[data-test-checked-out-account="prod@example.com"]')
+      .hasText('prod@example.com', 'Account renders for hierarchical library');
+    assert
+      .dom('[data-test-checked-out-library="prod@example.com"]')
+      .hasText('service-account/sa-prod', 'Library name displays full hierarchical path correctly');
+  });
 });
