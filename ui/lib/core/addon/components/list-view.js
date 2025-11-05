@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { pluralize } from 'ember-inflector';
 
 /**
+ * @deprecated As of 2025, This component is deprecated. Please refer to other related components such as 'list-table'
  * @module ListView
  * `ListView` components are used in conjunction with `ListItem` for rendering a list.
  *

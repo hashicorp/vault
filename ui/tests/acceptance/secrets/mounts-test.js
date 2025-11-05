@@ -138,7 +138,9 @@ module('Acceptance | secrets/mounts', function (hooks) {
 
     await page.secretList();
     await settled();
-    assert.dom(SES.secretsBackendLink(path)).exists({ count: 1 }, 'renders only one instance of the engine');
+    assert
+      .dom(GENERAL.tableData(`${path}/`, 'path'))
+      .exists({ count: 1 }, 'renders only one instance of the engine');
   });
 
   test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
@@ -317,6 +319,40 @@ module('Acceptance | secrets/mounts', function (hooks) {
       `vault.cluster.secrets.backend.list-root`,
       `${v1} navigates to list route`
     );
+  });
+
+  // Condensed tests for these specific engines here as they just check if they are added to the list after mounting
+  test('enable alicloud', async function (assert) {
+    const enginePath = `alicloud-${this.uid}`;
+    await mountSecrets.visit();
+    await mountBackend('alicloud', enginePath);
+
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'redirects to the backends page'
+    );
+
+    assert.ok(GENERAL.tableData(`${enginePath}/`, 'path'), 'shows the alicloud engine');
+
+    // cleanup
+    await runCmd(`delete sys/mounts/${enginePath}`);
+  });
+
+  test('enable gcpkms', async function (assert) {
+    const enginePath = `gcpkms-${this.uid}`;
+    await mountSecrets.visit();
+    await mountBackend('gcpkms', enginePath);
+
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'redirects to the backends page'
+    );
+
+    assert.ok(GENERAL.tableData(`${enginePath}/`, 'path'), 'shows the gcpkms engine');
+    // cleanup
+    await runCmd(`delete sys/mounts/${enginePath}`);
   });
 
   module('WIF secret engines', function () {
