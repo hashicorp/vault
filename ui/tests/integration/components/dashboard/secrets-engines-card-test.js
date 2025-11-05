@@ -31,10 +31,10 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
 
     await render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
 
-    // verify overflow style exists on secret engine text
+    // verify truncate class style exists on secret engine path text
     assert
       .dom(SES.secretPath('kubernetes-test/'))
-      .hasClass('overflow-wrap', 'secret engine name has overflow class ');
+      .hasClass('truncate-first-line', 'secret engine name has truncate class to handle overflow');
 
     assert.dom('[data-test-secrets-engines-card-show-all]').doesNotExist();
   });

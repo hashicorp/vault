@@ -34,7 +34,6 @@ import {
 } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
 
 const secretPath = `my-#:$=?-secret`;
@@ -44,7 +43,7 @@ const secretPathUrlEncoded = `my-%23:$=%3F-secret`;
 const ALL_TABS = ['Overview', 'Secret', 'Metadata', 'Paths', 'Version History'];
 const navToBackend = async (backend) => {
   await visit(`/vault/secrets`);
-  return click(SES.secretsBackendLink(backend));
+  return click(`${GENERAL.tableData(`${backend}/`, 'path')} a`);
 };
 const assertCorrectBreadcrumbs = (assert, expected) => {
   assert.dom(PAGE.breadcrumbs).hasText(expected.join(' '));
