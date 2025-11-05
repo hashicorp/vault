@@ -456,7 +456,7 @@ jobs:
               - type: header
                 text:
                   type: plain_text
-                  text: ':rotating_light: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} test failures on ${{ github.ref_name }} :rotating_light:'
+                  text: ':flashing-light: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} test failures on ${{ github.ref_name }} :flashing-light:'
                   emoji: true
               - type: divider
               - type: section
@@ -467,7 +467,7 @@ jobs:
                     ${{ needs.test-go-race.result != 'failure' && ':white_check_mark:' || ':x:' }} Go race tests
                         ${{ needs.test-go-race.outputs.data-race-result != 'success' && ':x: Data race detected' || ':white_check_mark: No race detected' }}
                     ${{ needs.test-go-testonly.result != 'failure' && ':white_check_mark:' || ':x:' }} Go testonly tests
-                    ${{ needs.test-ui.result != 'failure' && ':white_check_mark:' || ':x:' }} UI tests"
+                    ${{ needs.test-ui.result != 'failure' && ':white_check_mark:' || ':x:' }} UI tests
                 accessory:
                   type: button
                   text:
