@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Resolved a regression that prevented users with create and update permissions on KV v1 secrets from opening the edit view. The UI now correctly recognizes these capabilities and allows editing without requiring full read access.
+```
