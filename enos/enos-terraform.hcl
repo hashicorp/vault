@@ -24,6 +24,10 @@ terraform "default" {
       source = "hashicorp/aws"
     }
 
+    docker = {
+      source = "kreuzwerker/docker"
+    }
+
     enos = {
       source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.4.0"
