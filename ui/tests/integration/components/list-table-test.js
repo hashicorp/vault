@@ -96,8 +96,8 @@ module('Integration | Component | list-table', function (hooks) {
     await this.renderComponent();
 
     assert
-      .dom(`${GENERAL.tableRow('Maldives')} > th`)
-      .hasClass('hds-table__th--is-selectable', 'selectable column renders for row');
+      .dom(`${GENERAL.tableRow('Maldives')} > .hds-advanced-table__th`)
+      .hasClass('hds-advanced-table__th--is-selectable', 'selectable column renders for row');
   });
 
   // check that a custom item block will render
