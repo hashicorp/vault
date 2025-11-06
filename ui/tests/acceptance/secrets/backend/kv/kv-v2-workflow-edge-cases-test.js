@@ -39,6 +39,8 @@ import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { selectChoose } from 'ember-power-select/test-support';
+import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -66,7 +68,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     return;
   });
 
-  module('persona with read and list access on the secret level', function (hooks) {
+  module('persona with glob (*) read and list access on the secret level', function (hooks) {
     // see github issue for more details https://github.com/hashicorp/vault/issues/5362
     hooks.beforeEach(async function () {
       const secretPath = `${this.rootSecret}/*`; // user has LIST and READ access within this root secret directory
@@ -225,6 +227,62 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         'it navigates to secret overview'
       );
       assert.dom(GENERAL.overviewCard.container('Paths')).exists();
+    });
+  });
+
+  module('persona with list access on a secret path', function (hooks) {
+    // test coverage for this regression: https://github.com/hashicorp/vault/issues/31606
+    hooks.beforeEach(async function () {
+      const secretPath = this.rootSecret;
+      const capabilities = ['list'];
+      const backend = this.backend;
+      const token = await runCmd([
+        createPolicyCmd(
+          `secret-lister-${this.backend}`,
+          metadataPolicy({ backend, secretPath, capabilities })
+        ),
+        createTokenCmd(`secret-lister-${this.backend}`),
+      ]);
+      await login(token);
+    });
+
+    test('it lists secrets within the root directory from the kv engine list', async function (assert) {
+      assert.expect(4);
+      const backend = this.backend;
+      const [root, subdirectory] = this.fullSecretPath.split('/');
+
+      await visit(`/vault/secrets-engines/${backend}/kv/list`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${backend}/kv/list`,
+        'lands on secrets list page'
+      );
+
+      await typeIn(PAGE.list.overviewInput, `${root}/`);
+      await click(GENERAL.submitButton);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${backend}/kv/list/${root}/`,
+        'it navigates to secret list'
+      );
+      assert.dom(PAGE.list.filter).hasValue(`${root}/`);
+      assert.dom(PAGE.list.item(`${subdirectory}/`)).exists('it renders nested secret');
+    });
+
+    test('it lists secrets within the root directory from the quick actions card', async function (assert) {
+      assert.expect(2);
+      const backend = this.backend;
+      const [root, subdirectory] = this.fullSecretPath.split('/');
+
+      await visit(`/vault`);
+      await selectChoose(DASHBOARD.searchSelect('secrets-engines'), backend);
+      await fillIn(DASHBOARD.selectEl, 'Find KV secrets');
+      await typeIn(GENERAL.kvSuggestion.input, `${root}/`);
+      await click(GENERAL.kvSuggestion.input);
+      assert
+        .dom(GENERAL.searchSelect.options)
+        .hasText(`${subdirectory}/`)
+        .exists({ count: 1 }, 'expected options render');
     });
   });
 
