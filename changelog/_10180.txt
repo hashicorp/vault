@@ -1,0 +1,7 @@
+```release-note:bug
+ui: Update LDAP library count to reflect the total number of nodes instead of number of directories
+```
+
+```release-note:bug
+ui: Update LDAP accounts checked-in table to display hierarchical LDAP libraries
+```

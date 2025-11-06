@@ -7,18 +7,18 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { restartableTask } from 'ember-concurrency';
 
 import type LdapLibraryModel from 'vault/models/ldap/library';
 import type SecretEngineModel from 'vault/models/secret-engine';
 import type RouterService from '@ember/routing/router-service';
+import type Store from '@ember-data/store';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import LdapRoleModel from 'vault/models/ldap/role';
 import { LdapLibraryAccountStatus } from 'vault/vault/adapters/ldap/library';
 
 interface Args {
   roles: Array<LdapRoleModel>;
-  libraries: Array<LdapLibraryModel>;
-  librariesStatus: Array<LdapLibraryAccountStatus>;
   promptConfig: boolean;
   backendModel: SecretEngineModel;
   breadcrumbs: Array<Breadcrumb>;
@@ -32,8 +32,18 @@ interface Option {
 
 export default class LdapLibrariesPageComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
+  @service declare readonly store: Store;
 
   @tracked selectedRole: LdapRoleModel | undefined;
+  @tracked librariesStatus: Array<LdapLibraryAccountStatus> = [];
+  @tracked allLibraries: Array<LdapLibraryModel> = [];
+  @tracked librariesError: string | null = null;
+
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    this.fetchLibraries.perform();
+    this.fetchLibrariesStatus.perform();
+  }
 
   get roleOptions() {
     const options = this.args.roles
@@ -59,5 +69,63 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
   generateCredentials() {
     const { type, name } = this.selectedRole as LdapRoleModel;
     this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles.role.credentials', type, name);
+  }
+
+  fetchLibraries = restartableTask(async () => {
+    const backend = this.args.backendModel.id;
+    const allLibraries: Array<LdapLibraryModel> = [];
+
+    try {
+      this.librariesError = null; // Clear any previous errors
+      await this.discoverAllLibrariesRecursively(backend, '', allLibraries);
+      this.allLibraries = allLibraries;
+    } catch (error) {
+      // Hierarchical discovery failed - display inline error
+      this.librariesError = 'Unable to load complete library information. Please try refreshing the page.';
+      this.allLibraries = [];
+    }
+  });
+
+  fetchLibrariesStatus = restartableTask(async () => {
+    // Wait for fetchLibraries task to complete before proceeding
+    await this.fetchLibraries.last;
+
+    const allStatuses: Array<LdapLibraryAccountStatus> = [];
+
+    for (const library of this.allLibraries) {
+      try {
+        const statuses = await library.fetchStatus();
+        allStatuses.push(...statuses);
+      } catch (error) {
+        // suppressing error
+      }
+    }
+
+    this.librariesStatus = allStatuses;
+  });
+
+  private async discoverAllLibrariesRecursively(
+    backend: string,
+    currentPath: string,
+    allLibraries: Array<LdapLibraryModel>
+  ): Promise<void> {
+    const queryParams: { backend: string; path_to_library?: string } = { backend };
+    if (currentPath) {
+      queryParams.path_to_library = currentPath;
+    }
+
+    const items = await this.store.query('ldap/library', queryParams);
+    const libraryItems = items.toArray() as LdapLibraryModel[];
+
+    for (const item of libraryItems) {
+      if (item.name.endsWith('/')) {
+        // This is a directory - recursively explore it
+        const nextPath = currentPath ? `${currentPath}${item.name}` : item.name;
+        await this.discoverAllLibrariesRecursively(backend, nextPath, allLibraries);
+      } else {
+        // This is an actual library
+        allLibraries.push(item);
+      }
+    }
   }
 }
