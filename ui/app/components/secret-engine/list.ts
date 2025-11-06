@@ -73,7 +73,7 @@ export default class SecretEngineList extends Component<Args> {
       key: 'running_plugin_version',
       label: 'Version',
       isSortable: true,
-      width: '150px',
+      width: '170px',
     },
     {
       key: 'popupMenu',
@@ -171,6 +171,11 @@ export default class SecretEngineList extends Component<Args> {
       id: version,
     }));
   }
+
+  // Returns engine resource data for a given engine path, needed to get icon and other metadata from SecretEnginesResource
+  getEngineResourceData = (enginePath: string) => {
+    return this.displayableBackends.find((backend) => backend.path === enginePath);
+  };
 
   generateToolTipText = (backend: SecretsEngineResource) => {
     const displayData = engineDisplayData(backend.type);

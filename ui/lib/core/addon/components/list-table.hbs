@@ -6,13 +6,12 @@
 {{#if (has-block "selectedItems")}}
   {{yield to="selectedItems"}}
 {{/if}}
-<Hds::Table
+<Hds::AdvancedTable
   @model={{this.paginatedTableData}}
   @columns={{@columns}}
   @isSelectable={{if @selectionKey true false}}
   class="has-bottom-margin-s"
   @onSelectionChange={{@onSelectionChange}}
-  @isFixedLayout={{true}}
   {{did-update this.resetPagination @data}}
 >
   <:body as |B|>
@@ -28,7 +27,7 @@
           </B.Td>
         {{else}}
           {{#let (get B.data key) as |value|}}
-            <B.Td data-test-table-data={{key}} class="text-overflow-ellipsis">
+            <B.Td data-test-table-data={{key}} class="is-inline text-overflow-ellipsis">
               {{#if (get (get @columns index) "customTableItem")}}
                 {{yield B.data to="customTableItem"}}
               {{else}}
@@ -41,7 +40,7 @@
       {{/each}}
     </B.Tr>
   </:body>
-</Hds::Table>
+</Hds::AdvancedTable>
 {{! WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage }}
 {{#if this.renderPagination}}
   <Hds::Pagination::Numbered
