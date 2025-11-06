@@ -36,33 +36,12 @@ export default class LdapOverviewRoute extends Route {
 
   declare promptConfig: boolean;
 
-  async fetchLibrariesStatus(libraries: Array<LdapLibraryModel>): Promise<Array<LdapLibraryAccountStatus>> {
-    const allStatuses: Array<LdapLibraryAccountStatus> = [];
-
-    for (const library of libraries) {
-      try {
-        const statuses = await library.fetchStatus();
-        allStatuses.push(...statuses);
-      } catch (error) {
-        // suppressing error
-      }
-    }
-    return allStatuses;
-  }
-
-  async fetchLibraries(backend: string) {
-    return this.store.query('ldap/library', { backend }).catch(() => []);
-  }
-
   async model() {
     const backend = this.secretMountPath.currentPath;
-    const libraries = await this.fetchLibraries(backend);
     return hash({
       promptConfig: this.promptConfig,
       backendModel: this.modelFor('application'),
       roles: this.store.query('ldap/role', { backend }).catch(() => []),
-      libraries,
-      librariesStatus: this.fetchLibrariesStatus(libraries as Array<LdapLibraryModel>),
     });
   }
 

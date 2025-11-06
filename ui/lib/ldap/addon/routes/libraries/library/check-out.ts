@@ -50,9 +50,10 @@ export default class LdapLibraryCheckOutRoute extends Route {
       return [library.backend, childResource];
     };
     controller.breadcrumbs = [
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: library.backend, route: 'overview' },
       { label: 'Libraries', route: 'libraries' },
-      ...ldapBreadcrumbs(library.name, routeParams, libraryRoutes),
+      ...ldapBreadcrumbs(library.completeLibraryName, routeParams, libraryRoutes),
       { label: 'Check-Out' },
     ];
   }
