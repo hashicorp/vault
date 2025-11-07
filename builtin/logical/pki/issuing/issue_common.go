@@ -999,6 +999,15 @@ func GetCertificateNotAfter(b logical.SystemView, role *RoleEntry, input CertNot
 	if err != nil {
 		return time.Time{}, warnings, err
 	}
+	notBefore := time.Now().Add(-role.NotBeforeDuration)
+	if notAfter.Before(notBefore) {
+		return time.Time{}, warnings, errutil.UserError{Err: "notAfter before notBefore"}
+	}
+
+	if caSign != nil && notBefore.Before(caSign.Certificate.NotBefore) {
+		return time.Time{}, warnings, errutil.UserError{Err: "notBefore before signer's notBefore"}
+	}
+
 	return notAfter, warnings, nil
 }
 
