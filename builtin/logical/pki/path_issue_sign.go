@@ -94,6 +94,11 @@ func buildPathIssue(b *backend, pattern string, displayAttrs *framework.DisplayA
 								Description: `Private key type`,
 								Required:    false,
 							},
+							"authority_key_id": {
+								Type:        framework.TypeString,
+								Description: `AuthorityKeyID of certificate`,
+								Required:    false,
+							},
 						},
 					}},
 				},
@@ -168,6 +173,11 @@ func buildPathSign(b *backend, pattern string, displayAttrs *framework.DisplayAt
 								Type:        framework.TypeInt64,
 								Description: `Time of expiration`,
 								Required:    true,
+							},
+							"authority_key_id": {
+								Type:        framework.TypeString,
+								Description: `AuthorityKeyID of certificate`,
+								Required:    false,
 							},
 						},
 					}},
@@ -251,6 +261,11 @@ func buildPathIssuerSignVerbatim(b *backend, pattern string, displayAttrs *frame
 								Type:        framework.TypeInt64,
 								Description: `Time of expiration`,
 								Required:    true,
+							},
+							"authority_key_id": {
+								Type:        framework.TypeString,
+								Description: `AuthorityKeyID of certificate`,
+								Required:    false,
 							},
 						},
 					}},
@@ -559,6 +574,7 @@ func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *c
 	respData := map[string]interface{}{
 		"expiration":    parsedBundle.Certificate.NotAfter.Unix(),
 		"serial_number": cb.SerialNumber,
+		"authority_key_id": certutil.GetHexFormatted(parsedBundle.Certificate.AuthorityKeyId, ":"),
 	}
 
 	format := getFormat(data)
