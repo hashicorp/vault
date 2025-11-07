@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/huaweicloudkms/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2"
 )
@@ -54,6 +55,16 @@ var (
 		gcpckms.EnvGcpCkmsWrapperCryptoKey:   "crypto_key",
 		gcpckms.EnvGcpCkmsWrapperKeyRing:     "key_ring",
 		gcpckms.EnvVaultGcpCkmsSealKeyRing:   "key_ring",
+	}
+
+	HuaweiCloudKMSEnvVars = map[string]string{
+		"HUAWEICLOUD_REGION":                         "region",
+		"HUAWEICLOUD_PROJECT":                        "project",
+		"HUAWEICLOUD_ACCESS_KEY":                     "access_key",
+		"HUAWEICLOUD_SECRET_KEY":                     "secret_key",
+		"HUAWEICLOUD_IDENTITY_ENDPOINT":              "identity_endpoint",
+		"VAULT_HUAWEICLOUDKMS_SEAL_KEY_ID":           "kms_key_id",
+		huaweicloudkms.EnvHuaweiCloudKmsWrapperKeyId: "kms_key_id",
 	}
 
 	OCIKMSEnvVars = map[string]string{

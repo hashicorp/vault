@@ -55,6 +55,15 @@ func Test_getEnvConfig(t *testing.T) {
 			map[string]string{"credentials": "test_credentials", "project": "test_project", "region": "test_region", "key_ring": "test_key_ring", "crypto_key": "test_crypto_key"},
 		},
 		{
+			"HuaweiCloud KMS wrapper",
+			&KMS{
+				Type:     "huaweicloudkms",
+				Priority: 1,
+			},
+			map[string]string{"HUAWEICLOUD_REGION": "test_region", "HUAWEICLOUD_PROJECT": "test_project", "HUAWEICLOUD_ACCESS_KEY": "test_access_key", "HUAWEICLOUD_SECRET_KEY": "test_secret_key", "VAULT_HUAWEICLOUDKMS_SEAL_KEY_ID": "test_key_id"},
+			map[string]string{"region": "test_region", "project": "test_project", "access_key": "test_access_key", "secret_key": "test_secret_key", "kms_key_id": "test_key_id"},
+		},
+		{
 			"OCI KMS wrapper",
 			&KMS{
 				Type:     "ocikms",
@@ -213,6 +222,44 @@ seal "azurekeyvault" {
 				"resource":      "2001:db8::2:1",
 			},
 		},
+		"huaweicloudkms ipv4": {
+			config: `
+seal "huaweicloudkms" {
+  region     = "cn-north-1"
+  project    = "test-project"
+  access_key = "0wNEpMMlzy7szvai"
+  secret_key = "PupkTg8jdmau1cXxYacgE736PJj4cA"
+  kms_key_id = "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73"
+  identity_endpoint = "https://iam.myhwclouds.com:443/v3"
+}`,
+			expected: map[string]string{
+				"region":            "cn-north-1",
+				"project":           "test-project",
+				"access_key":        "0wNEpMMlzy7szvai",
+				"secret_key":        "PupkTg8jdmau1cXxYacgE736PJj4cA",
+				"kms_key_id":        "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73",
+				"identity_endpoint": "https://iam.myhwclouds.com:443/v3",
+			},
+		},
+		"huaweicloudkms ipv6": {
+			config: `
+seal "huaweicloudkms" {
+  region     = "cn-north-1"
+  project    = "test-project"
+  access_key = "0wNEpMMlzy7szvai"
+  secret_key = "PupkTg8jdmau1cXxYacgE736PJj4cA"
+  kms_key_id = "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73"
+  identity_endpoint = "https://[2001:db8:0:0:0:0:2:1]:443/v3"
+}`,
+			expected: map[string]string{
+				"region":            "cn-north-1",
+				"project":           "test-project",
+				"access_key":        "0wNEpMMlzy7szvai",
+				"secret_key":        "PupkTg8jdmau1cXxYacgE736PJj4cA",
+				"kms_key_id":        "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73",
+				"identity_endpoint": "https://[2001:db8::2:1]:443/v3",
+			},
+		},
 		"ocikms ipv4": {
 			config: `
 seal "ocikms" {
@@ -356,6 +403,26 @@ func TestMergeKMSEnvConfigAddrConformance(t *testing.T) {
 				"vault_name":    "hc-vault",
 				"key_name":      "vault_key",
 				"resource":      "2001:db8::2:1",
+			},
+		},
+		"huaweicloudkms": {
+			sealType: "huaweicloudkms",
+			kmsConfig: map[string]string{
+				"region":            "cn-north-1",
+				"project":           "test-project",
+				"access_key":        "0wNEpMMlzy7szvai",
+				"secret_key":        "PupkTg8jdmau1cXxYacgE736PJj4cA",
+				"kms_key_id":        "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73",
+				"identity_endpoint": "https://iam.myhwclouds.com:443/v3",
+			},
+			envVars: map[string]string{"HUAWEICLOUD_IDENTITY_ENDPOINT": "https://[2001:db8:0:0:0:0:2:1]:443/v3"},
+			expected: map[string]string{
+				"region":            "cn-north-1",
+				"project":           "test-project",
+				"access_key":        "0wNEpMMlzy7szvai",
+				"secret_key":        "PupkTg8jdmau1cXxYacgE736PJj4cA",
+				"kms_key_id":        "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73",
+				"identity_endpoint": "https://[2001:db8::2:1]:443/v3",
 			},
 		},
 		"ocikms wrapper env vars": {
