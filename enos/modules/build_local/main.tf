@@ -99,6 +99,6 @@ resource "enos_local_exec" "build" {
     GOOS               = var.goos
     PRERELEASE_VERSION = module.local_metadata.version_pre
     VERSION_METADATA   = module.local_metadata.version_meta
-    CUSTOM_BIN_PATH    = var.docker_bin_path != null ? abspath("${path.module}/../../../${var.docker_bin_path}") : ""
+    TARGET_BIN_PATH    = var.docker_bin_path != null ? abspath("${path.module}/../../../${var.docker_bin_path}") : ""
   }
 }
