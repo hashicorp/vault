@@ -1,0 +1,4 @@
+```release-note:change
+policies: add VAULT_NEW_PER_ELEMENT_MATCHING_ON_LIST env var to adopt new "contains all" list matching behavior on
+allowed_parameters and denied_parameters
+```
