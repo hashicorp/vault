@@ -1953,7 +1953,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	require.NoError(t, err, "should be signed by root-b but wasn't")
 }
 
-func TestBackend_PathFetchValidRaw(t *testing.T) {
+func TestBackend_PathFetchValid(t *testing.T) {
 	t.Parallel()
 	b, storage := CreateBackendWithStorage(t)
 
@@ -2040,6 +2040,8 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	expectedSerial := serialFromCert(issuedCrt)
 	expectedCert := []byte(issueCrtAsPem)
 
+	require.Equal(t, resp.Data["authority_key_id"].(string), certutil.GetHexFormatted(issuedCrt.AuthorityKeyId, ":"))
+
 	// get der cert
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -2083,6 +2085,22 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	if resp.Data[logical.HTTPContentType] != "application/pem-certificate-chain" {
 		t.Fatalf("failed to get raw cert content-type")
 	}
+
+	// get json
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      fmt.Sprintf("cert/%s", expectedSerial),
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to get cert, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	require.Equal(t, resp.Data["certificate"].(string), issueCrtAsPem)
+	require.Equal(t, resp.Data["authority_key_id"].(string), certutil.GetHexFormatted(issuedCrt.AuthorityKeyId, ":"))
 }
 
 func TestBackend_PathFetchCertList(t *testing.T) {
@@ -2366,6 +2384,8 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	if resp.Secret != nil {
 		t.Fatal("got a lease when we should not have")
 	}
+	cert := parseCert(t, resp.Data["certificate"].(string))
+	require.Equal(t, certutil.GetHexFormatted(cert.AuthorityKeyId, ":"), resp.Data["authority_key_id"].(string))
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim/test",
@@ -2385,19 +2405,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	if resp.Data == nil || resp.Data["certificate"] == nil {
 		t.Fatal("did not get expected data")
 	}
-	certString := resp.Data["certificate"].(string)
-	block, _ := pem.Decode([]byte(certString))
-	if block == nil {
-		t.Fatal("nil pem block")
-	}
-	certs, err := x509.ParseCertificates(block.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(certs) != 1 {
-		t.Fatalf("expected a single cert, got %d", len(certs))
-	}
-	cert := certs[0]
+	cert = parseCert(t, resp.Data["certificate"].(string))
 	if math.Abs(float64(time.Now().Add(12*time.Hour).Unix()-cert.NotAfter.Unix())) < 10 {
 		t.Fatalf("sign-verbatim did not properly cap validity period (notAfter) on signed CSR: was %v vs requested %v but should've been %v", cert.NotAfter, time.Now().Add(12*time.Hour), time.Now().Add(8*time.Hour))
 	}
@@ -2425,19 +2433,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	if resp.Data == nil || resp.Data["certificate"] == nil {
 		t.Fatal("did not get expected data")
 	}
-	certString = resp.Data["certificate"].(string)
-	block, _ = pem.Decode([]byte(certString))
-	if block == nil {
-		t.Fatal("nil pem block")
-	}
-	certs, err = x509.ParseCertificates(block.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(certs) != 1 {
-		t.Fatalf("expected a single cert, got %d", len(certs))
-	}
-	cert = certs[0]
+	cert = parseCert(t, resp.Data["certificate"].(string))
 
 	// Fallback check for duplicate otherName, necessary on Go versions before 1.19.
 	// We assume that there is only one SAN in the original CSR and that it is an otherName.
