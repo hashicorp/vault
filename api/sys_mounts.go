@@ -238,6 +238,7 @@ type TuneMountConfigInput struct {
 	TokenType                  *string                     `json:"token_type,omitempty" mapstructure:"token_type"`
 	AllowedManagedKeys         *[]string                   `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
 	PluginVersion              *string                     `json:"plugin_version,omitempty"`
+	OverridePinnedVersion      *bool                       `json:"override_pinned_version,omitempty" mapstructure:"override_pinned_version"`
 	UserLockoutConfig          *TuneUserLockoutConfigInput `json:"user_lockout_config,omitempty"`
 	DelegatedAuthAccessors     *[]string                   `json:"delegated_auth_accessors,omitempty" mapstructure:"delegated_auth_accessors"`
 	IdentityTokenKey           *string                     `json:"identity_token_key,omitempty" mapstructure:"identity_token_key"`
@@ -320,6 +321,8 @@ func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config Moun
 	if config.PluginVersion != "" { // Because omitempty in the JSON
 		tuneConfig.PluginVersion = &config.PluginVersion
 	}
+
+	tuneConfig.OverridePinnedVersion = config.OverridePinnedVersion
 
 	if config.UserLockoutConfig != nil {
 		userLockoutConfig := TuneUserLockoutConfigInput{}
@@ -416,6 +419,7 @@ type MountConfigInput struct {
 	TokenType                  string                  `json:"token_type,omitempty" mapstructure:"token_type"`
 	AllowedManagedKeys         []string                `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
 	PluginVersion              string                  `json:"plugin_version,omitempty"`
+	OverridePinnedVersion      *bool                   `json:"override_pinned_version,omitempty" mapstructure:"override_pinned_version"`
 	UserLockoutConfig          *UserLockoutConfigInput `json:"user_lockout_config,omitempty"`
 	DelegatedAuthAccessors     []string                `json:"delegated_auth_accessors,omitempty" mapstructure:"delegated_auth_accessors"`
 	IdentityTokenKey           string                  `json:"identity_token_key,omitempty" mapstructure:"identity_token_key"`
@@ -455,6 +459,7 @@ type MountConfigOutput struct {
 	DelegatedAuthAccessors     []string                 `json:"delegated_auth_accessors,omitempty" mapstructure:"delegated_auth_accessors"`
 	IdentityTokenKey           string                   `json:"identity_token_key,omitempty" mapstructure:"identity_token_key"`
 	TrimRequestTrailingSlashes bool                     `json:"trim_request_trailing_slashes,omitempty" mapstructure:"trim_request_trailing_slashes"`
+	OverridePinnedVersion      bool                     `json:"override_pinned_version,omitempty" mapstructure:"override_pinned_version"`
 
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
