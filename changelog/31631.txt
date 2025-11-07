@@ -1,0 +1,3 @@
+```ease-note:feature
+configutil: Add HuaweiCloud KMS wrapper support for auto unseal
+```
