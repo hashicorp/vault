@@ -84,3 +84,20 @@ func testPluginCreateAndRegisterVersioned(tb testing.TB, client *api.Client, dir
 
 	return pth, sha256Sum, "v1.0.0"
 }
+
+func testPluginRegisterWithDownload(tb testing.TB, client *api.Client, name string, pluginType api.PluginType, version string) {
+	tb.Helper()
+
+	resp, err := client.Sys().RegisterPluginDetailed(&api.RegisterPluginInput{
+		Name:     name,
+		Type:     pluginType,
+		Version:  version,
+		Download: true,
+	})
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if len(resp.Warnings) > 0 {
+		tb.Errorf("expected no warnings, got: %v", resp.Warnings)
+	}
+}

@@ -1,0 +1,3 @@
+```release-note:feature
+**Plugins (Enterprise)**: Allow overriding pinned version when enabling and tuning auth and secrets backends
+```
