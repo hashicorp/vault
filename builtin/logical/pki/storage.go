@@ -390,8 +390,8 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 		CommonName:         issuerCert.Subject.CommonName,
 		SKID:               issuerCert.SubjectKeyId,
 		AKID:               issuerCert.AuthorityKeyId,
-		NotBefore:          issuerCert.NotBefore.String(),
-		NotAfter:           issuerCert.NotAfter.String(),
+		NotBefore:          issuerCert.NotBefore.Format(time.RFC3339),
+		NotAfter:           issuerCert.NotAfter.Format(time.RFC3339),
 		PublicKeyAlgorithm: issuerCert.PublicKeyAlgorithm.String(),
 	}
 
