@@ -212,8 +212,8 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.mountPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.authPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, entWrappedMountsPath(b)...)
+	b.Backend.Paths = append(b.Backend.Paths, entWrappedAuthPath(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.lockedUserPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.leasePaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.policyPaths()...)
@@ -514,6 +514,8 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 	}, nil
 }
 
+// handlePluginCatalogUpdate handles plugin registration and updates in the plugin catalog.
+// Vault Enterprise replaces handlePluginCatalogUpdate with entHandlePluginCatalogUpdate
 func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
@@ -1383,89 +1385,6 @@ func (b *SystemBackend) handleGenerateRootDecodeTokenUpdate(ctx context.Context,
 	return resp, nil
 }
 
-func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry, legacyTTLFormat bool) map[string]interface{} {
-	info := map[string]interface{}{
-		"type":                    entry.Type,
-		"description":             entry.Description,
-		"accessor":                entry.Accessor,
-		"local":                   entry.Local,
-		"seal_wrap":               entry.SealWrap,
-		"external_entropy_access": entry.ExternalEntropyAccess,
-		"options":                 entry.Options,
-		"uuid":                    entry.UUID,
-		"plugin_version":          entry.Version,
-		"running_plugin_version":  entry.RunningVersion,
-		"running_sha256":          entry.RunningSha256,
-	}
-	coreDefTTL := int64(b.Core.defaultLeaseTTL.Seconds())
-	coreMaxTTL := int64(b.Core.maxLeaseTTL.Seconds())
-	entDefTTL := int64(entry.Config.DefaultLeaseTTL.Seconds())
-	entMaxTTL := int64(entry.Config.MaxLeaseTTL.Seconds())
-	entryConfig := map[string]interface{}{
-		"default_lease_ttl": entDefTTL,
-		"max_lease_ttl":     entMaxTTL,
-		"force_no_cache":    entry.Config.ForceNoCache,
-	}
-	if !legacyTTLFormat {
-		if entDefTTL == 0 {
-			entryConfig["default_lease_ttl"] = coreDefTTL
-		}
-		if entMaxTTL == 0 {
-			entryConfig["max_lease_ttl"] = coreMaxTTL
-		}
-	}
-	if entry.Config.TrimRequestTrailingSlashes {
-		entryConfig["trim_request_trailing_slashes"] = true
-	}
-	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
-	}
-	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
-		entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
-	}
-	// Even though empty value is valid for ListingVisibility, we can ignore
-	// this case during mount since there's nothing to unset/hide.
-	if len(entry.Config.ListingVisibility) > 0 {
-		entryConfig["listing_visibility"] = entry.Config.ListingVisibility
-	}
-	if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
-		entryConfig["passthrough_request_headers"] = rawVal.([]string)
-	}
-	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
-		entryConfig["allowed_response_headers"] = rawVal.([]string)
-	}
-	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_managed_keys"); ok {
-		entryConfig["allowed_managed_keys"] = rawVal.([]string)
-	}
-	if rawVal, ok := entry.synthesizedConfigCache.Load("identity_token_key"); ok {
-		entryConfig["identity_token_key"] = rawVal.(string)
-	}
-	if entry.Table == credentialTableType {
-		entryConfig["token_type"] = entry.Config.TokenType.String()
-	}
-	if entry.Config.UserLockoutConfig != nil {
-		userLockoutConfig := map[string]interface{}{
-			"user_lockout_counter_reset_duration": int64(entry.Config.UserLockoutConfig.LockoutCounterReset.Seconds()),
-			"user_lockout_threshold":              entry.Config.UserLockoutConfig.LockoutThreshold,
-			"user_lockout_duration":               int64(entry.Config.UserLockoutConfig.LockoutDuration.Seconds()),
-			"user_lockout_disable":                entry.Config.UserLockoutConfig.DisableLockout,
-		}
-		entryConfig["user_lockout_config"] = userLockoutConfig
-	}
-	if rawVal, ok := entry.synthesizedConfigCache.Load("delegated_auth_accessors"); ok {
-		entryConfig["delegated_auth_accessors"] = rawVal.([]string)
-	}
-
-	// Add deprecation status only if it exists
-	builtinType := b.Core.builtinTypeFromMountEntry(ctx, entry)
-	if status, ok := b.Core.builtinRegistry.DeprecationStatus(entry.Type, builtinType); ok {
-		info["deprecation_status"] = status.String()
-	}
-	info["config"] = entryConfig
-
-	return info
-}
-
 // handleMountTable handles the "mounts" endpoint to provide the mount table
 func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	ns, err := namespace.FromContext(ctx)
@@ -1504,6 +1423,7 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 }
 
 // handleMount is used to mount a new path
+// Vault Enterprise replaces handleMount with entHandlerMount
 func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
@@ -2069,6 +1989,7 @@ func (b *SystemBackend) moveMount(ns *namespace.Namespace, logger log.Logger, mi
 }
 
 // handleAuthTuneRead is used to get config settings on a auth path
+// Vault Enterprise replaces handleAuthTuneRead with entHandleAuthTuneRead
 func (b *SystemBackend) handleAuthTuneRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path == "" {
@@ -2108,6 +2029,7 @@ func (b *SystemBackend) handleRemountStatusCheck(ctx context.Context, req *logic
 }
 
 // handleMountTuneRead is used to get config settings on a backend
+// Vault Enterprise replaces handleMountTuneRead with entHandleMountTuneRead
 func (b *SystemBackend) handleMountTuneRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path == "" {
@@ -2123,6 +2045,7 @@ func (b *SystemBackend) handleMountTuneRead(ctx context.Context, req *logical.Re
 }
 
 // handleTuneReadCommon returns the config settings of a path
+// Vault Enterprise replaces handleTuneReadCommon with entHandleTuneReadCommon
 func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (*logical.Response, error) {
 	path = sanitizePath(path)
 
@@ -2221,6 +2144,7 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 }
 
 // handleAuthTuneWrite is used to set config settings on an auth path
+// Vault Enterprise replaces handleAuthTuneWrite with entHandleAuthTuneWrite
 func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path == "" {
@@ -2231,6 +2155,7 @@ func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Re
 }
 
 // handleMountTuneWrite is used to set config settings on a backend
+// Vault Enterprise replaces handleMountTuneWrite with entHandleMountTuneWrite
 func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path == "" {
@@ -2244,6 +2169,7 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 }
 
 // handleTuneWriteCommon is used to set config settings on a path
+// Vault Enterprise replaces handleTuneWriteCommon with entHandleTuneWriteCommon
 func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
@@ -2477,8 +2403,9 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
 			return nil, err
 		}
+
 		if pinnedVersion != nil {
-			return logical.ErrorResponse(fmt.Sprintf("plugin_version cannot be set for %s plugin %q as a pinned version %s is in effect", pluginType, mountEntry.Type, pinnedVersion.Version)), nil
+			return logical.ErrorResponse(fmt.Sprintf("plugin_version cannot be set for %s plugin %q as a pinned version %s is in effect.", pluginType, mountEntry.Type, pinnedVersion.Version)), nil
 		}
 
 		version := rawVal.(string)
@@ -3205,6 +3132,7 @@ func expandStringValsWithCommas(configMap map[string]interface{}) error {
 }
 
 // handleEnableAuth is used to enable a new credential backend
+// Vault Enterprise replaces handleEnableAuth with entHandleEnableAuth
 func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 	local := data.Get("local").(bool)

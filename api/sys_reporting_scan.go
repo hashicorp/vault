@@ -45,5 +45,6 @@ func (c *Sys) ReportingScanWithContext(ctx context.Context) (*ReportingScanOutpu
 }
 
 type ReportingScanOutput struct {
-	Timestamp string `json:"timestamp" structs:"timestamp" mapstructure:"timestamp"`
+	Timestamp         string `json:"timestamp" structs:"timestamp" mapstructure:"timestamp"`
+	FullDirectoryPath string `json:"full_directory_path" structs:"full_directory_path" mapstructure:"full_directory_path"`
 }

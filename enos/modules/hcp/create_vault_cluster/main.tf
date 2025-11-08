@@ -52,6 +52,44 @@ variable "upgrade_type" {
   default     = "MANUAL"
 }
 
+# Docker-specific variables (ignored but accepted for compatibility)
+variable "vault_edition" {
+  type        = string
+  description = "Ignored - for Docker compatibility only"
+  default     = ""
+}
+
+variable "vault_license" {
+  type        = string
+  description = "Ignored - for Docker compatibility only"
+  default     = ""
+  sensitive   = true
+}
+
+variable "network_name" {
+  type        = string
+  description = "Ignored - for Docker compatibility only"
+  default     = ""
+}
+
+variable "cluster_name" {
+  type        = string
+  description = "Ignored - for Docker compatibility only"
+  default     = ""
+}
+
+variable "use_local_build" {
+  type        = bool
+  description = "Ignored - for Docker compatibility only"
+  default     = false
+}
+
+variable "local_build_path" {
+  type        = string
+  description = "Ignored - for Docker compatibility only"
+  default     = ""
+}
+
 data "enos_environment" "localhost" {}
 
 resource "random_string" "id" {
