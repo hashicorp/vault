@@ -20,7 +20,7 @@ on:
         description: 'Version of the plugin with *NO* "v", e.g., 1.2.3'
         required: true
         type: string
-      ent-only:
+      ent-only: # currently not used
         description: Whether or not the plugin is enterprise only
         required: true
         type: boolean
@@ -61,16 +61,9 @@ jobs:
           git config user.name hc-github-team-secure-vault-ecosystem
           git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
 
-      - if: inputs.ent-only != 'true'
-        name: Update plugin
+      - name: Update plugin
         run: |
           go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}"
-          go mod tidy
-
-      - if: inputs.ent-only == 'true'
-        name: Update Enterprise-only plugin
-        run: |
-          (cd vault_ent && go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}" && go mod tidy)
           go mod tidy
 
       - name: Detect changes
