@@ -124,17 +124,18 @@ type AutoAuth struct {
 
 // Method represents the configuration for the authentication backend
 type Method struct {
-	Type          string
-	MountPath     string        `hcl:"mount_path"`
-	WrapTTLRaw    interface{}   `hcl:"wrap_ttl"`
-	WrapTTL       time.Duration `hcl:"-"`
-	MinBackoffRaw interface{}   `hcl:"min_backoff"`
-	MinBackoff    time.Duration `hcl:"-"`
-	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
-	MaxBackoff    time.Duration `hcl:"-"`
-	Namespace     string        `hcl:"namespace"`
-	ExitOnError   bool          `hcl:"exit_on_err"`
-	Config        map[string]interface{}
+	Type                  string
+	MountPath             string        `hcl:"mount_path"`
+	WrapTTLRaw            interface{}   `hcl:"wrap_ttl"`
+	WrapTTL               time.Duration `hcl:"-"`
+	MinBackoffRaw         interface{}   `hcl:"min_backoff"`
+	MinBackoff            time.Duration `hcl:"-"`
+	MaxBackoffRaw         interface{}   `hcl:"max_backoff"`
+	MaxBackoff            time.Duration `hcl:"-"`
+	Namespace             string        `hcl:"namespace"`
+	ExitOnError           bool          `hcl:"exit_on_err"`
+	LeaseRenewalThreshold *float64      `hcl:"lease_renewal_threshold"`
+	Config                map[string]interface{}
 }
 
 // Sink defines a location to write the authenticated token
@@ -257,6 +258,14 @@ func (c *Config) ValidateConfig() error {
 		if len(c.AutoAuth.Sinks) == 0 &&
 			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) && !cacheStaticSecrets {
 			return fmt.Errorf("auto_auth requires at least one sink, api_proxy.use_auto_auth_token=true, or cache.cache_static_secrets=true")
+		}
+
+		// Validate lease renewal threshold for auto-auth method
+		if c.AutoAuth.Method != nil && c.AutoAuth.Method.LeaseRenewalThreshold != nil {
+			threshold := *c.AutoAuth.Method.LeaseRenewalThreshold
+			if threshold <= 0 || threshold > 1.0 {
+				return fmt.Errorf("auto_auth.method.lease_renewal_threshold must be greater than 0 and less than or equal to 1, got %f", threshold)
+			}
 		}
 	}
 
