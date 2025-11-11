@@ -321,7 +321,22 @@ func (sc *storageContext) deleteIssuer(id issuing.IssuerID) (bool, error) {
 	return issuing.DeleteIssuer(sc.Context, sc.Storage, id)
 }
 
-func (sc *storageContext) importIssuer(certValue string, issuerName string) (*issuing.IssuerEntry, bool, error) {
+// ImportedIssuerInfo is a set of information reported by importIssuer about the issuer it just imported.
+// All of this is available via the cert in the issuing.IssuerEntry certificate, but this prevents the
+// need to re-parse the cert.
+type ImportedIssuerInfo struct {
+	IssuerName         string `json:"issuer_name"`
+	IssuerId           string `json:"issuer_id"`
+	SerialNumber       string `json:"serial_number"`
+	CommonName         string `json:"common_name"`
+	SKID               []byte `json:"subject_key_id"`
+	AKID               []byte `json:"authority_key_id"`
+	NotBefore          string `json:"not_before"`
+	NotAfter           string `json:"not_after"`
+	PublicKeyAlgorithm string `json:"public_key_algorithm"`
+}
+
+func (sc *storageContext) importIssuer(certValue string, issuerName string) (*issuing.IssuerEntry, *ImportedIssuerInfo, bool, error) {
 	// importIssuers imports the specified PEM-format certificate (from
 	// certValue) into the new PKI storage format. The first return field is a
 	// reference to the new issuer; the second is whether or not the issuer
@@ -348,18 +363,18 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	// known keys.
 	issuerCert, err := parseCertificateFromBytes([]byte(certValue))
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	// Ensure this certificate is a usable as a CA certificate.
 	if !issuerCert.BasicConstraintsValid || !issuerCert.IsCA {
-		return nil, false, errutil.UserError{Err: "Refusing to import non-CA certificate"}
+		return nil, nil, false, errutil.UserError{Err: "Refusing to import non-CA certificate"}
 	}
 
 	// Ensure this certificate has a parsed public key. Otherwise, we've
 	// likely been given a bad certificate.
 	if issuerCert.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || issuerCert.PublicKey == nil {
-		return nil, false, errutil.UserError{Err: "Refusing to import CA certificate with empty PublicKey. This usually means the SubjectPublicKeyInfo field has an OID not recognized by Go, such as 1.2.840.113549.1.1.10 for rsaPSS."}
+		return nil, nil, false, errutil.UserError{Err: "Refusing to import CA certificate with empty PublicKey. This usually means the SubjectPublicKeyInfo field has an OID not recognized by Go, such as 1.2.840.113549.1.1.10 for rsaPSS."}
 	}
 
 	// Before we can import a known issuer, we first need to know if the issuer
@@ -367,24 +382,36 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	// issuers and comparing their private value against this value.
 	knownIssuers, err := sc.listIssuers()
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
+	}
+
+	issuerInfo := &ImportedIssuerInfo{
+		SerialNumber:       issuerCert.SerialNumber.String(),
+		CommonName:         issuerCert.Subject.CommonName,
+		SKID:               issuerCert.SubjectKeyId,
+		AKID:               issuerCert.AuthorityKeyId,
+		NotBefore:          issuerCert.NotBefore.Format(time.RFC3339),
+		NotAfter:           issuerCert.NotAfter.Format(time.RFC3339),
+		PublicKeyAlgorithm: issuerCert.PublicKeyAlgorithm.String(),
 	}
 
 	foundExistingIssuerWithName := false
 	for _, identifier := range knownIssuers {
 		existingIssuer, err := sc.fetchIssuerById(identifier)
 		if err != nil {
-			return nil, false, err
+			return nil, nil, false, err
 		}
 		existingIssuerCert, err := existingIssuer.GetCertificate()
 		if err != nil {
-			return nil, false, err
+			return nil, nil, false, err
 		}
 		if areCertificatesEqual(existingIssuerCert, issuerCert) {
 			// Here, we don't need to stitch together the key entries,
 			// because the last run should've done that for us (or, when
 			// importing a key).
-			return existingIssuer, true, nil
+			issuerInfo.IssuerId = existingIssuer.ID.String()
+			issuerInfo.IssuerName = existingIssuer.Name
+			return existingIssuer, issuerInfo, true, nil
 		}
 
 		// Allow us to find an existing matching issuer with a different name before erroring out
@@ -394,7 +421,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	}
 
 	if foundExistingIssuerWithName {
-		return nil, false, errutil.UserError{Err: fmt.Sprintf("another issuer is using the requested name: %s", issuerName)}
+		return nil, nil, false, errutil.UserError{Err: fmt.Sprintf("another issuer is using the requested name: %s", issuerName)}
 	}
 
 	// Haven't found an issuer, so we've gotta create it and write it into
@@ -406,6 +433,8 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	result.LeafNotAfterBehavior = certutil.ErrNotAfterBehavior
 	result.Usage.ToggleUsage(issuing.AllIssuerUsages)
 	result.Version = issuing.LatestIssuerVersion
+	issuerInfo.IssuerId = result.ID.String()
+	issuerInfo.IssuerName = result.Name
 
 	// If we lack relevant bits for CRL, prohibit it from being set
 	// on the usage side.
@@ -416,7 +445,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	// We shouldn't add CSRs or multiple certificates in this
 	countCertificates := strings.Count(result.Certificate, "-BEGIN ")
 	if countCertificates != 1 {
-		return nil, false, fmt.Errorf("bad issuer: potentially multiple PEM blobs in one certificate storage entry:\n%v", result.Certificate)
+		return nil, nil, false, fmt.Errorf("bad issuer: potentially multiple PEM blobs in one certificate storage entry:\n%v", result.Certificate)
 	}
 
 	result.SerialNumber = serialFromCert(issuerCert)
@@ -427,7 +456,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	// it, to give ourselves a better chance of succeeding below.
 	knownKeys, err := sc.listKeys()
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	// Now, for each key, try and compute the issuer<->key link. We delay
@@ -436,12 +465,12 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	for _, identifier := range knownKeys {
 		existingKey, err := sc.fetchKeyById(identifier)
 		if err != nil {
-			return nil, false, err
+			return nil, nil, false, err
 		}
 
 		equal, err := comparePublicKey(sc, existingKey, issuerCert.PublicKey)
 		if err != nil {
-			return nil, false, err
+			return nil, nil, false, err
 		}
 
 		if equal {
@@ -457,23 +486,23 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	// Finally, rebuild the chains. In this process, because the provided
 	// reference issuer is non-nil, we'll save this issuer to storage.
 	if err := sc.rebuildIssuersChains(&result); err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	// If there was no prior default value set and/or we had no known
 	// issuers when we started, set this issuer as default.
 	issuerDefaultSet, err := sc.isDefaultIssuerSet()
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 	if (len(knownIssuers) == 0 || !issuerDefaultSet) && len(result.KeyID) != 0 {
 		if err = sc.updateDefaultIssuerId(result.ID); err != nil {
-			return nil, false, err
+			return nil, nil, false, err
 		}
 	}
 
 	// All done; return our new key reference.
-	return &result, false, nil
+	return &result, issuerInfo, false, nil
 }
 
 func areCertificatesEqual(cert1 *x509.Certificate, cert2 *x509.Certificate) bool {
@@ -539,13 +568,13 @@ func (sc *storageContext) writeCaBundle(caBundle *certutil.CertBundle, issuerNam
 		return &issuing.IssuerEntry{}, myKey, nil
 	}
 
-	myIssuer, _, err := sc.importIssuer(caBundle.Certificate, issuerName)
+	myIssuer, _, _, err := sc.importIssuer(caBundle.Certificate, issuerName)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	for _, cert := range caBundle.CAChain {
-		if _, _, err = sc.importIssuer(cert, ""); err != nil {
+		if _, _, _, err = sc.importIssuer(cert, ""); err != nil {
 			return nil, nil, err
 		}
 	}

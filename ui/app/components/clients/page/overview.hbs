@@ -3,18 +3,12 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Clients::RunningTotal @byMonthNewClients={{this.byMonthNewClients}} @runningTotals={{@activity.total}} />
+<Clients::RunningTotal @byMonthClients={{this.byMonthClients}} @runningTotals={{@activity.total}} />
 
 {{! by_namespace is an empty array when there is no client count activity data }}
 {{#if @activity.byNamespace}}
-  <Clients::CountsCard
-    @title="Client attribution"
-    @description="Select a month to view the client count per mount for that month."
-  >
+  <Clients::CountsCard @title="Client attribution">
     <:subheader>
-      <Hds::Text::Body class="has-top-margin-l has-bottom-margin-m" @tag="p" @size="100" @color="faint">Use the filters to
-        view the clients attributed by path.
-      </Hds::Text::Body>
       <Clients::FilterToolbar
         @dataset={{this.activityData}}
         @onFilter={{this.handleFilter}}
