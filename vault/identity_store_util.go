@@ -171,7 +171,8 @@ func (i *IdentityStore) activate(ctx context.Context, _ *logical.Request, featur
 	case activationflags.IdentityDeduplication:
 		return i.activateDeduplication(ctx, nil)
 	case activationflags.SCIMEnablement:
-		return nil
+		i.logger.Info("activating SCIM paths; SCIM operations can now be performed")
+		i.scimEnabled = true
 	}
 
 	return nil
