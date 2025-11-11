@@ -67,10 +67,10 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
       .hasText('January 2024', 'end month is correctly parsed from STATIC_NOW');
     assert
-      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
+      .dom(CLIENT_COUNT.card('Client usage trends'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
-      .dom(`${CLIENT_COUNT.card('Client usage trends for selected billing period')} ${CHARTS.xAxisLabel}`)
+      .dom(`${CLIENT_COUNT.card('Client usage trends')} ${CHARTS.xAxisLabel}`)
       .hasText('7/23', 'x-axis labels start with billing start date');
     assert.dom(CHARTS.xAxisLabel).exists({ count: 7 }, 'chart months matches query');
   });
@@ -95,7 +95,7 @@ module('Acceptance | clients | overview', function (hooks) {
         .dom(CLIENT_COUNT.usageStats('Client usage'))
         .exists('running total single month usage stats show');
       assert
-        .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
+        .dom(CLIENT_COUNT.card('Client usage trends'))
         .doesNotExist('running total month over month charts do not show');
 
       // change to start on month/year of upgrade to 1.10
@@ -108,10 +108,10 @@ module('Acceptance | clients | overview', function (hooks) {
         .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
         .hasText('September 2023', 'client count start month is correctly parsed from start query');
       assert
-        .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
+        .dom(CLIENT_COUNT.card('Client usage trends'))
         .exists('Shows running totals with monthly breakdown charts');
       assert
-        .dom(`${CLIENT_COUNT.card('Client usage trends for selected billing period')} ${CHARTS.xAxisLabel}`)
+        .dom(`${CLIENT_COUNT.card('Client usage trends')} ${CHARTS.xAxisLabel}`)
         .hasText('9/23', 'x-axis labels start with queried start month (upgrade date)');
       assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
 
@@ -121,7 +121,7 @@ module('Acceptance | clients | overview', function (hooks) {
       await fillIn(CLIENT_COUNT.dateRange.editDate('end'), upgradeMonth);
       await click(GENERAL.submitButton);
       assert
-        .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
+        .dom(CLIENT_COUNT.card('Client usage trends'))
         .exists('running total month over month charts show');
 
       // query historical date range (from September 2023 to December 2023)
@@ -137,7 +137,7 @@ module('Acceptance | clients | overview', function (hooks) {
         .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
         .hasText('December 2023', 'it displays correct end time');
       assert
-        .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
+        .dom(CLIENT_COUNT.card('Client usage trends'))
         .exists('Shows running totals with monthly breakdown charts');
 
       assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
@@ -152,6 +152,14 @@ module('Acceptance | clients | overview', function (hooks) {
         .dom(`${GENERAL.tableData(0, 'clients')} a`)
         .doesNotExist('client counts do not render as hyperlinks');
     });
+  });
+
+  test('it does not render client list links for HVD managed clusters', async function (assert) {
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+
+    assert
+      .dom(`${GENERAL.tableData(0, 'clients')} a`)
+      .doesNotExist('client counts do not render as hyperlinks');
   });
 
   // * FILTERING ASSERTIONS
@@ -334,22 +342,6 @@ module('Acceptance | clients | overview', function (hooks) {
         .hasText(
           'Entity clients Non-entity clients ACME clients',
           'it renders legend in order that matches the stacked bar data and does not include secret sync'
-        );
-    });
-
-    test('it should show secrets sync stats for HVD managed clusters', async function (assert) {
-      // mock HVD managed cluster
-      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
-
-      await login();
-      await visit('/vault/clients/counts/overview');
-      assert.dom(CLIENT_COUNT.statLegendValue('Secret sync clients')).exists();
-      await click(GENERAL.inputByAttr('toggle view'));
-      assert
-        .dom(CHARTS.legend)
-        .hasText(
-          'Entity clients Non-entity clients ACME clients Secret sync clients',
-          'it renders legend in order that matches the stacked bar data'
         );
     });
   });

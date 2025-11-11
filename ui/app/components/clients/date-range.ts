@@ -11,6 +11,7 @@ import { buildISOTimestamp, parseAPITimestamp } from 'core/utils/date-formatters
 import timestamp from 'core/utils/timestamp';
 import { format } from 'date-fns';
 
+import type FlagsService from 'vault/services/flags';
 import type VersionService from 'vault/services/version';
 import type { HTMLElementEvent } from 'forms';
 
@@ -46,6 +47,7 @@ interface Args {
  */
 
 export default class ClientsDateRangeComponent extends Component<Args> {
+  @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
 
   @tracked modalStart = ''; // format yyyy-MM
@@ -64,7 +66,8 @@ export default class ClientsDateRangeComponent extends Component<Args> {
 
   get historicalBillingPeriods() {
     // we want whole billing periods
-    const count = Math.floor(this.args.retentionMonths / 12);
+    const totalMonths = this.args.retentionMonths || 48;
+    const count = Math.floor(totalMonths / 12);
     const periods: string[] = [];
 
     for (let i = 1; i <= count; i++) {
@@ -118,9 +121,10 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   }
 
   @action
-  updateEnterpriseDateRange(start: string) {
+  updateEnterpriseDateRange(start: string, close: CallableFunction) {
     // We do not send an end_time so the backend handles computing the expected billing period
     this.args.onChange({ start_time: start, end_time: '' });
+    close();
   }
 
   // HELPERS

@@ -109,7 +109,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
       this.billingStartTime = '2018-01-01T14:15:30';
     });
 
-    test('it billing start date dropdown for enterprise', async function (assert) {
+    test('it renders billing start date dropdown for enterprise', async function (assert) {
       await this.renderComponent();
       await click(DATE_RANGE.edit);
       const expectedPeriods = [
@@ -124,6 +124,33 @@ module('Integration | Component | clients/date-range', function (hooks) {
         const month = expectedPeriods[idx];
         assert.dom(item).hasText(month, `dropdown index: ${idx} renders ${month}`);
       });
+    });
+
+    test('it updates toggle text when a new date is selected', async function (assert) {
+      this.onChange = ({ start_time }) => this.set('startTimestamp', start_time);
+
+      await this.renderComponent();
+      assert.dom(DATE_RANGE.edit).hasText('January 2018').hasAttribute('aria-expanded', 'false');
+      await click(DATE_RANGE.edit);
+      assert.dom(DATE_RANGE.edit).hasAttribute('aria-expanded', 'true');
+      await click(DATE_RANGE.dropdownOption(1));
+      assert
+        .dom(DATE_RANGE.edit)
+        .hasText('January 2017')
+        .hasAttribute('aria-expanded', 'false', 'it closes dropdown after selection');
+    });
+
+    test('it renders billing period text', async function (assert) {
+      await this.renderComponent();
+      assert
+        .dom(this.element)
+        .hasText('Change billing period January 2018', 'it renders billing related text');
+    });
+
+    test('it renders data period text for HVD managed clusters', async function (assert) {
+      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+      await this.renderComponent();
+      assert.dom(this.element).hasText('Change data period January 2018');
     });
   });
 });

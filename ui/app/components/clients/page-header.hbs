@@ -26,7 +26,7 @@
   {{#if this.version.isEnterprise}}
     <PH.Description class="has-text-weight-semibold flex">
       <p>
-        For billing period:
+        {{if this.flags.isHvdManaged "For data period:" "For billing period:"}}
         <span data-test-date-range="start">{{this.formattedStartDate}}</span>
         -
         <span data-test-date-range="end">{{this.formattedEndDate}}</span>
