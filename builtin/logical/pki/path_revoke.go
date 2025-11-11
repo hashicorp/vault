@@ -652,10 +652,22 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	b.GetRevokeStorageLock().Lock()
 	defer b.GetRevokeStorageLock().Unlock()
 
+	var serialNumber string
+	var isCa bool
+	var akid []byte
+	var skid []byte
+	if cert != nil {
+		serialNumber = cert.SerialNumber.String()
+		isCa = cert.IsCA
+		akid = cert.AuthorityKeyId
+		skid = cert.SubjectKeyId
+	}
+
 	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIRevoke,
-		observe.NewAdditionalPKIMetadata("issuer_name", cert.Issuer.String()),
-		observe.NewAdditionalPKIMetadata("is_ca", cert.IsCA),
-		observe.NewAdditionalPKIMetadata("serial_number", cert.SerialNumber.String()),
+		observe.NewAdditionalPKIMetadata("is_ca", isCa),
+		observe.NewAdditionalPKIMetadata("subject_key_id", skid),
+		observe.NewAdditionalPKIMetadata("authority_key_id", akid),
+		observe.NewAdditionalPKIMetadata("serial_number", serialNumber),
 	)
 
 	return revokeCert(sc, config, cert)

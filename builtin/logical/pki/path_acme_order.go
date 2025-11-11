@@ -225,7 +225,7 @@ func (b *backend) acmeFetchCertOrderHandler(ac *acmeContext, req *logical.Reques
 		issuerName = ac.Issuer.Name
 	}
 	b.pkiObserver.RecordPKIObservation(ac, req, observe.ObservationTypePKIAcmeFetchOrderCert,
-		observe.NewAdditionalPKIMetadata("role", role),
+		observe.NewAdditionalPKIMetadata("role_name", role),
 		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
 		observe.NewAdditionalPKIMetadata("issuer_id", issuerId),
 		observe.NewAdditionalPKIMetadata("order_id", order.OrderId),
@@ -333,11 +333,14 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 	}
 
 	b.pkiObserver.RecordPKIObservation(ac, r, observe.ObservationTypePKIAcmeFinalizeOrder,
-		observe.NewAdditionalPKIMetadata("role", role),
+		observe.NewAdditionalPKIMetadata("role_name", role),
 		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
 		observe.NewAdditionalPKIMetadata("issuer_id", issuerId.String()),
 		observe.NewAdditionalPKIMetadata("order_id", order.OrderId),
 		observe.NewAdditionalPKIMetadata("stored", stored),
+		observe.NewAdditionalPKIMetadata("public_key_algorithm", signedCertBundle.Certificate.PublicKeyAlgorithm.String()),
+		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(signedCertBundle.Certificate.PublicKey)),
+		observe.NewAdditionalPKIMetadata("common_name", csr.Subject.CommonName),
 		observe.NewAdditionalPKIMetadata("serial_number", order.CertificateSerialNumber),
 		observe.NewAdditionalPKIMetadata("certificate_expiry", order.CertificateExpiry.String()),
 		observe.NewAdditionalPKIMetadata("status", ACMEOrderValid),
@@ -728,7 +731,7 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, req *logical.Request, fie
 	}
 
 	b.pkiObserver.RecordPKIObservation(ac, req, observe.ObservationTypePKIAcmeGetOrder,
-		observe.NewAdditionalPKIMetadata("role", role),
+		observe.NewAdditionalPKIMetadata("role_name", role),
 		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
 		observe.NewAdditionalPKIMetadata("issuer_id", issuerId),
 		observe.NewAdditionalPKIMetadata("order_id", orderId),
@@ -778,7 +781,7 @@ func (b *backend) acmeListOrdersHandler(ac *acmeContext, req *logical.Request, _
 	}
 
 	b.pkiObserver.RecordPKIObservation(ac, req, observe.ObservationTypePKIAcmeListOrders,
-		observe.NewAdditionalPKIMetadata("role", role),
+		observe.NewAdditionalPKIMetadata("role_name", role),
 		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
 		observe.NewAdditionalPKIMetadata("issuer_id", issuerId),
 		observe.NewAdditionalPKIMetadata("order_ids", orderIds),
@@ -877,11 +880,11 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, req *logical.Request, _ *
 	}
 
 	b.pkiObserver.RecordPKIObservation(ac, req, observe.ObservationTypePKIAcmeNewOrder,
-		observe.NewAdditionalPKIMetadata("role", role),
+		observe.NewAdditionalPKIMetadata("role_name", role),
 		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
 		observe.NewAdditionalPKIMetadata("issuer_id", issuerId),
-		observe.NewAdditionalPKIMetadata("not_before", notBefore),
-		observe.NewAdditionalPKIMetadata("not_after", notAfter),
+		observe.NewAdditionalPKIMetadata("not_before", notBefore.Format(time.RFC3339)),
+		observe.NewAdditionalPKIMetadata("not_after", notAfter.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("order_id", order.OrderId),
 		observe.NewAdditionalPKIMetadata("account_id", order.AccountId),
 	)
