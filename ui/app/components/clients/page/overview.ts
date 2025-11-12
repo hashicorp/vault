@@ -28,7 +28,7 @@ export default class ClientsOverviewPageComponent extends Component<Args> {
   get byMonthClients() {
     // HVD clusters are billed differently and the monthly total is the important metric.
     if (this.flags.isHvdManaged) {
-      return this.args.activity.byMonth;
+      return this.args.activity.byMonth || [];
     }
     // For self-managed clusters only the new_clients per month are relevant because clients accumulate over a billing period.
     // (Since "total" per month is not cumulative it's not a useful metric)
@@ -36,6 +36,7 @@ export default class ClientsOverviewPageComponent extends Component<Args> {
   }
 
   // Supplies data passed to dropdown filters (except months which is computed below )
+  @cached
   get activityData() {
     // If no month is selected the table displays all of the activity for the queried date range.
     const selectedMonth = this.args.filterQueryParams.month;
@@ -49,9 +50,12 @@ export default class ClientsOverviewPageComponent extends Component<Args> {
 
   @cached
   get months() {
-    return this.byMonthClients.map((m) => m.timestamp).reverse();
+    const timestamps = this.byMonthClients.map((m) => m.timestamp);
+    // display the most recent month at the top of the dropdown
+    return timestamps.reverse();
   }
 
+  @cached
   get tableData() {
     if (this.activityData?.length) {
       // Reset the `month` query param because it determines which dataset (see this.activityData)
