@@ -7,14 +7,14 @@
   <div class="is-flex-column align-items-end">
     {{#if this.version.isEnterprise}}
       <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs">
-        Change billing period
+        {{if this.flags.isHvdManaged "Change data period" "Change billing period"}}
       </Hds::Text::Display>
-      <Hds::Dropdown class="has-left-margin-xs" @matchToggleWidth={{true}} as |D|>
-        <D.ToggleButton @text="Billing start date" @color="secondary" data-test-date-range-edit />
+      <Hds::Dropdown class="has-left-margin-xs" as |D|>
+        <D.ToggleButton @text={{this.formatDropdownDate @startTimestamp}} @color="secondary" data-test-date-range-edit />
         <D.Description @text="Current period" />
         <D.Checkmark
           {{! Pass an empty string to reset query param because the current billing period is the default }}
-          {{on "click" (fn this.updateEnterpriseDateRange "")}}
+          {{on "click" (fn this.updateEnterpriseDateRange "" D.close)}}
           @selected={{this.isSelected @billingStartTime}}
           data-test-date-range-billing-start="0"
         >
@@ -25,7 +25,7 @@
           <D.Description @text="Historical periods" />
           {{#each this.historicalBillingPeriods as |period idx|}}
             <D.Checkmark
-              {{on "click" (fn this.updateEnterpriseDateRange period)}}
+              {{on "click" (fn this.updateEnterpriseDateRange period D.close)}}
               data-test-date-range-billing-start={{add idx 1}}
               @selected={{this.isSelected period}}
             >

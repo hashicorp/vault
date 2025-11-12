@@ -32,6 +32,7 @@ import { task } from 'ember-concurrency';
  */
 export default class ClientsPageHeaderComponent extends Component {
   @service download;
+  @service flags;
   @service namespace;
   @service router;
   @service store;

@@ -78,7 +78,8 @@ export default class ClientsCountsRoute extends Route {
 
   async fetchAndFormatExportData(startTimestamp: string | undefined, endTimestamp: string | undefined) {
     // The "Client List" tab is only available on enterprise versions
-    if (this.version.isEnterprise) {
+    // For now, it is also hidden on HVD managed clusters
+    if (this.version.isEnterprise && !this.flags.isHvdManaged) {
       const adapter = this.store.adapterFor('clients/activity');
       let exportData, exportError;
       try {
