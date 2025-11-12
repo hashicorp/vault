@@ -39,7 +39,10 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   get formattedBillingStartDate() {
-    return this.args.config.billingStartTimestamp.toISOString();
+    if (this.args.config?.billingStartTimestamp) {
+      return this.args.config.billingStartTimestamp.toISOString();
+    }
+    return null;
   }
 
   // passed into page-header for the export modal alert

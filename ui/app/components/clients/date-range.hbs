@@ -5,7 +5,8 @@
 
 <div ...attributes>
   <div class="is-flex-column align-items-end">
-    {{#if this.version.isEnterprise}}
+    {{! Enterprise should always have a @billingStartTime but as a fallback allow the user to query dates manually }}
+    {{#if (and @billingStartTime this.version.isEnterprise)}}
       <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs">
         {{if this.flags.isHvdManaged "Change data period" "Change billing period"}}
       </Hds::Text::Display>
@@ -34,17 +35,15 @@
           {{/each}}
         {{/if}}
       </Hds::Dropdown>
-    {{else}}
-      {{! Hide if the user has made an initial query because dates can be updated by clicking "Edit" beside the date range }}
-      {{#unless (and @startTimestamp @endTimestamp)}}
-        <Hds::Button
-          class="has-left-margin-xs"
-          @text="Set date range"
-          @icon="edit"
-          {{on "click" (fn @setEditModalVisible true)}}
-          data-test-date-range-edit
-        />
-      {{/unless}}
+    {{else if (not (and @startTimestamp @endTimestamp))}}
+      {{! Hide if the user has already made an initial query because dates can be updated by clicking "Edit" beside the date range }}
+      <Hds::Button
+        class="has-left-margin-xs"
+        @text="Set date range"
+        @icon="edit"
+        {{on "click" (fn @setEditModalVisible true)}}
+        data-test-date-range-edit
+      />
     {{/if}}
   </div>
 
@@ -54,62 +53,61 @@
         Edit date range
       </M.Header>
       <M.Body>
-        <Hds::Text::Body @tag="div">
+        {{#if this.version.isCommunity}}
           <p class="has-bottom-margin-s">
             Use custom date ranges to query historic client count data. Query results do not include the current month.
           </p>
-          <ul class="has-bottom-margin-s">
-            <li>
-              <strong>Start</strong>
-              sets the month and year (inclusive) for the first month of client counting.
-            </li>
-            <li>
-              <strong>End</strong>
-              sets the month and year (inclusive) for the final month of client counting.
-            </li>
-          </ul>
-          <p class="has-bottom-margin-s">
-            We recommend setting
+        {{/if}}
+        <ul class="has-bottom-margin-s">
+          <li>
             <strong>Start</strong>
-            to your Vault deploy date to get the most accurate new and total client count estimations.</p>
-
-          <div class="clients-date-range-display">
-            <div>
-              <Hds::Form::TextInput::Field
-                @type="month"
-                @value={{this.modalStart}}
-                max={{this.previousMonth}}
-                id="start-month"
-                name="modalStart"
-                {{on "change" this.updateDate}}
-                data-test-date-edit="start"
-                as |F|
-              >
-                <F.Label>Start</F.Label>
-              </Hds::Form::TextInput::Field>
-            </div>
-            <div>
-              <Hds::Form::TextInput::Field
-                @type="month"
-                @value={{this.modalEnd}}
-                max={{this.previousMonth}}
-                id="end-month"
-                name="modalEnd"
-                {{on "change" this.updateDate}}
-                data-test-date-edit="end"
-                as |F|
-              >
-                <F.Label>End</F.Label>
-              </Hds::Form::TextInput::Field>
-            </div>
+            sets the month and year (inclusive) for the first month of client counting.
+          </li>
+          <li>
+            <strong>End</strong>
+            sets the month and year (inclusive) for the final month of client counting.
+          </li>
+        </ul>
+        <p class="has-bottom-margin-s">
+          We recommend setting
+          <strong>Start</strong>
+          to your Vault deploy date to get the most accurate client counts.</p>
+        <div class="clients-date-range-display">
+          <div>
+            <Hds::Form::TextInput::Field
+              @type="month"
+              @value={{this.modalStart}}
+              max={{if this.version.isCommunity this.previousMonth (date-format this.currentMonth "yyyy-MM")}}
+              id="start-month"
+              name="modalStart"
+              {{on "change" this.updateDate}}
+              data-test-date-edit="start"
+              as |F|
+            >
+              <F.Label>Start</F.Label>
+            </Hds::Form::TextInput::Field>
           </div>
-          {{#if this.validationError}}
-            <Hds::Form::Error
-              class="has-top-margin-xs"
-              data-test-date-range-validation
-            >{{this.validationError}}</Hds::Form::Error>
-          {{/if}}
-        </Hds::Text::Body>
+          <div>
+            <Hds::Form::TextInput::Field
+              @type="month"
+              @value={{this.modalEnd}}
+              max={{if this.version.isCommunity this.previousMonth (date-format this.currentMonth "yyyy-MM")}}
+              id="end-month"
+              name="modalEnd"
+              {{on "change" this.updateDate}}
+              data-test-date-edit="end"
+              as |F|
+            >
+              <F.Label>End</F.Label>
+            </Hds::Form::TextInput::Field>
+          </div>
+        </div>
+        {{#if this.validationError}}
+          <Hds::Form::Error
+            class="has-top-margin-xs"
+            data-test-date-range-validation
+          >{{this.validationError}}</Hds::Form::Error>
+        {{/if}}
       </M.Body>
       <M.Footer as |F|>
         <Hds::Button @text="Save" {{on "click" this.handleSave}} data-test-submit />
