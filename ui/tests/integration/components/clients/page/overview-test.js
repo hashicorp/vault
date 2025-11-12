@@ -9,7 +9,7 @@ import { click, find, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients/client-count-helpers';
-import { CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
+import { CHARTS, CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 import { ClientFilters, flattenMounts } from 'core/utils/client-count-utils';
@@ -143,6 +143,21 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       .hasText('No data found Clear or change filters to view client count data. Client count documentation');
   });
 
+  test('it renders NEW monthly clients for self-managed clusters instead of total clients', async function (assert) {
+    this.filterQueryParams = {
+      month: this.mostRecentMonth.timestamp,
+    };
+    const topMount = this.mostRecentMonth.new_clients.namespaces
+      .find((ns) => ns.label === 'ns1/')
+      .mounts.find((m) => m.label === 'auth/userpass/0/');
+
+    await this.renderComponent();
+    assert.dom(CHARTS.legend).hasText('New clients');
+    assert
+      .dom(GENERAL.tableData(0, 'clients'))
+      .hasText(`${topMount.clients}`, 'table renders total monthly clients');
+  });
+
   test('it filters data if @filterQueryParams specify a month', async function (assert) {
     const filterKey = 'month';
     const filterValue = this.mostRecentMonth.timestamp;
@@ -208,5 +223,21 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     assert
       .dom(CLIENT_COUNT.card('table empty state'))
       .hasText('No data found Clear or change filters to view client count data. Client count documentation');
+  });
+
+  test('it renders TOTAL monthly clients for HVD instead of new clients', async function (assert) {
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    this.filterQueryParams = {
+      month: this.mostRecentMonth.timestamp,
+    };
+    const topMount = this.mostRecentMonth.namespaces
+      .find((ns) => ns.label === 'root')
+      .mounts.find((m) => m.label === 'acme/pki/0/');
+
+    await this.renderComponent();
+    assert.dom(CHARTS.legend).hasText('Clients');
+    assert
+      .dom(GENERAL.tableData(0, 'clients'))
+      .hasText(`${topMount.clients}`, 'table renders total monthly clients');
   });
 });

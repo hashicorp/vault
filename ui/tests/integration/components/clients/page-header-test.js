@@ -34,6 +34,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
     this.renderComponent = async () => {
       return render(hbs`
         <Clients::PageHeader
+          @billingStartTime={{this.startTimestamp}}
           @startTimestamp={{this.startTimestamp}}
           @endTimestamp={{this.endTimestamp}}
           @upgradesDuringActivity={{this.upgradesDuringActivity}}
@@ -257,6 +258,26 @@ module('Integration | Component | clients/page-header', function (hooks) {
       await waitUntil(() => this.downloadStub.calledOnce);
       const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_bar');
+    });
+  });
+
+  module('enterprise', function (hooks) {
+    hooks.beforeEach(function () {
+      this.version = this.owner.lookup('service:version');
+      this.version.type = 'enterprise';
+    });
+
+    test('it renders billing period text', async function (assert) {
+      await this.renderComponent();
+      assert
+        .dom(this.element)
+        .hasTextContaining('Client Usage For billing period:', 'it renders billing related text');
+    });
+
+    test('it renders data period text for HVD managed clusters', async function (assert) {
+      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+      await this.renderComponent();
+      assert.dom(this.element).hasTextContaining('Client Usage For data period:');
     });
   });
 });
