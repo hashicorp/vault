@@ -25,6 +25,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
     this.downloadStub = Sinon.stub(this.owner.lookup('service:download'), 'download');
     this.startTimestamp = '2022-06-01T23:00:11.050Z';
     this.endTimestamp = '2022-12-01T23:00:11.050Z';
+    this.billingStartTime = this.startTimestamp;
     this.upgradesDuringActivity = [];
     this.noData = undefined;
     this.server.post('/sys/capabilities-self', () =>
@@ -34,7 +35,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
     this.renderComponent = async () => {
       return render(hbs`
         <Clients::PageHeader
-          @billingStartTime={{this.startTimestamp}}
+          @billingStartTime={{this.billingStartTime}}
           @startTimestamp={{this.startTimestamp}}
           @endTimestamp={{this.endTimestamp}}
           @upgradesDuringActivity={{this.upgradesDuringActivity}}
@@ -278,6 +279,14 @@ module('Integration | Component | clients/page-header', function (hooks) {
       this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
       await this.renderComponent();
       assert.dom(this.element).hasTextContaining('Client Usage For data period:');
+    });
+
+    test('it allows date editing if no billing start time is provided', async function (assert) {
+      this.billingStartTime = '';
+      await this.renderComponent();
+      assert.dom(CLIENT_COUNT.dateRange.edit).exists('it renders edit button to open modal').hasText('Edit');
+      assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText('June 2022');
+      assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText('December 2022');
     });
   });
 });
