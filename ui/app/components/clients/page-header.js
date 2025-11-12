@@ -95,10 +95,6 @@ export default class ClientsPageHeaderComponent extends Component {
     return `clients_export${ns}${csvDateRange}`;
   }
 
-  get showCommunity() {
-    return this.version.isCommunity && !!this.formattedStartDate && !!this.formattedEndDate;
-  }
-
   async getExportData() {
     const adapter = this.store.adapterFor('clients/activity');
     const { startTimestamp, endTimestamp } = this.args;
