@@ -74,7 +74,8 @@ func TestSudoPaths(t *testing.T) {
 				t.Fatalf(
 					"A path in the static list of sudo paths in the api module "+
 						"is not marked as a sudo path in the OpenAPI spec (%s). Please reconcile the two "+
-						"accordingly.", path)
+						"accordingly. This involves adding to the Root string array in the PathsSpecial declaration "+
+						"for the backend in question. For example, for sys/, this would be in NewSystemBackend.", path)
 			}
 		}
 	}

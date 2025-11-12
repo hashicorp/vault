@@ -95,6 +95,15 @@ func TestUnknownFieldValidationListenerAndStorage(t *testing.T) {
 	testUnknownFieldValidationStorageAndListener(t)
 }
 
+// Test_ReportingScanDirectory makes sure that the reporting scan directory is correctly parsed
+func Test_ReportingScanDirectory(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/reporting_directory.hcl")
+	require.NoError(t, err)
+	require.NotNil(t, config)
+	require.NotEmpty(t, config.ReportingScanDirectory)
+	require.Equal(t, "/foo/bar/", config.ReportingScanDirectory)
+}
+
 // Test_ObservationSystemConfig makes sure that the observation system config
 // is properly loaded.
 func Test_ObservationSystemConfig(t *testing.T) {
