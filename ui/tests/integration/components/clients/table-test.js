@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, findAll, render, waitFor } from '@ember/test-helpers';
+import { click, fillIn, render, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
@@ -87,26 +87,37 @@ module('Integration | Component | clients/table', function (hooks) {
     };
 
     await this.renderComponent();
-    const [firstColumn, secondColumn, thirdColumn, fourthColumn] = findAll(GENERAL.icon('swap-vertical'));
-    await click(firstColumn);
+    const firstColumnSortButton = GENERAL.tableColumnHeaderSortButton(1, {
+      isAdvanced: true,
+    });
+    await click(firstColumnSortButton);
     assertSortOrder(['Bora Bora', 'Fiji', 'Maldives', 'Maui', 'Santorini'], { column: 'island', page: 1 });
     await click(GENERAL.nextPage);
     assertSortOrder(['Seychelles'], { column: 'island', page: 2 });
 
     await click(GENERAL.prevPage);
-    await click(secondColumn);
+    const secondColumnSortButton = GENERAL.tableColumnHeaderSortButton(2, {
+      isAdvanced: true,
+    });
+    await click(secondColumnSortButton);
     assertSortOrder(['4', '5', '6', '7', '8'], { column: 'visit_length', page: 1 });
     await click(GENERAL.nextPage);
     assertSortOrder(['10'], { column: 'visit_length', page: 2 });
 
     await click(GENERAL.prevPage);
-    await click(thirdColumn);
+    const thirdColumnSortButton = GENERAL.tableColumnHeaderSortButton(3, {
+      isAdvanced: true,
+    });
+    await click(thirdColumnSortButton);
     assertSortOrder(['false', 'false', 'false', 'true', 'true'], { column: 'is_booked', page: 1 });
     await click(GENERAL.nextPage);
     assertSortOrder(['true'], { column: 'is_booked', page: 2 });
 
     await click(GENERAL.prevPage);
-    await click(fourthColumn);
+    const fourthColumnSortButton = GENERAL.tableColumnHeaderSortButton(4, {
+      isAdvanced: true,
+    });
+    await click(fourthColumnSortButton);
     assertSortOrder(
       [
         '2025-03-15T00:00:00.000Z',
