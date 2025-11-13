@@ -479,6 +479,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		observe.NewAdditionalPKIMetadata("not_after", parsedBundle.Certificate.NotAfter.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("not_before", parsedBundle.Certificate.NotBefore.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("common_name", parsedBundle.Certificate.Subject.CommonName),
+		observe.NewAdditionalPKIMetadata("serial_number", parsedBundle.Certificate.SerialNumber),
 		observe.NewAdditionalPKIMetadata("public_key_algorithm", parsedBundle.Certificate.PublicKeyAlgorithm.String()),
 		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(parsedBundle.Certificate.PublicKey)),
 		observe.NewAdditionalPKIMetadata("subject_key_id", parsedBundle.Certificate.SubjectKeyId),
