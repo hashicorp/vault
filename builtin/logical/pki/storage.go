@@ -334,6 +334,7 @@ type ImportedIssuerInfo struct {
 	NotBefore          string `json:"not_before"`
 	NotAfter           string `json:"not_after"`
 	PublicKeyAlgorithm string `json:"public_key_algorithm"`
+	PublicKeySize      int    `json:"public_key_size"`
 }
 
 func (sc *storageContext) importIssuer(certValue string, issuerName string) (*issuing.IssuerEntry, *ImportedIssuerInfo, bool, error) {
@@ -393,6 +394,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 		NotBefore:          issuerCert.NotBefore.Format(time.RFC3339),
 		NotAfter:           issuerCert.NotAfter.Format(time.RFC3339),
 		PublicKeyAlgorithm: issuerCert.PublicKeyAlgorithm.String(),
+		PublicKeySize:      certutil.GetPublicKeySize(issuerCert.PublicKey),
 	}
 
 	foundExistingIssuerWithName := false
