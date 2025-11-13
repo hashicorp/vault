@@ -12,6 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -85,8 +86,8 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
-    assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
+    assert.dom(GENERAL.icon('folder-users')).hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('ldap-test', 'Mount path renders in title');
     assert.dom('[data-test-toolbar-action="config"]').hasText('Configure LDAP', 'Toolbar action renders');
     assert.dom('[data-test-config-cta]').exists('Config cta renders');
   });

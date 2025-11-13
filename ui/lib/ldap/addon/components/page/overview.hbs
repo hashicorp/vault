@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
+<LdapHeader @model={{@backendModel}} @promptConfig={{@promptConfig}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarActions>
     {{#if @promptConfig}}
       <ToolbarLink @route="configure" data-test-toolbar-action="config">
@@ -11,7 +11,7 @@
       </ToolbarLink>
     {{/if}}
   </:toolbarActions>
-</TabPageHeader>
+</LdapHeader>
 
 {{#if @promptConfig}}
   <ConfigCta />

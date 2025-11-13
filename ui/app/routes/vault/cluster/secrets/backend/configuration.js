@@ -28,6 +28,8 @@ export default class SecretsBackendConfigurationRoute extends Route {
   fetchConfig(type, id) {
     // id is the path where the backend is mounted since there's only one config per engine (often this path is referred to just as backend)
     switch (type) {
+      case 'ldap':
+        return this.fetchLdapConfigs(id);
       case 'aws':
         return this.fetchAwsConfigs(id);
       case 'azure':
@@ -36,6 +38,18 @@ export default class SecretsBackendConfigurationRoute extends Route {
         return this.fetchGcpConfig(id);
       case 'ssh':
         return this.fetchSshCaConfig(id);
+    }
+  }
+
+  async fetchLdapConfigs(path) {
+    try {
+      const { data } = await this.api.secrets.ldapReadConfiguration(path);
+      return data;
+    } catch (e) {
+      const error = await this.parseApiError(e);
+      if (error.httpStatus === 404) {
+        return {};
+      }
     }
   }
 

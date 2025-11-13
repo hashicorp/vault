@@ -64,8 +64,8 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
-    assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
+    assert.dom(GENERAL.icon('folder-users')).hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('ldap-test', 'Mount path renders in title');
     assert
       .dom('[data-test-toolbar-action="config"]')
       .hasText('Configure LDAP', 'Correct toolbar action renders');
@@ -84,9 +84,9 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
     assert
       .dom('[data-test-filter-input]')
       .doesNotExist('Roles filter input is hidden when roles have not been created');
-    assert.dom('[data-test-empty-state-title]').hasText('No roles created yet', 'Title renders');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No roles created yet', 'Title renders');
     assert
-      .dom('[data-test-empty-state-message]')
+      .dom(GENERAL.emptyStateMessage)
       .hasText(
         'Roles in Vault will allow you to manage LDAP credentials. Create a role to get started.',
         'Message renders'
