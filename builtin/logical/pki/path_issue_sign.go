@@ -16,6 +16,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -509,7 +510,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		observe.NewAdditionalPKIMetadata("not_before", parsedBundle.Certificate.NotBefore.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("subject_key_id", parsedBundle.Certificate.SubjectKeyId),
 		observe.NewAdditionalPKIMetadata("authority_key_id", parsedBundle.Certificate.AuthorityKeyId),
-		observe.NewAdditionalPKIMetadata("serial_number", parsedBundle.Certificate.SerialNumber.String()),
+		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(parsedBundle.Certificate)),
 		observe.NewAdditionalPKIMetadata("public_key_algorithm", parsedBundle.Certificate.PublicKeyAlgorithm.String()),
 		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(parsedBundle.Certificate.PublicKey)),
 		observe.NewAdditionalPKIMetadata("lease_generated", generateLease),
