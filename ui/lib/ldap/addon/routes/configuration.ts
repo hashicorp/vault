@@ -21,6 +21,7 @@ interface RouteModel {
   configModel: LdapConfigModel;
   configError: AdapterError;
 }
+
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: RouteModel;
@@ -33,10 +34,14 @@ export default class LdapConfigurationRoute extends Route {
 
   declare configModel: LdapConfigModel;
   declare configError: AdapterError;
+  declare promptConfig: boolean;
 
   model() {
+    const backendModel: SecretEngineModel = this.modelFor('application') as SecretEngineModel;
+
     return {
-      backendModel: this.modelFor('application'),
+      backendModel,
+      promptConfig: this.promptConfig,
       configModel: this.configModel,
       configError: this.configError,
     };

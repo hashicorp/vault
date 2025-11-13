@@ -4,22 +4,19 @@
 }}
 
 {{#let (engines-display-data @secretsEngine.type) as |engineDisplayData|}}
-  <nav class="tabs" aria-label={{engineDisplayData.displayName}}>
+  <nav class="tabs" aria-label={{get engineDisplayData "displayName"}}>
     <ul>
       <li data-test-tab="general-settings">
         <LinkTo @route="vault.cluster.secrets.backend.configuration.general-settings" @model={{@secretsEngine.id}}>
           General settings
         </LinkTo>
       </li>
-      {{! If engine is not configurable, hide plugin settings link }}
-      {{#if (get engineDisplayData "isConfigurable")}}
-        <li data-test-tab="plugin-settings">
-          <LinkTo @route="vault.cluster.secrets.backend.configuration.plugin-settings" @model={{@secretsEngine.id}}>
-            {{get engineDisplayData "displayName"}}
-            settings
-          </LinkTo>
-        </li>
-      {{/if}}
+      <li data-test-tab="plugin-settings">
+        <LinkTo @route={{this.pluginSettingsRoute}} @model={{@secretsEngine.id}}>
+          {{get engineDisplayData "displayName"}}
+          settings
+        </LinkTo>
+      </li>
     </ul>
   </nav>
 {{/let}}

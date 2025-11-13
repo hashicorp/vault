@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
+<LdapHeader @model={{@backendModel}} @promptConfig={{@promptConfig}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @libraries)}}
       <FilterInput
@@ -26,7 +26,7 @@
       </ToolbarLink>
     {{/if}}
   </:toolbarActions>
-</TabPageHeader>
+</LdapHeader>
 
 {{#if @promptConfig}}
   <ConfigCta />

@@ -38,12 +38,16 @@ export default class SecretsBackendConfigurationGeneralSettingsRoute extends Rou
   async model() {
     const secretsEngine = this.modelFor('vault.cluster.secrets.backend') as SecretsEngineResource;
     const { data } = await this.pluginCatalog.getRawPluginCatalogData();
+    const { config } = this.modelFor('vault.cluster.secrets.backend.configuration') as Record<
+      string,
+      unknown
+    >;
     const versions = getPluginVersionsFromEngineType(data?.secret, secretsEngine.type);
 
     const model = { secretsEngine, versions };
     this.unsavedChanges.initialState = JSON.parse(JSON.stringify(model.secretsEngine));
 
-    return { secretsEngine, versions };
+    return { secretsEngine, versions, config };
   }
 
   setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {

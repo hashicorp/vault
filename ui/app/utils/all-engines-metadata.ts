@@ -35,6 +35,7 @@ export interface EngineDisplayData {
   isOldEngine?: boolean; // flag for engine views, if set to true, the engine will show pre-existing page design, if not, then the new views will be used. This is temporary until all engines have been migrated to the new design.
   type: string;
   value?: string;
+  engineConfigureRoute?: string;
 }
 
 /**
@@ -212,6 +213,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'LDAP',
     engineRoute: 'ldap.overview',
+    engineConfigureRoute: 'ldap.configure',
     glyph: 'folder-users',
     isOldEngine: true,
     mountCategory: ['auth', 'secret'],

@@ -14,7 +14,7 @@
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
     </:breadcrumbs>
     <:tabs>
-      <SecretEngine::ConfigureTabs @secretsEngine={{@model.secretsEngine}} />
+      <SecretEngine::ConfigureTabs @config={{@model.config}} @secretsEngine={{@model.secretsEngine}} />
     </:tabs>
   </Page::Header>
 {{/let}}
