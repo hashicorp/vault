@@ -179,4 +179,6 @@ export const GENERAL = {
   badge: (name: string) => (name ? `[data-test-badge="${name}"]` : '[data-test-badge]'),
   tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
   tooltipText: '.hds-tooltip-container',
+  manageDropdown: '[data-test-manage-dropdown]',
+  manageDropdownItem: (name: string) => `[data-test-manage-dropdown-item="${name}"]`,
 };

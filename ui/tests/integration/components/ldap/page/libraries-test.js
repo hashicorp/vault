@@ -13,6 +13,7 @@ import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Libraries', function (hooks) {
   setupRenderingTest(hooks);
@@ -59,8 +60,8 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
-    assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
+    assert.dom(GENERAL.icon('folder-users')).hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('ldap-test', 'Mount path renders in title');
     assert
       .dom('[data-test-toolbar-action="config"]')
       .hasText('Configure LDAP', 'Correct toolbar action renders');
@@ -114,7 +115,7 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
 
     await fillIn('[data-test-filter-input]', 'baz');
     assert
-      .dom('[data-test-empty-state-title]')
+      .dom(GENERAL.emptyStateTitle)
       .hasText('There are no libraries matching "baz"', 'Filter message renders');
 
     await fillIn('[data-test-filter-input]', 'foo');

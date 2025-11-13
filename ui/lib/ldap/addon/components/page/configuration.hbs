@@ -3,9 +3,14 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
+<LdapHeader
+  @model={{@model.backendModel}}
+  @promptConfig={{@model.promptConfig}}
+  @breadcrumbs={{@breadcrumbs}}
+  @configRoute="configuration"
+>
   <:toolbarActions>
-    {{#if @configModel}}
+    {{#if @model.configModel}}
       <ConfirmAction
         @buttonText="Rotate root"
         class="toolbar-button"
@@ -19,12 +24,12 @@
       />
     {{/if}}
     <ToolbarLink @route="configure" data-test-toolbar-config-action>
-      {{if @configModel "Edit configuration" "Configure LDAP"}}
+      {{if @model.configModel "Edit configuration" "Configure LDAP"}}
     </ToolbarLink>
   </:toolbarActions>
-</TabPageHeader>
+</LdapHeader>
 
-{{#if @configModel}}
+{{#if @model.configModel}}
   {{#each this.defaultFields as |field|}}
     <InfoTableRow @label={{field.label}} @value={{field.value}} @formatTtl={{field.formatTtl}} @alwaysRender={{true}} />
   {{/each}}
@@ -35,14 +40,12 @@
   {{#each this.connectionFields as |field|}}
     <InfoTableRow @label={{field.label}} @value={{field.value}} @alwaysRender={{true}} />
   {{/each}}
-{{else if @configError}}
-  <Page::Error @error={{@configError}} />
-{{else}}
-  <ConfigCta />
+{{else if @model.configError}}
+  <Page::Error @error={{@model.configError}} />
 {{/if}}
 
 <SecretsEngineMountConfig
-  @secretsEngine={{@backendModel}}
+  @secretsEngine={{@model.backendModel}}
   class="has-top-margin-xl has-bottom-margin-xl"
   data-test-mount-config
 />

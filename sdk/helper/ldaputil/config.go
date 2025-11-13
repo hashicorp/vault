@@ -232,6 +232,7 @@ Default: ({{.UserAttr}}={{.Username}})`,
 		"deny_null_bind": {
 			Type:        framework.TypeBool,
 			Default:     true,
+			Deprecated:  true,
 			Description: "Denies an unauthenticated LDAP bind request if the user's password is empty; defaults to true",
 			DisplayAttrs: &framework.DisplayAttributes{
 				Group: "LDAP Options",
@@ -487,7 +488,7 @@ type ConfigEntry struct {
 	StartTLS                 bool   `json:"starttls"`
 	BindDN                   string `json:"binddn"`
 	BindPassword             string `json:"bindpass"`
-	DenyNullBind             bool   `json:"deny_null_bind"`
+	DenyNullBind             bool   `json:"deny_null_bind"` // deprecated
 	DiscoverDN               bool   `json:"discoverdn"`
 	TLSMinVersion            string `json:"tls_min_version"`
 	TLSMaxVersion            string `json:"tls_max_version"`

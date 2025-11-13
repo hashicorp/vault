@@ -16,9 +16,11 @@ import type { Breadcrumb } from 'vault/vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 
 interface Args {
-  configModel: LdapConfigModel;
-  configError: AdapterError;
-  backendModel: SecretEngineModel;
+  model: {
+    configModel: LdapConfigModel;
+    configError: AdapterError;
+    backendModel: SecretEngineModel;
+  };
   breadcrumbs: Array<Breadcrumb>;
 }
 
@@ -32,7 +34,7 @@ export default class LdapConfigurationPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   get defaultFields(): Array<Field> {
-    const model = this.args.configModel;
+    const model = this.args.model.configModel;
     const keys = [
       'binddn',
       'url',
@@ -61,7 +63,7 @@ export default class LdapConfigurationPageComponent extends Component<Args> {
   }
 
   get connectionFields(): Array<Field> {
-    const model = this.args.configModel;
+    const model = this.args.model.configModel;
     const keys = ['certificate', 'starttls', 'insecure_tls', 'client_tls_cert', 'client_tls_key'];
     return model.allFields.reduce<Array<Field>>((filtered, field) => {
       if (keys.includes(field.name)) {
@@ -78,7 +80,7 @@ export default class LdapConfigurationPageComponent extends Component<Args> {
   @waitFor
   *rotateRoot() {
     try {
-      yield this.args.configModel.rotateRoot();
+      yield this.args.model.configModel.rotateRoot();
       this.flashMessages.success('Root password successfully rotated.');
     } catch (error) {
       this.flashMessages.danger(`Error rotating root password \n ${errorMessage(error)}`);

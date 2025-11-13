@@ -13,6 +13,7 @@ import { duration } from 'core/helpers/format-duration';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const selectors = {
   rotateAction: '[data-test-toolbar-rotate-action]',
@@ -40,12 +41,18 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
     });
     this.config = this.store.peekRecord('ldap/config', 'ldap-test');
 
+    this.model = {
+      backendModel: this.backend,
+      promptConfig: true,
+      configModel: this.config,
+      configError: null,
+      engineDisplayData: engineDisplayData(this.backend.type),
+    };
+
     this.renderComponent = () => {
       return render(
         hbs`<Page::Configuration
-          @backendModel={{this.backend}}
-          @configModel={{this.config}}
-          @configError={{this.error}}
+          @model={{this.model}}
           @breadcrumbs={{this.breadcrumbs}}
         />`,
         {
@@ -63,23 +70,22 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
   });
 
   test('it should render tab page header, config cta and mount config', async function (assert) {
-    this.config = null;
+    this.model.configModel = null;
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
-    assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
+    assert.dom(GENERAL.icon('folder-users')).hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('ldap-test configuration', 'Mount path renders in title');
     assert
       .dom(selectors.rotateAction)
       .doesNotExist('Rotate root action is hidden when engine is not configured');
     assert.dom(selectors.configAction).hasText('Configure LDAP', 'Toolbar action has correct text');
-    assert.dom(selectors.configCta).exists('Config cta renders');
     assert.dom(selectors.mountConfig).exists('Mount config renders');
   });
 
   test('it should render config fetch error', async function (assert) {
-    this.config = null;
-    this.error = { httpStatus: 403, message: 'Permission denied' };
+    this.model.configModel = null;
+    this.model.configError = { httpStatus: 403, message: 'Permission denied' };
 
     await this.renderComponent();
 
