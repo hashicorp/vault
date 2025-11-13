@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -514,6 +515,55 @@ func TestBackend_LoginRegression_AnonBind(t *testing.T) {
 			testAccStepUserList(t, []string{"hermes conrad"}),
 		},
 	})
+}
+
+// TestBackend_Login_EmptyPasswordDisallowed ensures that logins with empty
+// passwords are disallowed
+func TestBackend_Login_EmptyPasswordDisallowed(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	defer cleanup()
+
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			"url":            cfg.Url,
+			"userattr":       cfg.UserAttr,
+			"userdn":         cfg.UserDN,
+			"groupdn":        cfg.GroupDN,
+			"groupattr":      cfg.GroupAttr,
+			"binddn":         cfg.BindDN,
+			"bindpassword":   cfg.BindPassword,
+			"deny_null_bind": false,
+		},
+		Storage: storage,
+	}
+	resp, err := b.HandleRequest(context.Background(), configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// password is empty
+	loginReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "login/hermes conrad",
+		Data: map[string]interface{}{
+			"password": "",
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{},
+	}
+
+	resp, err = b.HandleRequest(context.Background(), loginReq)
+	if err == nil {
+		t.Fatalf("expected error but got none, resp:%#v", resp)
+	}
+
+	expectedErr := "password cannot be of zero length when passwordless binds are being denied"
+	if !strings.Contains(err.Error(), expectedErr) {
+		t.Fatalf("expected error to contain %q but got: %q", expectedErr, err.Error())
+	}
 }
 
 // TestBackend_LoginRegression_UserAttr is a test for the regression reported in
