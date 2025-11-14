@@ -129,7 +129,6 @@ module('Acceptance | auth enable tune form test', function (hooks) {
           'starttls',
           'insecureTls',
           'discoverdn',
-          'denyNullBind',
           'tlsMinVersion',
           'tlsMaxVersion',
           'certificate',
