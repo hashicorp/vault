@@ -6,12 +6,14 @@ package ldap
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/text/encoding/unicode"
 )
 
 func pathConfigRotateRoot(b *backend) *framework.Path {
@@ -103,11 +105,6 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 	if err != nil {
 		return err
 	}
-
-	lreq := &ldap.ModifyRequest{
-		DN: cfg.BindDN,
-	}
-
 	var newPassword string
 	if cfg.PasswordPolicy != "" {
 		newPassword, err = b.System().GeneratePasswordFromPolicy(ctx, cfg.PasswordPolicy)
@@ -117,9 +114,10 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 	if err != nil {
 		return err
 	}
-
-	lreq.Replace("userPassword", []string{newPassword})
-
+	lreq, err := b.getModifyRequest(cfg, newPassword)
+	if err != nil {
+		return err
+	}
 	err = conn.Modify(lreq)
 	if err != nil {
 		return err
@@ -136,6 +134,41 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 	}
 
 	return nil
+}
+
+func (b *backend) getModifyRequest(cfg *ldapConfigEntry, newPassword string) (*ldap.ModifyRequest, error) {
+	lreq := &ldap.ModifyRequest{
+		DN: cfg.BindDN,
+	}
+	switch cfg.RotationSchema {
+	case schemaOpenLDAP:
+		lreq.Replace("userPassword", []string{newPassword})
+	case schemaRACF:
+		// Password and password phrase management are mutually exclusive
+		// operations. When the system is configured to manage one, it will not
+		// modify the other.
+		if cfg.RotationCredentialType == credentialTypePhrase {
+			lreq.Replace("racfPassPhrase", []string{newPassword})
+		} else {
+			lreq.Replace("racfPassword", []string{newPassword})
+		}
+		lreq.Replace("racfAttributes", []string{"noexpired"})
+	case schemaAD:
+		pwdEncoded, err := formatPassword(newPassword)
+		if err != nil {
+			return nil, err
+		}
+		lreq.Replace("unicodePwd", []string{pwdEncoded})
+	default:
+		return nil, fmt.Errorf("configured schema %s not valid", cfg.RotationSchema)
+	}
+	return lreq, nil
+}
+
+// According to the MS docs, the password needs to be utf16 and enclosed in quotes.
+func formatPassword(original string) (string, error) {
+	utf16 := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
+	return utf16.NewEncoder().String("\"" + original + "\"")
 }
 
 const pathConfigRotateRootHelpSyn = `
