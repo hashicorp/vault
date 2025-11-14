@@ -1108,8 +1108,8 @@ github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-jose/go-jose/v3 v3.0.4 h1:Wp5HA7bLQcKnf6YYao/4kpRpVMp/yf6+pJKV8WFSaNY=
 github.com/go-jose/go-jose/v3 v3.0.4/go.mod h1:5b+7YgP7ZICgJDBdfjZaIt+H/9L9T/YQrVfLAMboGkQ=
-github.com/go-jose/go-jose/v4 v4.1.2 h1:TK/7NqRQZfgAh+Td8AlsrvtPoUyiHh0LqVvokh+1vHI=
-github.com/go-jose/go-jose/v4 v4.1.2/go.mod h1:22cg9HWM1pOlnRiY+9cQYJ9XHmya1bYW8OeDM6Ku6Oo=
+github.com/go-jose/go-jose/v4 v4.1.3 h1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=
+github.com/go-jose/go-jose/v4 v4.1.3/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
 github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
 github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
 github.com/go-kit/log v0.1.0/go.mod h1:zbhenjAZHb184qTLMA9ZjW7ThYL0H2mk7Q6pNt4vbaY=
@@ -1561,8 +1561,8 @@ github.com/hashicorp/vault-plugin-auth-jwt v0.25.0 h1:YdrZ+fGutoaaF/Hiw3+xtmcRal
 github.com/hashicorp/vault-plugin-auth-jwt v0.25.0/go.mod h1:HhfLJxvpYt10mrZoBTa+ToioN9HGOZbWYSR1UHqTMrs=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.16.0 h1:bZpmQS26TorpeensFerDPM7z+NgZjrRj9IbdGRdjaLM=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.16.0/go.mod h1:O6b92icQx0LGuknyVEVP/XgYjoYDNiTR9cJ1pEUuwjw=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.0 h1:OuyLSwuLjgWeZ57T1oroM3r1CBVmou7toWuKCEw3TdE=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.0/go.mod h1:492vjXlgdoUBk+RFIPKpdJPtxAX3aHaGCla/shLyv8E=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.1-0.20251104073139-a42a1d620bdb h1:FLCIyjug1ru/4v4zp2ZReECLAVcXnpmyqN63CSP8oKI=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.1-0.20251104073139-a42a1d620bdb/go.mod h1:JbYOg8apfrbWdw3eoEZaggIHpzpwviVXcbg23CGugbA=
 github.com/hashicorp/vault-plugin-auth-oci v0.20.0 h1:R1JXapvFsuxE8+jYBSQvkIwWHSpKpHpUbAX5K+6pbO4=
 github.com/hashicorp/vault-plugin-auth-oci v0.20.0/go.mod h1:XOhAs74HS6cSKWm2zQodRBxTFDhu/ApNpiw5Tfz9J4k=
 github.com/hashicorp/vault-plugin-database-couchbase v0.15.0 h1:6gLCOwwErqMgo9pJvsrOkg4tL7HmE95r3JVc14hSFSY=
