@@ -148,7 +148,6 @@ module('Acceptance | auth config form', function (hooks) {
           'starttls',
           'insecure_tls',
           'discoverdn',
-          'deny_null_bind',
           'tls_min_version',
           'tls_max_version',
           'certificate',

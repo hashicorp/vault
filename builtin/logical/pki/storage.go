@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/constants"
@@ -387,7 +388,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	}
 
 	issuerInfo := &ImportedIssuerInfo{
-		SerialNumber:       issuerCert.SerialNumber.String(),
+		SerialNumber:       parsing.SerialFromCert(issuerCert),
 		CommonName:         issuerCert.Subject.CommonName,
 		SKID:               issuerCert.SubjectKeyId,
 		AKID:               issuerCert.AuthorityKeyId,
