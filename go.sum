@@ -1565,8 +1565,8 @@ github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.0 h1:OuyLSwuLjgWeZ57T1or
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.0/go.mod h1:492vjXlgdoUBk+RFIPKpdJPtxAX3aHaGCla/shLyv8E=
 github.com/hashicorp/vault-plugin-auth-oci v0.20.0 h1:R1JXapvFsuxE8+jYBSQvkIwWHSpKpHpUbAX5K+6pbO4=
 github.com/hashicorp/vault-plugin-auth-oci v0.20.0/go.mod h1:XOhAs74HS6cSKWm2zQodRBxTFDhu/ApNpiw5Tfz9J4k=
-github.com/hashicorp/vault-plugin-database-couchbase v0.15.0 h1:6gLCOwwErqMgo9pJvsrOkg4tL7HmE95r3JVc14hSFSY=
-github.com/hashicorp/vault-plugin-database-couchbase v0.15.0/go.mod h1:KpGJp2QKCpMFhzMTdovoZFtx56Q7yQ8oO4fg+UuMGrI=
+github.com/hashicorp/vault-plugin-database-couchbase v0.15.1-0.20251101003620-a3fc3549a16e h1:kCJ/OmXMeVFi6egP49iqQhhsl4/9EJp/LDgQM4APfBE=
+github.com/hashicorp/vault-plugin-database-couchbase v0.15.1-0.20251101003620-a3fc3549a16e/go.mod h1:B1uIGzMirEt/6A+y1qGOkYwviPeYnC7ygAv4XwmlPrw=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.19.0 h1:8vbxtLgvTEyve6mJt6aLuaje7NW3aEkJMjf20QFB0gs=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.19.0/go.mod h1:K0W2sRQPX2T0Rv4eRba5d048nDF1/XcjaI/IJ5EHD3I=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.16.0 h1:/eF3lUTELNWU6NoHDLDdv0waibHHG281q7+RbwujGNU=
@@ -2411,8 +2411,8 @@ golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4/go.mod h1:jJ57K6gSWd91
 golang.org/x/mod v0.7.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=
 golang.org/x/mod v0.8.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=
 golang.org/x/mod v0.9.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=
-golang.org/x/mod v0.28.0 h1:gQBtGhjxykdjY9YhZpSlZIsbnaE2+PgjfLWUQTnoZ1U=
-golang.org/x/mod v0.28.0/go.mod h1:yfB/L0NOf/kmEbXjzCPOx1iK1fRutOydrCMsqRhEBxI=
+golang.org/x/mod v0.29.0 h1:HV8lRxZC4l2cr3Zq1LvtOsi/ThTgWnUk/y64QSs8GwA=
+golang.org/x/mod v0.29.0/go.mod h1:NyhrlYXJ2H4eJiRy/WDBO6HMqZQ6q9nk4JzS3NuCK+w=
 golang.org/x/net v0.0.0-20180724234803-3673e40ba225/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20180826012351-8a410e7b638d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20180906233101-161cd47e91fd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
