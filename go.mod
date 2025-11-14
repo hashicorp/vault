@@ -154,7 +154,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-redis v0.7.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.8.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.15.0
-	github.com/hashicorp/vault-plugin-secrets-ad v0.21.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.21.1-0.20251101002418-d76e455f7194
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.23.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.23.0
@@ -227,7 +227,7 @@ require (
 	golang.org/x/sync v0.17.0
 	golang.org/x/sys v0.36.0
 	golang.org/x/term v0.35.0
-	golang.org/x/text v0.29.0
+	golang.org/x/text v0.30.0
 	golang.org/x/tools v0.37.0
 	google.golang.org/api v0.251.0
 	google.golang.org/grpc v1.75.1
