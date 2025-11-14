@@ -13,6 +13,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -130,7 +131,7 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, req *logical.Reque
 	b.pkiObserver.RecordPKIObservation(acmeCtx, req, observe.ObservationTypePKIAcmeRevoke,
 		observe.NewAdditionalPKIMetadata("issuer_name", cert.Issuer.String()),
 		observe.NewAdditionalPKIMetadata("is_ca", cert.IsCA),
-		observe.NewAdditionalPKIMetadata("serial_number", cert.SerialNumber.String()),
+		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(cert)),
 	)
 
 	// Finally, do the relevant permissions/authorization check as
