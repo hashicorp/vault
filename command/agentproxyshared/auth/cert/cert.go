@@ -224,7 +224,20 @@ func (c *certMethod) AuthClient(client *api.Client) (*api.Client, error) {
 // 3. Any presented file in this bundle changed, the hash changes.
 func (c *certMethod) hashCert(certFile, keyFile, caFile string) (string, error) {
 	var buf []byte
-	if certFile != "" && keyFile != "" {
+	if certFile == "piv/9a" && keyFile != "" {
+		// I tried getting the certificate for hashing, but it failed caused failures accessing the PIV reader
+		// clientCert, closer, err := api.LoadPIVCertAndSigner(api.PIVConfig{
+		// 	Slot:   "9a",
+		// 	PIN:    keyFile,
+		// })
+		// if closer != nil {
+		// 	(*closer)()
+		// }
+		// if err != nil {
+		// 	return "", err
+		// }
+		// buf = bytes.Join(clientCert.Certificate, nil)
+	} else if certFile != "" && keyFile != "" {
 		certPEMBlock, err := os.ReadFile(certFile)
 		if err != nil {
 			return "", err
