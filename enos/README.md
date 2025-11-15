@@ -1,6 +1,6 @@
 # Enos
 
-Enos is an quality testing framework that allows composing and executing quality
+Enos is a quality testing framework that allows composing and executing quality
 requirement scenarios as code. For Vault, it is currently used to perform
 infrastructure integration testing using the artifacts that are created as part
 of the `build` workflow. While intended to be executed via Github Actions using
@@ -70,7 +70,7 @@ Additional variable information can also be found in the [Scenario Outlines](#sc
 Enos is capable of producing an outline of each scenario that is defined in a given directory. These
 scenarios often include a description of what behavior the scenario performs, which variants are
 available, and which variables are required. They also provide a step by step breakdown including
-which quality requirments are verifiend by a given step.
+which quality requirements are verified by a given step.
 
 You can generate outlines of all scenarios or specify one via it's name.
 
@@ -122,7 +122,7 @@ The [`ui` scenario](./enos-scenario-ui.hcl) creates a Vault cluster (deployed to
 built from the current checkout of the project. Once the cluster is available the UI acceptance tests
 are run in a headless browser.
 ### Variables
-In addition to the required variables that must be set, as described in the [Scenario Variables](#Scenario Variables), 
+In addition to the required variables that must be set, as described in the [Scenario Variables](#scenario-variables), 
 the `ui` scenario has two optional variables:
 
 **ui_test_filter** - An optional test filter to limit the tests that are run, i.e. `'!enterprise'`.

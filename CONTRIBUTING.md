@@ -60,7 +60,7 @@ quickly merge or address your contributions.
 
 5. The issue is closed.
 
-6. Issues that are not reproducible and/or not gotten responses for a long time are
+6. Issues that are not reproducible and/or have not received responses for a long time are
    stale issues. In order to provide faster responses and better engagement with
    the community, we strive to keep the issue tracker clean and the issue count
    low. In this regard, our current policy is to close stale issues after 30 days.
