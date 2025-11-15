@@ -76,14 +76,14 @@ export default class KvObjectEditor extends Component {
   }
   @action
   updateRow() {
-    this.args.onChange(this.kvData.toJSON());
+    this.args.onChange(this.kvData.toJSON(false, this.placeholders.key));
   }
   @action
   deleteRow(object, index) {
     const oldObj = this.kvData.objectAt(index);
     assert('object guids match', guidFor(oldObj) === guidFor(object));
     this.kvData.removeAt(index);
-    this.args.onChange(this.kvData.toJSON());
+    this.args.onChange(this.kvData.toJSON(false, this.placeholders.key));
   }
   @action
   handleKeyUp(event) {

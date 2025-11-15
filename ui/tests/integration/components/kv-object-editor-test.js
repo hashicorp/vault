@@ -123,4 +123,27 @@ module('Integration | Component | kv-object-editor', function (hooks) {
     await fillIn('[data-test-kv-value="0"]', 7);
     assert.dom('[data-test-kv-object-warning="0"]').exists();
   });
+
+  test('it defaults empty key to "key" when value is not empty', async function (assert) {
+    await render(hbs`<KvObjectEditor @onChange={{this.spy}} />`);
+    // Fill in only the value, leave the key empty
+    await component.rows.objectAt(0).kvVal('myvalue');
+    assert.strictEqual(this.spy.callCount, 1, 'calls onChange when value changes');
+    assert.deepEqual(
+      this.spy.lastCall.args[0],
+      { key: 'myvalue' },
+      'uses "key" as default when key is empty but value is not'
+    );
+  });
+
+  test('it uses custom placeholder as default key when keyPlaceholder is provided', async function (assert) {
+    await render(hbs`<KvObjectEditor @onChange={{this.spy}} @keyPlaceholder="customKey" />`);
+    // Fill in only the value, leave the key empty
+    await component.rows.objectAt(0).kvVal('myvalue');
+    assert.deepEqual(
+      this.spy.lastCall.args[0],
+      { customKey: 'myvalue' },
+      'uses custom placeholder as default key'
+    );
+  });
 });
