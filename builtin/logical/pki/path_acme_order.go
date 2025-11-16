@@ -17,6 +17,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -342,8 +343,8 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 		observe.NewAdditionalPKIMetadata("authority_key_id", signedCertBundle.Certificate.AuthorityKeyId),
 		observe.NewAdditionalPKIMetadata("public_key_algorithm", signedCertBundle.Certificate.PublicKeyAlgorithm.String()),
 		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(signedCertBundle.Certificate.PublicKey)),
-		observe.NewAdditionalPKIMetadata("common_name", csr.Subject.CommonName),
-		observe.NewAdditionalPKIMetadata("serial_number", order.CertificateSerialNumber),
+		observe.NewAdditionalPKIMetadata("common_name", signedCertBundle.Certificate.Subject.CommonName),
+		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(signedCertBundle.Certificate)),
 		observe.NewAdditionalPKIMetadata("certificate_expiry", order.CertificateExpiry.String()),
 		observe.NewAdditionalPKIMetadata("status", ACMEOrderValid),
 		observe.NewAdditionalPKIMetadata("account_id", order.AccountId),
@@ -888,6 +889,7 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, req *logical.Request, _ *
 		observe.NewAdditionalPKIMetadata("not_before", notBefore.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("not_after", notAfter.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("order_id", order.OrderId),
+		observe.NewAdditionalPKIMetadata("expires", order.Expires.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("account_id", order.AccountId),
 	)
 

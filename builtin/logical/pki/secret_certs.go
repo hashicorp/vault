@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -87,7 +88,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIRevoke,
 		observe.NewAdditionalPKIMetadata("issuer_name", cert.Issuer.String()),
 		observe.NewAdditionalPKIMetadata("is_ca", cert.IsCA),
-		observe.NewAdditionalPKIMetadata("serial_number", cert.SerialNumber.String()),
+		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(cert)),
 	)
 
 	return revokeCert(sc, config, cert)

@@ -1,0 +1,3 @@
+```release-note:improvement
+secret-sync: add parallelization support to sync and unsync operations for secret-key granularity associations
+```
