@@ -1,0 +1,3 @@
+```release-note:bug
+core/rotation: avoid shifting timezones by ignoring cron.SpecSchedule
+```
