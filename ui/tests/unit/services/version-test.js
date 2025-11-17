@@ -47,6 +47,13 @@ module('Unit | Service | version', function (hooks) {
     assert.true(service.hasDRReplication);
   });
 
+  test('hasPKIOnly', function (assert) {
+    const service = this.owner.lookup('service:version');
+    assert.false(service.hasPKIOnly);
+    service.features = ['PKI-only Secrets'];
+    assert.true(service.hasPKIOnly);
+  });
+
   // SHOW SECRETS SYNC TESTS
   test('hasSecretsSync: it returns false when version is community', function (assert) {
     const service = this.owner.lookup('service:version');
