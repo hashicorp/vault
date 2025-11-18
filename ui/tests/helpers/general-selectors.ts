@@ -19,9 +19,13 @@ export const GENERAL = {
 
   /* ────── Tabs & Navigation ────── */
   tab: (name: string) => `[data-test-tab="${name}"]`,
+  tabLink: (name: string) => `[data-test-tab="${name}"] a`,
   hdsTab: (name: string) => `[data-test-tab="${name}"] button`, // HDS tab buttons
   secretTab: (name: string) => `[data-test-secret-list-tab="${name}"]`,
-  navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
+  navLink: (label: string) =>
+    label ? `[data-test-sidebar-nav-link="${label}"]` : '[data-test-sidebar-nav-link]',
+  navHeading: (label: string) =>
+    label ? `[data-test-sidebar-nav-heading="${label}"]` : '[data-test-sidebar-nav-heading]',
   linkTo: (label: string) => `[data-test-link-to="${label}"]`,
 
   /* ────── Buttons ────── */
@@ -177,6 +181,7 @@ export const GENERAL = {
   /* ────── Misc ────── */
   icon: (name: string) => (name ? `[data-test-icon="${name}"]` : '[data-test-icon]'),
   badge: (name: string) => (name ? `[data-test-badge="${name}"]` : '[data-test-badge]'),
+  licenseBanner: (name: string) => `[data-test-license-banner="${name}"]`,
   tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
   tooltipText: '.hds-tooltip-container',
   manageDropdown: '[data-test-manage-dropdown]',
