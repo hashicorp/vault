@@ -10,62 +10,63 @@ import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
 import { service } from '@ember/service';
 import trimRight from 'vault/utils/trim-right';
-import errorMessage from 'vault/utils/error-message';
-import type PkiKeyModel from 'vault/models/pki/key';
+import FormField from 'vault/utils/forms/field';
+
 import type FlashMessageService from 'vault/services/flash-messages';
+import type ApiService from 'vault/services/api';
+import type SecretMountPath from 'vault/services/secret-mount-path';
 
 /**
  * @module PkiKeyImport
  * PkiKeyImport components are used to import PKI keys.
  *
- * @example
- * ```js
- * <PkiKeyImport @model={{this.model}} />
- * ```
  *
- * @param {Object} model - pki/key model.
  * @callback onCancel - Callback triggered when cancel button is clicked.
  * @callback onSubmit - Callback triggered on submit success.
  */
 interface Args {
-  model: PkiKeyModel;
   onSave: CallableFunction;
   onCancel: CallableFunction;
 }
 
 export default class PkiKeyImport extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly api: ApiService;
+  @service declare readonly secretMountPath: SecretMountPath;
 
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
+  @tracked declare keyName: string;
+  @tracked declare pemBundle: string;
+
+  keyNameField = new FormField('keyName', 'string', {
+    subText: `Optional, human-readable name for this key. The name must be unique across all keys and cannot be 'default'.`,
+  });
 
   @task
   @waitFor
   *submitForm(event: Event) {
     event.preventDefault();
     try {
-      const { keyName } = this.args.model;
-      yield this.args.model.save({ adapterOptions: { import: true } });
-      this.flashMessages.success(`Successfully imported key${keyName ? ` ${keyName}.` : '.'}`);
+      yield this.api.secrets.pkiImportKey(this.secretMountPath.currentPath, {
+        key_name: this.keyName,
+        pem_bundle: this.pemBundle,
+      });
+      this.flashMessages.success(`Successfully imported key${this.keyName ? ` ${this.keyName}.` : '.'}`);
       this.args.onSave();
     } catch (error) {
-      this.errorBanner = errorMessage(error);
+      const { message } = yield this.api.parseError(error);
+      this.errorBanner = message;
       this.invalidFormAlert = 'There was a problem importing key.';
     }
   }
 
   @action
   onFileUploaded({ value, filename }: { value: string; filename: string }) {
-    this.args.model.pemBundle = value;
-    if (!this.args.model.keyName) {
+    this.pemBundle = value;
+    if (!this.keyName) {
       const trimmedFileName = trimRight(filename, ['.json', '.pem']);
-      this.args.model.keyName = trimmedFileName;
+      this.keyName = trimmedFileName;
     }
-  }
-
-  @action
-  cancel() {
-    this.args.model.unloadRecord();
-    this.args.onCancel();
   }
 }
