@@ -308,7 +308,7 @@ func (b *Broker) LogRequest(ctx context.Context, in *logical.LogInput) (retErr e
 		return fmt.Errorf("error during audit pipeline processing: %w", errors.Join(status.Warnings...))
 	}
 
-	// Handle any additional audit that is required (Enterprise/CE dependant).
+	// Handle any additional audit that is required (Enterprise/CE dependent).
 	err = b.handleAdditionalAudit(auditContext, e)
 	if err != nil {
 		return err
@@ -375,7 +375,7 @@ func (b *Broker) LogResponse(ctx context.Context, in *logical.LogInput) (retErr 
 		return fmt.Errorf("error during audit pipeline processing: %w", errors.Join(status.Warnings...))
 	}
 
-	// Handle any additional audit that is required (Enterprise/CE dependant).
+	// Handle any additional audit that is required (Enterprise/CE dependent).
 	err = b.handleAdditionalAudit(auditContext, e)
 	if err != nil {
 		return err
@@ -430,7 +430,7 @@ func (b *Broker) IsRegistered(name string) bool {
 }
 
 // getAuditContext extracts the namespace from the specified context and returns
-// a new context and cancelation function, completely detached from the original
+// a new context and cancellation function, completely detached from the original
 // with a timeout.
 // NOTE: When error is nil, the context.CancelFunc returned from this function
 // should be deferred immediately by the caller to prevent resource leaks.
