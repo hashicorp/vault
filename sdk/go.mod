@@ -52,9 +52,9 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/tink-crypto/tink-go/v2 v2.2.0
 	go.uber.org/atomic v1.11.0
-	golang.org/x/crypto v0.37.0
-	golang.org/x/net v0.39.0
-	golang.org/x/text v0.25.0
+	golang.org/x/crypto v0.44.0
+	golang.org/x/net v0.46.0
+	golang.org/x/text v0.31.0
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.5
 )
@@ -147,8 +147,8 @@ require (
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	golang.org/x/oauth2 v0.28.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/term v0.31.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/term v0.37.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
 	google.golang.org/api v0.221.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250207221924-e9438ea467c6 // indirect
