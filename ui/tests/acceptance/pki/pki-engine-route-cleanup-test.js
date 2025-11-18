@@ -15,7 +15,6 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import {
   PKI_CONFIGURE_CREATE,
   PKI_ISSUER_LIST,
-  PKI_KEYS,
   PKI_ROLE_DETAILS,
 } from 'vault/tests/helpers/pki/pki-selectors';
 
@@ -172,100 +171,6 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
       issuers = this.store.peekAll('pki/action');
       assert.strictEqual(issuers.length, 0, 'Issuer is removed from store');
-    });
-  });
-
-  module('key routes', function (hooks) {
-    hooks.beforeEach(async function () {
-      await login();
-      // Configure PKI -- key creation not allowed unless configured
-      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
-      await click(`${GENERAL.emptyStateActions} a`);
-      await click(PKI_CONFIGURE_CREATE.optionByKey('generate-root'));
-      await fillIn(GENERAL.inputByAttr('type'), 'internal');
-      await fillIn(GENERAL.inputByAttr('common_name'), 'my-root-cert');
-      await click(GENERAL.submitButton);
-    });
-    test('create key exit', async function (assert) {
-      let keys, key;
-      await login();
-      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
-      await click(GENERAL.secretTab('Keys'));
-      keys = this.store.peekAll('pki/key');
-      const configKeyId = keys.at(0).id;
-      assert.strictEqual(keys.length, 1, 'One key exists from config');
-      // Create key
-      await click(PKI_KEYS.generateKey);
-      keys = this.store.peekAll('pki/key');
-      key = keys.at(1);
-      assert.strictEqual(keys.length, 2, 'New key exists');
-      assert.true(key.isNew, 'Role is new model');
-      // Exit
-      await click(GENERAL.cancelButton);
-      keys = this.store.peekAll('pki/key');
-      assert.strictEqual(keys.length, 1, 'Second key is removed from store');
-      assert.strictEqual(keys.at(0).id, configKeyId);
-      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys`, 'url is correct');
-
-      // Create again
-      await click(PKI_KEYS.generateKey);
-      assert.strictEqual(keys.length, 2, 'New key exists');
-      keys = this.store.peekAll('pki/key');
-      key = keys.at(1);
-      assert.true(key.isNew, 'Key is new model');
-      // Exit
-      await click(OVERVIEW_BREADCRUMB);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets-engines/${this.mountPath}/pki/overview`,
-        'url is correct'
-      );
-      keys = this.store.peekAll('pki/key');
-      assert.strictEqual(keys.length, 1, 'Key is removed from store');
-    });
-    test('edit key exit', async function (assert) {
-      let keys, key;
-      await login();
-      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
-      await click(GENERAL.secretTab('Keys'));
-      keys = this.store.peekAll('pki/key');
-      assert.strictEqual(keys.length, 1, 'One key from config exists');
-      assert.dom('.list-item-row').exists({ count: 1 }, 'single row for key');
-      await click('.list-item-row');
-      // Edit
-      await click(PKI_KEYS.keyEditLink);
-      await fillIn(GENERAL.inputByAttr('keyName'), 'foobar');
-      keys = this.store.peekAll('pki/key');
-      key = keys.at(0);
-      assert.true(key.hasDirtyAttributes, 'Key model is dirty');
-      // Exit
-      await click(GENERAL.cancelButton);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets-engines/${this.mountPath}/pki/keys/${key.id}/details`,
-        'url is correct'
-      );
-      keys = this.store.peekAll('pki/key');
-      assert.strictEqual(keys.length, 1, 'Key list has 1');
-      assert.false(key.hasDirtyAttributes, 'Key dirty attrs have been rolled back');
-
-      // Edit again
-      await click(PKI_KEYS.keyEditLink);
-      await fillIn(GENERAL.inputByAttr('keyName'), 'foobar');
-      keys = this.store.peekAll('pki/key');
-      key = keys.at(0);
-      assert.true(key.hasDirtyAttributes, 'Key model is dirty');
-
-      // Exit via breadcrumb
-      await click(OVERVIEW_BREADCRUMB);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets-engines/${this.mountPath}/pki/overview`,
-        'url is correct'
-      );
-      keys = this.store.peekAll('pki/key');
-      assert.strictEqual(keys.length, 1, 'Key list has 1');
-      assert.false(key.hasDirtyAttributes, 'Key dirty attrs have been rolled back');
     });
   });
 });

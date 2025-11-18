@@ -303,7 +303,7 @@ module('Acceptance | pki workflow', function (hooks) {
         'navigates back to details on cancel'
       );
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/edit`);
-      await fillIn(GENERAL.inputByAttr('keyName'), 'test-key');
+      await fillIn(GENERAL.inputByAttr('key_name'), 'test-key');
       await click(GENERAL.submitButton);
       assert.strictEqual(
         currentURL(),
@@ -317,7 +317,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(PKI_KEYS.generateKey);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/create`);
       await fillIn(GENERAL.inputByAttr('type'), 'exported'); // exported keys generated private_key data
-      await fillIn(GENERAL.inputByAttr('keyType'), 'rsa');
+      await fillIn(GENERAL.inputByAttr('key_type'), 'rsa');
       await click(GENERAL.submitButton);
       keyId = find(GENERAL.infoRowValue('Key ID')).textContent?.trim();
       assert.strictEqual(
