@@ -21,11 +21,6 @@ interface Args {
 export default class PkiGenerateToggleGroupsComponent extends Component<Args> {
   @tracked showGroup: string | null = null;
 
-  // shim until sign-intermediate model is migrated to form
-  get fieldsKey() {
-    return this.args.form instanceof PkiConfigGenerateForm ? 'formFields' : 'allFields';
-  }
-
   get keyParamFields() {
     const { form } = this.args;
     if (form.data.type) {
@@ -54,10 +49,7 @@ export default class PkiGenerateToggleGroupsComponent extends Component<Args> {
     };
     // excludeCnFromSans and serialNumber are present in default fields for generate-csr -- only include for other types
     if (this.args.actionType !== 'generate-csr') {
-      groups['Subject Alternative Name (SAN) Options'].unshift(
-        'exclude_cn_from_sans',
-        'subject_serial_number'
-      );
+      groups['Subject Alternative Name (SAN) Options'].unshift('exclude_cn_from_sans', 'serial_number');
     }
     return groups;
   }

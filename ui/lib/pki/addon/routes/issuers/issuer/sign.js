@@ -5,16 +5,18 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import PkiIssuersSignIntermediateForm from 'vault/forms/secrets/pki/issuers/sign-intermediate';
 
-@withConfirmLeave()
 export default class PkiIssuerSignRoute extends Route {
   @service store;
   @service secretMountPath;
 
   model() {
     const { issuer_ref } = this.paramsFor('issuers/issuer');
-    return this.store.createRecord('pki/sign-intermediate', { issuerRef: issuer_ref });
+    return {
+      form: new PkiIssuersSignIntermediateForm({}, { isNew: true }),
+      issuerRef: issuer_ref,
+    };
   }
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);

@@ -76,7 +76,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await click(PKI_CROSS_SIGN.copyButton('Certificate'));
     const oldIntCert = clipboardSpy.thirdCall.args[0];
     await click(PKI_ISSUER_DETAILS.configure);
-    await fillIn(GENERAL.inputByAttr('issuerName'), this.intIssuerName);
+    await fillIn(GENERAL.inputByAttr('issuer_name'), this.intIssuerName);
     await click('[data-test-submit]');
 
     // perform cross-sign

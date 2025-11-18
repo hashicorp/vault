@@ -7,10 +7,10 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import Sinon from 'sinon';
+import sinon from 'sinon';
 import { setupEngine } from 'ember-engines/test-support';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import PkiIssuersSignIntermediateForm from 'vault/forms/secrets/pki/issuers/sign-intermediate';
 
 const selectors = {
   form: '[data-test-sign-intermediate-form]',
@@ -19,24 +19,45 @@ const selectors = {
   formError: '[data-test-form-error]',
   resultsContainer: '[data-test-sign-intermediate-result]',
 };
+
 module('Integration | Component | pki-sign-intermediate-form', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
-  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
-    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
-    this.secretMountPath.currentPath = 'pki-test';
-    this.model = this.store.createRecord('pki/sign-intermediate', { issuerRef: 'some-issuer' });
-    this.onCancel = Sinon.spy();
+    this.mountPath = 'pki-test';
+    this.owner.lookup('service:secret-mount-path').update(this.mountPath);
+
+    this.form = new PkiIssuersSignIntermediateForm({}, { isNew: true });
+    this.issuerRef = 'some-issuer';
+    this.onCancel = sinon.spy();
+
+    this.renderComponent = () =>
+      render(
+        hbs`
+      <PkiSignIntermediateForm
+        @form={{this.form}}
+        @issuerRef={{this.issuerRef}}
+        @onCancel={{this.onCancel}}
+      />
+    `,
+        { owner: this.engine }
+      );
+
+    this.signStub = sinon
+      .stub(this.owner.lookup('service:api').secrets, 'pkiIssuerSignIntermediate')
+      .resolves({
+        serial_number: '31:52:b9:09:40',
+        ca_chain: ['-----BEGIN CERTIFICATE-----'],
+        issuing_ca: '-----BEGIN CERTIFICATE-----',
+        certificate: '-----BEGIN CERTIFICATE-----',
+      });
   });
 
   test('renders correctly on load', async function (assert) {
     assert.expect(10);
-    await render(hbs`<PkiSignIntermediateForm @onCancel={{this.onCancel}} @model={{this.model}} />`, {
-      owner: this.engine,
-    });
+
+    await this.renderComponent();
 
     assert.dom(selectors.form).exists('Form is rendered');
     assert.dom(selectors.resultsContainer).doesNotExist('Results display not rendered');
@@ -51,36 +72,33 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
     });
 
     await click(GENERAL.button('Signing options'));
-    ['usePss', 'skid', 'signatureBits'].forEach((name) => {
+    ['use_pss', 'skid', 'signature_bits'].forEach((name) => {
       assert.dom(GENERAL.fieldByAttr(name)).exists();
     });
   });
 
   test('it shows the returned values on successful save', async function (assert) {
     assert.expect(12);
-    await render(hbs`<PkiSignIntermediateForm @onCancel={{this.onCancel}} @model={{this.model}} />`, {
-      owner: this.engine,
-    });
 
-    this.server.post(`/pki-test/issuer/some-issuer/sign-intermediate`, function (schema, req) {
-      const payload = JSON.parse(req.requestBody);
-      assert.strictEqual(payload.csr, 'example-data', 'Request made to correct endpoint on save');
-      return {
-        request_id: 'some-id',
-        data: {
-          serial_number: '31:52:b9:09:40',
-          ca_chain: ['-----BEGIN CERTIFICATE-----'],
-          issuing_ca: '-----BEGIN CERTIFICATE-----',
-          certificate: '-----BEGIN CERTIFICATE-----',
-        },
-      };
-    });
+    await this.renderComponent();
+
     await click(selectors.saveButton);
     assert.dom(selectors.formError).hasText('There is an error with this form.', 'Shows validation errors');
     assert.dom(GENERAL.validationErrorByAttr('csr')).hasText('CSR is required.');
 
     await fillIn(GENERAL.inputByAttr('csr'), 'example-data');
     await click(selectors.saveButton);
+
+    assert.true(
+      this.signStub.calledWith(this.issuerRef, this.mountPath, {
+        csr: 'example-data',
+        format: 'pem',
+        not_before_duration: 30,
+        private_key_format: 'der',
+      }),
+      'Request made to correct endpoint on save'
+    );
+
     [
       { label: 'Serial number' },
       { label: 'CA Chain', isCertificate: true },

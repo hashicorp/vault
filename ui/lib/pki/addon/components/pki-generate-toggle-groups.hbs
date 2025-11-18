@@ -53,7 +53,7 @@
           {{/if}}
         </p>
         {{#each fields as |fieldName|}}
-          {{#let (find-by "name" fieldName (get @form this.fieldsKey)) as |field|}}
+          {{#let (find-by "name" fieldName @form.formFields) as |field|}}
             <FormField
               data-test-field
               @attr={{field}}

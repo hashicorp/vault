@@ -69,7 +69,7 @@ export default class PkiGenerateCsrComponent extends Component<Args> {
     'common_name',
     'exclude_cn_from_sans',
     'format',
-    'subject_serial_number',
+    'serial_number',
     'add_basic_constraints',
   ];
   // fields rendered after CSR generation
