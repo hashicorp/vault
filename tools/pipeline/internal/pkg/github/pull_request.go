@@ -30,9 +30,10 @@ func createPullRequestComment(
 	slog.Default().DebugContext(ctx, "creating pull request comment")
 
 	// Always try and write a comment on the pull request
+	limitedBody := limitCharacters(body)
 	comment, _, err := github.Issues.CreateComment(
 		ctx, owner, repo, pullNumber, &libgithub.IssueComment{
-			Body: &body,
+			Body: &limitedBody,
 		},
 	)
 	if err != nil {
