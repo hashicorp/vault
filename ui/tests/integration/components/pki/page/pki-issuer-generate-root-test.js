@@ -25,11 +25,7 @@ module('Integration | Component | page/pki-issuer-generate-root', function (hook
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.breadcrumbs = [{ label: 'something' }];
-    this.model = this.store.createRecord('pki/action', {
-      actionType: 'generate-csr',
-    });
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = 'pki-component';
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
@@ -46,7 +42,7 @@ module('Integration | Component | page/pki-issuer-generate-root', function (hook
 
   test('it renders correct title before and after submit', async function (assert) {
     assert.expect(3);
-    this.server.post(`/pki-component/root/generate/internal`, () => {
+    this.server.post('/pki-component/issuers/generate/root/internal', () => {
       assert.true(true, 'Root endpoint called');
       return {
         request_id: uuidv4(),
@@ -57,33 +53,30 @@ module('Integration | Component | page/pki-issuer-generate-root', function (hook
       };
     });
 
-    await render(
-      hbs`<Page::PkiIssuerGenerateRoot @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
-      {
-        owner: this.engine,
-      }
-    );
+    await render(hbs`<Page::PkiIssuerGenerateRoot @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
     assert.dom(GENERAL.title).hasText('Generate root');
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
-    await fillIn(GENERAL.inputByAttr('commonName'), 'foobar');
+    await fillIn(GENERAL.inputByAttr('common_name'), 'foobar');
     await click(GENERAL.submitButton);
     assert.dom(GENERAL.title).hasText('View generated root');
   });
 
   test('it does not update title if API response is an error', async function (assert) {
     assert.expect(2);
-    this.server.post(`/pki-component/root/generate/internal`, () => new Response(404, {}, { errors: [] }));
-
-    await render(
-      hbs`<Page::PkiIssuerGenerateRoot @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
-      {
-        owner: this.engine,
-      }
+    this.server.post(
+      `/pki-component/issuers/generate/root/internal`,
+      () => new Response(404, {}, { errors: [] })
     );
+
+    await render(hbs`<Page::PkiIssuerGenerateRoot @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
     assert.dom(GENERAL.title).hasText('Generate root');
     // Fill in
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
-    await fillIn(GENERAL.inputByAttr('commonName'), 'foobar');
+    await fillIn(GENERAL.inputByAttr('common_name'), 'foobar');
     await click(GENERAL.submitButton);
     assert.dom(GENERAL.title).hasText('Generate root', 'title does not change if response is unsuccessful');
   });

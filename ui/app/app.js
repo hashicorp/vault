@@ -120,7 +120,9 @@ export default class App extends Application {
     pki: {
       dependencies: {
         services: [
+          'api',
           'auth',
+          'capabilities',
           'download',
           'flash-messages',
           'namespace',

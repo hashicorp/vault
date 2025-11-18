@@ -54,7 +54,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await visit(`/vault/secrets-engines/${this.intMountPath}/pki/configuration/create`);
     await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
-    await fillIn(GENERAL.inputByAttr('commonName'), 'Short-Lived Int R1');
+    await fillIn(GENERAL.inputByAttr('common_name'), 'Short-Lived Int R1');
     await click(GENERAL.submitButton);
     await click(PKI_CROSS_SIGN.copyButton('CSR'));
     const csr = clipboardSpy.firstCall.args[0];
