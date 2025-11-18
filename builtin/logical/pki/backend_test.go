@@ -617,8 +617,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
-				"common_name": "Root Cert",
-				"ttl":         "180h",
+				"common_name":         "Root Cert",
+				"ttl":                 "180h",
 				"not_before_duration": "3h",
 			},
 			Check: func(resp *logical.Response) error {
@@ -2266,8 +2266,8 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 
 	// generate root
 	rootData := map[string]interface{}{
-		"common_name": "test.com",
-		"not_after":   "9999-12-31T23:59:59Z",
+		"common_name":         "test.com",
+		"not_after":           "9999-12-31T23:59:59Z",
 		"not_before_duration": "3h",
 	}
 
