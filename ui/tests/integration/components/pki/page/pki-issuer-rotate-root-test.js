@@ -9,12 +9,11 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 import { hbs } from 'ember-cli-htmlbars';
-import camelizeKeys from 'vault/utils/camelize-object-keys';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
-import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/pki/pki-selectors';
+import { PKI_CONFIGURE_CREATE, PKI_CONFIG_EDIT } from 'vault/tests/helpers/pki/pki-selectors';
 
 const SELECTORS = {
   nextSteps: '[data-test-rotate-next-steps]',
@@ -41,25 +40,23 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     this.store = this.owner.lookup('service:store');
     this.backend = 'test-pki';
     this.owner.lookup('service:secret-mount-path').update(this.backend);
+    this.api = this.owner.lookup('service:api');
+
     this.onCancel = sinon.spy();
     this.onComplete = sinon.spy();
+    this.rotateStub = sinon.stub(this.api.secrets, 'pkiRotateRoot').resolves();
+
     this.breadcrumbs = [{ label: 'rotate root' }];
     this.oldRootData = {
       certificate: loadedCert,
       issuer_id: 'old-issuer-id',
       issuer_name: 'old-issuer',
     };
-    this.parsedRootCert = camelizeKeys(parseCertificate(loadedCert));
     this.store.pushPayload('pki/issuer', { modelName: 'pki/issuer', data: this.oldRootData });
     this.oldRoot = this.store.peekRecord('pki/issuer', 'old-issuer-id');
-    this.newRootModel = this.store.createRecord('pki/action', {
-      actionType: 'rotate-root',
-      type: 'internal',
-      ...this.parsedRootCert, // copy old root settings over to new one
-    });
+    this.certData = parseCertificate(loadedCert);
 
     this.returnedData = {
-      id: 'response-id',
       certificate: loadedCert,
       expiration: 1682735724,
       issuer_id: 'some-issuer-id',
@@ -69,6 +66,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       key_name: 'my-key',
       serial_number: '3a:3c:17:..',
     };
+
     setRunOptions({
       rules: {
         // TODO: fix RadioCard component (replace with HDS)
@@ -76,30 +74,43 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
         'nested-interactive': { enabled: false },
       },
     });
+
+    this.renderComponent = () =>
+      render(
+        hbs`
+          <Page::PkiIssuerRotateRoot
+            @oldRoot={{this.oldRoot}}
+            @certData={{this.certData}}
+            @parsingErrors={{this.parsingErrors}}
+            @breadcrumbs={{this.breadcrumbs}}
+            @onCancel={{this.onCancel}}
+            @onComplete={{this.onComplete}}
+          />
+      `,
+        { owner: this.engine }
+      );
+
+    this.customizeAndSubmit = async () => {
+      await click(SELECTORS.customRadioSelect);
+      await fillIn(GENERAL.inputByAttr('type'), 'exported');
+      await fillIn(GENERAL.inputByAttr('common_name'), 'foo');
+      await click(GENERAL.submitButton);
+    };
   });
 
   test('it renders', async function (assert) {
     assert.expect(17);
-    await render(
-      hbs`
-      <Page::PkiIssuerRotateRoot
-        @oldRoot={{this.oldRoot}}
-        @newRootModel={{this.newRootModel}}
-        @breadcrumbs={{this.breadcrumbs}}
-        @onCancel={{this.onCancel}}
-        @onComplete={{this.onComplete}}
-      />
-    `,
-      { owner: this.engine }
-    );
+
+    await this.renderComponent();
+
     assert.dom(GENERAL.title).hasText('Generate New Root');
     assert.dom(SELECTORS.oldRadioSelect).isChecked('defaults to use-old-settings');
     assert.dom(SELECTORS.rotateRootForm).exists('it renders old settings form');
     assert
-      .dom(GENERAL.inputByAttr('commonName'))
-      .hasValue(this.parsedRootCert.commonName, 'common name prefilled with root cert cn');
+      .dom(GENERAL.inputByAttr('common_name'))
+      .hasValue(this.certData.common_name, 'common name prefilled with root cert cn');
     assert.dom(SELECTORS.toggle).hasText('Old root settings', 'toggle renders correct text');
-    assert.dom(GENERAL.inputByAttr('issuerName')).exists('renders issuer name input');
+    assert.dom(GENERAL.inputByAttr('issuer_name')).exists('renders issuer name input');
     assert.strictEqual(findAll('[data-test-row-label]').length, 0, 'it hides the old root info table rows');
     await click(SELECTORS.toggle);
     assert.strictEqual(findAll('[data-test-row-label]').length, 19, 'it shows the old root info table rows');
@@ -113,8 +124,11 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     await click(SELECTORS.customRadioSelect);
     assert.dom(SELECTORS.generateRootForm).exists('it renders generate root form');
     assert
-      .dom(GENERAL.inputByAttr('permittedDnsDomains'))
-      .hasValue(this.parsedRootCert.permittedDnsDomains, 'form is prefilled with values from old root');
+      .dom(PKI_CONFIG_EDIT.stringListInput('permitted_dns_domains', 0))
+      .hasValue(
+        this.certData.permitted_dns_domains.split(',')[0],
+        'form is prefilled with values from old root'
+      );
     await click(GENERAL.cancelButton);
     assert.ok(this.onCancel.calledOnce, 'custom form calls @onCancel passed from parent');
     await click(SELECTORS.oldRadioSelect);
@@ -122,85 +136,55 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     assert.ok(this.onCancel.calledTwice, 'old root settings form calls @onCancel from parent');
 
     // validations
-    await fillIn(GENERAL.inputByAttr('commonName'), '');
-    await fillIn(GENERAL.inputByAttr('issuerName'), 'default');
+    await fillIn(GENERAL.inputByAttr('common_name'), '');
+    await fillIn(GENERAL.inputByAttr('issuer_name'), 'default');
     await click(GENERAL.submitButton);
     assert.dom(SELECTORS.validationError).hasText('There are 2 errors with this form.');
-    assert.dom(GENERAL.validationErrorByAttr('commonName')).exists();
-    assert.dom(GENERAL.validationErrorByAttr('issuerName')).exists();
+    assert.dom(GENERAL.validationErrorByAttr('common_name')).exists();
+    assert.dom(GENERAL.validationErrorByAttr('issuer_name')).exists();
   });
 
   test('it sends request to rotate/internal on save when using old root settings', async function (assert) {
     assert.expect(1);
-    this.server.post(`/${this.backend}/root/rotate/internal`, () => {
-      assert.ok('request made to correct default endpoint type=internal');
-    });
-    await render(
-      hbs`
-      <Page::PkiIssuerRotateRoot
-        @oldRoot={{this.oldRoot}}
-        @newRootModel={{this.newRootModel}}
-        @breadcrumbs={{this.breadcrumbs}}
-        @onCancel={{this.onCancel}}
-        @onComplete={{this.onComplete}}
-      />
-    `,
-      { owner: this.engine }
-    );
+
+    await this.renderComponent();
+
     await click(GENERAL.submitButton);
+
+    assert.true(
+      this.rotateStub.calledWith('internal', this.backend),
+      'rotateStub called with correct params'
+    );
   });
 
-  function testEndpoint(test, type) {
-    test(`it sends request to rotate/${type} endpoint on save with custom root settings`, async function (assert) {
+  test.each(
+    `it sends request to rotate with correct type on save with custom root settings`,
+    ['internal', 'exported', 'existing', 'kms'],
+    async function (assert, type) {
       assert.expect(1);
-      this.server.post(`/${this.backend}/root/rotate/${type}`, () => {
-        assert.ok('request is made to correct endpoint');
-      });
-      await render(
-        hbs`
-      <Page::PkiIssuerRotateRoot
-        @oldRoot={{this.oldRoot}}
-        @newRootModel={{this.newRootModel}}
-        @breadcrumbs={{this.breadcrumbs}}
-        @onCancel={{this.onCancel}}
-        @onComplete={{this.onComplete}}
-      />
-    `,
-        { owner: this.engine }
-      );
+
+      await this.renderComponent();
+
       await click(SELECTORS.customRadioSelect);
       await fillIn(GENERAL.inputByAttr('type'), type);
       await click(GENERAL.submitButton);
-    });
-  }
-  testEndpoint(test, 'internal');
-  testEndpoint(test, 'exported');
-  testEndpoint(test, 'existing');
-  testEndpoint(test, 'kms');
+
+      assert.true(this.rotateStub.calledWith(type, this.backend), 'rotateStub called with correct params');
+    }
+  );
 
   test('it renders details after save for exported key type', async function (assert) {
     assert.expect(10);
-    const keyData = {
+
+    this.rotateStub.resolves({
+      ...this.returnedData,
       private_key: `-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEAtc9yU`,
       private_key_type: 'rsa',
-    };
-    this.store.pushPayload('pki/action', {
-      modelName: 'pki/action',
-      data: { ...this.returnedData, ...keyData },
     });
-    this.newRootModel = this.store.peekRecord('pki/action', 'response-id');
-    await render(
-      hbs`
-        <Page::PkiIssuerRotateRoot
-          @oldRoot={{this.oldRoot}}
-          @newRootModel={{this.newRootModel}}
-          @breadcrumbs={{this.breadcrumbs}}
-          @onCancel={{this.onCancel}}
-          @onComplete={{this.onComplete}}
-        />
-      `,
-      { owner: this.engine }
-    );
+
+    await this.renderComponent();
+    await this.customizeAndSubmit();
+
     assert.dom(GENERAL.title).hasText('View Issuer Certificate');
     assert
       .dom(SELECTORS.nextSteps)
@@ -216,28 +200,17 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     assert.dom(GENERAL.infoRowValue('Key ID')).hasText(this.returnedData.key_id);
 
     await click(PKI_CONFIGURE_CREATE.doneButton);
-    assert.ok(this.onComplete.calledOnce, 'clicking done fires @onComplete from parent');
+    assert.true(this.onComplete.calledOnce, 'clicking done fires @onComplete from parent');
   });
 
   test('it renders details after save for internal key type', async function (assert) {
     assert.expect(13);
-    this.store.pushPayload('pki/action', {
-      modelName: 'pki/action',
-      data: this.returnedData,
-    });
-    this.newRootModel = this.store.peekRecord('pki/action', 'response-id');
-    await render(
-      hbs`
-        <Page::PkiIssuerRotateRoot
-          @oldRoot={{this.oldRoot}}
-          @newRootModel={{this.newRootModel}}
-          @breadcrumbs={{this.breadcrumbs}}
-          @onCancel={{this.onCancel}}
-          @onComplete={{this.onComplete}}
-        />
-      `,
-      { owner: this.engine }
-    );
+
+    this.rotateStub.resolves(this.returnedData);
+
+    await this.renderComponent();
+    await this.customizeAndSubmit();
+
     assert.dom(GENERAL.title).hasText('View Issuer Certificate');
     assert.dom(SELECTORS.toolbarCrossSign).exists();
     assert.dom(SELECTORS.toolbarSignInt).exists();

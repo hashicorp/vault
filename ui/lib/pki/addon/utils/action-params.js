@@ -9,13 +9,13 @@
  * @returns array of valid key-related attribute names (camelCase). NOTE: Key params are not used on all action endpoints
  */
 export function keyParamsByType(type) {
-  let fields = ['keyName', 'keyType', 'keyBits'];
+  let fields = ['key_name', 'key_type', 'key_bits'];
   if (type === 'existing') {
-    fields = ['keyRef'];
+    fields = ['key_ref'];
   } else if (type === 'kms') {
-    fields = ['keyName', 'managedKeyName', 'managedKeyId'];
+    fields = ['key_name', 'managed_key_name', 'managed_key_id'];
   } else if (type === 'exported') {
-    fields = [...fields, 'privateKeyFormat'];
+    fields = [...fields, 'private_key_format'];
   }
   return fields;
 }

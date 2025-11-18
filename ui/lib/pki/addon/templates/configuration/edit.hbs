@@ -16,9 +16,10 @@
 </PageHeader>
 
 <Page::PkiConfigurationEdit
-  @acme={{this.model.acme}}
-  @cluster={{this.model.cluster}}
-  @urls={{this.model.urls}}
-  @crl={{this.model.crl}}
-  @backend={{this.model.engineId}}
+  @acmeForm={{this.model.acmeForm}}
+  @clusterForm={{this.model.clusterForm}}
+  @urlsForm={{this.model.urlsForm}}
+  @crlForm={{this.model.crlForm}}
+  @backend={{this.model.engine.id}}
+  @capabilities={{this.model.capabilities}}
 />

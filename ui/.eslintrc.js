@@ -39,6 +39,7 @@ module.exports = {
     'ember/no-actions-hash': 'off',
     'ember/require-tagless-components': 'off',
     'ember/no-component-lifecycle-hooks': 'off',
+    '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
   },
   overrides: [
     // node files

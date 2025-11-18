@@ -25,6 +25,14 @@ export function clearRecords(store: Store) {
   store.unloadAll('capabilities');
 }
 
+export const configCapabilities = {
+  canImportBundle: true,
+  canSetAcme: true,
+  canSetCluster: true,
+  canSetCrl: true,
+  canSetUrls: true,
+};
+
 /**
  * The following are certificate values used for testing. They are exported under the CERTIFICATES object.
  */

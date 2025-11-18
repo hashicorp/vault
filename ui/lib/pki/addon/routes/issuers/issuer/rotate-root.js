@@ -7,10 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
-import camelizeKeys from 'vault/utils/camelize-object-keys';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-@withConfirmLeave('model.newRootModel')
 export default class PkiIssuerRotateRootRoute extends Route {
   @service secretMountPath;
   @service store;
@@ -23,14 +20,9 @@ export default class PkiIssuerRotateRootRoute extends Route {
       const errorMessage = certData.parsing_errors.map((e) => e.message).join(', ');
       parsingErrors = errorMessage;
     }
-    const newRootModel = this.store.createRecord('pki/action', {
-      actionType: 'rotate-root',
-      type: 'internal',
-      ...camelizeKeys(certData), // copy old root settings over to new one
-    });
     return hash({
       oldRoot,
-      newRootModel,
+      certData,
       parsingErrors,
       backend: this.secretMountPath.currentPath,
     });

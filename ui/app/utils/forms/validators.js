@@ -63,6 +63,9 @@ export const isNonString = (value) => {
   }
 };
 
+// returns true if the value is NOT equal to the comparison value
+export const isNot = (value, { value: comparisonValue }) => value !== comparisonValue;
+
 export const WHITESPACE_WARNING = (item) =>
   `${capitalize(
     item
@@ -79,6 +82,7 @@ export default {
   endsInSlash,
   isNonString,
   hasWhitespace,
+  isNot,
   WHITESPACE_WARNING,
   NON_STRING_WARNING,
 };

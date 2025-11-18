@@ -491,7 +491,7 @@ module('Acceptance | pki workflow', function (hooks) {
         'it navigates to root rotate form'
       );
       assert
-        .dom('[data-test-input="commonName"]')
+        .dom('[data-test-input="common_name"]')
         .hasValue('Hashicorp Test', 'form prefilled with parent issuer cn');
     });
   });
@@ -520,8 +520,8 @@ module('Acceptance | pki workflow', function (hooks) {
           'Not all of the certificate values can be parsed and transferred to a new root',
           'it renders warning banner'
         );
-      assert.dom('[data-test-input="commonName"]').hasValue('fancy-cert-unsupported-subj-and-ext-oids');
-      await fillIn('[data-test-input="issuerName"]', 'existing-issuer');
+      assert.dom('[data-test-input="common_name"]').hasValue('fancy-cert-unsupported-subj-and-ext-oids');
+      await fillIn('[data-test-input="issuer_name"]', 'existing-issuer');
       await click(GENERAL.submitButton);
       assert
         .dom('[data-test-rotate-error]')
