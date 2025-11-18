@@ -4,9 +4,8 @@
  */
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, findAll, render } from '@ember/test-helpers';
+import { click, fillIn, render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 import { hbs } from 'ember-cli-htmlbars';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
@@ -34,10 +33,8 @@ const { loadedCert } = CERTIFICATES;
 module('Integration | Component | page/pki-issuer-rotate-root', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
-  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
     this.backend = 'test-pki';
     this.owner.lookup('service:secret-mount-path').update(this.backend);
     this.api = this.owner.lookup('service:api');
@@ -47,13 +44,11 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     this.rotateStub = sinon.stub(this.api.secrets, 'pkiRotateRoot').resolves();
 
     this.breadcrumbs = [{ label: 'rotate root' }];
-    this.oldRootData = {
+    this.oldRoot = {
       certificate: loadedCert,
       issuer_id: 'old-issuer-id',
       issuer_name: 'old-issuer',
     };
-    this.store.pushPayload('pki/issuer', { modelName: 'pki/issuer', data: this.oldRootData });
-    this.oldRoot = this.store.peekRecord('pki/issuer', 'old-issuer-id');
     this.certData = parseCertificate(loadedCert);
 
     this.returnedData = {
@@ -111,14 +106,15 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       .hasValue(this.certData.common_name, 'common name prefilled with root cert cn');
     assert.dom(SELECTORS.toggle).hasText('Old root settings', 'toggle renders correct text');
     assert.dom(GENERAL.inputByAttr('issuer_name')).exists('renders issuer name input');
-    assert.strictEqual(findAll('[data-test-row-label]').length, 0, 'it hides the old root info table rows');
+    assert.dom('[data-test-row-label]').doesNotExist('it hides the old root info table rows');
     await click(SELECTORS.toggle);
-    assert.strictEqual(findAll('[data-test-row-label]').length, 19, 'it shows the old root info table rows');
+
+    assert.dom('[data-test-row-label]').exists({ count: 3 }, 'it shows the old root info table rows');
     assert
       .dom(GENERAL.infoRowValue('Issuer name'))
-      .hasText(this.oldRoot.issuerName, 'renders correct issuer data');
+      .hasText(this.oldRoot.issuer_name, 'renders correct issuer data');
     await click(SELECTORS.toggle);
-    assert.strictEqual(findAll('[data-test-row-label]').length, 0, 'it hides again');
+    assert.dom('[data-test-row-label]').doesNotExist('it hides again');
 
     // customize form
     await click(SELECTORS.customRadioSelect);

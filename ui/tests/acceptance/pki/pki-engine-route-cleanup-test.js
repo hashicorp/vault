@@ -14,7 +14,6 @@ import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import {
   PKI_CONFIGURE_CREATE,
-  PKI_ISSUER_DETAILS,
   PKI_ISSUER_LIST,
   PKI_KEYS,
   PKI_ROLE_DETAILS,
@@ -173,33 +172,6 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
       issuers = this.store.peekAll('pki/action');
       assert.strictEqual(issuers.length, 0, 'Issuer is removed from store');
-    });
-    test('edit issuer exit', async function (assert) {
-      let issuers, issuer;
-      await login();
-      await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
-      await click(`${GENERAL.emptyStateActions} a`);
-      await click(PKI_CONFIGURE_CREATE.optionByKey('generate-root'));
-      await fillIn(GENERAL.inputByAttr('type'), 'internal');
-      await fillIn(GENERAL.inputByAttr('common_name'), 'my-root-cert');
-      await click(GENERAL.submitButton);
-      // Go to list view so we fetch all the issuers
-      await visit(`/vault/secrets-engines/${this.mountPath}/pki/issuers`);
-
-      issuers = this.store.peekAll('pki/issuer');
-      const issuerId = issuers.at(0).id;
-      assert.strictEqual(issuers.length, 1, 'Issuer exists on model in list');
-      await visit(`/vault/secrets-engines/${this.mountPath}/pki/issuers/${issuerId}/details`);
-      await click(PKI_ISSUER_DETAILS.configure);
-      issuer = this.store.peekRecord('pki/issuer', issuerId);
-      assert.false(issuer.hasDirtyAttributes, 'Model not dirty');
-      await fillIn('[data-test-input="issuerName"]', 'foobar');
-      assert.true(issuer.hasDirtyAttributes, 'Model is dirty');
-      await click(OVERVIEW_BREADCRUMB);
-      issuers = this.store.peekAll('pki/issuer');
-      assert.strictEqual(issuers.length, 1, 'Issuer exists on model in overview');
-      issuer = this.store.peekRecord('pki/issuer', issuerId);
-      assert.false(issuer.hasDirtyAttributes, 'Dirty attrs were rolled back');
     });
   });
 

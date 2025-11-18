@@ -78,7 +78,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
       'common_name',
       'exclude_cn_from_sans',
       'format',
-      'subject_serial_number',
+      'serial_number',
       'add_basic_constraints',
     ];
     fields.forEach((key) => {

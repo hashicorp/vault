@@ -67,7 +67,7 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
 
     const fields = [
       'exclude_cn_from_sans',
-      'subject_serial_number',
+      'serial_number',
       'alt_names',
       'ip_sans',
       'uri_sans',

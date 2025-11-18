@@ -20,7 +20,7 @@
       <ToolbarLink
         @route="issuers.issuer.cross-sign"
         @type="pen-tool"
-        @models={{array this.secretMountPath.currentPath this.newRoot.issuer_id}}
+        @model={{this.newRoot.issuer_id}}
         data-test-pki-issuer-cross-sign
       >
         Cross-sign issuers
@@ -28,7 +28,7 @@
       <ToolbarLink
         @route="issuers.issuer.sign"
         @type="pen-tool"
-        @models={{array this.secretMountPath.currentPath this.newRoot.issuer_id}}
+        @model={{this.newRoot.issuer_id}}
         data-test-pki-issuer-sign-int
       >
         Sign Intermediate
@@ -78,18 +78,12 @@
           </nav>
         </D.Content>
       </BasicDropdown>
-      <ToolbarLink
-        @route="issuers.issuer.edit"
-        @models={{array this.secretMountPath.currentPath this.newRoot.issuer_id}}
-        data-test-pki-issuer-configure
-      >
+      <ToolbarLink @route="issuers.issuer.edit" @model={{this.newRoot.issuer_id}} data-test-pki-issuer-configure>
         Configure
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
-{{/if}}
 
-{{#if this.newRoot}}
   <div class="has-top-margin-m">
     <Hds::Alert data-test-rotate-next-steps @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
       <A.Title>Next steps</A.Title>
@@ -132,7 +126,7 @@
 
 {{#if (eq this.displayedForm "use-old-settings")}}
   {{#if this.newRoot}}
-    <PkiInfoTableRows @model={{this.newRoot}} @displayFields={{this.displayFields}} />
+    <PkiInfoTableRows @model={{this.newRoot}} @displayFields={{this.displayFields}} @label={{this.label}} />
     <ParsedCertificateInfoRows @model={{this.newParsedCertificate}} />
     <div class="field is-grouped is-fullwidth has-top-margin-l has-bottom-margin-s">
       <Hds::Button @text="Done" {{on "click" @onComplete}} data-test-done />
@@ -169,7 +163,7 @@
           @onClick={{fn (mut this.showOldSettings)}}
         />
         {{#if this.showOldSettings}}
-          <PkiInfoTableRows @model={{@oldRoot}} @displayFields={{this.displayFields}} />
+          <PkiInfoTableRows @model={{@oldRoot}} @displayFields={{this.displayFields}} @label={{this.label}} />
           <ParsedCertificateInfoRows @model={{@oldRoot.parsedCertificate}} />
         {{/if}}
       </div>

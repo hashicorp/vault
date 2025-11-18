@@ -5,19 +5,19 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import PkiIssuerForm from 'vault/forms/secrets/pki/issuers/issuer';
 
-@withConfirmLeave()
 export default class PkiIssuerEditRoute extends Route {
-  @service store;
+  @service api;
   @service secretMountPath;
 
-  model() {
+  async model() {
     const { issuer_ref } = this.paramsFor('issuers/issuer');
-    return this.store.queryRecord('pki/issuer', {
-      backend: this.secretMountPath.currentPath,
-      id: issuer_ref,
-    });
+    const issuer = await this.api.secrets.pkiReadIssuer(issuer_ref, this.secretMountPath.currentPath);
+    return {
+      form: new PkiIssuerForm(issuer),
+      issuerRef: issuer_ref,
+    };
   }
 
   setupController(controller, resolvedModel) {
@@ -27,9 +27,9 @@ export default class PkiIssuerEditRoute extends Route {
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
       { label: 'Issuers', route: 'issuers.index', model: this.secretMountPath.currentPath },
       {
-        label: resolvedModel.id,
+        label: resolvedModel.issuerRef,
         route: 'issuers.issuer.details',
-        models: [this.secretMountPath.currentPath, resolvedModel.id],
+        models: [this.secretMountPath.currentPath, resolvedModel.issuerRef],
       },
       { label: 'Update' },
     ];

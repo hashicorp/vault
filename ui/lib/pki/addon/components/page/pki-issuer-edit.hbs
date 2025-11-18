@@ -6,53 +6,57 @@
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.error}} />
-    {{#each @model.formFields as |field|}}
-      {{#if (eq field.name "issuingCertificates")}}
-        <div class="has-top-margin-m has-bottom-margin-s">
-          <h2 class="title is-4">
-            Issuer URLs
-          </h2>
-        </div>
-      {{/if}}
-      <FormField @attr={{field}} @model={{@model}}>
-        {{#if (eq field.name "usage")}}
-          {{#each field.options.valueOptions as |option|}}
-            <div class="is-flex-center has-text-grey has-text-weight-bold">
-              <Input
-                data-test-usage={{option.label}}
-                id={{option.value}}
-                @type="checkbox"
-                @checked={{includes option.value this.usageValues}}
-                {{on "change" (fn this.setUsage option.value)}}
-              />
-              <label for={{option.value}} class="has-left-margin-s">{{option.label}}</label>
-            </div>
-          {{/each}}
-        {{else if (eq field.name "leafNotAfterBehavior")}}
-          <div class="control is-expanded">
-            <div class="select is-fullwidth">
-              <select
-                name={{field.name}}
-                id={{field.name}}
-                {{on "change" (pipe (pick "target.value") (fn (mut @model.leafNotAfterBehavior)))}}
-                onchange={{this.onChangeWithEvent}}
-              >
-                {{#each field.options.valueOptions as |value|}}
-                  <option selected={{eq @model.leafNotAfterBehavior value}} value={{value}}>
-                    {{#if (eq value "always_enforce_err")}}
-                      Error if the computed NotAfter exceeds that of this issuer in all circumstances (leaf, CA issuance and
-                      ACME)
-                    {{else}}
-                      {{capitalize (if (eq value "err") "error" value)}}
-                      if the computed NotAfter exceeds that of this issuer
-                    {{/if}}
-                  </option>
-                {{/each}}
-              </select>
-            </div>
+
+    {{#each this.fields as |field|}}
+      {{#let (find-by "name" field @form.formFields) as |formField|}}
+        {{#if (eq field "issuing_certificates")}}
+          <div class="has-top-margin-m has-bottom-margin-s">
+            <h2 class="title is-4">
+              Issuer URLs
+            </h2>
           </div>
         {{/if}}
-      </FormField>
+
+        <FormField @attr={{formField}} @model={{@form}}>
+          {{#if (eq field "usage")}}
+            {{#each this.usageOptions as |option|}}
+              <div class="is-flex-center has-text-grey has-text-weight-bold">
+                <Input
+                  data-test-usage={{option.label}}
+                  id={{option.value}}
+                  @type="checkbox"
+                  @checked={{includes option.value this.usageValues}}
+                  {{on "change" (fn this.setUsage option.value)}}
+                />
+                <label for={{option.value}} class="has-left-margin-s">{{option.label}}</label>
+              </div>
+            {{/each}}
+          {{else if (eq field "leaf_not_after_behavior")}}
+            <div class="control is-expanded">
+              <div class="select is-fullwidth">
+                <select
+                  name={{field}}
+                  id={{field}}
+                  {{on "change" (pipe (pick "target.value") (fn (mut @form.data.leaf_not_after_behavior)))}}
+                  onchange={{this.onChangeWithEvent}}
+                >
+                  {{#each this.notAfterOptions as |value|}}
+                    <option selected={{eq @form.data.leaf_not_after_behavior value}} value={{value}}>
+                      {{#if (eq value "always_enforce_err")}}
+                        Error if the computed NotAfter exceeds that of this issuer in all circumstances (leaf, CA issuance
+                        and ACME)
+                      {{else}}
+                        {{capitalize (if (eq value "err") "error" value)}}
+                        if the computed NotAfter exceeds that of this issuer
+                      {{/if}}
+                    </option>
+                  {{/each}}
+                </select>
+              </div>
+            </div>
+          {{/if}}
+        </FormField>
+      {{/let}}
     {{/each}}
   </div>
   <Hds::ButtonSet class="has-top-margin-l has-bottom-margin-l">
@@ -67,7 +71,7 @@
       @text="Cancel"
       @color="secondary"
       disabled={{this.save.isRunning}}
-      {{on "click" this.cancel}}
+      {{on "click" this.toDetails}}
       data-test-cancel
     />
   </Hds::ButtonSet>

@@ -9,9 +9,9 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { waitFor } from '@ember/test-waiters';
 import { task } from 'ember-concurrency';
-import { underscore, capitalize } from '@ember/string';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import PkiConfigGenerateForm from 'vault/forms/secrets/pki/config/generate';
+import { toLabel } from 'core/helpers/to-label';
 
 import type RouterService from '@ember/routing/router';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -59,40 +59,46 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
     { isNew: true }
   );
 
-  get generateOptions() {
-    return [
+  generateOptions = [
+    {
+      key: RADIO_BUTTON_KEY.oldSettings,
+      icon: 'certificate',
+      label: 'Use old root settings',
+      description: `Provide only a new common name and issuer name, using the old root’s settings. Selecting this option generates a root with Vault-internal key material.`,
+    },
+    {
+      key: RADIO_BUTTON_KEY.customizeNew,
+      icon: 'award',
+      label: 'Customize new root certificate',
+      description:
+        'Generates a new self-signed CA certificate and private key. This generated root will sign its own CRL.',
+    },
+  ];
+
+  label = (field: string) => {
+    return (
       {
-        key: RADIO_BUTTON_KEY.oldSettings,
-        icon: 'certificate',
-        label: 'Use old root settings',
-        description: `Provide only a new common name and issuer name, using the old root’s settings. Selecting this option generates a root with Vault-internal key material.`,
-      },
-      {
-        key: RADIO_BUTTON_KEY.customizeNew,
-        icon: 'award',
-        label: 'Customize new root certificate',
-        description:
-          'Generates a new self-signed CA certificate and private key. This generated root will sign its own CRL.',
-      },
-    ];
-  }
+        ca_chain: 'CA Chain',
+        issuer_id: 'Issuer ID',
+        key_id: 'Default key ID',
+      }[field] || toLabel([field])
+    );
+  };
 
   // for displaying old root details, and generated root details
   get displayFields() {
-    const addKeyFields = ['privateKey', 'privateKeyType'];
+    const addKeyFields = ['private_key', 'private_key_type'];
     const defaultFields = [
       'certificate',
-      'caChain',
-      'issuerId',
-      'issuerName',
-      'issuingCa',
-      'keyName',
-      'keyId',
-      'serialNumber',
+      'ca_chain',
+      'issuer_id',
+      'issuer_name',
+      'issuing_ca',
+      'key_name',
+      'key_id',
+      'serial_number',
     ];
-    return this.newRoot
-      ? [...defaultFields, ...addKeyFields].map((field) => underscore(field))
-      : defaultFields;
+    return this.newRoot ? [...defaultFields, ...addKeyFields] : defaultFields;
   }
 
   get newParsedCertificate() {
@@ -106,7 +112,7 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
       if (isValid) {
         const { type } = this.newRootForm.data;
         try {
-          await this.api.secrets.pkiRotateRoot(
+          this.newRoot = await this.api.secrets.pkiRotateRoot(
             type as PkiRotateRootExportedEnum,
             this.secretMountPath.currentPath,
             data as PkiRotateRootRequest
@@ -125,10 +131,14 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   );
 
   @action
-  fetchDataForDownload(format: 'der' | 'pem') {
-    const apiKey = `pkiReadIssuer${capitalize(format)}` as 'pkiReadIssuerDer' | 'pkiReadIssuerPem';
-    return this.api.secrets[apiKey](this.newRoot.issuer_id || '', this.secretMountPath.currentPath).catch(
-      () => null
-    );
+  async fetchDataForDownload(format: 'der' | 'pem') {
+    try {
+      const path = `/${this.secretMountPath.currentPath}/issuer/${this.newRoot.issuer_id}/${format}`;
+      const response = await this.api.request.get(path);
+      const body = format === 'der' ? 'blob' : 'text';
+      return response[body]();
+    } catch (e) {
+      return null;
+    }
   }
 }
