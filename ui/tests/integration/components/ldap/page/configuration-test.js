@@ -80,7 +80,6 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
       .dom(selectors.rotateAction)
       .doesNotExist('Rotate root action is hidden when engine is not configured');
     assert.dom(selectors.configAction).hasText('Configure LDAP', 'Toolbar action has correct text');
-    assert.dom(selectors.mountConfig).exists('Mount config renders');
   });
 
   test('it should render config fetch error', async function (assert) {

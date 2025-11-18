@@ -13,7 +13,11 @@
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
     </:breadcrumbs>
     <:tabs>
-      <SecretEngine::ConfigureTabs @config={{@model.config}} @secretsEngine={{@model.secretsEngine}} />
+      <SecretEngine::ConfigureTabs
+        @engineMetadata={{engineDisplayData}}
+        @isConfigured={{not (is-empty-value @model.config)}}
+        @path={{@model.secretsEngine.id}}
+      />
     </:tabs>
   </Page::Header>
 {{/let}}

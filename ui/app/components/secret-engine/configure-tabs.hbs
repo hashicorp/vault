@@ -3,20 +3,21 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#let (engines-display-data @secretsEngine.type) as |engineDisplayData|}}
-  <nav class="tabs" aria-label={{get engineDisplayData "displayName"}}>
-    <ul>
-      <li data-test-tab="general-settings">
-        <LinkTo @route="vault.cluster.secrets.backend.configuration.general-settings" @model={{@secretsEngine.id}}>
-          General settings
-        </LinkTo>
-      </li>
+<nav class="tabs" aria-label={{@engineMetadata.displayName}}>
+  <ul>
+    <li data-test-tab="general-settings">
+      <LinkTo @route="{{this.routePrefix}}configuration.general-settings" @model={{@path}}>
+        General settings
+      </LinkTo>
+    </li>
+    {{! If there are not engine-specific settings do not render this tab }}
+    {{#if @engineMetadata.isConfigurable}}
       <li data-test-tab="plugin-settings">
-        <LinkTo @route={{this.pluginSettingsRoute}} @model={{@secretsEngine.id}}>
-          {{get engineDisplayData "displayName"}}
+        <LinkTo @route={{this.pluginSettingsRoute}} @model={{@path}}>
+          {{@engineMetadata.displayName}}
           settings
         </LinkTo>
       </li>
-    </ul>
-  </nav>
-{{/let}}
+    {{/if}}
+  </ul>
+</nav>

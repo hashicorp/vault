@@ -2,7 +2,6 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-
 {{#let (engines-display-data @model.secretsEngine.type) as |engineDisplayData|}}
   <Page::Header
     @title="{{@model.secretsEngine.id}} configuration"
@@ -14,12 +13,28 @@
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
     </:breadcrumbs>
     <:tabs>
-      <SecretEngine::ConfigureTabs @config={{@model.config}} @secretsEngine={{@model.secretsEngine}} />
+      <SecretEngine::ConfigureTabs
+        @engineMetadata={{engineDisplayData}}
+        @isConfigured={{not (is-empty-value @model.config)}}
+        @path={{@model.secretsEngine.id}}
+      />
     </:tabs>
   </Page::Header>
 {{/let}}
 
 {{#if @model.config}}
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink
+        @route="vault.cluster.secrets.backend.configuration.edit"
+        @model={{this.model.secretsEngine.id}}
+        data-test-secret-backend-configure
+      >
+        Edit configuration
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+
   {{#each this.displayFields as |field|}}
     {{! public key while not sensitive when editing/creating, should be hidden by default on viewing }}
     {{#if (eq field "public_key")}}
@@ -54,7 +69,6 @@
         @model={{@id}}
       />
     </EmptyState>
-
   {{else}}
     <EmptyState
       data-test-no-config

@@ -16,6 +16,7 @@ import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import secretsNavTestHelper from 'vault/tests/acceptance/secrets/secrets-nav-test-helper';
 
 module('Acceptance | ldap | overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -32,6 +33,8 @@ module('Acceptance | ldap | overview', function (hooks) {
     };
     return login();
   });
+
+  secretsNavTestHelper(test, 'ldap');
 
   test('it should transition to ldap overview on mount success', async function (assert) {
     const backend = 'ldap-test-mount';

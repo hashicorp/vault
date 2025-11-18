@@ -14,6 +14,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SELECTORS } from 'vault/tests/helpers/secret-engine/general-settings-selectors';
 import { create } from 'ember-cli-page-object';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+import secretsNavTestHelper from 'vault/tests/acceptance/secrets/secrets-nav-test-helper';
 
 const consoleComponent = create(consoleClass);
 
@@ -23,6 +24,8 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
   hooks.beforeEach(function () {
     return login();
   });
+
+  secretsNavTestHelper(test, 'keymgmt');
 
   test('it should display keymgmt configuration and tune keymgmt in the general settings form', async function (assert) {
     await consoleComponent.runCommands([

@@ -19,6 +19,7 @@ export const GENERAL = {
 
   /* ────── Tabs & Navigation ────── */
   tab: (name: string) => `[data-test-tab="${name}"]`,
+  tabLink: (name: string) => `[data-test-tab="${name}"] a`,
   hdsTab: (name: string) => `[data-test-tab="${name}"] button`, // HDS tab buttons
   secretTab: (name: string) => `[data-test-secret-list-tab="${name}"]`,
   navLink: (label: string) =>

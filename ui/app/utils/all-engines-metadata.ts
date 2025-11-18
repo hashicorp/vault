@@ -30,12 +30,13 @@ export interface EngineDisplayData {
   mountCategory: string[];
   requiredFeature?: string; // flag for engines that require the ADP (Advanced Data Protection) feature. - https://www.hashicorp.com/en/blog/advanced-data-protection-adp-now-available-in-hcp-vault
   requiresEnterprise?: boolean;
-  isConfigurable?: boolean; // for secret engines that have their own configuration page and actions. - These engines do not exist in their own Ember engine.
+  isConfigurable?: boolean; // for secret engines that have additional configuration pages and actions.
   isOnlyMountable?: boolean; // The UI only supports configuration views for these secrets engines. The CLI must be used to manage other engine resources (i.e. roles, credentials).
   isOldEngine?: boolean; // flag for engine views, if set to true, the engine will show pre-existing page design, if not, then the new views will be used. This is temporary until all engines have been migrated to the new design.
   type: string;
   value?: string;
-  engineConfigureRoute?: string;
+  configReadRoute?: string; // override for custom route if not "configuration.plugin-settings" (used for Ember engines)
+  configEditRoute?: string; // override for custom route if not "configuration.edit" (used for Ember engines)
 }
 
 /**
@@ -212,10 +213,11 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   {
     pluginCategory: 'generic',
     displayName: 'LDAP',
+    isConfigurable: true,
     engineRoute: 'ldap.overview',
-    engineConfigureRoute: 'ldap.configure',
+    configEditRoute: 'ldap.configure',
+    configReadRoute: 'ldap.configuration',
     glyph: 'folder-users',
-    isOldEngine: true,
     mountCategory: ['auth', 'secret'],
     type: 'ldap',
   },

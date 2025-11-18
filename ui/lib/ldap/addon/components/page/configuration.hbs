@@ -43,9 +43,3 @@
 {{else if @model.configError}}
   <Page::Error @error={{@model.configError}} />
 {{/if}}
-
-<SecretsEngineMountConfig
-  @secretsEngine={{@model.backendModel}}
-  class="has-top-margin-xl has-bottom-margin-xl"
-  data-test-mount-config
-/>
