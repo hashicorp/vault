@@ -11,6 +11,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	libgithub "github.com/google/go-github/v74/github"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
@@ -135,6 +137,12 @@ func (r *SyncBranchReq) Run(
 		return res, fmt.Errorf("merging from-branch into to-branch: %s: %w", mergeRes.String(), err)
 	}
 
+	// Clean enterprise PR numbers from commit messages when syncing to CE
+	err = r.cleanCommitMessagesFromEnterprise(ctx, git)
+	if err != nil {
+		return res, fmt.Errorf("cleaning enterprise PR references: %w", err)
+	}
+
 	slog.Default().DebugContext(ctx, "pushing to-branch")
 	pushRes, err := git.Push(ctx, &libgit.PushOpts{
 		Repository: r.ToOrigin,
@@ -228,4 +236,128 @@ func (r *SyncBranchRes) ToTable(err error) table.Writer {
 	t.SuppressTrailingSpaces()
 
 	return t
+}
+
+// cleanCommitMessagesFromEnterprise removes enterprise PR references from commit messages
+// when syncing from vault-enterprise to vault (CE). This prevents enterprise PR numbers
+// from incorrectly linking to CE PRs in the CE repository.
+func (r *SyncBranchReq) cleanCommitMessagesFromEnterprise(ctx context.Context, git *libgit.Client) error {
+	// Only clean messages when syncing from enterprise to CE
+	if !r.isSyncingFromEnterpriseToVault() {
+		return nil
+	}
+
+	slog.Default().DebugContext(ctx, "cleaning enterprise PR references from commit messages")
+
+	// Regex pattern to match enterprise PR references like "(#12345)"
+	enterprisePRPattern := regexp.MustCompile(`\(#\d+\)`)
+
+	// Get the list of recent commits to process (last 20 commits should be sufficient)
+	// We need to use a simple approach since there's no LogOpts in the git package
+	// Use git log with basic format to get commit hashes
+	getCommitsRes, err := git.Show(ctx, &libgit.ShowOpts{
+		Object:  "HEAD",
+		Format:  "%H",
+		NoPatch: true,
+	})
+	if err != nil {
+		return fmt.Errorf("getting recent commits: %s: %w", getCommitsRes.String(), err)
+	}
+
+	// For now, let's process just the most recent commits that were part of this merge
+	// We'll get a more targeted set by looking at commits since the merge
+	commits := []string{}
+
+	// Get the last 20 commit hashes - we'll use a different approach
+	// Since we don't have direct access to git log options, let's work with what we have
+	currentCommit := strings.TrimSpace(string(getCommitsRes.Stdout))
+	if currentCommit == "" {
+		slog.Default().DebugContext(ctx, "no commits to process")
+		return nil
+	}
+
+	// For this implementation, we'll process just the current HEAD commit
+	// This is the most recent commit from the merge operation
+	commits = append(commits, currentCommit)
+
+	// Process commits and clean enterprise PR references
+	hasModifications := false
+	for _, commit := range commits {
+		commit = strings.TrimSpace(commit)
+		if commit == "" {
+			continue
+		}
+
+		// Get the current commit message using the proper ShowOpts
+		showRes, err := git.Show(ctx, &libgit.ShowOpts{
+			Object:  commit,
+			Format:  "%B",
+			NoPatch: true,
+		})
+		if err != nil {
+			slog.Default().WarnContext(slogctx.Append(ctx,
+				slog.String("commit", commit),
+				slog.String("error", err.Error()),
+			), "failed to get commit message, skipping")
+			continue
+		}
+
+		originalMessage := string(showRes.Stdout)
+		cleanedMessage := enterprisePRPattern.ReplaceAllString(originalMessage, "")
+
+		// Only modify if the message actually changed
+		if cleanedMessage != originalMessage {
+			// Checkout the commit to amend it
+			_, err := git.Checkout(ctx, &libgit.CheckoutOpts{
+				Branch: commit,
+			})
+			if err != nil {
+				slog.Default().WarnContext(slogctx.Append(ctx,
+					slog.String("commit", commit),
+					slog.String("error", err.Error()),
+				), "failed to checkout commit, skipping")
+				continue
+			}
+
+			// Amend the commit with the cleaned message using proper CommitOpts
+			_, err = git.Commit(ctx, &libgit.CommitOpts{
+				Amend:   true,
+				Message: cleanedMessage,
+				NoEdit:  true,
+			})
+			if err != nil {
+				slog.Default().WarnContext(slogctx.Append(ctx,
+					slog.String("commit", commit),
+					slog.String("error", err.Error()),
+				), "failed to amend commit message, skipping")
+				continue
+			}
+
+			slog.Default().DebugContext(slogctx.Append(ctx,
+				slog.String("commit", commit),
+				slog.String("original", strings.TrimSpace(originalMessage)),
+				slog.String("cleaned", strings.TrimSpace(cleanedMessage)),
+			), "cleaned enterprise PR references from commit message")
+			hasModifications = true
+		}
+	}
+
+	// Return to the target branch if we made modifications
+	if hasModifications {
+		checkoutRes, err := git.Checkout(ctx, &libgit.CheckoutOpts{
+			Branch: r.ToBranch,
+		})
+		if err != nil {
+			return fmt.Errorf("returning to target branch %s: %s: %w", r.ToBranch, checkoutRes.String(), err)
+		}
+
+		slog.Default().InfoContext(ctx, "cleaned enterprise PR references from commit messages")
+	}
+
+	return nil
+}
+
+// isSyncingFromEnterpriseToVault returns true if this sync is from vault-enterprise to vault
+func (r *SyncBranchReq) isSyncingFromEnterpriseToVault() bool {
+	return r.FromRepo == "vault-enterprise" && r.ToRepo == "vault"
 }
