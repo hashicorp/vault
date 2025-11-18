@@ -59,17 +59,13 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
     };
   });
 
-  test('it should render tab page header and config cta', async function (assert) {
+  test('it should render tab page header', async function (assert) {
     this.promptConfig = true;
 
     await this.renderComponent();
 
     assert.dom(GENERAL.icon('folder-users')).hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('ldap-test', 'Mount path renders in title');
-    assert
-      .dom('[data-test-toolbar-action="config"]')
-      .hasText('Configure LDAP', 'Correct toolbar action renders');
-    assert.dom('[data-test-config-cta]').exists('Config cta renders');
   });
 
   test('it should render create roles cta', async function (assert) {

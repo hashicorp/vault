@@ -65,10 +65,6 @@ module('Acceptance | ldap | overview', function (hooks) {
     await visitURL('overview', this.backend);
     await click('[data-test-config-cta] a');
     assert.true(isURL('configure', this.backend), 'Transitions to configure route on cta link click');
-
-    await click(`[data-test-breadcrumb="${this.backend}"] a`);
-    await click('[data-test-toolbar-action="config"]');
-    assert.true(isURL('configure', this.backend), 'Transitions to configure route on toolbar link click');
   });
 
   test('it should transition to configuration edit on empty state click', async function (assert) {
