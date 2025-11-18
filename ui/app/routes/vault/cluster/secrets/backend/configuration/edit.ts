@@ -82,6 +82,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
     const breadcrumbs = [
       { label: 'Secrets', route: 'vault.cluster.secrets' },
       { label: secretsEngine.id, route: 'vault.cluster.secrets.backend.list-root', model: secretsEngine.id },
+      { label: 'Configuration', route: 'vault.cluster.secrets.backend.configuration.plugin-settings' },
       { label: 'Configure' },
     ];
 
