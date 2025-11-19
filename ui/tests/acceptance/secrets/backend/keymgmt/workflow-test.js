@@ -77,10 +77,12 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     await fillIn(GENERAL.inputByAttr('default_lease_ttl'), 11);
     await fillIn(GENERAL.selectByAttr('default_lease_ttl'), 'm');
     await fillIn(GENERAL.textareaByAttr('description'), 'Updated awesome description.');
-    await click(GENERAL.breadcrumbAtIdx(0));
+    await click(GENERAL.breadcrumbAtIdx(1));
     assert.dom(GENERAL.modal.container('unsaved-changes')).exists('Unsaved changes exists');
     await click(GENERAL.button('save'));
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.configuration.general-settings');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list-root');
+    await visit(`/vault/secrets-engines/${keymgmtType}/configuration`);
+
     assert
       .dom(GENERAL.textareaByAttr('description'))
       .hasValue('Updated awesome description.', 'description was tuned from unsaved changes modal');
@@ -93,10 +95,12 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     await fillIn(GENERAL.inputByAttr('default_lease_ttl'), 12);
     await fillIn(GENERAL.selectByAttr('default_lease_ttl'), 'm');
     await fillIn(GENERAL.textareaByAttr('description'), 'Some awesome description.');
-    await click(GENERAL.breadcrumbAtIdx(0));
+    await click(GENERAL.breadcrumbAtIdx(1));
     assert.dom(GENERAL.modal.container('unsaved-changes')).exists('Unsaved changes exists');
     await click(GENERAL.button('discard'));
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.configuration.general-settings');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list-root');
+    await visit(`/vault/secrets-engines/${keymgmtType}/configuration`);
+
     assert
       .dom(GENERAL.textareaByAttr('description'))
       .hasValue(

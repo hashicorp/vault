@@ -48,7 +48,10 @@ export default class UnsavedChangesModal extends Component<Args> {
     }
 
     if (action === 'discard') {
-      this.unsavedChanges.changedFields = [];
+      // If a user has clicked "Discard" the models have already been compared
+      // and they do not want to save the changes.
+      // Update initialState so the transition does not re-abort.
+      this.unsavedChanges.resetUnsavedState();
       this.args.onDiscard();
     }
   }
