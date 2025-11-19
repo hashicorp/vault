@@ -1,0 +1,3 @@
+```release-note:improvement
+core (enterprise): Add common_criteria_mode feature_flags setting which limits listener TLS cipher suites.
+```
