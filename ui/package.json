@@ -241,5 +241,10 @@
     "node-notifier": "8.0.2",
     "uuid": "9.0.1"
   },
-  "packageManager": "yarn@3.5.0"
+  "packageManager": "yarn@3.5.0",
+  "scarfSettings": {
+    "defaultOptIn": false,
+    "enabled": false,
+    "skipTraversal": true
+  }
 }
