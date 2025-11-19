@@ -3,13 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Authentication Methods
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title="Authentication Methods">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 <Toolbar>
   <ToolbarFilters>

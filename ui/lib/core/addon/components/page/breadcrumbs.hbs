@@ -14,8 +14,8 @@
       @models={{breadcrumb.models}}
       @query={{breadcrumb.query}}
       @isRouteExternal={{breadcrumb.linkExternal}}
-      {{! only generate a link for crumbs with a route, otherwise assume it's the current view }}
-      @current={{not breadcrumb.route}}
+      {{! in case the 'current' param is absent, only generate a link for crumbs with a route}}
+      @current={{or breadcrumb.current (not breadcrumb.route)}}
     />
   {{/each}}
 </Hds::Breadcrumb>

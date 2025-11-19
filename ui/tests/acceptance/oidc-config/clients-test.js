@@ -355,7 +355,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
 
       await visit(OIDC_BASE_URL);
       assert.strictEqual(currentURL(), '/vault/access/oidc');
-      assert.dom('h1.title.is-3').hasText('OIDC Provider');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('OIDC Provider');
       assert.dom(SELECTORS.oidcHeader).hasText(
         `Configure Vault to act as an OIDC identity provider, and offer Vault’s various authentication
       methods and source of identity to any client applications. Learn more Create your first app`,
