@@ -45,7 +45,7 @@
     aria-label="general settings form"
     id="general-settings-form"
   >
-    <Hds::Text::Body class="has-top-bottom-margin-xxs">
+    <Hds::Text::Body @tag="p" class="has-top-margin-xs">
       Mount parameters that you can tune to fit required engine behavior.
     </Hds::Text::Body>
 
@@ -69,7 +69,12 @@
     <div class="field is-grouped has-top-bottom-margin">
       <Hds::ButtonSet>
         <Hds::Button @text="Save changes" type="submit" disabled={{this.saveGeneralSettings.isRunning}} data-test-submit />
-        <Hds::Button @text="Discard" @color="secondary" {{on "click" this.discardChanges}} data-test-cancel />
+        <Hds::Button
+          @text="Discard"
+          @color="secondary"
+          {{on "click" (fn this.unsavedChanges.transition "vault.cluster.secrets.backend.configuration.general-settings")}}
+          data-test-cancel
+        />
       </Hds::ButtonSet>
     </div>
   </form>
@@ -77,6 +82,6 @@
 
 <UnsavedChangesModal
   @onSave={{this.saveGeneralSettings}}
-  @onDiscard={{this.discardChanges}}
+  @onDiscard={{(fn this.unsavedChanges.transition "vault.cluster.secrets.backend.configuration.general-settings")}}
   @changedFields={{this.modalChangedFields}}
 />
