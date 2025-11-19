@@ -12,7 +12,9 @@
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </:breadcrumbs>
   <:actions>
-    {{#unless @configRoute}}
+    {{#if @configRoute}}
+      <Hds::Button @color="secondary" @route="overview" @text="Exit configuration" data-test-button="Exit configuration" />
+    {{else}}
       <Hds::Dropdown as |D|>
         <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
         <D.Interactive
@@ -28,7 +30,7 @@
           data-test-popup-menu="Delete"
         >Delete</D.Interactive>
       </Hds::Dropdown>
-    {{/unless}}
+    {{/if}}
   </:actions>
   <:tabs>
     <div class="tabs-container box is-marginless is-fullwidth is-paddingless">
