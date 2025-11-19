@@ -140,7 +140,7 @@ require (
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.22.0
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.22.1-0.20251101002005-889b4a88804d
 	github.com/hashicorp/vault-plugin-auth-azure v0.22.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.22.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.22.0
