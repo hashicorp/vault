@@ -2132,3 +2132,49 @@ func TestAppRole_RoleSecretIDAccessorCrossDelete(t *testing.T) {
 		t.Fatalf("expected error")
 	}
 }
+
+func TestAppRole_RoleSecretIDLookupByMetadata(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+	roleName := "role1-" + t.Name()
+	createRole(t, b, storage, roleName, "a,b")
+
+	// Create secret-id with metadata
+	createReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/" + roleName + "/secret-id",
+		Data: map[string]interface{}{
+			"metadata": "alias=devhost1,cidr=192.168.1.0/24",
+		},
+	}
+	createResp, err := b.HandleRequest(context.Background(), createReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secretIDAccessor := createResp.Data["secret_id_accessor"].(string)
+	t.Logf("Created secretID accessor: %s", secretIDAccessor)
+
+	// ... (debug listing code can stay) ...
+
+	check := func(label string, filter map[string]interface{}) {
+		req := &logical.Request{
+			Operation: logical.ReadOperation,
+			Storage:   storage,
+			Path:      "role/" + roleName + "/secret-id/lookup-by-metadata",
+			Data:      filter,
+		}
+		resp, err := b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatalf("%s lookup error: %v", label, err)
+		}
+		keys, _ := resp.Data["keys"].([]string)
+		t.Logf("%s lookup returned keys: %#v (expect [%s])", label, keys, secretIDAccessor)
+		if len(keys) != 1 || keys[0] != secretIDAccessor {
+			t.Fatalf("%s lookup: got keys=%#v, want [%s]", label, keys, secretIDAccessor)
+		}
+	}
+
+	check("alias", map[string]interface{}{"role_name": roleName, "alias": "devhost1"})
+	check("cidr", map[string]interface{}{"role_name": roleName, "cidr": "192.168.1.0/24"})
+	check("ip-in-cidr", map[string]interface{}{"role_name": roleName, "cidr": "192.168.1.100"})
+}
