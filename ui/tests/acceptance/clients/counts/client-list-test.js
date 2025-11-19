@@ -106,13 +106,13 @@ module('Acceptance | clients | counts | client list', function (hooks) {
     await visit(url);
     assert.strictEqual(currentURL(), url, 'URL does not contain query params');
     // select namespace
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
     await click(FILTERS.dropdownItem(ns));
     // select mount path
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
     await click(FILTERS.dropdownItem(mPath));
     // select mount type
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
     await click(FILTERS.dropdownItem(mType));
     assert.strictEqual(
       currentURL(),

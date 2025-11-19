@@ -14,14 +14,7 @@ import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ld
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import engineDisplayData from 'vault/helpers/engines-display-data';
-
-const selectors = {
-  rotateAction: '[data-test-toolbar-rotate-action]',
-  configAction: '[data-test-toolbar-config-action]',
-  configCta: '[data-test-config-cta]',
-  mountConfig: '[data-test-mount-config]',
-  pageError: '[data-test-page-error]',
-};
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 module('Integration | Component | ldap | Page::Configuration', function (hooks) {
   setupRenderingTest(hooks);
@@ -69,7 +62,7 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
     });
   });
 
-  test('it should render tab page header, config cta and mount config', async function (assert) {
+  test('it should render tab page header', async function (assert) {
     this.model.configModel = null;
 
     await this.renderComponent();
@@ -77,9 +70,9 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
     assert.dom(GENERAL.icon('folder-users')).hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('ldap-test configuration', 'Mount path renders in title');
     assert
-      .dom(selectors.rotateAction)
+      .dom(GENERAL.confirmTrigger)
       .doesNotExist('Rotate root action is hidden when engine is not configured');
-    assert.dom(selectors.configAction).hasText('Configure LDAP', 'Toolbar action has correct text');
+    assert.dom(SES.configure).doesNotExist('"Edit configuration" is hidden when not configured');
   });
 
   test('it should render config fetch error', async function (assert) {
@@ -119,7 +112,7 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
     });
 
     await this.renderComponent();
-    await click(selectors.rotateAction);
+    await click(GENERAL.confirmTrigger);
     await click(GENERAL.confirmButton);
   });
 });

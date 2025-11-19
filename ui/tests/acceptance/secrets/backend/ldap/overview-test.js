@@ -63,7 +63,7 @@ module('Acceptance | ldap | overview', function (hooks) {
   test('it should transition to configuration route when engine is not configured', async function (assert) {
     await runCmd(mountEngineCmd('ldap', this.backend));
     await visitURL('overview', this.backend);
-    await click('[data-test-config-cta] a');
+    await click(`${GENERAL.emptyStateActions} a`);
     assert.true(isURL('configure', this.backend), 'Transitions to configure route on cta link click');
   });
 
@@ -79,8 +79,8 @@ module('Acceptance | ldap | overview', function (hooks) {
     ldapMirageScenario(this.server);
     await runCmd(mountEngineCmd('ldap', this.backend));
     await visitURL('overview', this.backend);
-    await click(GENERAL.manageDropdown);
-    await click(GENERAL.manageDropdownItem('Delete'));
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Delete'));
     assert.dom('[data-test-confirm-modal]').exists('Confirm delete modal renders');
     await click('[data-test-confirm-button]');
     assert.strictEqual(

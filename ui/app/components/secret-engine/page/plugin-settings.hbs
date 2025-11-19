@@ -54,7 +54,6 @@
   {{#if (get (engines-display-data @model.secretsEngine.type) "isConfigurable")}}
     {{! Prompt user to configure the secret engine }}
     <EmptyState
-      data-test-config-cta
       @title="{{get (engines-display-data @model.secretsEngine.type) 'displayName'}} not configured"
       @message="Get started by configuring your {{get
         (engines-display-data @model.secretsEngine.type)

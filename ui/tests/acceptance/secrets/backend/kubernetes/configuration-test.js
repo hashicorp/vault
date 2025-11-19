@@ -11,6 +11,7 @@ import kubernetesHandlers from 'vault/mirage/handlers/kubernetes';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { visit, click, currentRouteName } from '@ember/test-helpers';
 import { Response } from 'miragejs';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 module('Acceptance | kubernetes | configuration', function (hooks) {
   setupApplicationTest(hooks);
@@ -31,14 +32,14 @@ module('Acceptance | kubernetes | configuration', function (hooks) {
   test('it should transition to configure page on Edit Configuration click from toolbar', async function (assert) {
     assert.expect(1);
     await this.visitConfiguration();
-    await click('[data-test-toolbar-config-action]');
+    await click(SES.configure);
     this.validateRoute(assert, 'configure', 'Transitions to Configure route on click');
   });
 
   test('it should transition to the configuration page on Save click in Configure', async function (assert) {
     assert.expect(1);
     await this.visitConfiguration();
-    await click('[data-test-toolbar-config-action]');
+    await click(SES.configure);
     await click('[data-test-config-save]');
     await click('[data-test-config-confirm]');
     this.validateRoute(assert, 'configuration', 'Transitions to Configuration route on click');
@@ -47,7 +48,7 @@ module('Acceptance | kubernetes | configuration', function (hooks) {
   test('it should transition to the configuration page on Cancel click in Configure', async function (assert) {
     assert.expect(1);
     await this.visitConfiguration();
-    await click('[data-test-toolbar-config-action]');
+    await click(SES.configure);
     await click('[data-test-config-cancel]');
     this.validateRoute(assert, 'configuration', 'Transitions to Configuration route on click');
   });

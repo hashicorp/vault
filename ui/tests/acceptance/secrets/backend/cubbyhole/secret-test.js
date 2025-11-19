@@ -15,6 +15,7 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { assertSecretWrap } from 'vault/tests/helpers/components/secret-edit-toolbar';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   setupApplicationTest(hooks);
@@ -55,7 +56,7 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
 
   test('it does not show the option to configure', async function (assert) {
     await visit(`/vault/secrets-engines/cubbyhole/list`);
-    await click(SES.configTab);
+    await click(GENERAL.tab('Configuration'));
     assert.dom(SES.configure).doesNotExist('does not show the configure button');
     // try to force it by visiting the URL
     await visit(`/vault/secrets-engines/cubbyhole/configuration/edit`);
