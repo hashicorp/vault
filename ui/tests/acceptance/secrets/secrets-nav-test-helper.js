@@ -20,6 +20,7 @@ export default (test, type) => {
     isConfigurable = false,
     configReadRoute = 'configuration.plugin-settings',
     configEditRoute = 'configuration.edit',
+    engineRoute = 'list-root',
   } = engineDisplayData(type);
 
   if (isConfigurable) {
@@ -125,6 +126,28 @@ export default (test, type) => {
 
       await runCmd(deleteEngineCmd(backend));
     });
+
+    test(`(configurable): it navigates to the ${engineRoute} page when "Exit configuration" is clicked in the plugin settings route`, async function (assert) {
+      const backend = `${type}-${uuidv4()}-nav-test`;
+      await this.mountAndConfig(backend);
+
+      await visit(`/vault/secrets-engines/${backend}/configuration`);
+      await click(GENERAL.tabLink('plugin-settings'));
+      assert.strictEqual(
+        currentRouteName(),
+        `${BASE_ROUTE}.${configReadRoute}`,
+        'it navigates to the read route when configured'
+      );
+      await click(GENERAL.button('Exit configuration'));
+
+      assert.strictEqual(
+        currentRouteName(),
+        `${BASE_ROUTE}.${engineRoute}`,
+        `it navigates to the ${engineRoute} route when "Exit configuration" is clicked`
+      );
+
+      await runCmd(deleteEngineCmd(backend));
+    });
   } else {
     // NON-CONFIGURABLE ENGINES
     test('it should hide plugin settings tab', async function (assert) {
@@ -144,4 +167,27 @@ export default (test, type) => {
       await runCmd(deleteEngineCmd(backend));
     });
   }
+
+  test(`it navigates to the ${engineRoute} page when "Exit configuration" is clicked in general-settings`, async function (assert) {
+    const backend = `${type}-${uuidv4()}-nav-test`;
+
+    await runCmd(mountEngineCmd(type, backend));
+
+    await visit(`/vault/secrets-engines/${backend}/configuration`);
+    assert.strictEqual(
+      currentRouteName(),
+      `${BASE_ROUTE}.configuration.general-settings`,
+      'it navigates to the "general-settings" route'
+    );
+
+    await click(GENERAL.button('Exit configuration'));
+
+    assert.strictEqual(
+      currentRouteName(),
+      `${BASE_ROUTE}.${engineRoute}`,
+      `it navigates to the ${engineRoute} route when "Exit configuration" is clicked`
+    );
+
+    await runCmd(deleteEngineCmd(backend));
+  });
 };

@@ -19,6 +19,14 @@
         @path={{@model.secretsEngine.id}}
       />
     </:tabs>
+    <:actions>
+      <Hds::Button
+        @color="secondary"
+        @route="vault.cluster.secrets.backend.list-root"
+        @text="Exit configuration"
+        data-test-button="Exit configuration"
+      />
+    </:actions>
   </Page::Header>
 {{/let}}
 
