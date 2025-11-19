@@ -7,10 +7,16 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
 import type ApiService from 'vault/services/api';
-import type { ModelFrom } from 'vault/vault/route';
+import type Controller from '@ember/controller';
 import type NamespaceService from 'vault/services/namespace';
+import type { Breadcrumb } from 'vault/vault/app-types';
+import type { ModelFrom } from 'vault/vault/route';
 
 export type SnapshotManageModel = ModelFrom<RecoverySnapshotsSnapshotManageRoute>;
+
+interface RouteController extends Controller {
+  breadcrumbs: Array<Breadcrumb>;
+}
 
 type SnapshotModel = {
   auto_snapshot_config: string;
@@ -45,5 +51,14 @@ export default class RecoverySnapshotsSnapshotManageRoute extends Route {
     } catch {
       return [];
     }
+  }
+
+  setupController(controller: RouteController, resolvedModel: SnapshotManageModel) {
+    super.setupController(controller, resolvedModel);
+
+    controller.breadcrumbs = [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
+      { label: 'Secrets Recovery' },
+    ];
   }
 }

@@ -6,6 +6,10 @@
 <Recovery::Page::Header
   @title="Secrets Recovery"
   @subtitle="Recover lost or deleted data from a raft snapshot. Supported data includes KV v1 and Cubbyhole secrets or Database static roles."
+  @breadcrumbs={{array
+    (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+    (hash label="Secrets Recovery" current="true")
+  }}
 />
 
 <hr class="has-background-gray-300" />
