@@ -14,18 +14,18 @@
   <:actions>
     {{#unless @configRoute}}
       <Hds::Dropdown as |D|>
-        <D.ToggleButton @text="Manage" @color="secondary" data-test-manage-dropdown />
+        <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
         <D.Interactive
           @icon="settings"
           @route={{if @promptConfig "configure" "configuration"}}
           @model={{@model.id}}
-          data-test-manage-dropdown-item="Configure"
+          data-test-popup-menu="Configure"
         >Configure</D.Interactive>
         <D.Interactive
           {{on "click" (fn (mut this.engineToDisable) @model)}}
           @color="critical"
           @icon="trash"
-          data-test-manage-dropdown-item="Delete"
+          data-test-popup-menu="Delete"
         >Delete</D.Interactive>
       </Hds::Dropdown>
     {{/unless}}

@@ -4,9 +4,11 @@
 }}
 
 <TabPageHeader @model={{@backend}} @breadcrumbs={{@breadcrumbs}}>
-  <ToolbarLink @route="configure" data-test-toolbar-config-action>
-    {{if @config "Edit configuration" "Configure Kubernetes"}}
-  </ToolbarLink>
+  {{#if @config}}
+    <ToolbarLink @route="configure" data-test-secret-backend-configure>
+      Edit configuration
+    </ToolbarLink>
+  {{/if}}
 </TabPageHeader>
 
 {{#if @config}}

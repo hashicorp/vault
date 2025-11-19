@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 // To use this helper for configurable engines
 // define `this.mountAndConfig` in the beforeEach hook
@@ -22,7 +23,7 @@ export default (test, type) => {
   } = engineDisplayData(type);
 
   if (isConfigurable) {
-    test('(configurable): it navigates from the list view when not configured', async function (assert) {
+    test('(configurable): it navigates from the list view when NOT configured', async function (assert) {
       const backend = `${type}-${uuidv4()}-nav-test`;
       await runCmd(mountEngineCmd(type, backend));
 
@@ -30,7 +31,7 @@ export default (test, type) => {
 
       await fillIn(GENERAL.inputSearch('secret-engine-path'), backend);
       await click(GENERAL.menuTrigger);
-      await click(GENERAL.menuItem('view-configuration'));
+      await click(GENERAL.menuItem('View configuration'));
       assert.strictEqual(
         currentRouteName(),
         `${BASE_ROUTE}.${configEditRoute}`,
@@ -40,7 +41,7 @@ export default (test, type) => {
       await runCmd(deleteEngineCmd(backend));
     });
 
-    test('(configurable): it renders tabs when not configured', async function (assert) {
+    test('(configurable): it renders tabs when NOT configured', async function (assert) {
       const backend = `${type}-${uuidv4()}-nav-test`;
       await runCmd(mountEngineCmd(type, backend));
 
@@ -74,7 +75,7 @@ export default (test, type) => {
 
       await fillIn(GENERAL.inputSearch('secret-engine-path'), backend);
       await click(GENERAL.menuTrigger);
-      await click(GENERAL.menuItem('view-configuration'));
+      await click(GENERAL.menuItem('View configuration'));
       assert.strictEqual(
         currentRouteName(),
         `${BASE_ROUTE}.${configReadRoute}`,
@@ -108,9 +109,8 @@ export default (test, type) => {
         .doesNotHaveClass('active', 'general-settings is no longer active');
       assert.dom(GENERAL.tabLink('plugin-settings')).hasClass('active', 'plugin-settings is now active');
 
-      // TODO make all configure secret engine selectors the same e.g. "[data-test-secret-backend-configure]"
       // Navigate to edit, visually the tabs look the same but this is a different route
-      await click('[data-test-toolbar-config-action]');
+      await click(SES.configure);
       assert.strictEqual(
         currentRouteName(),
         `${BASE_ROUTE}.${configEditRoute}`,

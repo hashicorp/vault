@@ -186,13 +186,13 @@ module('Acceptance | clients | overview', function (hooks) {
       const timestamp = this.staticMostRecentMonth.timestamp;
       const { namespace_path, mount_type, mount_path } = topMount;
       assert.strictEqual(currentURL(), url, 'URL does not contain query params');
-      await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+      await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
       await click(FILTERS.dropdownItem(timestamp));
-      await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+      await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
       await click(FILTERS.dropdownItem(namespace_path));
-      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+      await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
       await click(FILTERS.dropdownItem(mount_path));
-      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+      await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
       await click(FILTERS.dropdownItem(mount_type));
       assert.strictEqual(
         currentURL(),
@@ -213,13 +213,13 @@ module('Acceptance | clients | overview', function (hooks) {
       const mounts = flattenMounts(this.staticMostRecentMonth.new_clients.namespaces);
       const timestamp = this.staticMostRecentMonth.timestamp;
       const { namespace_path, mount_type, mount_path } = mounts[0];
-      await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+      await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
       await click(FILTERS.dropdownItem(timestamp));
-      await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+      await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
       await click(FILTERS.dropdownItem(namespace_path));
-      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+      await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
       await click(FILTERS.dropdownItem(mount_path));
-      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+      await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
       await click(FILTERS.dropdownItem(mount_type));
       assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'it only renders the filtered table row');
       await click(FILTERS.clearTag(namespace_path));
@@ -248,13 +248,13 @@ module('Acceptance | clients | overview', function (hooks) {
       const mounts = flattenMounts(this.staticMostRecentMonth.new_clients.namespaces);
       const timestamp = this.staticMostRecentMonth.timestamp;
       const { namespace_path, mount_type, mount_path } = mounts[0];
-      await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+      await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
       await click(FILTERS.dropdownItem(timestamp));
-      await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+      await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
       await click(FILTERS.dropdownItem(namespace_path));
-      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+      await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
       await click(FILTERS.dropdownItem(mount_path));
-      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+      await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
       await click(FILTERS.dropdownItem(mount_type));
       assert.strictEqual(
         currentURL(),
@@ -286,7 +286,7 @@ module('Acceptance | clients | overview', function (hooks) {
       const exportDataStub = sinon.stub(adapter, 'exportData');
       exportDataStub.resolves(mockResponse);
       const timestamp = this.staticMostRecentMonth.timestamp;
-      await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+      await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
       await click(FILTERS.dropdownItem(timestamp));
       await click(`${GENERAL.tableData(0, 'clients')} a`);
       const url = '/vault/clients/counts/client-list';

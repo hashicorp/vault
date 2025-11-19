@@ -106,26 +106,26 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     await this.renderComponent();
 
     // Select each filter
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
-    findAll(`${FILTERS.dropdown(ClientFilters.MONTH)} li button`).forEach((item, idx) => {
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
+    findAll(FILTERS.dropdownItem()).forEach((item, idx) => {
       const expected = expectedMonths[idx];
       assert.dom(item).hasText(expected, `month dropdown renders: ${expected}`);
     });
 
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
-    findAll(`${FILTERS.dropdown(ClientFilters.NAMESPACE)} li button`).forEach((item, idx) => {
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
+    findAll(FILTERS.dropdownItem()).forEach((item, idx) => {
       const expected = expectedNamespaces[idx];
       assert.dom(item).hasText(expected, `namespace dropdown renders: ${expected}`);
     });
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
-    findAll(`${FILTERS.dropdown(ClientFilters.MOUNT_PATH)} li button`).forEach((item, idx) => {
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
+    findAll(FILTERS.dropdownItem()).forEach((item, idx) => {
       const expected = expectedMountPaths[idx];
       assert.dom(item).hasText(expected, `mount_path dropdown renders: ${expected}`);
     });
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
-    findAll(`${FILTERS.dropdown(ClientFilters.MOUNT_TYPE)} li button`).forEach((item, idx) => {
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    findAll(FILTERS.dropdownItem()).forEach((item, idx) => {
       const expected = expectedMountTypes[idx];
       assert.dom(item).hasText(expected, `mount_type dropdown renders: ${expected}`);
     });

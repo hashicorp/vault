@@ -105,7 +105,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
     module('create', function () {
       test('it should save gcp account accessType options', async function (assert) {
         await enablePage.enable(this.type, this.path);
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await fillInGcpConfig();
         await click(GENERAL.submitButton);
@@ -204,7 +204,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['my goodness, that did not work!'] });
         });
 
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await fillInGcpConfig();
         await click(GENERAL.submitButton);
@@ -267,7 +267,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
     module('Error handling', function () {
       test('it shows API error if user previously set credentials but tries to edit the configuration with wif fields', async function (assert) {
         await enablePage.enable(this.type, this.path);
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await fillInGcpConfig();
         await click(GENERAL.submitButton); // save GCP credentials

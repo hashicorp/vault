@@ -41,7 +41,8 @@ export const GENERAL = {
   copySnippet: (name: string) => `[data-test-copy-snippet=${name}]`,
 
   /* ────── Menus & Lists ────── */
-  menuTrigger: '[data-test-popup-menu-trigger]',
+  dropdownToggle: (text: string) => `[data-test-dropdown="${text}"]`, // Use when dropdown toggle has text
+  menuTrigger: '[data-test-popup-menu-trigger]', // Use when dropdown toggle is just an icon
   menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
   listItem: (label: string) => (label ? `[data-test-list-item="${label}"]` : '[data-test-list-item]'),
   listItemLink: '[data-test-list-item-link]',
@@ -65,8 +66,8 @@ export const GENERAL = {
   docLinkByAttr: (attr: string) => `[data-test-doc-link="${attr}"]`,
   enableField: (attr: string) => `[data-test-enable-field="${attr}"] button`,
   fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,
-  fieldLabel: () => `[data-test-form-field-label]`,
-  fieldLabelbyAttr: (attr: string) => `[data-test-form-field-label="${attr}"]`,
+  fieldLabel: (attr: string) =>
+    attr ? `[data-test-form-field-label="${attr}"]` : `[data-test-form-field-label]`,
   groupControlByIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index})`,
   helpText: '[data-test-help-text]',
   helpTextByAttr: (attr: string) => `[data-test-help-text="${attr}"]`,
@@ -184,6 +185,4 @@ export const GENERAL = {
   licenseBanner: (name: string) => `[data-test-license-banner="${name}"]`,
   tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
   tooltipText: '.hds-tooltip-container',
-  manageDropdown: '[data-test-manage-dropdown]',
-  manageDropdownItem: (name: string) => `[data-test-manage-dropdown-item="${name}"]`,
 };
