@@ -318,6 +318,7 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 	if creation.Params == nil {
 		return nil, nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
+	EntAdjustCreationBundle(b, creation)
 
 	creation.Params.IsCA = signInput.IsCA()
 	creation.Params.UseCSRValues = signInput.UseCSRValues()

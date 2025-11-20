@@ -288,7 +288,7 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 			return nil, err
 		}
 	} else {
-		signedCertBundle, issuerId, err = issueCertFromCsr(ac, csr)
+		signedCertBundle, issuerId, err = issueCertFromCsr(b, ac, csr)
 		if err != nil {
 			return nil, err
 		}
@@ -553,7 +553,7 @@ func maybeAugmentReqDataWithSuitableCN(ac *acmeContext, csr *x509.CertificateReq
 	}
 }
 
-func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuing.IssuerID, error) {
+func issueCertFromCsr(b *backend, ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuing.IssuerID, error) {
 	pemBlock := &pem.Block{
 		Type:    "CERTIFICATE REQUEST",
 		Headers: nil,
@@ -625,6 +625,7 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 	// unit, we have no way of validating this (via ACME here, without perhaps
 	// an external policy engine), and thus should not be setting it on our
 	// final issued certificate.
+	b.adjustInputBundle(input)
 	parsedBundle, _, err := signCert(ac.sc.System(), input, signingBundle, false /* is_ca=false */, false /* use_csr_values */)
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: refusing to sign CSR: %s", ErrBadCSR, err.Error())

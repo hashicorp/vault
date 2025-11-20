@@ -810,6 +810,8 @@ type CreationParameters struct {
 	// sender of the CSR has proven proof of possession of the associated
 	// private key by some other means, otherwise keep this set to false.
 	IgnoreCSRSignature bool
+
+	ZeroNotBefore bool
 }
 
 type CreationBundle struct {
