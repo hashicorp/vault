@@ -35,8 +35,7 @@ export interface EngineDisplayData {
   isOldEngine?: boolean; // flag for engine views, if set to true, the engine will show pre-existing page design, if not, then the new views will be used. This is temporary until all engines have been migrated to the new design.
   type: string;
   value?: string;
-  configReadRoute?: string; // override for custom route if not "configuration.plugin-settings" (used for Ember engines)
-  configEditRoute?: string; // override for custom route if not "configuration.edit" (used for Ember engines)
+  configRoute?: string; // override for custom route if not "configuration.plugin-settings" (used for Ember engines)
 }
 
 /**
@@ -215,8 +214,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     displayName: 'LDAP',
     isConfigurable: true,
     engineRoute: 'ldap.overview',
-    configEditRoute: 'ldap.configure',
-    configReadRoute: 'ldap.configuration',
+    configRoute: 'ldap.configuration',
     glyph: 'folder-users',
     mountCategory: ['auth', 'secret'],
     type: 'ldap',

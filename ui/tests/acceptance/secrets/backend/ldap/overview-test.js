@@ -31,6 +31,7 @@ module('Acceptance | ldap | overview', function (hooks) {
         `write ${backend}/config binddn=foo bindpass=bar url=http://localhost:8208`,
       ]);
     };
+    this.expectedConfigEditRoute = 'ldap.configure';
     return login();
   });
 

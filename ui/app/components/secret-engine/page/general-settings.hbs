@@ -7,15 +7,17 @@
     @title="{{@model.secretsEngine.id}} configuration"
     @description={{engineDisplayData.displayName}}
     @icon={{engineDisplayData.glyph}}
-    @subtitle={{engineDisplayData.typeDisplay}}
   >
     <:breadcrumbs>
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
     </:breadcrumbs>
     <:tabs>
-      <SecretEngine::ConfigureTabs
-        @engineMetadata={{engineDisplayData}}
-        @isConfigured={{not (is-empty-value @model.config)}}
+      <Mount::ConfigureTabs
+        @configRoute={{if
+          engineDisplayData.isConfigurable
+          (or engineDisplayData.configRoute "configuration.plugin-settings")
+        }}
+        @displayName={{engineDisplayData.displayName}}
         @path={{@model.secretsEngine.id}}
       />
     </:tabs>

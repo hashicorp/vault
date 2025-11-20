@@ -1,0 +1,35 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<nav class="tabs" aria-label={{@displayName}}>
+  <ul>
+    <li data-test-tab="general-settings">
+      {{! General settings are the mount details for a secrets engine - all engines have these }}
+      {{#if @externalRoute}}
+        <LinkToExternal @route={{@externalRoute}} @model={{@path}}>
+          General settings
+        </LinkToExternal>
+      {{else}}
+        <LinkTo @route="vault.cluster.secrets.backend.configuration.general-settings" @model={{@path}}>
+          General settings
+        </LinkTo>
+      {{/if}}
+    </li>
+    {{! @configRoute is supplied if an engine is configurable - only some engines support additional configuration }}
+    {{#if @configRoute}}
+      <li data-test-tab="plugin-settings">
+        {{! if @externalRoute is provided this component is rendering in an ember engine and just @configRoute is sufficient
+        otherwise we need to provide the full route by concatenating the prefix. }}
+        <LinkTo
+          @route={{if @externalRoute @configRoute (concat "vault.cluster.secrets.backend." @configRoute)}}
+          @model={{@path}}
+        >
+          {{or @displayName "Plugin"}}
+          settings
+        </LinkTo>
+      </li>
+    {{/if}}
+  </ul>
+</nav>

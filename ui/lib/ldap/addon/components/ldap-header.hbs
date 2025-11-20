@@ -33,28 +33,22 @@
     {{/if}}
   </:actions>
   <:tabs>
-    <div class="tabs-container box is-marginless is-fullwidth is-paddingless">
+    {{#if @configRoute}}
+      <Mount::ConfigureTabs
+        @configRoute={{@configRoute}}
+        @displayName="LDAP"
+        @path={{@model.id}}
+        @externalRoute="secretsGeneralSettingsConfiguration"
+      />
+    {{else}}
       <nav class="tabs" aria-label="ldap tabs">
         <ul>
-          {{#if @configRoute}}
-            <li data-test-tab="general-settings">
-              <LinkToExternal @route="secretsGeneralSettingsConfiguration" @model={{@model.id}}>
-                General settings
-              </LinkToExternal>
-            </li>
-            <li data-test-tab="plugin-settings">
-              <LinkTo @route={{@configRoute}} @model={{@model.id}}>
-                LDAP settings
-              </LinkTo>
-            </li>
-          {{else}}
-            <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
-            <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
-            <li><LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo></li>
-          {{/if}}
+          <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
+          <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
+          <li><LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo></li>
         </ul>
       </nav>
-    </div>
+    {{/if}}
   </:tabs>
 </Page::Header>
 
