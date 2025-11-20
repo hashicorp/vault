@@ -4,6 +4,7 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"path"
 	"sort"
@@ -186,12 +187,38 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		versionKeys = append(versionKeys, i)
 	}
 
+	// Sort the versions by key and display them in order.
 	sort.Ints(versionKeys)
-
 	for _, v := range versionKeys {
-		c.UI.Info("\n" + getHeaderForMap(fmt.Sprintf("Version %d", v), versions[strconv.Itoa(v)].(map[string]interface{})))
-		OutputData(c.UI, versions[strconv.Itoa(v)])
+		version, err := expandVersionAttribution(versions[strconv.Itoa(v)])
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error parsing version %d: %s", v, err.Error()))
+			return 2
+		}
+		c.UI.Info("\n" + getHeaderForMap(fmt.Sprintf("Version %d", v), version))
+		OutputData(c.UI, version)
 	}
 
 	return 0
+}
+
+func expandVersionAttribution(versionData interface{}) (map[string]interface{}, error) {
+	version, ok := versionData.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("version is not a map")
+	}
+
+	attributionKeys := []string{"created_by", "deleted_by"}
+	for _, key := range attributionKeys {
+		if version[key] == nil {
+			continue
+		}
+
+		attr, err := json.Marshal(version[key])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse attribution data for %q", key)
+		}
+		version[key] = string(attr)
+	}
+	return version, nil
 }
