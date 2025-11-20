@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	crand "crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
@@ -3651,7 +3652,8 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 }
 
 type passwordPolicyConfig struct {
-	HCLPolicy string `json:"policy"`
+	HCLPolicy     string `json:"policy"`
+	EntropySource string `json:"entropy_source,omitempty"`
 }
 
 func getPasswordPolicyKey(policyName string) string {
@@ -3704,6 +3706,15 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 			fmt.Sprintf("passwords must be between %d and %d characters", minPasswordLength, maxPasswordLength))
 	}
 
+	entropySource := data.Get("entropy_source").(string)
+	switch entropySource {
+	case "":
+	case "seal":
+	case "platform":
+	default:
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unsupported entropy source %s", entropySource))
+	}
+
 	// Attempt to construct a test password from the rules to ensure that the policy isn't impossible
 	var testPassword []rune
 
@@ -3745,7 +3756,8 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 	}
 
 	cfg := passwordPolicyConfig{
-		HCLPolicy: rawPolicy,
+		HCLPolicy:     rawPolicy,
+		EntropySource: entropySource,
 	}
 	entry, err := logical.StorageEntryJSON(getPasswordPolicyKey(policyName), cfg)
 	if err != nil {
@@ -3780,6 +3792,10 @@ func (*SystemBackend) handlePoliciesPasswordGet(ctx context.Context, req *logica
 		Data: map[string]interface{}{
 			"policy": cfg.HCLPolicy,
 		},
+	}
+
+	if cfg.EntropySource != "" {
+		resp.Data["entropy_source"] = cfg.EntropySource
 	}
 
 	return resp, nil
@@ -3821,7 +3837,7 @@ func (*SystemBackend) handlePoliciesPasswordDelete(ctx context.Context, req *log
 }
 
 // handlePoliciesPasswordGenerate generates a password from the specified password policy
-func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	policyName := data.Get("name").(string)
 	if policyName == "" {
 		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
@@ -3841,7 +3857,11 @@ func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *l
 			"stored password policy configuration failed to parse")
 	}
 
-	password, err := policy.Generate(ctx, nil)
+	rng, err := b.Core.GetConfigurableRNG(cfg.EntropySource, crand.Reader)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("failed to retrieve rng: %v", err))
+	}
+	password, err := policy.Generate(ctx, rng)
 	if err != nil {
 		return nil, logical.CodedError(http.StatusInternalServerError,
 			fmt.Sprintf("failed to generate password from policy: %s", err))
