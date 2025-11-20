@@ -434,6 +434,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		apiData: data,
 		role:    role,
 	}
+	b.adjustInputBundle(input)
 	var parsedBundle *certutil.ParsedCertBundle
 	var warnings []string
 	if useCSR {

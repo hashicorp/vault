@@ -933,6 +933,9 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 	if data.Params.NotBeforeDuration > 0 {
 		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
 	}
+	if data.Params.ZeroNotBefore {
+		certTemplate.NotBefore = time.Now()
+	}
 
 	if err := HandleOtherSANs(certTemplate, data.Params.OtherSANs); err != nil {
 		return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling other SANs: {{err}}", err).Error()}
@@ -1295,6 +1298,9 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 	}
 	if data.Params.NotBeforeDuration > 0 {
 		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
+	}
+	if data.Params.ZeroNotBefore {
+		certTemplate.NotBefore = time.Now()
 	}
 
 	privateKeyType := data.SigningBundle.PrivateKeyType
