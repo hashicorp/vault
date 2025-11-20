@@ -6,7 +6,7 @@
 //* lookup OIDs: http://oid-info.com/basic-search.htm
 export const SUBJECT_OIDs = {
   common_name: '2.5.4.3',
-  subject_serial_number: '2.5.4.5',
+  serial_number: '2.5.4.5',
   ou: '2.5.4.11',
   organization: '2.5.4.10',
   country: '2.5.4.6',

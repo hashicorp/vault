@@ -13,6 +13,7 @@
     "ember-concurrency": "*",
     "ember-auto-import": "*",
     "@hashicorp/design-system-components": "*",
+    "ember-template-lint": "*",
     "@types/ember": "latest",
     "@types/ember-data": "latest",
     "@types/ember-data__adapter": "latest",

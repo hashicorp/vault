@@ -7,15 +7,18 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { format } from 'date-fns';
+
 import type { HTMLElementEvent } from 'forms';
+import PkiConfigGenerateForm from 'vault/forms/secrets/pki/config/generate';
 
 /**
  * <PkiNotValidAfterForm /> components are used to manage two mutually exclusive role options in the form.
  */
 interface Args {
   model: {
-    notAfter: string;
     ttl: string | number;
+    notAfter?: string;
+    not_after?: string;
     set: (key: string, value: string | number) => void;
   };
 }
@@ -29,12 +32,16 @@ export default class PkiNotValidAfterForm extends Component<Args> {
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     const { model } = this.args;
-    this.cachedNotAfter = model.notAfter || '';
-    this.formDate = this.calculateFormDate(model.notAfter);
+    this.cachedNotAfter = model[this.notAfterKey] || '';
+    this.formDate = this.calculateFormDate(this.cachedNotAfter);
     this.cachedTtl = model.ttl || '';
-    if (model.notAfter) {
+    if (this.cachedNotAfter) {
       this.groupValue = 'specificDate';
     }
+  }
+
+  get notAfterKey() {
+    return this.args.model instanceof PkiConfigGenerateForm ? 'not_after' : 'notAfter';
   }
 
   calculateFormDate(value: string) {
@@ -49,14 +56,15 @@ export default class PkiNotValidAfterForm extends Component<Args> {
   @action onRadioButtonChange(selection: string) {
     this.groupValue = selection;
     // Clear the previous selection if they have clicked the other radio button.
+    const { model } = this.args;
     if (selection === 'specificDate') {
-      this.args.model.ttl = '';
-      this.args.model.notAfter = this.cachedNotAfter;
+      model.ttl = '';
+      model[this.notAfterKey] = this.cachedNotAfter;
       this.formDate = this.calculateFormDate(this.cachedNotAfter);
     }
     if (selection === 'ttl') {
-      this.args.model.notAfter = '';
-      this.args.model.ttl = this.cachedTtl;
+      model[this.notAfterKey] = '';
+      model.ttl = `${this.cachedTtl}`;
       this.formDate = '';
     }
   }
@@ -77,7 +85,7 @@ export default class PkiNotValidAfterForm extends Component<Args> {
     if (!setDate) return;
 
     this.cachedNotAfter = setDate;
-    this.args.model.notAfter = setDate;
+    this.args.model[this.notAfterKey] = setDate;
     this.formDate = this.calculateFormDate(setDate);
   }
 }

@@ -16,15 +16,11 @@
     {{/if}}
   </:toolbarFilters>
   <:toolbarActions>
-    {{#if @promptConfig}}
-      <ToolbarLink @route="configure" data-test-toolbar-action="config">
-        Configure LDAP
-      </ToolbarLink>
-    {{else}}
+    {{#unless @promptConfig}}
       <ToolbarLink @route="libraries.create" @type="add" data-test-toolbar-action="library">
         Create library
       </ToolbarLink>
-    {{/if}}
+    {{/unless}}
   </:toolbarActions>
 </LdapHeader>
 
@@ -35,7 +31,6 @@
     <EmptyState @title="There are no libraries matching &quot;{{this.filterValue}}&quot;" />
   {{else}}
     <EmptyState
-      data-test-config-cta
       @title="No libraries created yet"
       @message="Use libraries to manage a set of highly privileged accounts that can be shared among a team."
     />

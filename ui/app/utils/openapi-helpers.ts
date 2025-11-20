@@ -268,9 +268,12 @@ export const expandOpenApiProps = function (
       editType = items.type + capitalize(type);
     }
 
+    // to preserve legacy behavior set the description to helpText
+    // this pattern is deprecated when used with Form class since description is better represented as subText
+    const descriptionKey = outputFormat === 'model' ? 'helpText' : 'subText';
     const attrDefn: MixedAttr = {
       editType,
-      helpText: description,
+      [descriptionKey]: description,
       possibleValues: prop['enum'],
       fieldValue: isId ? 'mutableId' : undefined,
       fieldGroup: group || 'default',

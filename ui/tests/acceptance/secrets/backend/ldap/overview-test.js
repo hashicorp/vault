@@ -31,6 +31,7 @@ module('Acceptance | ldap | overview', function (hooks) {
         `write ${backend}/config binddn=foo bindpass=bar url=http://localhost:8208`,
       ]);
     };
+    this.expectedConfigEditRoute = 'ldap.configure';
     return login();
   });
 
@@ -63,12 +64,8 @@ module('Acceptance | ldap | overview', function (hooks) {
   test('it should transition to configuration route when engine is not configured', async function (assert) {
     await runCmd(mountEngineCmd('ldap', this.backend));
     await visitURL('overview', this.backend);
-    await click('[data-test-config-cta] a');
+    await click(`${GENERAL.emptyStateActions} a`);
     assert.true(isURL('configure', this.backend), 'Transitions to configure route on cta link click');
-
-    await click(`[data-test-breadcrumb="${this.backend}"] a`);
-    await click('[data-test-toolbar-action="config"]');
-    assert.true(isURL('configure', this.backend), 'Transitions to configure route on toolbar link click');
   });
 
   test('it should transition to configuration edit on empty state click', async function (assert) {
@@ -83,8 +80,8 @@ module('Acceptance | ldap | overview', function (hooks) {
     ldapMirageScenario(this.server);
     await runCmd(mountEngineCmd('ldap', this.backend));
     await visitURL('overview', this.backend);
-    await click(GENERAL.manageDropdown);
-    await click(GENERAL.manageDropdownItem('Delete'));
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Delete'));
     assert.dom('[data-test-confirm-modal]').exists('Confirm delete modal renders');
     await click('[data-test-confirm-button]');
     assert.strictEqual(

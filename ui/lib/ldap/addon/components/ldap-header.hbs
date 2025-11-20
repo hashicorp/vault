@@ -12,47 +12,43 @@
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </:breadcrumbs>
   <:actions>
-    {{#unless @configRoute}}
+    {{#if @configRoute}}
+      <Hds::Button @color="secondary" @route="overview" @text="Exit configuration" data-test-button="Exit configuration" />
+    {{else}}
       <Hds::Dropdown as |D|>
-        <D.ToggleButton @text="Manage" @color="secondary" data-test-manage-dropdown />
+        <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
         <D.Interactive
           @icon="settings"
           @route={{if @promptConfig "configure" "configuration"}}
           @model={{@model.id}}
-          data-test-manage-dropdown-item="Configure"
+          data-test-popup-menu="Configure"
         >Configure</D.Interactive>
         <D.Interactive
           {{on "click" (fn (mut this.engineToDisable) @model)}}
           @color="critical"
           @icon="trash"
-          data-test-manage-dropdown-item="Delete"
+          data-test-popup-menu="Delete"
         >Delete</D.Interactive>
       </Hds::Dropdown>
-    {{/unless}}
+    {{/if}}
   </:actions>
   <:tabs>
-    <div class="tabs-container box is-marginless is-fullwidth is-paddingless">
+    {{#if @configRoute}}
+      <Mount::ConfigureTabs
+        @configRoute={{@configRoute}}
+        @displayName="LDAP"
+        @path={{@model.id}}
+        @externalRoute="secretsGeneralSettingsConfiguration"
+      />
+    {{else}}
       <nav class="tabs" aria-label="ldap tabs">
         <ul>
-          {{#if @configRoute}}
-            <li data-test-tab="general-settings">
-              <LinkToExternal @route="secretsGeneralSettingsConfiguration" @model={{@model.id}}>
-                General settings
-              </LinkToExternal>
-            </li>
-            <li data-test-tab="plugin-settings">
-              <LinkTo @route={{@configRoute}} @model={{@model.id}}>
-                LDAP settings
-              </LinkTo>
-            </li>
-          {{else}}
-            <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
-            <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
-            <li><LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo></li>
-          {{/if}}
+          <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
+          <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
+          <li><LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo></li>
         </ul>
       </nav>
-    </div>
+    {{/if}}
   </:tabs>
 </Page::Header>
 

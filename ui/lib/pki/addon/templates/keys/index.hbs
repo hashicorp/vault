@@ -6,12 +6,12 @@
 <PkiPageHeader @backend={{this.model.parentModel}} />
 
 <Page::PkiKeyList
-  @keyModels={{this.model.keyModels}}
+  @keys={{this.model.keys}}
   @mountPoint={{this.mountPoint}}
   @backend={{this.model.parentModel.id}}
-  @canImportKey={{(get (get this.model.keyModels 0) "canImportKey")}}
-  @canGenerateKey={{(get (get this.model.keyModels 0) "canGenerateKey")}}
-  @canRead={{(get (get this.model.keyModels 0) "canRead")}}
-  @canEdit={{(get (get this.model.keyModels 0) "canEdit")}}
+  @canImportKey={{this.model.canImportKey}}
+  @canGenerateKey={{this.model.canGenerateKey}}
+  @canRead={{this.model.canRead}}
+  @canEdit={{this.model.canEdit}}
   @hasConfig={{this.model.hasConfig}}
 />

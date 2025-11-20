@@ -16,6 +16,7 @@
 </PageHeader>
 
 <PkiSignIntermediateForm
-  @model={{this.model}}
+  @form={{this.model.form}}
+  @issuerRef={{this.model.issuerRef}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details" model=this.model.issuerRef}}
 />

@@ -11,6 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/pki/pki-selectors';
+import { configCapabilities } from 'vault/tests/helpers/pki/pki-helpers';
 
 module('Integration | Component | page/pki-configure-create', function (hooks) {
   setupRenderingTest(hooks);
@@ -18,26 +19,23 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
 
   hooks.beforeEach(function () {
     this.context = { owner: this.engine }; // this.engine set by setupEngine
-    this.store = this.owner.lookup('service:store');
     this.cancelSpy = sinon.spy();
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: 'pki', route: 'overview', model: 'pki' },
       { label: 'Configure' },
     ];
-    this.config = this.store.createRecord('pki/action');
-    this.urls = this.store.createRecord('pki/config/urls');
+    this.capabilities = configCapabilities;
   });
 
   test('it renders', async function (assert) {
     await render(
       hbs`
-      <Page::PkiConfigureCreate
-        @breadcrumbs={{this.breadcrumbs}}
-        @config={{this.config}}
-        @urls={{this.urls}}
-        @onCancel={{this.cancelSpy}}
-      />
+        <Page::PkiConfigureCreate
+          @breadcrumbs={{this.breadcrumbs}}
+          @capabilities={{this.capabilities}}
+          @onCancel={{this.cancelSpy}}
+        />
     `,
       this.context
     );

@@ -4,34 +4,35 @@
 }}
 
 {{yield}}
-{{#each @fields as |attr|}}
-  {{#if (eq attr.name "keyBits")}}
-    <div class="field" data-test-field="keyBits">
+{{#each @fields as |field|}}
+  {{#if (eq (camelize field.name) "keyBits")}}
+    <div class="field" data-test-field="key_bits">
       <FormFieldLabel
-        for={{attr.name}}
-        @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-        @subText={{attr.options.subText}}
+        for={{field.name}}
+        @label={{capitalize (or field.options.label (humanize (dasherize field.name)))}}
+        @subText={{field.options.subText}}
       />
+
       <div
         class="select is-fullwidth"
         {{! these extra parentheses are necessary to conditionally apply the modifier }}
         {{! TODO: refactor this component and avoid this conditional modifier pattern }}
-        {{(unless @model.keyType (modifier "hds-tooltip" "Choose a key type before specifying bit length."))}}
+        {{(unless (this.getValue "keyType") (modifier "hds-tooltip" "Choose a key type before specifying bit length."))}}
       >
         <select
-          id={{attr.name}}
-          name={{attr.name}}
-          data-test-input={{attr.name}}
-          disabled={{unless @model.keyType true}}
+          id={{field.name}}
+          name={{field.name}}
+          data-test-input={{field.name}}
+          disabled={{unless (this.getValue "keyType") true}}
           {{on "change" this.onKeyBitsChange}}
         >
-          {{#if (and attr.options.noDefault (not @model.keyType))}}
+          {{#if (and field.options.noDefault (not (this.getValue "keyType")))}}
             <option value="">
               Select one
             </option>
           {{/if}}
           {{#each this.keyBitOptions as |val|}}
-            <option selected={{loose-equal (get @model "keyBits") val}} value={{val}}>
+            <option selected={{loose-equal (this.getValue "keyBits") val}} value={{val}}>
               {{val}}
             </option>
           {{/each}}
@@ -40,8 +41,8 @@
     </div>
   {{else}}
     <FormField
-      data-test-field={{attr}}
-      @attr={{attr}}
+      data-test-field={{field}}
+      @attr={{field}}
       @model={{@model}}
       @modelValidations={{@modelValidations}}
       @showHelpText={{false}}

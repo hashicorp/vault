@@ -8,21 +8,22 @@ import { v4 as uuidv4 } from 'uuid';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 // To use this helper for configurable engines
-// define `this.mountAndConfig` in the beforeEach hook
+// define `this.mountAndConfig` and this.expectedConfigEditRoute in the beforeEach hook
 // (see "Acceptance | ldap | overview" as an example)
 const BASE_ROUTE = 'vault.cluster.secrets.backend';
 
 export default (test, type) => {
   const {
     isConfigurable = false,
-    configReadRoute = 'configuration.plugin-settings',
-    configEditRoute = 'configuration.edit',
+    configRoute = 'configuration.plugin-settings',
+    engineRoute = 'list-root',
   } = engineDisplayData(type);
 
   if (isConfigurable) {
-    test('(configurable): it navigates from the list view when not configured', async function (assert) {
+    test('(configurable): it navigates from the list view when NOT configured', async function (assert) {
       const backend = `${type}-${uuidv4()}-nav-test`;
       await runCmd(mountEngineCmd(type, backend));
 
@@ -30,17 +31,17 @@ export default (test, type) => {
 
       await fillIn(GENERAL.inputSearch('secret-engine-path'), backend);
       await click(GENERAL.menuTrigger);
-      await click(GENERAL.menuItem('view-configuration'));
+      await click(GENERAL.menuItem('View configuration'));
       assert.strictEqual(
         currentRouteName(),
-        `${BASE_ROUTE}.${configEditRoute}`,
+        `${BASE_ROUTE}.${this.expectedConfigEditRoute}`,
         'it navigates to the configure route from the list view'
       );
 
       await runCmd(deleteEngineCmd(backend));
     });
 
-    test('(configurable): it renders tabs when not configured', async function (assert) {
+    test('(configurable): it renders tabs when NOT configured', async function (assert) {
       const backend = `${type}-${uuidv4()}-nav-test`;
       await runCmd(mountEngineCmd(type, backend));
 
@@ -55,7 +56,7 @@ export default (test, type) => {
       await click(GENERAL.tabLink('plugin-settings'));
       assert.strictEqual(
         currentRouteName(),
-        `${BASE_ROUTE}.${configEditRoute}`,
+        `${BASE_ROUTE}.${this.expectedConfigEditRoute}`,
         'clicking plugin settings navigates to edit route when not configured'
       );
       assert
@@ -74,10 +75,10 @@ export default (test, type) => {
 
       await fillIn(GENERAL.inputSearch('secret-engine-path'), backend);
       await click(GENERAL.menuTrigger);
-      await click(GENERAL.menuItem('view-configuration'));
+      await click(GENERAL.menuItem('View configuration'));
       assert.strictEqual(
         currentRouteName(),
-        `${BASE_ROUTE}.${configReadRoute}`,
+        `${BASE_ROUTE}.${configRoute}`,
         'it navigates to the configure route from the list view'
       );
 
@@ -100,7 +101,7 @@ export default (test, type) => {
       // Confirm tabs after clicking plugin-settings
       assert.strictEqual(
         currentRouteName(),
-        `${BASE_ROUTE}.${configReadRoute}`,
+        `${BASE_ROUTE}.${configRoute}`,
         'it navigates to the read route when configured'
       );
       assert
@@ -108,12 +109,11 @@ export default (test, type) => {
         .doesNotHaveClass('active', 'general-settings is no longer active');
       assert.dom(GENERAL.tabLink('plugin-settings')).hasClass('active', 'plugin-settings is now active');
 
-      // TODO make all configure secret engine selectors the same e.g. "[data-test-secret-backend-configure]"
       // Navigate to edit, visually the tabs look the same but this is a different route
-      await click('[data-test-toolbar-config-action]');
+      await click(SES.configure);
       assert.strictEqual(
         currentRouteName(),
-        `${BASE_ROUTE}.${configEditRoute}`,
+        `${BASE_ROUTE}.${this.expectedConfigEditRoute}`,
         'it navigates to the edit route'
       );
       assert
@@ -122,6 +122,28 @@ export default (test, type) => {
       assert
         .dom(GENERAL.tabLink('plugin-settings'))
         .hasClass('active', 'plugin-settings is still active after clicking edit');
+
+      await runCmd(deleteEngineCmd(backend));
+    });
+
+    test(`(configurable): it navigates to the ${engineRoute} page when "Exit configuration" is clicked in the plugin settings route`, async function (assert) {
+      const backend = `${type}-${uuidv4()}-nav-test`;
+      await this.mountAndConfig(backend);
+
+      await visit(`/vault/secrets-engines/${backend}/configuration`);
+      await click(GENERAL.tabLink('plugin-settings'));
+      assert.strictEqual(
+        currentRouteName(),
+        `${BASE_ROUTE}.${configRoute}`,
+        'it navigates to the read route when configured'
+      );
+      await click(GENERAL.button('Exit configuration'));
+
+      assert.strictEqual(
+        currentRouteName(),
+        `${BASE_ROUTE}.${engineRoute}`,
+        `it navigates to the ${engineRoute} route when "Exit configuration" is clicked`
+      );
 
       await runCmd(deleteEngineCmd(backend));
     });
@@ -144,4 +166,27 @@ export default (test, type) => {
       await runCmd(deleteEngineCmd(backend));
     });
   }
+
+  test(`it navigates to the ${engineRoute} page when "Exit configuration" is clicked in general-settings`, async function (assert) {
+    const backend = `${type}-${uuidv4()}-nav-test`;
+
+    await runCmd(mountEngineCmd(type, backend));
+
+    await visit(`/vault/secrets-engines/${backend}/configuration`);
+    assert.strictEqual(
+      currentRouteName(),
+      `${BASE_ROUTE}.configuration.general-settings`,
+      'it navigates to the "general-settings" route'
+    );
+
+    await click(GENERAL.button('Exit configuration'));
+
+    assert.strictEqual(
+      currentRouteName(),
+      `${BASE_ROUTE}.${engineRoute}`,
+      `it navigates to the ${engineRoute} route when "Exit configuration" is clicked`
+    );
+
+    await runCmd(deleteEngineCmd(backend));
+  });
 };

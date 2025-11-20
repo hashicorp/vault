@@ -163,16 +163,16 @@
           <dd.Interactive
             @route={{backendData.backendConfigurationLink}}
             @model={{backendData.id}}
-            data-test-popup-menu="view-configuration"
+            data-test-popup-menu="View configuration"
             @icon="settings"
           >View configuration</dd.Interactive>
           {{#if (not-eq backendData.type "cubbyhole")}}
             <dd.Interactive
               @color="critical"
               {{on "click" (fn (mut this.engineToDisable) backendData)}}
-              data-test-popup-menu="disable-engine"
+              data-test-popup-menu="Delete"
               @icon="trash"
-            >Disable</dd.Interactive>
+            >Delete</dd.Interactive>
           {{/if}}
         </Hds::Dropdown>
       {{/let}}

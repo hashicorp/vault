@@ -303,6 +303,7 @@ func (r *CopyPullRequestReq) Run(
 		err = fmt.Errorf("creating copy pull request body %w", err)
 		return res, errors.Join(cherryPickErr, err)
 	}
+	limitedPRBody := limitCharacters(prBody)
 
 	res.PullRequest, _, err = github.PullRequests.Create(
 		ctx, r.ToOwner, r.ToRepo, &libgithub.NewPullRequest{
@@ -310,7 +311,7 @@ func (r *CopyPullRequestReq) Run(
 			Head:     &branchName,
 			HeadRepo: &r.ToRepo,
 			Base:     &baseRef,
-			Body:     &prBody,
+			Body:     &limitedPRBody,
 		},
 	)
 	if err != nil {

@@ -24,9 +24,9 @@ export default class PkiIssuerCrossSignRoute extends Route {
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
       { label: 'Issuers', route: 'issuers.index', model: this.secretMountPath.currentPath },
       {
-        label: resolvedModel.id,
+        label: resolvedModel.issuer_id,
         route: 'issuers.issuer.details',
-        models: [this.secretMountPath.currentPath, resolvedModel.id],
+        models: [this.secretMountPath.currentPath, resolvedModel.issuer_id],
       },
       { label: 'Cross-sign' },
     ];

@@ -5,16 +5,9 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-@withConfirmLeave()
 export default class PkiIssuersGenerateIntermediateRoute extends Route {
-  @service store;
   @service secretMountPath;
-
-  model() {
-    return this.store.createRecord('pki/action', { actionType: 'generate-csr' });
-  }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);

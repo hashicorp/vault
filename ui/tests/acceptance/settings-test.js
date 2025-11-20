@@ -61,7 +61,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await visit('/vault/secrets-engines');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
-    await click(GENERAL.menuItem('view-configuration'));
+    await click(GENERAL.menuItem('View configuration'));
     // since ldap hasn't been configured yet, it should redirect to configure page
     assert.strictEqual(
       currentURL(),
@@ -81,7 +81,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await visit('/vault/secrets-engines');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
-    await click(GENERAL.menuItem('view-configuration'));
+    await click(GENERAL.menuItem('View configuration'));
 
     // since non-ember engines haven't been configured yet, it should redirect to general settings page
     assert.strictEqual(
