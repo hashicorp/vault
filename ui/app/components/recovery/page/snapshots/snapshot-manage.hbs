@@ -162,6 +162,7 @@
     @isInvalid={{this.resourcePathError}}
     placeholder="Enter the resource path..."
     {{on "input" this.updateResourcePath}}
+    autocomplete="off"
     data-test-input="resourcePath"
     as |F|
   >
@@ -206,6 +207,7 @@
       @isInvalid={{this.copyPathError}}
       placeholder="Enter new path"
       {{on "input" this.updateCopyPath}}
+      autocomplete="off"
       data-test-input="copyPath"
       as |F|
     >
