@@ -909,6 +909,7 @@ func TestAcmeRoleExtKeyUsage(t *testing.T) {
 	}
 
 	_, err := client.Logical().Write("pki/roles/"+roleName, roleOpt)
+	require.NoError(t, err, "failed creating role")
 
 	baseAcmeURL := "/v1/pki/roles/" + roleName + "/acme/"
 	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)

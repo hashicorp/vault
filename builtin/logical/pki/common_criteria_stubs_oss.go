@@ -12,6 +12,6 @@ import (
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
 func (b *backend) adjustInputBundle(input *inputBundle) {}
 
-func entValidateRole(b *backend, entry *issuing.RoleEntry) ([]string, error) {
+func entValidateRole(b *backend, entry *issuing.RoleEntry, operation string) ([]string, error) {
 	return nil, nil
 }

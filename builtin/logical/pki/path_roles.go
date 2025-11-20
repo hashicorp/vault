@@ -903,11 +903,7 @@ func (b *backend) GetRole(ctx context.Context, s logical.Storage, n string) (*is
 	}
 
 	if result.WasModified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
-		jsonEntry, err := logical.StorageEntryJSON("role/"+n, result)
-		if err != nil {
-			return nil, err
-		}
-		if err := s.Put(ctx, jsonEntry); err != nil {
+		if err := issuing.WriteRole(ctx, s, result); err != nil {
 			// Only perform upgrades on replication primary
 			if !strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 				return nil, err
@@ -947,7 +943,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		return nil, nil
 	}
 
-	warnings, err := entValidateRole(b, role)
+	warnings, err := entValidateRole(b, role, logical.ReadOperation)
 	if err != nil {
 		return nil, err
 	}
@@ -1073,18 +1069,14 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		return logical.ErrorResponse(userError), nil
 	}
 
-	if entWarnings, err := entValidateRole(b, entry); err != nil {
+	if entWarnings, err := entValidateRole(b, entry, logical.UpdateOperation); err != nil {
 		return nil, err
 	} else {
 		warnings = append(warnings, entWarnings...)
 	}
 
 	// Store it
-	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
-	if err != nil {
-		return nil, err
-	}
-	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+	if err := issuing.WriteRole(ctx, req.Storage, entry); err != nil {
 		return nil, err
 	}
 
@@ -1252,6 +1244,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		NotBeforeDuration:             getTimeWithExplicitDefault(data, "not_before_duration", oldEntry.NotBeforeDuration),
 		NotAfter:                      getWithExplicitDefault(data, "not_after", oldEntry.NotAfter).(string),
 		Issuer:                        getWithExplicitDefault(data, "issuer_ref", oldEntry.Issuer).(string),
+		Name:                          oldEntry.Name,
 	}
 
 	allowedOtherSANsData, wasSet := data.GetOk("allowed_other_sans")
@@ -1308,18 +1301,14 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		return logical.ErrorResponse(userError), nil
 	}
 
-	if entWarnings, err := entValidateRole(b, entry); err != nil {
+	if entWarnings, err := entValidateRole(b, entry, logical.PatchOperation); err != nil {
 		return nil, err
 	} else {
 		warnings = append(warnings, entWarnings...)
 	}
 
 	// Store it
-	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
-	if err != nil {
-		return nil, err
-	}
-	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+	if err := issuing.WriteRole(ctx, req.Storage, entry); err != nil {
 		return nil, err
 	}
 
