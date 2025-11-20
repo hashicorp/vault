@@ -23,22 +23,21 @@
       />
     </PH.Subtitle>
   {{/if}}
-  {{#if this.version.isEnterprise}}
-    <PH.Description class="has-text-weight-semibold flex">
-      <p>
-        For billing period:
+  <PH.Description>
+    {{#if (and this.version.isEnterprise @billingStartTime)}}
+      {{! Enterprise should always have a @billingStartTime but as a fallback allow the user to query dates manually. }}
+      {{! A dropdown renders in Clients::DateRange to query specific dates if we have a @billingStartTime }}
+      <p class="has-text-weight-semibold">
+        {{if this.flags.isHvdManaged "For data period: " "For billing period: "}}
         <span data-test-date-range="start">{{this.formattedStartDate}}</span>
         -
         <span data-test-date-range="end">{{this.formattedEndDate}}</span>
       </p>
-    </PH.Description>
-  {{/if}}
-  <PH.Description>
-    {{#if this.showCommunity}}
+    {{else if (and @startTimestamp @endTimestamp)}}
+      {{! If these timestamps exist an initial query has already been made using the modal in Clients::DateRange }}
       <div class="has-top-padding-m">
         <Hds::Text::Display @tag="h3">Client counting period</Hds::Text::Display>
-        <Hds::Text::Body @tag="p" class="has-text-grey">Specify a date range to view within that timeframe. Click 'Edit' to
-          choose a different date range.</Hds::Text::Body>
+        <Hds::Text::Body @tag="p" @size="100" color="faint">Click 'Edit' to select a different date range.</Hds::Text::Body>
         <Hds::Text::Body @tag="p">
           <span data-test-date-range="start">{{this.formattedStartDate}}</span>
           -

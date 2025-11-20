@@ -10,11 +10,13 @@ import { v4 as uuidv4 } from 'uuid';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ldapHandlers from 'vault/mirage/handlers/ldap';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { click, visit } from '@ember/test-helpers';
+import { click, visit, currentURL } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import secretsNavTestHelper from 'vault/tests/acceptance/secrets/secrets-nav-test-helper';
 
 module('Acceptance | ldap | overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -29,8 +31,11 @@ module('Acceptance | ldap | overview', function (hooks) {
         `write ${backend}/config binddn=foo bindpass=bar url=http://localhost:8208`,
       ]);
     };
+    this.expectedConfigEditRoute = 'ldap.configure';
     return login();
   });
+
+  secretsNavTestHelper(test, 'ldap');
 
   test('it should transition to ldap overview on mount success', async function (assert) {
     const backend = 'ldap-test-mount';
@@ -38,43 +43,52 @@ module('Acceptance | ldap | overview', function (hooks) {
     await click('[data-test-enable-engine]');
     await mountBackend('ldap', backend);
     assert.true(isURL('overview', backend), 'Transitions to ldap overview route on mount success');
-    assert.dom('[data-test-header-title]').hasText(backend);
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(backend);
     // cleanup mounted engine
     await visit('/vault/secrets-engines');
     await runCmd(deleteEngineCmd(backend));
   });
 
   test('it should transition to routes on tab link click', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
     await this.mountAndConfig(this.backend);
 
     await visitURL('overview', this.backend);
 
-    for (const tab of ['roles', 'libraries', 'config', 'overview']) {
+    for (const tab of ['roles', 'libraries', 'overview']) {
       await click(`[data-test-tab="${tab}"]`);
-      const route = tab === 'config' ? 'configuration' : tab;
-      assert.true(isURL(route, this.backend), `Transitions to ${route} route on tab link click`);
+      assert.true(isURL(tab, this.backend), `Transitions to ${tab} route on tab link click`);
     }
   });
 
   test('it should transition to configuration route when engine is not configured', async function (assert) {
     await runCmd(mountEngineCmd('ldap', this.backend));
     await visitURL('overview', this.backend);
-    await click('[data-test-config-cta] a');
+    await click(`${GENERAL.emptyStateActions} a`);
     assert.true(isURL('configure', this.backend), 'Transitions to configure route on cta link click');
-
-    await click(`[data-test-breadcrumb="${this.backend}"] a`);
-    await click('[data-test-toolbar-action="config"]');
-    assert.true(isURL('configure', this.backend), 'Transitions to configure route on toolbar link click');
   });
-  // including a test for the configuration route here since it is the only one needed
-  test('it should transition to configuration edit on toolbar link click', async function (assert) {
+
+  test('it should transition to configuration edit on empty state click', async function (assert) {
     ldapMirageScenario(this.server);
-    await this.mountAndConfig(this.backend);
+    await runCmd(mountEngineCmd('ldap', this.backend));
     await visitURL('overview', this.backend);
-    await click('[data-test-tab="config"]');
-    await click('[data-test-toolbar-config-action]');
-    assert.true(isURL('configure', this.backend), 'Transitions to configure route on toolbar link click');
+    await click('.hds-link-standalone');
+    assert.true(isURL('configure', this.backend), 'Transitions to configure route on empty state click');
+  });
+
+  test('it should delete the ldap engine on delete action', async function (assert) {
+    ldapMirageScenario(this.server);
+    await runCmd(mountEngineCmd('ldap', this.backend));
+    await visitURL('overview', this.backend);
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Delete'));
+    assert.dom('[data-test-confirm-modal]').exists('Confirm delete modal renders');
+    await click('[data-test-confirm-button]');
+    assert.strictEqual(
+      currentURL(),
+      '/vault/secrets-engines',
+      'navigates back to the secrets engines list after engine deletion'
+    );
   });
 
   test('it should transition to create role route on card action link click', async function (assert) {

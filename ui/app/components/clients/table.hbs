@@ -25,7 +25,11 @@
               <B.Td data-test-table-data={{key}} class="white-space-nowrap">
                 <Hds::Copy::Snippet @textToCopy={{value}} @color="secondary" />
               </B.Td>
-            {{else if (and (eq key "clients") this.version.isEnterprise)}}
+            {{else if (and (eq key "clients") this.version.isEnterprise (not this.flags.isHvdManaged))}}
+              {{! The "Client list" tab is hidden on HVD managed clusters (for now) because the "Month" filter for that page
+              uses the `client_first_used_time` timestamp. This timestamp tracks when a client is FIRST seen in the queried date range (i.e. billing period). 
+              This is useful for self-managed customers who are billed on monthly NEW clients, but not for HVD users who are billed on TOTAL clients per 
+              month regardless of whether the client was seen in a previous month. }}
               <B.Td data-test-table-data={{key}} class="white-space-nowrap">
                 <Hds::Link::Inline
                   @route="vault.cluster.clients.counts.client-list"

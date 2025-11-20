@@ -156,12 +156,12 @@ func TestPki_PermitFQDNs(t *testing.T) {
 					Schema: fields,
 					Raw: map[string]interface{}{
 						"common_name": "example.com.",
-						"ttl":         3600,
+						"ttl":         time.Hour,
 					},
 				},
 				role: &issuing.RoleEntry{
 					AllowAnyName:     true,
-					MaxTTL:           3600,
+					MaxTTL:           time.Hour,
 					EnforceHostnames: true,
 				},
 			},
@@ -175,13 +175,13 @@ func TestPki_PermitFQDNs(t *testing.T) {
 					Raw: map[string]interface{}{
 						"common_name": "Example.Net",
 						"alt_names":   "eXaMPLe.COM",
-						"ttl":         3600,
+						"ttl":         time.Hour,
 					},
 				},
 				role: &issuing.RoleEntry{
 					AllowedDomains:   []string{"example.net", "EXAMPLE.COM"},
 					AllowBareDomains: true,
-					MaxTTL:           3600,
+					MaxTTL:           time.Hour,
 				},
 			},
 			expectedDnsNames: []string{"Example.Net", "eXaMPLe.COM"},
@@ -193,13 +193,13 @@ func TestPki_PermitFQDNs(t *testing.T) {
 					Schema: fields,
 					Raw: map[string]interface{}{
 						"common_name": "SUB.EXAMPLE.COM",
-						"ttl":         3600,
+						"ttl":         time.Hour,
 					},
 				},
 				role: &issuing.RoleEntry{
 					AllowedDomains:   []string{"example.com", "*.Example.com"},
 					AllowGlobDomains: true,
-					MaxTTL:           3600,
+					MaxTTL:           time.Hour,
 				},
 			},
 			expectedDnsNames: []string{"SUB.EXAMPLE.COM"},
@@ -211,13 +211,13 @@ func TestPki_PermitFQDNs(t *testing.T) {
 					Schema: fields,
 					Raw: map[string]interface{}{
 						"common_name": "test@testemail.com",
-						"ttl":         3600,
+						"ttl":         time.Hour,
 					},
 				},
 				role: &issuing.RoleEntry{
 					AllowedDomains:   []string{"test@testemail.com"},
 					AllowBareDomains: true,
-					MaxTTL:           3600,
+					MaxTTL:           time.Hour,
 				},
 			},
 			expectedDnsNames: []string{},
@@ -229,13 +229,13 @@ func TestPki_PermitFQDNs(t *testing.T) {
 					Schema: fields,
 					Raw: map[string]interface{}{
 						"common_name": "test@testemail.com",
-						"ttl":         3600,
+						"ttl":         time.Hour,
 					},
 				},
 				role: &issuing.RoleEntry{
 					AllowedDomains:   []string{"testemail.com"},
 					AllowBareDomains: true,
-					MaxTTL:           3600,
+					MaxTTL:           time.Hour,
 				},
 			},
 			expectedDnsNames: []string{},

@@ -56,6 +56,18 @@ module "create_vpc" {
   common_tags = var.tags
 }
 
+module "cloud_docker_vault_cluster" {
+  source = "./modules/cloud_docker_vault_cluster"
+}
+
+module "docker_namespace_token" {
+  source = "./modules/docker_namespace_token"
+}
+
+module "docker_network" {
+  source = "./modules/docker_network"
+}
+
 module "choose_follower_host" {
   source = "./modules/choose_follower_host"
 }

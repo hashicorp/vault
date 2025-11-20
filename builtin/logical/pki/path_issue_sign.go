@@ -16,6 +16,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -94,6 +95,11 @@ func buildPathIssue(b *backend, pattern string, displayAttrs *framework.DisplayA
 								Description: `Private key type`,
 								Required:    false,
 							},
+							"authority_key_id": {
+								Type:        framework.TypeString,
+								Description: `AuthorityKeyID of certificate`,
+								Required:    false,
+							},
 						},
 					}},
 				},
@@ -168,6 +174,11 @@ func buildPathSign(b *backend, pattern string, displayAttrs *framework.DisplayAt
 								Type:        framework.TypeInt64,
 								Description: `Time of expiration`,
 								Required:    true,
+							},
+							"authority_key_id": {
+								Type:        framework.TypeString,
+								Description: `AuthorityKeyID of certificate`,
+								Required:    false,
 							},
 						},
 					}},
@@ -251,6 +262,11 @@ func buildPathIssuerSignVerbatim(b *backend, pattern string, displayAttrs *frame
 								Type:        framework.TypeInt64,
 								Description: `Time of expiration`,
 								Required:    true,
+							},
+							"authority_key_id": {
+								Type:        framework.TypeString,
+								Description: `AuthorityKeyID of certificate`,
+								Required:    false,
 							},
 						},
 					}},
@@ -490,11 +506,11 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		observe.NewAdditionalPKIMetadata("role_name", role.Name),
 		observe.NewAdditionalPKIMetadata("stored", !role.NoStore),
 		observe.NewAdditionalPKIMetadata("common_name", parsedBundle.Certificate.Subject.CommonName),
-		observe.NewAdditionalPKIMetadata("not_after", parsedBundle.Certificate.NotAfter.String()),
-		observe.NewAdditionalPKIMetadata("not_before", parsedBundle.Certificate.NotBefore.String()),
+		observe.NewAdditionalPKIMetadata("not_after", parsedBundle.Certificate.NotAfter.Format(time.RFC3339)),
+		observe.NewAdditionalPKIMetadata("not_before", parsedBundle.Certificate.NotBefore.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("subject_key_id", parsedBundle.Certificate.SubjectKeyId),
 		observe.NewAdditionalPKIMetadata("authority_key_id", parsedBundle.Certificate.AuthorityKeyId),
-		observe.NewAdditionalPKIMetadata("serial_number", parsedBundle.Certificate.SerialNumber.String()),
+		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(parsedBundle.Certificate)),
 		observe.NewAdditionalPKIMetadata("public_key_algorithm", parsedBundle.Certificate.PublicKeyAlgorithm.String()),
 		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(parsedBundle.Certificate.PublicKey)),
 		observe.NewAdditionalPKIMetadata("lease_generated", generateLease),
@@ -562,8 +578,9 @@ func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *c
 	includeKey := parsedBundle.PrivateKey != nil
 
 	respData := map[string]interface{}{
-		"expiration":    parsedBundle.Certificate.NotAfter.Unix(),
-		"serial_number": cb.SerialNumber,
+		"expiration":       parsedBundle.Certificate.NotAfter.Unix(),
+		"serial_number":    cb.SerialNumber,
+		"authority_key_id": certutil.GetHexFormatted(parsedBundle.Certificate.AuthorityKeyId, ":"),
 	}
 
 	format := getFormat(data)

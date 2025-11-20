@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Include the certificate's AuthorityKeyID in response fields for API endpoints that issue, sign, or fetch certs.
+```

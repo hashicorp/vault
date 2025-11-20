@@ -50,7 +50,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     });
     this.editModel = this.store.peekRecord('ldap/config', 'ldap-edit');
     this.breadcrumbs = generateBreadcrumbs('ldap', 'configure');
-    this.model = this.newModel; // most of the tests use newModel but set this to editModel when needed
+    this.model = { promptConfig: true, configModel: this.newModel }; // most of the tests use newModel but set this to editModel when needed
     this.renderComponent = () => {
       return render(hbs`<Page::Configure @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
         owner: this.engine,
@@ -130,7 +130,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
   });
 
   test('it should populate fields when editing form', async function (assert) {
-    this.model = this.editModel;
+    this.model = { promptConfig: true, configModel: this.editModel };
 
     await this.renderComponent();
 
@@ -140,7 +140,12 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     await fillIn(selectors.binddn, 'foobar');
     await click('[data-test-config-cancel]');
 
-    assert.strictEqual(this.model.binddn, this.existingConfig.binddn, 'Model is rolled back on cancel');
+    assert.strictEqual(
+      this.model.configModel.binddn,
+      this.existingConfig.binddn,
+      'Model is rolled back on cancel'
+    );
+
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.ldap.configuration'),
       'Transitions to configuration route on save success'

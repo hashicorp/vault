@@ -4,6 +4,7 @@
  */
 import { validate } from 'vault/utils/forms/validate';
 import { set } from '@ember/object';
+import { TrackedObject } from 'tracked-built-ins';
 
 import type { Validations } from 'vault/app-types';
 import type FormField from 'vault/utils/forms/field';
@@ -24,7 +25,7 @@ export default class Form<T extends object> {
   fieldGroupProps = ['formFieldGroups'];
 
   constructor(data: Partial<T> = {}, options: FormOptions = {}, validations?: Validations) {
-    this.data = { ...data } as T;
+    this.data = new TrackedObject(data) as T;
     this.isNew = options.isNew || false;
     // typically this would be defined on the subclass
     // if validations are conditional, it may be preferable to define them during instantiation

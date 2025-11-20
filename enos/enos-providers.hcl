@@ -27,3 +27,6 @@ provider "enos" "ubuntu" {
 
 provider "hcp" "default" {
 }
+
+provider "docker" "default" {
+}

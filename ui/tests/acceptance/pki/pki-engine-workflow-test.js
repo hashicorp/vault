@@ -303,7 +303,7 @@ module('Acceptance | pki workflow', function (hooks) {
         'navigates back to details on cancel'
       );
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/edit`);
-      await fillIn(GENERAL.inputByAttr('keyName'), 'test-key');
+      await fillIn(GENERAL.inputByAttr('key_name'), 'test-key');
       await click(GENERAL.submitButton);
       assert.strictEqual(
         currentURL(),
@@ -317,7 +317,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(PKI_KEYS.generateKey);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/create`);
       await fillIn(GENERAL.inputByAttr('type'), 'exported'); // exported keys generated private_key data
-      await fillIn(GENERAL.inputByAttr('keyType'), 'rsa');
+      await fillIn(GENERAL.inputByAttr('key_type'), 'rsa');
       await click(GENERAL.submitButton);
       keyId = find(GENERAL.infoRowValue('Key ID')).textContent?.trim();
       assert.strictEqual(
@@ -491,7 +491,7 @@ module('Acceptance | pki workflow', function (hooks) {
         'it navigates to root rotate form'
       );
       assert
-        .dom('[data-test-input="commonName"]')
+        .dom('[data-test-input="common_name"]')
         .hasValue('Hashicorp Test', 'form prefilled with parent issuer cn');
     });
   });
@@ -520,8 +520,8 @@ module('Acceptance | pki workflow', function (hooks) {
           'Not all of the certificate values can be parsed and transferred to a new root',
           'it renders warning banner'
         );
-      assert.dom('[data-test-input="commonName"]').hasValue('fancy-cert-unsupported-subj-and-ext-oids');
-      await fillIn('[data-test-input="issuerName"]', 'existing-issuer');
+      assert.dom('[data-test-input="common_name"]').hasValue('fancy-cert-unsupported-subj-and-ext-oids');
+      await fillIn('[data-test-input="issuer_name"]', 'existing-issuer');
       await click(GENERAL.submitButton);
       assert
         .dom('[data-test-rotate-error]')

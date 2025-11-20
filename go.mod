@@ -10,7 +10,7 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.25.1
+go 1.25.3
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -28,6 +28,8 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 // keyring addresses the issue.
 // See https://github.com/99designs/keyring/issues/103 and https://github.com/snowflakedb/gosnowflake/issues/1183
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
+
+replace github.com/ma314smith/signedxml v1.1.1 => github.com/moov-io/signedxml v1.1.1
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
@@ -144,7 +146,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.22.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.25.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.16.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.20.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.15.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.19.0
@@ -218,15 +220,15 @@ require (
 	go.opentelemetry.io/otel/sdk v1.37.0
 	go.opentelemetry.io/otel/trace v1.37.0
 	go.uber.org/atomic v1.11.0
-	golang.org/x/crypto v0.42.0
-	golang.org/x/exp v0.0.0-20251002181428-27f1f14c8bb9
-	golang.org/x/net v0.44.0
+	golang.org/x/crypto v0.44.0
+	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
+	golang.org/x/net v0.46.0
 	golang.org/x/oauth2 v0.31.0
-	golang.org/x/sync v0.17.0
-	golang.org/x/sys v0.36.0
-	golang.org/x/term v0.35.0
-	golang.org/x/text v0.29.0
-	golang.org/x/tools v0.37.0
+	golang.org/x/sync v0.18.0
+	golang.org/x/sys v0.38.0
+	golang.org/x/term v0.37.0
+	golang.org/x/text v0.31.0
+	golang.org/x/tools v0.38.0
 	google.golang.org/api v0.251.0
 	google.golang.org/grpc v1.75.1
 	google.golang.org/protobuf v1.36.9
@@ -249,7 +251,7 @@ require (
 	github.com/moby/go-archive v0.1.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/telemetry v0.0.0-20250908211612-aef8a434d053 // indirect
+	golang.org/x/telemetry v0.0.0-20251008203120-078029d740a8 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
 
@@ -360,7 +362,7 @@ require (
 	github.com/docker/cli v27.4.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
+	github.com/dvsekhvalnov/jose2go v1.7.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4 // indirect
@@ -374,7 +376,7 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.2 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/go-ldap/ldif v0.0.0-20250910174327-aa3bc3095c92 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -556,7 +558,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.37.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/mod v0.28.0 // indirect
+	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/time v0.13.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20251002232023-7c0ddcbb5797 // indirect
@@ -578,5 +580,3 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
-
-replace github.com/ma314smith/signedxml v1.1.1 => github.com/moov-io/signedxml v1.1.1

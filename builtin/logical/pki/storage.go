@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/constants"
@@ -334,6 +335,7 @@ type ImportedIssuerInfo struct {
 	NotBefore          string `json:"not_before"`
 	NotAfter           string `json:"not_after"`
 	PublicKeyAlgorithm string `json:"public_key_algorithm"`
+	PublicKeySize      int    `json:"public_key_size"`
 }
 
 func (sc *storageContext) importIssuer(certValue string, issuerName string) (*issuing.IssuerEntry, *ImportedIssuerInfo, bool, error) {
@@ -386,13 +388,14 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	}
 
 	issuerInfo := &ImportedIssuerInfo{
-		SerialNumber:       issuerCert.SerialNumber.String(),
+		SerialNumber:       parsing.SerialFromCert(issuerCert),
 		CommonName:         issuerCert.Subject.CommonName,
 		SKID:               issuerCert.SubjectKeyId,
 		AKID:               issuerCert.AuthorityKeyId,
-		NotBefore:          issuerCert.NotBefore.String(),
-		NotAfter:           issuerCert.NotAfter.String(),
+		NotBefore:          issuerCert.NotBefore.Format(time.RFC3339),
+		NotAfter:           issuerCert.NotAfter.Format(time.RFC3339),
 		PublicKeyAlgorithm: issuerCert.PublicKeyAlgorithm.String(),
+		PublicKeySize:      certutil.GetPublicKeySize(issuerCert.PublicKey),
 	}
 
 	foundExistingIssuerWithName := false

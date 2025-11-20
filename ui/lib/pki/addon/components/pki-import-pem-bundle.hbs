@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if this.importedResponse}}
+{{#if this.importedIssuerKeyMap}}
   <div class="is-flex-start has-top-margin-xs">
     <div class="is-flex-grow-1 basis-0 has-text-grey has-bottom-margin-xs">
       <h2>
@@ -17,7 +17,7 @@
     </div>
   </div>
   <div class="box is-fullwidth is-sideless is-marginless is-paddingless" data-test-imported-bundle-mapping>
-    {{#each this.importedResponse as |imported|}}
+    {{#each this.importedIssuerKeyMap as |imported|}}
       <div
         class="box is-marginless no-top-shadow has-slim-padding"
         data-test-import-pair={{concat imported.issuer "_" imported.key}}
@@ -77,7 +77,7 @@
             @text="Cancel"
             @color="secondary"
             disabled={{this.submitForm.isRunning}}
-            {{on "click" this.cancel}}
+            {{on "click" @onCancel}}
             data-test-pki-ca-cert-cancel
           />
         </Hds::ButtonSet>

@@ -17,7 +17,9 @@ export default class PkiEngine extends Engine {
   Resolver = Resolver;
   dependencies = {
     services: [
+      'api',
       'auth',
+      'capabilities',
       'download',
       'flash-messages',
       'namespace',

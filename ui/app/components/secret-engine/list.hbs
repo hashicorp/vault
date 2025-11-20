@@ -128,50 +128,54 @@
       {{/if}}
     </:selectedItems>
     <:customTableItem as |itemData|>
-      <Hds::TooltipButton
-        aria-label="Type of backend"
-        @text={{this.generateToolTipText itemData}}
-        data-test-tooltip="Backend type"
-        isInline={{true}}
-        class="is-v-centered"
-      >
-        <Hds::Icon @name={{if itemData.icon itemData.icon "lock"}} />
-      </Hds::TooltipButton>
-      {{#if itemData.isSupportedBackend}}
-        <Hds::Link::Inline
-          @route={{itemData.backendLink}}
-          @model={{itemData.id}}
-          @color="secondary"
-          class="has-text-weight-semibold"
-        >{{itemData.path}}</Hds::Link::Inline>
-      {{else}}
-        {{itemData.path}}
-      {{/if}}
+      {{#let (this.getEngineResourceData itemData.path) as |backendData|}}
+        <Hds::TooltipButton
+          aria-label="Type of backend"
+          @text={{this.generateToolTipText backendData}}
+          data-test-tooltip="Backend type"
+          isInline={{true}}
+          class="is-v-centered"
+        >
+          <Hds::Icon @name={{if backendData.icon backendData.icon "lock"}} />
+        </Hds::TooltipButton>
+        {{#if backendData.isSupportedBackend}}
+          <Hds::Link::Inline
+            @route={{backendData.backendLink}}
+            @model={{backendData.id}}
+            @color="secondary"
+            class="has-text-weight-semibold"
+          >{{backendData.path}}</Hds::Link::Inline>
+        {{else}}
+          {{backendData.path}}
+        {{/if}}
+      {{/let}}
     </:customTableItem>
 
     <:popupMenu as |rowData|>
-      <Hds::Dropdown @isInline={{true}} as |dd|>
-        <dd.ToggleIcon
-          @icon="more-horizontal"
-          @text="{{if rowData.isSupportedBackend 'supported' 'unsupported'}} secrets engine menu"
-          @hasChevron={{false}}
-          data-test-popup-menu-trigger
-        />
-        <dd.Interactive
-          @route={{rowData.backendConfigurationLink}}
-          @model={{rowData.id}}
-          data-test-popup-menu="view-configuration"
-          @icon="settings"
-        >View configuration</dd.Interactive>
-        {{#if (not-eq rowData.type "cubbyhole")}}
+      {{#let (this.getEngineResourceData rowData.path) as |backendData|}}
+        <Hds::Dropdown @isInline={{true}} as |dd|>
+          <dd.ToggleIcon
+            @icon="more-horizontal"
+            @text="{{if backendData.isSupportedBackend 'supported' 'unsupported'}} secrets engine menu"
+            @hasChevron={{false}}
+            data-test-popup-menu-trigger
+          />
           <dd.Interactive
-            @color="critical"
-            {{on "click" (fn (mut this.engineToDisable) rowData)}}
-            data-test-popup-menu="disable-engine"
-            @icon="trash"
-          >Disable</dd.Interactive>
-        {{/if}}
-      </Hds::Dropdown>
+            @route={{backendData.backendConfigurationLink}}
+            @model={{backendData.id}}
+            data-test-popup-menu="View configuration"
+            @icon="settings"
+          >View configuration</dd.Interactive>
+          {{#if (not-eq backendData.type "cubbyhole")}}
+            <dd.Interactive
+              @color="critical"
+              {{on "click" (fn (mut this.engineToDisable) backendData)}}
+              data-test-popup-menu="Delete"
+              @icon="trash"
+            >Delete</dd.Interactive>
+          {{/if}}
+        </Hds::Dropdown>
+      {{/let}}
     </:popupMenu>
   </ListTable>
 {{else}}

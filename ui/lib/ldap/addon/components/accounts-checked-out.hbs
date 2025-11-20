@@ -12,7 +12,11 @@
   <:content>
     <hr class="has-background-gray-200" />
 
-    {{#if this.filteredAccounts}}
+    {{#if @isLoadingStatuses}}
+      <div class="has-padding-l flex is-centered">
+        <Hds::Icon @name="loading" @color="neutral" @size="24" />
+      </div>
+    {{else if this.filteredAccounts}}
       <Hds::Table @model={{this.filteredAccounts}} @columns={{this.columns}}>
         <:body as |Body|>
           <Body.Tr>

@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ inputs.vault-revision }}
-      - uses: hashicorp/action-setup-enos@39a8f388434bea5eeba6649b99aa9949a55a1150 # v1.38
+      - uses: hashicorp/action-setup-enos@dd06687d36a75db090d990790a8cf06cc0b238c3 # v1.39
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/metadata
@@ -87,12 +87,12 @@ jobs:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
-      - uses: hashicorp/action-setup-enos@39a8f388434bea5eeba6649b99aa9949a55a1150 # v1.38
+      - uses: hashicorp/action-setup-enos@dd06687d36a75db090d990790a8cf06cc0b238c3 # v1.39
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Download Docker Image
         id: download
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: ${{ inputs.build-artifact-name }}
           path: ./enos/support/downloads

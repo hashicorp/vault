@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import PkiKeyForm from 'vault/forms/secrets/pki/key';
 
-@withConfirmLeave()
 export default class PkiKeyEditRoute extends Route {
   @service secretMountPath;
 
   model() {
-    return this.modelFor('keys.key');
+    const { key } = this.modelFor('keys.key');
+    return new PkiKeyForm(key);
   }
 
   setupController(controller, resolvedModel) {
@@ -21,7 +21,7 @@ export default class PkiKeyEditRoute extends Route {
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
       { label: 'Keys', route: 'keys.index', model: this.secretMountPath.currentPath },
-      { label: resolvedModel.id },
+      { label: resolvedModel.data.key_id },
     ];
   }
 }

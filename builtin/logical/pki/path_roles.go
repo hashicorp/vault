@@ -1086,7 +1086,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		observe.NewAdditionalPKIMetadata("ttl", entry.TTL.String()),
 		observe.NewAdditionalPKIMetadata("no_store", entry.NoStore),
 		observe.NewAdditionalPKIMetadata("not_after", entry.NotAfter),
-		observe.NewAdditionalPKIMetadata("not_before", entry.NotBeforeDuration.String()),
+		observe.NewAdditionalPKIMetadata("not_before_duration", entry.NotBeforeDuration.String()),
 	)
 
 	return resp, nil
@@ -1311,7 +1311,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		observe.NewAdditionalPKIMetadata("ttl", entry.TTL.String()),
 		observe.NewAdditionalPKIMetadata("no_store", entry.NoStore),
 		observe.NewAdditionalPKIMetadata("not_after", entry.NotAfter),
-		observe.NewAdditionalPKIMetadata("not_before", entry.NotBeforeDuration.String()),
+		observe.NewAdditionalPKIMetadata("not_before_duration", entry.NotBeforeDuration.String()),
 	)
 
 	return resp, nil

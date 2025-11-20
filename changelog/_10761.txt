@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Add a SHA256 sum field to the json list response for external plugins.
+```

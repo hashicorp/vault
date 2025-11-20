@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: After clicking Save or Discard in the unsaved changes modal, the user will now navigate to the intended destination link.
+```

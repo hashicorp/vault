@@ -3,13 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Multi-Factor Authentication
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title="Multi-Factor Authentication">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 <Mfa::Nav />
 

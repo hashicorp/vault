@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, fillIn, find, visit, waitUntil, waitFor } from '@ember/test-helpers';
+import { click, fillIn, find, visit, waitUntil, waitFor, settled } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { DELAY_IN_MS, windowStub } from 'vault/tests/helpers/oidc-window-stub';
@@ -169,8 +169,9 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     await fillIn(AUTH_FORM.selectMethod, 'saml');
     await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.button('user-menu-trigger')), { timeout: DELAY_IN_MS });
+    await settled();
     await click(GENERAL.button('user-menu-trigger'));
-    await click('#logout');
+    await click('[data-test-user-menu-item="logout"]');
     assert.dom(AUTH_FORM.selectMethod).hasValue('saml', 'Previous auth method selected on logout');
   });
 });

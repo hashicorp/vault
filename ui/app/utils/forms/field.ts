@@ -24,6 +24,10 @@ export interface FieldOptions {
   placeholder?: string;
   noDefault?: boolean;
   isSectionHeader?: boolean;
+  hideToggle?: boolean;
+  labelDisabled?: string;
+  mapToBoolean?: string;
+  isOppositeValue?: boolean;
 }
 
 export default class FormField {
