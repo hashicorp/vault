@@ -11,15 +11,14 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 // To use this helper for configurable engines
-// define `this.mountAndConfig` in the beforeEach hook
+// define `this.mountAndConfig` and this.expectedConfigEditRoute in the beforeEach hook
 // (see "Acceptance | ldap | overview" as an example)
 const BASE_ROUTE = 'vault.cluster.secrets.backend';
 
 export default (test, type) => {
   const {
     isConfigurable = false,
-    configReadRoute = 'configuration.plugin-settings',
-    configEditRoute = 'configuration.edit',
+    configRoute = 'configuration.plugin-settings',
     engineRoute = 'list-root',
   } = engineDisplayData(type);
 
@@ -35,7 +34,7 @@ export default (test, type) => {
       await click(GENERAL.menuItem('View configuration'));
       assert.strictEqual(
         currentRouteName(),
-        `${BASE_ROUTE}.${configEditRoute}`,
+        `${BASE_ROUTE}.${this.expectedConfigEditRoute}`,
         'it navigates to the configure route from the list view'
       );
 
@@ -57,7 +56,7 @@ export default (test, type) => {
       await click(GENERAL.tabLink('plugin-settings'));
       assert.strictEqual(
         currentRouteName(),
-        `${BASE_ROUTE}.${configEditRoute}`,
+        `${BASE_ROUTE}.${this.expectedConfigEditRoute}`,
         'clicking plugin settings navigates to edit route when not configured'
       );
       assert
@@ -79,7 +78,7 @@ export default (test, type) => {
       await click(GENERAL.menuItem('View configuration'));
       assert.strictEqual(
         currentRouteName(),
-        `${BASE_ROUTE}.${configReadRoute}`,
+        `${BASE_ROUTE}.${configRoute}`,
         'it navigates to the configure route from the list view'
       );
 
@@ -102,7 +101,7 @@ export default (test, type) => {
       // Confirm tabs after clicking plugin-settings
       assert.strictEqual(
         currentRouteName(),
-        `${BASE_ROUTE}.${configReadRoute}`,
+        `${BASE_ROUTE}.${configRoute}`,
         'it navigates to the read route when configured'
       );
       assert
@@ -114,7 +113,7 @@ export default (test, type) => {
       await click(SES.configure);
       assert.strictEqual(
         currentRouteName(),
-        `${BASE_ROUTE}.${configEditRoute}`,
+        `${BASE_ROUTE}.${this.expectedConfigEditRoute}`,
         'it navigates to the edit route'
       );
       assert
@@ -135,7 +134,7 @@ export default (test, type) => {
       await click(GENERAL.tabLink('plugin-settings'));
       assert.strictEqual(
         currentRouteName(),
-        `${BASE_ROUTE}.${configReadRoute}`,
+        `${BASE_ROUTE}.${configRoute}`,
         'it navigates to the read route when configured'
       );
       await click(GENERAL.button('Exit configuration'));

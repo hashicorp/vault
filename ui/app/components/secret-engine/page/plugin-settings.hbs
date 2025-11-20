@@ -2,20 +2,20 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
+
 {{#let (engines-display-data @model.secretsEngine.type) as |engineDisplayData|}}
   <Page::Header
     @title="{{@model.secretsEngine.id}} configuration"
     @description={{engineDisplayData.displayName}}
     @icon={{engineDisplayData.glyph}}
-    @subtitle={{engineDisplayData.typeDisplay}}
   >
     <:breadcrumbs>
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
     </:breadcrumbs>
     <:tabs>
-      <SecretEngine::ConfigureTabs
-        @engineMetadata={{engineDisplayData}}
-        @isConfigured={{not (is-empty-value @model.config)}}
+      <Mount::ConfigureTabs
+        @configRoute={{or engineDisplayData.configRoute "configuration.plugin-settings"}}
+        @displayName={{engineDisplayData.displayName}}
         @path={{@model.secretsEngine.id}}
       />
     </:tabs>
@@ -28,70 +28,62 @@
       />
     </:actions>
   </Page::Header>
-{{/let}}
 
-{{#if @model.config}}
-  <Toolbar>
-    <ToolbarActions>
-      <ToolbarLink
-        @route="vault.cluster.secrets.backend.configuration.edit"
-        @model={{this.model.secretsEngine.id}}
-        data-test-secret-backend-configure
-      >
-        Edit configuration
-      </ToolbarLink>
-    </ToolbarActions>
-  </Toolbar>
+  {{#if @model.config}}
+    <Toolbar>
+      <ToolbarActions>
+        <ToolbarLink
+          @route="vault.cluster.secrets.backend.configuration.edit"
+          @model={{this.model.secretsEngine.id}}
+          data-test-secret-backend-configure
+        >
+          Edit configuration
+        </ToolbarLink>
+      </ToolbarActions>
+    </Toolbar>
 
-  {{#each this.displayFields as |field|}}
-    {{! public key while not sensitive when editing/creating, should be hidden by default on viewing }}
-    {{#if (eq field "public_key")}}
-      <InfoTableRow @label="Public key" @value={{@model.config.public_key}}>
-        <MaskedInput @value={{@model.config.public_key}} @name={{field}} @displayOnly={{true}} @allowCopy={{true}} />
-      </InfoTableRow>
-    {{else}}
-      <InfoTableRow
-        @alwaysRender={{not (is-empty-value (get @model.config field))}}
-        @label={{this.label field}}
-        @value={{get @model.config field}}
-        @formatTtl={{this.isDuration field}}
-      />
-    {{/if}}
-  {{/each}}
-{{else}}
-  {{#if (get (engines-display-data @model.secretsEngine.type) "isConfigurable")}}
+    {{#each this.displayFields as |field|}}
+      {{! public key while not sensitive when editing/creating, should be hidden by default on viewing }}
+      {{#if (eq field "public_key")}}
+        <InfoTableRow @label="Public key" @value={{@model.config.public_key}}>
+          <MaskedInput @value={{@model.config.public_key}} @name={{field}} @displayOnly={{true}} @allowCopy={{true}} />
+        </InfoTableRow>
+      {{else}}
+        <InfoTableRow
+          @alwaysRender={{not (is-empty-value (get @model.config field))}}
+          @label={{this.label field}}
+          @value={{get @model.config field}}
+          @formatTtl={{this.isDuration field}}
+        />
+      {{/if}}
+    {{/each}}
+  {{else if engineDisplayData.isConfigurable}}
     {{! Prompt user to configure the secret engine }}
     <EmptyState
-      @title="{{get (engines-display-data @model.secretsEngine.type) 'displayName'}} not configured"
-      @message="Get started by configuring your {{get
-        (engines-display-data @model.secretsEngine.type)
-        'displayName'
-      }} secrets engine."
+      @title="{{engineDisplayData.displayName}} not configured"
+      @message="Get started by configuring your {{engineDisplayData.displayName}} secrets engine."
     >
       <Hds::Link::Standalone
         @icon="chevron-right"
         @iconPosition="trailing"
-        @text="Configure {{get (engines-display-data @model.secretsEngine.type) 'displayName'}}"
+        @text="Configure {{engineDisplayData.displayName}}"
         @route="vault.cluster.secrets.backend.configuration.edit"
-        @model={{@id}}
+        @model={{@model.secretsEngine.id}}
       />
     </EmptyState>
   {{else}}
     <EmptyState
       data-test-no-config
       @title="No configuration details available"
-      @message="{{get
-        (engines-display-data @model.secretsEngine.type)
-        'displayName'
-      }} does not have any plugin specific configuration. All configurable parameters for this engine are under 'General Settings'."
+      @message="{{engineDisplayData.displayName}} does not have any plugin specific configuration. All configurable parameters for this engine are under 'General Settings'."
     >
       <Hds::Link::Standalone
         @icon="chevron-right"
         @iconPosition="trailing"
         @text="Back to general settings"
         @route="vault.cluster.secrets.backend.configuration.general-settings"
-        @model={{@id}}
+        @model={{@model.secretsEngine.id}}
       />
     </EmptyState>
   {{/if}}
-{{/if}}
+{{/let}}
