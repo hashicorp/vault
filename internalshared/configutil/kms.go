@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/huaweicloudkms/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2"
 	"github.com/hashicorp/go-multierror"
@@ -227,13 +228,14 @@ func ParseKMSes(d string) ([]*KMS, error) {
 // when parsing the seal config. Seal types which do not contain such
 // configurations ought to have an empty array as the value in the map.
 var kmsSealAddressKeys = map[string][]string{
-	wrapping.WrapperTypeAliCloudKms.String():   {"domain"},
-	wrapping.WrapperTypeAwsKms.String():        {"endpoint"},
-	wrapping.WrapperTypeAzureKeyVault.String(): {"resource"},
-	wrapping.WrapperTypeGcpCkms.String():       {},
-	wrapping.WrapperTypeOciKms.String():        {"key_id", "crypto_endpoint", "management_endpoint"},
-	wrapping.WrapperTypePkcs11.String():        {},
-	wrapping.WrapperTypeTransit.String():       {"address"},
+	wrapping.WrapperTypeAliCloudKms.String():    {"domain"},
+	wrapping.WrapperTypeAwsKms.String():         {"endpoint"},
+	wrapping.WrapperTypeAzureKeyVault.String():  {"resource"},
+	wrapping.WrapperTypeGcpCkms.String():        {},
+	wrapping.WrapperTypeHuaweiCloudKms.String(): {"identity_endpoint"},
+	wrapping.WrapperTypeOciKms.String():         {"key_id", "crypto_endpoint", "management_endpoint"},
+	wrapping.WrapperTypePkcs11.String():         {},
+	wrapping.WrapperTypeTransit.String():        {"address"},
 }
 
 // normalizeKMSSealConfigAddrs takes a kms seal type, a config key, and its
@@ -306,6 +308,9 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 
 	case wrapping.WrapperTypeGcpCkms:
 		wrapper, kmsInfo, err = GetGCPCKMSKMSFunc(configKMS, opts...)
+
+	case wrapping.WrapperTypeHuaweiCloudKms:
+		wrapper, kmsInfo, err = GetHuaweiCloudKMSFunc(configKMS, opts...)
 
 	case wrapping.WrapperTypeOciKms:
 		if keyId, ok := configKMS.Config["key_id"]; ok {
@@ -430,6 +435,26 @@ func GetGCPCKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map
 	return wrapper, info, nil
 }
 
+func GetHuaweiCloudKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
+	wrapper := huaweicloudkms.NewWrapper()
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
+	if err != nil {
+		// If the error is any other than logical.KeyNotFoundError, return the error
+		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
+			return nil, nil, err
+		}
+	}
+	info := make(map[string]string)
+	if wrapperInfo != nil {
+		info["HuaweiCloud KMS Region"] = wrapperInfo.Metadata["region"]
+		info["HuaweiCloud KMS KeyID"] = wrapperInfo.Metadata["kms_key_id"]
+		if project, ok := wrapperInfo.Metadata["project"]; ok {
+			info["HuaweiCloud KMS Project"] = project
+		}
+	}
+	return wrapper, info, nil
+}
+
 func GetOCIKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := ocikms.NewWrapper()
 	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
@@ -494,6 +519,8 @@ func getEnvConfig(kms *KMS) map[string]string {
 		wrapperEnvVars = AzureEnvVars
 	case wrapping.WrapperTypeGcpCkms:
 		wrapperEnvVars = GCPCKMSEnvVars
+	case wrapping.WrapperTypeHuaweiCloudKms:
+		wrapperEnvVars = HuaweiCloudKMSEnvVars
 	case wrapping.WrapperTypeOciKms:
 		wrapperEnvVars = OCIKMSEnvVars
 	case wrapping.WrapperTypeTransit:
