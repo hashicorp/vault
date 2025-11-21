@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/ldap: Introduces options to do root password rotation for Active Directory and RACF rotation schemas
+```
