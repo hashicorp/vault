@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -14,13 +14,18 @@ export const GENERAL = {
   headerContainer: 'header.page-header',
   title: '[data-test-page-title]',
   hdsPageHeaderTitle: '.hds-page-header__title',
+  hdsPageHeaderSubtitle: '.hds-page-header__subtitle',
   hdsPageHeaderDescription: '.hds-page-header__description',
 
   /* ────── Tabs & Navigation ────── */
   tab: (name: string) => `[data-test-tab="${name}"]`,
+  tabLink: (name: string) => `[data-test-tab="${name}"] a`,
   hdsTab: (name: string) => `[data-test-tab="${name}"] button`, // HDS tab buttons
   secretTab: (name: string) => `[data-test-secret-list-tab="${name}"]`,
-  navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
+  navLink: (label: string) =>
+    label ? `[data-test-sidebar-nav-link="${label}"]` : '[data-test-sidebar-nav-link]',
+  navHeading: (label: string) =>
+    label ? `[data-test-sidebar-nav-heading="${label}"]` : '[data-test-sidebar-nav-heading]',
   linkTo: (label: string) => `[data-test-link-to="${label}"]`,
 
   /* ────── Buttons ────── */
@@ -36,7 +41,8 @@ export const GENERAL = {
   copySnippet: (name: string) => `[data-test-copy-snippet=${name}]`,
 
   /* ────── Menus & Lists ────── */
-  menuTrigger: '[data-test-popup-menu-trigger]',
+  dropdownToggle: (text: string) => `[data-test-dropdown="${text}"]`, // Use when dropdown toggle has text
+  menuTrigger: '[data-test-popup-menu-trigger]', // Use when dropdown toggle is just an icon
   menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
   listItem: (label: string) => (label ? `[data-test-list-item="${label}"]` : '[data-test-list-item]'),
   listItemLink: '[data-test-list-item-link]',
@@ -48,6 +54,10 @@ export const GENERAL = {
   tableData: (idx?: number, key?: string) => `[data-test-table-row="${idx}"] [data-test-table-data="${key}"]`,
   tableColumnHeader: (col: number, { isAdvanced = false } = {}) =>
     `${isAdvanced ? '.hds-advanced-table__th' : 'hds-table__th'}:nth-child(${col})`, // number is not 0-indexed, first column header is 1
+  tableColumnHeaderSortButton: (col: number, { isAdvanced = false } = {}) =>
+    `${
+      isAdvanced ? '.hds-advanced-table__th' : 'hds-table__th'
+    }:nth-child(${col}) .hds-advanced-table__th-button--sort`, // number is not 0-indexed, first column header is 1
 
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
@@ -56,10 +66,10 @@ export const GENERAL = {
   docLinkByAttr: (attr: string) => `[data-test-doc-link="${attr}"]`,
   enableField: (attr: string) => `[data-test-enable-field="${attr}"] button`,
   fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,
-  fieldLabel: () => `[data-test-form-field-label]`,
-  fieldLabelbyAttr: (attr: string) => `[data-test-form-field-label="${attr}"]`,
+  fieldLabel: (attr: string) =>
+    attr ? `[data-test-form-field-label="${attr}"]` : `[data-test-form-field-label]`,
   groupControlByIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index})`,
-  helpText: () => `[data-test-help-text]`,
+  helpText: '[data-test-help-text]',
   helpTextByAttr: (attr: string) => `[data-test-help-text="${attr}"]`,
   helpTextByGroupControlIndex: (index: number) =>
     `.hds-form-group__control-field:nth-of-type(${index}) [data-test-help-text]`,
@@ -172,5 +182,7 @@ export const GENERAL = {
   /* ────── Misc ────── */
   icon: (name: string) => (name ? `[data-test-icon="${name}"]` : '[data-test-icon]'),
   badge: (name: string) => (name ? `[data-test-badge="${name}"]` : '[data-test-badge]'),
+  licenseBanner: (name: string) => `[data-test-license-banner="${name}"]`,
   tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
+  tooltipText: '.hds-tooltip-container',
 };

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 // Package cmd defines the pipeline CLI commands.
@@ -32,6 +32,7 @@ func newRootCmd() *cobra.Command {
 
 	rootCmd.AddCommand(newGenerateCmd())
 	rootCmd.AddCommand(newGithubCmd())
+	rootCmd.AddCommand(newGoCmd())
 	rootCmd.AddCommand(newHCPCmd())
 	rootCmd.AddCommand(newReleasesCmd())
 

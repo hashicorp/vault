@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -57,7 +57,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
       .exists('shows the link for the kvv2 secrets engine');
     const row = GENERAL.tableRow(`${enginePath}/`);
     await click(`${row} ${GENERAL.menuTrigger}`);
-    await click(GENERAL.menuItem('disable-engine'));
+    await click(GENERAL.menuItem('Delete'));
     await click(GENERAL.confirmButton);
 
     assert.true(

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -12,19 +12,17 @@ import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 import type LdapLibraryModel from 'vault/models/ldap/library';
 import type SecretEngineModel from 'vault/models/secret-engine';
-import type Controller from '@ember/controller';
-import type { Breadcrumb } from 'vault/vault/app-types';
+
 import { ldapBreadcrumbs, libraryRoutes } from 'ldap/utils/ldap-breadcrumbs';
+import type LdapLibrariesSubdirectoryController from 'ldap/controllers/libraries/subdirectory';
 
 interface RouteModel {
   backendModel: SecretEngineModel;
   path_to_library: string;
   libraries: Array<LdapLibraryModel>;
 }
-interface RouteController extends Controller {
-  breadcrumbs: Array<Breadcrumb>;
-  model: RouteModel;
-}
+
+type RouteController = LdapLibrariesSubdirectoryController;
 interface RouteParams {
   path_to_library?: string;
 }
@@ -36,10 +34,17 @@ export default class LdapLibrariesSubdirectoryRoute extends Route {
   model(params: RouteParams) {
     const backendModel = this.modelFor('application') as SecretEngineModel;
     const { path_to_library } = params;
+
+    // Ensure path_to_library has trailing slash for proper API calls and model construction
+    const normalizedPath = path_to_library?.endsWith('/') ? path_to_library : `${path_to_library}/`;
+
     return hash({
       backendModel,
-      path_to_library,
-      libraries: this.store.query('ldap/library', { backend: backendModel.id, path_to_library }),
+      path_to_library: normalizedPath,
+      libraries: this.store.query('ldap/library', {
+        backend: backendModel.id,
+        path_to_library: normalizedPath,
+      }),
     });
   }
 
@@ -50,11 +55,13 @@ export default class LdapLibrariesSubdirectoryRoute extends Route {
       return [resolvedModel.backendModel.id, childResource];
     };
 
+    const currentLevelPath = resolvedModel.path_to_library;
+
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backendModel.id, route: 'overview' },
       { label: 'Libraries', route: 'libraries' },
-      ...ldapBreadcrumbs(resolvedModel.path_to_library, routeParams, libraryRoutes, true),
+      ...ldapBreadcrumbs(currentLevelPath, routeParams, libraryRoutes, true),
     ];
   }
 }

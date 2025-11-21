@@ -1,10 +1,10 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if @model.id}}
-  {{! Model only has ID once form has been submitted and saved }}
+{{#if this.signedIntermediate}}
+  {{! this block displays when the intermediate has been signed successfully }}
   <Toolbar />
   <main data-test-sign-intermediate-result>
     <div class="box is-sideless is-fullwidth is-shadowless">
@@ -14,23 +14,23 @@
           The CA Chain and Issuing CA values will only be available once. Make sure you copy and save it now.
         </A.Description>
       </Hds::Alert>
-      {{#each this.showFields as |fieldName|}}
-        {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
-          <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @model attr.name}}>
-            {{#if (and attr.options.isCertificate (get @model attr.name))}}
-              <CertificateCard @data={{get @model attr.name}} />
-            {{else if (eq attr.name "serialNumber")}}
-              <LinkTo
-                @route="certificates.certificate.details"
-                @model={{@model.serialNumber}}
-              >{{@model.serialNumber}}</LinkTo>
-            {{else}}
-              <Icon @name="minus" />
-            {{/if}}
-          </InfoTableRow>
-        {{/let}}
-      {{/each}}
-      <ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
+
+      <InfoTableRow @label="Serial number">
+        <LinkTo @route="certificates.certificate.details" @model={{this.signedIntermediate.serial_number}}>
+          {{this.signedIntermediate.serial_number}}
+        </LinkTo>
+      </InfoTableRow>
+      <InfoTableRow @label="Certificate">
+        <CertificateCard @data={{this.signedIntermediate.certificate}} />
+      </InfoTableRow>
+      <InfoTableRow @label="Issuing CA">
+        <CertificateCard @data={{this.signedIntermediate.issuing_ca}} />
+      </InfoTableRow>
+      <InfoTableRow @label="CA Chain">
+        <CertificateCard @data={{this.signedIntermediate.ca_chain}} />
+      </InfoTableRow>
+
+      <ParsedCertificateInfoRows @model={{this.parsedCertificate}} />
     </div>
   </main>
 {{else}}
@@ -38,20 +38,23 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
       <NamespaceReminder @mode={{"create"}} @noun="signed intermediate" />
-      {{#each @model.formFields as |attr|}}
-        <FormField
-          data-test-field={{attr}}
-          @attr={{attr}}
-          @model={{@model}}
-          @modelValidations={{this.modelValidations}}
-          @showHelpText={{false}}
-        >
-          {{! attr customTtl has editType yield and will show this component }}
-          <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
-        </FormField>
+
+      {{#each this.fields as |field|}}
+        {{#let (find-by "name" field @form.formFields) as |formField|}}
+          <FormField
+            data-test-field={{field}}
+            @attr={{formField}}
+            @model={{@form}}
+            @modelValidations={{this.modelValidations}}
+            @showHelpText={{false}}
+          >
+            {{! attr customTtl has editType yield and will show this component }}
+            <PkiNotValidAfterForm @attr={{formField}} @model={{@form}} />
+          </FormField>
+        {{/let}}
       {{/each}}
 
-      <PkiGenerateToggleGroups @model={{@model}} @groups={{this.groups}} />
+      <PkiGenerateToggleGroups @form={{@form}} @groups={{this.groups}} />
     </div>
 
     <Hds::ButtonSet class="has-top-padding-s">
@@ -67,7 +70,7 @@
         @color="secondary"
         class="has-left-margin-s"
         disabled={{this.save.isRunning}}
-        {{on "click" this.cancel}}
+        {{on "click" @onCancel}}
         data-test-pki-sign-intermediate-cancel
       />
     </Hds::ButtonSet>

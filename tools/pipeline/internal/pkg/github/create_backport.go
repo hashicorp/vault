@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -697,13 +697,14 @@ func (r *CreateBackportReq) backportRef(
 		res.Error = fmt.Errorf("creating backport pull request body %w", err)
 		return res
 	}
+	limitedPRBody := limitCharacters(prBody)
 	res.PullRequest, _, err = github.PullRequests.Create(
 		ctx, r.Owner, r.Repo, &libgithub.NewPullRequest{
 			Title:    &prTitle,
 			Head:     &branchName,
 			HeadRepo: &r.Repo,
 			Base:     &ref,
-			Body:     &prBody,
+			Body:     &limitedPRBody,
 		},
 	)
 	if err != nil {

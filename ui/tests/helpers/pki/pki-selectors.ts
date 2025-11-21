@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -126,9 +126,11 @@ export const PKI_CONFIG_EDIT = {
   acmeEditSection: '[data-test-acme-edit-section]',
   configEditSection: '[data-test-cluster-config-edit-section]',
   configInput: (attr: string) => `[data-test-input="${attr}"]`,
-  stringListInput: (attr: string) => `[data-test-input="${attr}"] [data-test-string-list-input="0"]`,
+  stringListInput: (attr: string, number = 0) =>
+    `[data-test-input="${attr}"] [data-test-string-list-input="${number}"]`,
   urlsEditSection: '[data-test-urls-edit-section]',
-  urlFieldInput: (attr: string) => `[data-test-input="${attr}"] textarea`,
+  urlFieldInput: (attr: string, isTextarea = true) =>
+    `[data-test-input="${attr}"]${isTextarea ? ' textarea' : ''}`,
   urlFieldLabel: (attr: string) => `[data-test-input="${attr}"] label`,
   crlEditSection: '[data-test-crl-edit-section]',
   crlToggleInput: (attr: string) => `[data-test-input="${attr}"] input`,

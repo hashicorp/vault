@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -52,47 +52,47 @@
     </BasicDropdown>
   </:actions>
   <:list as |issuers|>
-    {{#each issuers as |pkiIssuer idx|}}
+    {{#each issuers as |issuer idx|}}
       <LinkedBlock
         class="list-item-row"
-        @params={{array "issuers.issuer.details" @backend pkiIssuer.id}}
+        @params={{array "issuers.issuer.details" @backend issuer.issuer_id}}
         @linkPrefix={{@mountPoint}}
       >
         <div class="level is-mobile">
           <div class="level-left">
-            <div data-test-issuer-list={{pkiIssuer.id}}>
+            <div data-test-issuer-list={{issuer.issuer_id}}>
               <Icon @name="certificate" class="has-text-grey-light" />
               <span class="has-text-weight-semibold is-underline">
-                {{pkiIssuer.issuerRef}}
-                {{#if pkiIssuer.issuerName}}
-                  <Hds::Badge @text={{pkiIssuer.id}} />
+                {{or issuer.issuer_name issuer.issuer_id}}
+                {{#if issuer.issuer_name}}
+                  <Hds::Badge @text={{issuer.issuer_id}} />
                 {{/if}}
               </span>
               <div class="is-flex-row has-left-margin-l has-top-margin-xs">
-                {{#if pkiIssuer.isDefault}}
+                {{#if issuer.is_default}}
                   <Hds::Badge @text="default issuer" data-test-is-default={{idx}} class="has-right-margin-8" />
                 {{/if}}
-                {{#if (not-eq pkiIssuer.isRoot undefined)}}
+                {{#if (not-eq issuer.isRoot undefined)}}
                   <Hds::Badge
-                    @text={{if pkiIssuer.isRoot "root" "intermediate"}}
+                    @text={{if issuer.isRoot "root" "intermediate"}}
                     data-test-is-root-tag={{idx}}
                     class="has-right-margin-8"
                   />
                 {{/if}}
-                {{#if pkiIssuer.serialNumber}}
+                {{#if issuer.serial_number}}
                   <span class="is-flex-v-centered has-side-padding-8" data-test-serial-number={{idx}}>
-                    <InfoTooltip>
-                      Serial number
-                    </InfoTooltip>
-                    {{pkiIssuer.serialNumber}}
+                    <Hds::TooltipButton @text="Serial number" aria-label="This is the serial number">
+                      <Hds::Icon @name="info" />
+                    </Hds::TooltipButton>
+                    {{issuer.serial_number}}
                   </span>
                 {{/if}}
-                {{#if pkiIssuer.parsedCertificate.common_name}}
+                {{#if issuer.parsedCertificate.common_name}}
                   <span class="is-flex-v-centered has-side-padding-8" data-test-common-name={{idx}}>
-                    <InfoTooltip>
-                      Common name
-                    </InfoTooltip>
-                    {{pkiIssuer.parsedCertificate.common_name}}
+                    <Hds::TooltipButton @text="Common name" aria-label="This is the common name">
+                      <Hds::Icon @name="info" />
+                    </Hds::TooltipButton>
+                    {{issuer.parsedCertificate.common_name}}
                   </span>
                 {{/if}}
               </div>
@@ -109,10 +109,14 @@
                 />
                 <dd.Interactive
                   @route="issuers.issuer.details"
-                  @models={{array @backend pkiIssuer.id}}
+                  @models={{array @backend issuer.issuer_id}}
                   data-test-pki-issuer-details
-                >Details</dd.Interactive>
-                <dd.Interactive @route="issuers.issuer.edit" @models={{array @backend pkiIssuer.id}}>Edit</dd.Interactive>
+                >
+                  Details
+                </dd.Interactive>
+                <dd.Interactive @route="issuers.issuer.edit" @models={{array @backend issuer.issuer_id}}>
+                  Edit
+                </dd.Interactive>
               </Hds::Dropdown>
             </div>
           </div>

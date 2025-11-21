@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -27,4 +27,25 @@ export const PATH_MAP = {
   authMethodConfig: apiPath`auth/${'path'}/config`,
   authMethodConfigAws: apiPath`auth/${'path'}/config/client`,
   authMethodDelete: apiPath`sys/auth/${'path'}`,
+  pkiRevoke: apiPath`${'backend'}/revoke`,
+  pkiConfigAcme: apiPath`${'backend'}/config/acme`,
+  pkiConfigCluster: apiPath`${'backend'}/config/cluster`,
+  pkiConfigCrl: apiPath`${'backend'}/config/crl`,
+  pkiConfigUrls: apiPath`${'backend'}/config/urls`,
+  pkiIssuersImportBundle: apiPath`${'backend'}/issuers/import/bundle`,
+  pkiIssuersGenerateRoot: apiPath`${'backend'}/issuers/generate/root/${'type'}`,
+  pkiIssuersGenerateIntermediate: apiPath`${'backend'}/issuers/generate/intermediate/${'type'}`,
+  pkiIssuersCrossSign: apiPath`${'backend'}/issuers/cross-sign`,
+  pkiIssuer: apiPath`${'backend'}/issuer/${'issuerId'}`,
+  pkiIssuerSignIntermediate: apiPath`${'backend'}/issuer/${'issuerId'}/sign-intermediate`,
+  pkiRoot: apiPath`${'backend'}/root`,
+  pkiRootRotate: apiPath`${'backend'}/root/rotate/${'type'}`,
+  pkiIntermediateCrossSign: apiPath`${'backend'}/intermediate/cross-sign`,
+  pkiKey: apiPath`${'backend'}/key/${'keyId'}`,
+  pkiKeysGenerate: apiPath`${'backend'}/keys/generate`,
+  pkiKeysImport: apiPath`${'backend'}/keys/import`,
+  pkiRole: apiPath`${'backend'}/roles/${'id'}`,
+  pkiIssue: apiPath`${'backend'}/issue/${'id'}`,
+  pkiSign: apiPath`${'backend'}/sign/${'id'}`,
+  pkiSignVerbatim: apiPath`${'backend'}/sign-verbatim/${'id'}`,
 };

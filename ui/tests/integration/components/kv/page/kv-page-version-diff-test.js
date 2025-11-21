@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -124,7 +124,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::VersionDiff', 
 
     const [left, right] = findAll(PAGE.detail.versionDropdown);
     assert.dom(PAGE.diff.visualDiff).hasText(
-      `foo\"bar\"hello\"world\"`, // eslint-disable-line no-useless-escape
+      `hello\"world\"foo\"bar\"`, // eslint-disable-line no-useless-escape
       'correctly pull in the data from version 4 and compared to version 1.'
     );
     assert.dom(PAGE.diff.deleted).hasText(`hello"world"`);

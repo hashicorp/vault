@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -45,6 +45,13 @@ module('Unit | Service | version', function (hooks) {
     assert.false(service.hasDRReplication);
     service.features = ['DR Replication'];
     assert.true(service.hasDRReplication);
+  });
+
+  test('hasPKIOnly', function (assert) {
+    const service = this.owner.lookup('service:version');
+    assert.false(service.hasPKIOnly);
+    service.features = ['PKI-only Secrets'];
+    assert.true(service.hasPKIOnly);
   });
 
   // SHOW SECRETS SYNC TESTS

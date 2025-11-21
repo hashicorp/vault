@@ -148,6 +148,7 @@ jobs:
           startsWith(github.event.pull_request.base.ref, 'ce/') &&
           contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'enterprise')
         name: Ensure that we have not changed any enterprise files on pull requests against ce/* branches.
+        id: ce-ent-changed-file-check
         run: |
           echo "The pull request has changed files that are in enterprise groups!"
           echo "If you believe this to be in error you will want to update the changed files checks in tools/pipeline/internal/pkg/changed"
@@ -171,6 +172,95 @@ jobs:
           # Don't download them on a cache hit during setup, just make sure they're cached before
           # subsequent workflows are run.
           no-restore: true
+
+  ce-code-checks:
+    # Checks that we want to run only on changes to ce/* branches that ought to pass but aren't
+    # required for the "completed-successfully" job to pass. This allows us to bubble up this
+    # information without gating merges, which can be useful if you have many PRs simultaneously
+    # modifying go.mod before CE PRs with the equivalent changes have been merged.
+    name: Check ce/* Pull Requests
+    if: |
+      needs.setup.outputs.is-ent-repo == 'true' &&
+      needs.setup.outputs.workflow-trigger == 'pull_request' &&
+      github.event.pull_request.draft == false &&
+      startsWith(github.event.pull_request.base.ref, 'ce/')
+    runs-on:
+      - self-hosted
+      - ubuntu-latest-x64
+    permissions: write-all # vault-auth
+    needs:
+      - setup
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      # Get the elevated github token
+      - id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      - id: set-up-pipeline
+        uses: ./.github/actions/set-up-pipeline
+        with:
+          github-token: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      # Ensure that our go.mod files have not drifted if we've changed the Go toolchain on a CE PR
+      - if: |
+          needs.setup.outputs.is-ent-repo == 'true' &&
+          needs.setup.outputs.workflow-trigger == 'pull_request' &&
+          startsWith(github.event.pull_request.base.ref, 'ce/') &&
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')
+        name: Check go.mod diff on pull requests against ce/* branches that changed the go toolchain
+        id: go-mod-diff
+        env:
+          GITHUB_TOKEN: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+          # Pass these in as env variables.
+          # See: https://docs.github.com/en/actions/reference/security/secure-use#good-practices-for-mitigating-script-injection-attacks
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          # Check the deltas between all relevant go.mod files between the PR HEAD ref and the
+          # Enterprise equivalent base ref. We disable 'strict-require' because enterprise and CE
+          # are allowed to have different modules. We still enforce that like modules between
+          # branches share the same versions. Similarly, 'strict-replace' is also disabled to allow
+          # both modules to have different 'replace' directives but still compare like 'replace'
+          # directives that are shared. This allows enterprise to use enterprise plugin 'replace'
+          # directives and not fail this check. We also have this run in a non-failing job to handle
+          # cases where multiple PRs are changing go.mod in enteprise an CE.
+
+          # Strip the ce/ prefix off of the PR base ref
+          ent_base_ref="${BASE_REF#ce/}"
+          if [[ "$ent_base_ref" != "main" ]]; then
+            # If it's not main add the +ent suffix
+            ent_base_ref="${ent_base_ref}+ent"
+          fi
+          echo "A branch: $ent_base_ref"
+          echo "B branch: $HEAD_REF"
+          pipeline github check go-mod-diff ${{ runner.debug && '--log debug' }} \
+            --a-repo vault-enterprise \
+            --a-branch "$ent_base_ref" \
+            --b-repo vault-enterprise \
+            --b-branch "$HEAD_REF" \
+              --strict-replace=false \
+              --strict-require=false \
+                -p go.mod \
+                -p api/go.mod \
+                -p api/auth/approle/go.mod \
+                -p api/auth/aws/go.mod \
+                -p api/auth/azure/go.mod \
+                -p api/auth/cert/go.mod \
+                -p api/auth/gcp/go.mod \
+                -p api/auth/kubernetes/go.mod \
+                -p api/auth/ldap/go.mod \
+                -p api/auth/userpass/go.mod \
+                -p tools/pipeline/go.mod \
+                -p sdk/go.mod \
+                --format markdown | tee -a "$GITHUB_STEP_SUMMARY"
 
   ui:
     # The Web UI workflow is a prerequisite workflow for building our artifacts. If the application
@@ -223,7 +313,7 @@ jobs:
           key: ui-${{ steps.ui-hash.outputs.ui-hash }}
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Set up node and yarn
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version-file: ui/package.json
           cache: yarn
@@ -454,10 +544,10 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
-            kv/data/github/${{ github.repository }}/github_actions_notifications_bot token | SLACK_BOT_TOKEN;
-      - id: slackbot-token
+            kv/data/github/${{ github.repository }}/slack feed-vault-ci-official-webhook-url | slack-webhook-url;
+      - id: slackbot-webhook-url
         run:
-          echo "slackbot-token=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.SLACK_BOT_TOKEN || steps.secrets.outputs.SLACK_BOT_TOKEN }}" >> "$GITHUB_OUTPUT"
+          echo "slackbot-webhook-url=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL || steps.secrets.outputs.slackbot-webhook-url }}" >> "$GITHUB_OUTPUT"
       - if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name &&
@@ -480,19 +570,17 @@ jobs:
           (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
         uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
         with:
-          # send to #feed-vault-ci-official, use "C05Q4D5V89W" as the channel to send to test-vault-ci-slack-integration for testing
           errors: true # exit with an error if the payload is invalid
           retries: rapid # retry if we're being rated limited
-          method: chat.postMessage
-          token: ${{ steps.slackbot-token.outputs.slackbot-token }}
+          webhook: ${{ steps.slackbot-webhook-url.outputs.slackbot-webhook-url }}
+          webhook-type: incoming-webhook
           payload: |
-            channel: C09L3BB542Y
             text: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} build failures on ${{ github.ref_name }}
             blocks:
               - type: header
                 text:
                   type: plain_text
-                  text: :rotating_light: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} build failures on ${{ github.ref_name }} :rotating_light:
+                  text: ':flashing-light: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} build failures on ${{ github.ref_name }} :flashing-light:'
                   emoji: true
               - type: divider
               - type: section
@@ -519,7 +607,7 @@ jobs:
         with:
           version: ${{ needs.setup.outputs.vault-version-metadata }}
           product: ${{ needs.setup.outputs.vault-binary-name }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: steps.generate-metadata-file.outcome == 'success' # upload our metadata if we created it
         with:
           name: metadata.json

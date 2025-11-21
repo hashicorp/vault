@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
+
+# This script builds Vault binaries and optionally packages them.
+#
+# Two distinct workflows are supported:
+# 1. Standard build: Builds to dist/ and creates zip bundle from dist/
+# 2. Target path build: Builds to dist/, copies to TARGET_BIN_PATH, skips bundling
+#    (bundling is skipped to avoid confusion when binary exists in multiple locations)
+#
+# Environment variables:
+# - BUILD_UI: Set to "true" to build UI components
+# - TARGET_BIN_PATH: If set, copies built binary to this location instead of bundling
+# - BUNDLE_PATH: If set (and TARGET_BIN_PATH is not), creates zip bundle at this path
 
 set -eux -o pipefail
 
@@ -20,5 +32,12 @@ make ci-build
 
 popd > /dev/null
 
-echo "--> Bundling $BIN_PATH/* to $BUNDLE_PATH"
-zip -r -j "$BUNDLE_PATH" "$BIN_PATH/"
+if [ -n "$TARGET_BIN_PATH" ]; then
+  echo "--> Target binary path specified, copying binary and skipping bundle"
+  make -C "$root_dir" ci-copy-binary
+elif [ -n "$BUNDLE_PATH" ]; then
+  echo "--> Creating zip bundle from dist/"
+  make -C "$root_dir" ci-bundle
+else
+  echo "--> No post-build packaging requested (neither TARGET_BIN_PATH nor BUNDLE_PATH specified)"
+fi

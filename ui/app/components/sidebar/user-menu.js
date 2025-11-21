@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -15,6 +15,7 @@ export default class SidebarUserMenuComponent extends Component {
   @service router;
 
   @tracked fakeRenew = false;
+  @tracked showRevokeModal = false;
 
   get hasEntityId() {
     // root users will not have an entity_id because they are not associated with an entity.

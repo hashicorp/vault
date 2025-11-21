@@ -1,9 +1,8 @@
 @use '../utils/box-shadow_variables';
-@use '../utils/font_variables';
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -18,7 +17,7 @@
   justify-content: space-between;
   margin: size_variables.$spacing-8 size_variables.$spacing-16;
   border: box-shadow_variables.$base-border;
-  border-radius: size_variables.$radius;
+  border-radius: var(--token-form-radiocard-border-radius);
   transition: all ease-in-out size_variables.$speed;
   max-width: 60%;
   input[type='radio'] {
@@ -83,27 +82,27 @@
 }
 
 .radio-card-message-title {
-  font-weight: font_variables.$font-weight-semibold;
+  font-weight: var(--token-typography-font-weight-semibold);
   font-size: size_variables.$size-7;
   margin-bottom: size_variables.$spacing-4;
 }
 .radio-card-message-body {
   line-height: 1.2;
   color: var(--token-color-foreground-faint);
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
 }
 
 .radio-card-radio-row {
   display: flex;
   justify-content: center;
-  background: var(--token-color-palette-neutral-50);
+  background: var(--token-color-surface-faint);
   padding: size_variables.$spacing-8;
 }
 
 .is-selected {
   &.radio-card {
     border-color: var(--token-color-palette-blue-200);
-    background: var(--token-color-palette-neutral-50);
+    background: var(--token-color-surface-faint);
     box-shadow: box-shadow_variables.$box-shadow-middle;
   }
   .radio-card-icon {

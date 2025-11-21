@@ -1,7 +1,7 @@
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -70,13 +70,12 @@
 // large grouped css blocks
 .is-hint {
   color: var(--token-color-palette-neutral-400);
-  font-size: size_variables.$size-8;
-  padding: size_variables.$spacing-12 0;
+  font-size: var(--token-typography-body-200-font-size);
 }
 
 .is-optional {
   color: var(--token-color-palette-neutral-400);
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
   text-transform: lowercase;
 }
 
@@ -136,8 +135,8 @@
 }
 
 // border-radius
-.border-radius-4 {
-  border-radius: size_variables.$radius-large;
+.border-radius-small {
+  border-radius: var(--token-border-radius-small);
 }
 
 // border-spacing

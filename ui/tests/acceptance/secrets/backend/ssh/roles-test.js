@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -109,7 +109,7 @@ module('Acceptance | ssh | roles', function (hooks) {
     assert.expect(28);
     const sshPath = `ssh-${this.uid}`;
     await enablePage.enable('ssh', sshPath);
-    await click(SES.configTab);
+    await click(GENERAL.tab('Configuration'));
     await click(SES.configure);
     // default has generate CA checked so we just submit the form
     await click(GENERAL.submitButton);

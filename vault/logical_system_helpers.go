@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -131,6 +131,11 @@ var (
 		// group-policy-application paths
 		paths = append(paths, buildEnterpriseOnlyPaths(map[string]enterprisePathStub{
 			"config/group-policy-application$": {operations: []logical.Operation{logical.ReadOperation, logical.UpdateOperation}},
+		})...)
+
+		// reporting paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string]enterprisePathStub{
+			"reporting/scan$": {operations: []logical.Operation{logical.UpdateOperation}},
 		})...)
 
 		// namespaces paths

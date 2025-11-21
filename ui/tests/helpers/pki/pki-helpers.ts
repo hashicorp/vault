@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -24,6 +24,14 @@ export function clearRecords(store: Store) {
   store.unloadAll('pki/certificate/sign');
   store.unloadAll('capabilities');
 }
+
+export const configCapabilities = {
+  canImportBundle: true,
+  canSetAcme: true,
+  canSetCluster: true,
+  canSetCrl: true,
+  canSetUrls: true,
+};
 
 /**
  * The following are certificate values used for testing. They are exported under the CERTIFICATES object.
@@ -213,6 +221,7 @@ hU9YsNh6bCDmnBDBsDMOI7h8lBRQwTiWVoSD9YNVvFiY29YvFbJQGdh+pmBtf7E+
 d8SYWhRdxmH3qcHNPcR1iw==
 -----END CERTIFICATE-----`;
 const certWithoutCN = `-----BEGIN CERTIFICATE-----\nMIIDUDCCAjigAwIBAgIUEUpM5i7XMd/imZkR9XvonMaqPyYwDQYJKoZIhvcNAQEL\nBQAwHDEaMBgGCSqGSIb3DQEJARYLZm9vQGJhci5jb20wHhcNMjMwMTIzMjMyODEw\nWhcNMzMwMTIwMjMyODEwWjAcMRowGAYJKoZIhvcNAQkBFgtmb29AYmFyLmNvbTCC\nASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAPGSdeqLICZcoUzxk88F8Tp+\nVNI+mS74L8pHyb9ZNZfeXPo0E9L5pi+KKI7rkxAtBGUecG1ENSxDDK9p6XZhWHSU\nZ6bdjOsjcIlfiM+1hhtDclIVxIDnz2Jt1/Vmnm8DXwdwVATWiFLTnfm288deNwsT\npl0ehAR3BadkZvteC6t+giEw/4qm1/FP53GEBOQeUWJDZRvtL37rdx4joFv3cR4w\nV0dukOjc5AGXtIOorO145OSZj8s7RsW3pfGcFUcOg7/flDxfK1UqFflQa7veLvKa\nWE/fOMyB/711QjSkTuQ5Rw3Rf9Fr2pqVJQgElTIW1SKaX5EJTB9mtGB34UqUXtsC\nAwEAAaOBiTCBhjAdBgNVHQ4EFgQUyhFP/fm+798mErPD5VQvEaAZQrswHwYDVR0j\nBBgwFoAUyhFP/fm+798mErPD5VQvEaAZQrswDgYDVR0PAQH/BAQDAgWgMCAGA1Ud\nJQEB/wQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjASBgNVHRMBAf8ECDAGAQH/AgEK\nMA0GCSqGSIb3DQEBCwUAA4IBAQCishzVkhuSAtqxgsZdYzBs3GpakGIio5zReW27\n6dk96hYCbbe4K3DtcFbRD1B8t6aTJlHxkFRaOWErSXu9WP3fUhIDNRE64Qsrg1zk\n3Km430qBlorXmTp6xhYHQfY5bn5rT2YY7AmaYIlIFxRhod43i5GDbBP+e+d/vTqR\nv1AJflYofeR4LeATP64B6a4R+QQVoxI43+pyH3ka+nRHwJBR9h8SMtJoqBy7x9pl\nYlBDa8lSn05doA3+e03VIzitvBBWI4oX1XB0tShSLk6YJXayIwe0ZNVvfYLIRKCp\nb4DUwChYzG/FwFSssUAqzVFhu3i+uU3Z47bsLVm0R5m7hLiZ\n-----END CERTIFICATE-----`;
+const certWithAllKeyUsage = `-----BEGIN CERTIFICATE-----\nMIIDjjCCAnagAwIBAgIUYykdVqVIR0kyYMzGIPeqijtsypowDQYJKoZIhvcNAQEL\nBQAwEjEQMA4GA1UEAxMHbXktcm9vdDAeFw0yNTEwMjcyMDUxMjNaFw0yNTEwMjcy\nMjUxNTNaMBYxFDASBgNVBAMTC2FsbGtleXVzYWdlMIIBIjANBgkqhkiG9w0BAQEF\nAAOCAQ8AMIIBCgKCAQEAxmTxzVAon27u1utDb6QCVftjJaMhop/XcIMea8kus0Kj\n1ASE6vITOq6OV0piofdJ1wL7PsZNMJFYHZQVKwXi+UlSxChJQdeqFfSJ6n/V6B7g\nO9cADMJNJOgrujyYQKDWDE9YxQJV4RoikthS0jMDuOSTYcX9s9KywGm5l9p+He0I\nHWZHhBpS3QIrn0InUjANtV5CD8aTqLIu5A3maX1Sba7hvH2h9gzXRhWxmjSAtUOp\ngyYXBbyL4bx7wELKCnIudUDBE4G7imzGbAR0nIRidZJ8vn3Cx9JyK4WMvmEC99wo\n+rDNzaVMsH1WPW9OAlaVX8y6b8Z1kQtCTpYk+fQlFwIDAQABo4HXMIHUMA8GA1Ud\nDwEB/wQFAwMH/4AwaQYDVR0lBGIwYAYEVR0lAAYIKwYBBQUHAwEGCCsGAQUFBwMC\nBggrBgEFBQcDAwYIKwYBBQUHAwQGCCsGAQUFBwMFBggrBgEFBQcDBgYIKwYBBQUH\nAwcGCCsGAQUFBwMIBggrBgEFBQcDCTAdBgNVHQ4EFgQUnakdzwExzVyymSbc6GPP\nyfNHPvEwHwYDVR0jBBgwFoAUBq3YXv2yL2unSF36GmuqeaW/SQkwFgYDVR0RBA8w\nDYILYWxsa2V5dXNhZ2UwDQYJKoZIhvcNAQELBQADggEBAL5f52isY1Oqn20Cez3R\ncgOuMvVBTKw3UAzjJhoSmZEVAhn1TcDjIXrb0dUhleacRdkV7whzL8BAsPV3lB2R\nw9fnWQct4CAlXSgli2w6ONcsfX8ehQ0tiEhjrfJEBu//6Zgj9K5FwMlZ/R0qok5s\nh2hGNU+j8AmE+MWlpdY2+hnvV800ENcHZLbokcRDu+WDGOGdbZcxBZE4Iyg2Ec+7\nSBIBbsq5T1IbQfMmS+udtxEIbb/n+XAGhRdo1hO0A8y4AYcurv+5uLXNSyVh61Xt\nBRjcpUQ6wtgJvGP2xNPSllPQ2UelueKfLqZi6dZWWd/+T6DG6gBbfZzSbFk+W/jt\nbS8=\n-----END CERTIFICATE-----`;
 
 // CROSS-SIGNING:
 const newCSR = {
@@ -241,6 +250,7 @@ export const CERTIFICATES = {
   unsupportedOids,
   unsupportedPem,
   certWithoutCN,
+  certWithAllKeyUsage,
   newCSR,
   oldParentIssuerCert,
   parentIssuerCert,

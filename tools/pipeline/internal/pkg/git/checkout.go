@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package git
@@ -35,7 +35,7 @@ type CheckoutOpts struct {
 	PathSpec []string // -- <pathspec>
 }
 
-// Branch runs the git checkout command
+// Checkout runs the git checkout command
 func (c *Client) Checkout(ctx context.Context, opts *CheckoutOpts) (*ExecResponse, error) {
 	return c.Exec(ctx, "checkout", opts)
 }

@@ -1,10 +1,9 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 export const SECRET_ENGINE_SELECTORS = {
-  configTab: '[data-test-configuration-tab]',
   configure: '[data-test-secret-backend-configure]',
   configureNote: (name: string) => `[data-test-configure-note="${name}"]`,
   configureTitle: (type: string) => `[data-test-backend-configure-title="${type}"]`,

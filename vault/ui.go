@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
@@ -35,10 +36,14 @@ type UIConfig struct {
 // NewUIConfig creates a new UI config
 func NewUIConfig(enabled bool, physicalStorage physical.Backend, barrierStorage logical.Storage) *UIConfig {
 	defaultHeaders := http.Header{}
+	connectSrcHeader := "connect-src 'self';"
 	defaultHeaders.Set("Service-Worker-Allowed", "/")
 	defaultHeaders.Set("X-Content-Type-Options", "nosniff")
-	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; connect-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'")
-
+	isHVD := os.Getenv("VAULT_CLOUD_ADMIN_NAMESPACE") // grab feature flag to determine if HVD
+	if isHVD != "" && isHVD != "0" {                  // only if HVD, set connect-src to include posthog
+		connectSrcHeader = "connect-src 'self' https://eu.i.posthog.com;"
+	}
+	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; "+connectSrcHeader+" img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'")
 	return &UIConfig{
 		physicalStorage: physicalStorage,
 		barrierStorage:  barrierStorage,

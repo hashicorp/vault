@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package testcluster
@@ -54,8 +54,8 @@ type VaultNodeConfig struct {
 	//   ServiceRegistrationType        string
 	//   ServiceRegistrationOptions    map[string]string
 
-	StorageOptions      map[string]string
-	AdditionalListeners []VaultNodeListenerConfig
+	StorageOptions      map[string]string         `json:"-"`
+	AdditionalListeners []VaultNodeListenerConfig `json:"-"`
 
 	DefaultMaxRequestDuration      time.Duration `json:"default_max_request_duration"`
 	LogFormat                      string        `json:"log_format"`
@@ -79,6 +79,7 @@ type VaultNodeConfig struct {
 	LogRequestsLevel               string        `json:"log_requests_level"`
 	EnableResponseHeaderRaftNodeID bool          `json:"enable_response_header_raft_node_id"`
 	LicensePath                    string        `json:"license_path"`
+	FeatureFlags                   []string      `json:"feature_flags,omitempty"`
 }
 
 type ClusterNode struct {
@@ -110,6 +111,7 @@ type VaultNodeListenerConfig struct {
 	RedactAddresses   bool
 	RedactClusterName bool
 	RedactVersion     bool
+	TLSCipherSuites   []uint16
 }
 
 type CA struct {

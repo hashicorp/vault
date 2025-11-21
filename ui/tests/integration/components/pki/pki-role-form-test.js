@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -56,7 +56,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     assert
       .dom(GENERAL.fieldByAttr('noStoreMetadata'))
       .doesNotExist('noStoreMetadata is not shown b/c not enterprise');
-    assert.dom(GENERAL.inputByAttr('addBasicConstraints')).exists();
+    assert.dom(GENERAL.inputByAttr('basicConstraintsValidForNonCa')).exists();
     assert.dom(GENERAL.button('Domain handling')).exists('shows form-field group add domain handling');
     assert.dom(GENERAL.button('Key parameters')).exists('shows form-field group key params');
     assert.dom(GENERAL.button('Key usage')).exists('shows form-field group key usage');
@@ -127,7 +127,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
       .includesText('Name is required.', 'show correct error message');
 
     await fillIn(GENERAL.inputByAttr('name'), 'test-role');
-    await click('[data-test-input="addBasicConstraints"]');
+    await click('[data-test-input="basicConstraintsValidForNonCa"]');
     await click(GENERAL.button('Domain handling'));
     await click('[data-test-input="allowedDomainsTemplate"]');
     await click(GENERAL.button('Policy identifiers'));

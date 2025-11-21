@@ -1,17 +1,9 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
-  <:toolbarActions>
-    {{#if @promptConfig}}
-      <ToolbarLink @route="configure" data-test-toolbar-action="config">
-        Configure LDAP
-      </ToolbarLink>
-    {{/if}}
-  </:toolbarActions>
-</TabPageHeader>
+<LdapHeader @model={{@backendModel}} @promptConfig={{@promptConfig}} @breadcrumbs={{@breadcrumbs}} />
 
 {{#if @promptConfig}}
   <ConfigCta />
@@ -38,18 +30,30 @@
         <Hds::Link::Standalone @text="Create new" @route="libraries.create" @icon="plus" @iconPosition="trailing" />
       </:action>
       <:content>
-        <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-libraries-count>
-          {{or @libraries.length "None"}}
-        </h2>
+        {{#if this.librariesError}}
+          <Hds::Alert @type="inline" @color="critical" class="has-top-margin-s" data-test-libraries-error as |A|>
+            <A.Title>Error loading libraries</A.Title>
+            <A.Description>{{this.librariesError}}</A.Description>
+          </Hds::Alert>
+        {{else}}
+          <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-libraries-count>
+            {{#if this.fetchLibraries.isRunning}}
+              <Hds::Icon @name="loading" @size="24" @color="neutral" />
+            {{else}}
+              {{or this.allLibraries.length "None"}}
+            {{/if}}
+          </h2>
+        {{/if}}
       </:content>
     </OverviewCard>
   </div>
   <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
     <AccountsCheckedOut
-      @libraries={{@libraries}}
-      @statuses={{@librariesStatus}}
+      @libraries={{this.allLibraries}}
+      @statuses={{this.librariesStatus}}
       @showLibraryColumn={{true}}
       @onCheckInSuccess={{transition-to "vault.cluster.secrets.backend.ldap.overview"}}
+      @isLoadingStatuses={{or this.fetchLibraries.isRunning this.fetchLibrariesStatus.isRunning}}
       class="is-flex-half"
     />
     <div>

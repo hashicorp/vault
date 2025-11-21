@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -145,7 +145,10 @@ export default Route.extend({
     return types[engineType];
   },
 
-  handleSecretModelError(capabilities, secretId, modelType, error) {
+  async handleSecretModelError(capabilitiesPromise, secretId, modelType, error) {
+    // capabilities is a promise proxy, not a real object
+    // to work around this we explicitly assign it to a const and await it
+    const capabilities = await capabilitiesPromise;
     // can't read the path and don't have update capability, so re-throw
     if (!capabilities.canUpdate && modelType === 'secret') {
       throw error;
@@ -186,8 +189,7 @@ export default Route.extend({
       // we've failed the read request, but if it's a kv-v1 type backend, we want to
       // do additional checks of the capabilities
       if (err.httpStatus === 403 && modelType === 'secret') {
-        await capabilities;
-        secretModel = this.handleSecretModelError(capabilities, secret, modelType, err);
+        secretModel = await this.handleSecretModelError(capabilities, secret, modelType, err);
       } else {
         throw err;
       }

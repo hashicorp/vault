@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,7 +8,7 @@
 }
 
 .ttl-picker-label {
-  font-weight: bold;
+  font-weight: var(--token-typography-font-weight-bold);
 }
 
 input.has-error,

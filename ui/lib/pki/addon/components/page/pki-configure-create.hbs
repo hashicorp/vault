@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -14,14 +14,12 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if @config.id}}
-  <Toolbar />
-{{else}}
+{{#if this.showActionTypes}}
   <div class="box is-bottomless is-fullwidth is-marginless">
     <div class="columns">
       {{#each this.configTypes as |option|}}
         <div class="column is-flex">
-          <label for={{option.key}} class="box-label is-column {{if (eq @config.actionType option.key) 'is-selected'}}">
+          <label for={{option.key}} class="box-label is-column {{if (eq this.actionType option.key) 'is-selected'}}">
             <div>
               <h3 class="box-label-header title is-6">
                 <Icon @size="24" @name={{option.icon}} />
@@ -36,8 +34,8 @@
                 id={{option.key}}
                 name="pki-config-type"
                 @value={{option.key}}
-                @groupValue={{@config.actionType}}
-                @onChange={{fn (mut @config.actionType) option.key}}
+                @groupValue={{this.actionType}}
+                @onChange={{fn (mut this.actionType) option.key}}
                 data-test-pki-config-option={{option.key}}
               />
               <label for={{option.key}}></label>
@@ -47,41 +45,29 @@
       {{/each}}
     </div>
   </div>
+{{else}}
+  <Toolbar />
 {{/if}}
-{{#if (eq @config.actionType "import")}}
+
+{{#if (eq this.actionType "import")}}
   <PkiImportPemBundle
-    @model={{@config}}
+    @useIssuer={{@capabilities.canImportBundle}}
     @onCancel={{@onCancel}}
-    @onSave={{fn (mut this.title) "View imported items"}}
+    @onSave={{this.onSave "View imported items"}}
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
-    @adapterOptions={{hash actionType=@config.actionType useIssuer=@config.canImportBundle}}
   />
-{{else if (eq @config.actionType "generate-root")}}
-  {{#if @config.privateKey}}
-    <div class="has-top-margin-m">
-      <Hds::Alert data-test-config-next-steps @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
-        <A.Title>Next steps</A.Title>
-        <A.Description>
-          The
-          <code>private_key</code>
-          is only available once. Make sure you copy and save it now.
-        </A.Description>
-      </Hds::Alert>
-    </div>
-  {{/if}}
+{{else if (eq this.actionType "generate-root")}}
   <PkiGenerateRoot
-    @model={{@config}}
-    @urls={{@urls}}
+    @withUrls={{true}}
+    @canSetUrls={{@capabilities.canSetUrls}}
     @onCancel={{@onCancel}}
-    @adapterOptions={{hash actionType=@config.actionType useIssuer=@config.canGenerateIssuerRoot}}
-    @onSave={{fn (mut this.title) "View Root Certificate"}}
+    @onSave={{this.onSave "View Root Certificate"}}
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
   />
-{{else if (eq @config.actionType "generate-csr")}}
+{{else if (eq this.actionType "generate-csr")}}
   <PkiGenerateCsr
-    @model={{@config}}
     @onCancel={{@onCancel}}
-    @onSave={{fn (mut this.title) "View Generated CSR"}}
+    @onSave={{this.onSave "View Generated CSR"}}
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
   />
 {{else}}

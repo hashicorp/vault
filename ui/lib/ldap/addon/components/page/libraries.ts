@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -35,6 +35,10 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
   linkParams = (library: LdapLibraryModel) => {
     const route = this.isHierarchical(library.name) ? 'libraries.subdirectory' : 'libraries.library.details';
     return [route, library.completeLibraryName];
+  };
+
+  getEncodedLibraryName = (library: LdapLibraryModel) => {
+    return library.completeLibraryName;
   };
 
   get mountPoint(): string {

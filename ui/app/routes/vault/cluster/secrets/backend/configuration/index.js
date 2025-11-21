@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -19,13 +19,5 @@ export default class SecretsBackendConfigurationIndexRoute extends Route {
     if (!engine?.isOldEngine) {
       return this.router.replaceWith('vault.cluster.secrets.backend.configuration.general-settings');
     }
-  }
-
-  setupController(controller, resolvedModel) {
-    super.setupController(controller, resolvedModel);
-    const engine = engineDisplayData(resolvedModel.secretsEngine.type);
-    controller.typeDisplay = engine.displayName;
-    controller.isConfigurable = engine.isConfigurable ?? false;
-    controller.modelId = resolvedModel.secretsEngine.id;
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -17,7 +17,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
 
 interface Args {
-  model: LdapConfigModel;
+  model: { configModel: LdapConfigModel };
   breadcrumbs: Array<Breadcrumb>;
 }
 interface SchemaOption {
@@ -67,7 +67,7 @@ export default class LdapConfigurePageComponent extends Component<Args> {
   }
 
   validate() {
-    const { isValid, state, invalidFormMessage } = this.args.model.validate();
+    const { isValid, state, invalidFormMessage } = this.args.model.configModel.validate();
     this.modelValidations = isValid ? null : state;
     this.invalidFormMessage = isValid ? '' : invalidFormMessage;
     return isValid;
@@ -75,10 +75,24 @@ export default class LdapConfigurePageComponent extends Component<Args> {
 
   async rotateRoot() {
     try {
-      await this.args.model.rotateRoot();
+      await this.args.model.configModel.rotateRoot();
     } catch (error) {
       // since config save was successful at this point we only want to show the error in a flash message
       this.flashMessages.danger(`Error rotating root password \n ${errorMessage(error)}`);
+    }
+  }
+
+  async saveConfigModelAndRotateRoot(rotate: boolean) {
+    try {
+      await this.args.model.configModel.save();
+      // if save was triggered from confirm action in rotate password prompt we need to make an additional request
+      if (rotate) {
+        await this.rotateRoot();
+      }
+      this.flashMessages.success('Successfully configured LDAP engine');
+      this.leave('configuration');
+    } catch (error) {
+      this.error = errorMessage(error, 'Error saving configuration. Please try again or contact support.');
     }
   }
 
@@ -90,29 +104,28 @@ export default class LdapConfigurePageComponent extends Component<Args> {
     }
     const isValid = this.validate();
     // show rotate creds prompt for new models when form state is valid
-    this.showRotatePrompt = isValid && this.args.model.isNew && !this.showRotatePrompt;
+    this.showRotatePrompt = isValid && this.args.model.configModel.isNew && !this.showRotatePrompt;
 
     if (isValid && !this.showRotatePrompt) {
-      try {
-        yield this.args.model.save();
-        // if save was triggered from confirm action in rotate password prompt we need to make an additional request
-        if (rotate) {
-          yield this.rotateRoot();
-        }
-        this.flashMessages.success('Successfully configured LDAP engine');
-        this.leave('configuration');
-      } catch (error) {
-        this.error = errorMessage(error, 'Error saving configuration. Please try again or contact support.');
-      }
+      yield this.saveConfigModelAndRotateRoot(rotate);
     }
   }
 
   @action
   cancel() {
-    const { model } = this.args;
-    const transitionRoute = model.isNew ? 'overview' : 'configuration';
-    const cleanupMethod = model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    model[cleanupMethod]();
+    const {
+      model: { configModel },
+    } = this.args;
+    const transitionRoute = configModel.isNew ? 'overview' : 'configuration';
+    const cleanupMethod = configModel.isNew ? 'unloadRecord' : 'rollbackAttributes';
+    configModel[cleanupMethod]();
     this.leave(transitionRoute);
+  }
+
+  @task
+  @waitFor
+  *saveAndClose(rotate: boolean, close: () => void) {
+    close();
+    yield this.saveConfigModelAndRotateRoot(rotate);
   }
 }

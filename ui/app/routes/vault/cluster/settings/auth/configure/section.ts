@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -13,8 +13,6 @@ import type PathHelpService from 'vault/services/path-help';
 import type Store from '@ember-data/store';
 import type { ClusterSettingsAuthConfigureRouteModel } from '../configure';
 import type { MountConfig } from 'vault/mount';
-import type { HTTPRequestInit, RequestOpts } from '@hashicorp/vault-client-typescript';
-import type { OpenApiHelpResponse } from 'vault/utils/openapi-helpers';
 
 export default class ClusterSettingsAuthConfigureRoute extends Route {
   @service declare readonly api: ApiService;
@@ -56,44 +54,64 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
     }[method.methodType];
   }
 
-  fetchConfig(type: string, section: string, path: string, help = false) {
-    const initOverride = help
-      ? (context: { init: HTTPRequestInit; context: RequestOpts }) =>
-          this.api.addQueryParams(context, { help: 1 })
-      : undefined;
-
+  fetchConfig(type: string, section: string, path: string) {
     switch (type) {
       case 'aws': {
         switch (section) {
           case 'client':
-            return this.api.auth.awsReadClientConfiguration(path, initOverride);
+            return this.api.auth.awsReadClientConfiguration(path);
           case 'identity-accesslist':
-            return this.api.auth.awsReadIdentityAccessListTidySettings(path, initOverride);
+            return this.api.auth.awsReadIdentityAccessListTidySettings(path);
           case 'roletag-denylist':
-            return this.api.auth.awsReadRoleTagDenyListTidySettings(path, initOverride);
+            return this.api.auth.awsReadRoleTagDenyListTidySettings(path);
         }
         break;
       }
       case 'azure':
-        return this.api.auth.azureReadAuthConfiguration(path, initOverride);
+        return this.api.auth.azureReadAuthConfiguration(path);
       case 'github':
-        return this.api.auth.githubReadConfiguration(path, initOverride);
+        return this.api.auth.githubReadConfiguration(path);
       case 'gcp':
-        return this.api.auth.googleCloudReadAuthConfiguration(path, initOverride);
+        return this.api.auth.googleCloudReadAuthConfiguration(path);
       case 'jwt':
       case 'oidc':
-        return this.api.auth.jwtReadConfiguration(path, initOverride);
+        return this.api.auth.jwtReadConfiguration(path);
       case 'kubernetes':
-        return this.api.auth.kubernetesReadAuthConfiguration(path, initOverride);
+        return this.api.auth.kubernetesReadAuthConfiguration(path);
       case 'ldap':
-        return this.api.auth.ldapReadAuthConfiguration(path, initOverride);
+        return this.api.auth.ldapReadAuthConfiguration(path);
       case 'okta':
-        return this.api.auth.oktaReadConfiguration(path, initOverride);
+        return this.api.auth.oktaReadConfiguration(path);
       case 'radius':
-        return this.api.auth.radiusReadConfiguration(path, initOverride);
+        return this.api.auth.radiusReadConfiguration(path);
     }
 
     throw { httpStatus: 404 };
+  }
+
+  schemaForType(type: string, section?: string) {
+    if (type === 'aws' && section) {
+      return (
+        {
+          client: 'AwsConfigureClientRequest',
+          'identity-accesslist': 'AwsConfigureIdentityAccessListTidyOperationRequest',
+          'roletag-denylist': 'AwsConfigureRoleTagDenyListTidyOperationRequest',
+        }[section] || ''
+      );
+    }
+    return (
+      {
+        azure: 'AzureConfigureAuthRequest',
+        github: 'GithubConfigureRequest',
+        gcp: 'GoogleCloudConfigureAuthRequest',
+        jwt: 'JwtConfigureRequest',
+        oidc: 'JwtConfigureRequest',
+        kubernetes: 'KubernetesConfigureRequest',
+        ldap: 'LdapConfigureAuthRequest',
+        okta: 'OktaConfigureRequest',
+        radius: 'RadiusConfigureRequest',
+      }[type] || ''
+    );
   }
 
   async modelForConfiguration(section: string) {
@@ -113,14 +131,7 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
         throw { message, httpsStatus: status };
       }
     }
-    // make request to fetch OpenAPI properties with help query param
-    const helpResponse = (await this.fetchConfig(
-      methodType,
-      section,
-      path,
-      true
-    )) as unknown as OpenApiHelpResponse;
-    const form = new OpenApiForm(helpResponse, formData, formOptions);
+    const form = new OpenApiForm(this.schemaForType(methodType, section), formData, formOptions);
     // for jwt and oidc types, the jwks_pairs field is not deprecated but we do not render it in the UI
     // remove the field from the group before rendering the form
     if (['jwt', 'oidc'].includes(methodType)) {

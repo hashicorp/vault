@@ -1,0 +1,36 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::PageHeader class="page-header" as |PH|>
+  <PH.Title>{{@title}}</PH.Title>
+  {{#if (has-block "breadcrumbs")}}
+    <PH.Breadcrumb>
+      {{yield to="breadcrumbs"}}
+    </PH.Breadcrumb>
+  {{/if}}
+  {{#if @icon}}
+    <PH.IconTile @icon={{@icon}} />
+  {{/if}}
+  {{#if (has-block "badges")}}
+    <PH.Badges>
+      {{yield to="badges"}}
+    </PH.Badges>
+  {{/if}}
+  {{#if @subtitle}}
+    <PH.Subtitle>{{@subtitle}}</PH.Subtitle>
+  {{/if}}
+  {{#if @description}}
+    <PH.Description>{{@description}}</PH.Description>
+  {{/if}}
+  {{#if (has-block "actions")}}
+    <PH.Actions>{{yield to="actions"}}</PH.Actions>
+  {{/if}}
+</Hds::PageHeader>
+
+{{#if (has-block "tabs")}}
+  <div class="has-top-margin-l">
+    {{yield to="tabs"}}
+  </div>
+{{/if}}

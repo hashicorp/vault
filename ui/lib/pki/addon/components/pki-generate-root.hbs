@@ -1,53 +1,62 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{! Show results if model has an ID, which is only generated after save }}
-{{#if @model.id}}
+{{! Show results if config is provided, else show form to generate root CA }}
+{{#if this.config}}
+  {{#if (and (not @rotateCertData) this.config.private_key)}}
+    <div class="has-top-margin-m">
+      <Hds::Alert data-test-config-next-steps @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+        <A.Title>Next steps</A.Title>
+        <A.Description>
+          The
+          <code>private_key</code>
+          is only available once. Make sure you copy and save it now.
+        </A.Description>
+      </Hds::Alert>
+    </div>
+  {{/if}}
+
   <main class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{#each this.returnedFields as |field|}}
-      {{#let (find-by "name" field @model.allFields) as |attr|}}
-        {{#if attr.options.detailLinkTo}}
-          <InfoTableRow
-            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
-            @value={{get @model attr.name}}
-            @addCopyButton={{or (eq attr.name "issuerId") (eq attr.name "keyId")}}
-          >
-            <LinkTo @route={{attr.options.detailLinkTo}} @models={{array @model.backend (get @model attr.name)}}>{{get
-                @model
-                attr.name
-              }}</LinkTo>
+    {{#each this.returnedFields as |fieldName|}}
+      {{#let (this.valueForField fieldName) as |value|}}
+        {{#if (this.linkForField fieldName)}}
+          <InfoTableRow @label={{this.detailLabel fieldName}} @addCopyButton={{true}}>
+            <LinkTo
+              @route={{this.linkForField fieldName}}
+              @models={{array this.secretMountPath.currentPath (get this.config fieldName)}}
+            >
+              {{value}}
+            </LinkTo>
           </InfoTableRow>
-        {{else if attr.options.isCertificate}}
-          <InfoTableRow
-            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
-          >
-            <CertificateCard @data={{get @model attr.name}} />
+        {{else if (this.isCertificateField fieldName)}}
+          <InfoTableRow @label={{this.detailLabel fieldName}}>
+            <CertificateCard @data={{value}} />
           </InfoTableRow>
         {{else}}
-          <InfoTableRow
-            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
-            @value={{get @model attr.name}}
-          />
+          <InfoTableRow @label={{this.detailLabel fieldName}} @value={{value}} />
         {{/if}}
       {{/let}}
     {{/each}}
+
     <InfoTableRow @label="Private key">
-      {{#if @model.privateKey}}
-        <CertificateCard @data={{@model.privateKey}} />
+      {{#if this.config.private_key}}
+        <CertificateCard @data={{this.config.private_key}} />
       {{else}}
         <Hds::Badge @text="internal" />
       {{/if}}
     </InfoTableRow>
-    <InfoTableRow @label="Private key type" @value={{@model.privateKeyType}}>
-      {{#if @model.privateKeyType}}
-        {{@model.privateKeyType}}
+
+    <InfoTableRow @label="Private key type">
+      {{#if this.config.private_key_type}}
+        {{this.config.private_key_type}}
       {{else}}
         <Hds::Badge @text="internal" />
       {{/if}}
     </InfoTableRow>
-    <ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
+
+    <ParsedCertificateInfoRows @model={{this.parsedCertificate}} />
   </main>
   <footer>
     <div class="field is-grouped is-fullwidth has-top-margin-l">
@@ -60,38 +69,36 @@
     <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-generate-root-title="Root parameters">
       Root parameters
     </h2>
-    {{#each this.defaultFields as |field|}}
-      {{#let (find-by "name" field @model.allFields) as |attr|}}
-        <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} data-test-field>
-          {{#if (eq field "customTtl")}}
-            {{! customTtl attr has editType yield, which will render this }}
-            <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
+    {{#each this.defaultFields as |fieldName|}}
+      {{#let (find-by "name" fieldName this.form.formFields) as |field|}}
+        <FormField @attr={{field}} @model={{this.form}} @modelValidations={{this.modelValidations}} data-test-field>
+          {{#if (eq fieldName "customTtl")}}
+            {{! custom_ttl field has editType yield, which will render this }}
+            <PkiNotValidAfterForm @attr={{field}} @form={{this.form}} />
           {{/if}}
         </FormField>
       {{/let}}
     {{/each}}
 
-    <PkiGenerateToggleGroups @model={{@model}} @modelValidations={{this.modelValidations}} />
+    <PkiGenerateToggleGroups @form={{this.form}} @actionType="generate-root" @modelValidations={{this.modelValidations}} />
 
-    {{#if @urls}}
+    {{#if @withUrls}}
       <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-section>
         <h2
-          class="title is-size-5 page-header {{if @urls.canCreate 'has-border-bottom-light' 'is-borderless'}}"
+          class="title is-size-5 page-header {{if @canSetUrls 'has-border-bottom-light' 'is-borderless'}}"
           data-test-generate-root-title="Issuer URLs"
         >
           Issuer URLs
         </h2>
-        {{#if @urls.canSet}}
-          {{#each @urls.allFields as |attr|}}
-            {{#if (not-eq attr.name "mountPath")}}
-              <FormField
-                @attr={{attr}}
-                @mode="create"
-                @model={{@urls}}
-                @showHelpText={{attr.options.showHelpText}}
-                data-test-urls-field
-              />
-            {{/if}}
+        {{#if @canSetUrls}}
+          {{#each this.urlsForm.formFields as |field|}}
+            <FormField
+              @attr={{field}}
+              @mode="create"
+              @model={{this.urlsForm}}
+              @showHelpText={{field.options.showHelpText}}
+              data-test-urls-field
+            />
           {{/each}}
         {{else}}
           <EmptyState

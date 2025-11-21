@@ -9,8 +9,10 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json",
-    "build:dev": "ember build",
+    "postinstall": "yarn build:jsondiffpatch",
+    "build": "yarn build:jsondiffpatch && ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json",
+    "build:dev": "yarn build:jsondiffpatch && ember build",
+    "build:jsondiffpatch": "webpack --config webpack.jsondiffpatch.config.js",
     "docs": "sh scripts/generate-docs.sh",
     "docfy-md": "node scripts/docfy-md.js",
     "lint:css": "stylelint \"**/*.css\"",
@@ -27,8 +29,8 @@
     "fmt:js": "prettier --config .prettierrc.js --write '{app,tests,config,lib}/**/*.js'",
     "fmt:hbs": "prettier --config .prettierrc.js --write '**/*.hbs'",
     "fmt:styles": "prettier --write app/styles/**/*.*",
-    "start": "VAULT_ADDR=http://127.0.0.1:8200; ember server --proxy=$VAULT_ADDR",
-    "start2": "ember server --proxy=http://127.0.0.1:8202 --port=4202",
+    "start": "VAULT_ADDR=http://127.0.0.1:8200; yarn build:jsondiffpatch && ember server --proxy=$VAULT_ADDR",
+    "start2": "yarn build:jsondiffpatch && ember server --proxy=http://127.0.0.1:8202 --port=4202",
     "start:chroot": "ember server --proxy=http://127.0.0.1:8300 --port=4300",
     "lint": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,lint:types \"yarn:lint:js:quiet\" \"yarn:lint:hbs:quiet\" \"yarn:lint:types\"",
     "test": "yarn lint && node scripts/start-vault.js",
@@ -113,7 +115,6 @@
     "ember-exam": "~9.1.0",
     "ember-inflector": "4.0.2",
     "ember-load-initializers": "~3.0.1",
-    "ember-modal-dialog": "~4.1.5",
     "ember-modifier": "~4.2.0",
     "ember-power-select": "~8.7.0",
     "ember-qrcode-shim": "~0.4.0",
@@ -140,7 +141,7 @@
     "filesize": "~4.2.1",
     "jsdoc-babel": "~0.5.0",
     "jsdoc-to-markdown": "~8.0.3",
-    "jsondiffpatch": "~0.4.1",
+    "jsondiffpatch": "0.7.3",
     "jsonlint": "~1.6.3",
     "lint-staged": "~16.0.0",
     "loader.js": "~4.7.0",
@@ -161,7 +162,8 @@
     "text-encoder-lite": "2.0.0",
     "tracked-built-ins": "~3.4.0",
     "typescript": "~5.8.3",
-    "webpack": "5.94.0"
+    "webpack": "5.94.0",
+    "webpack-cli": "^6.0.1"
   },
   "resolutions": {
     "ansi-html": "0.0.8",
@@ -182,6 +184,7 @@
     "xmlhttprequest-ssl": "1.6.3",
     "@embroider/macros": "1.15.0",
     "@babel/runtime": "7.27.0",
+    "@messageformat/runtime": "3.0.2",
     "socket.io": "4.8.1",
     "json5": "1.0.2",
     "ember-cli-typescript": "5.3.0",
@@ -214,7 +217,7 @@
   "dependencies": {
     "@babel/core": "7.26.10",
     "@hashicorp-internal/vault-reporting": "file:vault-reporting/0.8.0.tgz",
-    "@hashicorp/design-system-components": "4.20.1",
+    "@hashicorp/design-system-components": "4.24.1",
     "@hashicorp/vault-client-typescript": "hashicorp/vault-client-typescript",
     "ember-auto-import": "2.10.0",
     "handlebars": "4.7.8",
@@ -222,5 +225,10 @@
     "posthog-js": "^1.202.2",
     "uuid": "9.0.1"
   },
-  "packageManager": "yarn@3.5.0"
+  "packageManager": "yarn@3.5.0",
+  "scarfSettings": {
+    "defaultOptIn": false,
+    "enabled": false,
+    "skipTraversal": true
+  }
 }

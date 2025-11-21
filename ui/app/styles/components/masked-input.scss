@@ -1,8 +1,7 @@
-@use '../utils/font_variables';
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -28,7 +27,7 @@ pre.masked-font {
 // need to be the same font and small
 .masked-input.masked .masked-value {
   font-size: 9px;
-  font-family: font_variables.$family-sans;
+  font-family: var(--token-typography-font-stack-text);
   line-height: 2.5;
 }
 
@@ -39,12 +38,12 @@ pre.masked-font {
 // aligns the boxes on the input page
 .masked-input.masked:not(.display-only) .masked-value {
   line-height: 3;
-  border-radius: size_variables.$radius 0 0 size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small) 0 0 var(--token-border-radius-x-small);
 }
 
 //override bulma's pre styling
 .masked-input .display-only {
-  line-height: 1.5;
+  line-height: var(--token-typography-body-300-line-height);
   font-size: 1rem;
   padding-top: 0;
   padding-bottom: 0;
@@ -60,7 +59,7 @@ pre.masked-font {
 }
 
 .button.masked-input-toggle {
-  border-radius: 0 size_variables.$radius size_variables.$radius 0;
+  border-radius: 0 var(--token-border-radius-x-small) var(--token-border-radius-x-small) 0;
 }
 
 .display-only {
@@ -80,7 +79,7 @@ pre.masked-font {
     &:focus,
     &:hover,
     &:focus:not(:active) {
-      color: var(--token-color-palette-blue-200);
+      color: var(--token-color-foreground-action);
       border: 0;
       box-shadow: none;
     }

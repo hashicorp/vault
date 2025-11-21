@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
@@ -27,26 +26,23 @@ module('Integration | Component | text-file', function (hooks) {
   });
 
   test('it renders with label and toggle by default', async function (assert) {
-    await render(hbs`<TextFile @onChange={{this.onChange}} />`);
+    await render(hbs`<TextFile @onChange={{this.onChange}} @helpText="this is my help text"/>`);
 
     assert.dom(SELECTORS.label).hasText('File', 'renders default label');
     assert.dom(GENERAL.textToggle).exists({ count: 1 }, 'toggle exists');
     assert.dom(SELECTORS.fileUpload).exists({ count: 1 }, 'File input shown');
+
+    assert.dom(GENERAL.tooltipText).hasNoText();
+    await click(GENERAL.tooltip('text-file'));
+    assert.dom(GENERAL.tooltipText).hasText('this is my help text', 'Tooltip text renders');
   });
 
   test('it renders without toggle and option for text input when uploadOnly=true', async function (assert) {
-    setRunOptions({
-      rules: {
-        // TODO: fix textFile / replace with HDS
-        label: { enabled: false },
-        'label-title-only': { enabled: false },
-      },
-    });
-
     await render(hbs`<TextFile @onChange={{this.onChange}} @uploadOnly={{true}} />`);
 
     assert.dom(SELECTORS.label).doesNotExist('Label no longer rendered');
     assert.dom(GENERAL.textToggle).doesNotExist('toggle no longer rendered');
+    assert.dom(GENERAL.tooltip('text-file')).doesNotExist('tooltip icon no longer rendered');
     assert.dom(SELECTORS.fileUpload).exists({ count: 1 }, 'File input shown');
   });
 

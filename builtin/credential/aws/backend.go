@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package awsauth
@@ -73,17 +73,19 @@ type backend struct {
 	// of tidyCooldownPeriod.
 	nextTidyTime time.Time
 
-	// Map to hold the EC2 client objects indexed by region and STS role.
+	// Map to hold the EC2 client objects indexed by a composite key of Account
+	// ID, region, and STS role.
 	// This avoids the overhead of creating a client object for every login request.
 	// When the credentials are modified or deleted, all the cached client objects
 	// will be flushed. The empty STS role signifies the master account
-	EC2ClientsMap map[string]map[string]*ec2.EC2
+	EC2ClientsMap map[clientKey]*ec2.EC2
 
-	// Map to hold the IAM client objects indexed by region and STS role.
+	// Map to hold the IAM client objects indexed by a composite key of Account
+	// ID, region, and STS role.
 	// This avoids the overhead of creating a client object for every login request.
 	// When the credentials are modified or deleted, all the cached client objects
 	// will be flushed. The empty STS role signifies the master account
-	IAMClientsMap map[string]map[string]*iam.IAM
+	IAMClientsMap map[clientKey]*iam.IAM
 
 	// Map to associate a partition to a random region in that partition. Users of
 	// this don't care what region in the partition they use, but there is some client
@@ -117,13 +119,31 @@ type backend struct {
 	deprecatedTerms *strings.Replacer
 }
 
+// clientKey is a composite key for caching IAM or EC2 clients.
+type clientKey struct {
+	AccountID string
+	Region    string
+	STSRole   string // Use an empty string for the master account
+}
+
+func (c clientKey) String() string {
+	// For clarity in logs, we explicitly state when the master account is
+	// being used instead of showing an empty string for the role.
+	rolePart := c.STSRole
+	if rolePart == "" {
+		rolePart = "<master-account>"
+	}
+
+	return fmt.Sprintf("%s/%s/%s", c.AccountID, c.Region, rolePart)
+}
+
 func Backend(_ *logical.BackendConfig) (*backend, error) {
 	b := &backend{
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
 		tidyCooldownPeriod:     time.Hour,
-		EC2ClientsMap:          make(map[string]map[string]*ec2.EC2),
-		IAMClientsMap:          make(map[string]map[string]*iam.IAM),
+		EC2ClientsMap:          make(map[clientKey]*ec2.EC2),
+		IAMClientsMap:          make(map[clientKey]*iam.IAM),
 		iamUserIdToArnCache:    cache.New(7*24*time.Hour, 24*time.Hour),
 		tidyDenyListCASGuard:   new(uint32),
 		tidyAccessListCASGuard: new(uint32),

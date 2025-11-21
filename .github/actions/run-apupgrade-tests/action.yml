@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 ---
@@ -96,6 +96,10 @@ runs:
         current_version=$(cat version/VERSION)
         "${GITHUB_WORKSPACE}/vault-tools/vvm/vvm" save "${current_version}"
         echo "VAULT_TARGET_VERSION=${current_version}" >> "${GITHUB_ENV}"
+    - name: Install SQLC
+      uses: sqlc-dev/setup-sqlc@c0209b9199cd1cce6a14fc27cabcec491b651761 # v4.0.0
+      with:
+        sqlc-version: '1.29.0'
     - name: Build VCM
       shell: bash
       run: |
@@ -105,7 +109,7 @@ runs:
       shell: bash
       run: |
         cd "${GITHUB_WORKSPACE}/vault-tools/apupgrade" || exit 1
-        go build -o apupgrade .
+        GOWORK=off go build -o apupgrade .
     - name: Run Autopilot upgrade tool
       shell: bash
       run: |

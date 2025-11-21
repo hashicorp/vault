@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -45,7 +45,13 @@ export default class LdapCreateAndEditLibraryPageComponent extends Component<Arg
         const action = model.isNew ? 'created' : 'updated';
         yield model.save();
         this.flashMessages.success(`Successfully ${action} the library ${model.name}.`);
-        this.router.transitionTo('vault.cluster.secrets.backend.ldap.libraries.library.details', model.name);
+        const libraryParam = model.completeLibraryName.includes('/')
+          ? encodeURIComponent(model.completeLibraryName)
+          : model.name;
+        this.router.transitionTo(
+          'vault.cluster.secrets.backend.ldap.libraries.library.details',
+          libraryParam
+        );
       } catch (error) {
         this.error = errorMessage(error, 'Error saving library. Please try again or contact support.');
       }

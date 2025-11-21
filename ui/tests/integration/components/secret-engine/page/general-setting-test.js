@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -40,13 +40,22 @@ module('Integration | Component | SecretEngine::Page::GeneralSettings', function
 
   hooks.beforeEach(function () {
     this.model = keyManagementMockModel;
+    this.breadcrumbs = [
+      { label: 'Secrets', route: 'vault.cluster.secrets' },
+      {
+        label: this.model.secretsEngine.id,
+        route: 'vault.cluster.secrets.backend.list-root',
+        model: this.model.secretsEngine.id,
+      },
+      { label: 'Configuration' },
+    ];
   });
 
   test('it shows general settings form', async function (assert) {
     assert.expect(4);
 
     await render(hbs`
-      <SecretEngine::Page::GeneralSettings @model={{this.model}} />
+      <SecretEngine::Page::GeneralSettings @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />
     `);
     assert.dom(GENERAL.cardContainer('secrets duration')).exists(`Lease duration card exists`);
     assert.dom(GENERAL.cardContainer('security')).exists(`Security card exists`);

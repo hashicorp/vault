@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -9,8 +9,8 @@
     {{#each-in this.dropdownConfig as |filterProperty d|}}
       {{! "searchProperty" is the tracked variable in the component class that corresponds to the search input }}
       {{#let d.label d.dropdownItems d.searchProperty as |label dropdownItems searchProperty|}}
-        <SG.Dropdown data-test-dropdown={{filterProperty}} @onClose={{fn this.handleDropdownClose searchProperty}} as |D|>
-          <D.ToggleButton @color="secondary" @text={{capitalize label}} />
+        <SG.Dropdown @onClose={{fn this.handleDropdownClose searchProperty}} as |D|>
+          <D.ToggleButton @color="secondary" @text={{capitalize label}} data-test-dropdown={{filterProperty}} />
           <D.Header>
             <Hds::Form::TextInput::Base
               type="search"

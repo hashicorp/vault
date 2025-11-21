@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -60,6 +60,7 @@ interface PkiKeyUsageArgs {
 }
 
 export default class PkiKeyUsage extends Component<PkiKeyUsageArgs> {
+  keyUsageFlags = ['clientFlag', 'serverFlag', 'codeSigningFlag', 'emailProtectionFlag'];
   keyUsageFields = KEY_USAGE_FIELDS;
   extKeyUsageFields = EXT_KEY_USAGE_FIELDS;
 

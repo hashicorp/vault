@@ -1,11 +1,9 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader @model={{@backend}} @breadcrumbs={{@breadcrumbs}}>
-  <ToolbarLink @route="configure">Configure Kubernetes</ToolbarLink>
-</TabPageHeader>
+<TabPageHeader @model={{@backend}} @breadcrumbs={{@breadcrumbs}} />
 
 {{#if @promptConfig}}
   <ConfigCta />

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -60,7 +60,7 @@ export default class RecoverySnapshotsLoadRoute extends Route {
 
     controller.breadcrumbs = [
       { label: 'Secrets Recovery', route: 'vault.cluster.recovery.snapshots' },
-      { label: 'Upload', route: 'vault.cluster.recovery.snapshots.load' },
+      { label: 'Upload' },
     ];
   }
 }

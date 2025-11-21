@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -61,7 +61,8 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
     assert
       .dom(GENERAL.filterInputExplicit)
       .doesNotExist('Roles filter input does not render when not configured');
-    assert.dom('[data-test-config-cta]').exists('Config cta renders');
+    assert.dom(GENERAL.emptyStateTitle).hasText('Kubernetes not configured');
+    assert.dom(GENERAL.emptyStateActions).hasText('Configure Kubernetes');
   });
 
   test('it should render create roles cta', async function (assert) {
@@ -72,7 +73,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
       .dom('[data-test-toolbar-roles-action] svg')
       .hasClass('hds-icon-plus', 'Toolbar action has correct icon');
     assert.dom(GENERAL.filterInputExplicit).exists('Roles filter input renders');
-    assert.dom('[data-test-empty-state-title]').hasText('No roles yet', 'Title renders');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No roles yet', 'Title renders');
     assert
       .dom('[data-test-empty-state-message]')
       .hasText(

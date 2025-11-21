@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -28,9 +28,10 @@ export default class LdapLibraryEditRoute extends Route {
       return [resolvedModel.backend, childResource];
     };
     controller.breadcrumbs = [
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'overview' },
       { label: 'Libraries', route: 'libraries' },
-      ...ldapBreadcrumbs(resolvedModel.name, routeParams, libraryRoutes),
+      ...ldapBreadcrumbs(resolvedModel.completeLibraryName, routeParams, libraryRoutes),
       { label: 'Edit' },
     ];
   }

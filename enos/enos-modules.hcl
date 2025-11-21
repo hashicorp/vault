@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 module "autopilot_upgrade_storageconfig" {
@@ -54,6 +54,18 @@ module "create_vpc" {
 
   environment = "ci"
   common_tags = var.tags
+}
+
+module "cloud_docker_vault_cluster" {
+  source = "./modules/cloud_docker_vault_cluster"
+}
+
+module "docker_namespace_token" {
+  source = "./modules/docker_namespace_token"
+}
+
+module "docker_network" {
+  source = "./modules/docker_network"
 }
 
 module "choose_follower_host" {

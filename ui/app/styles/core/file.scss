@@ -4,7 +4,7 @@
 @use '../core/inputs.scss';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -17,7 +17,7 @@
 .file-cta {
   align-items: center;
   border: box-shadow_variables.$base-border;
-  border-radius: size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small);
   display: inline-flex;
   height: 2.25em;
   justify-content: flex-start;
@@ -83,11 +83,11 @@
 .file-name {
   @extend .input;
   border: box-shadow_variables.$base-border;
-  border-radius: size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small);
   box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
   display: block;
   font-size: 1em;
-  line-height: 1.5;
+  line-height: var(--token-typography-body-300-line-height);
   overflow: hidden;
   padding-bottom: calc(0.375em - 1px);
   padding-left: 1em;

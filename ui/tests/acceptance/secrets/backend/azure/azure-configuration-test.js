@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -60,6 +60,11 @@ module('Acceptance | Azure | configuration', function (hooks) {
   test('it should transition to configure page on click "Configure" from toolbar', async function (assert) {
     const path = `azure-${this.uid}`;
     await enablePage.enable(this.type, path);
+
+    // await click(GENERAL.dropdownMenu("Manage"));
+    // await click(GENERAL.menuItem('Configure'));
+    // TODO - clicking config tab will change to "Manage" dropdown selectors ^
+    await click(GENERAL.tab('Configuration'));
     await click(SES.configure);
     assert.strictEqual(
       currentURL(),
@@ -122,7 +127,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           );
         });
 
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await fillInAzureConfig();
         await click(GENERAL.submitButton);
@@ -220,7 +225,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['welp, that did not work!'] });
         });
 
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await fillInAzureConfig();
         await click(GENERAL.submitButton);
@@ -298,7 +303,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           throw new Error(`Request was made to return the issuer when it should not have been.`);
         });
         await enablePage.enable(this.type, path);
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
 
         assert.dom(GENERAL.infoRowLabel('Issuer')).doesNotExist(`Issuer does not exists on config details.`);
         // cleanup
@@ -325,7 +330,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           };
         });
 
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await click(SES.wif.accessType('wif'));
         await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
@@ -348,7 +353,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           throw new Error('post request was incorrectly made to update the issuer');
         });
 
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await fillInAzureConfig(true);
         await click(GENERAL.submitButton);
@@ -379,7 +384,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         });
 
         await enablePage.enable(this.type, path);
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await fillInAzureConfig(true);
         await fillIn(GENERAL.inputByAttr('issuer'), 'http://new.issuererrors');
@@ -416,7 +421,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         });
 
         await enablePage.enable(this.type, path);
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await fillInAzureConfig(true);
         await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
@@ -441,7 +446,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
       test('it should update WIF attributes', async function (assert) {
         const path = `azure-${this.uid}`;
         await enablePage.enable(this.type, path);
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await fillInAzureConfig(true);
         await click(GENERAL.submitButton); // finished creating attributes, go back and edit them.

@@ -1,20 +1,20 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 
 import type Store from '@ember-data/store';
 import type RouterService from '@ember/routing/router';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type PkiActionModel from 'vault/models/pki/action';
-import type { Breadcrumb } from 'vault/vault/app-types';
+import type { Breadcrumb, CapabilitiesMap } from 'vault/vault/app-types';
 
 interface Args {
-  config: PkiActionModel;
+  capabilities: CapabilitiesMap;
   onCancel: CallableFunction;
   breadcrumbs: Breadcrumb;
 }
@@ -32,6 +32,8 @@ export default class PkiConfigureCreate extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
 
   @tracked title = 'Configure PKI';
+  @tracked showActionTypes = true;
+  @tracked actionType = '';
 
   get configTypes() {
     return [
@@ -57,5 +59,11 @@ export default class PkiConfigureCreate extends Component<Args> {
           'Generate a new CSR for signing, optionally generating a new private key. No new issuer is created by this call.',
       },
     ];
+  }
+
+  @action
+  onSave(title: string) {
+    this.title = title;
+    this.showActionTypes = false;
   }
 }

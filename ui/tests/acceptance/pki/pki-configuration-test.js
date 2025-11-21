@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -37,7 +37,6 @@ module('Acceptance | pki configuration test', function (hooks) {
   });
 
   hooks.afterEach(async function () {
-    await logout();
     await login();
     // Cleanup engine
     await runCmd([`delete sys/mounts/${this.mountPath}`]);
@@ -47,15 +46,15 @@ module('Acceptance | pki configuration test', function (hooks) {
     setupMirage(hooks);
 
     test('it shows the delete all issuers modal', async function (assert) {
-      await login(this.pkiAdminToken);
+      await login();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration`);
       await click(PKI_CONFIGURE_CREATE.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await settled();
       await click(PKI_CONFIGURE_CREATE.generateRootOption);
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
-      await fillIn(GENERAL.inputByAttr('commonName'), 'issuer-common-0');
-      await fillIn(GENERAL.inputByAttr('issuerName'), 'issuer-0');
+      await fillIn(GENERAL.inputByAttr('common_name'), 'issuer-common-0');
+      await fillIn(GENERAL.inputByAttr('issuer_name'), 'issuer-0');
       await click(GENERAL.submitButton);
       await click(PKI_CONFIGURE_CREATE.doneButton);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
@@ -77,7 +76,7 @@ module('Acceptance | pki configuration test', function (hooks) {
     });
 
     test('it shows the correct empty state message if certificates exists after delete all issuers', async function (assert) {
-      await login(this.pkiAdminToken);
+      await login();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration`);
       await click(PKI_CONFIGURE_CREATE.configureButton);
       assert.strictEqual(
@@ -87,8 +86,8 @@ module('Acceptance | pki configuration test', function (hooks) {
       );
       await click(PKI_CONFIGURE_CREATE.generateRootOption);
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
-      await fillIn(GENERAL.inputByAttr('commonName'), 'issuer-common-0');
-      await fillIn(GENERAL.inputByAttr('issuerName'), 'issuer-0');
+      await fillIn(GENERAL.inputByAttr('common_name'), 'issuer-common-0');
+      await fillIn(GENERAL.inputByAttr('issuer_name'), 'issuer-0');
       await click(GENERAL.submitButton);
       await click(PKI_CONFIGURE_CREATE.doneButton);
       assert.strictEqual(
@@ -156,15 +155,15 @@ module('Acceptance | pki configuration test', function (hooks) {
     });
 
     test('it shows the correct empty state message if roles and certificates exists after delete all issuers', async function (assert) {
-      await login(this.pkiAdminToken);
+      await login();
       // Configure PKI
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration`);
       await click(PKI_CONFIGURE_CREATE.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.generateRootOption);
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
-      await fillIn(GENERAL.inputByAttr('commonName'), 'issuer-common-0');
-      await fillIn(GENERAL.inputByAttr('issuerName'), 'issuer-0');
+      await fillIn(GENERAL.inputByAttr('common_name'), 'issuer-common-0');
+      await fillIn(GENERAL.inputByAttr('issuer_name'), 'issuer-0');
       await click(GENERAL.submitButton);
       await click(PKI_CONFIGURE_CREATE.doneButton);
       // Create role and root CA"
@@ -230,18 +229,18 @@ module('Acceptance | pki configuration test', function (hooks) {
     // test coverage for ed25519 certs not displaying because the verify() function errors
     test('it generates and displays a root issuer of key type = ed25519', async function (assert) {
       assert.expect(4);
-      await login(this.pkiAdminToken);
+      await login();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
       await click(PKI_ISSUER_LIST.generateIssuerDropdown);
       await click(PKI_ISSUER_LIST.generateIssuerRoot);
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
-      await fillIn(GENERAL.inputByAttr('commonName'), 'my-certificate');
+      await fillIn(GENERAL.inputByAttr('common_name'), 'my-certificate');
       await click(GENERAL.button('Key parameters'));
-      await fillIn(GENERAL.inputByAttr('keyType'), 'ed25519');
+      await fillIn(GENERAL.inputByAttr('key_type'), 'ed25519');
       await click(GENERAL.submitButton);
 
-      const issuerId = find(PKI_GENERATE_ROOT.saved.issuerLink).innerHTML;
+      const issuerId = find(PKI_GENERATE_ROOT.saved.issuerLink).innerHTML.trim();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/issuers`);
       assert.dom(PKI_ISSUER_LIST.issuerListItem(issuerId)).exists();
       assert

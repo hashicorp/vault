@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -57,7 +57,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       // in this test go through the full mount process. Bypass this step in later tests.
       await visit('/vault/secrets-engines/enable');
       await mountBackend('aws', path);
-      await click(SES.configTab);
+      await click(GENERAL.tab('Configuration'));
       assert.dom(GENERAL.emptyStateTitle).hasText('AWS not configured');
       assert.dom(GENERAL.emptyStateActions).hasText('Configure AWS');
       // cleanup
@@ -67,7 +67,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     test('it should transition to configure page on click "Configure" from toolbar', async function (assert) {
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
-      await click(SES.configTab);
+      await click(GENERAL.tab('Configuration'));
       await click(SES.configure);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${path}/configuration/edit`);
       assert.dom(SES.configureTitle('aws')).hasText('Configure AWS');
@@ -86,7 +86,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       // we are intentionally not redirecting from the old url to the new one.
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
-      await click(SES.configTab);
+      await click(GENERAL.tab('Configuration'));
       await visit(`/vault/settings/secrets/configure/${path}`);
       assert.dom(GENERAL.notFound).exists('shows page-error');
       // cleanup
@@ -103,7 +103,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         );
       });
 
-      await click(SES.configTab);
+      await click(GENERAL.tab('Configuration'));
       await click(SES.configure);
       await fillInAwsConfig('withWif');
       await click(GENERAL.submitButton);
@@ -141,7 +141,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       });
 
       await enablePage.enable(type, path);
-      await click(SES.configTab);
+      await click(GENERAL.tab('Configuration'));
       assert.dom(GENERAL.infoRowLabel('Issuer')).doesNotExist(`Issuer does not exists on config details.`);
       assert.dom(GENERAL.infoRowLabel('Access key')).exists(`Access key does exists on config details.`);
       // cleanup
@@ -157,7 +157,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         throw new Error(`post request was made to config/lease when it should not have been.`);
       });
 
-      await click(SES.configTab);
+      await click(GENERAL.tab('Configuration'));
       await click(SES.configure);
       await fillInAwsConfig('withAccess');
       await click(GENERAL.submitButton);
@@ -178,7 +178,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
 
-      await click(SES.configTab);
+      await click(GENERAL.tab('Configuration'));
       await click(SES.configure);
       // manually fill in attrs without using helper so we can exclude identity_token_ttl and max_retries.
       await click(SES.wif.accessType('wif')); // toggle to wif
@@ -208,7 +208,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       });
 
       await enablePage.enable(type, path);
-      await click(SES.configTab);
+      await click(GENERAL.tab('Configuration'));
 
       for (const key of expectedConfigKeys(type)) {
         if (key === 'Secret key') continue; // secret-key is not returned by the API
@@ -232,7 +232,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       const type = 'aws';
       await enablePage.enable(type, path);
       // create access_key with value foo and confirm it shows up in the details page.
-      await click(SES.configTab);
+      await click(GENERAL.tab('Configuration'));
       await click(SES.configure);
       await fillInAwsConfig('withAccess');
       await click(GENERAL.submitButton);
@@ -266,7 +266,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
 
-      await click(SES.configTab);
+      await click(GENERAL.tab('Configuration'));
       await click(SES.configure);
       await fillInAwsConfig('withLease');
       await click(GENERAL.submitButton);
@@ -294,7 +294,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       const path = `aws-${this.uid}`;
       const type = 'aws';
       await enablePage.enable(type, path);
-      await click(SES.configTab);
+      await click(GENERAL.tab('Configuration'));
       await click(SES.configure);
       assert
         .dom(SES.wif.accessTypeSection)
@@ -326,7 +326,7 @@ module('Acceptance | aws | configuration', function (hooks) {
             `post request was made to config/lease when the first config was not saved. A request to this endpoint should NOT be be made`
           );
         });
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await fillInAwsConfig('withAccess');
         await fillInAwsConfig('withLease');
@@ -344,7 +344,7 @@ module('Acceptance | aws | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['bad request!'] });
         });
 
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await fillInAwsConfig('withLease');
         await click(GENERAL.submitButton);
@@ -370,7 +370,7 @@ module('Acceptance | aws | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['welp, that did not work!'] });
         });
 
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         await click(SES.configure);
         await fillInAwsConfig('withAccess');
         await click(GENERAL.submitButton);
@@ -394,7 +394,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         this.server.get(configUrl(type, path), () => {
           return overrideResponse(400, { errors: ['bad request'] });
         });
-        await click(SES.configTab);
+        await click(GENERAL.tab('Configuration'));
         assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
       });
     });

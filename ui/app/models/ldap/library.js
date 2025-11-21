@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -66,9 +66,14 @@ export default class LdapLibraryModel extends Model {
   disable_check_in_enforcement;
 
   get completeLibraryName() {
-    // if there is a path_to_library then the name is hierarchical
-    // and we must concat the ancestors with the leaf name to get the full library path
-    return this.path_to_library ? this.path_to_library + this.name : this.name;
+    // For hierarchical libraries, combines path_to_library + name
+    // e.g. "service-account/" + "sa" = "service-account/sa"
+
+    if (this.path_to_library) {
+      return this.path_to_library + this.name;
+    }
+
+    return this.name;
   }
 
   get displayFields() {
@@ -106,12 +111,17 @@ export default class LdapLibraryModel extends Model {
   }
 
   fetchStatus() {
-    return this.store.adapterFor('ldap/library').fetchStatus(this.backend, this.name);
+    // Use completeLibraryName to construct proper hierarchical path for fetch library status endpoint
+    return this.store.adapterFor('ldap/library').fetchStatus(this.backend, this.completeLibraryName);
   }
   checkOutAccount(ttl) {
-    return this.store.adapterFor('ldap/library').checkOutAccount(this.backend, this.name, ttl);
+    // Use completeLibraryName to construct proper hierarchical path for check-out endpoint
+    return this.store.adapterFor('ldap/library').checkOutAccount(this.backend, this.completeLibraryName, ttl);
   }
   checkInAccount(account) {
-    return this.store.adapterFor('ldap/library').checkInAccount(this.backend, this.name, [account]);
+    // Use completeLibraryName to construct proper hierarchical path for check-in endpoint
+    return this.store
+      .adapterFor('ldap/library')
+      .checkInAccount(this.backend, this.completeLibraryName, [account]);
   }
 }

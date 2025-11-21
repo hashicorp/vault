@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package docker
@@ -43,6 +43,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/stretchr/testify/require"
 	uberAtomic "go.uber.org/atomic"
 	"golang.org/x/net/http2"
 )
@@ -404,6 +406,12 @@ func (n *DockerClusterNode) setupCert(ip string) error {
 }
 
 func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerCluster {
+	dc, err := NewTestDockerClusterWithErr(t, opts)
+	require.NoError(t, err)
+	return dc
+}
+
+func NewTestDockerClusterWithErr(t *testing.T, opts *DockerClusterOptions) (*DockerCluster, error) {
 	if opts == nil {
 		opts = &DockerClusterOptions{DisableMlock: true}
 	}
@@ -421,11 +429,10 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 	t.Cleanup(cancel)
 
 	dc, err := NewDockerCluster(ctx, opts)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil {
+		dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
 	}
-	dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
-	return dc
+	return dc, err
 }
 
 func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerCluster, error) {
@@ -665,7 +672,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	ports := []string{"8200/tcp", "8201/tcp"}
 
 	if opts.VaultNodeConfig != nil && opts.VaultNodeConfig.AdditionalListeners != nil {
-		for _, config := range opts.VaultNodeConfig.AdditionalListeners {
+		for i, config := range opts.VaultNodeConfig.AdditionalListeners {
 			cfg := n.createDefaultListenerConfig()
 			listener := cfg["tcp"].(map[string]interface{})
 			listener["address"] = fmt.Sprintf("%s:%d", "0.0.0.0", config.Port)
@@ -673,6 +680,17 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 			listener["redact_addresses"] = config.RedactAddresses
 			listener["redact_cluster_name"] = config.RedactClusterName
 			listener["redact_version"] = config.RedactVersion
+			if len(config.TLSCipherSuites) > 0 {
+				var suites []string
+				for _, suite := range config.TLSCipherSuites {
+					name, err := tlsutil.GetCipherName(suite)
+					if err != nil {
+						return fmt.Errorf("bad TLSCipherSuite %d on listener %d: %w", suite, i, err)
+					}
+					suites = append(suites, name)
+				}
+				listener["tls_cipher_suites"] = strings.Join(suites, ",")
+			}
 			listenerConfig = append(listenerConfig, cfg)
 			portStr := fmt.Sprintf("%d/tcp", config.Port)
 			if strutil.StrListContains(ports, portStr) {

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
@@ -151,4 +151,9 @@ func (c *Core) IsMountTypeAllowed(mountType string) bool {
 
 func (c *Core) GetPkiCertificateCounter() logical.PkiCertificateCounter {
 	return logical.NewNullPkiCertificateCounter()
+}
+
+// IsFlagEnabled returns true if the named flag is set in HCL config feature_flags.
+func (c *Core) IsFlagEnabled(name string) bool {
+	return false
 }

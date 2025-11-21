@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package git
@@ -68,7 +68,7 @@ func WithToken(token string) NewClientOpt {
 	}
 }
 
-// WithToken sets additional gitconfig in NewClient()
+// WithConfig sets additional gitconfig in NewClient()
 func WithConfig(config map[string]string) NewClientOpt {
 	return func(client *Client) {
 		maps.Copy(client.config, config)

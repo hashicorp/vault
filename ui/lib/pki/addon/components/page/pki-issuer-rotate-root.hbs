@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -9,18 +9,18 @@
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-page-title>
-      {{if @newRootModel.id "View Issuer Certificate" "Generate New Root"}}
+      {{if this.newRoot "View Issuer Certificate" "Generate New Root"}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if @newRootModel.id}}
-  <Toolbar aria-label="manu for managing PKI certificate">
+{{#if this.newRoot}}
+  <Toolbar aria-label="menu for managing PKI certificate">
     <ToolbarActions aria-label="actions for managing PKI certificate">
       <ToolbarLink
         @route="issuers.issuer.cross-sign"
         @type="pen-tool"
-        @models={{array @newRootModel.backend @newRootModel.issuerId}}
+        @model={{this.newRoot.issuer_id}}
         data-test-pki-issuer-cross-sign
       >
         Cross-sign issuers
@@ -28,7 +28,7 @@
       <ToolbarLink
         @route="issuers.issuer.sign"
         @type="pen-tool"
-        @models={{array @newRootModel.backend @newRootModel.issuerId}}
+        @model={{this.newRoot.issuer_id}}
         data-test-pki-issuer-sign-int
       >
         Sign Intermediate
@@ -55,7 +55,7 @@
               <li>
                 <DownloadButton
                   class="link"
-                  @filename={{@newRootModel.issuerId}}
+                  @filename={{this.newRoot.issuer_id}}
                   @extension="pem"
                   @fetchData={{fn this.fetchDataForDownload "pem"}}
                   data-test-issuer-download-type="pem"
@@ -66,7 +66,7 @@
               <li>
                 <DownloadButton
                   class="link"
-                  @filename={{@newRootModel.issuerId}}
+                  @filename={{this.newRoot.issuer_id}}
                   @extension="der"
                   @fetchData={{fn this.fetchDataForDownload "der"}}
                   data-test-issuer-download-type="der"
@@ -78,24 +78,18 @@
           </nav>
         </D.Content>
       </BasicDropdown>
-      <ToolbarLink
-        @route="issuers.issuer.edit"
-        @models={{array @newRootModel.backend @newRootModel.issuerId}}
-        data-test-pki-issuer-configure
-      >
+      <ToolbarLink @route="issuers.issuer.edit" @model={{this.newRoot.issuer_id}} data-test-pki-issuer-configure>
         Configure
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
-{{/if}}
 
-{{#if @newRootModel.id}}
   <div class="has-top-margin-m">
     <Hds::Alert data-test-rotate-next-steps @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
       <A.Title>Next steps</A.Title>
       <A.Description>
         Your new root has been generated.
-        {{#if @newRootModel.privateKey}}
+        {{#if this.newRoot.private_key}}
           Make sure to copy and save the
           <code>private_key</code>
           as it is only available once.
@@ -108,7 +102,7 @@
         @iconPosition="trailing"
         @text="Cross-sign issuers"
         @route="issuers.issuer.cross-sign"
-        @models={{array @newRootModel.backend @newRootModel.issuerId}}
+        @models={{array this.secretMountPath.currentPath this.newRoot.issuer_id}}
       />
 
     </Hds::Alert>
@@ -131,9 +125,9 @@
 {{/if}}
 
 {{#if (eq this.displayedForm "use-old-settings")}}
-  {{#if @newRootModel.id}}
-    <PkiInfoTableRows @model={{@newRootModel}} @displayFields={{this.displayFields}} />
-    <ParsedCertificateInfoRows @model={{@newRootModel.parsedCertificate}} />
+  {{#if this.newRoot}}
+    <PkiInfoTableRows @model={{this.newRoot}} @displayFields={{this.displayFields}} @label={{this.label}} />
+    <ParsedCertificateInfoRows @model={{this.newParsedCertificate}} />
     <div class="field is-grouped is-fullwidth has-top-margin-l has-bottom-margin-s">
       <Hds::Button @text="Done" {{on "click" @onComplete}} data-test-done />
     </div>
@@ -155,12 +149,11 @@
           <A.Description>{{this.alertBanner}}</A.Description>
         </Hds::Alert>
       {{/if}}
-      {{#let (find-by "name" "commonName" @newRootModel.allFields) as |attr|}}
-        <FormField @attr={{attr}} @model={{@newRootModel}} @modelValidations={{this.modelValidations}} />
-      {{/let}}
-      {{#let (find-by "name" "issuerName" @newRootModel.allFields) as |attr|}}
-        <FormField @attr={{attr}} @model={{@newRootModel}} @modelValidations={{this.modelValidations}} />
-      {{/let}}
+      {{#each this.newRootForm.formFields as |field|}}
+        {{#if (includes field.name (array "common_name" "issuer_name"))}}
+          <FormField @attr={{field}} @model={{this.newRootForm}} @modelValidations={{this.modelValidations}} />
+        {{/if}}
+      {{/each}}
       <div class="box has-slim-padding is-shadowless">
         <ToggleButton
           data-test-details-toggle
@@ -170,7 +163,7 @@
           @onClick={{fn (mut this.showOldSettings)}}
         />
         {{#if this.showOldSettings}}
-          <PkiInfoTableRows @model={{@oldRoot}} @displayFields={{this.displayFields}} />
+          <PkiInfoTableRows @model={{@oldRoot}} @displayFields={{this.displayFields}} @label={{this.label}} />
           <ParsedCertificateInfoRows @model={{@oldRoot.parsedCertificate}} />
         {{/if}}
       </div>
@@ -194,9 +187,9 @@
   {{/if}}
 {{else}}
   <PkiGenerateRoot
-    @model={{@newRootModel}}
+    @rotateCertData={{@certData}}
     @onCancel={{@onCancel}}
+    @onSave={{fn (mut this.newRoot)}}
     @onComplete={{@onComplete}}
-    @adapterOptions={{hash actionType="rotate-root"}}
   />
 {{/if}}

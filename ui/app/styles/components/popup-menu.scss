@@ -1,20 +1,19 @@
 @use '../utils/box-shadow_variables';
-@use '../utils/font_variables';
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 // Popup menu no longer exists, but these styles are still used in some places
 .popup-menu-content,
 .search-select .ember-power-select-options {
-  border-radius: size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small);
   margin: -2px 0 0 0;
 
   & > .box {
-    border-radius: size_variables.$radius;
+    border-radius: var(--token-border-radius-x-small);
     box-shadow: box-shadow_variables.$box-shadow, box-shadow_variables.$box-shadow-middle;
     padding: 0;
     position: relative;
@@ -46,7 +45,7 @@
     display: block;
     height: auto;
     font-size: size_variables.$size-7;
-    font-weight: font_variables.$font-weight-semibold;
+    font-weight: var(--token-typography-font-weight-semibold);
     padding: size_variables.$spacing-10 size_variables.$spacing-12;
     text-align: left;
     text-decoration: none;
@@ -57,13 +56,13 @@
   // so they match other dropdown elements until we replace popup-menu with Hds::Dropdown
   .hds-confirm-action-critical {
     &:hover {
-      background-color: var(--token-color-palette-neutral-50);
+      background-color: var(--token-color-surface-faint);
     }
     div,
     span {
       margin-left: -(size_variables.$spacing-4);
       font-size: size_variables.$size-7;
-      font-weight: font_variables.$font-weight-semibold;
+      font-weight: var(--token-typography-font-weight-semibold);
     }
   }
 
@@ -72,21 +71,21 @@
   .ember-power-select-option[aria-current='true'],
   a {
     background-color: hsl(0, 0%, 100%);
-    color: var(--token-color-palette-neutral-600);
+    color: var(--token-color-foreground-primary);
 
     &:hover {
-      background-color: var(--token-color-palette-neutral-50);
-      color: var(--token-color-palette-neutral-600);
+      background-color: var(--token-color-surface-faint);
+      color: var(--token-color-foreground-primary);
     }
 
     &.active,
     &.is-active {
       background-color: transparent;
-      color: var(--token-color-palette-blue-200);
+      color: var(--token-color-foreground-action);
     }
 
     &.is-destroy {
-      color: var(--token-color-palette-red-200);
+      color: var(--token-color-foreground-critical);
 
       &:hover {
         background-color: var(--token-color-palette-red-200);
@@ -109,9 +108,9 @@
   }
 
   .menu-label {
-    color: var(--token-color-palette-neutral-500);
+    color: var(--token-color-foreground-faint);
     font-size: size_variables.$size-9;
-    font-weight: font_variables.$font-weight-normal;
+    font-weight: var(--token-typography-font-weight-regular);
     letter-spacing: 0;
     margin: 0;
     padding: size_variables.$spacing-8 size_variables.$spacing-12 0;
@@ -131,7 +130,7 @@
 .popup-menu-content p {
   box-shadow: none;
   padding-top: size_variables.$spacing-8;
-  font-weight: font_variables.$font-weight-semibold;
+  font-weight: var(--token-typography-font-weight-semibold);
 }
 
 .popup-menu-content .level-left {

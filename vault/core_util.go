@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
@@ -8,6 +8,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/activationflags"
@@ -228,3 +229,16 @@ func (c *Core) ReloadRequestLimiter() {}
 
 // createSnapshotManager is a no-op on CE.
 func (c *Core) createSnapshotManager() {}
+
+func (c *Core) GetConfigurableRNG(source string, defaultSource io.Reader) (io.Reader, error) {
+	var rng io.Reader
+	switch source {
+	case "platform":
+		rng = defaultSource
+	case "":
+		rng = defaultSource
+	default:
+		return nil, fmt.Errorf("unsupported entropy source: %s", source)
+	}
+	return rng, nil
+}

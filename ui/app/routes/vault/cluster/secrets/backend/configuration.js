@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -21,9 +21,19 @@ export default class SecretsBackendConfigurationRoute extends Route {
     const { type, id } = secretsEngine;
     return {
       secretsEngine,
-      config: await this.fetchConfig(type, id), // fetch config for configurable engines (aws, azure, gcp, ssh)
+      // fetch config for configurable secrets engines that use the "general" route pattern: aws, azure, gcp, ssh
+      // ember-engines manage their own engine config routes and requests so do not fetch here.
+      config: await this.fetchConfig(type, id),
     };
   }
+
+  // TODO after update to show separated general settings vs plugin settings redirect if not configured?
+  // afterModel(resolvedModel) {
+  //   // Redirect to edit route if not configured
+  //   if (!resolvedModel.config) {
+  //     this.router.transitionTo('vault.cluster.secrets.backend.configuration.edit');
+  //   }
+  // }
 
   fetchConfig(type, id) {
     // id is the path where the backend is mounted since there's only one config per engine (often this path is referred to just as backend)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 module('Integration | Component | kubernetes | Page::Configuration', function (hooks) {
   setupRenderingTest(hooks);
@@ -61,10 +62,9 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
     await this.renderComponent();
     assert.dom('.title svg').hasClass('hds-icon-kubernetes-color', 'Kubernetes icon renders in title');
     assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
-    assert
-      .dom('[data-test-toolbar-config-action]')
-      .hasText('Configure Kubernetes', 'Toolbar action has correct text');
-    assert.dom('[data-test-config-cta]').exists('Config cta renders');
+    assert.dom(SES.configure).doesNotExist('Toolbar action does not render when engine is not configured');
+    assert.dom(GENERAL.emptyStateTitle).hasText('Kubernetes not configured');
+    assert.dom(GENERAL.emptyStateActions).hasText('Configure Kubernetes');
     assert.dom('[data-test-mount-config]').exists('Mount config renders');
   });
 
@@ -77,9 +77,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
     const message =
       'These details were successfully inferred from Vault’s kubernetes environment and were not explicity set in this config.';
     assert.dom('[data-test-inferred-message]').hasText(message, 'Inferred message renders');
-    assert
-      .dom('[data-test-toolbar-config-action]')
-      .hasText('Edit configuration', 'Toolbar action has correct text');
+    assert.dom(SES.configure).exists().hasText('Edit configuration', 'Toolbar action has correct text');
   });
 
   test('it should render host and certificate info', async function (assert) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -148,7 +148,6 @@ module('Acceptance | auth config form', function (hooks) {
           'starttls',
           'insecure_tls',
           'discoverdn',
-          'deny_null_bind',
           'tls_min_version',
           'tls_max_version',
           'certificate',

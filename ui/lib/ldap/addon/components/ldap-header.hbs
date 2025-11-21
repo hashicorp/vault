@@ -1,0 +1,72 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header
+  @title={{if @configRoute (concat @model.id " configuration") @model.id}}
+  @description="LDAP"
+  @icon={{@model.icon}}
+>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+  <:actions>
+    {{#if @configRoute}}
+      <Hds::Button @color="secondary" @route="overview" @text="Exit configuration" data-test-button="Exit configuration" />
+    {{else}}
+      <Hds::Dropdown as |D|>
+        <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
+        <D.Interactive
+          @icon="settings"
+          @route={{if @promptConfig "configure" "configuration"}}
+          @model={{@model.id}}
+          data-test-popup-menu="Configure"
+        >Configure</D.Interactive>
+        <D.Interactive
+          {{on "click" (fn (mut this.engineToDisable) @model)}}
+          @color="critical"
+          @icon="trash"
+          data-test-popup-menu="Delete"
+        >Delete</D.Interactive>
+      </Hds::Dropdown>
+    {{/if}}
+  </:actions>
+  <:tabs>
+    {{#if @configRoute}}
+      <Mount::ConfigureTabs
+        @configRoute={{@configRoute}}
+        @displayName="LDAP"
+        @path={{@model.id}}
+        @externalRoute="secretsGeneralSettingsConfiguration"
+      />
+    {{else}}
+      <nav class="tabs" aria-label="ldap tabs">
+        <ul>
+          <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
+          <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
+          <li><LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo></li>
+        </ul>
+      </nav>
+    {{/if}}
+  </:tabs>
+</Page::Header>
+
+{{#if this.engineToDisable}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="Any data in this engine will be permanently deleted."
+    @confirmTitle="Disable engine?"
+    @onClose={{fn (mut this.engineToDisable) null}}
+    @onConfirm={{perform this.disableEngine this.engineToDisable}}
+  />
+{{/if}}
+
+<Toolbar aria-label="nav for managing LDAP">
+  <ToolbarFilters aria-label="filter for LDAP items">
+    {{yield to="toolbarFilters"}}
+  </ToolbarFilters>
+  <ToolbarActions aria-label="actions for LDAP items">
+    {{yield to="toolbarActions"}}
+  </ToolbarActions>
+</Toolbar>

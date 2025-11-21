@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -18,9 +18,8 @@
   <Toolbar />
 {{/if}}
 <PkiImportPemBundle
-  @model={{@model}}
+  @useIssuer={{true}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
   @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
   @onSave={{fn (mut this.title) "View imported items"}}
-  @adapterOptions={{hash actionType="import" useIssuer=true}}
 />

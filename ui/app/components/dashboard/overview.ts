@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -13,7 +13,7 @@ export type Args = {
   replication: unknown;
   secretsEngines: unknown;
   vaultConfiguration: unknown;
-  version: { isEnterprise: boolean };
+  version: { isEnterprise: boolean; hasPKIOnly: boolean };
 };
 
 export default class OverviewComponent extends Component<Args> {
@@ -32,6 +32,9 @@ export default class OverviewComponent extends Component<Args> {
 
     // don't show client count if this isn't an enterprise cluster
     if (!version.isEnterprise) return false;
+
+    // don't show client count if this is a PKI-only Secrets cluster
+    if (version.hasPKIOnly) return false;
 
     // HVD clusters
     if (namespace.inHvdAdminNamespace) return true;

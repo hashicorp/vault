@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -14,7 +14,7 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
-import { runCmd } from 'vault/tests/helpers/commands';
+import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -94,6 +94,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     hooks.afterEach(async function () {
       await runCmd([`delete sys/mounts/${this.backend}`]);
     });
+
     test('it can create a secret when check-and-set is required', async function (assert) {
       const secretPath = 'foo/bar';
       const output = await runCmd(`write ${this.backend}/config cas_required=true`);
@@ -110,6 +111,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'redirects to the overview page'
       );
     });
+
     test('it navigates to version history and to a specific version', async function (assert) {
       assert.expect(4);
       const secretPath = `specific-version`;
@@ -143,9 +145,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await mountSecrets.version(1);
       await click(GENERAL.submitButton);
     });
+
     hooks.afterEach(async function () {
       await runCmd([`delete sys/mounts/${this.backend}`]);
     });
+
     test('version 1 performs the correct capabilities lookup', async function (assert) {
       // TODO: while this should pass it doesn't really do anything anymore for us as v1 and v2 are completely separate.
       const secretPath = 'foo/bar';
@@ -158,6 +162,41 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       );
       assert.ok(showPage.editIsPresent, 'shows the edit button');
     });
+
+    test('version 1 token without read permissions can create and update a secret', async function (assert) {
+      const updatePersonaToken = await runCmd(
+        tokenWithPolicyCmd(
+          'read-all',
+          `
+    path "${this.backend}/*" {
+      capabilities = ["create", "update", "list"]
+    }
+    # used to delete the engine after test done in afterEach hook
+    path "sys/mounts/${this.backend}" {
+      capabilities = ["delete"]
+    }
+    `
+        )
+      );
+
+      await login(updatePersonaToken);
+      await visit(`/vault/secrets-engines/${this.backend}/list`);
+      await click(SS.createSecretLink);
+      await createSecret('test', 'foo', 'bar');
+      await click('[data-test-secret-edit]', 'can click edit button');
+      // edit only without read permissions
+      assert
+        .dom('[data-test-secret-no-read-permissions] .hds-alert__description')
+        .hasText(
+          'You do not have read permissions. If a secret exists at this path creating a new secret will overwrite it.',
+          'Displays warning about no read permissions'
+        );
+      await fillIn('[data-test-secret-key]', 'new');
+      await fillIn('[data-test-secret-value] textarea', 'new');
+      await click(GENERAL.submitButton);
+      assert.dom(GENERAL.latestFlashContent).includesText('Secret test updated successfully.');
+    });
+
     // https://github.com/hashicorp/vault/issues/5960
     test('version 1: nested paths creation maintains ability to navigate the tree', async function (assert) {
       const enginePath = this.backend;
@@ -224,6 +263,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'redirected to the list page on delete'
       );
     });
+
     test('paths are properly encoded', async function (assert) {
       const backend = this.backend;
       const paths = [

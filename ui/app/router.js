@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -167,6 +167,7 @@ Router.map(function () {
           });
         });
       });
+      this.route('secrets-redirect', { path: '/secrets' }); // legacy redirect
       this.route('secrets', { path: '/secrets-engines' }, function () {
         this.route('enable', function () {
           // TODO: Revisit path on create once components are separated - should we specify selected type or just keep it generic as /create?

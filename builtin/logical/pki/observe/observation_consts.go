@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package observe
@@ -48,6 +48,9 @@ const (
 	// i.e. the following:
 	// https://developer.hashicorp.com/vault/api-docs/secret/pki#read-issuer-certificate
 	ObservationTypePKIReadIssuerCertificate = "pki/issuer/certificate/read"
+
+	ObservationTypePKIIssuerSignIntermediate = "pki/issuer/sign/intermediate"
+	ObservationTypePKIIssuerSignSelfIssued   = "pki/issuer/sign/self-issued"
 
 	// ---
 	// Role related observations

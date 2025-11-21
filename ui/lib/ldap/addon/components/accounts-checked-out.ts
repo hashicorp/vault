@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -20,6 +20,7 @@ interface Args {
   statuses: Array<LdapLibraryAccountStatus>;
   showLibraryColumn: boolean;
   onCheckInSuccess: CallableFunction;
+  isLoadingStatuses?: boolean;
 }
 
 export default class LdapAccountsCheckedOutComponent extends Component<Args> {
@@ -55,7 +56,7 @@ export default class LdapAccountsCheckedOutComponent extends Component<Args> {
   };
 
   findLibrary(name: string): LdapLibraryModel {
-    return this.args.libraries.find((library) => library.name === name) as LdapLibraryModel;
+    return this.args.libraries.find((library) => library.completeLibraryName === name) as LdapLibraryModel;
   }
 
   @task

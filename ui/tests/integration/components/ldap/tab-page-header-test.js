@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,8 +9,9 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Integration | Component | ldap | TabPageHeader', function (hooks) {
+module('Integration | Component | ldap | LdapHeader', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'ldap');
   setupMirage(hooks);
@@ -31,7 +32,7 @@ module('Integration | Component | ldap | TabPageHeader', function (hooks) {
   });
 
   test('it should render breadcrumbs', async function (assert) {
-    await render(hbs`<TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+    await render(hbs`<LdapHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
     assert.dom('[data-test-breadcrumbs] li:nth-child(1) a').hasText('Secrets', 'Secrets breadcrumb renders');
@@ -42,36 +43,35 @@ module('Integration | Component | ldap | TabPageHeader', function (hooks) {
   });
 
   test('it should render title', async function (assert) {
-    await render(hbs`<TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+    await render(hbs`<LdapHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
     assert
-      .dom('[data-test-header-title] svg')
+      .dom(GENERAL.icon('folder-users'))
       .hasClass('hds-icon-folder-users', 'Correct icon renders in title');
-    assert.dom('[data-test-header-title]').hasText(this.mount, 'Mount path renders in title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(this.mount, 'Mount path renders in title');
   });
 
   test('it should render tabs', async function (assert) {
-    await render(hbs`<TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+    await render(hbs`<LdapHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
     assert.dom('[data-test-tab="overview"]').hasText('Overview', 'Overview tab renders');
     assert.dom('[data-test-tab="roles"]').hasText('Roles', 'Roles tab renders');
     assert.dom('[data-test-tab="libraries"]').hasText('Libraries', 'Libraries tab renders');
-    assert.dom('[data-test-tab="config"]').hasText('Configuration', 'Configuration tab renders');
   });
 
   test('it should yield toolbar blocks', async function (assert) {
     await render(
       hbs`
-      <TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}}>
+      <LdapHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}}>
         <:toolbarFilters>
           <span data-test-filters>Toolbar filters</span>
         </:toolbarFilters>
         <:toolbarActions>
           <span data-test-actions>Toolbar actions</span>
         </:toolbarActions>
-      </TabPageHeader>
+      </LdapHeader>
     `,
       { owner: this.engine }
     );

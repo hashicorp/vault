@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -164,6 +164,18 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 	reporterResolver.LogReport(i.logger)
 
 	return err
+}
+
+func (i *IdentityStore) activate(ctx context.Context, _ *logical.Request, featureName string) error {
+	switch featureName {
+	case activationflags.IdentityDeduplication:
+		return i.activateDeduplication(ctx, nil)
+	case activationflags.SCIMEnablement:
+		i.logger.Info("activating SCIM paths; SCIM operations can now be performed")
+		i.scimEnabled = true
+	}
+
+	return nil
 }
 
 // activateDeduplication is called when the identity deduplication feature is

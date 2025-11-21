@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package database
@@ -92,7 +92,7 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		if err != nil {
 			b.Logger().Error("failed to rotate root credential on user request", "path", req.Path, "error", err.Error())
 		} else {
-			b.Logger().Info("succesfully rotated root credential on user request", "path", req.Path)
+			b.Logger().Info("successfully rotated root credential on user request", "path", req.Path)
 		}
 		return resp, err
 	}

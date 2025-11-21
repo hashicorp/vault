@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package activationflags
@@ -15,6 +15,7 @@ import (
 const (
 	storagePathActivationFlags = "activation-flags"
 	IdentityDeduplication      = "force-identity-deduplication"
+	SCIMEnablement             = "enable-scim"
 )
 
 // FeatureActivationFlags stores activation flags in a local map and storage.

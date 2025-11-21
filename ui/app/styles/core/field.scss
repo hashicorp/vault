@@ -1,7 +1,7 @@
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,7 +10,7 @@
 .field {
   // cannot use :read-only selector because tag used for other purposes
   &.is-readOnly {
-    background-color: var(--token-color-palette-neutral-100);
+    background-color: var(--token-color-surface-strong);
     cursor: not-allowed;
   }
 
@@ -49,8 +49,8 @@
       .checkbox,
       .input,
       .select select {
-        border-bottom-left-radius: size_variables.$radius;
-        border-top-left-radius: size_variables.$radius;
+        border-bottom-left-radius: var(--token-border-radius-x-small);
+        border-top-left-radius: var(--token-border-radius-x-small);
       }
     }
     &:last-child {
@@ -58,8 +58,8 @@
       .checkbox,
       .input,
       .select select {
-        border-bottom-right-radius: size_variables.$radius;
-        border-top-right-radius: size_variables.$radius;
+        border-bottom-right-radius: var(--token-border-radius-x-small);
+        border-top-right-radius: var(--token-border-radius-x-small);
       }
     }
   }
@@ -136,7 +136,7 @@ fieldset.form-fieldset {
     }
 
     &.is-large {
-      font-size: 1.5rem;
+      font-size: var(--token-typography-display-400-font-size);
       padding-top: 0.375em;
     }
   }

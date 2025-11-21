@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -16,17 +16,17 @@
     <div class="box is-marginless" data-test-group={{group}}>
       {{#if (eq group "Key parameters")}}
         <p class="has-bottom-margin-m" data-test-toggle-group-description>
-          {{#if (eq @model.type "internal")}}
+          {{#if (eq @form.type "internal")}}
             This certificate type is internal. This means that the private key will not be returned and cannot be retrieved
             later. Below, you will name the key and define its type and key bits.
-          {{else if (eq @model.type "kms")}}
+          {{else if (eq @form.type "kms")}}
             This certificate type is kms, meaning managed keys will be used. Below, you will name the key and tell Vault
             where to find it in your KMS or HSM.
             <DocLink @path="/vault/docs/enterprise/managed-keys">Learn more about managed keys.</DocLink>
-          {{else if (eq @model.type "exported")}}
+          {{else if (eq @form.type "exported")}}
             This certificate type is exported. This means the private key will be returned in the response. Below, you will
             name the key and define its type and key bits.
-          {{else if (eq @model.type "existing")}}
+          {{else if (eq @form.type "existing")}}
             You chose to use an existing key. This means that we’ll use the key reference to create the CSR or root. Please
             provide the reference to the key.
           {{else}}
@@ -34,7 +34,7 @@
           {{/if}}
         </p>
         {{#if this.keyParamFields}}
-          <PkiKeyParameters @model={{@model}} @fields={{this.keyParamFields}} @modelValidations={{@modelValidations}} />
+          <PkiKeyParameters @model={{@form}} @fields={{this.keyParamFields}} @modelValidations={{@modelValidations}} />
         {{/if}}
       {{else}}
         <p class="has-bottom-margin-m" data-test-toggle-group-description>
@@ -53,11 +53,11 @@
           {{/if}}
         </p>
         {{#each fields as |fieldName|}}
-          {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
+          {{#let (find-by "name" fieldName @form.formFields) as |field|}}
             <FormField
               data-test-field
-              @attr={{attr}}
-              @model={{@model}}
+              @attr={{field}}
+              @model={{@form}}
               @showHelpText={{false}}
               @modelValidations={{@modelValidations}}
             />

@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -14,25 +14,12 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if @model.id}}
+{{#if (eq this.title "View generated root")}}
   <Toolbar />
 {{/if}}
-{{#if @model.privateKey}}
-  <div class="has-top-margin-m">
-    <Hds::Alert @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
-      <A.Title>Next steps</A.Title>
-      <A.Description>
-        The
-        <code>private_key</code>
-        is only available once. Make sure you copy and save it now.
-      </A.Description>
-    </Hds::Alert>
-  </div>
-{{/if}}
+
 <PkiGenerateRoot
-  @model={{@model}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
   @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
   @onSave={{fn (mut this.title) "View generated root"}}
-  @adapterOptions={{hash actionType="generate-root" useIssuer=@model.canGenerateIssuerRoot}}
 />

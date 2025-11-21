@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/plugincatalog"
@@ -353,6 +352,7 @@ type MountEntry struct {
 
 // MountConfig is used to hold settable options
 type MountConfig struct {
+	EntMountConfig             `mapstructure:",squash"`
 	DefaultLeaseTTL            time.Duration         `json:"default_lease_ttl,omitempty" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
 	MaxLeaseTTL                time.Duration         `json:"max_lease_ttl,omitempty" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
 	ForceNoCache               bool                  `json:"force_no_cache,omitempty" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
@@ -394,6 +394,7 @@ type APIUserLockoutConfig struct {
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
 type APIMountConfig struct {
+	EntAPIMountConfig          `mapstructure:",squash"`
 	DefaultLeaseTTL            string                `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
 	MaxLeaseTTL                string                `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache               bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
@@ -1842,23 +1843,6 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	return backend, nil
 }
 
-// resolveMountEntryVersion allows entry.Version to be overridden if there is a
-// corresponding pinned version.
-func (c *Core) resolveMountEntryVersion(ctx context.Context, pluginType consts.PluginType, entry *MountEntry) (string, error) {
-	pluginName := entry.Type
-	if alias, ok := mountAliases[pluginName]; ok {
-		pluginName = alias
-	}
-	pinnedVersion, err := c.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
-	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
-		return "", err
-	}
-	if pinnedVersion != nil {
-		return pinnedVersion.Version, nil
-	}
-	return entry.Version, nil
-}
-
 // defaultMountTable creates a default mount table
 func (c *Core) defaultMountTable() *MountTable {
 	table := &MountTable{
@@ -2015,7 +1999,7 @@ func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 	}
 	c.authLock.RUnlock()
 
-	return
+	return mounts, auth
 }
 
 func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *BarrierView) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -21,16 +21,11 @@ export default class ConfigurationIndexRoute extends Route {
   }
 
   model() {
-    const { acme, cluster, urls, crl, engine } = this.modelFor('configuration');
+    const configRouteModel = this.modelFor('configuration');
     return hash({
       hasConfig: this.pkiMountHasConfig,
-      engine,
-      acme,
-      cluster,
-      urls,
-      crl,
-      mountConfig: this.fetchMountConfig(engine.id),
-      issuerModel: this.store.createRecord('pki/issuer'),
+      mountConfig: this.fetchMountConfig(configRouteModel.engine.id),
+      ...configRouteModel,
     });
   }
 

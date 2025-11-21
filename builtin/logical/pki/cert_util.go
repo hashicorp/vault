@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -295,6 +295,7 @@ func generateCert(sc *storageContext,
 	if data.Params == nil {
 		return nil, nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
+	issuing.EntAdjustCreationBundle(sc.System(), data)
 
 	if isCA {
 		data.Params.IsCA = isCA

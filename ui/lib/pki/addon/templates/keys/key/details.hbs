@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -15,4 +15,4 @@
   </p.levelLeft>
 </PageHeader>
 
-<Page::PkiKeyDetails @key={{this.model}} @canDelete={{this.model.canDelete}} @canEdit={{this.model.canEdit}} />
+<Page::PkiKeyDetails @key={{this.model.key}} @canDelete={{this.model.canDelete}} @canEdit={{this.model.canUpdate}} />

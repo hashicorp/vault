@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -26,6 +26,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.flags = this.owner.lookup('service:flags');
+    this.version = this.owner.lookup('service:version');
     this.flags.activatedFlags = ['secrets-sync'];
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     clientsHandler(this.server);
@@ -35,24 +36,53 @@ module('Integration | Component | clients/running-total', function (hooks) {
       end_time: { timestamp: getUnixTime(timestamp.now()) },
     };
     this.activity = await store.queryRecord('clients/activity', activityQuery);
-    this.byMonthNewClients = this.activity.byMonth.map((d) => d.new_clients);
+    this.byMonthClients = this.activity.byMonth.map((d) => d.new_clients);
 
     this.renderComponent = async () => {
       await render(hbs`
       <Clients::RunningTotal
-        @byMonthNewClients={{this.byMonthNewClients}}
+        @byMonthClients={{this.byMonthClients}}
         @runningTotals={{this.activity.total}}
       />
     `);
     };
   });
 
+  test('it text for community versions', async function (assert) {
+    this.version.type = 'community';
+    await this.renderComponent();
+    assert
+      .dom(`${CLIENT_COUNT.card('Client usage trends')} p`)
+      .hasText(
+        'Number of clients in the date range by client type, and a breakdown of new clients per month during the date range.'
+      );
+  });
+
+  // abbreviating "ent" so the test is not filtered out in CE repo runs
+  test('it renders text for ent versions', async function (assert) {
+    this.version.type = 'enterprise';
+    await this.renderComponent();
+    assert
+      .dom(`${CLIENT_COUNT.card('Client usage trends')} p`)
+      .hasText(
+        'Number of clients in the billing period by client type, and a breakdown of new clients per month during the billing period.'
+      );
+  });
+
+  test('it renders text for HVD managed versions', async function (assert) {
+    this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    await this.renderComponent();
+    assert
+      .dom(`${CLIENT_COUNT.card('Client usage trends')} p`)
+      .hasText(
+        'Number of total unique clients in the data period by client type, and total number of unique clients per month. The monthly total is the relevant billing metric.'
+      );
+  });
+
   test('it renders with full monthly activity data', async function (assert) {
     await this.renderComponent();
 
-    assert
-      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
-      .exists('running total component renders');
+    assert.dom(CLIENT_COUNT.card('Client usage trends')).exists('running total component renders');
     assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
     assert.dom(CHARTS.legend).hasText('New clients');
     const expectedColor = 'rgb(28, 52, 95)';
@@ -76,22 +106,20 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     // assert bar chart is correct
     findAll(CHARTS.xAxisLabel).forEach((e, i) => {
-      const timestamp = this.byMonthNewClients[i].timestamp;
+      const timestamp = this.byMonthClients[i].timestamp;
       const displayMonth = parseAPITimestamp(timestamp, 'M/yy');
       assert.dom(e).hasText(displayMonth, `renders x-axis labels for bar chart: ${displayMonth}`);
     });
     assert
       .dom(CHARTS.verticalBar)
-      .exists({ count: this.byMonthNewClients.length }, 'renders correct number of bars ');
+      .exists({ count: this.byMonthClients.length }, 'renders correct number of bars ');
   });
 
   test('it toggles to split chart by client type', async function (assert) {
     await this.renderComponent();
     await click(GENERAL.inputByAttr('toggle view'));
 
-    assert
-      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
-      .exists('running total component renders');
+    assert.dom(CLIENT_COUNT.card('Client usage trends')).exists('running total component renders');
     assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
     assert
       .dom(CHARTS.legend)
@@ -117,12 +145,12 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     // assert bar chart is correct
     findAll(CHARTS.xAxisLabel).forEach((e, i) => {
-      const timestamp = this.byMonthNewClients[i].timestamp;
+      const timestamp = this.byMonthClients[i].timestamp;
       const displayMonth = parseAPITimestamp(timestamp, 'M/yy');
       assert.dom(e).hasText(`${displayMonth}`, `renders x-axis labels for bar chart: ${displayMonth}`);
     });
 
-    const months = this.byMonthNewClients.length;
+    const months = this.byMonthClients.length;
     const barsPerMonth = expectedLegend.length;
     assert
       .dom(CHARTS.verticalBar)
@@ -130,7 +158,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
   });
 
   test('it renders when no monthly breakdown is available', async function (assert) {
-    this.byMonthNewClients = [];
+    this.byMonthClients = [];
     await this.renderComponent();
     const expectedStats = {
       Entity: formatNumber([this.activity.total.entity_clients]),
@@ -153,13 +181,11 @@ module('Integration | Component | clients/running-total', function (hooks) {
   test('it hides secret sync totals when feature is not activated', async function (assert) {
     this.flags.activatedFlags = [];
     // reset secret sync clients to 0
-    this.byMonthNewClients = this.byMonthNewClients.map((obj) => ({ ...obj, secret_syncs: 0 }));
+    this.byMonthClients = this.byMonthClients.map((obj) => ({ ...obj, secret_syncs: 0 }));
 
     await this.renderComponent();
 
-    assert
-      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
-      .exists('running total component renders');
+    assert.dom(CLIENT_COUNT.card('Client usage trends')).exists('running total component renders');
     assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
     assert.dom(CLIENT_COUNT.statLegendValue('Entity clients')).exists();
     assert.dom(CLIENT_COUNT.statLegendValue('Non-entity clients')).exists();
@@ -187,7 +213,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       assert.strictEqual(dotColor, color, `${label} - actual color: ${dotColor}, expected: ${color}`);
     });
 
-    const months = this.byMonthNewClients.length;
+    const months = this.byMonthClients.length;
     const barsPerMonth = expectedLegend.length;
     assert
       .dom(CHARTS.verticalBar)

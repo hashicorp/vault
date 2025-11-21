@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package issuing
@@ -318,6 +318,7 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 	if creation.Params == nil {
 		return nil, nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
+	EntAdjustCreationBundle(b, creation)
 
 	creation.Params.IsCA = signInput.IsCA()
 	creation.Params.UseCSRValues = signInput.UseCSRValues()
@@ -327,11 +328,11 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 		creation.Params.ExcludedDNSDomains = signInput.GetExcludedDomains()
 		creation.Params.PermittedIPRanges, err = signInput.GetPermittedIpRanges()
 		if err != nil {
-			return nil, nil, errutil.UserError{Err: fmt.Sprintf("error parsinng permitted IP ranges: %v", err)}
+			return nil, nil, errutil.UserError{Err: fmt.Sprintf("error parsing permitted IP ranges: %v", err)}
 		}
 		creation.Params.ExcludedIPRanges, err = signInput.GetExcludedIpRanges()
 		if err != nil {
-			return nil, nil, errutil.UserError{Err: fmt.Sprintf("error parsinng excluded IP ranges: %v", err)}
+			return nil, nil, errutil.UserError{Err: fmt.Sprintf("error parsing excluded IP ranges: %v", err)}
 		}
 		creation.Params.PermittedEmailAddresses = signInput.GetPermittedEmailAddresses()
 		creation.Params.ExcludedEmailAddresses = signInput.GetExcludedEmailAddresses()
@@ -339,7 +340,7 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 		creation.Params.ExcludedURIDomains = signInput.GetExcludedUriDomains()
 	} else {
 		for _, ext := range csr.Extensions {
-			if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+			if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) && !signInput.UseCSRValues() {
 				warnings = append(warnings, "specified CSR contained a Basic Constraints extension that was ignored during issuance")
 			}
 		}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -18,11 +18,61 @@ module('Integration | Component | pki-key-usage', function (hooks) {
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.model = this.store.createRecord('pki/role');
+    // add fields that openapi normally hydrates
+    // ideally we pull this from the openapi schema in the future
+    const openapifields = [
+      {
+        name: 'clientFlag',
+        type: 'boolean',
+        options: {
+          editType: 'boolean',
+          helpText:
+            'If set, certificates are flagged for client auth use. Defaults to true. See also RFC 5280 Section 4.2.1.12.',
+          fieldGroup: 'default',
+          defaultValue: true,
+        },
+      },
+      {
+        name: 'serverFlag',
+        type: 'boolean',
+        options: {
+          editType: 'boolean',
+          helpText:
+            'If set, certificates are flagged for server auth use. Defaults to true. See also,  RFC 5280 Section 4.2.1.12.',
+          fieldGroup: 'default',
+          defaultValue: true,
+        },
+      },
+      {
+        name: 'codeSigningFlag',
+        type: 'boolean',
+        options: {
+          editType: 'boolean',
+          helpText:
+            'If set, certificates are flagged for code signing use. Defaults to false. See also RFC 5280 Section 4.2.1.12.',
+          fieldGroup: 'default',
+        },
+      },
+      {
+        name: 'emailProtectionFlag',
+        type: 'boolean',
+        options: {
+          editType: 'boolean',
+          helpText:
+            'If set, certificates are flagged for email protection use. Defaults to false. See also RFC 5280 Section 4.2.1.12.',
+          fieldGroup: 'default',
+        },
+      },
+    ];
+    this.model._allByKey = {};
+    openapifields.forEach((f) => {
+      this.model._allByKey[f.name] = f;
+      this.model[f.name] = f.options.defaultValue;
+    });
     this.model.backend = 'pki';
   });
 
   test('it should render the component', async function (assert) {
-    assert.expect(6);
     await render(
       hbs`
       <div class="has-top-margin-xxl">
@@ -38,6 +88,10 @@ module('Integration | Component | pki-key-usage', function (hooks) {
     assert.dom(PKI_ROLE_FORM.keyAgreement).isChecked('Key Agreement is true by default');
     assert.dom(PKI_ROLE_FORM.keyEncipherment).isChecked('Key Encipherment is true by default');
     assert.dom(PKI_ROLE_FORM.any).isNotChecked('Any is false by default');
+    assert.dom(GENERAL.inputByAttr('clientFlag')).isChecked();
+    assert.dom(GENERAL.inputByAttr('serverFlag')).isChecked();
+    assert.dom(GENERAL.inputByAttr('codeSigningFlag')).isNotChecked();
+    assert.dom(GENERAL.inputByAttr('emailProtectionFlag')).isNotChecked();
     assert.dom(GENERAL.inputByAttr('extKeyUsageOids')).exists('Extended Key usage oids renders');
   });
 

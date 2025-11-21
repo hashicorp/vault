@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -178,7 +178,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       assert.dom(DASHBOARD.cardName('client-count')).exists();
     });
 
-    test('it should show not show client count on enterprise in child namespaces called "admin" when running a managed mode', async function (assert) {
+    test('it should hide client count on enterprise in child namespaces called "admin" when running a managed mode', async function (assert) {
       this.permissions.exactPaths = {
         'admin/sys/internal/counters/activity': {
           capabilities: ['read'],
@@ -215,6 +215,17 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       await this.renderComponent();
 
+      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    });
+
+    test('it should hide client count on PKI-only Secrets clusters', async function (assert) {
+      this.permissions.exactPaths = {
+        'sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+      };
+      this.version.features = ['PKI-only Secrets'];
+      await this.renderComponent();
       assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
     });
 

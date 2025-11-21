@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -12,8 +12,7 @@
     @urls={{this.model.urls}}
     @crl={{this.model.crl}}
     @backend={{this.model.engine.id}}
-    @canDeleteAllIssuers={{this.model.issuerModel.canDeleteAllIssuers}}
-    @hasConfig={{this.model.hasConfig}}
+    @canDeleteAllIssuers={{this.model.capabilities.canDeleteAllIssuers}}
   />
 {{else}}
   <Toolbar>

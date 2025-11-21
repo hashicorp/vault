@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -67,26 +67,26 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
 
     this.selectFilters = async () => {
       // select namespace
-      await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+      await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
       await click(FILTERS.dropdownItem('admin/'));
       // select mount path
-      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+      await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
       await click(FILTERS.dropdownItem('auth/userpass-root/'));
       // select mount type
-      await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+      await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
       await click(FILTERS.dropdownItem('token/'));
       // select month
-      await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+      await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
       await click(FILTERS.dropdownItem('2025-04-01T00:00:00Z'));
     };
   });
 
   test('it renders dropdowns when there is no data', async function (assert) {
     await this.renderComponent();
-    assert.dom(FILTERS.dropdownToggle(ClientFilters.NAMESPACE)).hasText('Namespace');
-    assert.dom(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH)).hasText('Mount path');
-    assert.dom(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE)).hasText('Mount type');
-    assert.dom(FILTERS.dropdownToggle(ClientFilters.MONTH)).hasText('Month');
+    assert.dom(GENERAL.dropdownToggle(ClientFilters.NAMESPACE)).hasText('Namespace');
+    assert.dom(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH)).hasText('Mount path');
+    assert.dom(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE)).hasText('Mount type');
+    assert.dom(GENERAL.dropdownToggle(ClientFilters.MONTH)).hasText('Month');
     assert.dom(FILTERS.tagContainer).hasText('Filters applied: None');
   });
 
@@ -108,7 +108,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
       '2025-01-01T00:00:00Z',
     ];
 
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
     assert.dom('li button').exists({ count: 3 }, 'list renders 3 namespaces');
     findAll('li button').forEach((item, idx) => {
       const ns = expectedNamespaces[idx];
@@ -117,21 +117,21 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
       assert.dom(item).hasText(ns, msg);
     });
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
     assert.dom('li button').exists({ count: 3 }, 'list renders 3 mount paths');
     findAll('li button').forEach((item, idx) => {
       const m = expectedMountPaths[idx];
       assert.dom(item).hasText(m, `it renders mount_path: ${m}`);
     });
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
     assert.dom('li button').exists({ count: 3 }, 'list renders 3 mount types');
     findAll('li button').forEach((item, idx) => {
       const m = expectedMountTypes[idx];
       assert.dom(item).hasText(m, `it renders mount_type: ${m}`);
     });
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
     assert.dom('li button').exists({ count: 4 }, 'list renders 4 months');
     findAll('li button').forEach((item, idx) => {
       const m = expectedMonths[idx];
@@ -146,7 +146,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     this.dropdownMonths = ['2025-10-01T07:36:21Z', '2025-09-01T02:38:21Z', '2025-08-01T03:56:21Z'];
     await this.renderComponent();
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
     assert.dom('li button').exists({ count: 3 }, 'list renders 3 months');
     findAll('li button').forEach((item, idx) => {
       const m = this.dropdownMonths[idx];
@@ -158,26 +158,25 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
   test('it searches dropdown items', async function (assert) {
     this.dataset = this.generateData({ withTimestamps: true });
     await this.renderComponent();
-
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
     await fillIn(FILTERS.dropdownSearch(ClientFilters.NAMESPACE), 'n');
     let dropdownItems = findAll('li button');
     await waitUntil(() => dropdownItems.length === 2);
     assert.dom('ul').hasText('admin/ ns1/', 'it renders matching namespaces');
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
     await typeIn(FILTERS.dropdownSearch(ClientFilters.MOUNT_PATH), 'eng');
     dropdownItems = findAll('li button');
     await waitUntil(() => dropdownItems.length === 1);
     assert.dom('ul').hasText('auth/auto/eng/core/auth/core-gh-auth/', 'it renders matching mount paths');
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
     await typeIn(FILTERS.dropdownSearch(ClientFilters.MOUNT_TYPE), 'token');
     dropdownItems = findAll('li button');
     await waitUntil(() => dropdownItems.length === 2);
     assert.dom('ul').hasText('token/ ns_token/', 'it renders matching mount types');
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
     await typeIn(FILTERS.dropdownSearch(ClientFilters.MONTH), 'y');
     dropdownItems = findAll('li button');
     await waitUntil(() => dropdownItems.length === 2);
@@ -189,18 +188,18 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     assert.dom('ul').hasText('April 2025', 'it renders matching months');
 
     // Re-open each dropdown to confirm search input and dropdown reset after close
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
     assert.dom('ul').hasText('root admin/ ns1/', 'namespace dropdown resets on close');
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
     assert
       .dom('ul')
       .hasText(
         'auth/auto/eng/core/auth/core-gh-auth/ auth/userpass-root/ auth/token/',
         'mount path dropdown resets on close'
       );
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
     assert.dom('ul').hasText('userpass/ token/ ns_token/', 'mount types dropdown resets on close');
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
     assert
       .dom('ul')
       .hasText('April 2025 March 2025 February 2025 January 2025', 'months dropdown resets on close');
@@ -210,25 +209,25 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     this.dataset = this.generateData({ withTimestamps: true });
     await this.renderComponent();
 
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
     await fillIn(FILTERS.dropdownSearch(ClientFilters.NAMESPACE), 'no matches');
     let dropdownItems = findAll('li button');
     await waitUntil(() => dropdownItems.length === 0);
     assert.dom('ul').hasText('No matching namespaces');
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
     await fillIn(FILTERS.dropdownSearch(ClientFilters.MOUNT_PATH), 'no matches');
     dropdownItems = findAll('li button');
     await waitUntil(() => dropdownItems.length === 0);
     assert.dom('ul').hasText('No matching mount paths');
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
     await fillIn(FILTERS.dropdownSearch(ClientFilters.MOUNT_TYPE), 'no matches');
     dropdownItems = findAll('li button');
     await waitUntil(() => dropdownItems.length === 0);
     assert.dom('ul').hasText('No matching mount types');
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
     await fillIn(FILTERS.dropdownSearch(ClientFilters.MONTH), 'no matches');
     dropdownItems = findAll('li button');
     await waitUntil(() => dropdownItems.length === 0);
@@ -238,13 +237,13 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
   test('it renders no items to filter if dropdown is empty', async function (assert) {
     this.dataset = [{ namespace_path: null, mount_type: null, mount_path: null, months: null }];
     await this.renderComponent();
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
     assert.dom('ul').hasText('No namespaces to filter');
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
     assert.dom('ul').hasText('No mount paths to filter');
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
     assert.dom('ul').hasText('No mount types to filter');
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
     assert.dom('ul').hasText('No months to filter');
   });
 
@@ -252,7 +251,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     this.dataset = this.generateData({ withTimestamps: false });
     this.isExportData = true;
     await this.renderComponent();
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
     assert
       .dom('ul')
       .hasText(
@@ -263,8 +262,8 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
   test('it renders no months to filter message when data has no client_first_used_time', async function (assert) {
     this.dataset = this.generateData({ withTimestamps: false });
     await this.renderComponent();
-    assert.dom(FILTERS.dropdownToggle(ClientFilters.MONTH)).hasText('Month');
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+    assert.dom(GENERAL.dropdownToggle(ClientFilters.MONTH)).hasText('Month');
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
     assert.dom('ul').hasText('No months to filter');
   });
 
@@ -272,20 +271,20 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     this.dataset = this.generateData({ withTimestamps: true });
     this.dropdownMonths = [];
     await this.renderComponent();
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
     assert.dom('ul').hasText('No months to filter');
   });
 
   test('it renders no items to filter if dataset does not contain expected keys', async function (assert) {
     this.dataset = [{ foo: null, bar: null, baz: null }];
     await this.renderComponent();
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
     assert.dom('ul').hasText('No namespaces to filter');
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
     assert.dom('ul').hasText('No mount paths to filter');
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
     assert.dom('ul').hasText('No mount types to filter');
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
     assert.dom('ul').hasText('No months to filter');
   });
 
@@ -294,42 +293,42 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     await this.renderComponent();
 
     // select namespace
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
     await click(FILTERS.dropdownItem('admin/'));
     assert.dom(FILTERS.tag(ClientFilters.NAMESPACE, 'admin/')).exists();
     assert.dom(FILTERS.tag()).exists({ count: 1 }, '1 filter tag renders');
     // dropdown should close after an item is selected, reopen to assert the correct item is selected
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
     assert.dom(FILTERS.dropdownItem('admin/')).hasAttribute('aria-selected', 'true');
     assert.dom(`${FILTERS.dropdownItem('admin/')} ${GENERAL.icon('check')}`).exists();
 
     // select mount path
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
     await click(FILTERS.dropdownItem('auth/userpass-root/'));
     assert.dom(FILTERS.tag(ClientFilters.MOUNT_PATH, 'auth/userpass-root/')).exists();
     assert.dom(FILTERS.tag()).exists({ count: 2 }, '2 filter tags render');
     // dropdown should close after an item is selected, reopen to assert the correct item is selected
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
     assert.dom(FILTERS.dropdownItem('auth/userpass-root/')).hasAttribute('aria-selected', 'true');
     assert.dom(`${FILTERS.dropdownItem('auth/userpass-root/')} ${GENERAL.icon('check')}`).exists();
 
     // select mount type
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
     await click(FILTERS.dropdownItem('token/'));
     assert.dom(FILTERS.tag(ClientFilters.MOUNT_TYPE, 'token/')).exists();
     assert.dom(FILTERS.tag()).exists({ count: 3 }, '3 filter tags render');
     // dropdown should close after an item is selected, reopen to assert the correct item is selected
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
     assert.dom(FILTERS.dropdownItem('token/')).hasAttribute('aria-selected', 'true');
     assert.dom(`${FILTERS.dropdownItem('token/')} ${GENERAL.icon('check')}`).exists();
 
     // select month
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
     await click(FILTERS.dropdownItem('2025-02-01T00:00:00Z'));
     assert.dom(FILTERS.tag(ClientFilters.MONTH, '2025-02-01T00:00:00Z')).exists();
     assert.dom(FILTERS.tag()).exists({ count: 4 }, '4 filter tags render');
     // dropdown should close after an item is selected, reopen to assert the correct item is selected
-    await click(FILTERS.dropdownToggle(ClientFilters.MONTH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
     assert.dom(FILTERS.dropdownItem('2025-02-01T00:00:00Z')).hasAttribute('aria-selected', 'true');
     assert.dom(`${FILTERS.dropdownItem('2025-02-01T00:00:00Z')} ${GENERAL.icon('check')}`).exists();
   });
@@ -339,7 +338,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     await this.renderComponent();
 
     // select namespace
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
     await click(FILTERS.dropdownItem('admin/'));
     let lastCall = this.onFilter.lastCall.args[0];
     // this.filterQueryParams has empty values for each filter type
@@ -347,14 +346,14 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     assert.propEqual(lastCall, expectedObject, `callback includes value for ${ClientFilters.NAMESPACE}`);
 
     // select mount path
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
     await click(FILTERS.dropdownItem('auth/userpass-root/'));
     lastCall = this.onFilter.lastCall.args[0];
     expectedObject = { ...expectedObject, [ClientFilters.MOUNT_PATH]: 'auth/userpass-root/' };
     assert.propEqual(lastCall, expectedObject, `callback includes value for ${ClientFilters.MOUNT_PATH}`);
 
     // select mount type
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
     await click(FILTERS.dropdownItem('token/'));
     lastCall = this.onFilter.lastCall.args[0];
     expectedObject = { ...expectedObject, [ClientFilters.MOUNT_TYPE]: 'token/' };

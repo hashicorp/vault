@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -19,6 +19,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -652,10 +653,22 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	b.GetRevokeStorageLock().Lock()
 	defer b.GetRevokeStorageLock().Unlock()
 
+	var serialNumber string
+	var isCa bool
+	var akid []byte
+	var skid []byte
+	if cert != nil {
+		serialNumber = parsing.SerialFromCert(cert)
+		isCa = cert.IsCA
+		akid = cert.AuthorityKeyId
+		skid = cert.SubjectKeyId
+	}
+
 	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIRevoke,
-		observe.NewAdditionalPKIMetadata("issuer_name", cert.Issuer.String()),
-		observe.NewAdditionalPKIMetadata("is_ca", cert.IsCA),
-		observe.NewAdditionalPKIMetadata("serial_number", cert.SerialNumber.String()),
+		observe.NewAdditionalPKIMetadata("is_ca", isCa),
+		observe.NewAdditionalPKIMetadata("subject_key_id", skid),
+		observe.NewAdditionalPKIMetadata("authority_key_id", akid),
+		observe.NewAdditionalPKIMetadata("serial_number", serialNumber),
 	)
 
 	return revokeCert(sc, config, cert)

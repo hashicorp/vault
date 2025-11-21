@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -129,6 +129,11 @@ export default class ConfigureWif extends Component<Args> {
         }
         this.flashMessages.success(`Successfully saved ${this.args.backendPath}'s configuration.`);
         this.transition();
+        // TODO: revisit after we have other plugin settings (secrets engines other than LDAP) pages set up
+        // this.router.transitionTo(
+        //   'vault.cluster.secrets.backend.configuration.plugin-settings',
+        //   this.args.backendPath
+        // );
       } catch (e) {
         const { message } = await this.api.parseError(e);
         this.errorMessage = message;

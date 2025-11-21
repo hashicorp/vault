@@ -1,9 +1,9 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
+<LdapHeader @model={{@backendModel}} @promptConfig={{@promptConfig}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @libraries)}}
       <FilterInput
@@ -16,17 +16,13 @@
     {{/if}}
   </:toolbarFilters>
   <:toolbarActions>
-    {{#if @promptConfig}}
-      <ToolbarLink @route="configure" data-test-toolbar-action="config">
-        Configure LDAP
-      </ToolbarLink>
-    {{else}}
+    {{#unless @promptConfig}}
       <ToolbarLink @route="libraries.create" @type="add" data-test-toolbar-action="library">
         Create library
       </ToolbarLink>
-    {{/if}}
+    {{/unless}}
   </:toolbarActions>
-</TabPageHeader>
+</LdapHeader>
 
 {{#if @promptConfig}}
   <ConfigCta />
@@ -35,7 +31,6 @@
     <EmptyState @title="There are no libraries matching &quot;{{this.filterValue}}&quot;" />
   {{else}}
     <EmptyState
-      data-test-config-cta
       @title="No libraries created yet"
       @message="Use libraries to manage a set of highly privileged accounts that can be shared among a team."
     />
@@ -46,7 +41,7 @@
       <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{this.linkParams library}} as |Item|>
         <Item.content>
           <Icon @name="folder" />
-          <span data-test-library={{library.completeLibraryName}}>{{library.name}}</span>
+          <span data-test-library={{library.name}}>{{library.name}}</span>
         </Item.content>
         <Item.menu>
           {{#if (or library.canRead library.canEdit library.canDelete)}}
@@ -55,7 +50,7 @@
                 @icon="more-horizontal"
                 @text="More options"
                 @hasChevron={{false}}
-                data-test-popup-menu-trigger={{library.completeLibraryName}}
+                data-test-popup-menu-trigger={{library.name}}
               />
               {{#if (this.isHierarchical library.name)}}
                 <dd.Interactive
@@ -68,14 +63,14 @@
                   <dd.Interactive
                     data-test-edit
                     @route="libraries.library.edit"
-                    @model={{library.completeLibraryName}}
+                    @model={{this.getEncodedLibraryName library}}
                   >Edit</dd.Interactive>
                 {{/if}}
                 {{#if library.canRead}}
                   <dd.Interactive
                     data-test-details
                     @route="libraries.library.details"
-                    @model={{library.completeLibraryName}}
+                    @model={{this.getEncodedLibraryName library}}
                   >Details</dd.Interactive>
                 {{/if}}
                 {{#if library.canDelete}}
