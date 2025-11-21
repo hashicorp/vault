@@ -1,6 +1,6 @@
 # Vault Agent
 
-Vault Agent is a client daemon that provides Auth-Auth, Caching, and Template
+Vault Agent is a client daemon that provides Auto-Auth, Caching, and Template
 features. 
 
 Vault Agent provides a number of different helper features, specifically

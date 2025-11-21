@@ -32,7 +32,7 @@ Release notes are text files with three lines:
      - `improvement` - Most updates to the product that aren’t `bug`s, but
        aren't big enough to be a `feature`, will be an `improvement`.
 
- 2. A component (for example, `secret/pki` or `sdk/framework` or), a colon and a space, and then a one-line description of the change.
+ 2. A component (for example, `secret/pki` or `sdk/framework`), a colon and a space, and then a one-line description of the change.
 
  3. An ending code block.
 
