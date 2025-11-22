@@ -82,14 +82,15 @@ const (
 type LifetimeWatcher struct {
 	l sync.Mutex
 
-	client        *Client
-	secret        *Secret
-	grace         time.Duration
-	random        *rand.Rand
-	increment     int
-	doneCh        chan error
-	renewCh       chan *RenewOutput
-	renewBehavior RenewBehavior
+	client           *Client
+	secret           *Secret
+	grace            time.Duration
+	random           *rand.Rand
+	increment        int
+	doneCh           chan error
+	renewCh          chan *RenewOutput
+	renewBehavior    RenewBehavior
+	renewalThreshold float64
 
 	stopped bool
 	stopCh  chan struct{}
@@ -125,6 +126,12 @@ type LifetimeWatcherInput struct {
 	// RenewBehavior controls what happens when a renewal errors or the
 	// passed-in secret is not renewable.
 	RenewBehavior RenewBehavior
+
+	// RenewalThreshold is the proportion of the lease duration at which
+	// renewal should be attempted. Must be between 0 and 1. For example,
+	// 0.667 means renew at 2/3 of the lease duration, 0.8 means renew at
+	// 80% of the lease duration. If not specified, defaults to 0.667 (2/3).
+	RenewalThreshold *float64
 }
 
 // RenewOutput is the metadata returned to the client (if it's listening) to
@@ -167,14 +174,26 @@ func (c *Client) NewLifetimeWatcher(i *LifetimeWatcherInput) (*LifetimeWatcher, 
 		renewBuffer = DefaultLifetimeWatcherRenewBuffer
 	}
 
+	// Set and validate renewal threshold
+	renewalThreshold := 0.667 // Default to 2/3 (current behavior)
+	if i.RenewalThreshold != nil {
+		renewalThreshold = *i.RenewalThreshold
+		// Validate that threshold is in valid range (0, 1]
+		// We exclude 0 as it would cause immediate renewal, but allow up to 1.0
+		if renewalThreshold <= 0 || renewalThreshold > 1.0 {
+			return nil, errors.New("renewal_threshold must be greater than 0 and less than or equal to 1")
+		}
+	}
+
 	return &LifetimeWatcher{
-		client:        c,
-		secret:        secret,
-		increment:     i.Increment,
-		random:        random,
-		doneCh:        make(chan error, 1),
-		renewCh:       make(chan *RenewOutput, renewBuffer),
-		renewBehavior: i.RenewBehavior,
+		client:           c,
+		secret:           secret,
+		increment:        i.Increment,
+		random:           random,
+		doneCh:           make(chan error, 1),
+		renewCh:          make(chan *RenewOutput, renewBuffer),
+		renewBehavior:    i.RenewBehavior,
+		renewalThreshold: renewalThreshold,
 
 		stopped: false,
 		stopCh:  make(chan struct{}),
@@ -398,9 +417,15 @@ func (r *LifetimeWatcher) calculateSleepDuration(remainingLeaseDuration, priorDu
 		r.calculateGrace(remainingLeaseDuration, time.Duration(r.increment)*time.Second)
 	}
 
-	// The sleep duration is set to 2/3 of the current lease duration plus
-	// 1/3 of the current grace period, which adds jitter.
-	return time.Duration(float64(remainingLeaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3)
+	// The sleep duration is set to renewalThreshold proportion of the current lease duration
+	// plus the remaining proportion of the grace period, which adds jitter.
+	// For example, if renewalThreshold is 0.8, we sleep for 80% of the lease duration
+	// plus 20% of the grace period.
+	thresholdProportion := r.renewalThreshold
+	graceProportion := 1.0 - thresholdProportion
+
+	return time.Duration(float64(remainingLeaseDuration.Nanoseconds())*thresholdProportion +
+		float64(r.grace.Nanoseconds())*graceProportion)
 }
 
 // calculateGrace calculates the grace period based on the minimum of the
