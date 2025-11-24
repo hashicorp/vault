@@ -573,7 +573,7 @@ func issueCertFromCsr(b *backend, ac *acmeContext, csr *x509.CertificateRequest)
 	// (TLS) clients are mostly verifying against server's DNS SANs.
 	maybeAugmentReqDataWithSuitableCN(ac, csr, data)
 
-	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(ac.Issuer.ID.String(), issuing.IssuanceUsage)
+	signingBundle, issuer, err := ac.sc.fetchCAInfoWithIssuer(ac.Issuer.ID.String(), issuing.IssuanceUsage)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed loading CA %s: %w", ac.Issuer.ID.String(), err)
 	}
@@ -631,7 +631,7 @@ func issueCertFromCsr(b *backend, ac *acmeContext, csr *x509.CertificateRequest)
 		return nil, "", fmt.Errorf("%w: refusing to sign CSR: %s", ErrBadCSR, err.Error())
 	}
 
-	if err = issuing.VerifyCertificate(ac.Context, ac.sc.Storage, issuerId, parsedBundle); err != nil {
+	if err = issuing.VerifyCertificate(ac.Issuer, parsedBundle); err != nil {
 		return nil, "", fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
@@ -643,7 +643,7 @@ func issueCertFromCsr(b *backend, ac *acmeContext, csr *x509.CertificateRequest)
 		}
 	}
 
-	return parsedBundle, issuerId, err
+	return parsedBundle, issuer.ID, err
 }
 
 func parseCsrFromFinalize(data map[string]interface{}) (*x509.CertificateRequest, error) {
