@@ -1,0 +1,3 @@
+```release-note:bug
+activity (enterprise): sys/internal/counters/activity outputs the correct mount type when called from a non root namespace
+```

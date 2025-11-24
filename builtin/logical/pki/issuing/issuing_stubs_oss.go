@@ -9,6 +9,7 @@ import (
 	"context"
 
 	ctx509 "github.com/google/certificate-transparency-go/x509"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -16,4 +17,8 @@ import (
 
 func entSetCertVerifyOptions(ctx context.Context, storage logical.Storage, issuerId IssuerID, options *ctx509.VerifyOptions) error {
 	return nil
+}
+
+func EntAdjustCreationBundle(view logical.SystemView, bundle *certutil.CreationBundle) {
+	return
 }

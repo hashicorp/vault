@@ -314,7 +314,7 @@ func TestDisableVerifyCertificateEnvVar(t *testing.T) {
 		"allowed_user_ids":    "*",
 		"not_before_duration": "45s",
 		"signature_bits":      384,
-		"key_usage":           "KeyAgreement",
+		"key_usage":           "DigitalSignature, KeyAgreement",
 		"ext_key_usage":       "ServerAuth",
 		"ext_key_usage_oids":  "1.3.6.1.5.5.7.3.67,1.3.6.1.5.5.7.3.68",
 		"client_flag":         false,

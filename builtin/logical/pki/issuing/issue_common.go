@@ -428,7 +428,7 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 			SignatureBits:                 role.SignatureBits,
 			UsePSS:                        role.UsePSS,
 			NotAfter:                      notAfter,
-			KeyUsage:                      x509.KeyUsage(parsing.ParseKeyUsages(role.KeyUsage)),
+			KeyUsage:                      ParseKeyUsagesFromRole(role),
 			ExtKeyUsage:                   ParseExtKeyUsagesFromRole(role),
 			ExtKeyUsageOIDs:               role.ExtKeyUsageOIDs,
 			PolicyIdentifiers:             role.PolicyIdentifiers,

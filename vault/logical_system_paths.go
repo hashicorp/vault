@@ -4112,17 +4112,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 				OperationSuffix: "password-policy",
 			},
 
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: "The name of the password policy.",
-				},
-				"policy": {
-					Type:        framework.TypeString,
-					Description: "The password policy",
-				},
-			},
-
+			Fields: passwordPolicySchema,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesPasswordSet,
@@ -4143,6 +4133,10 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 								"policy": {
 									Type:     framework.TypeString,
 									Required: true,
+								},
+								"entropy_source": {
+									Type:     framework.TypeString,
+									Required: false,
 								},
 							},
 						}},
