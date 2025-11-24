@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Avoid loading issuer information multiple times per leaf certificate signing
+```

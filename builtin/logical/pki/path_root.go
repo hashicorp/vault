@@ -400,7 +400,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, issuerId, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
+	signingBundle, issuer, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -448,7 +448,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		}
 	}
 
-	if err := issuing.VerifyCertificate(sc.GetContext(), sc.GetStorage(), issuerId, parsedBundle); err != nil {
+	if err := issuing.VerifyCertificate(issuer, parsedBundle); err != nil {
 		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
@@ -477,7 +477,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuerSignIntermediate,
 		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
-		observe.NewAdditionalPKIMetadata("issuer_id", issuerId),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuer.ID),
 		observe.NewAdditionalPKIMetadata("not_after", parsedBundle.Certificate.NotAfter.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("not_before", parsedBundle.Certificate.NotBefore.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("common_name", parsedBundle.Certificate.Subject.CommonName),
@@ -601,7 +601,7 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 	}
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, issuerId, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
+	signingBundle, issuer, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -670,7 +670,7 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 
 	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuerSignSelfIssued,
 		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
-		observe.NewAdditionalPKIMetadata("issuer_id", issuerId.String()),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuer.ID.String()),
 		observe.NewAdditionalPKIMetadata("issuing_ca", signingCB.IssuingCA),
 		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(cert)),
 		observe.NewAdditionalPKIMetadata("not_after", cert.NotAfter.Format(time.RFC3339)),

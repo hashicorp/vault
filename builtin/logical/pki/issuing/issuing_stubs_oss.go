@@ -6,8 +6,6 @@
 package issuing
 
 import (
-	"context"
-
 	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -15,7 +13,7 @@ import (
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
-func entSetCertVerifyOptions(ctx context.Context, storage logical.Storage, issuerId IssuerID, options *ctx509.VerifyOptions) error {
+func entSetCertVerifyOptions(issuer *IssuerEntry, options *ctx509.VerifyOptions) error {
 	return nil
 }
 
