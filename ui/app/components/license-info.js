@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { allFeatures } from 'vault/helpers/all-features';
+import { allFeatures } from 'core/utils/all-features';
 /**
  * @module LicenseInfo
  *

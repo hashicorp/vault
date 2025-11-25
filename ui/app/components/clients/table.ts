@@ -10,6 +10,7 @@ import { paginate } from 'core/utils/paginate-list';
 import { next } from '@ember/runloop';
 import { service } from '@ember/service';
 
+import type FlagsService from 'vault/services/flags';
 import type VersionService from 'vault/services/version';
 import type { ClientFilterTypes } from 'vault/vault/client-counts/activity-api';
 
@@ -52,6 +53,7 @@ interface Args {
 }
 
 export default class ClientsTable extends Component<Args> {
+  @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
 
   @tracked currentPage = 1;

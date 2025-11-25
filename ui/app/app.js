@@ -88,9 +88,12 @@ export default class App extends Application {
           'secret-mount-path',
           'flash-messages',
           'auth',
+          'api',
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
+          secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
+          secretsPluginSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.plugin-settings',
         },
       },
     },
@@ -117,7 +120,9 @@ export default class App extends Application {
     pki: {
       dependencies: {
         services: [
+          'api',
           'auth',
+          'capabilities',
           'download',
           'flash-messages',
           'namespace',

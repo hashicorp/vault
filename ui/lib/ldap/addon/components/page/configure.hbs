@@ -3,23 +3,19 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">Configure LDAP</h1>
-  </p.levelLeft>
-</PageHeader>
-
-<hr class="is-marginless has-background-gray-200" />
+<LdapHeader
+  @model={{@model.backendModel}}
+  @promptConfig={{@model.promptConfig}}
+  @breadcrumbs={{@breadcrumbs}}
+  @configRoute="configure"
+/>
 
 <form class="has-top-margin-l" {{on "submit" (perform this.save)}}>
   <Hds::Form::RadioCard::Group @name="schema options" as |RadioGroup|>
     {{#each this.schemaOptions as |option|}}
       <RadioGroup.RadioCard
-        @checked={{eq option.value @model.schema}}
-        {{on "change" (fn (mut @model.schema) option.value)}}
+        @checked={{eq option.value @model.configModel.schema}}
+        {{on "change" (fn (mut @model.configModel.schema) option.value)}}
         data-test-radio-card={{option.title}}
         as |Card|
       >
@@ -36,9 +32,13 @@
     <h2 class="title is-4">Schema Options</h2>
     <hr class="has-background-gray-200" />
 
-    {{#if @model.schema}}
+    {{#if @model.configModel.schema}}
       <div class="has-top-margin-l">
-        <FormFieldGroups @model={{@model}} @groupName="formFieldGroups" @modelValidations={{this.modelValidations}} />
+        <FormFieldGroups
+          @model={{@model.configModel}}
+          @groupName="formFieldGroups"
+          @modelValidations={{this.modelValidations}}
+        />
       </div>
     {{else}}
       <EmptyState
@@ -56,8 +56,7 @@
       @text="Save"
       data-test-config-save
       type="submit"
-      disabled={{or this.save.isRunning (not @model.schema)}}
-      {{on "click" (perform this.save)}}
+      disabled={{or this.save.isRunning (not @model.configModel.schema)}}
     />
     <Hds::Button
       @text="Back"
@@ -94,17 +93,17 @@
         Would you like to rotate your new credentials? You can also do this later.
       </p>
     </M.Body>
-    <M.Footer>
+    <M.Footer as |F|>
       <Hds::ButtonSet>
         <Hds::Button
           @text="Save and rotate"
-          {{on "click" (fn (perform this.save) null true)}}
+          {{on "click" (perform this.saveAndClose true F.close)}}
           data-test-button="Save and rotate"
         />
         <Hds::Button
           @text="Save without rotating"
           @color="secondary"
-          {{on "click" (fn (perform this.save) null false)}}
+          {{on "click" (perform this.saveAndClose false F.close)}}
           data-test-button="Save without rotating"
         />
       </Hds::ButtonSet>

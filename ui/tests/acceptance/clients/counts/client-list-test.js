@@ -53,6 +53,24 @@ module('Acceptance | clients | counts | client list', function (hooks) {
   test('it hides client list tab on community', async function (assert) {
     this.version.type = 'community';
     assert.dom(GENERAL.tab('client list')).doesNotExist();
+
+    // Navigate directly to URL to test redirect
+    await visit('/vault/clients/counts/client-list');
+    assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'it redirects to overview');
+  });
+
+  // skip this test on CE test runs because GET sys/license/features an enterprise only endpoint
+  test('enterprise: it hides client list tab on HVD managed clusters', async function (assert) {
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    assert.dom(GENERAL.tab('client list')).doesNotExist();
+
+    // Navigate directly to URL to test redirect
+    await visit('/vault/clients/counts/client-list');
+    assert.strictEqual(
+      currentURL(),
+      '/vault/clients/counts/overview?namespace=admin',
+      'it redirects to overview'
+    );
   });
 
   test('it navigates to client list tab', async function (assert) {
@@ -88,13 +106,13 @@ module('Acceptance | clients | counts | client list', function (hooks) {
     await visit(url);
     assert.strictEqual(currentURL(), url, 'URL does not contain query params');
     // select namespace
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
     await click(FILTERS.dropdownItem(ns));
     // select mount path
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
     await click(FILTERS.dropdownItem(mPath));
     // select mount type
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
     await click(FILTERS.dropdownItem(mType));
     assert.strictEqual(
       currentURL(),

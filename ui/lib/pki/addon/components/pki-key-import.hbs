@@ -12,9 +12,7 @@
         Importing a PKI key
       </DocLink>
     </p>
-    {{#let (find-by "name" "keyName" @model.formFields) as |attr|}}
-      <FormField data-test-field={{attr}} @attr={{attr}} @model={{@model}} @showHelpText={{false}} />
-    {{/let}}
+    <FormField data-test-field="keyName" @attr={{this.keyNameField}} @model={{this}} @showHelpText={{false}} />
     <TextFile @onChange={{this.onFileUploaded}} @label="PEM Bundle" data-test-pki-key-file />
   </div>
   <Hds::ButtonSet class="has-top-padding-s">
@@ -29,7 +27,7 @@
       @text="Cancel"
       @color="secondary"
       disabled={{this.submitForm.isRunning}}
-      {{on "click" this.cancel}}
+      {{on "click" @onCancel}}
       data-test-cancel
     />
   </Hds::ButtonSet>

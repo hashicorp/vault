@@ -7,9 +7,11 @@ import Component from '@glimmer/component';
 import { cached, tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { filterTableData, flattenMounts } from 'core/utils/client-count-utils';
+import { service } from '@ember/service';
 
 import type ClientsActivityModel from 'vault/vault/models/clients/activity';
 import type { ClientFilterTypes } from 'vault/vault/client-counts/activity-api';
+import type FlagsService from 'vault/services/flags';
 
 export interface Args {
   activity: ClientsActivityModel;
@@ -18,19 +20,28 @@ export interface Args {
 }
 
 export default class ClientsOverviewPageComponent extends Component<Args> {
+  @service declare readonly flags: FlagsService;
+
   @tracked selectedMonth = '';
 
   @cached
-  get byMonthNewClients() {
+  get byMonthClients() {
+    // HVD clusters are billed differently and the monthly total is the important metric.
+    if (this.flags.isHvdManaged) {
+      return this.args.activity.byMonth || [];
+    }
+    // For self-managed clusters only the new_clients per month are relevant because clients accumulate over a billing period.
+    // (Since "total" per month is not cumulative it's not a useful metric)
     return this.args.activity.byMonth?.map((m) => m?.new_clients) || [];
   }
 
   // Supplies data passed to dropdown filters (except months which is computed below )
+  @cached
   get activityData() {
     // If no month is selected the table displays all of the activity for the queried date range.
     const selectedMonth = this.args.filterQueryParams.month;
     const namespaceData = selectedMonth
-      ? this.byMonthNewClients.find((m) => m.timestamp === selectedMonth)?.namespaces
+      ? this.byMonthClients.find((m) => m.timestamp === selectedMonth)?.namespaces
       : this.args.activity.byNamespace;
 
     // Get the array of "mounts" data nested in each namespace object and flatten
@@ -39,9 +50,12 @@ export default class ClientsOverviewPageComponent extends Component<Args> {
 
   @cached
   get months() {
-    return this.byMonthNewClients.reverse().map((m) => m.timestamp);
+    const timestamps = this.byMonthClients.map((m) => m.timestamp);
+    // display the most recent month at the top of the dropdown
+    return timestamps.reverse();
   }
 
+  @cached
   get tableData() {
     if (this.activityData?.length) {
       // Reset the `month` query param because it determines which dataset (see this.activityData)

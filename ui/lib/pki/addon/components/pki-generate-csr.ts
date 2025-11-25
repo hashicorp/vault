@@ -6,19 +6,27 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import errorMessage from 'vault/utils/error-message';
+import { toLabel } from 'core/helpers/to-label';
+import PkiConfigGenerateForm from 'vault/forms/secrets/pki/config/generate';
 
 import type FlashMessageService from 'vault/services/flash-messages';
-import type PkiActionModel from 'vault/models/pki/action';
-import type { Model, ValidationMap } from 'vault/app-types';
+import type CapabilitiesService from 'vault/services/capabilities';
+import type ApiService from 'vault/services/api';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+import type { ValidationMap } from 'vault/app-types';
+import type {
+  PkiGenerateIntermediateExportedEnum,
+  PkiIssuersGenerateIntermediateExportedEnum,
+  PkiGenerateIntermediateRequest,
+  PkiGenerateIntermediateResponse,
+  PkiIssuersGenerateIntermediateRequest,
+  PkiIssuersGenerateIntermediateResponse,
+} from '@hashicorp/vault-client-typescript';
 
 interface Args {
-  model: PkiActionModel;
-  useIssuer: boolean;
+  form: PkiConfigGenerateForm;
   onComplete: CallableFunction;
   onCancel: CallableFunction;
   onSave?: CallableFunction;
@@ -27,7 +35,7 @@ interface Args {
 /**
  * @module PkiGenerateCsrComponent
  * PkiGenerateCsr shows only the fields valid for the generate CSR endpoint.
- * This component renders the form, handles the model save and rollback actions,
+ * This component renders the form, handles saving the data to the server,
  * and shows the resulting data on success. onCancel is required for the cancel
  * transition, and if onSave is provided it will call that after save for any
  * side effects in the parent.
@@ -45,65 +53,87 @@ interface Args {
  */
 export default class PkiGenerateCsrComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly capabilities: CapabilitiesService;
+  @service declare readonly api: ApiService;
+  @service declare readonly secretMountPath: SecretMountPath;
 
   @tracked modelValidations: ValidationMap | null = null;
   @tracked error: string | null = null;
   @tracked alert: string | null = null;
+  @tracked declare config: PkiGenerateIntermediateResponse | PkiIssuersGenerateIntermediateResponse;
 
-  formFields;
+  form = new PkiConfigGenerateForm('PkiGenerateIntermediateRequest', {}, { isNew: true });
+
+  defaultFields = [
+    'type',
+    'common_name',
+    'exclude_cn_from_sans',
+    'format',
+    'serial_number',
+    'add_basic_constraints',
+  ];
   // fields rendered after CSR generation
-  showFields = ['csr', 'keyId', 'privateKey', 'privateKeyType'];
+  returnedFields = ['csr', 'key_id', 'private_key', 'private_key_type'];
 
-  constructor(owner: unknown, args: Args) {
-    super(owner, args);
-    this.formFields = expandAttributeMeta(this.args.model, [
-      'type',
-      'commonName',
-      'excludeCnFromSans',
-      'format',
-      'subjectSerialNumber',
-      'addBasicConstraints',
-    ]);
-  }
+  detailLabel = (fieldName: string) => {
+    return (
+      {
+        csr: 'CSR',
+        key_id: 'Key ID',
+      }[fieldName] || toLabel([fieldName])
+    );
+  };
 
-  @action
-  cancel() {
-    this.args.model.unloadRecord();
-    this.args.onCancel();
-  }
-
-  async getCapability(): Promise<boolean> {
+  async fetchIssuerCapabilities() {
     try {
-      const issuerCapabilities = await this.args.model.generateIssuerCsrPath;
-      return issuerCapabilities.get('canCreate') === true;
-    } catch (error) {
+      const { canCreate } = await this.capabilities.for('pkiIssuersGenerateIntermediate', {
+        backend: this.secretMountPath.currentPath,
+        type: this.form.data.type,
+      });
+      return canCreate;
+    } catch (e) {
+      // fallback to pkiGenerateIntermediate if capabilities fetch fails
       return false;
     }
   }
 
-  @task
-  @waitFor
-  *save(event: Event): Generator<Promise<boolean | Model>> {
-    event.preventDefault();
-    try {
-      const { model, onSave } = this.args;
-      const { isValid, state, invalidFormMessage } = model.validate();
-      if (isValid) {
-        const useIssuer = yield this.getCapability();
-        yield model.save({ adapterOptions: { actionType: 'generate-csr', useIssuer } });
-        this.flashMessages.success('Successfully generated CSR.');
-        // This component shows the results, but call `onSave` for any side effects on parent
-        if (onSave) {
-          onSave();
-        }
-        window?.scrollTo(0, 0);
-      } else {
-        this.modelValidations = state;
-        this.alert = invalidFormMessage;
-      }
-    } catch (e) {
-      this.error = errorMessage(e);
-      this.alert = 'There was a problem generating the CSR.';
+  generateCsr(canUseIssuer: boolean, data: PkiConfigGenerateForm['data']) {
+    if (canUseIssuer) {
+      return this.api.secrets.pkiIssuersGenerateIntermediate(
+        this.form.data.type as PkiIssuersGenerateIntermediateExportedEnum,
+        this.secretMountPath.currentPath,
+        data as PkiIssuersGenerateIntermediateRequest
+      );
+    } else {
+      return this.api.secrets.pkiGenerateIntermediate(
+        this.form.data.type as PkiGenerateIntermediateExportedEnum,
+        this.secretMountPath.currentPath,
+        data as PkiGenerateIntermediateRequest
+      );
     }
   }
+
+  save = task(
+    waitFor(async (event: Event) => {
+      event.preventDefault();
+      try {
+        const { isValid, state, invalidFormMessage, data } = this.form.toJSON();
+        if (isValid) {
+          const canUseIssuer = await this.fetchIssuerCapabilities();
+          this.config = await this.generateCsr(canUseIssuer, data);
+          this.flashMessages.success('Successfully generated CSR.');
+          // This component shows the results, but call `onSave` for any side effects on parent
+          this.args.onSave?.();
+          window?.scrollTo(0, 0);
+        } else {
+          this.modelValidations = state;
+          this.alert = invalidFormMessage;
+        }
+      } catch (e) {
+        const { message } = await this.api.parseError(e);
+        this.error = message;
+        this.alert = 'There was a problem generating the CSR.';
+      }
+    })
+  );
 }

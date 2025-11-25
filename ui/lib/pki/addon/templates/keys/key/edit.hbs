@@ -15,8 +15,4 @@
   </p.levelLeft>
 </PageHeader>
 
-<PkiKeyForm
-  @model={{this.model}}
-  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.keys.key.details" this.model.id}}
-  @onSave={{transition-to "vault.cluster.secrets.backend.pki.keys.key.details" this.model.id}}
-/>
+<PkiKeyForm @form={{this.model}} />

@@ -4,6 +4,7 @@
  */
 
 import Controller from '@ember/controller';
+import { capitalize } from '@ember/string';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
@@ -35,5 +36,28 @@ export default class OidcConfigureController extends Controller {
 
   get isCta() {
     return this.header === 'cta';
+  }
+
+  get breadcrumbs() {
+    // we check parent for the name as the currentRoute is always "index"
+    const route = this.router.currentRoute.parent.localName ?? '';
+    const isDefaultRoute = route === 'clients';
+
+    const baseCrumbs = [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
+      { label: 'Auth Oidc', route: 'vault.cluster.access.oidc', current: isDefaultRoute },
+    ];
+
+    // clients is the default view, so in order to match current patterns, we do not include it as a breadcrumb
+    if (!isDefaultRoute && route) {
+      return [
+        ...baseCrumbs,
+        {
+          label: capitalize(route),
+        },
+      ];
+    }
+
+    return baseCrumbs;
   }
 }

@@ -72,7 +72,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await click(GENERAL.cardContainer('aws'));
     await click(GENERAL.submitButton);
 
-    assert.dom(SES.configTab).exists();
+    assert.dom(GENERAL.tab('Configuration')).exists();
 
     await click(GENERAL.breadcrumbLink('Secrets'));
     assert.strictEqual(
@@ -165,7 +165,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     assert.dom(GENERAL.tableData(`${enginePath}/`, 'path')).exists('the alicloud engine is mounted');
 
     await click(GENERAL.menuTrigger);
-    await click(GENERAL.menuItem('disable-engine'));
+    await click(GENERAL.menuItem('Delete'));
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentRouteName(),

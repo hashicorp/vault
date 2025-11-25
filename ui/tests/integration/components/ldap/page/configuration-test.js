@@ -13,14 +13,8 @@ import { duration } from 'core/helpers/format-duration';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-
-const selectors = {
-  rotateAction: '[data-test-toolbar-rotate-action]',
-  configAction: '[data-test-toolbar-config-action]',
-  configCta: '[data-test-config-cta]',
-  mountConfig: '[data-test-mount-config]',
-  pageError: '[data-test-page-error]',
-};
+import engineDisplayData from 'vault/helpers/engines-display-data';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 module('Integration | Component | ldap | Page::Configuration', function (hooks) {
   setupRenderingTest(hooks);
@@ -40,12 +34,18 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
     });
     this.config = this.store.peekRecord('ldap/config', 'ldap-test');
 
+    this.model = {
+      backendModel: this.backend,
+      promptConfig: true,
+      configModel: this.config,
+      configError: null,
+      engineDisplayData: engineDisplayData(this.backend.type),
+    };
+
     this.renderComponent = () => {
       return render(
         hbs`<Page::Configuration
-          @backendModel={{this.backend}}
-          @configModel={{this.config}}
-          @configError={{this.error}}
+          @model={{this.model}}
           @breadcrumbs={{this.breadcrumbs}}
         />`,
         {
@@ -62,24 +62,22 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
     });
   });
 
-  test('it should render tab page header, config cta and mount config', async function (assert) {
-    this.config = null;
+  test('it should render tab page header', async function (assert) {
+    this.model.configModel = null;
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
-    assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
+    assert.dom(GENERAL.icon('folder-users')).hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('ldap-test configuration', 'Mount path renders in title');
     assert
-      .dom(selectors.rotateAction)
+      .dom(GENERAL.confirmTrigger)
       .doesNotExist('Rotate root action is hidden when engine is not configured');
-    assert.dom(selectors.configAction).hasText('Configure LDAP', 'Toolbar action has correct text');
-    assert.dom(selectors.configCta).exists('Config cta renders');
-    assert.dom(selectors.mountConfig).exists('Mount config renders');
+    assert.dom(SES.configure).doesNotExist('"Edit configuration" is hidden when not configured');
   });
 
   test('it should render config fetch error', async function (assert) {
-    this.config = null;
-    this.error = { httpStatus: 403, message: 'Permission denied' };
+    this.model.configModel = null;
+    this.model.configError = { httpStatus: 403, message: 'Permission denied' };
 
     await this.renderComponent();
 
@@ -114,7 +112,7 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
     });
 
     await this.renderComponent();
-    await click(selectors.rotateAction);
+    await click(GENERAL.confirmTrigger);
     await click(GENERAL.confirmButton);
   });
 });

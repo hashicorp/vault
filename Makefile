@@ -366,6 +366,10 @@ ci-build-ui:
 ci-bundle:
 	@$(CURDIR)/scripts/ci-helper.sh bundle
 
+.PHONY: ci-copy-binary
+ci-copy-binary:
+	@$(CURDIR)/scripts/ci-helper.sh copy-binary
+
 .PHONY: ci-get-artifact-basename
 ci-get-artifact-basename:
 	@$(CURDIR)/scripts/ci-helper.sh artifact-basename

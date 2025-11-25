@@ -5,17 +5,25 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { verifyCertificates, parseCertificate } from 'vault/utils/parse-pki-cert';
 
 export default class PkiIssuerIndexRoute extends Route {
-  @service store;
+  @service api;
   @service secretMountPath;
 
   model() {
     const { issuer_ref } = this.paramsFor('issuers/issuer');
-    return this.store.queryRecord('pki/issuer', {
-      backend: this.secretMountPath.currentPath,
-      id: issuer_ref,
-    });
+    return this.api.secrets
+      .pkiReadIssuer(issuer_ref, this.secretMountPath.currentPath)
+      .then(async (issuer) => {
+        const isRoot = await verifyCertificates(issuer.certificate, issuer.certificate);
+        const parsedCertificate = parseCertificate(issuer.certificate);
+        return {
+          ...issuer,
+          isRoot,
+          parsedCertificate,
+        };
+      });
   }
 
   setupController(controller, resolvedModel) {

@@ -32,7 +32,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     // in this test go through the full mount process. Bypass this step in later tests.
     await visit('/vault/secrets-engines/enable');
     await mountBackend('ssh', sshPath);
-    await click(SES.configTab);
+    await click(GENERAL.tab('Configuration'));
     assert.dom(GENERAL.emptyStateTitle).hasText('SSH not configured');
     assert.dom(GENERAL.emptyStateActions).hasText('Configure SSH');
     // cleanup
@@ -43,7 +43,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     // we are intentionally not redirecting from the old url to the new one
     const sshPath = `ssh-${this.uid}`;
     await enablePage.enable('ssh', sshPath);
-    await click(SES.configTab);
+    await click(GENERAL.tab('Configuration'));
     await visit(`/vault/settings/secrets/configure/${sshPath}`);
     assert.dom(GENERAL.notFound).exists('shows page-error');
     // cleanup
@@ -53,7 +53,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
   test('it should show a public key after saving default configuration and allows you to delete public key', async function (assert) {
     const sshPath = `ssh-${this.uid}`;
     await enablePage.enable('ssh', sshPath);
-    await click(SES.configTab);
+    await click(GENERAL.tab('Configuration'));
     await click(SES.configure);
     assert.strictEqual(
       currentURL(),
@@ -88,7 +88,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     assert.dom(GENERAL.inputByAttr('public_key')).hasNoText('Public key is empty and reset');
     assert.dom(GENERAL.inputByAttr('generate_signing_key')).isChecked('Generate signing key is checked');
     await click(SES.viewBackend);
-    await click(SES.configTab);
+    await click(GENERAL.tab('Configuration'));
     assert
       .dom(GENERAL.emptyStateTitle)
       .hasText('SSH not configured', 'after deleting public key SSH is no longer configured');
@@ -99,7 +99,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
   test('it displays error if generate Signing key is not checked and no public and private keys', async function (assert) {
     const path = `ssh-configure-${this.uid}`;
     await enablePage.enable('ssh', path);
-    await click(SES.configTab);
+    await click(GENERAL.tab('Configuration'));
     await click(SES.configure);
     assert
       .dom(GENERAL.inputByAttr('generate_signing_key'))
@@ -126,7 +126,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     this.server.get(configUrl(type, path), () => {
       return overrideResponse(400, { errors: ['bad request'] });
     });
-    await click(SES.configTab);
+    await click(GENERAL.tab('Configuration'));
     assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
   });
 });

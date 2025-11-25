@@ -26,6 +26,10 @@ export default class KvSecretsListRoute extends Route {
 
   async fetchMetadata(backend, pathToSecret, params) {
     try {
+      // kvV2List => GET /:secret-mount-path/metadata/:secret_path/?list=true
+      // This request can either list secrets at the mount root or for a specified :secret_path.
+      // Since :secret_path already contains a trailing slash, e.g. /metadata/my-secret//
+      // the request URL is sanitized by the api service to remove duplicate slashes.
       const { keys } = await this.api.secrets.kvV2List(pathToSecret, backend, true);
       return paginate(keys, { page: Number(params.page) || 1, filter: params.pageFilter });
     } catch (error) {

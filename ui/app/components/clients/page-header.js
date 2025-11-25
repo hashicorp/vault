@@ -32,6 +32,7 @@ import { task } from 'ember-concurrency';
  */
 export default class ClientsPageHeaderComponent extends Component {
   @service download;
+  @service flags;
   @service namespace;
   @service router;
   @service store;
@@ -92,10 +93,6 @@ export default class ClientsPageHeaderComponent extends Component {
     const csvDateRange = this.formattedStartDate ? `_${this.formattedStartDate + endRange}` : '';
     const ns = this.namespace.path ? `_${this.namespace.path}` : '';
     return `clients_export${ns}${csvDateRange}`;
-  }
-
-  get showCommunity() {
-    return this.version.isCommunity && !!this.formattedStartDate && !!this.formattedEndDate;
   }
 
   async getExportData() {

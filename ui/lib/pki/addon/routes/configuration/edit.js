@@ -5,20 +5,23 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import PkiConfigAcmeForm from 'vault/forms/secrets/pki/config/acme';
+import PkiConfigClusterForm from 'vault/forms/secrets/pki/config/cluster';
+import PkiConfigCrlForm from 'vault/forms/secrets/pki/config/crl';
+import PkiConfigUrlsForm from 'vault/forms/secrets/pki/config/urls';
 
-@withConfirmLeave('model.config', ['model.urls', 'model.crl'])
 export default class PkiConfigurationEditRoute extends Route {
   @service secretMountPath;
 
   model() {
-    const { acme, cluster, urls, crl, engine } = this.modelFor('configuration');
+    const { acme, cluster, urls, crl, engine, capabilities } = this.modelFor('configuration');
     return {
-      engineId: engine.id,
-      acme,
-      cluster,
-      urls,
-      crl,
+      engine,
+      capabilities,
+      acmeForm: new PkiConfigAcmeForm(acme),
+      clusterForm: new PkiConfigClusterForm(cluster),
+      urlsForm: new PkiConfigUrlsForm(urls),
+      crlForm: new PkiConfigCrlForm(crl),
     };
   }
 

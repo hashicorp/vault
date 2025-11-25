@@ -9,6 +9,12 @@ import AuthMethodResource from 'vault/resources/auth/method';
 
 import type ApiService from 'vault/services/api';
 import type Capabilities from 'vault/services/capabilities';
+import type Controller from '@ember/controller';
+import type { Breadcrumb } from 'vault/vault/app-types';
+
+interface RouteController extends Controller {
+  breadcrumbs: Array<Breadcrumb>;
+}
 
 export default class VaultClusterAccessMethodsRoute extends Route {
   @service declare readonly api: ApiService;
@@ -44,5 +50,14 @@ export default class VaultClusterAccessMethodsRoute extends Route {
     const capabilities = this.capabilities.fetch(paths);
 
     return { methods, capabilities };
+  }
+
+  setupController(controller: RouteController, resolvedModel: unknown) {
+    super.setupController(controller, resolvedModel);
+
+    controller.breadcrumbs = [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
+      { label: 'Auth Methods' },
+    ];
   }
 }

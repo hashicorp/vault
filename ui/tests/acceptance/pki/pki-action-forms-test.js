@@ -8,6 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, fillIn, typeIn, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
+import sinon from 'sinon';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
@@ -27,6 +28,16 @@ module('Acceptance | pki action forms test', function (hooks) {
     const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
+    this.importStub = sinon
+      .stub(this.owner.lookup('service:api').secrets, 'pkiIssuersImportBundle')
+      .resolves({
+        imported_issuers: ['my-imported-issuer', 'imported2'],
+        imported_keys: ['my-imported-key', 'imported3'],
+        mapping: {
+          'my-imported-issuer': 'my-imported-key',
+          imported2: '',
+        },
+      });
     await visit('/vault/logout');
   });
 
@@ -44,7 +55,7 @@ module('Acceptance | pki action forms test', function (hooks) {
     });
 
     test('happy path', async function (assert) {
-      await login(this.pkiAdminToken);
+      await login();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(`${GENERAL.emptyStateActions} a`);
@@ -77,20 +88,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       );
     });
     test('with many imports', async function (assert) {
-      this.server.post(`${this.mountPath}/config/ca`, () => {
-        return {
-          request_id: 'some-config-id',
-          data: {
-            imported_issuers: ['my-imported-issuer', 'imported2'],
-            imported_keys: ['my-imported-key', 'imported3'],
-            mapping: {
-              'my-imported-issuer': 'my-imported-key',
-              imported2: '',
-            },
-          },
-        };
-      });
-      await login(this.pkiAdminToken);
+      await login();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
@@ -118,20 +116,16 @@ module('Acceptance | pki action forms test', function (hooks) {
       );
     });
     test('shows imported items when keys is empty', async function (assert) {
-      this.server.post(`${this.mountPath}/config/ca`, () => {
-        return {
-          request_id: 'some-config-id',
-          data: {
-            imported_issuers: ['my-imported-issuer', 'my-imported-issuer2'],
-            imported_keys: null,
-            mapping: {
-              'my-imported-issuer': '',
-              'my-imported-issuer2': '',
-            },
-          },
-        };
+      this.importStub.resolves({
+        imported_issuers: ['my-imported-issuer', 'my-imported-issuer2'],
+        imported_keys: null,
+        mapping: {
+          'my-imported-issuer': '',
+          'my-imported-issuer2': '',
+        },
       });
-      await login(this.pkiAdminToken);
+
+      await login();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
@@ -147,17 +141,13 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(PKI_CONFIGURE_CREATE.importedKey).hasText('None', 'Shows placeholder value for key');
     });
     test('shows None for imported items if nothing new imported', async function (assert) {
-      this.server.post(`${this.mountPath}/config/ca`, () => {
-        return {
-          request_id: 'some-config-id',
-          data: {
-            imported_issuers: null,
-            imported_keys: null,
-            mapping: {},
-          },
-        };
+      this.importStub.resolves({
+        imported_issuers: null,
+        imported_keys: null,
+        mapping: {},
       });
-      await login(this.pkiAdminToken);
+
+      await login();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
@@ -191,10 +181,10 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(PKI_GENERATE_ROOT.urlField).exists({ count: 5 });
       // Fill in form
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
-      await typeIn(GENERAL.inputByAttr('commonName'), commonName);
-      await typeIn(GENERAL.inputByAttr('issuerName'), issuerName);
+      await typeIn(GENERAL.inputByAttr('common_name'), commonName);
+      await typeIn(GENERAL.inputByAttr('issuer_name'), issuerName);
       await click(GENERAL.button('Key parameters'));
-      await typeIn(GENERAL.inputByAttr('keyName'), keyName);
+      await typeIn(GENERAL.inputByAttr('key_name'), keyName);
       await click(GENERAL.submitButton);
 
       assert.strictEqual(
@@ -222,7 +212,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-root'));
       // Fill in form
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
-      await typeIn(GENERAL.inputByAttr('commonName'), commonName);
+      await typeIn(GENERAL.inputByAttr('common_name'), commonName);
       await click(GENERAL.submitButton);
 
       assert.strictEqual(
@@ -258,7 +248,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(GENERAL.title).hasText('Configure PKI');
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
-      await fillIn(GENERAL.inputByAttr('commonName'), 'my-common-name');
+      await fillIn(GENERAL.inputByAttr('common_name'), 'my-common-name');
       await click('[data-test-submit]');
       assert.dom(GENERAL.title).hasText('View Generated CSR');
       await assert.dom(PKI_CONFIGURE_CREATE.csrDetails).exists('renders CSR details after save');
@@ -275,7 +265,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click(`${GENERAL.emptyStateActions} a`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
-      await fillIn(GENERAL.inputByAttr('commonName'), 'my-common-name');
+      await fillIn(GENERAL.inputByAttr('common_name'), 'my-common-name');
       await click('[data-test-submit]');
       await assert.dom(PKI_CONFIGURE_CREATE.csrDetails).exists('renders CSR details after save');
       assert.dom(GENERAL.title).hasText('View Generated CSR');

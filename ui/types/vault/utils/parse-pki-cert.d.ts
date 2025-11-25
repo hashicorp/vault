@@ -9,7 +9,7 @@ interface ParsedCertificateData {
 
   // certificate values
   common_name: string;
-  subject_serial_number: string;
+  serial_number: string;
   ou: string;
   organization: string;
   country: string;

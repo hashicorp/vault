@@ -18,6 +18,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
+    this.version = this.owner.lookup('service:version');
     Sinon.replace(timestamp, 'now', Sinon.fake.returns(new Date('2018-04-03T14:15:30')));
     this.now = timestamp.now();
     this.startTimestamp = '2018-01-01T14:15:30';
@@ -34,6 +35,11 @@ module('Integration | Component | clients/date-range', function (hooks) {
         hbs`<Clients::DateRange @startTimestamp={{this.startTimestamp}} @endTimestamp={{this.endTimestamp}} @onChange={{this.onChange}} @billingStartTime={{this.billingStartTime}} @retentionMonths={{this.retentionMonths}} @setEditModalVisible={{this.setEditModalVisible}} @showEditModal={{this.showEditModal}}/>`
       );
     };
+  });
+
+  test('it does not render if a start and end timestamp are already provided', async function (assert) {
+    await this.renderComponent();
+    assert.dom(DATE_RANGE.edit).doesNotExist('it does not render if timestamps are provided');
   });
 
   test('it formats modal inputs to ISO string timestamps', async function (assert) {
@@ -80,7 +86,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
   });
 
   test('it does not allow the current month to be selected as a start date or as an end date', async function (assert) {
-    this.owner.lookup('service:version').type = 'community';
+    this.version.type = 'community';
     this.endTimestamp = undefined;
     const currentMonth = format(timestamp.now(), 'yyyy-MM');
 
@@ -91,7 +97,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
 
     assert.dom(DATE_RANGE.validation).hasText('You cannot select the current month or beyond.');
     await click(GENERAL.submitButton);
-    assert.false(this.onChange.called);
+    assert.false(this.onChange.called, 'it does not call @onChange callback');
 
     //  This tests validation when the end date is the current month and start is valid.
     //  If start is current month and end is a valid prior selection, it will run into the validation error of start being after end date
@@ -99,7 +105,22 @@ module('Integration | Component | clients/date-range', function (hooks) {
     await fillIn(DATE_RANGE.editDate('start'), '2018-01');
     await fillIn(DATE_RANGE.editDate('end'), currentMonth);
     await click(GENERAL.submitButton);
-    assert.false(this.onChange.called);
+    assert.false(this.onChange.called, 'it does not call @onChange callback');
+  });
+
+  test('it allows the current month to be selected if enterprise and there is not a @billingStartTime', async function (assert) {
+    this.version.type = 'enterprise';
+    this.endTimestamp = undefined;
+    const currentMonth = format(timestamp.now(), 'yyyy-MM');
+
+    await this.renderComponent();
+    await click(DATE_RANGE.edit);
+    await fillIn(DATE_RANGE.editDate('start'), currentMonth);
+    await fillIn(DATE_RANGE.editDate('end'), currentMonth);
+
+    assert.dom(DATE_RANGE.validation).doesNotExist();
+    await click(GENERAL.submitButton);
+    assert.true(this.onChange.called, 'it calls @onChange callback');
   });
 
   module('enterprise', function (hooks) {
@@ -109,7 +130,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
       this.billingStartTime = '2018-01-01T14:15:30';
     });
 
-    test('it billing start date dropdown for enterprise', async function (assert) {
+    test('it renders billing start date dropdown for enterprise', async function (assert) {
       await this.renderComponent();
       await click(DATE_RANGE.edit);
       const expectedPeriods = [
@@ -124,6 +145,46 @@ module('Integration | Component | clients/date-range', function (hooks) {
         const month = expectedPeriods[idx];
         assert.dom(item).hasText(month, `dropdown index: ${idx} renders ${month}`);
       });
+    });
+
+    test('it renders date range modal if there are no timestamps provided', async function (assert) {
+      this.billingStartTime = '';
+      this.startTimestamp = '';
+      this.endTimestamp = '';
+      await this.renderComponent();
+      assert
+        .dom(DATE_RANGE.edit)
+        .exists('it renders button to open date range modal')
+        .hasText('Set date range');
+      await click(DATE_RANGE.edit);
+      assert.dom(DATE_RANGE.editModal).exists();
+    });
+
+    test('it updates toggle text when a new date is selected', async function (assert) {
+      this.onChange = ({ start_time }) => this.set('startTimestamp', start_time);
+
+      await this.renderComponent();
+      assert.dom(DATE_RANGE.edit).hasText('January 2018').hasAttribute('aria-expanded', 'false');
+      await click(DATE_RANGE.edit);
+      assert.dom(DATE_RANGE.edit).hasAttribute('aria-expanded', 'true');
+      await click(DATE_RANGE.dropdownOption(1));
+      assert
+        .dom(DATE_RANGE.edit)
+        .hasText('January 2017')
+        .hasAttribute('aria-expanded', 'false', 'it closes dropdown after selection');
+    });
+
+    test('it renders billing period text', async function (assert) {
+      await this.renderComponent();
+      assert
+        .dom(this.element)
+        .hasText('Change billing period January 2018', 'it renders billing related text');
+    });
+
+    test('it renders data period text for HVD managed clusters', async function (assert) {
+      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+      await this.renderComponent();
+      assert.dom(this.element).hasText('Change data period January 2018');
     });
   });
 });
