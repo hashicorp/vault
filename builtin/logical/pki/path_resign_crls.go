@@ -661,7 +661,8 @@ func getCaBundle(sc *storageContext, issuerRef string) (*certutil.CAInfoBundle, 
 		return nil, fmt.Errorf("failed to resolve issuer %s: %w", issuerRefParam, err)
 	}
 
-	return sc.fetchCAInfoByIssuerId(issuerId, issuing.CRLSigningUsage)
+	caBundle, _, err := sc.fetchCAInfoByIssuerId(issuerId, issuing.CRLSigningUsage)
+	return caBundle, err
 }
 
 func decodePemCrls(rawCrls []string) ([]*x509.RevocationList, error) {
