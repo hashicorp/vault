@@ -15,4 +15,4 @@
   </p.levelLeft>
 </PageHeader>
 
-<PkiRoleGenerate @model={{this.model}} @type="sign" @onSuccess={{this.toggleTitle}} />
+<PkiRoleGenerate @form={{this.model.form}} @role={{this.model.role}} @mode="sign" @onSuccess={{this.toggleTitle}} />

@@ -9,52 +9,29 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { PKI_NOT_VALID_AFTER } from 'vault/tests/helpers/pki/pki-selectors';
+import PkiCertificateForm from 'vault/forms/secrets/pki/certificate';
 
 module('Integration | Component | pki-not-valid-after-form', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/role', { backend: 'pki' });
-    this.attr = {
-      helpText: '',
-      options: {
-        helperTextEnabled: 'toggled on and shows text',
-      },
-    };
+    this.form = new PkiCertificateForm('PkiIssueWithRoleRequest', {}, { isNew: true });
+    this.renderComponent = () =>
+      render(hbs`<PkiNotValidAfterForm @form={{this.form}} />`, { owner: this.engine });
   });
 
   test('it should render the component with ttl selected by default', async function (assert) {
     assert.expect(3);
-    await render(
-      hbs`
-      <div class="has-top-margin-xxl">
-        <PkiNotValidAfterForm
-          @model={{this.model}}
-          @attr={{this.attr}}
-        />
-       </div>
-  `,
-      { owner: this.engine }
-    );
+
+    await this.renderComponent();
     assert.dom(PKI_NOT_VALID_AFTER.ttlForm).exists('shows the TTL picker');
     assert.dom(PKI_NOT_VALID_AFTER.ttlTimeInput).hasValue('', 'default TTL is empty');
     assert.dom(PKI_NOT_VALID_AFTER.radioTtl).isChecked('ttl is selected by default');
   });
 
   test('it clears and resets model properties from cache when changing radio selection', async function (assert) {
-    await render(
-      hbs`
-      <div class="has-top-margin-xxl">
-        <PkiNotValidAfterForm
-          @model={{this.model}}
-          @attr={{this.attr}}
-        />
-       </div>
-  `,
-      { owner: this.engine }
-    );
+    await this.renderComponent();
     assert.dom(PKI_NOT_VALID_AFTER.radioTtl).isChecked('notBeforeDate radio is selected');
     assert.dom(PKI_NOT_VALID_AFTER.ttlForm).exists({ count: 1 }, 'shows TTL form');
     assert.dom(PKI_NOT_VALID_AFTER.radioDate).isNotChecked('NotAfter selection not checked');
@@ -71,41 +48,38 @@ module('Integration | Component | pki-not-valid-after-form', function (hooks) {
     const notAfterExpected = '1994-11-05T00:00:00.000Z';
     const ttlDate = 1;
     await fillIn('[data-test-input="not_after"]', utcDate);
+
     assert.strictEqual(
-      this.model.notAfter,
+      this.form.data.not_after,
       notAfterExpected,
       'sets the model property notAfter when this value is selected and filled in.'
     );
     await click('[data-test-radio-button="ttl"]');
     assert.strictEqual(
-      this.model.notAfter,
+      this.form.data.not_after,
       '',
       'The notAfter is cleared on the model because the radio button was selected.'
     );
     await fillIn('[data-test-ttl-value="TTL"]', ttlDate);
     assert.strictEqual(
-      this.model.ttl,
+      this.form.data.ttl,
       '1s',
       'The ttl is now saved on the model because the radio button was selected.'
     );
 
     await click('[data-test-radio-button="not_after"]');
-    assert.strictEqual(this.model.ttl, '', 'TTL is cleared after radio select.');
-    assert.strictEqual(this.model.notAfter, notAfterExpected, 'notAfter gets populated from local cache');
-  });
-  test('Form renders properly for edit when TTL present', async function (assert) {
-    this.model = this.store.createRecord('pki/role', { backend: 'pki', ttl: 6000 });
-    await render(
-      hbs`
-      <div class="has-top-margin-xxl">
-        <PkiNotValidAfterForm
-          @model={{this.model}}
-          @attr={{this.attr}}
-        />
-       </div>
-  `,
-      { owner: this.engine }
+    assert.strictEqual(this.form.data.ttl, '', 'TTL is cleared after radio select.');
+    assert.strictEqual(
+      this.form.data.not_after,
+      notAfterExpected,
+      'notAfter gets populated from local cache'
     );
+  });
+
+  test('Form renders properly for edit when TTL present', async function (assert) {
+    this.form.data.ttl = 6000;
+
+    await this.renderComponent();
     assert.dom(PKI_NOT_VALID_AFTER.radioTtl).isChecked('notBeforeDate radio is selected');
     assert.dom(PKI_NOT_VALID_AFTER.ttlForm).exists({ count: 1 }, 'shows TTL form');
     assert.dom(PKI_NOT_VALID_AFTER.radioDate).isNotChecked('NotAfter selection not checked');
@@ -114,20 +88,12 @@ module('Integration | Component | pki-not-valid-after-form', function (hooks) {
     assert.dom(PKI_NOT_VALID_AFTER.ttlTimeInput).hasValue('100', 'TTL value is correctly shown');
     assert.dom(PKI_NOT_VALID_AFTER.ttlUnitInput).hasValue('m', 'TTL unit is correctly shown');
   });
+
   test('Form renders properly for edit when notAfter present', async function (assert) {
     const utcDate = '1994-11-05T00:00:00.000Z';
-    this.model = this.store.createRecord('pki/role', { backend: 'pki', notAfter: utcDate });
-    await render(
-      hbs`
-      <div class="has-top-margin-xxl">
-        <PkiNotValidAfterForm
-          @model={{this.model}}
-          @attr={{this.attr}}
-        />
-       </div>
-  `,
-      { owner: this.engine }
-    );
+    this.form.data.not_after = utcDate;
+
+    await this.renderComponent();
     assert.dom(PKI_NOT_VALID_AFTER.radioDate).isChecked('notAfter radio is selected');
     assert.dom(PKI_NOT_VALID_AFTER.dateInput).exists({ count: 1 }, 'shows date picker');
     assert.dom(PKI_NOT_VALID_AFTER.radioTtl).isNotChecked('ttl radio not selected');

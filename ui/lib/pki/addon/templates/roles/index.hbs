@@ -19,10 +19,10 @@
     {{/if}}
   </:actions>
   <:list as |roles|>
-    {{#each roles as |pkiRole|}}
+    {{#each roles as |role|}}
       <LinkedBlock
         class="list-item-row"
-        @params={{array "roles.role.details" this.model.parentModel.id pkiRole.id}}
+        @params={{array "roles.role.details" this.model.parentModel.id role}}
         @linkPrefix={{this.mountPoint}}
       >
         <div class="level is-mobile">
@@ -30,7 +30,7 @@
             <div>
               <Icon @name="user" class="has-text-grey-light" />
               <span class="has-text-weight-semibold is-underline">
-                {{pkiRole.id}}
+                {{role}}
               </span>
             </div>
           </div>
@@ -43,14 +43,12 @@
                   @hasChevron={{false}}
                   data-test-popup-menu-trigger
                 />
-                <dd.Interactive
-                  @route="roles.role.details"
-                  @models={{array this.model.parentModel.id pkiRole.id}}
-                >Details</dd.Interactive>
-                <dd.Interactive
-                  @route="roles.role.edit"
-                  @models={{array this.model.parentModel.id pkiRole.id}}
-                >Edit</dd.Interactive>
+                <dd.Interactive @route="roles.role.details" @models={{array this.model.parentModel.id role}}>
+                  Details
+                </dd.Interactive>
+                <dd.Interactive @route="roles.role.edit" @models={{array this.model.parentModel.id role}}>
+                  Edit
+                </dd.Interactive>
               </Hds::Dropdown>
             </div>
           </div>

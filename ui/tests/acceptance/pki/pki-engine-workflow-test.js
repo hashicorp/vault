@@ -246,7 +246,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(GENERAL.submitButton);
       assert.strictEqual(
         flash.latestMessage,
-        `Successfully created the role ${roleName}.`,
+        `Successfully saved the role ${roleName}.`,
         'renders success flash upon creation'
       );
       assert.strictEqual(

@@ -77,7 +77,7 @@ module('Integration | Component | pki key form', function (hooks) {
       this.genExportedStub.calledWith(this.backend, {
         key_name: 'test-key',
         key_type: 'rsa',
-        key_bits: '2048',
+        key_bits: 2048,
       }),
       'generates exported key with correct params'
     );
@@ -111,7 +111,7 @@ module('Integration | Component | pki key form', function (hooks) {
       this.genInternalStub.calledWith(this.backend, {
         key_name: 'test-key',
         key_type: 'rsa',
-        key_bits: '2048',
+        key_bits: 2048,
       }),
       'generates internal key with correct params'
     );

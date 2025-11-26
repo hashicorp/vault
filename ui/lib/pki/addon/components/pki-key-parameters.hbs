@@ -5,7 +5,7 @@
 
 {{yield}}
 {{#each @fields as |field|}}
-  {{#if (eq (camelize field.name) "keyBits")}}
+  {{#if (eq field.name "key_bits")}}
     <div class="field" data-test-field="key_bits">
       <FormFieldLabel
         for={{field.name}}
@@ -17,22 +17,22 @@
         class="select is-fullwidth"
         {{! these extra parentheses are necessary to conditionally apply the modifier }}
         {{! TODO: refactor this component and avoid this conditional modifier pattern }}
-        {{(unless (this.getValue "keyType") (modifier "hds-tooltip" "Choose a key type before specifying bit length."))}}
+        {{(unless @form.data.key_type (modifier "hds-tooltip" "Choose a key type before specifying bit length."))}}
       >
         <select
           id={{field.name}}
           name={{field.name}}
           data-test-input={{field.name}}
-          disabled={{unless (this.getValue "keyType") true}}
+          disabled={{unless @form.data.key_type true}}
           {{on "change" this.onKeyBitsChange}}
         >
-          {{#if (and field.options.noDefault (not (this.getValue "keyType")))}}
+          {{#if (and field.options.noDefault (not @form.data.key_type))}}
             <option value="">
               Select one
             </option>
           {{/if}}
           {{#each this.keyBitOptions as |val|}}
-            <option selected={{loose-equal (this.getValue "keyBits") val}} value={{val}}>
+            <option selected={{loose-equal @form.data.key_bits val}} value={{val}}>
               {{val}}
             </option>
           {{/each}}
@@ -43,7 +43,7 @@
     <FormField
       data-test-field={{field}}
       @attr={{field}}
-      @model={{@model}}
+      @model={{@form}}
       @modelValidations={{@modelValidations}}
       @showHelpText={{false}}
       @onChange={{this.handleSelection}}
