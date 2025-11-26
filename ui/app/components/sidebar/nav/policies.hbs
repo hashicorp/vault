@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::SideNav::Portal @ariaLabel="Policies Navigation Links" data-test-sidebar-nav-panel="Policies" as |Nav|>
+<Hds::AppSideNav::Portal @ariaLabel="Policies Navigation Links" data-test-sidebar-nav-panel="Policies" as |Nav|>
   <Nav.BackLink
     @route="vault.cluster"
     @current-when={{false}}
@@ -41,4 +41,4 @@
       data-test-sidebar-nav-link="Endpoint Governing Policies"
     />
   {{/if}}
-</Hds::SideNav::Portal>
+</Hds::AppSideNav::Portal>

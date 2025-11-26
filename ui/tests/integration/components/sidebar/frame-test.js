@@ -17,7 +17,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
   hooks.beforeEach(function () {
     setRunOptions({
       rules: {
-        // This is an issue with Hds::SideNav::Header::HomeLink
+        // This is an issue with Hds::AppHeader::HomeLink
         'aria-prohibited-attr': { enabled: false },
         // TODO: fix use Dropdown on user-menu
         'nested-interactive': { enabled: false },
@@ -25,7 +25,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
     });
   });
 
-  test('it should hide and show sidebar', async function (assert) {
+  test('it should hide and show app sidebar', async function (assert) {
     this.set('showSidebar', true);
     await render(hbs`
       <Sidebar::Frame @showSidebar={{this.showSidebar}} />
@@ -34,6 +34,17 @@ module('Integration | Component | sidebar-frame', function (hooks) {
 
     this.set('showSidebar', false);
     assert.dom('[data-test-sidebar-nav]').doesNotExist('Sidebar is hidden');
+  });
+
+  test('it should hide and show app header', async function (assert) {
+    this.set('showSidebar', true);
+    await render(hbs`
+      <Sidebar::Frame @showSidebar={{this.showSidebar}} />
+    `);
+    assert.dom('[data-test-app-header]').exists('App header renders');
+
+    this.set('showSidebar', false);
+    assert.dom('[data-test-app-header]').doesNotExist('App header is hidden');
   });
 
   test('it should render link status, console ui panel container and yield block for app content', async function (assert) {
@@ -55,7 +66,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
     assert.dom('.page-container').exists('Block yields for app content');
   });
 
-  test('it should render logo and actions in sidebar header', async function (assert) {
+  test('it should render logo and actions in app header', async function (assert) {
     setRunOptions({
       rules: {
         'aria-prohibited-attr': { enabled: false },
@@ -69,14 +80,14 @@ module('Integration | Component | sidebar-frame', function (hooks) {
       <Sidebar::Frame @showSidebar={{true}} />
     `);
 
-    assert.dom('[data-test-sidebar-logo]').exists('Vault logo renders in sidebar header');
+    assert.dom('[data-test-app-header-logo]').exists('Vault logo renders in sidebar header');
     assert.dom('[data-test-console-toggle]').exists('Console toggle button renders in sidebar header');
     await click('[data-test-console-toggle]');
     assert.dom('.panel-open').exists('Console ui panel opens');
 
+    assert.dom('[data-test-user-menu]').exists('User menu renders');
     await click('[data-test-console-toggle]');
     assert.dom('.panel-open').doesNotExist('Console ui panel closes');
-    assert.dom('[data-test-user-menu]').exists('User menu renders');
   });
 
   test('it should render namespace picker in sidebar footer', async function (assert) {

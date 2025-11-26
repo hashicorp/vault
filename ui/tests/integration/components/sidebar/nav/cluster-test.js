@@ -27,7 +27,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     this.flags = this.owner.lookup('service:flags');
     setRunOptions({
       rules: {
-        // This is an issue with Hds::SideNav::Header::HomeLink
+        // This is an issue with Hds::AppHeader::HomeLink
         'aria-prohibited-attr': { enabled: false },
         // TODO: fix use Dropdown on user-menu
         'nested-interactive': { enabled: false },
