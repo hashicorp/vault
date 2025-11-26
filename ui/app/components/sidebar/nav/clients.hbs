@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::SideNav::Portal @ariaLabel="Client Count Navigation Links" data-test-sidebar-nav-panel="Client Count" as |Nav|>
+<Hds::AppSideNav::Portal @ariaLabel="Client Count Navigation Links" data-test-sidebar-nav-panel="Client Count" as |Nav|>
   <Nav.BackLink
     @route="vault.cluster"
     @current-when={{false}}
@@ -28,4 +28,4 @@
       data-test-sidebar-nav-link="Configuration"
     />
   {{/if}}
-</Hds::SideNav::Portal>
+</Hds::AppSideNav::Portal>
