@@ -74,7 +74,7 @@
         <FormField @attr={{field}} @model={{this.form}} @modelValidations={{this.modelValidations}} data-test-field>
           {{#if (eq fieldName "customTtl")}}
             {{! custom_ttl field has editType yield, which will render this }}
-            <PkiNotValidAfterForm @attr={{field}} @form={{this.form}} />
+            <PkiNotValidAfterForm @form={{this.form}} />
           {{/if}}
         </FormField>
       {{/let}}

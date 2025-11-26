@@ -5,43 +5,44 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
-import { hash } from 'rsvp';
+import { PkiListIssuersListEnum } from '@hashicorp/vault-client-typescript';
+import PkiRoleForm from 'vault/forms/secrets/pki/role';
 
-@withConfirmLeave('model.role', ['model.issuers'])
 export default class PkiRoleEditRoute extends Route {
-  @service store;
+  @service api;
   @service secretMountPath;
 
-  model() {
-    const { role } = this.paramsFor('roles/role');
+  async model() {
+    const { role: name } = this.paramsFor('roles/role');
     const backend = this.secretMountPath.currentPath;
 
-    return hash({
-      role: this.store.queryRecord('pki/role', {
-        backend,
-        id: role,
-      }),
-      issuers: this.store.query('pki/issuer', { backend }).catch((err) => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
-      }),
-    });
+    const role = await this.api.secrets.pkiReadRole(name, backend).then((role) => ({ name, ...role }));
+
+    let issuers = [];
+    try {
+      const response = await this.api.secrets.pkiListIssuers(backend, PkiListIssuersListEnum.TRUE);
+      issuers = this.api.keyInfoToArray(response, 'issuer_id');
+    } catch (error) {
+      if (error.response.status !== 404) {
+        throw error;
+      }
+    }
+
+    return {
+      form: new PkiRoleForm(role),
+      issuers,
+    };
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    const {
-      role: { id },
-    } = resolvedModel;
+    const { form } = resolvedModel;
+    const { name } = form.data;
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
       { label: 'Roles', route: 'roles.index', model: this.secretMountPath.currentPath },
-      { label: id, route: 'roles.role.details', models: [this.secretMountPath.currentPath, id] },
+      { label: name, route: 'roles.role.details', models: [this.secretMountPath.currentPath, name] },
       { label: 'Edit' },
     ];
   }

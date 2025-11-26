@@ -14,4 +14,5 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-<Page::PkiCertificateDetails @model={{this.model}} />
+
+<Page::PkiCertificateDetails @certData={{this.model.certificate}} @canRevoke={{this.model.canRevoke}} />

@@ -11,8 +11,8 @@
     <h1 class="title is-3" data-test-page-title>
       <Icon @name="file-text" @size="24" class="has-text-grey-light" />
       PKI Role
-      <code>{{this.model.name}}</code>
+      <code>{{this.model.role.name}}</code>
     </h1>
   </p.levelLeft>
 </PageHeader>
-<Page::PkiRoleDetails @role={{this.model}} />
+<Page::PkiRoleDetails @role={{this.model.role}} @capabilities={{this.model.capabilities}} />
