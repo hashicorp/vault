@@ -6,12 +6,15 @@ package event
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
@@ -20,6 +23,8 @@ import (
 // defaultFileMode is the default file permissions (read/write for everyone).
 const (
 	defaultFileMode = 0o600
+	stdout          = "/dev/stdout"
+	stderr          = "/dev/stderr"
 	devnull         = "/dev/null"
 )
 
@@ -32,6 +37,11 @@ type FileSink struct {
 	fileMode       os.FileMode
 	path           string
 	requiredFormat string
+	maxFiles       int
+	maxBytes       int64
+	maxDuration    time.Duration
+	bytesWritten   int64
+	lastCreated    time.Time
 	logger         hclog.Logger
 }
 
@@ -53,7 +63,7 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 	// If we got an optional file mode supplied and our path isn't a special keyword
 	// then we should use the supplied file mode, or maintain the existing file mode.
 	switch {
-	case path == devnull:
+	case path == stdout || path == stderr || path == devnull:
 	case opts.withFileMode == nil:
 	case *opts.withFileMode == 0: // Maintain the existing file's mode when set to "0000".
 		fileInfo, err := os.Stat(path)
@@ -71,6 +81,11 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 		fileMode:       mode,
 		requiredFormat: format,
 		path:           p,
+		maxFiles:       opts.withMaxFiles,
+		maxBytes:       opts.withMaxBytes,
+		maxDuration:    opts.withMaxDurationFile,
+		bytesWritten:   0,
+		lastCreated:    time.Time{},
 		logger:         opts.withLogger,
 	}
 
@@ -105,8 +120,8 @@ func (s *FileSink) Process(ctx context.Context, e *eventlogger.Event) (_ *eventl
 		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
-	// '/dev/null' path means we just do nothing and pretend we're done.
-	if s.path == devnull {
+	// '/dev/stdout', '/dev/stderr', '/dev/null' paths mean we just do nothing and pretend we're done.
+	if s.path == stdout || s.path == stderr || s.path == devnull {
 		return nil, nil
 	}
 
@@ -126,8 +141,8 @@ func (s *FileSink) Process(ctx context.Context, e *eventlogger.Event) (_ *eventl
 
 // Reopen handles closing and reopening the file.
 func (s *FileSink) Reopen() error {
-	// '/dev/null' path means we just do nothing and pretend we're done.
-	if s.path == devnull {
+	// '/dev/stdout', '/dev/stderr', '/dev/null' paths mean we just do nothing and pretend we're done.
+	if s.path == stdout || s.path == stderr || s.path == devnull {
 		return nil
 	}
 
@@ -166,25 +181,28 @@ func (s *FileSink) open() error {
 		return fmt.Errorf("unable to create file %q: %w", s.path, err)
 	}
 
-	var err error
-	s.file, err = os.OpenFile(s.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, s.fileMode)
+	createTime := time.Now()
+	filePointer, err := os.OpenFile(s.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, s.fileMode)
 	if err != nil {
 		return fmt.Errorf("unable to open file for sink %q: %w", s.path, err)
 	}
 
 	// Change the file mode in case the log file already existed.
-	// We special case '/dev/null' since we can't chmod it, and bypass if the mode is zero.
+	// We special case '/dev/stdout', '/dev/stderr', '/dev/null' since we can't chmod them, and bypass if the mode is zero.
 	switch s.path {
-	case devnull:
+	case stdout, stderr, devnull:
 	default:
 		if s.fileMode != 0 {
-			err = os.Chmod(s.path, s.fileMode)
-			if err != nil {
+			if err = os.Chmod(s.path, s.fileMode); err != nil {
 				return fmt.Errorf("unable to change file permissions '%v' for sink %q: %w", s.fileMode, s.path, err)
 			}
 		}
 	}
 
+	// New file, new bytes tracker, new creation time :)
+	s.file = filePointer
+	s.lastCreated = createTime
+	s.bytesWritten = 0
 	return nil
 }
 
@@ -208,13 +226,18 @@ func (s *FileSink) log(ctx context.Context, data []byte) error {
 		return fmt.Errorf("unable to open file for sink %q: %w", s.path, err)
 	}
 
-	if _, err := reader.WriteTo(s.file); err == nil {
+	// Check for last contact, rotate if necessary and able.
+	if err := s.rotate(); err != nil {
+		return fmt.Errorf("unable to rotate file for sink %q: %w", s.path, err)
+	}
+
+	if n, err := reader.WriteTo(s.file); err == nil {
+		s.bytesWritten += n
 		return nil
 	}
 
 	// Otherwise, opportunistically try to re-open the FD, once per call (1 retry attempt).
-	err := s.file.Close()
-	if err != nil {
+	if err := s.file.Close(); err != nil {
 		return fmt.Errorf("unable to close file for sink %q: %w", s.path, err)
 	}
 
@@ -224,15 +247,95 @@ func (s *FileSink) log(ctx context.Context, data []byte) error {
 		return fmt.Errorf("unable to re-open file for sink %q: %w", s.path, err)
 	}
 
-	_, err = reader.Seek(0, io.SeekStart)
-	if err != nil {
+	if _, err := reader.Seek(0, io.SeekStart); err != nil {
 		return fmt.Errorf("unable to seek to start of file for sink %q: %w", s.path, err)
 	}
 
-	_, err = reader.WriteTo(s.file)
-	if err != nil {
+	if _, err := reader.WriteTo(s.file); err != nil {
 		return fmt.Errorf("unable to re-write to file for sink %q: %w", s.path, err)
 	}
 
 	return nil
+}
+
+func (s *FileSink) rotate() error {
+	switch s.path {
+	case stdout, stderr, devnull:
+		return nil
+	}
+
+	// Get the time from the last point of contact.
+	timeElapsed := time.Since(s.lastCreated)
+	// Rotate if we hit the byte file limit or the time limit.
+	if (s.bytesWritten >= s.maxBytes && s.maxBytes > 0) ||
+		(timeElapsed >= s.maxDuration && s.maxDuration > 0) {
+
+		// Clean up the existing file.
+		if err := s.file.Close(); err != nil {
+			return err
+		}
+		s.file = nil
+
+		// Move current log file to a timestamped file.
+		rotateTime := time.Now().UnixNano()
+		rotateFileName := fmt.Sprintf(s.fileNamePattern("-%d"), rotateTime)
+		newPath := filepath.Join(filepath.Dir(s.path), rotateFileName)
+		if err := os.Rename(s.path, newPath); err != nil {
+			return fmt.Errorf("failed to rotate log file: %v", err)
+		}
+
+		if err := s.pruneFiles(); err != nil {
+			return fmt.Errorf("failed to prune log files: %w", err)
+		}
+		return s.open()
+	}
+
+	return nil
+}
+
+func (s *FileSink) pruneFiles() error {
+	switch {
+	case s.path == stdout, s.path == stderr, s.path == devnull:
+		return nil
+	case s.maxFiles == 0:
+		return nil
+	}
+
+	pattern := filepath.Join(filepath.Dir(s.path), fmt.Sprintf(s.fileNamePattern("-%s"), "*"))
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
+	}
+
+	switch {
+	case s.maxFiles < 0:
+		return removeFiles(matches)
+	case len(matches) < s.maxFiles:
+		return nil
+	}
+
+	sort.Strings(matches)
+	stale := len(matches) - s.maxFiles
+	return removeFiles(matches[:stale])
+}
+
+func removeFiles(files []string) (err error) {
+	for _, file := range files {
+		if fileError := os.Remove(file); fileError != nil {
+			err = errors.Join(err, fmt.Errorf("error removing file %s: %v", file, fileError))
+		}
+	}
+	return err
+}
+
+func (s *FileSink) fileNamePattern(format string) string {
+	fileName := filepath.Base(s.path)
+	// Extract the file extension.
+	fileExt := filepath.Ext(fileName)
+	// If we have no file extension we append .log.
+	if fileExt == "" {
+		fileExt = ".log"
+	}
+	// Add format string between file and extension.
+	return strings.TrimSuffix(fileName, fileExt) + format + fileExt
 }
