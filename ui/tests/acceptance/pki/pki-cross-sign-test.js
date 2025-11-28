@@ -111,7 +111,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     max_ttl="720h"`,
     ]);
     await visit(`vault/secrets-engines/${this.intMountPath}/pki/roles/${myRole}/generate`);
-    await fillIn(GENERAL.inputByAttr('commonName'), 'my-leaf');
+    await fillIn(GENERAL.inputByAttr('common_name'), 'my-leaf');
     await fillIn('[data-test-ttl-value="TTL"]', '3600');
     await click(GENERAL.submitButton);
     await click(PKI_CROSS_SIGN.copyButton('Certificate'));

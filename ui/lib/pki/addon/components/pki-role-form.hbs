@@ -6,22 +6,23 @@
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
-    <NamespaceReminder @mode={{if @role.isNew "create" "update"}} @noun="PKI role" />
-    {{#each @role.formFieldGroups as |fieldGroup|}}
+    <NamespaceReminder @mode={{if @form.isNew "create" "update"}} @noun="PKI role" />
+
+    {{#each @form.formFieldGroups as |fieldGroup|}}
       {{#each-in fieldGroup as |group fields|}}
         {{! DEFAULT VIEW }}
         {{#if (eq group "default")}}
-          {{#each fields as |attr|}}
-            {{#if (and (eq attr.name "issuerRef") @issuers)}}
+          {{#each fields as |field|}}
+            {{#if (and (eq field.name "issuer_ref") @issuers)}}
               <div class="has-top-margin-m {{unless this.showDefaultIssuer 'has-bottom-margin-xs' 'has-bottom-margin-m'}}">
                 <FormFieldLabel
-                  for="select-{{attr.name}}"
+                  for="select-{{field.name}}"
                   @label="Issuer ref"
-                  @helpText={{(if this.showHelpText attr.options.helpText)}}
-                  @subText={{attr.options.subText}}
+                  @helpText={{(if this.showHelpText field.options.helpText)}}
+                  @subText={{field.options.subText}}
                 />
                 <Toggle
-                  @name={{concat attr.name "-toggle"}}
+                  @name={{concat field.name "-toggle"}}
                   @checked={{this.showDefaultIssuer}}
                   @onChange={{this.toggleShowDefaultIssuer}}
                 >
@@ -32,95 +33,93 @@
                 <div class="has-top-margin-xs has-bottom-margin-l">
                   <div class="select is-fullwidth">
                     <Select
-                      @name={{attr.name}}
+                      @name={{field.name}}
                       @options={{this.issuers}}
                       @valueAttribute={{"issuerDisplayName"}}
                       @labelAttribute={{"issuerDisplayName"}}
                       @isFullwidth={{true}}
-                      @selectedValue={{@role.issuerRef}}
-                      @onChange={{action (mut @role.issuerRef)}}
-                      aria-labelledby={{attr.name}}
+                      @selectedValue={{@form.data.issuer_ref}}
+                      @onChange={{action (mut @form.data.issuer_ref)}}
+                      aria-labelledby={{field.name}}
                     />
                   </div>
                 </div>
               {{/unless}}
-            {{else}}
+            {{else if (this.showField field.name)}}
               <FormField
-                data-test-field={{attr}}
-                @attr={{attr}}
-                @model={{@role}}
+                data-test-field={{field.name}}
+                @attr={{field}}
+                @model={{@form}}
                 @modelValidations={{this.modelValidations}}
                 @showHelpText={{false}}
               >
-                <PkiNotValidAfterForm @attr={{attr}} @model={{@role}} />
+                <PkiNotValidAfterForm @form={{@form}} />
               </FormField>
             {{/if}}
           {{/each}}
         {{else}}
-          {{#let (camelize (concat "show" group)) as |prop|}}
-            <ToggleButton
-              @isOpen={{get @role prop}}
-              @openLabel={{concat "Hide " group}}
-              @closedLabel={{group}}
-              @onClick={{fn (mut (get @role prop))}}
-              class="is-block"
-              data-test-button={{group}}
-            />
-            {{#if (get @role prop)}}
-              <div class="box is-tall is-marginless" data-test-toggle-div={{group}}>
-                {{#let (get @role.fieldGroupsInfo group) as |toggleGroup|}}
-                  {{! HEADER }}
-                  {{#if toggleGroup.header}}
-                    <div class="has-bottom-margin-s">
-                      <FormFieldLabel
-                        for={{toggleGroup.header.name}}
-                        @label={{toggleGroup.header.label}}
-                        @subText={{toggleGroup.header.text}}
-                        @docLink={{toggleGroup.header.docLink}}
-                      />
-                    </div>
-                  {{/if}}
-                  {{! FIELDS }}
-                  {{#if (eq group "Key usage")}}
-                    <PkiKeyUsage @model={{@role}} />
-                  {{else if (eq group "Key parameters")}}
-                    <PkiKeyParameters @model={{@role}} @fields={{fields}} />
-                  {{else}}
-                    {{#each fields as |attr|}}
-                      <FormField
-                        data-test-field={{true}}
-                        @attr={{attr}}
-                        @model={{@role}}
-                        @modelValidations={{@roleValidations}}
-                        @showHelpText={{false}}
-                      >
-                        {{yield attr}}
-                      </FormField>
-                    {{/each}}
-                  {{/if}}
-                  {{! FOOTER }}
-                  {{#if toggleGroup.footer}}
-                    <p class="sub-text">
-                      <Icon @name="info" />
-                      {{toggleGroup.footer.text}}
-                      {{#if toggleGroup.footer.docLink}}
-                        <DocLink @path={{toggleGroup.footer.docLink}}>
-                          {{toggleGroup.footer.docText}}
-                        </DocLink>
-                      {{/if}}
-                    </p>
-                  {{/if}}
-                {{/let}}
-              </div>
-            {{/if}}
-          {{/let}}
+          <ToggleButton
+            @isOpen={{includes group this.openGroups}}
+            @openLabel={{concat "Hide " group}}
+            @closedLabel={{group}}
+            @onClick={{fn this.toggleGroup group}}
+            class="is-block"
+            data-test-button={{group}}
+          />
+          {{#if (includes group this.openGroups)}}
+            <div class="box is-tall is-marginless" data-test-toggle-div={{group}}>
+              {{#let (get @form.fieldGroupsInfo group) as |toggleGroup|}}
+                {{! HEADER }}
+                {{#if toggleGroup.header}}
+                  <div class="has-bottom-margin-s">
+                    <FormFieldLabel
+                      for={{toggleGroup.header.name}}
+                      @label={{toggleGroup.header.label}}
+                      @subText={{toggleGroup.header.text}}
+                      @docLink={{toggleGroup.header.docLink}}
+                    />
+                  </div>
+                {{/if}}
+                {{! FIELDS }}
+                {{#if (eq group "Key usage")}}
+                  <PkiKeyUsage @form={{@form}} />
+                {{else if (eq group "Key parameters")}}
+                  <PkiKeyParameters @form={{@form}} @fields={{fields}} />
+                {{else}}
+                  {{#each fields as |field|}}
+                    <FormField
+                      data-test-field={{field.name}}
+                      @attr={{field}}
+                      @model={{@form}}
+                      @modelValidations={{this.modelValidations}}
+                      @showHelpText={{false}}
+                    >
+                      {{yield field}}
+                    </FormField>
+                  {{/each}}
+                {{/if}}
+                {{! FOOTER }}
+                {{#if toggleGroup.footer}}
+                  <p class="sub-text">
+                    <Icon @name="info" />
+                    {{toggleGroup.footer.text}}
+                    {{#if toggleGroup.footer.docLink}}
+                      <DocLink @path={{toggleGroup.footer.docLink}}>
+                        {{toggleGroup.footer.docText}}
+                      </DocLink>
+                    {{/if}}
+                  </p>
+                {{/if}}
+              {{/let}}
+            </div>
+          {{/if}}
         {{/if}}
       {{/each-in}}
     {{/each}}
   </div>
   <Hds::ButtonSet class="has-top-padding-s">
     <Hds::Button
-      @text={{if @role.isNew "Create" "Update"}}
+      @text={{if @form.isNew "Create" "Update"}}
       @icon={{if this.save.isRunning "loading"}}
       type="submit"
       disabled={{this.save.isRunning}}

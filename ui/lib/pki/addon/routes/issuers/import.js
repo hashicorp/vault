@@ -12,10 +12,6 @@ export default class PkiIssuersImportRoute extends Route {
   @service store;
   @service secretMountPath;
 
-  model() {
-    return this.store.createRecord('pki/action');
-  }
-
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [

@@ -7,20 +7,30 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
 export default class PkiCertificateDetailsRoute extends Route {
-  @service store;
+  @service api;
   @service secretMountPath;
+  @service capabilities;
 
-  model() {
-    const id = this.paramsFor('certificates/certificate').serial;
-    return this.store.queryRecord('pki/certificate/base', { backend: this.secretMountPath.currentPath, id });
+  async model() {
+    const { serial } = this.paramsFor('certificates/certificate');
+    const certificate = await this.api.secrets.pkiReadCert(serial, this.secretMountPath.currentPath);
+    const { canCreate } = await this.capabilities.for('pkiRevoke', {
+      backend: this.secretMountPath.currentPath,
+    });
+
+    return {
+      certificate: { serial_number: serial, ...certificate },
+      canRevoke: canCreate,
+    };
   }
+
   setupController(controller, model) {
     super.setupController(controller, model);
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
       { label: 'Certificates', route: 'certificates.index', model: this.secretMountPath.currentPath },
-      { label: model.id },
+      { label: model.certificate.serial_number },
     ];
   }
 }

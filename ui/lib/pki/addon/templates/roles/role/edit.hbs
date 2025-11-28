@@ -13,9 +13,10 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
+
 <PkiRoleForm
-  @role={{this.model.role}}
+  @form={{this.model.form}}
   @issuers={{this.model.issuers}}
-  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.role.id}}
-  @onSave={{transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.role.id}}
+  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.form.data.name}}
+  @onSave={{transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.form.data.name}}
 />

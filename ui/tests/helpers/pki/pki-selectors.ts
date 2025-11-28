@@ -173,7 +173,7 @@ export const PKI_ROLE_DETAILS = {
   noStoreValue: GENERAL.infoRowValue('Store in storage backend'),
   noStoreMetadataValue: GENERAL.infoRowValue('Store metadata in storage backend'),
   keyUsageValue: GENERAL.infoRowValue('Key usage'),
-  extKeyUsageValue: GENERAL.infoRowValue('Ext key usage'),
+  extKeyUsageValue: GENERAL.infoRowValue('Extended key usage'),
   customTtlValue: GENERAL.infoRowValue('Issued certificates expire after'),
   deleteRoleButton: '[data-test-pki-role-delete]',
   generateCertLink: '[data-test-pki-role-generate-cert]',

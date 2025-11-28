@@ -5,18 +5,18 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import PkiCertificateForm from 'vault/forms/secrets/pki/certificate';
 
-withConfirmLeave();
 export default class PkiRoleSignRoute extends Route {
   @service store;
   @service secretMountPath;
 
   model() {
     const { role } = this.paramsFor('roles/role');
-    return this.store.createRecord('pki/certificate/sign', {
+    return {
       role,
-    });
+      form: new PkiCertificateForm('PkiSignWithRoleRequest', {}, { isNew: true }),
+    };
   }
 
   setupController(controller, resolvedModel) {
