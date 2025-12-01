@@ -31,6 +31,7 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 )
 
@@ -63,6 +64,7 @@ type RunOptions struct {
 	LogStderr              io.Writer
 	LogStdout              io.Writer
 	VolumeNameToMountPoint map[string]string
+	Logger                 hclog.Logger
 }
 
 func NewDockerAPI() (*client.Client, error) {
@@ -443,6 +445,8 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 			_ = d.DockerAPI.ContainerRemove(ctx, c.ID, container.RemoveOptions{})
 			return nil, err
 		}
+		files, err := os.ReadDir(from)
+		d.RunOptions.Logger.Trace("copied", "from", from, "to", to, "files", files, "err", err)
 	}
 
 	err = d.DockerAPI.ContainerStart(ctx, c.ID, container.StartOptions{})

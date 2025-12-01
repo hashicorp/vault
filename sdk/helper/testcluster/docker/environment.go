@@ -879,6 +879,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		VolumeNameToMountPoint: map[string]string{
 			n.DataVolumeName: "/vault/file",
 		},
+		Logger: n.Logger,
 	})
 	if err != nil {
 		return err
