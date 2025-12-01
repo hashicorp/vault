@@ -913,6 +913,10 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		return err
 	}
 
+	workDirContents, err := os.ReadDir(n.WorkDir)
+	n.Logger.Info("copied files", "copyFromTo", copyFromTo, "workdir", n.WorkDir,
+		"workDirContents", workDirContents, "err", err)
+
 	n.HostPort = svc.Config.Address()
 	n.Container = svc.Container
 	netName := opts.NetworkName
