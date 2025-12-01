@@ -429,7 +429,7 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 	var config *server.Config
 	for _, path := range c.flagConfigs {
 		// TODO (HCL_DUP_KEYS_DEPRECATION): return to server.LoadConfig once deprecation is done
-		current, duplicate, err := server.LoadConfigCheckDuplicate(path)
+		current, duplicate, err := server.LoadConfigCheckDuplicate(c.logger, path)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error loading configuration from %s: %w", path, err)
 		}
@@ -1900,7 +1900,7 @@ func (c *ServerCommand) reloadConfigFiles() (*server.Config, []configutil.Config
 	for _, path := range c.flagConfigs {
 		// don't care about HCL duplicate attributes here on reloading
 		// TODO (HCL_DUP_KEYS_DEPRECATION): go back to server.LoadConfig and remove duplicate when deprecation is done
-		current, _, err := server.LoadConfigCheckDuplicate(path)
+		current, _, err := server.LoadConfigCheckDuplicate(nil, path)
 		if err != nil {
 			return nil, nil, err
 		}

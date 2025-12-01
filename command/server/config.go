@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
 	"os"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-discover"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
@@ -526,13 +528,13 @@ func (c *Config) Merge(c2 *Config) *Config {
 // LoadConfig loads the configuration at the given path, regardless if
 // it's a file or directory.
 func LoadConfig(path string) (*Config, error) {
-	cfg, _, err := LoadConfigCheckDuplicate(path)
+	cfg, _, err := LoadConfigCheckDuplicate(nil, path)
 	return cfg, err
 }
 
 // LoadConfigCheckDuplicate is the same as the above function but also checks for duplicate attributes
 // TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfig once deprecation is complete
-func LoadConfigCheckDuplicate(path string) (cfg *Config, duplicate bool, err error) {
+func LoadConfigCheckDuplicate(logger hclog.InterceptLogger, path string) (cfg *Config, duplicate bool, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, false, err
@@ -561,7 +563,7 @@ func LoadConfigCheckDuplicate(path string) (cfg *Config, duplicate bool, err err
 			}
 		}
 
-		cfg, duplicate, err = LoadConfigDirCheckDuplicate(path)
+		cfg, duplicate, err = LoadConfigDirCheckDuplicate(logger, path)
 		if err != nil {
 			return nil, duplicate, err
 		}
@@ -939,13 +941,13 @@ func mergeExperiments(left, right []string) []string {
 // LoadConfigDir loads all the configurations in the given directory
 // in alphabetical order.
 func LoadConfigDir(dir string) (*Config, error) {
-	cfg, _, err := LoadConfigDirCheckDuplicate(dir)
+	cfg, _, err := LoadConfigDirCheckDuplicate(nil, dir)
 	return cfg, err
 }
 
 // LoadConfigDirCheckDuplicate is the same as the above but checks for duplciate HCL attributes
 // TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfigDir once deprecation is complete
-func LoadConfigDirCheckDuplicate(dir string) (cfg *Config, duplicate bool, err error) {
+func LoadConfigDirCheckDuplicate(logger hclog.InterceptLogger, dir string) (cfg *Config, duplicate bool, err error) {
 	f, err := os.Open(dir)
 	if err != nil {
 		return nil, false, err
@@ -970,6 +972,10 @@ func LoadConfigDirCheckDuplicate(dir string) (cfg *Config, duplicate bool, err e
 		}
 
 		for _, fi := range fis {
+			if logger != nil {
+				logger.Info("LoadConfigDirCheckDuplicate", "dir", dir,
+					"file", fi.Name(), "info", fs.FormatFileInfo(fi))
+			}
 			// Ignore directories
 			if fi.IsDir() {
 				continue
