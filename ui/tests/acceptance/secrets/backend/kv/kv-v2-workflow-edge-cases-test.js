@@ -23,6 +23,7 @@ import {
   mountEngineCmd,
   runCmd,
   createTokenCmd,
+  deleteNS,
 } from 'vault/tests/helpers/commands';
 import {
   dataPolicy,
@@ -550,9 +551,57 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
 
   hooks.afterEach(async function () {
     await login();
-    await runCmd([`delete /sys/auth/${this.namespace}`]);
+    await runCmd(deleteNS(this.namespace));
     await runCmd(deleteEngineCmd(this.backend));
     return;
+  });
+
+  test('namespace: it switches between namespaces and lists relevant secrets', async function (assert) {
+    const ns1 = this.namespace;
+    const ns1Secret = 'test-nav-ns1';
+    const ns2 = `ns2-${uuidv4()}`;
+    const ns2Secret = 'test-nav-ns2';
+    const backend = `ns-${this.backend}`; // backend must be the same between namespaces
+    // Login as ns1 and write secret
+    await loginNs(ns1);
+    await runCmd(mountEngineCmd('kv-v2', backend), false);
+    await writeSecret(backend, ns1Secret, 'foo', 'bar', ns1);
+    // Login as root and make ns2
+    await login();
+    await runCmd([`write sys/namespaces/${ns2} -force`]);
+    // Login as ns2 to mount engine and write secret
+    await loginNs(ns2);
+    await runCmd(mountEngineCmd('kv-v2', backend), false);
+    await writeSecret(backend, ns2Secret, 'foo', 'bar', ns2);
+    // Navigate to engine list view in ns2
+    await click(GENERAL.breadcrumbLink(backend));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${backend}/kv/list?namespace=${ns2}`,
+      'it lists secrets in ns2'
+    );
+    // Use namespace picker to switch to ns1
+    await click(GENERAL.toggleInput('namespace-id'));
+    await fillIn('input[type=search]', ns1);
+    await click(`[data-test-namespace-link=${ns1}]`);
+    // Navigate to kv engine
+    await click(`[data-test-secrets-engines-row=${backend}] [data-test-view]`);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${backend}/kv/list?namespace=${ns1}`,
+      'it navigates to secrets in ns1'
+    );
+    // Assert secret for ns1 renders and NOT ns2
+    assert
+      .dom(`[data-test-list-item="${ns1Secret}"]`)
+      .exists()
+      .hasText(ns1Secret, 'it renders secret from ns1');
+    assert
+      .dom(`[data-test-list-item="${ns2Secret}"]`)
+      .doesNotExist('it does not render secrets from previous namespace');
+    // Login to root for cleanup
+    await login();
+    await runCmd(deleteNS(ns2)); // ns1 is cleaned up by afterEach hook
   });
 
   module('admin persona', function (hooks) {

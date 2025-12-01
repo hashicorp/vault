@@ -1,0 +1,3 @@
+```release-note:bug
+ui/kvv2 (enterprise): Fixes listing stale secrets when switching between namespaces that have KV v2 engines with the same mount path
+```

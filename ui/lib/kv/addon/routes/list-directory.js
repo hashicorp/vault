@@ -30,6 +30,7 @@ export default class KvSecretsListRoute extends Route {
         page: Number(params.page) || 1,
         pageFilter: params.pageFilter,
         pathToSecret,
+        skipCache: true,
       })
       .catch((err) => {
         if (err.httpStatus === 403) {
