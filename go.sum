@@ -1561,8 +1561,8 @@ github.com/hashicorp/vault-plugin-auth-jwt v0.25.0 h1:YdrZ+fGutoaaF/Hiw3+xtmcRal
 github.com/hashicorp/vault-plugin-auth-jwt v0.25.0/go.mod h1:HhfLJxvpYt10mrZoBTa+ToioN9HGOZbWYSR1UHqTMrs=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.16.0 h1:bZpmQS26TorpeensFerDPM7z+NgZjrRj9IbdGRdjaLM=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.16.0/go.mod h1:O6b92icQx0LGuknyVEVP/XgYjoYDNiTR9cJ1pEUuwjw=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.1 h1:9SW3Qu08RR9Tyn2K0wU4rcjQtYf1ykgPcyFgWs/TqTY=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.1/go.mod h1:Uzb/uPdIKqXmq3xo4NNT2+5HgXlxNfuDKwU2EqzwD8s=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.2-0.20251201002645-b75da76ef921 h1:XNmaBSmEoeioP9OZZHq9eK3Hg3Vd629Ic/J5ZiP8iXo=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.2-0.20251201002645-b75da76ef921/go.mod h1:nDZl+wYgl9DznPZZb+CZr5z68idZ3DgvXGmPhUuIjQY=
 github.com/hashicorp/vault-plugin-auth-oci v0.20.0 h1:R1JXapvFsuxE8+jYBSQvkIwWHSpKpHpUbAX5K+6pbO4=
 github.com/hashicorp/vault-plugin-auth-oci v0.20.0/go.mod h1:XOhAs74HS6cSKWm2zQodRBxTFDhu/ApNpiw5Tfz9J4k=
 github.com/hashicorp/vault-plugin-database-couchbase v0.15.0 h1:6gLCOwwErqMgo9pJvsrOkg4tL7HmE95r3JVc14hSFSY=
@@ -3132,10 +3132,10 @@ honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt
 honnef.co/go/tools v0.0.1-2020.1.3/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9vFzvIQ3k=
 honnef.co/go/tools v0.0.1-2020.1.4/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9vFzvIQ3k=
 honnef.co/go/tools v0.1.3/go.mod h1:NgwopIslSNH47DimFoV78dnkksY2EFtX0ajyb3K/las=
-k8s.io/api v0.34.1 h1:jC+153630BMdlFukegoEL8E/yT7aLyQkIVuwhmwDgJM=
-k8s.io/api v0.34.1/go.mod h1:SB80FxFtXn5/gwzCoN6QCtPD7Vbu5w2n1S0J5gFfTYk=
-k8s.io/apimachinery v0.34.1 h1:dTlxFls/eikpJxmAC7MVE8oOeP1zryV7iRyIjB0gky4=
-k8s.io/apimachinery v0.34.1/go.mod h1:/GwIlEcWuTX9zKIg2mbw0LRFIsXwrfoVxn+ef0X13lw=
+k8s.io/api v0.34.2 h1:fsSUNZhV+bnL6Aqrp6O7lMTy6o5x2C4XLjnh//8SLYY=
+k8s.io/api v0.34.2/go.mod h1:MMBPaWlED2a8w4RSeanD76f7opUoypY8TFYkSM+3XHw=
+k8s.io/apimachinery v0.34.2 h1:zQ12Uk3eMHPxrsbUJgNF8bTauTVR2WgqJsTmwTE/NW4=
+k8s.io/apimachinery v0.34.2/go.mod h1:/GwIlEcWuTX9zKIg2mbw0LRFIsXwrfoVxn+ef0X13lw=
 k8s.io/client-go v0.34.1 h1:ZUPJKgXsnKwVwmKKdPfw4tB58+7/Ik3CrjOEhsiZ7mY=
 k8s.io/client-go v0.34.1/go.mod h1:kA8v0FP+tk6sZA0yKLRG67LWjqufAoSHA2xVGKw9Of8=
 k8s.io/klog/v2 v2.130.1 h1:n9Xl7H1Xvksem4KFG4PYbdQCQxqc/tTUyrgXaOhHSzk=
