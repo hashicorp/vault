@@ -48,7 +48,7 @@ module('Acceptance | pki tidy', function (hooks) {
       .exists('Configure manual tidy button exists');
     await click(PKI_TIDY.tidyConfigureModal.tidyModalManualButton);
     assert.dom(PKI_TIDY_FORM.tidyFormName('manual')).exists('Manual tidy form exists');
-    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidy_cert_store'));
     await fillIn(PKI_TIDY_FORM.tidyPauseDuration, '10');
     await click(PKI_TIDY_FORM.tidySave);
     await click(PKI_TIDY.cancelTidyAction);
@@ -130,12 +130,12 @@ module('Acceptance | pki tidy', function (hooks) {
     assert
       .dom(PKI_TIDY_FORM.tidySectionHeader('ACME operations'))
       .exists('Auto tidy form enabled shows ACME operations field');
-    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidy_cert_store'));
     await click(PKI_TIDY_FORM.tidySave);
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.index');
     await click(PKI_TIDY_FORM.editAutoTidyButton);
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.configure');
-    await click(PKI_TIDY_FORM.inputByAttr('tidyRevokedCerts'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidy_revoked_certs'));
     await click(PKI_TIDY_FORM.tidySave);
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.index');
   });
@@ -151,7 +151,7 @@ module('Acceptance | pki tidy', function (hooks) {
     await click(PKI_TIDY.tidyConfigureModal.tidyModalManualButton);
 
     assert.dom(PKI_TIDY_FORM.tidyFormName('manual')).exists();
-    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidy_cert_store'));
 
     await click(GENERAL.ttl.toggle('Tidy ACME disabled'));
     assert
@@ -190,8 +190,8 @@ module('Acceptance | pki tidy', function (hooks) {
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
     await click(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton);
     await click(GENERAL.ttl.toggle('enabled'));
-    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
-    await click(PKI_TIDY_FORM.inputByAttr('tidyRevokedCerts'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidy_cert_store'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidy_revoked_certs'));
     await click(PKI_TIDY_FORM.tidySave);
     await visit(`/vault/secrets-engines/${this.mountPath}/pki/tidy`);
     assert
