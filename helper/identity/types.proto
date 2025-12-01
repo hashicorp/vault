@@ -75,6 +75,13 @@ message Group {
   // group.
   // @inject_tag: sentinel:"-"
   string namespace_id = 13;
+
+  // ScimClientId records the unique identifier of the SCIM client that
+  // originally created this Group. This establishes a strict ownership model,
+  // ensuring that authoritative lifecycle operations (like updates and deletes by
+  // an IGA) can only be performed by the client that owns the resource.
+  // @inject_tag: sentinel:"-"
+  string scim_client_id = 14;
 }
 
 // LocalAliases holds the aliases belonging to an entity that are local to the
@@ -155,6 +162,21 @@ message Entity {
   // entity.
   // @inject_tag: sentinel:"-"
   string namespace_id = 12;
+
+  // ExternalId stores the `externalId` provided by a SCIM client.
+  // This field serves as the canonical correlation key, linking this Vault Entity
+  // to its representation in the external identity management system. It is
+  // crucial for preventing the creation of duplicate entities when multiple
+  // SCIM clients provision the same user.
+  // @inject_tag: sentinel:"-"
+  string external_id = 13;
+
+  // ScimClientId records the unique identifier of the SCIM client that
+  // originally created this Entity. This establishes a strict ownership model,
+  // ensuring that authoritative lifecycle operations (like updates and deletes by
+  // an IGA) can only be performed by the client that owns the resource.
+  // @inject_tag: sentinel:"-"
+  string scim_client_id = 14;
 }
 
 // Alias represents the alias that gets stored inside of the
@@ -233,6 +255,36 @@ message Alias {
   // during invalidation of local aliases in performance standbys.
   // @inject_tag: sentinel:"-"
   string local_bucket_key = 14;
+
+  // ScimClientId records the unique identifier of the SCIM client that
+  // originally created this Alias. This establishes a strict ownership model,
+  // ensuring that authoritative lifecycle operations (like updates and deletes by
+  // an IGA) can only be performed by the client that owns the resource.
+  // @inject_tag: sentinel:"-"
+  string scim_client_id = 15;
+}
+
+// ScimConfig defines the stored configuration for a single SCIM client.
+// This configuration links a client's identity within Vault to its specific
+// role and capabilities within the SCIM server.
+message ScimConfig {
+  // ClientId is a unique, user-defined identifier for this specific SCIM
+  // client configuration (e.g., 'Okta-Prod', 'SailPoint-Dev').
+  string client_id = 1;
+
+  // ClientRole defines the client's function and authoritative power.
+  // It must be either "IGA" (authoritative) or "IdP" (standard).
+  string client_role = 2;
+
+  // AccessGrantPrincipal is the Vault Entity ID that represents the SCIM
+  // client application itself. This is the principal that will be granted the
+  // necessary permissions to perform SCIM operations.
+  string access_grant_principal = 3;
+
+  // AliasMountAccessor is an optional field that specifies the mount accessor
+  // of an auth method where login aliases should be created for provisioned users.
+  // This is typically used for clients with the 'IdP' role.
+  string alias_mount_accessor = 4;
 }
 
 // Deprecated. Retained for backwards compatibility.
