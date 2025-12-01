@@ -16,7 +16,7 @@
 </PageHeader>
 
 <PkiTidyForm
-  @tidy={{@model}}
+  @form={{@model}}
   @tidyType="manual"
   @onSave={{transition-to "vault.cluster.secrets.backend.pki.tidy"}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.pki.tidy"}}
