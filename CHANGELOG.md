@@ -2421,6 +2421,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * core: resultant-acl now merges segment-wildcard (`+`) paths with existing prefix rules in `glob_paths`, so clients receive a complete view of glob-style permissions. This unblocks UI sidebar navigation checks and namespace access banners.
+* ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`
 
 
 ## 1.16.27 Enterprise
