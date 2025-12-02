@@ -35,4 +35,21 @@ const (
 	ObservationTypeNamespacePatch = "namespace/patch"
 	// ObservationTypeNamespaceDelete is emitted when a namespace is deleted
 	ObservationTypeNamespaceDelete = "namespace/delete"
+
+	// ObservationTypeEntityUpsert is emitted when an entity is upserted
+	ObservationTypeEntityUpsert = "identity/entity/upsert"
+	// ObservationTypeEntityDelete is emitted when an entity is deleted
+	ObservationTypeEntityDelete = "identity/entity/delete"
+
+	// ObservationTypeAliasUpsert is emitted when an alias is upserted.
+	// NOTE: Currently we don't allow by-factors modification of group aliases the
+	// way we do with entities. Instead, the group itself is updated, not the alias.
+	ObservationTypeAliasUpsert = "identity/alias/upsert"
+	// ObservationTypeAliasDelete is emitted when an alias is deleted
+	ObservationTypeAliasDelete = "identity/alias/delete"
+
+	// ObservationTypeGroupUpsert is emitted when a group is upserted
+	ObservationTypeGroupUpsert = "identity/group/upsert"
+	// ObservationTypeGroupDelete is emitted when a group is deleted
+	ObservationTypeGroupDelete = "identity/group/delete"
 )
