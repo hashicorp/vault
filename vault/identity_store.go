@@ -33,6 +33,7 @@ import (
 const (
 	groupBucketsPrefix        = "packer/group/buckets/"
 	localAliasesBucketsPrefix = "packer/local-aliases/buckets/"
+	scimBucketsPrefix         = "packer/scim/buckets/"
 )
 
 var (
@@ -95,6 +96,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	core.AddLogger(localAliasesPackerLogger)
 	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
 	core.AddLogger(groupsPackerLogger)
+	scimPackerLogger := iStore.logger.Named("storagepacker").Named("scim")
+	core.AddLogger(scimPackerLogger)
 
 	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, entitiesPackerLogger, "")
 	if err != nil {
@@ -111,6 +114,11 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, fmt.Errorf("failed to create group packer: %w", err)
 	}
 
+	iStore.scimConfigPacker, err = storagepacker.NewStoragePacker(iStore.view, scimPackerLogger, scimBucketsPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create scim packer: %w", err)
+	}
+
 	iStore.Backend = &framework.Backend{
 		BackendType:    logical.TypeLogical,
 		Paths:          iStore.paths(),
@@ -123,7 +131,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 				"oidc/+/.well-known/*",
 				"oidc/provider/+/.well-known/*",
 				"oidc/provider/+/token",
-			}, identityStoreLoginMFAEntUnauthedPaths()...),
+			}),
 			LocalStorage: []string{
 				localAliasesBucketsPrefix,
 			},
@@ -165,7 +173,6 @@ func (i *IdentityStore) paths() []*framework.Path {
 		mfaDuoPaths(i),
 		mfaPingIDPaths(i),
 		mfaLoginEnforcementPaths(i),
-		mfaLoginEnterprisePaths(i),
 	)
 }
 

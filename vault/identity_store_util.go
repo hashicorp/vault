@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -1467,6 +1468,42 @@ func (i *IdentityStore) MemDBEntityByIDInTxn(txn *memdb.Txn, entityID string, cl
 	return entity, nil
 }
 
+func (i *IdentityStore) MemDBEntityByExternalIDInTxn(ctx context.Context, txn *memdb.Txn, externalID string, clone bool) (*identity.Entity, error) {
+	var entity *identity.Entity
+	if externalID == "" {
+		return nil, fmt.Errorf("missing entity id")
+	}
+
+	if txn == nil {
+		return nil, fmt.Errorf("txn is nil")
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	entityRaw, err := txn.First(entitiesTable, "external_id", ns.ID, externalID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch entity from memdb using entity id: %w", err)
+	}
+
+	if entityRaw == nil {
+		return entity, nil
+	}
+
+	entity, ok := entityRaw.(*identity.Entity)
+	if !ok {
+		return nil, fmt.Errorf("failed to declare the type of fetched entity")
+	}
+
+	if clone {
+		return entity.Clone()
+	}
+
+	return entity, nil
+}
+
 func (i *IdentityStore) MemDBEntityByID(entityID string, clone bool) (*identity.Entity, error) {
 	if entityID == "" {
 		return nil, fmt.Errorf("missing entity id")
@@ -1475,6 +1512,16 @@ func (i *IdentityStore) MemDBEntityByID(entityID string, clone bool) (*identity.
 	txn := i.db.Txn(false)
 
 	return i.MemDBEntityByIDInTxn(txn, entityID, clone)
+}
+
+func (i *IdentityStore) MemDBEntityByExternalID(ctx context.Context, externalID string, clone bool) (*identity.Entity, error) {
+	if externalID == "" {
+		return nil, fmt.Errorf("missing entity externalID")
+	}
+
+	txn := i.db.Txn(false)
+
+	return i.MemDBEntityByExternalIDInTxn(ctx, txn, externalID, clone)
 }
 
 func (i *IdentityStore) MemDBEntityByName(ctx context.Context, entityName string, clone bool) (*identity.Entity, error) {
@@ -1657,6 +1704,98 @@ func (i *IdentityStore) MemDBDeleteEntityByID(entityID string) error {
 	txn.Commit()
 
 	return nil
+}
+
+func (i *IdentityStore) MemDBEntitiesByScimClientID(ctx context.Context, scimClientID string, maxResultSet int) ([]*identity.Entity, error) {
+	if scimClientID == "" {
+		return nil, nil
+	}
+
+	txn := i.db.Txn(false)
+	defer txn.Abort()
+
+	entities, err := i.MemDBEntitiesByScimClientIDInTxn(ctx, txn, scimClientID, maxResultSet)
+	if err != nil {
+		return nil, err
+	}
+
+	return entities, nil
+}
+
+// MemDBEntitiesByScimClientIDInTxn retrieves a fully sorted list of all entities
+// belonging to a specific SCIM client.
+//
+// Implementation Pattern: Filter-Then-Sort
+// This function implements the "filter then sort" pattern, which is the idiomatic
+// approach for this type of query in go-memdb. The process involves two steps:
+//  1. Filtering: A simple two-part compound index on `(NamespaceID, ScimClientID)`
+//     is used with `txn.Get()` to efficiently retrieve all entities for the client.
+//  2. Sorting: The resulting slice of entities is then sorted in-memory by name
+//     using Go's native `sort.Slice`.
+//
+// Why This Pattern is Used (memdb Limitations):
+// It might seem more efficient to perform the sorting at the database level
+// using a single ordered index, memdb's built-in `CompoundIndex` does not support
+// using a partial key (e.g., just `NamespaceID` and `ScimClientID`) to get an
+// ordered iterator over the remaining fields (e.g., `Name`). The indexer's
+// internal `FromArgs` method requires a value for every field defined in the index.
+// This makes a single-operation "filter and ordered scan" impossible with the
+// standard indexers.
+//
+// Given that go-memdb is an in-memory database, sorting a pre-filtered slice
+// is extremely fast and avoids the complexity of creating a custom indexer.
+// This function returns the entire sorted list; the caller is responsible for
+// any subsequent pagination.
+func (i *IdentityStore) MemDBEntitiesByScimClientIDInTxn(ctx context.Context, txn *memdb.Txn, scimClientID string, maxResultSet int) ([]*identity.Entity, error) {
+	if txn == nil {
+		return nil, fmt.Errorf("nil txn")
+	}
+
+	if scimClientID == "" {
+		return nil, fmt.Errorf("empty scim client id key")
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ws := memdb.NewWatchSet()
+
+	entitiesIter, err := txn.Get(entitiesTable, "scim_client_id", ns.ID, scimClientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup entities using scim client id: %w", err)
+	}
+
+	ws.Add(entitiesIter.WatchCh())
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			break
+		}
+
+		var entities []*identity.Entity
+		for item := entitiesIter.Next(); item != nil; item = entitiesIter.Next() {
+			if len(entities) > maxResultSet {
+				return nil, fmt.Errorf("query returned more than the server's limit of %d results. Please use more specific filters", maxResultSet)
+			}
+
+			entity, err := item.(*identity.Entity).Clone()
+			if err != nil {
+				return nil, err
+			}
+			entities = append(entities, entity)
+		}
+
+		sort.Slice(entities, func(i, j int) bool {
+			return entities[i].Name < entities[j].Name
+		})
+
+		return entities, nil
+	}
 }
 
 // FetchEntityForLocalAliasInTxn fetches the entity associated with the provided
@@ -2342,6 +2481,43 @@ func (i *IdentityStore) MemDBGroupByID(groupID string, clone bool) (*identity.Gr
 	txn := i.db.Txn(false)
 
 	return i.MemDBGroupByIDInTxn(txn, groupID, clone)
+}
+
+func (i *IdentityStore) MemDBGroupsByScimClientIDInTxn(txn *memdb.Txn, scimClientID string) ([]*identity.Group, error) {
+	if scimClientID == "" {
+		return nil, fmt.Errorf("missing scim client ID")
+	}
+
+	if txn == nil {
+		return nil, fmt.Errorf("txn is nil")
+	}
+
+	groupsIter, err := txn.Get(groupsTable, "scim_client_id", scimClientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup groups using scim client ID: %w", err)
+	}
+
+	var groups []*identity.Group
+	for group := groupsIter.Next(); group != nil; group = groupsIter.Next() {
+		entry := group.(*identity.Group)
+		entry, err = entry.Clone()
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, entry)
+	}
+
+	return groups, nil
+}
+
+func (i *IdentityStore) MemDBGroupsByScimClientID(scimClientID string) ([]*identity.Group, error) {
+	if scimClientID == "" {
+		return nil, fmt.Errorf("missing scim client ID")
+	}
+
+	txn := i.db.Txn(false)
+
+	return i.MemDBGroupsByScimClientIDInTxn(txn, scimClientID)
 }
 
 func (i *IdentityStore) MemDBGroupsByParentGroupIDInTxn(txn *memdb.Txn, memberGroupID string, clone bool) ([]*identity.Group, error) {
