@@ -33,8 +33,8 @@ replace github.com/ma314smith/signedxml v1.1.1 => github.com/moov-io/signedxml v
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
-	cloud.google.com/go/monitoring v1.24.2
-	cloud.google.com/go/spanner v1.85.1
+	cloud.google.com/go/monitoring v1.24.3
+	cloud.google.com/go/spanner v1.86.0
 	cloud.google.com/go/storage v1.56.1
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.12.0
@@ -158,7 +158,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.23.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.23.0
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.22.0
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.22.1-0.20251101001620-9d4927e41c45
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.25.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.16.0
@@ -223,15 +223,15 @@ require (
 	golang.org/x/crypto v0.44.0
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
 	golang.org/x/net v0.46.0
-	golang.org/x/oauth2 v0.31.0
+	golang.org/x/oauth2 v0.32.0
 	golang.org/x/sync v0.18.0
 	golang.org/x/sys v0.38.0
 	golang.org/x/term v0.37.0
 	golang.org/x/text v0.31.0
 	golang.org/x/tools v0.38.0
-	google.golang.org/api v0.251.0
-	google.golang.org/grpc v1.75.1
-	google.golang.org/protobuf v1.36.9
+	google.golang.org/api v0.254.0
+	google.golang.org/grpc v1.76.0
+	google.golang.org/protobuf v1.36.10
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/apimachinery v0.34.1
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
@@ -258,12 +258,12 @@ require (
 require (
 	cel.dev/expr v0.24.0 // indirect
 	cloud.google.com/go v0.121.6 // indirect
-	cloud.google.com/go/auth v0.16.5 // indirect
+	cloud.google.com/go/auth v0.17.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	cloud.google.com/go/iam v1.5.2 // indirect
-	cloud.google.com/go/kms v1.23.0 // indirect; indirect\
-	cloud.google.com/go/longrunning v0.6.7 // indirect
+	cloud.google.com/go/iam v1.5.3 // indirect
+	cloud.google.com/go/kms v1.23.2 // indirect; indirect\
+	cloud.google.com/go/longrunning v0.7.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
@@ -559,11 +559,11 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/mod v0.29.0 // indirect
-	golang.org/x/time v0.13.0
+	golang.org/x/time v0.14.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
-	google.golang.org/genproto v0.0.0-20251002232023-7c0ddcbb5797 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250922171735-9219d122eba9 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250929231259-57b25ae835d4 // indirect; indirect\
+	google.golang.org/genproto v0.0.0-20251029180050-ab9386a59fda // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20251014184007-4626949a642f // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect; indirect\
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
