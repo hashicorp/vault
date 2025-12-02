@@ -278,7 +278,7 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 				AdditionalDatabaseMetadata{key: "credential_ttl", value: s.CredentialTTL().String()},
 				AdditionalDatabaseMetadata{key: "rotation_period", value: s.RotationPeriod.String()},
 				AdditionalDatabaseMetadata{key: "rotation_schedule", value: s.RotationSchedule},
-				AdditionalDatabaseMetadata{key: "next_vault_rotation", value: s.NextVaultRotation.String()})
+				AdditionalDatabaseMetadata{key: "next_vault_rotation", value: s.NextVaultRotation.Format(time.RFC3339)})
 		} else {
 			b.dbEvent(ctx, "rotate-fail", "", roleName, false)
 			recordDatabaseObservation(ctx, b, nil, role.DBName, ObservationTypeDatabaseRotateStaticRoleFailure,
