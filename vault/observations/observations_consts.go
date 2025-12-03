@@ -17,6 +17,11 @@ const (
 	// ObservationTypeLeaseRevocation is emitted when a lease is revoked
 	ObservationTypeLeaseRevocation = "lease/revoke"
 
+	// ObservationTypeTokenCreation is emitted when a token is created.
+	// Does not include that token's ID.
+	// Type (i.e. batch/service) is included in 'type'.
+	ObservationTypeTokenCreation = "token/create"
+
 	// ObservationTypePolicyACLEvaluation is emitted when an ACL policy is evaluated
 	ObservationTypePolicyACLEvaluation = "policy/acl/evaluation"
 
