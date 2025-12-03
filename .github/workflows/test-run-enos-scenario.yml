@@ -52,7 +52,7 @@ jobs:
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
       VAULT_METADATA: ent
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Set product version and revision
         # If the Vault version and revision are not provided as workflow inputs, incase of
         # testing local artifact, the environment variables ENOS_VAR_vault_product_version
@@ -77,7 +77,7 @@ jobs:
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
