@@ -49,7 +49,7 @@ runs:
       run: |
         git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
     - name: Check out the .release/versions.hcl file from Vault Enterprise repository
-      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       with:
         ref: ${{ inputs.checkout-ref }}
     - uses: ./.github/actions/set-up-go
@@ -58,14 +58,14 @@ runs:
     - name: Build external tools
       uses: ./.github/actions/install-tools
     - name: Checkout VCM repository
-      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       with:
         repository: hashicorp/vcm
         ref: 1fcab6591e3bdc81d2921ca77441bfcf913c6a57
         token: ${{ inputs.github-token }}
         path: vcm
     - name: Checkout Vault tools repository to get the Autopilot upgrade tool
-      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       with:
         repository: hashicorp/vault-tools
         token: ${{ inputs.github-token }}
