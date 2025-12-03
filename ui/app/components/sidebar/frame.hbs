@@ -51,9 +51,15 @@
     <div data-test-console-panel class={{if this.console.isOpen "panel-open"}}>
       {{#if this.console.isOpen}}
         <Console::UiPanel
+          {{on "keydown" this.closeConsole}}
           @isFullscreen={{this.consoleFullscreen}}
           {{focus-trap
-            focusTrapOptions=(hash initialFocus="#console-input" clickOutsideDeactivates=true onDeactivate=this.closeConsole)
+            focusTrapOptions=(hash
+              initialFocus="#console-input"
+              escapeDeactivates=true
+              clickOutsideDeactivates=true
+              onDeactivate=this.closeConsole
+            )
           }}
         />
       {{/if}}

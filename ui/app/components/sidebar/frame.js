@@ -18,4 +18,10 @@ export default class SidebarNavComponent extends Component {
   trackReplToggle = () => {
     this.analytics.trackEvent(TOGGLE_WEB_REPL);
   };
+
+  closeConsole = (event) => {
+    if (event?.key === 'Escape') {
+      this.console.isOpen = false;
+    }
+  };
 }
