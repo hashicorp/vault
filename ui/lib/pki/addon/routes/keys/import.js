@@ -8,7 +8,6 @@ import { service } from '@ember/service';
 
 export default class PkiKeysImportRoute extends Route {
   @service secretMountPath;
-  @service store;
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);

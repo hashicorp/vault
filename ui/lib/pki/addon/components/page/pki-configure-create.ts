@@ -8,7 +8,6 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
-import type Store from '@ember-data/store';
 import type RouterService from '@ember/routing/router';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, CapabilitiesMap } from 'vault/vault/app-types';
@@ -28,7 +27,6 @@ interface Args {
  */
 export default class PkiConfigureCreate extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly store: Store;
   @service('app-router') declare readonly router: RouterService;
 
   @tracked title = 'Configure PKI';

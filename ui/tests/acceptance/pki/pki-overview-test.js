@@ -11,7 +11,6 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
-import { clearRecords } from 'vault/tests/helpers/pki/pki-helpers';
 import { PKI_OVERVIEW } from 'vault/tests/helpers/pki/pki-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 const { overviewCard } = GENERAL;
@@ -20,7 +19,6 @@ module('Acceptance | pki overview', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
     await login();
     // Setup PKI engine
     const mountPath = `pki-${uuidv4()}`;
@@ -46,8 +44,6 @@ module('Acceptance | pki overview', function (hooks) {
     this.pkiRolesList = await runCmd(tokenWithPolicyCmd('pki-roles-list', pki_roles_list_policy));
     this.pkiIssuersList = await runCmd(tokenWithPolicyCmd('pki-issuers-list', pki_issuers_list_policy));
     this.pkiAdminToken = await runCmd(tokenWithPolicyCmd('pki-admin', pki_admin_policy));
-
-    clearRecords(this.store);
   });
 
   hooks.afterEach(async function () {

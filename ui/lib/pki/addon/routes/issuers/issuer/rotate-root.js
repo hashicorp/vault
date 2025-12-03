@@ -10,7 +10,6 @@ import { parseCertificate } from 'vault/utils/parse-pki-cert';
 
 export default class PkiIssuerRotateRootRoute extends Route {
   @service secretMountPath;
-  @service store;
 
   model() {
     const oldRoot = this.modelFor('issuers.issuer');
