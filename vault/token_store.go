@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/tokens"
 )
 
@@ -3251,6 +3252,27 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		if policy == nil {
 			resp.AddWarning(fmt.Sprintf("Policy %q does not exist", p))
 		}
+	}
+
+	clientId, nonEntityToken := te.CreateClientID()
+	// Note: this should not be modified to include the token's ID (the token's actual value),
+	// due to sensitivity.
+	ts.core.Observations().RecordObservationToLedger(ctx, observations.ObservationTypeTokenCreation, ns, map[string]interface{}{
+		"policies":                     te.Policies,
+		"path":                         te.Path,
+		"display_name":                 te.DisplayName,
+		"num_uses":                     te.NumUses,
+		"token_type":                   te.Type.String(),
+		"ttl":                          te.TTL.String(),
+		"role":                         te.Role,
+		"token_client_id":              clientId,
+		"token_entity_id":              te.EntityID,
+		"token_client_id_is_entity_id": !nonEntityToken,
+		"request_client_id":            req.ClientID,
+		"request_entity_id":            req.EntityID,
+	})
+	if err != nil {
+		ts.logger.Error("error recording observation for token creation", err)
 	}
 
 	return resp, nil
