@@ -27,7 +27,6 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 export default class KvListPageComponent extends Component {
   @service flashMessages;
   @service('app-router') router;
-  @service pagination;
   @service api;
 
   @tracked secretPath;

@@ -8,6 +8,8 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
+import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 /**
  * @module DashboardQuickActionsCard
  * DashboardQuickActionsCard component allows users to see a list of secrets engines filtered by
@@ -23,10 +25,13 @@ const QUICK_ACTION_ENGINES = ['pki', 'database'];
 
 export default class DashboardQuickActionsCard extends Component {
   @service router;
+  @service api;
+  @service flashMessages;
 
   @tracked selectedEngine;
   @tracked selectedAction;
   @tracked paramValue;
+  @tracked searchSelectOptions = [];
 
   get actionOptions() {
     switch (this.selectedEngine.type) {
@@ -53,44 +58,34 @@ export default class DashboardQuickActionsCard extends Component {
         return {
           title: 'Role to use',
           buttonText: 'Generate credentials',
-          model: 'database/role',
           route: 'vault.cluster.secrets.backend.credentials',
-          queryObject: { backend: this.selectedEngine.id },
         };
       case 'Issue certificate':
         return {
           title: 'Role to use',
           placeholder: 'Type to find a role',
           buttonText: 'Issue leaf certificate',
-          model: 'pki/role',
           route: 'vault.cluster.secrets.backend.pki.roles.role.generate',
-          queryObject: { backend: this.selectedEngine.id },
         };
       case 'View certificate':
         return {
           title: 'Certificate serial number',
           placeholder: '33:a3:...',
           buttonText: 'View certificate',
-          model: 'pki/certificate/base',
           route: 'vault.cluster.secrets.backend.pki.certificates.certificate.details',
-          queryObject: { backend: this.selectedEngine.id },
         };
       case 'View issuer':
         return {
           title: 'Issuer',
           placeholder: 'Type issuer name or ID',
           buttonText: 'View issuer',
-          model: 'pki/issuer',
           route: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
-          nameKey: 'issuerName',
-          queryObject: { backend: this.selectedEngine.id },
-          objectKeys: ['id', 'issuerName'],
+          shouldRenderName: true,
         };
       default:
         return {
           placeholder: 'Please select an action above',
           buttonText: 'Select an action',
-          model: '',
         };
     }
   }
@@ -109,6 +104,44 @@ export default class DashboardQuickActionsCard extends Component {
     });
   }
 
+  fetchOptions = task(
+    waitFor(async () => {
+      this.searchSelectOptions = [];
+      const action = this.selectedAction;
+      const api = this.api.secrets;
+      const catchError = (e) => (e.response.status === 404 ? { keys: [] } : Promise.reject(e));
+
+      try {
+        // kv-suggestion-input fetches secrets internally -- this handles the remaining action types
+        if (action && action !== 'Find KV secrets') {
+          // fetch database roles, pki roles, pki certificates or pki issuers
+          const methods = {
+            'Generate credentials for database': ['databaseListStaticRoles', 'databaseListRoles'],
+            'Issue certificate': ['pkiListRoles'],
+            'View certificate': ['pkiListCerts'],
+            'View issuer': ['pkiListIssuers'],
+          }[this.selectedAction];
+          const responses = await Promise.all(
+            methods.map((method) => api[method](this.selectedEngine.id, true).catch(catchError))
+          );
+          responses.forEach((response) => {
+            const options =
+              action === 'View issuer'
+                ? this.api.keyInfoToArray(response).map(({ id, issuer_name }) => ({
+                    name: issuer_name || id,
+                    id,
+                  }))
+                : response.keys.map((id) => ({ id }));
+            this.searchSelectOptions.push(...options);
+          });
+        }
+      } catch (e) {
+        const { message } = await this.api.parseError(e);
+        this.flashMessages.danger(`Error fetching options for selected action: ${message}`);
+      }
+    })
+  );
+
   @action
   handleSearchEngineSelect([selection]) {
     this.selectedEngine = selection;
@@ -121,6 +154,7 @@ export default class DashboardQuickActionsCard extends Component {
   setSelectedAction(selectedAction) {
     this.selectedAction = selectedAction;
     this.paramValue = null;
+    this.fetchOptions.perform();
   }
 
   @action

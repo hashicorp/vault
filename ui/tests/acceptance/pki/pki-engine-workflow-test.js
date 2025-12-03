@@ -15,7 +15,7 @@ import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CERTIFICATES, clearRecords } from 'vault/tests/helpers/pki/pki-helpers';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 import {
   PKI_CONFIGURE_CREATE,
   PKI_CONFIG_EDIT,
@@ -36,13 +36,11 @@ module('Acceptance | pki workflow', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
     await login();
     // Setup PKI engine
     const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
-    clearRecords(this.store);
   });
 
   hooks.afterEach(async function () {
@@ -56,7 +54,6 @@ module('Acceptance | pki workflow', function (hooks) {
       await login();
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
       this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
-      clearRecords(this.store);
     });
 
     test('empty state messages are correct when PKI not configured', async function (assert) {
@@ -119,7 +116,6 @@ module('Acceptance | pki workflow', function (hooks) {
         tokenWithPolicyCmd(`pki-editor-${this.mountPath}`, pki_editor_policy)
       );
       this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
-      clearRecords(this.store);
     });
 
     test('shows correct items if user has all permissions', async function (assert) {
@@ -269,7 +265,6 @@ module('Acceptance | pki workflow', function (hooks) {
       this.pkiKeyReader = await runCmd(tokenWithPolicyCmd(`pki-reader-${this.mountPath}`, pki_reader_policy));
       this.pkiKeyEditor = await runCmd(tokenWithPolicyCmd(`pki-editor-${this.mountPath}`, pki_editor_policy));
       this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
-      clearRecords(this.store);
     });
 
     test('shows correct items if user has all permissions', async function (assert) {
@@ -391,7 +386,6 @@ module('Acceptance | pki workflow', function (hooks) {
       await runCmd([
         `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
       ]);
-      clearRecords(this.store);
     });
     test('lists the correct issuer metadata info', async function (assert) {
       await login(this.pkiAdminToken);

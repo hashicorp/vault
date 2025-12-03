@@ -8,7 +8,6 @@ import { service } from '@ember/service';
 import PkiIssuersSignIntermediateForm from 'vault/forms/secrets/pki/issuers/sign-intermediate';
 
 export default class PkiIssuerSignRoute extends Route {
-  @service store;
   @service secretMountPath;
 
   model() {

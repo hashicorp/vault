@@ -27,7 +27,6 @@ export default class MessagesList extends Component {
   @service customMessages;
   @service flashMessages;
   @service namespace;
-  @service pagination;
   @service('app-router') router;
   @service api;
 

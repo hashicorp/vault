@@ -20,7 +20,6 @@ export default class App extends Application {
           'flash-messages',
           'namespace',
           { 'app-router': 'router' },
-          'pagination',
           'version',
           'custom-messages',
           'api',
@@ -108,7 +107,6 @@ export default class App extends Application {
           'namespace',
           { 'app-router': 'router' },
           'secret-mount-path',
-          'pagination',
           'version',
         ],
         externalRoutes: {
@@ -129,8 +127,6 @@ export default class App extends Application {
           'path-help',
           { 'app-router': 'router' },
           'secret-mount-path',
-          'store',
-          'pagination',
           'version',
         ],
         externalRoutes: {
@@ -149,7 +145,6 @@ export default class App extends Application {
           'store',
           'api',
           'capabilities',
-          'pagination',
           'version',
         ],
         externalRoutes: {

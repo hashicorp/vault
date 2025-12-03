@@ -9,7 +9,6 @@ import { SystemListSyncDestinationsListEnum } from '@hashicorp/vault-client-type
 import { listDestinationsTransform } from 'sync/utils/api-transforms';
 import { paginate } from 'core/utils/paginate-list';
 
-import type PaginationService from 'vault/services/pagination';
 import type RouterService from '@ember/routing/router-service';
 import type { ModelFrom } from 'vault/vault/route';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
@@ -38,7 +37,6 @@ interface SyncSecretsDestinationsController extends Controller {
 }
 
 export default class SyncSecretsDestinationsIndexRoute extends Route {
-  @service declare readonly pagination: PaginationService;
   @service declare readonly api: ApiService;
   @service('app-router') declare readonly router: RouterService;
   @service declare readonly capabilities: CapabilitiesService;

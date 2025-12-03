@@ -8,7 +8,6 @@ import { service } from '@ember/service';
 import PkiTidyForm from 'vault/forms/secrets/pki/tidy';
 
 export default class PkiTidyManualRoute extends Route {
-  @service store;
   @service secretMountPath;
 
   model() {
