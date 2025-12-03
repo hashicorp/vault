@@ -5,11 +5,8 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-@withConfirmLeave()
 export default class PkiIssuersImportRoute extends Route {
-  @service store;
   @service secretMountPath;
 
   setupController(controller, resolvedModel) {

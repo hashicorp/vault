@@ -22,7 +22,6 @@ export default class MessageDetails extends Component {
   @service('app-router') router;
   @service flashMessages;
   @service customMessages;
-  @service pagination;
   @service api;
 
   displayFields = ['active', 'type', 'authenticated', 'title', 'message', 'start_time', 'end_time', 'link'];

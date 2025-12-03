@@ -8,7 +8,6 @@ import { service } from '@ember/service';
 
 export default class TidyAutoIndexRoute extends Route {
   @service secretMountPath;
-  @service store;
 
   // inherits model from tidy/auto
 

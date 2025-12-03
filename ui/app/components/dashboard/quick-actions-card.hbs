@@ -8,8 +8,9 @@
   {{#if this.filteredSecretEngines}}
     <div class="has-top-margin-m has-bottom-margin-m">
       <h3 class="title is-marginless is-6" data-test-card-subtitle="secrets-engines">Secrets engines</h3>
-      <p class="is-size-8 has-top-margin-xxs has-bottom-margin-s has-text-grey">Supported engines include databases, KV
-        version 2, and PKI.</p>
+      <p class="is-size-8 has-top-margin-xxs has-bottom-margin-s has-text-grey">
+        Supported engines include databases, KV version 2, and PKI.
+      </p>
       <SearchSelect
         @id="type-to-select-a-mount"
         @options={{this.mountOptions}}
@@ -40,32 +41,29 @@
       />
 
       {{#if this.selectedAction}}
-        {{! use special input to allow searching for KVv2 secrets inside a directory }}
-        {{#if this.searchSelectParams.isKV}}
+        {{#if this.fetchOptions.isRunning}}
+          <Hds::Icon @name="loading" @isInline={{true}} />
+          <p class="has-left-margin-xs" data-test-loading>Loading options...</p>
+        {{else if this.searchSelectParams.isKV}}
+          {{! use special input to allow searching for KVv2 secrets inside a directory }}
           <KvSuggestionInput
             @label="Secret Path"
             @value={{this.paramValue}}
             @mountPath={{this.selectedEngine.id}}
             @onChange={{fn (mut this.paramValue)}}
           />
-        {{else if this.searchSelectParams.model}}
+        {{else}}
           <h3 class="title is-6" data-test-card-subtitle="param">{{this.searchSelectParams.title}}</h3>
-
           <SearchSelect
             class="is-flex-grow-1"
+            @id="quick-actions-card-param-select"
             @ariaLabel={{this.searchSelectParams.title}}
             @selectLimit="1"
-            @models={{array this.searchSelectParams.model}}
             @placeholder={{this.searchSelectParams.placeholder}}
             @disallowNewItems={{true}}
+            @shouldRenderName={{this.searchSelectParams.shouldRenderName}}
+            @options={{this.searchSelectOptions}}
             @onChange={{this.handleActionSelect}}
-            @fallbackComponent="input-search"
-            @disabled={{not this.searchSelectParams.model}}
-            @nameKey={{this.searchSelectParams.nameKey}}
-            @queryObject={{this.searchSelectParams.queryObject}}
-            @objectKeys={{this.searchSelectParams.objectKeys}}
-            @passObject={{true}}
-            @shouldRenderName={{this.searchSelectParams.nameKey}}
             data-test-search-select="params"
           />
         {{/if}}

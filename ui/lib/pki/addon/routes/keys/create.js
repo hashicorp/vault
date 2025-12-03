@@ -9,7 +9,6 @@ import PkiKeyForm from 'vault/forms/secrets/pki/key';
 
 export default class PkiKeysCreateRoute extends Route {
   @service secretMountPath;
-  @service store;
 
   model() {
     return new PkiKeyForm({}, { isNew: true });
