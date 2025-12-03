@@ -52,25 +52,22 @@ module('Integration | Component | ldap | Page::Library::Details', function (hook
       owner: this.engine,
     });
 
-    assert.dom('[data-test-header-title]').hasText(this.model.name, 'Library name renders in header');
-    assert
-      .dom('[data-test-breadcrumbs] li:nth-child(1)')
-      .containsText(this.model.backend, 'Overview breadcrumb renders');
-    assert
-      .dom('[data-test-breadcrumbs] li:nth-child(2) a')
-      .containsText('Libraries', 'Libraries breadcrumb renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(this.model.name, 'Library name renders in header');
+    assert.dom(GENERAL.breadcrumbAtIdx(0)).containsText(this.model.backend, 'Overview breadcrumb renders');
+    assert.dom(GENERAL.breadcrumbAtIdx(1)).containsText('Libraries', 'Libraries breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(3)')
       .containsText(this.model.name, 'Library breadcrumb renders');
 
-    assert.dom('[data-test-tab="accounts"]').hasText('Accounts', 'Accounts tab renders');
+    assert.dom(GENERAL.tab('accounts')).hasText('Accounts', 'Accounts tab renders');
     assert.dom('[data-test-tab="config"]').hasText('Configuration', 'Configuration tab renders');
 
-    assert.dom('[data-test-delete]').hasText('Delete library', 'Delete action renders');
-    assert.dom('[data-test-edit]').hasText('Edit library', 'Edit action renders');
+    await click(GENERAL.dropdownToggle('Manage'));
+    assert.dom(GENERAL.menuItem('Delete library')).hasText('Delete library', 'Delete action renders');
+    assert.dom(GENERAL.menuItem('Edit library')).hasText('Edit library', 'Edit action renders');
 
     const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-    await click('[data-test-delete]');
+    await click(GENERAL.menuItem('Delete library'));
     await click(GENERAL.confirmButton);
     assert.ok(
       transitionStub.calledWith('vault.cluster.secrets.backend.ldap.libraries'),

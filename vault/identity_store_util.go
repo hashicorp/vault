@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -26,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -1255,6 +1257,24 @@ func (i *IdentityStore) MemDBUpsertAliasInTxn(txn *memdb.Txn, alias *identity.Al
 		return fmt.Errorf("failed to update alias into memdb: %w", err)
 	}
 
+	err = i.Backend.RecordObservation(context.Background(), observations.ObservationTypeAliasUpsert, map[string]interface{}{
+		"group_alias":        groupAlias,
+		"alias_id":           alias.ID,
+		"alias_namespace_id": alias.NamespaceID,
+		"scim_client_id":     alias.ScimClientID,
+		"mount_path":         alias.MountPath,
+		"mount_type":         alias.MountType,
+		"mount_accessor":     alias.MountAccessor,
+		"local":              alias.Local,
+		"metadata":           alias.Metadata,
+		"custom_metadata":    alias.CustomMetadata,
+		"creation_time":      alias.CreationTime.AsTime().Format(time.RFC3339),
+		"last_update_time":   alias.LastUpdateTime.AsTime().Format(time.RFC3339),
+	})
+	if err != nil {
+		i.logger.Error("failed to record observation for alias upsert", "error", err)
+	}
+
 	return nil
 }
 
@@ -1384,6 +1404,24 @@ func (i *IdentityStore) MemDBDeleteAliasByIDInTxn(txn *memdb.Txn, aliasID string
 		return fmt.Errorf("failed to delete alias from memdb: %w", err)
 	}
 
+	err = i.Backend.RecordObservation(context.Background(), observations.ObservationTypeAliasDelete, map[string]interface{}{
+		"group_alias":        groupAlias,
+		"alias_id":           alias.ID,
+		"alias_namespace_id": alias.NamespaceID,
+		"scim_client_id":     alias.ScimClientID,
+		"mount_path":         alias.MountPath,
+		"mount_type":         alias.MountType,
+		"mount_accessor":     alias.MountAccessor,
+		"local":              alias.Local,
+		"metadata":           alias.Metadata,
+		"custom_metadata":    alias.CustomMetadata,
+		"creation_time":      alias.CreationTime.AsTime().Format(time.RFC3339),
+		"last_update_time":   alias.LastUpdateTime.AsTime().Format(time.RFC3339),
+	})
+	if err != nil {
+		i.logger.Error("failed to record observation for alias deletion", "error", err)
+	}
+
 	return nil
 }
 
@@ -1434,6 +1472,22 @@ func (i *IdentityStore) MemDBUpsertEntityInTxn(txn *memdb.Txn, entity *identity.
 		return fmt.Errorf("failed to update entity into memdb: %w", err)
 	}
 
+	err = i.Backend.RecordObservation(context.Background(), observations.ObservationTypeEntityUpsert, map[string]interface{}{
+		"entity_id":           entity.ID,
+		"entity_namespace_id": entity.NamespaceID,
+		"metadata":            entity.Metadata,
+		"aliases":             entity.Aliases,
+		"policies":            entity.Policies,
+		"creation_time":       entity.CreationTime.AsTime().Format(time.RFC3339),
+		"last_updated_time":   entity.LastUpdateTime.AsTime().Format(time.RFC3339),
+		"merged_entity_ids":   entity.MergedEntityIDs,
+		"scim_client_id":      entity.ScimClientID,
+		"is_new_entity":       entityRaw == nil,
+	})
+	if err != nil {
+		i.logger.Error("failed to record observation for entity upsert", "error", err)
+	}
+
 	return nil
 }
 
@@ -1467,6 +1521,42 @@ func (i *IdentityStore) MemDBEntityByIDInTxn(txn *memdb.Txn, entityID string, cl
 	return entity, nil
 }
 
+func (i *IdentityStore) MemDBEntityByExternalIDInTxn(ctx context.Context, txn *memdb.Txn, externalID string, clone bool) (*identity.Entity, error) {
+	var entity *identity.Entity
+	if externalID == "" {
+		return nil, fmt.Errorf("missing entity id")
+	}
+
+	if txn == nil {
+		return nil, fmt.Errorf("txn is nil")
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	entityRaw, err := txn.First(entitiesTable, "external_id", ns.ID, externalID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch entity from memdb using entity id: %w", err)
+	}
+
+	if entityRaw == nil {
+		return entity, nil
+	}
+
+	entity, ok := entityRaw.(*identity.Entity)
+	if !ok {
+		return nil, fmt.Errorf("failed to declare the type of fetched entity")
+	}
+
+	if clone {
+		return entity.Clone()
+	}
+
+	return entity, nil
+}
+
 func (i *IdentityStore) MemDBEntityByID(entityID string, clone bool) (*identity.Entity, error) {
 	if entityID == "" {
 		return nil, fmt.Errorf("missing entity id")
@@ -1475,6 +1565,16 @@ func (i *IdentityStore) MemDBEntityByID(entityID string, clone bool) (*identity.
 	txn := i.db.Txn(false)
 
 	return i.MemDBEntityByIDInTxn(txn, entityID, clone)
+}
+
+func (i *IdentityStore) MemDBEntityByExternalID(ctx context.Context, externalID string, clone bool) (*identity.Entity, error) {
+	if externalID == "" {
+		return nil, fmt.Errorf("missing entity externalID")
+	}
+
+	txn := i.db.Txn(false)
+
+	return i.MemDBEntityByExternalIDInTxn(ctx, txn, externalID, clone)
 }
 
 func (i *IdentityStore) MemDBEntityByName(ctx context.Context, entityName string, clone bool) (*identity.Entity, error) {
@@ -1659,6 +1759,98 @@ func (i *IdentityStore) MemDBDeleteEntityByID(entityID string) error {
 	return nil
 }
 
+func (i *IdentityStore) MemDBEntitiesByScimClientID(ctx context.Context, scimClientID string, maxResultSet int) ([]*identity.Entity, error) {
+	if scimClientID == "" {
+		return nil, nil
+	}
+
+	txn := i.db.Txn(false)
+	defer txn.Abort()
+
+	entities, err := i.MemDBEntitiesByScimClientIDInTxn(ctx, txn, scimClientID, maxResultSet)
+	if err != nil {
+		return nil, err
+	}
+
+	return entities, nil
+}
+
+// MemDBEntitiesByScimClientIDInTxn retrieves a fully sorted list of all entities
+// belonging to a specific SCIM client.
+//
+// Implementation Pattern: Filter-Then-Sort
+// This function implements the "filter then sort" pattern, which is the idiomatic
+// approach for this type of query in go-memdb. The process involves two steps:
+//  1. Filtering: A simple two-part compound index on `(NamespaceID, ScimClientID)`
+//     is used with `txn.Get()` to efficiently retrieve all entities for the client.
+//  2. Sorting: The resulting slice of entities is then sorted in-memory by name
+//     using Go's native `sort.Slice`.
+//
+// Why This Pattern is Used (memdb Limitations):
+// It might seem more efficient to perform the sorting at the database level
+// using a single ordered index, memdb's built-in `CompoundIndex` does not support
+// using a partial key (e.g., just `NamespaceID` and `ScimClientID`) to get an
+// ordered iterator over the remaining fields (e.g., `Name`). The indexer's
+// internal `FromArgs` method requires a value for every field defined in the index.
+// This makes a single-operation "filter and ordered scan" impossible with the
+// standard indexers.
+//
+// Given that go-memdb is an in-memory database, sorting a pre-filtered slice
+// is extremely fast and avoids the complexity of creating a custom indexer.
+// This function returns the entire sorted list; the caller is responsible for
+// any subsequent pagination.
+func (i *IdentityStore) MemDBEntitiesByScimClientIDInTxn(ctx context.Context, txn *memdb.Txn, scimClientID string, maxResultSet int) ([]*identity.Entity, error) {
+	if txn == nil {
+		return nil, fmt.Errorf("nil txn")
+	}
+
+	if scimClientID == "" {
+		return nil, fmt.Errorf("empty scim client id key")
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ws := memdb.NewWatchSet()
+
+	entitiesIter, err := txn.Get(entitiesTable, "scim_client_id", ns.ID, scimClientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup entities using scim client id: %w", err)
+	}
+
+	ws.Add(entitiesIter.WatchCh())
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			break
+		}
+
+		var entities []*identity.Entity
+		for item := entitiesIter.Next(); item != nil; item = entitiesIter.Next() {
+			if len(entities) > maxResultSet {
+				return nil, fmt.Errorf("query returned more than the server's limit of %d results. Please use more specific filters", maxResultSet)
+			}
+
+			entity, err := item.(*identity.Entity).Clone()
+			if err != nil {
+				return nil, err
+			}
+			entities = append(entities, entity)
+		}
+
+		sort.Slice(entities, func(i, j int) bool {
+			return entities[i].Name < entities[j].Name
+		})
+
+		return entities, nil
+	}
+}
+
 // FetchEntityForLocalAliasInTxn fetches the entity associated with the provided
 // local identity.Alias. MemDB will first be searched for the entity. If it is
 // not found there, the localAliasPacker storagepacker.StoragePacker will be
@@ -1710,6 +1902,21 @@ func (i *IdentityStore) MemDBDeleteEntityByIDInTxn(txn *memdb.Txn, entityID stri
 	err = txn.Delete(entitiesTable, entity)
 	if err != nil {
 		return fmt.Errorf("failed to delete entity from memdb: %w", err)
+	}
+
+	err = i.Backend.RecordObservation(context.Background(), observations.ObservationTypeEntityDelete, map[string]interface{}{
+		"entity_id":           entity.ID,
+		"entity_namespace_id": entity.NamespaceID,
+		"metadata":            entity.Metadata,
+		"aliases":             entity.Aliases,
+		"policies":            entity.Policies,
+		"creation_time":       entity.CreationTime.AsTime().Format(time.RFC3339),
+		"last_updated_time":   entity.LastUpdateTime.AsTime().Format(time.RFC3339),
+		"merged_entity_ids":   entity.MergedEntityIDs,
+		"scim_client_id":      entity.ScimClientID,
+	})
+	if err != nil {
+		i.logger.Error("failed to record observation for entity deletion", "error", err)
 	}
 
 	return nil
@@ -2246,6 +2453,19 @@ func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, gr
 	return nil
 }
 
+// GroupAliasInformation is a set of information about a group's alias, if present
+type GroupAliasInformation struct {
+	Id             string            `json:"id"`
+	Name           string            `json:"name"`
+	MountType      string            `json:"mount_type"`
+	MountAccessor  string            `json:"mount_accessor"`
+	MountPath      string            `json:"mount_path"`
+	Metadata       map[string]string `json:"metadata"`
+	CustomMetadata map[string]string `json:"custom_metadata"`
+	CreationTime   string            `json:"creation_time"`
+	LastUpdateTime string            `json:"last_update_time"`
+}
+
 func (i *IdentityStore) MemDBUpsertGroupInTxn(txn *memdb.Txn, group *identity.Group) error {
 	if txn == nil {
 		return fmt.Errorf("nil txn")
@@ -2275,6 +2495,40 @@ func (i *IdentityStore) MemDBUpsertGroupInTxn(txn *memdb.Txn, group *identity.Gr
 		return fmt.Errorf("failed to update group into memdb: %w", err)
 	}
 
+	var aliasInfo *GroupAliasInformation
+	if group.Alias != nil {
+		// We should re-marshall this so that we can correctly format, for example, the time.
+		aliasInfo = &GroupAliasInformation{
+			Id:             group.Alias.ID,
+			Name:           group.Alias.Name,
+			MountType:      group.Alias.MountType,
+			MountAccessor:  group.Alias.MountAccessor,
+			MountPath:      group.Alias.MountPath,
+			Metadata:       group.Alias.Metadata,
+			CustomMetadata: group.Alias.CustomMetadata,
+			CreationTime:   group.Alias.CreationTime.AsTime().Format(time.RFC3339),
+			LastUpdateTime: group.Alias.LastUpdateTime.AsTime().Format(time.RFC3339),
+		}
+	}
+
+	err = i.Backend.RecordObservation(context.Background(), observations.ObservationTypeGroupUpsert, map[string]interface{}{
+		"group_id":           group.ID,
+		"alias":              aliasInfo,
+		"group_namespace_id": group.NamespaceID,
+		"scim_client_id":     group.ScimClientID,
+		"policies":           group.Policies,
+		"type":               group.Type,
+		"parent_group_ids":   group.ParentGroupIDs,
+		"member_entity_ids":  group.MemberEntityIDs,
+		"metadata":           group.Metadata,
+		"creation_time":      group.CreationTime.AsTime().Format(time.RFC3339),
+		"last_update_time":   group.LastUpdateTime.AsTime().Format(time.RFC3339),
+		"is_new_group":       groupRaw == nil,
+	})
+	if err != nil {
+		i.logger.Error("failed to record observation for group upsert", "error", err)
+	}
+
 	return nil
 }
 
@@ -2299,6 +2553,22 @@ func (i *IdentityStore) MemDBDeleteGroupByIDInTxn(txn *memdb.Txn, groupID string
 	err = txn.Delete("groups", group)
 	if err != nil {
 		return fmt.Errorf("failed to delete group from memdb: %w", err)
+	}
+
+	err = i.Backend.RecordObservation(context.Background(), observations.ObservationTypeGroupDelete, map[string]interface{}{
+		"group_id":           group.ID,
+		"group_namespace_id": group.NamespaceID,
+		"scim_client_id":     group.ScimClientID,
+		"policies":           group.Policies,
+		"type":               group.Type,
+		"parent_group_ids":   group.ParentGroupIDs,
+		"member_entity_ids":  group.MemberEntityIDs,
+		"metadata":           group.Metadata,
+		"creation_time":      group.CreationTime.AsTime().Format(time.RFC3339),
+		"last_update_time":   group.LastUpdateTime.AsTime().Format(time.RFC3339),
+	})
+	if err != nil {
+		i.logger.Error("failed to record observation for group deletion", "error", err)
 	}
 
 	return nil
@@ -2342,6 +2612,43 @@ func (i *IdentityStore) MemDBGroupByID(groupID string, clone bool) (*identity.Gr
 	txn := i.db.Txn(false)
 
 	return i.MemDBGroupByIDInTxn(txn, groupID, clone)
+}
+
+func (i *IdentityStore) MemDBGroupsByScimClientIDInTxn(txn *memdb.Txn, scimClientID string) ([]*identity.Group, error) {
+	if scimClientID == "" {
+		return nil, fmt.Errorf("missing scim client ID")
+	}
+
+	if txn == nil {
+		return nil, fmt.Errorf("txn is nil")
+	}
+
+	groupsIter, err := txn.Get(groupsTable, "scim_client_id", scimClientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup groups using scim client ID: %w", err)
+	}
+
+	var groups []*identity.Group
+	for group := groupsIter.Next(); group != nil; group = groupsIter.Next() {
+		entry := group.(*identity.Group)
+		entry, err = entry.Clone()
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, entry)
+	}
+
+	return groups, nil
+}
+
+func (i *IdentityStore) MemDBGroupsByScimClientID(scimClientID string) ([]*identity.Group, error) {
+	if scimClientID == "" {
+		return nil, fmt.Errorf("missing scim client ID")
+	}
+
+	txn := i.db.Txn(false)
+
+	return i.MemDBGroupsByScimClientIDInTxn(txn, scimClientID)
 }
 
 func (i *IdentityStore) MemDBGroupsByParentGroupIDInTxn(txn *memdb.Txn, memberGroupID string, clone bool) ([]*identity.Group, error) {

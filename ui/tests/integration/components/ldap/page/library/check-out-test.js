@@ -43,13 +43,9 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
   test('it should render page title and breadcrumbs', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('[data-test-header-title]').hasText('Check-out', 'Page title renders');
-    assert
-      .dom('[data-test-breadcrumbs] li:nth-child(1)')
-      .containsText('ldap-test', 'Overview breadcrumb renders');
-    assert
-      .dom('[data-test-breadcrumbs] li:nth-child(2) a')
-      .containsText('Libraries', 'Libraries breadcrumb renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Check-out', 'Page title renders');
+    assert.dom(GENERAL.breadcrumbAtIdx(0)).containsText('ldap-test', 'Overview breadcrumb renders');
+    assert.dom(GENERAL.breadcrumbAtIdx(1)).containsText('Libraries', 'Libraries breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(3)')
       .containsText('test-library', 'Library breadcrumb renders');

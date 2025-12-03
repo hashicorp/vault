@@ -49,7 +49,7 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
 
   test('it should render header with role name and breadcrumbs', async function (assert) {
     await this.renderComponent('static');
-    assert.dom('[data-test-header-title]').hasText(this.model.name, 'Role name renders in header');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(this.model.name, 'Role name renders in header');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(1)')
       .containsText(this.model.backend, 'Overview breadcrumb renders');
@@ -59,17 +59,20 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
       .containsText(this.model.name, 'Role breadcrumb renders');
   });
 
-  test('it should render toolbar actions', async function (assert) {
+  test('it should render page header dropdown actions', async function (assert) {
     assert.expect(7);
 
     await this.renderComponent('static');
+    await click(GENERAL.dropdownToggle('Manage'));
 
-    assert.dom('[data-test-delete]').hasText('Delete role', 'Delete action renders');
+    assert.dom(GENERAL.menuItem('Delete role')).hasText('Delete role', 'Delete action renders');
     assert
       .dom(GENERAL.button('Get credentials'))
       .hasText('Get credentials', 'Get credentials action renders');
-    assert.dom('[data-test-rotate-credentials]').exists('Rotate credentials action renders for static role');
-    assert.dom('[data-test-edit]').hasText('Edit role', 'Edit action renders');
+    assert
+      .dom(GENERAL.menuItem('Rotate credentials'))
+      .exists('Rotate credentials action renders for static role');
+    assert.dom(GENERAL.menuItem('Edit role')).hasText('Edit role', 'Edit action renders');
 
     await this.renderComponent('dynamic');
     // defined after render so this.model is defined
@@ -82,8 +85,8 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
     assert
       .dom('[data-test-rotate-credentials]')
       .doesNotExist('Rotate credentials action is hidden for dynamic role');
-
-    await click('[data-test-delete]');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Delete role'));
     await click(GENERAL.confirmButton);
     assert.ok(
       transitionStub.calledWith('vault.cluster.secrets.backend.ldap.roles'),

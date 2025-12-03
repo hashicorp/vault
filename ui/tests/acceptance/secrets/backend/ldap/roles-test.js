@@ -84,7 +84,7 @@ module('Acceptance | ldap | roles', function (hooks) {
     }
   });
 
-  test('it should transition to routes from role details toolbar links', async function (assert) {
+  test('it should transition to routes from role details page header actions', async function (assert) {
     await click(LDAP_SELECTORS.roleItem('dynamic', 'dynamic-role'));
     await click(GENERAL.button('Get credentials'));
     assert.true(
@@ -92,8 +92,9 @@ module('Acceptance | ldap | roles', function (hooks) {
       'Transitions to credentials route from toolbar link'
     );
 
-    await click('[data-test-breadcrumb="dynamic-role"] a');
-    await click('[data-test-edit]');
+    await click(GENERAL.breadcrumbLink('dynamic-role'));
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Edit role'));
     assert.true(
       isURL('roles/dynamic/dynamic-role/edit', this.backend),
       'Transitions to edit route from toolbar link'

@@ -190,6 +190,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 			LocalStorage: []string{
 				expirationSubPath,
 				countersSubPath,
+				rotationLocalSubPath,
 			},
 
 			SealWrapStorage: []string{

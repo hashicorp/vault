@@ -35,34 +35,7 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 				OperationSuffix: "alias",
 			},
 
-			Fields: map[string]*framework.FieldSchema{
-				"id": {
-					Type:        framework.TypeString,
-					Description: "ID of the entity alias. If set, updates the corresponding entity alias.",
-				},
-				// entity_id is deprecated in favor of canonical_id
-				"entity_id": {
-					Type: framework.TypeString,
-					Description: `Entity ID to which this alias belongs.
-This field is deprecated, use canonical_id.`,
-				},
-				"canonical_id": {
-					Type:        framework.TypeString,
-					Description: "Entity ID to which this alias belongs",
-				},
-				"mount_accessor": {
-					Type:        framework.TypeString,
-					Description: "Mount accessor to which this alias belongs to; unused for a modify",
-				},
-				"name": {
-					Type:        framework.TypeString,
-					Description: "Name of the alias; unused for a modify",
-				},
-				"custom_metadata": {
-					Type:        framework.TypeKVPairs,
-					Description: "User provided key-value pairs",
-				},
-			},
+			Fields: aliasFieldSchema(),
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.handleAliasCreateUpdate(),
 			},
@@ -146,6 +119,37 @@ This field is deprecated, use canonical_id.`,
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id-list"][0]),
 			HelpDescription: strings.TrimSpace(aliasHelp["alias-id-list"][1]),
+		},
+	}
+}
+
+func aliasFieldSchema() map[string]*framework.FieldSchema {
+	return map[string]*framework.FieldSchema{
+		"id": {
+			Type:        framework.TypeString,
+			Description: "ID of the entity alias. If set, updates the corresponding entity alias.",
+		},
+		// entity_id is deprecated in favor of canonical_id
+		"entity_id": {
+			Type: framework.TypeString,
+			Description: `Entity ID to which this alias belongs.
+This field is deprecated, use canonical_id.`,
+		},
+		"canonical_id": {
+			Type:        framework.TypeString,
+			Description: "Entity ID to which this alias belongs",
+		},
+		"mount_accessor": {
+			Type:        framework.TypeString,
+			Description: "Mount accessor to which this alias belongs to; unused for a modify",
+		},
+		"name": {
+			Type:        framework.TypeString,
+			Description: "Name of the alias; unused for a modify",
+		},
+		"custom_metadata": {
+			Type:        framework.TypeKVPairs,
+			Description: "User provided key-value pairs",
 		},
 	}
 }
@@ -239,7 +243,6 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 			return logical.ErrorResponse("'id' or 'mount_accessor' and 'name' must be provided"), nil
 		}
 
-		// Look up the alias by factors; if it's found it's an update
 		mountEntry := i.router.MatchingMountByAccessor(mountAccessor)
 		if mountEntry == nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
@@ -247,22 +250,30 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 		if mountEntry.NamespaceID != ns.ID {
 			return logical.ErrorResponse("matching mount is in a different namespace than request"), logical.ErrPermissionDenied
 		}
-		alias, err := i.MemDBAliasByFactors(mountAccessor, name, true, false)
-		if err != nil {
-			return nil, err
-		}
-		if alias != nil {
-			if alias.NamespaceID != ns.ID {
-				return logical.ErrorResponse("cannot modify aliases across namespaces"), logical.ErrPermissionDenied
-			}
-			return i.handleAliasUpdate(ctx, canonicalID, name, mountAccessor, alias, customMetadata)
-		}
-		// At this point we know it's a new creation request
-		return i.handleAliasCreate(ctx, canonicalID, name, mountAccessor, mountEntry.Local, customMetadata)
+
+		localMount := mountEntry.Local
+
+		// Look up the alias by factors; if it's found it's an update
+		return i.handleAliasCreateUpdateCommon(ctx, ns, mountAccessor, name, canonicalID, customMetadata, localMount, "")
 	}
 }
 
-func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name, mountAccessor string, local bool, customMetadata map[string]string) (*logical.Response, error) {
+func (i *IdentityStore) handleAliasCreateUpdateCommon(ctx context.Context, ns *namespace.Namespace, mountAccessor string, name string, canonicalID string, customMetadata map[string]string, localMount bool, scimClientID string) (*logical.Response, error) {
+	alias, err := i.MemDBAliasByFactors(mountAccessor, name, true, false)
+	if err != nil {
+		return nil, err
+	}
+	if alias != nil {
+		if alias.NamespaceID != ns.ID {
+			return logical.ErrorResponse("cannot modify aliases across namespaces"), logical.ErrPermissionDenied
+		}
+		return i.handleAliasUpdate(ctx, canonicalID, name, mountAccessor, alias, customMetadata)
+	}
+	// At this point we know it's a new creation request
+	return i.handleAliasCreate(ctx, canonicalID, name, mountAccessor, localMount, customMetadata, scimClientID)
+}
+
+func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name, mountAccessor string, local bool, customMetadata map[string]string, scimClientID string) (*logical.Response, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -326,6 +337,7 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name
 			Name:           name,
 			CustomMetadata: customMetadata,
 			CanonicalID:    entity.ID,
+			ScimClientID:   scimClientID,
 		}
 		err = i.sanitizeAlias(ctx, alias)
 		if err != nil {

@@ -9,6 +9,7 @@ import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { tracked } from '@glimmer/tracking';
 
 import type LdapRoleModel from 'vault/models/ldap/role';
 import { Breadcrumb } from 'vault/vault/app-types';
@@ -25,6 +26,9 @@ export default class LdapRoleDetailsPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service('app-router') declare readonly router: RouterService;
   @service declare readonly pagination: PaginationService;
+
+  @tracked showConfirmDeleteModal = false;
+  @tracked showConfirmRotateModal = false;
 
   @action
   async delete() {
