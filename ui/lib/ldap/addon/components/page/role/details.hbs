@@ -2,55 +2,37 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-
-<PageHeader as |p|>
-  <p.top>
+<Page::Header @title={{@model.name}}>
+  <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-header-title>
-      {{@model.name}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-
-<Toolbar>
-  <ToolbarActions aria-label="actions for role {{@role.id}}">
-    {{#if @model.canDelete}}
-      <ConfirmAction
-        @buttonText="Delete role"
-        class="toolbar-button"
-        @buttonColor="secondary"
-        @onConfirmAction={{this.delete}}
-        data-test-delete
-      />
-      <div class="toolbar-separator"></div>
-    {{/if}}
+  </:breadcrumbs>
+  <:actions>
+    <Hds::Dropdown as |D|>
+      <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
+      {{#if @model.canEdit}}
+        <D.Interactive @icon="edit" @route="roles.role.edit" data-test-popup-menu="Edit role">Edit role</D.Interactive>
+      {{/if}}
+      {{#if @model.canRotateStaticCreds}}
+        <D.Interactive
+          @icon="rotate-cw"
+          {{on "click" (fn (mut this.showConfirmRotateModal) true)}}
+          data-test-popup-menu="Rotate credentials"
+        >Rotate credentials</D.Interactive>
+      {{/if}}
+      {{#if @model.canDelete}}
+        <D.Interactive
+          @color="critical"
+          @icon="trash"
+          {{on "click" (fn (mut this.showConfirmDeleteModal) true)}}
+          data-test-popup-menu="Delete role"
+        >Delete role</D.Interactive>
+      {{/if}}
+    </Hds::Dropdown>
     {{#if @model.canReadCreds}}
-      <ToolbarLink @route="roles.role.credentials" data-test-button="Get credentials">
-        Get credentials
-      </ToolbarLink>
+      <Hds::Button @text="Get credentials" @route="roles.role.credentials" data-test-button="Get credentials" />
     {{/if}}
-    {{#if @model.canRotateStaticCreds}}
-      <ConfirmAction
-        @buttonText="Rotate credentials"
-        class="toolbar-button"
-        @buttonColor="secondary"
-        @confirmTitle="Rotate credentials?"
-        @confirmMessage="When manually rotating credentials, the rotation period will start over."
-        @modalColor="warning"
-        @isRunning={{this.rotateCredentials.isRunning}}
-        @onConfirmAction={{perform this.rotateCredentials}}
-        data-test-rotate-credentials
-      />
-    {{/if}}
-    {{#if @model.canEdit}}
-      <ToolbarLink @route="roles.role.edit" data-test-edit>
-        Edit role
-      </ToolbarLink>
-    {{/if}}
-  </ToolbarActions>
-</Toolbar>
+  </:actions>
+</Page::Header>
 
 {{#each @model.displayFields as |field|}}
   {{#let (get @model field.name) as |value|}}
@@ -61,3 +43,23 @@
     />
   {{/let}}
 {{/each}}
+
+{{#if this.showConfirmDeleteModal}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="You will not be able to recover it later."
+    @confirmTitle="Are you sure?"
+    @onClose={{fn (mut this.showConfirmDeleteModal) false}}
+    @onConfirm={{this.delete}}
+  />
+{{/if}}
+
+{{#if this.showConfirmRotateModal}}
+  <ConfirmModal
+    @color="warning"
+    @confirmMessage="When manually rotating credentials, the rotation period will start over."
+    @confirmTitle="Rotate credentials?"
+    @onClose={{fn (mut this.showConfirmRotateModal) false}}
+    @onConfirm={{perform this.rotateCredentials}}
+  />
+{{/if}}

@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
+import { tracked } from '@glimmer/tracking';
 
 import type LdapLibraryModel from 'vault/models/ldap/library';
 import { Breadcrumb } from 'vault/vault/app-types';
@@ -21,6 +22,8 @@ interface Args {
 export default class LdapLibraryDetailsPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service('app-router') declare readonly router: RouterService;
+
+  @tracked showConfirmModal = false;
 
   @action
   async delete() {
