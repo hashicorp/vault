@@ -50,8 +50,8 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/tink-crypto/tink-go/v2 v2.2.0
 	go.uber.org/atomic v1.11.0
-	golang.org/x/crypto v0.44.0
-	golang.org/x/net v0.46.0
+	golang.org/x/crypto v0.45.0
+	golang.org/x/net v0.47.0
 	golang.org/x/text v0.31.0
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.5

@@ -1,0 +1,3 @@
+```release-note:bug
+ui/pki: Fix handling of values that contain commas in list fields like `crl_distribution_points`.
+```
