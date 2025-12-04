@@ -43,7 +43,7 @@ module('Integration | Component | page/pki-tidy-auto-settings', function (hooks)
     await this.renderComponent();
 
     assert.dom('[data-test-breadcrumbs] li').exists({ count: 4 }, 'an item exists for each breadcrumb');
-    assert.dom('[data-test-header-title]').hasText('Automatic Tidy Configuration', 'title is correct');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Automatic Tidy Configuration', 'title is correct');
     assert
       .dom('[data-test-pki-edit-tidy-auto-link]')
       .hasText('Edit auto-tidy', 'toolbar edit link has correct text');

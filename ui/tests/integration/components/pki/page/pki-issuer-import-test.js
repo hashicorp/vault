@@ -39,7 +39,7 @@ module('Integration | Component | page/pki-issuer-import', function (hooks) {
     assert.expect(3);
 
     await this.renderComponent();
-    assert.dom(GENERAL.title).hasText('Import a CA');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Import a CA');
 
     const pem_bundle = 'dummy-pem-bundle';
     await click(GENERAL.textToggle);
@@ -47,7 +47,7 @@ module('Integration | Component | page/pki-issuer-import', function (hooks) {
     await click(PKI_CONFIGURE_CREATE.importSubmit);
 
     assert.true(this.importStub.calledWith(this.backend, { pem_bundle }), 'API called with correct params');
-    assert.dom(GENERAL.title).hasText('View imported items');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View imported items');
   });
 
   test('it does not update title if API response is an error', async function (assert) {
@@ -56,11 +56,13 @@ module('Integration | Component | page/pki-issuer-import', function (hooks) {
     this.importStub.rejects(getErrorResponse());
 
     await this.renderComponent();
-    assert.dom(GENERAL.title).hasText('Import a CA');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Import a CA');
     // Fill in
     await click(GENERAL.textToggle);
     await fillIn(GENERAL.maskedInput, 'dummy-pem-bundle');
     await click(PKI_CONFIGURE_CREATE.importSubmit);
-    assert.dom(GENERAL.title).hasText('Import a CA', 'title does not change if response is unsuccessful');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText('Import a CA', 'title does not change if response is unsuccessful');
   });
 });

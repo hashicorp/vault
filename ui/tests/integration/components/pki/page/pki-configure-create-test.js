@@ -40,7 +40,7 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
       this.context
     );
     assert.dom(GENERAL.breadcrumbs).exists();
-    assert.dom(GENERAL.title).hasText('Configure PKI');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Configure PKI');
     assert.dom(PKI_CONFIGURE_CREATE.option).exists({ count: 3 });
     assert.dom(GENERAL.cancelButton).exists('Cancel link is shown');
     assert.dom(GENERAL.submitButton).isDisabled('Done button is disabled');
