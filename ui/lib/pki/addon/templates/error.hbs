@@ -3,27 +3,21 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
+<Page::Header @icon="file-text" @title={{this.title}}>
+  <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      <Icon @name="file-text" @size="24" class="has-text-grey-light" />
-      {{this.title}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-<div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless">
-  <nav class="tabs" aria-label="secret tabs">
-    <ul>
-      {{#each this.tabs as |oTab|}}
-        <LinkTo @route={{oTab.route}} data-test-tab={{oTab.route}}>
-          {{oTab.label}}
-        </LinkTo>
-      {{/each}}
-    </ul>
-  </nav>
-</div>
+  </:breadcrumbs>
+  <:tabs>
+    <nav class="tabs" aria-label="secret tabs">
+      <ul>
+        {{#each this.tabs as |oTab|}}
+          <LinkTo @route={{oTab.route}} data-test-tab={{oTab.route}}>
+            {{oTab.label}}
+          </LinkTo>
+        {{/each}}
+      </ul>
+    </nav>
+  </:tabs>
+</Page::Header>
 
 <Page::Error @error={{this.model}} />

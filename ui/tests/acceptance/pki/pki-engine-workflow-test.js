@@ -236,7 +236,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/roles/create`);
       assert.dom(GENERAL.breadcrumbs).exists({ count: 1 }, 'breadcrumbs are rendered');
       assert.dom(GENERAL.breadcrumb).exists({ count: 4 }, 'Shows 4 breadcrumbs');
-      assert.dom(GENERAL.title).hasText('Create a PKI Role');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a PKI Role');
 
       await fillIn(GENERAL.inputByAttr('name'), roleName);
       await click(GENERAL.submitButton);
@@ -250,7 +250,8 @@ module('Acceptance | pki workflow', function (hooks) {
         `/vault/secrets-engines/${this.mountPath}/pki/roles/${roleName}/details`
       );
       assert.dom(GENERAL.breadcrumb).exists({ count: 4 }, 'Shows 4 breadcrumbs');
-      assert.dom(GENERAL.title).hasText(`PKI Role ${roleName}`);
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('PKI Role');
+      assert.dom(GENERAL.hdsPageHeaderSubtitle).hasText(roleName);
     });
   });
 
@@ -371,7 +372,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(PKI_KEYS.keyDeleteButton).doesNotExist('Delete key button is not shown');
       await click(PKI_KEYS.keyEditLink);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/edit`);
-      assert.dom(GENERAL.title).hasText('Edit Key');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Key');
       await click(GENERAL.cancelButton);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/details`);
     });
@@ -436,7 +437,7 @@ module('Acceptance | pki workflow', function (hooks) {
         currentURL().match(`/vault/secrets-engines/${this.mountPath}/pki/issuers/.+/details`),
         `/vault/secrets-engines/${this.mountPath}/pki/issuers/my-issuer/details`
       );
-      assert.dom(GENERAL.title).hasText('View Issuer Certificate');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View Issuer Certificate');
 
       ['Certificate', 'CA Chain', 'Common name', 'Issuer name', 'Issuer ID', 'Default key ID'].forEach(
         (label) => {

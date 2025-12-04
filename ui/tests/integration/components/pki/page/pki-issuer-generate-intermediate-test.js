@@ -41,7 +41,7 @@ module('Integration | Component | page/pki-issuer-generate-intermediate', functi
     assert.expect(4);
 
     await this.renderComponent();
-    assert.dom(GENERAL.title).hasText('Generate intermediate CSR');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Generate intermediate CSR');
 
     const { backend } = this;
     const type = 'internal';
@@ -61,7 +61,7 @@ module('Integration | Component | page/pki-issuer-generate-intermediate', functi
       'Capabilities checked for api path'
     );
     assert.true(this.generateStub.calledWith(type, backend, payload), 'API called with correct params');
-    assert.dom(GENERAL.title).hasText('View Generated CSR');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View Generated CSR');
   });
 
   test('it does not update title if API response is an error', async function (assert) {
@@ -70,13 +70,13 @@ module('Integration | Component | page/pki-issuer-generate-intermediate', functi
     this.generateStub.rejects(getErrorResponse({ errors: ['API returns this error'] }, 403));
 
     await this.renderComponent();
-    assert.dom(GENERAL.title).hasText('Generate intermediate CSR');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Generate intermediate CSR');
     // Fill in
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
     await fillIn(GENERAL.inputByAttr('common_name'), 'foobar');
     await click('[data-test-submit]');
     assert
-      .dom(GENERAL.title)
+      .dom(GENERAL.hdsPageHeaderTitle)
       .hasText('Generate intermediate CSR', 'title does not change if response is unsuccessful');
   });
 });
