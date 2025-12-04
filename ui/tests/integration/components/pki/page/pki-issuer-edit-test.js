@@ -54,7 +54,9 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
         usage: 'read-only,issuing-certificates,ocsp-signing',
         manual_chain: 'issuer_ref',
         issuing_certificates: ['http://localhost', 'http://localhost:8200'],
-        crl_distribution_points: 'http://localhost',
+        crl_distribution_points: [
+          'ldap://MYSERVER1/CN=Office,OU=Sales,OU=Fabrikam,O=Contoso Sales,C=US?certificateRevocationList',
+        ],
         ocsp_servers: 'http://localhost',
       },
     });
@@ -86,11 +88,11 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
     assert.dom(selectors.usageCrl).isNotChecked('Usage signing crls is not checked');
     assert.dom(selectors.usageOcsp).isChecked('Usage signing ocsps is checked');
     assert.dom(selectors.manualChain).hasValue(this.model.manualChain, 'Manual chain field populates');
-    const certUrls = this.model.issuingCertificates.split(',');
+    const certUrls = this.model.issuingCertificates;
     assert.dom(selectors.certUrl1).hasValue(certUrls[0], 'Issuing certificate populates');
     assert.dom(selectors.certUrl2).hasValue(certUrls[1], 'Issuing certificate populates');
-    const crlDistributionPoints = this.model.crlDistributionPoints.split(',');
-    assert.dom(selectors.crlDist).hasValue(crlDistributionPoints[0], 'Crl distribution points populate');
+    const [crlDistributionPoints] = this.model.crlDistributionPoints;
+    assert.dom(selectors.crlDist).hasValue(crlDistributionPoints, 'Crl distribution points populate');
     const ocspServers = this.model.ocspServers.split(',');
     assert.dom(selectors.ocspServers).hasValue(ocspServers[0], 'Ocsp servers populate');
   });
@@ -104,9 +106,9 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
     assert.ok(this.transitionCalled(), 'Transitions to details route on cancel');
     assert.strictEqual(this.model.issuerName, 'foo-bar', 'Issuer name rolled back');
     assert.strictEqual(this.model.usage, 'read-only,issuing-certificates,ocsp-signing', 'Usage rolled back');
-    assert.strictEqual(
+    assert.propEqual(
       this.model.issuingCertificates,
-      'http://localhost,http://localhost:8200',
+      ['http://localhost', 'http://localhost:8200'],
       'Issuing certificates rolled back'
     );
   });
@@ -122,9 +124,9 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
         'read-only,issuing-certificates,ocsp-signing,crl-signing',
         'Updated usage sent in POST request'
       );
-      assert.strictEqual(
+      assert.propEqual(
         data.issuing_certificates,
-        'http://localhost:8200',
+        ['http://localhost:8200'],
         'Updated issuing certificates sent in POST request'
       );
       return { issuer_id: 'test', data };

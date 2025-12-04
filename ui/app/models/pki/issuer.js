@@ -104,21 +104,21 @@ export default class PkiIssuerModel extends Model {
   })
   revocationSignatureAlgorithm;
 
-  @attr('string', {
+  @attr({
     subText:
       'The URL values for the Issuing Certificate field; these are different URLs for the same resource.',
     editType: 'stringArray',
   })
   issuingCertificates;
 
-  @attr('string', {
+  @attr({
     label: 'CRL distribution points',
     subText: 'Specifies the URL values for the CRL Distribution Points field.',
     editType: 'stringArray',
   })
   crlDistributionPoints;
 
-  @attr('string', {
+  @attr({
     label: 'OCSP servers',
     subText: 'Specifies the URL values for the OCSP Servers field.',
     editType: 'stringArray',
