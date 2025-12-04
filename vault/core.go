@@ -4855,3 +4855,7 @@ func (c *Core) SetSealMigrationDone() {
 }
 
 var errRemovedHANode = errors.New("node has been removed from the HA cluster")
+
+func (c *Core) CoreNumber() int {
+	return c.coreNumber
+}
