@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn, triggerKeyEvent } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | string list', function (hooks) {
   setupRenderingTest(hooks);
@@ -136,5 +137,30 @@ module('Integration | Component | string list', function (hooks) {
     assert.dom('[data-test-string-list-input]').exists({ count: 2 }, 'renders 2 inputs');
     assert.dom('[data-test-string-list-input="0"]').hasValue('bar');
     assert.dom('[data-test-string-list-input="1"]').hasValue('');
+  });
+
+  test('it shows a warning when input contains a comma', async function (assert) {
+    await render(
+      hbs`<StringList @inputValue={{this.inputValue}} @onChange={{this.spy}} @attrName="paramA" />`
+    );
+    await fillIn('[data-test-string-list-input="0"]', 'foo,bar');
+    await click('[data-test-string-list-button="add"]');
+    await fillIn('[data-test-string-list-input="1"]', 'no comma');
+    assert
+      .dom(GENERAL.validationWarningByAttr('paramA'))
+      .exists()
+      .hasText(
+        'Input contains a comma. To enter multiple values, use separate rows. If commas are part of your value, disregard this message.'
+      );
+    assert
+      .dom(`[data-test-string-list-row="0"] ${GENERAL.icon('alert-triangle')}`)
+      .exists('input containing comma has an alert icon');
+    assert
+      .dom(`[data-test-string-list-row="1"] ${GENERAL.icon('alert-triangle')}`)
+      .doesNotExist('input without comma does NOT have an alert icon');
+    // Update input to assert warning disappears
+    await fillIn('[data-test-string-list-input="0"]', 'foobar');
+    assert.dom(GENERAL.validationWarningByAttr('paramA')).doesNotExist();
+    assert.dom(GENERAL.icon('alert-triangle')).doesNotExist();
   });
 });
