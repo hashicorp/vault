@@ -1967,6 +1967,9 @@ func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreC
 		localConfig.Seal.SetCore(c)
 	}
 
+	// Set test public keys in the core for tests that call license reloads
+	c.testSetTestPubKeys(localConfig.LicensingConfig.AdditionalPublicKeys)
+
 	return cleanupFunc, c, localConfig, handler
 }
 
