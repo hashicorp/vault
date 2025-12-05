@@ -28,6 +28,8 @@ export interface FieldOptions {
   labelDisabled?: string;
   mapToBoolean?: string;
   isOppositeValue?: boolean;
+  defaultSubText?: string;
+  defaultShown?: string;
 }
 
 export default class FormField {

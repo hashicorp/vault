@@ -11,15 +11,15 @@ import { getOwner } from '@ember/owner';
 import errorMessage from 'vault/utils/error-message';
 
 import type LdapLibraryModel from 'vault/models/ldap/library';
-import type SecretEngineModel from 'vault/models/secret-engine';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
 import type RouterService from '@ember/routing/router-service';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 interface Args {
   libraries: Array<LdapLibraryModel>;
   promptConfig: boolean;
-  backendModel: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   breadcrumbs: Array<Breadcrumb>;
 }
 

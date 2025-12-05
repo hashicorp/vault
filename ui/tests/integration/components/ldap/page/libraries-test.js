@@ -41,7 +41,7 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
       return render(
         hbs`<Page::Libraries
           @promptConfig={{this.promptConfig}}
-          @backendModel={{this.backend}}
+          @secretsEngine={{this.backend}}
           @libraries={{this.libraries}}
           @breadcrumbs={{this.breadcrumbs}}
         />`,

@@ -59,7 +59,7 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
       return render(
         hbs`<Page::Overview
           @promptConfig={{this.promptConfig}}
-          @backendModel={{this.backendModel}}
+          @secretsEngine={{this.backendModel}}
           @roles={{this.roles}}
           @libraries={{this.libraries}}
           @librariesStatus={{(array)}}

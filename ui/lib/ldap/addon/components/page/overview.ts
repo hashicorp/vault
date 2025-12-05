@@ -10,7 +10,7 @@ import { action } from '@ember/object';
 import { restartableTask } from 'ember-concurrency';
 
 import type LdapLibraryModel from 'vault/models/ldap/library';
-import type SecretEngineModel from 'vault/models/secret-engine';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type RouterService from '@ember/routing/router-service';
 import type Store from '@ember-data/store';
 import type { Breadcrumb } from 'vault/vault/app-types';
@@ -20,7 +20,7 @@ import { LdapLibraryAccountStatus } from 'vault/vault/adapters/ldap/library';
 interface Args {
   roles: Array<LdapRoleModel>;
   promptConfig: boolean;
-  backendModel: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   breadcrumbs: Array<Breadcrumb>;
 }
 
@@ -72,7 +72,7 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
   }
 
   fetchLibraries = restartableTask(async () => {
-    const backend = this.args.backendModel.id;
+    const backend = this.args.secretsEngine.id;
     const allLibraries: Array<LdapLibraryModel> = [];
 
     try {
