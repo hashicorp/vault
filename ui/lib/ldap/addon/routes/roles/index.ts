@@ -4,19 +4,17 @@
  */
 
 import LdapRolesRoute from '../roles';
-import { service } from '@ember/service';
-import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
 
-import type Store from '@ember-data/store';
 import type Transition from '@ember/routing/transition';
 import type LdapRoleModel from 'vault/models/ldap/role';
-import type SecretEngineModel from 'vault/models/secret-engine';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import { LdapApplicationModel } from '../application';
 
 interface RouteModel {
-  backendModel: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   promptConfig: boolean;
   roles: Array<LdapRoleModel>;
 }
@@ -26,12 +24,7 @@ interface RouteController extends Controller {
   model: RouteModel;
 }
 
-@withConfig('ldap/config')
 export default class LdapRolesIndexRoute extends LdapRolesRoute {
-  @service declare readonly store: Store; // necessary for @withConfig decorator
-
-  declare promptConfig: boolean;
-
   queryParams = {
     pageFilter: {
       refreshModel: true,
@@ -42,11 +35,11 @@ export default class LdapRolesIndexRoute extends LdapRolesRoute {
   };
 
   model(params: { page?: string; pageFilter: string }) {
-    const backendModel = this.modelFor('application') as SecretEngineModel;
+    const { secretsEngine, promptConfig } = this.modelFor('application') as LdapApplicationModel;
     return hash({
-      backendModel,
-      promptConfig: this.promptConfig,
-      roles: this.lazyQuery(backendModel.id, params, { showPartialError: true }),
+      secretsEngine,
+      promptConfig,
+      roles: this.lazyQuery(secretsEngine.id, params, { showPartialError: true }),
     });
   }
 
@@ -55,7 +48,7 @@ export default class LdapRolesIndexRoute extends LdapRolesRoute {
 
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id, route: 'overview' },
+      { label: resolvedModel.secretsEngine.id, route: 'overview' },
       { label: 'Roles' },
     ];
   }

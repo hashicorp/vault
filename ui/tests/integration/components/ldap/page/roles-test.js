@@ -49,7 +49,7 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
       return render(
         hbs`<Page::Roles
           @promptConfig={{this.promptConfig}}
-          @backendModel={{this.backend}}
+          @secretsEngine={{this.backend}}
           @roles={{this.roles}}
           @breadcrumbs={{this.breadcrumbs}}
           @pageFilter={{this.pageFilter}}

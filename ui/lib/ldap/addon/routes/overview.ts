@@ -5,31 +5,30 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
 
 import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
-import type SecretEngineModel from 'vault/models/secret-engine';
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type LdapLibraryModel from 'vault/models/ldap/library';
 import type Controller from '@ember/controller';
-import type { Breadcrumb } from 'vault/vault/app-types';
-import { LdapLibraryAccountStatus } from 'vault/vault/adapters/ldap/library';
+import type { Breadcrumb } from 'vault/app-types';
+import type { LdapLibraryAccountStatus } from 'vault/adapters/ldap/library';
+import type { LdapApplicationModel } from './application';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
 }
 interface RouteModel {
-  backendModel: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   promptConfig: boolean;
   roles: Array<LdapRoleModel>;
   libraries: Array<LdapLibraryModel>;
   librariesStatus: Array<LdapLibraryAccountStatus>;
 }
 
-@withConfig('ldap/config')
 export default class LdapOverviewRoute extends Route {
   @service declare readonly store: Store;
   @service declare readonly secretMountPath: SecretMountPath;
@@ -37,10 +36,11 @@ export default class LdapOverviewRoute extends Route {
   declare promptConfig: boolean;
 
   async model() {
+    const { promptConfig, secretsEngine } = this.modelFor('application') as LdapApplicationModel;
     const backend = this.secretMountPath.currentPath;
     return hash({
-      promptConfig: this.promptConfig,
-      backendModel: this.modelFor('application'),
+      promptConfig,
+      secretsEngine,
       roles: this.store.query('ldap/role', { backend }).catch(() => []),
     });
   }
@@ -50,7 +50,7 @@ export default class LdapOverviewRoute extends Route {
 
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id },
+      { label: resolvedModel.secretsEngine.id },
     ];
   }
 }

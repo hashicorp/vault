@@ -11,16 +11,16 @@ import errorMessage from 'vault/utils/error-message';
 import { tracked } from '@glimmer/tracking';
 
 import type LdapRoleModel from 'vault/models/ldap/role';
-import type SecretEngineModel from 'vault/models/secret-engine';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
 import type RouterService from '@ember/routing/router-service';
 import type PaginationService from 'vault/services/pagination';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 interface Args {
   roles: Array<LdapRoleModel>;
   promptConfig: boolean;
-  backendModel: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   breadcrumbs: Array<Breadcrumb>;
   pageFilter: string;
 }

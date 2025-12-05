@@ -5,19 +5,19 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
 
 import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 import type LdapLibraryModel from 'vault/models/ldap/library';
-import type SecretEngineModel from 'vault/models/secret-engine';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import type { LdapApplicationModel } from '../application';
 
 interface LdapLibrariesRouteModel {
-  backendModel: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   promptConfig: boolean;
   libraries: Array<LdapLibraryModel>;
 }
@@ -26,19 +26,16 @@ interface LdapLibrariesController extends Controller {
   model: LdapLibrariesRouteModel;
 }
 
-@withConfig('ldap/config')
 export default class LdapLibrariesRoute extends Route {
   @service declare readonly store: Store;
   @service declare readonly secretMountPath: SecretMountPath;
 
-  declare promptConfig: boolean;
-
   model() {
-    const backendModel = this.modelFor('application') as SecretEngineModel;
+    const { secretsEngine, promptConfig } = this.modelFor('application') as LdapApplicationModel;
     return hash({
-      backendModel,
-      promptConfig: this.promptConfig,
-      libraries: this.store.query('ldap/library', { backend: backendModel.id }),
+      secretsEngine,
+      promptConfig,
+      libraries: this.store.query('ldap/library', { backend: secretsEngine.id }),
     });
   }
 
@@ -51,7 +48,7 @@ export default class LdapLibrariesRoute extends Route {
 
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id, route: 'overview', model: resolvedModel.backendModel.id },
+      { label: resolvedModel.secretsEngine.id, route: 'overview', model: resolvedModel.secretsEngine.id },
       { label: 'Libraries' },
     ];
   }
