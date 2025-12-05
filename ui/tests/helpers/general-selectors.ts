@@ -34,6 +34,7 @@ export const GENERAL = {
   confirmButton: '[data-test-confirm-button]', // used most often on modal or confirm popups
   confirmTrigger: '[data-test-confirm-action-trigger]',
   copyButton: '[data-test-copy-button]',
+  revealButton: (label: string) => `[data-test-reveal="${label}"] button`, // intended for Hds::Reveal components
   // there should only be one submit button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
@@ -169,7 +170,8 @@ export const GENERAL = {
   },
 
   /* ────── Cards ────── */
-  cardContainer: (title: string) => `[data-test-card-container="${title}"]`,
+  cardContainer: (title: string) =>
+    title ? `[data-test-card-container="${title}"]` : '[data-test-card-container]',
 
   /* ────── Modals & Flyouts ────── */
   flyout: '[data-test-flyout]',
