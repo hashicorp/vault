@@ -52,7 +52,7 @@ jobs:
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
       VAULT_METADATA: ent
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: Set product version and revision
         # If the Vault version and revision are not provided as workflow inputs, incase of
         # testing local artifact, the environment variables ENOS_VAR_vault_product_version
