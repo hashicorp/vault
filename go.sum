@@ -1421,6 +1421,8 @@ github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.14 h1:oK4OQ5
 github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.14/go.mod h1:fWxrv9YkAMqtsISde5mcutoMvuiH4kyg1AlDzzmqRh8=
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.13 h1:NGBZnF+yPRZ3gjFl69Y2m58/U0iyB2oH9HaznL9tekA=
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.13/go.mod h1:4Xb+6d8VPeDcUNuh4toPqJlDpkajeJyIQeg36TtWhKw=
+github.com/hashicorp/go-kms-wrapping/wrappers/huaweicloudkms/v2 v2.0.2 h1:6HzlZbttwtIFnxj88M+Yb1WNscZuYU8zhe9CWf0mShI=
+github.com/hashicorp/go-kms-wrapping/wrappers/huaweicloudkms/v2 v2.0.2/go.mod h1:IgyKwEoo7RT2H1qBZEkzZAzM/td2JJsMz0l9qIKlNp8=
 github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.9 h1:rlKOPHzZ41QeV/H6UIX2wVkPhLzVK+nKhLRIbIAZ0Yc=
 github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.9/go.mod h1:pHJfTvq97FAKCWxIJOHZWQmVfRXmUN6tmgEcgj3nC+M=
 github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.13 h1:UuDeq3nr0e+H9CrZM3dvpDGkWFSJYTtuTqVekn2za2k=
@@ -1608,6 +1610,8 @@ github.com/hashicorp/yamux v0.1.2/go.mod h1:C+zze2n6e/7wshOZep2A70/aQU6QBRWJO/G6
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/huandu/xstrings v1.5.0 h1:2ag3IFq9ZDANvthTwTiqSSZLjDc+BedvHPAp5tJy2TI=
 github.com/huandu/xstrings v1.5.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
+github.com/huaweicloud/golangsdk v0.0.0-20210831081626-d823fe11ceba h1:KFikP/B8lypq9FTWlxm366g0hVsnLBIV6EwAS4SQcKw=
+github.com/huaweicloud/golangsdk v0.0.0-20210831081626-d823fe11ceba/go.mod h1:fcOI5u+0f62JtJd7zkCch/Z57BNC6bhqb32TKuiF4r0=
 github.com/iancoleman/strcase v0.2.0/go.mod h1:iwCmte+B7n89clKwxIoIXy/HfoL7AsD47ZCWhYzw7ho=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/ianlancetaylor/demangle v0.0.0-20200824232613-28f6c0f3b639/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
@@ -2333,6 +2337,7 @@ golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586/go.mod h1:yigFU9vqHzYiE8U
 golang.org/x/crypto v0.0.0-20190923035154-9ee001bba392/go.mod h1:/lpIB1dKB+9EgE3H3cr1v9wB50oz8l4C4h62xy7jSTY=
 golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
 golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20201203163018-be400aefbc4c/go.mod h1:jdWPYTVW3xRLrWPugEBEK3UY2ZEsg3UU495nc5E+M+I=
