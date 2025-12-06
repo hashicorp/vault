@@ -431,6 +431,233 @@ func TestBackend_basic(t *testing.T) {
 	assertEvent(t, "database/role-delete", "plugin-role-test", "roles/plugin-role-test")
 }
 
+func TestBackend_basicWithAtRole(t *testing.T) {
+	cluster, sys := getClusterPostgresDB(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+	eventSender := logical.NewMockEventSender()
+	config.EventsSender = eventSender
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
+	t.Cleanup(cleanup)
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url": connURL,
+		"plugin_name":    "postgresql-database-plugin",
+		"allowed_roles":  []string{"plugin-role-@test"},
+	}
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Create a role
+	data = map[string]interface{}{
+		"db_name":             "plugin-test",
+		"creation_statements": testRole,
+		"max_ttl":             "10m",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/plugin-role-@test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+	// Get creds
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "creds/plugin-role-@test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	credsResp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (credsResp != nil && credsResp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+	}
+
+	// Update the role with no max ttl
+	data = map[string]interface{}{
+		"db_name":             "plugin-test",
+		"creation_statements": testRole,
+		"default_ttl":         "5m",
+		"max_ttl":             0,
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/plugin-role-@test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+	// Get creds
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "creds/plugin-role-@test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (credsResp != nil && credsResp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+	}
+	// Test for #3812
+	if credsResp.Secret.TTL != 5*time.Minute {
+		t.Fatalf("unexpected TTL of %d", credsResp.Secret.TTL)
+	}
+	// Update the role with a max ttl
+	data = map[string]interface{}{
+		"db_name":             "plugin-test",
+		"creation_statements": testRole,
+		"default_ttl":         "5m",
+		"max_ttl":             "10m",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/plugin-role-@test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Get creds and revoke when the role stays in existence
+	{
+		data = map[string]interface{}{}
+		req = &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "creds/plugin-role-@test",
+			Storage:   config.StorageView,
+			Data:      data,
+		}
+		credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (credsResp != nil && credsResp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+		}
+		// Test for #3812
+		if credsResp.Secret.TTL != 5*time.Minute {
+			t.Fatalf("unexpected TTL of %d", credsResp.Secret.TTL)
+		}
+		if !testCredsExist(t, credsResp.Data, connURL) {
+			t.Fatalf("Creds should exist")
+		}
+
+		// Revoke creds
+		resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			Operation: logical.RevokeOperation,
+			Storage:   config.StorageView,
+			Secret: &logical.Secret{
+				InternalData: map[string]interface{}{
+					"secret_type": "creds",
+					"username":    credsResp.Data["username"],
+					"role":        "plugin-role-@test",
+				},
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+
+		if testCredsExist(t, credsResp.Data, connURL) {
+			t.Fatalf("Creds should not exist")
+		}
+	}
+
+	// Get creds and revoke using embedded revocation data
+	{
+		data = map[string]interface{}{}
+		req = &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "creds/plugin-role-@test",
+			Storage:   config.StorageView,
+			Data:      data,
+		}
+		credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (credsResp != nil && credsResp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+		}
+		if !testCredsExist(t, credsResp.Data, connURL) {
+			t.Fatalf("Creds should exist")
+		}
+
+		// Delete role, forcing us to rely on embedded data
+		req = &logical.Request{
+			Operation: logical.DeleteOperation,
+			Path:      "roles/plugin-role-@test",
+			Storage:   config.StorageView,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+
+		// Revoke creds
+		resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			Operation: logical.RevokeOperation,
+			Storage:   config.StorageView,
+			Secret: &logical.Secret{
+				InternalData: map[string]interface{}{
+					"secret_type":           "creds",
+					"username":              credsResp.Data["username"],
+					"role":                  "plugin-role-@test",
+					"db_name":               "plugin-test",
+					"revocation_statements": nil,
+				},
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+
+		if testCredsExist(t, credsResp.Data, connURL) {
+			t.Fatalf("Creds should not exist")
+		}
+	}
+	assert.Equal(t, 9, len(eventSender.Events))
+
+	assertEvent := func(t *testing.T, typ, name, path string) {
+		t.Helper()
+		assert.Equal(t, typ, string(eventSender.Events[0].Type))
+		assert.Equal(t, name, eventSender.Events[0].Event.Metadata.AsMap()["name"])
+		assert.Equal(t, path, eventSender.Events[0].Event.Metadata.AsMap()["path"])
+		eventSender.Events = slices.Delete(eventSender.Events, 0, 1)
+	}
+
+	assertEvent(t, "database/config-write", "plugin-test", "config/plugin-test")
+	for i := 0; i < 3; i++ {
+		assertEvent(t, "database/role-update", "plugin-role-@test", "roles/plugin-role-@test")
+		assertEvent(t, "database/creds-create", "plugin-role-@test", "creds/plugin-role-@test")
+	}
+	assertEvent(t, "database/creds-create", "plugin-role-@test", "creds/plugin-role-@test")
+	assertEvent(t, "database/role-delete", "plugin-role-@test", "roles/plugin-role-@test")
+}
+
 // singletonDBFactory allows us to reach into the internals of a databaseBackend
 // even when it's been created by a call to the sys mount. The factory method
 // satisfies the logical.Factory type, and lazily creates the databaseBackend
