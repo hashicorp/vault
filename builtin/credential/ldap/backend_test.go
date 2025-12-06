@@ -1472,6 +1472,8 @@ func testAccStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 	}
 }
 
+// TestLdapAuthBackend_ConfigUpgrade tests that older stored configurations are
+// properly upgraded to the latest configuration structure when read.
 func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 	var resp *logical.Response
 	var err error
@@ -1544,6 +1546,8 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			DerefAliases:             "never",
 			MaximumPageSize:          1000,
 		},
+		RotationSchema:         schemaOpenLDAP,
+		RotationCredentialType: credentialTypePassword,
 	}
 	if constants.IsEnterprise {
 		exp.TokenParams.AliasMetadata = make(map[string]string)
