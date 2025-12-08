@@ -839,6 +839,9 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	if entity == nil {
 		return false, errors.New("entity is nil")
 	}
+	if !i.disableLowerCasedNames {
+		entity.Name = strings.ToLower(entity.Name)
+	}
 
 	if entity.NamespaceID == "" {
 		entity.NamespaceID = namespace.RootNamespaceID
@@ -852,6 +855,10 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 
 	var localAliasesToDrop []*identity.Alias
 	for index, alias := range entity.Aliases {
+		if !i.disableLowerCasedNames {
+			alias.Name = strings.ToLower(alias.Name)
+		}
+
 		// Verify that alias is not associated to a different one already
 		aliasByFactors, err := i.MemDBAliasByFactorsInTxn(txn, alias.MountAccessor, alias.Name, false, false)
 		if err != nil {
@@ -1230,6 +1237,10 @@ func (i *IdentityStore) MemDBUpsertAliasInTxn(txn *memdb.Txn, alias *identity.Al
 
 	if alias == nil {
 		return fmt.Errorf("alias is nil")
+	}
+
+	if !i.disableLowerCasedNames {
+		alias.Name = strings.ToLower(alias.Name)
 	}
 
 	if alias.NamespaceID == "" {
@@ -2403,6 +2414,10 @@ func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, gr
 
 	if group == nil {
 		return fmt.Errorf("group is nil")
+	}
+
+	if !i.disableLowerCasedNames {
+		group.Name = strings.ToLower(group.Name)
 	}
 
 	// Increment the modify index of the group
