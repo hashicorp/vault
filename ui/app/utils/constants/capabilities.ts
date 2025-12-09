@@ -48,4 +48,9 @@ export const PATH_MAP = {
   pkiIssue: apiPath`${'backend'}/issue/${'id'}`,
   pkiSign: apiPath`${'backend'}/sign/${'id'}`,
   pkiSignVerbatim: apiPath`${'backend'}/sign-verbatim/${'id'}`,
+  ldapStaticRole: apiPath`${'backend'}/static-role/${'name'}`,
+  ldapDynamicRole: apiPath`${'backend'}/role/${'name'}`,
+  ldapRotateStaticRole: apiPath`${'backend'}/rotate-role/${'name'}`,
+  ldapStaticRoleCreds: apiPath`${'backend'}/static-cred/${'name'}`,
+  ldapDynamicRoleCreds: apiPath`${'backend'}/creds/${'name'}`,
 };

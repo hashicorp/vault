@@ -4,7 +4,6 @@
  */
 
 import LdapRolesRoute from '../roles';
-import { hash } from 'rsvp';
 import { ldapBreadcrumbs, roleRoutes } from 'ldap/utils/ldap-breadcrumbs';
 
 import type { Breadcrumb } from 'vault/vault/app-types';
@@ -42,15 +41,21 @@ export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {
     },
   };
 
-  model(params: RouteParams) {
+  async model(params: RouteParams) {
+    const { page, pageFilter: filter } = params;
     const { secretsEngine } = this.modelFor('application') as LdapApplicationModel;
-    const { path_to_role, type } = params;
+    const { path_to_role, type } = params as { path_to_role: string; type: string };
     const roleAncestry = { path_to_role, type };
-    return hash({
+    const { roles, capabilities } = await this.fetchRolesAndCapabilities(
+      { page: Number(page) || 1, filter },
+      roleAncestry
+    );
+    return {
       secretsEngine,
       roleAncestry,
-      roles: this.lazyQuery(secretsEngine.id, params, { roleAncestry }),
-    });
+      roles,
+      capabilities,
+    };
   }
 
   setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {

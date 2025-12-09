@@ -8,7 +8,7 @@ import { Response } from 'miragejs';
 export default function (server) {
   const query = (req) => {
     const { name, backend } = req.params;
-    return name ? { name } : { backend };
+    return name ? { name: decodeURIComponent(name) } : { backend };
   };
   const getRecord = (schema, req, dbKey) => {
     const record = schema.db[dbKey].findBy(query(req));
@@ -58,6 +58,17 @@ export default function (server) {
     return getRecord(schema, req, dbKey);
   };
 
+  const deleteRecord = (schema, req, type) => {
+    const dbKey = type ? 'ldapRoles' : 'ldapLibraries';
+    const lookup = type ? { type, ...query(req) } : query(req);
+    const record = schema.db[dbKey].findBy(lookup);
+    if (record) {
+      schema.db[dbKey].remove(lookup);
+      return new Response(204);
+    }
+    return new Response(404, {}, { errors: [] });
+  };
+
   // config
   server.post('/:backend/config', (schema, req) => createOrUpdateRecord(schema, req, 'ldapConfigs'));
   server.get('/:backend/config', (schema, req) => getRecord(schema, req, 'ldapConfigs'));
@@ -77,6 +88,8 @@ export default function (server) {
   server.get('/:backend/creds/:name', (schema) => ({
     data: schema.db.ldapCredentials.firstOrCreate({ type: 'dynamic' }),
   }));
+  server.delete('/:backend/static-role/*name', (schema, req) => deleteRecord(schema, req, 'static'));
+  server.delete('/:backend/role/*name', (schema, req) => deleteRecord(schema, req, 'dynamic'));
   // libraries
   server.post('/:backend/library/:name', (schema, req) => createOrUpdateRecord(schema, req, 'ldapLibraries'));
   server.get('/:backend/library/*name', (schema, req) => listOrGetRecord(schema, req));

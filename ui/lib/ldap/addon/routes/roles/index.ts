@@ -4,7 +4,6 @@
  */
 
 import LdapRolesRoute from '../roles';
-import { hash } from 'rsvp';
 
 import type Transition from '@ember/routing/transition';
 import type LdapRoleModel from 'vault/models/ldap/role';
@@ -34,13 +33,16 @@ export default class LdapRolesIndexRoute extends LdapRolesRoute {
     },
   };
 
-  model(params: { page?: string; pageFilter: string }) {
+  async model(params: { page?: string; pageFilter: string }) {
+    const { page, pageFilter: filter } = params;
     const { secretsEngine, promptConfig } = this.modelFor('application') as LdapApplicationModel;
-    return hash({
+    const { roles, capabilities } = await this.fetchRolesAndCapabilities({ page: Number(page) || 1, filter });
+    return {
       secretsEngine,
       promptConfig,
-      roles: this.lazyQuery(secretsEngine.id, params, { showPartialError: true }),
-    });
+      roles,
+      capabilities,
+    };
   }
 
   setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {

@@ -6,6 +6,7 @@
 {{#let this.model.roleAncestry.type this.model.roleAncestry.path_to_role as |roleType path_to_role|}}
   <Page::Roles
     @roles={{this.model.roles}}
+    @capabilities={{this.model.capabilities}}
     @promptConfig={{false}}
     @secretsEngine={{this.model.secretsEngine}}
     @breadcrumbs={{this.breadcrumbs}}

@@ -11,7 +11,6 @@ import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { duration } from 'core/helpers/format-duration';
-import { ldapRoleID } from 'vault/adapters/ldap/role';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Role::Details', function (hooks) {
@@ -20,26 +19,22 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.server.post('/sys/capabilities-self', () => ({
-      data: {
-        capabilities: ['root'],
+    this.backend = 'ldap-test';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
+    this.model = {
+      capabilities: {
+        canDelete: true,
+        canEdit: true,
+        canReadCreds: true,
+        canRotateStaticCreds: true,
       },
-    }));
+    };
     this.renderComponent = (type) => {
-      const data = this.server.create('ldap-role', type);
-      data.id = ldapRoleID(type, data.name);
-      const store = this.owner.lookup('service:store');
-      store.pushPayload('ldap/role', {
-        modelName: 'ldap/role',
-        backend: 'ldap-test',
-        type,
-        ...data,
-      });
-      this.model = store.peekRecord('ldap/role', ldapRoleID(type, data.name));
+      this.model.role = this.server.create('ldap-role', type);
       this.breadcrumbs = [
-        { label: this.model.backend, route: 'overview' },
+        { label: this.backend, route: 'overview' },
         { label: 'Roles', route: 'roles' },
-        { label: this.model.name },
+        { label: this.model.role.name },
       ];
       return render(hbs`<Page::Role::Details @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
         owner: this.engine,
@@ -49,14 +44,14 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
 
   test('it should render header with role name and breadcrumbs', async function (assert) {
     await this.renderComponent('static');
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(this.model.name, 'Role name renders in header');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(this.model.role.name, 'Role name renders in header');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(1)')
-      .containsText(this.model.backend, 'Overview breadcrumb renders');
+      .containsText(this.backend, 'Overview breadcrumb renders');
     assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('Roles', 'Roles breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(3)')
-      .containsText(this.model.name, 'Role breadcrumb renders');
+      .containsText(this.model.role.name, 'Role breadcrumb renders');
   });
 
   test('it should render page header dropdown actions', async function (assert) {
@@ -74,12 +69,12 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
       .exists('Rotate credentials action renders for static role');
     assert.dom(GENERAL.menuItem('Edit role')).hasText('Edit role', 'Edit action renders');
 
+    this.model.capabilities.canRotateStaticCreds = false;
     await this.renderComponent('dynamic');
     // defined after render so this.model is defined
-    this.server.delete(`/${this.model.backend}/role/${this.model.name}`, () => {
-      assert.ok(true, 'Request made to delete role');
-      return;
-    });
+    const deleteStub = sinon
+      .stub(this.owner.lookup('service:api').secrets, 'ldapDeleteDynamicRole')
+      .resolves();
     const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
 
     assert
@@ -88,7 +83,12 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
     await click(GENERAL.dropdownToggle('Manage'));
     await click(GENERAL.menuItem('Delete role'));
     await click(GENERAL.confirmButton);
-    assert.ok(
+
+    assert.true(
+      deleteStub.calledWith(this.model.role.name, this.backend),
+      'Delete API called with correct parameters'
+    );
+    assert.true(
       transitionStub.calledWith('vault.cluster.secrets.backend.ldap.roles'),
       'Transitions to roles route on delete success'
     );
@@ -119,7 +119,7 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
         assert
           .dom(`[data-test-row-label="${field.label}"]`)
           .hasText(field.label, `${field.label} label renders`);
-        const modelValue = this.model[field.key];
+        const modelValue = this.model.role[field.key];
         const isDuration = ['TTL', 'Max TTL', 'Rotation period'].includes(field.label);
         const value = isDuration ? duration([modelValue]) : modelValue;
         assert.dom(`[data-test-row-value="${field.label}"]`).hasText(value, `${field.label} value renders`);
