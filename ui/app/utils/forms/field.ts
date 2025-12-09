@@ -30,6 +30,8 @@ export interface FieldOptions {
   isOppositeValue?: boolean;
   defaultSubText?: string;
   defaultShown?: string;
+  example?: string;
+  mode?: string;
 }
 
 export default class FormField {

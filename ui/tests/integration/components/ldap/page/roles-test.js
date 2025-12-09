@@ -9,11 +9,11 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
+import { generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import sinon from 'sinon';
 import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 module('Integration | Component | ldap | Page::Roles', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,36 +21,35 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-
-    this.store = this.owner.lookup('service:store');
-    this.backend = createSecretsEngine(this.store);
-    this.breadcrumbs = generateBreadcrumbs(this.backend.id);
-
-    for (const type of ['static', 'dynamic']) {
-      this.store.pushPayload('ldap/role', {
-        modelName: 'ldap/role',
-        backend: 'ldap-test',
-        type,
-        ...this.server.create('ldap-role', type, { name: `${type}-test` }),
-      });
-    }
-    this.backend = this.store.peekRecord('secret-engine', 'ldap-test');
-    this.roles = this.store.peekAll('ldap/role');
+    this.backend = 'ldap-test';
+    this.secretsEngine = new SecretsEngineResource({ path: this.backend, type: 'ldap' });
+    this.breadcrumbs = generateBreadcrumbs(this.backend);
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
+    this.roles = ['static', 'dynamic'].map((type) =>
+      this.server.create('ldap-role', type, { name: `${type}-test` })
+    );
     this.roles.meta = {
       currentPage: 1,
       pageSize: 10,
       filteredTotal: this.roles.length,
       total: this.roles.length,
     };
+    const getPerms = (type) => ({
+      canDelete: true,
+      canEdit: true,
+      canReadCreds: true,
+      canRotateStaticCreds: type === 'static',
+    });
+    this.capabilities = [getPerms('static'), getPerms('dynamic')];
     this.promptConfig = false;
 
     this.renderComponent = () => {
       return render(
         hbs`<Page::Roles
           @promptConfig={{this.promptConfig}}
-          @secretsEngine={{this.backend}}
+          @secretsEngine={{this.secretsEngine}}
           @roles={{this.roles}}
+          @capabilities={{this.capabilities}}
           @breadcrumbs={{this.breadcrumbs}}
           @pageFilter={{this.pageFilter}}
         />`,

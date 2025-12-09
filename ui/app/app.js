@@ -88,6 +88,7 @@ export default class App extends Application {
           'flash-messages',
           'auth',
           'api',
+          'capabilities',
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
