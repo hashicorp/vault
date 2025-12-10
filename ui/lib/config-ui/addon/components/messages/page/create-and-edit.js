@@ -26,7 +26,6 @@ import timestamp from 'core/utils/timestamp';
 
 export default class MessagesList extends Component {
   @service('app-router') router;
-  @service pagination;
   @service flashMessages;
   @service customMessages;
   @service api;

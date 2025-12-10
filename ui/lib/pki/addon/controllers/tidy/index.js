@@ -11,7 +11,6 @@ import { service } from '@ember/service';
 const POLL_INTERVAL_MS = 5000;
 
 export default class PkiTidyIndexController extends Controller {
-  @service store;
   @service secretMountPath;
 
   @tracked tidyStatus = null;

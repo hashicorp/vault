@@ -40,9 +40,14 @@ func NewReplicationSetCore(t *testing.T, conf *vault.CoreConfig, opts *vault.Tes
 	}
 
 	r.Builder = func(ctx context.Context, name string, baseLogger hclog.Logger) (testcluster.VaultCluster, error) {
-		conf, opts := teststorage.ClusterSetup(conf, opts, setup)
-		opts.Logger = baseLogger.Named(name)
-		return vault.NewTestCluster(t, conf, opts), nil
+		newconf, newopts := teststorage.ClusterSetup(conf, opts, setup)
+		newopts.Logger = baseLogger.Named(name)
+		if opts.NumCores > 0 {
+			opts.FirstCoreNumber += opts.NumCores
+		} else {
+			opts.FirstCoreNumber += 3
+		}
+		return vault.NewTestCluster(t, newconf, newopts), nil
 	}
 
 	a, err := r.Builder(context.TODO(), "A", r.Logger)

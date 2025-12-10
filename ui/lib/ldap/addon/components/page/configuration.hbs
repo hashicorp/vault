@@ -4,13 +4,13 @@
 }}
 
 <LdapHeader
-  @model={{@model.backendModel}}
+  @model={{@model.secretsEngine}}
   @promptConfig={{@model.promptConfig}}
   @breadcrumbs={{@breadcrumbs}}
   @configRoute="configuration"
 >
   <:toolbarActions>
-    {{#if @model.configModel}}
+    {{#if @model.config}}
       <ConfirmAction
         @buttonText="Rotate root"
         class="toolbar-button"
@@ -22,7 +22,7 @@
         @isRunning={{this.rotateRoot.isRunning}}
       />
     {{/if}}
-    {{#if @model.configModel}}
+    {{#if @model.config}}
       <ToolbarLink @route="configure" data-test-secret-backend-configure>
         Edit configuration
       </ToolbarLink>
@@ -30,16 +30,21 @@
   </:toolbarActions>
 </LdapHeader>
 
-{{#if @model.configModel}}
+{{#if @model.config}}
   {{#each this.defaultFields as |field|}}
-    <InfoTableRow @label={{field.label}} @value={{field.value}} @formatTtl={{field.formatTtl}} @alwaysRender={{true}} />
+    <InfoTableRow
+      @label={{this.label field}}
+      @value={{get @model.config field}}
+      @formatTtl={{includes field (array "request_timeout" "connection_timeout")}}
+      @alwaysRender={{true}}
+    />
   {{/each}}
 
   <h2 class="title is-4 has-top-margin-xl">TLS Connection</h2>
   <hr class="is-marginless" />
 
   {{#each this.connectionFields as |field|}}
-    <InfoTableRow @label={{field.label}} @value={{field.value}} @alwaysRender={{true}} />
+    <InfoTableRow @label={{this.label field}} @value={{get @model.config field}} @alwaysRender={{true}} />
   {{/each}}
 {{else if @model.configError}}
   <Page::Error @error={{@model.configError}} />

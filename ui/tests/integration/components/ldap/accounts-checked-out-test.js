@@ -9,7 +9,6 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import sinon from 'sinon';
 
 module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
@@ -18,17 +17,15 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-
-    this.store = this.owner.lookup('service:store');
+    this.backend = 'ldap-test';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
     this.authStub = sinon.stub(this.owner.lookup('service:auth'), 'authData');
+    this.pathForStub = sinon.stub(this.owner.lookup('service:capabilities'), 'pathFor').returns('test-path');
 
-    this.store.pushPayload('ldap/library', {
-      modelName: 'ldap/library',
-      backend: 'ldap-test',
-      ...this.server.create('ldap-library', { name: 'test-library' }),
+    this.library = this.server.create('ldap-library', {
+      name: 'test-library',
+      completeLibraryName: 'test-library',
     });
-    this.library = this.store.peekRecord('ldap/library', 'test-library');
     this.statuses = [
       {
         account: 'foo.bar',
@@ -40,25 +37,26 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
       { account: 'bar.baz', available: false, library: 'test-library' },
       { account: 'checked.in', available: true, library: 'test-library' },
     ];
-    this.onCheckInSuccess = () => true;
-    this.renderComponent = () => {
-      return render(
-        hbs`
-                    <AccountsCheckedOut
-            @libraries={{array this.library}}
-            @statuses={{this.statuses}}
-            @showLibraryColumn={{this.showLibraryColumn}}
-            @onCheckInSuccess={{this.onCheckInSuccess}} />
-        `,
+    this.capabilities = { 'test-path': { canUpdate: true } };
+    this.onCheckInSuccess = sinon.spy();
+    this.isLoadingStatuses = false;
+    this.showLibraryColumn = false;
+
+    this.renderComponent = () =>
+      render(
+        hbs`<AccountsCheckedOut
+          @libraries={{array this.library}}
+          @capabilities={{this.capabilities}}
+          @statuses={{this.statuses}}
+          @showLibraryColumn={{this.showLibraryColumn}}
+          @onCheckInSuccess={{this.onCheckInSuccess}}
+          @isLoadingStatuses={{this.isLoadingStatuses}}
+        />
+      `,
         {
           owner: this.engine,
         }
       );
-    };
-  });
-
-  hooks.afterEach(function () {
-    this.authStub.restore();
   });
 
   test('it should render empty state when no accounts are checked out', async function (assert) {
@@ -100,7 +98,7 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
   });
 
   test('it should display all accounts when check-in enforcement is disabled on library', async function (assert) {
-    this.library.disable_check_in_enforcement = 'Disabled';
+    this.library.disable_check_in_enforcement = true;
 
     await this.renderComponent();
 
@@ -130,40 +128,25 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
   test('it should check in account', async function (assert) {
     assert.expect(2);
 
-    this.library.disable_check_in_enforcement = 'Disabled';
-    this.onCheckInSuccess = () => assert.ok(true, 'Callback is fired on check-in success');
-
-    this.server.post('/ldap-test/library/test-library/check-in', (schema, req) => {
-      const json = JSON.parse(req.requestBody);
-      assert.deepEqual(
-        json.service_account_names,
-        ['foo.bar'],
-        'Check-in request made with correct account names'
-      );
-    });
+    this.library.disable_check_in_enforcement = true;
+    const apiStub = sinon
+      .stub(this.owner.lookup('service:api').secrets, 'ldapLibraryForceCheckIn')
+      .resolves();
 
     await this.renderComponent();
 
     await click('[data-test-checked-out-account-action="foo.bar"]');
     await click('[data-test-check-in-confirm]');
+
+    assert.true(
+      apiStub.calledWith(this.library.name, this.backend, { service_account_names: ['foo.bar'] }),
+      'Check in request called with correct parameters'
+    );
+    assert.true(this.onCheckInSuccess.called, 'onCheckInSuccess callback was called');
   });
 
   test('it should show loading state when isLoadingStatuses is true', async function (assert) {
-    this.renderComponent = () => {
-      return render(
-        hbs`
-          <AccountsCheckedOut
-            @libraries={{array this.library}}
-            @statuses={{this.statuses}}
-            @showLibraryColumn={{this.showLibraryColumn}}
-            @onCheckInSuccess={{this.onCheckInSuccess}}
-            @isLoadingStatuses={{true}} />
-        `,
-        {
-          owner: this.engine,
-        }
-      );
-    };
+    this.isLoadingStatuses = true;
 
     await this.renderComponent();
 
@@ -174,22 +157,6 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
   });
 
   test('it should not show loading state when isLoadingStatuses is false', async function (assert) {
-    this.renderComponent = () => {
-      return render(
-        hbs`
-          <AccountsCheckedOut
-            @libraries={{array this.library}}
-            @statuses={{this.statuses}}
-            @showLibraryColumn={{this.showLibraryColumn}}
-            @onCheckInSuccess={{this.onCheckInSuccess}}
-            @isLoadingStatuses={{false}} />
-        `,
-        {
-          owner: this.engine,
-        }
-      );
-    };
-
     await this.renderComponent();
 
     assert
@@ -200,19 +167,13 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
 
   test('it should find library by completeLibraryName for hierarchical libraries', async function (assert) {
     // Create a hierarchical library with proper setup
-    this.store.pushPayload('ldap/library', {
-      modelName: 'ldap/library',
-      backend: 'ldap-test',
+    this.library = {
       name: 'sa-prod',
-      path_to_library: 'service-account/',
-      disable_check_in_enforcement: 'Disabled', // Allow all accounts to show
-    });
-    const hierarchicalLibrary = this.store.peekRecord('ldap/library', 'sa-prod');
-    this.hierarchicalLibrary = hierarchicalLibrary; // Make available in template scope
-
+      completeLibraryName: 'service-account/sa-prod',
+      disable_check_in_enforcement: true, // Allow all accounts to show
+    };
     // Mock the auth service to simulate a root user (no entity ID)
     this.authStub.value({ entityId: '' });
-
     // Status should reference the complete library name
     this.statuses = [
       {
@@ -223,21 +184,7 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
         borrower_entity_id: '', // Root user has no entity ID
       },
     ];
-
-    this.renderComponent = () => {
-      return render(
-        hbs`
-          <AccountsCheckedOut
-            @libraries={{array this.hierarchicalLibrary}}
-            @statuses={{this.statuses}}
-            @showLibraryColumn={{true}}
-            @onCheckInSuccess={{this.onCheckInSuccess}} />
-        `,
-        {
-          owner: this.engine,
-        }
-      );
-    };
+    this.showLibraryColumn = true;
 
     await this.renderComponent();
 

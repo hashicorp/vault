@@ -26,3 +26,4 @@ func (c *TestClusterCore) StopPkiCertificateCountConsumerJob() {}
 func (c *TestClusterCore) ResetPkiCertificateCounts()          {}
 func (c *TestClusterCore) RequirePkiCertificateCounts(t testing.TB, expectedIssuedCount, expectedStoredCount int) {
 }
+func (c *Core) testSetTestPubKeys(additionalKeys []interface{}) {}

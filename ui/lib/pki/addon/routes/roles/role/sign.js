@@ -8,7 +8,6 @@ import { service } from '@ember/service';
 import PkiCertificateForm from 'vault/forms/secrets/pki/certificate';
 
 export default class PkiRoleSignRoute extends Route {
-  @service store;
   @service secretMountPath;
 
   model() {

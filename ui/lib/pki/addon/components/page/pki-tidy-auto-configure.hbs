@@ -3,17 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
+<Page::Header @icon="certificate" @title="Configure Automatic Tidy">
+  <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      <Icon @name="certificate" @size="24" class="has-text-grey-light" />
-      Configure Automatic Tidy
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+  </:breadcrumbs>
+</Page::Header>
 
 <PkiTidyForm
   @form={{@form}}

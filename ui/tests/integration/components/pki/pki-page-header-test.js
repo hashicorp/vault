@@ -9,6 +9,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | pki page header test', function (hooks) {
   setupRenderingTest(hooks);
@@ -33,10 +34,8 @@ module('Integration | Component | pki page header test', function (hooks) {
     await render(hbs`<PkiPageHeader @backend={{this.model}} />`, {
       owner: this.engine,
     });
-    assert
-      .dom('[data-test-header-title] [data-test-icon="certificate"]')
-      .exists('Correct icon renders in title');
-    assert.dom('[data-test-header-title]').hasText(this.mount, 'Mount path renders in title');
+    assert.dom(GENERAL.icon('certificate')).exists('Correct icon renders in title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(this.mount, 'Mount path renders in title');
   });
 
   test('it should render tabs', async function (assert) {

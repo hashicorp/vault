@@ -56,11 +56,11 @@ module('Integration | Component | page/pki-issuer-generate-root', function (hook
     await render(hbs`<Page::PkiIssuerGenerateRoot @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
-    assert.dom(GENERAL.title).hasText('Generate root');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Generate root');
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
     await fillIn(GENERAL.inputByAttr('common_name'), 'foobar');
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.title).hasText('View generated root');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View generated root');
   });
 
   test('it does not update title if API response is an error', async function (assert) {
@@ -73,11 +73,13 @@ module('Integration | Component | page/pki-issuer-generate-root', function (hook
     await render(hbs`<Page::PkiIssuerGenerateRoot @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
-    assert.dom(GENERAL.title).hasText('Generate root');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Generate root');
     // Fill in
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
     await fillIn(GENERAL.inputByAttr('common_name'), 'foobar');
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.title).hasText('Generate root', 'title does not change if response is unsuccessful');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText('Generate root', 'title does not change if response is unsuccessful');
   });
 });

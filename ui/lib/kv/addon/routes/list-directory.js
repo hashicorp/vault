@@ -9,7 +9,6 @@ import { pathIsDirectory, breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 import { paginate } from 'core/utils/paginate-list';
 
 export default class KvSecretsListRoute extends Route {
-  @service pagination;
   @service('app-router') router;
   @service secretMountPath;
   @service api;

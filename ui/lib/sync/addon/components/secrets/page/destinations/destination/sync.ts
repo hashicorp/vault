@@ -13,7 +13,6 @@ import { keyIsFolder } from 'core/utils/key-utils';
 import type { Destination } from 'vault/sync';
 import type RouterService from '@ember/routing/router-service';
 import type ApiService from 'vault/services/api';
-import type PaginationService from 'vault/services/pagination';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { SearchSelectOption } from 'vault/app-types';
 
@@ -25,7 +24,6 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly pagination: PaginationService;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);

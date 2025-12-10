@@ -63,9 +63,10 @@
     </div>
   {{/each}}
   {{#if this.indicesWithComma}}
-    <Hds::Alert @type="inline" @color="warning" as |A|>
+    <Hds::Alert @type="inline" @color="warning" data-test-validation-warning={{@attrName}} as |A|>
       <A.Description>
-        Input contains a comma. Please separate values into individual rows.
+        Input contains a comma. To enter multiple values, use separate rows. If commas are part of your value, disregard this
+        message.
       </A.Description>
     </Hds::Alert>
   {{/if}}

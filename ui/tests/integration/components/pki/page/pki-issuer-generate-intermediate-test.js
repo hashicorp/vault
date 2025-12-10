@@ -5,15 +5,12 @@
 
 import { module, test } from 'qunit';
 import { click, fillIn, render } from '@ember/test-helpers';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { Response } from 'miragejs';
-import { v4 as uuidv4 } from 'uuid';
-
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 /**
  * this test is for the page component only. A separate test is written for the form rendered
@@ -21,65 +18,65 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 module('Integration | Component | page/pki-issuer-generate-intermediate', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
-  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.breadcrumbs = [{ label: 'something' }];
-    this.model = this.store.createRecord('pki/action', {
-      actionType: 'generate-csr',
-    });
-    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
-    this.secretMountPath.currentPath = 'pki-component';
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
+    this.backend = 'pki-component';
+    this.secretMountPath = this.owner.lookup('service:secret-mount-path').update(this.backend);
+
+    this.generateStub = sinon
+      .stub(this.owner.lookup('service:api').secrets, 'pkiIssuersGenerateIntermediate')
+      .resolves();
+    this.capabilitiesStub = sinon
+      .stub(this.owner.lookup('service:capabilities'), 'for')
+      .resolves({ canCreate: true });
+
+    this.renderComponent = () =>
+      render(hbs`<Page::PkiIssuerGenerateIntermediate @breadcrumbs={{this.breadcrumbs}} />`, {
+        owner: this.engine,
+      });
   });
 
   test('it renders correct title before and after submit', async function (assert) {
-    assert.expect(3);
-    this.server.post(`/pki-component/issuers/generate/intermediate/internal`, () => {
-      assert.true(true, 'Issuers endpoint called');
-      return {
-        request_id: uuidv4(),
-        data: {
-          csr: '------BEGIN CERTIFICATE------',
-          key_id: 'some-key-id',
-        },
-      };
-    });
+    assert.expect(4);
 
-    await render(
-      hbs`<Page::PkiIssuerGenerateIntermediate @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
-      {
-        owner: this.engine,
-      }
-    );
-    assert.dom(GENERAL.title).hasText('Generate intermediate CSR');
-    await fillIn(GENERAL.inputByAttr('type'), 'internal');
+    await this.renderComponent();
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Generate intermediate CSR');
+
+    const { backend } = this;
+    const type = 'internal';
+    await fillIn(GENERAL.inputByAttr('type'), type);
     await fillIn(GENERAL.inputByAttr('common_name'), 'foobar');
     await click('[data-test-submit]');
-    assert.dom(GENERAL.title).hasText('View Generated CSR');
+
+    const payload = {
+      common_name: 'foobar',
+      format: 'pem',
+      key_type: 'rsa',
+      not_before_duration: 30,
+      private_key_format: 'der',
+    };
+    assert.true(
+      this.capabilitiesStub.calledWith('pkiIssuersGenerateIntermediate', { backend, type }),
+      'Capabilities checked for api path'
+    );
+    assert.true(this.generateStub.calledWith(type, backend, payload), 'API called with correct params');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View Generated CSR');
   });
 
   test('it does not update title if API response is an error', async function (assert) {
     assert.expect(2);
-    this.server.post(
-      '/pki-component/issuers/generate/intermediate/internal',
-      () => new Response(403, {}, { errors: ['API returns this error'] })
-    );
 
-    await render(
-      hbs`<Page::PkiIssuerGenerateIntermediate @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
-      {
-        owner: this.engine,
-      }
-    );
-    assert.dom(GENERAL.title).hasText('Generate intermediate CSR');
+    this.generateStub.rejects(getErrorResponse({ errors: ['API returns this error'] }, 403));
+
+    await this.renderComponent();
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Generate intermediate CSR');
     // Fill in
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
     await fillIn(GENERAL.inputByAttr('common_name'), 'foobar');
     await click('[data-test-submit]');
     assert
-      .dom(GENERAL.title)
+      .dom(GENERAL.hdsPageHeaderTitle)
       .hasText('Generate intermediate CSR', 'title does not change if response is unsuccessful');
   });
 });

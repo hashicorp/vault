@@ -12,7 +12,6 @@ import { paginate } from 'core/utils/paginate-list';
 
 @withConfig()
 export default class PkiCertificatesIndexRoute extends Route {
-  @service pagination;
   @service secretMountPath;
   @service api;
 

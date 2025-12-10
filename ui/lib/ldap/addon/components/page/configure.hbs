@@ -4,7 +4,7 @@
 }}
 
 <LdapHeader
-  @model={{@model.backendModel}}
+  @model={{@model.secretsEngine}}
   @promptConfig={{@model.promptConfig}}
   @breadcrumbs={{@breadcrumbs}}
   @configRoute="configure"
@@ -14,8 +14,8 @@
   <Hds::Form::RadioCard::Group @name="schema options" as |RadioGroup|>
     {{#each this.schemaOptions as |option|}}
       <RadioGroup.RadioCard
-        @checked={{eq option.value @model.configModel.schema}}
-        {{on "change" (fn (mut @model.configModel.schema) option.value)}}
+        @checked={{eq option.value @model.form.data.schema}}
+        {{on "change" (fn (mut @model.form.data.schema) option.value)}}
         data-test-radio-card={{option.title}}
         as |Card|
       >
@@ -32,13 +32,9 @@
     <h2 class="title is-4">Schema Options</h2>
     <hr class="has-background-gray-200" />
 
-    {{#if @model.configModel.schema}}
+    {{#if @model.form.data.schema}}
       <div class="has-top-margin-l">
-        <FormFieldGroups
-          @model={{@model.configModel}}
-          @groupName="formFieldGroups"
-          @modelValidations={{this.modelValidations}}
-        />
+        <FormFieldGroups @model={{@model.form}} @groupName="formFieldGroups" @modelValidations={{this.modelValidations}} />
       </div>
     {{else}}
       <EmptyState
@@ -56,7 +52,7 @@
       @text="Save"
       data-test-config-save
       type="submit"
-      disabled={{or this.save.isRunning (not @model.configModel.schema)}}
+      disabled={{or this.save.isRunning (not @model.form.data.schema)}}
     />
     <Hds::Button
       @text="Back"
