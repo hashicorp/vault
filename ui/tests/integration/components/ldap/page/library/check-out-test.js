@@ -6,7 +6,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
@@ -15,11 +14,10 @@ import sinon from 'sinon';
 module('Integration | Component | ldap | Page::Library::CheckOut', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'ldap');
-  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.creds = {
-      account: 'foo.bar',
+      service_account_name: 'foo.bar',
       password: 'password',
       lease_id: 'ldap/library/test/check-out/123',
       lease_duration: 86400,

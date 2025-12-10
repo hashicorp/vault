@@ -3,12 +3,11 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Route from '@ember/routing/route';
+import LdapLibrariesRoute from '../libraries';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { ldapBreadcrumbs, libraryRoutes } from 'ldap/utils/ldap-breadcrumbs';
 
-import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 import type LdapLibraryModel from 'vault/models/ldap/library';
@@ -27,24 +26,22 @@ interface RouteParams {
   path_to_library?: string;
 }
 
-export default class LdapLibrariesSubdirectoryRoute extends Route {
-  @service declare readonly store: Store;
+export default class LdapLibrariesSubdirectoryRoute extends LdapLibrariesRoute {
   @service declare readonly secretMountPath: SecretMountPath;
 
-  model(params: RouteParams) {
+  async model(params: RouteParams) {
     const { secretsEngine } = this.modelFor('application') as LdapApplicationModel;
     const { path_to_library } = params;
 
     // Ensure path_to_library has trailing slash for proper API calls and model construction
     const normalizedPath = path_to_library?.endsWith('/') ? path_to_library : `${path_to_library}/`;
+    const { libraries, capabilities } = await this.fetchLibrariesAndCapabilities(normalizedPath);
 
     return hash({
       secretsEngine,
       path_to_library: normalizedPath,
-      libraries: this.store.query('ldap/library', {
-        backend: secretsEngine.id,
-        path_to_library: normalizedPath,
-      }),
+      libraries,
+      capabilities,
     });
   }
 

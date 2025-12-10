@@ -53,4 +53,7 @@ export const PATH_MAP = {
   ldapRotateStaticRole: apiPath`${'backend'}/rotate-role/${'name'}`,
   ldapStaticRoleCreds: apiPath`${'backend'}/static-cred/${'name'}`,
   ldapDynamicRoleCreds: apiPath`${'backend'}/creds/${'name'}`,
+  ldapLibrary: apiPath`${'backend'}/library/${'name'}`,
+  ldapLibraryCheckOut: apiPath`${'backend'}/library/${'name'}/check-out`,
+  ldapLibraryCheckIn: apiPath`${'backend'}/library/${'name'}/check-in`,
 };

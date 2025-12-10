@@ -50,6 +50,7 @@
   <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
     <AccountsCheckedOut
       @libraries={{this.allLibraries}}
+      @capabilities={{this.checkInCapabilities}}
       @statuses={{this.librariesStatus}}
       @showLibraryColumn={{true}}
       @onCheckInSuccess={{transition-to "vault.cluster.secrets.backend.ldap.overview"}}

@@ -3,40 +3,44 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Route from '@ember/routing/route';
+import LdapLibrariesRoute from '../libraries';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
 
-import type Store from '@ember-data/store';
+import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
-import type LdapLibraryModel from 'vault/models/ldap/library';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type { LdapApplicationModel } from '../application';
+import type { LdapLibrary } from 'vault/secrets/ldap';
+import type CapabilitiesService from 'vault/services/capabilities';
 
 interface LdapLibrariesRouteModel {
   secretsEngine: SecretsEngineResource;
   promptConfig: boolean;
-  libraries: Array<LdapLibraryModel>;
+  libraries: LdapLibrary[];
 }
 interface LdapLibrariesController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapLibrariesRouteModel;
 }
 
-export default class LdapLibrariesRoute extends Route {
-  @service declare readonly store: Store;
+export default class LdapLibrariesIndexRoute extends LdapLibrariesRoute {
+  @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;
+  @service declare readonly capabilities: CapabilitiesService;
 
-  model() {
+  async model() {
     const { secretsEngine, promptConfig } = this.modelFor('application') as LdapApplicationModel;
-    return hash({
+    const { libraries, capabilities } = await this.fetchLibrariesAndCapabilities();
+
+    return {
       secretsEngine,
       promptConfig,
-      libraries: this.store.query('ldap/library', { backend: secretsEngine.id }),
-    });
+      libraries,
+      capabilities,
+    };
   }
 
   setupController(

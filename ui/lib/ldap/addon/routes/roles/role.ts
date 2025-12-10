@@ -45,7 +45,9 @@ export default class LdapRolesRoleRoute extends Route {
     const backend = this.secretMountPath.currentPath;
     const { name, type } = params;
 
-    const [capabilities] = await fetchRoleCapabilities(this.capabilities, backend, [{ name, type }]);
+    const [capabilities] = await fetchRoleCapabilities(this.capabilities, backend, [
+      { name, completeRoleName: name, type },
+    ]);
     const { data } =
       type === 'static'
         ? await this.api.secrets.ldapReadStaticRole(name, backend)

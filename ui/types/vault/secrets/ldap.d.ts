@@ -34,6 +34,7 @@ export interface LdapStaticRoleCredentials {
   username: string;
   type: string;
 }
+
 export interface LdapDynamicRoleCredentials {
   distinguished_names: Array<string>;
   password: string;
@@ -43,3 +44,20 @@ export interface LdapDynamicRoleCredentials {
   renewable: boolean;
   type: string;
 }
+
+export type LdapLibrary = {
+  name: string;
+  completeLibraryName: string;
+  service_account_names: string[];
+  ttl: string;
+  max_ttl: string;
+  disable_check_in_enforcement: boolean;
+};
+
+export type LdapLibraryAccountStatus = {
+  account: string;
+  available: boolean;
+  library: string;
+  borrower_client_token?: string;
+  borrower_entity_id?: string;
+};

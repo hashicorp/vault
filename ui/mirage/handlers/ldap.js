@@ -105,7 +105,7 @@ export default function (server) {
     return { data };
   });
   // check-out / check-in
-  server.post('/:backend/library/:set_name/check-in', (schema, req) => {
+  server.post('/:backend/library/manage/:set_name/check-in', (schema, req) => {
     // Check-in makes an unavailable account available again
     const { service_account_names } = JSON.parse(req.requestBody);
     const dbCollection = schema.db['ldapAccountStatuses'];
@@ -127,8 +127,8 @@ export default function (server) {
     const { set_name, backend } = req.params;
     const dbCollection = schema.db['ldapAccountStatuses'];
     const available = dbCollection.where({ available: true });
-    if (available) {
-      return Response(404, {}, { errors: ['no accounts available to check out'] });
+    if (!available) {
+      return new Response(404, {}, { errors: ['no accounts available to check out'] });
     }
     const checkOut = {
       ...available[0],
@@ -150,4 +150,5 @@ export default function (server) {
       auth: null,
     };
   });
+  server.delete('/:backend/library/*name', (schema, req) => deleteRecord(schema, req));
 }

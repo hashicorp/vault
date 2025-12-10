@@ -4,15 +4,16 @@
  */
 
 import type CapabilitiesService from 'vault/services/capabilities';
+import type { LdapRole } from 'vault/vault/secrets/ldap';
 
 export async function fetchRoleCapabilities(
   capabilities: CapabilitiesService,
   backend: string,
-  roles: Array<{ name: string; type: string }>
+  roles: LdapRole[]
 ) {
   const { pathFor } = capabilities;
 
-  const paths = roles.map(({ name, type }) => {
+  const paths = roles.map(({ completeRoleName: name, type }) => {
     const pathType = type === 'static' ? 'Static' : 'Dynamic';
 
     const pathMap: { role: string; rotate?: string; creds: string } = {

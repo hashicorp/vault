@@ -8,16 +8,18 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/owner';
-import errorMessage from 'vault/utils/error-message';
 
-import type LdapLibraryModel from 'vault/models/ldap/library';
+import type { LdapLibrary } from 'vault/secrets/ldap';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
+import type { Breadcrumb, CapabilitiesMap, EngineOwner } from 'vault/vault/app-types';
 import type RouterService from '@ember/routing/router-service';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+import type ApiService from 'vault/services/api';
 
 interface Args {
-  libraries: Array<LdapLibraryModel>;
+  libraries: Array<LdapLibrary>;
+  capabilities: CapabilitiesMap;
   promptConfig: boolean;
   secretsEngine: SecretsEngineResource;
   breadcrumbs: Array<Breadcrumb>;
@@ -26,18 +28,20 @@ interface Args {
 export default class LdapLibrariesPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service('app-router') declare readonly router: RouterService;
+  @service declare readonly secretMountPath: SecretMountPath;
+  @service declare readonly api: ApiService;
 
   @tracked filterValue = '';
-  @tracked libraryToDelete: LdapLibraryModel | null = null;
+  @tracked libraryToDelete: LdapLibrary | null = null;
 
   isHierarchical = (name: string) => name.endsWith('/');
 
-  linkParams = (library: LdapLibraryModel) => {
+  linkParams = (library: LdapLibrary) => {
     const route = this.isHierarchical(library.name) ? 'libraries.subdirectory' : 'libraries.library.details';
     return [route, library.completeLibraryName];
   };
 
-  getEncodedLibraryName = (library: LdapLibraryModel) => {
+  getEncodedLibraryName = (library: LdapLibrary) => {
     return library.completeLibraryName;
   };
 
@@ -54,14 +58,15 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
   }
 
   @action
-  async onDelete(model: LdapLibraryModel) {
+  async onDelete(library: LdapLibrary) {
     try {
-      const message = `Successfully deleted library ${model.completeLibraryName}.`;
-      await model.destroyRecord();
+      const { completeLibraryName } = library;
+      await this.api.secrets.ldapLibraryDelete(completeLibraryName, this.secretMountPath.currentPath);
       this.router.transitionTo('vault.cluster.secrets.backend.ldap.libraries');
-      this.flashMessages.success(message);
+      this.flashMessages.success(`Successfully deleted library ${completeLibraryName}.`);
     } catch (error) {
-      this.flashMessages.danger(`Error deleting library \n ${errorMessage(error)}`);
+      const { message } = await this.api.parseError(error);
+      this.flashMessages.danger(`Error deleting library \n ${message}`);
     }
   }
 }
