@@ -44,45 +44,47 @@
           <span data-test-library={{library.name}}>{{library.name}}</span>
         </Item.content>
         <Item.menu>
-          {{#if (or library.canRead library.canEdit library.canDelete)}}
-            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-              <dd.ToggleIcon
-                @icon="more-horizontal"
-                @text="More options"
-                @hasChevron={{false}}
-                data-test-popup-menu-trigger={{library.name}}
-              />
-              {{#if (this.isHierarchical library.name)}}
-                <dd.Interactive
-                  data-test-subdirectory
-                  @route="libraries.subdirectory"
-                  @model={{library.completeLibraryName}}
-                >Content</dd.Interactive>
-              {{else}}
-                {{#if library.canEdit}}
+          {{#let (hash name=library.completeLibraryName backend=this.secretMountPath.currentPath) as |capabilityParams|}}
+            {{#if (has-capability @capabilities "read" "update" "delete" pathKey="ldapLibrary" params=capabilityParams)}}
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="More options"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger={{library.name}}
+                />
+                {{#if (this.isHierarchical library.name)}}
                   <dd.Interactive
-                    data-test-edit
-                    @route="libraries.library.edit"
-                    @model={{this.getEncodedLibraryName library}}
-                  >Edit</dd.Interactive>
+                    data-test-subdirectory
+                    @route="libraries.subdirectory"
+                    @model={{library.completeLibraryName}}
+                  >Content</dd.Interactive>
+                {{else}}
+                  {{#if (has-capability @capabilities "update" pathKey="ldapLibrary" params=capabilityParams)}}
+                    <dd.Interactive
+                      data-test-edit
+                      @route="libraries.library.edit"
+                      @model={{this.getEncodedLibraryName library}}
+                    >Edit</dd.Interactive>
+                  {{/if}}
+                  {{#if (has-capability @capabilities "read" pathKey="ldapLibrary" params=capabilityParams)}}
+                    <dd.Interactive
+                      data-test-details
+                      @route="libraries.library.details"
+                      @model={{this.getEncodedLibraryName library}}
+                    >Details</dd.Interactive>
+                  {{/if}}
+                  {{#if (has-capability @capabilities "delete" pathKey="ldapLibrary" params=capabilityParams)}}
+                    <dd.Interactive
+                      data-test-delete
+                      @color="critical"
+                      {{on "click" (fn (mut this.libraryToDelete) library)}}
+                    >Delete</dd.Interactive>
+                  {{/if}}
                 {{/if}}
-                {{#if library.canRead}}
-                  <dd.Interactive
-                    data-test-details
-                    @route="libraries.library.details"
-                    @model={{this.getEncodedLibraryName library}}
-                  >Details</dd.Interactive>
-                {{/if}}
-                {{#if library.canDelete}}
-                  <dd.Interactive
-                    data-test-delete
-                    @color="critical"
-                    {{on "click" (fn (mut this.libraryToDelete) library)}}
-                  >Delete</dd.Interactive>
-                {{/if}}
-              {{/if}}
-            </Hds::Dropdown>
-          {{/if}}
+              </Hds::Dropdown>
+            {{/if}}
+          {{/let}}
         </Item.menu>
       </ListItem>
     {{/each}}

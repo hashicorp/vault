@@ -13,9 +13,10 @@ import type LdapLibraryModel from 'vault/models/ldap/library';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type RouterService from '@ember/routing/router-service';
 import type Store from '@ember-data/store';
-import type { Breadcrumb } from 'vault/vault/app-types';
-import LdapRoleModel from 'vault/models/ldap/role';
-import { LdapLibraryAccountStatus } from 'vault/vault/adapters/ldap/library';
+import type { Breadcrumb, CapabilitiesMap } from 'vault/vault/app-types';
+import type LdapRoleModel from 'vault/models/ldap/role';
+import type { LdapLibraryAccountStatus } from 'vault/vault/adapters/ldap/library';
+import type CapabilitiesService from 'vault/services/capabilities';
 
 interface Args {
   roles: Array<LdapRoleModel>;
@@ -33,11 +34,13 @@ interface Option {
 export default class LdapLibrariesPageComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
   @service declare readonly store: Store;
+  @service declare readonly capabilities: CapabilitiesService;
 
   @tracked selectedRole: LdapRoleModel | undefined;
   @tracked librariesStatus: Array<LdapLibraryAccountStatus> = [];
   @tracked allLibraries: Array<LdapLibraryModel> = [];
   @tracked librariesError: string | null = null;
+  @tracked declare checkInCapabilities: CapabilitiesMap;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -79,6 +82,11 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
       this.librariesError = null; // Clear any previous errors
       await this.discoverAllLibrariesRecursively(backend, '', allLibraries);
       this.allLibraries = allLibraries;
+      // fetch capabilities for all libraries
+      const paths = this.allLibraries.map(({ name }) =>
+        this.capabilities.pathFor('ldapLibraryCheckIn', { backend, name })
+      );
+      this.checkInCapabilities = await this.capabilities.fetch(paths);
     } catch (error) {
       // Hierarchical discovery failed - display inline error
       this.librariesError = 'Unable to load complete library information. Please try refreshing the page.';
