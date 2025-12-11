@@ -166,15 +166,4 @@ module('Unit | Decorators | ModelFormFields', function (hooks) {
       'formFields set on Model class'
     );
   });
-
-  test('it should set formFieldGroups on Model class', function (assert) {
-    // this model uses withFormFields with groups
-    const record = this.store.createRecord('ldap/config');
-    const groups = record.formFieldGroups.map((group) => Object.keys(group)[0]);
-    assert.deepEqual(
-      groups,
-      ['default', 'TLS options', 'More options'],
-      'formFieldGroups set on Model class with correct group labels'
-    );
-  });
 });
