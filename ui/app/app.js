@@ -82,8 +82,6 @@ export default class App extends Application {
       dependencies: {
         services: [
           { 'app-router': 'router' },
-          'store',
-          'pagination',
           'secret-mount-path',
           'flash-messages',
           'auth',

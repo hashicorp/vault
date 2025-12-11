@@ -8,18 +8,26 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { restartableTask } from 'ember-concurrency';
+import {
+  LdapLibraryListListEnum,
+  LdapLibraryListLibraryPathListEnum,
+} from '@hashicorp/vault-client-typescript';
 
-import type LdapLibraryModel from 'vault/models/ldap/library';
+import type {
+  LdapRole,
+  LdapLibrary,
+  LdapLibraryAccountStatus,
+  LdapLibraryAccountStatusResponse,
+} from 'vault/secrets/ldap';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type RouterService from '@ember/routing/router-service';
-import type Store from '@ember-data/store';
 import type { Breadcrumb, CapabilitiesMap } from 'vault/vault/app-types';
-import type LdapRoleModel from 'vault/models/ldap/role';
-import type { LdapLibraryAccountStatus } from 'vault/vault/adapters/ldap/library';
 import type CapabilitiesService from 'vault/services/capabilities';
+import type ApiService from 'vault/services/api';
+import type SecretMountPath from 'vault/services/secret-mount-path';
 
 interface Args {
-  roles: Array<LdapRoleModel>;
+  roles: Array<LdapRole>;
   promptConfig: boolean;
   secretsEngine: SecretsEngineResource;
   breadcrumbs: Array<Breadcrumb>;
@@ -33,12 +41,13 @@ interface Option {
 
 export default class LdapLibrariesPageComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
-  @service declare readonly store: Store;
+  @service declare readonly api: ApiService;
   @service declare readonly capabilities: CapabilitiesService;
+  @service declare readonly secretMountPath: SecretMountPath;
 
-  @tracked selectedRole: LdapRoleModel | undefined;
+  @tracked selectedRole: LdapRole | undefined;
   @tracked librariesStatus: Array<LdapLibraryAccountStatus> = [];
-  @tracked allLibraries: Array<LdapLibraryModel> = [];
+  @tracked allLibraries: Array<LdapLibrary> = [];
   @tracked librariesError: string | null = null;
   @tracked declare checkInCapabilities: CapabilitiesMap;
 
@@ -51,11 +60,11 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
   get roleOptions() {
     const options = this.args.roles
       // hierarchical roles are not selectable
-      .filter((r: LdapRoleModel) => !r.name.endsWith('/'))
+      .filter((r: LdapRole) => !r.name.endsWith('/'))
       // *hack alert* - type is set as id so it renders beside name in search select
       // this is to avoid more changes to search select and is okay here because
       // we use the type and name to select the item below, not the id
-      .map((r: LdapRoleModel) => ({ id: r.type, name: r.name, type: r.type }));
+      .map((r: LdapRole) => ({ id: r.type, name: r.name, type: r.type }));
     return options;
   }
 
@@ -70,20 +79,20 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
 
   @action
   generateCredentials() {
-    const { type, name } = this.selectedRole as LdapRoleModel;
+    const { type, name } = this.selectedRole as LdapRole;
     this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles.role.credentials', type, name);
   }
 
   fetchLibraries = restartableTask(async () => {
     const backend = this.args.secretsEngine.id;
-    const allLibraries: Array<LdapLibraryModel> = [];
+    const allLibraries: Array<LdapLibrary> = [];
 
     try {
       this.librariesError = null; // Clear any previous errors
       await this.discoverAllLibrariesRecursively(backend, '', allLibraries);
       this.allLibraries = allLibraries;
       // fetch capabilities for all libraries
-      const paths = this.allLibraries.map(({ name }) =>
+      const paths = this.allLibraries.map(({ completeLibraryName: name }) =>
         this.capabilities.pathFor('ldapLibraryCheckIn', { backend, name })
       );
       this.checkInCapabilities = await this.capabilities.fetch(paths);
@@ -99,13 +108,25 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
     await this.fetchLibraries.last;
 
     const allStatuses: Array<LdapLibraryAccountStatus> = [];
+    const requests = this.allLibraries.map((library) =>
+      this.api.secrets.ldapLibraryCheckStatus(library.completeLibraryName, this.secretMountPath.currentPath)
+    );
+    const results = await Promise.allSettled(requests);
 
-    for (const library of this.allLibraries) {
-      try {
-        const statuses = await library.fetchStatus();
-        allStatuses.push(...statuses);
-      } catch (error) {
-        // suppressing error
+    for (const result of results) {
+      // ignore failures and only extract statuses from successful requests
+      if (result.status === 'fulfilled') {
+        const index = results.indexOf(result);
+        const response = result.value.data as LdapLibraryAccountStatusResponse;
+
+        for (const key in response) {
+          const status = response[key] as LdapLibraryAccountStatusResponse[string];
+          allStatuses.push({
+            ...status,
+            account: key,
+            library: this.allLibraries[index]?.completeLibraryName as string,
+          });
+        }
       }
     }
 
@@ -114,25 +135,32 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
 
   private async discoverAllLibrariesRecursively(
     backend: string,
-    currentPath: string,
-    allLibraries: Array<LdapLibraryModel>
+    pathToLibrary: string,
+    allLibraries: Array<LdapLibrary>
   ): Promise<void> {
-    const queryParams: { backend: string; path_to_library?: string } = { backend };
-    if (currentPath) {
-      queryParams.path_to_library = currentPath;
-    }
+    const { currentPath } = this.secretMountPath;
+    const { keys } = pathToLibrary
+      ? await this.api.secrets.ldapLibraryListLibraryPath(
+          pathToLibrary,
+          currentPath,
+          LdapLibraryListLibraryPathListEnum.TRUE
+        )
+      : await this.api.secrets.ldapLibraryList(currentPath, LdapLibraryListListEnum.TRUE);
 
-    const items = await this.store.query('ldap/library', queryParams);
-    const libraryItems = items.toArray() as LdapLibraryModel[];
+    const libraries =
+      keys?.map((name) => {
+        // if path is provided combine with name for completeLibraryName
+        const completeLibraryName = pathToLibrary ? `${pathToLibrary}${name}` : name;
+        return { name, completeLibraryName } as LdapLibrary;
+      }) || [];
 
-    for (const item of libraryItems) {
-      if (item.name.endsWith('/')) {
+    for (const library of libraries) {
+      if (library.name.endsWith('/')) {
         // This is a directory - recursively explore it
-        const nextPath = currentPath ? `${currentPath}${item.name}` : item.name;
-        await this.discoverAllLibrariesRecursively(backend, nextPath, allLibraries);
+        await this.discoverAllLibrariesRecursively(backend, library.completeLibraryName, allLibraries);
       } else {
         // This is an actual library
-        allLibraries.push(item);
+        allLibraries.push(library);
       }
     }
   }

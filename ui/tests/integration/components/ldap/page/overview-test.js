@@ -13,6 +13,7 @@ import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ld
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Integration | Component | ldap | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,49 +21,24 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
+    this.backend = 'ldap-test';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
+    this.secretsEngine = createSecretsEngine();
+    this.breadcrumbs = generateBreadcrumbs(this.backend);
+    this.promptConfig = false;
 
-    this.backendModel = createSecretsEngine(this.store);
-    this.breadcrumbs = generateBreadcrumbs(this.backendModel.id);
+    const { secrets } = this.owner.lookup('service:api');
+    this.apiLibraryStub = sinon.stub(secrets, 'ldapLibraryList').resolves({ keys: ['test-library'] });
+    this.apiStatusStub = sinon.stub(secrets, 'ldapLibraryCheckStatus').resolves({ data: {} });
 
-    // Set up server endpoints for library operations
-    this.server.get('/ldap-test/library', () => {
-      return {
-        data: {
-          keys: ['test-library'],
-        },
-      };
-    });
-
-    this.server.get('/ldap-test/library/:name/status', () => {
-      return { data: {} };
-    });
-
-    const pushPayload = (type) => {
-      this.store.pushPayload(`ldap/${type}`, {
-        modelName: `ldap/${type}`,
-        backend: 'ldap-test',
-        ...this.server.create(`ldap-${type}`),
-      });
-    };
-
-    ['role', 'library'].forEach((type) => {
-      pushPayload(type);
-      if (type === 'role') {
-        pushPayload(type);
-      }
-      const key = type === 'role' ? 'roles' : 'libraries';
-      this[key] = this.store.peekAll(`ldap/${type}`);
-    });
+    this.roles = [this.server.create('ldap-role'), this.server.create('ldap-role')];
 
     this.renderComponent = () => {
       return render(
         hbs`<Page::Overview
           @promptConfig={{this.promptConfig}}
-          @secretsEngine={{this.backendModel}}
+          @secretsEngine={{this.secretsEngine}}
           @roles={{this.roles}}
-          @libraries={{this.libraries}}
-          @librariesStatus={{(array)}}
           @breadcrumbs={{this.breadcrumbs}}
         />`,
         {
@@ -204,10 +180,7 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
 
   test('it should show error message when library discovery fails', async function (assert) {
     // Override server to return error for library requests
-    this.server.handlers = [];
-    this.server.get('/ldap-test/library', () => {
-      return new Response(500, {}, { errors: ['Server error'] });
-    });
+    this.apiLibraryStub.rejects(getErrorResponse({ errors: ['Server error'] }, 500));
 
     await this.renderComponent();
 

@@ -54,6 +54,11 @@ export type LdapLibrary = {
   disable_check_in_enforcement: boolean;
 };
 
+export type LdapLibraryAccountStatusResponse = Record<
+  string,
+  { available: boolean; borrower_client_token?: string; borrower_entity_id?: string }
+>;
+
 export type LdapLibraryAccountStatus = {
   account: string;
   available: boolean;

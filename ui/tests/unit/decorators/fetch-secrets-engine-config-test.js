@@ -23,7 +23,7 @@ module('Unit | Decorators | fetch-secrets-engine-config', function (hooks) {
     this.owner.lookup('service:secretMountPath').update(this.backend);
 
     this.createClass = () => {
-      @withConfig('ldap/config')
+      @withConfig('kubernetes/config')
       class Foo extends Route {
         @service store;
         @service secretMountPath;
@@ -45,15 +45,15 @@ module('Unit | Decorators | fetch-secrets-engine-config', function (hooks) {
   });
 
   test('it should return cached record from store if it exists', async function (assert) {
-    this.store.pushPayload('ldap/config', {
-      modelName: 'ldap/config',
+    this.store.pushPayload('kubernetes/config', {
+      modelName: 'kubernetes/config',
       backend: this.backend,
     });
     const peekSpy = sinon.spy(this.store, 'peekRecord');
     const route = this.createClass();
 
     await route.beforeModel();
-    assert.true(peekSpy.calledWith('ldap/config', this.backend), 'peekRecord called for config model');
+    assert.true(peekSpy.calledWith('kubernetes/config', this.backend), 'peekRecord called for config model');
     assert.strictEqual(route.configModel.backend, this.backend, 'config model set on class');
     assert.strictEqual(route.configError, null, 'error is unset when model is found');
     assert.false(route.promptConfig, 'promptConfig is false when model is found');
