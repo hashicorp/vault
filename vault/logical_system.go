@@ -3625,7 +3625,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		}
 
 		// Update the policy
-		if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
+		if err := b.Core.policyStore.SetPolicyWithRequest(ctx, policy, req); err != nil {
 			return handleError(err)
 		}
 
@@ -3645,7 +3645,7 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 
-		if err := b.Core.policyStore.DeletePolicy(ctx, name, policyType); err != nil {
+		if err := b.Core.policyStore.DeletePolicyWithRequest(ctx, name, policyType, req); err != nil {
 			return handleError(err)
 		}
 		return nil, nil
