@@ -3391,6 +3391,15 @@ func (c *Core) migrateMultiSealConfig(ctx context.Context) error {
 	}
 
 	switch {
+	case barrierSealConfig == nil:
+		// This can happen when a secondary is being enabled.  The active node
+		// seals itself and (except for raft) releases the leader lock, allowing
+		// another node to become active.  The former active node clears storage,
+		// and if the new active node reaches this point at the wrong time (before
+		// the former active node writes the bootstrap package, replacing the
+		// barrier config file), then the barrierSealConfig we just read from storage
+		// will be nil.
+		return nil
 	case c.seal.BarrierSealConfigType().IsSameAs(barrierSealConfig.Type):
 		return nil
 	case c.seal.BarrierSealConfigType() == SealConfigTypeMultiseal:
