@@ -141,8 +141,8 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       }
       /* This module covers code that is the same for all engines. We run them once against one of the engines.*/
       module('Engine agnostic', function () {
-        test('it transitions without sending a config or issuer payload on cancel', async function (assert) {
-          assert.expect(3);
+        test('it does not transition on cancel', async function (assert) {
+          assert.expect(2);
           this.id = `azure-${this.uid}`;
           this.displayName = 'Azure';
           this.type = 'azure';
@@ -166,11 +166,6 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
           assert.true(this.flashSuccessSpy.notCalled, 'No success flash messages called.');
-
-          assert.true(
-            this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
-            'Transitioned to the configuration index route.'
-          );
         });
 
         test('it throws an error if the getter isWifPluginConfigured is not defined on the model', async function (assert) {
@@ -219,8 +214,11 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             'Flash message shows that root was saved even if issuer was not'
           );
           assert.true(
-            this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
-            'Transitioned to the configuration index route.'
+            this.transitionStub.calledWith(
+              'vault.cluster.secrets.backend.configuration.plugin-settings',
+              this.id
+            ),
+            'Transitioned to the configuration plugin settings route.'
           );
         });
 
@@ -401,12 +399,15 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             'Flash message shows that lease was not saved.'
           );
           assert.true(
-            this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
-            'Transitioned to the configuration index route.'
+            this.transitionStub.calledWith(
+              'vault.cluster.secrets.backend.configuration.plugin-settings',
+              this.id
+            ),
+            'Transitioned to the configuration plugin settings route.'
           );
         });
 
-        test('it transitions without sending a lease, root, or issuer payload on cancel', async function (assert) {
+        test('it does not transition on cancel', async function (assert) {
           this.server.post(configUrl('aws', this.id), () => {
             throw new Error(
               `Request was made to post the config/root when it should not have been because the user canceled out of the flow.`
@@ -431,10 +432,6 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
           assert.true(this.flashSuccessSpy.notCalled, 'No success flash messages called.');
-          assert.true(
-            this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
-            'Transitioned to the configuration index route.'
-          );
         });
 
         test('it does show aws specific note', async function (assert) {
@@ -526,8 +523,11 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           await click(SES.wif.issuerWarningSave);
           assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
           assert.true(
-            this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
-            'Transitioned to the configuration index route.'
+            this.transitionStub.calledWith(
+              'vault.cluster.secrets.backend.configuration.plugin-settings',
+              this.id
+            ),
+            'Transitioned to the configuration plugin settings route.'
           );
         });
 
@@ -564,8 +564,11 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             "calls the config flash message not the issuer's"
           );
           assert.true(
-            this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
-            'Transitioned to the configuration index route.'
+            this.transitionStub.calledWith(
+              'vault.cluster.secrets.backend.configuration.plugin-settings',
+              this.id
+            ),
+            'Transitioned to the configuration plugin settings route.'
           );
         });
 

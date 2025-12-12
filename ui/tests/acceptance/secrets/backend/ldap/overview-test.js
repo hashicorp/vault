@@ -32,6 +32,7 @@ module('Acceptance | ldap | overview', function (hooks) {
       ]);
     };
     this.expectedConfigEditRoute = 'ldap.configure';
+    this.overviewUrl = (backend) => `vault/secrets-engines/${backend}/ldap/overview`;
     return login();
   });
 

@@ -20,6 +20,7 @@ import type SecretEngineModel from 'vault/models/secret-engine';
 interface RouteModel {
   secretsEngine: SecretEngineModel;
   versions: string[];
+  config: Record<string, unknown>;
 }
 
 interface RouteController extends Controller {

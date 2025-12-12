@@ -22,8 +22,8 @@ import (
 	agentalicloud "github.com/hashicorp/vault/command/agentproxyshared/auth/alicloud"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
-	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
+	thutils "github.com/hashicorp/vault/sdk/helper/testhelpers/utils"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -45,7 +45,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 		envVarAlicloudSecretKey,
 		envVarAlicloudRoleArn,
 	}
-	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+	thutils.SkipUnlessEnvVarsSet(t, credNames)
 
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{

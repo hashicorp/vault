@@ -159,7 +159,7 @@ export default class SecretEngineModel extends Model {
     if (isAddonEngine(this.engineType, this.version)) {
       return `vault.cluster.secrets.backend.${this.engineType}.configuration`;
     }
-    return `vault.cluster.secrets.backend.configuration`;
+    return `vault.cluster.secrets.backend.configuration.general-settings`;
   }
 
   get localDisplay() {
