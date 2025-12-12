@@ -1,0 +1,34 @@
+@use '../helper-classes/flexbox-and-grid';
+@use '../helper-classes/spacing';
+
+/**
+ * Copyright IBM Corp. 2016, 2025
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.wizard {
+  @extend .is-flex-column;
+  @extend .is-flex-grow-1;
+  // a fixed height is needed for content to stretch properly
+  height: 1px;
+
+  .content {
+    // ensures button bar is always at the bottom even if content is not filled
+    @extend .is-flex-1;
+    overflow-y: auto;
+  }
+
+  .button-bar {
+    @extend .has-padding-m;
+    @extend .is-flex-between;
+
+    background: var(--token-color-surface-primary);
+    box-shadow:
+      0 2px 3px 0 rgba(59, 61, 69, 0.25),
+      0 12px 24px 0 rgba(59, 61, 69, 0.35);
+
+    .hds-button-set {
+      margin-left: auto;
+    }
+  }
+}

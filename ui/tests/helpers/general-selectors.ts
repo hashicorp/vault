@@ -34,6 +34,7 @@ export const GENERAL = {
   confirmButton: '[data-test-confirm-button]', // used most often on modal or confirm popups
   confirmTrigger: '[data-test-confirm-action-trigger]',
   copyButton: '[data-test-copy-button]',
+  nextButton: '[data-test-next-button]',
   revealButton: (label: string) => `[data-test-reveal="${label}"] button`, // intended for Hds::Reveal components
   // there should only be one submit button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
