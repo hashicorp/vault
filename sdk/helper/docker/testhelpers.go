@@ -34,7 +34,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 )
 
-const DockerAPIVersion = "1.40"
+const DockerAPIVersion = "1.44"
 
 type Runner struct {
 	DockerAPI  *client.Client
