@@ -1461,7 +1461,7 @@ func (i *IdentityStore) MemDBUpsertEntityInTxn(txn *memdb.Txn, entity *identity.
 		"entity_id":           entity.ID,
 		"entity_namespace_id": entity.NamespaceID,
 		"metadata":            entity.Metadata,
-		"aliases":             entity.Aliases,
+		"aliases":             aliasesToEntityObservationAliases(entity.Aliases),
 		"policies":            entity.Policies,
 		"creation_time":       entity.CreationTime.AsTime().Format(time.RFC3339),
 		"last_updated_time":   entity.LastUpdateTime.AsTime().Format(time.RFC3339),
@@ -1473,6 +1473,31 @@ func (i *IdentityStore) MemDBUpsertEntityInTxn(txn *memdb.Txn, entity *identity.
 	}
 
 	return nil
+}
+
+// EntityObservationAliases is a minimal version of aliases to contain only
+// salient information for entity upsert observations.
+type EntityObservationAliases struct {
+	Id            string `json:"id"`
+	MountPath     string `json:"mount_path"`
+	MountType     string `json:"mount_type"`
+	MountAccessor string `json:"mount_accessor"`
+}
+
+// aliasesToEntityObservationAliases translated a list of *identity.Alias into a list of EntityObservationAliases
+func aliasesToEntityObservationAliases(aliases []*identity.Alias) []*EntityObservationAliases {
+	entityObservationAliases := make([]*EntityObservationAliases, 0, len(aliases))
+	for _, alias := range aliases {
+		if alias != nil {
+			entityObservationAliases = append(entityObservationAliases, &EntityObservationAliases{
+				Id:            alias.ID,
+				MountPath:     alias.MountPath,
+				MountType:     alias.MountType,
+				MountAccessor: alias.MountAccessor,
+			})
+		}
+	}
+	return entityObservationAliases
 }
 
 func (i *IdentityStore) MemDBEntityByIDInTxn(txn *memdb.Txn, entityID string, clone bool) (*identity.Entity, error) {
