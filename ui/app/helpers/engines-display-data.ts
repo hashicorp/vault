@@ -27,7 +27,6 @@ export default function engineDisplayData(methodType: string): EngineDisplayData
     return {
       displayName: methodType || 'Unknown plugin',
       type: 'unknown',
-      isOldEngine: true,
       glyph: 'lock',
       mountCategory: ['secret', 'auth'],
     };

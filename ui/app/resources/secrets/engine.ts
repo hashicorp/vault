@@ -80,10 +80,12 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
   }
 
   get backendConfigurationLink() {
-    if (isAddonEngine(this.engineType, this.version)) {
-      return `vault.cluster.secrets.backend.${this.engineType}.configuration`;
+    const { isConfigurable, configRoute } = engineDisplayData(this.engineType);
+    if (isConfigurable) {
+      const route = configRoute || 'configuration.plugin-settings';
+      return `vault.cluster.secrets.backend.${route}`;
     }
-    return `vault.cluster.secrets.backend.configuration`;
+    return `vault.cluster.secrets.backend.configuration.general-settings`;
   }
 
   get localDisplay() {

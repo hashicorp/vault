@@ -22,7 +22,11 @@
     <:actions>
       <Hds::Button
         @color="secondary"
-        @route="vault.cluster.secrets.backend.list-root"
+        @route={{if
+          engineDisplayData.isOnlyMountable
+          "vault.cluster.secrets.backends"
+          "vault.cluster.secrets.backend.list-root"
+        }}
         @text="Exit configuration"
         data-test-button="Exit configuration"
       />

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { settled, click, fillIn, visit, currentRouteName } from '@ember/test-helpers';
+import { settled, click, fillIn, visit, currentRouteName, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 
@@ -58,7 +58,7 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
 
     // after submitting go to list and back to configuration
     await visit(`/vault/secrets-engines/${keymgmtType}/list`);
-    await visit(`/vault/secrets-engines/${keymgmtType}/configuration`);
+    await visit(`/vault/secrets-engines/${keymgmtType}/configuration/general-settings`);
 
     // confirm that submitted values were saved and prepopulated with those saved values
     assert
@@ -80,8 +80,9 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     await click(GENERAL.breadcrumbAtIdx(1));
     assert.dom(GENERAL.modal.container('unsaved-changes')).exists('Unsaved changes exists');
     await click(GENERAL.button('save'));
+    await waitUntil(() => currentRouteName() === 'vault.cluster.secrets.backend.list-root');
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list-root');
-    await visit(`/vault/secrets-engines/${keymgmtType}/configuration`);
+    await visit(`/vault/secrets-engines/${keymgmtType}/configuration/general-settings`);
 
     assert
       .dom(GENERAL.textareaByAttr('description'))
@@ -89,7 +90,7 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     assert.dom(GENERAL.inputByAttr('default_lease_ttl')).hasValue('11', 'default ttl value was tuned');
     assert.dom(GENERAL.selectByAttr('default_lease_ttl')).hasValue('m', 'default ttl unit was tuned');
 
-    await visit(`/vault/secrets-engines/${keymgmtType}/configuration`);
+    await visit(`/vault/secrets-engines/${keymgmtType}/configuration/general-settings`);
 
     // show unsaved changes modal and discard
     await fillIn(GENERAL.inputByAttr('default_lease_ttl'), 12);
@@ -99,7 +100,7 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     assert.dom(GENERAL.modal.container('unsaved-changes')).exists('Unsaved changes exists');
     await click(GENERAL.button('discard'));
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list-root');
-    await visit(`/vault/secrets-engines/${keymgmtType}/configuration`);
+    await visit(`/vault/secrets-engines/${keymgmtType}/configuration/general-settings`);
 
     assert
       .dom(GENERAL.textareaByAttr('description'))

@@ -72,7 +72,8 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await click(GENERAL.cardContainer('aws'));
     await click(GENERAL.submitButton);
 
-    assert.dom(GENERAL.tab('Configuration')).exists();
+    await click(GENERAL.dropdownToggle('Manage'));
+    assert.dom(GENERAL.menuItem('Configure')).exists();
 
     await click(GENERAL.breadcrumbLink('Secrets'));
     assert.strictEqual(

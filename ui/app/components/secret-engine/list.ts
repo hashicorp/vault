@@ -15,6 +15,7 @@ import type ApiService from 'vault/services/api';
 import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
 import engineDisplayData from 'vault/helpers/engines-display-data';
+import NamespaceService from 'vault/vault/services/namespace';
 
 /**
  * @module SecretEngineList handles the display of the list of secret engines, including the filtering.
@@ -36,6 +37,7 @@ export default class SecretEngineList extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
   @service declare readonly version: VersionService;
+  @service declare readonly namespace: NamespaceService;
 
   @tracked secretEngineOptions: Array<string> | [] = [];
   @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
@@ -81,10 +83,6 @@ export default class SecretEngineList extends Component<Args> {
       width: '75px',
     },
   ];
-
-  get clusterName() {
-    return this.version.clusterName;
-  }
 
   get displayableBackends() {
     return this.args.secretEngines.filter((backend) => backend.shouldIncludeInList);

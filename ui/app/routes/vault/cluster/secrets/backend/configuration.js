@@ -15,6 +15,7 @@ import Route from '@ember/routing/route';
 export default class SecretsBackendConfigurationRoute extends Route {
   @service api;
   @service version;
+  @service router;
 
   async model() {
     const secretsEngine = this.modelFor('vault.cluster.secrets.backend');
@@ -26,14 +27,6 @@ export default class SecretsBackendConfigurationRoute extends Route {
       config: await this.fetchConfig(type, id),
     };
   }
-
-  // TODO after update to show separated general settings vs plugin settings redirect if not configured?
-  // afterModel(resolvedModel) {
-  //   // Redirect to edit route if not configured
-  //   if (!resolvedModel.config) {
-  //     this.router.transitionTo('vault.cluster.secrets.backend.configuration.edit');
-  //   }
-  // }
 
   fetchConfig(type, id) {
     // id is the path where the backend is mounted since there's only one config per engine (often this path is referred to just as backend)

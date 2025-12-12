@@ -56,8 +56,9 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
 
   test('it does not show the option to configure', async function (assert) {
     await visit(`/vault/secrets-engines/cubbyhole/list`);
-    await click(GENERAL.tab('Configuration'));
-    assert.dom(SES.configure).doesNotExist('does not show the configure button');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Configure'));
+    assert.dom(GENERAL.tab('plugin-settings')).doesNotExist('does not show the configure button');
     // try to force it by visiting the URL
     await visit(`/vault/secrets-engines/cubbyhole/configuration/edit`);
     assert.dom('[data-test-backend-error-title]').hasText('404 Not Found', 'shows 404 error');

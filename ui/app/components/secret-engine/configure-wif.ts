@@ -128,12 +128,10 @@ export default class ConfigureWif extends Component<Args> {
           await this.updateIssuer(issuer as string);
         }
         this.flashMessages.success(`Successfully saved ${this.args.backendPath}'s configuration.`);
-        this.transition();
-        // TODO: revisit after we have other plugin settings (secrets engines other than LDAP) pages set up
-        // this.router.transitionTo(
-        //   'vault.cluster.secrets.backend.configuration.plugin-settings',
-        //   this.args.backendPath
-        // );
+        this.router.transitionTo(
+          'vault.cluster.secrets.backend.configuration.plugin-settings',
+          this.args.backendPath
+        );
       } catch (e) {
         const { message } = await this.api.parseError(e);
         this.errorMessage = message;
@@ -176,7 +174,7 @@ export default class ConfigureWif extends Component<Args> {
   }
 
   transition() {
-    this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.backendPath);
+    this.router.transitionTo('vault.cluster.secrets.backend.list-root', this.args.backendPath);
   }
 
   @action

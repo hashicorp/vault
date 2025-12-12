@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, visit, currentURL, fillIn } from '@ember/test-helpers';
+import { click, currentURL, fillIn } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -12,17 +12,17 @@ import { spy } from 'sinon';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { runCmd } from 'vault/tests/helpers/commands';
+import { runCmd, mountEngineCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import {
   expectedConfigKeys,
   expectedValueOfConfigKeys,
   configUrl,
   fillInAzureConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
+import secretsNavTestHelper from '../../secrets-nav-test-helper';
 
 module('Acceptance | Azure | configuration', function (hooks) {
   setupApplicationTest(hooks);
@@ -36,39 +36,27 @@ module('Acceptance | Azure | configuration', function (hooks) {
     this.version = this.owner.lookup('service:version');
     this.uid = uuidv4();
     this.type = 'azure';
+
+    this.mountAndConfig = (backend) => {
+      return runCmd([
+        mountEngineCmd('azure', backend),
+        `write ${backend}/config subscription_id=subscriptionID tenant_id=tenantID client_id=clientID client_secret=clientSecret`,
+      ]);
+    };
+    this.expectedConfigEditRoute = 'configuration.edit';
+    this.overviewUrl = (backend) => `/vault/secrets-engines/${backend}/configuration`;
     return login();
   });
 
-  test('it should prompt configuration after mounting the azure engine', async function (assert) {
-    const path = `azure-${this.uid}`;
-    await visit('/vault/secrets-engines/enable');
-    await mountBackend(this.type, path);
+  secretsNavTestHelper(test, 'azure');
 
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets-engines/${path}/configuration`,
-      'navigated to configuration view'
-    );
-    assert
-      .dom(GENERAL.emptyStateTitle)
-      .hasText('Azure not configured', "empty state title is 'Azure not configured'");
-    assert.dom(GENERAL.emptyStateActions).hasText('Configure Azure');
-    // cleanup
-    await runCmd(`delete sys/mounts/${path}`);
-  });
-
-  test('it should transition to configure page on click "Configure" from toolbar', async function (assert) {
+  test('it should transition to configure edit page once engine is mounted', async function (assert) {
     const path = `azure-${this.uid}`;
     await enablePage.enable(this.type, path);
 
-    // await click(GENERAL.dropdownMenu("Manage"));
-    // await click(GENERAL.menuItem('Configure'));
-    // TODO - clicking config tab will change to "Manage" dropdown selectors ^
-    await click(GENERAL.tab('Configuration'));
-    await click(SES.configure);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets-engines/${path}/configuration/edit`,
+      `/vault/secrets-engines/${path}/configuration/general-settings`,
       'navigated to configuration edit view'
     );
     // cleanup
@@ -96,6 +84,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           return { data: { id: path, type: this.type, ...azureAccountAttrs } };
         });
         await enablePage.enable(this.type, path);
+        await click(GENERAL.tabLink('plugin-settings'));
         for (const key of expectedConfigKeys('azure')) {
           if (key === 'Client secret') continue; // client-secret is not returned by the API
           assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${this.type} config details exists.`);
@@ -105,9 +94,9 @@ module('Acceptance | Azure | configuration', function (hooks) {
             .hasText(responseKeyAndValue, `value for ${key} on the ${this.type} config details exists.`);
         }
         // check mount configuration details are present and accurate.
-        await click(SES.configurationToggle);
+        await click(GENERAL.tabLink('general-settings'));
         assert
-          .dom(GENERAL.infoRowValue('Path'))
+          .dom(GENERAL.copySnippet('path'))
           .hasText(`${path}/`, 'mount path is displayed in the configuration details');
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
@@ -126,11 +115,10 @@ module('Acceptance | Azure | configuration', function (hooks) {
             `Request was made to return the issuer when it should not have been because user is on CE.`
           );
         });
-
-        await click(GENERAL.tab('Configuration'));
-        await click(SES.configure);
+        await click(GENERAL.tabLink('plugin-settings'));
         await fillInAzureConfig();
         await click(GENERAL.submitButton);
+
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
           'Success flash message is rendered showing the azure configuration was saved.'
@@ -165,6 +153,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
       test('it should not save client secret if it has NOT been changed', async function (assert) {
         assert.expect(2);
+        await click(GENERAL.tabLink('plugin-settings'));
         await click(SES.configure);
         const url = currentURL();
         const path = url.split('/')[3]; // get path from url because we can't pass the path from beforeEach hook to individual test.
@@ -190,6 +179,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
       test('it should save client secret if it HAS been changed', async function (assert) {
         assert.expect(2);
+        await click(GENERAL.tabLink('plugin-settings'));
         await click(SES.configure);
         const url = currentURL();
         const path = url.split('/')[3]; // get path from url because we can't pass the path from beforeEach hook to individual test.
@@ -225,8 +215,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['welp, that did not work!'] });
         });
 
-        await click(GENERAL.tab('Configuration'));
-        await click(SES.configure);
+        await click(GENERAL.tabLink('plugin-settings'));
         await fillInAzureConfig();
         await click(GENERAL.submitButton);
 
@@ -275,7 +264,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           return { data: { id: path, type: this.type, ...wifAttrs } };
         });
         await enablePage.enable(this.type, path);
-        GENERAL.button('More options');
+        await click(GENERAL.tabLink('plugin-settings'));
 
         for (const key of expectedConfigKeys('azure-wif')) {
           const responseKeyAndValue = expectedValueOfConfigKeys(this.type, key);
@@ -284,9 +273,10 @@ module('Acceptance | Azure | configuration', function (hooks) {
             .hasText(responseKeyAndValue, `value for ${key} on the ${this.type} config details exists.`);
         }
         // check mount configuration details are present and accurate.
-        await click(SES.configurationToggle);
+        await click(GENERAL.tabLink('general-settings'));
+
         assert
-          .dom(GENERAL.infoRowValue('Path'))
+          .dom(GENERAL.copySnippet('path'))
           .hasText(`${path}/`, 'mount path is displayed in the configuration details');
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
@@ -303,8 +293,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           throw new Error(`Request was made to return the issuer when it should not have been.`);
         });
         await enablePage.enable(this.type, path);
-        await click(GENERAL.tab('Configuration'));
-
+        await click(GENERAL.tabLink('plugin-settings'));
         assert.dom(GENERAL.infoRowLabel('Issuer')).doesNotExist(`Issuer does not exists on config details.`);
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
@@ -329,9 +318,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
             ],
           };
         });
-
-        await click(GENERAL.tab('Configuration'));
-        await click(SES.configure);
+        await click(GENERAL.tabLink('plugin-settings'));
         await click(SES.wif.accessType('wif'));
         await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
         await click(GENERAL.submitButton);
@@ -352,9 +339,8 @@ module('Acceptance | Azure | configuration', function (hooks) {
         this.server.post('/identity/oidc/config', () => {
           throw new Error('post request was incorrectly made to update the issuer');
         });
+        await click(GENERAL.tabLink('plugin-settings'));
 
-        await click(GENERAL.tab('Configuration'));
-        await click(SES.configure);
         await fillInAzureConfig(true);
         await click(GENERAL.submitButton);
         assert.dom(SES.wif.issuerWarningModal).doesNotExist('issuer warning modal does not show');
@@ -384,8 +370,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         });
 
         await enablePage.enable(this.type, path);
-        await click(GENERAL.tab('Configuration'));
-        await click(SES.configure);
+        await click(GENERAL.tabLink('plugin-settings'));
         await fillInAzureConfig(true);
         await fillIn(GENERAL.inputByAttr('issuer'), 'http://new.issuererrors');
         await click(GENERAL.submitButton);
@@ -399,6 +384,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           this.flashDangerSpy.calledWith(`Issuer was not saved: bad request`),
           'Danger flash message is rendered showing the issuer was not saved.'
         );
+        await click(GENERAL.tabLink('plugin-settings'));
         assert
           .dom(GENERAL.infoRowValue('Identity token audience'))
           .hasText('azure-audience', 'Identity token audience has been set.');
@@ -421,8 +407,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         });
 
         await enablePage.enable(this.type, path);
-        await click(GENERAL.tab('Configuration'));
-        await click(SES.configure);
+        await click(GENERAL.tabLink('plugin-settings'));
         await fillInAzureConfig(true);
         await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
         await click(GENERAL.submitButton);
@@ -446,8 +431,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
       test('it should update WIF attributes', async function (assert) {
         const path = `azure-${this.uid}`;
         await enablePage.enable(this.type, path);
-        await click(GENERAL.tab('Configuration'));
-        await click(SES.configure);
+        await click(GENERAL.tabLink('plugin-settings'));
         await fillInAzureConfig(true);
         await click(GENERAL.submitButton); // finished creating attributes, go back and edit them.
         assert
