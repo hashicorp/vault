@@ -496,7 +496,7 @@ type ObservationPathRules struct {
 
 // pathRulesToObservationPathRules translated a list of PathRules into a list of ObservationPathRules
 func pathRulesToObservationPathRules(rules []*PathRules) []*ObservationPathRules {
-	var observationPathRules []*ObservationPathRules
+	observationPathRules := make([]*ObservationPathRules, 0, len(rules))
 	for _, rule := range rules {
 		if rule != nil {
 			observationPathRules = append(observationPathRules, &ObservationPathRules{
