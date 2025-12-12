@@ -54,9 +54,10 @@ type VaultNodeConfig struct {
 	//   ServiceRegistrationType        string
 	//   ServiceRegistrationOptions    map[string]string
 
-	StorageOptions      map[string]string         `json:"-"`
-	AdditionalListeners []VaultNodeListenerConfig `json:"-"`
-	AdditionalTCPPorts  []int                     `json:"-"`
+	StorageOptions           map[string]string         `json:"-"`
+	AdditionalListeners      []VaultNodeListenerConfig `json:"-"`
+	CustomListenerConfigOpts map[string]interface{}    `json:"-"`
+	AdditionalTCPPorts       []int                     `json:"-"`
 
 	DefaultMaxRequestDuration      time.Duration `json:"default_max_request_duration"`
 	LogFormat                      string        `json:"log_format"`

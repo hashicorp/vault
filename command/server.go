@@ -1514,8 +1514,10 @@ func (c *ServerCommand) Run(args []string) int {
 	// mode if it's set
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterHandler(vaulthttp.Handler.Handler(&vault.HandlerProperties{
-		Core:           core,
-		ListenerConfig: &configutil.Listener{},
+		Core: core,
+		ListenerConfig: &configutil.Listener{
+			DisableJSONLimitParsing: true,
+		},
 	}))
 
 	// Attempt unsealing in a background goroutine. This is needed for when a
