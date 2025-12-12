@@ -105,7 +105,7 @@ jobs:
       matrix: ${{ steps.build.outputs.matrix }}
       matrix_ids: ${{ steps.build.outputs.matrix_ids }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/metadata
@@ -242,7 +242,7 @@ jobs:
       go-test-results-download-pattern: ${{ steps.metadata.outputs.go-test-results-download-pattern }}
       data-race-log-download-pattern: ${{ steps.metadata.outputs.data-race-log-download-pattern }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go

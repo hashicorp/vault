@@ -17,7 +17,7 @@ jobs:
       runs-on: ${{ steps.metadata.outputs.runs-on }}
       version: ${{ steps.metadata.outputs.version }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - id: set-product-version
         uses: hashicorp/actions-set-product-version@2ec1b51402b3070bccf7ca95306afbd039e574ff # v2.0.1
       - id: metadata
@@ -34,7 +34,7 @@ jobs:
     needs: metadata
     runs-on: ${{ fromJSON(needs.metadata.outputs.runs-on) }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - uses: ./.github/actions/set-up-go
         with:
           no-restore: true
