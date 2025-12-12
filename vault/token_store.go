@@ -1071,6 +1071,41 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		}
 	}
 
+	recordObservationFunc := func() {
+		clientId, nonEntityToken := entry.CreateClientID()
+
+		var mountAccessor string
+		var mountPath string
+		var mountType string
+		mountEntry := ts.core.router.MatchingMountEntry(ctx, entry.Path)
+		if mountEntry != nil {
+			mountAccessor = mountEntry.Accessor
+			mountPath = mountEntry.Path
+			mountType = mountEntry.Type
+		}
+
+		// Note: this should not be modified to include the token's ID (the token's actual value),
+		// due to sensitivity.
+		ts.core.Observations().RecordObservationToLedger(ctx, observations.ObservationTypeTokenCreation, tokenNS, map[string]interface{}{
+			"policies":                     entry.Policies,
+			"path":                         entry.Path,
+			"display_name":                 entry.DisplayName,
+			"num_uses":                     entry.NumUses,
+			"token_type":                   entry.Type.String(),
+			"ttl":                          entry.TTL.String(),
+			"role":                         entry.Role,
+			"token_client_id":              clientId,
+			"token_entity_id":              entry.EntityID,
+			"token_client_id_is_entity_id": !nonEntityToken,
+			"mount_accessor":               mountAccessor,
+			"mount_path":                   mountPath,
+			"mount_type":                   mountType,
+		})
+		if err != nil {
+			ts.logger.Error("error recording observation for token creation", err)
+		}
+	}
+
 	switch entry.Type {
 	case logical.TokenTypeDefault, logical.TokenTypeService:
 		// In case it was default, force to service
@@ -1148,6 +1183,9 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if !userSelectedID && !ts.core.DisableSSCTokens() {
 			entry.ExternalID = ts.GenerateSSCTokenID(entry.ID, logical.IndexStateFromContext(ctx), entry)
 		}
+
+		recordObservationFunc()
+
 		return nil
 
 	case logical.TokenTypeBatch:
@@ -1216,6 +1254,8 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if tokenNS.ID != namespace.RootNamespaceID {
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
 		}
+
+		recordObservationFunc()
 
 		return nil
 
@@ -3252,27 +3292,6 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		if policy == nil {
 			resp.AddWarning(fmt.Sprintf("Policy %q does not exist", p))
 		}
-	}
-
-	clientId, nonEntityToken := te.CreateClientID()
-	// Note: this should not be modified to include the token's ID (the token's actual value),
-	// due to sensitivity.
-	ts.core.Observations().RecordObservationToLedger(ctx, observations.ObservationTypeTokenCreation, ns, map[string]interface{}{
-		"policies":                     te.Policies,
-		"path":                         te.Path,
-		"display_name":                 te.DisplayName,
-		"num_uses":                     te.NumUses,
-		"token_type":                   te.Type.String(),
-		"ttl":                          te.TTL.String(),
-		"role":                         te.Role,
-		"token_client_id":              clientId,
-		"token_entity_id":              te.EntityID,
-		"token_client_id_is_entity_id": !nonEntityToken,
-		"request_client_id":            req.ClientID,
-		"request_entity_id":            req.EntityID,
-	})
-	if err != nil {
-		ts.logger.Error("error recording observation for token creation", err)
 	}
 
 	return resp, nil
