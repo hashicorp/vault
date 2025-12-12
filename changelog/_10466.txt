@@ -1,0 +1,3 @@
+```release-note:change
+secrets/pki: sign-verbatim endpoints no longer ignore basic constraints extension in CSRs, using them in generated certificates if isCA=false or returning an error if isCA=true
+```
