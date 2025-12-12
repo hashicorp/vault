@@ -22,6 +22,13 @@ const (
 	// Type (i.e. batch/service) is included in 'type'.
 	ObservationTypeTokenCreation = "token/create"
 
+	// ObservationTypePolicyUpsert is emitted when a policy is
+	// inserted or updated.
+	ObservationTypePolicyUpsert = "policy/upsert"
+	// ObservationTypePolicyDelete is emitted when a policy is
+	// deleted.
+	ObservationTypePolicyDelete = "policy/delete"
+
 	// ObservationTypePolicyACLEvaluation is emitted when an ACL policy is evaluated
 	ObservationTypePolicyACLEvaluation = "policy/acl/evaluation"
 
