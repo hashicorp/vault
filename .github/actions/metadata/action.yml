@@ -166,10 +166,10 @@ runs:
             go_tags='ent,enterprise'
             version_metadata='${{ inputs.vault-version }}+ent'
           fi
-          compute_build='["self-hosted","ondemand","os=linux","disk_gb=64","type=c6a.4xlarge;c5a.4xlarge"]'
-          compute_build_ui='["self-hosted","ondemand","os=linux", "disk_gb=64", "type=c6a.2xlarge;c5a.2xlarge;c6a.4xlarge"]'
-          compute_test_go='["self-hosted","ondemand","os=linux","disk_gb=64","type=c6a.2xlarge;c5a.2xlarge;c6a.4xlarge"]'
-          compute_test_ui='["self-hosted","ondemand","os=linux","type=m6a.2xlarge;m6a.4xlarge"]'
+          compute_build='["self-hosted","ondemand","os=linux","disk_gb=64","image=previous","type=c6a.4xlarge;c5a.4xlarge"]'
+          compute_build_ui='["self-hosted","ondemand","os=linux", "disk_gb=64", "image=previous","type=c6a.2xlarge;c5a.2xlarge;c6a.4xlarge"]'
+          compute_test_go='["self-hosted","ondemand","os=linux","disk_gb=64","image=previous","type=c6a.2xlarge;c5a.2xlarge;c6a.4xlarge"]'
+          compute_test_ui='["self-hosted","ondemand","os=linux","image=previous","type=m6a.2xlarge;m6a.4xlarge"]'
           compute_small='["self-hosted","linux","small"]'
         else
           compute_build='"custom-linux-medium-vault-latest"'
