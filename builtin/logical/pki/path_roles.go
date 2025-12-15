@@ -1106,9 +1106,9 @@ func validateRole(b *backend, entry *issuing.RoleEntry, ctx context.Context, s l
 		return `"ttl" value must be less than "max_ttl" value`, nil, nil
 	}
 
-	keyBits, signatureBits, err := certutil.ValidateDefaultOrValueKeyTypeSignatureLength(entry.KeyType, entry.KeyBits, entry.SignatureBits)
+	keyBits, err := certutil.ValidateDefaultOrValueKeyType(entry.KeyType, entry.KeyBits)
 	if err != nil {
-		return err.Error(), nil, nil
+		return fmt.Sprintf("error setting keyBits %v on role for keyType %v: %v", entry.KeyBits, entry.KeyType, err.Error()), nil, nil
 	}
 
 	if entry.SerialNumberSource != "" &&
@@ -1135,6 +1135,7 @@ func validateRole(b *backend, entry *issuing.RoleEntry, ctx context.Context, s l
 	// resolve the reference (to an issuerId) at role creation time; instead,
 	// resolve it at use time. This allows values such as `default` or other
 	// user-assigned names to "float" and change over time.
+	var issuerId issuing.IssuerID
 	issuer := entry.Issuer
 	if len(issuer) == 0 {
 		issuer = defaultRef
@@ -1144,7 +1145,7 @@ func validateRole(b *backend, entry *issuing.RoleEntry, ctx context.Context, s l
 	// Check that the issuers reference set resolves to something
 	if !b.UseLegacyBundleCaStorage() {
 		sc := b.makeStorageContext(ctx, s)
-		issuerId, err := sc.resolveIssuerReference(issuer)
+		issuerId, err = sc.resolveIssuerReference(issuer)
 		if err != nil {
 			if issuerId == issuing.IssuerRefNotFound {
 				if entry.Issuer == defaultRef {
@@ -1156,7 +1157,33 @@ func validateRole(b *backend, entry *issuing.RoleEntry, ctx context.Context, s l
 				return "", nil, err
 			}
 		}
+	}
 
+	// Validate SignatureBits Against Issuer, if there is one, this is just to set a warning, so don't error out here:
+	var signatureBits int
+	if issuerId != issuing.IssuerRefNotFound {
+		if b.UseLegacyBundleCaStorage() {
+			issuerId = issuing.LegacyBundleShimID
+		}
+		issuerEntry, _, err := issuing.FetchCertBundleByIssuerId(ctx, s, issuerId, false)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("Failed to fetch entry for issuer %q to validate against: %v", entry.Issuer, err))
+		} else {
+			issuerCertificate, err := issuerEntry.GetCertificate()
+			if err != nil {
+				warnings = append(warnings, fmt.Sprintf("Unable to get certificate for issuer %s to validate against: %v", entry.Issuer, err))
+			}
+			issuerKeyType := strings.ToLower(issuerCertificate.PublicKeyAlgorithm.String())
+			signatureBits, err = certutil.ValidateDefaultOrValueHashBits(issuerKeyType, entry.SignatureBits)
+			if err != nil {
+				warnings = append(warnings, fmt.Sprintf("The Issuing Certificate %v for this role has a key algorithm, %v, incompatible with the set role signature bits, %v", entry.Issuer, issuerKeyType, entry.SignatureBits))
+			}
+		}
+	} else {
+		// We still want to update to keep default value of 256 bits
+		if signatureBits == 0 {
+			signatureBits = 256
+		}
 	}
 
 	// Ensures CNValidations are alright

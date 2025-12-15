@@ -138,7 +138,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		keyType := data.Get(keyTypeParam).(string)
 		keyBits = data.Get(keyBitsParam).(int)
 
-		keyBits, _, err := certutil.ValidateDefaultOrValueKeyTypeSignatureLength(keyType, keyBits, 0)
+		keyBits, err := certutil.ValidateDefaultOrValueKeyType(keyType, keyBits)
 		if err != nil {
 			return logical.ErrorResponse("Validation for key_type, key_bits failed: %s", err.Error()), nil
 		}
