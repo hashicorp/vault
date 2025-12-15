@@ -725,6 +725,11 @@ func (b *Backend) handleRotation(ctx context.Context, req *logical.Request) (*lo
 		return nil, logical.ErrUnsupportedOperation
 	}
 
+	// rotation is a write operation, so we short-circuit the request
+	if !b.WriteSafeReplicationState() {
+		return nil, logical.ErrReadOnly
+	}
+
 	err := b.RotateCredential(ctx, req)
 	if err != nil {
 		return nil, err
