@@ -52,16 +52,11 @@ jobs:
           role-skip-session-tagging: true
           role-duration-seconds: 3600
           mask-aws-account-id: false
-      - name: Get AWS Account ID
-        id: aws-info
-        run: |
-          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          echo "aws-account-id=$AWS_ACCOUNT_ID" | tee -a "$GITHUB_OUTPUT"
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Configure
         run: |
           cp enos/ci/aws-nuke.yml .
-          sed -i "s/ACCOUNT_NUM/${{ steps.aws-info.outputs.aws-account-id }}/g" aws-nuke.yml
+          sed -i "s/ACCOUNT_NUM/${{ steps.aws-configure.outputs.aws-account-id }}/g" aws-nuke.yml
           sed -i "s/TIME_LIMIT/${TIME_LIMIT}/g" aws-nuke.yml
       # We don't care if cleanup succeeds or fails, because dependencies be dependenceies,
       # we'll fail on actually actionable things in the quota steep afterwards.
