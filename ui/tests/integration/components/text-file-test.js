@@ -5,17 +5,14 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
+import { click, fillIn, findAll, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-const SELECTORS = {
-  label: '[data-test-text-file-label]',
-  fileUpload: '[data-test-text-file-input]',
-};
 const { componentPemBundle } = CERTIFICATES;
+
 module('Integration | Component | text-file', function (hooks) {
   setupRenderingTest(hooks);
 
@@ -27,10 +24,11 @@ module('Integration | Component | text-file', function (hooks) {
 
   test('it renders with label and toggle by default', async function (assert) {
     await render(hbs`<TextFile @onChange={{this.onChange}} @helpText="this is my help text"/>`);
-
-    assert.dom(SELECTORS.label).hasText('File', 'renders default label');
+    const [firstLabel, secondLabel] = findAll('label');
+    assert.dom(firstLabel).hasText('File', 'renders default label');
+    assert.dom(secondLabel).hasText('Enter as text', 'it renders toggle label');
     assert.dom(GENERAL.textToggle).exists({ count: 1 }, 'toggle exists');
-    assert.dom(SELECTORS.fileUpload).exists({ count: 1 }, 'File input shown');
+    assert.dom(GENERAL.fileInput).exists({ count: 1 }, 'File input shown');
 
     assert.dom(GENERAL.tooltipText).hasNoText();
     await click(GENERAL.tooltip('text-file'));
@@ -40,27 +38,27 @@ module('Integration | Component | text-file', function (hooks) {
   test('it renders without toggle and option for text input when uploadOnly=true', async function (assert) {
     await render(hbs`<TextFile @onChange={{this.onChange}} @uploadOnly={{true}} />`);
 
-    assert.dom(SELECTORS.label).doesNotExist('Label no longer rendered');
+    assert.dom('label').exists({ count: 1 }).hasText('File', 'it renders a label just for the file');
     assert.dom(GENERAL.textToggle).doesNotExist('toggle no longer rendered');
     assert.dom(GENERAL.tooltip('text-file')).doesNotExist('tooltip icon no longer rendered');
-    assert.dom(SELECTORS.fileUpload).exists({ count: 1 }, 'File input shown');
+    assert.dom(GENERAL.fileInput).exists({ count: 1 }, 'File input shown');
   });
 
   test('it toggles between upload and textarea', async function (assert) {
     await render(hbs`<TextFile @onChange={{this.onChange}} />`);
 
-    assert.dom(SELECTORS.fileUpload).exists({ count: 1 }, 'File input shown');
+    assert.dom(GENERAL.fileInput).exists({ count: 1 }, 'File input shown');
     assert.dom(GENERAL.maskedInput).doesNotExist('Texarea hidden');
     await click(GENERAL.textToggle);
     assert.dom(GENERAL.maskedInput).exists({ count: 1 }, 'Textarea shown');
-    assert.dom(SELECTORS.fileUpload).doesNotExist('File upload hidden');
+    assert.dom(GENERAL.fileInput).doesNotExist('File upload hidden');
   });
 
   test('it correctly parses uploaded files', async function (assert) {
     const file = new Blob([['some content for a file']], { type: 'text/plain' });
     file.name = 'filename.txt';
     await render(hbs`<TextFile @onChange={{this.onChange}} />`);
-    await triggerEvent(SELECTORS.fileUpload, 'change', { files: [file] });
+    await triggerEvent(GENERAL.fileInput, 'change', { files: [file] });
     assert.propEqual(
       this.onChange.lastCall.args[0],
       {
@@ -91,7 +89,7 @@ module('Integration | Component | text-file', function (hooks) {
     this.file = { foo: 'bar' };
     await render(hbs`<TextFile @onChange={{this.onChange}} />`);
 
-    await triggerEvent(SELECTORS.fileUpload, 'change', { files: [this.file] });
+    await triggerEvent(GENERAL.fileInput, 'change', { files: [this.file] });
     assert.dom(GENERAL.inlineAlert).hasText('There was a problem uploading. Please try again.');
     assert.propEqual(
       this.onChange.lastCall.args[0],

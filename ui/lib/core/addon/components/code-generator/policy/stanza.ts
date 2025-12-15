@@ -13,7 +13,7 @@ import type { AclCapability, PolicyStanza } from 'core/utils/code-generators/pol
 
 interface Args {
   stanza: PolicyStanza;
-  onChange: (() => void) | undefined;
+  onChange: () => void;
 }
 export default class CodeGeneratorPolicyStanza extends Component<Args> {
   @tracked showPreview = false;
@@ -30,7 +30,7 @@ export default class CodeGeneratorPolicyStanza extends Component<Args> {
   @action
   setPath(event: HTMLElementEvent<HTMLInputElement>) {
     this.args.stanza.path = event.target.value;
-    this.args.onChange?.();
+    this.args.onChange();
   }
 
   @action
@@ -41,7 +41,7 @@ export default class CodeGeneratorPolicyStanza extends Component<Args> {
       checked ? capabilities.add(value) : capabilities.delete(value);
       // Update stanza with list of capabilities
       this.args.stanza.capabilities = capabilities;
-      this.args.onChange?.();
+      this.args.onChange();
     }
   }
 }
