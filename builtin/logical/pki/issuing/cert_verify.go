@@ -10,6 +10,7 @@ import (
 
 	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // disableVerifyCertificateEnvVar is an environment variable that can be used to disable the
@@ -32,7 +33,7 @@ func isCertificateVerificationDisabled() (bool, error) {
 	return disable, nil
 }
 
-func VerifyCertificate(issuer *IssuerEntry, parsedBundle *certutil.ParsedCertBundle) error {
+func VerifyCertificate(issuer *IssuerEntry, system logical.SystemView, parsedBundle *certutil.ParsedCertBundle) error {
 	if verificationDisabled, err := isCertificateVerificationDisabled(); err != nil {
 		return err
 	} else if verificationDisabled {
@@ -51,9 +52,11 @@ func VerifyCertificate(issuer *IssuerEntry, parsedBundle *certutil.ParsedCertBun
 		DisablePathLenChecks:           false,
 		DisableNameConstraintChecks:    false,
 	}
-	if err := entSetCertVerifyOptions(issuer, &options); err != nil {
+
+	isCommonCriteria, err := entSetCertVerifyOptions(issuer, system, &options)
+	if err != nil {
 		return err
 	}
 
-	return certutil.VerifyCertificate(parsedBundle, options)
+	return certutil.VerifyCertificateChain(parsedBundle, options, isCommonCriteria)
 }

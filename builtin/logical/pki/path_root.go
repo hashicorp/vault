@@ -449,7 +449,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		}
 	}
 
-	if err := issuing.VerifyCertificate(issuer, parsedBundle); err != nil {
+	if err := issuing.VerifyCertificate(issuer, sc.System(), parsedBundle); err != nil {
 		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 

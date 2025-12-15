@@ -13,8 +13,8 @@ import (
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
-func entSetCertVerifyOptions(issuer *IssuerEntry, options *ctx509.VerifyOptions) error {
-	return nil
+func entSetCertVerifyOptions(issuer *IssuerEntry, view logical.SystemView, options *ctx509.VerifyOptions) (bool, error) {
+	return false, nil
 }
 
 func EntAdjustCreationBundle(view logical.SystemView, bundle *certutil.CreationBundle) {

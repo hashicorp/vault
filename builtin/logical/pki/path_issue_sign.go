@@ -460,7 +460,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		return nil, err
 	}
 
-	if err = issuing.VerifyCertificate(issuer, parsedBundle); err != nil {
+	if err = issuing.VerifyCertificate(issuer, sc.System(), parsedBundle); err != nil {
 		return nil, err
 	}
 
