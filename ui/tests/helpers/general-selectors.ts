@@ -21,6 +21,7 @@ export const GENERAL = {
   tab: (name: string) => `[data-test-tab="${name}"]`,
   tabLink: (name: string) => `[data-test-tab="${name}"] a`,
   hdsTab: (name: string) => `[data-test-tab="${name}"] button`, // HDS tab buttons
+  hdsTabPanel: (name: string) => `[data-test-panel="${name}"]`,
   secretTab: (name: string) => `[data-test-secret-list-tab="${name}"]`,
   navLink: (label: string) =>
     label ? `[data-test-sidebar-nav-link="${label}"]` : '[data-test-sidebar-nav-link]',
@@ -36,6 +37,7 @@ export const GENERAL = {
   copyButton: '[data-test-copy-button]',
   nextButton: '[data-test-next-button]',
   revealButton: (label: string) => `[data-test-reveal="${label}"] button`, // intended for Hds::Reveal components
+  accordionButton: (label: string) => `[data-test-accordion="${label}"] button`, // intended for Hds::Accordion components
   // there should only be one submit button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
@@ -70,6 +72,10 @@ export const GENERAL = {
   fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,
   fieldLabel: (attr: string) =>
     attr ? `[data-test-form-field-label="${attr}"]` : `[data-test-form-field-label]`,
+  fileInput: '[data-test-file-input]',
+  filter: (name: string) => `[data-test-filter="${name}"]`,
+  filterInput: '[data-test-filter-input]',
+  filterInputExplicit: '[data-test-filter-input-explicit]',
   groupControlByIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index})`,
   helpText: '[data-test-help-text]',
   helpTextByAttr: (attr: string) => `[data-test-help-text="${attr}"]`,
@@ -78,17 +84,15 @@ export const GENERAL = {
   inputByAttr: (attr: string) => `[data-test-input="${attr}"]`,
   inputGroupByAttr: (attr: string) => `[data-test-input-group="${attr}"]`,
   inputSearch: (attr: string) => `[data-test-input-search="${attr}"]`,
-  filterInput: '[data-test-filter-input]',
-  filterInputExplicit: '[data-test-filter-input-explicit]',
   labelById: (id: string) => `label[id="${id}"]`,
   labelByGroupControlIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index}) label`,
   maskedInput: '[data-test-masked-input]',
-  radioByAttr: (attr: string) => `[data-test-radio="${attr}"]`,
+  radioByAttr: (attr: string) => (attr ? `[data-test-radio="${attr}"]` : '[data-test-radio]'),
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
-  toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
+  stringListByIdx: (index: number) => `[data-test-string-list-input="${index}"]`,
   textToggle: '[data-test-text-toggle]',
-  filter: (name: string) => `[data-test-filter="${name}"]`,
   textareaByAttr: (attr: string) => `textarea[name="${attr}"]`,
+  toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
 
   /* ────── Code Blocks / Editor ────── */
   codemirror: `[data-test-component="code-mirror-modifier"]`,
@@ -177,9 +181,9 @@ export const GENERAL = {
   /* ────── Modals & Flyouts ────── */
   flyout: '[data-test-flyout]',
   modal: {
-    container: (title: string) => `[data-test-modal=${title}]`,
-    header: (title: string) => `[data-test-modal-header=${title}]`,
-    body: (title: string) => `[data-test-modal-body=${title}]`,
+    container: (title: string) => `[data-test-modal="${title}"]`,
+    header: (title: string) => `[data-test-modal-header="${title}"]`,
+    body: (title: string) => `[data-test-modal-body="${title}"]`,
   },
 
   /* ────── Misc ────── */

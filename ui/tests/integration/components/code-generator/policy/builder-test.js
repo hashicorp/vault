@@ -5,26 +5,36 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, fillIn, setupOnerror } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import Sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { ACL_CAPABILITIES } from 'core/utils/code-generators/policy';
+import { ACL_CAPABILITIES, PolicyStanza } from 'core/utils/code-generators/policy';
 
 module('Integration | Component | code-generator/policy/builder', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.onPolicyChange = Sinon.spy();
+    this.onPolicyChange = ({ policy, stanzas }) => {
+      this.set('policyCallback', policy);
+      this.set('stanzas', stanzas);
+    };
+
+    this.policyCallback = '';
     this.policyName = undefined;
+    this.stanzas = [new PolicyStanza()];
+
     this.renderComponent = () => {
       return render(hbs`
-        <CodeGenerator::Policy::Builder @onPolicyChange={{this.onPolicyChange}} @policyName={{this.policyName}} />`);
+        <CodeGenerator::Policy::Builder
+          @onPolicyChange={{this.onPolicyChange}}
+          @policyName={{this.policyName}}
+          @stanzas={{this.stanzas}}
+        />`);
     };
 
     this.assertPolicyUpdate = (assert, expected, message) => {
-      const [policy] = this.onPolicyChange.lastCall.args;
-      assert.strictEqual(policy, expected, `onPolicyChange is called ${message}`);
+      // this.policyCallback is set by onPolicyChange
+      assert.strictEqual(this.policyCallback, expected, `onPolicyChange is called ${message}`);
     };
 
     this.assertEmptyTemplate = async (assert, { index } = {}) => {
@@ -50,16 +60,16 @@ module('Integration | Component | code-generator/policy/builder', function (hook
     await this.renderComponent();
     await this.assertEmptyTemplate(assert);
     assert.dom(GENERAL.button('Add rule')).exists({ count: 1 });
-    assert.dom(GENERAL.revealButton('Automation snippets')).hasAttribute('aria-expanded', 'false');
-    await click(GENERAL.revealButton('Automation snippets'));
-    assert.dom(GENERAL.revealButton('Automation snippets')).hasAttribute('aria-expanded', 'true');
-    assert.dom(GENERAL.inputByAttr('terraform')).isChecked();
-    assert.dom(GENERAL.inputByAttr('cli')).isNotChecked();
+    assert.dom(GENERAL.accordionButton('Automation snippets')).hasAttribute('aria-expanded', 'false');
+    await click(GENERAL.accordionButton('Automation snippets'));
+    assert.dom(GENERAL.accordionButton('Automation snippets')).hasAttribute('aria-expanded', 'true');
+    assert.dom(GENERAL.hdsTab('terraform')).exists().hasAttribute('aria-selected', 'true');
+    assert.dom(GENERAL.hdsTab('cli')).exists().hasAttribute('aria-selected', 'false');
   });
 
   test('it renders default snippets', async function (assert) {
     await this.renderComponent();
-    await click(GENERAL.revealButton('Automation snippets'));
+    await click(GENERAL.accordionButton('Automation snippets'));
     let expectedSnippet = `resource "vault_policy" "<local identifier>" {
   name = "<policy name>"
 
@@ -69,8 +79,10 @@ module('Integration | Component | code-generator/policy/builder', function (hook
 }
 EOT
 }`;
+    assert.dom(GENERAL.hdsTabPanel('terraform')).doesNotHaveAttribute('hidden');
+    assert.dom(GENERAL.hdsTabPanel('cli')).hasAttribute('hidden');
     assert
-      .dom(GENERAL.fieldByAttr('snippets'))
+      .dom(GENERAL.fieldByAttr('terraform'))
       .hasText(expectedSnippet, 'it renders empty terraform snippet');
 
     expectedSnippet = `vault policy write <policy name> - <<EOT
@@ -78,17 +90,19 @@ EOT
     capabilities = []
 }
 EOT`;
-    await click(GENERAL.inputByAttr('cli'));
-    assert.dom(GENERAL.inputByAttr('cli')).isChecked();
-    assert.dom(GENERAL.inputByAttr('terraform')).isNotChecked();
-    assert.dom(GENERAL.fieldByAttr('snippets')).hasText(expectedSnippet, 'it renders empty cli snippet');
+    await click(GENERAL.hdsTab('cli'));
+    assert.dom(GENERAL.hdsTab('cli')).exists().hasAttribute('aria-selected', 'true');
+    assert.dom(GENERAL.hdsTabPanel('cli')).doesNotHaveAttribute('hidden');
+    assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedSnippet, 'it renders empty cli snippet');
+    assert.dom(GENERAL.hdsTab('terraform')).exists().hasAttribute('aria-selected', 'false');
+    assert.dom(GENERAL.hdsTabPanel('terraform')).hasAttribute('hidden');
   });
 
   test('it includes namespace in snippet for non-root namespaces', async function (assert) {
     const namespace = this.owner.lookup('service:namespace');
     namespace.path = 'admin';
     await this.renderComponent();
-    await click(GENERAL.revealButton('Automation snippets'));
+    await click(GENERAL.accordionButton('Automation snippets'));
     const expectedSnippet = `resource "vault_policy" "<local identifier>" {
   namespace = "admin"
 
@@ -101,17 +115,20 @@ EOT`;
 EOT
 }`;
     assert
-      .dom(GENERAL.fieldByAttr('snippets'))
+      .dom(GENERAL.fieldByAttr('terraform'))
       .hasText(expectedSnippet, 'it renders empty terraform snippet');
   });
 
-  test('it does not call onPolicyChange when callback is not provided', async function (assert) {
-    this.onPolicyChange = undefined;
+  test('it throws an error when stanzas are not provided', async function (assert) {
+    this.stanzas = undefined;
+    // catches error so qunit test doesn't fail
+    setupOnerror(({ message }) => {
+      assert.strictEqual(
+        message,
+        'Assertion Failed: @stanzas are required and must be an array of PolicyStanza instances'
+      );
+    });
     await this.renderComponent();
-    await fillIn(GENERAL.inputByAttr('path'), 'test/path');
-    await click(GENERAL.checkboxByAttr('read'));
-    await click(GENERAL.button('Add rule'));
-    assert.true(true, 'no errors are thrown when callback is undefined');
   });
 
   test('it adds a rule', async function (assert) {
@@ -183,7 +200,7 @@ EOT
     await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('path'), 'my/super/secret/*');
     await click(GENERAL.checkboxByAttr('patch'));
-    await click(GENERAL.revealButton('Automation snippets'));
+    await click(GENERAL.accordionButton('Automation snippets'));
     // Check terraform snippet
     let expectedSnippet = `resource "vault_policy" "<local identifier>" {
   name = "my-secure-policy"
@@ -194,7 +211,7 @@ EOT
 }
 EOT
 }`;
-    assert.dom(GENERAL.fieldByAttr('snippets')).hasText(expectedSnippet, 'it renders terraform snippet');
+    assert.dom(GENERAL.fieldByAttr('terraform')).hasText(expectedSnippet);
 
     // Check CLI snippet
     expectedSnippet = `vault policy write my-secure-policy - <<EOT
@@ -202,8 +219,7 @@ EOT
     capabilities = ["patch"]
 }
 EOT`;
-    await click(GENERAL.inputByAttr('cli'));
-    assert.dom(GENERAL.fieldByAttr('snippets')).hasText(expectedSnippet, 'it renders cli snippet');
+    assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedSnippet);
   });
 
   test('it passes policy updates as changes are made', async function (assert) {

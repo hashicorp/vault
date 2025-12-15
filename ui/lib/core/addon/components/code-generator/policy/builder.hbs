@@ -3,46 +3,27 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#each this.stanzas as |stanza idx|}}
-  <CodeGenerator::Policy::Stanza
-    @index={{idx}}
-    @onChange={{this.handleChange}}
-    @onDelete={{fn this.deleteStanza stanza}}
-    @stanza={{stanza}}
-    class="has-top-bottom-margin-12"
-  />
-{{/each}}
+<div ...attributes>
+  {{#each @stanzas as |stanza idx|}}
+    <CodeGenerator::Policy::Stanza
+      @index={{idx}}
+      @onChange={{this.updateStanzas}}
+      @onDelete={{fn this.deleteStanza stanza}}
+      @stanza={{stanza}}
+      class="has-bottom-margin-m"
+    />
+  {{/each}}
 
-<div class="has-top-padding-m">
   <Hds::Button @icon="plus" @text="Add rule" @color="secondary" {{on "click" this.addStanza}} data-test-button="Add rule" />
 </div>
 
-<Hds::Separator />
+<Hds::Separator @spacing="0" />
 
-<Hds::Card::Container @hasBorder={{true}} class="has-top-padding-m has-bottom-padding-m side-padding-24">
-  <Hds::Reveal @text="Automation snippets" class="is-fullwidth" data-test-reveal="Automation snippets">
-    <Hds::Layout::Flex @gap="24" class="has-top-bottom-margin-12">
-      {{#each-in this.snippetTypes as |value label|}}
-        <Hds::Form::Radio::Field
-          name="snippetType"
-          @value={{value}}
-          checked={{eq this.snippetType value}}
-          {{on "change" this.handleRadio}}
-          data-test-input={{value}}
-          as |F|
-        >
-          <F.Label>{{label}}</F.Label>
-        </Hds::Form::Radio::Field>
-      {{/each-in}}
-    </Hds::Layout::Flex>
-
-    <Hds::CodeBlock
-      @language="hcl"
-      @value={{this.snippet}}
-      @hasLineNumbers={{false}}
-      @hasCopyButton={{true}}
-      data-test-field="snippets"
-    />
-
-  </Hds::Reveal>
-</Hds::Card::Container>
+<Hds::Accordion @size="medium" as |A|>
+  <A.Item data-test-accordion="Automation snippets">
+    <:toggle>Automation snippets</:toggle>
+    <:content>
+      <CodeGenerator::AutomationSnippets @snippets={{this.snippets}} />
+    </:content>
+  </A.Item>
+</Hds::Accordion>

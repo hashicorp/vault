@@ -17,6 +17,8 @@ export class PolicyStanza {
   }
 }
 
+export const formatStanzas = (stanzas: PolicyStanza[]) => stanzas.map((s) => s.preview).join('\n');
+
 /**
  * Formats an ACL policy stanza in HCL
  * @param path - The Vault API path the policy applies to (e.g., "secret/data/*")

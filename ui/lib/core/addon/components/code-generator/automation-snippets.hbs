@@ -1,0 +1,34 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{! 
+@snippets: SnippetOptions[]
+
+interface SnippetOption {
+  key: string;
+  label: string;
+  language: 'bash' | 'go' | 'hcl' | 'json' | 'log' | 'ruby' | 'shell-session' | 'yaml'
+  value: string;
+}
+
+}}
+
+<Hds::Tabs as |T|>
+  {{! key="key" tells Ember to track each tab by its key property rather than array index. }}
+  {{! This prevents the tabs from re-rendering and jarring page flashes when @snippets recalculates. }}
+  {{#each @snippets key="key" as |snippet|}}
+    <T.Tab data-test-tab={{snippet.key}}>{{snippet.label}}</T.Tab>
+    <T.Panel data-test-panel={{snippet.key}} class="has-top-padding-m">
+      <Hds::CodeBlock
+        @language={{or snippet.language "json"}}
+        @value={{snippet.value}}
+        @hasLineNumbers={{false}}
+        @hasCopyButton={{true}}
+        data-test-field={{snippet.key}}
+      />
+    </T.Panel>
+
+  {{/each}}
+</Hds::Tabs>

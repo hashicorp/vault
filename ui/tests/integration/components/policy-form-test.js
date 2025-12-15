@@ -12,26 +12,11 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
-
-const SELECTORS = {
-  nameInput: '[data-test-policy-input="name"]',
-  uploadFileToggle: '[data-test-policy-edit-toggle]',
-  policyEditor: '[data-test-policy-editor]',
-  policyUpload: '[data-test-text-file-input]',
-  altTabMessage: '[data-test-alt-tab-message]',
-  error: '[data-test-message-error]',
-  // For example modal:
-  exampleModal: '[data-test-policy-example-modal]',
-  exampleModalTitle: '[data-test-modal-title]',
-  exampleModalClose: '[data-test-modal-close-button]',
-  // For additional fields for EGP policy:
-  fields: (name) => `[data-test-field=${name}]`,
-  pathsInput: (index) => `[data-test-string-list-input="${index}"]`,
-};
+import { FORM } from 'vault/tests/helpers/form-selectors';
 
 async function setEditorValue(value) {
   await waitFor('.cm-editor');
-  const editor = codemirror(SELECTORS.policyEditor);
+  const editor = codemirror(GENERAL.codemirror);
   setCodeEditorValue(editor, value);
   return settled();
 }
@@ -42,9 +27,11 @@ module('Integration | Component | policy-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    // Set model here with "ACL" policy type for so PolicyForm component consistently has a @model arg
     this.model = this.store.createRecord('policy/acl');
     this.onSave = sinon.spy();
     this.onCancel = sinon.spy();
+    this.isCompact = undefined;
     this.server.put('/sys/policies/acl/:name', (_, req) => {
       if (req.params.name === 'bad-policy') {
         return overrideResponse(400, { errors: ['An error occurred'] });
@@ -53,219 +40,75 @@ module('Integration | Component | policy-form', function (hooks) {
     });
     this.server.put('/sys/policies/rgp/:name', () => overrideResponse(204));
     this.server.put('/sys/policies/egp/:name', () => overrideResponse(204));
+
+    this.assertNoVisualEditor = (assert, msg = 'it does not render visual policy builder') => {
+      assert.dom(GENERAL.radioByAttr()).doesNotExist('it does not render radio options');
+      assert.dom(GENERAL.codemirror).exists('JSON editor renders');
+      assert.dom(GENERAL.fieldByAttr('visual editor')).doesNotExist(msg);
+    };
+
+    this.renderComponent = () => {
+      return render(
+        hbs`<PolicyForm
+          @model={{this.model}}
+          @onCancel={{this.onCancel}}
+          @onSave={{this.onSave}}
+          @isCompact={{this.isCompact}}
+        />`
+      );
+    };
   });
 
-  test('it renders the form for new ACL policy', async function (assert) {
-    const policy = `
-    path "secret/*" {
-      capabilities = [ "create", "read", "update", "list" ]
-    }
-    `;
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
-    assert.dom(SELECTORS.nameInput).exists({ count: 1 }, 'Name input exists');
-    assert.dom(SELECTORS.nameInput).hasNoText('Name field is not filled');
-    assert.dom(SELECTORS.uploadFileToggle).exists({ count: 1 }, 'Upload file toggle exists');
-    await fillIn(SELECTORS.nameInput, 'Foo');
-    assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
-    await setEditorValue(policy);
-    assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
-    assert.ok(this.onSave.notCalled);
-    assert.dom(GENERAL.submitButton).hasText('Create policy');
-    await click(GENERAL.submitButton);
-    assert.ok(this.onSave.calledOnceWith(this.model));
-  });
-
-  test('it renders the form for new RGP policy', async function (assert) {
-    const model = this.store.createRecord('policy/rgp');
-    const policy = `
-    path "secret/*" {
-      capabilities = [ "create", "read", "update", "list" ]
-    }
-    `;
-    this.set('model', model);
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
-    assert.dom(SELECTORS.nameInput).exists({ count: 1 }, 'Name input exists');
-    assert.dom(SELECTORS.nameInput).hasNoText('Name field is not filled');
-    assert.dom(SELECTORS.uploadFileToggle).exists({ count: 1 }, 'Upload file toggle exists');
-    await fillIn(SELECTORS.nameInput, 'Foo');
-    assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
-    await setEditorValue(policy);
-    assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
-    assert.ok(this.onSave.notCalled);
-    assert.dom(GENERAL.submitButton).hasText('Create policy');
-    await click(GENERAL.submitButton);
-    assert.ok(this.onSave.calledOnceWith(this.model));
-  });
-
-  test('it renders the form for new EGP policy', async function (assert) {
-    const model = this.store.createRecord('policy/egp');
-    const policy = `
-    path "secret/*" {
-      capabilities = [ "create", "read", "update", "list" ]
-    }
-    `;
-    this.set('model', model);
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
-    assert.dom(SELECTORS.nameInput).exists({ count: 1 }, 'Name input exists');
-    assert.dom(SELECTORS.nameInput).hasNoText('Name field is not filled');
-    assert.dom(SELECTORS.uploadFileToggle).exists({ count: 1 }, 'Upload file toggle exists');
-    await fillIn(SELECTORS.nameInput, 'Foo');
-    assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
-    await setEditorValue(policy);
-    assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
-    assert.dom(SELECTORS.fields('paths')).exists('Paths field exists');
-    assert.dom(SELECTORS.pathsInput('0')).exists('0 field exists');
-    await fillIn(SELECTORS.pathsInput('0'), 'my path');
-    assert.ok(this.onSave.notCalled);
-    assert.dom(GENERAL.submitButton).hasText('Create policy');
-    await click(GENERAL.submitButton);
-    assert.ok(this.onSave.calledOnceWith(this.model));
-  });
-
+  // Tests that are policy type agnostic are below, otherwise tests are organized by module for each type: ACL, RGP, EGP
   test('it toggles to upload a new policy and uploads file', async function (assert) {
-    const policy = `
-    path "auth/token/lookup-self" {
-      capabilities = ["read"]
-    }`;
-    this.file = new File([policy], 'test-policy.hcl');
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
-    assert.dom(SELECTORS.uploadFileToggle).exists({ count: 1 }, 'Upload file toggle exists');
-    assert.dom(SELECTORS.policyEditor).exists({ count: 1 }, 'Policy editor is shown');
-    assert.dom(SELECTORS.policyUpload).doesNotExist('Policy upload is not shown');
-    await click(SELECTORS.uploadFileToggle);
-    assert.dom(SELECTORS.policyUpload).exists({ count: 1 }, 'Policy upload is shown after toggle');
-    assert.dom(SELECTORS.policyEditor).doesNotExist('Policy editor is not shown');
-    await triggerEvent(SELECTORS.policyUpload, 'change', { files: [this.file] });
-    assert.dom(SELECTORS.nameInput).hasValue('test-policy', 'it fills in policy name');
+    const policy = `path "auth/token/lookup-self" { capabilities = ["read"] }`;
+    const file = new File([policy], 'test-policy.hcl');
+    await this.renderComponent();
+    assert.dom(GENERAL.toggleInput('Upload file')).exists({ count: 1 }, 'Upload file toggle exists');
+    assert.dom(GENERAL.fieldByAttr('visual editor')).exists('Visual editor renders');
+    assert.dom(GENERAL.fileInput).doesNotExist('Policy upload is not shown');
+    // Click upload file toggle
+    await click(GENERAL.toggleInput('Upload file'));
+    assert.dom(GENERAL.fileInput).exists({ count: 1 }, 'Policy upload is shown after toggle');
+    assert.dom(FORM.header('Policy rules')).doesNotExist();
+    assert.dom(FORM.description('Policy rules')).doesNotExist();
+    assert
+      .dom(GENERAL.fieldByAttr('visual editor'))
+      .doesNotExist('Visual editor is hidden when "Upload file" is selected');
+    assert
+      .dom(GENERAL.radioByAttr())
+      .doesNotExist('it does not render radio buttons "Upload file" is selected');
+    // Upload file
+    await triggerEvent(GENERAL.fileInput, 'change', { files: [file] });
+    await waitFor('.cm-editor');
+    assert.dom(GENERAL.toggleInput('Upload file')).isNotChecked('Upload file is unchecked after upload');
+    assert.dom(GENERAL.codemirror).exists().hasTextContaining(policy, 'code editor renders policy from file');
+    assert.dom(GENERAL.inputByAttr('name')).hasValue('test-policy', 'it fills in policy name');
+    assert.dom(GENERAL.radioByAttr('visual')).exists().isNotChecked();
+    assert.dom(GENERAL.radioByAttr('code')).exists().isChecked();
     await click(GENERAL.submitButton);
     assert.propEqual(this.onSave.lastCall.args[0].policy, policy, 'policy content saves in correct format');
   });
 
-  test('it renders the form to edit existing ACL policy', async function (assert) {
-    const model = this.store.createRecord('policy/acl', {
-      name: 'bar',
-      policy: 'some policy content',
-    });
-    model.save();
-
-    this.set('model', model);
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
-    assert.dom(SELECTORS.nameInput).doesNotExist('Name input is not rendered');
-    assert.dom(SELECTORS.uploadFileToggle).doesNotExist('Upload file toggle does not exist');
-
-    await setEditorValue('updated');
-    assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
-    assert.ok(this.onSave.notCalled);
-    assert.dom(GENERAL.submitButton).hasText('Save', 'Save button text is correct');
-    await click(GENERAL.submitButton);
-    assert.ok(this.onSave.calledOnceWith(this.model));
+  test('it renders all elements by default (when not compact)', async function (assert) {
+    await this.renderComponent();
+    assert.dom(GENERAL.fieldByAttr('visual editor')).exists();
+    assert.dom(GENERAL.accordionButton('Automation snippets')).exists('Automation snippets render');
+    assert.dom(GENERAL.radioByAttr()).exists({ count: 2 }, 'radio buttons render for each editor');
+    assert.dom(GENERAL.radioByAttr('visual')).exists();
+    assert.dom(GENERAL.radioByAttr('code')).exists();
+    await click(GENERAL.radioByAttr('code'));
+    assert.dom(GENERAL.button('How to write a policy')).exists();
   });
 
-  test('it renders the form to edit existing RGP policy', async function (assert) {
-    const model = this.store.createRecord('policy/rgp', {
-      name: 'bar',
-      policy: 'some policy content',
-    });
-    model.save();
-
-    this.set('model', model);
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
-    assert.dom(SELECTORS.nameInput).doesNotExist('Name input is not rendered');
-    assert.dom(SELECTORS.uploadFileToggle).doesNotExist('Upload file toggle does not exist');
-
-    await setEditorValue('updated');
-    assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
-    assert.ok(this.onSave.notCalled);
-    assert.dom(GENERAL.submitButton).hasText('Save', 'Save button text is correct');
-    await click(GENERAL.submitButton);
-    assert.ok(this.onSave.calledOnceWith(this.model));
-  });
-
-  test('it renders the form to edit existing EGP policy', async function (assert) {
-    const model = this.store.createRecord('policy/egp', {
-      name: 'bar',
-      policy: 'some policy content',
-      paths: ['first path'],
-    });
-    model.save();
-
-    this.set('model', model);
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
-    assert.dom(SELECTORS.nameInput).doesNotExist('Name input is not rendered');
-    assert.dom(SELECTORS.uploadFileToggle).doesNotExist('Upload file toggle does not exist');
-    await setEditorValue('updated');
-    assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
-    await fillIn(SELECTORS.pathsInput('1'), 'second path');
-    assert.strictEqual(
-      JSON.stringify(this.model.paths),
-      '["first path","second path"]',
-      'Second path field is updated on model'
-    );
-    assert.ok(this.onSave.notCalled);
-    assert.dom(GENERAL.submitButton).hasText('Save', 'Save button text is correct');
-    await click(GENERAL.submitButton);
-    assert.ok(this.onSave.calledOnceWith(this.model));
-  });
-
-  test('it shows the error message on form when save fails', async function (assert) {
-    const model = this.store.createRecord('policy/acl', {
-      name: 'bad-policy',
-      policy: 'some policy content',
-    });
-
-    this.set('model', model);
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
-    await click(GENERAL.submitButton);
-    assert.ok(this.onSave.notCalled);
-    assert.dom(SELECTORS.error).includesText('An error occurred');
+  test('it hides elements when isCompact', async function (assert) {
+    this.isCompact = true;
+    await this.renderComponent();
+    assert.dom(GENERAL.fieldByAttr('visual editor')).doesNotExist('Visual editor does not render');
+    assert.dom(GENERAL.accordionButton('Automation snippets')).doesNotExist();
+    assert.dom(GENERAL.radioByAttr('visual')).doesNotExist();
+    assert.dom(GENERAL.radioByAttr('code')).doesNotExist();
+    assert.dom(GENERAL.button('How to write a policy')).doesNotExist();
   });
 
   test('it does not create a new policy when the cancel button is clicked', async function (assert) {
@@ -274,51 +117,30 @@ module('Integration | Component | policy-form', function (hooks) {
       capabilities = [ "create", "read", "update", "list" ]
     }
     `;
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
-    await fillIn(SELECTORS.nameInput, 'Foo');
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), 'Foo');
     assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
+    await click(GENERAL.radioByAttr('code'));
     await setEditorValue(policy);
     assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
 
     await click(GENERAL.cancelButton);
-    assert.ok(this.onSave.notCalled);
-    assert.ok(this.onCancel.calledOnce, 'Form calls onCancel');
+    assert.true(this.onSave.notCalled, 'onSave is not called yet');
+    assert.true(this.onCancel.calledOnce, 'Form calls onCancel');
   });
 
   test('it does not save edits when the cancel button is clicked', async function (assert) {
-    const model = this.store.createRecord('policy/acl', {
-      name: 'foo',
-      policy: 'some policy content',
-    });
-    model.save();
-
-    this.set('model', model);
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
+    this.model.name = 'foo';
+    this.model.policy = 'some policy content';
+    this.model.save();
+    await this.renderComponent();
     await setEditorValue('updated');
     assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
     await click(GENERAL.cancelButton);
-    assert.ok(this.onSave.notCalled);
-    assert.ok(this.onCancel.calledOnce, 'Form calls onCancel');
+    assert.true(this.onSave.notCalled, 'onSave is not called yet');
+    assert.true(this.onCancel.calledOnce, 'Form calls onCancel');
 
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
+    await this.renderComponent();
     assert.strictEqual(
       this.model.policy,
       'some policy content',
@@ -326,77 +148,345 @@ module('Integration | Component | policy-form', function (hooks) {
     );
   });
 
-  test('it does not render the button and modal for the policy example if not specified to', async function (assert) {
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-    `);
-    assert.dom(SELECTORS.exampleModal).doesNotExist('Modal for the policy example does not exist');
-    assert
-      .dom(GENERAL.button('How to write a policy'))
-      .doesNotExist('Button for the policy example modal does not exist');
+  test('it shows the error message on form when save fails', async function (assert) {
+    this.model.name = 'bad-policy';
+    this.model.policy = 'some policy content';
+    await this.renderComponent();
+    await click(GENERAL.submitButton);
+    assert.true(this.onSave.notCalled, 'onSave is not called yet');
+    assert.dom(GENERAL.messageError).includesText('An error occurred');
+  });
+  // End shared functionality tests
+
+  module('ACL', function (hooks) {
+    hooks.beforeEach(function () {
+      this.model = this.store.createRecord('policy/acl');
+      this.policy = `path "secret/*" {
+      capabilities = [ "create", "read", "update", "list" ]
+    }
+    `;
+    });
+
+    test('it renders the form for new ACL policy', async function (assert) {
+      await this.renderComponent();
+      assert.dom(GENERAL.inputByAttr('name')).exists({ count: 1 }, 'Name input exists');
+      assert.dom(GENERAL.inputByAttr('name')).hasNoText('Name field is not filled');
+      // Assert visual policy editor default state
+      assert.dom(GENERAL.radioByAttr('visual')).exists().isChecked();
+      assert.dom(GENERAL.radioByAttr('code')).exists().isNotChecked();
+      assert.dom(GENERAL.codemirror).doesNotExist('JSON editor does not render by default');
+      assert.dom(GENERAL.fieldByAttr('visual editor')).exists('it renders visual policy editor by default');
+      assert.dom(GENERAL.toggleInput('Upload file')).exists({ count: 1 }, 'Upload file toggle exists');
+      assert.dom(GENERAL.submitButton).hasText('Create policy');
+    });
+
+    test('it saves a new ACL policy using the code editor', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'Foo');
+      assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
+      await click(GENERAL.radioByAttr('code'));
+      await setEditorValue(this.policy);
+      assert.strictEqual(this.model.policy, this.policy, 'Policy editor sets policy on model');
+      assert.true(this.onSave.notCalled, 'onSave is not called yet');
+      await click(GENERAL.submitButton);
+      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+      const [actual] = this.onSave.lastCall.args;
+      assert.strictEqual(actual.policy, this.policy, 'onSave is called with expected policy');
+    });
+
+    test('it renders the form to edit existing ACL policy', async function (assert) {
+      this.model.name = 'bar';
+      this.model.policy = this.policy;
+      this.model.save();
+      await this.renderComponent();
+      assert.dom(GENERAL.inputByAttr('name')).doesNotExist('Name input is not rendered');
+      assert.dom(GENERAL.toggleInput('Upload file')).doesNotExist('Upload file toggle does not exist');
+      this.assertNoVisualEditor(assert, 'it does not render visual editor when editing an ACL policy');
+
+      await setEditorValue('updated');
+      assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
+      assert.true(this.onSave.notCalled, 'onSave is not called yet');
+      assert.dom(GENERAL.submitButton).hasText('Save', 'Save button text is correct');
+      await click(GENERAL.submitButton);
+      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+    });
+
+    test('it renders the correct title for ACL example for the policy example modal', async function (assert) {
+      this.renderPolicyExampleModal = true;
+      await this.renderComponent();
+      await click(GENERAL.radioByAttr('code'));
+      await click(GENERAL.button('How to write a policy'));
+      assert.dom(GENERAL.modal.container('Example policy')).exists('Modal renders');
+      assert.dom(GENERAL.modal.header('Example policy')).hasText('Example ACL Policy');
+    });
+
+    // Only ACL policy types support the visual editor
+    test('it toggles between visual and code editors', async function (assert) {
+      await this.renderComponent();
+      // Assert default state
+      assert.dom(GENERAL.radioByAttr('visual')).exists().isChecked();
+      assert.dom(GENERAL.radioByAttr('code')).exists().isNotChecked();
+      assert.dom(GENERAL.codemirror).doesNotExist('JSON editor does not render by default');
+      assert
+        .dom(GENERAL.fieldByAttr('visual editor'))
+        .hasTextContaining('Rule Show preview')
+        .exists('it renders visual policy editor by default');
+      // Select Code editor
+      await click(GENERAL.radioByAttr('code'));
+      assert.dom(GENERAL.radioByAttr('visual')).exists().isNotChecked();
+      assert.dom(GENERAL.radioByAttr('code')).exists().isChecked();
+      assert.dom(GENERAL.codemirror).exists('code editor renders after selecting "Code editor"');
+      assert.dom(GENERAL.fieldByAttr('visual editor')).doesNotExist('visual editor no longer renders');
+      // Go back to Visual editor
+      await click(GENERAL.radioByAttr('visual'));
+      assert.dom(GENERAL.radioByAttr('visual')).exists().isChecked();
+      assert.dom(GENERAL.radioByAttr('code')).exists().isNotChecked();
+      assert.dom(GENERAL.codemirror).doesNotExist();
+      assert
+        .dom(GENERAL.fieldByAttr('visual editor'))
+        .hasTextContaining('Rule Show preview')
+        .exists('Visual editor renders after selecting radio');
+    });
+
+    test('it saves a new ACL policy using the visual editor', async function (assert) {
+      const expectedPolicy = `path "first/path" {
+    capabilities = ["read"]
+}
+path "second/path" {
+    capabilities = ["update"]
+}`;
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'Foo');
+      assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
+      // Set up first rule
+      await fillIn(GENERAL.inputByAttr('path'), 'first/path');
+      await click(GENERAL.checkboxByAttr('read'));
+      // Add second rule
+      await click(GENERAL.button('Add rule'));
+      await fillIn(`${GENERAL.cardContainer('1')} ${GENERAL.inputByAttr('path')}`, 'second/path');
+      await click(`${GENERAL.cardContainer('1')} ${GENERAL.checkboxByAttr('update')}`);
+      // Save policy
+      assert.strictEqual(this.model.policy, expectedPolicy, 'Policy editor sets policy on model');
+      assert.true(this.onSave.notCalled, 'onSave is not called yet');
+      await click(GENERAL.submitButton);
+      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+      const [actual] = this.onSave.lastCall.args;
+      assert.strictEqual(actual.policy, expectedPolicy, 'save is called with expected policy');
+    });
+
+    module('switch editors modal', function (hooks) {
+      hooks.beforeEach(function () {
+        this.originalPolicy = `path "secret/data/*" {
+    capabilities = ["read"]
+}`;
+        this.editedPolicy = `path "secret/data/*" {
+    capabilities = ["read", "list"]
+}`;
+        this.setupSwitch = async () => {
+          await this.renderComponent();
+          // Use visual editor
+          await fillIn(GENERAL.inputByAttr('path'), 'secret/data/*');
+          await click(GENERAL.checkboxByAttr('read'));
+          // Switch to code editor and set with edited policy
+          await click(GENERAL.radioByAttr('code'));
+          await setEditorValue(this.editedPolicy);
+        };
+      });
+
+      test('it renders modal when switching back to visual editor after using code editor', async function (assert) {
+        await this.setupSwitch();
+        // Switch back to visual editor
+        await click(GENERAL.radioByAttr('visual'));
+        assert
+          .dom(GENERAL.modal.container('warning'))
+          .exists()
+          .hasText(
+            'Switching editors? Changes made in the Code editor will not be carried over to the Visual editor. Do you want to switch and discard changes? Switch and discard changes Cancel'
+          );
+        assert.dom(GENERAL.icon('alert-triangle')).exists();
+        assert.dom(GENERAL.confirmButton).exists();
+        assert.dom(GENERAL.cancelButton).exists();
+      });
+
+      test('it renders modal when only formatting has changed', async function (assert) {
+        // Same as original policy but remove indents before "capabilities"
+        this.editedPolicy = `path "secret/data/*" {
+capabilities = ["read"]
+}`;
+        await this.setupSwitch();
+        // Switch back to visual editor
+        await click(GENERAL.radioByAttr('visual'));
+        assert.dom(GENERAL.modal.container('warning')).exists();
+      });
+
+      test('it does NOT render modal when code editor is updated with original policy', async function (assert) {
+        // Clear editor
+        this.editedPolicy = '';
+        await this.setupSwitch();
+        // Set with original policy
+        await setEditorValue(this.originalPolicy);
+        // Switch back to visual editor
+        await click(GENERAL.radioByAttr('visual'));
+        assert.dom(GENERAL.modal.container('warning')).doesNotExist('modal does not render');
+        assert.dom(GENERAL.radioByAttr('visual')).isChecked('visual editor is checked');
+        assert.dom(GENERAL.radioByAttr('code')).isNotChecked();
+      });
+
+      test('it does not switch editors after clicking "Cancel"', async function (assert) {
+        await this.setupSwitch();
+        // Switch back to visual editor
+        await click(GENERAL.radioByAttr('visual'));
+        await click(GENERAL.cancelButton);
+        assert.dom(GENERAL.modal.container('warning')).doesNotExist('Clicking cancel closes the modal');
+        assert
+          .dom(GENERAL.radioByAttr('visual'))
+          .isNotChecked('visual editor is not checked after clicking "Cancel"');
+        assert.dom(GENERAL.fieldByAttr('visual editor')).doesNotExist('visual editor does not render');
+        assert.dom(GENERAL.radioByAttr('code')).isChecked('code editor is still checked');
+        assert
+          .dom(GENERAL.codemirror)
+          .exists()
+          .hasTextContaining('list', 'code editor renders edited policy');
+      });
+
+      test('it switches editors and reverts changes after confirming', async function (assert) {
+        await this.setupSwitch();
+        // Switch back to visual editor
+        await click(GENERAL.radioByAttr('visual'));
+        await click(GENERAL.confirmButton);
+        assert.dom(GENERAL.modal.container('warning')).doesNotExist('confirming switch closes the modal');
+        assert.dom(GENERAL.radioByAttr('visual')).isChecked('visual editor is checked after "Cancel"');
+        assert.dom(GENERAL.fieldByAttr('visual editor')).exists('visual editor renders');
+        assert.dom(GENERAL.inputByAttr('path')).hasValue('secret/data/*');
+        assert.dom(GENERAL.checkboxByAttr('read')).isChecked('"read" is still checked');
+        assert.dom(GENERAL.radioByAttr('code')).isNotChecked('code editor is no longer checked');
+        // Confirm code editor reverts to original policy and not edited one
+        await click(GENERAL.radioByAttr('code'));
+        await waitFor('.cm-editor');
+        assert.dom(GENERAL.codemirror).doesNotHaveTextContaining('list');
+      });
+    });
   });
 
-  test('it renders the button and modal for the policy example when specified to', async function (assert) {
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-      @renderPolicyExampleModal={{true}}
-    />
-        `);
-    assert
-      .dom(GENERAL.button('How to write a policy'))
-      .exists({ count: 1 }, 'Modal for the policy example exists');
-    assert
-      .dom(GENERAL.button('How to write a policy'))
-      .exists({ count: 1 }, 'Button for the policy example modal exists');
+  module('RGP', function (hooks) {
+    hooks.beforeEach(function () {
+      this.model = this.store.createRecord('policy/rgp');
+      this.policy = `import "strings"
+precond = rule {
+    strings.has_prefix(request.path, "sys/policies/admin")
+}
+main = rule when precond {
+    identity.entity.metadata.role is "Team Lead" or
+      identity.entity.name is "James Thomas"
+}`;
+    });
+
+    test('it renders the form for new RGP policy', async function (assert) {
+      await this.renderComponent();
+      assert.dom(GENERAL.inputByAttr('name')).exists({ count: 1 }, 'Name input exists');
+      assert.dom(GENERAL.inputByAttr('name')).hasNoText('Name field is not filled');
+      assert.dom(GENERAL.toggleInput('Upload file')).exists({ count: 1 }, 'Upload file toggle exists');
+      this.assertNoVisualEditor(assert, 'it hides visual editor for RGP policy types');
+
+      await fillIn(GENERAL.inputByAttr('name'), 'Foo');
+      assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
+      await setEditorValue(this.policy);
+      assert.strictEqual(this.model.policy, this.policy, 'Policy editor sets policy on model');
+      assert.true(this.onSave.notCalled, 'onSave is not called yet');
+      assert.dom(GENERAL.submitButton).hasText('Create policy');
+      await click(GENERAL.submitButton);
+      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+    });
+
+    test('it renders the form to edit existing RGP policy', async function (assert) {
+      this.model.name = 'bar';
+      this.model.policy = this.policy;
+      this.model.save();
+      await this.renderComponent();
+      assert.dom(GENERAL.inputByAttr('name')).doesNotExist('Name input is not rendered');
+      assert.dom(GENERAL.toggleInput('Upload file')).doesNotExist('Upload file toggle does not exist');
+
+      await setEditorValue('updated');
+      assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
+      assert.true(this.onSave.notCalled, 'onSave is not called yet');
+      assert.dom(GENERAL.submitButton).hasText('Save', 'Save button text is correct');
+      await click(GENERAL.submitButton);
+      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+    });
+
+    test('it renders the correct title for RGP example for the policy example modal', async function (assert) {
+      this.renderPolicyExampleModal = true;
+      await this.renderComponent();
+      await click(GENERAL.button('How to write a policy'));
+      assert.dom(GENERAL.modal.header('Example policy')).hasText('Example RGP Policy');
+    });
   });
 
-  test('it renders the correct title for ACL example for the policy example modal', async function (assert) {
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-      @renderPolicyExampleModal={{true}}
-    />
-        `);
-    await click(GENERAL.button('How to write a policy'));
-    assert.dom(SELECTORS.exampleModalTitle).hasText('Example ACL Policy');
-  });
+  module('EGP', function (hooks) {
+    hooks.beforeEach(function () {
+      this.model = this.store.createRecord('policy/egp');
+      this.policy = `import "time"
+workdays = rule {
+    time.now.weekday > 0 and time.now.weekday < 6
+}
+workhours = rule {
+    time.now.hour > 7 and time.now.hour < 18
+}
+main = rule {
+    workdays and workhours
+}
+`;
+    });
 
-  test('it renders the correct title for RGP example for the policy example modal', async function (assert) {
-    const model = this.store.createRecord('policy/rgp');
-    this.set('model', model);
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-      @renderPolicyExampleModal={{true}}
-    />
-        `);
-    await click(GENERAL.button('How to write a policy'));
-    assert.dom(SELECTORS.exampleModalTitle).hasText('Example RGP Policy');
-  });
+    test('it renders the form for new EGP policy', async function (assert) {
+      await this.renderComponent();
 
-  test('it renders the correct title for EGP example for the policy example modal', async function (assert) {
-    const model = this.store.createRecord('policy/egp');
-    this.set('model', model);
-    await render(hbs`
-    <PolicyForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-      @renderPolicyExampleModal={{true}}
-    />
-        `);
-    await click(GENERAL.button('How to write a policy'));
-    assert.dom(SELECTORS.exampleModalTitle).hasText('Example EGP Policy');
+      assert.dom(GENERAL.inputByAttr('name')).exists({ count: 1 }, 'Name input exists');
+      assert.dom(GENERAL.inputByAttr('name')).hasNoText('Name field is not filled');
+      assert.dom(GENERAL.toggleInput('Upload file')).exists({ count: 1 }, 'Upload file toggle exists');
+      this.assertNoVisualEditor(assert, 'it hides visual editor for EGP policy types');
+
+      await fillIn(GENERAL.inputByAttr('name'), 'Foo');
+      assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
+      await setEditorValue(this.policy);
+      assert.strictEqual(this.model.policy, this.policy, 'Policy editor sets policy on model');
+      assert.dom(GENERAL.fieldByAttr('paths')).exists('Paths field exists');
+      assert.dom(GENERAL.stringListByIdx(0)).exists('0 field exists');
+      await fillIn(GENERAL.stringListByIdx(0), 'my path');
+      assert.true(this.onSave.notCalled, 'onSave is not called yet');
+      assert.dom(GENERAL.submitButton).hasText('Create policy');
+      await click(GENERAL.submitButton);
+      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+    });
+
+    test('it renders the form to edit existing EGP policy', async function (assert) {
+      this.model.name = 'bar';
+      this.model.policy = this.policy;
+      this.model.paths = ['first path'];
+      this.model.save();
+      await this.renderComponent();
+
+      assert.dom(GENERAL.inputByAttr('name')).doesNotExist('Name input is not rendered');
+      assert.dom(GENERAL.toggleInput('Upload file')).doesNotExist('Upload file toggle does not exist');
+      await setEditorValue('updated');
+      assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
+      await fillIn(GENERAL.stringListByIdx(1), 'second path');
+      assert.strictEqual(
+        JSON.stringify(this.model.paths),
+        '["first path","second path"]',
+        'Second path field is updated on model'
+      );
+      assert.true(this.onSave.notCalled, 'onSave is not called yet');
+      assert.dom(GENERAL.submitButton).hasText('Save', 'Save button text is correct');
+      await click(GENERAL.submitButton);
+      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+    });
+
+    test('it renders the correct title for EGP example for the policy example modal', async function (assert) {
+      this.renderPolicyExampleModal = true;
+      await this.renderComponent();
+      await click(GENERAL.button('How to write a policy'));
+      assert.dom(GENERAL.modal.header('Example policy')).hasText('Example EGP Policy');
+    });
   });
 });

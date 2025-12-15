@@ -151,15 +151,6 @@ module('Integration | Component | code-generator/policy/stanza', function (hooks
     assert.strictEqual(this.stanza.path, 'my/super/secret/*', '"path" is updated');
   });
 
-  // This whole test will fail if conditionals around @onChange are problematically refactored
-  test('it does not call onChange when callback is not provided', async function (assert) {
-    this.onChange = undefined;
-    await this.renderComponent();
-    await fillIn(GENERAL.inputByAttr('path'), 'test/path');
-    await click(GENERAL.checkboxByAttr('read'));
-    assert.true(true, 'no errors are thrown when callback is undefined');
-  });
-
   test('it calls onChange when path changes', async function (assert) {
     await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('path'), 'my/super/secret/*');

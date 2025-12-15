@@ -26,7 +26,6 @@ const SELECT = {
   policyByName: (name) => `[data-test-policy-link="${name}"]`,
   filterBar: '[data-test-component="navigate-input"]',
   createPolicy: '[data-test-policy-create-link]',
-  nameInput: '[data-test-policy-input="name"]',
   policyTitle: '[data-test-policy-name]',
   listBreadcrumb: '[data-test-policy-list-link] a',
 };
@@ -83,8 +82,8 @@ module('Acceptance | policies/acl', function (hooks) {
     // new policy creation
     await click(SELECT.createPolicy);
 
-    await fillIn(SELECT.nameInput, policyName);
-
+    await fillIn(GENERAL.inputByAttr('name'), policyName);
+    await click(GENERAL.radioByAttr('code'));
     await waitFor('.cm-editor');
     const editor = codemirror();
     setCodeEditorValue(editor, policyString);
@@ -107,12 +106,12 @@ module('Acceptance | policies/acl', function (hooks) {
     // new policy creation
     await click(SELECT.createPolicy);
 
-    await fillIn(SELECT.nameInput, policyName);
+    await fillIn(GENERAL.inputByAttr('name'), policyName);
     await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
       .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
-
+    await click(GENERAL.radioByAttr('code'));
     await waitFor('.cm-editor');
     const editor = codemirror();
     setCodeEditorValue(editor, policyString);
