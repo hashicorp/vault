@@ -261,16 +261,25 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 
 		return nil
 	}
-
-	err = tidyFunc(secretIDPrefix, secretIDAccessorPrefix)
-	if err != nil {
-		logger.Error("error tidying global secret IDs", "error", err)
-		return
-	}
-	err = tidyFunc(secretIDLocalPrefix, secretIDAccessorLocalPrefix)
-	if err != nil {
-		logger.Error("error tidying local secret IDs", "error", err)
-		return
+	// If this is a replicated mount on a Performance secondary cluster, only attempt to clean up local
+	// secret IDs.  Otherwise, clean up all secret IDs.
+	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		err = tidyFunc(secretIDLocalPrefix, secretIDAccessorLocalPrefix)
+		if err != nil {
+			logger.Error("error tidying local secret IDs", "error", err)
+			return
+		}
+	} else {
+		err = tidyFunc(secretIDPrefix, secretIDAccessorPrefix)
+		if err != nil {
+			logger.Error("error tidying global secret IDs", "error", err)
+			return
+		}
+		err = tidyFunc(secretIDLocalPrefix, secretIDAccessorLocalPrefix)
+		if err != nil {
+			logger.Error("error tidying local secret IDs", "error", err)
+			return
+		}
 	}
 }
 
