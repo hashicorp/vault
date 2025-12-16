@@ -13,7 +13,7 @@ import { action } from '@ember/object';
  * OverviewPage component is a child component to overview kubernetes secrets engine.
  *
  * @param {boolean} promptConfig - whether or not to display config cta
- * @param {object} backend - backend model that contains kubernetes configuration
+ * @param {object} secretsEngine -  SecretsEngine resource that contains kubernetes configuration
  * @param {array} roles - array of roles
  * @param {array} breadcrumbs - breadcrumbs as an array of objects that contain label and route
  */

@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader @model={{@backend}} @breadcrumbs={{@breadcrumbs}}>
+<TabPageHeader @model={{@secretsEngine}} @breadcrumbs={{@breadcrumbs}}>
   {{#if @config}}
     <ToolbarLink @route="configure" data-test-secret-backend-configure>
       Edit configuration
@@ -12,11 +12,11 @@
 </TabPageHeader>
 
 {{#if @config}}
-  {{#if @config.disableLocalCaJwt}}
-    <InfoTableRow @label="Kubernetes host" @value={{@config.kubernetesHost}} />
-    {{#if @config.kubernetesCaCert}}
+  {{#if @config.disable_local_ca_jwt}}
+    <InfoTableRow @label="Kubernetes host" @value={{@config.kubernetes_host}} />
+    {{#if @config.kubernetes_ca_cert}}
       <InfoTableRow @label="Certificate">
-        <CertificateCard @data={{@config.kubernetesCaCert}} @isPem={{true}} />
+        <CertificateCard @data={{@config.kubernetes_ca_cert}} @isPem={{true}} />
       </InfoTableRow>
     {{/if}}
   {{else}}
@@ -33,7 +33,7 @@
 {{/if}}
 
 <SecretsEngineMountConfig
-  @secretsEngine={{@backend}}
+  @secretsEngine={{@secretsEngine}}
   class="has-top-margin-xl has-bottom-margin-xl"
   data-test-mount-config
 />

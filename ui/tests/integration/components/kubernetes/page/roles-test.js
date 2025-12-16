@@ -44,7 +44,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
 
     this.renderComponent = () => {
       return render(
-        hbs`<Page::Roles @promptConfig={{this.promptConfig}} @backend={{this.backend}} @roles={{this.roles}} @filterValue={{this.filterValue}} @breadcrumbs={{this.breadcrumbs}} />`,
+        hbs`<Page::Roles @promptConfig={{this.promptConfig}} @secretsEngine={{this.backend}} @roles={{this.roles}} @filterValue={{this.filterValue}} @breadcrumbs={{this.breadcrumbs}} />`,
         { owner: this.engine }
       );
     };

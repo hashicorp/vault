@@ -27,7 +27,7 @@
     @description="Generate credentials for the local Kubernetes cluster that Vault is running on, using Vault’s service account."
     @icon="kubernetes-color"
     @value={{false}}
-    @groupValue={{@model.disableLocalCaJwt}}
+    @groupValue={{@form.data.disable_local_ca_jwt}}
     @onChange={{this.onRadioSelect}}
     data-test-radio-card="local"
   />
@@ -38,17 +38,17 @@
     @icon="vault"
     @iconClass="has-text-black"
     @value={{true}}
-    @groupValue={{@model.disableLocalCaJwt}}
+    @groupValue={{@form.data.disable_local_ca_jwt}}
     @onChange={{this.onRadioSelect}}
     data-test-radio-card="manual"
   />
 </div>
 
 <div class="has-top-margin-m" data-test-config>
-  {{#if @model.disableLocalCaJwt}}
+  {{#if @form.data.disable_local_ca_jwt}}
     <MessageError @errorMessage={{this.error}} />
-    {{#each @model.formFields as |attr|}}
-      <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+    {{#each @form.formFields as |field|}}
+      <FormField @attr={{field}} @model={{@form}} @modelValidations={{this.modelValidations}} />
     {{/each}}
   {{else if (eq this.inferredState "success")}}
     <Icon @name="check-circle-fill" class="has-text-success" />
