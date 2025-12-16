@@ -49,7 +49,7 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
     this.promptConfig = false;
     this.renderComponent = () => {
       return render(
-        hbs`<Page::Overview @promptConfig={{this.promptConfig}} @backend={{this.backend}} @roles={{this.roles}} @breadcrumbs={{this.breadcrumbs}} />`,
+        hbs`<Page::Overview @promptConfig={{this.promptConfig}} @secretsEngine={{this.backend}} @roles={{this.roles}} @breadcrumbs={{this.breadcrumbs}} />`,
         { owner: this.engine }
       );
     };
