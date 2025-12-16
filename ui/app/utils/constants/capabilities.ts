@@ -56,4 +56,6 @@ export const PATH_MAP = {
   ldapLibrary: apiPath`${'backend'}/library/${'name'}`,
   ldapLibraryCheckOut: apiPath`${'backend'}/library/${'name'}/check-out`,
   ldapLibraryCheckIn: apiPath`${'backend'}/library/${'name'}/check-in`,
+  kubernetesRole: apiPath`${'backend'}/role/${'name'}`,
+  kubernetesCreds: apiPath`${'backend'}/creds/${'name'}`,
 };

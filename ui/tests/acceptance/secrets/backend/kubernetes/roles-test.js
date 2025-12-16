@@ -83,8 +83,8 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     await click('[data-test-toolbar-roles-action]');
     await click('[data-test-radio-card="basic"]');
     await fillIn('[data-test-input="name"]', 'new-test-role');
-    await fillIn('[data-test-input="serviceAccountName"]', 'default');
-    await fillIn('[data-test-input="allowedKubernetesNamespaces"]', '*');
+    await fillIn('[data-test-input="service_account_name"]', 'default');
+    await fillIn('[data-test-input="allowed_kubernetes_namespaces"]', '*');
     await click('[data-test-submit]');
     this.validateRoute(assert, 'roles.role.details', 'Transitions to details route on save success');
     await click('[data-test-breadcrumbs] li:nth-child(2) a');

@@ -9,36 +9,56 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { getRules } from '../../../utils/generated-role-rules';
-import errorMessage from 'vault/utils/error-message';
+import { getRules } from 'kubernetes/utils/generated-role-rules';
+
+import type RouterService from '@ember/routing/router-service';
+import type ApiService from 'vault/services/api';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type { EngineOwner, ValidationMap } from 'vault/app-types';
+import type KubernetesRoleForm from 'vault/forms/secrets/kubernetes/role';
+import type { HTMLElementEvent } from 'vault/forms';
+import type { EditorView } from '@codemirror/view';
 
 /**
  * @module CreateAndEditRolePage
  * CreateAndEditRolePage component is a child component for create and edit role pages.
  *
- * @param {object} model - role model that contains role record and backend
+ * @param {KubernetesRoleForm} form - form class
  */
 
-export default class CreateAndEditRolePageComponent extends Component {
-  @service('app-router') router;
-  @service flashMessages;
+interface Args {
+  form: KubernetesRoleForm;
+}
+interface RulesTemplate {
+  id: string;
+  label: string;
+  rules: string;
+}
 
-  @tracked roleRulesTemplates;
-  @tracked selectedTemplateId;
-  @tracked modelValidations;
-  @tracked invalidFormAlert;
-  @tracked errorBanner;
-  @tracked codemirrorEditor;
+export default class CreateAndEditRolePageComponent extends Component<Args> {
+  @service('app-router') declare readonly router: RouterService;
+  @service declare readonly api: ApiService;
+  @service declare readonly secretMountPath: SecretMountPath;
+  @service declare readonly flashMessages: FlashMessageService;
 
-  constructor() {
-    super(...arguments);
+  @tracked showAnnotations = false;
+  @tracked declare roleRulesTemplates: RulesTemplate[];
+  @tracked selectedTemplateId = '';
+  @tracked modelValidations: ValidationMap | null = null;
+  @tracked invalidFormAlert = '';
+  @tracked errorBanner = '';
+  @tracked declare codemirrorEditor: EditorView;
+
+  constructor(owner: EngineOwner, args: Args) {
+    super(owner, args);
     // generated role rules are only rendered for the full object chain option
-    if (this.args.model.generationPreference === 'full') {
+    if (this.args.form.generationPreference === 'full') {
       this.initRoleRules();
     }
     // if editing and annotations or labels exist expand the section
-    const { extraAnnotations, extraLabels } = this.args.model;
-    if (extraAnnotations || extraLabels) {
+    const { extra_annotations, extra_labels } = this.args.form.data;
+    if (extra_annotations || extra_labels) {
       this.showAnnotations = true;
     }
   }
@@ -70,12 +90,12 @@ export default class CreateAndEditRolePageComponent extends Component {
     return [
       {
         type: 'annotations',
-        key: 'extraAnnotations',
+        key: 'extra_annotations',
         description: 'Attach arbitrary non-identifying metadata to objects.',
       },
       {
         type: 'labels',
-        key: 'extraLabels',
+        key: 'extra_labels',
         description:
           'Labels specify identifying attributes of objects that are meaningful and relevant to users.',
       },
@@ -95,16 +115,16 @@ export default class CreateAndEditRolePageComponent extends Component {
     // first check if generatedRoleRules matches one of the templates, the user may have chosen a template and not made changes
     // in this case we need to select the corresponding template in the dropdown
     // if there is no match then replace the example rules with the user defined value for no template option
-    const { generatedRoleRules } = this.args.model;
+    const { generated_role_rules } = this.args.form.data;
     const rulesTemplates = getRules();
     this.selectedTemplateId = '1';
 
-    if (generatedRoleRules) {
-      const template = rulesTemplates.find((t) => t.rules === generatedRoleRules);
+    if (generated_role_rules) {
+      const template = rulesTemplates.find((t) => t.rules === generated_role_rules);
       if (template) {
         this.selectedTemplateId = template.id;
       } else {
-        rulesTemplates.find((t) => t.id === '1').rules = generatedRoleRules;
+        (rulesTemplates.find((t) => t.id === '1') as RulesTemplate).rules = generated_role_rules;
       }
     }
     this.roleRulesTemplates = rulesTemplates;
@@ -126,68 +146,64 @@ export default class CreateAndEditRolePageComponent extends Component {
         {
           from: 0,
           to: this.codemirrorEditor.state.doc.length,
-          insert: template.rules,
+          insert: template?.rules,
         },
       ],
     });
   }
 
   @action
-  selectTemplate(event) {
+  selectTemplate(event: HTMLElementEvent<HTMLSelectElement>) {
     this.selectedTemplateId = event.target.value;
     // Dispatch the event to codemirror so the code editor updates when a template is selected
     this.updateCodeMirror();
   }
 
   @action
-  changePreference(pref) {
+  changePreference(pref: 'basic' | 'expanded' | 'full') {
     if (pref === 'full') {
       this.initRoleRules();
     } else {
-      this.selectedTemplateId = null;
+      this.selectedTemplateId = '';
     }
-    this.args.model.generationPreference = pref;
+    this.args.form.generationPreference = pref;
   }
 
-  @task
-  @waitFor
-  *save() {
-    try {
-      // set generatedRoleRoles to value of selected template
-      const selectedTemplate = this.roleRulesTemplates?.find((t) => t.id === this.selectedTemplateId);
-      if (selectedTemplate) {
-        this.args.model.generatedRoleRules = selectedTemplate.rules;
+  save = task(
+    waitFor(async (event: SubmitEvent) => {
+      event.preventDefault();
+
+      try {
+        const { currentPath } = this.secretMountPath;
+        const { form } = this.args;
+        const { isValid, state, invalidFormMessage, data } = form.toJSON();
+
+        if (isValid) {
+          // set generated_role_rules to value of selected template
+          const selectedTemplate = this.roleRulesTemplates?.find((t) => t.id === this.selectedTemplateId);
+          if (selectedTemplate) {
+            data.generated_role_rules = selectedTemplate.rules;
+          }
+          const { name, ...payload } = data;
+          await this.api.secrets.kubernetesWriteRole(name as string, currentPath, payload);
+          this.router.transitionTo('vault.cluster.secrets.backend.kubernetes.roles.role.details', name);
+        } else {
+          this.invalidFormAlert = invalidFormMessage;
+          this.modelValidations = state;
+        }
+      } catch (error) {
+        const { message } = await this.api.parseError(
+          error,
+          'Error saving role. Please try again or contact support'
+        );
+        this.errorBanner = message;
+        this.invalidFormAlert = 'There was an error submitting this form.';
       }
-      yield this.args.model.save();
-      this.router.transitionTo(
-        'vault.cluster.secrets.backend.kubernetes.roles.role.details',
-        this.args.model.name
-      );
-    } catch (error) {
-      const message = errorMessage(error, 'Error saving role. Please try again or contact support');
-      this.errorBanner = message;
-      this.invalidFormAlert = 'There was an error submitting this form.';
-    }
-  }
-
-  @action
-  async onSave(event) {
-    event.preventDefault();
-    const { isValid, state, invalidFormMessage } = await this.args.model.validate();
-    if (isValid) {
-      this.modelValidations = null;
-      this.save.perform();
-    } else {
-      this.invalidFormAlert = invalidFormMessage;
-      this.modelValidations = state;
-    }
-  }
+    })
+  );
 
   @action
   cancel() {
-    const { model } = this.args;
-    const method = model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    model[method]();
     this.router.transitionTo('vault.cluster.secrets.backend.kubernetes.roles');
   }
 }
