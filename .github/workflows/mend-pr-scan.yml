@@ -1,0 +1,42 @@
+name: Mend PR Security Scan
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}-mend-scan
+  cancel-in-progress: true
+
+jobs:
+  mend-scan:
+    if: ${{ github.repository == 'hashicorp/vault-enterprise' }}
+    runs-on: [self-hosted, ubuntu-latest-x64]
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+      - name: Run Mend Security Scan
+        uses: hashicorp/oss-core-library-dashboard-metrics/mend-security/actions/mend-pr-scan@main
+        with:
+          vault-url: ${{ vars.CI_VAULT_URL }}
+          vault-method: ${{ vars.CI_VAULT_METHOD }}
+          vault-path: ${{ vars.CI_VAULT_PATH }}
+          vault-jwt-github-audience: ${{ vars.CI_VAULT_AUD }}
+          generate-scan-report: "true"
+          npm-include-dev-dependencies: "true"
+          scan-timeout-minutes: "30"
+          psirt-id: "PSIRT_PRD0014264"
+
+      - name: Upload Scan Artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+        if: always()
+        with:
+          name: mend-scan-results-pr-${{ github.event.number }}
+          path: whitesource/**
+          retention-days: 90
