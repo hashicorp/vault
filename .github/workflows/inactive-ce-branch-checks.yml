@@ -1,0 +1,62 @@
+name: inactive-ce-branch-checks
+
+# 1.20.x is no longer active. All code changes should be merged into 1.20.x+ent.
+
+on:
+  pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
+
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}-inactive-ce-branch-checks
+  cancel-in-progress: true
+
+jobs:
+  check-changed-files-only-include-docs:
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      # Make sure we check out correct ref based on PR labels and such
+      - uses: ./.github/actions/checkout
+        id: checkout
+      # Get the vault version metadata
+      - uses: hashicorp/actions-set-product-version@2ec1b51402b3070bccf7ca95306afbd039e574ff # v2.0.1
+        id: set-product-version
+        with:
+          checkout: false # don't override the reference we've checked out
+      # Gather additional metadata about our execution context
+      - uses: ./.github/actions/metadata
+        id: metadata
+        with:
+          vault-version: ${{ steps.set-product-version.outputs.product-version }}
+      # Get the elevated github token
+      - if: steps.metadata.outputs.is-enterprise == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: steps.metadata.outputs.is-enterprise == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      # Determine the changed files
+      - uses: ./.github/actions/changed-files
+        id: changed-files
+        with:
+          github-token: ${{ steps.metadata.outputs.is-enterprise != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - id: docs-only
+        name: Ensure no app or UI changes are included in the PR
+        run: |
+          if jq -rec '[.groups[] | select(. == "app" or . == "ui")] | length > 0' <<< '${{steps.changed-files.outputs.changed-files}}'; then
+            echo "WARNING: we have detected that you are changing Go or UI files. Only documentation or website changes should be merged on inactive CE branches." >&2
+            exit 1
+          fi
