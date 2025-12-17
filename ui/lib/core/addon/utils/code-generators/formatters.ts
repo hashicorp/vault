@@ -8,7 +8,7 @@
  * @param content - The content to wrap in the heredoc block
  * @returns A formatted heredoc string with EOT delimiters
  */
-export const formatEot = (content: string) => {
+export const formatEot = (content = '') => {
   return `<<EOT
 ${content}
 EOT`;

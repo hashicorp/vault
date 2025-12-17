@@ -5,77 +5,105 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import { terraformTemplate, formatTerraformOptions } from 'core/utils/code-generators/terraform';
+import { terraformTemplate, formatTerraformResourceArgs } from 'core/utils/code-generators/terraform';
 
 module('Integration | Util | code-generators/terraform', function (hooks) {
   setupTest(hooks);
 
-  test('formatTerraformOptions: it formats single option', async function (assert) {
-    const options = { type: '"github"' };
-    const formatted = formatTerraformOptions(options);
+  test('formatTerraformResourceArgs: it formats single option', async function (assert) {
+    const resourceArgs = { type: '"github"' };
+    const formatted = formatTerraformResourceArgs(resourceArgs);
     const expected = ['  type = "github"'];
     assert.propEqual(formatted, expected, 'it formats single option correctly');
   });
 
-  test('formatTerraformOptions: it formats multiple options', async function (assert) {
-    const options = {
+  test('formatTerraformResourceArgs: it formats multiple resourceArgs', async function (assert) {
+    const resourceArgs = {
       type: '"userpass"',
       path: '"userpass"',
       description: '"User password auth"',
     };
-    const formatted = formatTerraformOptions(options);
+    const formatted = formatTerraformResourceArgs(resourceArgs);
     assert.strictEqual(formatted.length, 3, 'it returns array with 3 items');
     assert.true(formatted.includes('  type = "userpass"'), 'it includes type option');
     assert.true(formatted.includes('  path = "userpass"'), 'it includes path option');
     assert.true(formatted.includes('  description = "User password auth"'), 'it includes description option');
   });
 
-  test('formatTerraformOptions: it formats options with numbers', async function (assert) {
-    const options = { max_ttl: 3600 };
-    const formatted = formatTerraformOptions(options);
+  test('formatTerraformResourceArgs: it formats resourceArgs with numbers', async function (assert) {
+    const resourceArgs = { max_ttl: 3600 };
+    const formatted = formatTerraformResourceArgs(resourceArgs);
     const expected = ['  max_ttl = 3600'];
     assert.propEqual(formatted, expected, 'it formats numeric values');
   });
 
-  test('formatTerraformOptions: it handles empty options', async function (assert) {
-    const options = {};
-    const formatted = formatTerraformOptions(options);
-    assert.propEqual(formatted, [], 'it returns empty array for empty options');
+  test('formatTerraformResourceArgs: it handles empty resourceArgs', async function (assert) {
+    const resourceArgs = {};
+    const formatted = formatTerraformResourceArgs(resourceArgs);
+    assert.propEqual(formatted, [], 'it returns empty array for empty resourceArgs');
   });
 
-  test('terraformTemplate: it generates basic terraform resource', async function (assert) {
+  test('formatTerraformResourceArgs: it handles undefined resourceArgs', async function (assert) {
+    const formatted = formatTerraformResourceArgs();
+    assert.propEqual(formatted, [], 'it returns empty array for empty resourceArgs');
+  });
+
+  test('terraformTemplate: it formats terraform', async function (assert) {
     const formatted = terraformTemplate({
       resource: 'vault_auth_backend',
       localId: 'example',
-      options: { type: '"github"' },
+      resourceArgs: { type: '"github"' },
     });
     const expected = `resource "vault_auth_backend" "example" {
   type = "github"
 }`;
-    assert.strictEqual(formatted, expected, 'it generates terraform resource');
+    assert.strictEqual(formatted, expected, 'it returns formatted terraform snippet');
   });
 
-  test('terraformTemplate: it generates terraform resource with multiple options', async function (assert) {
+  test('terraformTemplate: it formats terraform with multiple resourceArgs', async function (assert) {
     const formatted = terraformTemplate({
       resource: 'vault_mount',
-      localId: 'kv',
-      options: {
+      localId: 'secrets',
+      resourceArgs: {
         path: '"secret"',
-        type: '"kv-v2"',
-        description: '"KV Version 2 secret engine"',
+        type: '"generic"',
+        description: '"A generic secret engine"',
       },
     });
 
-    assert.true(formatted.includes('resource "vault_mount" "kv"'), 'it includes resource declaration');
+    assert.true(formatted.includes('resource "vault_mount" "secrets"'), 'it includes resource declaration');
     assert.true(formatted.includes('path = "secret"'), 'it includes path option');
-    assert.true(formatted.includes('type = "kv-v2"'), 'it includes type option');
-    assert.true(formatted.includes('description = "KV Version 2 secret engine"'), 'it includes description');
+    assert.true(formatted.includes('type = "generic"'), 'it includes type option');
+    assert.true(formatted.includes('description = "A generic secret engine"'), 'it includes description');
+  });
+
+  test('terraformTemplate: it formats terraform with nested object', async function (assert) {
+    const formatted = terraformTemplate({
+      resource: 'vault_mount',
+      localId: 'kv',
+      resourceArgs: {
+        description: '"This is an example KV Version 2 secret engine mount"',
+        path: '"my-kv-path"',
+        type: '"kv-v2"',
+        options: { version: '"2"', type: '"kv-v2"' },
+      },
+    });
+    const expected = `resource "vault_mount" "kv" {
+  description = "This is an example KV Version 2 secret engine mount"
+  path = "my-kv-path"
+  type = "kv-v2"
+  options = {
+    version = "2"
+    type = "kv-v2"
+  }
+}`;
+    assert.strictEqual(formatted, expected, 'it returns formatted terraform snippet');
   });
 
   test('terraformTemplate: it uses default localId when not provided', async function (assert) {
     const formatted = terraformTemplate({
       resource: 'vault_auth_backend',
-      options: { type: '"github"' },
+      resourceArgs: { type: '"github"' },
     });
     assert.true(formatted.includes('"<local identifier>"'), 'it uses default local identifier');
   });
@@ -84,24 +112,30 @@ module('Integration | Util | code-generators/terraform', function (hooks) {
     const formatted = terraformTemplate({
       resource: '',
       localId: 'test',
-      options: { key: '"value"' },
+      resourceArgs: { key: '"value"' },
     });
     assert.true(formatted.includes('resource "" "test"'), 'it handles empty resource name');
   });
 
-  test('terraformTemplate: it formats multiple options with proper spacing', async function (assert) {
+  test('terraformTemplate: it formats with linebreaks', async function (assert) {
     const formatted = terraformTemplate({
       resource: 'vault_auth_backend',
       localId: 'userpass',
-      options: {
+      resourceArgs: {
         type: '"userpass"',
         path: '"userpass"',
-        tune: '{}',
       },
     });
+    // Check that snippet is separated by newlines
+    const lines = formatted.split('\n');
+    assert.strictEqual(lines.length, 4, 'the formatted snippet renders on 4 separate lines');
+  });
 
-    // Check that options are separated by double newlines
-    const lines = formatted.split('\n\n');
-    assert.strictEqual(lines.length, 3, 'options are separated by blank lines');
+  test('terraformTemplate: it handles undefined args', async function (assert) {
+    const formatted = terraformTemplate();
+    const expected = `resource "<resource name>" "<local identifier>" {
+
+}`;
+    assert.strictEqual(formatted, expected, 'it returns default template when args are undefined');
   });
 });

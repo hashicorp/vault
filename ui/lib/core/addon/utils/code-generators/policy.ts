@@ -5,6 +5,12 @@
 
 import { tracked } from '@glimmer/tracking';
 
+export enum PolicyTypes {
+  ACL = 'acl',
+  RGP = 'rgp',
+  EGP = 'egp',
+}
+
 export const ACL_CAPABILITIES = ['create', 'read', 'update', 'delete', 'list', 'patch', 'sudo'] as const;
 export type AclCapability = (typeof ACL_CAPABILITIES)[number]; // 'create' | 'read' | 'update' | 'delete' | 'list' | 'patch' | 'sudo'
 

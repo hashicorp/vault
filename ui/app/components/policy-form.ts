@@ -9,7 +9,14 @@ import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import trimRight from 'vault/utils/trim-right';
 import { tracked } from '@glimmer/tracking';
-import { formatStanzas, PolicyStanza } from 'core/utils/code-generators/policy';
+import { formatStanzas, PolicyStanza, PolicyTypes } from 'core/utils/code-generators/policy';
+import errorMessage from 'vault/utils/error-message';
+import { formatEot } from 'core/utils/code-generators/formatters';
+
+import type FlashMessageService from 'ember-cli-flash/services/flash-messages';
+import type { HTMLElementEvent } from 'vault/forms';
+import type { PolicyData } from 'core/components/code-generator/policy/builder';
+import type { FormField } from 'vault/vault/app-types';
 
 /**
  * @module PolicyForm
@@ -29,23 +36,48 @@ import { formatStanzas, PolicyStanza } from 'core/utils/code-generators/policy';
  * @param {boolean} isCompact - renders a compact version of the form component, such as when rendering in a modal (see policy-template.hbs)
  */
 
-export default class PolicyFormComponent extends Component {
-  @service flashMessages;
+enum EditorTypes {
+  CODE = 'code',
+  VISUAL = 'visual',
+}
 
-  editTypes = { visual: 'Visual editor', code: 'Code editor' };
+interface PolicyModel {
+  name: string;
+  policy: string;
+  policyType: PolicyTypes;
+  isNew: boolean;
+  additionalAttrs?: FormField[]; // Only exist for "rgp" and "egp" policy types
+  save: () => Promise<void>;
+  unloadRecord: () => void;
+  rollbackAttributes: () => void;
+}
 
-  @tracked editType = 'visual';
+interface Args {
+  onCancel: () => void;
+  onSave: (model: PolicyModel) => void;
+  model: PolicyModel;
+  isCompact?: boolean;
+}
+
+export default class PolicyFormComponent extends Component<Args> {
+  @service declare readonly flashMessages: FlashMessageService;
+
+  editTypes = { [EditorTypes.VISUAL]: 'Visual editor', [EditorTypes.CODE]: 'Code editor' } as const;
+
+  @tracked editType: EditorTypes = EditorTypes.VISUAL;
   @tracked errorBanner = '';
   @tracked showFileUpload = false;
   @tracked showSwitchEditorsModal = false;
   @tracked showTemplateModal = false;
-  @tracked stanzas = [new PolicyStanza()];
+  @tracked stanzas: PolicyStanza[] = [new PolicyStanza()];
 
-  constructor() {
-    super(...arguments);
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
     // Only ACL policies support the visual editor
-    this.editType = this.args.model.policyType === 'acl' ? 'visual' : 'code';
+    this.editType = this.args.model.policyType === PolicyTypes.ACL ? EditorTypes.VISUAL : EditorTypes.CODE;
   }
+
+  isActiveEditor = (type: string): boolean => type === this.editType;
 
   get hasPolicyDiff() {
     const { policy } = this.args.model;
@@ -55,46 +87,64 @@ export default class PolicyFormComponent extends Component {
     return policy && formatStanzas(this.stanzas) !== policy;
   }
 
+  get snippetArgs() {
+    const policyName = this.args.model.name || '<policy name>';
+    const policy = formatEot(formatStanzas(this.stanzas));
+    const resourceArgs = { name: `"${policyName}"`, policy };
+    return {
+      terraform: { resource: 'vault_policy', resourceArgs },
+      cli: { command: `policy write ${policyName}`, content: `- ${policy}` },
+    };
+  }
+
   get visualEditorSupported() {
     const { model, isCompact } = this.args;
-    return model.isNew && model.policyType === 'acl' && !isCompact;
+    return model.isNew && model.policyType === PolicyTypes.ACL && !isCompact;
   }
 
   @action
   confirmEditorSwitch() {
     // User has confirmed discarding changes so switch to "visual" editor
-    this.editType = 'visual';
+    this.editType = EditorTypes.VISUAL;
     this.showSwitchEditorsModal = false;
     // Reset this.args.model.policy to match visual editor stanzas
     this.setPolicy(formatStanzas(this.stanzas));
   }
 
   @action
-  handleNameInput(event) {
+  handleNameInput(event: HTMLElementEvent<HTMLInputElement>) {
     const { value } = event.target;
     this.setName(value);
   }
 
   @action
-  handlePolicyChange({ policy, stanzas }) {
+  handlePolicyChange({ policy, stanzas }: PolicyData) {
     this.setPolicy(policy);
     this.stanzas = stanzas;
   }
 
   @action
-  handleRadioChange(event) {
+  handleRadioChange(event: HTMLElementEvent<HTMLInputElement>) {
     const { value } = event.target;
+
+    if (!Object.values(EditorTypes).includes(value as EditorTypes)) {
+      console.debug(`Invalid editor type: ${value}`); // eslint-disable-line
+      return;
+    }
+
+    const editorType = value as EditorTypes;
+
     // Users cannot make changes using the code editor and have those parsed BACK to the visual editor
-    if (value === 'visual' && this.hasPolicyDiff) {
+    if (editorType === EditorTypes.VISUAL && this.hasPolicyDiff) {
       // Open modal to confirm user wants to switch back to "visual" editor and lose changes
       this.showSwitchEditorsModal = true;
     } else {
-      this.editType = value;
+      this.editType = editorType;
     }
   }
 
   @task
-  *save(event) {
+  *save(event: HTMLElementEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
       const { name, policyType, isNew } = this.args.model;
@@ -104,18 +154,17 @@ export default class PolicyFormComponent extends Component {
       );
       this.args.onSave(this.args.model);
     } catch (error) {
-      const message = error.errors ? error.errors.join('. ') : error.message;
-      this.errorBanner = message;
+      this.errorBanner = errorMessage(error);
     }
   }
 
   @action
-  setName(name) {
+  setName(name: string) {
     this.args.model.name = name.toLowerCase();
   }
 
   @action
-  setPolicyFromFile(fileInfo) {
+  setPolicyFromFile(fileInfo: { value: string; filename: string }) {
     const { value, filename } = fileInfo;
     this.setPolicy(value);
     if (!this.args.model.name) {
@@ -124,11 +173,11 @@ export default class PolicyFormComponent extends Component {
     }
     this.showFileUpload = false;
     // Switch to the code editor if they've uploaded a policy
-    this.editType = 'code';
+    this.editType = EditorTypes.CODE;
   }
 
   @action
-  setPolicy(policy) {
+  setPolicy(policy: string) {
     this.args.model.policy = policy;
   }
 
