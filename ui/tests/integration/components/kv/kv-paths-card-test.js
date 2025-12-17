@@ -88,6 +88,7 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
       { label: 'Configuration path', expected: `${this.backend}/data/${this.path}` },
       { label: 'CLI path', expected: `-mount="${this.backend}" "${this.path}"` },
       { label: 'API path for metadata', expected: `/v1/${this.backend}/metadata/${this.path}` },
+      { label: 'Configuration metadata path', expected: `${this.backend}/metadata/${this.path}` },
     ];
 
     await this.renderComponent();

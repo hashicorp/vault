@@ -57,6 +57,11 @@ export default class KvPathsCard extends Component {
               snippet: namespace ? `/v1/${encodePath(namespace)}/${metadata}` : `/v1/${metadata}`,
               text: `Use this path when referring to this secret's metadata in the API and permanent secret deletion.`,
             },
+            {
+              label: 'Configuration metadata path',
+              snippet: namespace ? `${encodePath(namespace)}/${metadata}` : metadata,
+              text: 'Use this path in policies and other tools that reference the logical metadata path.',
+            },
           ]),
     ];
   }
