@@ -9,8 +9,8 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   setupRenderingTest(hooks);
@@ -18,33 +18,35 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub(['read', 'update', 'delete']));
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'kubernetes_f3400dee',
-        path: 'kubernetes-test/',
-        type: 'kubernetes',
-      },
+    this.backend = 'kubernetes-test';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
+
+    this.secretsEngine = new SecretsEngineResource({
+      accessor: 'kubernetes_f3400dee',
+      path: 'kubernetes-test/',
+      type: 'kubernetes',
     });
-    this.store.pushPayload('kubernetes/role', {
-      modelName: 'kubernetes/role',
-      backend: 'kubernetes-test',
-      ...this.server.create('kubernetes-role'),
-    });
-    this.backend = this.store.peekRecord('secret-engine', 'kubernetes-test');
-    this.roles = this.store.peekAll('kubernetes/role');
+    this.roleName = 'role-0';
+    this.roles = [this.roleName];
     this.filterValue = '';
-    this.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: this.backend.id },
-    ];
+    this.breadcrumbs = [{ label: 'Secrets', route: 'secrets', linkExternal: true }, { label: this.backend }];
     this.promptConfig = false;
+
+    const path = this.owner
+      .lookup('service:capabilities')
+      .pathFor('kubernetesRole', { backend: this.backend, name: this.roleName });
+    this.capabilities = { [path]: { canRead: true, canUpdate: true, canDelete: true } };
 
     this.renderComponent = () => {
       return render(
-        hbs`<Page::Roles @promptConfig={{this.promptConfig}} @secretsEngine={{this.backend}} @roles={{this.roles}} @filterValue={{this.filterValue}} @breadcrumbs={{this.breadcrumbs}} />`,
+        hbs`<Page::Roles
+          @promptConfig={{this.promptConfig}}
+          @secretsEngine={{this.secretsEngine}}
+          @roles={{this.roles}}
+          @capabilities={{this.capabilities}}
+          @filterValue={{this.filterValue}}
+          @breadcrumbs={{this.breadcrumbs}}
+        />`,
         { owner: this.engine }
       );
     };
@@ -94,7 +96,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   test('it should render roles list', async function (assert) {
     await this.renderComponent();
     assert.dom('[data-test-list-item-content] svg').hasClass('hds-icon-user', 'List item icon renders');
-    assert.dom('[data-test-list-item-content]').hasText(this.roles[0].name, 'List item name renders');
+    assert.dom('[data-test-list-item-content]').hasText(this.roles[0], 'List item name renders');
     await click(GENERAL.menuTrigger);
     assert.dom('[data-test-details]').hasText('Details', 'Details link renders in menu');
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');
