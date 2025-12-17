@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix KV version diff view overflowing and incorrectly rendering multiline secret values.
+```
