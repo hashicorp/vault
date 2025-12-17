@@ -10,7 +10,7 @@ import { ldapBreadcrumbs, libraryRoutes } from 'ldap/utils/ldap-breadcrumbs';
 
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
-import type LdapLibraryModel from 'vault/models/ldap/library';
+import type { LdapLibrary } from 'vault/secrets/ldap';
 import type LdapLibrariesSubdirectoryController from 'ldap/controllers/libraries/subdirectory';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type { LdapApplicationModel } from '../application';
@@ -18,7 +18,7 @@ import type { LdapApplicationModel } from '../application';
 interface RouteModel {
   secretsEngine: SecretsEngineResource;
   path_to_library: string;
-  libraries: Array<LdapLibraryModel>;
+  libraries: Array<LdapLibrary>;
 }
 
 type RouteController = LdapLibrariesSubdirectoryController;

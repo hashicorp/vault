@@ -16,10 +16,10 @@ import { toLabel } from 'core/helpers/to-label';
 import type RouterService from '@ember/routing/router';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type SecretMountPath from 'vault/services/secret-mount-path';
-import type PkiIssuerModel from 'vault/models/pki/issuer';
 import type { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
 import type {
   PkiGenerateRootResponse,
+  PkiReadIssuerResponse,
   PkiRotateRootExportedEnum,
   PkiRotateRootRequest,
 } from '@hashicorp/vault-client-typescript';
@@ -27,7 +27,7 @@ import type { ParsedCertificateData } from 'vault/vault/utils/parse-pki-cert';
 import type ApiService from 'vault/services/api';
 
 interface Args {
-  oldRoot: PkiIssuerModel;
+  oldRoot: PkiReadIssuerResponse;
   certData: ParsedCertificateData;
   breadcrumbs: Breadcrumb;
   parsingErrors: string;

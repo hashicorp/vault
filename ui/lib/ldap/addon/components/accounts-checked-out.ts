@@ -11,8 +11,7 @@ import { waitFor } from '@ember/test-waiters';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type AuthService from 'vault/services/auth';
-import type { LdapLibrary } from 'vault/secrets/ldap';
-import type { LdapLibraryAccountStatus } from 'vault/adapters/ldap/library';
+import type { LdapLibrary, LdapLibraryAccountStatus } from 'vault/secrets/ldap';
 import type { CapabilitiesMap } from 'vault/app-types';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type ApiService from 'vault/services/api';

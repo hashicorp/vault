@@ -8,7 +8,7 @@ import { ldapBreadcrumbs, roleRoutes } from 'ldap/utils/ldap-breadcrumbs';
 
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type Controller from '@ember/controller';
-import type LdapRoleModel from 'vault/models/ldap/role';
+import type { LdapRole } from 'vault/secrets/ldap';
 import type Transition from '@ember/routing/transition';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type { LdapApplicationModel } from '../application';
@@ -16,7 +16,7 @@ import type { LdapApplicationModel } from '../application';
 interface RouteModel {
   secretsEngine: SecretsEngineResource;
   roleAncestry: { path_to_role: string; type: string };
-  roles: Array<LdapRoleModel>;
+  roles: Array<LdapRole>;
 }
 
 interface RouteController extends Controller {
