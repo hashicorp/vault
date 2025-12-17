@@ -5,12 +5,12 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
 import { ModelFrom } from 'vault/route';
+import { KubernetesListRolesListEnum } from '@hashicorp/vault-client-typescript';
 
 import type { KubernetesApplicationModel } from './application';
 import type SecretMountPath from 'vault/services/secret-mount-path';
-import type Store from '@ember-data/store';
+import type ApiService from 'vault/services/api';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/app-types';
 
@@ -22,17 +22,22 @@ interface RouteController extends Controller {
 export type KubernetesOverviewModel = ModelFrom<KubernetesOverviewRoute>;
 
 export default class KubernetesOverviewRoute extends Route {
-  @service declare readonly store: Store;
+  @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;
 
   async model() {
-    const backend = this.secretMountPath.currentPath;
+    const { currentPath } = this.secretMountPath;
     const { promptConfig, secretsEngine } = this.modelFor('application') as KubernetesApplicationModel;
-    return hash({
+
+    const { keys } = await this.api.secrets
+      .kubernetesListRoles(currentPath, KubernetesListRolesListEnum.TRUE)
+      .catch(() => ({ keys: [] }));
+
+    return {
       promptConfig,
       secretsEngine,
-      roles: this.store.query('kubernetes/role', { backend }).catch(() => []),
-    });
+      roles: keys,
+    };
   }
 
   setupController(controller: RouteController, resolvedModel: KubernetesOverviewModel) {

@@ -20,8 +20,8 @@ export const GENERAL = {
   /* ────── Tabs & Navigation ────── */
   tab: (name: string) => `[data-test-tab="${name}"]`,
   tabLink: (name: string) => `[data-test-tab="${name}"] a`,
-  hdsTab: (name: string) => `[data-test-tab="${name}"] button`, // HDS tab buttons
-  hdsTabPanel: (name: string) => `[data-test-panel="${name}"]`,
+  hdsTab: (name: string) => (name ? `[data-test-tab="${name}"] button` : '[data-test-tab] button'), // HDS tab buttons
+  hdsTabPanel: (name: string) => (name ? `[data-test-panel="${name}"]` : '[data-test-panel]'),
   secretTab: (name: string) => `[data-test-secret-list-tab="${name}"]`,
   navLink: (label: string) =>
     label ? `[data-test-sidebar-nav-link="${label}"]` : '[data-test-sidebar-nav-link]',

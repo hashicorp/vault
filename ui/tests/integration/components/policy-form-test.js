@@ -93,7 +93,10 @@ module('Integration | Component | policy-form', function (hooks) {
   test('it renders all elements by default (when not compact)', async function (assert) {
     await this.renderComponent();
     assert.dom(GENERAL.fieldByAttr('visual editor')).exists();
-    assert.dom(GENERAL.accordionButton('Automation snippets')).exists('Automation snippets render');
+    assert
+      .dom(GENERAL.accordionButton('Automation snippets'))
+      .exists('Automation snippets render')
+      .hasAttribute('aria-expanded', 'false');
     assert.dom(GENERAL.radioByAttr()).exists({ count: 2 }, 'radio buttons render for each editor');
     assert.dom(GENERAL.radioByAttr('visual')).exists();
     assert.dom(GENERAL.radioByAttr('code')).exists();
@@ -212,7 +215,6 @@ module('Integration | Component | policy-form', function (hooks) {
     });
 
     test('it renders the correct title for ACL example for the policy example modal', async function (assert) {
-      this.renderPolicyExampleModal = true;
       await this.renderComponent();
       await click(GENERAL.radioByAttr('code'));
       await click(GENERAL.button('How to write a policy'));
@@ -272,6 +274,57 @@ path "second/path" {
       assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
       const [actual] = this.onSave.lastCall.args;
       assert.strictEqual(actual.policy, expectedPolicy, 'save is called with expected policy');
+    });
+
+    // Automation snippets are only supported for "ACL" policy types at this time
+    test('it renders empty snippets by default', async function (assert) {
+      await this.renderComponent();
+      assert.dom(GENERAL.accordionButton('Automation snippets')).exists();
+      await click(GENERAL.accordionButton('Automation snippets'));
+      assert.dom(GENERAL.hdsTab('terraform')).exists().hasAttribute('aria-selected', 'true');
+      assert.dom(GENERAL.hdsTab('cli')).exists().hasAttribute('aria-selected', 'false');
+      const expectedTfvp = `resource "vault_policy" "<local identifier>" {
+      name = "<policy name>"
+    
+      policy = <<EOT
+      path "" {
+        capabilities = []
+    }
+    EOT
+    }`;
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasText(expectedTfvp, 'it renders empty terraform snippet');
+      const expectedCli = `vault policy write <policy name> - <<EOT
+      path "" {
+        capabilities = []
+    }
+    EOT`;
+      assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedCli, 'it renders empty cli snippet');
+    });
+
+    test('it updates snippets as policy changes', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'my-secure-policy');
+      await fillIn(GENERAL.inputByAttr('path'), 'my/super/secret/*');
+      await click(GENERAL.checkboxByAttr('patch'));
+      await click(GENERAL.accordionButton('Automation snippets'));
+      const expectedTfvp = `resource "vault_policy" "<local identifier>" {
+  name = "my-secure-policy"
+
+  policy = <<EOT
+  path "my/super/secret/*" {
+    capabilities = ["patch"]
+}
+EOT
+}`;
+      assert.dom(GENERAL.fieldByAttr('terraform')).hasText(expectedTfvp);
+      const expectedCli = `vault policy write my-secure-policy - <<EOT
+  path "my/super/secret/*" {
+    capabilities = ["patch"]
+}
+EOT`;
+      assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedCli);
     });
 
     module('switch editors modal', function (hooks) {
@@ -415,10 +468,14 @@ main = rule when precond {
     });
 
     test('it renders the correct title for RGP example for the policy example modal', async function (assert) {
-      this.renderPolicyExampleModal = true;
       await this.renderComponent();
       await click(GENERAL.button('How to write a policy'));
       assert.dom(GENERAL.modal.header('Example policy')).hasText('Example RGP Policy');
+    });
+
+    test('it does not render automation snippets', async function (assert) {
+      await this.renderComponent();
+      assert.dom(GENERAL.accordionButton('Automation snippets')).doesNotExist();
     });
   });
 
@@ -483,10 +540,14 @@ main = rule {
     });
 
     test('it renders the correct title for EGP example for the policy example modal', async function (assert) {
-      this.renderPolicyExampleModal = true;
       await this.renderComponent();
       await click(GENERAL.button('How to write a policy'));
       assert.dom(GENERAL.modal.header('Example policy')).hasText('Example EGP Policy');
+    });
+
+    test('it does not render automation snippets', async function (assert) {
+      await this.renderComponent();
+      assert.dom(GENERAL.accordionButton('Automation snippets')).doesNotExist();
     });
   });
 });

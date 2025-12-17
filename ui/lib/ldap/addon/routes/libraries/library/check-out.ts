@@ -13,7 +13,6 @@ import type { LdapLibraryRouteModel } from 'ldap/routes/libraries/library';
 import type Controller from '@ember/controller';
 import type Transition from '@ember/routing/transition';
 import type { Breadcrumb } from 'vault/app-types';
-import { LdapLibraryCheckOutCredentials } from 'vault/vault/adapters/ldap/library';
 import { ldapBreadcrumbs, libraryRoutes } from 'ldap/utils/ldap-breadcrumbs';
 import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
@@ -68,7 +67,7 @@ export default class LdapLibraryCheckOutRoute extends Route {
   }
   setupController(
     controller: LdapLibraryCheckOutController,
-    resolvedModel: LdapLibraryCheckOutCredentials,
+    resolvedModel: LdapLibraryCheckOutRouteModel,
     transition: Transition
   ) {
     super.setupController(controller, resolvedModel, transition);

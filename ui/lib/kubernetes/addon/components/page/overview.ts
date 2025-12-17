@@ -8,6 +8,10 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
+import type RouterService from '@ember/routing/router-service';
+import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
+
 /**
  * @module Overview
  * OverviewPage component is a child component to overview kubernetes secrets engine.
@@ -18,21 +22,28 @@ import { action } from '@ember/object';
  * @param {array} breadcrumbs - breadcrumbs as an array of objects that contain label and route
  */
 
-export default class OverviewPageComponent extends Component {
-  @service('app-router') router;
+interface Args {
+  promptConfig: boolean;
+  secretsEngine: SecretsEngineResource;
+  roles: string[];
+  breadcrumbs: Array<Breadcrumb>;
+}
 
-  @tracked selectedRole = null;
-  @tracked roleOptions = [];
+export default class OverviewPageComponent extends Component<Args> {
+  @service('app-router') declare readonly router: RouterService;
 
-  constructor() {
-    super(...arguments);
+  @tracked selectedRole = '';
+  @tracked roleOptions: Array<{ name: string; id: string }> = [];
+
+  constructor(owner: EngineOwner, args: Args) {
+    super(owner, args);
     this.roleOptions = this.args.roles.map((role) => {
-      return { name: role.name, id: role.name };
+      return { name: role, id: role };
     });
   }
 
   @action
-  selectRole([roleName]) {
+  selectRole([roleName]: [string]) {
     this.selectedRole = roleName;
   }
 

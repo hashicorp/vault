@@ -67,7 +67,7 @@
                     <Hds::Form::Radio::Field
                       name="editType"
                       @value={{value}}
-                      checked={{eq this.editType value}}
+                      checked={{this.isActiveEditor value}}
                       {{on "change" this.handleRadioChange}}
                       data-test-radio={{value}}
                       as |F|
@@ -82,7 +82,7 @@
         </FS.Header>
       {{/if}}
 
-      {{#if (and (eq this.editType "visual") this.visualEditorSupported)}}
+      {{#if (and (this.isActiveEditor "visual") this.visualEditorSupported)}}
         <CodeGenerator::Policy::Builder
           @policyName={{@model.name}}
           @onPolicyChange={{this.handlePolicyChange}}
@@ -119,6 +119,22 @@
       {{#each @model.additionalAttrs as |attr|}}
         <FormField @attr={{attr}} @model={{@model}} />
       {{/each}}
+    </FORM.Section>
+  {{/if}}
+
+  {{! Automation snippets are currently only supported for ACL policies }}
+  {{#if (and (eq @model.policyType "acl") (not @isCompact))}}
+    <FORM.Separator />
+
+    <FORM.Section @isFullWidth={{true}}>
+      <Hds::Accordion @size="medium" as |A|>
+        <A.Item data-test-accordion="Automation snippets">
+          <:toggle>Automation snippets</:toggle>
+          <:content>
+            <CodeGenerator::AutomationSnippets @cliArgs={{this.snippetArgs.cli}} @tfvpArgs={{this.snippetArgs.terraform}} />
+          </:content>
+        </A.Item>
+      </Hds::Accordion>
     </FORM.Section>
   {{/if}}
 

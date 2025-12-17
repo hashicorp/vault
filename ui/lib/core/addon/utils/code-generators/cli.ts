@@ -3,13 +3,20 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export interface FormatCliArgs {
-  command: string; // The CLI command (e.g., "policy write my-policy")
-  content: string; // The content/body to pass to the command
+// The CliTemplateArgs intentionally does NOT include "namespace" because the location for CLI commands is not consistent.
+// Additionally, namespace can be specified via the environment variable `VAULT_NAMESPACE` and passing a flag is unnecessary.
+
+export interface CliTemplateArgs {
+  command?: string; // The CLI command that comes after "vault" (e.g., "policy write my-policy")
+  content?: string; // Vault CLI commands are not consistent so this is essentially whatever needs to come after the command, usually param flags e.g. `-path="some-path"` or `-ttl='24h'`
 }
 
-export const formatCli = ({ command, content }: FormatCliArgs) => {
-  return `vault ${command} ${content}`.trim();
-};
+export const cliTemplate = ({ command = '', content = '' }: CliTemplateArgs = {}) => {
+  // Show placeholders when no args are provided
+  if (!command && !content) {
+    return 'vault <command> [args]';
+  }
 
-export const writePolicy = (name: string) => `policy write ${name}`;
+  const segments = ['vault', command, content].filter(Boolean);
+  return segments.join(' ');
+};

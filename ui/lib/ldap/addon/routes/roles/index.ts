@@ -6,16 +6,16 @@
 import LdapRolesRoute from '../roles';
 
 import type Transition from '@ember/routing/transition';
-import type LdapRoleModel from 'vault/models/ldap/role';
+import type { LdapRole } from 'vault/secrets/ldap';
 import type Controller from '@ember/controller';
-import type { Breadcrumb } from 'vault/vault/app-types';
+import type { Breadcrumb } from 'vault/app-types';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import { LdapApplicationModel } from '../application';
 
 interface RouteModel {
   secretsEngine: SecretsEngineResource;
   promptConfig: boolean;
-  roles: Array<LdapRoleModel>;
+  roles: Array<LdapRole>;
 }
 
 interface RouteController extends Controller {
