@@ -1177,8 +1177,8 @@ github.com/goccy/go-json v0.10.5/go.mod h1:oq7eo15ShAhp70Anwd5lgX2pLfOS3QCiwU/PU
 github.com/gocql/gocql v1.0.0 h1:UnbTERpP72VZ/viKE1Q1gPtmLvyTZTvuAstvSRydw/c=
 github.com/gocql/gocql v1.0.0/go.mod h1:3gM2c4D3AnkISwBxGnMMsS8Oy4y2lhbPRsH4xnJrHG8=
 github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
-github.com/gofrs/flock v0.8.1 h1:+gYjHKf32LDeiEEFhQaotPbLuUXjY5ZqxKgXy7n59aw=
-github.com/gofrs/flock v0.8.1/go.mod h1:F1TvTiK9OcQqauNUHlbJvyl9Qa1QvF/gOUDKA14jxHU=
+github.com/gofrs/flock v0.10.0 h1:SHMXenfaB03KbroETaCMtbBg3Yn29v4w1r+tgy4ff4k=
+github.com/gofrs/flock v0.10.0/go.mod h1:FirDy1Ing0mI2+kB6wk+vyyAH+e6xiE+EYA0jnzV9jc=
 github.com/gofrs/uuid v4.0.0+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=
 github.com/gofrs/uuid v4.3.0+incompatible h1:CaSVZxm5B+7o45rtab4jC2G37WGYX1zQfuU2i6DSvnc=
 github.com/gofrs/uuid v4.3.0+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=
@@ -1563,8 +1563,8 @@ github.com/hashicorp/vault-plugin-auth-kerberos v0.16.0 h1:bZpmQS26TorpeensFerDP
 github.com/hashicorp/vault-plugin-auth-kerberos v0.16.0/go.mod h1:O6b92icQx0LGuknyVEVP/XgYjoYDNiTR9cJ1pEUuwjw=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.1 h1:9SW3Qu08RR9Tyn2K0wU4rcjQtYf1ykgPcyFgWs/TqTY=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.1/go.mod h1:Uzb/uPdIKqXmq3xo4NNT2+5HgXlxNfuDKwU2EqzwD8s=
-github.com/hashicorp/vault-plugin-auth-oci v0.20.0 h1:R1JXapvFsuxE8+jYBSQvkIwWHSpKpHpUbAX5K+6pbO4=
-github.com/hashicorp/vault-plugin-auth-oci v0.20.0/go.mod h1:XOhAs74HS6cSKWm2zQodRBxTFDhu/ApNpiw5Tfz9J4k=
+github.com/hashicorp/vault-plugin-auth-oci v0.20.1-0.20251201003020-2a6dc0d5ff08 h1:GCTnQf1vYOFATcvz3MjTkS2XTDH5HQShMNgJqcc5Crk=
+github.com/hashicorp/vault-plugin-auth-oci v0.20.1-0.20251201003020-2a6dc0d5ff08/go.mod h1:8lcTwrjSROhr1sREU6b2ejoa5ZrDJ99hGD4syD5OAmA=
 github.com/hashicorp/vault-plugin-database-couchbase v0.15.0 h1:6gLCOwwErqMgo9pJvsrOkg4tL7HmE95r3JVc14hSFSY=
 github.com/hashicorp/vault-plugin-database-couchbase v0.15.0/go.mod h1:KpGJp2QKCpMFhzMTdovoZFtx56Q7yQ8oO4fg+UuMGrI=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.19.0 h1:8vbxtLgvTEyve6mJt6aLuaje7NW3aEkJMjf20QFB0gs=
@@ -1957,10 +1957,10 @@ github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b h1:Ff
 github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b/go.mod h1:AC62GU6hc0BrNm+9RK9VSiwa/EUe1bkIeFORAMcHvJU=
 github.com/oracle/oci-go-sdk v24.3.0+incompatible h1:x4mcfb4agelf1O4/1/auGlZ1lr97jXRSSN5MxTgG/zU=
 github.com/oracle/oci-go-sdk v24.3.0+incompatible/go.mod h1:VQb79nF8Z2cwLkLS35ukwStZIg5F66tcBccjip/j888=
-github.com/oracle/oci-go-sdk/v59 v59.0.0 h1:+zTvWfj9ZK0OwLRyXjUkZ8dPN3WvkQSRd3iooaOxNVs=
-github.com/oracle/oci-go-sdk/v59 v59.0.0/go.mod h1:PWyWRn+xkQxwwmLq/oO03X3tN1tk2vEIE2tFaJmldHM=
 github.com/oracle/oci-go-sdk/v60 v60.0.0 h1:EJAWjEi4SY5Raha6iUzq4LTQ0uM5YFw/wat/L1ehIEM=
 github.com/oracle/oci-go-sdk/v60 v60.0.0/go.mod h1:krz+2gkSzlSL/L4PvP0Z9pZpag9HYLNtsMd1PmxlA2w=
+github.com/oracle/oci-go-sdk/v65 v65.105.0 h1:VN3IkW4kwyOOIrjrg7Lh1QGG/sou54c8dqTZB2THeTE=
+github.com/oracle/oci-go-sdk/v65 v65.105.0/go.mod h1:oB8jFGVc/7/zJ+DbleE8MzGHjhs2ioCz5stRTdZdIcY=
 github.com/ory/dockertest v3.3.5+incompatible h1:iLLK6SQwIhcbrG783Dghaaa3WPzGc+4Emza6EbVUUGA=
 github.com/ory/dockertest v3.3.5+incompatible/go.mod h1:1vX4m9wsvi00u5bseYwXaSnhNrne+V0E6LAcBILJdPs=
 github.com/ory/dockertest/v3 v3.12.0 h1:3oV9d0sDzlSQfHtIaB5k6ghUCVMVLpAY8hwrqoCyRCw=
