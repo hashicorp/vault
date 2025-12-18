@@ -159,6 +159,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'KV',
     engineRoute: 'kv.list',
+    configRoute: 'kv.configuration', // only utilized to display config data for kvv2, not in conjunction with isConfigurable as templates determine whether engine is kv v1 or v2
     glyph: 'key-values',
     mountCategory: ['secret'],
     type: 'kv',

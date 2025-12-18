@@ -6,9 +6,10 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
-import { render } from '@ember/test-helpers';
+import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | Page::Configuration', function (hooks) {
   setupRenderingTest(hooks);
@@ -29,7 +30,29 @@ module('Integration | Component | kv-v2 | Page::Configuration', function (hooks)
       max_lease_ttl: '123h',
       version: '2',
     };
-    this.backend = 'my-kv';
+    this.backend = {
+      accessor: 'kv_05319fa9',
+      config: {
+        default_lease_ttl: 2764800,
+        force_no_cache: false,
+        listing_visibility: 'hidden',
+        max_lease_ttl: 2764800,
+      },
+      description: '',
+      external_entropy_access: false,
+      local: false,
+      options: {
+        version: '2',
+      },
+      path: 'my-kv/',
+      plugin_version: '',
+      running_plugin_version: 'v0.25.0+builtin',
+      running_sha256: '',
+      seal_wrap: false,
+      type: 'kv',
+      uuid: '0cd6346f-c93a-ecfa-b01d-6b690a745c8e',
+      id: 'my-kv',
+    };
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: 'my-kv', route: 'list' },
@@ -38,7 +61,7 @@ module('Integration | Component | kv-v2 | Page::Configuration', function (hooks)
   });
 
   test('it renders kv configuration details', async function (assert) {
-    assert.expect(15);
+    assert.expect(6);
 
     await render(
       hbs`
@@ -51,21 +74,13 @@ module('Integration | Component | kv-v2 | Page::Configuration', function (hooks)
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.title).includesText('my-kv', 'renders engine path as page title');
-    assert.dom(PAGE.secretTab('Secrets')).exists('renders Secrets tab');
-    assert.dom(PAGE.secretTab('Configuration')).exists('renders Configuration tab');
+    assert.dom(PAGE.title).includesText('my-kv configuration', 'renders engine path as page title');
+    assert.dom(GENERAL.tab('general-settings')).exists('renders general settings tab');
+    assert.dom(GENERAL.tab('plugin-settings')).exists('renders kv settings tab');
 
+    await click(GENERAL.tab('plugin-settings'));
     assert.dom(PAGE.infoRowValue('Require check and set')).hasText('Yes');
     assert.dom(PAGE.infoRowValue('Automate secret deletion')).hasText('Never delete');
     assert.dom(PAGE.infoRowValue('Maximum number of versions')).hasText('0');
-    assert.dom(PAGE.infoRowValue('Type')).hasText('kv');
-    assert.dom(PAGE.infoRowValue('Path')).hasText('my-kv');
-    assert.dom(PAGE.infoRowValue('Accessor')).hasText('kv_80616825');
-    assert.dom(PAGE.infoRowValue('Running plugin version')).hasText('2.7.0');
-    assert.dom(PAGE.infoRowValue('Local')).hasText('No');
-    assert.dom(PAGE.infoRowValue('Seal wrap')).hasText('No');
-    assert.dom(PAGE.infoRowValue('Default Lease TTL')).hasText('3 days');
-    assert.dom(PAGE.infoRowValue('Max Lease TTL')).hasText('5 days 3 hours');
-    assert.dom(PAGE.infoRowValue('Version')).hasText('2');
   });
 });

@@ -85,7 +85,6 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     });
 
     test('it can navigate to secrets within a secret directory', async function (assert) {
-      assert.expect(23);
       const backend = this.backend;
       const [root, subdirectory, secret] = this.fullSecretPath.split('/');
 
@@ -115,14 +114,16 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       );
 
       // Title correct
-      assert.dom(PAGE.title).hasText(`${backend} version 2`);
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${backend}`);
       // Tabs correct
-      assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
-      assert.dom(PAGE.secretTab('Secrets')).hasClass('active');
-      assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
-      assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
+      assert.dom(GENERAL.tab('Secrets')).hasText('Secrets');
+
+      assert.dom(GENERAL.dropdownToggle('Manage')).exists('renders manage dropdown');
+      await click(GENERAL.dropdownToggle('Manage'));
+      assert.dom(GENERAL.menuItem('Configure')).exists('renders configure option');
+      // Create button correct
+      assert.dom(GENERAL.button('create secret')).exists('renders create secret button');
       // Toolbar correct
-      assert.dom(PAGE.toolbarAction).exists({ count: 1 }, 'toolbar only renders create secret action');
       assert.dom(PAGE.list.filter).hasValue(`${root}/`);
       // List content correct
       assert.dom(GENERAL.listItem(`${subdirectory}/`)).exists('renders linked block for subdirectory');
@@ -134,7 +135,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         .hasText(`Current version The current version of this secret. 1`);
       // Secret details visible
       await click(PAGE.secretTab('Secret'));
-      assert.dom(PAGE.title).hasText(this.fullSecretPath);
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText(this.fullSecretPath);
       assert.dom(PAGE.secretTab('Secret')).hasText('Secret');
       assert.dom(PAGE.secretTab('Secret')).hasClass('active');
       assert.dom(PAGE.secretTab('Metadata')).hasText('Metadata');

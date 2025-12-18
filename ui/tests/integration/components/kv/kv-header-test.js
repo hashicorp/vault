@@ -8,8 +8,9 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Integration | Component | kv | kv-page-header', function (hooks) {
+module('Integration | Component | kv | kv-header', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
 
@@ -27,16 +28,20 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     this.renderComponent = () =>
       render(
         hbs`
-          <KvPageHeader
+          <KvHeader
+            @backend={{this.backend}}
             @breadcrumbs={{this.breadcrumbs}}
             @pageTitle={{this.pageTitle}}
             @mountName={{this.mountName}}
             @secretPath={{this.secretPath}}
           >
-            <:tabLinks>
+            <:tabs>
               <li><LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo></li>
-              <li><LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo></li>
-            </:tabLinks>
+            </:tabs>
+
+            <:badges>
+              <Hds::Badge @text="version 2" data-test-badge />
+            </:badges>
 
             <:toolbarActions>
               <ToolbarLink @route="secrets.create" @type="add">Create secret</ToolbarLink>
@@ -45,7 +50,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
             <:toolbarFilters>
               <p>stuff here</p>
             </:toolbarFilters>
-          </KvPageHeader>
+          </KvHeader>
         `,
         { owner: this.engine }
       );
@@ -66,38 +71,38 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     assert.expect(2);
     this.pageTitle = 'Create new version';
     await this.renderComponent();
-    assert.dom('[data-test-header-title]').hasText('Create new version', 'displays custom title.');
-    assert.dom('[data-test-header-title] svg').doesNotExist('Does not show icon if not at engine level.');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create new version', 'displays custom title.');
+    assert.dom(GENERAL.icon('key-values')).doesNotExist('Does not show icon if not at engine level.');
   });
 
   test('it renders a title and copy button for @secretPath', async function (assert) {
     assert.expect(3);
     this.secretPath = 'my/secret/path';
+    this.pageTitle = this.secretPath;
     await this.renderComponent();
-    assert.dom('[data-test-header-title]').hasText('my/secret/path', 'displays path');
-    assert.dom('[data-test-header-title] button').exists('renders copy button for path');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('my/secret/path', 'displays path');
+    assert.dom(GENERAL.copyButton).exists('renders copy button for path');
     assert.dom('[data-test-icon="clipboard-copy"]').exists('renders copy icon');
   });
 
   test('it renders a title, icon and tag if engine view', async function (assert) {
-    assert.expect(2);
-    this.mountName = this.backend;
+    assert.expect(3);
+    this.breadcrumbs = [
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.backend, route: 'secrets' },
+    ];
+    this.backend = { id: this.backend, icon: 'key-values' };
+    this.pageTitle = this.backend.id;
     await this.renderComponent();
-    assert
-      .dom('[data-test-header-title]')
-      .hasText(`${this.backend} version 2`, 'Mount path and version tag render for title.');
-    assert
-      .dom('[data-test-header-title] [data-test-icon="key-values"]')
-      .exists('An icon renders next to title.');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${this.pageTitle}`, 'Mount path renders for title.');
+    assert.dom(GENERAL.badge()).hasText('version 2', 'version badge renders in header.');
+    assert.dom(GENERAL.icon('key-values')).exists('An icon renders next to title.');
   });
 
   test('it renders tabs', async function (assert) {
-    assert.expect(2);
+    assert.expect(1);
     await this.renderComponent();
     assert.dom('[data-test-secrets-tab="Secrets"]').hasText('Secrets', 'Secrets tab renders');
-    assert
-      .dom('[data-test-secrets-tab="Configuration"]')
-      .hasText('Configuration', 'Configuration tab renders');
   });
 
   test('it should yield block for toolbar actions', async function (assert) {

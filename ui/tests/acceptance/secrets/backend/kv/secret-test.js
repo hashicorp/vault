@@ -58,7 +58,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
       await click(GENERAL.submitButton);
 
-      await click(PAGE.secretTab('Configuration'));
+      await click(GENERAL.dropdownToggle('Manage'));
+      await click(GENERAL.menuItem('Configure'));
+      await click(GENERAL.tabLink('plugin-settings'));
 
       assert
         .dom(PAGE.infoRowValue('Maximum number of versions'))

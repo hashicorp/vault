@@ -22,7 +22,7 @@
     </:actions>
   </Page::Header>
   <Mount::ConfigureTabs
-    @configRoute={{or engineDisplayData.configRoute "configuration.plugin-settings"}}
+    @configRoute={{this.configRoute}}
     @displayName={{engineDisplayData.displayName}}
     @path={{@model.secretsEngine.id}}
   />
