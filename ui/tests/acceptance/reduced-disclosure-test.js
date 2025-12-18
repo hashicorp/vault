@@ -18,7 +18,6 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 const { unsealKeys } = VAULT_KEYS;
 const SELECTORS = {
   footerVersion: `[data-test-footer-version]`,
-  dashboardTitle: `[data-test-dashboard-card-header="Vault version"]`,
 };
 
 module('Acceptance | reduced disclosure test', function (hooks) {
@@ -39,7 +38,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/dashboard');
 
     // Ensure it shows version on dashboard
-    assert.dom(SELECTORS.dashboardTitle).includesText(`Vault v1.`);
+    assert.dom(GENERAL.hdsPageHeaderTitle).includesText(`Vault v1.`);
     assert
       .dom(SELECTORS.footerVersion)
       .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version after login');
@@ -160,7 +159,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
           `Vault ${this.versionSvc.version}`,
           'shows Vault version for default policy in child namespace'
         );
-      assert.dom(SELECTORS.dashboardTitle).includesText('Vault v1.');
+      assert.dom(GENERAL.hdsPageHeaderTitle).includesText('Vault v1.');
 
       // log in to "root" before deleting
       await login();
@@ -174,7 +173,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
       assert.strictEqual(currentURL(), '/vault/dashboard');
 
       // Ensure it shows version on dashboard
-      assert.dom(SELECTORS.dashboardTitle).includesText(`Vault v1.`);
+      assert.dom(GENERAL.hdsPageHeaderTitle).includesText(`Vault v1.`);
       assert
         .dom(SELECTORS.footerVersion)
         .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version after login');

@@ -38,15 +38,14 @@
       {{/if}}
     </Hds::Dropdown>
   </:actions>
-  <:tabs>
-    <nav class="tabs" aria-label="ldap tabs">
-      <ul>
-        <li><LinkTo @route="libraries.library.details.accounts" data-test-tab="accounts">Accounts</LinkTo></li>
-        <li><LinkTo @route="libraries.library.details.configuration" data-test-tab="config">Configuration</LinkTo></li>
-      </ul>
-    </nav>
-  </:tabs>
 </Page::Header>
+
+<nav class="tabs" aria-label="ldap tabs">
+  <ul>
+    <li><LinkTo @route="libraries.library.details.accounts" data-test-tab="accounts">Accounts</LinkTo></li>
+    <li><LinkTo @route="libraries.library.details.configuration" data-test-tab="config">Configuration</LinkTo></li>
+  </ul>
+</nav>
 
 {{#if this.showConfirmModal}}
   <ConfirmModal

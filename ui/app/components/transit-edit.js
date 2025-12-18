@@ -69,6 +69,22 @@ export default Component.extend(FocusOnInsertMixin, {
     return baseCrumbs;
   },
 
+  get title() {
+    if (this.mode === 'create') {
+      return 'Create Key';
+    } else if (this.mode === 'edit') {
+      return 'Edit Key';
+    } else {
+      return 'Key';
+    }
+  },
+
+  get subtitle() {
+    if (this.mode === 'create' || this.mode === 'edit') return '';
+
+    return this.key?.id;
+  },
+
   waitForKeyUp: task(function* () {
     while (true) {
       const event = yield waitForEvent(document.body, 'keyup');

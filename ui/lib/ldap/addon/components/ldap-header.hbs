@@ -32,25 +32,24 @@
       </Hds::Dropdown>
     {{/if}}
   </:actions>
-  <:tabs>
-    {{#if @configRoute}}
-      <Mount::ConfigureTabs
-        @configRoute={{@configRoute}}
-        @displayName="LDAP"
-        @path={{@model.id}}
-        @externalRoute="secretsGeneralSettingsConfiguration"
-      />
-    {{else}}
-      <nav class="tabs" aria-label="ldap tabs">
-        <ul>
-          <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
-          <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
-          <li><LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo></li>
-        </ul>
-      </nav>
-    {{/if}}
-  </:tabs>
 </Page::Header>
+
+{{#if @configRoute}}
+  <Mount::ConfigureTabs
+    @configRoute={{@configRoute}}
+    @displayName="LDAP"
+    @path={{@model.id}}
+    @externalRoute="secretsGeneralSettingsConfiguration"
+  />
+{{else}}
+  <nav class="tabs" aria-label="ldap tabs">
+    <ul>
+      <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
+      <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
+      <li><LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo></li>
+    </ul>
+  </nav>
+{{/if}}
 
 {{#if this.engineToDisable}}
   <ConfirmModal

@@ -3,29 +3,23 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{titleize (pluralize this.identityType)}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-  <nav class="tabs" aria-label="navigation for entities">
-    <ul>
-      <li>
-        <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize this.identityType}}>
-          {{capitalize (pluralize this.identityType)}}
-        </LinkTo>
-      </li>
-      <li>
-        <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize this.identityType}}>
-          Aliases
-        </LinkTo>
-      </li>
-    </ul>
-  </nav>
-</div>
+<Page::Header @title={{titleize (pluralize this.identityType)}} />
+
+<nav class="tabs" aria-label="navigation for entities">
+  <ul>
+    <li>
+      <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize this.identityType}}>
+        {{capitalize (pluralize this.identityType)}}
+      </LinkTo>
+    </li>
+    <li>
+      <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize this.identityType}}>
+        Aliases
+      </LinkTo>
+    </li>
+  </ul>
+</nav>
+
 <Toolbar>
   {{#if this.model.meta.total}}
     <ToolbarFilters>

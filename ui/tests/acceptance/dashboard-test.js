@@ -8,6 +8,7 @@ import { visit, currentURL } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import Sinon from 'sinon';
 
 module('Acceptance | landing page dashboard', function (hooks) {
@@ -25,12 +26,12 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
   test('display the version number for the title', async function (assert) {
     await login();
-    // Since we're using mirage, version is mocked static value
-    const versionText = this.version.isEnterprise
-      ? `Vault ${this.version.versionDisplay} root`
-      : `Vault ${this.version.versionDisplay}`;
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`Vault ${this.version.versionDisplay}`);
+  });
 
-    assert.dom(DASHBOARD.cardHeader('Vault version')).hasText(versionText);
+  test('display the namespace badge for enterprise', async function (assert) {
+    await login();
+    assert.dom('.hds-badge').hasText('root', 'shows root namespace for enterprise');
   });
 
   test('hides the configuration details card on a non-root namespace enterprise version', async function (assert) {

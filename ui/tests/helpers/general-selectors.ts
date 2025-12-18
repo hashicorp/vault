@@ -93,6 +93,7 @@ export const GENERAL = {
   textToggle: '[data-test-text-toggle]',
   textareaByAttr: (attr: string) => `textarea[name="${attr}"]`,
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
+  superSelect: (name: string) => `[data-test-super-select="${name}"]`,
 
   /* ────── Code Blocks / Editor ────── */
   codemirror: `[data-test-component="code-mirror-modifier"]`,

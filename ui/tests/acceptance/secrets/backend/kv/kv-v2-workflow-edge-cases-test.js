@@ -40,7 +40,6 @@ import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { selectChoose } from 'ember-power-select/test-support';
-import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -275,8 +274,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       const [root, subdirectory] = this.fullSecretPath.split('/');
 
       await visit(`/vault`);
-      await selectChoose(DASHBOARD.searchSelect('secrets-engines'), backend);
-      await fillIn(DASHBOARD.selectEl, 'Find KV secrets');
+      await selectChoose(GENERAL.superSelect('secrets-engines'), backend);
+      await selectChoose(GENERAL.superSelect('actions'), 'Find KV secrets');
       await typeIn(GENERAL.kvSuggestion.input, `${root}/`);
       await click(GENERAL.kvSuggestion.input);
       assert

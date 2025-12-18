@@ -121,7 +121,9 @@ module('Acceptance | ssh | roles', function (hooks) {
     for (const role of ROLES) {
       // create a role
       await click(SES.createSecretLink);
-      assert.dom(SES.secretHeader).includesText('SSH Role', `${role.type}: renders the create page`);
+      assert
+        .dom(GENERAL.hdsPageHeaderTitle)
+        .includesText('SSH Role', `${role.type}: renders the create page`);
 
       await fillIn(GENERAL.inputByAttr('name'), role.name);
       await fillIn(GENERAL.inputByAttr('keyType'), role.type);

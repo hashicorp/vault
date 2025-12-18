@@ -44,7 +44,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       assert
-        .dom(GENERAL.title)
+        .dom(GENERAL.hdsPageHeaderTitle)
         .hasText('Enable an Authentication Method', 'renders auth header in default state');
 
       for (const method of filterEnginesByMountCategory({

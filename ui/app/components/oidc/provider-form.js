@@ -36,6 +36,17 @@ export default class OidcProviderForm extends Component {
       ? 'allow_all'
       : 'limited';
 
+  get breadcrumbs() {
+    const firstBreadcrumb = this.args.model.isNew
+      ? { label: 'Providers', route: 'vault.cluster.access.oidc.providers' }
+      : {
+          label: 'Details',
+          route: 'vault.cluster.access.oidc.providers.provider.details',
+          model: this.args.model.name,
+        };
+    return [firstBreadcrumb, { label: this.args.model.isNew ? 'Create Provider' : 'Edit Provider' }];
+  }
+
   // function passed to search select
   renderTooltip(selection, dropdownOptions) {
     // if a client has been deleted it will not exist in dropdownOptions (response from search select's query)

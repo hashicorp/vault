@@ -52,7 +52,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     await click(GENERAL.tab('enforcements'));
     await click('[data-test-enforcement-create]');
 
-    assert.dom('[data-test-mleh-title]').hasText('New enforcement', 'Title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('New enforcement', 'Title renders');
     await click('[data-test-mlef-save]');
     assert
       .dom('[data-test-inline-error-message]')

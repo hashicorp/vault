@@ -12,13 +12,6 @@
     <:breadcrumbs>
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
     </:breadcrumbs>
-    <:tabs>
-      <Mount::ConfigureTabs
-        @configRoute={{or engineDisplayData.configRoute "configuration.plugin-settings"}}
-        @displayName={{engineDisplayData.displayName}}
-        @path={{@model.secretsEngine.id}}
-      />
-    </:tabs>
     <:actions>
       <Hds::Button
         @color="secondary"
@@ -32,6 +25,11 @@
       />
     </:actions>
   </Page::Header>
+  <Mount::ConfigureTabs
+    @configRoute={{or engineDisplayData.configRoute "configuration.plugin-settings"}}
+    @displayName={{engineDisplayData.displayName}}
+    @path={{@model.secretsEngine.id}}
+  />
 
   {{#if @model.config}}
     <Toolbar>
