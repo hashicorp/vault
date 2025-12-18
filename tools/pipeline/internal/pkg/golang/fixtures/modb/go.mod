@@ -2,6 +2,8 @@ module github.com/hashicorp/vault/pipeline/golang/modb
 
 go 1.25.2
 
+toolchain go1.24
+
 godebug (
 	default=go1.21
 	httpcookiemaxnum=4000
