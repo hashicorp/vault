@@ -11,16 +11,6 @@
     <:breadcrumbs>
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
     </:breadcrumbs>
-    <:tabs>
-      <Mount::ConfigureTabs
-        @configRoute={{if
-          engineDisplayData.isConfigurable
-          (or engineDisplayData.configRoute "configuration.plugin-settings")
-        }}
-        @displayName={{engineDisplayData.displayName}}
-        @path={{@model.secretsEngine.id}}
-      />
-    </:tabs>
     <:actions>
       <Hds::Button
         @color="secondary"
@@ -34,8 +24,12 @@
       />
     </:actions>
   </Page::Header>
+  <Mount::ConfigureTabs
+    @configRoute={{if engineDisplayData.isConfigurable (or engineDisplayData.configRoute "configuration.plugin-settings")}}
+    @displayName={{engineDisplayData.displayName}}
+    @path={{@model.secretsEngine.id}}
+  />
 {{/let}}
-
 {{#if this.saveGeneralSettings.isRunning}}
   {{! TODO: Fix loading state styles }}
   <Hds::Layout::Flex @gap="24" @direction="column" @justify="center" @align="center">

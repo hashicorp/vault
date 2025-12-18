@@ -7,17 +7,16 @@
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
-  <:tabs>
-    <nav class="tabs" aria-label="secret tabs">
-      <ul>
-        {{#each this.tabs as |oTab|}}
-          <LinkTo @route={{oTab.route}} data-test-tab={{oTab.route}}>
-            {{oTab.label}}
-          </LinkTo>
-        {{/each}}
-      </ul>
-    </nav>
-  </:tabs>
 </Page::Header>
+
+<nav class="tabs" aria-label="secret tabs">
+  <ul>
+    {{#each this.tabs as |oTab|}}
+      <LinkTo @route={{oTab.route}} data-test-tab={{oTab.route}}>
+        {{oTab.label}}
+      </LinkTo>
+    {{/each}}
+  </ul>
+</nav>
 
 <Page::Error @error={{this.model}} />

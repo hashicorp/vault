@@ -41,6 +41,16 @@ export default class AlphabetEditComponent extends Component {
     ];
   }
 
+  get title() {
+    if (this.args?.mode === 'create') {
+      return 'Create Alphabet';
+    } else if (this.args?.mode === 'edit') {
+      return 'Edit Alphabet';
+    } else {
+      return this.args?.model?.id;
+    }
+  }
+
   transition(route = 'show') {
     this.errorMessage = '';
     const { backend, id } = this.args.model;

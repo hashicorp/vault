@@ -31,6 +31,17 @@ export default class KeymgmtKeyEdit extends Component {
   @service flashMessages;
   @tracked isDeleteModalOpen = false;
 
+  get title() {
+    if (this.isDistributing) {
+      return 'Distribute Key';
+    } else if (this.args.mode === 'create') {
+      return 'Create Key';
+    } else if (this.args.mode === 'edit') {
+      return 'Edit Key';
+    }
+    return this.args.model.id;
+  }
+
   get mode() {
     return this.args.mode || 'show';
   }

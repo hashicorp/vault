@@ -3,33 +3,21 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <Hds::Breadcrumb>
-      <Hds::Breadcrumb::Item
-        @text={{pluralize this.itemType}}
-        @route="vault.cluster.access.method.item.list"
-        @models={{array this.mountPath this.itemType}}
-      />
-      <Hds::Breadcrumb::Item @text={{if (eq this.mode "show") this.model.id (capitalize this.mode)}} @current={{true}} />
-    </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft>
-    {{#if (eq this.mode "show")}}
-      <h1 class="title is-3">
-        {{this.model.id}}
-      </h1>
-    {{else}}
-      <h1 class="title is-3">
-        {{capitalize this.mode}}
-        {{singularize this.itemType}}
-        {{#if (eq this.mode "edit")}}
-          {{this.model.id}}
-        {{/if}}
-      </h1>
-    {{/if}}
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title={{this.title}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash
+          label=(pluralize this.itemType)
+          route="vault.cluster.access.method.item.list"
+          models=(array this.mountPath this.itemType)
+        )
+        (hash label=(if (eq this.mode "show") this.model.id (capitalize this.mode)))
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
+
 {{#if (eq this.mode "show")}}
   <Toolbar>
     <ToolbarActions>

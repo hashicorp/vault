@@ -58,7 +58,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   });
 
   test('it should render show view', async function (assert) {
-    assert.expect(10);
+    assert.expect(11);
 
     // override capability getters
     Object.defineProperties(this.model, {
@@ -88,7 +88,8 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         @tab={{this.tab}}
       />`);
 
-    assert.dom(`[${ts}-header]`).hasText('Provider foo-bar', 'Page header renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Provider', 'Page header renders');
+    assert.dom(GENERAL.hdsPageHeaderSubtitle).hasText(' foo-bar', 'Page header renders subtitle');
     assert.dom(`[${ts}-tab="details"]`).hasClass('active', 'Details tab is active');
 
     const infoRows = this.element.querySelectorAll('[data-test-component="info-table-row"]');
@@ -194,7 +195,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         @mode="create"
       />`);
 
-    assert.dom(`[${ts}-header]`).hasText('Create Provider', 'Page header renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Provider', 'Page header renders');
     assert.dom(`[${ts}-config-title]`).exists('Config header shown in create mode');
     assert.dom(`[${ts}-creds-title]`).doesNotExist('New credentials header hidden in create mode');
 
@@ -256,7 +257,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         @mode="edit"
       />`);
 
-    assert.dom(`[${ts}-header]`).hasText('Update Credentials', 'Page header renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Update Credentials', 'Page header renders');
     assert.dom(`[${ts}-config-title]`).doesNotExist('Config header hidden in edit mode');
     assert.dom(`[${ts}-creds-title]`).exists('New credentials header shown in edit mode');
 
