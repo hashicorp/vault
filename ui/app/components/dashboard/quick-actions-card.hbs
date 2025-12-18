@@ -5,68 +5,75 @@
 
 <Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="quick-actions">
   <h2 class="title is-4">Quick actions</h2>
-  {{#if this.filteredSecretEngines}}
+  {{#if this.filteredSecretsEngines}}
     <div class="has-top-margin-m has-bottom-margin-m">
-      <h3 class="title is-marginless is-6" data-test-card-subtitle="secrets-engines">Secrets engines</h3>
-      <p class="is-size-8 has-top-margin-xxs has-bottom-margin-s has-text-grey">
-        Supported engines include databases, KV version 2, and PKI.
-      </p>
-      <SearchSelect
-        @id="type-to-select-a-mount"
-        @options={{this.mountOptions}}
-        @selectLimit="1"
-        @disallowNewItems={{true}}
-        @fallbackComponent="input-search"
+      <Hds::Form::SuperSelect::Single::Field
+        @options={{this.filteredSecretsEngines}}
+        @selected={{this.selectedEngine}}
+        @searchEnabled={{true}}
+        @searchField="id"
+        @placeholder="Select a mount"
+        @searchPlaceholder="Type to search for mounts"
         @onChange={{this.handleSearchEngineSelect}}
-        @placeholder="Type to select a mount"
-        @displayInherit={{true}}
-        @shouldRenderName={{true}}
-        @passObject={{true}}
-        @objectKeys={{array "type" "version"}}
-        class="is-marginless"
-        data-test-search-select="secrets-engines"
-      />
+        data-test-super-select="secrets-engines"
+        as |F|
+      >
+        <F.Label>Secrets engines</F.Label>
+        <F.HelperText>Supported engines include databases, KV version 2, and PKI.</F.HelperText>
+        <F.Options>{{F.options.id}}</F.Options>
+      </Hds::Form::SuperSelect::Single::Field>
     </div>
 
     {{#if this.selectedEngine}}
-      <h3 id="action-select-title" class="title is-6" data-test-card-subtitle="secrets-engines">Action</h3>
-      <Select
-        @name="action-select"
+      <Hds::Form::SuperSelect::Single::Field
         @options={{this.actionOptions}}
-        @isFullwidth={{true}}
-        @selectedValue={{this.selectedAction}}
+        @selected={{this.selectedAction}}
+        @searchEnabled={{false}}
+        @placeholder="Select one"
         @onChange={{this.setSelectedAction}}
-        @noDefault={{true}}
-        @ariaLabel="Action"
-      />
+        data-test-super-select="actions"
+        as |F|
+      >
+        <F.Label>Action</F.Label>
+        <F.Options>{{F.options}}</F.Options>
+      </Hds::Form::SuperSelect::Single::Field>
 
       {{#if this.selectedAction}}
-        {{#if this.fetchOptions.isRunning}}
-          <Hds::Icon @name="loading" @isInline={{true}} />
-          <p class="has-left-margin-xs" data-test-loading>Loading options...</p>
-        {{else if this.searchSelectParams.isKV}}
-          {{! use special input to allow searching for KVv2 secrets inside a directory }}
-          <KvSuggestionInput
-            @label="Secret Path"
-            @value={{this.paramValue}}
-            @mountPath={{this.selectedEngine.id}}
-            @onChange={{fn (mut this.paramValue)}}
-          />
-        {{else}}
-          <h3 class="title is-6" data-test-card-subtitle="param">{{this.searchSelectParams.title}}</h3>
-          <SearchSelect
-            class="is-flex-grow-1"
-            @id="quick-actions-card-param-select"
-            @ariaLabel={{this.searchSelectParams.title}}
-            @selectLimit="1"
-            @placeholder={{this.searchSelectParams.placeholder}}
-            @disallowNewItems={{true}}
-            @shouldRenderName={{this.searchSelectParams.shouldRenderName}}
-            @options={{this.searchSelectOptions}}
-            @onChange={{this.handleActionSelect}}
-            data-test-search-select="params"
-          />
-        {{/if}}
+        <div class="has-top-margin-m">
+          {{#if this.fetchOptions.isRunning}}
+            <Hds::Icon @name="loading" @isInline={{true}} />
+            <p class="has-left-margin-xs" data-test-loading>Loading options...</p>
+          {{else if this.searchSelectParams.isKV}}
+            {{! use special input to allow searching for KVv2 secrets inside a directory }}
+            <KvSuggestionInput
+              @label="Secret Path"
+              @value={{this.paramValue}}
+              @mountPath={{this.selectedEngine.id}}
+              @onChange={{fn (mut this.paramValue)}}
+            />
+          {{else if this.searchSelectOptions}}
+            <Hds::Form::SuperSelect::Single::Field
+              @options={{this.searchSelectOptions}}
+              @selected={{this.paramValue}}
+              @searchEnabled={{true}}
+              @placeholder={{this.searchSelectParams.placeholder}}
+              @searchPlaceholder={{this.searchSelectParams.searchPlaceholder}}
+              @onChange={{fn (mut this.paramValue)}}
+              data-test-super-select="params"
+              as |F|
+            >
+              <F.Label data-test-card-subtitle="param">{{this.searchSelectParams.title}}</F.Label>
+              <F.Options>{{F.options}}</F.Options>
+            </Hds::Form::SuperSelect::Single::Field>
+          {{else}}
+            <InputSearch
+              @label={{this.searchSelectParams.title}}
+              @placeholder={{this.searchSelectParams.inputPlaceholder}}
+              @onChange={{fn (mut this.paramValue)}}
+              data-test-param-input
+            />
+          {{/if}}
+        </div>
         <div>
           <Hds::Button
             @text={{this.searchSelectParams.buttonText}}
