@@ -16,6 +16,8 @@ import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 import NamespaceService from 'vault/vault/services/namespace';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 
 /**
  * @module SecretEngineList handles the display of the list of secret engines, including the filtering.
@@ -98,9 +100,10 @@ export default class SecretEngineList extends Component<Args> {
 
     // filters by engine type, ex: 'kv'
     if (this.engineTypeFilters.length > 0) {
-      sortedBackends = sortedBackends.filter((backend) =>
-        this.engineTypeFilters.includes(backend.engineType)
-      );
+      sortedBackends = sortedBackends.filter((backend) => {
+        const effectiveType = getEffectiveEngineType(backend.engineType);
+        return this.engineTypeFilters.includes(effectiveType);
+      });
     }
 
     // filters by engine version, ex: 'v1.21.0...'
@@ -124,9 +127,10 @@ export default class SecretEngineList extends Component<Args> {
   get typeFilterOptions() {
     // if there is search text, filter types by that
     if (this.typeSearchText.trim() !== '') {
-      return this.displayableBackends.filter((backend) =>
-        backend.engineType.toLowerCase().includes(this.typeSearchText.toLowerCase())
-      );
+      return this.displayableBackends.filter((backend) => {
+        const effectiveType = getEffectiveEngineType(backend.engineType);
+        return effectiveType.toLowerCase().includes(this.typeSearchText.toLowerCase());
+      });
     }
 
     return this.displayableBackends;
@@ -146,14 +150,16 @@ export default class SecretEngineList extends Component<Args> {
 
   // Returns filtered engines list by type
   get secretEngineArrayByType() {
-    const arrayOfAllEngineTypes = this.typeFilterOptions.map((modelObject) => modelObject.engineType);
-    // filter out repeated engineTypes (e.g. [kv, kv] => [kv])
-    const arrayOfUniqueEngineTypes = [...new Set(arrayOfAllEngineTypes)];
+    const arrayOfAllEffectiveTypes = this.typeFilterOptions.map((modelObject) =>
+      getEffectiveEngineType(modelObject.engineType)
+    );
+    // filter out repeated effective types (e.g. [kv, kv] => [kv])
+    const arrayOfUniqueEffectiveTypes = [...new Set(arrayOfAllEffectiveTypes)];
 
-    return arrayOfUniqueEngineTypes.map((engineType) => ({
-      name: engineType,
-      id: engineType,
-      icon: engineDisplayData(engineType)?.glyph ?? 'lock',
+    return arrayOfUniqueEffectiveTypes.map((effectiveType) => ({
+      name: effectiveType,
+      id: effectiveType,
+      icon: engineDisplayData(effectiveType)?.glyph ?? 'lock',
     }));
   }
 
@@ -187,8 +193,8 @@ export default class SecretEngineList extends Component<Args> {
       } else {
         return `${displayData.displayName}`;
       }
-    } else if (displayData.type === 'unknown') {
-      // If a mounted engine type doesn't match any known type, the type is returned as 'unknown' and set this tooltip.
+    } else if (!ALL_ENGINES.find((engine) => engine.type === backend.type)) {
+      // If a mounted engine type doesn't match any known type in our static metadata, set this tooltip.
       // Handles issue when a user externally mounts an engine that doesn't follow the expected naming conventions for what's in the binary, despite being a valid engine.
       return `This engine's type is not recognized by the UI. Please use the CLI to manage this engine.`;
     } else {

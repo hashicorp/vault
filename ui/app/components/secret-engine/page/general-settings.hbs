@@ -14,11 +14,7 @@
     <:actions>
       <Hds::Button
         @color="secondary"
-        @route={{if
-          engineDisplayData.isOnlyMountable
-          "vault.cluster.secrets.backends"
-          (concat "vault.cluster.secrets.backend." (or engineDisplayData.engineRoute "list-root"))
-        }}
+        @route={{exit-configuration-route @model.secretsEngine.type @model.secretsEngine.version}}
         @text="Exit configuration"
         data-test-button="Exit configuration"
       />

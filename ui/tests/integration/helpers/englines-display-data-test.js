@@ -23,7 +23,7 @@ module('Unit | Helper | engineDisplayData', function () {
   test('it returns fallback display data for unknown engine type', function (assert) {
     const { displayName, type, mountCategory, glyph } = engineDisplayData('not-an-engine');
     assert.strictEqual(displayName, 'not-an-engine', 'it returns passed type as fallback displayName');
-    assert.strictEqual(type, 'unknown', 'it returns "unknown"" as fallback type');
+    assert.strictEqual(type, 'not-an-engine', 'it returns methodType type');
     assert.propEqual(mountCategory, ['secret', 'auth'], 'mountCategory is correct');
     assert.strictEqual(glyph, 'lock', 'default glyph is a lock');
   });

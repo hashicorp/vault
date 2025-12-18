@@ -10,6 +10,9 @@ import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import { getModelTypeForEngine } from 'vault/utils/model-helpers/secret-engine-helpers';
+import { getBackendEffectiveType, getEnginePathParam } from 'vault/utils/backend-route-helpers';
 
 /**
  * @type Class
@@ -24,15 +27,10 @@ export default Route.extend({
     return secret ? normalizePath(secret) : '';
   },
 
-  enginePathParam() {
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    return backend;
-  },
-
   capabilities(secret, modelType) {
-    const backend = this.enginePathParam();
+    const backend = getEnginePathParam(this);
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
-    const backendType = backendModel.engineType;
+    const backendType = getEffectiveEngineType(backendModel.engineType);
     let path;
     if (backendType === 'transit') {
       path = backend + '/keys/' + secret;
@@ -51,27 +49,13 @@ export default Route.extend({
     return `${backend}/${noun}/${secret}`;
   },
 
-  modelTypeForTransform(secretName) {
-    if (!secretName) return 'transform';
-    if (secretName.startsWith('role/')) {
-      return 'transform/role';
-    }
-    if (secretName.startsWith('template/')) {
-      return 'transform/template';
-    }
-    if (secretName.startsWith('alphabet/')) {
-      return 'transform/alphabet';
-    }
-    return 'transform'; // TODO: transform/transformation;
-  },
-
   transformSecretName(secret, modelType) {
     const noun = modelType.split('/')[1];
     return secret.replace(`${noun}/`, '');
   },
 
   backendType() {
-    return this.modelFor('vault.cluster.secrets.backend').engineType;
+    return getBackendEffectiveType(this);
   },
 
   templateName: 'vault/cluster/secrets/backend/secretEditLayout',
@@ -119,7 +103,7 @@ export default Route.extend({
   },
 
   buildModel(secret, queryParams) {
-    const backend = this.enginePathParam();
+    const backend = getEnginePathParam(this);
     const modelType = this.modelType(backend, secret, { queryParams });
     if (modelType === 'secret') {
       return resolve();
@@ -130,19 +114,12 @@ export default Route.extend({
   modelType(backend, secret, options = {}) {
     const backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
     const { engineType } = backendModel;
-    const types = {
-      database: secret && secret.startsWith('role/') ? 'database/role' : 'database/connection',
-      transit: 'transit-key',
-      ssh: 'role-ssh',
-      transform: this.modelTypeForTransform(secret),
-      aws: 'role-aws',
-      cubbyhole: 'secret',
-      kv: 'secret',
-      keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
-      generic: 'secret',
-      totp: 'totp-key',
-    };
-    return types[engineType];
+    const effectiveType = getEffectiveEngineType(engineType);
+
+    return getModelTypeForEngine(effectiveType, {
+      secret,
+      itemType: options.queryParams?.itemType,
+    });
   },
 
   async handleSecretModelError(capabilitiesPromise, secretId, modelType, error) {
@@ -168,7 +145,7 @@ export default Route.extend({
 
   async model(params, { to: { queryParams } }) {
     let secret = this.secretParam();
-    const backend = this.enginePathParam();
+    const backend = getEnginePathParam(this);
     const modelType = this.modelType(backend, secret, { queryParams });
     const type = params.type || '';
     if (!secret) {
@@ -205,7 +182,7 @@ export default Route.extend({
   setupController(controller, model) {
     this._super(...arguments);
     const secret = this.secretParam();
-    const backend = this.enginePathParam();
+    const backend = getEnginePathParam(this);
     const preferAdvancedEdit =
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
       this.controllerFor('vault.cluster.secrets.backend').preferAdvancedEdit || false;
@@ -232,7 +209,7 @@ export default Route.extend({
   actions: {
     error(error) {
       const secret = this.secretParam();
-      const backend = this.enginePathParam();
+      const backend = getEnginePathParam(this);
       set(error, 'keyId', backend + '/' + secret);
       set(error, 'backend', backend);
       return true;
