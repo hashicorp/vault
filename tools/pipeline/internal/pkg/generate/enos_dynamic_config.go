@@ -132,8 +132,7 @@ func (e *EnosDynamicConfigReq) getSampleAttrs(ctx context.Context) (*SampleAttrs
 	// TODO: Move this to pipeline config
 	attrs := &SampleAttrs{
 		// Use the cheapest regions
-		// AWSRegion: []string{"us-east-1", "us-west-2"},
-		AWSRegion: []string{"us-west-1", "us-west-2"},
+		AWSRegion: []string{"us-east-1", "us-west-2"},
 		// Current distro defaults
 		DistroVersionAmzn:   []string{"2023"},
 		DistroVersionLeap:   []string{"15.6"},
