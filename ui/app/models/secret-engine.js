@@ -11,6 +11,7 @@ import { withExpandedAttributes } from 'vault/decorators/model-expanded-attribut
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 import { ALL_ENGINES, isAddonEngine } from 'vault/utils/all-engines-metadata';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const LINKED_BACKENDS = supportedSecretBackends();
@@ -110,7 +111,8 @@ export default class SecretEngineModel extends Model {
 
   /* GETTERS */
   get isV2KV() {
-    return this.version === 2 && (this.engineType === 'kv' || this.engineType === 'generic');
+    const effectiveType = getEffectiveEngineType(this.engineType);
+    return this.version === 2 && ['kv', 'generic'].includes(effectiveType);
   }
 
   get attrs() {
@@ -142,11 +144,12 @@ export default class SecretEngineModel extends Model {
   }
 
   get backendLink() {
-    if (this.engineType === 'database') {
+    const effectiveType = getEffectiveEngineType(this.engineType);
+    if (effectiveType === 'database') {
       return 'vault.cluster.secrets.backend.overview';
     }
-    if (isAddonEngine(this.engineType, this.version)) {
-      return `vault.cluster.secrets.backend.${engineDisplayData(this.engineType).engineRoute}`;
+    if (isAddonEngine(effectiveType, this.version)) {
+      return `vault.cluster.secrets.backend.${engineDisplayData(effectiveType).engineRoute}`;
     }
     if (this.isV2KV) {
       // if it's KV v2 but not registered as an addon, it's type generic
@@ -156,8 +159,9 @@ export default class SecretEngineModel extends Model {
   }
 
   get backendConfigurationLink() {
-    if (isAddonEngine(this.engineType, this.version)) {
-      return `vault.cluster.secrets.backend.${this.engineType}.configuration`;
+    const effectiveType = getEffectiveEngineType(this.engineType);
+    if (isAddonEngine(effectiveType, this.version)) {
+      return `vault.cluster.secrets.backend.${effectiveType}.configuration`;
     }
     return `vault.cluster.secrets.backend.configuration.general-settings`;
   }

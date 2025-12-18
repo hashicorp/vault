@@ -10,6 +10,7 @@ import AzureConfigForm from 'vault/forms/secrets/azure-config';
 import GcpConfigForm from 'vault/forms/secrets/gcp-config';
 import SshConfigForm from 'vault/forms/secrets/ssh-config';
 import engineDisplayData from 'vault/helpers/engines-display-data';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type ApiService from 'vault/services/api';
@@ -50,24 +51,27 @@ export default class SecretsBackendConfigurationEdit extends Route {
       'vault.cluster.secrets.backend.configuration'
     ) as SecretsBackendConfigurationModel;
 
+    // Use effective type to handle external plugin mappings
+    const effectiveType = getEffectiveEngineType(type);
+
     const formClass = {
       aws: AwsConfigForm,
       azure: AzureConfigForm,
       gcp: GcpConfigForm,
       ssh: SshConfigForm,
-    }[type];
+    }[effectiveType];
 
     const defaults = {
       ssh: { generate_signing_key: true, issuer: '' },
-    }[type] || { issuer: '' };
+    }[effectiveType] || { issuer: '' };
 
     // if the engine type is not configurable or a form class does not exist for the type return a 404.
-    if (!engineDisplayData(type)?.isConfigurable || !formClass) {
+    if (!engineDisplayData(effectiveType)?.isConfigurable || !formClass) {
       throw { httpStatus: 404, backend };
     }
 
     return {
-      type,
+      type: effectiveType,
       id: backend,
       config,
       secretsEngine: this.modelFor('vault.cluster.secrets.backend'),
