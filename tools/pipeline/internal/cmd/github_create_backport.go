@@ -48,7 +48,7 @@ func newCreateGithubBackportCmd() *cobra.Command {
 		},
 	}
 
-	backportCmd.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceAllowInactive, "ce-allow-inactive-groups", "a", []string{"docs", "changelog", "pipeline"}, "Change file groups that should be allowed to backport to inactive CE branches")
+	backportCmd.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceAllowInactive, "ce-allow-inactive-groups", "a", []string{}, "Change file groups that should be allowed to backport to inactive CE branches")
 	backportCmd.PersistentFlags().StringVar(&createGithubBackportState.req.CEBranchPrefix, "ce-branch-prefix", "ce", "The branch name prefix")
 	backportCmd.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceExclude, "ce-exclude-groups", "e", []string{"enterprise"}, "Change file groups that should be excluded from the backporting to CE branches")
 	backportCmd.PersistentFlags().StringVar(&createGithubBackportState.req.BaseOrigin, "base-origin", "origin", "The name to use for the base remote origin")
