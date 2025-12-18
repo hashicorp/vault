@@ -79,17 +79,17 @@ func newCreateGithubBackportCmd() *cobra.Command {
 func runCreateGithubBackportCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	for i, ig := range createGithubBackportState.ceAllowInactive {
-		if i == 0 && createGithubBackportState.req.CEAllowInactiveGroups == nil {
-			createGithubBackportState.req.CEAllowInactiveGroups = changed.FileGroups{}
-		}
+	if createGithubBackportState.req.CEAllowInactiveGroups == nil {
+		createGithubBackportState.req.CEAllowInactiveGroups = changed.FileGroups{}
+	}
+	for _, ig := range createGithubBackportState.ceAllowInactive {
 		createGithubBackportState.req.CEAllowInactiveGroups = createGithubBackportState.req.CEAllowInactiveGroups.Add(changed.FileGroup(ig))
 	}
 
-	for i, eg := range createGithubBackportState.ceExclude {
-		if i == 0 && createGithubBackportState.req.CEExclude == nil {
-			createGithubBackportState.req.CEExclude = changed.FileGroups{}
-		}
+	if createGithubBackportState.req.CEExclude == nil {
+		createGithubBackportState.req.CEExclude = changed.FileGroups{}
+	}
+	for _, eg := range createGithubBackportState.ceExclude {
 		createGithubBackportState.req.CEExclude = createGithubBackportState.req.CEExclude.Add(changed.FileGroup(eg))
 	}
 
