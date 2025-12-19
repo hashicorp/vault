@@ -111,6 +111,7 @@ export default class App extends Application {
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
           syncDestination: 'vault.cluster.sync.secrets.destinations.destination',
+          secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
         },
       },
     },

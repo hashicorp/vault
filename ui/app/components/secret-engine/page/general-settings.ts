@@ -14,6 +14,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type ApiService from 'vault/services/api';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type UnsavedChangesService from 'vault/services/unsaved-changes';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const CHARACTER_LIMIT = 500;
 
@@ -63,6 +64,19 @@ export default class GeneralSettingsComponent extends Component<Args> {
     changedFieldsCopy[configIndex] = 'Secrets duration';
 
     return changedFieldsCopy;
+  }
+
+  get configRoute() {
+    const engine = this.args.model.secretsEngine;
+    const isKvv2 = engine.version === 2 && engine.effectiveEngineType === 'kv';
+    const engineMetadata = engineDisplayData(engine.effectiveEngineType);
+
+    // Kvv2 is configurable but shares metadata with Kvv1 so isConfigurable is left unset
+    if (engineMetadata.isConfigurable || isKvv2) {
+      return engineMetadata.configRoute || 'configuration.plugin-settings';
+    } else {
+      return false;
+    }
   }
 
   validateTtl(ttlValue: FormDataEntryValue | number | null) {

@@ -3,39 +3,47 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@backend}}>
-  <:tabLinks>
-    <li>
-      <LinkTo
-        @route={{this.router.currentRoute.localName}}
-        @models={{@currentRouteParams}}
-        data-test-secrets-tab="Secrets"
-        @current-when={{true}}
-      >Secrets</LinkTo>
-    </li>
-    <li>
-      <LinkTo @route="configuration" @model={{@backend}} data-test-secrets-tab="Configuration">Configuration</LinkTo>
-    </li>
-  </:tabLinks>
-
+<KvHeader @pageTitle={{@backendModel.id}} @backend={{@backendModel}} @breadcrumbs={{@breadcrumbs}} @filter={{@filterValue}}>
   <:toolbarFilters>
     {{#if (and (not-eq @secrets 403) (or @secrets @filterValue))}}
       <KvListFilter @mountPoint={{this.mountPoint}} @filterValue={{@filterValue}} />
     {{/if}}
   </:toolbarFilters>
 
-  <:toolbarActions>
-    <ToolbarLink
-      data-test-toolbar-create-secret
+  <:tabs>
+    <li><LinkTo @route="list" data-test-tab="Secrets" @model={{@backend}}>Secrets</LinkTo></li>
+  </:tabs>
+  <:badges>
+    <Hds::Badge @text="version 2" data-test-badge />
+  </:badges>
+
+  <:actions>
+    <Hds::Dropdown as |D|>
+      <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
+      <D.Interactive
+        @icon="settings"
+        @route="configuration"
+        @model={{@backendModel.id}}
+        data-test-popup-menu="Configure"
+      >Configure</D.Interactive>
+      <D.Interactive
+        {{on "click" (fn (mut this.engineToDisable) @backendModel)}}
+        @color="critical"
+        @icon="trash"
+        data-test-popup-menu="Delete"
+      >Delete</D.Interactive>
+    </Hds::Dropdown>
+
+    <Hds::Button
+      @text="Create secret"
+      @icon="plus"
       @route="create"
-      @model={{@backend}}
+      @model={{@backendModel}}
       @query={{hash initialKey=@filterValue}}
-      @type="add"
-    >
-      Create secret
-    </ToolbarLink>
-  </:toolbarActions>
-</KvPageHeader>
+      data-test-button="create secret"
+    />
+  </:actions>
+</KvHeader>
 
 {{#if (eq @secrets 403)}}
   <div class="box is-fullwidth is-shadowless has-tall-padding">
@@ -177,4 +185,14 @@
       />
     {{/if}}
   {{/if}}
+{{/if}}
+
+{{#if this.engineToDisable}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="Any data in this engine will be permanently deleted."
+    @confirmTitle="Disable engine?"
+    @onClose={{fn (mut this.engineToDisable) null}}
+    @onConfirm={{perform this.disableEngine this.engineToDisable}}
+  />
 {{/if}}

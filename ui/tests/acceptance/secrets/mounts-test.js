@@ -22,7 +22,6 @@ import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 
 import { create } from 'ember-cli-page-object';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
-import configPage from 'vault/tests/pages/secrets/backend/configuration';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
@@ -69,10 +68,17 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
     await page.maxTTLUnit('h').maxTTLVal(maxTTLHours);
     await click(GENERAL.submitButton);
 
-    // TODO: Update this when KVV2 is migrated to new configuration flow
-    await click('[data-test-secrets-tab="Configuration"]');
-    assert.strictEqual(configPage.defaultTTL, `${this.calcDays(defaultTTLHours)}`, 'shows the proper TTL');
-    assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
+    assert.dom(GENERAL.dropdownToggle('Manage')).exists('renders manage dropdown');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Configure'));
+    await click(GENERAL.tabLink('general-settings'));
+    assert
+      .dom(GENERAL.inputByAttr('default_lease_ttl'))
+      .hasValue(`${defaultTTLHours}`, 'shows the proper TTL');
+    assert.dom(GENERAL.selectByAttr('default_lease_ttl')).hasValue('h', 'shows the proper TTL unit');
+
+    assert.dom(GENERAL.inputByAttr('max_lease_ttl')).hasValue(`${maxTTLHours}`, 'shows the proper max TTL');
+    assert.dom(GENERAL.selectByAttr('max_lease_ttl')).hasValue('h', 'shows the proper max TTL unit');
   });
 
   test('it sets the ttl when enabled then disabled', async function (assert) {
@@ -91,10 +97,14 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
     await page.maxTTLUnit('h').maxTTLVal(maxTTLHours);
     await click(GENERAL.submitButton);
 
-    // TODO: Update this when KVV2 is migrated to new configuration flow
-    await click('[data-test-secrets-tab="Configuration"]');
-    assert.strictEqual(configPage.defaultTTL, '1 month 1 day', 'shows system default TTL');
-    assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
+    assert.dom(GENERAL.dropdownToggle('Manage')).exists('renders manage dropdown');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Configure'));
+    await click(GENERAL.tabLink('general-settings'));
+
+    assert.dom(GENERAL.inputByAttr('default_lease_ttl')).hasValue('32', 'shows system default TTL');
+    assert.dom(GENERAL.inputByAttr('max_lease_ttl')).hasValue(`${maxTTLHours}`, 'shows the proper max TTL');
+    assert.dom(GENERAL.selectByAttr('max_lease_ttl')).hasValue('h', 'shows the proper max TTL unit');
   });
 
   test('it sets the max ttl after pki chosen, resets after', async function (assert) {
