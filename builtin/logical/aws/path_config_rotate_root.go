@@ -123,6 +123,13 @@ func (b *backend) rotateRoot(ctx context.Context, req *logical.Request) (*logica
 		return nil, fmt.Errorf("error deleting old access key: %w", err)
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSRootConfigRotate, map[string]interface{}{
+		"rotation_period":            config.RotationPeriod.String(),
+		"rotation_schedule":          config.RotationSchedule,
+		"rotation_window":            config.RotationWindow.String(),
+		"disable_automatic_rotation": config.DisableAutomatedRotation,
+	})
+
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"access_key": config.AccessKey,

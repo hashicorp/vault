@@ -157,6 +157,13 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 	config.PopulatePluginIdentityTokenData(configData)
 	config.PopulateAutomatedRotationData(configData)
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSRootConfigRead, map[string]interface{}{
+		"rotation_period":            config.RotationPeriod.String(),
+		"rotation_schedule":          config.RotationSchedule,
+		"rotation_window":            config.RotationWindow.String(),
+		"disable_automatic_rotation": config.DisableAutomatedRotation,
+	})
+
 	return &logical.Response{
 		Data: configData,
 	}, nil
@@ -315,6 +322,13 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		}
 		return nil, wrappedError
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSRootConfigWrite, map[string]interface{}{
+		"rotation_period":            rc.RotationPeriod.String(),
+		"rotation_schedule":          rc.RotationSchedule,
+		"rotation_window":            rc.RotationWindow.String(),
+		"disable_automatic_rotation": rc.DisableAutomatedRotation,
+	})
 
 	// clear possible cached IAM / STS clients after successfully updating
 	// config/root
