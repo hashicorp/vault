@@ -184,7 +184,6 @@ jobs:
             echo 'ENOS_VAR_aws_ssh_private_key_path=./support/private_key.pem'
             echo 'ENOS_VAR_consul_license_path=./support/consul.hclic'
             echo 'ENOS_VAR_distro_version_amzn=${{ matrix.attributes.distro_version_amzn }}'
-            echo 'ENOS_VAR_distro_version_leap=${{ matrix.attributes.distro_version_leap }}'
             echo 'ENOS_VAR_distro_version_rhel=${{ matrix.attributes.distro_version_rhel }}'
             echo 'ENOS_VAR_distro_version_sles=${{ matrix.attributes.distro_version_sles }}'
             echo 'ENOS_VAR_distro_version_ubuntu=${{ matrix.attributes.distro_version_ubuntu }}'

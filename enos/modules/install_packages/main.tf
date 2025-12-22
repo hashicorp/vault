@@ -15,20 +15,22 @@ locals {
     "arm64" = "aarch64"
   }
   package_manager = {
-    "amzn"          = "yum"
-    "opensuse-leap" = "zypper"
-    "rhel"          = "dnf"
-    "sles"          = "zypper"
-    "ubuntu"        = "apt"
+    "amzn"   = "yum"
+    "rhel"   = "dnf"
+    "sles"   = "zypper"
+    "ubuntu" = "apt"
   }
   distro_repos = {
+    // NOTE: The versions here always correspond to the output of enos_host_info.distro_version. These are used in
+    // several modules so if you change the keys here also consider the "artifact/metadata", "ec2_info",
     "sles" = {
-      "15.6" = "https://download.opensuse.org/repositories/network:utilities/SLE_15_SP6/network:utilities.repo"
+      "15.7" = "https://download.opensuse.org/repositories/network:utilities/15.6/network:utilities.repo"
+      "16.0" = "https://download.opensuse.org/repositories/network:utilities/16.0/network:utilities.repo"
     }
     "rhel" = {
       "8.10" = "https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm"
-      "9.6"  = "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"
-      "10.0" = "https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm"
+      "9.7"  = "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"
+      "10.1" = "https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm"
     }
   }
 }
