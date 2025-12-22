@@ -11,7 +11,8 @@ on:
   pull_request:
     branches:
       - 'main'
-      - '!oss-merge-main*'
+      - 'release/**'
+      - 'ce/**'
 
 jobs:
   scan:
@@ -29,7 +30,7 @@ jobs:
       uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
       with:
         cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
-        go-version-file: .go-version
+        go-version: 'stable'
 
     - name: Set up Python
       uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
