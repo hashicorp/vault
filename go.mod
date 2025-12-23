@@ -159,7 +159,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.23.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.23.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.22.0
-	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.12.0
+	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.12.1-0.20251101003710-9d9a835cf246
 	github.com/hashicorp/vault-plugin-secrets-kv v0.25.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.17.0
