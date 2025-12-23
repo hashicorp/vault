@@ -1498,8 +1498,8 @@ github.com/hashicorp/go-uuid v1.0.1/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/b
 github.com/hashicorp/go-uuid v1.0.2/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/hashicorp/go-uuid v1.0.3 h1:2gKiV6YVmrJ1i2CKKa9obLvRieoRGviZFL26PcT/Co8=
 github.com/hashicorp/go-uuid v1.0.3/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
-github.com/hashicorp/go-version v1.7.0 h1:5tqGy27NaOTB8yJKUZELlFAS/LTKJkrmONwQKeRZfjY=
-github.com/hashicorp/go-version v1.7.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
+github.com/hashicorp/go-version v1.8.0 h1:KAkNb1HAiZd1ukkxDFGmokVZe1Xy9HG6NUp+bPle2i4=
+github.com/hashicorp/go-version v1.8.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
@@ -1565,8 +1565,8 @@ github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.1 h1:9SW3Qu08RR9Tyn2K0wU
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.1/go.mod h1:Uzb/uPdIKqXmq3xo4NNT2+5HgXlxNfuDKwU2EqzwD8s=
 github.com/hashicorp/vault-plugin-auth-oci v0.20.0 h1:R1JXapvFsuxE8+jYBSQvkIwWHSpKpHpUbAX5K+6pbO4=
 github.com/hashicorp/vault-plugin-auth-oci v0.20.0/go.mod h1:XOhAs74HS6cSKWm2zQodRBxTFDhu/ApNpiw5Tfz9J4k=
-github.com/hashicorp/vault-plugin-database-couchbase v0.15.0 h1:6gLCOwwErqMgo9pJvsrOkg4tL7HmE95r3JVc14hSFSY=
-github.com/hashicorp/vault-plugin-database-couchbase v0.15.0/go.mod h1:KpGJp2QKCpMFhzMTdovoZFtx56Q7yQ8oO4fg+UuMGrI=
+github.com/hashicorp/vault-plugin-database-couchbase v0.15.1-0.20251201004320-b9e3e60a55dc h1:pD8t3mG05Q+JbD36TSgz1/qUm840LXhYGSA+/b61U6w=
+github.com/hashicorp/vault-plugin-database-couchbase v0.15.1-0.20251201004320-b9e3e60a55dc/go.mod h1:wHQyYYGiQO0OBptLEpj4ihquTkmhh+JaT+CPDIrk2Aw=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.19.0 h1:8vbxtLgvTEyve6mJt6aLuaje7NW3aEkJMjf20QFB0gs=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.19.0/go.mod h1:K0W2sRQPX2T0Rv4eRba5d048nDF1/XcjaI/IJ5EHD3I=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.16.0 h1:/eF3lUTELNWU6NoHDLDdv0waibHHG281q7+RbwujGNU=
@@ -2411,8 +2411,8 @@ golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4/go.mod h1:jJ57K6gSWd91
 golang.org/x/mod v0.7.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=
 golang.org/x/mod v0.8.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=
 golang.org/x/mod v0.9.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=
-golang.org/x/mod v0.29.0 h1:HV8lRxZC4l2cr3Zq1LvtOsi/ThTgWnUk/y64QSs8GwA=
-golang.org/x/mod v0.29.0/go.mod h1:NyhrlYXJ2H4eJiRy/WDBO6HMqZQ6q9nk4JzS3NuCK+w=
+golang.org/x/mod v0.30.0 h1:fDEXFVZ/fmCKProc/yAXXUijritrDzahmwwefnjoPFk=
+golang.org/x/mod v0.30.0/go.mod h1:lAsf5O2EvJeSFMiBxXDki7sCgAxEUcZHXoXMKT4GJKc=
 golang.org/x/net v0.0.0-20180724234803-3673e40ba225/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20180826012351-8a410e7b638d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20180906233101-161cd47e91fd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
