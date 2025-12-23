@@ -141,7 +141,7 @@ sample "build_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["amzn", "leap", "rhel", "sles"]
+      distro          = ["amzn", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -151,7 +151,7 @@ sample "build_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["amzn", "leap", "rhel", "sles"]
+      distro          = ["amzn", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -161,7 +161,7 @@ sample "build_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["amzn", "leap", "rhel", "sles"]
+      distro          = ["amzn", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -171,7 +171,7 @@ sample "build_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["amzn", "leap", "rhel", "sles"]
+      distro          = ["amzn", "rhel", "sles"]
       edition         = ["ce"]
 
       exclude {

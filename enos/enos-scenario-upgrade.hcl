@@ -72,10 +72,10 @@ scenario "upgrade" {
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    // softhsm packages not available for leap/sles.
+    // softhsm packages not available for sles (at the time of development)
     exclude {
       seal   = ["pkcs11"]
-      distro = ["leap", "sles"]
+      distro = ["sles"]
     }
 
     // Testing in IPV6 mode is currently implemented for integrated Raft storage only
@@ -97,7 +97,6 @@ scenario "upgrade" {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
       amzn   = provider.enos.ec2_user
-      leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
       ubuntu = provider.enos.ubuntu
@@ -191,6 +190,7 @@ scenario "upgrade" {
       ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
       cluster_tag_key = global.vault_tag_key
       common_tags     = global.tags
+      instance_count  = 1
       vpc_id          = step.create_vpc.id
     }
   }
