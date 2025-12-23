@@ -45,7 +45,7 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 			HelpDescription: pathRotateCredentialsUpdateHelpDesc,
 		},
 		{
-			Pattern: "rotate-role/" + framework.GenericNameRegex("name"),
+			Pattern: "rotate-role/" + framework.GenericNameWithAtRegex("name"),
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixDatabase,
@@ -361,7 +361,7 @@ Request to rotate the root credentials for a certain database connection.
 `
 
 const pathRotateCredentialsUpdateHelpDesc = `
-This path attempts to rotate the root credentials for the given database. 
+This path attempts to rotate the root credentials for the given database.
 `
 
 const pathRotateRoleCredentialsUpdateHelpSyn = `
