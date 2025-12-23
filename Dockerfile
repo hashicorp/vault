@@ -33,7 +33,6 @@ COPY ${LICENSE_SOURCE} ${LICENSE_DEST}
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
-ENV VERSION=$VERSION
 
 # Create a non-root user to run the software.
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
@@ -79,7 +78,7 @@ CMD ["server", "-dev"]
 
 
 ## UBI DOCKERFILE ##
-FROM registry.access.redhat.com/ubi8/ubi-minimal AS ubi
+FROM registry.access.redhat.com/ubi10/ubi-minimal AS ubi
 
 ARG BIN_NAME
 # NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
@@ -107,7 +106,6 @@ LABEL name="Vault" \
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
-ENV VERSION=$VERSION
 
 # Copy the license file as per Legal requirement
 COPY ${LICENSE_SOURCE} ${LICENSE_DEST}/
