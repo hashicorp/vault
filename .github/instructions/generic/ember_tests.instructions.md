@@ -25,6 +25,47 @@ This document provides testing standards and best practices for HashiCorp Ember.
 
 # Testing Standards
 
+## Test Focus and Purpose
+- **Test repository-specific business logic**, not framework internals or external library functionality
+- Focus on testing the behavior and logic that your application implements
+- Avoid testing that framework methods exist or that imported functions are functions
+- Test how your code interacts with frameworks, not the frameworks themselves
+
+**What TO test:**
+- Business logic and application-specific behavior
+- Component interactions and state changes
+- Data transformations and computations
+- User workflows and edge cases
+- Error handling and validation logic
+
+**What NOT to test:**
+- That Ember route methods like `modelFor()` or `paramsFor()` exist
+- That imported utility functions are of type 'function'
+- Framework-provided functionality (Ember, QUnit, etc.)
+- Third-party library internals
+- Basic JavaScript language features
+
+Example of unnecessary framework testing:
+```javascript
+// Don't do this - testing framework internals
+test('route has standard methods', function (assert) {
+  assert.ok(this.route.modelFor, 'Route has modelFor method');
+  assert.strictEqual(typeof myUtilFunction, 'function', 'function is a function');
+});
+```
+
+Example of proper business logic testing:
+```javascript  
+// Do this - test your application logic
+test('getBackendEffectiveType returns correct type for external plugins', function (assert) {
+  this.route.modelFor = this.stub().returns({ engineType: 'vault-plugin-secrets-keymgmt' });
+  
+  const effectiveType = getBackendEffectiveType(this.route);
+  
+  assert.strictEqual(effectiveType, 'keymgmt', 'External keymgmt plugin returns effective type');
+});
+```
+
 ## Test Quality
 - Use `assert.true()` or `assert.false()` instead of `assert.ok()` for boolean checks
 - Provide descriptive assertion messages that explain what is being verified
