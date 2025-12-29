@@ -237,7 +237,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['bad request'] });
         });
         await enablePage.enable(this.type, path);
-        assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
+        assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Error', 'shows the secrets backend error route');
       });
     });
   });

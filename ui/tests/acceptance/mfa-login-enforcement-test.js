@@ -133,7 +133,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     await click(`[data-test-list-item="${enforcement.name}"]`);
     // heading
     assert.dom('h1').includesText(enforcement.name, 'Name renders in title');
-    assert.dom('h1 svg').hasClass('hds-icon-lock', 'Lock icon renders in title');
+    assert.dom(GENERAL.icon('lock')).hasClass('hds-icon-lock', 'Lock icon renders in title');
     assert.dom(GENERAL.tab('targets')).hasClass('active', 'Targets tab is active by default');
     await waitFor('[data-test-target]', { timeout: 5000 });
     assert.dom('[data-test-target]').exists({ count: 4 }, 'Targets render in list');

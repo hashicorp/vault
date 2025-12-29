@@ -121,6 +121,6 @@ module('Acceptance | ssh | configuration', function (hooks) {
     });
     await click(GENERAL.dropdownToggle('Manage'));
     await click(GENERAL.menuItem('Configure'));
-    assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Error', 'shows the secrets backend error route');
   });
 });

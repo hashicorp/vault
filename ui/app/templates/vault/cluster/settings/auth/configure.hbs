@@ -3,25 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <Hds::Breadcrumb data-test-breadcrumbs>
-      <Hds::Breadcrumb::Item @text="Auth Methods" @route="vault.cluster.access.methods" />
-      <Hds::Breadcrumb::Item
-        @text={{this.model.method.id}}
-        @route="vault.cluster.access.method"
-        @model={{this.model.method.id}}
-      />
-      <Hds::Breadcrumb::Item @text="Configure" @current={{true}} />
-    </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Configure
-      {{get (engines-display-data this.model.method.methodType) "displayName"}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title="Configure {{get (engines-display-data this.model.method.methodType) 'displayName'}}">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Auth Methods" route="vault.cluster.access.methods")
+        (hash label=this.model.method.id route="vault.cluster.access.method" model=this.model.method.id)
+        (hash label="Configure")
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
 
 <SectionTabs @model={{this.model.method}} />
 
