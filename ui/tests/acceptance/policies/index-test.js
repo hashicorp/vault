@@ -124,9 +124,9 @@ module('Acceptance | policies/acl', function (hooks) {
       `/vault/policy/acl/${encodeURIComponent(policyLower)}`,
       'navigates to policy show on successful save'
     );
-    assert.dom(SELECT.policyTitle).hasText(policyLower, 'displays the policy name on the show page');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(policyLower, 'displays the policy name on the show page');
     assert.dom(GENERAL.latestFlashContent).hasText(`ACL policy "${policyLower}" was successfully created.`);
-    await click(SELECT.listBreadcrumb);
+    await click(GENERAL.breadcrumbAtIdx(0));
 
     assert.strictEqual(currentURL(), `/vault/policies/acl`, 'navigates to policy list from breadcrumb');
     // List of policies can get long quickly -- filter for the policy to make the test more robust

@@ -400,7 +400,7 @@ module('Acceptance | aws | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['bad request'] });
         });
         await visit(`/vault/secrets-engines/${path}/configuration/edit`);
-        assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
+        assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Error', 'shows the secrets backend error route');
       });
     });
   });

@@ -4,13 +4,8 @@
 }}
 
 {{#if (has-feature "Control Groups")}}
-  <PageHeader as |p|>
-    <p.levelLeft>
-      <h1 class="title is-3">
-        Control Groups
-      </h1>
-    </p.levelLeft>
-  </PageHeader>
+  <Page::Header @title="Control Groups" />
+
   <EditForm @model={{this.model}} @onSave={{action "onSave"}} />
 {{else}}
   <UpgradePage @title="Control Groups" @minimumEdition="Vault Enterprise Premium" />
