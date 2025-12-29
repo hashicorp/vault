@@ -1,0 +1,6 @@
+```release-note:change
+packaging: Container images are now exported using a compressed OCI image layout.
+```
+```release-note:change
+storage: Upgrade aerospike client library to v8.
+```
