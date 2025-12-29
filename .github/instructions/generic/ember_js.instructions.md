@@ -20,6 +20,7 @@ This document provides JavaScript and TypeScript coding standards for HashiCorp 
 - Remove all unused imports, variables, and functions before committing
 - Place comments directly above the code they describe, not inline or below
 - Update comments when code changes to maintain accuracy
+- Only export functions, classes, or variables that are used by other files. If a function is only used within the same file, keep it private (no export). This reduces API surface area and improves maintainability.
 
 ## TypeScript Guidelines
 - **File Naming**: All new files should use `.ts` extension instead of `.js`
@@ -35,6 +36,28 @@ This document provides JavaScript and TypeScript coding standards for HashiCorp 
 - Create reusable components rather than one-off implementations
 - Co-locate component templates (`.hbs`) with their TypeScript files (`.ts` preferred over `.js`)
 - Prioritize reusability and maintainability when creating components - avoid overly complex or one-off implementations
+
+## Deprecated Patterns to Avoid
+- **Don't use Mixins** 
+- Ember mixins (`Mixin.create()`) are deprecated and being phased out
+- Convert existing mixin functionality to utility modules or service injection instead
+- Use utility functions or services for shared logic between classes
+- **Code Review**: Flag any imports from `@ember/object/mixin` or `*.extend(SomeMixin)` patterns
+
+```javascript
+// DEPRECATED: Don't use mixins
+import Mixin from '@ember/object/mixin';
+import SomeMixin from 'vault/mixins/some-mixin';
+export default Route.extend(SomeMixin, { /* ... */ });
+
+// Instead, use utility functions
+import { utilityFunction } from 'vault/utils/utility-helpers';
+export default class MyRoute extends Route {
+  someMethod() {
+    return utilityFunction(this);
+  }
+}
+```
 
 ## Asynchronous Programming
 - Use `async`/`await` with proper error handling in `try`/`catch` blocks
