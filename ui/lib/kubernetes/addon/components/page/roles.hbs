@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader
+<KubernetesHeader
   @model={{@secretsEngine}}
   @filterRoles={{not @promptConfig}}
   @query={{this.query}}
@@ -17,7 +17,7 @@
       Create role
     </ToolbarLink>
   {{/unless}}
-</TabPageHeader>
+</KubernetesHeader>
 
 {{#if @promptConfig}}
   <ConfigCta />

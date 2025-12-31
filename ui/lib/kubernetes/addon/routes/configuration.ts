@@ -23,12 +23,14 @@ export default class KubernetesConfigureRoute extends Route {
   @service declare readonly secretMountPath: SecretMountPath;
 
   model() {
-    const { config, configError, secretsEngine } = this.modelFor('application') as KubernetesApplicationModel;
+    const { config, configError, secretsEngine, promptConfig } = this.modelFor(
+      'application'
+    ) as KubernetesApplicationModel;
     // in case of any error other than 404 we want to display that to the user
     if (configError) {
       throw configError;
     }
-    return { secretsEngine, config };
+    return { secretsEngine, config, promptConfig };
   }
 
   setupController(controller: RouteController, resolvedModel: KubernetesConfigureModel) {

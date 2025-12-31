@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader @model={{@secretsEngine}} @breadcrumbs={{@breadcrumbs}} />
+<KubernetesHeader @model={{@secretsEngine}} @promptConfig={{@promptConfig}} @breadcrumbs={{@breadcrumbs}} />
 
 {{#if @promptConfig}}
   <ConfigCta />

@@ -12,7 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 
-module('Integration | Component | kubernetes | TabPageHeader', function (hooks) {
+module('Integration | Component | kubernetes | KubernetesHeader', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kubernetes');
   setupMirage(hooks);
@@ -37,7 +37,7 @@ module('Integration | Component | kubernetes | TabPageHeader', function (hooks) 
 
   test('it should render breadcrumbs', async function (assert) {
     await render(
-      hbs`<TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @handleSearch={{this.handleSearch}} @handleInput={{this.handleInput}} @handleKeyDown={{this.handleKeyDown}} />`,
+      hbs`<KubernetesHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @handleSearch={{this.handleSearch}} @handleInput={{this.handleInput}} @handleKeyDown={{this.handleKeyDown}} />`,
       {
         owner: this.engine,
       }
@@ -51,20 +51,20 @@ module('Integration | Component | kubernetes | TabPageHeader', function (hooks) 
 
   test('it should render title', async function (assert) {
     await render(
-      hbs`<TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @handleSearch={{this.handleSearch}} @handleInput={{this.handleInput}} @handleKeyDown={{this.handleKeyDown}} />`,
+      hbs`<KubernetesHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @handleSearch={{this.handleSearch}} @handleInput={{this.handleInput}} @handleKeyDown={{this.handleKeyDown}} />`,
       {
         owner: this.engine,
       }
     );
     assert
-      .dom('[data-test-header-title] svg')
+      .dom(GENERAL.icon('kubernetes-color'))
       .hasClass('hds-icon-kubernetes-color', 'Correct icon renders in title');
-    assert.dom('[data-test-header-title]').hasText(this.mount, 'Mount path renders in title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(this.mount, 'Mount path renders in title');
   });
 
   test('it should render tabs', async function (assert) {
     await render(
-      hbs`<TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @handleSearch={{this.handleSearch}} @handleInput={{this.handleInput}} @handleKeyDown={{this.handleKeyDown}}/>`,
+      hbs`<KubernetesHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @handleSearch={{this.handleSearch}} @handleInput={{this.handleInput}} @handleKeyDown={{this.handleKeyDown}}/>`,
       {
         owner: this.engine,
       }
@@ -76,7 +76,7 @@ module('Integration | Component | kubernetes | TabPageHeader', function (hooks) 
 
   test('it should render filter for roles', async function (assert) {
     await render(
-      hbs`<TabPageHeader @model={{this.model}} @filterRoles={{true}} @query="test" @breadcrumbs={{this.breadcrumbs}} @handleSearch={{this.handleSearch}} @handleInput={{this.handleInput}} @handleKeyDown={{this.handleKeyDown}} />`,
+      hbs`<KubernetesHeader @model={{this.model}} @filterRoles={{true}} @query="test" @breadcrumbs={{this.breadcrumbs}} @handleSearch={{this.handleSearch}} @handleInput={{this.handleInput}} @handleKeyDown={{this.handleKeyDown}} />`,
       { owner: this.engine }
     );
     assert.dom(GENERAL.filterInputExplicit).hasValue('test', 'Filter renders with provided value');
@@ -85,9 +85,9 @@ module('Integration | Component | kubernetes | TabPageHeader', function (hooks) 
   test('it should yield block for toolbar actions', async function (assert) {
     await render(
       hbs`
-      <TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @handleSearch={{this.handleSearch}} @handleInput={{this.handleInput}} @handleKeyDown={{this.handleKeyDown}}>
+      <KubernetesHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @handleSearch={{this.handleSearch}} @handleInput={{this.handleInput}} @handleKeyDown={{this.handleKeyDown}}>
         <span data-test-yield>It yields!</span>
-      </TabPageHeader>
+      </KubernetesHeader>
     `,
       { owner: this.engine }
     );

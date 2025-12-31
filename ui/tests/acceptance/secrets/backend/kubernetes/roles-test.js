@@ -95,14 +95,17 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     assert.expect(3);
     await this.visitRoles();
     await click('[data-test-list-item-link]');
-    await click('[data-test-generate-credentials]');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Generate credentials'));
     this.validateRoute(assert, 'roles.role.credentials', 'Transitions to credentials route');
-    await click('[data-test-breadcrumbs] li:nth-child(3) a');
-    await click('[data-test-edit]');
+    await click(GENERAL.breadcrumbAtIdx(2));
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Edit role'));
     this.validateRoute(assert, 'roles.role.edit', 'Transitions to edit route');
     await click('[data-test-cancel]');
     await click('[data-test-list-item-link]');
-    await click('[data-test-delete]');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Delete role'));
     await click(GENERAL.confirmButton);
     assert
       .dom('[data-test-list-item-link]')
@@ -113,7 +116,8 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     assert.expect(1);
     await this.visitRoles();
     await click('[data-test-list-item-link]');
-    await click('[data-test-generate-credentials]');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Generate credentials'));
     await fillIn('[data-test-kubernetes-namespace]', 'test-namespace');
     await click('[data-test-generate-credentials-button]');
     await click('[data-test-generate-credentials-done]');
