@@ -79,17 +79,15 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
 
   test('it should render header with role name and breadcrumbs', async function (assert) {
     await this.renderComponent();
-    assert.dom('[data-test-header-title]').hasText(this.role.name, 'Role name renders in header');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(this.role.name, 'Role name renders in header');
+    assert.dom(GENERAL.breadcrumbAtIdx(0)).containsText(this.backend, 'Overview breadcrumb renders');
+    assert.dom(GENERAL.breadcrumbAtIdx(1)).containsText('Roles', 'Roles breadcrumb renders');
     assert
-      .dom('[data-test-breadcrumbs] li:nth-child(1)')
-      .containsText(this.backend, 'Overview breadcrumb renders');
-    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('Roles', 'Roles breadcrumb renders');
-    assert
-      .dom('[data-test-breadcrumbs] li:nth-child(3)')
-      .containsText(this.role.name, 'Role breadcrumb renders');
+      .dom(GENERAL.currentBreadcrumb(this.role.name))
+      .containsText(this.role.name, 'Role name breadcrumb renders');
   });
 
-  test('it should render toolbar actions', async function (assert) {
+  test('it should render role page header dropdown', async function (assert) {
     assert.expect(5);
 
     const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
@@ -98,14 +96,13 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
       .resolves();
 
     await this.renderComponent();
-
-    assert.dom('[data-test-delete]').hasText('Delete role', 'Delete action renders');
+    await click(GENERAL.dropdownToggle('Manage'));
+    assert.dom(GENERAL.menuItem('Delete role')).hasText('Delete role', 'Delete action renders in dropdown');
     assert
-      .dom('[data-test-generate-credentials]')
+      .dom(GENERAL.menuItem('Generate credentials'))
       .hasText('Generate credentials', 'Generate credentials action renders');
-    assert.dom('[data-test-edit]').hasText('Edit role', 'Edit action renders');
-
-    await click('[data-test-delete]');
+    assert.dom(GENERAL.menuItem('Edit role')).hasText('Edit role', 'Edit action renders');
+    await click(GENERAL.menuItem('Delete role'));
     await click(GENERAL.confirmButton);
 
     assert.true(deleteStub.calledWith(this.role.name, this.backend), 'Request made to delete role');

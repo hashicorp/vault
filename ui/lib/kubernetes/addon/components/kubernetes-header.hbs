@@ -1,0 +1,61 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title={{@model.id}} @icon={{@model.icon}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+  <:actions>
+    <Hds::Dropdown as |D|>
+      <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
+      <D.Interactive
+        @icon="settings"
+        @route={{if @promptConfig "configure" "configuration"}}
+        @model={{@model.id}}
+        data-test-popup-menu="Configure"
+      >Configure</D.Interactive>
+      <D.Interactive
+        {{on "click" (fn (mut this.engineToDisable) @model)}}
+        @color="critical"
+        @icon="trash"
+        data-test-popup-menu="Delete"
+      >Delete</D.Interactive>
+    </Hds::Dropdown>
+  </:actions>
+</Page::Header>
+
+{{#if @configRoute}}
+  <Mount::ConfigureTabs
+    @configRoute={{@configRoute}}
+    @displayName="Kubernetes"
+    @path={{@model.id}}
+    @externalRoute="secretsGeneralSettingsConfiguration"
+  />
+{{else}}
+  <nav class="tabs" aria-label="kubernetes tabs">
+    <ul>
+      <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
+      <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
+      <li><LinkTo @route="configuration" data-test-tab="config">Configuration</LinkTo></li>
+    </ul>
+  </nav>
+{{/if}}
+
+<Toolbar aria-label="items for managing kubernetes items">
+  {{#if @filterRoles}}
+    <ToolbarFilters>
+      <FilterInputExplicit
+        @query={{@query}}
+        @placeholder="Filter roles"
+        @handleSearch={{@handleSearch}}
+        @handleInput={{@handleInput}}
+        @handleKeyDown={{@handleKeyDown}}
+      />
+    </ToolbarFilters>
+  {{/if}}
+  <ToolbarActions>
+    {{yield}}
+  </ToolbarActions>
+</Toolbar>

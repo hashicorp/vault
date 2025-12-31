@@ -75,6 +75,7 @@ export default class App extends Application {
         services: [{ 'app-router': 'router' }, 'secret-mount-path', 'flash-messages', 'api', 'capabilities'],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
+          secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
         },
       },
     },

@@ -10,6 +10,7 @@ export const GENERAL = {
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx: string) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
   breadcrumbLink: (label: string) => `[data-test-breadcrumb="${label}"] a`,
+  currentBreadcrumb: (label: string) => `[data-test-breadcrumb="${label}"]`,
   breadcrumbs: '[data-test-breadcrumbs]',
   headerContainer: 'header.page-header',
   title: '[data-test-page-title]',

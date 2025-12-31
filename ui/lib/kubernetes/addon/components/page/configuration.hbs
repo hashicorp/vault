@@ -3,13 +3,14 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader @model={{@secretsEngine}} @breadcrumbs={{@breadcrumbs}}>
+{{! TODO: VAULT-40884 Add @configRoute argument with value "configuration" so mount config tabs show }}
+<KubernetesHeader @model={{@secretsEngine}} @promptConfig={{@promptConfig}} @breadcrumbs={{@breadcrumbs}}>
   {{#if @config}}
     <ToolbarLink @route="configure" data-test-secret-backend-configure>
       Edit configuration
     </ToolbarLink>
   {{/if}}
-</TabPageHeader>
+</KubernetesHeader>
 
 {{#if @config}}
   {{#if @config.disable_local_ca_jwt}}
