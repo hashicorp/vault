@@ -36,8 +36,8 @@ require (
 	cloud.google.com/go/monitoring v1.24.2
 	cloud.google.com/go/spanner v1.85.1
 	cloud.google.com/go/storage v1.56.1
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.12.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
 	github.com/Azure/azure-storage-blob-go v0.15.0
 	github.com/Azure/go-autorest/autorest v0.11.29
 	github.com/Azure/go-autorest/autorest/adal v0.9.24
@@ -141,7 +141,7 @@ require (
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.22.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.22.0
+	github.com/hashicorp/vault-plugin-auth-azure v0.22.1-0.20260101002625-440d17e53998
 	github.com/hashicorp/vault-plugin-auth-cf v0.22.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.22.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.25.0
@@ -223,7 +223,7 @@ require (
 	golang.org/x/crypto v0.45.0
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
 	golang.org/x/net v0.47.0
-	golang.org/x/oauth2 v0.31.0
+	golang.org/x/oauth2 v0.34.0
 	golang.org/x/sync v0.18.0
 	golang.org/x/sys v0.38.0
 	golang.org/x/term v0.37.0
@@ -289,7 +289,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.5.0 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/DataDog/datadog-go v3.2.0+incompatible // indirect
 	github.com/GoogleCloudPlatform/grpc-gcp-go/grpcgcp v1.5.3 // indirect
@@ -343,7 +343,7 @@ require (
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/etcd v3.3.27+incompatible // indirect
-	github.com/coreos/go-oidc/v3 v3.15.0 // indirect
+	github.com/coreos/go-oidc/v3 v3.17.0 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf // indirect
@@ -475,8 +475,8 @@ require (
 	github.com/microsoft/kiota-serialization-form-go v1.1.2 // indirect
 	github.com/microsoft/kiota-serialization-json-go v1.1.2 // indirect
 	github.com/microsoft/kiota-serialization-multipart-go v1.1.2 // indirect
-	github.com/microsoft/kiota-serialization-text-go v1.1.2 // indirect
-	github.com/microsoftgraph/msgraph-sdk-go v1.86.0 // indirect
+	github.com/microsoft/kiota-serialization-text-go v1.1.3 // indirect
+	github.com/microsoftgraph/msgraph-sdk-go v1.92.0 // indirect
 	github.com/microsoftgraph/msgraph-sdk-go-core v1.4.0 // indirect
 	github.com/miekg/dns v1.1.50 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
