@@ -160,7 +160,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.23.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.22.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.12.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.25.0
+	github.com/hashicorp/vault-plugin-secrets-kv v0.25.1-0.20260101001635-9dbc5c6a77a8
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.17.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.13.0
@@ -231,7 +231,7 @@ require (
 	golang.org/x/tools v0.38.0
 	google.golang.org/api v0.251.0
 	google.golang.org/grpc v1.75.1
-	google.golang.org/protobuf v1.36.9
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/apimachinery v0.34.1
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
