@@ -2544,3 +2544,131 @@ func TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields(t *testing.T) {
 		t.Fatal("expected an error from ValidateConfig: disallowed fields specified in env_template")
 	}
 }
+
+func TestLoadConfigFile_AutoAuth_LeaseRenewalThreshold(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config-auto-auth-renewal-threshold.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:8200",
+			Retry: &Retry{
+				NumRetries: 12,
+			},
+		},
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:                  "approle",
+				MountPath:             "auth/approle",
+				LeaseRenewalThreshold: FloatPtr(0.75),
+				Config: map[string]interface{}{
+					"role_id_file_path":   "/tmp/role-id",
+					"secret_id_file_path": "/tmp/secret-id",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type: "file",
+					Config: map[string]interface{}{
+						"path": "/tmp/token",
+					},
+				},
+			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestValidateConfig_LeaseRenewalThreshold_Invalid(t *testing.T) {
+	testCases := []struct {
+		name      string
+		threshold float64
+		location  string
+	}{
+		{"auto_auth method zero", 0.0, "auto_auth.method.lease_renewal_threshold"},
+		{"auto_auth method negative", -0.5, "auto_auth.method.lease_renewal_threshold"},
+		{"auto_auth method too large", 1.5, "auto_auth.method.lease_renewal_threshold"},
+		{"template_config zero", 0.0, "template_config.lease_renewal_threshold"},
+		{"template_config negative", -0.1, "template_config.lease_renewal_threshold"},
+		{"template_config too large", 2.0, "template_config.lease_renewal_threshold"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			config := &Config{
+				SharedConfig: &configutil.SharedConfig{
+					Listeners: []*configutil.Listener{
+						{
+							Type:       "tcp",
+							Address:    "127.0.0.1:8200",
+							TLSDisable: true,
+						},
+					},
+				},
+			}
+
+			if tc.location == "auto_auth.method.lease_renewal_threshold" {
+				config.AutoAuth = &AutoAuth{
+					Method: &Method{
+						Type:                  "approle",
+						MountPath:             "auth/approle",
+						LeaseRenewalThreshold: &tc.threshold,
+						Config: map[string]interface{}{
+							"role_id_file_path": "/tmp/role-id",
+						},
+					},
+					Sinks: []*Sink{
+						{
+							Type: "file",
+							Config: map[string]interface{}{
+								"path": "/tmp/token",
+							},
+						},
+					},
+				}
+			} else {
+				config.AutoAuth = &AutoAuth{
+					Method: &Method{
+						Type:      "approle",
+						MountPath: "auth/approle",
+						Config: map[string]interface{}{
+							"role_id_file_path": "/tmp/role-id",
+						},
+					},
+					Sinks: []*Sink{
+						{
+							Type: "file",
+							Config: map[string]interface{}{
+								"path": "/tmp/token",
+							},
+						},
+					},
+				}
+				config.TemplateConfig = &TemplateConfig{
+					LeaseRenewalThreshold: &tc.threshold,
+				}
+				config.Templates = []*ctconfig.TemplateConfig{
+					{
+						Source:      pointerutil.StringPtr("/tmp/template.tmpl"),
+						Destination: pointerutil.StringPtr("/tmp/output"),
+					},
+				}
+			}
+
+			err := config.ValidateConfig()
+			if err == nil {
+				t.Fatalf("expected validation error for %s with value %f", tc.location, tc.threshold)
+			}
+		})
+	}
+}
