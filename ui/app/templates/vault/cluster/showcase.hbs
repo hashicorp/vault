@@ -1,0 +1,704 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="shw-page-wrapper">
+
+  <h1>Vault Components Showcase</h1>
+
+  <hr />
+
+  <h2>Form Components</h2>
+
+  <h3>FormFieldLabel</h3>
+
+  <blockquote>FormFieldLabel components add labels and descriptions to inputs</blockquote>
+
+  <pre>Only Label</pre>
+  <FormFieldLabel @label="This is the label" />
+
+  <pre>Label with HelpText</pre>
+  <FormFieldLabel @label="This is the label" @helpText="This is the help text" />
+
+  <pre>Only SubText</pre>
+  <FormFieldLabel @subText="This is the subtext" />
+
+  <pre>SubText with DocLink</pre>
+  <FormFieldLabel @subText="This is the subtext" @docLink="#" />
+
+  <pre>Label + SubText</pre>
+  <FormFieldLabel @label="This is the label" @subText="This is the subtext" />
+
+  <pre>Label with HelpText + SubText with DocLink</pre>
+  <FormFieldLabel @label="This is the label" @helpText="This is the help text" @subText="This is the subtext" @docLink="#" />
+
+  <hr />
+
+  <h3>FormField</h3>
+
+  <blockquote>FormField components are field elements associated with a particular model.</blockquote>
+
+  {{#let
+    (array
+      (hash
+        editType="boolean"
+        variants=(array
+          "base"
+          "with label"
+          "with helpText + subText + docLink"
+          "checked"
+          "disabled"
+          "with validation errors"
+          "with validation warnings"
+          "with validation errors and warnings"
+        )
+      )
+      (hash
+        isHds=true
+        editType="checkboxList"
+        variants=(array
+          "base"
+          "with label"
+          "with helpText + subText + docLink"
+          "with validation errors"
+          "with validation warnings"
+          "with validation errors and warnings"
+        )
+      )
+      (hash
+        editType="dateTimeLocal"
+        variants=(array
+          "base"
+          "with label"
+          "with helpText + subText + docLink"
+          "with value"
+          "with validation errors"
+          "with validation warnings"
+          "with validation errors and warnings"
+        )
+      )
+      (hash
+        editType="file" variants=(array "base" "with label" "with helpText + subText + docLink" "with validation errors")
+      )
+      (hash
+        editType="input"
+        attrType="string"
+        variants=(array
+          "base"
+          "with label"
+          "with helpText + subText + docLink"
+          "with placeholder"
+          "with value"
+          "with character limit"
+          "with validation errors"
+          "readonly"
+          "disabled"
+        )
+      )
+      (hash
+        editType="json"
+        attrType="string"
+        variants=(array "base" "with label" "with helpText" "with value" "with value + restore")
+      )
+      (hash
+        editType="kv"
+        variants=(array
+          "base"
+          "with label"
+          "with label as section header"
+          "with helpText + subText"
+          "with key/value placeholders"
+          "single row"
+          "with value"
+          "with validation errors"
+          "with whitespace in key"
+        )
+      )
+      (hash editType="mountAccessor" variants=(array "base" "with label" "with helpText" "with value"))
+      (hash editType="object" attrType="object" variants=(array "base" "with label" "with helpText" "with value"))
+      (hash
+        editType="optionalText"
+        variants=(array
+          "base" "with label" "with subText + docLink" "with default subText" "with value" "with value + subText + docLink"
+        )
+      )
+      (hash
+        isHds=true
+        editType="password"
+        attrType="string"
+        variants=(array
+          "base"
+          "with label"
+          "with label as section header"
+          "with helpText + subText + docLink"
+          "with value"
+          "with validation errors"
+          "with validation warnings"
+          "with validation errors and warnings"
+        )
+      )
+      (hash
+        isHds=true
+        editType="radio"
+        variants=(array
+          "base"
+          "with label"
+          "with helpText + subText + docLink"
+          "with item subText"
+          "with item helpText"
+          "disabled"
+          "with validation errors"
+          "with validation warnings"
+          "with validation errors and warnings"
+        )
+      )
+      (hash editType="regex" variants=(array "base" "with label" "with helpText + subText + docLink" "with value"))
+      (hash
+        editType="searchSelect"
+        variants=(array "base" "with label" "with label as section header" "with helpText + subText" "with value")
+      )
+      (hash
+        isHds=true
+        editType="select"
+        variants=(array
+          "base"
+          "with label"
+          "with label as section header"
+          "with helpText + subText"
+          "with helpText + subText + docLink"
+          "with no default"
+          "with value"
+          "with validation errors"
+          "with validation warnings"
+          "with validation errors and warnings"
+        )
+      )
+      (hash editType="stringArray" variants=(array "base" "with label" "with helpText + subText" "with value"))
+      (hash editType="sensitive" variants=(array "base" "with label" "with value" "with copy"))
+      (hash
+        isHds=true
+        editType="textarea"
+        attrType="string"
+        variants=(array "base" "with label" "with helpText + subText + docLink" "with value" "with validation errors")
+      )
+      (hash
+        editType="toggleButton"
+        attrType="boolean"
+        variants=(array
+          "base"
+          "with label"
+          "with custom helper text"
+          "checked"
+          "checked with opposite value"
+          "disabled"
+          "with validation errors"
+          "with validation warnings"
+          "with validation errors and warnings"
+        )
+      )
+      (hash
+        editType="ttl"
+        variants=(array
+          "base"
+          "with helpText"
+          "with custom helper texts"
+          "with value"
+          "with value 0s"
+          "with value 1h"
+          "with validation errors"
+          "with hidden toggle"
+        )
+      )
+      (hash editType="yield" variants=(array "yielded content"))
+    )
+    as |FormFieldTypes|
+  }}
+    {{#each FormFieldTypes as |FormFieldType index|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      {{#let FormFieldType.editType FormFieldType.attrType FormFieldType.variants as |editType attrType variants|}}
+        <h4>{{#if FormFieldType.isHds}}✅{{/if}} Type "{{editType}}"</h4>
+        {{#each variants as |variant|}}
+          {{#let
+            (fn this.dynamicFormFieldOptionsModels editType)
+            (fn this.dynamicFormFieldOptionsPossibleValues editType variant)
+            (fn this.dynamicFormFieldOptionsFieldValue editType)
+            (fn this.dynamicFormFieldHelperTextEnabledValue editType variant)
+            (fn this.dynamicFormFieldHelperTextDisabledValue editType variant)
+            as |dynamicFormFieldOptionsModels dynamicFormFieldOptionsPossibleValues dynamicFormFieldOptionsFieldValue dynamicFormFieldHelperTextEnabledValue dynamicFormFieldHelperTextDisabledValue|
+          }}
+            <pre>{{capitalize variant}}</pre>
+            <FormField
+              class={{if FormFieldType.isHds "isHds"}}
+              data-test-field={{true}}
+              @attr={{(hash
+                name=(if
+                  (or
+                    (eq editType "input")
+                    (eq editType "optionalText")
+                    (eq editType "radio")
+                    (eq editType "regex")
+                    (eq editType "toggleButton")
+                  )
+                  (concat editType "-" variant)
+                  editType
+                )
+                type=attrType
+                options=(hash
+                  editType=(if (eq editType "input") undefined editType)
+                  label=(unless (eq variant "base") (concat "This is the label of the '" editType "' type of field"))
+                  isSectionHeader=(if (eq variant "with label as section header") true)
+                  helpText=(if
+                    (or
+                      (eq variant "with helpText")
+                      (eq variant "with helpText + subText")
+                      (eq variant "with helpText + subText + docLink")
+                      (eq variant "with subText + docLink")
+                      (eq variant "with value + subText + docLink")
+                    )
+                    "This is the help text"
+                  )
+                  subText=(if
+                    (or
+                      (eq variant "with subText")
+                      (eq variant "with helpText + subText")
+                      (eq variant "with helpText + subText + docLink")
+                      (eq variant "with subText + docLink")
+                      (eq variant "with value + subText + docLink")
+                    )
+                    "This is the subtext"
+                  )
+                  defaultSubText=(if
+                    (and (eq editType "optionalText") (eq variant "with default subText")) "This is the default subtext"
+                  )
+                  docLink=(if
+                    (or (eq variant "with helpText + subText + docLink") (eq variant "with value + subText + docLink")) "/#"
+                  )
+                  example=(if (and (eq editType "json") (eq variant "with value + restore")) this.jsonExample)
+                  noCopy=(if (and (eq editType "sensitive") (eq variant "with copy")) false true)
+                  hideToggle=(if (and (eq editType "ttl") (eq variant "with hidden toggle")) true false)
+                  helperTextEnabled=(dynamicFormFieldHelperTextEnabledValue)
+                  helperTextDisabled=(dynamicFormFieldHelperTextDisabledValue)
+                  readOnly=(if (eq variant "readonly") true false)
+                  editDisabled=(if (eq variant "disabled") "Enabled state custom helper text")
+                  noDefault=(if (and (eq editType "select") (eq variant "with no default")) true false)
+                  placeholder=(if (and (eq editType "input") (eq variant "with placeholder")) "This is the placeholder text")
+                  keyPlaceholder=(if (and (eq editType "kv") (eq variant "with key/value placeholders")) "Key placeholder")
+                  valuePlaceholder=(if
+                    (and (eq editType "kv") (eq variant "with key/value placeholders")) "Value placeholder"
+                  )
+                  isSingleRow=(if (and (eq editType "kv") (eq variant "single row")) true false)
+                  isOppositeValue=(if
+                    (and (eq editType "toggleButton") (eq variant "checked with opposite value")) true false
+                  )
+                  characterLimit=(if (and (eq editType "input") (eq variant "with character limit")) 10)
+                  models=(dynamicFormFieldOptionsModels)
+                  possibleValues=(dynamicFormFieldOptionsPossibleValues)
+                  fieldValue=(dynamicFormFieldOptionsFieldValue)
+                  sensitive=(if (eq editType "sensitive") true false)
+                )
+              )}}
+              @disabled={{if (eq variant "disabled") true false}}
+              @mode={{if (eq variant "readonly") "edit"}}
+              @model={{this.dynamicFormFieldModel editType variant}}
+              @modelValidations={{this.dynamicFormFieldModelValidations editType variant}}
+            >
+              {{#if (eq editType "yield")}}
+                <span>This is yielded content</span>
+              {{/if}}
+            </FormField>
+          {{/let}}
+        {{/each}}
+      {{/let}}
+    {{/each}}
+  {{/let}}
+
+  <hr />
+
+  <h3>FormSaveButtons</h3>
+
+  <pre>Save</pre>
+  <FormSaveButtons @saveButtonText="Save" />
+
+  <pre>Save / Loading state (isSaving=true)</pre>
+  <FormSaveButtons @saveButtonText="Save" @isSaving={{true}} />
+
+  <pre>Save + Cancel (onCancel)</pre>
+  <FormSaveButtons @saveButtonText="Save" @cancelButtonText="Cancel" @onCancel={{this.noop}} />
+
+  <pre>Save + Cancel (cancelLinkParams)</pre>
+  <FormSaveButtons @saveButtonText="Save" @cancelButtonText="Cancel" @cancelLinkParams={{array "vault.cluster.storage"}} />
+
+  <pre>Save (isSaving=true / saveButtonText="Loading") + Cancel</pre>
+  <FormSaveButtons @saveButtonText="Save" @isSaving={{true}} @cancelButtonText="Cancel" @onCancel={{this.noop}} />
+
+  <pre>Without top border (includeBox=false)</pre>
+  <FormSaveButtons @saveButtonText="Save" @cancelButtonText="Cancel" @onCancel={{this.noop}} @includeBox={{false}} />
+
+  <hr />
+
+  <h3>ReadonlyFormField</h3>
+
+  {{#let
+    (array
+      (hash
+        attrType="text"
+        variants=(array "base" "with label" "with helpText + subText" "with value" "with value + helpText + subText")
+      )
+      (hash
+        attrType="password"
+        variants=(array "base" "with label" "with helpText + subText" "with value" "with value + helpText + subText")
+      )
+      (hash
+        attrType="date"
+        variants=(array "base" "with label" "with helpText + subText" "with value" "with value + helpText + subText")
+      )
+      (hash
+        attrType="select"
+        variants=(array "base" "with label" "with helpText + subText" "with value" "with value + helpText + subText")
+      )
+    )
+    as |ReadonlyFormFieldTypes|
+  }}
+    {{#each ReadonlyFormFieldTypes as |ReadonlyFormFieldType index|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      {{#let ReadonlyFormFieldType.attrType ReadonlyFormFieldType.variants as |attrType variants|}}
+        <h4>Input type="{{attrType}}"</h4>
+        {{#each variants as |variant|}}
+          <pre>{{capitalize variant}}</pre>
+          <ReadonlyFormField
+            @value={{this.dynamicReadonlyFormFieldValue attrType variant}}
+            @attr={{(hash
+              name=(concat attrType "-" variant)
+              type=attrType
+              options=(hash
+                label=(unless (eq variant "base") (concat "This is the label of the readonly '" attrType "' type of field"))
+                helpText=(if
+                  (or
+                    (eq variant "with helpText")
+                    (eq variant "with helpText + subText")
+                    (eq variant "with value + helpText + subText")
+                  )
+                  "This is the help text"
+                )
+                subText=(if
+                  (or
+                    (eq variant "with subText")
+                    (eq variant "with helpText + subText")
+                    (eq variant "with value + helpText + subText")
+                  )
+                  "This is the subtext"
+                )
+                possibleValues=(if (eq attrType "select") (array "a" "b" "c"))
+              )
+            )}}
+          />
+        {{/each}}
+      {{/let}}
+    {{/each}}
+  {{/let}}
+
+  <hr />
+
+  <h3>FormFieldGroups</h3>
+
+  <p>TODO</p>
+
+  <hr />
+
+  <h3>FormFieldGroupsLoop</h3>
+
+  <p>TODO</p>
+
+  <hr />
+
+  <h3>FormFieldGroupFromModel</h3>
+
+  <p>TODO</p>
+
+  <hr />
+
+  <h3>AutocompleteInput</h3>
+
+  {{#let (array "base" "with label" "with subText" "with placeholder" "with value") as |variants index|}}
+    {{#each variants as |variant|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      <pre>{{capitalize variant}}</pre>
+      <AutocompleteInput
+        @label={{unless (eq variant "base") "This is the label of the 'AutocompleteInput' type of input"}}
+        @subText={{if (or (eq variant "with subText") (eq variant "with value + subText")) "Type '$' to see autocomplete"}}
+        @placeholder={{if (eq variant "with placeholder") "This is the placeholder text"}}
+        @value={{if (eq variant "with value") "Lorem"}}
+        @optionsTrigger="$"
+        @options={{(array
+          (hash label="Lorem" value="lorem") (hash label="Ipsum" value="ipsum") (hash label="Dolor" value="dolor")
+        )}}
+        @onChange={{this.noop}}
+      />
+    {{/each}}
+  {{/let}}
+
+  <hr />
+
+  <h3>CommandInput</h3>
+
+  <Console::CommandInput
+    @isFullscreen={{false}}
+    @isRunning={{false}}
+    @value="lorem"
+    @onValueUpdate={{this.noop}}
+    @onFullscreen={{this.noop}}
+    @onExecuteCommand={{this.noop}}
+    @onShiftCommand={{this.noop}}
+  />
+
+  <hr />
+
+  <h3>EnableInput</h3>
+
+  <blockquote>EnableInput components render a disabled input with a hardcoded masked value beside an "Edit" button to
+    "enable" the input. Clicking "Edit" hides the disabled input and renders the yielded component. This way any data
+    management is handled by the parent. These are useful for editing inputs of sensitive values not returned by the API. The
+    extra click ensures the user is intentionally editing the field.</blockquote>
+
+  <pre>With generic input / with Input placeholder (@label)</pre>
+  <div {{style width="fit-content"}}>
+    <EnableInput @label="This is the label">
+      <Input @type="text" @value="This input is yielded" />
+    </EnableInput>
+  </div>
+
+  <pre>With generic input / with ReadonlyFormField placeholder (@attr)</pre>
+  <div {{style width="fit-content"}}>
+    <EnableInput
+      @attr={{(hash
+        name="EnableInputWithReadonlyFormField"
+        type="text"
+        options=(hash label="This is the label" helpText="This is the help text" subText="This is the subtext")
+      )}}
+    >
+      <Input @type="text" @value="This input is yielded" />
+    </EnableInput>
+  </div>
+
+  <hr />
+
+  <h3>✅ FilterInput</h3>
+
+  <pre>Base</pre>
+  <FilterInput />
+
+  <pre>With value</pre>
+  <FilterInput value="Lorem ipsum" />
+
+  <pre>With icon hidden</pre>
+  <FilterInput value="Lorem ipsum" @hideIcon={{true}} />
+
+  <hr />
+
+  <h3>✅ InputSearch</h3>
+
+  <blockquote>This component renders an input that fires a callback on "keyup" containing the input's value</blockquote>
+
+  <pre>Base</pre>
+  <InputSearch @id="input-search-base" />
+
+  <pre>With label</pre>
+  <InputSearch @id="input-search-with-label" @label="This is the label" />
+
+  <pre>With subText</pre>
+  <InputSearch @id="input-search-with-subtext" @label="This is the label" @subText="This is the subtext" />
+
+  <pre>With placeholder</pre>
+  <InputSearch @id="input-search-with-placeholder" @label="This is the label" @placeholder="This is the placeholder" />
+
+  <pre>With value</pre>
+  <InputSearch @id="input-search-with-value" @label="This is the label" @initialValue="Lorem ipsum" />
+
+  <hr />
+
+  <h3>KvSuggestionInput</h3>
+
+  <blockquote>Input component that fetches secrets at a provided mount path and displays them as suggestions in a dropdown.
+    As the user types the result set will be filtered providing suggestions for the user to select. After the input debounce
+    wait time (500ms), if the value ends in a slash, secrets will be fetched at that path. The new result set will then be
+    displayed in the dropdown as suggestions for the newly inputted path. Selecting a suggestion will append it to the input
+    value. This allows the user to build a full path to a secret for the provided mount. This is useful for helping the user
+    find deeply nested secrets given the path based policy system. If the user does not have list permission they are still
+    able to enter a path to a secret but will not see suggestions. Input is disabled when mount path is not provided</blockquote>
+
+  {{#let (array "base" "with label" "with subText" "no mountpath") as |variants index|}}
+    {{#each variants as |variant|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      <pre>{{capitalize variant}}</pre>
+      <KvSuggestionInput
+        @label={{unless (eq variant "base") "This is the label of the 'KvSuggestionInput'"}}
+        @subText={{if (eq variant "with subText") "This is the subtext"}}
+        @value="lorem-ipsum/"
+        @mountPath={{(unless (eq variant "no mountpath") "secret/")}}
+        @onChange={{this.noop}}
+      />
+    {{/each}}
+  {{/let}}
+
+  <hr />
+
+  <h3>MaskedInput</h3>
+
+  <blockquote>MaskedInput components are textarea inputs where the input is hidden. They are used to enter sensitive
+    information like passwords.</blockquote>
+
+  {{#let
+    (array
+      "base"
+      "with label"
+      "with value"
+      "allow download"
+      "allow copy + download"
+      "display only"
+      "display only with value"
+      "display only with empty string as value"
+    )
+    as |variants index|
+  }}
+    {{#each variants as |variant|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      <pre>{{capitalize variant}}</pre>
+      <MaskedInput
+        @name={{concat "masked-input-" variant}}
+        @value={{if
+          (or
+            (eq variant "with value")
+            (eq variant "allow download")
+            (eq variant "allow copy + download")
+            (eq variant "display only with value")
+          )
+          "lorem ipsum"
+          (if (eq variant "display only with empty string as value") "")
+        }}
+        @allowCopy={{if (or (eq variant "allow copy") (eq variant "allow copy + download")) true false}}
+        @allowDownload={{if (or (eq variant "allow download") (eq variant "allow copy + download")) true false}}
+        @displayOnly={{if
+          (or
+            (eq variant "display only")
+            (eq variant "display only with value")
+            (eq variant "display only with empty string as value")
+          )
+          true
+          false
+        }}
+        @onChange={{this.noop}}
+      />
+    {{/each}}
+  {{/let}}
+
+  <hr />
+
+  <h3>✅ NavigateInput</h3>
+
+  <blockquote>NavigateInput components are used to filter list data.</blockquote>
+
+  {{#let (array "base" "with placeholder" "with value") as |variants index|}}
+    {{#each variants as |variant|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      <pre>{{capitalize variant}}</pre>
+      <NavigateInput
+        @filter={{(if (eq variant "with value") "lorem ipsum")}}
+        @placeholder={{(if (eq variant "with placeholder") "This is the placeholder")}}
+        @filterDidChange={{this.noop}}
+      />
+    {{/each}}
+  {{/let}}
+
+  <hr />
+
+  <h3>ObjectListInput</h3>
+
+  <blockquote>ObjectListInput components are used to render a variable number of text inputs in a single row with an "Add"
+    button at the end of the row. Clicking 'add' generates a new row of empty inputs. Each input field is generated by an
+    object in the @objectKeys array. Labels render above each column.</blockquote>
+
+  {{#let
+    (array "base" "with single set of values" "with multiple sets of values" "with validation errors")
+    as |variants index|
+  }}
+    {{#each variants as |variant|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      <pre>{{capitalize variant}}</pre>
+      <ObjectListInput
+        @objectKeys={{this.dynamicObjectListInputObjectKeys variant}}
+        @inputValue={{this.dynamicObjectListInputInputValue variant}}
+        @validationErrors={{this.dynamicObjectListInputValidationErrors variant}}
+      />
+    {{/each}}
+  {{/let}}
+
+  <hr />
+
+  <h3>Select</h3>
+
+  {{#let (array "base" "with label" "with no default" "with selected value" "inline" "full width") as |variants index|}}
+    {{#each variants as |variant|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      <pre>{{capitalize variant}}</pre>
+      <Select
+        @label={{unless (eq variant "base") "This is the label of the 'Select'"}}
+        @selectedValue={{if (eq variant "with selected value") 123456}}
+        @labelAttribute="label"
+        @valueAttribute="value"
+        @options={{(array
+          (hash label="Lorem ipsum" value="lorem")
+          (hash label="123456" value=123456)
+          (hash label="Disabled option" value="disabled" isDisabled=true)
+        )}}
+        @isInline={{if (eq variant "inline") true false}}
+        @isFullwidth={{if (eq variant "full width") true false}}
+        @onChange={{this.noop}}
+      />
+    {{/each}}
+  {{/let}}
+
+  <hr />
+
+  <h3>TextFile</h3>
+
+  <blockquote>TextFile components render a file upload input with the option to toggle a "Enter as text" button that changes
+    the input into a textarea</blockquote>
+
+  {{#let
+    (array "base" "base / upload only" "with label" "with helpText + subText + docLink" "with validation errors")
+    as |variants index|
+  }}
+    {{#each variants as |variant|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      <pre>{{capitalize variant}}</pre>
+      <TextFile
+        @uploadOnly={{if (eq variant "base / upload only") true false}}
+        @label={{if (not (or (eq variant "base") (eq variant "base / upload only"))) "This is the label of the 'Select'"}}
+        @helpText={{if (eq variant "with helpText + subText + docLink") "This is the helptext"}}
+        @subText={{if (eq variant "with helpText + subText + docLink") "This is the subtext"}}
+        @docLink={{if (eq variant "with helpText + subText + docLink") "/#"}}
+        @validationError={{if (eq variant "with validation errors") "This is the validation error message"}}
+      />
+    {{/each}}
+  {{/let}}
+
+</div>
