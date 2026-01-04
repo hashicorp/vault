@@ -347,9 +347,23 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		if err := mapstructure.WeakDecode(raw, &listResult); err != nil {
 			return nil, false, err
 		}
+		if len(listResult) == 1 {
+			// Try splitting by comma to see if there are multiple pairs
+			commaSplit := strings.Split(listResult[0], ",")
+			if len(commaSplit) > 1 {
+				// Multiple pairs found, use the comma-split version
+				listResult = commaSplit
+			}
+		}
 
 		result := make(map[string]string, len(listResult))
 		for _, keyPair := range listResult {
+			// Trim whitespace from each pair
+			keyPair = strings.TrimSpace(keyPair)
+			if keyPair == "" {
+				continue
+			}
+
 			keyPairSlice := strings.SplitN(keyPair, "=", 2)
 			if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {
 				return nil, false, fmt.Errorf("invalid key pair %q", keyPair)
