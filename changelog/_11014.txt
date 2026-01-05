@@ -1,0 +1,5 @@
+```release-note:bug
+secrets-sync (enterprise): Corrected a bug where the deletion of the latest KV-V2 secret version caused the associated external secret
+to be deleted entirely. The sync job now implements a version fallback mechanism to find and sync the highest available
+active version, ensuring continuity and preventing the unintended deletion of the external secret resource.
+```
