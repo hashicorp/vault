@@ -1,0 +1,3 @@
+```release-note:change
+auth/oci: bump plugin to v0.20.1
+```
