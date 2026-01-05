@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { helper } from '@ember/component/helper';
 import { isAddonEngine } from 'vault/utils/all-engines-metadata';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
@@ -44,8 +43,6 @@ function getExitConfigurationRoute(engineType: string, version?: number): string
  * @param version - The version of the engine (optional, defaults to 1)
  * @returns The full route path for the exit configuration button
  */
-export function exitConfigurationRoute([engineType, version]: [string, number?]): string {
+export default function exitConfigurationRoute(engineType: string, version?: number): string {
   return getExitConfigurationRoute(engineType, version);
 }
-
-export default helper(exitConfigurationRoute);
