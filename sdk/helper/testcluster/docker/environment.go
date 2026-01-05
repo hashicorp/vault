@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"maps"
 	"math/big"
 	mathrand "math/rand"
 	"net"
@@ -659,6 +660,11 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		defaultListenerConfig = n.createTLSDisabledListenerConfig()
 	} else {
 		defaultListenerConfig = n.createDefaultListenerConfig()
+	}
+
+	// Merge custom listener config options to default config
+	if opts.VaultNodeConfig != nil && opts.VaultNodeConfig.CustomListenerConfigOpts != nil {
+		maps.Copy(defaultListenerConfig["tcp"].(map[string]interface{}), opts.VaultNodeConfig.CustomListenerConfigOpts)
 	}
 
 	listenerConfig = append(listenerConfig, defaultListenerConfig)
@@ -1338,6 +1344,28 @@ func (dc *DockerCluster) GetActiveClusterNode() *DockerClusterNode {
 	}
 
 	return dc.ClusterNodes[node]
+}
+
+func (dc *DockerCluster) GetActiveAndStandbys() (*DockerClusterNode, []*DockerClusterNode) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	activeIndex, err := testcluster.WaitForActiveNode(ctx, dc)
+	if err != nil {
+		panic(fmt.Sprintf("no cluster node became active in timeout window: %v", err))
+	}
+
+	var leaderNode *DockerClusterNode
+	var standbyNodes []*DockerClusterNode
+	for i, node := range dc.ClusterNodes {
+		if i == activeIndex {
+			leaderNode = node
+			continue
+		}
+		standbyNodes = append(standbyNodes, node)
+	}
+
+	return leaderNode, standbyNodes
 }
 
 /* Notes on testing the non-bridge network case:
