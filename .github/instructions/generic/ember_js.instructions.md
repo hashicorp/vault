@@ -37,6 +37,26 @@ This document provides JavaScript and TypeScript coding standards for HashiCorp 
 - Co-locate component templates (`.hbs`) with their TypeScript files (`.ts` preferred over `.js`)
 - Prioritize reusability and maintainability when creating components - avoid overly complex or one-off implementations
 
+## Helper Functions
+- **Modern Syntax**: Use direct function exports instead of the `helper()` wrapper for new helpers
+- **Migration**: When updating existing helpers, convert from `export default helper(functionName)` to `export default function functionName()`
+- **Documentation**: Maintain JSDoc comments explaining helper usage and parameters
+- **Reference**: See [Ember Helper Functions Guide](https://guides.emberjs.com/release/components/helper-functions/#toc_shared-helper-functions) for modern syntax
+
+Example:
+```javascript
+// Modern syntax (preferred)
+export default function myHelper([param1, param2]: [string, number]): string {
+  return `${param1}: ${param2}`;
+}
+
+// Legacy syntax (avoid for new helpers)
+import { helper } from '@ember/component/helper';
+export function myHelper([param1, param2]: [string, number]): string {
+  return `${param1}: ${param2}`;
+}
+export default helper(myHelper);
+
 ## Deprecated Patterns to Avoid
 - **Don't use Mixins** 
 - Ember mixins (`Mixin.create()`) are deprecated and being phased out
