@@ -215,18 +215,24 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	roleName := d.Get("name").(string)
 	for _, prefix := range []string{"policy/", "role/"} {
-		err := req.Storage.Delete(ctx, prefix+d.Get("name").(string))
+		err := req.Storage.Delete(ctx, prefix+roleName)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSRoleDelete, map[string]interface{}{
+		"role_name": roleName,
+	})
+
 	return nil, nil
 }
 
 func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entry, err := b.roleRead(ctx, req.Storage, d.Get("name").(string), true)
+	roleName := d.Get("name").(string)
+	entry, err := b.roleRead(ctx, req.Storage, roleName, true)
 	if err != nil {
 		return nil, err
 	}
@@ -234,6 +240,10 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 		return nil, nil
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSRoleRead, map[string]interface{}{
+		"credential_types": entry.CredentialTypes,
+		"role_name":        roleName,
+	})
 	return &logical.Response{
 		Data: entry.toResponseData(),
 	}, nil
@@ -384,6 +394,11 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	if err != nil {
 		return nil, err
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSRoleWrite, map[string]interface{}{
+		"credential_types": roleEntry.CredentialTypes,
+		"role_name":        roleName,
+	})
 
 	if len(resp.Warnings) == 0 {
 		return nil, nil
