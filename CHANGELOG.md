@@ -3,6 +3,40 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.21.2
+### January 07, 2026
+
+CHANGES:
+
+* auth/oci: bump plugin to v0.20.1
+* core: Bump Go version to 1.25.5
+* packaging: Container images are now exported using a compressed OCI image layout.
+* packaging: UBI container images are now built on the UBI 10 minimal image.
+* secrets/azure: Update plugin to v0.25.1+ent. Improves retry handling during Azure application and service principal creation to reduce transient failures.
+* storage: Upgrade aerospike client library to v8.
+
+IMPROVEMENTS:
+
+* core: check rotation manager queue every 5 seconds instead of 10 seconds to improve responsiveness
+* go: update to golang/x/crypto to v0.45.0 to resolve GHSA-f6x5-jh6r-wrfv, GHSA-j5w8-q4qc-rx2x, GO-2025-4134 and GO-2025-4135.
+* rotation: Ensure rotations for shared paths only execute on the Primary cluster's active node. Ensure rotations for local paths execute on the cluster-local active node.
+* sdk/rotation: Prevent rotation attempts on read-only storage.
+* secrets-sync (enterprise): Added support for a boolean force_delete flag (default: false). When set to true, this flag allows deletion of a destination even if its associations cannot be unsynced. This option should be used only as a last-resort deletion mechanism, as any secrets already synced to the external provider will remain orphaned and require manual cleanup.
+* secrets/pki: Avoid loading issuer information multiple times per leaf certificate signing.
+
+BUG FIXES:
+
+* core/activitylog (enterprise): Resolve a stability issue where Vault Enterprise could encounter a panic during month-end billing activity rollover.
+* http: skip JSON limit parsing on cluster listener.
+* quotas: Vault now protects plugins with ResolveRole operations from panicking on quota creation.
+* replication (enterprise): fix rare panic due to race when enabling a secondary with Consul storage.
+* rotation: Fix a bug where a performance secondary would panic if a write was made to a local mount.
+* secret-sync (enterprise): Improved unsync error handling by treating cases where the destination no longer exists as successful.
+* secrets-sync (enterprise): Corrected a bug where the deletion of the latest KV-V2 secret version caused the associated external secret to be deleted entirely. The sync job now implements a version fallback mechanism to find and sync the highest available active version, ensuring continuity and preventing the unintended deletion of the external secret resource.
+* secrets-sync (enterprise): Fix issue where secrets were not properly un-synced after destination config changes.
+* secrets-sync (enterprise): Fix issue where sync store deletion could be attempted when sync is disabled.
+* ui/pki: Fix handling of values that contain commas in list fields like `crl_distribution_points`.
+
 ## 1.21.1
 ### November 19, 2025
 
@@ -260,6 +294,42 @@ BUG FIXES:
 * ui: Include user's root namespace in the namespace picker if it's a namespace other than the actual root ("")
 * ui: Revert camelizing of parameters returned from `sys/internal/ui/mounts` so mount paths match serve value
 * ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`
+
+## 1.20.7 Enterprise
+### January 07, 2026
+
+CHANGES:
+
+* auth/oci: bump plugin to v0.19.1
+* go: bump go version to 1.25.5
+* packaging: Container images are now exported using a compressed OCI image layout.
+* packaging: UBI container images are now built on the UBI 10 minimal image.
+* secrets/azure: Update plugin to [v0.22.1](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.22.1). Improves retry handling during Azure application and service principal creation to reduce transient failures.
+* storage: Upgrade aerospike client library to v8.
+
+IMPROVEMENTS:
+
+* core: check rotation manager queue every 5 seconds instead of 10 seconds to improve responsiveness.
+* go: update to golang/x/crypto to v0.45.0 to resolve GHSA-f6x5-jh6r-wrfv, GHSA-j5w8-q4qc-rx2x, GO-2025-4134 and GO-2025-4135.
+* rotation: Ensure rotations for shared paths only execute on the Primary cluster's active node. Ensure rotations for local paths execute on the cluster-local active node.
+* sdk/rotation: Prevent rotation attempts on read-only storage
+* secrets-sync (enterprise): Added support for a boolean force_delete flag (default: false). 
+When set to true, this flag allows deletion of a destination even if its associations cannot be unsynced. 
+This option should be used only as a last-resort deletion mechanism, as any secrets already synced to the external provider will remain orphaned and require manual cleanup.
+
+BUG FIXES:
+
+* auth/approle (enterprise): Fixed bug that prevented periodic tidy running on performance secondary.
+* core/activitylog (enterprise): Resolve a stability issue where Vault Enterprise could encounter a panic during month-end billing activity rollover.
+* http: skip JSON limit parsing on cluster listener.
+* quotas: Vault now protects plugins with ResolveRole operations from panicking.
+on quota creation.
+* replication (enterprise): fix rare panic due to race when enabling a secondary with Consul storage.
+* rotation: Fix a bug where a performance secondary would panic if a write was made to a local mount.
+* secret-sync (enterprise): Improved unsync error handling by treating cases where the destination no longer exists as successful.
+* secrets-sync (enterprise): Corrected a bug where the deletion of the latest KV-V2 secret version caused the associated external secret to be deleted entirely. The sync job now implements a version fallback mechanism to find and sync the highest available active version, ensuring continuity and preventing the unintended deletion of the external secret resource.
+* ui/kvv2 (enterprise): Fixes listing stale secrets when switching between namespaces that have KV v2 engines with the same mount path.
+* ui/pki: Fix handling of values that contain commas in list fields like `crl_distribution_points`.
 
 ## 1.20.6 Enterprise
 ### November 19, 2025
@@ -622,6 +692,40 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.13 Enterprise
+### January 07, 2026
+
+CHANGES:
+
+* auth/oci: bump plugin to v0.18.1
+* go: bump go version to 1.25.5
+* packaging: Container images are now exported using a compressed OCI image layout.
+* packaging: UBI container images are now built on the UBI 10 minimal image.
+* secrets/azure: Update plugin to [v0.21.5](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.21.5). Improves retry handling during Azure application and service principal creation to reduce transient failures.
+* storage: Upgrade aerospike client library to v8.
+
+IMPROVEMENTS:
+
+* core: check rotation manager queue every 5 seconds instead of 10 seconds to improve responsiveness.
+* go: update to golang/x/crypto to v0.45.0 to resolve GHSA-f6x5-jh6r-wrfv, GHSA-j5w8-q4qc-rx2x, GO-2025-4134 and GO-2025-4135.
+* rotation: Ensure rotations for shared paths only execute on the Primary cluster's active node. Ensure rotations for local paths execute on the cluster-local active node.
+* sdk/rotation: Prevent rotation attempts on read-only storage.
+* secrets-sync (enterprise): Added support for a boolean force_delete flag (default: false). 
+When set to true, this flag allows deletion of a destination even if its associations cannot be unsynced. 
+This option should be used only as a last-resort deletion mechanism, as any secrets already synced to the external provider will remain orphaned and require manual cleanup.
+
+BUG FIXES:
+
+* auth/approle (enterprise): Fixed bug that prevented periodic tidy running on performance secondary.
+* http: skip JSON limit parsing on cluster listener.
+* quotas: Vault now protects plugins with ResolveRole operations from panicking on quota creation.
+* replication (enterprise): fix rare panic due to race when enabling a secondary with Consul storage.
+* rotation: Fix a bug where a performance secondary would panic if a write was made to a local mount.
+* secret-sync (enterprise): Improved unsync error handling by treating cases where the destination no longer exists as successful.
+* secrets-sync (enterprise): Corrected a bug where the deletion of the latest KV-V2 secret version caused the associated external secret to be deleted entirely. The sync job now implements a version fallback mechanism to find and sync the highest available active version, ensuring continuity and preventing the unintended deletion of the external secret resource.
+* ui/pki: Fix handling of values that contain commas in list fields like `crl_distribution_points`.
+
 
 ## 1.19.12 Enterprise
 ### November 19, 2025
@@ -2401,6 +2505,31 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.29 Enterprise
+### January 07, 2026
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+CHANGES:
+
+* core: Bump Go version to 1.24.11
+* packaging: Container images are now exported using a compressed OCI image layout.
+* packaging: UBI container images are now built on the UBI 10 minimal image.
+* storage: Upgrade aerospike client library to v8.
+
+IMPROVEMENTS:
+
+* go: update to golang/x/crypto to v0.45.0 to resolve GHSA-f6x5-jh6r-wrfv, GHSA-j5w8-q4qc-rx2x, GO-2025-4134 and GO-2025-4135.
+* secrets-sync (enterprise): Added support for a boolean force_delete flag (default: false). When set to true, this flag allows deletion of a destination even if its associations cannot be unsynced. This option should be used only as a last-resort deletion mechanism, as any secrets already synced to the external provider will remain orphaned and require manual cleanup.
+
+BUG FIXES:
+
+* http: skip JSON limit parsing on cluster listener
+* secret-sync (enterprise): Improved unsync error handling by treating cases where the destination no longer exists as successful.
+* secrets-sync (enterprise): Corrected a bug where the deletion of the latest KV-V2 secret version caused the associated external secret to be deleted entirely. The sync job now implements a version fallback mechanism to find and sync the highest available active version, ensuring continuity and preventing the unintended deletion of the external secret resource.
+* ui/pki: Fix handling of values that contain commas in list fields like `crl_distribution_points`.
+
 
 ## 1.16.28 Enterprise
 ### November 19, 2025
