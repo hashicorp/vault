@@ -53,6 +53,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/billing"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 	"github.com/hashicorp/vault/version"
@@ -191,6 +192,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 				expirationSubPath,
 				countersSubPath,
 				rotationLocalSubPath,
+				billing.BillingSubPath + billing.LocalPrefix,
 			},
 
 			SealWrapStorage: []string{
