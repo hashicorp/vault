@@ -688,8 +688,20 @@ func (r *CreateBackportReq) backportRef(
 		return res
 	}
 
-	prTitle := fmt.Sprintf("Backport %s into %s", pr.GetTitle(), ref)
-	prBody, err := renderEmbeddedTemplate("backport-pr-message.tmpl", struct {
+	// Generate title, removing existing "Backport" prefix to avoid stuttering
+	cleanTitle := pr.GetTitle()
+	if strings.HasPrefix(strings.ToLower(cleanTitle), "backport ") {
+		cleanTitle = strings.TrimSpace(cleanTitle[9:]) // Remove "Backport " prefix
+	}
+	prTitle := fmt.Sprintf("Backport %s into %s", cleanTitle, ref)
+
+	// Choose template based on whether this is a CE backport
+	templateName := "backport-pr-message.tmpl"
+	if r.hasCEPrefix(ref) {
+		templateName = "backport-ce-pr-message.tmpl"
+	}
+
+	prBody, err := renderEmbeddedTemplate(templateName, struct {
 		OriginPullRequest *libgithub.PullRequest
 		Attempt           *CreateBackportAttempt
 	}{pr, res})
