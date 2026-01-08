@@ -203,6 +203,9 @@ func TestHWMRoleCounts(t *testing.T) {
 		},
 	}
 
+	// Sleep to prevent race conditions during the role initialization
+	time.Sleep(1 * time.Second)
+
 	core.mountsLock.RLock()
 	defer core.mountsLock.RUnlock()
 	for _, tc := range testCases {
@@ -387,11 +390,74 @@ func TestHWMRoleCounts(t *testing.T) {
 	}, counts)
 }
 
+// TestHWMKvSecretsCounts tests that we correctly store and track the HWM kv counts
+// for both kv-v1 and kv-v2 mounts.
+func TestHWMKvSecretsCounts(t *testing.T) {
+	coreConfig := &CoreConfig{
+		LogicalBackends: roleLogicalBackends,
+		BillingConfig: billing.BillingConfig{
+			MetricsUpdateCadence: 3 * time.Second,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	// Add 1 kv-v1 mount and 1 kv-v2 mount in the root namespace
+	for _, mount := range []string{"kv-v1", "kv-v2"} {
+		req := logical.TestRequest(t, logical.CreateOperation, fmt.Sprintf("sys/mounts/%v", mount))
+		req.Data["type"] = mount
+		req.ClientToken = root
+		ctx := namespace.RootContext(context.Background())
+
+		_, err := core.HandleRequest(ctx, req)
+		require.NoError(t, err)
+	}
+
+	// Add two secrets to each mount
+	for _, mount := range []string{"kv-v1", "kv-v2"} {
+		for i := 0; i < 2; i++ {
+			secretName := fmt.Sprintf("secret-%d", i)
+			addKvSecretToStorage(t, namespace.RootContext(context.Background()), core, mount, root, secretName, mount)
+		}
+	}
+
+	// Verify that the max kv counts are as expected
+	timer := time.NewTimer(3 * time.Second)
+	_ = <-timer.C
+	counts, err := core.GetStoredHWMKvCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, 4, counts)
+
+	// Add one more secret to the kv-v1 mount
+	addKvSecretToStorage(t, namespace.RootContext(context.Background()), core, "kv-v1", root, "secret-3", "kv-v1")
+
+	// Wait for the metrics update
+	timer = time.NewTimer(3 * time.Second)
+	_ = <-timer.C
+
+	// Verify that the max kv counts are updated
+	counts, err = core.GetStoredHWMKvCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, 5, counts)
+
+	// Now delete one secret from the kv-v2 mount
+	deleteKvSecretFromStorage(t, namespace.RootContext(context.Background()), core, "kv-v2", root, "secret-1", "kv-v2")
+
+	// Wait for any metrics updates to complete
+	timer = time.NewTimer(3 * time.Second)
+	_ = <-timer.C
+
+	// Verify that the max kv counts are still the same
+	counts, err = core.GetStoredHWMKvCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, 5, counts)
+}
+
 func addRoleToStorage(t *testing.T, core *Core, mount string, key string, numberOfKeys int) {
 	raw, ok := core.router.root.Get(mount + "/")
 	if !ok {
 		return
 	}
+	require.NotNil(t, raw)
 	re := raw.(*routeEntry)
 	storageView := re.storageView
 
@@ -434,4 +500,40 @@ func deleteAllRolesFromStorage(t *testing.T, core *Core, mount string, key strin
 	list, err = storageView.List(context.Background(), key)
 	require.NoError(t, err)
 	require.Len(t, list, 0)
+}
+
+func addKvSecretToStorage(t *testing.T, ctx context.Context, core *Core, mount string, token string, secretName string, kvVersion string) {
+	var req *logical.Request
+	switch kvVersion {
+	case "kv-v2":
+		// KV v2 expects writes to /data/<path> with a nested "data" payload
+		req = logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("%v/data/%s", mount, secretName))
+		req.Data["data"] = map[string]interface{}{
+			"foo": "bar",
+		}
+	case "kv-v1":
+		// KV v1 expects writes directly to /<path> with a flat payload
+		req = logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("%v/%s", mount, secretName))
+		req.Data["foo"] = "bar"
+	default:
+		t.Fatalf("invalid kv version: %s", kvVersion)
+	}
+	req.ClientToken = token
+	_, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+}
+
+func deleteKvSecretFromStorage(t *testing.T, ctx context.Context, core *Core, mount string, token string, secretName string, kvVersion string) {
+	var req *logical.Request
+	switch kvVersion {
+	case "kv-v2":
+		req = logical.TestRequest(t, logical.DeleteOperation, fmt.Sprintf("%v/data/%s", mount, secretName))
+	case "kv-v1":
+		req = logical.TestRequest(t, logical.DeleteOperation, fmt.Sprintf("%v/%s", mount, secretName))
+	default:
+		t.Fatalf("invalid kv version: %s", kvVersion)
+	}
+	req.ClientToken = token
+	_, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
 }
