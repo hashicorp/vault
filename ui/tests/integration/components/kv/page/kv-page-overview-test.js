@@ -116,7 +116,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       assert
         .dom(overviewCard.container('Paths'))
         .hasText(
-          `Paths The paths to use when referring to this secret in API or CLI. API path /v1/${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
+          `Paths The paths to use when referring to this secret in API, policies, or CLI. API path /v1/${this.backend}/data/${this.path} Configuration path ${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
         );
       assert
         .dom(overviewCard.container('Subkeys'))
@@ -162,7 +162,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       assert
         .dom(overviewCard.container('Paths'))
         .hasText(
-          `Paths The paths to use when referring to this secret in API or CLI. API path /v1/${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
+          `Paths The paths to use when referring to this secret in API, policies, or CLI. API path /v1/${this.backend}/data/${this.path} Configuration path ${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
         );
       assert
         .dom(overviewCard.container('Subkeys'))
@@ -191,7 +191,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       assert
         .dom(overviewCard.container('Paths'))
         .hasText(
-          `Paths The paths to use when referring to this secret in API or CLI. API path /v1/${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
+          `Paths The paths to use when referring to this secret in API, policies, or CLI. API path /v1/${this.backend}/data/${this.path} Configuration path ${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
         );
       assert.dom(overviewCard.container('Subkeys')).doesNotExist();
     });
@@ -206,7 +206,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       assert
         .dom(overviewCard.container('Paths'))
         .hasText(
-          `Paths The paths to use when referring to this secret in API or CLI. API path /v1/${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
+          `Paths The paths to use when referring to this secret in API, policies, or CLI. API path /v1/${this.backend}/data/${this.path} Configuration path ${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
         );
     });
   });
@@ -250,7 +250,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       assert
         .dom(overviewCard.container('Paths'))
         .hasText(
-          `Paths The paths to use when referring to this secret in API or CLI. API path /v1/${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
+          `Paths The paths to use when referring to this secret in API, policies, or CLI. API path /v1/${this.backend}/data/${this.path} Configuration path ${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
         );
     });
 
@@ -326,7 +326,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       assert
         .dom(overviewCard.container('Paths'))
         .hasText(
-          `Paths The paths to use when referring to this secret in API or CLI. API path /v1/${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
+          `Paths The paths to use when referring to this secret in API, policies, or CLI. API path /v1/${this.backend}/data/${this.path} Configuration path ${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
         );
     });
 
