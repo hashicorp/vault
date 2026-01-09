@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/dnstest"
 )
 
 type VaultPkiCluster struct {
