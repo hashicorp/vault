@@ -271,17 +271,19 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      # Setup node.js without caching to allow running npm install -g yarn (next step)
+      - name: Install PNPM
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          run_install: false
+          package_json_file: './ui/package.json'
+
+      # Setup node.js with caching using the pnpm-lock.yaml file
       - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           node-version-file: './ui/package.json'
-      - run: npm install -g yarn
-      # Setup node.js with caching using the yarn.lock file
-      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
-        with:
-          node-version-file: './ui/package.json'
-          cache: yarn
-          cache-dependency-path: ui/yarn.lock
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
+
       - uses: browser-actions/setup-chrome@b94431e051d1c52dcbe9a7092a4f10f827795416 # v2.1.0
         with:
           # Temporarily pin our Chrome version while we sort out a broken test on latest
@@ -289,7 +291,7 @@ jobs:
       - name: ui-dependencies
         working-directory: ./ui
         run: |
-          yarn install --frozen-lockfile
+          pnpm i
           npm rebuild node-sass
       - if: needs.setup.outputs.is-ent-repo != 'true'
         name: Rebuild font cache on Github hosted runner
@@ -330,7 +332,7 @@ jobs:
           # Run Ember tests
           cd ui
           mkdir -p test-results/qunit
-          yarn ${{ needs.setup.outputs.is-ent-branch == 'true' && 'test' || 'test:oss' }}
+          pnpm ${{ needs.setup.outputs.is-ent-branch == 'true' && 'test' || 'test:oss' }}
       - if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:

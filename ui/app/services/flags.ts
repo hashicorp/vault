@@ -6,7 +6,7 @@
 import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { keepLatestTask } from 'ember-concurrency';
-import { DEBUG } from '@glimmer/env';
+import { macroCondition, isDevelopingApp } from '@embroider/macros';
 
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
@@ -48,7 +48,9 @@ export default class FlagsService extends Service {
         this.featureFlags = body.feature_flags || [];
       }
     } catch (error) {
-      if (DEBUG) console.error(error); // eslint-disable-line no-console
+      if (macroCondition(isDevelopingApp())) {
+        console.error(error); // eslint-disable-line no-console
+      }
     }
   });
 
@@ -71,7 +73,9 @@ export default class FlagsService extends Service {
       this.activatedFlags = response.data?.activated;
       return;
     } catch (error) {
-      if (DEBUG) console.error(error); // eslint-disable-line no-console
+      if (macroCondition(isDevelopingApp())) {
+        console.error(error); // eslint-disable-line no-console
+      }
     }
   });
 
