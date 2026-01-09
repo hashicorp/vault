@@ -54,6 +54,7 @@ export default class App extends Application {
     kmip: {
       dependencies: {
         services: [
+          'api',
           'auth',
           'download',
           'flash-messages',

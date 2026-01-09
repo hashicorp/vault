@@ -1,0 +1,29 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title="Configure KMIP Secrets Engine" @icon="lock">
+  <:breadcrumbs>
+    <KmipBreadcrumb @showPath={{true}} @currentRoute="Configure" />
+  </:breadcrumbs>
+</Page::Header>
+
+<form {{on "submit" (perform this.save)}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <MessageError @errorMessage={{this.errorMessage}} />
+    <NamespaceReminder @mode="save" />
+
+    {{#each @form.formFields as |field|}}
+      <FormField @attr={{field}} @model={{@form}} @modelValidations={{this.modelValidations}} />
+    {{/each}}
+  </div>
+
+  <FormSaveButtons @isSaving={{this.save.isRunning}} @cancelLinkParams={{array "configuration"}} @onCancel={{@onCancel}}>
+    <:error>
+      {{#if this.invalidFormAlert}}
+        <AlertInline @type="danger" class="has-top-padding-s" @message={{this.invalidFormAlert}} />
+      {{/if}}
+    </:error>
+  </FormSaveButtons>
+</form>

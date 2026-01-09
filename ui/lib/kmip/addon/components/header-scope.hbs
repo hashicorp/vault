@@ -12,12 +12,16 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs">
     <ul>
-      <LinkTo @route="scopes.index" data-test-kmip-link-scopes="true">
-        Scopes
-      </LinkTo>
-      <LinkTo @route="configuration" data-test-kmip-link-config="true">
-        Configuration
-      </LinkTo>
+      <li>
+        <LinkTo @route="scopes.index" data-test-kmip-tab="scopes">
+          Scopes
+        </LinkTo>
+      </li>
+      <li>
+        <LinkTo @route="configuration" data-test-kmip-tab="config">
+          Configuration
+        </LinkTo>
+      </li>
     </ul>
   </nav>
 </div>

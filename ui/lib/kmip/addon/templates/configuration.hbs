@@ -3,32 +3,4 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<HeaderScope />
-<Toolbar>
-  <ToolbarActions>
-    {{#if this.model}}
-      <DownloadButton
-        class="toolbar-button"
-        @color="secondary"
-        @filename={{concat this.model.ca.id "-ca"}}
-        @data={{this.model.ca.caPem}}
-        @extension="pem"
-        @text="Download CA cert"
-      />
-    {{/if}}
-    <ToolbarLink @route="configure" data-test-kmip-link-configure>
-      Configure
-    </ToolbarLink>
-  </ToolbarActions>
-</Toolbar>
-{{#if this.model}}
-  <FieldGroupShow @model={{this.model}} />
-  <InfoTableRow @label="CA PEM" @value={{this.model.ca.caPem}}>
-    <MaskedInput @value={{this.model.ca.caPem}} @displayOnly={{true}} @allowCopy={{true}} />
-  </InfoTableRow>
-{{else}}
-  <EmptyState
-    @title="No configuration for this secrets engine"
-    @message="We'll need to configure a few things before getting started."
-  />
-{{/if}}
+<Page::Configuration @config={{this.model}} />
