@@ -38,13 +38,44 @@ variable "vault_root_token" {
   default     = null
 }
 
-locals {
-  ldap_login_data = jsondecode(enos_remote_exec.ldap_verify_configs.stdout)
+variable "credential_ttl_buffer" {
+  description = "Buffer (seconds) to wait after LDAP credential TTL expiry"
+  type        = number
+  default     = 80
 }
 
-# Verifying Vault LDAP Configurations
-resource "enos_remote_exec" "ldap_verify_configs" {
+variable "default_ttl" {
+  description = "Default time-to-live (in seconds) for issued LDAP credentials."
+  type        = number
+  default     = 60
+}
 
+variable "max_ttl" {
+  description = "Maximum time-to-live (in seconds) allowed for issued LDAP credentials"
+  type        = number
+  default     = 60
+}
+
+variable "enable_secrets_verification" {
+  type        = bool
+  description = "Enable LDAP secrets engine verification (dynamic credentials)"
+  default     = true
+}
+
+variable "enable_rotation_verification" {
+  type        = bool
+  description = "Enable LDAP root rotation verification"
+  default     = true
+}
+
+variable "enable_auth_verification" {
+  type        = bool
+  description = "Enable LDAP authentication verification"
+  default     = true
+}
+
+resource "enos_remote_exec" "ldap_verify_auth" {
+  count = var.enable_auth_verification ? 1 : 0
   environment = {
     MOUNT             = "${var.create_state.ldap.ldap_mount}"
     LDAP_SERVER       = "${var.create_state.ldap.host.private_ip}"
@@ -55,8 +86,59 @@ resource "enos_remote_exec" "ldap_verify_configs" {
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token
   }
+  scripts = [abspath("${path.module}/../../../scripts/ldap/verify-auth.sh")]
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
 
-  scripts = [abspath("${path.module}/../../../scripts/ldap-verify-configs")]
+# Configure and verify LDAP secrets engine 
+resource "enos_remote_exec" "ldap_verify_secrets" {
+  count = var.enable_secrets_verification ? 1 : 0
+
+  environment = {
+    MOUNT                 = "${var.create_state.ldap.ldap_mount}"
+    LDAP_SERVER           = "${var.create_state.ldap.host.private_ip}"
+    LDAP_PORT             = "${var.create_state.ldap.port}"
+    LDAP_USERNAME         = "${var.create_state.ldap.username}"
+    LDAP_ADMIN_PW         = "${var.create_state.ldap.pw}"
+    VAULT_ADDR            = var.vault_addr
+    VAULT_INSTALL_DIR     = var.vault_install_dir
+    VAULT_TOKEN           = var.vault_root_token
+    CREDENTIAL_TTL_BUFFER = tostring(var.credential_ttl_buffer)
+    DEFAULT_TTL           = tostring(var.default_ttl)
+    MAX_TTL               = tostring(var.max_ttl)
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/ldap/verify-secrets.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
+# Verify LDAP root rotation 
+resource "enos_remote_exec" "ldap_verify_rotation" {
+  count = var.enable_rotation_verification ? 1 : 0
+
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets
+  ]
+  environment = {
+    MOUNT             = "${var.create_state.ldap.ldap_mount}"
+    LDAP_SERVER       = "${var.create_state.ldap.host.private_ip}"
+    LDAP_PORT         = "${var.create_state.ldap.port}"
+    LDAP_USERNAME     = "${var.create_state.ldap.username}"
+    LDAP_ADMIN_PW     = "${var.create_state.ldap.pw}"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+  scripts = [abspath("${path.module}/../../../scripts/ldap/verify-rotation.sh")]
 
   transport = {
     ssh = {

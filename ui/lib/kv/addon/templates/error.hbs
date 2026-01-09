@@ -3,12 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<KvHeader
-  @backend={{this.backend}}
-  @pageTitle={{this.backend}}
-  @breadcrumbs={{this.breadcrumbs}}
-  @mountName={{this.mountName}}
->
+<Page::Header @title={{@path}} @icon={{this.backend.icon}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
+
+<KvTabsToolbar>
   <:tabs>
     <li><LinkTo @route="list" @model={{this.mountName}} data-test-secrets-tab="Secrets">Secrets</LinkTo></li>
     <li><LinkTo
@@ -17,6 +18,6 @@
         data-test-secrets-tab="Configuration"
       >Configuration</LinkTo></li>
   </:tabs>
-</KvHeader>
+</KvTabsToolbar>
 
 <Page::Error @error={{this.model}} />

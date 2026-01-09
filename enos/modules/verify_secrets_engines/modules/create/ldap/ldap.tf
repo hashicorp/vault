@@ -93,8 +93,8 @@ resource "enos_remote_exec" "secrets_enable_ldap_secret" {
   }
 }
 
-# Configuring Openldap Server and Vault LDAP
-resource "enos_remote_exec" "ldap_configurations" {
+# Setup OpenLDAP infrastructure 
+resource "enos_remote_exec" "ldap_setup" {
   depends_on = [
     enos_remote_exec.secrets_enable_ldap_secret
   ]
@@ -110,7 +110,7 @@ resource "enos_remote_exec" "ldap_configurations" {
     VAULT_TOKEN       = var.vault_root_token
   }
 
-  scripts = [abspath("${path.module}/../../../scripts/ldap-configs.sh")]
+  scripts = [abspath("${path.module}/../../../scripts/ldap/setup.sh")]
 
   transport = {
     ssh = {

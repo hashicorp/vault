@@ -3,20 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<KvHeader @pageTitle={{@backendModel.id}} @backend={{@backendModel}} @breadcrumbs={{@breadcrumbs}} @filter={{@filterValue}}>
-  <:toolbarFilters>
-    {{#if (and (not-eq @secrets 403) (or @secrets @filterValue))}}
-      <KvListFilter @mountPoint={{this.mountPoint}} @filterValue={{@filterValue}} />
-    {{/if}}
-  </:toolbarFilters>
-
-  <:tabs>
-    <li><LinkTo @route="list" data-test-tab="Secrets" @model={{@backend}}>Secrets</LinkTo></li>
-  </:tabs>
+<Page::Header @description="KV" @icon={{@backendModel.icon}} @title={{@backendModel.id}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
   <:badges>
     <Hds::Badge @text="version 2" data-test-badge />
   </:badges>
-
   <:actions>
     <Hds::Dropdown as |D|>
       <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
@@ -43,7 +36,19 @@
       data-test-button="create secret"
     />
   </:actions>
-</KvHeader>
+</Page::Header>
+
+<KvTabsToolbar>
+  <:tabs>
+    <li><LinkTo @route="list" data-test-tab="Secrets" @model={{@backend}}>Secrets</LinkTo></li>
+  </:tabs>
+
+  <:toolbarFilters>
+    {{#if (and (not-eq @secrets 403) (or @secrets @filterValue))}}
+      <KvListFilter @mountPoint={{this.mountPoint}} @filterValue={{@filterValue}} />
+    {{/if}}
+  </:toolbarFilters>
+</KvTabsToolbar>
 
 {{#if (eq @secrets 403)}}
   <div class="box is-fullwidth is-shadowless has-tall-padding">
