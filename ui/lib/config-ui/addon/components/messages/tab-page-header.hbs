@@ -3,18 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  {{#if @breadcrumbs}}
-    <p.top>
-      <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-    </p.top>
-  {{/if}}
-  <p.levelLeft>
-    <Hds::Text::Display @tag="h2" @size="500" class="has-top-margin-m" data-test-page-title>
-      {{@pageTitle}}
-    </Hds::Text::Display>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title={{@pageTitle}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if @showTabs}}
   <div class="tabs-container box is-bottomless is-marginless is-paddingless">
