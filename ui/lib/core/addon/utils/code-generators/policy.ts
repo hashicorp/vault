@@ -4,6 +4,7 @@
  */
 
 import { tracked } from '@glimmer/tracking';
+import { formatEot } from './formatters';
 
 export enum PolicyTypes {
   ACL = 'acl',
@@ -24,6 +25,15 @@ export class PolicyStanza {
 }
 
 export const formatStanzas = (stanzas: PolicyStanza[]) => stanzas.map((s) => s.preview).join('\n');
+
+export const policySnippetArgs = (policyName: string, stanzas: PolicyStanza[]) => {
+  const policy = formatEot(formatStanzas(stanzas));
+  const resourceArgs = { name: `"${policyName}"`, policy };
+  return {
+    terraform: { resource: 'vault_policy', resourceArgs },
+    cli: { command: `policy write ${policyName}`, content: `- ${policy}` },
+  };
+};
 
 /**
  * Formats an ACL policy stanza in HCL

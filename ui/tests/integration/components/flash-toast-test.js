@@ -8,6 +8,13 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, find, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
+const SELECTORS = {
+  element: '[data-test-flash-toast ]',
+  title: '[data-test-flash-toast-title]',
+  message: '[data-test-flash-message-body]',
+};
 
 module('Integration | Component | flash-toast', function (hooks) {
   setupRenderingTest(hooks);
@@ -23,8 +30,9 @@ module('Integration | Component | flash-toast', function (hooks) {
   test('it renders', async function (assert) {
     await render(hbs`<FlashToast @flash={{this.flash}} @close={{this.closeSpy}} />`);
 
-    assert.dom('[data-test-flash-message-body]').hasText('The bare minimum flash message');
-    assert.dom('[data-test-flash-toast]').hasClass('hds-alert--color-highlight');
+    assert.dom(SELECTORS.message).hasText('The bare minimum flash message');
+    assert.dom(SELECTORS.element).hasClass('hds-alert--color-highlight');
+    assert.dom('a').doesNotExist('link does not render');
     await click('button');
     assert.ok(this.closeSpy.calledOnce, 'close action was called');
   });
@@ -40,8 +48,8 @@ module('Integration | Component | flash-toast', function (hooks) {
       this.flash.type = type;
       await render(hbs`<FlashToast @flash={{this.flash}} @close={{this.closeSpy}} />`);
 
-      assert.dom('[data-test-flash-toast-title]').hasText(title, 'title is correct');
-      assert.dom('[data-test-flash-toast]').hasClass(color, 'color is correct');
+      assert.dom(SELECTORS.title).hasText(title, 'title is correct');
+      assert.dom(SELECTORS.element).hasClass(color, 'color is correct');
     });
   });
 
@@ -51,8 +59,36 @@ module('Integration | Component | flash-toast', function (hooks) {
 line msg`;
 
     await render(hbs`<FlashToast @flash={{this.flash}} @close={{this.closeSpy}} />`);
-    const dom = find('[data-test-flash-message-body]');
+    const dom = find(SELECTORS.message);
     const lineHeight = 20;
     assert.true(dom.clientHeight > lineHeight, 'renders message on multiple lines');
+  });
+
+  test('it renders custom title when provided', async function (assert) {
+    this.flash.title = 'Tada a flash!';
+    await render(hbs`<FlashToast @flash={{this.flash}} @close={{this.closeSpy}} />`);
+    assert.dom(SELECTORS.title).hasText('Tada a flash!');
+  });
+
+  test('it renders link when provided', async function (assert) {
+    this.flash.link = {
+      text: 'A snazzy link',
+      route: 'vault.cluster.policy.show',
+    };
+
+    await render(hbs`<FlashToast @flash={{this.flash}} @close={{this.closeSpy}} />`);
+    assert
+      .dom('a')
+      .exists()
+      .hasText('A snazzy link')
+      .hasClass('hds-link-standalone--color-secondary', 'it renders secondary color')
+      .hasClass('hds-link-standalone--icon-position-trailing', 'it renders trailing icon');
+    assert.dom(GENERAL.icon('arrow-right')).exists('it renders default icon');
+  });
+
+  test('it renders custom icon for link', async function (assert) {
+    this.flash.link = { text: 'Click me', href: 'example.com', icon: 'rocket' };
+    await render(hbs`<FlashToast @flash={{this.flash}} @close={{this.closeSpy}} />`);
+    assert.dom(GENERAL.icon('rocket')).exists();
   });
 });
