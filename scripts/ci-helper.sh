@@ -97,9 +97,9 @@ function build_ui() {
     mkdir -p http/web_ui
     popd
     pushd "$repo_root/ui"
-    yarn install
+  pnpm install
     npm rebuild node-sass
-    yarn run build
+  pnpm run build
     popd
 }
 

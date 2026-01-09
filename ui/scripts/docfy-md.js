@@ -9,10 +9,10 @@
 
 /*
 run from the ui directory:
-yarn docfy-md some-component
+pnpm docfy-md some-component
 
 or if the docs are for a component in an in-repo-addon or an engine:
-yarn docfy-md some-component name-of-engine
+pnpm docfy-md some-component name-of-engine
 
 see the readme ui/docs/how-to-docfy.md for more info
 */
