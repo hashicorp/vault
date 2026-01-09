@@ -9,9 +9,13 @@ import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import trimRight from 'vault/utils/trim-right';
 import { tracked } from '@glimmer/tracking';
-import { formatStanzas, PolicyStanza, PolicyTypes } from 'core/utils/code-generators/policy';
+import {
+  formatStanzas,
+  policySnippetArgs,
+  PolicyStanza,
+  PolicyTypes,
+} from 'core/utils/code-generators/policy';
 import errorMessage from 'vault/utils/error-message';
-import { formatEot } from 'core/utils/code-generators/formatters';
 
 import type FlashMessageService from 'ember-cli-flash/services/flash-messages';
 import type { HTMLElementEvent } from 'vault/forms';
@@ -89,12 +93,7 @@ export default class PolicyFormComponent extends Component<Args> {
 
   get snippetArgs() {
     const policyName = this.args.model.name || '<policy name>';
-    const policy = formatEot(formatStanzas(this.stanzas));
-    const resourceArgs = { name: `"${policyName}"`, policy };
-    return {
-      terraform: { resource: 'vault_policy', resourceArgs },
-      cli: { command: `policy write ${policyName}`, content: `- ${policy}` },
-    };
+    return policySnippetArgs(policyName, this.stanzas);
   }
 
   get visualEditorSupported() {

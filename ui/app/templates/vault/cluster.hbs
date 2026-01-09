@@ -73,7 +73,7 @@
 </div>
 <div class="global-flash">
   {{#each this.flashMessages.queue as |flash|}}
-    <FlashMessage data-test-flash-message={{true}} @flash={{flash}} as |customComponent flash close|>
+    <FlashMessage data-test-flash-message @flash={{flash}} as |customComponent flash close|>
       <FlashToast @flash={{flash}} @close={{close}} />
     </FlashMessage>
   {{/each}}

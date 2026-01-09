@@ -13,7 +13,7 @@
   {{#if @model.isNew}}
     <FORM.Section @isFullWidth={{true}} as |FS|>
       <FS.Header as |FSH|>
-        <FSH.Title>
+        <FSH.Title @tag="h2">
           Policy information
 
           <div class="is-pulled-right">
@@ -51,7 +51,7 @@
   {{#unless this.showFileUpload}}
     <FORM.Section @isFullWidth={{true}} as |FS|>
       {{#if @model.isNew}}
-        <FS.Header data-test-form-header="Policy rules" as |FSH|>
+        <FS.Header @tag="h3" data-test-form-header="Policy rules" as |FSH|>
           <FSH.Title>Policy rules</FSH.Title>
 
           <FSH.Description data-test-form-description="Policy rules">
