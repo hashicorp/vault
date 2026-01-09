@@ -285,9 +285,6 @@ jobs:
           cache-dependency-path: ui/pnpm-lock.yaml
 
       - uses: browser-actions/setup-chrome@b94431e051d1c52dcbe9a7092a4f10f827795416 # v2.1.0
-        with:
-          # Temporarily pin our Chrome version while we sort out a broken test on latest
-          chrome-version: 1314712
       - name: ui-dependencies
         working-directory: ./ui
         run: |
