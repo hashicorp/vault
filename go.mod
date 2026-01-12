@@ -102,6 +102,7 @@ require (
 	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.13
 	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.9
 	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.13
+	github.com/hashicorp/go-licensing/v4 v4.0.0
 	github.com/hashicorp/go-memdb v1.3.5
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-pgmultiauth v1.0.0
