@@ -82,19 +82,25 @@
       {{yield}}
     {{else if (and this.version.isCommunity (or (not @startTimestamp) (not @endTimestamp)))}}
       {{! Empty state for community without start or end query param }}
-      <EmptyState
-        @title="Input the start and end dates to view client attribution by path."
-        @message="Only historical data may be queried. No data is available for the current month."
-      />
+      <Hds::ApplicationState class="top-padding-32" as |A|>
+        <A.Header data-test-empty-state-title @title="Input the start and end dates to view client attribution by path." />
+        <A.Body
+          data-test-empty-state-message
+          @text="Only historical data may be queried. No data is available for the current month."
+        />
+      </Hds::ApplicationState>
     {{else}}
-      <EmptyState
-        @title="No data received"
-        @message={{if
-          this.version.isCommunity
-          "Select a start and end date above to query client count data."
-          "Select a different date range to view client count data."
-        }}
-      />
+      <Hds::ApplicationState class="top-padding-32" as |A|>
+        <A.Header data-test-empty-state-title @title="No data received" />
+        <A.Body
+          data-test-empty-state-message
+          @text={{if
+            this.version.isCommunity
+            "Select a start and end date above to query client count data."
+            "Select a different date range to view client count data."
+          }}
+        />
+      </Hds::ApplicationState>
     {{/if}}
   {{/if}}
 </div>
