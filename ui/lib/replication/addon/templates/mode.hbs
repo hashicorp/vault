@@ -9,20 +9,23 @@
       <LayoutLoading />
     {{else}}
       {{#if this.model.replicationAttrs.replicationEnabled}}
-        <PageHeader as |p|>
-          <p.top>
-            <Hds::Breadcrumb>
-              <Hds::Breadcrumb::Item @text="Replication" @route="index" data-test-replication-breadcrumb />
-              <Hds::Breadcrumb::Item @text={{this.model.replicationModeForDisplay}} @current={{true}} />
-            </Hds::Breadcrumb>
-          </p.top>
-          <p.levelLeft>
-            <h1 class="has-top-margin-m title is-3" data-test-replication-title={{this.model.replicationModeForDisplay}}>
-              {{this.model.replicationModeForDisplay}}
-              <Hds::Badge @text={{this.model.replicationAttrs.modeForHeader}} data-test-replication-mode-display />
-            </h1>
-          </p.levelLeft>
-        </PageHeader>
+        <Page::Header @title={{this.model.replicationModeForDisplay}}>
+          <:breadcrumbs>
+            <Page::Breadcrumbs
+              @breadcrumbs={{array
+                (hash label="Replication" route="index")
+                (hash label=this.model.replicationModeForDisplay)
+              }}
+            />
+          </:breadcrumbs>
+          <:badges>
+            <Hds::Badge
+              @text={{this.model.replicationAttrs.modeForHeader}}
+              data-test-badge={{this.model.replicationAttrs.modeForHeader}}
+            />
+          </:badges>
+        </Page::Header>
+
         <div class="tabs-container box is-bottomless is-fullwidth is-paddingless is-marginless">
           <nav class="tabs sub-nav" aria-label="tab navigation">
             <ul>
