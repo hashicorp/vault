@@ -132,10 +132,17 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
       }
     }
     const form = new OpenApiForm(this.schemaForType(methodType, section), formData, formOptions);
+    const defaultGroup = form.formFieldGroups[0]?.['default'] || [];
+    // to improve UX, set kubernetes_ca_cert editType to file
+    if (methodType === 'kubernetes') {
+      const kubernetesCaCertField = defaultGroup.find((field) => field.name === 'kubernetes_ca_cert');
+      if (kubernetesCaCertField) {
+        kubernetesCaCertField.options.editType = 'file';
+      }
+    }
     // for jwt and oidc types, the jwks_pairs field is not deprecated but we do not render it in the UI
     // remove the field from the group before rendering the form
     if (['jwt', 'oidc'].includes(methodType)) {
-      const defaultGroup = form.formFieldGroups[0]?.['default'] || [];
       const index = defaultGroup.findIndex((field) => field.name === 'jwks_pairs');
       if (index !== undefined && index >= 0) {
         defaultGroup.splice(index, 1);

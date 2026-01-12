@@ -312,12 +312,18 @@ jobs:
           # Never do a partial restore of the web_ui if we don't get a cache hit.
           key: ui-${{ steps.ui-hash.outputs.ui-hash }}
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Set up node and yarn
+        name: Install PNPM
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          run_install: false
+          package_json_file: './ui/package.json'
+      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
+        name: Set up node and pnpm
         uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           node-version-file: ui/package.json
-          cache: yarn
-          cache-dependency-path: ui/yarn.lock
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Build UI
         run: make ci-build-ui

@@ -130,13 +130,15 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   test('authenticated it should create, edit, view, and delete a message', async function (assert) {
     // create first message
     await this.createMessageRepl({ title: 'new-message' });
-    assert.dom(GENERAL.title).hasText('new-message', 'message title shows on the details screen');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText('new-message', 'message title shows on the details screen');
     // edit message
     await click(GENERAL.linkTo('edit'));
     await fillIn(CUSTOM_MESSAGES.input('title'), `Edited new-message`);
     await click(GENERAL.submitButton);
     assert
-      .dom(GENERAL.title)
+      .dom(GENERAL.hdsPageHeaderTitle)
       .hasText(`Edited new-message`, 'edited message title shows on the details screen');
     await this.deleteMessages();
     const linkedBlocks = findAll('[data-test-list-item]');
@@ -256,14 +258,14 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       authenticated: false,
     });
     assert
-      .dom(GENERAL.title)
+      .dom(GENERAL.hdsPageHeaderTitle)
       .hasText('unauthenticated create edit view delete', 'title shows on the details screen');
     // navigate to edit the title
     await click(GENERAL.linkTo('edit'));
     await fillIn(CUSTOM_MESSAGES.input('title'), `Edited ${'unauthenticated create edit view delete'}`);
     await click(GENERAL.submitButton);
     assert
-      .dom(GENERAL.title)
+      .dom(GENERAL.hdsPageHeaderTitle)
       .hasText(
         `Edited ${'unauthenticated create edit view delete'}`,
         'edited title shows on the details screen'

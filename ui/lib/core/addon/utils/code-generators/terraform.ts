@@ -19,7 +19,7 @@ export interface TerraformTemplateArgs {
 /**
  * Generates a Terraform resource block for Vault providers.
  * @see https://registry.terraform.io/providers/hashicorp/vault/latest/docs
- * @example
+ * @example (double quotes are intentional for string values so the output is wrapped in double quotes)
  * ```
  * terraformTemplate({
  *   resource: 'vault_mount',

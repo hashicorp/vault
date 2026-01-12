@@ -3,25 +3,32 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<KvHeader
-  @pageTitle="{{@backend.id}} configuration"
-  @backend={{@backend}}
-  @breadcrumbs={{@breadcrumbs}}
-  @configRoute="configuration"
->
+<Page::Header @title="{{@backend.id}} configuration" @description="KV" @icon={{@backend.icon}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
   <:badges>
     <Hds::Badge @text="version 2" data-test-badge />
   </:badges>
   <:actions>
     <Hds::Button @color="secondary" @route="list" @text="Exit configuration" data-test-button="Exit configuration" />
   </:actions>
+</Page::Header>
 
+<Mount::ConfigureTabs
+  @configRoute="configuration"
+  @displayName="KV"
+  @path={{@backend.id}}
+  @externalRoute="secretsGeneralSettingsConfiguration"
+/>
+
+<KvTabsToolbar>
   <:toolbarActions>
     <ToolbarLink @route="configure" data-test-secret-backend-configure>
       Edit configuration
     </ToolbarLink>
   </:toolbarActions>
-</KvHeader>
+</KvTabsToolbar>
 
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#each-in @config as |key value|}}

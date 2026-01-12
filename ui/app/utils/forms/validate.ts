@@ -60,7 +60,11 @@ export const validate = (
         continue;
       }
       // dot notation may be used to define key for nested property
-      const passedValidation = useCustomValidator ? validator(data) : validator(get(data, key), options);
+      const passedValidation = useCustomValidator
+        ? // @ts-expect-error - options may or may not be defined
+          validator(data, options)
+        : // @ts-expect-error - options may or may not be defined
+          validator(get(data, key), options);
 
       if (!passedValidation) {
         // message can also be a function
