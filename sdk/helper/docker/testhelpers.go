@@ -64,6 +64,7 @@ type RunOptions struct {
 	LogStdout              io.Writer
 	VolumeNameToMountPoint map[string]string
 	Resources              container.Resources
+	ExtraHosts             []string
 }
 
 func NewDockerAPI() (*client.Client, error) {
@@ -396,6 +397,7 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 		AutoRemove:      !d.RunOptions.DoNotAutoRemove,
 		PublishAllPorts: true,
 		Resources:       d.RunOptions.Resources,
+		ExtraHosts:      d.RunOptions.ExtraHosts,
 	}
 	if len(d.RunOptions.Capabilities) > 0 {
 		hostConfig.CapAdd = d.RunOptions.Capabilities
