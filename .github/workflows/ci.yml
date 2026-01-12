@@ -436,6 +436,8 @@ jobs:
           always() &&
           needs.setup.outputs.workflow-trigger == 'push' &&
           (
+            needs.setup.result == 'failure' ||
+            needs.test-autopilot-upgrade.result == 'failure' ||
             needs.test-go.result == 'failure' ||
             needs.test-go-race.result == 'failure' ||
             needs.test-go-race.outputs.data-race-result == 'failure' ||
@@ -462,11 +464,18 @@ jobs:
                 text:
                   type: mrkdwn
                   text: |
-                    ${{ needs.test-go.result != 'failure' && ':white_check_mark:' || ':x:' }} Go tests
-                    ${{ needs.test-go-race.result != 'failure' && ':white_check_mark:' || ':x:' }} Go race tests
-                        ${{ needs.test-go-race.outputs.data-race-result != 'success' && ':x: Data race detected' || ':white_check_mark: No race detected' }}
-                    ${{ needs.test-go-testonly.result != 'failure' && ':white_check_mark:' || ':x:' }} Go testonly tests
-                    ${{ needs.test-ui.result != 'failure' && ':white_check_mark:' || ':x:' }} UI tests
+                    ${{ needs.setup.result                  == 'failure' && ':x: Setup'             || '' }}
+                    ${{ needs.test-autopilot-upgrade.result == 'failure' && ':x: Autopilot upgrade' || '' }}
+                    ${{ needs.test-go.result                == 'failure' && ':x: Go tests'          || '' }}
+                    ${{ needs.test-go-testonly.result       == 'failure' && ':x: Go testonly tests' || '' }}
+                    ${{ needs.test-go-fips.result           == 'failure' && ':x: Go FIPS tests'     || '' }}
+                    ${{ needs.test-ui.result                == 'failure' && ':x: UI tests'          || '' }}
+                    ${{ needs.test-go-race.result != 'skipped' &&
+                      (
+                        ((needs.test-go-race.outputs.data-race-result != '' && needs.test-go-race.outputs.data-race-result != 'success') && ':x: Go race tests (Data race(s) detected)') ||
+                        (needs.test-go-race.result == 'failure' && ':x: Go race tests' || '')
+                      ) || ''
+                    }}
                 accessory:
                   type: button
                   text:
