@@ -22,5 +22,7 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState @title="This group has no parent groups yet" />
+  <Hds::ApplicationState class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="This group has no parent groups yet" />
+  </Hds::ApplicationState>
 {{/if}}
