@@ -62,7 +62,7 @@ module('Acceptance | clients | counts', function (hooks) {
       return overrideResponse(403);
     });
     await visit('/vault/clients/counts/overview');
-    assert.dom(GENERAL.emptyStateTitle).hasText('You are not authorized');
+    assert.dom(GENERAL.emptyStateTitle).hasText('ERROR 403 You are not authorized');
     assert
       .dom(GENERAL.emptyStateMessage)
       .hasText(
