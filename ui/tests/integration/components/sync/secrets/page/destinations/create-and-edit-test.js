@@ -267,7 +267,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         await this.renderComponent();
 
-        assert.dom(PAGE.title).hasTextContaining(`Create Destination for ${name}`);
+        assert.dom(GENERAL.hdsPageHeaderTitle).hasTextContaining(`Create Destination for ${name}`);
 
         for (const field of this.formFields) {
           assert.dom(PAGE.fieldByAttr(field.name)).exists();
@@ -401,7 +401,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         await this.renderComponent(false, type);
 
-        assert.dom(PAGE.title).hasTextContaining(`Edit ${this.form.name}`);
+        assert.dom(GENERAL.hdsPageHeaderTitle).hasTextContaining(`Edit ${this.form.name}`);
 
         for (const field of this.formFields) {
           if (editable.includes(field.name)) {

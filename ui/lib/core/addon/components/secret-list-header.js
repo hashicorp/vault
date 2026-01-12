@@ -23,6 +23,26 @@ import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
  */
 
 export default class SecretListHeader extends Component {
+  get breadcrumbs() {
+    const breadcrumbs = [
+      { label: 'Secrets', route: 'vault.cluster.secrets' },
+      {
+        label: this.args.model.id,
+        route: 'vault.cluster.secrets.backend.list-root',
+        model: this.args.model.id,
+        current: !this.args.isConfigure,
+      },
+    ];
+
+    if (this.args.isConfigure) {
+      breadcrumbs.push([{ label: 'Configure' }]);
+
+      return breadcrumbs;
+    }
+
+    return breadcrumbs;
+  }
+
   get effectiveEngineType() {
     return getEffectiveEngineType(this.args.model.engineType);
   }

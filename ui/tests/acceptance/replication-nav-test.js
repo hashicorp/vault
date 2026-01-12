@@ -31,18 +31,21 @@ module('Acceptance | Enterprise | replication navigation', function (hooks) {
 
   test('navigate between replication types updates page', async function (assert) {
     await click(SELECTORS.navReplication);
-    assert.dom(SELECTORS.title).hasText('Disaster Recovery & Performance primary');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Disaster Recovery & Performance');
+    assert.dom(GENERAL.badge('primary')).exists('shows primary badge for dr');
     await click(SELECTORS.navPerformance);
 
     // Ensure data is expected for performance
-    assert.dom(SELECTORS.title).hasText('Performance primary');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Performance');
+    assert.dom(GENERAL.badge('primary')).exists('shows primary badge for performance');
     assert.dom(SELECTORS.primaryCluster).hasText('perf-foobar');
     assert.dom(SELECTORS.replicationSet).hasText('perf-cluster-id');
     assert.dom(SELECTORS.knownSecondariesTitle).hasText('0 Known secondaries');
 
     // Nav to DR and see updated data
     await click(SELECTORS.navDR);
-    assert.dom(SELECTORS.title).hasText('Disaster Recovery primary');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Disaster Recovery');
+    assert.dom(GENERAL.badge('primary')).exists('shows primary badge for dr');
     assert.dom(SELECTORS.primaryCluster).hasText('dr-foobar');
     assert.dom(SELECTORS.replicationSet).hasText('dr-cluster-id');
     assert.dom(SELECTORS.knownSecondariesTitle).hasText('1 Known secondaries');
