@@ -84,16 +84,25 @@ func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time
 	} else {
 		c.logger.Info("updated replicated hwm role counts", "prefix", billing.ReplicatedPrefix, "currentMonth", currentMonth)
 	}
+	if _, err = c.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, currentMonth); err != nil {
+		// We won't return an error. Instead we will log the errors and attempt to continue
+		c.logger.Error("error updating replicated max kv counts", "error", err)
+	} else {
+		c.logger.Info("updated replicated max kv counts", "prefix", billing.ReplicatedPrefix, "currentMonth", currentMonth)
+	}
 	return nil
 }
 
 func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time) error {
-	_, err := c.UpdateMaxRoleCounts(ctx, billing.LocalPrefix, currentMonth)
-	if err != nil {
+	if _, err := c.UpdateMaxRoleCounts(ctx, billing.LocalPrefix, currentMonth); err != nil {
 		c.logger.Error("error updating local max role counts", "error", err)
-		// We won't return an error. Instead we will log the errors and attempt to continue
 	} else {
 		c.logger.Info("updated local max role counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+	}
+	if _, err := c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth); err != nil {
+		c.logger.Error("error updating local max kv counts", "error", err)
+	} else {
+		c.logger.Info("updated local max kv counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
 	}
 	return nil
 }

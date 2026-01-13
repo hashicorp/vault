@@ -52,6 +52,7 @@ func (b *SystemBackend) useCaseConsumptionBillingPaths() []*framework.Path {
 func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get HWM role counts
 	replicatedMaxRoleCounts := &RoleCounts{}
+	replicatedKvHWMCounts := 0
 	var err error
 	currentMonth := time.Now()
 	previousMonth := timeutil.StartOfPreviousMonth(currentMonth)
@@ -63,6 +64,10 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving replicated max role counts: %w", err)
 		}
+		replicatedKvHWMCounts, err = b.Core.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, currentMonth)
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving replicated max kv counts: %w", err)
+		}
 	}
 
 	// We always want to get the local max role counts
@@ -71,32 +76,50 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving local max role counts: %w", err)
 	}
+	localKvHWMCounts, err := b.Core.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving local max kv counts: %w", err)
+	}
 
 	// If we are the primary, then combine the replicated and local max role counts. Else just output the local
 	// max role counts. replicatedMaxRoleCounts will be empty if we are not a primary, so this is taken care of for us.
 	combinedMaxRoleCounts := combineRoleCounts(ctx, replicatedMaxRoleCounts, localMaxRoleCounts)
+	combinedMaxKvCounts := replicatedKvHWMCounts + localKvHWMCounts
 
 	var replicatedPreviousMonthRoleCounts *RoleCounts
+	replicatedPreviousMonthKvHWMCounts := 0
 	if b.Core.isPrimary() {
 		replicatedPreviousMonthRoleCounts, err = b.Core.GetStoredHWMRoleCounts(ctx, billing.ReplicatedPrefix, previousMonth)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving replicated max role counts for previous month: %w", err)
+		}
+		replicatedPreviousMonthKvHWMCounts, err = b.Core.GetStoredHWMKvCounts(ctx, billing.ReplicatedPrefix, previousMonth)
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving replicated max kv counts for previous month: %w", err)
 		}
 	}
 	localPreviousMonthRoleCounts, err := b.Core.GetStoredHWMRoleCounts(ctx, billing.LocalPrefix, previousMonth)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving local max role counts for previous month: %w", err)
 	}
+	localPreviousMonthKvHWMCounts, err := b.Core.GetStoredHWMKvCounts(ctx, billing.LocalPrefix, previousMonth)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving local max kv counts for previous month: %w", err)
+	}
+
 	combinedPreviousMonthRoleCounts := combineRoleCounts(ctx, replicatedPreviousMonthRoleCounts, localPreviousMonthRoleCounts)
+	combinedPreviousMonthKvHWMCounts := replicatedPreviousMonthKvHWMCounts + localPreviousMonthKvHWMCounts
 
 	resp := map[string]interface{}{
 		"current_month": map[string]interface{}{
 			"timestamp":           timeutil.StartOfMonth(currentMonth),
 			"maximum_role_counts": combinedMaxRoleCounts,
+			"maximum_kv_counts":   combinedMaxKvCounts,
 		},
 		"previous_month": map[string]interface{}{
 			"timestamp":           previousMonth,
 			"maximum_role_counts": combinedPreviousMonthRoleCounts,
+			"maximum_kv_counts":   combinedPreviousMonthKvHWMCounts,
 		},
 	}
 

@@ -13,11 +13,12 @@ const (
 	BillingSubPath       = "billing/"
 	ReplicatedPrefix     = "replicated/"
 	RoleHWMCountsHWM     = "maxRoleCounts/"
+	KvHWMCountsHWM       = "maxKvCounts/"
 	LocalPrefix          = "local/"
 	BillingWriteInterval = 10 * time.Minute
 )
 
-var BillingMonthStorageFormat = "%s/%d/%02d/%s"
+var BillingMonthStorageFormat = "%s%d/%02d/%s" // e.g replicated/2026/01/maxKvCounts/
 
 type ConsumptionBilling struct {
 	// BillingStorageLock controls access to the billing storage paths
@@ -32,7 +33,10 @@ type BillingConfig struct {
 }
 
 func GetMonthlyBillingPath(localPrefix string, now time.Time, billingMetric string) string {
+	// Normalize to avoid double slashes since our prefixes include trailing "/".
+	// Example: localPrefix="replicated/", billingMetric="maxKvCounts/" =>
+	// "replicated/2026/01/maxKvCounts/"
 	year := now.Year()
-	month := now.Month()
-	return fmt.Sprintf(localPrefix, month, year, billingMetric)
+	month := int(now.Month())
+	return fmt.Sprintf(BillingMonthStorageFormat, localPrefix, year, month, billingMetric)
 }
