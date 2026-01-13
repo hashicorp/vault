@@ -13,6 +13,7 @@ import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import LdapStaticRoleForm from 'vault/forms/secrets/ldap/roles/static';
 import LdapDynamicRoleForm from 'vault/forms/secrets/ldap/roles/dynamic';
+import { formatError, overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -233,5 +234,33 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
       this.transitionCalledWith('roles.role.details', 'dynamic', name),
       'Transitions to role details route on save success'
     );
+  });
+
+  test('it should display api error when creating static roles fails', async function (assert) {
+    this.server.post('/:backend/static-role/:name', () => {
+      return overrideResponse(500, formatError('uh oh!'));
+    });
+    this.model = this.createModel;
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), 'test-role');
+    await fillIn(GENERAL.inputByAttr('dn'), 'foo');
+    await fillIn(GENERAL.inputByAttr('username'), 'bar');
+    await fillIn(GENERAL.ttl.input('Rotation period'), 5);
+    await click(GENERAL.submitButton);
+    assert
+      .dom(GENERAL.messageError)
+      .hasText('Error uh oh!', 'it renders error message returned from the API');
+  });
+
+  test('it should display api error when creating dynamic roles fails', async function (assert) {
+    this.server.post('/:backend/role/:name', () => {
+      return overrideResponse(500, formatError('uh oh!'));
+    });
+    this.model = this.dynamicEditModel;
+    await this.renderComponent();
+    await click(GENERAL.submitButton);
+    assert
+      .dom(GENERAL.messageError)
+      .hasText('Error uh oh!', 'it renders error message returned from the API');
   });
 });
