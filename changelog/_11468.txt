@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk: Add alias_metadata to tokenutil fields that auth method roles use.
+```
