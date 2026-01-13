@@ -870,3 +870,58 @@ func (c *Core) GetRoleCounts() *RoleCounts {
 func (c *Core) GetRoleCountsForCluster() *RoleCounts {
 	return c.getRoleCountsInternal(true, c.isPrimary())
 }
+
+// GetKvUsageMetrics returns a map of namespace paths to KV secret counts.
+func (c *Core) GetKvUsageMetrics(ctx context.Context, kvVersion string) (map[string]int, error) {
+	return c.GetKvUsageMetricsByNamespace(ctx, kvVersion, "", true, true)
+}
+
+// GetKvUsageMetricsByNamespace returns a map of namespace paths to KV secret counts within a specific namespace.
+func (c *Core) GetKvUsageMetricsByNamespace(ctx context.Context, kvVersion string, nsPath string, includeLocal bool, includeReplicated bool) (map[string]int, error) {
+	mounts := c.findKvMounts()
+	results := make(map[string]int)
+
+	if kvVersion == "1" || kvVersion == "2" {
+		var newMounts []*kvMount
+		for _, mount := range mounts {
+			if mount.Version == kvVersion {
+				newMounts = append(newMounts, mount)
+			}
+		}
+		mounts = newMounts
+	} else if kvVersion != "0" {
+		return results, fmt.Errorf("kv version %s not supported, must be 0, 1, or 2", kvVersion)
+	}
+
+	for _, m := range mounts {
+		if !includeLocal && m.Local {
+			continue
+		}
+		if !includeReplicated && !m.Local {
+			continue
+		}
+
+		if nsPath != "" && !strings.HasPrefix(m.Namespace.Path, nsPath) {
+			continue
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context expired")
+		default:
+			break
+		}
+
+		c.walkKvMountSecrets(ctx, m)
+
+		_, ok := results[m.Namespace.Path]
+		if ok {
+			// we need to add, not overwrite
+			results[m.Namespace.Path] += m.NumSecrets
+		} else {
+			results[m.Namespace.Path] = m.NumSecrets
+		}
+	}
+
+	return results, nil
+}
