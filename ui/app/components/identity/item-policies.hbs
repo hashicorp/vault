@@ -23,5 +23,7 @@
     </div>
   </LinkedBlock>
 {{else}}
-  <EmptyState @title="No policies associated with {{@model.name}} yet" />
+  <Hds::ApplicationState class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="No policies associated with {{@model.name}} yet" />
+  </Hds::ApplicationState>
 {{/each}}

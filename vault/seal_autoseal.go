@@ -483,12 +483,7 @@ func (d *autoSeal) StartHealthCheck(ctx context.Context) {
 		lastSeenOk := time.Now()
 
 		check := func(now time.Time) {
-			if d.core.activeContext == nil {
-				// This probably only happens during the execution of some unit tests.
-				d.logger.Warn("no active context, skipping this health check")
-				return
-			}
-			ctx, cancel := context.WithTimeout(d.core.activeContext, seal.HealthTestTimeout)
+			ctx, cancel := context.WithTimeout(ctx, seal.HealthTestTimeout)
 			defer cancel()
 
 			d.logger.Trace("performing a seal health check")

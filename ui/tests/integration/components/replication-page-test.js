@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | replication-page', function (hooks) {
   setupRenderingTest(hooks);
@@ -60,13 +61,13 @@ module('Integration | Component | replication-page', function (hooks) {
     await render(
       hbs`<ReplicationPage @model={{this.model}} as |Page|><Page.header @showTabs={{false}} /></ReplicationPage>`
     );
-    assert.dom('[data-test-replication-title="Disaster Recovery"]').hasText('Disaster Recovery');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Disaster Recovery');
 
     this.model.replicationMode = 'performance';
     await render(
       hbs`<ReplicationPage @model={{this.model}} as |Page|><Page.header @showTabs={{false}} /></ReplicationPage>`
     );
 
-    assert.dom('[data-test-replication-title="Performance"]').hasText('Performance');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Performance');
   });
 });

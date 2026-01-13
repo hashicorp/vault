@@ -65,7 +65,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
 
   test('it should display generate credentials form', async function (assert) {
     await this.renderComponent();
-    assert.dom('[data-test-credentials-header]').hasText('Generate credentials');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Generate credentials');
     assert
       .dom('[data-test-generate-credentials] p')
       .hasText(`This will generate credentials using the role ${this.roleName}.`);
@@ -118,7 +118,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
       this.generateStub.calledWith(this.roleName, this.backend, payload),
       'Generate credentials request made'
     );
-    assert.dom('[data-test-credentials-header]').hasText('Credentials');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Credentials');
     assert.dom('[data-test-k8-alert-title]').hasText('Warning');
     assert
       .dom('[data-test-k8-alert-message]')

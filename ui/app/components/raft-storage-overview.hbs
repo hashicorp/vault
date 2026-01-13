@@ -3,9 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::PageHeader class="has-top-margin-xl has-bottom-margin-m" as |PH|>
-  <PH.Title>Raft Storage</PH.Title>
-  <PH.Actions>
+<Page::Header @title="Raft Storage">
+  <:actions>
     <Hds::Dropdown as |dd|>
       <dd.ToggleButton @text="Snapshots" @color="secondary" />
       {{#if this.useServiceWorker}}
@@ -19,8 +18,8 @@
       {{/if}}
       <dd.Interactive @route="vault.cluster.storage-restore">Restore</dd.Interactive>
     </Hds::Dropdown>
-  </PH.Actions>
-</Hds::PageHeader>
+  </:actions>
+</Page::Header>
 
 <Hds::Table @caption="Raft servers">
   <:head as |H|>

@@ -19,5 +19,7 @@
     </div>
   </div>
 {{else}}
-  <EmptyState @title="No metadata associated with {{@model.name}} yet" />
+  <Hds::ApplicationState class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="No metadata associated with {{@model.name}} yet" />
+  </Hds::ApplicationState>
 {{/each-in}}

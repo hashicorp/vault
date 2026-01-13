@@ -39,11 +39,9 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await pollCluster(this.owner);
     await settled();
     assert
-      .dom('[data-test-replication-title="Disaster Recovery"]')
+      .dom(GENERAL.hdsPageHeaderTitle)
       .includesText('Disaster Recovery', 'it displays the replication type correctly');
-    assert
-      .dom('[data-test-replication-mode-display]')
-      .includesText('primary', 'it displays the cluster mode correctly');
+    assert.dom(GENERAL.badge('primary')).includesText('primary', 'it displays the cluster mode correctly');
 
     await addSecondary(secondaryName);
     // modal for copying the token appears
@@ -258,7 +256,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
     assert
-      .dom('[data-test-replication-mode-display]')
+      .dom(GENERAL.badge('secondary'))
       .hasText('secondary', 'it displays the cluster mode correctly in header');
   });
 
@@ -283,10 +281,10 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled();
 
     // Breadcrumbs only load once we're in the summary mode after enabling
-    await waitFor('[data-test-replication-breadcrumb]');
+    await waitFor(GENERAL.breadcrumb);
     // navigate using breadcrumbs back to replication.index
-    assert.dom('[data-test-replication-breadcrumb]').exists('shows the replication breadcrumb (flaky)');
-    await click('[data-test-replication-breadcrumb] a');
+    assert.dom(GENERAL.currentBreadcrumb('Replication')).exists('shows the replication breadcrumb (flaky)');
+    await click(GENERAL.breadcrumbLink('Replication'));
 
     assert
       .dom('[data-test-replication-summary-card]')

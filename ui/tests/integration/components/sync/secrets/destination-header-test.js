@@ -12,6 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | sync | Secrets::DestinationHeader', function (hooks) {
   setupRenderingTest(hooks);
@@ -33,7 +34,7 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
 
   test('it should render SyncHeader component', async function (assert) {
     await this.renderComponent();
-    assert.dom(PAGE.title).includesText('destination-aws', 'SyncHeader component renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).includesText('destination-aws', 'SyncHeader component renders');
   });
 
   test('it should render tabs', async function (assert) {
