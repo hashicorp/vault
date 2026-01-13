@@ -1,0 +1,3 @@
+```release-note:improvement
+secret-sync (enterprise): Added telemetry counters for sync/unsync operations with status breakdown by destination type, and exposed operation counters in the destinations list API response.
+```
