@@ -197,4 +197,12 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
       .dom('[data-test-overview-card-container="Accounts checked-out"]')
       .exists('AccountsCheckedOut component still renders when library discovery fails');
   });
+
+  test('it should display "None" when library request returns a 404', async function (assert) {
+    // Override server to return empty 404 response for library requests
+    this.apiLibraryStub.rejects(getErrorResponse({}, 404));
+    await this.renderComponent();
+    assert.dom('[data-test-libraries-error]').doesNotExist();
+    assert.dom('[data-test-libraries-count]').hasText('None');
+  });
 });

@@ -66,11 +66,7 @@ export function allowAllCapabilitiesStub(capabilitiesList = ['root']) {
  */
 export function overrideResponse(httpStatus = 200, payload = {}) {
   if (httpStatus === 403) {
-    return new Response(
-      403,
-      { 'Content-Type': 'application/json' },
-      JSON.stringify({ errors: ['permission denied'] })
-    );
+    return new Response(403, { 'Content-Type': 'application/json' }, formatError('permission denied'));
   }
   if (httpStatus === 404) {
     return new Response(404, { 'Content-Type': 'application/json' });
@@ -80,3 +76,5 @@ export function overrideResponse(httpStatus = 200, payload = {}) {
   }
   return new Response(httpStatus, { 'Content-Type': 'application/json' }, payload);
 }
+
+export const formatError = (msg) => JSON.stringify({ errors: [msg] });

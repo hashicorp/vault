@@ -9,7 +9,6 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
 
 import { LdapRolesCreateRouteModel } from 'ldap/routes/roles/create';
 import { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
@@ -133,7 +132,11 @@ export default class LdapCreateAndEditRolePageComponent extends Component<Args> 
             name
           );
         } catch (error) {
-          this.error = errorMessage(error, 'Error saving role. Please try again or contact support.');
+          const { message } = await this.api.parseError(
+            error,
+            'Error saving role. Please try again or contact support.'
+          );
+          this.error = message;
         }
       }
     })

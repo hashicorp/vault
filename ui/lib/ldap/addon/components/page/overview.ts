@@ -97,8 +97,12 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
       );
       this.checkInCapabilities = await this.capabilities.fetch(paths);
     } catch (error) {
-      // Hierarchical discovery failed - display inline error
-      this.librariesError = 'Unable to load complete library information. Please try refreshing the page.';
+      const { status } = await this.api.parseError(error);
+      // Only set error message if status is not a 404 which just means an empty response.
+      if (status !== 404) {
+        // Hierarchical discovery failed - display inline error
+        this.librariesError = 'Unable to load complete library information. Please try refreshing the page.';
+      }
       this.allLibraries = [];
     }
   });
