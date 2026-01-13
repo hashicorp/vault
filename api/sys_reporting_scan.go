@@ -11,15 +11,19 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func (c *Sys) ReportingScan() (*ReportingScanOutput, error) {
-	return c.ReportingScanWithContext(context.Background())
+func (c *Sys) ReportingScan(opts *ReportingScanRequest) (*ReportingScanOutput, error) {
+	return c.ReportingScanWithContext(context.Background(), opts)
 }
 
-func (c *Sys) ReportingScanWithContext(ctx context.Context) (*ReportingScanOutput, error) {
+func (c *Sys) ReportingScanWithContext(ctx context.Context, opts *ReportingScanRequest) (*ReportingScanOutput, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
 	r := c.c.NewRequest(http.MethodPost, "/v1/sys/reporting/scan")
+
+	if err := r.SetJSONBody(opts); err != nil {
+		return nil, err
+	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
@@ -42,6 +46,11 @@ func (c *Sys) ReportingScanWithContext(ctx context.Context) (*ReportingScanOutpu
 	}
 
 	return &result, err
+}
+
+// ReportingScanRequest represents the parameters consumed by the reporting scan API
+type ReportingScanRequest struct {
+	Async bool `json:"async"`
 }
 
 type ReportingScanOutput struct {
