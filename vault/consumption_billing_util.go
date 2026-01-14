@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -35,6 +36,83 @@ func combineRoleCounts(ctx context.Context, a, b *RoleCounts) *RoleCounts {
 		a.OpenLDAPDynamicRoles + b.OpenLDAPDynamicRoles,
 		a.OpenLDAPStaticRoles + b.OpenLDAPStaticRoles,
 	}
+}
+
+// storeMaxKvCountsLocked must be called with BillingStorageLock held
+func (c *Core) storeMaxKvCountsLocked(ctx context.Context, maxKvCounts int, localPathPrefix string, month time.Time) error {
+	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.KvHWMCountsHWM)
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(strconv.Itoa(maxKvCounts)),
+	}
+	return c.GetBillingSubView().Put(ctx, entry)
+}
+
+// getStoredMaxKvCountsLocked must be called with BillingStorageLock held
+func (c *Core) getStoredMaxKvCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (int, error) {
+	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.KvHWMCountsHWM)
+	entry, err := c.GetBillingSubView().Get(ctx, billingPath)
+	if err != nil {
+		return 0, err
+	}
+	if entry == nil {
+		return 0, nil
+	}
+	maxKvCounts, err := strconv.Atoi(string(entry.Value))
+	if err != nil {
+		return 0, err
+	}
+	return maxKvCounts, nil
+}
+
+func (c *Core) GetStoredHWMKvCounts(ctx context.Context, localPathPrefix string, month time.Time) (int, error) {
+	c.consumptionBilling.BillingStorageLock.RLock()
+	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	return c.getStoredMaxKvCountsLocked(ctx, localPathPrefix, month)
+}
+
+// UpdateMaxKvCounts updates the HWM kv counts for the given month, and returns the value that was stored.
+func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time) (int, error) {
+	c.consumptionBilling.BillingStorageLock.Lock()
+	defer c.consumptionBilling.BillingStorageLock.Unlock()
+
+	local := localPathPrefix == billing.LocalPrefix
+
+	// Get the current count of kv version 1 secrets
+	currentKvCounts, err := c.GetKvUsageMetricsByNamespace(ctx, "1", "", local, !local)
+	if err != nil {
+		c.logger.Error("error getting count of kv version 1 secrets", "error", err)
+		return 0, err
+	}
+	totalKvCounts := getTotalSecretsAcrossAllNamespaces(currentKvCounts)
+
+	// Get the current count of kv version 2 secrets
+	currentKvCounts, err = c.GetKvUsageMetricsByNamespace(ctx, "2", "", local, !local)
+	if err != nil {
+		c.logger.Error("error getting current count of kv version 2 secrets", "error", err)
+		return 0, err
+	}
+	totalKvCounts += getTotalSecretsAcrossAllNamespaces(currentKvCounts)
+
+	// Get the stored max kv counts
+	maxKvCounts, err := c.getStoredMaxKvCountsLocked(ctx, localPathPrefix, currentMonth)
+	if err != nil {
+		c.logger.Error("error getting stored max kv counts", "error", err)
+		return 0, err
+	}
+	if maxKvCounts == 0 {
+		maxKvCounts = totalKvCounts
+	}
+	if totalKvCounts > maxKvCounts {
+		c.logger.Info("updating max kv counts", "totalKvCounts", totalKvCounts, "maxKvCounts", maxKvCounts)
+		maxKvCounts = totalKvCounts
+	}
+	err = c.storeMaxKvCountsLocked(ctx, maxKvCounts, localPathPrefix, currentMonth)
+	if err != nil {
+		c.logger.Error("error storing max kv counts", "error", err)
+		return 0, err
+	}
+	return maxKvCounts, nil
 }
 
 // storeMaxRoleCountsLocked must be called with BillingStorageLock held
