@@ -442,6 +442,13 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 		CSR:           csr,
 	}
 
+	// Make Sure Signature Bits are Correct for EC (or ECDSA) Keys
+	// It's not possible to do later during the signing process because
+	// signingKeyType := role.KeyType // if root
+	// if caSign != nil {
+	// 	signingKeyType = caSign.ParsedCertBundle.Certificate.PublicKeyAlgorithm.String()
+	// }
+
 	// Don't deal with URLs or max path length if it's self-signed, as these
 	// normally come from the signing bundle
 	if caSign == nil {

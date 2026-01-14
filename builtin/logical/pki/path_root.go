@@ -141,7 +141,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 
-	exported, format, role, errorResp := getGenerationParams(sc, data)
+	// Tell getGenerationParams we are generating a root, so that we can validate signatureBits against KeyType
+	exported, format, role, errorResp := getGenerationParams(sc, data, true)
 	if errorResp != nil {
 		return errorResp, nil
 	}

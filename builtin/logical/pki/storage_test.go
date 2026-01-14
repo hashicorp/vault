@@ -263,7 +263,7 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 		},
 	}
 	sc := b.makeStorageContext(ctx, s)
-	_, _, role, respErr := getGenerationParams(sc, apiData)
+	_, _, role, respErr := getGenerationParams(sc, apiData, true)
 	require.Nil(t, respErr)
 
 	input := &inputBundle{
