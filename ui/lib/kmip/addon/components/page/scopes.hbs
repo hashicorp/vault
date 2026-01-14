@@ -1,0 +1,98 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<HeaderScope />
+<Toolbar>
+  {{#if @scopes.meta.total}}
+    <ToolbarFilters>
+      <FilterInput
+        aria-label="Filter scopes by name"
+        placeholder="Filter scopes by name"
+        @value={{@filterValue}}
+        @wait={{200}}
+        @onInput={{this.onFilterChange}}
+      />
+    </ToolbarFilters>
+  {{/if}}
+  <ToolbarActions>
+    <ToolbarLink @route="scopes.create" @type="add" data-test-scope-create>
+      Create scope
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+{{#if @scopes}}
+  <div class="has-bottom-margin-s">
+    {{#each @scopes as |scope|}}
+      <div data-test-list-item={{scope}}>
+        <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "scope.roles" scope}} as |Item|>
+          <Item.content>
+            <Icon @name="folder" class="has-text-grey-light" />
+            {{scope}}
+          </Item.content>
+          <Item.menu>
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="More options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              <dd.Interactive @route="scope" @model={{scope}} data-test-popup-menu="View scope">View scope</dd.Interactive>
+              {{#if
+                (has-capability
+                  @capabilities
+                  "delete"
+                  pathKey="kmipScope"
+                  params=(hash backend=this.secretMountPath.currentPath name=scope)
+                )
+              }}
+                <dd.Interactive
+                  @color="critical"
+                  {{on "click" (fn (mut this.scopeToDelete) scope)}}
+                  data-test-confirm-action-trigger
+                >
+                  Delete scope
+                </dd.Interactive>
+              {{/if}}
+            </Hds::Dropdown>
+
+            {{#if (eq this.scopeToDelete scope)}}
+              <ConfirmModal
+                @color="critical"
+                @confirmTitle="Delete scope {{this.scopeToDelete}}?"
+                @confirmMessage="This will permanently delete this scope and all roles and credentials contained within"
+                @onClose={{fn (mut this.scopeToDelete) null}}
+                @onConfirm={{this.deleteScope}}
+                data-test-scope-delete
+              />
+            {{/if}}
+          </Item.menu>
+        </ListItem>
+      </div>
+    {{/each}}
+
+    <Hds::Pagination::Numbered
+      @currentPage={{@scopes.meta.currentPage}}
+      @currentPageSize={{@scopes.meta.pageSize}}
+      @route="scopes.index"
+      @showSizeSelector={{false}}
+      @totalItems={{@scopes.meta.filteredTotal}}
+      @queryFunction={{this.paginationQueryParams}}
+      data-test-pagination
+    />
+  </div>
+{{else}}
+  {{#if @filterValue}}
+    <EmptyState @title="There are no scopes matching &quot;{{@filterValue}}&quot;" />
+  {{else}}
+    <EmptyState
+      @title="KMIP Secrets Engine"
+      @message="First, let's create a scope that our roles and credentials will belong to. A client can only access objects within their role's scope."
+    >
+      <Hds::Link::Standalone @icon="plus" @text="Create a scope" @route="scopes.create" />
+    </EmptyState>
+  {{/if}}
+{{/if}}

@@ -56,6 +56,7 @@ export default class App extends Application {
         services: [
           'api',
           'auth',
+          'capabilities',
           'download',
           'flash-messages',
           'namespace',
