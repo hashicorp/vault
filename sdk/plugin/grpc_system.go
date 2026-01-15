@@ -249,6 +249,7 @@ func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rot
 			MountPoint:       req.MountPoint,
 			Path:             req.ReqPath,
 			RotationSchedule: req.RotationSchedule,
+			RotationPolicy:   req.RotationPolicy,
 
 			// on the side outbound from the plugin, we convert duration to seconds, so seconds get sent over the wire
 			RotationWindow: int64(req.RotationWindow.Seconds()),
@@ -510,6 +511,7 @@ func (s *gRPCSystemViewServer) RegisterRotationJob(ctx context.Context, req *pb.
 		MountPoint:       req.Job.MountPoint,
 		ReqPath:          req.Job.Path,
 		RotationSchedule: req.Job.RotationSchedule,
+		RotationPolicy:   req.Job.RotationPolicy,
 		// on the side inbound to vault, we convert seconds back to time.Duration
 		// Note: this value is seconds (as per the outbound client call, despite being int64)
 		// The field is int64 because of gRPC reasons, not time.Duration reasons

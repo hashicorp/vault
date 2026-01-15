@@ -30,6 +30,8 @@ type AutomatedRotationParams struct {
 
 	// If set, will deregister all registered rotation jobs from the RotationManager for plugin.
 	DisableAutomatedRotation bool `json:"disable_automated_rotation"`
+
+	RotationPolicy string `json:"rotation_policy"`
 }
 
 // ParseAutomatedRotationFields provides common field parsing to embedding structs.
@@ -38,6 +40,7 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 	rotationWindowSecondsRaw, windowOk := d.GetOk("rotation_window")
 	rotationPeriodSecondsRaw, periodOk := d.GetOk("rotation_period")
 	disableRotation, disableRotationOk := d.GetOk("disable_automated_rotation")
+	rotationPolicyRaw, policyOk := d.GetOk("rotation_policy")
 
 	if scheduleOk {
 		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationScheduleRaw.(string) != "" {
@@ -75,6 +78,10 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 		p.DisableAutomatedRotation = disableRotation.(bool)
 	}
 
+	if policyOk {
+		p.RotationPolicy = rotationPolicyRaw.(string)
+	}
+
 	return nil
 }
 
@@ -84,6 +91,7 @@ func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]int
 	m["rotation_window"] = p.RotationWindow.Seconds()
 	m["rotation_period"] = p.RotationPeriod.Seconds()
 	m["disable_automated_rotation"] = p.DisableAutomatedRotation
+	m["rotation_policy"] = p.RotationPolicy
 }
 
 func (p *AutomatedRotationParams) ShouldRegisterRotationJob() bool {
@@ -128,6 +136,13 @@ func AddAutomatedRotationFieldsWithGroup(m map[string]*framework.FieldSchema, gr
 		"disable_automated_rotation": {
 			Type:        framework.TypeBool,
 			Description: "If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Group: group,
+			},
+		},
+		"rotation_policy": {
+			Type:        framework.TypeString,
+			Description: "Defines the rotation policy to use when performing automated rotations.",
 			DisplayAttrs: &framework.DisplayAttributes{
 				Group: group,
 			},
