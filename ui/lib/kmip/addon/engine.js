@@ -16,6 +16,7 @@ export default class KmipEngine extends Engine {
     services: [
       'api',
       'auth',
+      'capabilities',
       'download',
       'flash-messages',
       'namespace',

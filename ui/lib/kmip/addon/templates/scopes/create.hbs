@@ -3,14 +3,4 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Create a Scope">
-  <:breadcrumbs>
-    <KmipBreadcrumb @showPath={{true}} @currentRoute="Create Scope" />
-  </:breadcrumbs>
-</Page::Header>
-
-<EditForm
-  @model={{this.model}}
-  @onSave={{transition-to "vault.cluster.secrets.backend.kmip.scopes.index"}}
-  @cancelLinkParams={{array "scopes.index"}}
-/>
+<Page::Scopes::Create />
