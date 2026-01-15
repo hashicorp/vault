@@ -3,26 +3,18 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::PageHeader class="page-header" as |PH|>
-  <PH.Breadcrumb>
-    <Hds::Breadcrumb data-test-breadcrumbs>
-      <Hds::Breadcrumb::Item @text="Vault" @route="vault.cluster.dashboard" @icon="vault" />
-      <Hds::Breadcrumb::Item @text="Secrets engines" @current={{true}} />
-    </Hds::Breadcrumb>
-  </PH.Breadcrumb>
-  <PH.IconTile @icon="key" />
-
-  <PH.Title>Secrets engines</PH.Title>
-  <PH.Subtitle>Secrets engines available in the
-    {{this.namespace.currentNamespace}}
-    namespace of the
-    {{this.version.clusterName}}
-    cluster.</PH.Subtitle>
-
-  <PH.Actions>
+<Page::Header
+  @title="Secrets engines"
+  @subtitle="Secrets engines available in the {{this.namespace.currentNamespace}} namespace of the {{this.version.clusterName}}cluster."
+  @icon="key"
+>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+  <:actions>
     <Hds::Button @text="Enable new engine" @icon="plus" @route="vault.cluster.secrets.enable" data-test-enable-engine />
-  </PH.Actions>
-</Hds::PageHeader>
+  </:actions>
+</Page::Header>
 
 {{! Filters section }}
 <Hds::SegmentedGroup class="has-top-margin-m" as |SG|>

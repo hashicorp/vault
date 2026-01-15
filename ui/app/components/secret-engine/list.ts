@@ -86,6 +86,19 @@ export default class SecretEngineList extends Component<Args> {
     },
   ];
 
+  get breadcrumbs() {
+    return [
+      {
+        label: 'Vault',
+        route: 'vault.cluster.dashboard',
+        icon: 'vault',
+      },
+      {
+        label: 'Secrets engines',
+      },
+    ];
+  }
+
   get displayableBackends() {
     return this.args.secretEngines.filter((backend) => backend.shouldIncludeInList);
   }

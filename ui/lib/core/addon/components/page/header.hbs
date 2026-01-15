@@ -18,7 +18,9 @@
       {{yield to="badges"}}
     </PH.Badges>
   {{/if}}
-  {{#if @subtitle}}
+  {{#if (has-block "subtitle")}}
+    <PH.Subtitle>{{yield to="subtitle"}}</PH.Subtitle>
+  {{else if @subtitle}}
     <PH.Subtitle>{{@subtitle}}</PH.Subtitle>
   {{/if}}
   {{#if (has-block "description")}}
