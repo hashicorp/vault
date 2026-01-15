@@ -42,6 +42,18 @@ func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d 
 	resp := &logical.Response{Secret: req.Secret}
 	resp.Secret.TTL = lease.TTL
 	resp.Secret.MaxTTL = lease.MaxTTL
+	accessorID := ""
+	if req.Secret.InternalData != nil {
+		accessorIDRaw, ok := req.Secret.InternalData["accessor_id"]
+		if ok {
+			accessorID, _ = accessorIDRaw.(string)
+		}
+	}
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadCredentialRenew, map[string]interface{}{
+		"ttl":         lease.TTL.String(),
+		"max_ttl":     lease.MaxTTL.String(),
+		"accessor_id": accessorID,
+	})
 	return resp, nil
 }
 
@@ -67,6 +79,10 @@ func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d
 	if err != nil {
 		return nil, err
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadCredentialRevoke, map[string]interface{}{
+		"accessor_id": accessorID,
+	})
 
 	return nil, nil
 }
