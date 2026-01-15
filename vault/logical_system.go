@@ -192,6 +192,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 				expirationSubPath,
 				countersSubPath,
 				rotationLocalSubPath,
+				orphanLocalSubPath,
 				billing.BillingSubPath + billing.LocalPrefix,
 			},
 

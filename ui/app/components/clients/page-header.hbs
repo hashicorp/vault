@@ -3,13 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::PageHeader class="has-top-padding-l has-bottom-padding-m" as |PH|>
-  <PH.Title>
-    Client Usage
-  </PH.Title>
-
-  {{#if @activityTimestamp}}
-    <PH.Subtitle data-test-activity-timestamp>
+<Page::Header @title="Client Usage">
+  <:subtitle>
+    {{#if @activityTimestamp}}
       Dashboard last updated:
       {{date-format @activityTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
       <Hds::Button
@@ -21,9 +17,9 @@
         data-test-button="Refresh page"
         {{on "click" this.refreshRoute}}
       />
-    </PH.Subtitle>
-  {{/if}}
-  <PH.Description>
+    {{/if}}
+  </:subtitle>
+  <:description>
     {{#if (and this.version.isEnterprise @billingStartTime)}}
       {{! Enterprise should always have a @billingStartTime but as a fallback allow the user to query dates manually. }}
       {{! A dropdown renders in Clients::DateRange to query specific dates if we have a @billingStartTime }}
@@ -55,12 +51,11 @@
         </Hds::Text::Body>
       </div>
     {{/if}}
-  </PH.Description>
-
-  <PH.Actions class="align-items-end align-self-end">
+  </:description>
+  <:actions>
     {{#if this.showExportButton}}
       <Hds::Button
-        class="has-font-weight-normal"
+        class="has-font-weight-normal align-items-end align-self-end"
         data-test-export-button
         @text="Export activity data"
         @color="secondary"
@@ -78,9 +73,8 @@
       @setEditModalVisible={{this.setEditModalVisible}}
       class={{if (and this.version.isCommunity this.startDate this.endDate) "position-absolute"}}
     />
-  </PH.Actions>
-
-</Hds::PageHeader>
+  </:actions>
+</Page::Header>
 
 {{#if this.showExportModal}}
   <Hds::Modal id="attribution-csv-download-modal" class="has-text-left" @onClose={{this.resetModal}} as |M|>

@@ -88,6 +88,10 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHOTPVerify, map[string]interface{}{
+		"role_name": otpEntry.RoleName,
+	})
+
 	// Return username and IP only if there were no problems uptill this point.
 	return &logical.Response{
 		Data: map[string]interface{}{

@@ -45,6 +45,7 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 		"identity_token_audience":    "",
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
+		"rotation_policy":            "",
 		"rotation_period":            time.Duration(0).Seconds(),
 		"rotation_window":            time.Duration(0).Seconds(),
 		"disable_automated_rotation": false,
@@ -99,6 +100,7 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 		"identity_token_audience":    "",
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
+		"rotation_policy":            "",
 		"rotation_period":            time.Duration(0).Seconds(),
 		"rotation_window":            time.Duration(0).Seconds(),
 		"disable_automated_rotation": false,
@@ -162,6 +164,7 @@ func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
 		"identity_token_audience":    "",
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
+		"rotation_policy":            "",
 		"rotation_window":            time.Duration(0).Seconds(),
 		"disable_automated_rotation": false,
 	}
@@ -213,6 +216,7 @@ func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
 		"identity_token_audience":    "",
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
+		"rotation_policy":            "",
 		"rotation_window":            time.Duration(0).Seconds(),
 		"disable_automated_rotation": false,
 	}

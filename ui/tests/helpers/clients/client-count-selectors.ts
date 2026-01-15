@@ -7,7 +7,6 @@ import { camelize } from '@ember/string';
 
 // TODO: separate nested into distinct exported consts
 export const CLIENT_COUNT = {
-  activityTimestamp: '[data-test-activity-timestamp]',
   card: (name: string) => `[data-test-card="${name}"]`,
   counts: {
     description: '[data-test-counts-description]',
