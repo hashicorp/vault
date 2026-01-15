@@ -16,8 +16,10 @@ import (
 	nomadapi "github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/observations"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
 )
 
 type Config struct {
@@ -159,6 +161,8 @@ func preprePolicies(nomadClient *nomadapi.Client) error {
 func TestBackend_config_Bootstrap(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	or := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -184,11 +188,15 @@ func TestBackend_config_Bootstrap(t *testing.T) {
 		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
 	}
 
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeNomadConfigAccessWrite))
+
 	confReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), confReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
 	}
+
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeNomadConfigAccessRead))
 
 	expected := map[string]interface{}{
 		"address":               connData["address"].(string),
@@ -318,6 +326,8 @@ func TestBackend_config_access_with_certs(t *testing.T) {
 func TestBackend_renew_revoke(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	or := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -341,6 +351,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeNomadConfigAccessWrite))
 
 	req.Path = "role/test"
 	req.Data = map[string]interface{}{
@@ -351,6 +362,12 @@ func TestBackend_renew_revoke(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeNomadRoleWrite))
+	roleObs := or.ObservationsByType(ObservationTypeNomadRoleWrite)
+	require.Len(t, roleObs, 1)
+	require.Equal(t, "test", roleObs[0].Data["role_name"])
+	require.Equal(t, "client", roleObs[0].Data["token_type"])
+	require.Equal(t, false, roleObs[0].Data["global"])
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test"
@@ -364,6 +381,15 @@ func TestBackend_renew_revoke(t *testing.T) {
 	if resp.IsError() {
 		t.Fatalf("resp is error: %v", resp.Error())
 	}
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeNomadCredentialCreateSuccess))
+	credObs := or.ObservationsByType(ObservationTypeNomadCredentialCreateSuccess)
+	require.Len(t, credObs, 1)
+	require.Equal(t, "test", credObs[0].Data["role_name"])
+	require.Equal(t, "client", credObs[0].Data["token_type"])
+	require.Equal(t, false, credObs[0].Data["global"])
+	require.Equal(t, "0s", credObs[0].Data["ttl"])
+	require.Equal(t, "0s", credObs[0].Data["max_ttl"])
+	require.NotEmpty(t, credObs[0].Data["accessor_id"])
 
 	generatedSecret := resp.Secret
 	generatedSecret.TTL = 6 * time.Hour
@@ -402,11 +428,23 @@ func TestBackend_renew_revoke(t *testing.T) {
 		t.Fatal("got nil response from renew")
 	}
 
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeNomadCredentialRenew))
+	renewObs := or.ObservationsByType(ObservationTypeNomadCredentialRenew)
+	require.Len(t, renewObs, 1)
+	require.Equal(t, d.Accessor, renewObs[0].Data["accessor_id"])
+	require.Equal(t, "0s", renewObs[0].Data["ttl"])
+	require.Equal(t, "0s", renewObs[0].Data["max_ttl"])
+
 	req.Operation = logical.RevokeOperation
 	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeNomadCredentialRevoke))
+	revokeObs := or.ObservationsByType(ObservationTypeNomadCredentialRevoke)
+	require.Len(t, revokeObs, 1)
+	require.Equal(t, d.Accessor, revokeObs[0].Data["accessor_id"])
 
 	// Build a management client and verify that the token does not exist anymore
 	nomadmgmtConfig := nomadapi.DefaultConfig()
