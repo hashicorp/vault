@@ -62,3 +62,16 @@ func (t *TestObservationRecorder) ObservationsByType(observationType string) []*
 	}
 	return toReturn
 }
+
+// LastObservationOfType returns the last observation recorded of the given type.
+// If no observation of that type was recorded, it returns nil.
+func (t *TestObservationRecorder) LastObservationOfType(observationType string) *TestObservation {
+	t.l.RLock()
+	defer t.l.RUnlock()
+
+	ofType := t.observationsByType[observationType]
+	if len(ofType) == 0 {
+		return nil
+	}
+	return ofType[len(ofType)-1]
+}
