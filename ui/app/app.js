@@ -136,6 +136,7 @@ export default class App extends Application {
           secrets: 'vault.cluster.secrets.backends',
           externalMountIssuer: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
           secretsListRootConfiguration: 'vault.cluster.secrets.backend.configuration',
+          secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
         },
       },
     },
