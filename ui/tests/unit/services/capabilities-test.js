@@ -142,6 +142,45 @@ module('Unit | Service | capabilities', function (hooks) {
     assert.propEqual(actual, expected, `it returns expected response: ${JSON.stringify(actual)}`);
   });
 
+  test('fetch: it tracks the requested paths', async function (assert) {
+    const paths = ['/my/api/path', 'another/api/path'];
+
+    this.server.post('/sys/capabilities-self', () => {
+      return this.generateResponse({
+        paths,
+        capabilities: { '/my/api/path': ['read'], 'another/api/path': ['update'] },
+      });
+    });
+
+    assert.strictEqual(this.capabilities.requestedPaths.size, 0, 'requestedPaths is empty before fetch');
+
+    await this.capabilities.fetch(paths);
+
+    assert.strictEqual(this.capabilities.requestedPaths.size, 2, 'requestedPaths contains 2 items');
+    assert.true(this.capabilities.requestedPaths.has('/my/api/path'), 'contains first path');
+    assert.true(this.capabilities.requestedPaths.has('another/api/path'), 'contains second path');
+  });
+
+  test('fetch: it replaces requestedPaths on each call', async function (assert) {
+    const firstPaths = ['/path/one', '/path/two'];
+    const secondPaths = ['/path/three'];
+
+    this.server.post('/sys/capabilities-self', () => {
+      return this.generateResponse({
+        paths: firstPaths,
+        capabilities: { '/path/one': ['read'], '/path/two': ['read'], '/path/three': ['read'] },
+      });
+    });
+
+    await this.capabilities.fetch(firstPaths);
+    assert.strictEqual(this.capabilities.requestedPaths.size, 2, 'initially has 2 paths');
+
+    await this.capabilities.fetch(secondPaths);
+    assert.strictEqual(this.capabilities.requestedPaths.size, 1, 'updated to have 1 path');
+    assert.true(this.capabilities.requestedPaths.has('/path/three'), 'contains new path');
+    assert.false(this.capabilities.requestedPaths.has('/path/one'), 'no longer contains old path');
+  });
+
   test('fetchPathCapabilities: it makes request to capabilities-self and returns capabilities for single path', async function (assert) {
     const path = '/my/api/path';
     const expectedPayload = { paths: [path] };

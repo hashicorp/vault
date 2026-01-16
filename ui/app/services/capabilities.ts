@@ -6,6 +6,7 @@
 import Service, { service } from '@ember/service';
 import { sanitizePath, sanitizeStart } from 'core/utils/sanitize-path';
 import { PATH_MAP, SUDO_PATHS, SUDO_PATH_PREFIXES } from 'vault/utils/constants/capabilities';
+import { tracked } from '@glimmer/tracking';
 
 import type ApiService from 'vault/services/api';
 import type NamespaceService from 'vault/services/namespace';
@@ -14,6 +15,8 @@ import type { Capabilities, CapabilitiesMap, CapabilitiesData, CapabilityTypes }
 export default class CapabilitiesService extends Service {
   @service declare readonly api: ApiService;
   @service declare readonly namespace: NamespaceService;
+
+  @tracked requestedPaths = new Set<string>([]);
 
   /*
   Add API paths to the PATH_MAP constant using a friendly key, e.g. 'syncDestinations'.
@@ -83,6 +86,8 @@ export default class CapabilitiesService extends Service {
   }
 
   async fetch(paths: string[]): Promise<CapabilitiesMap> {
+    this.requestedPaths = new Set(paths);
+
     const payload = { paths: paths.map((path) => this.relativeNamespacePath(path)) };
 
     try {
