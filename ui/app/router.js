@@ -182,7 +182,6 @@ Router.map(function () {
           this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration', function () {
-            this.route('index', { path: '/' }); // this is still used by old engines
             this.route('general-settings');
             this.route('plugin-settings');
             // only CONFIGURABLE_SECRET_ENGINES can be configured and access the edit route

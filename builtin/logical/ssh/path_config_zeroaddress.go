@@ -65,6 +65,9 @@ func (b *backend) pathConfigZeroAddressDelete(ctx context.Context, req *logical.
 	if err != nil {
 		return nil, err
 	}
+
+	b.Backend.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHConfigZeroAddressDelete, nil)
+
 	return nil, nil
 }
 
@@ -76,6 +79,10 @@ func (b *backend) pathConfigZeroAddressRead(ctx context.Context, req *logical.Re
 	if entry == nil {
 		return nil, nil
 	}
+
+	b.Backend.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHConfigZeroAddressRead, map[string]interface{}{
+		"role_names": entry.Roles,
+	})
 
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -105,6 +112,10 @@ func (b *backend) pathConfigZeroAddressWrite(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
+
+	b.Backend.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHConfigZeroAddressWrite, map[string]interface{}{
+		"role_names": roles,
+	})
 
 	return nil, nil
 }

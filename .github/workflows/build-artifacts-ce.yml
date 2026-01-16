@@ -97,7 +97,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     name: (${{ matrix.goos }}, ${{ matrix.goarch }})
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
@@ -180,20 +180,15 @@ jobs:
           - false
         goos:
           - freebsd
-          - netbsd
-          - openbsd
-          - solaris
           - windows
         goarch:
           - 386
           - amd64
           - arm
         exclude:
-          - goos: solaris
-            goarch: 386
-          - goos: solaris
-            goarch: arm
           - goos: windows
+            goarch: arm
+          - goos: freebsd
             goarch: arm
         include:
           - goos: darwin
@@ -210,16 +205,11 @@ jobs:
             goarch: 386
             docker: true
             packages: true
-          - goos: linux
-            docker: true
-            goarch: arm
-            goarm: 6
-            packages: true
       fail-fast: true
-    name: (${{ matrix.goos }}, ${{ matrix.goarch }}${{ matrix.goarm && ' ' || '' }}${{ matrix.goarm }})
+    name: (${{ matrix.goos }}, ${{ matrix.goarch }})
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
@@ -230,7 +220,6 @@ jobs:
           create-redhat-container: false
           goarch: ${{ matrix.goarch }}
           goos: ${{ matrix.goos }}
-          goarm: ${{ matrix.goarm }}
           go-tags: ${{ matrix.go-tags != '' && matrix.go-tags || 'ui' }}
           vault-binary-name: vault
           vault-edition: ce
@@ -247,7 +236,7 @@ jobs:
       - core
       - extended
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Determine status

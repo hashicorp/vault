@@ -18,5 +18,7 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState @title="{{@model.name}} is not a member of any groups." />
+  <Hds::ApplicationState class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="{{@model.name}} is not a member of any groups." />
+  </Hds::ApplicationState>
 {{/if}}

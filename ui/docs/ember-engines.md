@@ -170,7 +170,7 @@ If you used `ember g in-repo-engine <engine-name>` to generate the engine’s bl
 
 ### Important Notes:
 
-- Anytime a new engine is created, you will need to `yarn install` and **RESTART** ember server!
+- Anytime a new engine is created, you will need to `pnpm install` and **RESTART** ember server!
 - To add `package.json` **dependencies** or **devDependencies**, you can copy + paste the dependency into corresponding sections. Most of the time, we will want to use "\*" in place of the version number to ensure all the dependencies have the latest version.
 
 ### Common blueprint commands:

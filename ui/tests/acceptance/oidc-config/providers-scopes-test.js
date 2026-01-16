@@ -92,7 +92,6 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.index',
       'create form navigates back to index on cancel'
     );
-
     await click(GENERAL.menuTrigger);
     await click('[data-test-oidc-scope-menu-link="edit"]');
     assert.strictEqual(
@@ -100,6 +99,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.scope.edit',
       'linked block popup menu navigates to edit'
     );
+
     await click(SELECTORS.scopeCancelButton);
     assert.strictEqual(
       currentRouteName(),
@@ -108,7 +108,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
 
     // navigate to details from index page
-    await click('[data-test-breadcrumb-link="oidc-scopes"] a');
+    await click(GENERAL.breadcrumbAtIdx(0));
     await click(GENERAL.menuTrigger);
     await click('[data-test-oidc-scope-menu-link="details"]');
     assert.strictEqual(
@@ -148,7 +148,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
     await visit(OIDC_BASE_URL + '/scopes');
     await click('[data-test-oidc-scope-linked-block="test-scope"]');
-    assert.dom('[data-test-oidc-scope-header]').hasText('test-scope', 'renders scope name');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('test-scope', 'renders scope name');
     assert.dom(SELECTORS.scopeDetailsTab).hasClass('active', 'details tab is active');
 
     // try to delete scope
@@ -232,7 +232,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       .hasText('this is an edit test', 'has correct edited description');
 
     // create a provider using test-scope
-    await click('[data-test-breadcrumb-link="oidc-scopes"] a');
+    await click(GENERAL.breadcrumbAtIdx(0));
     await click(GENERAL.tab('providers'));
     assert.dom(GENERAL.tab('providers')).hasClass('active', 'providers tab is active');
     await click('[data-test-oidc-provider-create]');
@@ -376,7 +376,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
 
     // navigate to details from index page
-    await click('[data-test-breadcrumb-link="oidc-providers"] a');
+    await click(GENERAL.breadcrumbAtIdx(0));
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.providers.index',

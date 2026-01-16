@@ -33,6 +33,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-licensing/v4"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
@@ -270,6 +271,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.TB, opts *CoreConfig) *Core {
 	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
+	conf.BillingConfig = opts.BillingConfig
 	testApplyEntBaseConfig(conf, opts)
 
 	c, err := NewCore(conf)
@@ -1096,6 +1098,7 @@ type TestClusterOptions struct {
 	SkipInit                 bool
 	HandlerFunc              HandlerHandler
 	DefaultHandlerProperties HandlerProperties
+	ClusterHandlerProperties HandlerProperties
 
 	// BaseListenAddress is used to explicitly assign ports in sequence to the
 	// listener of each core.  It should be a string of the form
@@ -1210,7 +1213,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	}
 
 	var numCores int
-	if opts == nil || opts.NumCores == 0 {
+	if opts.NumCores == 0 {
 		numCores = DefaultNumCores
 	} else {
 		numCores = opts.NumCores
@@ -1225,13 +1228,13 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	var testCluster TestCluster
 
 	switch {
-	case opts != nil && opts.Logger != nil && !reflect.ValueOf(opts.Logger).IsNil():
+	case opts.Logger != nil && !reflect.ValueOf(opts.Logger).IsNil():
 		testCluster.Logger = opts.Logger
 	default:
 		testCluster.Logger = corehelpers.NewTestLogger(t)
 	}
 
-	if opts != nil && opts.TempDir != "" {
+	if opts.TempDir != "" {
 		if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(opts.TempDir, 0o700); err != nil {
 				t.Fatal(err)
@@ -1247,7 +1250,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	}
 
 	var caKey *ecdsa.PrivateKey
-	if opts != nil && opts.CAKey != nil {
+	if opts.CAKey != nil {
 		caKey = opts.CAKey
 	} else {
 		caKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -1257,7 +1260,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	}
 	testCluster.CAKey = caKey
 	var caBytes []byte
-	if opts != nil && len(opts.CACert) > 0 {
+	if len(opts.CACert) > 0 {
 		caBytes = opts.CACert
 	} else {
 		caCertTemplate := &x509.Certificate{
@@ -1418,7 +1421,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 			NextProtos:     []string{"h2", "http/1.1"},
 			GetCertificate: certGetter.GetCertificate,
 		}
-		if opts != nil && opts.RequireClientAuth {
+		if opts.RequireClientAuth {
 			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 			testCluster.ClientAuthRequired = true
 		}
@@ -1545,6 +1548,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		coreConfig.DevToken = base.DevToken
 		coreConfig.RecoveryMode = base.RecoveryMode
 		coreConfig.ActivityLogConfig = base.ActivityLogConfig
+		coreConfig.BillingConfig = base.BillingConfig
 		coreConfig.EnableResponseHeaderHostname = base.EnableResponseHeaderHostname
 		coreConfig.EnableResponseHeaderRaftNodeID = base.EnableResponseHeaderRaftNodeID
 		coreConfig.RollbackPeriod = base.RollbackPeriod
@@ -1603,7 +1607,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		testCluster.LicensePrivateKey = priKey
 	}
 
-	if opts != nil && opts.InmemClusterLayers {
+	if opts.InmemClusterLayers {
 		if opts.ClusterLayers != nil {
 			t.Fatalf("cannot specify ClusterLayers when InmemClusterLayers is true")
 		}
@@ -1614,7 +1618,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		opts.ClusterLayers = inmemCluster
 	}
 
-	if opts != nil && len(opts.Plugins) != 0 {
+	if len(opts.Plugins) != 0 {
 		var plugins []pluginhelpers.TestPlugin
 		for _, pluginType := range opts.Plugins {
 			if pluginType.Container && runtime.GOOS != "linux" {
@@ -1694,7 +1698,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	testCluster.Cores = ret
 
 	// Initialize cores
-	if opts == nil || !opts.SkipInit {
+	if !opts.SkipInit {
 		testCluster.initCores(t, opts)
 	}
 
@@ -1716,11 +1720,9 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	}
 
 	// Setup
-	if opts != nil {
-		if opts.SetupFunc != nil {
-			testCluster.SetupFunc = func() {
-				opts.SetupFunc(t, &testCluster)
-			}
+	if opts.SetupFunc != nil {
+		testCluster.SetupFunc = func() {
+			opts.SetupFunc(t, &testCluster)
 		}
 	}
 
@@ -1831,6 +1833,11 @@ func (cluster *TestCluster) StartCore(t testing.TB, idx int, opts *TestClusterOp
 	}
 
 	tcc.Logger().Info("restarted test core", "core", idx)
+}
+
+type TestLicenseOptions struct {
+	PubKey        ed25519.PublicKey
+	IssuerOptions licensing.IssuerOptions
 }
 
 func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []*TestListener, pubKey ed25519.PublicKey) (func(), *Core, CoreConfig, http.Handler) {
@@ -1966,6 +1973,12 @@ func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreC
 	if localConfig.Seal != nil {
 		localConfig.Seal.SetCore(c)
 	}
+
+	// Set test public keys in the core for tests that call license reloads
+	c.testSetTestPubKeys(localConfig.LicensingConfig.AdditionalPublicKeys)
+
+	// Set test license issuer  options in the core for tests that call license reloads
+	c.testSetTestIssuerOptions(localConfig.LicensingConfig.IssuerOptions)
 
 	return cleanupFunc, c, localConfig, handler
 }

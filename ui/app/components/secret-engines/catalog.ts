@@ -43,6 +43,18 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
   @tracked flyoutPlugin: unknown = null;
   @tracked flyoutPluginType: string | null = null;
 
+  get breadcrumbs() {
+    return [
+      {
+        label: 'Secrets engines',
+        route: 'vault.cluster.secrets.backends',
+      },
+      {
+        label: 'Enable secrets engine',
+      },
+    ];
+  }
+
   get secretEngines() {
     // If an enterprise license is present, return all secret engines;
     // otherwise, return only the secret engines supported in OSS.

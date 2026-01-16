@@ -58,7 +58,9 @@ export function filterEnginesByMountCategory({
 }
 
 export function isAddonEngine(type: string, version: number) {
-  if (type === 'kv' && version === 1) return false;
+  if (type === 'kv' && version === 1) {
+    return false;
+  }
   const engineRoute = ALL_ENGINES.find((engine) => engine.type === type)?.engineRoute;
   return !!engineRoute;
 }
@@ -68,7 +70,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'cloud',
     displayName: 'AliCloud',
     glyph: 'alibaba-color',
-    isOldEngine: true,
     mountCategory: ['auth', 'secret'],
     type: 'alicloud',
   },
@@ -86,7 +87,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     displayName: 'AWS',
     glyph: 'aws-color',
     isConfigurable: true,
-    isOldEngine: true,
     isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'aws',
@@ -95,7 +95,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'cloud',
     displayName: 'Azure',
     glyph: 'azure-color',
-    isOldEngine: true,
     isOnlyMountable: true,
     isConfigurable: true,
     isWIF: true,
@@ -106,13 +105,11 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'infra',
     displayName: 'Consul',
     glyph: 'consul-color',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'consul',
   },
   {
     displayName: 'Cubbyhole',
-    isOldEngine: true,
     type: 'cubbyhole',
     mountCategory: ['secret'],
   },
@@ -120,7 +117,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'infra',
     displayName: 'Databases',
     glyph: 'database',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'database',
   },
@@ -137,7 +133,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'cloud',
     displayName: 'Google Cloud',
     glyph: 'gcp-color',
-    isOldEngine: true,
     isOnlyMountable: true,
     isConfigurable: true,
     isWIF: true,
@@ -148,7 +143,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'cloud',
     displayName: 'Google Cloud KMS',
     glyph: 'gcp-color',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'gcpkms',
   },
@@ -165,8 +159,8 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'KV',
     engineRoute: 'kv.list',
+    configRoute: 'kv.configuration', // only utilized to display config data for kvv2, not in conjunction with isConfigurable as templates determine whether engine is kv v1 or v2
     glyph: 'key-values',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'kv',
   },
@@ -185,7 +179,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'Transform',
     glyph: 'transform-data',
-    isOldEngine: true,
     mountCategory: ['secret'],
     requiredFeature: 'Transform Secrets Engine',
     requiresEnterprise: true,
@@ -223,7 +216,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'infra',
     displayName: 'Nomad',
     glyph: 'nomad-color',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'nomad',
   },
@@ -267,7 +259,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'infra',
     displayName: 'RabbitMQ',
     glyph: 'rabbitmq-color',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'rabbitmq',
   },
@@ -285,7 +276,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'SSH',
     glyph: 'terminal-screen',
-    isOldEngine: true,
     isConfigurable: true,
     mountCategory: ['secret'],
     type: 'ssh',
@@ -303,7 +293,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'TOTP',
     glyph: 'history',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'totp',
   },
@@ -311,7 +300,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'Transit',
     glyph: 'swap-horizontal',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'transit',
   },

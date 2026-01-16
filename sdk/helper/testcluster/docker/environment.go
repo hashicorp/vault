@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"maps"
 	"math/big"
 	mathrand "math/rand"
 	"net"
@@ -498,6 +499,7 @@ type DockerClusterNode struct {
 	DataVolumeName       string
 	cleanupVolume        func()
 	AllClients           []*api.Client
+	ExtraAddrs           []string
 }
 
 func (n *DockerClusterNode) TLSConfig() *tls.Config {
@@ -668,6 +670,11 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		defaultListenerConfig = n.createDefaultListenerConfig()
 	}
 
+	// Merge custom listener config options to default config
+	if opts.VaultNodeConfig != nil && opts.VaultNodeConfig.CustomListenerConfigOpts != nil {
+		maps.Copy(defaultListenerConfig["tcp"].(map[string]interface{}), opts.VaultNodeConfig.CustomListenerConfigOpts)
+	}
+
 	listenerConfig = append(listenerConfig, defaultListenerConfig)
 	ports := []string{"8200/tcp", "8201/tcp"}
 
@@ -697,6 +704,11 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 				return fmt.Errorf("duplicate port %d specified", config.Port)
 			}
 			ports = append(ports, portStr)
+		}
+	}
+	if opts.VaultNodeConfig != nil {
+		for _, portNo := range opts.VaultNodeConfig.AdditionalTCPPorts {
+			ports = append(ports, fmt.Sprintf("%d/tcp", portNo))
 		}
 	}
 	vaultCfg["listener"] = listenerConfig
@@ -934,7 +946,11 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 
 	n.AllClients = append(n.AllClients, client)
 
-	for _, addr := range svc.StartResult.Addrs[2:] {
+	end := len(svc.StartResult.Addrs)
+	if opts.VaultNodeConfig != nil {
+		end = 2 + len(opts.VaultNodeConfig.AdditionalListeners)
+	}
+	for _, addr := range svc.StartResult.Addrs[2:end] {
 		// The second element of this list of addresses is the cluster address
 		// We do not want to create a client for the cluster address mapping
 		client, err := n.newAPIClientForAddress(addr)
@@ -943,6 +959,9 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		}
 		client.SetToken(n.Cluster.rootToken)
 		n.AllClients = append(n.AllClients, client)
+	}
+	if len(svc.StartResult.Addrs) > end {
+		n.ExtraAddrs = svc.StartResult.Addrs[end:]
 	}
 	return nil
 }
@@ -1254,8 +1273,61 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 	if err := os.MkdirAll(node.WorkDir, 0o755); err != nil {
 		return err
 	}
+	if err := copyDirContents(node.WorkDir, dc.tmpDir); err != nil {
+		return err
+	}
 	if err := node.Start(ctx, opts); err != nil {
 		return err
+	}
+	return nil
+}
+
+func copyFile(to string, from string) error {
+	in, err := os.Open(from)
+	if err != nil {
+		return fmt.Errorf("failed to open source file %s: %w", from, err)
+	}
+	defer in.Close()
+
+	out, err := os.Create(to)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file %s: %w", to, err)
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return fmt.Errorf("failed to copy file content from %s to %s: %w", from, to, err)
+	}
+
+	// Copy file permissions
+	info, err := os.Stat(from)
+	if err != nil {
+		return fmt.Errorf("failed to get source file info %s: %w", from, err)
+	}
+	err = os.Chmod(to, info.Mode())
+	if err != nil {
+		return fmt.Errorf("failed to set destination file permissions %s: %w", to, err)
+	}
+
+	return nil
+}
+
+func copyDirContents(to string, from string) error {
+	entries, err := os.ReadDir(from)
+	if err != nil {
+		return fmt.Errorf("failed to read source directory %s: %w", from, err)
+	}
+
+	for _, entry := range entries {
+		fromPath := filepath.Join(from, entry.Name())
+		toPath := filepath.Join(to, entry.Name())
+
+		if !entry.IsDir() {
+			if err = copyFile(toPath, fromPath); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -1356,6 +1428,28 @@ func (dc *DockerCluster) GetActiveClusterNode() *DockerClusterNode {
 	}
 
 	return dc.ClusterNodes[node]
+}
+
+func (dc *DockerCluster) GetActiveAndStandbys() (*DockerClusterNode, []*DockerClusterNode) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	activeIndex, err := testcluster.WaitForActiveNode(ctx, dc)
+	if err != nil {
+		panic(fmt.Sprintf("no cluster node became active in timeout window: %v", err))
+	}
+
+	var leaderNode *DockerClusterNode
+	var standbyNodes []*DockerClusterNode
+	for i, node := range dc.ClusterNodes {
+		if i == activeIndex {
+			leaderNode = node
+			continue
+		}
+		standbyNodes = append(standbyNodes, node)
+	}
+
+	return leaderNode, standbyNodes
 }
 
 /* Notes on testing the non-bridge network case:

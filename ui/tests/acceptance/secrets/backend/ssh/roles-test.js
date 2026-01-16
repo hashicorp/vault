@@ -109,17 +109,21 @@ module('Acceptance | ssh | roles', function (hooks) {
     assert.expect(28);
     const sshPath = `ssh-${this.uid}`;
     await enablePage.enable('ssh', sshPath);
-    await click(GENERAL.tab('Configuration'));
-    await click(SES.configure);
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Configure'));
     // default has generate CA checked so we just submit the form
     await click(GENERAL.submitButton);
+    await click(GENERAL.tabLink('plugin-settings'));
+
     // There is a delay in the backend for the public key to be generated, wait for it to complete by checking that the public key is displayed
     await waitFor(GENERAL.infoRowLabel('Public key'));
-    await click(GENERAL.tab(sshPath));
+    await click(GENERAL.button('Exit configuration'));
     for (const role of ROLES) {
       // create a role
       await click(SES.createSecretLink);
-      assert.dom(SES.secretHeader).includesText('SSH Role', `${role.type}: renders the create page`);
+      assert
+        .dom(GENERAL.hdsPageHeaderTitle)
+        .includesText('SSH Role', `${role.type}: renders the create page`);
 
       await fillIn(GENERAL.inputByAttr('name'), role.name);
       await fillIn(GENERAL.inputByAttr('keyType'), role.type);

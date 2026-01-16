@@ -288,7 +288,7 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 			return nil, err
 		}
 	} else {
-		signedCertBundle, issuerId, err = issueCertFromCsr(ac, csr)
+		signedCertBundle, issuerId, err = issueCertFromCsr(b, ac, csr)
 		if err != nil {
 			return nil, err
 		}
@@ -339,13 +339,15 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 		observe.NewAdditionalPKIMetadata("issuer_id", issuerId.String()),
 		observe.NewAdditionalPKIMetadata("order_id", order.OrderId),
 		observe.NewAdditionalPKIMetadata("stored", stored),
+		observe.NewAdditionalPKIMetadata("not_before", signedCertBundle.Certificate.NotBefore.Format(time.RFC3339)),
+		observe.NewAdditionalPKIMetadata("not_after", signedCertBundle.Certificate.NotAfter.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("subject_key_id", signedCertBundle.Certificate.SubjectKeyId),
 		observe.NewAdditionalPKIMetadata("authority_key_id", signedCertBundle.Certificate.AuthorityKeyId),
 		observe.NewAdditionalPKIMetadata("public_key_algorithm", signedCertBundle.Certificate.PublicKeyAlgorithm.String()),
 		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(signedCertBundle.Certificate.PublicKey)),
 		observe.NewAdditionalPKIMetadata("common_name", signedCertBundle.Certificate.Subject.CommonName),
 		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(signedCertBundle.Certificate)),
-		observe.NewAdditionalPKIMetadata("certificate_expiry", order.CertificateExpiry.String()),
+		observe.NewAdditionalPKIMetadata("order_expires", order.Expires.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("status", ACMEOrderValid),
 		observe.NewAdditionalPKIMetadata("account_id", order.AccountId),
 	)
@@ -553,7 +555,7 @@ func maybeAugmentReqDataWithSuitableCN(ac *acmeContext, csr *x509.CertificateReq
 	}
 }
 
-func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuing.IssuerID, error) {
+func issueCertFromCsr(b *backend, ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuing.IssuerID, error) {
 	pemBlock := &pem.Block{
 		Type:    "CERTIFICATE REQUEST",
 		Headers: nil,
@@ -573,7 +575,7 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 	// (TLS) clients are mostly verifying against server's DNS SANs.
 	maybeAugmentReqDataWithSuitableCN(ac, csr, data)
 
-	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(ac.Issuer.ID.String(), issuing.IssuanceUsage)
+	signingBundle, issuer, err := ac.sc.fetchCAInfoWithIssuer(ac.Issuer.ID.String(), issuing.IssuanceUsage)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed loading CA %s: %w", ac.Issuer.ID.String(), err)
 	}
@@ -625,12 +627,13 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 	// unit, we have no way of validating this (via ACME here, without perhaps
 	// an external policy engine), and thus should not be setting it on our
 	// final issued certificate.
+	b.adjustInputBundle(input)
 	parsedBundle, _, err := signCert(ac.sc.System(), input, signingBundle, false /* is_ca=false */, false /* use_csr_values */)
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: refusing to sign CSR: %s", ErrBadCSR, err.Error())
 	}
 
-	if err = issuing.VerifyCertificate(ac.Context, ac.sc.Storage, issuerId, parsedBundle); err != nil {
+	if err = issuing.VerifyCertificate(ac.Issuer, ac.sc.System(), parsedBundle); err != nil {
 		return nil, "", fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
@@ -642,7 +645,7 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		}
 	}
 
-	return parsedBundle, issuerId, err
+	return parsedBundle, issuer.ID, err
 }
 
 func parseCsrFromFinalize(data map[string]interface{}) (*x509.CertificateRequest, error) {
@@ -886,10 +889,10 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, req *logical.Request, _ *
 		observe.NewAdditionalPKIMetadata("role_name", role),
 		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
 		observe.NewAdditionalPKIMetadata("issuer_id", issuerId),
-		observe.NewAdditionalPKIMetadata("not_before", notBefore.Format(time.RFC3339)),
-		observe.NewAdditionalPKIMetadata("not_after", notAfter.Format(time.RFC3339)),
+		observe.NewAdditionalPKIMetadata("order_not_before", notBefore.Format(time.RFC3339)),
+		observe.NewAdditionalPKIMetadata("order_not_after", notAfter.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("order_id", order.OrderId),
-		observe.NewAdditionalPKIMetadata("expires", order.Expires.Format(time.RFC3339)),
+		observe.NewAdditionalPKIMetadata("order_expires", order.Expires.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("account_id", order.AccountId),
 	)
 

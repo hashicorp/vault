@@ -8,8 +8,11 @@ import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { isAddonEngine, filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import { getModelTypeForEngine } from 'vault/utils/model-helpers/secret-engine-helpers';
 import { service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
+import { getEnginePathParam } from 'vault/utils/backend-route-helpers';
 import { assert } from '@ember/debug';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 import engineDisplayData from 'vault/helpers/engines-display-data';
@@ -49,57 +52,34 @@ export default Route.extend({
     },
   },
 
-  modelTypeForTransform(tab) {
-    let modelType;
-    switch (tab) {
-      case 'role':
-        modelType = 'transform/role';
-        break;
-      case 'template':
-        modelType = 'transform/template';
-        break;
-      case 'alphabet':
-        modelType = 'transform/alphabet';
-        break;
-      default: // CBS TODO: transform/transformation
-        modelType = 'transform';
-        break;
-    }
-    return modelType;
-  },
-
   secretParam() {
     const { secret } = this.paramsFor(this.routeName);
     return secret ? normalizePath(secret) : '';
   },
 
-  enginePathParam() {
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    return backend;
-  },
-
   beforeModel() {
     const secret = this.secretParam();
-    const backend = this.enginePathParam();
+    const backend = getEnginePathParam(this);
     const { tab } = this.paramsFor('vault.cluster.secrets.backend.list-root');
     const secretEngine = this.modelFor('vault.cluster.secrets.backend');
     const type = secretEngine?.engineType;
+    const effectiveType = getEffectiveEngineType(type);
     assert('secretEngine.engineType is not defined', !!type);
     // if configuration only, redirect to configuration route
-    if (engineDisplayData(type)?.isOnlyMountable) {
+    if (engineDisplayData(effectiveType)?.isOnlyMountable) {
       return this.router.transitionTo('vault.cluster.secrets.backend.configuration', backend);
     }
 
     const engineRoute = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: true }).find(
-      (engine) => engine.type === type
+      (engine) => engine.type === effectiveType
     )?.engineRoute;
-    if (!type || !SUPPORTED_BACKENDS.includes(type)) {
+    if (!type || !SUPPORTED_BACKENDS.includes(effectiveType)) {
       return this.router.transitionTo('vault.cluster.secrets');
     }
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
       return this.router.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
-    if (isAddonEngine(type, secretEngine.version)) {
+    if (isAddonEngine(effectiveType, secretEngine.version)) {
       if (engineRoute === 'kv.list' && pathIsDirectory(secret)) {
         return this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', backend, secret);
       }
@@ -108,33 +88,22 @@ export default Route.extend({
       // if it's KV v2 but not registered as an addon, it's type generic
       return this.router.transitionTo('vault.cluster.secrets.backend.kv.list', backend);
     }
-    const modelType = this.getModelType(type, tab);
+    const modelType = this.getModelType(effectiveType, tab);
     return this.pathHelp.hydrateModel(modelType, backend).then(() => {
       this.store.unloadAll('capabilities');
     });
   },
 
   getModelType(type, tab) {
-    const types = {
-      database: tab === 'role' ? 'database/role' : 'database/connection',
-      transit: 'transit-key',
-      ssh: 'role-ssh',
-      transform: this.modelTypeForTransform(tab),
-      aws: 'role-aws',
-      cubbyhole: 'secret',
-      kv: 'secret',
-      keymgmt: `keymgmt/${tab || 'key'}`,
-      generic: 'secret',
-      totp: 'totp-key',
-    };
-    return types[type];
+    return getModelTypeForEngine(type, { tab });
   },
 
   async model(params) {
     const secret = this.secretParam() || '';
-    const backend = this.enginePathParam();
+    const backend = getEnginePathParam(this);
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
-    const modelType = this.getModelType(backendModel.engineType, params.tab);
+    const effectiveType = getEffectiveEngineType(backendModel.engineType);
+    const modelType = this.getModelType(effectiveType, params.tab);
 
     return hash({
       secret,
@@ -165,7 +134,7 @@ export default Route.extend({
     const secretParams = this.paramsFor(this.routeName);
     const secret = resolvedModel.secret;
     const model = resolvedModel.secrets;
-    const backend = this.enginePathParam();
+    const backend = getEnginePathParam(this);
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
     const has404 = this.has404;
     // only clear store cache if this is a new model
@@ -179,7 +148,7 @@ export default Route.extend({
       backend,
       backendModel,
       baseKey: { id: secret },
-      backendType: backendModel.engineType,
+      backendType: getEffectiveEngineType(backendModel.engineType),
     });
     if (!has404) {
       const pageFilter = secretParams.pageFilter;
@@ -207,7 +176,7 @@ export default Route.extend({
   actions: {
     error(error, transition) {
       const secret = this.secretParam();
-      const backend = this.enginePathParam();
+      const backend = getEnginePathParam(this);
       const is404 = error.httpStatus === 404;
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
       const hasModel = this.controllerFor(this.routeName).hasModel;

@@ -24,8 +24,7 @@ import Component from '@glimmer/component';
 export default class PolicyExampleComponent extends Component {
   // formatting here is purposeful so that whitespace renders correctly in JsonEditor
   policyTemplates = {
-    acl: `
-# Grant 'create', 'read' , 'update', and ‘list’ permission
+    acl: `# Grant 'create', 'read' , 'update', and ‘list’ permission
 # to paths prefixed by 'secret/*'
 path "secret/*" {
   capabilities = [ "create", "read", "update", "list" ]
@@ -37,8 +36,7 @@ path "secret/super-secret" {
   capabilities = ["deny"]
 }
 `,
-    rgp: `
-# Import strings library that exposes common string operations
+    rgp: `# Import strings library that exposes common string operations
 import "strings"
 
 # Conditional rule (precond) checks the incoming request endpoint
@@ -54,8 +52,7 @@ main = rule when precond {
       identity.entity.name is "James Thomas"
 }
 `,
-    egp: `
-import "time"
+    egp: `import "time"
 
 # Expect requests to only happen during work days (Monday
 # through Friday) 0 for Sunday and 6 for Saturday

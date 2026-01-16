@@ -40,6 +40,11 @@ export default class KvPathsCard extends Component {
         text: 'Use this path when referring to this secret in the API.',
       },
       {
+        label: 'Configuration path',
+        snippet: namespace ? `${encodePath(namespace)}/${data}` : data,
+        text: 'Use this path in policies, Vault Agent configurations, and other tools that reference the logical path.',
+      },
+      {
         label: 'CLI path',
         snippet: namespace ? `-namespace=${namespace} ${cli}` : cli,
         text: 'Use this path when referring to this secret in the CLI.',
@@ -51,6 +56,11 @@ export default class KvPathsCard extends Component {
               label: 'API path for metadata',
               snippet: namespace ? `/v1/${encodePath(namespace)}/${metadata}` : `/v1/${metadata}`,
               text: `Use this path when referring to this secret's metadata in the API and permanent secret deletion.`,
+            },
+            {
+              label: 'Configuration metadata path',
+              snippet: namespace ? `${encodePath(namespace)}/${metadata}` : metadata,
+              text: 'Use this path in policies and other tools that reference the logical metadata path.',
             },
           ]),
     ];

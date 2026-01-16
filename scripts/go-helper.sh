@@ -118,7 +118,7 @@ mod_tidy() {
     pushd "$(dirname "$mod")" > /dev/null || (echo "failed to push into module dir" && exit 1)
     GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp go mod tidy
     popd > /dev/null || (echo "failed to pop out of module dir" && exit 1)
-  done < <(find . -type f -name go.mod -print0)
+  done < <(find . -type f -name go.mod ! -path '*/fixtures/*' -print0)
 }
 
 main() {

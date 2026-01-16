@@ -4,21 +4,18 @@
  */
 
 import LdapRolesRoute from '../roles';
-import { service } from '@ember/service';
-import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
-import { hash } from 'rsvp';
 
-import type Store from '@ember-data/store';
 import type Transition from '@ember/routing/transition';
-import type LdapRoleModel from 'vault/models/ldap/role';
-import type SecretEngineModel from 'vault/models/secret-engine';
+import type { LdapRole } from 'vault/secrets/ldap';
 import type Controller from '@ember/controller';
-import type { Breadcrumb } from 'vault/vault/app-types';
+import type { Breadcrumb } from 'vault/app-types';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import { LdapApplicationModel } from '../application';
 
 interface RouteModel {
-  backendModel: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   promptConfig: boolean;
-  roles: Array<LdapRoleModel>;
+  roles: Array<LdapRole>;
 }
 
 interface RouteController extends Controller {
@@ -26,12 +23,7 @@ interface RouteController extends Controller {
   model: RouteModel;
 }
 
-@withConfig('ldap/config')
 export default class LdapRolesIndexRoute extends LdapRolesRoute {
-  @service declare readonly store: Store; // necessary for @withConfig decorator
-
-  declare promptConfig: boolean;
-
   queryParams = {
     pageFilter: {
       refreshModel: true,
@@ -41,13 +33,16 @@ export default class LdapRolesIndexRoute extends LdapRolesRoute {
     },
   };
 
-  model(params: { page?: string; pageFilter: string }) {
-    const backendModel = this.modelFor('application') as SecretEngineModel;
-    return hash({
-      backendModel,
-      promptConfig: this.promptConfig,
-      roles: this.lazyQuery(backendModel.id, params, { showPartialError: true }),
-    });
+  async model(params: { page?: string; pageFilter: string }) {
+    const { page, pageFilter: filter } = params;
+    const { secretsEngine, promptConfig } = this.modelFor('application') as LdapApplicationModel;
+    const { roles, capabilities } = await this.fetchRolesAndCapabilities({ page: Number(page) || 1, filter });
+    return {
+      secretsEngine,
+      promptConfig,
+      roles,
+      capabilities,
+    };
   }
 
   setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {
@@ -55,7 +50,7 @@ export default class LdapRolesIndexRoute extends LdapRolesRoute {
 
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id, route: 'overview' },
+      { label: resolvedModel.secretsEngine.id, route: 'overview' },
       { label: 'Roles' },
     ];
   }

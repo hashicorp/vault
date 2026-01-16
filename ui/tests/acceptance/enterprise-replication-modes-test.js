@@ -21,10 +21,9 @@ const s = {
 };
 
 // wait for specific title selector as an attempt to stabilize flaky tests
-async function assertTitle(assert, title, altSelector) {
-  const selector = altSelector || title;
-  await waitFor(s.title(selector));
-  assert.dom(s.title(selector)).hasText(title);
+async function assertTitle(assert, title) {
+  await waitFor(GENERAL.hdsPageHeaderTitle);
+  assert.dom(GENERAL.hdsPageHeaderTitle).hasText(title);
 }
 
 module('Acceptance | Enterprise | replication modes', function (hooks) {
@@ -124,7 +123,8 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     assert.dom(s.enableForm).exists('it shows the enable view for performance');
 
     await click(GENERAL.navLink('Disaster Recovery'));
-    await assertTitle(assert, 'Disaster Recovery primary', 'Disaster Recovery');
+    await assertTitle(assert, 'Disaster Recovery', 'Disaster Recovery');
+    assert.dom(GENERAL.badge('primary')).exists('shows primary badge for dr');
     assert.dom(s.dashboard).exists(`it shows the replication dashboard`);
   });
 
@@ -134,15 +134,18 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
       performance: mockReplicationBlock('primary'),
     });
     await visit('/vault/replication');
-    await assertTitle(assert, 'Disaster Recovery & Performance primary', 'Disaster Recovery & Performance');
+    await assertTitle(assert, 'Disaster Recovery & Performance', 'Disaster Recovery & Performance');
+    assert.dom(GENERAL.badge('primary')).exists('shows primary badge for dr');
     assert.dom(s.summaryCard).exists({ count: 2 }, 'shows 2 summary cards');
 
     await click(GENERAL.navLink('Performance'));
-    await assertTitle(assert, 'Performance primary', 'Performance');
+    await assertTitle(assert, 'Performance', 'Performance');
+    assert.dom(GENERAL.badge('primary')).exists('shows primary badge for dr');
     assert.dom(s.enableForm).doesNotExist();
 
     await click(GENERAL.navLink('Disaster Recovery'));
-    await assertTitle(assert, 'Disaster Recovery primary', 'Disaster Recovery');
+    await assertTitle(assert, 'Disaster Recovery', 'Disaster Recovery');
+    assert.dom(GENERAL.badge('primary')).exists('shows primary badge for dr');
     assert.dom(s.enableForm).doesNotExist();
   });
 });

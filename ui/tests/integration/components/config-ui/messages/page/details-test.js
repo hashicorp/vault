@@ -49,14 +49,18 @@ module('Integration | Component | messages/page/details', function (hooks) {
       end_time: undefined,
     };
     this.capabilities = { canDelete: true, canUpdate: true };
+    this.breadcrumbs = [
+      { label: 'Messages', route: 'messages', query: { authenticated: this.message.authenticated } },
+      { label: this.message.title },
+    ];
   });
 
   test('it should show the message details', async function (assert) {
     await render(
-      hbs`<Messages::Page::Details @message={{this.message}} @capabilities={{this.capabilities}} />`,
+      hbs`<Messages::Page::Details @message={{this.message}} @capabilities={{this.capabilities}} @breadcrumbs={{this.breadcrumbs}} />`,
       this.context
     );
-    assert.dom(GENERAL.title).hasText('Message title 1');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Message title 1');
     assert
       .dom('[data-test-component="info-table-row"]')
       .exists({ count: allFields.length }, 'Correct number of filtered fields render');

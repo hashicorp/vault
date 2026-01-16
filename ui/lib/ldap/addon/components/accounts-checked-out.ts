@@ -8,15 +8,18 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type AuthService from 'vault/services/auth';
-import type LdapLibraryModel from 'vault/models/ldap/library';
-import type { LdapLibraryAccountStatus } from 'vault/adapters/ldap/library';
+import type { LdapLibrary, LdapLibraryAccountStatus } from 'vault/secrets/ldap';
+import type { CapabilitiesMap } from 'vault/app-types';
+import type CapabilitiesService from 'vault/services/capabilities';
+import type ApiService from 'vault/services/api';
+import type SecretMountPath from 'vault/services/secret-mount-path';
 
 interface Args {
-  libraries: Array<LdapLibraryModel>;
+  libraries: Array<LdapLibrary>;
+  capabilities: CapabilitiesMap;
   statuses: Array<LdapLibraryAccountStatus>;
   showLibraryColumn: boolean;
   onCheckInSuccess: CallableFunction;
@@ -26,6 +29,9 @@ interface Args {
 export default class LdapAccountsCheckedOutComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly auth: AuthService;
+  @service declare readonly capabilities: CapabilitiesService;
+  @service declare readonly api: ApiService;
+  @service declare readonly secretMountPath: SecretMountPath;
 
   @tracked selectedStatus: LdapLibraryAccountStatus | undefined;
 
@@ -39,38 +45,47 @@ export default class LdapAccountsCheckedOutComponent extends Component<Args> {
 
   get filteredAccounts() {
     // filter status to only show checked out accounts associated to the current user
-    // if disable_check_in_enforcement is true on the library set then all checked out accounts are displayed
+    // if disable_check_in_enforcement is true on the library then all checked out accounts are displayed
     return this.args.statuses.filter((status) => {
       const authEntityId = this.auth.authData?.entityId;
       const isRoot = !status.borrower_entity_id && !authEntityId; // root user will not have an entity id and it won't be populated on status
       const isEntity = status.borrower_entity_id === authEntityId;
       const library = this.findLibrary(status.library);
-      const enforcementDisabled = library.disable_check_in_enforcement === 'Disabled';
 
-      return !status.available && (enforcementDisabled || isEntity || isRoot);
+      return !status.available && (library.disable_check_in_enforcement || isEntity || isRoot);
     });
   }
 
-  disableCheckIn = (name: string) => {
-    return !this.findLibrary(name).canCheckIn;
+  disableCheckIn = (libraryName: string) => {
+    const { completeLibraryName: name } = this.findLibrary(libraryName);
+    const { currentPath: backend } = this.secretMountPath;
+    const path = this.capabilities.pathFor('ldapLibraryCheckIn', { backend, name });
+    const { canUpdate } = this.args.capabilities[path] || {};
+    return !canUpdate;
   };
 
-  findLibrary(name: string): LdapLibraryModel {
-    return this.args.libraries.find((library) => library.completeLibraryName === name) as LdapLibraryModel;
+  findLibrary(name: string): LdapLibrary {
+    return this.args.libraries.find((library) => library.completeLibraryName === name) as LdapLibrary;
   }
 
-  @task
-  @waitFor
-  *checkIn() {
-    const { library, account } = this.selectedStatus as LdapLibraryAccountStatus;
-    try {
-      const libraryModel = this.findLibrary(library);
-      yield libraryModel.checkInAccount(account);
-      this.flashMessages.success(`Successfully checked in the account ${account}.`);
-      this.args.onCheckInSuccess();
-    } catch (error) {
-      this.selectedStatus = undefined;
-      this.flashMessages.danger(`Error checking in the account ${account}. \n ${errorMessage(error)}`);
-    }
-  }
+  checkIn = task(
+    waitFor(async () => {
+      const { library, account } = this.selectedStatus as LdapLibraryAccountStatus;
+      try {
+        const { completeLibraryName } = this.findLibrary(library);
+        const payload = { service_account_names: [account] };
+        await this.api.secrets.ldapLibraryForceCheckIn(
+          completeLibraryName,
+          this.secretMountPath.currentPath,
+          payload
+        );
+        this.flashMessages.success(`Successfully checked in the account ${account}.`);
+        this.args.onCheckInSuccess();
+      } catch (error) {
+        const { message } = await this.api.parseError(error);
+        this.selectedStatus = undefined;
+        this.flashMessages.danger(`Error checking in the account ${account}. \n ${message}`);
+      }
+    })
+  );
 }

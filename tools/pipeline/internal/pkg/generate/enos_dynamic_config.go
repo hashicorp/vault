@@ -45,7 +45,6 @@ type Globals struct {
 type SampleAttrs struct {
 	AWSRegion             []string `json:"aws_region,omitempty" hcl:"aws_region" cty:"aws_region"`
 	DistroVersionAmzn     []string `json:"distro_version_amzn,omitempty" hcl:"distro_version_amzn" cty:"distro_version_amzn"`
-	DistroVersionLeap     []string `json:"distro_version_leap,omitempty" hcl:"distro_version_leap" cty:"distro_version_leap"`
 	DistroVersionRhel     []string `json:"distro_version_rhel,omitempty" hcl:"distro_version_rhel" cty:"distro_version_rhel"`
 	DistroVersionSles     []string `json:"distro_version_sles,omitempty" hcl:"distro_version_sles" cty:"distro_version_sles"`
 	DistroVersionUbuntu   []string `json:"distro_version_ubuntu,omitempty" hcl:"distro_version_ubuntu" cty:"distro_version_ubuntu"`
@@ -132,13 +131,11 @@ func (e *EnosDynamicConfigReq) getSampleAttrs(ctx context.Context) (*SampleAttrs
 	// TODO: Move this to pipeline config
 	attrs := &SampleAttrs{
 		// Use the cheapest regions
-		// AWSRegion: []string{"us-east-1", "us-west-2"},
-		AWSRegion: []string{"us-west-1", "us-west-2"},
+		AWSRegion: []string{"us-east-1", "us-west-2"},
 		// Current distro defaults
 		DistroVersionAmzn:   []string{"2023"},
-		DistroVersionLeap:   []string{"15.6"},
-		DistroVersionRhel:   []string{"8.10", "9.6", "10.0"},
-		DistroVersionSles:   []string{"15.6"},
+		DistroVersionRhel:   []string{"8.10", "9.7", "10.1"},
+		DistroVersionSles:   []string{"15.7", "16.0"},
 		DistroVersionUbuntu: []string{"22.04", "24.04"},
 	}
 

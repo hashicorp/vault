@@ -82,7 +82,7 @@ module('Acceptance | aws secret backend', function (hooks) {
     );
 
     await click(SES.createSecretLink);
-    assert.dom(SES.secretHeader).hasText('Create an AWS Role', 'It renders the create role page');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create an AWS Role', 'It renders the create role page');
 
     await fillIn(GENERAL.inputByAttr('name'), roleName);
     await click(GENERAL.submitButton);

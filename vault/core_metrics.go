@@ -764,3 +764,164 @@ func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsu
 
 	return values, nil
 }
+
+type RoleCounts struct {
+	AWSDynamicRoles         int `json:"aws_dynamic_roles"`
+	AWSStaticRoles          int `json:"aws_static_roles"`
+	AzureDynamicRoles       int `json:"azure_dynamic_roles"`
+	DatabaseDynamicRoles    int `json:"database_dynamic_roles"`
+	DatabaseStaticRoles     int `json:"database_static_roles"`
+	GCPRolesets             int `json:"gcp_rolesets"`
+	GCPStaticAccounts       int `json:"gcp_static_accounts"`
+	GCPImpersonatedAccounts int `json:"gcp_impersonated_accounts"`
+	LDAPDynamicRoles        int `json:"ldap_dynamic_roles"`
+	LDAPStaticRoles         int `json:"ldap_static_roles"`
+	OpenLDAPDynamicRoles    int `json:"openldap_dynamic_roles"`
+	OpenLDAPStaticRoles     int `json:"openldap_static_roles"`
+}
+
+func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool) *RoleCounts {
+	if c.Sealed() {
+		c.logger.Debug("core is sealed, cannot access mounts table")
+		return nil
+	}
+
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	apiList := func(entry *MountEntry, apiPath string) []string {
+		listRequest := &logical.Request{
+			Operation: logical.ListOperation,
+			Path:      entry.namespace.Path + entry.Path + apiPath,
+		}
+
+		ctx := namespace.ContextWithNamespace(c.activeContext, namespace.RootNamespace)
+		resp, err := c.router.Route(ctx, listRequest)
+		if err != nil || resp == nil {
+			return nil
+		}
+		rawKeys, ok := resp.Data["keys"]
+		if !ok {
+			return nil
+		}
+		keys, ok := rawKeys.([]string)
+		if !ok {
+			return nil
+		}
+		return keys
+	}
+
+	var roles RoleCounts
+	for _, entry := range c.mounts.Entries {
+		if !entry.Local && !includeReplicated {
+			continue
+		}
+		if entry.Local && !includeLocal {
+			continue
+		}
+		secretType := entry.Type
+
+		switch secretType {
+		case pluginconsts.SecretEngineAWS:
+			dynamicRoles := apiList(entry, "roles")
+			roles.AWSDynamicRoles += len(dynamicRoles)
+			staticRoles := apiList(entry, "static-roles")
+			roles.AWSStaticRoles += len(staticRoles)
+
+		case pluginconsts.SecretEngineAzure:
+			dynamicRoles := apiList(entry, "roles")
+			roles.AzureDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineDatabase:
+			dynamicRoles := apiList(entry, "roles")
+			roles.DatabaseDynamicRoles += len(dynamicRoles)
+			staticRoles := apiList(entry, "static-roles")
+			roles.DatabaseStaticRoles += len(staticRoles)
+
+		case pluginconsts.SecretEngineGCP:
+			rolesets := apiList(entry, "rolesets")
+			roles.GCPRolesets += len(rolesets)
+			staticAccounts := apiList(entry, "static-accounts")
+			roles.GCPStaticAccounts += len(staticAccounts)
+			impersonatedAccounts := apiList(entry, "impersonated-accounts")
+			roles.GCPImpersonatedAccounts += len(impersonatedAccounts)
+
+		case pluginconsts.SecretEngineLDAP:
+			dynamicRoles := apiList(entry, "role")
+			roles.LDAPDynamicRoles += len(dynamicRoles)
+			staticRoles := apiList(entry, "static-role")
+			roles.LDAPStaticRoles += len(staticRoles)
+
+		case pluginconsts.SecretEngineOpenLDAP:
+			dynamicRoles := apiList(entry, "role")
+			roles.OpenLDAPDynamicRoles += len(dynamicRoles)
+			staticRoles := apiList(entry, "static-role")
+			roles.OpenLDAPStaticRoles += len(staticRoles)
+		}
+	}
+
+	return &roles
+}
+
+func (c *Core) GetRoleCounts() *RoleCounts {
+	return c.getRoleCountsInternal(true, true)
+}
+
+func (c *Core) GetRoleCountsForCluster() *RoleCounts {
+	return c.getRoleCountsInternal(true, c.isPrimary())
+}
+
+// GetKvUsageMetrics returns a map of namespace paths to KV secret counts.
+func (c *Core) GetKvUsageMetrics(ctx context.Context, kvVersion string) (map[string]int, error) {
+	return c.GetKvUsageMetricsByNamespace(ctx, kvVersion, "", true, true)
+}
+
+// GetKvUsageMetricsByNamespace returns a map of namespace paths to KV secret counts within a specific namespace.
+func (c *Core) GetKvUsageMetricsByNamespace(ctx context.Context, kvVersion string, nsPath string, includeLocal bool, includeReplicated bool) (map[string]int, error) {
+	mounts := c.findKvMounts()
+	results := make(map[string]int)
+
+	if kvVersion == "1" || kvVersion == "2" {
+		var newMounts []*kvMount
+		for _, mount := range mounts {
+			if mount.Version == kvVersion {
+				newMounts = append(newMounts, mount)
+			}
+		}
+		mounts = newMounts
+	} else if kvVersion != "0" {
+		return results, fmt.Errorf("kv version %s not supported, must be 0, 1, or 2", kvVersion)
+	}
+
+	for _, m := range mounts {
+		if !includeLocal && m.Local {
+			continue
+		}
+		if !includeReplicated && !m.Local {
+			continue
+		}
+
+		if nsPath != "" && !strings.HasPrefix(m.Namespace.Path, nsPath) {
+			continue
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context expired")
+		default:
+			break
+		}
+
+		c.walkKvMountSecrets(ctx, m)
+
+		_, ok := results[m.Namespace.Path]
+		if ok {
+			// we need to add, not overwrite
+			results[m.Namespace.Path] += m.NumSecrets
+		} else {
+			results[m.Namespace.Path] = m.NumSecrets
+		}
+	}
+
+	return results, nil
+}

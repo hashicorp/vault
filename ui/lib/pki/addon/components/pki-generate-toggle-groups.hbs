@@ -34,7 +34,7 @@
           {{/if}}
         </p>
         {{#if this.keyParamFields}}
-          <PkiKeyParameters @model={{@form}} @fields={{this.keyParamFields}} @modelValidations={{@modelValidations}} />
+          <PkiKeyParameters @form={{@form}} @fields={{this.keyParamFields}} @modelValidations={{@modelValidations}} />
         {{/if}}
       {{else}}
         <p class="has-bottom-margin-m" data-test-toggle-group-description>

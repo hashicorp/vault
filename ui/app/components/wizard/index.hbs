@@ -1,0 +1,30 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if @showWelcome}}
+  <div data-test-welcome-content>
+    {{yield to="welcome"}}
+  </div>
+{{else}}
+  <Wizard::Quickstart
+    @currentStep={{@currentStep}}
+    @steps={{@steps}}
+    @onStepChange={{@onStepChange}}
+    @onDismiss={{@onDismiss}}
+    @hasSubmitBlock={{has-block "submit"}}
+  >
+    <:content>
+      {{yield to="quickstart"}}
+    </:content>
+
+    <:submit>
+      {{#if (has-block "submit")}}
+        {{yield to="submit"}}
+      {{else}}
+        <Hds::Button @text="Done" {{on "click" @onDismiss}} data-test-submit />
+      {{/if}}
+    </:submit>
+  </Wizard::Quickstart>
+{{/if}}

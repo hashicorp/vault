@@ -9,7 +9,6 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
@@ -21,33 +20,34 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-
-    this.store = this.owner.lookup('service:store');
-    this.backend = createSecretsEngine(this.store);
-    this.breadcrumbs = generateBreadcrumbs(this.backend.id);
-
-    for (const name of ['foo', 'bar', 'foo/']) {
-      this.store.pushPayload('ldap/library', {
-        modelName: 'ldap/library',
-        backend: 'ldap-test',
-        ...this.server.create('ldap-library', { name }),
-      });
-    }
-    this.libraries = this.store.peekAll('ldap/library');
+    this.backend = 'ldap-test';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
+    this.secretsEngine = createSecretsEngine();
+    this.breadcrumbs = generateBreadcrumbs(this.backend);
+    this.libraries = ['foo', 'bar', 'foo/'].map((name) =>
+      this.server.create('ldap-library', { name, completeLibraryName: name })
+    );
+    this.capabilities = this.libraries.reduce((capabilities, { name }) => {
+      const path = this.owner
+        .lookup('service:capabilities')
+        .pathFor('ldapLibrary', { backend: this.backend, name });
+      capabilities[path] = { canRead: true, canUpdate: true, canDelete: true };
+      return capabilities;
+    }, {});
     this.promptConfig = false;
 
-    this.renderComponent = () => {
-      return render(
+    this.renderComponent = () =>
+      render(
         hbs`<Page::Libraries
-          @promptConfig={{this.promptConfig}}
-          @backendModel={{this.backend}}
           @libraries={{this.libraries}}
+          @capabilities={{this.capabilities}}
+          @promptConfig={{this.promptConfig}}
+          @secretsEngine={{this.secretsEngine}}
           @breadcrumbs={{this.breadcrumbs}}
         />`,
         { owner: this.engine }
       );
-    };
+
     setRunOptions({
       rules: {
         list: { enabled: false },

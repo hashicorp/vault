@@ -22,6 +22,16 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
 export default class GenerateCredentialsDatabase extends Component {
+  get breadcrumbs() {
+    return [
+      {
+        label: this.args.backendPath,
+        route: 'vault.cluster.secrets.backend.overview',
+        model: this.args.backendPath,
+      },
+      { label: this.args.roleName },
+    ];
+  }
   get errorTitle() {
     return this.args.model.errorTitle || 'Something went wrong';
   }

@@ -54,8 +54,10 @@ type VaultNodeConfig struct {
 	//   ServiceRegistrationType        string
 	//   ServiceRegistrationOptions    map[string]string
 
-	StorageOptions      map[string]string         `json:"-"`
-	AdditionalListeners []VaultNodeListenerConfig `json:"-"`
+	StorageOptions           map[string]string         `json:"-"`
+	AdditionalListeners      []VaultNodeListenerConfig `json:"-"`
+	CustomListenerConfigOpts map[string]interface{}    `json:"-"`
+	AdditionalTCPPorts       []int                     `json:"-"`
 
 	DefaultMaxRequestDuration      time.Duration `json:"default_max_request_duration"`
 	LogFormat                      string        `json:"log_format"`
@@ -67,6 +69,7 @@ type VaultNodeConfig struct {
 	MaxLeaseTTL                    time.Duration `json:"max_lease_ttl"`
 	DefaultLeaseTTL                time.Duration `json:"default_lease_ttl"`
 	ClusterCipherSuites            string        `json:"cluster_cipher_suites"`
+	PluginDirectory                string        `json:"plugin_directory"`
 	PluginFileUid                  int           `json:"plugin_file_uid"`
 	PluginFilePermissions          int           `json:"plugin_file_permissions"`
 	EnableRawEndpoint              bool          `json:"raw_storage_endpoint"`

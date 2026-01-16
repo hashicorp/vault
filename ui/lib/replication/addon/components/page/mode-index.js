@@ -22,6 +22,17 @@ import Component from '@glimmer/component';
  * @param {string} replicationMode - should be "dr" or "performance"
  */
 export default class PageModeIndex extends Component {
+  get title() {
+    if (this.args.replicationMode === 'dr') {
+      return 'Enable Disaster Recovery Replication';
+    }
+    if (this.args.replicationMode === 'performance') {
+      return 'Enable Performance Replication';
+    }
+    // should never get here, but have safe fallback just in case
+    return 'Enable Replication';
+  }
+
   canEnable = (type) => {
     const { cluster, replicationMode } = this.args;
     let perm;

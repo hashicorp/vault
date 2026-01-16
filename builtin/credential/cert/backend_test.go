@@ -2363,8 +2363,8 @@ func Test_Renew(t *testing.T) {
 	}
 
 	b := lb.(*backend)
-	connState, err := testConnState("test-fixtures/keys/cert.pem",
-		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	connState, err := testConnState("test-fixtures/testcert1.pem",
+		"test-fixtures/testkey1.pem", "test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
@@ -2415,6 +2415,33 @@ func Test_Renew(t *testing.T) {
 	req.Auth.Period = resp.Auth.Period
 
 	// Normal renewal
+	resp, err = b.pathLoginRenew(context.Background(), req, empty_login_fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error: %#v", *resp)
+	}
+
+	// Try changing the cert - this should fail
+	goodConnState := connState
+	connState, err = testConnState("test-fixtures/testcert2.pem",
+		"test-fixtures/testkey2.pem", "test-fixtures/root/rootcacert.pem")
+	req.Connection.ConnState = &connState
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.pathLoginRenew(context.Background(), req, empty_login_fd)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Reset connState to the good one, this should work:
+	connState = goodConnState
+	req.Connection.ConnState = &connState
 	resp, err = b.pathLoginRenew(context.Background(), req, empty_login_fd)
 	if err != nil {
 		t.Fatal(err)

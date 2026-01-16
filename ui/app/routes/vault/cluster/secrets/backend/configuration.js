@@ -5,6 +5,7 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 
 /**
  * This route is responsible for fetching all configuration data.
@@ -15,6 +16,7 @@ import Route from '@ember/routing/route';
 export default class SecretsBackendConfigurationRoute extends Route {
   @service api;
   @service version;
+  @service router;
 
   async model() {
     const secretsEngine = this.modelFor('vault.cluster.secrets.backend');
@@ -27,17 +29,11 @@ export default class SecretsBackendConfigurationRoute extends Route {
     };
   }
 
-  // TODO after update to show separated general settings vs plugin settings redirect if not configured?
-  // afterModel(resolvedModel) {
-  //   // Redirect to edit route if not configured
-  //   if (!resolvedModel.config) {
-  //     this.router.transitionTo('vault.cluster.secrets.backend.configuration.edit');
-  //   }
-  // }
-
   fetchConfig(type, id) {
     // id is the path where the backend is mounted since there's only one config per engine (often this path is referred to just as backend)
-    switch (type) {
+    // Use effective type to handle external plugin mappings
+    const effectiveType = getEffectiveEngineType(type);
+    switch (effectiveType) {
       case 'aws':
         return this.fetchAwsConfigs(id);
       case 'azure':

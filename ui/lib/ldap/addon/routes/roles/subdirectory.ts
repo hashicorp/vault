@@ -4,19 +4,19 @@
  */
 
 import LdapRolesRoute from '../roles';
-import { hash } from 'rsvp';
 import { ldapBreadcrumbs, roleRoutes } from 'ldap/utils/ldap-breadcrumbs';
 
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type Controller from '@ember/controller';
-import type LdapRoleModel from 'vault/models/ldap/role';
-import type SecretEngineModel from 'vault/models/secret-engine';
+import type { LdapRole } from 'vault/secrets/ldap';
 import type Transition from '@ember/routing/transition';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import type { LdapApplicationModel } from '../application';
 
 interface RouteModel {
-  backendModel: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   roleAncestry: { path_to_role: string; type: string };
-  roles: Array<LdapRoleModel>;
+  roles: Array<LdapRole>;
 }
 
 interface RouteController extends Controller {
@@ -41,28 +41,34 @@ export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {
     },
   };
 
-  model(params: RouteParams) {
-    const backendModel = this.modelFor('application') as SecretEngineModel;
-    const { path_to_role, type } = params;
+  async model(params: RouteParams) {
+    const { page, pageFilter: filter } = params;
+    const { secretsEngine } = this.modelFor('application') as LdapApplicationModel;
+    const { path_to_role, type } = params as { path_to_role: string; type: string };
     const roleAncestry = { path_to_role, type };
-    return hash({
-      backendModel,
+    const { roles, capabilities } = await this.fetchRolesAndCapabilities(
+      { page: Number(page) || 1, filter },
+      roleAncestry
+    );
+    return {
+      secretsEngine,
       roleAncestry,
-      roles: this.lazyQuery(backendModel.id, params, { roleAncestry }),
-    });
+      roles,
+      capabilities,
+    };
   }
 
   setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
-    const { backendModel, roleAncestry } = resolvedModel;
+    const { secretsEngine, roleAncestry } = resolvedModel;
 
     const routeParams = (childResource: string) => {
-      return [backendModel.id, roleAncestry.type, childResource];
+      return [secretsEngine.id, roleAncestry.type, childResource];
     };
 
     const crumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: backendModel.id, route: 'overview' },
+      { label: secretsEngine.id, route: 'overview' },
       { label: 'Roles', route: 'roles' },
       ...ldapBreadcrumbs(roleAncestry.path_to_role, routeParams, roleRoutes, true),
     ];

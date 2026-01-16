@@ -6,25 +6,23 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { Response } from 'miragejs';
 import sinon from 'sinon';
 import { generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import LdapConfigForm from 'vault/forms/secrets/ldap/config';
 
 const selectors = {
   radioCard: '[data-test-radio-card="OpenLDAP"]',
   save: '[data-test-config-save]',
   binddn: '[data-test-field="binddn"] input',
-  bindpass: '[data-test-field="bindpass"] input',
+  bindpass: '[data-test-input="bindpass"]',
 };
 
 module('Integration | Component | ldap | Page::Configure', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'ldap');
-  setupMirage(hooks);
 
   const fillAndSubmit = async (rotate) => {
     await click(selectors.radioCard);
@@ -33,30 +31,30 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     await click(selectors.save);
     const buttonLabel = rotate === 'without' ? 'Save without rotating' : 'Save and rotate';
     await click(GENERAL.button(buttonLabel));
+    return { binddn: 'foo', bindpass: 'bar', schema: 'openldap', groupattr: 'cn', userattr: 'cn' };
   };
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.newModel = this.store.createRecord('ldap/config', { backend: 'ldap-new' });
+    this.newForm = new LdapConfigForm({}, { isNew: true });
     this.existingConfig = {
       schema: 'openldap',
       binddn: 'cn=vault,ou=Users,dc=hashicorp,dc=com',
       bindpass: 'foobar',
     };
-    this.store.pushPayload('ldap/config', {
-      modelName: 'ldap/config',
-      backend: 'ldap-edit',
-      ...this.existingConfig,
-    });
-    this.editModel = this.store.peekRecord('ldap/config', 'ldap-edit');
+    this.editForm = new LdapConfigForm(this.existingConfig);
     this.breadcrumbs = generateBreadcrumbs('ldap', 'configure');
-    this.model = { promptConfig: true, configModel: this.newModel }; // most of the tests use newModel but set this to editModel when needed
-    this.renderComponent = () => {
-      return render(hbs`<Page::Configure @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+    this.model = { promptConfig: true, form: this.newForm }; // most of the tests use newForm but set this to editForm when needed
+
+    this.owner.lookup('service:secret-mount-path').update('ldap-new');
+    this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
+    const { secrets } = this.owner.lookup('service:api');
+    this.configStub = sinon.stub(secrets, 'ldapConfigure').resolves();
+    this.rotateStub = sinon.stub(secrets, 'ldapRotateRootCredentials').resolves();
+
+    this.renderComponent = () =>
+      render(hbs`<Page::Configure @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
         owner: this.engine,
       });
-    };
-    this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
   });
 
   test('it should render empty state when schema is not selected', async function (assert) {
@@ -94,14 +92,13 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
   test('it should save new configuration without rotating root password', async function (assert) {
     assert.expect(2);
 
-    this.server.post('/ldap-new/config', () => {
-      assert.ok(true, 'POST request made to save config');
-      return new Response(204, {});
-    });
-
     await this.renderComponent();
-    await fillAndSubmit('without');
+    const payload = await fillAndSubmit('without');
 
+    assert.true(
+      this.configStub.calledWith('ldap-new', payload),
+      'Config save called with correct mount path'
+    );
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.ldap.configuration'),
       'Transitions to configuration route on save success'
@@ -111,18 +108,13 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
   test('it should save new configuration and rotate root password', async function (assert) {
     assert.expect(3);
 
-    this.server.post('/ldap-new/config', () => {
-      assert.ok(true, 'POST request made to save config');
-      return new Response(204, {});
-    });
-    this.server.post('/ldap-new/rotate-root', () => {
-      assert.ok(true, 'POST request made to rotate root password');
-      return new Response(204, {});
-    });
-
     await this.renderComponent();
-    await fillAndSubmit('with');
-
+    const payload = await fillAndSubmit('with');
+    assert.true(
+      this.configStub.calledWith('ldap-new', payload),
+      'Config save called with correct mount path'
+    );
+    assert.true(this.rotateStub.calledWith('ldap-new'), 'Rotate root called with correct mount path');
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.ldap.configuration'),
       'Transitions to configuration route on save success'
@@ -130,7 +122,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
   });
 
   test('it should populate fields when editing form', async function (assert) {
-    this.model = { promptConfig: true, configModel: this.editModel };
+    this.model = { promptConfig: true, form: this.editForm };
 
     await this.renderComponent();
 
@@ -139,12 +131,6 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
 
     await fillIn(selectors.binddn, 'foobar');
     await click('[data-test-config-cancel]');
-
-    assert.strictEqual(
-      this.model.configModel.binddn,
-      this.existingConfig.binddn,
-      'Model is rolled back on cancel'
-    );
 
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.ldap.configuration'),

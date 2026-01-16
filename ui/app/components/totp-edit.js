@@ -34,6 +34,19 @@ export default class TotpEdit extends Component {
 
   successCallback;
 
+  get title() {
+    if (this.args.mode === 'create') {
+      return 'Create a TOTP key';
+    }
+    return 'TOTP key';
+  }
+
+  get subtitle() {
+    if (this.args.mode === 'create') return '';
+
+    return this.args.model.id;
+  }
+
   get defaultKeyFormFields() {
     const shared = ['name', 'generate', 'issuer', 'accountName'];
     const generated = [...shared, 'exported'];

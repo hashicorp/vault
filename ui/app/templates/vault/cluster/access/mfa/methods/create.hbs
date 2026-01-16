@@ -3,25 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <Hds::Breadcrumb>
-      <Hds::Breadcrumb::Item @text="Methods" @route="vault.cluster.access.mfa.methods.index" />
-      <Hds::Breadcrumb::Item @text="Configure MFA Method" @current={{true}} />
-    </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft class="has-border-bottom-light">
-    <h1 class="title is-3">
-      {{#if this.method}}
-        Configure
-        {{this.method.name}}
-        MFA
-      {{else}}
-        Multi-Factor Authentication
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title={{if this.method (concat "Configure " this.method.name " MFA") "Multi-Factor Authentication"}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Methods" route="vault.cluster.access.mfa.methods.index")
+        (hash label="Configure MFA Method")
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
+
 <div class="has-border-top-light has-top-padding-l">
   {{#if this.showForms}}
     <h3 class="is-size-4 has-text-weight-semibold">Settings</h3>

@@ -3,8 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader
-  @model={{@backend}}
+<KubernetesHeader
+  @model={{@secretsEngine}}
   @filterRoles={{not @promptConfig}}
   @query={{this.query}}
   @breadcrumbs={{@breadcrumbs}}
@@ -17,7 +17,7 @@
       Create role
     </ToolbarLink>
   {{/unless}}
-</TabPageHeader>
+</KubernetesHeader>
 
 {{#if @promptConfig}}
   <ConfigCta />
@@ -33,35 +33,35 @@
 {{else}}
   <div class="has-bottom-margin-s">
     {{#each @roles as |role|}}
-      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role.details" role.name}} as |Item|>
+      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role.details" role}} as |Item|>
         <Item.content>
           <Icon @name="user" />
-          <span data-test-role={{role.name}}>{{role.name}}</span>
+          <span data-test-role={{role}}>{{role}}</span>
         </Item.content>
         <Item.menu>
-          {{#if (or role.canRead role.canEdit role.canDelete)}}
-            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-              <dd.ToggleIcon
-                @icon="more-horizontal"
-                @text="More options"
-                @hasChevron={{false}}
-                data-test-popup-menu-trigger
-              />
-              {{#if role.canRead}}
-                <dd.Interactive @route="roles.role.details" @model={{role}} data-test-details>Details</dd.Interactive>
-              {{/if}}
-              {{#if role.canEdit}}
-                <dd.Interactive data-test-edit @route="roles.role.edit" @model={{role}}>Edit</dd.Interactive>
-              {{/if}}
-              {{#if role.canDelete}}
-                <dd.Interactive
-                  data-test-delete
-                  @color="critical"
-                  {{on "click" (fn (mut this.roleToDelete) role)}}
-                >Delete</dd.Interactive>
-              {{/if}}
-            </Hds::Dropdown>
-          {{/if}}
+          {{#let (hash backend=this.secretMountPath.currentPath name=role) as |params|}}
+            {{#if (has-capability @capabilities "read" "update" "delete" pathKey="kubernetesRole" params=params)}}
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="More options"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                {{#if (has-capability @capabilities "read" pathKey="kubernetesRole" params=params)}}
+                  <dd.Interactive @route="roles.role.details" @model={{role}} data-test-details>Details</dd.Interactive>
+                {{/if}}
+                {{#if (has-capability @capabilities "update" pathKey="kubernetesRole" params=params)}}
+                  <dd.Interactive data-test-edit @route="roles.role.edit" @model={{role}}>Edit</dd.Interactive>
+                {{/if}}
+                {{#if (has-capability @capabilities "delete" pathKey="kubernetesRole" params=params)}}
+                  <dd.Interactive data-test-delete @color="critical" {{on "click" (fn (mut this.roleToDelete) role)}}>
+                    Delete
+                  </dd.Interactive>
+                {{/if}}
+              </Hds::Dropdown>
+            {{/if}}
+          {{/let}}
         </Item.menu>
       </ListItem>
     {{/each}}

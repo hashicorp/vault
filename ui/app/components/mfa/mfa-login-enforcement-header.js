@@ -38,6 +38,18 @@ export default class MfaLoginEnforcementHeaderComponent extends Component {
 
   @tracked enforcements = [];
 
+  get breadcrumbs() {
+    return [
+      {
+        label: 'Enforcements',
+        route: 'vault.cluster.access.mfa.enforcements.index',
+      },
+      {
+        label: this.args.heading,
+      },
+    ];
+  }
+
   async fetchEnforcements() {
     try {
       // cache initial values for lookup in select handler

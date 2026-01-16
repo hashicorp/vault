@@ -20,7 +20,6 @@ export default class App extends Application {
           'flash-messages',
           'namespace',
           { 'app-router': 'router' },
-          'pagination',
           'version',
           'custom-messages',
           'api',
@@ -55,7 +54,9 @@ export default class App extends Application {
     kmip: {
       dependencies: {
         services: [
+          'api',
           'auth',
+          'capabilities',
           'download',
           'flash-messages',
           'namespace',
@@ -73,9 +74,10 @@ export default class App extends Application {
     },
     kubernetes: {
       dependencies: {
-        services: [{ 'app-router': 'router' }, 'store', 'secret-mount-path', 'flash-messages'],
+        services: [{ 'app-router': 'router' }, 'secret-mount-path', 'flash-messages', 'api', 'capabilities'],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
+          secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
         },
       },
     },
@@ -83,12 +85,11 @@ export default class App extends Application {
       dependencies: {
         services: [
           { 'app-router': 'router' },
-          'store',
-          'pagination',
           'secret-mount-path',
           'flash-messages',
           'auth',
           'api',
+          'capabilities',
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
@@ -108,12 +109,12 @@ export default class App extends Application {
           'namespace',
           { 'app-router': 'router' },
           'secret-mount-path',
-          'pagination',
           'version',
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
           syncDestination: 'vault.cluster.sync.secrets.destinations.destination',
+          secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
         },
       },
     },
@@ -129,8 +130,6 @@ export default class App extends Application {
           'path-help',
           { 'app-router': 'router' },
           'secret-mount-path',
-          'store',
-          'pagination',
           'version',
         ],
         externalRoutes: {
@@ -149,7 +148,6 @@ export default class App extends Application {
           'store',
           'api',
           'capabilities',
-          'pagination',
           'version',
         ],
         externalRoutes: {

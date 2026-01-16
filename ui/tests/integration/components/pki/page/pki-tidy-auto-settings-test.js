@@ -15,38 +15,35 @@ module('Integration | Component | page/pki-tidy-auto-settings', function (hooks)
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(function () {
-    const backend = 'pki-auto-tidy';
-    this.backend = backend;
-
-    this.context = { owner: this.engine };
-    this.store = this.owner.lookup('service:store');
-
+    this.backend = 'pki-auto-tidy';
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: backend, route: 'overview', model: backend },
-      { label: 'Tidy', route: 'tidy.index', model: backend },
+      { label: this.backend, route: 'overview', model: this.backend },
+      { label: 'Tidy', route: 'tidy.index', model: this.backend },
       { label: 'Auto' },
     ];
+
+    this.model = {
+      enabled: false,
+      interval_duration: '2d',
+      tidy_cert_store: false,
+      tidy_expired_issuers: true,
+    };
+
+    this.renderComponent = () =>
+      render(
+        hbs`<Page::PkiTidyAutoSettings @breadcrumbs={{this.breadcrumbs}} @model={{this.model}} @backend={{this.backend}} />`,
+        {
+          owner: this.engine,
+        }
+      );
   });
 
   test('it renders', async function (assert) {
-    const model = this.store.createRecord('pki/tidy', {
-      backend: this.backend,
-      tidyType: 'auto',
-      enabled: false,
-      intervalDuration: '2d',
-      tidyCertStore: false,
-      tidyExpiredIssuers: true,
-    });
-    this.set('model', model);
-
-    await render(
-      hbs`<Page::PkiTidyAutoSettings @breadcrumbs={{this.breadcrumbs}} @model={{this.model}} />`,
-      this.context
-    );
+    await this.renderComponent();
 
     assert.dom('[data-test-breadcrumbs] li').exists({ count: 4 }, 'an item exists for each breadcrumb');
-    assert.dom('[data-test-header-title]').hasText('Automatic Tidy Configuration', 'title is correct');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Automatic Tidy Configuration', 'title is correct');
     assert
       .dom('[data-test-pki-edit-tidy-auto-link]')
       .hasText('Edit auto-tidy', 'toolbar edit link has correct text');

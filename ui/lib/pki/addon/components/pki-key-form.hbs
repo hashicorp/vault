@@ -20,7 +20,7 @@
         {{#each @form.formFieldGroups as |fieldGroup|}}
           {{#each-in fieldGroup as |group fields|}}
             {{#if (eq group "Key parameters")}}
-              <PkiKeyParameters @model={{@form}} @fields={{fields}} @modelValidations={{this.modelValidations}} />
+              <PkiKeyParameters @form={{@form}} @fields={{fields}} @modelValidations={{this.modelValidations}} />
             {{else}}
               {{#each fields as |field|}}
                 <FormField

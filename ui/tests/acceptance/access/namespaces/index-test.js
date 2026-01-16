@@ -27,7 +27,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
       'navigates to the correct route'
     );
 
-    assert.dom(GENERAL.title).hasText('Namespaces', 'Page title is displayed correctly');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Namespaces', 'Page title is displayed correctly');
   });
 
   test('the route displays the breadcrumb trail', async function (assert) {

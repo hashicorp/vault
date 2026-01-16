@@ -13,7 +13,7 @@
     </T.Tab>
 
     <T.Panel>
-      <PolicyForm @onSave={{this.onSave}} @model={{this.policy}} @onCancel={{@onCancel}} />
+      <PolicyForm @onSave={{this.onSave}} @model={{this.policy}} @onCancel={{@onCancel}} @isCompact={{true}} />
     </T.Panel>
     <T.Panel class="has-top-padding-m">
       <PolicyExample @policyType={{this.policy.policyType}} />

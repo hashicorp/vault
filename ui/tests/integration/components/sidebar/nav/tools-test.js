@@ -26,7 +26,7 @@ module('Integration | Component | sidebar-nav-tools', function (hooks) {
   hooks.beforeEach(function () {
     setRunOptions({
       rules: {
-        // This is an issue with Hds::SideNav::Header::HomeLink
+        // This is an issue with Hds::AppHeader::HomeLink
         'aria-prohibited-attr': { enabled: false },
         // TODO: fix use Dropdown on user-menu
         'nested-interactive': { enabled: false },

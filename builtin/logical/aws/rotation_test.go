@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/observations"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 	"github.com/hashicorp/vault/vault"
@@ -114,9 +115,11 @@ func TestRotation(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			config := logical.TestBackendConfig()
 			config.StorageView = &logical.InmemStorage{}
+			or := observations.NewTestObservationRecorder()
+			config.ObservationRecorder = or
 
 			b := Backend(config)
-
+			require.NoError(t, b.Setup(context.Background(), config))
 			expirations := make([]*time.Time, len(c.creds))
 			// insert all our creds
 			for i, cred := range c.creds {
@@ -214,6 +217,7 @@ func TestRotation(t *testing.T) {
 				t.Fatalf("got an error rotating credentials: %s", err)
 			}
 
+			numChanged := 0
 			// check our credentials
 			for i, cred := range c.creds {
 				entry, err := config.StorageView.Get(bgCTX, formatCredsStoragePath(cred.config.Name))
@@ -229,11 +233,13 @@ func TestRotation(t *testing.T) {
 				if cred.changed {
 					require.Equal(t, out.SecretAccessKey, newSecret, "expected the key for cred %d to have changed, but it hasn't", i)
 					require.NotEqual(t, out.Expiration.UTC(), expirations[i].UTC(), "expected the expiration for cred %d to have changed, but it hasn't", i)
+					numChanged++
 				} else {
 					require.Equal(t, out.SecretAccessKey, oldSecret, "expected the key for cred %d to have stayed the same, but it changed", i)
 					require.Equal(t, out.Expiration.UTC(), expirations[i].UTC(), "expected the expiration for cred %d to have changed, but it hasn't", i)
 				}
 			}
+			require.Equal(t, numChanged, or.NumObservationsByType(ObservationTypeAWSStaticCredentialRotate))
 		})
 	}
 }

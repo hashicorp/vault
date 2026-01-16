@@ -9,7 +9,6 @@ import { pathIsDirectory, breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 import { paginate } from 'core/utils/paginate-list';
 
 export default class KvSecretsListRoute extends Route {
-  @service pagination;
   @service('app-router') router;
   @service secretMountPath;
   @service api;
@@ -59,8 +58,10 @@ export default class KvSecretsListRoute extends Route {
     const filterValue = pathToSecret ? (pageFilter ? pathToSecret + pageFilter : pathToSecret) : pageFilter;
     const secrets = await this.fetchMetadata(backend, pathToSecret, params);
     const capabilities = await this.capabilities.for('kvMetadata', { backend, path: path_to_secret });
+    const backendModel = this.modelFor('application');
 
     return {
+      backendModel,
       secrets,
       backend,
       pathToSecret,

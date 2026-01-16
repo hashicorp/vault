@@ -104,7 +104,7 @@ jobs:
       vault-version-package: ${{ steps.metadata.outputs.vault-version-package }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       # Make sure we check out correct ref based on PR labels and such
       - uses: ./.github/actions/checkout
         id: checkout
@@ -191,7 +191,7 @@ jobs:
     needs:
       - setup
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       # Get the elevated github token
       - id: vault-auth
         name: Vault Authenticate
@@ -295,7 +295,7 @@ jobs:
     outputs:
       cache-key: ui-${{ steps.ui-hash.outputs.ui-hash }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
       - name: Get UI hash
@@ -303,7 +303,7 @@ jobs:
         run: echo "ui-hash=$(git ls-tree HEAD ui --object-only)" | tee -a "$GITHUB_OUTPUT"
       - name: Set up UI asset cache
         id: cache-ui-assets
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           enableCrossOsArchive: true
           lookup-only: true
@@ -312,12 +312,18 @@ jobs:
           # Never do a partial restore of the web_ui if we don't get a cache hit.
           key: ui-${{ steps.ui-hash.outputs.ui-hash }}
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Set up node and yarn
-        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        name: Install PNPM
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          run_install: false
+          package_json_file: './ui/package.json'
+      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
+        name: Set up node and pnpm
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           node-version-file: ui/package.json
-          cache: yarn
-          cache-dependency-path: ui/yarn.lock
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Build UI
         run: make ci-build-ui
@@ -504,7 +510,7 @@ jobs:
       - test-containers
       - test-hcp-image
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - id: disallow-merge-on-ce
         if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&
@@ -587,11 +593,11 @@ jobs:
                 text:
                   type: mrkdwn
                   text: |
-                    ${{ needs.setup.result != 'failure' && ':white_check_mark:' || ':x:' }} Setup
-                    ${{ needs.ui.result != 'failure' && ':white_check_mark:' || ':x:' }} Build UI
-                    ${{ (needs.artifacts-ent.result != 'failure' && needs.artifacts-ce.result != 'failure') && ':white_check_mark:' || ':x:' }} Build Vault Artifacts
-                    ${{ needs.test.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos package test scenarios
-                    ${{ needs.test-containers.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos container test scenarios
+                    ${{ needs.setup.result           == 'failure' && ':x: Setup'                         || '' }}
+                    ${{ needs.ui.result              == 'failure' && ':x: Build UI'                      || '' }}
+                    ${{ needs.test.result            == 'failure' && ':x: Enos package test scenarios'   || '' }}
+                    ${{ needs.test-containers.result == 'failure' && ':x: Enos container test scenarios' || '' }}
+                    ${{ (needs.artifacts-ent.result == 'failure' || needs.artifacts-ce.result == 'failure') && ':x: Build Vault Artifacts' || '' }}
                 accessory:
                   type: button
                   text:
@@ -607,7 +613,7 @@ jobs:
         with:
           version: ${{ needs.setup.outputs.vault-version-metadata }}
           product: ${{ needs.setup.outputs.vault-binary-name }}
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: steps.generate-metadata-file.outcome == 'success' # upload our metadata if we created it
         with:
           name: metadata.json

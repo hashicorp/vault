@@ -481,14 +481,10 @@ func (d *autoSeal) StartHealthCheck(ctx context.Context) {
 	go func() {
 		lastTestOk := true
 		lastSeenOk := time.Now()
+		core := d.core
 
 		check := func(now time.Time) {
-			if d.core.activeContext == nil {
-				// This probably only happens during the execution of some unit tests.
-				d.logger.Warn("no active context, skipping this health check")
-				return
-			}
-			ctx, cancel := context.WithTimeout(d.core.activeContext, seal.HealthTestTimeout)
+			ctx, cancel := context.WithTimeout(ctx, seal.HealthTestTimeout)
 			defer cancel()
 
 			d.logger.Trace("performing a seal health check")
@@ -509,7 +505,7 @@ error and restart Vault.`)
 				if err := sealWrapper.CheckHealth(ctx, now); err != nil {
 					// Seal wrapper is unhealthy
 					d.logger.Warn("seal wrapper health check failed", "seal_name", sealWrapper.Name, "err", err)
-					d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration,
+					core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration,
 						float32(time.Since(sealWrapper.LastSeenHealthy()).Milliseconds()), mLabels)
 					allHealthy = false
 				} else {
@@ -530,14 +526,14 @@ error and restart Vault.`)
 				lastTestOk = true
 				lastSeenOk = now
 				healthCheck.Reset(seal.HealthTestIntervalNominal)
-				d.core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
+				core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
 			} else {
 				if lastTestOk && allUnhealthy {
 					d.logger.Error("seal backend is completely unhealthy (all seal wrappers all unhealthy)", "downtime", now.Sub(lastSeenOk).String())
 				}
 				lastTestOk = false
 				healthCheck.Reset(seal.HealthTestIntervalUnhealthy)
-				d.core.MetricSink().SetGauge(autoSealUnavailableDuration, float32(time.Since(lastSeenOk).Milliseconds()))
+				core.MetricSink().SetGauge(autoSealUnavailableDuration, float32(time.Since(lastSeenOk).Milliseconds()))
 			}
 
 			d.hcLock.Lock()

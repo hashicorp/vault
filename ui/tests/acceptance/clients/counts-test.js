@@ -62,7 +62,7 @@ module('Acceptance | clients | counts', function (hooks) {
       return overrideResponse(403);
     });
     await visit('/vault/clients/counts/overview');
-    assert.dom(GENERAL.emptyStateTitle).hasText('You are not authorized');
+    assert.dom(GENERAL.emptyStateTitle).hasText('ERROR 403 You are not authorized');
     assert
       .dom(GENERAL.emptyStateMessage)
       .hasText(
@@ -151,7 +151,7 @@ module('Acceptance | clients | counts', function (hooks) {
       await click(CLIENT_COUNT.dateRange.edit);
       await click(CLIENT_COUNT.dateRange.dropdownOption(1));
       assert
-        .dom(CLIENT_COUNT.activityTimestamp)
+        .dom(GENERAL.hdsPageHeaderSubtitle)
         .hasTextContaining(`Dashboard last updated: ${format(STATIC_NOW, 'MMM d yyyy')}`);
       // Save URL with query params before clicking refresh
       const url = currentURL();
@@ -163,7 +163,7 @@ module('Acceptance | clients | counts', function (hooks) {
       assert.true(this.refreshSpy.calledOnce, 'router.refresh() is called once');
       assert.strictEqual(currentURL(), url, 'url is the same after clicking refresh');
       assert
-        .dom(CLIENT_COUNT.activityTimestamp)
+        .dom(GENERAL.hdsPageHeaderSubtitle)
         .hasTextContaining(`Dashboard last updated: ${format(fakeUpdatedNow, 'MMM d yyyy')}`);
     });
 
@@ -178,7 +178,7 @@ module('Acceptance | clients | counts', function (hooks) {
       await click(CLIENT_COUNT.dateRange.edit);
       await click(CLIENT_COUNT.dateRange.dropdownOption(1));
       assert
-        .dom(CLIENT_COUNT.activityTimestamp)
+        .dom(GENERAL.hdsPageHeaderSubtitle)
         .hasTextContaining(`Dashboard last updated: ${format(STATIC_NOW, 'MMM d yyyy')}`);
       // Save URL with query params before clicking refresh
       const url = currentURL();
@@ -190,7 +190,7 @@ module('Acceptance | clients | counts', function (hooks) {
       assert.true(this.refreshSpy.calledOnce, 'router.refresh() is called once');
       assert.strictEqual(currentURL(), url, 'url is the same after clicking refresh');
       assert
-        .dom(CLIENT_COUNT.activityTimestamp)
+        .dom(GENERAL.hdsPageHeaderSubtitle)
         .hasTextContaining(`Dashboard last updated: ${format(fakeUpdatedNow, 'MMM d yyyy')}`);
     });
   });

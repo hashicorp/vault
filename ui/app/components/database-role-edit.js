@@ -57,6 +57,16 @@ export default class DatabaseRoleEdit extends Component {
     this.modelValidations = null;
   }
 
+  get title() {
+    if (this.args?.mode === 'create') {
+      return 'Create Role';
+    } else if (this.args?.mode === 'edit') {
+      return 'Edit Role';
+    } else {
+      return this.args?.model?.id;
+    }
+  }
+
   get warningMessages() {
     const warnings = {};
     const { canCreateDynamic, canCreateStatic, type } = this.args.model;

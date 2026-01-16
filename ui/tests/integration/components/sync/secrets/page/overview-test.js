@@ -18,8 +18,9 @@ import { Response } from 'miragejs';
 import { dateFormat } from 'core/helpers/date-format';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { listDestinationsTransform } from 'sync/utils/api-transforms';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-const { title, tab, overviewCard, cta, overview, emptyStateTitle, emptyStateMessage } = PAGE;
+const { tab, overviewCard, cta, overview, emptyStateTitle, emptyStateMessage } = PAGE;
 
 module('Integration | Component | sync | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -94,7 +95,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
     await this.renderComponent();
 
-    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets Sync', 'Page title renders');
     assert.dom(cta.summary).doesNotExist('CTA does not render');
     assert.dom(tab('Overview')).hasText('Overview', 'Overview tab renders');
     assert.dom(tab('Destinations')).hasText('Destinations', 'Destinations tab renders');
@@ -114,7 +115,8 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     await this.renderComponent();
 
     assert.dom(overview.optInBanner.container).doesNotExist('Opt-in banner is not shown');
-    assert.dom(title).hasText('Secrets Sync Plus feature');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets Sync');
+    assert.dom(GENERAL.badge('Plus feature')).hasText('Plus feature', 'Plus feature badge renders');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
     assert.dom(cta.summary).exists();
   });
@@ -156,7 +158,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     this.isActivated = true;
     await this.renderComponent();
 
-    assert.dom(title).hasText('Secrets Sync');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets Sync');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
     assert.dom(cta.summary).exists();
   });

@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<LdapHeader @model={{@backendModel}} @promptConfig={{@promptConfig}} @breadcrumbs={{@breadcrumbs}} />
+<LdapHeader @model={{@secretsEngine}} @promptConfig={{@promptConfig}} @breadcrumbs={{@breadcrumbs}} />
 
 {{#if @promptConfig}}
   <ConfigCta />
@@ -50,6 +50,7 @@
   <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
     <AccountsCheckedOut
       @libraries={{this.allLibraries}}
+      @capabilities={{this.checkInCapabilities}}
       @statuses={{this.librariesStatus}}
       @showLibraryColumn={{true}}
       @onCheckInSuccess={{transition-to "vault.cluster.secrets.backend.ldap.overview"}}

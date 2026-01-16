@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/observations"
 )
 
 const (
@@ -341,14 +342,14 @@ func (ps *PolicyStore) invalidate(ctx context.Context, name string, policyType P
 	// case another process has re-written the policy; instead next time Get is
 	// called the values will be loaded back in.
 	if out == nil {
-		ps.switchedDeletePolicy(ctx, name, policyType, false, true)
+		ps.switchedDeletePolicy(ctx, name, policyType, false, true, nil)
 	}
 
 	return
 }
 
-// SetPolicy is used to create or update the given policy
-func (ps *PolicyStore) SetPolicy(ctx context.Context, p *Policy) error {
+// SetPolicyWithRequest is used to create or update a given policy from a request
+func (ps *PolicyStore) SetPolicyWithRequest(ctx context.Context, p *Policy, req *logical.Request) error {
 	defer metrics.MeasureSince([]string{"policy", "set_policy"}, time.Now())
 	if p == nil {
 		return fmt.Errorf("nil policy passed in for storage")
@@ -362,10 +363,15 @@ func (ps *PolicyStore) SetPolicy(ctx context.Context, p *Policy) error {
 		return fmt.Errorf("cannot update %q policy", p.Name)
 	}
 
-	return ps.setPolicyInternal(ctx, p)
+	return ps.setPolicyInternal(ctx, p, req)
 }
 
-func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
+// SetPolicy is used to create or update the given policy
+func (ps *PolicyStore) SetPolicy(ctx context.Context, p *Policy) error {
+	return ps.SetPolicyWithRequest(ctx, p, nil)
+}
+
+func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy, req *logical.Request) error {
 	ps.modifyLock.Lock()
 	defer ps.modifyLock.Unlock()
 
@@ -454,7 +460,54 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 		return fmt.Errorf("unknown policy type, cannot set")
 	}
 
+	var clientId string
+	var entityId string
+	var requestId string
+	if req != nil {
+		clientId = req.ClientID
+		entityId = req.EntityID
+		requestId = req.ID
+	}
+	// TODO Violet 1
+	err = ps.core.Observations().RecordObservationToLedger(ctx, observations.ObservationTypePolicyUpsert, p.namespace, map[string]interface{}{
+		"client_id":  clientId,
+		"entity_id":  entityId,
+		"request_id": requestId,
+		"type":       p.Type.String(),
+		"name":       p.Name,
+		"raw_policy": p.Raw,
+		"path_rules": pathRulesToObservationPathRules(p.Paths),
+	})
+	if err != nil {
+		ps.logger.Error("error recording observation for policy upsert", err)
+	}
+
 	return nil
+}
+
+// ObservationPathRules is a minimal version of PathRules to contain only
+// salient information for observations.
+type ObservationPathRules struct {
+	Path                string   `json:"path"`
+	Capabilities        []string `json:"capabilities"`
+	Prefix              bool     `json:"prefix"`
+	HasSegmentWildcards bool     `json:"has_segment_wildcards"`
+}
+
+// pathRulesToObservationPathRules translated a list of PathRules into a list of ObservationPathRules
+func pathRulesToObservationPathRules(rules []*PathRules) []*ObservationPathRules {
+	var observationPathRules []*ObservationPathRules
+	for _, rule := range rules {
+		if rule != nil {
+			observationPathRules = append(observationPathRules, &ObservationPathRules{
+				Path:                rule.Path,
+				Capabilities:        rule.Capabilities,
+				Prefix:              rule.IsPrefix,
+				HasSegmentWildcards: rule.HasSegmentWildcards,
+			})
+		}
+	}
+	return observationPathRules
 }
 
 // GetNonEGPPolicyType returns a policy's type.
@@ -737,9 +790,14 @@ func (ps *PolicyStore) policiesByNamespaces(ctx context.Context, policyType Poli
 	return keys, err
 }
 
+// DeletePolicyWithRequest is used to delete the named policy with a given request
+func (ps *PolicyStore) DeletePolicyWithRequest(ctx context.Context, name string, policyType PolicyType, req *logical.Request) error {
+	return ps.switchedDeletePolicy(ctx, name, policyType, true, false, req)
+}
+
 // DeletePolicy is used to delete the named policy
 func (ps *PolicyStore) DeletePolicy(ctx context.Context, name string, policyType PolicyType) error {
-	return ps.switchedDeletePolicy(ctx, name, policyType, true, false)
+	return ps.switchedDeletePolicy(ctx, name, policyType, true, false, nil)
 }
 
 // deletePolicyForce is used to delete the named policy and force it even if
@@ -747,10 +805,10 @@ func (ps *PolicyStore) DeletePolicy(ctx context.Context, name string, policyType
 // where we internally need to actually remove a policy that the user normally
 // isn't allowed to remove.
 func (ps *PolicyStore) deletePolicyForce(ctx context.Context, name string, policyType PolicyType) error {
-	return ps.switchedDeletePolicy(ctx, name, policyType, true, true)
+	return ps.switchedDeletePolicy(ctx, name, policyType, true, true, nil)
 }
 
-func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, policyType PolicyType, physicalDeletion, force bool) error {
+func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, policyType PolicyType, physicalDeletion, force bool, req *logical.Request) error {
 	defer metrics.MeasureSince([]string{"policy", "delete_policy"}, time.Now())
 
 	ns, err := namespace.FromContext(ctx)
@@ -831,6 +889,26 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 		defer ps.core.invalidateSentinelPolicy(policyType, index)
 
 		ps.invalidateEGPTreePath(index)
+	}
+
+	var clientId string
+	var entityId string
+	var requestId string
+	if req != nil {
+		clientId = req.ClientID
+		entityId = req.EntityID
+		requestId = req.ID
+	}
+	err = ps.core.Observations().RecordObservationToLedger(ctx, observations.ObservationTypePolicyDelete, ns, map[string]interface{}{
+		"client_id":     clientId,
+		"entity_id":     entityId,
+		"request_id":    requestId,
+		"forced_delete": force,
+		"type":          policyType.String(),
+		"name":          name,
+	})
+	if err != nil {
+		ps.logger.Error("error recording observation for policy delete", err)
 	}
 
 	return nil
@@ -936,7 +1014,7 @@ func (ps *PolicyStore) loadACLPolicyInternal(ctx context.Context, policyName, po
 
 	policy.Name = policyName
 	policy.Type = PolicyTypeACL
-	return ps.setPolicyInternal(ctx, policy)
+	return ps.setPolicyInternal(ctx, policy, nil)
 }
 
 func (ps *PolicyStore) sanitizeName(name string) string {

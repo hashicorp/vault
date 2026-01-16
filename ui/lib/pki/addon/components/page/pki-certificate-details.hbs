@@ -13,7 +13,7 @@
       {{on "click" this.downloadCert}}
       data-test-pki-cert-download-button
     />
-    {{#if @model.canRevoke}}
+    {{#if @canRevoke}}
       <ConfirmAction
         @buttonText="Revoke certificate"
         class="toolbar-button"
@@ -26,7 +26,7 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#if @model.privateKey}}
+{{#if @certData.private_key}}
   <div class="has-top-margin-m">
     <Hds::Alert data-test-cert-detail-next-steps @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
       <A.Title>Next steps</A.Title>
@@ -39,27 +39,29 @@
   </div>
 {{/if}}
 
-{{#each @model.formFields as |field|}}
-  {{#if field.options.isCertificate}}
-    <InfoTableRow @label={{or field.options.label (capitalize (humanize (dasherize field.name)))}}>
-      <CertificateCard @data={{get @model field.name}} />
-    </InfoTableRow>
-  {{else if (eq field.name "serialNumber")}}
-    <InfoTableRow @label="Serial number">
-      <code class="has-text-black">{{@model.serialNumber}}</code>
-    </InfoTableRow>
-  {{else}}
-    <InfoTableRow
-      @label={{capitalize (humanize (dasherize field.name))}}
-      {{! formatDate fields can be 0 which will cause them to always render -- pass null instead }}
-      @value={{or (get @model field.name) null}}
-      @formatDate={{if field.options.formatDate "MMM dd yyyy hh:mm:ss a"}}
-      @alwaysRender={{false}}
-    />
-  {{/if}}
+{{#each this.displayFields as |field|}}
+  {{#let (or (get @certData field) (get this.parsedCertificate field)) as |value|}}
+    {{#if value}}
+      {{#if (this.isCertificate field)}}
+        <InfoTableRow @label={{this.label field}}>
+          <CertificateCard @data={{value}} />
+        </InfoTableRow>
+      {{else if (eq field "serial_number")}}
+        <InfoTableRow @label="Serial number">
+          <code class="has-text-black">{{value}}</code>
+        </InfoTableRow>
+      {{else}}
+        <InfoTableRow
+          @label={{this.label field}}
+          @value={{value}}
+          @formatDate={{if (eq field "revocation_time") "MMM dd yyyy hh:mm:ss a"}}
+        />
+      {{/if}}
+    {{/if}}
+  {{/let}}
 {{/each}}
 
-<ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
+<ParsedCertificateInfoRows @model={{this.parsedCertificate}} />
 
 {{#if @onBack}}
   <div class="field is-grouped box is-fullwidth is-bottomless">

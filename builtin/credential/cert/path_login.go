@@ -280,8 +280,12 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 
 		// Certificate should not only match a registered certificate policy.
 		// Also, the identity of the certificate presented should match the identity of the certificate used during login
-		if req.Auth.InternalData["subject_key_id"] != skid && req.Auth.InternalData["authority_key_id"] != akid {
+		// For the identity of the certificate to match, both the subject key ID and authority key Id should match
+		if req.Auth.InternalData["subject_key_id"] != skid {
 			return nil, fmt.Errorf("client identity during renewal not matching client identity used during login")
+		}
+		if req.Auth.InternalData["authority_key_id"] != akid {
+			return nil, fmt.Errorf("client authority identity during renewal not matching client identity used during login")
 		}
 
 	}

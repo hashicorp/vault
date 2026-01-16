@@ -96,19 +96,23 @@
   />
 
 {{else}}
-  <EmptyState
-    @title="No {{pluralize this.identityType}} yet"
-    @message="A list of {{pluralize
-      this.identityType
-    }} in this namespace will be listed here. Create your first {{this.identityType}} to get started."
-  >
-    <Hds::Link::Standalone
-      @text="Identity: entities and groups tutorial"
-      @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
-      @icon="learn-link"
-      @iconPosition="trailing"
+  <Hds::ApplicationState class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="No {{pluralize this.identityType}} yet" />
+    <A.Body
+      data-test-empty-state-message
+      @text="A list of {{pluralize
+        this.identityType
+      }} in this namespace will be listed here. Create your first {{this.identityType}} to get started."
     />
-  </EmptyState>
+    <A.Footer data-test-empty-state-actions as |F|>
+      <F.LinkStandalone
+        @text="Identity: entities and groups tutorial"
+        @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
+        @icon="learn-link"
+        @iconPosition="trailing"
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
 {{/if}}
 
 {{#if this.entityToDisable}}

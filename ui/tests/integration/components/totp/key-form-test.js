@@ -52,7 +52,7 @@ module('Integration | Component | totp/key-form', function (hooks) {
     />
     `);
 
-    assert.dom('[data-test-secret-header]').hasText('Create a TOTP key', 'Form title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a TOTP key', 'Form title renders');
 
     // check validation errors
     await click(GENERAL.submitButton);
@@ -110,7 +110,7 @@ module('Integration | Component | totp/key-form', function (hooks) {
     />
     `);
 
-    assert.dom('[data-test-secret-header]').hasText('Create a TOTP key', 'Form title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a TOTP key', 'Form title renders');
 
     // switch to non-generated form fields
     await click(GENERAL.radioByAttr('Other service'));

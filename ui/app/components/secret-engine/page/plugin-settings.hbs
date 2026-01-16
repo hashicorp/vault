@@ -12,22 +12,20 @@
     <:breadcrumbs>
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
     </:breadcrumbs>
-    <:tabs>
-      <Mount::ConfigureTabs
-        @configRoute={{or engineDisplayData.configRoute "configuration.plugin-settings"}}
-        @displayName={{engineDisplayData.displayName}}
-        @path={{@model.secretsEngine.id}}
-      />
-    </:tabs>
     <:actions>
       <Hds::Button
         @color="secondary"
-        @route="vault.cluster.secrets.backend.list-root"
+        @route={{exit-configuration-route @model.secretsEngine.type @model.secretsEngine.version}}
         @text="Exit configuration"
         data-test-button="Exit configuration"
       />
     </:actions>
   </Page::Header>
+  <Mount::ConfigureTabs
+    @configRoute={{this.configRoute}}
+    @displayName={{engineDisplayData.displayName}}
+    @path={{@model.secretsEngine.id}}
+  />
 
   {{#if @model.config}}
     <Toolbar>

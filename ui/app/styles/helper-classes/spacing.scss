@@ -38,6 +38,11 @@
   padding-right: size_variables.$spacing-12;
 }
 
+.side-padding-24 {
+  padding-left: size_variables.$spacing-24;
+  padding-right: size_variables.$spacing-24;
+}
+
 .has-padding-8 {
   padding: size_variables.$spacing-8;
 }
@@ -80,6 +85,10 @@
 
 .top-padding-10 {
   padding-top: size_variables.$spacing-10;
+}
+
+.top-padding-32 {
+  padding-top: size_variables.$spacing-32;
 }
 
 .has-top-padding-s {

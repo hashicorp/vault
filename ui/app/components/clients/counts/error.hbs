@@ -3,8 +3,10 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::ApplicationState class="has-top-margin-xxl" ...attributes as |A|>
+<Hds::ApplicationState class="top-padding-32" ...attributes as |A|>
   <A.Header
+    @icon="skip"
+    @errorCode={{@error.httpStatus}}
     @title={{or @title (if (eq @error.httpStatus 403) "You are not authorized" "Error")}}
     data-test-empty-state-title
   />

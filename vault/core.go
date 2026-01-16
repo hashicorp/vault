@@ -62,6 +62,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
+	"github.com/hashicorp/vault/vault/billing"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/eventbus"
 	"github.com/hashicorp/vault/vault/observations"
@@ -444,6 +445,12 @@ type Core struct {
 	// activityLogLock protects the activityLog and activityLogConfig
 	activityLogLock sync.RWMutex
 
+	// consumptionBilling is used to track use case consumption-based billing metrics
+	consumptionBilling *billing.ConsumptionBilling
+
+	// consumptionBillingLock protects the consumptionBillingConfig
+	consumptionBillingLock sync.RWMutex
+
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
 
@@ -671,6 +678,8 @@ type Core struct {
 	// activityLogConfig contains override values for the activity log
 	// it is protected by activityLogLock
 	activityLogConfig ActivityLogCoreConfig
+
+	billingConfig billing.BillingConfig
 
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
@@ -907,6 +916,9 @@ type CoreConfig struct {
 	// Activity log controls
 	ActivityLogConfig ActivityLogCoreConfig
 
+	// BillingConfig contains override values for billing
+	BillingConfig billing.BillingConfig
+
 	// number of workers to use for lease revocation in the expiration manager
 	NumExpirationWorkers int
 
@@ -1108,6 +1120,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		raftJoinDoneCh:                 make(chan struct{}),
 		clusterHeartbeatInterval:       clusterHeartbeatInterval,
 		activityLogConfig:              conf.ActivityLogConfig,
+		billingConfig:                  conf.BillingConfig,
 		keyRotateGracePeriod:           new(int64),
 		numExpirationWorkers:           conf.NumExpirationWorkers,
 		raftFollowerStates:             raft.NewFollowerStates(),
@@ -2592,6 +2605,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupCensusManager(ctx); err != nil {
 			return err
 		}
+		if err := c.setupConsumptionBilling(ctx); err != nil {
+			return err
+		}
 	} else {
 		brokerLogger := logger.Named("audit")
 		broker, err := audit.NewBroker(brokerLogger)
@@ -3391,6 +3407,15 @@ func (c *Core) migrateMultiSealConfig(ctx context.Context) error {
 	}
 
 	switch {
+	case barrierSealConfig == nil:
+		// This can happen when a secondary is being enabled.  The active node
+		// seals itself and (except for raft) releases the leader lock, allowing
+		// another node to become active.  The former active node clears storage,
+		// and if the new active node reaches this point at the wrong time (before
+		// the former active node writes the bootstrap package, replacing the
+		// barrier config file), then the barrierSealConfig we just read from storage
+		// will be nil.
+		return nil
 	case c.seal.BarrierSealConfigType().IsSameAs(barrierSealConfig.Type):
 		return nil
 	case c.seal.BarrierSealConfigType() == SealConfigTypeMultiseal:
@@ -4855,3 +4880,7 @@ func (c *Core) SetSealMigrationDone() {
 }
 
 var errRemovedHANode = errors.New("node has been removed from the HA cluster")
+
+func (c *Core) CoreNumber() int {
+	return c.coreNumber
+}

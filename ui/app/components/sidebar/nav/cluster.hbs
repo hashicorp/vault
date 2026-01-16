@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::SideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
+<Hds::AppSideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
   <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
 
   <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
@@ -141,4 +141,4 @@
       />
     {{/if}}
   {{/if}}
-</Hds::SideNav::Portal>
+</Hds::AppSideNav::Portal>

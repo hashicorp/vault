@@ -11,6 +11,7 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 module('Integration | Component | kubernetes | Page::Configuration', function (hooks) {
   setupRenderingTest(hooks);
@@ -18,39 +19,29 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'kubernetes_f3400dee',
-        path: 'kubernetes-test/',
-        type: 'kubernetes',
-      },
+    this.secretsEngine = new SecretsEngineResource({
+      accessor: 'kubernetes_f3400dee',
+      path: 'kubernetes-test/',
+      type: 'kubernetes',
     });
-    this.backend = this.store.peekRecord('secret-engine', 'kubernetes-test');
+
     this.config = null;
 
     this.setConfig = (disableLocal) => {
-      const data = this.server.create(
+      this.config = this.server.create(
         'kubernetes-config',
         !disableLocal ? { disable_local_ca_jwt: false } : null
       );
-      this.store.pushPayload('kubernetes/config', {
-        modelName: 'kubernetes/config',
-        backend: 'kubernetes-test',
-        ...data,
-      });
-      this.config = this.store.peekRecord('kubernetes/config', 'kubernetes-test');
     };
 
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: this.backend.id },
+      { label: this.secretsEngine.id },
     ];
 
     this.renderComponent = () => {
       return render(
-        hbs`<Page::Configuration @backend={{this.backend}} @config={{this.config}} @breadcrumbs={{this.breadcrumbs}} />`,
+        hbs`<Page::Configuration @config={{this.config}} @secretsEngine={{this.secretsEngine}} @breadcrumbs={{this.breadcrumbs}} />`,
         {
           owner: this.engine,
         }
@@ -60,8 +51,10 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
 
   test('it should render tab page header, config cta and mount config', async function (assert) {
     await this.renderComponent();
-    assert.dom('.title svg').hasClass('hds-icon-kubernetes-color', 'Kubernetes icon renders in title');
-    assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
+    assert
+      .dom(GENERAL.icon('kubernetes-color'))
+      .hasClass('hds-icon-kubernetes-color', 'Kubernetes icon renders in title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('kubernetes-test', 'Mount path renders in title');
     assert.dom(SES.configure).doesNotExist('Toolbar action does not render when engine is not configured');
     assert.dom(GENERAL.emptyStateTitle).hasText('Kubernetes not configured');
     assert.dom(GENERAL.emptyStateActions).hasText('Configure Kubernetes');
@@ -86,7 +79,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
     assert.dom('[data-test-row-label="Kubernetes host"]').exists('Kubernetes host label renders');
     assert
       .dom('[data-test-row-value="Kubernetes host"]')
-      .hasText(this.config.kubernetesHost, 'Kubernetes host value renders');
+      .hasText(this.config.kubernetes_host, 'Kubernetes host value renders');
 
     assert.dom('[data-test-row-label="Certificate"]').exists('Certificate label renders');
     assert.dom('[data-test-certificate-card]').exists('Certificate card component renders');
@@ -95,6 +88,6 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
     assert.dom('[data-test-certificate-label]').hasText('PEM Format', 'Certificate label renders');
     assert
       .dom('[data-test-certificate-value]')
-      .hasText(this.config.kubernetesCaCert, 'Certificate value renders');
+      .hasText(this.config.kubernetes_ca_cert, 'Certificate value renders');
   });
 });

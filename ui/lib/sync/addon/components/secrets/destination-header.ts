@@ -9,7 +9,6 @@ import { service } from '@ember/service';
 import apiMethodResolver from 'sync/utils/api-method-resolver';
 
 import type RouterService from '@ember/routing/router-service';
-import type PaginationService from 'vault/services/pagination';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type ApiService from 'vault/services/api';
 import type CapabilitiesService from 'vault/services/capabilities';
@@ -23,7 +22,6 @@ interface Args {
 
 export default class DestinationsTabsToolbar extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
-  @service declare readonly pagination: PaginationService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;
   @service declare readonly capabilities: CapabilitiesService;

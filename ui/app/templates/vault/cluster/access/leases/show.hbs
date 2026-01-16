@@ -3,8 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
+<Page::Header @title="Leases">
+  <:breadcrumbs>
     <KeyValueHeader
       @baseKey={{this.baseKey}}
       @path="vault.cluster.access.leases.list"
@@ -12,15 +12,16 @@
       @showCurrent={{true}}
       @linkToPaths={{this.capabilities.leases.canList}}
     />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      <LinkTo @route="vault.cluster.access.leases">
-        Leases
-      </LinkTo>
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+  </:breadcrumbs>
+  <:actions>
+    <Hds::Button
+      @text="Back to Leases"
+      @color="secondary"
+      @route="vault.cluster.access.leases"
+      data-test-button="Back to Leases"
+    />
+  </:actions>
+</Page::Header>
 
 {{#if this.capabilities.revoke.canUpdate}}
   <Toolbar>

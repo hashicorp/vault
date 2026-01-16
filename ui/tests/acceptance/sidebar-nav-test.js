@@ -34,8 +34,8 @@ module('Acceptance | sidebar navigation', function (hooks) {
     return login();
   });
 
-  test('it should navigate back to the dashboard when logo is clicked', async function (assert) {
-    await click('[data-test-sidebar-logo]');
+  test('it should navigate back to the dashboard when logo is clicked in app header', async function (assert) {
+    await click('[data-test-app-header-logo]');
     assert.strictEqual(currentURL(), '/vault/dashboard', 'dashboard route renders');
   });
 

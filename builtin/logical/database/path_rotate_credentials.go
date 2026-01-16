@@ -295,7 +295,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 					AdditionalDatabaseMetadata{key: "credential_ttl", value: s.CredentialTTL().String()},
 					AdditionalDatabaseMetadata{key: "rotation_period", value: s.RotationPeriod.String()},
 					AdditionalDatabaseMetadata{key: "rotation_schedule", value: s.RotationSchedule},
-					AdditionalDatabaseMetadata{key: "next_vault_rotation", value: s.NextVaultRotation.String()})
+					AdditionalDatabaseMetadata{key: "next_vault_rotation", value: s.NextVaultRotation.Format(time.RFC3339)})
 			} else {
 				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRotateStaticRoleFailure,
 					AdditionalDatabaseMetadata{key: "role_name", value: name},

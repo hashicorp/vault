@@ -18,19 +18,17 @@
       {{yield to="badges"}}
     </PH.Badges>
   {{/if}}
-  {{#if @subtitle}}
+  {{#if (has-block "subtitle")}}
+    <PH.Subtitle>{{yield to="subtitle"}}</PH.Subtitle>
+  {{else if @subtitle}}
     <PH.Subtitle>{{@subtitle}}</PH.Subtitle>
   {{/if}}
-  {{#if @description}}
+  {{#if (has-block "description")}}
+    <PH.Description>{{yield to="description"}}</PH.Description>
+  {{else if @description}}
     <PH.Description>{{@description}}</PH.Description>
   {{/if}}
   {{#if (has-block "actions")}}
     <PH.Actions>{{yield to="actions"}}</PH.Actions>
   {{/if}}
 </Hds::PageHeader>
-
-{{#if (has-block "tabs")}}
-  <div class="has-top-margin-l">
-    {{yield to="tabs"}}
-  </div>
-{{/if}}

@@ -5,10 +5,11 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import type PkiActionModel from 'vault/vault/models/pki/action';
+
+import type { Breadcrumb } from 'vault/vault/app-types';
 
 interface Args {
-  model: PkiActionModel;
+  breadcrumbs: Breadcrumb[];
 }
 
 export default class PagePkiIssuerImportComponent extends Component<Args> {

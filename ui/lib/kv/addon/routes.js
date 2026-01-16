@@ -25,4 +25,5 @@ export default buildRoutes(function () {
     });
   });
   this.route('configuration');
+  this.route('configure');
 });

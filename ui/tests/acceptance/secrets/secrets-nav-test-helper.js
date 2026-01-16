@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
+import { click, currentRouteName, fillIn, visit, waitUntil } from '@ember/test-helpers';
 import { v4 as uuidv4 } from 'uuid';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
@@ -20,6 +20,7 @@ export default (test, type) => {
     isConfigurable = false,
     configRoute = 'configuration.plugin-settings',
     engineRoute = 'list-root',
+    isOnlyMountable,
   } = engineDisplayData(type);
 
   if (isConfigurable) {
@@ -45,41 +46,85 @@ export default (test, type) => {
       const backend = `${type}-${uuidv4()}-nav-test`;
       await runCmd(mountEngineCmd(type, backend));
 
-      await visit(`/vault/secrets-engines/${backend}/configuration`);
+      await visit(`/vault/secrets-engines/${backend}/configuration/general-settings`);
       assert.strictEqual(
         currentRouteName(),
         `${BASE_ROUTE}.configuration.general-settings`,
-        'it navigates to the "general-settings" route'
+        'it navigates to general settings'
       );
       assert.dom(GENERAL.tabLink('general-settings')).hasClass('active');
       assert.dom(GENERAL.tab('plugin-settings')).exists();
+      assert.dom(GENERAL.tabLink('plugin-settings')).doesNotHaveClass('active');
+
       await click(GENERAL.tabLink('plugin-settings'));
-      assert.strictEqual(
-        currentRouteName(),
-        `${BASE_ROUTE}.${this.expectedConfigEditRoute}`,
-        'clicking plugin settings navigates to edit route when not configured'
-      );
+      assert.dom(GENERAL.tabLink('plugin-settings')).hasClass('active', 'plugin-settings is now active');
       assert
         .dom(GENERAL.tabLink('general-settings'))
         .doesNotHaveClass('active', 'general-settings is no longer active');
-      assert.dom(GENERAL.tabLink('plugin-settings')).hasClass('active', 'plugin-settings is now active');
+      assert.strictEqual(
+        currentRouteName(),
+        `${BASE_ROUTE}.${this.expectedConfigEditRoute}`,
+        'it redirects to the edit route for the plugin'
+      );
 
       await runCmd(deleteEngineCmd(backend));
     });
 
+    // The dropdown only renders for engines that can be managed using the UI, e.g. "Azure" is only mountable so skip these tests
+    if (!isOnlyMountable) {
+      test('(configurable): it navigates when NOT configured via dropdown', async function (assert) {
+        const backend = `${type}-${uuidv4()}-nav-test`;
+        await runCmd(mountEngineCmd(type, backend));
+
+        await visit(this.overviewUrl(backend));
+        await click(GENERAL.dropdownToggle('Manage'));
+        await click(GENERAL.menuItem('Configure'));
+
+        assert.strictEqual(
+          currentRouteName(),
+          `${BASE_ROUTE}.${this.expectedConfigEditRoute}`,
+          'it redirects to the plugins edit route'
+        );
+        assert.dom(GENERAL.tab('general-settings')).exists();
+        assert.dom(GENERAL.tabLink('plugin-settings')).hasClass('active');
+
+        await runCmd(deleteEngineCmd(backend));
+      });
+
+      test('(configurable): it navigates when configured via dropdown', async function (assert) {
+        const backend = `${type}-${uuidv4()}-nav-test`;
+        await runCmd(mountEngineCmd(type, backend));
+
+        await visit(this.overviewUrl(backend));
+        await click(GENERAL.dropdownToggle('Manage'));
+        await click(GENERAL.menuItem('Configure'));
+
+        assert.strictEqual(
+          currentRouteName(),
+          `${BASE_ROUTE}.${this.expectedConfigEditRoute}`,
+          'it redirects to the plugins edit route'
+        );
+        assert.dom(GENERAL.tab('general-settings')).exists();
+        assert.dom(GENERAL.tabLink('plugin-settings')).hasClass('active');
+
+        await runCmd(deleteEngineCmd(backend));
+      });
+    }
+
     test('(configurable): it navigates from the list view when configured', async function (assert) {
       const backend = `${type}-${uuidv4()}-nav-test`;
       await this.mountAndConfig(backend);
-
       await visit(`/vault/secrets-engines`);
-
       await fillIn(GENERAL.inputSearch('secret-engine-path'), backend);
       await click(GENERAL.menuTrigger);
       await click(GENERAL.menuItem('View configuration'));
+
+      // For configurable engines, clicking "View configuration" will direct to its plugin settings route
+      await waitUntil(() => currentRouteName() === `${BASE_ROUTE}.${configRoute}`);
       assert.strictEqual(
         currentRouteName(),
         `${BASE_ROUTE}.${configRoute}`,
-        'it navigates to the configure route from the list view'
+        'it navigates to the configure edit route from the list view'
       );
 
       await runCmd(deleteEngineCmd(backend));
@@ -89,7 +134,7 @@ export default (test, type) => {
       const backend = `${type}-${uuidv4()}-nav-test`;
       await this.mountAndConfig(backend);
 
-      await visit(`/vault/secrets-engines/${backend}/configuration`);
+      await visit(`/vault/secrets-engines/${backend}/configuration/general-settings`);
       assert.strictEqual(
         currentRouteName(),
         `${BASE_ROUTE}.configuration.general-settings`,
@@ -126,11 +171,11 @@ export default (test, type) => {
       await runCmd(deleteEngineCmd(backend));
     });
 
-    test(`(configurable): it navigates to the ${engineRoute} page when "Exit configuration" is clicked in the plugin settings route`, async function (assert) {
+    test(`(configurable): it navigates to the appropriate page when "Exit configuration" is clicked in the plugin settings route`, async function (assert) {
       const backend = `${type}-${uuidv4()}-nav-test`;
       await this.mountAndConfig(backend);
 
-      await visit(`/vault/secrets-engines/${backend}/configuration`);
+      await visit(`/vault/secrets-engines/${backend}/configuration/general-settings`);
       await click(GENERAL.tabLink('plugin-settings'));
       assert.strictEqual(
         currentRouteName(),
@@ -139,10 +184,12 @@ export default (test, type) => {
       );
       await click(GENERAL.button('Exit configuration'));
 
+      // added check for mountable only engines to navigate back to secrets engines list as they don't have an overview page
+      const route = isOnlyMountable ? 'vault.cluster.secrets.backends' : `${BASE_ROUTE}.${engineRoute}`;
       assert.strictEqual(
         currentRouteName(),
-        `${BASE_ROUTE}.${engineRoute}`,
-        `it navigates to the ${engineRoute} route when "Exit configuration" is clicked`
+        route,
+        `it navigates to the ${route} route when "Exit configuration" is clicked`
       );
 
       await runCmd(deleteEngineCmd(backend));
@@ -153,7 +200,7 @@ export default (test, type) => {
       const backend = `${type}-${uuidv4()}-nav-test`;
       await runCmd(mountEngineCmd(type, backend));
 
-      await visit(`/vault/secrets-engines/${backend}/configuration`);
+      await visit(`/vault/secrets-engines/${backend}/configuration/general-settings`);
 
       assert.strictEqual(
         currentRouteName(),
@@ -165,28 +212,28 @@ export default (test, type) => {
 
       await runCmd(deleteEngineCmd(backend));
     });
+
+    test(`it navigates to the ${engineRoute} page when "Exit configuration" is clicked in general-settings`, async function (assert) {
+      const backend = `${type}-${uuidv4()}-nav-test`;
+
+      await runCmd(mountEngineCmd(type, backend));
+
+      await visit(`/vault/secrets-engines/${backend}/configuration/general-settings`);
+      assert.strictEqual(
+        currentRouteName(),
+        `${BASE_ROUTE}.configuration.general-settings`,
+        'it navigates to the "general-settings" route'
+      );
+
+      await click(GENERAL.button('Exit configuration'));
+
+      assert.strictEqual(
+        currentRouteName(),
+        `${BASE_ROUTE}.${engineRoute}`,
+        `it navigates to the ${engineRoute} route when "Exit configuration" is clicked`
+      );
+
+      await runCmd(deleteEngineCmd(backend));
+    });
   }
-
-  test(`it navigates to the ${engineRoute} page when "Exit configuration" is clicked in general-settings`, async function (assert) {
-    const backend = `${type}-${uuidv4()}-nav-test`;
-
-    await runCmd(mountEngineCmd(type, backend));
-
-    await visit(`/vault/secrets-engines/${backend}/configuration`);
-    assert.strictEqual(
-      currentRouteName(),
-      `${BASE_ROUTE}.configuration.general-settings`,
-      'it navigates to the "general-settings" route'
-    );
-
-    await click(GENERAL.button('Exit configuration'));
-
-    assert.strictEqual(
-      currentRouteName(),
-      `${BASE_ROUTE}.${engineRoute}`,
-      `it navigates to the ${engineRoute} route when "Exit configuration" is clicked`
-    );
-
-    await runCmd(deleteEngineCmd(backend));
-  });
 };

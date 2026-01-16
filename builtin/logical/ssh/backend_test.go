@@ -22,6 +22,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/observations"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
@@ -616,13 +617,14 @@ func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateFalse(t *testing.T
 	}
 }
 
-func newTestingFactory(t *testing.T) func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+func newTestingFactory(t *testing.T, obsRecorder logical.ObservationRecorder) func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	return func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 		defaultLeaseTTLVal := 2 * time.Minute
 		maxLeaseTTLVal := 10 * time.Minute
 		return Factory(context.Background(), &logical.BackendConfig{
-			Logger:      corehelpers.NewTestLogger(t),
-			StorageView: &logical.InmemStorage{},
+			Logger:              corehelpers.NewTestLogger(t),
+			ObservationRecorder: obsRecorder,
+			StorageView:         &logical.InmemStorage{},
 			System: &logical.StaticSystemView{
 				DefaultLeaseTTLVal: defaultLeaseTTLVal,
 				MaxLeaseTTLVal:     maxLeaseTTLVal,
@@ -643,18 +645,19 @@ func TestSSHBackend_Lookup(t *testing.T) {
 	resp1 := []string(nil)
 	resp2 := []string{testOTPRoleName}
 	resp3 := []string{testAtRoleName}
+	obsRecorder := observations.NewTestObservationRecorder()
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: newTestingFactory(t),
+		LogicalFactory: newTestingFactory(t, obsRecorder),
 		Steps: []logicaltest.TestStep{
-			testLookupRead(t, data, resp1),
-			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
-			testLookupRead(t, data, resp2),
-			testRoleDelete(t, testOTPRoleName),
-			testLookupRead(t, data, resp1),
-			testRoleWrite(t, testAtRoleName, testOTPRoleData),
-			testLookupRead(t, data, resp3),
-			testRoleDelete(t, testAtRoleName),
-			testLookupRead(t, data, resp1),
+			testLookupRead(t, data, resp1, obsRecorder),
+			testRoleWrite(t, testOTPRoleName, testOTPRoleData, obsRecorder),
+			testLookupRead(t, data, resp2, obsRecorder),
+			testRoleDelete(t, testOTPRoleName, obsRecorder),
+			testLookupRead(t, data, resp1, obsRecorder),
+			testRoleWrite(t, testAtRoleName, testOTPRoleData, obsRecorder),
+			testLookupRead(t, data, resp3, obsRecorder),
+			testRoleDelete(t, testAtRoleName, obsRecorder),
+			testLookupRead(t, data, resp1, obsRecorder),
 		},
 	})
 }
@@ -685,17 +688,18 @@ func TestSSHBackend_RoleList(t *testing.T) {
 			},
 		},
 	}
+	obsRecorder := observations.NewTestObservationRecorder()
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: newTestingFactory(t),
+		LogicalFactory: newTestingFactory(t, obsRecorder),
 		Steps: []logicaltest.TestStep{
 			testRoleList(t, resp1),
-			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
+			testRoleWrite(t, testOTPRoleName, testOTPRoleData, obsRecorder),
 			testRoleList(t, resp2),
-			testRoleWrite(t, testAtRoleName, testOTPRoleData),
+			testRoleWrite(t, testAtRoleName, testOTPRoleData, obsRecorder),
 			testRoleList(t, resp3),
-			testRoleDelete(t, testAtRoleName),
+			testRoleDelete(t, testAtRoleName, obsRecorder),
 			testRoleList(t, resp2),
-			testRoleDelete(t, testOTPRoleName),
+			testRoleDelete(t, testOTPRoleName, obsRecorder),
 			testRoleList(t, resp1),
 		},
 	})
@@ -713,17 +717,18 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 		"default_user": testUserName,
 		"cidr_list":    testCIDRList,
 	}
+	obsRecorder := observations.NewTestObservationRecorder()
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: newTestingFactory(t),
+		LogicalFactory: newTestingFactory(t, obsRecorder),
 		Steps: []logicaltest.TestStep{
-			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
-			testRoleRead(t, testOTPRoleName, respOTPRoleData),
-			testRoleDelete(t, testOTPRoleName),
-			testRoleRead(t, testOTPRoleName, nil),
-			testRoleWrite(t, testAtRoleName, testOTPRoleData),
-			testRoleRead(t, testAtRoleName, respOTPRoleData),
-			testRoleDelete(t, testAtRoleName),
-			testRoleRead(t, testAtRoleName, nil),
+			testRoleWrite(t, testOTPRoleName, testOTPRoleData, obsRecorder),
+			testRoleRead(t, testOTPRoleName, respOTPRoleData, obsRecorder),
+			testRoleDelete(t, testOTPRoleName, obsRecorder),
+			testRoleRead(t, testOTPRoleName, nil, obsRecorder),
+			testRoleWrite(t, testAtRoleName, testOTPRoleData, obsRecorder),
+			testRoleRead(t, testAtRoleName, respOTPRoleData, obsRecorder),
+			testRoleDelete(t, testAtRoleName, obsRecorder),
+			testRoleRead(t, testAtRoleName, nil, obsRecorder),
 		},
 	})
 }
@@ -751,11 +756,12 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 		"username": testUserName,
 		"ip":       host,
 	}
+	obsRecorder := observations.NewTestObservationRecorder()
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: newTestingFactory(t),
+		LogicalFactory: newTestingFactory(t, obsRecorder),
 		Steps: []logicaltest.TestStep{
-			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
-			testCredsWrite(t, testOTPRoleName, data, false, sshAddress),
+			testRoleWrite(t, testOTPRoleName, testOTPRoleData, obsRecorder),
+			testCredsWrite(t, testOTPRoleName, data, false, sshAddress, obsRecorder),
 		},
 	})
 }
@@ -768,7 +774,7 @@ func TestSSHBackend_VerifyEcho(t *testing.T) {
 		"message": api.VerifyEchoResponse,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: newTestingFactory(t),
+		LogicalFactory: newTestingFactory(t, nil),
 		Steps: []logicaltest.TestStep{
 			testVerifyWrite(t, verifyData, expectedData),
 		},
@@ -794,17 +800,18 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 		"roles": []string{},
 	}
 
+	obsRecorder := observations.NewTestObservationRecorder()
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: newTestingFactory(t),
+		LogicalFactory: newTestingFactory(t, obsRecorder),
 		Steps: []logicaltest.TestStep{
-			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
-			testConfigZeroAddressWrite(t, req1),
-			testConfigZeroAddressRead(t, resp1),
-			testConfigZeroAddressRead(t, resp2),
-			testConfigZeroAddressRead(t, resp1),
-			testRoleDelete(t, testOTPRoleName),
-			testConfigZeroAddressRead(t, resp3),
-			testConfigZeroAddressDelete(t),
+			testRoleWrite(t, testOTPRoleName, testOTPRoleData, obsRecorder),
+			testConfigZeroAddressWrite(t, req1, obsRecorder),
+			testConfigZeroAddressRead(t, resp1, obsRecorder),
+			testConfigZeroAddressRead(t, resp2, obsRecorder),
+			testConfigZeroAddressRead(t, resp1, obsRecorder),
+			testRoleDelete(t, testOTPRoleName, obsRecorder),
+			testConfigZeroAddressRead(t, resp3, obsRecorder),
+			testConfigZeroAddressDelete(t, obsRecorder),
 		},
 	})
 }
@@ -821,15 +828,16 @@ func TestSSHBackend_CredsForZeroAddressRoles_otp(t *testing.T) {
 	req1 := map[string]interface{}{
 		"roles": testOTPRoleName,
 	}
+	obsRecorder := observations.NewTestObservationRecorder()
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: newTestingFactory(t),
+		LogicalFactory: newTestingFactory(t, obsRecorder),
 		Steps: []logicaltest.TestStep{
-			testRoleWrite(t, testOTPRoleName, otpRoleData),
-			testCredsWrite(t, testOTPRoleName, data, true, ""),
-			testConfigZeroAddressWrite(t, req1),
-			testCredsWrite(t, testOTPRoleName, data, false, ""),
-			testConfigZeroAddressDelete(t),
-			testCredsWrite(t, testOTPRoleName, data, true, ""),
+			testRoleWrite(t, testOTPRoleName, otpRoleData, obsRecorder),
+			testCredsWrite(t, testOTPRoleName, data, true, "", obsRecorder),
+			testConfigZeroAddressWrite(t, req1, obsRecorder),
+			testCredsWrite(t, testOTPRoleName, data, false, "", obsRecorder),
+			testConfigZeroAddressDelete(t, obsRecorder),
+			testCredsWrite(t, testOTPRoleName, data, true, "", obsRecorder),
 		},
 	})
 }
@@ -944,7 +952,8 @@ func testSSHBackend_CA(t *testing.T, dockerImageTag, caPublicKey, caPrivateKey, 
 	cleanup, sshAddress := prepareTestContainer(t, dockerImageTag, caPublicKey)
 	defer cleanup()
 	config := logical.TestBackendConfig()
-
+	obsRecorder := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = obsRecorder
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
@@ -999,7 +1008,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(caPublicKey, caPrivateKey),
-			testRoleWrite(t, "testcarole", roleOptions),
+			testRoleWrite(t, "testcarole", roleOptions, obsRecorder),
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/testcarole",
@@ -1041,7 +1050,6 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 					if !expectError && err != nil {
 						return err
 					}
-
 					return nil
 				},
 			},
@@ -1107,6 +1115,8 @@ func TestSSHBackend_CAUpgradeAlgorithmSigner(t *testing.T) {
 	defer cleanup()
 	config := logical.TestBackendConfig()
 
+	obsRecorder := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = obsRecorder
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
@@ -1177,8 +1187,8 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(testCAPublicKey, testCAPrivateKey),
-			testRoleWrite(t, "testcarole", roleOptionsOldEntry),
-			testRoleWrite(t, "testcarole", roleOptionsUpgradedEntry),
+			testRoleWrite(t, "testcarole", roleOptionsOldEntry, obsRecorder),
+			testRoleWrite(t, "testcarole", roleOptionsUpgradedEntry, obsRecorder),
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/testcarole",
@@ -2448,22 +2458,55 @@ func getSigningPublicKey() (ssh.PublicKey, error) {
 	return parsedKey, nil
 }
 
-func testConfigZeroAddressDelete(t *testing.T) logicaltest.TestStep {
+func testConfigZeroAddressDelete(t *testing.T, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.DeleteOperation,
 		Path:      "config/zeroaddress",
+		Check: func(resp *logical.Response) error {
+			if obsRecorder == nil {
+				return nil
+			}
+			lastObservation := obsRecorder.LastObservationOfType(ObservationTypeSSHConfigZeroAddressDelete)
+			if lastObservation == nil {
+				return fmt.Errorf("missing observation")
+			}
+			return nil
+		},
 	}
 }
 
-func testConfigZeroAddressWrite(t *testing.T, data map[string]interface{}) logicaltest.TestStep {
+func testConfigZeroAddressWrite(t *testing.T, data map[string]interface{}, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/zeroaddress",
 		Data:      data,
+		Check: func(resp *logical.Response) error {
+			if obsRecorder == nil {
+				return nil
+			}
+			lastObservation := obsRecorder.LastObservationOfType(ObservationTypeSSHConfigZeroAddressWrite)
+			if lastObservation == nil {
+				return fmt.Errorf("missing observation")
+			}
+			roleData := data["roles"]
+			var expectedRoles []string
+			switch v := roleData.(type) {
+			case []string:
+				expectedRoles = v
+			case string:
+				expectedRoles = []string{v}
+			default:
+				return fmt.Errorf("invalid role data type: %T", roleData)
+			}
+			if !reflect.DeepEqual(lastObservation.Data["role_names"], expectedRoles) {
+				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["role_names"], expectedRoles)
+			}
+			return nil
+		},
 	}
 }
 
-func testConfigZeroAddressRead(t *testing.T, expected map[string]interface{}) logicaltest.TestStep {
+func testConfigZeroAddressRead(t *testing.T, expected map[string]interface{}, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "config/zeroaddress",
@@ -2482,6 +2525,16 @@ func testConfigZeroAddressRead(t *testing.T, expected map[string]interface{}) lo
 				return fmt.Errorf("Response mismatch:\nActual:%#v\nExpected:%#v", d, ex)
 			}
 
+			if obsRecorder == nil {
+				return nil
+			}
+			lastObservation := obsRecorder.LastObservationOfType(ObservationTypeSSHConfigZeroAddressRead)
+			if lastObservation == nil {
+				return fmt.Errorf("missing observation")
+			}
+			if !reflect.DeepEqual(lastObservation.Data["role_names"].([]string), d.Roles) {
+				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["role_names"], d.Roles)
+			}
 			return nil
 		},
 	}
@@ -2510,7 +2563,7 @@ func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[str
 	}
 }
 
-func testLookupRead(t *testing.T, data map[string]interface{}, expected []string) logicaltest.TestStep {
+func testLookupRead(t *testing.T, data map[string]interface{}, expected []string, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "lookup",
@@ -2522,16 +2575,43 @@ func testLookupRead(t *testing.T, data map[string]interface{}, expected []string
 			if !reflect.DeepEqual(resp.Data["roles"].([]string), expected) {
 				return fmt.Errorf("Invalid response: \nactual:%#v\nexpected:%#v", resp.Data["roles"].([]string), expected)
 			}
+
+			if obsRecorder == nil {
+				return nil
+			}
+			lastObservation := obsRecorder.LastObservationOfType(ObservationTypeSSHLookup)
+			if lastObservation == nil {
+				return fmt.Errorf("missing observation")
+			}
+			if !reflect.DeepEqual(lastObservation.Data["role_names"].([]string), expected) {
+				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["role_names"], expected)
+			}
 			return nil
 		},
 	}
 }
 
-func testRoleWrite(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
+func testRoleWrite(t *testing.T, name string, data map[string]interface{}, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data:      data,
+		Check: func(r *logical.Response) error {
+			if obsRecorder == nil {
+				return nil
+			}
+			lastObservation := obsRecorder.LastObservationOfType(ObservationTypeSSHRoleWrite)
+			if lastObservation == nil {
+				return fmt.Errorf("missing observation")
+			}
+			if lastObservation.Data["role_name"] != name {
+				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["role_name"], name)
+			}
+			if lastObservation.Data["key_type"] != data["key_type"] {
+				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["key_type"], data["key_type"])
+			}
+			return nil
+		},
 	}
 }
 
@@ -2554,7 +2634,7 @@ func testRoleList(t *testing.T, expected map[string]interface{}) logicaltest.Tes
 	}
 }
 
-func testRoleRead(t *testing.T, roleName string, expected map[string]interface{}) logicaltest.TestStep {
+func testRoleRead(t *testing.T, roleName string, expected map[string]interface{}, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + roleName,
@@ -2577,19 +2657,45 @@ func testRoleRead(t *testing.T, roleName string, expected map[string]interface{}
 			default:
 				return fmt.Errorf("unknown key type. bad: %#v", resp)
 			}
+			if obsRecorder == nil {
+				return nil
+			}
+			lastObservation := obsRecorder.LastObservationOfType(ObservationTypeSSHRoleRead)
+			if lastObservation == nil {
+				return fmt.Errorf("missing observation")
+			}
+			if lastObservation.Data["role_name"] != roleName {
+				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["role_name"], roleName)
+			}
+			if lastObservation.Data["key_type"] != d.KeyType {
+				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["key_type"], d.KeyType)
+			}
 			return nil
 		},
 	}
 }
 
-func testRoleDelete(t *testing.T, name string) logicaltest.TestStep {
+func testRoleDelete(t *testing.T, name string, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.DeleteOperation,
 		Path:      "roles/" + name,
+		Check: func(r *logical.Response) error {
+			if obsRecorder == nil {
+				return nil
+			}
+			lastObservation := obsRecorder.LastObservationOfType(ObservationTypeSSHRoleDelete)
+			if lastObservation == nil {
+				return fmt.Errorf("missing observation")
+			}
+			if lastObservation.Data["role_name"] != name {
+				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["role_name"], name)
+			}
+			return nil
+		},
 	}
 }
 
-func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, expectError bool, address string) logicaltest.TestStep {
+func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, expectError bool, address string, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      fmt.Sprintf("creds/%s", roleName),
@@ -2640,6 +2746,20 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 					return fmt.Errorf("invalid key")
 				}
 			}
+
+			if obsRecorder == nil {
+				return nil
+			}
+			lastObservation := obsRecorder.LastObservationOfType(ObservationTypeSSHOTPCreate)
+			if lastObservation == nil {
+				return fmt.Errorf("missing observation")
+			}
+			if lastObservation.Data["role_name"] != roleName {
+				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["role_name"], roleName)
+			}
+			if lastObservation.Data["key_type"] != KeyTypeOTP {
+				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["key_type"], KeyTypeOTP)
+			}
 			return nil
 		},
 	}
@@ -2648,7 +2768,6 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 func TestBackend_CleanupDynamicHostKeys(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
@@ -2671,7 +2790,6 @@ func TestBackend_CleanupDynamicHostKeys(t *testing.T) {
 	require.NotNil(t, resp.Data)
 	require.NotNil(t, resp.Data["message"])
 	require.Contains(t, resp.Data["message"], "0 of 0")
-
 	// Write a bunch of bogus entries.
 	for i := 0; i < 15; i++ {
 		data := map[string]interface{}{

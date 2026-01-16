@@ -1,0 +1,14 @@
+autoInstallPeers: false
+strictPeerDependencies: true
+resolvePeersFromWorkspaceRoot: false
+
+peerDependencyRules:
+  allowedVersions:
+    # for @typescript-eslint/parser
+    eslint: '*'
+
+dedupeInjectedDeps: true
+publicHoistPattern:
+  - ember-source
+
+verifyDepsBeforeRun: 'install'

@@ -3,27 +3,22 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <Hds::Breadcrumb>
-      <Hds::Breadcrumb::Item
-        @text="{{uppercase this.policyType}} policies"
-        @route="vault.cluster.policies"
-        @model={{this.policyType}}
-        data-test-policy-list-link
-      />
-      <Hds::Breadcrumb::Item @text={{this.model.id}} @current={{true}} />
-    </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-policy-name="true">
-      {{this.model.id}}
-      {{#if this.model.enforcementLevel}}
-        <Hds::Badge @text={{this.model.enforcementLevel}} aria-label="Enforcement level: {{this.model.enforcementLevel}}" />
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title={{this.model.id}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label=(concat (uppercase this.policyType) " policies") route="vault.cluster.policies" model=this.policyType)
+        (hash label=this.model.id)
+      }}
+    />
+  </:breadcrumbs>
+  <:badges>
+    {{#if this.model.enforcementLevel}}
+      <Hds::Badge @text={{this.model.enforcementLevel}} aria-label="Enforcement level: {{this.model.enforcementLevel}}" />
+    {{/if}}
+  </:badges>
+</Page::Header>
+
 <Toolbar>
   <ToolbarActions>
     <DownloadButton

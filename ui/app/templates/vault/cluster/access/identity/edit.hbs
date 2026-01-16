@@ -3,13 +3,6 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Edit
-      {{this.model.name}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title="Edit {{titleize this.model.name}}" />
 
 <Identity::EditForm @mode="edit" @model={{this.model}} @onSave={{action "navAfterSave"}} />

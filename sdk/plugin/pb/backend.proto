@@ -649,6 +649,7 @@ message RotationJobInput {
   string rotation_schedule = 4;
   int64 rotation_window = 5;
   int64 rotation_period = 6;
+  string rotation_policy = 7;
 }
 
 message DeregisterRotationRequestInput {
