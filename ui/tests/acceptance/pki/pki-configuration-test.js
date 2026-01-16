@@ -37,7 +37,6 @@ module('Acceptance | pki configuration test', function (hooks) {
   });
 
   hooks.afterEach(async function () {
-    await login();
     // Cleanup engine
     await runCmd([`delete sys/mounts/${this.mountPath}`]);
   });
@@ -48,7 +47,6 @@ module('Acceptance | pki configuration test', function (hooks) {
     test('it shows the delete all issuers modal', async function (assert) {
       await login();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration`);
-      await click(PKI_CONFIGURE_CREATE.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await settled();
       await click(PKI_CONFIGURE_CREATE.generateRootOption);
@@ -59,7 +57,8 @@ module('Acceptance | pki configuration test', function (hooks) {
       await click(PKI_CONFIGURE_CREATE.doneButton);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await settled();
-      await click(GENERAL.secretTab('Configuration'));
+      await click(GENERAL.dropdownToggle('Manage'));
+      await click(GENERAL.menuItem('Configure'));
       await settled();
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration`);
       await click(PKI_DELETE_ALL_ISSUERS.issuerLink);
@@ -72,13 +71,12 @@ module('Acceptance | pki configuration test', function (hooks) {
       await waitUntil(() => !find(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal));
 
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).doesNotExist();
-      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
     });
 
     test('it shows the correct empty state message if certificates exists after delete all issuers', async function (assert) {
       await login();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration`);
-      await click(PKI_CONFIGURE_CREATE.configureButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`,
@@ -95,7 +93,9 @@ module('Acceptance | pki configuration test', function (hooks) {
         `/vault/secrets-engines/${this.mountPath}/pki/overview`,
         'goes to overview page'
       );
-      await click(GENERAL.secretTab('Configuration'));
+      await settled();
+      await click(GENERAL.dropdownToggle('Manage'));
+      await click(GENERAL.menuItem('Configure'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${this.mountPath}/pki/configuration`,
@@ -110,7 +110,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).doesNotExist('delete all issuers modal closes');
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${this.mountPath}/pki/configuration`,
+        `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`,
         'is still on configuration page'
       );
       await settled();
@@ -158,7 +158,6 @@ module('Acceptance | pki configuration test', function (hooks) {
       await login();
       // Configure PKI
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration`);
-      await click(PKI_CONFIGURE_CREATE.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.generateRootOption);
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
@@ -176,7 +175,8 @@ module('Acceptance | pki configuration test', function (hooks) {
       ]);
       await runCmd([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
-      await click(GENERAL.secretTab('Configuration'));
+      await click(GENERAL.dropdownToggle('Manage'));
+      await click(GENERAL.menuItem('Configure'));
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration`);
       await click(PKI_DELETE_ALL_ISSUERS.issuerLink);
       await waitFor(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal);
@@ -186,7 +186,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await settled();
       await waitUntil(() => !find(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal));
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).doesNotExist();
-      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
       await settled();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await settled();

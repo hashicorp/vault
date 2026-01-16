@@ -3,11 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @icon="file-text" @title="Edit PKI Configuration">
-  <:breadcrumbs>
-    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
-  </:breadcrumbs>
-</Page::Header>
+<PkiPageHeader @backend={{this.model.engine}} @breadcrumbs={{this.breadcrumbs}} @configRoute="configuration.edit" />
+
 <Page::PkiConfigurationEdit
   @acmeForm={{this.model.acmeForm}}
   @clusterForm={{this.model.clusterForm}}

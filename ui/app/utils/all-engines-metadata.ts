@@ -240,9 +240,10 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   {
     pluginCategory: 'generic',
     displayName: 'PKI Certificates',
+    isConfigurable: true,
     engineRoute: 'pki.overview',
+    configRoute: 'pki.configuration',
     glyph: 'certificate',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'pki',
   },
