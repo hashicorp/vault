@@ -1,0 +1,4 @@
+```release-note:improvement
+secret-sync (enterprise): Added telemetry counters for reconciliation loop operations, including the number of corrections detected,
+retry attempts, and operation outcomes (success or failure with internal/external cause labels).
+```
