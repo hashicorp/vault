@@ -13,6 +13,13 @@
   <:actions>
     <Hds::Dropdown as |D|>
       <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
+      <CodeGenerator::Policy::Flyout @onClose={{D.close}}>
+        <:customTrigger as |openFlyout|>
+          <D.Interactive @icon="shield-check" {{on "click" openFlyout}} data-test-popup-menu="Generate policy">
+            Generate policy
+          </D.Interactive>
+        </:customTrigger>
+      </CodeGenerator::Policy::Flyout>
       <D.Interactive
         @icon="settings"
         @route="configuration"

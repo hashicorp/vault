@@ -17,7 +17,11 @@ export type AclCapability = (typeof ACL_CAPABILITIES)[number]; // 'create' | 're
 
 export class PolicyStanza {
   @tracked capabilities: Set<AclCapability> = new Set();
-  @tracked path = '';
+  @tracked path;
+
+  constructor({ path = '' } = {}) {
+    this.path = path;
+  }
 
   get preview() {
     return aclTemplate(this.path, Array.from(this.capabilities));

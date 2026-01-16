@@ -6,7 +6,7 @@
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { policySnippetArgs, PolicyStanza } from 'core/utils/code-generators/policy';
+import { formatStanzas, policySnippetArgs, PolicyStanza } from 'core/utils/code-generators/policy';
 import { validate } from 'vault/utils/forms/validate';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
@@ -15,22 +15,32 @@ import type { HTMLElementEvent } from 'vault/forms';
 import type { PolicyData } from './builder';
 import type { ValidationMap, Validations } from 'vault/vault/app-types';
 import type ApiService from 'vault/services/api';
+import type CapabilitiesService from 'vault/services/capabilities';
 import type FlashMessageService from 'ember-cli-flash/services/flash-messages';
+import type VersionService from 'vault/services/version';
 
-export default class CodeGeneratorPolicyFlyout extends Component {
+interface Args {
+  onClose?: CallableFunction;
+}
+
+export default class CodeGeneratorPolicyFlyout extends Component<Args> {
   @service declare readonly api: ApiService;
+  @service declare readonly capabilities: CapabilitiesService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly version: VersionService;
+
+  defaultStanzas = [new PolicyStanza()];
+
+  validations: Validations = {
+    name: [{ type: 'presence', message: 'Name is required.' }],
+  };
 
   @tracked errorMessage = '';
   @tracked policyContent = '';
   @tracked policyName = '';
   @tracked showFlyout = false;
-  @tracked stanzas: PolicyStanza[] = [new PolicyStanza()];
+  @tracked stanzas: PolicyStanza[] = this.defaultStanzas;
   @tracked validationErrors: ValidationMap | null = null;
-
-  validations: Validations = {
-    name: [{ type: 'presence', message: 'Name is required.' }],
-  };
 
   validationError = (param: string) => {
     const { isValid, errors } = this.validationErrors?.[param] ?? {};
@@ -84,9 +94,26 @@ export default class CodeGeneratorPolicyFlyout extends Component {
   }
 
   @action
-  onClose() {
+  openFlyout() {
+    this.showFlyout = true;
+    const presetStanzas = Array.from(this.capabilities.requestedPaths).map(
+      (path) => new PolicyStanza({ path })
+    );
+
+    const defaultState = formatStanzas(this.defaultStanzas);
+    const currentState = formatStanzas(this.stanzas);
+    const noChanges = currentState === defaultState;
+    // Only preset stanzas if no changes have been made to the flyout
+    if (presetStanzas.length && noChanges) {
+      this.stanzas = presetStanzas;
+    }
+  }
+
+  @action
+  closeFlyout() {
     this.showFlyout = false;
     this.resetErrors();
+    this.args.onClose?.();
   }
 
   resetErrors() {

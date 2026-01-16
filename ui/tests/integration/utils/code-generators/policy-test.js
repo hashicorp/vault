@@ -89,6 +89,11 @@ module('Integration | Util | code-generators/policy', function (hooks) {
     assert.strictEqual(stanza.capabilities.size, 0, 'capabilities set is empty');
   });
 
+  test('PolicyStanza: it sets path when instantiated with a path value', async function (assert) {
+    const stanza = new PolicyStanza({ path: 'my-path' });
+    assert.strictEqual(stanza.path, 'my-path', 'path is sets');
+  });
+
   test('PolicyStanza: it generates preview for single capability', async function (assert) {
     const stanza = new PolicyStanza();
     stanza.path = 'secret/data/*';
