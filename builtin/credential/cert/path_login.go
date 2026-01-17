@@ -817,7 +817,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			}
 
 			// Limits are arbitrary. Max of 2^55 backoff just so that delay
-			// and the the jitter fits into a double. Is that silly? Yes.
+			// and the jitter fits into a double. Is that silly? Yes.
 			// 2^55 seconds is more years than the computer will keep
 			// running.
 			if cache.retry.attempt < 55 {

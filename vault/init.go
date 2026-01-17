@@ -476,7 +476,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 		return NewNonFatalError(fmt.Errorf("fetching stored unseal keys failed: %w", err))
 	}
 
-	// Check whether Vault initialization is still in progress. If it is is, then
+	// Check whether Vault initialization is still in progress. If it is, then
 	// bail out to give it a chance to complete.
 	isInitializing, err := c.seal.IsInitializationFlagSet(ctx)
 	if err != nil {

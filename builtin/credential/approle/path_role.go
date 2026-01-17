@@ -160,7 +160,7 @@ IP addresses which can perform the login operation.`,
 			"secret_id_num_uses": {
 				Type: framework.TypeInt,
 				Description: `Number of times a SecretID can access the role, after which the SecretID
-will expire. Defaults to 0 meaning that the the secret_id is of unlimited use.`,
+will expire. Defaults to 0 meaning that the secret_id is of unlimited use.`,
 			},
 
 			"secret_id_ttl": {
