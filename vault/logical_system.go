@@ -1792,6 +1792,11 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 		return handleError(fmt.Errorf("unable to find storage for path: %q", path))
 	}
 
+	// Unsync secrets during mount deletion
+	if err := b.callUnsyncMountHelper(ctx, path); err != nil {
+		b.Backend.Logger().Error("failed to unsync secrets during mount deletion", "error", err)
+	}
+
 	// Attempt unmount
 	if err := b.Core.unmountWithRequest(ctx, path, req); err != nil {
 		b.Backend.Logger().Error("unmount failed", "path", path, "error", err)

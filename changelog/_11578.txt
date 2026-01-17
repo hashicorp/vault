@@ -1,0 +1,6 @@
+```release-note:improvement
+secrets-sync (enterprise): Improved the user experience during mount lifecycle changes by triggering immediate
+unsyncing of external secrets when a secrets engine mount is deleted or disabled. By moving this logic from
+the background reconciliation loop to a direct callback, the system prevents perceived "leaks" and ensures external
+secret resources are cleaned up synchronously with the Vault unmount.
+```
