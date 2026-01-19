@@ -116,3 +116,7 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry, legacy
 
 	return info
 }
+
+func (b *SystemBackend) callUnsyncMountHelper(ctx context.Context, path string) error {
+	return nil
+}
