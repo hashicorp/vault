@@ -135,6 +135,14 @@ SjOQL/GkH1nkRcDS9++aAAAAAmNhAQID
 	dockerImageTagSupportsNoRSA1 = "8.4_p1-r3-ls48"
 )
 
+var caObservationFields = []string{
+	"ttl", "max_ttl", "allow_user_certificates", "allow_host_certificates",
+	"allow_bare_domains", "allow_subdomains", "allow_user_key_ids",
+	"allowed_users_template", "allowed_domains_template", "default_user_template",
+	"default_extensions_template", "algorithm_signer", "not_before_duration",
+	"allow_empty_principals",
+}
+
 var ctx = context.Background()
 
 func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {
@@ -773,10 +781,11 @@ func TestSSHBackend_VerifyEcho(t *testing.T) {
 	expectedData := map[string]interface{}{
 		"message": api.VerifyEchoResponse,
 	}
+	obsRecorder := observations.NewTestObservationRecorder()
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: newTestingFactory(t, nil),
+		LogicalFactory: newTestingFactory(t, obsRecorder),
 		Steps: []logicaltest.TestStep{
-			testVerifyWrite(t, verifyData, expectedData),
+			testVerifyWrite(t, verifyData, expectedData, obsRecorder),
 		},
 	})
 }
@@ -1007,7 +1016,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(caPublicKey, caPrivateKey),
+			configCaStep(caPublicKey, caPrivateKey, obsRecorder),
 			testRoleWrite(t, "testcarole", roleOptions, obsRecorder),
 			{
 				Operation: logical.UpdateOperation,
@@ -1050,19 +1059,27 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 					if !expectError && err != nil {
 						return err
 					}
+
+					obs := obsRecorder.LastObservationOfType(ObservationTypeSSHSign)
+					if obs == nil {
+						return errors.New("no SSH sign observation recorded")
+					}
+					if obs.Data["role_name"] != "testcarole" {
+						return fmt.Errorf("expected role_name %q, got %q", "testcarole", obs.Data["role_name"])
+					}
 					return nil
 				},
 			},
-			testIssueCert("testcarole", "ec", testUserName, sshAddress, expectError),
-			testIssueCert("testcarole", "ed25519", testUserName, sshAddress, expectError),
-			testIssueCert("testcarole", "rsa", testUserName, sshAddress, expectError),
+			testIssueCert("testcarole", "ec", testUserName, sshAddress, expectError, obsRecorder),
+			testIssueCert("testcarole", "ed25519", testUserName, sshAddress, expectError, obsRecorder),
+			testIssueCert("testcarole", "rsa", testUserName, sshAddress, expectError, obsRecorder),
 		},
 	}
 
 	logicaltest.Test(t, testCase)
 }
 
-func testIssueCert(role string, keyType string, testUserName string, sshAddress string, expectError bool) logicaltest.TestStep {
+func testIssueCert(role string, keyType string, testUserName string, sshAddress string, expectError bool, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "issue/" + role,
@@ -1103,6 +1120,32 @@ func testIssueCert(role string, keyType string, testUserName string, sshAddress 
 			}
 			if !expectError && err != nil {
 				return err
+			}
+
+			if obsRecorder == nil {
+				return nil
+			}
+			obs := obsRecorder.LastObservationOfType(ObservationTypeSSHIssue)
+			if obs == nil {
+				return errors.New("no SSH issue observation recorded")
+			}
+			if obs.Data["role_name"] != role {
+				return fmt.Errorf("expected role_name %q, got %q", role, obs.Data["role_name"])
+			}
+			if obs.Data["key_type"] == nil {
+				return fmt.Errorf("missing key_type in observation metadata")
+			}
+			if obs.Data["certificate_type"] == nil {
+				return fmt.Errorf("missing certificate_type in observation metadata")
+			}
+			if obs.Data["serial_number"] == nil {
+				return fmt.Errorf("missing serial_number in observation metadata")
+			}
+			if obs.Data["key_id"] == nil {
+				return fmt.Errorf("missing key_id in observation metadata")
+			}
+			if _, exists := obs.Data["ttl"]; !exists {
+				return fmt.Errorf("missing ttl in observation metadata")
 			}
 
 			return nil
@@ -1186,7 +1229,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(testCAPublicKey, testCAPrivateKey),
+			configCaStep(testCAPublicKey, testCAPrivateKey, obsRecorder),
 			testRoleWrite(t, "testcarole", roleOptionsOldEntry, obsRecorder),
 			testRoleWrite(t, "testcarole", roleOptionsUpgradedEntry, obsRecorder),
 			{
@@ -1243,7 +1286,7 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(testCAPublicKey, testCAPrivateKey),
+			configCaStep(testCAPublicKey, testCAPrivateKey, nil),
 
 			{
 				Operation:       logical.ReadOperation,
@@ -1325,7 +1368,7 @@ func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(testCAPublicKey, testCAPrivateKey),
+			configCaStep(testCAPublicKey, testCAPrivateKey, nil),
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type":                "ca",
@@ -1368,7 +1411,7 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(testCAPublicKey, testCAPrivateKey),
+			configCaStep(testCAPublicKey, testCAPrivateKey, nil),
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type":                 "ca",
@@ -1415,7 +1458,7 @@ func TestBackend_EmptyPrincipals(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(testCAPublicKey, testCAPrivateKey),
+			configCaStep(testCAPublicKey, testCAPrivateKey, nil),
 			createRoleStep("no_user_principals", map[string]interface{}{
 				"key_type":                "ca",
 				"allow_user_certificates": true,
@@ -1489,7 +1532,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(testCAPublicKey, testCAPrivateKey),
+			configCaStep(testCAPublicKey, testCAPrivateKey, nil),
 			createRoleStep("weakkey", map[string]interface{}{
 				"key_type":                "ca",
 				"allow_user_certificates": true,
@@ -1662,7 +1705,7 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(testCAPublicKey, testCAPrivateKey),
+			configCaStep(testCAPublicKey, testCAPrivateKey, nil),
 
 			createRoleStep("customrole", map[string]interface{}{
 				"key_type":                 "ca",
@@ -1711,7 +1754,7 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(testCAPublicKey, testCAPrivateKey),
+			configCaStep(testCAPublicKey, testCAPrivateKey, nil),
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type":                "ca",
@@ -1976,7 +2019,7 @@ func TestSSHBackend_ValidateNotBeforeDuration(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(testCAPublicKey, testCAPrivateKey),
+			configCaStep(testCAPublicKey, testCAPrivateKey, nil),
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type":                "ca",
@@ -2071,7 +2114,7 @@ func TestSSHBackend_IssueSign(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(testCAPublicKey, testCAPrivateKey),
+			configCaStep(testCAPublicKey, testCAPrivateKey, nil),
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type":     "otp",
@@ -2304,13 +2347,24 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 	)
 }
 
-func configCaStep(caPublicKey, caPrivateKey string) logicaltest.TestStep {
+func configCaStep(caPublicKey, caPrivateKey string, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/ca",
 		Data: map[string]interface{}{
 			"public_key":  caPublicKey,
 			"private_key": caPrivateKey,
+		},
+		Check: func(r *logical.Response) error {
+			if obsRecorder == nil {
+				return nil
+			}
+			obs := obsRecorder.LastObservationOfType(ObservationTypeSSHConfigCAWrite)
+			if obs == nil {
+				return errors.New("no SSH config CA write observation recorded")
+			}
+
+			return nil
 		},
 	}
 }
@@ -2540,7 +2594,7 @@ func testConfigZeroAddressRead(t *testing.T, expected map[string]interface{}, ob
 	}
 }
 
-func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[string]interface{}) logicaltest.TestStep {
+func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[string]interface{}, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      fmt.Sprintf("verify"),
@@ -2558,6 +2612,17 @@ func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[str
 			if !reflect.DeepEqual(ac, ex) {
 				return fmt.Errorf("invalid response")
 			}
+
+			if obsRecorder != nil && data["otp"] != api.VerifyEchoRequest {
+				lastObservation := obsRecorder.LastObservationOfType(ObservationTypeSSHOTPVerify)
+				if lastObservation == nil {
+					return fmt.Errorf("missing OTP verify observation")
+				}
+				if lastObservation.Data["role_name"] == nil {
+					return fmt.Errorf("missing role_name in OTP verify observation metadata")
+				}
+			}
+
 			return nil
 		},
 	}
@@ -2610,6 +2675,15 @@ func testRoleWrite(t *testing.T, name string, data map[string]interface{}, obsRe
 			if lastObservation.Data["key_type"] != data["key_type"] {
 				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["key_type"], data["key_type"])
 			}
+
+			if data["key_type"] == KeyTypeCA {
+				for _, field := range caObservationFields {
+					if _, exists := lastObservation.Data[field]; !exists {
+						return fmt.Errorf("missing CA-specific field %q in observation metadata for CA role", field)
+					}
+				}
+			}
+
 			return nil
 		},
 	}
@@ -2670,6 +2744,15 @@ func testRoleRead(t *testing.T, roleName string, expected map[string]interface{}
 			if lastObservation.Data["key_type"] != d.KeyType {
 				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["key_type"], d.KeyType)
 			}
+
+			if d.KeyType == KeyTypeCA {
+				for _, field := range caObservationFields {
+					if _, exists := lastObservation.Data[field]; !exists {
+						return fmt.Errorf("missing CA-specific field %q in observation metadata for CA role", field)
+					}
+				}
+			}
+
 			return nil
 		},
 	}
@@ -2754,12 +2837,14 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 			if lastObservation == nil {
 				return fmt.Errorf("missing observation")
 			}
+
 			if lastObservation.Data["role_name"] != roleName {
 				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["role_name"], roleName)
 			}
 			if lastObservation.Data["key_type"] != KeyTypeOTP {
 				return fmt.Errorf("invalid observation data: \nactual:%#v\nexpected:%#v", lastObservation.Data["key_type"], KeyTypeOTP)
 			}
+
 			return nil
 		},
 	}
@@ -2768,6 +2853,8 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 func TestBackend_CleanupDynamicHostKeys(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	obsRecorder := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = obsRecorder
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
@@ -2790,6 +2877,9 @@ func TestBackend_CleanupDynamicHostKeys(t *testing.T) {
 	require.NotNil(t, resp.Data)
 	require.NotNil(t, resp.Data["message"])
 	require.Contains(t, resp.Data["message"], "0 of 0")
+	obs := obsRecorder.LastObservationOfType(ObservationTypeSSHTidyDynamicKeys)
+	require.NotNil(t, obs)
+	require.Equal(t, 0, obs.Data["keys_deleted"])
 	// Write a bunch of bogus entries.
 	for i := 0; i < 15; i++ {
 		data := map[string]interface{}{
@@ -2809,6 +2899,9 @@ func TestBackend_CleanupDynamicHostKeys(t *testing.T) {
 	require.NotNil(t, resp.Data)
 	require.NotNil(t, resp.Data["message"])
 	require.Contains(t, resp.Data["message"], "15 of 15")
+	obs = obsRecorder.LastObservationOfType(ObservationTypeSSHTidyDynamicKeys)
+	require.NotNil(t, obs)
+	require.Equal(t, 15, obs.Data["keys_deleted"])
 
 	// Should have none left.
 	resp, err = b.HandleRequest(context.Background(), cleanRequest)
@@ -2817,6 +2910,9 @@ func TestBackend_CleanupDynamicHostKeys(t *testing.T) {
 	require.NotNil(t, resp.Data)
 	require.NotNil(t, resp.Data["message"])
 	require.Contains(t, resp.Data["message"], "0 of 0")
+	obs = obsRecorder.LastObservationOfType(ObservationTypeSSHTidyDynamicKeys)
+	require.NotNil(t, obs)
+	require.Equal(t, 0, obs.Data["keys_deleted"])
 }
 
 type pathAuthCheckerFunc func(t *testing.T, client *api.Client, path string, token string)
