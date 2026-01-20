@@ -1,0 +1,111 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<form {{on "submit" (perform this.save)}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <MessageError @errorMessage={{this.errorMessage}} />
+    <NamespaceReminder @mode="save" />
+
+    {{#if @form.isNew}}
+      {{! only show name field for new roles }}
+      <div class="field" data-test-field="name">
+        <Hds::Form::TextInput::Field
+          name="name"
+          @id="kmip-role-name"
+          @value={{this.name}}
+          @isInvalid={{this.validationError}}
+          disabled={{this.save.isRunning}}
+          autocomplete="off"
+          spellcheck="false"
+          data-test-input="name"
+          {{on "input" (pipe (pick "target.value") (fn (mut this.name)))}}
+          as |F|
+        >
+          <F.Label data-test-form-field-label>Name</F.Label>
+          {{#if this.validationError}}
+            <F.Error data-test-validation-error="name">Name is required</F.Error>
+          {{/if}}
+        </Hds::Form::TextInput::Field>
+      </div>
+    {{/if}}
+
+    <div class="control is-flex box is-shadowless is-fullwidth is-marginless">
+      <Hds::Form::Toggle::Field
+        data-test-input="operation_none"
+        checked={{not @form.data.operation_none}}
+        {{on "change" this.toggleOperationNone}}
+        as |F|
+      >
+        <F.Label>Allow this role to perform KMIP operations</F.Label>
+      </Hds::Form::Toggle::Field>
+    </div>
+
+    {{#unless @form.data.operation_none}}
+      <Toolbar>
+        <h3 class="title is-6 has-left-padding-s" data-test-kmip-section="Allowed Operations">
+          Allowed Operations
+        </h3>
+      </Toolbar>
+
+      <div class="box">
+        <FormField
+          @attr={{hash name="operation_all" type="boolean" options=(hash label="Allow this role to perform all operations")}}
+          @model={{@form}}
+        />
+        <hr />
+
+        <div class="kmip-role-operations">
+          {{! the operation-groups helper gets all the available operation keys and formats them into groups }}
+          {{#each-in (operation-groups) as |groupName fields|}}
+            <div class="kmip-role-allowed-operations">
+              <h4 class="title is-7" data-test-kmip-operations={{groupName}}>
+                {{groupName}}
+              </h4>
+
+              {{#each fields as |fieldKey|}}
+                {{#let (@form.fieldFor fieldKey) as |field|}}
+                  <div class="field" data-test-field={{field.name}}>
+                    {{#let (get @form.data fieldKey) as |value|}}
+                      <Hds::Form::Checkbox::Field
+                        name={{field.name}}
+                        checked={{or @form.data.operation_all value}}
+                        disabled={{@form.data.operation_all}}
+                        {{on "change" (fn (mut value) (not value))}}
+                        data-test-input={{field.name}}
+                        as |F|
+                      >
+                        <F.Label data-test-form-field-label>{{field.options.label}}</F.Label>
+                      </Hds::Form::Checkbox::Field>
+                    {{/let}}
+                  </div>
+                {{/let}}
+              {{/each}}
+            </div>
+          {{/each-in}}
+        </div>
+      </div>
+    {{/unless}}
+
+    <div class="box is-fullwidth is-shadowless">
+      <h3 class="title is-3" data-test-kmip-section="TLS">
+        TLS
+      </h3>
+      {{#each @form.tlsFields as |field|}}
+        <FormField @attr={{field}} @model={{@form}} />
+      {{/each}}
+    </div>
+    {{#each @form.otherFields as |field|}}
+      <FormField @attr={{field}} @model={{@form}} />
+    {{/each}}
+  </div>
+
+  <FormSaveButtons @isSaving={{this.save.isRunning}} @onCancel={{@onCancel}}>
+    <:error>
+      {{#if this.invalidFormAlert}}
+        <AlertInline @type="danger" class="has-top-padding-s" @message={{this.invalidFormAlert}} />
+      {{/if}}
+    </:error>
+  </FormSaveButtons>
+</form>
