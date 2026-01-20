@@ -64,10 +64,10 @@ var (
 	}
 )
 
-// enableCredential is used to enable a new credential backend
-func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
+// enableCredentialWithRequest is used to enable a new credential backend with a request
+func (c *Core) enableCredentialWithRequest(ctx context.Context, entry *MountEntry, request *logical.Request) error {
 	// Enable credential internally
-	if err := c.enableCredentialInternal(ctx, entry, MountTableUpdateStorage); err != nil {
+	if err := c.enableCredentialWithRequestInternal(ctx, entry, MountTableUpdateStorage, request); err != nil {
 		return err
 	}
 
@@ -75,7 +75,17 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 }
 
 // enableCredential is used to enable a new credential backend
+func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
+	return c.enableCredentialWithRequest(ctx, entry, nil)
+}
+
+// enableCredentialInternal is used to enable a new credential backend with a request
 func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, updateStorage bool) error {
+	return c.enableCredentialWithRequestInternal(ctx, entry, updateStorage, nil)
+}
+
+// enableCredentialWithRequestInternal is used to enable a new credential backend with a request
+func (c *Core) enableCredentialWithRequestInternal(ctx context.Context, entry *MountEntry, updateStorage bool, request *logical.Request) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(entry.Path, "/") {
 		entry.Path += "/"
@@ -250,14 +260,21 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		c.logger.Info("enabled credential backend", "path", entry.Path, "type", entry.Type, "version", entry.RunningVersion)
 	}
 
-	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountAuthEnable, ns, map[string]interface{}{
+	observationData := map[string]interface{}{
 		"path":                   entry.Path,
 		"local_mount":            entry.Local,
 		"type":                   entry.Type,
 		"accessor":               entry.Accessor,
 		"plugin_version":         entry.Version,
 		"running_plugin_version": entry.RunningVersion,
-	})
+	}
+	if request != nil {
+		observationData["entity_id"] = request.EntityID
+		observationData["request_id"] = request.ID
+		observationData["client_id"] = request.ClientID
+	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountAuthEnable, ns, observationData)
 	if err != nil {
 		c.logger.Error("failed to record observation after enabling credential backend", "path", entry.Path, "error", err)
 	}
@@ -267,6 +284,11 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 
 // disableCredential is used to disable an existing credential backend
 func (c *Core) disableCredential(ctx context.Context, path string) error {
+	return c.disableCredentialWithRequest(ctx, path, nil)
+}
+
+// disableCredentialWithRequest is used to disable an existing credential backend with a request
+func (c *Core) disableCredentialWithRequest(ctx context.Context, path string, request *logical.Request) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -278,7 +300,7 @@ func (c *Core) disableCredential(ctx context.Context, path string) error {
 	}
 
 	// Disable credential internally
-	if err := c.disableCredentialInternal(ctx, path, MountTableUpdateStorage); err != nil {
+	if err := c.disableCredentialWithRequestInternal(ctx, path, MountTableUpdateStorage, request); err != nil {
 		return err
 	}
 
@@ -291,6 +313,10 @@ func (c *Core) disableCredential(ctx context.Context, path string) error {
 }
 
 func (c *Core) disableCredentialInternal(ctx context.Context, path string, updateStorage bool) error {
+	return c.disableCredentialWithRequestInternal(ctx, path, updateStorage, nil)
+}
+
+func (c *Core) disableCredentialWithRequestInternal(ctx context.Context, path string, updateStorage bool, request *logical.Request) error {
 	path = credentialRoutePrefix + path
 
 	ns, err := namespace.FromContext(ctx)
@@ -394,14 +420,21 @@ func (c *Core) disableCredentialInternal(ctx context.Context, path string, updat
 		c.logger.Info("disabled credential backend", "path", path)
 	}
 
-	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountAuthDisable, ns, map[string]interface{}{
-		"path":                   path,
+	observationData := map[string]interface{}{
+		"path":                   entry.Path,
 		"local_mount":            entry.Local,
 		"type":                   entry.Type,
 		"accessor":               entry.Accessor,
 		"plugin_version":         entry.Version,
 		"running_plugin_version": entry.RunningVersion,
-	})
+	}
+	if request != nil {
+		observationData["entity_id"] = request.EntityID
+		observationData["request_id"] = request.ID
+		observationData["client_id"] = request.ClientID
+	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountAuthDisable, ns, observationData)
 	if err != nil {
 		c.logger.Error("failed to record observation after disabling auth backend", "path", path, "error", err)
 	}
