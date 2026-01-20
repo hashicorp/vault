@@ -5,6 +5,7 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 
 /**
  * This route is responsible for fetching all configuration data.
@@ -27,7 +28,9 @@ export default class SecretsBackendConfigurationRoute extends Route {
 
   fetchConfig(type, id) {
     // id is the path where the backend is mounted since there's only one config per engine (often this path is referred to just as backend)
-    switch (type) {
+    // Use effective type to handle external plugin mappings
+    const effectiveType = getEffectiveEngineType(type);
+    switch (effectiveType) {
       case 'aws':
         return this.fetchAwsConfigs(id);
       case 'azure':

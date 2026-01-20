@@ -6,15 +6,11 @@
 import Route from '@ember/routing/route';
 import { hash } from 'rsvp';
 import { service } from '@ember/service';
+import { getEnginePathParam } from 'vault/utils/backend-route-helpers';
 
 export default Route.extend({
   store: service(),
   type: '',
-
-  enginePathParam() {
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    return backend;
-  },
 
   async fetchConnection(queryOptions) {
     try {
@@ -51,7 +47,7 @@ export default Route.extend({
   },
 
   model() {
-    const backend = this.enginePathParam();
+    const backend = getEnginePathParam(this);
     const queryOptions = { backend, id: '' };
 
     const connection = this.fetchConnection(queryOptions);
