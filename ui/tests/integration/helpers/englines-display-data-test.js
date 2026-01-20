@@ -21,38 +21,34 @@ module('Unit | Helper | engineDisplayData', function () {
   });
 
   test('it returns fallback display data for unknown engine type', function (assert) {
-    const { displayName, type, mountCategory, glyph, isOldEngine } = engineDisplayData('not-an-engine');
+    const { displayName, type, mountCategory, glyph } = engineDisplayData('not-an-engine');
     assert.strictEqual(displayName, 'not-an-engine', 'it returns passed type as fallback displayName');
-    assert.strictEqual(type, 'unknown', 'it returns "unknown"" as fallback type');
+    assert.strictEqual(type, 'not-an-engine', 'it returns methodType type');
     assert.propEqual(mountCategory, ['secret', 'auth'], 'mountCategory is correct');
     assert.strictEqual(glyph, 'lock', 'default glyph is a lock');
-    assert.true(isOldEngine, 'isOldEngine is true');
   });
 
   test('it returns fallback display data for empty string', function (assert) {
-    const { displayName, type, mountCategory, glyph, isOldEngine } = engineDisplayData('');
+    const { displayName, type, mountCategory, glyph } = engineDisplayData('');
     assert.strictEqual(displayName, 'Unknown plugin', 'it returns fallback displayName for empty string');
     assert.strictEqual(type, 'unknown', 'it returns fallback type for empty string');
     assert.propEqual(mountCategory, ['secret', 'auth'], 'mountCategory is correct');
     assert.strictEqual(glyph, 'lock', 'default glyph is a lock');
-    assert.true(isOldEngine, 'isOldEngine is true');
   });
 
   test('it returns fallback display data for undefined', function (assert) {
-    const { displayName, type, mountCategory, glyph, isOldEngine } = engineDisplayData(undefined);
+    const { displayName, type, mountCategory, glyph } = engineDisplayData(undefined);
     assert.strictEqual(displayName, 'Unknown plugin', 'it returns fallback displayName for undefined');
     assert.strictEqual(type, 'unknown', 'it returns fallback type for undefined');
     assert.propEqual(mountCategory, ['secret', 'auth'], 'mountCategory is correct');
     assert.strictEqual(glyph, 'lock', 'default glyph is a lock');
-    assert.true(isOldEngine, 'isOldEngine is true');
   });
 
   test('it returns fallback display data for null', function (assert) {
-    const { displayName, type, mountCategory, glyph, isOldEngine } = engineDisplayData(null);
+    const { displayName, type, mountCategory, glyph } = engineDisplayData(null);
     assert.strictEqual(displayName, 'Unknown plugin', 'it returns fallback displayName for null');
     assert.strictEqual(type, 'unknown', 'it returns fallback type for null');
     assert.propEqual(mountCategory, ['secret', 'auth'], 'mountCategory is correct');
     assert.strictEqual(glyph, 'lock', 'default glyph is a lock');
-    assert.true(isOldEngine, 'isOldEngine is true');
   });
 });

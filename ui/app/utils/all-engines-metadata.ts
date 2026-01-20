@@ -57,7 +57,9 @@ export function filterEnginesByMountCategory({
 }
 
 export function isAddonEngine(type: string, version: number) {
-  if (type === 'kv' && version === 1) return false;
+  if (type === 'kv' && version === 1) {
+    return false;
+  }
   const engineRoute = ALL_ENGINES.find((engine) => engine.type === type)?.engineRoute;
   return !!engineRoute;
 }
