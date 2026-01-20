@@ -1,0 +1,61 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<HeaderCredentials @role={{@roleName}} @scope={{@scopeName}} />
+
+<Toolbar>
+  <ToolbarActions>
+    {{#if @capabilities.canDelete}}
+      <ConfirmAction
+        @buttonText="Delete role"
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @onConfirmAction={{this.deleteRole}}
+        @confirmMessage="Are you sure you want to delete {{@roleName}}?"
+      />
+      <div class="toolbar-separator"></div>
+    {{/if}}
+
+    {{#if @capabilities.canUpdate}}
+      <ToolbarLink @route="role.edit" @models={{array @scopeName @roleName}} data-test-kmip-link-edit-role>
+        Edit role
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+<div class="box is-fullwidth is-sideless is-shadowless">
+  <div class="box is-fullwidth is-shadowless is-sideless is-marginless">
+    <h2 class="title is-5">TLS</h2>
+    <InfoTableRow @label="TLS client key bits" @value={{@role.tls_client_key_bits}} />
+    <InfoTableRow @label="TLS client key type" @value={{@role.tls_client_key_type}} />
+    <InfoTableRow @label="TLS client TTL" @value={{@role.tls_client_ttl}} @formatTtl={{true}} />
+  </div>
+
+  <div class="box is-fullwidth is-shadowless is-sideless is-marginless">
+    <h2 class="title is-5">Allowed operations</h2>
+    {{#if @role.operation_all}}
+      <AlertInline @type="info" @message="This role allows all KMIP operations" class="is-marginless" />
+    {{/if}}
+
+    {{! the operation-groups helper gets all the available operation keys and formats them into groups }}
+    {{#each-in (operation-groups) as |groupName fields|}}
+      <InfoTableRow @alwaysRender={{true}} @label={{groupName}} @value={{true}}>
+        <div>
+          {{#each fields as |field|}}
+            {{#let (this.iconState field) as |icon|}}
+              <div data-test-operation-field={{field}}>
+                <Icon aria-label={{icon.label}} class={{icon.class}} @name={{icon.name}} />
+                {{! operation-label helper formats the key into a human-readable label }}
+                {{operation-label field}}
+                <br />
+              </div>
+            {{/let}}
+          {{/each}}
+        </div>
+      </InfoTableRow>
+    {{/each-in}}
+  </div>
+</div>

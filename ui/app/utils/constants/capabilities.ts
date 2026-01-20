@@ -59,4 +59,5 @@ export const PATH_MAP = {
   kubernetesRole: apiPath`${'backend'}/role/${'name'}`,
   kubernetesCreds: apiPath`${'backend'}/creds/${'name'}`,
   kmipScope: apiPath`${'backend'}/scopes/${'name'}`,
+  kmipRole: apiPath`${'backend'}/scopes/${'scope'}/roles/${'name'}`,
 };

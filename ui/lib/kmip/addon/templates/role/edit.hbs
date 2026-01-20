@@ -5,12 +5,14 @@
 
 <Page::Header @title="Edit Role">
   <:breadcrumbs>
-    <KmipBreadcrumb @scope={{this.scope}} @role={{this.role}} @currentRoute="Edit Role" />
+    <KmipBreadcrumb @scope={{this.model.scopeName}} @role={{this.model.roleName}} @currentRoute="Edit Role" />
   </:breadcrumbs>
 </Page::Header>
 
-<Kmip::RoleForm
-  @model={{this.model}}
-  @onSave={{transition-to "vault.cluster.secrets.backend.kmip.role" this.scope this.role}}
-  @onCancel={{transition-to "vault.cluster.secrets.backend.kmip.role" this.scope this.role}}
+<RoleForm
+  @form={{this.model.form}}
+  @roleName={{this.model.roleName}}
+  @scopeName={{this.model.scopeName}}
+  @onSave={{transition-to "vault.cluster.secrets.backend.kmip.role" this.model.scopeName this.model.roleName}}
+  @onCancel={{transition-to "vault.cluster.secrets.backend.kmip.role" this.model.scopeName this.model.roleName}}
 />
