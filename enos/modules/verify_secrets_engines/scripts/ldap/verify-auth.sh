@@ -72,3 +72,75 @@ LDAP_DEV_POLICY="dev-policy"
 "$binpath" write "auth/${MOUNT}/groups/devs" policies="${LDAP_DEV_POLICY}"
 
 echo "SUCCESS: LDAP auth engine configured and verified"
+# Authenticate Using Vault LDAP login
+VAULT_LDAP_LOGIN=$("$binpath" login -format=json -method="${MOUNT}" username="${LDAP_USERNAME}" password="${LDAP_ADMIN_PW}")
+
+# Verify that admin-policy is attached to the token
+verify_admin_policy_attachment() {
+  if ! echo "$VAULT_LDAP_LOGIN" \
+      | jq -e '.auth.policies[] | select(. == "admin-policy")' > /dev/null; then
+    fail "admin-policy is NOT attached to the LDAP login token"
+  fi
+}
+
+# Verify LDAP user is in vault-admins group
+verify_ldap_group_membership() {
+  if ! ldapsearch -x \
+      -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" \
+      -D "cn=admin,dc=${LDAP_USERNAME},dc=com" \
+      -w "${LDAP_ADMIN_PW}" \
+      -b "ou=groups,dc=${LDAP_USERNAME},dc=com" \
+      "(&(cn=vault-admins)(member=uid=${LDAP_USERNAME},ou=users,dc=${LDAP_USERNAME},dc=com))" \
+      | grep -qi '^dn:'; then
+    fail "User NOT in vault-admins group"
+  fi
+}
+
+# Verify vault-admins mapped to admin-policy
+verify_policy_mapping() {
+  if ! "$binpath" read -format=json auth/"${MOUNT}"/groups/vault-admins \
+       | jq -e '.data.policies[] | select(. == "admin-policy")' > /dev/null; then
+    fail "vault-admins is NOT mapped to admin-policy"
+  fi
+}
+
+# Verify LDAP admin login successful
+verify_admin_login() {
+  if ! ADMIN_LOGIN_OUTPUT=$(
+    "$binpath" login -format=json \
+      -method="${MOUNT}" \
+      username="${LDAP_USERNAME}" \
+      password="${LDAP_ADMIN_PW}"
+  ); then
+    fail "LDAP admin login FAILED"
+  fi
+  jq -e '.auth.client_token' <<< "$ADMIN_LOGIN_OUTPUT" > /dev/null \
+    || fail "LDAP admin login FAILED"
+}
+
+# Verify wrong passwordlogin fails
+verify_wrong_password_login_fails() {
+  BAD_LOGIN_OUTPUT=$(
+    "$binpath" login \
+      -method="${MOUNT}" \
+      username="${LDAP_USERNAME}" \
+      password="wrong-password" 2>&1 || true
+  )
+  if ! echo "$BAD_LOGIN_OUTPUT" | grep -Eqi "(invalid|failed to bind as user)"; then
+    fail "Security Failure: Login succeeded with wrong password"
+  fi
+}
+
+# Deleting admin policy
+cleanup_admin_policy() {
+  echo "Vault: Deleting admin policy"
+  "$binpath" policy delete "admin-policy" > /dev/null 2>&1 || true
+}
+
+verify_admin_policy_attachment
+verify_ldap_group_membership
+verify_policy_mapping
+verify_admin_login
+verify_wrong_password_login_fails
+cleanup_admin_policy
+echo "${VAULT_LDAP_LOGIN}"
