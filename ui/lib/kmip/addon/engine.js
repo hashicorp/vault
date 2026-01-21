@@ -22,8 +22,6 @@ export default class KmipEngine extends Engine {
       'namespace',
       'path-help',
       'app-router',
-      'store',
-      'pagination',
       'version',
       'secret-mount-path',
     ],

@@ -97,6 +97,7 @@
       @currentPage={{@roles.meta.currentPage}}
       @currentPageSize={{@roles.meta.pageSize}}
       @route="scope.roles"
+      @models={{array @scope}}
       @showSizeSelector={{false}}
       @totalItems={{@roles.meta.filteredTotal}}
       @queryFunction={{this.paginationQueryParams}}
