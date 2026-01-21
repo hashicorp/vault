@@ -9,7 +9,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Acceptance | policy/acl/:name/edit', function (hooks) {
+module('Acceptance | policies | edit', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
@@ -32,7 +32,7 @@ module('Acceptance | policy/acl/:name/edit', function (hooks) {
 
   test('it navigates to show when the toggle is clicked', async function (assert) {
     await visit(`vault/policy/acl/default/edit`);
-    await click('[data-test-policy-edit-toggle]');
+    await click(GENERAL.button('Back to policy'));
     assert.strictEqual(currentURL(), '/vault/policy/acl/default', 'toggle navigates from edit to show');
   });
 });

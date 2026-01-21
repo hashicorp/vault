@@ -61,7 +61,8 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
 
   get snippetArgs() {
     const policyName = this.policyName || '<policy name>';
-    return policySnippetArgs(policyName, this.stanzas);
+    const policy = formatStanzas(this.stanzas);
+    return policySnippetArgs(policyName, policy);
   }
 
   @task
