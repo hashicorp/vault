@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { cached, tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { filterTableData, flattenMounts } from 'core/utils/client-count-utils';
+import { filterTableData, flattenMounts } from 'core/utils/client-counts/helpers';
 import { service } from '@ember/service';
 
 import type ClientsActivityModel from 'vault/vault/models/clients/activity';

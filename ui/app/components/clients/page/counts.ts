@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { filterVersionHistory } from 'core/utils/client-count-utils';
+import { filterVersionHistory } from 'core/utils/client-counts/helpers';
 
 import type AdapterError from '@ember-data/adapter/error';
 import type FlagsService from 'vault/services/flags';
@@ -29,6 +29,20 @@ interface Args {
 export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
+
+  get error() {
+    const { httpStatus, message, path } = this.args.activityError || {};
+    let title = 'Error',
+      text = message;
+
+    if (httpStatus === 403) {
+      const endpoint = path ? `the ${path} endpoint` : 'this endpoint';
+      title = 'You are not authorized';
+      text = `You must be granted permissions to view this page. Ask your administrator if you think you should have access to ${endpoint}.`;
+    }
+
+    return { title, text, httpStatus };
+  }
 
   get formattedStartDate() {
     return this.args.startTimestamp ? parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy') : null;

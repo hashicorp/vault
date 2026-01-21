@@ -10,11 +10,12 @@ import { visit, click, currentURL } from '@ember/test-helpers';
 import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { ClientFilters } from 'core/utils/client-count-utils';
+import { ClientFilters } from 'core/utils/client-counts/helpers';
 import { CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { ACTIVITY_EXPORT_STUB } from 'vault/tests/helpers/clients/client-count-helpers';
 import timestamp from 'core/utils/timestamp';
 import clientsHandler, { STATIC_NOW } from 'vault/mirage/handlers/clients';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 // integration test handle general display assertions, acceptance handles nav + filtering
 module('Acceptance | clients | counts | client list', function (hooks) {
@@ -32,16 +33,17 @@ module('Acceptance | clients | counts | client list', function (hooks) {
     //* End CE setup
 
     // The activity export endpoint returns a ReadableStream of json lines, this is not easily mocked using mirage.
-    // Stubbing the adapter method return instead.
+    // Stubbing the api service method instead.
     const mockResponse = {
-      status: 200,
-      ok: true,
-      text: () => Promise.resolve(ACTIVITY_EXPORT_STUB.trim()),
+      raw: new Response(ACTIVITY_EXPORT_STUB, {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     };
-    const store = this.owner.lookup('service:store');
-    const adapter = store.adapterFor('clients/activity');
-    this.exportDataStub = sinon.stub(adapter, 'exportData');
+    const api = this.owner.lookup('service:api');
+    this.exportDataStub = sinon.stub(api.sys, 'internalClientActivityExportRaw');
     this.exportDataStub.resolves(mockResponse);
+
     await login();
     return visit('/vault');
   });
@@ -126,7 +128,10 @@ module('Acceptance | clients | counts | client list', function (hooks) {
   });
 
   test('it renders error message if export has no data', async function (assert) {
-    this.exportDataStub.throws(new Error('No data to export in provided time range.'));
+    const emptyResponse = {
+      raw: new Response({}, { status: 204, headers: { 'Content-Type': 'application/json' } }),
+    };
+    this.exportDataStub.resolves(emptyResponse);
     await visit('/vault/clients/counts/client-list');
     await click(CLIENT_COUNT.dateRange.edit);
     await click(CLIENT_COUNT.dateRange.dropdownOption(4));
@@ -138,14 +143,22 @@ module('Acceptance | clients | counts | client list', function (hooks) {
   });
 
   test('it renders error message for permission denied', async function (assert) {
-    this.exportDataStub.throws(new Error('permission denied'));
+    const error = { errors: ['1 error occurred:\n\t* permission denied\n\n'] };
+    this.exportDataStub.rejects(getErrorResponse(error, 403));
     await visit('/vault/clients/counts/client-list');
-    await click(CLIENT_COUNT.dateRange.edit);
-    await click(CLIENT_COUNT.dateRange.dropdownOption(4));
-    assert.dom(GENERAL.emptyStateTitle).hasText('Error');
-    assert.dom(GENERAL.emptyStateMessage).hasText('permission denied');
-    // Assert the empty state message renders below the page header so user can query other dates
-    assert.dom(GENERAL.tab('overview')).exists('Overview tab still renders');
-    assert.dom(GENERAL.tab('client list')).exists('Client list tab still renders');
+    assert.dom(GENERAL.emptyStateTitle).hasText('You are not authorized');
+    assert
+      .dom(GENERAL.emptyStateMessage)
+      .hasText('Viewing export data requires sudo permissions to /sys/internal/counters/activity/export.');
+    assert.dom(GENERAL.emptyStateActions).hasText('Client Export Documentation');
+  });
+
+  // since permissions errors are specially handled, test that a non 403 is handled correctly
+  test('it renders error message for a server error', async function (assert) {
+    const error = { errors: ['uh oh'] };
+    this.exportDataStub.rejects(getErrorResponse(error, 500));
+    await visit('/vault/clients/counts/client-list');
+    assert.dom(GENERAL.pageError.errorTitle(500)).hasText('Error');
+    assert.dom(GENERAL.pageError.errorDetails).hasText('uh oh');
   });
 });

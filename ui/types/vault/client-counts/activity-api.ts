@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { CLIENT_TYPES, ClientFilters, EXPORT_CLIENT_TYPES } from 'core/utils/client-count-utils';
+import { CLIENT_TYPES, ClientFilters, EXPORT_CLIENT_TYPES } from 'core/utils/client-counts/helpers';
 
 // At time of writing ClientTypes are: 'acme_clients' | 'clients' | 'entity_clients' | 'non_entity_clients' | 'secret_syncs'
 export type ClientTypes = (typeof CLIENT_TYPES)[number];

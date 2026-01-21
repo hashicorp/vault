@@ -12,7 +12,7 @@ import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients/client-count
 import { CHARTS, CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
-import { ClientFilters, flattenMounts } from 'core/utils/client-count-utils';
+import { ClientFilters, flattenMounts } from 'core/utils/client-counts/helpers';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 module('Integration | Component | clients/page/overview', function (hooks) {

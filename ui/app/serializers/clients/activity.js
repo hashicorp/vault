@@ -5,7 +5,11 @@
 
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
-import { formatByMonths, formatByNamespace, destructureClientCounts } from 'core/utils/client-count-utils';
+import {
+  destructureClientCounts,
+  formatByMonths,
+  formatByNamespace,
+} from 'core/utils/client-counts/serializers';
 import timestamp from 'core/utils/timestamp';
 
 // see tests/helpers/clients/client-count-helpers for sample API response (ACTIVITY_RESPONSE_STUB)

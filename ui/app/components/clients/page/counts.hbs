@@ -26,7 +26,10 @@
   {{#if (eq @activity.id "no-data")}}
     <Clients::NoData @config={{@config}} />
   {{else if @activityError}}
-    <Clients::Counts::Error @error={{@activityError}} />
+    <Hds::ApplicationState class="top-padding-32" as |A|>
+      <A.Header data-test-empty-state-title @title={{this.error.title}} @icon="skip" @errorCode={{this.error.httpStatus}} />
+      <A.Body data-test-empty-state-message @text={{this.error.text}} />
+    </Hds::ApplicationState>
   {{else}}
     {{#if (eq @config.enabled "Off")}}
       <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
