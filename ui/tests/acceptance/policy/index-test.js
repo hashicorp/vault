@@ -94,7 +94,7 @@ module('Acceptance | policies/acl', function (hooks) {
       `/vault/policy/acl/${policyName}`,
       'navigates to policy show on successful save'
     );
-    assert.dom('[data-test-policy-edit-toggle]').exists({ count: 1 }, 'shows the edit toggle');
+    assert.dom(GENERAL.button('Edit policy')).exists({ count: 1 }, 'shows the edit toggle');
   });
 
   test('it can create and delete correctly', async function (assert) {
@@ -137,7 +137,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
     // policy deletion
     await click(SELECT.policyByName(policyLower));
-    await click('[data-test-policy-edit-toggle]');
+    await click(GENERAL.button('Edit policy'));
     await click(GENERAL.confirmTrigger);
     await click(GENERAL.confirmButton);
     await waitUntil(() => currentURL() === `/vault/policies/acl`);

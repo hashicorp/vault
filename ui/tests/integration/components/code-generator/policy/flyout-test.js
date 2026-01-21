@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, typeIn } from '@ember/test-helpers';
+import { render, click, fillIn, typeIn, waitUntil, find } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
@@ -113,6 +113,8 @@ module('Integration | Component | code-generator/policy/flyout', function (hooks
     assert.dom(GENERAL.flyout).exists('flyout is open');
     await click(GENERAL.cancelButton);
     assert.dom(GENERAL.flyout).doesNotExist('flyout is closed');
+    const dropdown = find(GENERAL.dropdownToggle('Toolbox'));
+    await waitUntil(() => dropdown.ariaExpanded === 'false');
     assert
       .dom(GENERAL.dropdownToggle('Toolbox'))
       .hasAttribute('aria-expanded', 'false', 'dropdown closes when flyout is closed');

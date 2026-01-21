@@ -93,7 +93,8 @@ export default class PolicyFormComponent extends Component<Args> {
 
   get snippetArgs() {
     const policyName = this.args.model.name || '<policy name>';
-    return policySnippetArgs(policyName, this.stanzas);
+    const policy = formatStanzas(this.stanzas);
+    return policySnippetArgs(policyName, policy);
   }
 
   get visualEditorSupported() {

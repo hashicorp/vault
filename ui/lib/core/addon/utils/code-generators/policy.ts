@@ -30,12 +30,12 @@ export class PolicyStanza {
 
 export const formatStanzas = (stanzas: PolicyStanza[]) => stanzas.map((s) => s.preview).join('\n');
 
-export const policySnippetArgs = (policyName: string, stanzas: PolicyStanza[]) => {
-  const policy = formatEot(formatStanzas(stanzas));
-  const resourceArgs = { name: `"${policyName}"`, policy };
+export const policySnippetArgs = (policyName: string, policy: string) => {
+  const formattedPolicy = formatEot(policy);
+  const resourceArgs = { name: `"${policyName}"`, policy: formattedPolicy };
   return {
     terraform: { resource: 'vault_policy', resourceArgs },
-    cli: { command: `policy write ${policyName}`, content: `- ${policy}` },
+    cli: { command: `policy write ${policyName}`, content: `- ${formattedPolicy}` },
   };
 };
 
