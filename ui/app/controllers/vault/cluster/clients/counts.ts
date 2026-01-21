@@ -6,7 +6,7 @@
 import Controller from '@ember/controller';
 import { action, set } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { ClientFilters } from 'core/utils/client-count-utils';
+import { ClientFilters } from 'core/utils/client-counts/helpers';
 
 import type { ClientsCountsRouteParams } from 'vault/routes/vault/cluster/clients/counts';
 

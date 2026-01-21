@@ -6,25 +6,13 @@
 import queryParamString from 'vault/utils/query-param-string';
 import ApplicationAdapter from '../application';
 import { debug } from '@ember/debug';
-import { parseJSON, isValid } from 'date-fns';
+import { formatQueryParams } from 'core/utils/client-counts/serializers';
 
 export default class ActivityAdapter extends ApplicationAdapter {
-  formatQueryParams({ start_time, end_time }) {
-    const query = {};
-
-    if (start_time && isValid(parseJSON(start_time))) {
-      query.start_time = start_time;
-    }
-    if (end_time && isValid(parseJSON(end_time))) {
-      query.end_time = end_time;
-    }
-    return query;
-  }
-
   queryRecord(store, type, query) {
     const url = `${this.buildURL()}/internal/counters/activity`;
     const options = {
-      data: this.formatQueryParams(query),
+      data: formatQueryParams(query),
     };
 
     if (query?.namespace) {

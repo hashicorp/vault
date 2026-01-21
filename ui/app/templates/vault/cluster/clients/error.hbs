@@ -3,39 +3,4 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if (eq @model.httpStatus 404)}}
-  <NotFound @model={{this.model}} />
-{{else}}
-  <div class="is-flex is-flex-grow-1">
-    <Hds::ApplicationState class="align-self-center" as |A|>
-      <A.Header
-        data-test-empty-state-title
-        @title={{if (eq @model.httpStatus 403) "You are not authorized" "Error"}}
-        @icon="skip"
-        @errorCode={{@model.httpStatus}}
-      />
-      <A.Body data-test-empty-state-message>
-        {{#if (eq @model.httpStatus 403)}}
-          <p>
-            You must be granted permissions to view this page. Ask your administrator if you think you should have access to
-            the
-            <code>{{@model.path}}</code>
-            endpoint.
-          </p>
-        {{else}}
-          <ul>
-            {{#if @model.message}}
-              <li>{{@model.message}}</li>
-              <hr />
-            {{/if}}
-            {{#each @model.errors as |error|}}
-              <li>
-                {{error}}
-              </li>
-            {{/each}}
-          </ul>
-        {{/if}}
-      </A.Body>
-    </Hds::ApplicationState>
-  </div>
-{{/if}}
+<Page::Error @error={{this.model}} />

@@ -23,7 +23,7 @@ import {
   ACTIVITY_EXPORT_STUB,
   ACTIVITY_RESPONSE_STUB,
 } from 'vault/tests/helpers/clients/client-count-helpers';
-import { ClientFilters, flattenMounts } from 'core/utils/client-count-utils';
+import { ClientFilters, flattenMounts } from 'core/utils/client-counts/helpers';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 module('Acceptance | clients | overview', function (hooks) {

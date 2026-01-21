@@ -10,7 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 import { FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
-import { ClientFilters } from 'core/utils/client-count-utils';
+import { ClientFilters } from 'core/utils/client-counts/helpers';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 module('Integration | Component | clients/filter-toolbar', function (hooks) {

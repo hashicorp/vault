@@ -5,7 +5,10 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { formatExportData, formatQueryParams } from 'core/utils/client-counts/serializers';
+
 import type AdapterError from '@ember-data/adapter/error';
+import type ApiService from 'vault/services/api';
 import type FlagsService from 'vault/services/flags';
 import type NamespaceService from 'vault/services/namespace';
 import type Store from '@ember-data/store';
@@ -32,6 +35,7 @@ interface ActivityAdapterQuery {
 export type ClientsCountsRouteModel = ModelFrom<ClientsCountsRoute>;
 
 export default class ClientsCountsRoute extends Route {
+  @service declare readonly api: ApiService;
   @service declare readonly flags: FlagsService;
   @service declare readonly namespace: NamespaceService;
   @service declare readonly store: Store;
@@ -80,25 +84,37 @@ export default class ClientsCountsRoute extends Route {
     // The "Client List" tab is only available on enterprise versions
     // For now, it is also hidden on HVD managed clusters
     if (this.version.isEnterprise && !this.flags.isHvdManaged) {
-      const adapter = this.store.adapterFor('clients/activity');
-      let exportData, exportError;
+      const { start_time, end_time } = formatQueryParams({
+        start_time: startTimestamp,
+        end_time: endTimestamp,
+      });
+      let exportData, cannotRequestExport;
       try {
-        const resp = await adapter.exportData({
-          // the API only accepts json or csv
-          format: 'json',
-          start_time: startTimestamp,
-          end_time: endTimestamp,
+        const { raw } = await this.api.sys.internalClientActivityExportRaw({
+          end_time,
+          format: 'json', // the API only accepts json or csv
+          start_time,
         });
-        const jsonLines = await resp.text();
-        const lines = jsonLines.trim().split('\n');
-        exportData = lines.map((line: string) => JSON.parse(line));
-      } catch (error) {
-        // Ideally we would not handle errors manually but this is the pattern the other client.counts
-        // route follow since the sys/internal/counters API doesn't always return helpful error messages.
-        // When these routes are migrated away from ember data we should revisit the error handling.
-        exportError = error as AdapterError;
+
+        // If it's not a 200 but didn't throw an error then it's likely a 204 (empty response).
+        exportData = raw.status === 200 ? await formatExportData(raw, { isDownload: false }) : null;
+      } catch (e) {
+        const { status, path, response } = await this.api.parseError(e);
+        // Show a custom error message when the user does not have permission
+        if (status === 403) {
+          cannotRequestExport = true;
+        } else {
+          // re-throw if not a permissions error
+          throw {
+            httpStatus: status,
+            path,
+            message: response?.message,
+            errors: response?.errors || [],
+            error: response?.error,
+          };
+        }
       }
-      return { exportData, exportError };
+      return { exportData, cannotRequestExport };
     }
     return { exportData: null, exportError: null };
   }
@@ -106,16 +122,16 @@ export default class ClientsCountsRoute extends Route {
   async model(params: ClientsCountsRouteParams) {
     const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ModelFrom<ClientsRoute>;
     const { activity, activityError } = await this.getActivity(params);
-    const { exportData, exportError } = await this.fetchAndFormatExportData(
+    const { exportData, cannotRequestExport } = await this.fetchAndFormatExportData(
       activity?.startTime,
       activity?.endTime
     );
     return {
       activity,
       activityError,
+      cannotRequestExport,
       config,
       exportData,
-      exportError,
       // We always want to return the start and end time from the activity response
       // so they serve as the source of truth for the time period of the displayed client count data
       startTimestamp: activity?.startTime,
