@@ -386,7 +386,6 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   // the kmip/role model relies on openApi so testing the form via an acceptance test
   module('kmip role edit form', function (hooks) {
     hooks.beforeEach(async function () {
-      this.store = this.owner.lookup('service:store');
       this.scope = 'my-scope';
       this.name = 'my-role';
 

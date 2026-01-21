@@ -62,8 +62,6 @@ export default class App extends Application {
           'namespace',
           'path-help',
           { 'app-router': 'router' },
-          'store',
-          'pagination',
           'version',
           'secret-mount-path',
         ],
