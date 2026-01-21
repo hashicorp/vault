@@ -1,0 +1,3 @@
+```release-note:bug
+agent: Fix Vault Agent discarding cached tokens on transient server errors instead of retrying
+```
