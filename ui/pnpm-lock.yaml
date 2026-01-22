@@ -5,7 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@hashicorp/design-system-components': 6.0.0-rc-20260122180106
   '@babel/runtime': 7.27.0
   '@embroider/macros': 1.15.0
   '@messageformat/runtime': 3.0.2
@@ -1485,7 +1484,7 @@ packages:
     resolution: {integrity: sha512-3WDH1gPWjCNNQQlZvO1wDCq8gT7ce7Aawpn0zP/8OttzyZDe5uRrKsKw6RtYJbgxpNcz+rMAYR2HN5eXLQeq0g==, tarball: file:vault-reporting/0.8.0.tgz}
     version: 0.8.0
     peerDependencies:
-      '@hashicorp/design-system-components': 6.0.0-rc-20260122180106
+      '@hashicorp/design-system-components': ^4.22.1
 
   '@hashicorp/design-system-components@6.0.0-rc-20260122180106':
     resolution: {integrity: sha512-crGruEOZHgNW8xWZguxEZRJKTm8KuX/D3LA6tbyyqhhXVdXrxJaGJoIsmoMLNESZwAI6J08Nlz0i/PXxFXlGgw==}
