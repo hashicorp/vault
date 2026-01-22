@@ -219,7 +219,7 @@
     "@babel/core": "7.26.10",
     "@babel/eslint-parser": "^7.28.5",
     "@hashicorp-internal/vault-reporting": "file:vault-reporting/0.8.0.tgz",
-    "@hashicorp/design-system-components": "4.24.1",
+    "@hashicorp/design-system-components": "6.0.0-rc-20260122180106",
     "@hashicorp/design-system-tokens": "3.0.0",
     "@hashicorp/vault-client-typescript": "hashicorp/vault-client-typescript",
     "ember-auto-import": "2.10.0",
