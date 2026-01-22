@@ -46,6 +46,12 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 	resp := &logical.Response{Secret: req.Secret}
 	resp.Secret.TTL = lease.TTL
 	resp.Secret.MaxTTL = lease.MaxTTL
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeRabbitMQCredentialRenew, map[string]interface{}{
+		"ttl":     lease.TTL.String(),
+		"max_ttl": lease.MaxTTL.String(),
+	})
+
 	return resp, nil
 }
 
@@ -67,6 +73,8 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	if _, err = client.DeleteUser(username); err != nil {
 		return nil, fmt.Errorf("could not delete user: %w", err)
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeRabbitMQCredentialRevoke, nil)
 
 	return nil, nil
 }
