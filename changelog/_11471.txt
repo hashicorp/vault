@@ -1,0 +1,3 @@
+```release-note:improvement
+core/managed-keys (enterprise): Allow GCP managed keys to leverage workload identity federation credentials
+```
