@@ -8,8 +8,6 @@ package vault
 import (
 	"crypto/ed25519"
 	"testing"
-
-	"github.com/hashicorp/go-licensing/v4"
 )
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
@@ -28,5 +26,7 @@ func (c *TestClusterCore) StopPkiCertificateCountConsumerJob() {}
 func (c *TestClusterCore) ResetPkiCertificateCounts()          {}
 func (c *TestClusterCore) RequirePkiCertificateCounts(t testing.TB, expectedIssuedCount, expectedStoredCount int) {
 }
-func (c *Core) testSetTestPubKeys(additionalKeys []interface{})                 {}
-func (c *Core) testSetTestIssuerOptions(testIssuerOpts licensing.IssuerOptions) {}
+
+// Ent specific test config for licensing
+func (c *Core) testSetTestPubKeys(config CoreConfig)       {}
+func (c *Core) testSetTestIssuerOptions(config CoreConfig) {}

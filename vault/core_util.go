@@ -11,7 +11,6 @@ import (
 	"io"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-licensing/v4"
 	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/limits"
@@ -39,7 +38,6 @@ func (e entCoreConfig) Clone() entCoreConfig {
 
 type LicensingConfig struct {
 	AdditionalPublicKeys []interface{}
-	IssuerOptions        licensing.IssuerOptions
 }
 
 func coreInit(c *Core, conf *CoreConfig) error {
