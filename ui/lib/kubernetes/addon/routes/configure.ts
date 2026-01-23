@@ -23,9 +23,9 @@ export default class KubernetesConfigureRoute extends Route {
   @service declare readonly secretMountPath: SecretMountPath;
 
   async model() {
-    const { config } = this.modelFor('application') as KubernetesApplicationModel;
+    const { config, secretsEngine } = this.modelFor('application') as KubernetesApplicationModel;
     const data = config || { disable_local_ca_jwt: false };
-    return new KubernetesConfigForm(data, { isNew: !config });
+    return { form: new KubernetesConfigForm(data, { isNew: !config }), secretsEngine };
   }
 
   setupController(controller: RouteController, resolvedModel: KubernetesConfigureModel) {

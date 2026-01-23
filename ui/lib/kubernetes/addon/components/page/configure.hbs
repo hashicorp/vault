@@ -3,12 +3,12 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{! TODO: VAULT-40884 Update Page::Header to use Kubernetes::Header and pass @configRoute argument with value "configure" for mount config tabs to show}}
-<Page::Header @title="Configure Kubernetes">
-  <:breadcrumbs>
-    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-  </:breadcrumbs>
-</Page::Header>
+<KubernetesHeader
+  @model={{@engine}}
+  @promptConfig={{@promptConfig}}
+  @breadcrumbs={{@breadcrumbs}}
+  @configRoute="configure"
+/>
 
 <hr class="is-marginless has-background-gray-200" />
 

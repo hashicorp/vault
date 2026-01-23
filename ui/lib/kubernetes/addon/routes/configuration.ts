@@ -11,6 +11,7 @@ import type { KubernetesApplicationModel } from './application';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/app-types';
+import type RouterService from '@ember/routing/router-service';
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
@@ -21,6 +22,7 @@ export type KubernetesConfigureModel = ModelFrom<KubernetesConfigureRoute>;
 
 export default class KubernetesConfigureRoute extends Route {
   @service declare readonly secretMountPath: SecretMountPath;
+  @service('app-router') declare readonly router: RouterService;
 
   model() {
     const { config, configError, secretsEngine, promptConfig } = this.modelFor(
@@ -31,6 +33,12 @@ export default class KubernetesConfigureRoute extends Route {
       throw configError;
     }
     return { secretsEngine, config, promptConfig };
+  }
+
+  afterModel(resolvedModel: KubernetesConfigureModel) {
+    if (!resolvedModel.config) {
+      this.router.transitionTo('vault.cluster.secrets.backend.kubernetes.configure');
+    }
   }
 
   setupController(controller: RouteController, resolvedModel: KubernetesConfigureModel) {
