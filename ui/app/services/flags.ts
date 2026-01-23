@@ -49,7 +49,7 @@ export default class FlagsService extends Service {
       }
     } catch (error) {
       if (macroCondition(isDevelopingApp())) {
-        console.error(error); // eslint-disable-line no-console
+        console.error(error);
       }
     }
   });
@@ -74,7 +74,7 @@ export default class FlagsService extends Service {
       return;
     } catch (error) {
       if (macroCondition(isDevelopingApp())) {
-        console.error(error); // eslint-disable-line no-console
+        console.error(error);
       }
     }
   });

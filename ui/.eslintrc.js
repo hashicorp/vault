@@ -29,7 +29,7 @@ module.exports = {
     browser: true,
   },
   rules: {
-    'no-console': 'error',
+    'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
     'prefer-const': ['error', { destructuring: 'all' }],
     'ember/no-mixins': 'warn',
     'ember/no-new-mixins': 'off', // should be warn but then every line of the mixin is green
@@ -42,6 +42,12 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
   },
   overrides: [
+    {
+      files: ['scripts/generate-form-config.js'],
+      rules: {
+        'no-console': 'off',
+      },
+    },
     // node files
     {
       files: [

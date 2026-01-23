@@ -66,7 +66,6 @@ export default class OpenApiForm<T extends object> extends Form<T> {
       );
     } else {
       // to aide in development log out an error to the console if the schema is not found
-      // eslint-disable-next-line no-console
       console.error(`OpenApiForm: Schema '${schemaKey}' not found in OpenAPI spec.`);
     }
 

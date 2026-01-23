@@ -108,7 +108,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @action
   onModalError(errorMsg: string) {
     if (macroCondition(isDevelopingApp())) {
-      console.error(errorMsg); // eslint-disable-line no-console
+      console.error(errorMsg);
     }
 
     const errors = [errorMsg];
