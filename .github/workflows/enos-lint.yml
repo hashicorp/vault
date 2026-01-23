@@ -27,7 +27,7 @@ jobs:
           echo "version=${{ steps.set-product-version.outputs.product-version }}" >> "$GITHUB_OUTPUT"
           github_repository="${{ github.repository }}"
           if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
-            echo 'runs-on=["self-hosted","ubuntu-latest-x64","type=c6a.4xlarge"]' >> "$GITHUB_OUTPUT"
+            echo 'runs-on=["self-hosted","ubuntu-latest-x64","type=c6a.2xlarge;c6a.4xlarge;c6a.8xlarge"]' >> "$GITHUB_OUTPUT"
           else
             echo 'runs-on="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
           fi

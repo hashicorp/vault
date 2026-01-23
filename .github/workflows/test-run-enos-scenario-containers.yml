@@ -73,7 +73,7 @@ jobs:
   run:
     needs: metadata
     name: run ${{ matrix.scenario.id.filter }}
-    runs-on: ${{ fromJSON(needs.metadata.outputs.is-ent-repo == 'true' && (contains(inputs.build-artifact-name, 'arm64') && '["self-hosted","ondemand","os=ubuntu-arm","type=c6g.xlarge"]' || '["self-hosted","ubuntu-latest-x64"]') || (contains(inputs.build-artifact-name, 'arm64') && '"ubuntu-22.04-arm"' || '"ubuntu-latest"')) }}
+    runs-on: ${{ fromJSON(needs.metadata.outputs.is-ent-repo == 'true' && (contains(inputs.build-artifact-name, 'arm64') && '["self-hosted","ondemand","os=ubuntu-arm","type=c6g.xlarge;c6g.2xlarge;c6g.4xlarge"]' || '["self-hosted","ubuntu-latest-x64"]') || (contains(inputs.build-artifact-name, 'arm64') && '"ubuntu-22.04-arm"' || '"ubuntu-latest"')) }}
     strategy:
       fail-fast: false # don't fail as that can skip required cleanup steps for jobs
       matrix:
