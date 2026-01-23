@@ -39,7 +39,7 @@ runs:
         } | tee -a "$GITHUB_ENV"
     - name: Try to restore dynamic config from cache
       id: dyn-cfg-cache
-      uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
+      uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
       with:
         path: ${{ env.DYNAMIC_CONFIG_PATH }}
         key: dyn-cfg-${{ env.DYNAMIC_CONFIG_KEY }}
