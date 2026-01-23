@@ -10,10 +10,15 @@ import { typeOf } from '@ember/utils';
 const TWO_SPACES = `  `;
 const FOUR_SPACES = `    `;
 
-export interface TerraformTemplateArgs {
+export interface TerraformResourceTemplateArgs {
   resource?: string; // The Terraform resource type (e.g., "vault_auth_backend", "vault_mount")
   localId?: string; // The local identifier/label for this resource instance. Used in Terraform commands like `terraform import vault_auth_backend.example github` (<- is "example" here)
   resourceArgs?: Record<string, unknown>; //  Key/value pairs that build the terraform configuration, string interpolations should be wrapped in double `""` quotes, e.g. resourceArgs = { name: `"${name}"` };
+}
+
+export interface TerraformVariableTemplateArgs {
+  variable?: string; // The Terraform variable name (e.g., "vault_team_ns")
+  variableArgs?: Record<string, unknown>; //  Key/value pairs that build the terraform configuration, string interpolations should be wrapped in double `""` quotes, e.g. variableArgs = { default: `"${name}"` };
 }
 
 /**
@@ -21,7 +26,7 @@ export interface TerraformTemplateArgs {
  * @see https://registry.terraform.io/providers/hashicorp/vault/latest/docs
  * @example (double quotes are intentional for string values so the output is wrapped in double quotes)
  * ```
- * terraformTemplate({
+ * terraformResourceTemplate({
  *   resource: 'vault_mount',
  *   localId: 'kvv2-example',
  *   resourceArgs: {
@@ -49,18 +54,28 @@ export interface TerraformTemplateArgs {
  * }
  * ```
  */
-export const terraformTemplate = ({
+export const terraformResourceTemplate = ({
   resource = '<resource name>',
   localId = '<local identifier>',
   resourceArgs = {},
-}: TerraformTemplateArgs = {}) => {
-  const formattedContent = formatTerraformResourceArgs(resourceArgs);
+}: TerraformResourceTemplateArgs = {}) => {
+  const formattedContent = formatTerraformArgs(resourceArgs);
   return `resource "${resource}" "${localId}" {
 ${formattedContent.join('\n')}
 }`;
 };
 
-export const formatTerraformResourceArgs = (resourceArgs: Record<string, unknown> = {}) => {
+export const terraformVariableTemplate = ({
+  variable = '<variable name>',
+  variableArgs = {},
+}: TerraformVariableTemplateArgs = {}) => {
+  const formattedContent = formatTerraformArgs(variableArgs);
+  return `variable "${variable}" {
+${formattedContent.join('\n')}
+}`;
+};
+
+export const formatTerraformArgs = (resourceArgs: Record<string, unknown> = {}) => {
   const formattedArgs = [];
   for (const [key, value] of Object.entries(resourceArgs)) {
     // Handle nested objects (like "options" above)
