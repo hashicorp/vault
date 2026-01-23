@@ -26,7 +26,7 @@ jobs:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
     - name: Set up Go
-      uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+      uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
       with:
         cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
         go-version-file: .go-version
@@ -61,7 +61,7 @@ jobs:
       run: |
         cat ${{ steps.scan.outputs.sarif-file-path }}
 
-    - name: Upload SARIF 
+    - name: Upload SARIF
       uses: github/codeql-action/upload-sarif@3096afedf9873361b2b2f65e1445b13272c83eb8  # TSCCR: could not find entry for github/codeql-action/upload-sarif
       with:
         sarif_file: ${{ steps.scan.outputs.sarif-file-path }}

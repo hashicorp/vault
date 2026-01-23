@@ -40,7 +40,7 @@ runs:
         else
           echo "go-version=${{ inputs.go-version }}" | tee -a "$GITHUB_OUTPUT"
         fi
-    - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+    - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
       with:
         go-version: ${{ steps.go-version.outputs.go-version }}
         cache: false # We use our own caching strategy
@@ -63,7 +63,7 @@ runs:
           echo "cache-key=go-modules-${wd_hash}-${{ hashFiles('**/go.sum') }}"
         } | tee -a "$GITHUB_OUTPUT"
     - id: cache-modules
-      uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
+      uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
       with:
         enableCrossOsArchive: true
         lookup-only: ${{ inputs.no-restore }}
