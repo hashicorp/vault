@@ -184,8 +184,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
           isEnterprise: Boolean(model.license),
         });
       } catch (e) {
-        // eslint-disable-next-line no-console
-        console.log('unable to start analytics', e);
+        console.error('unable to start analytics', e);
       }
     }
   },
