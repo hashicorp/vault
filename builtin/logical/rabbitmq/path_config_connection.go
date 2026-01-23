@@ -123,6 +123,8 @@ func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeRabbitMQConnectionConfigWrite, nil)
+
 	// Reset the client connection
 	b.resetClient(ctx)
 
