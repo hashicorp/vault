@@ -108,7 +108,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
 
     // navigate to details from index page
-    await click(GENERAL.breadcrumbAtIdx(0));
+    await click(GENERAL.breadcrumbAtIdx(1));
     await click(GENERAL.menuTrigger);
     await click('[data-test-oidc-scope-menu-link="details"]');
     assert.strictEqual(
@@ -232,7 +232,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       .hasText('this is an edit test', 'has correct edited description');
 
     // create a provider using test-scope
-    await click(GENERAL.breadcrumbAtIdx(0));
+    await click(GENERAL.breadcrumbAtIdx(1));
     await click(GENERAL.tab('providers'));
     assert.dom(GENERAL.tab('providers')).hasClass('active', 'providers tab is active');
     await click('[data-test-oidc-provider-create]');
@@ -376,7 +376,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
 
     // navigate to details from index page
-    await click(GENERAL.breadcrumbAtIdx(0));
+    await click(GENERAL.breadcrumbAtIdx(1));
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.providers.index',

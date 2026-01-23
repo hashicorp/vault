@@ -4,7 +4,16 @@
 }}
 
 {{#if (has-feature "Control Groups")}}
-  <Page::Header @title="Control Groups" />
+  <Page::Header @title="Approval workflow">
+    <:breadcrumbs>
+      <Page::Breadcrumbs
+        @breadcrumbs={{array
+          (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+          (hash label="Approval workflow" route="vault.cluster.access.control-groups")
+        }}
+      />
+    </:breadcrumbs>
+  </Page::Header>
   {{#if this.model.canConfigure}}
     <Toolbar>
       <ToolbarActions>
@@ -17,8 +26,8 @@
   <form {{action (nav-to-route "vault.cluster.access.control-group-accessor" this.model.id) on="submit"}}>
     <div class="box is-sideless is-fullwidth is-marginless">
       <p class="has-text-grey is-size-8">
-        Control Groups add additional authorization factors to be required before satisfying a request. If you have a Control
-        Group accessor, provide it here to view the lookup the authorization progress.
+        Approval workflows add additional authorization factors to be required before satisfying a request. If you have a
+        Control Group accessor, provide it here to view the lookup the authorization progress.
       </p>
       <label for="accessor" class="is-label">
         Accessor
@@ -32,5 +41,5 @@
     </div>
   </form>
 {{else}}
-  <UpgradePage @title="Control Groups" @minimumEdition="Vault Enterprise Premium" />
+  <UpgradePage @title="Approval workflow" @minimumEdition="Vault Enterprise Premium" />
 {{/if}}

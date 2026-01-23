@@ -4,7 +4,17 @@
 }}
 
 {{#if (has-feature "Control Groups")}}
-  <Page::Header @title="Control Groups" />
+  <Page::Header @title="Approval workflow">
+    <:breadcrumbs>
+      <Page::Breadcrumbs
+        @breadcrumbs={{array
+          (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+          (hash label="Approval workflow" route="vault.cluster.access.control-groups")
+          (hash label="Accessor")
+        }}
+      />
+    </:breadcrumbs>
+  </Page::Header>
 
   {{#if this.model.canConfigure}}
     <Toolbar>

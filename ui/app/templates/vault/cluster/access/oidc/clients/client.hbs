@@ -8,6 +8,7 @@
     <:breadcrumbs>
       <Page::Breadcrumbs
         @breadcrumbs={{array
+          (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
           (hash label="Applications" route="vault.cluster.access.oidc.clients")
           (hash label=this.model.name)
         }}

@@ -38,7 +38,9 @@ module('Acceptance | cluster', function (hooks) {
     await login(userToken);
     await visit('/vault/access');
 
-    assert.dom('[data-test-sidebar-nav-link="Policies"]').doesNotExist();
+    assert.dom('[data-test-sidebar-nav-link="ACL policies"]').doesNotExist();
+    assert.dom('[data-test-sidebar-nav-link="Role governing policies"]').doesNotExist();
+    assert.dom('[data-test-sidebar-nav-link="Endpoint governing policies"]').doesNotExist();
   });
 
   test('it hides mfa setup if user does not have entityId (ex: is a root user)', async function (assert) {
@@ -72,7 +74,9 @@ module('Acceptance | cluster', function (hooks) {
     await login(userToken);
     await visit('/vault/access');
 
-    assert.dom('[data-test-sidebar-nav-link="Policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
+    assert.dom('[data-test-sidebar-nav-link="ACL policies"]').doesNotExist();
+    assert.dom('[data-test-sidebar-nav-link="Role governing policies"]').exists();
+    assert.dom('[data-test-sidebar-nav-link="Endpoint governing policies"]').doesNotExist();
   });
 
   test('shows error banner if resultant-acl check fails', async function (assert) {

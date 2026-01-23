@@ -16,6 +16,7 @@ export default class PagePolicyShow extends Component<Args> {
     // Provide defaults so crumbs don't error as the component is torn down
     const { policyType = 'acl', id = 'policy' } = this.args.model || {};
     return [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
       {
         label: `${policyType.toUpperCase()} policies`,
         route: 'vault.cluster.policies',

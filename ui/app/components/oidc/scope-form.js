@@ -40,14 +40,18 @@ export default class OidcScopeFormComponent extends Component {
 }`;
 
   get breadcrumbs() {
-    const firstBreadcrumb = this.args.model.isNew
+    const scopesOrDetailsBreadcrumb = this.args.model.isNew
       ? { label: 'Scopes', route: 'vault.cluster.access.oidc.scopes' }
       : {
           label: 'Details',
           route: 'vault.cluster.access.oidc.scopes.scope.details',
           model: this.args.model.name,
         };
-    return [firstBreadcrumb, { label: this.args.model.isNew ? 'Create Scope' : 'Edit Scope' }];
+    return [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
+      scopesOrDetailsBreadcrumb,
+      { label: this.args.model.isNew ? 'Create Scope' : 'Edit Scope' },
+    ];
   }
 
   @task

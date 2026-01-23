@@ -34,7 +34,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     });
 
     await visit('/ui/vault/access');
-    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
+    await click('[data-test-sidebar-nav-link="Multi-factor authentication"]');
     await click(GENERAL.tab('enforcements'));
     await click('[data-test-enforcement-create]');
     // Fill out form
@@ -48,7 +48,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
 
   test('it should create login enforcement', async function (assert) {
     await visit('/ui/vault/access');
-    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
+    await click('[data-test-sidebar-nav-link="Multi-factor authentication"]');
     await click(GENERAL.tab('enforcements'));
     await click('[data-test-enforcement-create]');
 
@@ -65,7 +65,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       'Cancel transitions to enforcements list'
     );
     await click('[data-test-enforcement-create]');
-    await click('.hds-breadcrumb a');
+    await click(GENERAL.breadcrumbAtIdx(1));
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.index',
@@ -117,7 +117,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       'vault.cluster.access.mfa.enforcements.enforcement.index',
       'Details more menu action transitions to enforcement route'
     );
-    await click('.hds-breadcrumb a');
+    await click(GENERAL.breadcrumbAtIdx(1));
     await click(GENERAL.menuTrigger);
     await click('[data-test-list-item-link="edit"]');
     assert.strictEqual(

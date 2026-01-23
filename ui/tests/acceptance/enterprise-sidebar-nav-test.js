@@ -57,18 +57,44 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
     await click(link('License'));
     assert.strictEqual(currentURL(), '/vault/license', 'License route renders');
     await click(link('Access'));
-    await click(link('Control Groups'));
-    assert.strictEqual(currentURL(), '/vault/access/control-groups', 'Control groups route renders');
+    await click(link('Approval workflow'));
+    assert.strictEqual(currentURL(), '/vault/access/control-groups', 'Approval workflow route renders');
 
     await click(link('Namespaces'));
     assert.strictEqual(currentURL(), '/vault/access/namespaces?page=1', 'Replication route renders');
 
     await click(link('Back to main navigation'));
-    await click(link('Policies'));
-    await click(link('Role-Governing Policies'));
-    assert.strictEqual(currentURL(), '/vault/policies/rgp', 'Role-Governing Policies route renders');
+    await click(link('Access'));
+    await click(link('Role governing policies'));
+    assert.strictEqual(currentURL(), '/vault/policies/rgp', 'Role governing policies route renders');
 
-    await click(link('Endpoint Governing Policies'));
-    assert.strictEqual(currentURL(), '/vault/policies/egp', 'Endpoint Governing Policies route renders');
+    await click(link('Endpoint governing policies'));
+    assert.strictEqual(currentURL(), '/vault/policies/egp', 'Endpoint governing policies route renders');
+  });
+
+  test('it should link to correct routes at the access level', async function (assert) {
+    assert.expect(12);
+
+    await click(link('Access'));
+    assert.dom(panel('Access')).exists('Access nav panel renders');
+
+    const links = [
+      { label: 'ACL policies', route: '/vault/policies/acl' },
+      { label: 'Role governing policies', route: '/vault/policies/rgp' },
+      { label: 'Endpoint governing policies', route: '/vault/policies/egp' },
+      { label: 'Approval workflow', route: '/vault/access/control-groups' },
+      { label: 'Leases', route: '/vault/access/leases/list' },
+      { label: 'Authentication methods', route: '/vault/access' },
+      { label: 'Multi-factor authentication', route: '/vault/access/mfa' },
+      { label: 'OIDC provider', route: '/vault/access/oidc' },
+      { label: 'Namespaces', route: '/vault/access/namespaces' },
+      { label: 'Groups', route: '/vault/access/identity/groups' },
+      { label: 'Entities', route: '/vault/access/identity/entities' },
+    ];
+
+    for (const l of links) {
+      await click(link(l.label));
+      assert.ok(currentURL().includes(l.route), `${l.label} route renders`);
+    }
   });
 });

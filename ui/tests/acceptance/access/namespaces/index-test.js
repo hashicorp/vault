@@ -31,8 +31,11 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   });
 
   test('the route displays the breadcrumb trail', async function (assert) {
-    assert.dom(GENERAL.breadcrumb).exists({ count: 1 }, 'Only one breadcrumb is displayed');
-    assert.dom(GENERAL.breadcrumb).hasText('Namespaces', 'Breadcrumb trail is displayed correctly');
+    assert.dom(GENERAL.breadcrumb).exists({ count: 2 }, 'Only two breadcrumb is displayed');
+    assert.dom(GENERAL.breadcrumbAtIdx(0)).hasText('Vault', 'Breadcrumb trail is displayed correctly');
+    assert
+      .dom(GENERAL.currentBreadcrumb('Namespaces'))
+      .hasText('Namespaces', 'Namespace breadcrumb trail is displayed correctly');
   });
 
   test('the route should update namespace list after create/delete WITH manual refresh in the CLI', async function (assert) {

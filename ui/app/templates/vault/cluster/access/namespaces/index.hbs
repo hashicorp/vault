@@ -6,7 +6,9 @@
 {{#if (has-feature "Namespaces")}}
   <Page::Header @title="Namespaces">
     <:breadcrumbs>
-      <Page::Breadcrumbs @breadcrumbs={{array (hash label="Namespaces")}} />
+      <Page::Breadcrumbs
+        @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="Namespaces")}}
+      />
     </:breadcrumbs>
   </Page::Header>
 
