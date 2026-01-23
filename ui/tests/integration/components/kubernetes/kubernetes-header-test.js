@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
@@ -71,7 +71,6 @@ module('Integration | Component | kubernetes | KubernetesHeader', function (hook
     );
     assert.dom('[data-test-tab="overview"]').hasText('Overview', 'Overview tab renders');
     assert.dom('[data-test-tab="roles"]').hasText('Roles', 'Roles tab renders');
-    assert.dom('[data-test-tab="config"]').hasText('Configuration', 'Configuration tab renders');
   });
 
   test('it should render filter for roles', async function (assert) {
@@ -95,5 +94,28 @@ module('Integration | Component | kubernetes | KubernetesHeader', function (hook
     assert
       .dom('.toolbar-actions [data-test-yield]')
       .hasText('It yields!', 'Block is yielded for toolbar actions');
+  });
+
+  test('it should render a dropdown when configRoute is omitted', async function (assert) {
+    await render(
+      hbs`<KubernetesHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @handleSearch={{this.handleSearch}} @handleInput={{this.handleInput}} @handleKeyDown={{this.handleKeyDown}} />`,
+      {
+        owner: this.engine,
+      }
+    );
+    assert.dom(GENERAL.dropdownToggle('Manage')).hasText('Manage', 'Manage dropdown renders');
+    await click(GENERAL.dropdownToggle('Manage'));
+    assert.dom(GENERAL.menuItem('Configure')).exists('Configure dropdown item renders');
+    assert.dom(GENERAL.menuItem('Delete')).exists('Configure dropdown item renders');
+  });
+
+  test('it should render exit configuration button when configRoute is provided', async function (assert) {
+    await render(
+      hbs`<KubernetesHeader @configRoute="configuration" @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @handleSearch={{this.handleSearch}} @handleInput={{this.handleInput}} @handleKeyDown={{this.handleKeyDown}} />`,
+      {
+        owner: this.engine,
+      }
+    );
+    assert.dom(GENERAL.button('Exit configuration')).exists('Exit configuration button renders');
   });
 });
