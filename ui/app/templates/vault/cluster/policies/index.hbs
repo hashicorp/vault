@@ -9,6 +9,14 @@
         <Hds::Badge @text="Sentinel" />
       {{/if}}
     </:badges>
+    <:breadcrumbs>
+      <Page::Breadcrumbs
+        @breadcrumbs={{array
+          (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+          (hash label=(concat (uppercase this.policyType) " Policies"))
+        }}
+      />
+    </:breadcrumbs>
   </Page::Header>
   <Toolbar>
     {{#if this.model.meta.total}}

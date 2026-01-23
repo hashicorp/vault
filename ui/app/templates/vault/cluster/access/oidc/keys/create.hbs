@@ -6,7 +6,11 @@
 <Page::Header @title="Create Key">
   <:breadcrumbs>
     <Page::Breadcrumbs
-      @breadcrumbs={{array (hash label="Keys" route="vault.cluster.access.oidc.keys") (hash label="Create Key")}}
+      @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label="Keys" route="vault.cluster.access.oidc.keys")
+        (hash label="Create Key")
+      }}
     />
   </:breadcrumbs>
 </Page::Header>

@@ -62,7 +62,6 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Secrets Sync',
       'Secrets Recovery',
       'Access',
-      'Policies',
       'Tools',
       'Replication',
       'Raft Storage',

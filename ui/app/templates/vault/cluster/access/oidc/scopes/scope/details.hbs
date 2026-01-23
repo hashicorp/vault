@@ -6,7 +6,11 @@
 <Page::Header @title={{this.model.name}}>
   <:breadcrumbs>
     <Page::Breadcrumbs
-      @breadcrumbs={{array (hash label="Scopes" route="vault.cluster.access.oidc.scopes") (hash label=this.model.name)}}
+      @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label="Scopes" route="vault.cluster.access.oidc.scopes")
+        (hash label=this.model.name)
+      }}
     />
   </:breadcrumbs>
 </Page::Header>
