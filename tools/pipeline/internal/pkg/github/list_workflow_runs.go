@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"sync"
 
-	gh "github.com/google/go-github/v74/github"
+	gh "github.com/google/go-github/v81/github"
 )
 
 // PerPageMax is the maximum number of entities to request for enpoints that
