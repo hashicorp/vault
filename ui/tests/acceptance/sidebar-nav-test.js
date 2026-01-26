@@ -46,7 +46,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
 
     const subNavs = [
       { label: 'Access', route: 'policies/acl' },
-      { label: 'Tools', route: 'tools/wrap' },
+      { label: 'Operational tools', route: 'tools/wrap' },
     ];
 
     for (const subNav of subNavs) {
@@ -95,8 +95,8 @@ module('Acceptance | sidebar navigation', function (hooks) {
   test('it should link to correct routes at the tools level', async function (assert) {
     assert.expect(7);
 
-    await click(link('Tools'));
-    assert.dom(panel('Tools')).exists('Tools nav panel renders');
+    await click(link('Operational tools'));
+    assert.dom(panel('Operational tools')).exists('Operational tools nav panel renders');
 
     const links = [
       { label: 'Wrap', route: '/vault/tools/wrap' },

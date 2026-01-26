@@ -3,7 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Wrap Data" />
+<Page::Header @title="Wrap data">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if this.token}}
   <div class="box is-sideless is-fullwidth is-marginless">

@@ -3,7 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="API Explorer" />
+<Page::Header @title="API explorer">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 <div class="box is-fullwidth is-sideless is-marginless">
   <NamespaceReminder as |R|>
