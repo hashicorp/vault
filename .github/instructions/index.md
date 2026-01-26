@@ -1,16 +1,29 @@
-# Instructions 
+# Instructions
 
 ## Generic
-The generic folder contains instructions that can simply be copied into your teams repo for reuse. They are generic problem solving rules. 
 
-- golang_test.instructions.md
-Best practice for writing tests in Golang
+The generic folder contains instructions that can simply be copied into your teams repo for reuse. They are generic problem solving rules.
 
-## Specific
-The specific folder contains instructions that are not intended for reuse. 
+- code_comments.instructions.md
+  Guidelines for writing effective code comments - explains when to comment and when to write self-documenting code instead
 
-config.instructions.md
-Guidance for the pkg/config package in the terraform-enterprise repository, providing additional context, such as the requirement to consider backwards compatability. 
+- golang_tests.instructions.md
+  Best practices for writing tests in Golang
 
-style.instructions.md 
-Guidance for writing documentation. Used in the web-unified-docs-internal repo. 
+- ember_general.instructions.md
+  General guidelines for HashiCorp Ember.js UI applications
+
+- ember_hbs.instructions.md
+  Guidelines for Handlebars templates in Ember applications
+
+- ember_js.instructions.md
+  Guidelines for JavaScript/TypeScript in Ember applications
+
+- ember_styles.instructions.md
+  Guidelines for SCSS styling in Ember applications
+
+- ember_tests.instructions.md
+  Guidelines for testing Ember applications
+
+- testing.instructions.md
+  General testing best practices and guidelines
