@@ -312,7 +312,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.acmeState = NewACMEState()
 	b.certificateCounter = NewCertificateCounter(b.backendUUID)
 
-	b.pkiCertificateCounter = logical.NewNullPkiCertificateCounter()
+	if pkiCertCounterSysView, ok := conf.System.(logical.PkiCertificateCountSystemView); ok {
+		b.pkiCertificateCounter = pkiCertCounterSysView.GetPkiCertificateCounter()
+	} else {
+		b.pkiCertificateCounter = logical.NewNullPkiCertificateCounter()
+	}
 
 	b.pkiObserver = observe.NewPkiCeObserver(b.Logger(), b)
 
@@ -350,7 +354,7 @@ type backend struct {
 
 	// pkiCertificateCounter keeps track of issued and stored certificate counts
 	// for the purposes of PKI-only billing.
-	pkiCertificateCounter logical.PkiCertificateCounter
+	pkiCertificateCounter logical.CertificateCounter
 
 	pkiStorageVersion atomic.Value
 	crlBuilder        *CrlBuilder

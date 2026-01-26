@@ -8,8 +8,6 @@ package vault
 import (
 	"context"
 	"fmt"
-
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
@@ -151,10 +149,6 @@ func (c *Core) entJoinPluginDir(_ string) (string, error) {
 // of that type should return an error on any routed external requests.
 func (c *Core) IsMountTypeAllowed(mountType string) bool {
 	return true
-}
-
-func (c *Core) GetPkiCertificateCounter() logical.PkiCertificateCounter {
-	return logical.NewNullPkiCertificateCounter()
 }
 
 // IsFlagEnabled returns true if the named flag is set in HCL config feature_flags.
