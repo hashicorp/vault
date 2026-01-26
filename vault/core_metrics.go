@@ -766,18 +766,26 @@ func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsu
 }
 
 type RoleCounts struct {
-	AWSDynamicRoles         int `json:"aws_dynamic_roles"`
-	AWSStaticRoles          int `json:"aws_static_roles"`
-	AzureDynamicRoles       int `json:"azure_dynamic_roles"`
-	DatabaseDynamicRoles    int `json:"database_dynamic_roles"`
-	DatabaseStaticRoles     int `json:"database_static_roles"`
-	GCPRolesets             int `json:"gcp_rolesets"`
-	GCPStaticAccounts       int `json:"gcp_static_accounts"`
-	GCPImpersonatedAccounts int `json:"gcp_impersonated_accounts"`
-	LDAPDynamicRoles        int `json:"ldap_dynamic_roles"`
-	LDAPStaticRoles         int `json:"ldap_static_roles"`
-	OpenLDAPDynamicRoles    int `json:"openldap_dynamic_roles"`
-	OpenLDAPStaticRoles     int `json:"openldap_static_roles"`
+	AWSDynamicRoles            int `json:"aws_dynamic_roles"`
+	AWSStaticRoles             int `json:"aws_static_roles"`
+	AzureDynamicRoles          int `json:"azure_dynamic_roles"`
+	AzureStaticRoles           int `json:"azure_static_roles"`
+	DatabaseDynamicRoles       int `json:"database_dynamic_roles"`
+	DatabaseStaticRoles        int `json:"database_static_roles"`
+	GCPRolesets                int `json:"gcp_rolesets"`
+	GCPStaticAccounts          int `json:"gcp_static_accounts"`
+	GCPImpersonatedAccounts    int `json:"gcp_impersonated_accounts"`
+	LDAPDynamicRoles           int `json:"ldap_dynamic_roles"`
+	LDAPStaticRoles            int `json:"ldap_static_roles"`
+	OpenLDAPDynamicRoles       int `json:"openldap_dynamic_roles"`
+	OpenLDAPStaticRoles        int `json:"openldap_static_roles"`
+	AlicloudDynamicRoles       int `json:"alicloud_dynamic_roles"`
+	RabbitMQDynamicRoles       int `json:"rabbitmq_dynamic_roles"`
+	ConsulDynamicRoles         int `json:"consul_dynamic_roles"`
+	NomadDynamicRoles          int `json:"nomad_dynamic_roles"`
+	KubernetesDynamicRoles     int `json:"kubernetes_dynamic_roles"`
+	MongoDBAtlasDynamicRoles   int `json:"mongodb_atlas_dynamic_roles"`
+	TerraformCloudDynamicRoles int `json:"terraformcloud_dynamic_roles"`
 }
 
 func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool) *RoleCounts {
@@ -831,6 +839,8 @@ func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool) 
 		case pluginconsts.SecretEngineAzure:
 			dynamicRoles := apiList(entry, "roles")
 			roles.AzureDynamicRoles += len(dynamicRoles)
+			staticRoles := apiList(entry, "static-roles")
+			roles.AzureStaticRoles += len(staticRoles)
 
 		case pluginconsts.SecretEngineDatabase:
 			dynamicRoles := apiList(entry, "roles")
@@ -857,6 +867,34 @@ func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool) 
 			roles.OpenLDAPDynamicRoles += len(dynamicRoles)
 			staticRoles := apiList(entry, "static-role")
 			roles.OpenLDAPStaticRoles += len(staticRoles)
+
+		case pluginconsts.SecretEngineAlicloud:
+			dynamicRoles := apiList(entry, "role")
+			roles.AlicloudDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineRabbitMQ:
+			dynamicRoles := apiList(entry, "roles")
+			roles.RabbitMQDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineConsul:
+			dynamicRoles := apiList(entry, "roles")
+			roles.ConsulDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineNomad:
+			dynamicRoles := apiList(entry, "role")
+			roles.NomadDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineKubernetes:
+			dynamicRoles := apiList(entry, "roles")
+			roles.KubernetesDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineMongoDBAtlas:
+			dynamicRoles := apiList(entry, "roles")
+			roles.MongoDBAtlasDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineTerraform:
+			dynamicRoles := apiList(entry, "role")
+			roles.TerraformCloudDynamicRoles += len(dynamicRoles)
 		}
 	}
 

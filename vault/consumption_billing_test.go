@@ -32,6 +32,10 @@ var secretEngineBackends = map[string]struct {
 		mount: pluginconsts.SecretEngineAzure,
 		key:   "roles/",
 	},
+	"Azure Static Roles": {
+		mount: pluginconsts.SecretEngineAzure,
+		key:   "static-roles/",
+	},
 	"Database Dynamic Roles": {
 		mount: pluginconsts.SecretEngineDatabase,
 		key:   "role/",
@@ -68,6 +72,36 @@ var secretEngineBackends = map[string]struct {
 		mount: pluginconsts.SecretEngineOpenLDAP,
 		key:   "static-role/",
 	},
+	"Alicloud Dynamic Roles": {
+		mount: pluginconsts.SecretEngineAlicloud,
+		key:   "role/",
+	},
+	"RabbitMQ Dynamic Roles": {
+		mount: pluginconsts.SecretEngineRabbitMQ,
+		key:   "role/",
+	},
+	"Consul Dynamic Roles": {
+		mount: pluginconsts.SecretEngineConsul,
+		key:   "policy/",
+	},
+	"Nomad Dynamic Roles": {
+		mount: pluginconsts.SecretEngineNomad,
+		key:   "role/",
+	},
+	"Kubernetes Dynamic Roles": {
+		mount: pluginconsts.SecretEngineKubernetes,
+		key:   "roles/",
+	},
+	// MongoDB roles, unlike MongoDB Atlas roles, are
+	// counted as part of the Database secret engine
+	"MongoDB Atlas Dynamic Roles": {
+		mount: pluginconsts.SecretEngineMongoDBAtlas,
+		key:   "roles/",
+	},
+	"Terraform Cloud Dynamic Roles": {
+		mount: pluginconsts.SecretEngineTerraform,
+		key:   "role/",
+	},
 }
 
 // TestConsumptionBillingMetricsWorker tests that we correctly update the consumption metrics at
@@ -95,27 +129,13 @@ func TestConsumptionBillingMetricsWorker(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 5)
 	}
 	timer := time.NewTimer(5 * time.Second)
-	expectedCounts := RoleCounts{
-		AWSDynamicRoles:         5,
-		AWSStaticRoles:          5,
-		AzureDynamicRoles:       5,
-		DatabaseDynamicRoles:    5,
-		DatabaseStaticRoles:     5,
-		GCPImpersonatedAccounts: 5,
-		GCPRolesets:             5,
-		GCPStaticAccounts:       5,
-		LDAPDynamicRoles:        5,
-		LDAPStaticRoles:         5,
-		OpenLDAPDynamicRoles:    5,
-		OpenLDAPStaticRoles:     5,
-	}
 
 	_ = <-timer.C
 	// Check that the billing metrics have been updated
 	counts, err := core.GetStoredHWMRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, *counts, expectedCounts)
+	verifyExpectedRoleCounts(t, counts, 5)
 
 	for _, tc := range secretEngineBackends {
 		deleteAllRolesFromStorage(t, core, tc.mount, tc.key)
@@ -129,5 +149,5 @@ func TestConsumptionBillingMetricsWorker(t *testing.T) {
 	counts, err = core.GetStoredHWMRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, *counts, expectedCounts)
+	verifyExpectedRoleCounts(t, counts, 5)
 }

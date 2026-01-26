@@ -9,13 +9,20 @@ import (
 	"testing"
 	"time"
 
+	logicalAlicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
 	logicalAzure "github.com/hashicorp/vault-plugin-secrets-azure"
 	logicalGcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
+	logicalKubernetes "github.com/hashicorp/vault-plugin-secrets-kubernetes"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	logicalMongoDBAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
 	logicalLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
+	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
+	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
 	logicalDatabase "github.com/hashicorp/vault/builtin/logical/database"
+	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
+	logicalRabbitMQ "github.com/hashicorp/vault/builtin/logical/rabbitmq"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -24,13 +31,20 @@ import (
 )
 
 var roleLogicalBackends = map[string]logical.Factory{
-	pluginconsts.SecretEngineAWS:      logicalAws.Factory,
-	pluginconsts.SecretEngineAzure:    logicalAzure.Factory,
-	pluginconsts.SecretEngineGCP:      logicalGcp.Factory,
-	pluginconsts.SecretEngineKV:       logicalKv.Factory,
-	pluginconsts.SecretEngineLDAP:     logicalLDAP.Factory,
-	pluginconsts.SecretEngineDatabase: logicalDatabase.Factory,
-	pluginconsts.SecretEngineOpenLDAP: logicalLDAP.Factory,
+	pluginconsts.SecretEngineAWS:          logicalAws.Factory,
+	pluginconsts.SecretEngineAzure:        logicalAzure.Factory,
+	pluginconsts.SecretEngineGCP:          logicalGcp.Factory,
+	pluginconsts.SecretEngineKV:           logicalKv.Factory,
+	pluginconsts.SecretEngineLDAP:         logicalLDAP.Factory,
+	pluginconsts.SecretEngineDatabase:     logicalDatabase.Factory,
+	pluginconsts.SecretEngineOpenLDAP:     logicalLDAP.Factory,
+	pluginconsts.SecretEngineAlicloud:     logicalAlicloud.Factory,
+	pluginconsts.SecretEngineRabbitMQ:     logicalRabbitMQ.Factory,
+	pluginconsts.SecretEngineConsul:       logicalConsul.Factory,
+	pluginconsts.SecretEngineNomad:        logicalNomad.Factory,
+	pluginconsts.SecretEngineKubernetes:   logicalKubernetes.Factory,
+	pluginconsts.SecretEngineMongoDBAtlas: logicalMongoDBAtlas.Factory,
+	pluginconsts.SecretEngineTerraform:    logicalTerraform.Factory,
 }
 
 // TestStoreAndGetMaxRoleCounts verifies that we can store and retrieve the HWM role counts correctly
@@ -105,6 +119,7 @@ func TestStoreAndGetMaxRoleCounts(t *testing.T) {
 			require.Equal(t, tc.roleCounts.AWSDynamicRoles, retrievedCounts.AWSDynamicRoles)
 			require.Equal(t, tc.roleCounts.AWSStaticRoles, retrievedCounts.AWSStaticRoles)
 			require.Equal(t, tc.roleCounts.AzureDynamicRoles, retrievedCounts.AzureDynamicRoles)
+			require.Equal(t, tc.roleCounts.AzureStaticRoles, retrievedCounts.AzureStaticRoles)
 			require.Equal(t, tc.roleCounts.GCPStaticAccounts, retrievedCounts.GCPStaticAccounts)
 			require.Equal(t, tc.roleCounts.GCPImpersonatedAccounts, retrievedCounts.GCPImpersonatedAccounts)
 			require.Equal(t, tc.roleCounts.OpenLDAPDynamicRoles, retrievedCounts.OpenLDAPDynamicRoles)
@@ -114,6 +129,13 @@ func TestStoreAndGetMaxRoleCounts(t *testing.T) {
 			require.Equal(t, tc.roleCounts.DatabaseDynamicRoles, retrievedCounts.DatabaseDynamicRoles)
 			require.Equal(t, tc.roleCounts.DatabaseStaticRoles, retrievedCounts.DatabaseStaticRoles)
 			require.Equal(t, tc.roleCounts.GCPRolesets, retrievedCounts.GCPRolesets)
+			require.Equal(t, tc.roleCounts.AlicloudDynamicRoles, retrievedCounts.AlicloudDynamicRoles)
+			require.Equal(t, tc.roleCounts.RabbitMQDynamicRoles, retrievedCounts.RabbitMQDynamicRoles)
+			require.Equal(t, tc.roleCounts.ConsulDynamicRoles, retrievedCounts.ConsulDynamicRoles)
+			require.Equal(t, tc.roleCounts.NomadDynamicRoles, retrievedCounts.NomadDynamicRoles)
+			require.Equal(t, tc.roleCounts.KubernetesDynamicRoles, retrievedCounts.KubernetesDynamicRoles)
+			require.Equal(t, tc.roleCounts.MongoDBAtlasDynamicRoles, retrievedCounts.MongoDBAtlasDynamicRoles)
+			require.Equal(t, tc.roleCounts.TerraformCloudDynamicRoles, retrievedCounts.TerraformCloudDynamicRoles)
 		})
 	}
 }
@@ -154,6 +176,11 @@ func TestHWMRoleCounts(t *testing.T) {
 		"Azure Dynamic Roles": {
 			mount:        pluginconsts.SecretEngineAzure,
 			key:          "roles/",
+			numberOfKeys: 5,
+		},
+		"Azure Static Roles": {
+			mount:        pluginconsts.SecretEngineAzure,
+			key:          "static-roles/",
 			numberOfKeys: 5,
 		},
 		"Database Dynamic Roles": {
@@ -201,6 +228,41 @@ func TestHWMRoleCounts(t *testing.T) {
 			key:          "static-role/",
 			numberOfKeys: 5,
 		},
+		"Alicloud Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineAlicloud,
+			key:          "role/",
+			numberOfKeys: 5,
+		},
+		"RabbitMQ Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineRabbitMQ,
+			key:          "role/",
+			numberOfKeys: 5,
+		},
+		"Consul Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineConsul,
+			key:          "policy/",
+			numberOfKeys: 5,
+		},
+		"Nomad Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineNomad,
+			key:          "role/",
+			numberOfKeys: 5,
+		},
+		"Kubernetes Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineKubernetes,
+			key:          "roles/",
+			numberOfKeys: 5,
+		},
+		"MongoDB Atlas Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineMongoDBAtlas,
+			key:          "roles/",
+			numberOfKeys: 5,
+		},
+		"Terraform Cloud Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineTerraform,
+			key:          "role/",
+			numberOfKeys: 5,
+		},
 	}
 
 	// Sleep to prevent race conditions during the role initialization
@@ -213,56 +275,17 @@ func TestHWMRoleCounts(t *testing.T) {
 	}
 
 	firstCounts := core.GetRoleCounts()
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         5,
-		AWSStaticRoles:          5,
-		AzureDynamicRoles:       5,
-		DatabaseDynamicRoles:    5,
-		DatabaseStaticRoles:     5,
-		GCPImpersonatedAccounts: 5,
-		GCPRolesets:             5,
-		GCPStaticAccounts:       5,
-		LDAPDynamicRoles:        5,
-		LDAPStaticRoles:         5,
-		OpenLDAPDynamicRoles:    5,
-		OpenLDAPStaticRoles:     5,
-	}, firstCounts)
+	verifyExpectedRoleCounts(t, firstCounts, 5)
 
 	counts, err := core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         5,
-		AWSStaticRoles:          5,
-		AzureDynamicRoles:       5,
-		DatabaseDynamicRoles:    5,
-		DatabaseStaticRoles:     5,
-		GCPImpersonatedAccounts: 5,
-		GCPRolesets:             5,
-		GCPStaticAccounts:       5,
-		LDAPDynamicRoles:        5,
-		LDAPStaticRoles:         5,
-		OpenLDAPDynamicRoles:    5,
-		OpenLDAPStaticRoles:     5,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 5)
 
 	counts, err = core.GetStoredHWMRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 	// Verify that the max role counts are as expected
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         5,
-		AWSStaticRoles:          5,
-		AzureDynamicRoles:       5,
-		DatabaseDynamicRoles:    5,
-		DatabaseStaticRoles:     5,
-		GCPImpersonatedAccounts: 5,
-		GCPRolesets:             5,
-		GCPStaticAccounts:       5,
-		LDAPDynamicRoles:        5,
-		LDAPStaticRoles:         5,
-		OpenLDAPDynamicRoles:    5,
-		OpenLDAPStaticRoles:     5,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 5)
 
 	// Reduce the number of roles. The max counts should remain the same
 	for _, tc := range testCases {
@@ -273,38 +296,12 @@ func TestHWMRoleCounts(t *testing.T) {
 	counts, err = core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         5,
-		AWSStaticRoles:          5,
-		AzureDynamicRoles:       5,
-		DatabaseDynamicRoles:    5,
-		DatabaseStaticRoles:     5,
-		GCPImpersonatedAccounts: 5,
-		GCPRolesets:             5,
-		GCPStaticAccounts:       5,
-		LDAPDynamicRoles:        5,
-		LDAPStaticRoles:         5,
-		OpenLDAPDynamicRoles:    5,
-		OpenLDAPStaticRoles:     5,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 5)
 
 	counts, err = core.GetStoredHWMRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         5,
-		AWSStaticRoles:          5,
-		AzureDynamicRoles:       5,
-		DatabaseDynamicRoles:    5,
-		DatabaseStaticRoles:     5,
-		GCPImpersonatedAccounts: 5,
-		GCPRolesets:             5,
-		GCPStaticAccounts:       5,
-		LDAPDynamicRoles:        5,
-		LDAPStaticRoles:         5,
-		OpenLDAPDynamicRoles:    5,
-		OpenLDAPStaticRoles:     5,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 5)
 
 	// Increase the number of roles. The max counts should update
 	for _, tc := range testCases {
@@ -315,38 +312,12 @@ func TestHWMRoleCounts(t *testing.T) {
 	counts, err = core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         8,
-		AWSStaticRoles:          8,
-		AzureDynamicRoles:       8,
-		DatabaseDynamicRoles:    8,
-		DatabaseStaticRoles:     8,
-		GCPImpersonatedAccounts: 8,
-		GCPRolesets:             8,
-		GCPStaticAccounts:       8,
-		LDAPDynamicRoles:        8,
-		LDAPStaticRoles:         8,
-		OpenLDAPDynamicRoles:    8,
-		OpenLDAPStaticRoles:     8,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 8)
 
 	counts, err = core.GetStoredHWMRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         8,
-		AWSStaticRoles:          8,
-		AzureDynamicRoles:       8,
-		DatabaseDynamicRoles:    8,
-		DatabaseStaticRoles:     8,
-		GCPImpersonatedAccounts: 8,
-		GCPRolesets:             8,
-		GCPStaticAccounts:       8,
-		LDAPDynamicRoles:        8,
-		LDAPStaticRoles:         8,
-		OpenLDAPDynamicRoles:    8,
-		OpenLDAPStaticRoles:     8,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 8)
 
 	// Decrease the number of roles back to 5. The max counts should remain at 8
 	for _, tc := range testCases {
@@ -357,37 +328,11 @@ func TestHWMRoleCounts(t *testing.T) {
 	counts, err = core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         8,
-		AWSStaticRoles:          8,
-		AzureDynamicRoles:       8,
-		DatabaseDynamicRoles:    8,
-		DatabaseStaticRoles:     8,
-		GCPImpersonatedAccounts: 8,
-		GCPRolesets:             8,
-		GCPStaticAccounts:       8,
-		LDAPDynamicRoles:        8,
-		LDAPStaticRoles:         8,
-		OpenLDAPDynamicRoles:    8,
-		OpenLDAPStaticRoles:     8,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 8)
 
 	counts, err = core.GetStoredHWMRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         8,
-		AWSStaticRoles:          8,
-		AzureDynamicRoles:       8,
-		DatabaseDynamicRoles:    8,
-		DatabaseStaticRoles:     8,
-		GCPImpersonatedAccounts: 8,
-		GCPRolesets:             8,
-		GCPStaticAccounts:       8,
-		LDAPDynamicRoles:        8,
-		LDAPStaticRoles:         8,
-		OpenLDAPDynamicRoles:    8,
-		OpenLDAPStaticRoles:     8,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 8)
 }
 
 // TestHWMKvSecretsCounts tests that we correctly store and track the HWM kv counts
