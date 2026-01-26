@@ -31,7 +31,6 @@
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 
 # Content on developer.hashicorp.com
-
 # Web presence gets notified of, and can approve changes to web tooling, but not content.
 
 /website/               @hashicorp/web-presence
@@ -40,7 +39,6 @@
 /website/content/
 
 # Education gets notified of, and can approve changes to web content.
-
 /website/data/          @hashicorp/vault-education-approvers
 /website/public/        @hashicorp/vault-education-approvers
 /website/content/       @hashicorp/vault-education-approvers
@@ -66,6 +64,10 @@
 # Quality engineering
 /.github/  @hashicorp/team-vault-quality
 /enos/     @hashicorp/team-vault-quality
+
+# Copilot instructions - exceptions to the general .github/ rule
+/.github/instructions/  @hashicorp/vault
+/.github/copilot-instructions.md  @hashicorp/vault
 
 # Cryptosec
 /api/auth/cert/                                      @hashicorp/vault-crypto
