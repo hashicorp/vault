@@ -48,7 +48,7 @@ jobs:
       - id: get-outputs
         run: |
           if [[ '${{ steps.metadata.outputs.is-ent-repo }}' == 'true' ]]; then
-            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m5d.4xlarge']" >> "$GITHUB_OUTPUT"
+            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m8a.4xlarge;m7a.4xlarge;m5d.4xlarge']" >> "$GITHUB_OUTPUT"
           else
             echo "runs-on=\"custom-linux-xl-vault-latest\"" >> "$GITHUB_OUTPUT"
           fi

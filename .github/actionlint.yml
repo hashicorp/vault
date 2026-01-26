@@ -16,5 +16,6 @@ self-hosted-runner:
     - type=c6a.xlarge
     - type=c6g.2xlarge
     - type=c6a.4xlarge
+    - type=c6g.2xlarge;c6g.4xlarge
     - ubuntu-latest-x64
     - custom-linux-xl-vault-latest
