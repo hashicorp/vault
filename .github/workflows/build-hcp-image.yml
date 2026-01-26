@@ -3,6 +3,8 @@ name: build-hcp-image
 on:
   workflow_call:
     inputs:
+      branch:
+        type: string
       pull-request:
         type: number
       create-azure-image:
