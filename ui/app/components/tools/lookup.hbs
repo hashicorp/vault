@@ -3,7 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Lookup Token" />
+<Page::Header @title="Lookup token">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if this.lookupData}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">

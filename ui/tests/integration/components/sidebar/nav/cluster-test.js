@@ -36,7 +36,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   });
 
   test('it should render nav headings', async function (assert) {
-    const headings = ['Vault', 'Monitoring', 'Settings'];
+    const headings = ['Vault', 'Monitoring'];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
 
@@ -62,15 +62,13 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Secrets Sync',
       'Secrets Recovery',
       'Access',
-      'Tools',
+      'Operational tools',
       'Replication',
       'Raft Storage',
       'Client Count',
       'Vault Usage',
       'License',
       'Seal Vault',
-      'Custom Messages',
-      'UI Login Settings',
     ];
     // do not add PKI-only Secrets feature as it hides Client Count nav link
     const features = allFeatures().filter((feat) => feat !== 'PKI-only Secrets');

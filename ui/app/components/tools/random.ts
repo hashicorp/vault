@@ -28,6 +28,10 @@ export default class ToolsRandom extends Component {
   @tracked randomBytes = '';
   @tracked errorMessage = '';
 
+  get breadcrumbs() {
+    return [{ label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' }, { label: 'Random bytes' }];
+  }
+
   @action
   reset() {
     this.bytes = 32;

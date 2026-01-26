@@ -42,12 +42,14 @@ module('Integration | Component | sidebar-nav-tools', function (hooks) {
   });
 
   test('it should render nav headings and links', async function (assert) {
-    const links = ['Back to main navigation', ...toolsActions(), 'API Explorer'];
+    const links = ['Back to main navigation', ...toolsActions(), 'API explorer'];
     stubFeaturesAndPermissions(this.owner);
     await renderComponent();
 
     assert.dom('[data-test-sidebar-nav-heading]').exists({ count: 1 }, 'Correct number of headings render');
-    assert.dom('[data-test-sidebar-nav-heading="Tools"]').hasText('Tools', 'Tools heading renders');
+    assert
+      .dom('[data-test-sidebar-nav-heading="Operational tools"]')
+      .hasText('Operational tools', 'Operational tools heading renders');
 
     assert
       .dom('[data-test-sidebar-nav-link]')

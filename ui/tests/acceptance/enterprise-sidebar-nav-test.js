@@ -97,4 +97,15 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
       assert.ok(currentURL().includes(l.route), `${l.label} route renders`);
     }
   });
+
+  test('it should navigate to the correct links from Operational tools > Custom messages ember engine (enterprise)', async function (assert) {
+    await click(link('Operational tools'));
+    assert.strictEqual(currentURL(), '/vault/tools/wrap', 'Tool route renders');
+    await click(link('Custom messages'));
+    assert.strictEqual(currentURL(), '/vault/config-ui/messages', 'Custom messages route renders');
+    await click(link('Lookup'));
+    assert.strictEqual(currentURL(), '/vault/tools/lookup', 'Lookup route renders');
+    await click(link('UI login settings'));
+    assert.strictEqual(currentURL(), '/vault/config-ui/login-settings', 'UI login settings route renders');
+  });
 });
