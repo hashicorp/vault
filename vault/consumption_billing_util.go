@@ -26,6 +26,7 @@ func combineRoleCounts(ctx context.Context, a, b *RoleCounts) *RoleCounts {
 		a.AWSDynamicRoles + b.AWSDynamicRoles,
 		a.AWSStaticRoles + b.AWSStaticRoles,
 		a.AzureDynamicRoles + b.AzureDynamicRoles,
+		a.AzureStaticRoles + b.AzureStaticRoles,
 		a.DatabaseDynamicRoles + b.DatabaseDynamicRoles,
 		a.DatabaseStaticRoles + b.DatabaseStaticRoles,
 		a.GCPRolesets + b.GCPRolesets,
@@ -35,6 +36,13 @@ func combineRoleCounts(ctx context.Context, a, b *RoleCounts) *RoleCounts {
 		a.LDAPStaticRoles + b.LDAPStaticRoles,
 		a.OpenLDAPDynamicRoles + b.OpenLDAPDynamicRoles,
 		a.OpenLDAPStaticRoles + b.OpenLDAPStaticRoles,
+		a.AlicloudDynamicRoles + b.AlicloudDynamicRoles,
+		a.RabbitMQDynamicRoles + b.RabbitMQDynamicRoles,
+		a.ConsulDynamicRoles + b.ConsulDynamicRoles,
+		a.NomadDynamicRoles + b.NomadDynamicRoles,
+		a.KubernetesDynamicRoles + b.KubernetesDynamicRoles,
+		a.MongoDBAtlasDynamicRoles + b.MongoDBAtlasDynamicRoles,
+		a.TerraformCloudDynamicRoles + b.TerraformCloudDynamicRoles,
 	}
 }
 
@@ -139,42 +147,27 @@ func (c *Core) UpdateMaxRoleCounts(ctx context.Context, localPathPrefix string, 
 	if currentRoleCounts == nil {
 		currentRoleCounts = &RoleCounts{}
 	}
-	if currentRoleCounts.AWSDynamicRoles > maxRoleCounts.AWSDynamicRoles {
-		maxRoleCounts.AWSDynamicRoles = currentRoleCounts.AWSDynamicRoles
-	}
-	if currentRoleCounts.AzureDynamicRoles > maxRoleCounts.AzureDynamicRoles {
-		maxRoleCounts.AzureDynamicRoles = currentRoleCounts.AzureDynamicRoles
-	}
-	if currentRoleCounts.GCPRolesets > maxRoleCounts.GCPRolesets {
-		maxRoleCounts.GCPRolesets = currentRoleCounts.GCPRolesets
-	}
-	if currentRoleCounts.AWSStaticRoles > maxRoleCounts.AWSStaticRoles {
-		maxRoleCounts.AWSStaticRoles = currentRoleCounts.AWSStaticRoles
-	}
-	if currentRoleCounts.DatabaseDynamicRoles > maxRoleCounts.DatabaseDynamicRoles {
-		maxRoleCounts.DatabaseDynamicRoles = currentRoleCounts.DatabaseDynamicRoles
-	}
-	if currentRoleCounts.OpenLDAPStaticRoles > maxRoleCounts.OpenLDAPStaticRoles {
-		maxRoleCounts.OpenLDAPStaticRoles = currentRoleCounts.OpenLDAPStaticRoles
-	}
-	if currentRoleCounts.OpenLDAPDynamicRoles > maxRoleCounts.OpenLDAPDynamicRoles {
-		maxRoleCounts.OpenLDAPDynamicRoles = currentRoleCounts.OpenLDAPDynamicRoles
-	}
-	if currentRoleCounts.LDAPDynamicRoles > maxRoleCounts.LDAPDynamicRoles {
-		maxRoleCounts.LDAPDynamicRoles = currentRoleCounts.LDAPDynamicRoles
-	}
-	if currentRoleCounts.LDAPStaticRoles > maxRoleCounts.LDAPStaticRoles {
-		maxRoleCounts.LDAPStaticRoles = currentRoleCounts.LDAPStaticRoles
-	}
-	if currentRoleCounts.DatabaseStaticRoles > maxRoleCounts.DatabaseStaticRoles {
-		maxRoleCounts.DatabaseStaticRoles = currentRoleCounts.DatabaseStaticRoles
-	}
-	if currentRoleCounts.GCPImpersonatedAccounts > maxRoleCounts.GCPImpersonatedAccounts {
-		maxRoleCounts.GCPImpersonatedAccounts = currentRoleCounts.GCPImpersonatedAccounts
-	}
-	if currentRoleCounts.GCPStaticAccounts > maxRoleCounts.GCPStaticAccounts {
-		maxRoleCounts.GCPStaticAccounts = currentRoleCounts.GCPStaticAccounts
-	}
+	maxRoleCounts.AWSDynamicRoles = adjustCounts(currentRoleCounts.AWSDynamicRoles, maxRoleCounts.AWSDynamicRoles)
+	maxRoleCounts.AzureDynamicRoles = adjustCounts(currentRoleCounts.AzureDynamicRoles, maxRoleCounts.AzureDynamicRoles)
+	maxRoleCounts.AzureStaticRoles = adjustCounts(currentRoleCounts.AzureStaticRoles, maxRoleCounts.AzureStaticRoles)
+	maxRoleCounts.GCPRolesets = adjustCounts(currentRoleCounts.GCPRolesets, maxRoleCounts.GCPRolesets)
+	maxRoleCounts.AWSStaticRoles = adjustCounts(currentRoleCounts.AWSStaticRoles, maxRoleCounts.AWSStaticRoles)
+	maxRoleCounts.DatabaseDynamicRoles = adjustCounts(currentRoleCounts.DatabaseDynamicRoles, maxRoleCounts.DatabaseDynamicRoles)
+	maxRoleCounts.OpenLDAPStaticRoles = adjustCounts(currentRoleCounts.OpenLDAPStaticRoles, maxRoleCounts.OpenLDAPStaticRoles)
+	maxRoleCounts.OpenLDAPDynamicRoles = adjustCounts(currentRoleCounts.OpenLDAPDynamicRoles, maxRoleCounts.OpenLDAPDynamicRoles)
+	maxRoleCounts.LDAPDynamicRoles = adjustCounts(currentRoleCounts.LDAPDynamicRoles, maxRoleCounts.LDAPDynamicRoles)
+	maxRoleCounts.LDAPStaticRoles = adjustCounts(currentRoleCounts.LDAPStaticRoles, maxRoleCounts.LDAPStaticRoles)
+	maxRoleCounts.DatabaseStaticRoles = adjustCounts(currentRoleCounts.DatabaseStaticRoles, maxRoleCounts.DatabaseStaticRoles)
+	maxRoleCounts.GCPImpersonatedAccounts = adjustCounts(currentRoleCounts.GCPImpersonatedAccounts, maxRoleCounts.GCPImpersonatedAccounts)
+	maxRoleCounts.GCPStaticAccounts = adjustCounts(currentRoleCounts.GCPStaticAccounts, maxRoleCounts.GCPStaticAccounts)
+	maxRoleCounts.AlicloudDynamicRoles = adjustCounts(currentRoleCounts.AlicloudDynamicRoles, maxRoleCounts.AlicloudDynamicRoles)
+	maxRoleCounts.RabbitMQDynamicRoles = adjustCounts(currentRoleCounts.RabbitMQDynamicRoles, maxRoleCounts.RabbitMQDynamicRoles)
+	maxRoleCounts.ConsulDynamicRoles = adjustCounts(currentRoleCounts.ConsulDynamicRoles, maxRoleCounts.ConsulDynamicRoles)
+	maxRoleCounts.NomadDynamicRoles = adjustCounts(currentRoleCounts.NomadDynamicRoles, maxRoleCounts.NomadDynamicRoles)
+	maxRoleCounts.KubernetesDynamicRoles = adjustCounts(currentRoleCounts.KubernetesDynamicRoles, maxRoleCounts.KubernetesDynamicRoles)
+	maxRoleCounts.MongoDBAtlasDynamicRoles = adjustCounts(currentRoleCounts.MongoDBAtlasDynamicRoles, maxRoleCounts.MongoDBAtlasDynamicRoles)
+	maxRoleCounts.TerraformCloudDynamicRoles = adjustCounts(currentRoleCounts.TerraformCloudDynamicRoles, maxRoleCounts.TerraformCloudDynamicRoles)
+
 	err = c.storeMaxRoleCountsLocked(ctx, maxRoleCounts, localPathPrefix, currentMonth)
 	if err != nil {
 		return nil, err
@@ -207,4 +200,11 @@ func (c *Core) getStoredRoleCountsLocked(ctx context.Context, localPathPrefix st
 
 func (c *Core) GetBillingSubView() *BarrierView {
 	return c.systemBarrierView.SubView(billing.BillingSubPath)
+}
+
+func adjustCounts(currentCount int, maxCount int) int {
+	if currentCount > maxCount {
+		return currentCount
+	}
+	return maxCount
 }
