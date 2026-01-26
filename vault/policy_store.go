@@ -468,14 +468,12 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy, req *lo
 		entityId = req.EntityID
 		requestId = req.ID
 	}
-	// TODO Violet 1
 	err = ps.core.Observations().RecordObservationToLedger(ctx, observations.ObservationTypePolicyUpsert, p.namespace, map[string]interface{}{
 		"client_id":  clientId,
 		"entity_id":  entityId,
 		"request_id": requestId,
 		"type":       p.Type.String(),
 		"name":       p.Name,
-		"raw_policy": p.Raw,
 		"path_rules": pathRulesToObservationPathRules(p.Paths),
 	})
 	if err != nil {
