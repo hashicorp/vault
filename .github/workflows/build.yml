@@ -395,17 +395,20 @@ jobs:
   hcp-image:
     if: |
       needs.setup.outputs.is-ent-branch == 'true' &&
-      needs.setup.outputs.workflow-trigger == 'pull_request' &&
-      (
-        contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') ||
-        contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
+        (
+          contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') ||
+          contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+        )
       )
     needs:
       - setup
       - artifacts-ent
     uses: ./.github/workflows/build-hcp-image.yml
     with:
-      pull-request: ${{ github.event.pull_request.number }}
+      pull-request: ${{ needs.setup.outputs.workflow-trigger == 'pull_request' && github.event.pull_request.number || '' }}
+      branch: ${{ needs.setup.outputs.workflow-trigger == 'schedule' && 'main' || '' }}
       create-aws-image: true
       create-azure-image: false
       hcp-environment: int
@@ -481,6 +484,7 @@ jobs:
       - hcp-image
     uses: ./.github/workflows/test-run-enos-scenario-cloud.yml
     with:
+      hcp-environment: int
       product-version: ${{ fromJSON(needs.hcp-image.outputs.image).product_version }}
 
   completed-successfully:

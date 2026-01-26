@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	gh "github.com/google/go-github/v74/github"
+	gh "github.com/google/go-github/v81/github"
 	slogctx "github.com/veqryn/slog-context"
 )
 

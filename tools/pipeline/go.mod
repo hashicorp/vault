@@ -9,7 +9,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/PuerkitoBio/goquery v1.11.0
 	github.com/avast/retry-go/v4 v4.6.1
-	github.com/google/go-github/v74 v74.0.0
+	github.com/google/go-github/v81 v81.0.0
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/hashicorp/releases-api v0.2.3
 	github.com/jedib0t/go-pretty/v6 v6.6.8
