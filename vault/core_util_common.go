@@ -69,3 +69,7 @@ func (c *Core) setupHeaderHMACKey(ctx context.Context, isPerfStandby bool) error
 	c.IndexHeaderHMACKey.Store([]byte(key))
 	return nil
 }
+
+func (c *Core) GetPkiCertificateCounter() logical.CertificateCounter {
+	return c.pkiCertCountManager
+}

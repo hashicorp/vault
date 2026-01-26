@@ -144,6 +144,6 @@ func (a *acmeBillingImpl) CreateActivityCountEventForIdentifiers(ctx context.Con
 	return nil
 }
 
-func (a *acmeBillingImpl) GetPkiCertificateCounter() logical.PkiCertificateCounter {
+func (a *acmeBillingImpl) GetPkiCertificateCounter() logical.CertificateCounter {
 	return a.core.GetPkiCertificateCounter()
 }

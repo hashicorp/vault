@@ -512,7 +512,7 @@ type testingPkiCertificateCounter struct {
 	StoredCount uint64
 }
 
-var _ logical.PkiCertificateCounter = (*testingPkiCertificateCounter)(nil)
+var _ logical.CertificateCounter = (*testingPkiCertificateCounter)(nil)
 
 func (c *testingPkiCertificateCounter) Reset() {
 	c.IssuedCount = 0
