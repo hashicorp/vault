@@ -1597,8 +1597,8 @@ github.com/hashicorp/vault-plugin-secrets-openldap v0.17.0 h1:GpgYcuBL66zzFLkf14
 github.com/hashicorp/vault-plugin-secrets-openldap v0.17.0/go.mod h1:UPWSw0hYY37sC4MeeoG9G8jN88DYi3L4MeJjRauhaBI=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.13.0 h1:Rhahoi3L1dnZjNqlbUh1f59DMdmfdhsfBvaaX1vjejY=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.13.0/go.mod h1:N1fdq0KpTbK/S4Yc4I04JqJ64+mkya4SZ+ychIYd3E4=
-github.com/hashicorp/vault-testing-stepwise v0.3.2 h1:FCe0yrbK/hHiHqzu7utLcvCTTKjghWHyXwOQ2lxfoQM=
-github.com/hashicorp/vault-testing-stepwise v0.3.2/go.mod h1:aI3k4Nu6TjBKxatj8plXKn8LhA9qb2TeeJyz2psHXEw=
+github.com/hashicorp/vault-testing-stepwise v0.3.3 h1:/PQhXpJln7UQf3NJmG61ucAxsvttd+a0kb5NKW01iIA=
+github.com/hashicorp/vault-testing-stepwise v0.3.3/go.mod h1:QzyV6ePJn+zQNouFkrAvR26gJlnZl/mBqhWrgfmwvJA=
 github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77 h1:Y/+BtwxmRak3Us9jrByARvYW6uNeqZlEpMylIdXVIjY=
 github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77/go.mod h1:a2crHoMWwY6aiL8GWT8hYj7vKD64uX0EdRPbnsHF5wU=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 h1:O/pT5C1Q3mVXMyuqg7yuAWUg/jMZR1/0QTzTRdNR6Uw=
