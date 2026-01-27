@@ -12,12 +12,15 @@ module('Integration | Component | usage | Page::Usage', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.authStub = sinon.stub(this.owner.lookup('service:auth'), 'authData');
+    this.authStub.value({ userRootNamespace: '' });
     this.api = this.owner.lookup('service:api');
     this.generateUtilizationReportStub = sinon.stub(this.api.sys, 'generateUtilizationReport').resolves({});
   });
 
   hooks.afterEach(function () {
     this.generateUtilizationReportStub.restore();
+    this.authStub.restore();
   });
 
   test('it provides the correct fetch function to the dashboard component', async function (assert) {
