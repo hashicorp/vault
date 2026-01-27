@@ -10,12 +10,13 @@ import (
 )
 
 const (
-	BillingSubPath       = "billing/"
-	ReplicatedPrefix     = "replicated/"
-	RoleHWMCountsHWM     = "maxRoleCounts/"
-	KvHWMCountsHWM       = "maxKvCounts/"
-	LocalPrefix          = "local/"
-	BillingWriteInterval = 10 * time.Minute
+	BillingSubPath          = "billing/"
+	ReplicatedPrefix        = "replicated/"
+	RoleHWMCountsHWM        = "maxRoleCounts/"
+	KvHWMCountsHWM          = "maxKvCounts/"
+	LocalPrefix             = "local/"
+	ThirdPartyPluginsPrefix = "thirdPartyPluginCounts/"
+	BillingWriteInterval    = 10 * time.Minute
 )
 
 var BillingMonthStorageFormat = "%s%d/%02d/%s" // e.g replicated/2026/01/maxKvCounts/
