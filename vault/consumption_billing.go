@@ -104,5 +104,13 @@ func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time
 	} else {
 		c.logger.Info("updated local max kv counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
 	}
+	// The count of external plugins is per cluster, and we do not de-duplicate across clusters.
+	// For that reason, we will always store the count at the "local" prefix, so that the count does not
+	// get replicated.
+	if _, err := c.UpdateMaxThirdPartyPluginCounts(ctx, currentMonth); err != nil {
+		c.logger.Error("error updating local max external plugin counts", "error", err)
+	} else {
+		c.logger.Info("updated local max external plugin counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+	}
 	return nil
 }
