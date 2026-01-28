@@ -69,6 +69,7 @@ type AuthHandler struct {
 	enableTemplateTokenCh        bool
 	enableExecTokenCh            bool
 	exitOnError                  bool
+	leaseRenewalThreshold        *float64
 }
 
 type AuthHandlerConfig struct {
@@ -88,6 +89,7 @@ type AuthHandlerConfig struct {
 	EnableTemplateTokenCh        bool
 	EnableExecTokenCh            bool
 	ExitOnError                  bool
+	LeaseRenewalThreshold        *float64
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
@@ -112,6 +114,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		exitOnError:                  conf.ExitOnError,
 		userAgent:                    conf.UserAgent,
 		metricsSignifier:             conf.MetricsSignifier,
+		leaseRenewalThreshold:        conf.LeaseRenewalThreshold,
 	}
 
 	return ah
@@ -534,7 +537,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		}
 
 		watcher, err = clientToUse.NewLifetimeWatcher(&api.LifetimeWatcherInput{
-			Secret: secret,
+			Secret:           secret,
+			RenewalThreshold: ah.leaseRenewalThreshold,
 		})
 		if err != nil {
 			ah.logger.Error("error creating lifetime watcher", "error", err, "backoff", backoffCfg)
