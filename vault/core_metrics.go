@@ -963,3 +963,70 @@ func (c *Core) GetKvUsageMetricsByNamespace(ctx context.Context, kvVersion strin
 
 	return results, nil
 }
+
+// ListExternalSecretPlugins returns the enabled secret engines
+// that are not builtin and not official-tier.
+//
+// This is useful for identifying "third-party" secrets mounts (e.g. community or
+// partner tier external plugins) while excluding builtins and official HashiCorp
+// plugins.
+// Note: This will include all mounts that have been built externally (even if they are
+// Hashicorp owned). This will happen if the plugin was built from a Github repo or from an
+// artifact.
+func (c *Core) ListExternalSecretPlugins(ctx context.Context) ([]*MountEntry, error) {
+	if c == nil || c.pluginCatalog == nil {
+		return nil, fmt.Errorf("core or plugin catalog is nil")
+	}
+
+	mounts, err := c.ListMounts()
+	if err != nil {
+		return nil, fmt.Errorf("error listing mounts: %w", err)
+	}
+
+	seen := make(map[string]struct{})
+	var result []*MountEntry
+	for _, entry := range mounts {
+		if entry == nil {
+			continue
+		}
+
+		// Only secrets-engine mounts live in the mounts table. Exclude the known
+		// non-secrets mounts and database mounts (PluginTypeDatabase).
+		if entry.Table != mountTableType {
+			continue
+		}
+
+		pluginName := entry.Type
+		if pluginName == mountTypePlugin && entry.Config.PluginName != "" {
+			pluginName = entry.Config.PluginName
+		}
+		if pluginName == "" {
+			continue
+		}
+
+		pluginVersion := entry.RunningVersion
+
+		// De-dupe: multiple mounts can point at the same underlying plugin+version.
+		// We want to charge for each unique plugin+version pair.
+		key := pluginName + "\x00" + pluginVersion
+		if _, ok := seen[key]; ok {
+			continue
+		}
+
+		runner, err := c.pluginCatalog.Get(ctx, pluginName, consts.PluginTypeSecrets, pluginVersion)
+		if err != nil || runner == nil {
+			// If we can't resolve the plugin runner (e.g. missing catalog entry),
+			// conservatively skip it rather than risk misclassifying it.
+			continue
+		}
+
+		if runner.Builtin || runner.Tier == consts.PluginTierOfficial {
+			continue
+		}
+
+		result = append(result, entry)
+		seen[key] = struct{}{}
+	}
+
+	return result, nil
+}

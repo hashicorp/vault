@@ -6,7 +6,9 @@ package vault
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -14,7 +16,12 @@ import (
 
 	"github.com/armon/go-metrics"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/pluginconsts"
+	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
+	sdkconsts "github.com/hashicorp/vault/sdk/helper/consts"
+	sdkpluginutil "github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -466,4 +473,88 @@ func TestCoreMetrics_AvailablePolicies(t *testing.T) {
 			assert.EqualValues(t, tst.ExpectedValues, mgValues)
 		})
 	}
+}
+
+// TestCore_ListExternalSecretPlugins tests that we correctly list the external secret plugins enabled
+// on Vault. We will register a few builtin plugins, a few external plugins with different versions
+// and verify that we return a count of the unique plugin name+version pairs. We should exclude any builtin
+// plugins.
+func TestCore_ListExternalSecretPlugins(t *testing.T) {
+	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
+	require.NoError(t, err)
+	coreConfig := &CoreConfig{
+		PluginDirectory: pluginDir,
+		CredentialBackends: map[string]logical.Factory{
+			pluginconsts.AuthTypeUserpass: userpass.Factory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	// Register a few plugins in the plugin catalog.
+	ctx := namespace.RootContext(context.Background())
+
+	// Enable a builtin credential plugin and an additional builtin kv engine
+	// mount. Neither should affect the results from ListNonOfficialExternalSecretsMounts.
+	req := logical.TestRequest(t, logical.CreateOperation, "sys/auth/userpass")
+	req.Data["type"] = pluginconsts.AuthTypeUserpass
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.CreateOperation, "sys/mounts/kv2")
+	req.Data["type"] = "kv"
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Creates a secret plugin of the same name, with different versions
+	secretPluginV1 := pluginhelpers.CompilePlugin(t, sdkconsts.PluginTypeSecrets, "v1.0.0", pluginDir)
+	secretPluginV2 := pluginhelpers.CompilePlugin(t, sdkconsts.PluginTypeSecrets, "v2.0.0", pluginDir)
+	secretPluginV3 := pluginhelpers.CompilePlugin(t, sdkconsts.PluginTypeSecrets, "v3.0.0", pluginDir)
+
+	dbPlugin := pluginhelpers.CompilePlugin(t, sdkconsts.PluginTypeDatabase, "v1.0.0", pluginDir)
+
+	registerPlugin := func(p pluginhelpers.TestPlugin) {
+		t.Helper()
+		shaBytes, err := hex.DecodeString(p.Sha256)
+		require.NoError(t, err)
+
+		require.NoError(t, core.pluginCatalog.Set(ctx, sdkpluginutil.SetPluginInput{
+			Name:    p.Name,
+			Type:    p.Typ,
+			Version: p.Version,
+			Command: p.FileName,
+			Sha256:  shaBytes,
+		}))
+	}
+	registerPlugin(secretPluginV1)
+	registerPlugin(secretPluginV2)
+	registerPlugin(secretPluginV3)
+	registerPlugin(dbPlugin)
+
+	// Add mounts: include duplicates, official-tier, builtin, and non-secrets.
+	core.mountsLock.Lock()
+	core.mounts.Entries = append(core.mounts.Entries,
+		// Duplicate mounts: same plugin+version should only be counted once.
+		&MountEntry{Table: mountTableType, Path: "dup-a/", Type: secretPluginV2.Name, RunningVersion: secretPluginV2.Version},
+		&MountEntry{Table: mountTableType, Path: "dup-b/", Type: secretPluginV2.Name, RunningVersion: secretPluginV2.Version},
+		&MountEntry{Table: mountTableType, Path: "different-version/", Type: secretPluginV3.Name, RunningVersion: secretPluginV3.Version},
+		&MountEntry{Table: mountTableType, Path: "another-version/", Type: secretPluginV1.Name, RunningVersion: secretPluginV1.Version},
+
+		// Non-secrets plugin mounted in the mounts table: should be excluded.
+		&MountEntry{Table: mountTableType, Path: "db/", Type: dbPlugin.Name, RunningVersion: dbPlugin.Version},
+	)
+	core.mountsLock.Unlock()
+
+	got, err := core.ListExternalSecretPlugins(ctx)
+	require.NoError(t, err)
+
+	// Expect only the non-builtin external secrets plugin v2, v3 and v1.
+	require.Len(t, got, 3)
+	require.Equal(t, secretPluginV2.Name, got[0].Type)
+	require.Equal(t, secretPluginV2.Version, got[0].RunningVersion)
+	require.Equal(t, secretPluginV3.Name, got[1].Type)
+	require.Equal(t, secretPluginV3.Version, got[1].RunningVersion)
+	require.Equal(t, secretPluginV1.Name, got[2].Type)
+	require.Equal(t, secretPluginV1.Version, got[2].RunningVersion)
 }

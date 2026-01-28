@@ -12,6 +12,60 @@ import (
 	"github.com/hashicorp/vault/vault/billing"
 )
 
+func (c *Core) storeThirdPartyPluginCountsLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, thirdPartyPluginCounts int) error {
+	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, currentMonth, billing.ThirdPartyPluginsPrefix)
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(strconv.Itoa(thirdPartyPluginCounts)),
+	}
+	return c.GetBillingSubView().Put(ctx, entry)
+}
+
+func (c *Core) getStoredThirdPartyPluginCountsLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (int, error) {
+	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, currentMonth, billing.ThirdPartyPluginsPrefix)
+	entry, err := c.GetBillingSubView().Get(ctx, billingPath)
+	if err != nil {
+		return 0, err
+	}
+	if entry == nil {
+		return 0, nil
+	}
+	thirdPartyPluginCounts, err := strconv.Atoi(string(entry.Value))
+	if err != nil {
+		return 0, err
+	}
+	return thirdPartyPluginCounts, nil
+}
+
+// UpdateMaxThirdPartyPlugins updates the max number of third-party plugins for the given month.
+// Note that this count is per cluster. It does NOT de-duplicate across clusters. For that reason,
+// we will always store the count at the "local" prefix.
+func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth time.Time) (int, error) {
+	c.consumptionBilling.BillingStorageLock.Lock()
+	defer c.consumptionBilling.BillingStorageLock.Unlock()
+
+	previousThirdPartyPluginCounts, err := c.getStoredThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, currentMonth)
+	if err != nil {
+		return 0, err
+	}
+	currentThirdPartyPluginCounts, err := c.ListExternalSecretPlugins(ctx)
+	if err != nil {
+		return 0, err
+	}
+	maxCount := c.compareCounts(previousThirdPartyPluginCounts, len(currentThirdPartyPluginCounts), "Third-Party Plugins")
+	err = c.storeThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, currentMonth, maxCount)
+	if err != nil {
+		return 0, err
+	}
+	return maxCount, nil
+}
+
+func (c *Core) GetStoredThirdPartyPluginCounts(ctx context.Context, month time.Time) (int, error) {
+	c.consumptionBilling.BillingStorageLock.RLock()
+	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	return c.getStoredThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, month)
+}
+
 func combineRoleCounts(ctx context.Context, a, b *RoleCounts) *RoleCounts {
 	if a == nil && b == nil {
 		return &RoleCounts{}
@@ -147,26 +201,26 @@ func (c *Core) UpdateMaxRoleCounts(ctx context.Context, localPathPrefix string, 
 	if currentRoleCounts == nil {
 		currentRoleCounts = &RoleCounts{}
 	}
-	maxRoleCounts.AWSDynamicRoles = adjustCounts(currentRoleCounts.AWSDynamicRoles, maxRoleCounts.AWSDynamicRoles)
-	maxRoleCounts.AzureDynamicRoles = adjustCounts(currentRoleCounts.AzureDynamicRoles, maxRoleCounts.AzureDynamicRoles)
-	maxRoleCounts.AzureStaticRoles = adjustCounts(currentRoleCounts.AzureStaticRoles, maxRoleCounts.AzureStaticRoles)
-	maxRoleCounts.GCPRolesets = adjustCounts(currentRoleCounts.GCPRolesets, maxRoleCounts.GCPRolesets)
-	maxRoleCounts.AWSStaticRoles = adjustCounts(currentRoleCounts.AWSStaticRoles, maxRoleCounts.AWSStaticRoles)
-	maxRoleCounts.DatabaseDynamicRoles = adjustCounts(currentRoleCounts.DatabaseDynamicRoles, maxRoleCounts.DatabaseDynamicRoles)
-	maxRoleCounts.OpenLDAPStaticRoles = adjustCounts(currentRoleCounts.OpenLDAPStaticRoles, maxRoleCounts.OpenLDAPStaticRoles)
-	maxRoleCounts.OpenLDAPDynamicRoles = adjustCounts(currentRoleCounts.OpenLDAPDynamicRoles, maxRoleCounts.OpenLDAPDynamicRoles)
-	maxRoleCounts.LDAPDynamicRoles = adjustCounts(currentRoleCounts.LDAPDynamicRoles, maxRoleCounts.LDAPDynamicRoles)
-	maxRoleCounts.LDAPStaticRoles = adjustCounts(currentRoleCounts.LDAPStaticRoles, maxRoleCounts.LDAPStaticRoles)
-	maxRoleCounts.DatabaseStaticRoles = adjustCounts(currentRoleCounts.DatabaseStaticRoles, maxRoleCounts.DatabaseStaticRoles)
-	maxRoleCounts.GCPImpersonatedAccounts = adjustCounts(currentRoleCounts.GCPImpersonatedAccounts, maxRoleCounts.GCPImpersonatedAccounts)
-	maxRoleCounts.GCPStaticAccounts = adjustCounts(currentRoleCounts.GCPStaticAccounts, maxRoleCounts.GCPStaticAccounts)
-	maxRoleCounts.AlicloudDynamicRoles = adjustCounts(currentRoleCounts.AlicloudDynamicRoles, maxRoleCounts.AlicloudDynamicRoles)
-	maxRoleCounts.RabbitMQDynamicRoles = adjustCounts(currentRoleCounts.RabbitMQDynamicRoles, maxRoleCounts.RabbitMQDynamicRoles)
-	maxRoleCounts.ConsulDynamicRoles = adjustCounts(currentRoleCounts.ConsulDynamicRoles, maxRoleCounts.ConsulDynamicRoles)
-	maxRoleCounts.NomadDynamicRoles = adjustCounts(currentRoleCounts.NomadDynamicRoles, maxRoleCounts.NomadDynamicRoles)
-	maxRoleCounts.KubernetesDynamicRoles = adjustCounts(currentRoleCounts.KubernetesDynamicRoles, maxRoleCounts.KubernetesDynamicRoles)
-	maxRoleCounts.MongoDBAtlasDynamicRoles = adjustCounts(currentRoleCounts.MongoDBAtlasDynamicRoles, maxRoleCounts.MongoDBAtlasDynamicRoles)
-	maxRoleCounts.TerraformCloudDynamicRoles = adjustCounts(currentRoleCounts.TerraformCloudDynamicRoles, maxRoleCounts.TerraformCloudDynamicRoles)
+	maxRoleCounts.AWSDynamicRoles = c.compareCounts(currentRoleCounts.AWSDynamicRoles, maxRoleCounts.AWSDynamicRoles, "AWS Dynamic Roles")
+	maxRoleCounts.AzureDynamicRoles = c.compareCounts(currentRoleCounts.AzureDynamicRoles, maxRoleCounts.AzureDynamicRoles, "Azure Dynamic Roles")
+	maxRoleCounts.AzureStaticRoles = c.compareCounts(currentRoleCounts.AzureStaticRoles, maxRoleCounts.AzureStaticRoles, "Azure Static Roles")
+	maxRoleCounts.GCPRolesets = c.compareCounts(currentRoleCounts.GCPRolesets, maxRoleCounts.GCPRolesets, "GCP Rolesets")
+	maxRoleCounts.AWSStaticRoles = c.compareCounts(currentRoleCounts.AWSStaticRoles, maxRoleCounts.AWSStaticRoles, "AWS Static Roles")
+	maxRoleCounts.DatabaseDynamicRoles = c.compareCounts(currentRoleCounts.DatabaseDynamicRoles, maxRoleCounts.DatabaseDynamicRoles, "Database Dynamic Roles")
+	maxRoleCounts.OpenLDAPStaticRoles = c.compareCounts(currentRoleCounts.OpenLDAPStaticRoles, maxRoleCounts.OpenLDAPStaticRoles, "OpenLDAP Static Roles")
+	maxRoleCounts.OpenLDAPDynamicRoles = c.compareCounts(currentRoleCounts.OpenLDAPDynamicRoles, maxRoleCounts.OpenLDAPDynamicRoles, "OpenLDAP Dynamic Roles")
+	maxRoleCounts.LDAPDynamicRoles = c.compareCounts(currentRoleCounts.LDAPDynamicRoles, maxRoleCounts.LDAPDynamicRoles, "LDAP Dynamic Roles")
+	maxRoleCounts.LDAPStaticRoles = c.compareCounts(currentRoleCounts.LDAPStaticRoles, maxRoleCounts.LDAPStaticRoles, "LDAP Static Roles")
+	maxRoleCounts.DatabaseStaticRoles = c.compareCounts(currentRoleCounts.DatabaseStaticRoles, maxRoleCounts.DatabaseStaticRoles, "Database Static Roles")
+	maxRoleCounts.GCPImpersonatedAccounts = c.compareCounts(currentRoleCounts.GCPImpersonatedAccounts, maxRoleCounts.GCPImpersonatedAccounts, "GCPImpersonated Accounts")
+	maxRoleCounts.GCPStaticAccounts = c.compareCounts(currentRoleCounts.GCPStaticAccounts, maxRoleCounts.GCPStaticAccounts, "GCP Static Accounts")
+	maxRoleCounts.AlicloudDynamicRoles = c.compareCounts(currentRoleCounts.AlicloudDynamicRoles, maxRoleCounts.AlicloudDynamicRoles, "Alicloud Dynamic Roles")
+	maxRoleCounts.RabbitMQDynamicRoles = c.compareCounts(currentRoleCounts.RabbitMQDynamicRoles, maxRoleCounts.RabbitMQDynamicRoles, "RabbitMQ Dynamic Roles")
+	maxRoleCounts.ConsulDynamicRoles = c.compareCounts(currentRoleCounts.ConsulDynamicRoles, maxRoleCounts.ConsulDynamicRoles, "Consul Dynamic Roles")
+	maxRoleCounts.NomadDynamicRoles = c.compareCounts(currentRoleCounts.NomadDynamicRoles, maxRoleCounts.NomadDynamicRoles, "Nomad Dynamic Roles")
+	maxRoleCounts.KubernetesDynamicRoles = c.compareCounts(currentRoleCounts.KubernetesDynamicRoles, maxRoleCounts.KubernetesDynamicRoles, "Kubernetes Dynamic Roles")
+	maxRoleCounts.MongoDBAtlasDynamicRoles = c.compareCounts(currentRoleCounts.MongoDBAtlasDynamicRoles, maxRoleCounts.MongoDBAtlasDynamicRoles, "MongoDB Atlas Dynamic Roles")
+	maxRoleCounts.TerraformCloudDynamicRoles = c.compareCounts(currentRoleCounts.TerraformCloudDynamicRoles, maxRoleCounts.TerraformCloudDynamicRoles, "Terraform Cloud Dynamic Roles")
 
 	err = c.storeMaxRoleCountsLocked(ctx, maxRoleCounts, localPathPrefix, currentMonth)
 	if err != nil {
@@ -198,13 +252,14 @@ func (c *Core) getStoredRoleCountsLocked(ctx context.Context, localPathPrefix st
 	return maxRoleCounts, nil
 }
 
-func (c *Core) GetBillingSubView() *BarrierView {
-	return c.systemBarrierView.SubView(billing.BillingSubPath)
+func (c *Core) compareCounts(current, previous int, metricName string) int {
+	if previous > current {
+		return previous
+	}
+	c.logger.Debug("updating max counts", "metricName", metricName, "previous", previous, "current", current)
+	return current
 }
 
-func adjustCounts(currentCount int, maxCount int) int {
-	if currentCount > maxCount {
-		return currentCount
-	}
-	return maxCount
+func (c *Core) GetBillingSubView() *BarrierView {
+	return c.systemBarrierView.SubView(billing.BillingSubPath)
 }
