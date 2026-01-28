@@ -93,10 +93,10 @@ const assertDetailsToolbar = (assert, expected = DETAIL_TOOLBARS) => {
 const patchRedirectTest = (test, testCase) => {
   // only run this test on enterprise so we are testing permissions specifically and not enterprise vs CE (which also redirects)
   test(`enterprise: patch route redirects for users without permissions (${testCase})`, async function (assert) {
-    await visit(`/vault/secrets-engines/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
+    await visit(`/vault/secrets-engines/${this.backend}/kv/app/nested/secret/patch`);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets-engines/${this.backend}/kv/app%2Fnested%2Fsecret`,
+      `/vault/secrets-engines/${this.backend}/kv/app/nested/secret`,
       'redirects to index'
     );
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.kv.secret.index');
@@ -162,6 +162,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       .hasText(pathWithSpace, 'the list item is shown correctly after filtering');
 
     await click(PAGE.list.item(pathWithSpace));
+    // Path has no slashes, so encodeURIComponent works the same as encoding each segment
     assert.strictEqual(
       currentURL(),
       `/vault/secrets-engines/${this.backend}/kv/${encodeURIComponent(pathWithSpace)}`,
@@ -200,10 +201,12 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       .hasText('centfu ll', 'the list item is shown correctly after filtering');
 
     await click(PAGE.list.item('centfu ll'));
+    // Slashes are NOT encoded in the URL path; each segment is encoded separately
+    const encodedPath = nestedPathWithSpace.split('/').map((s) => encodeURIComponent(s)).join('/');
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets-engines/${this.backend}/kv/${encodeURIComponent(nestedPathWithSpace)}`,
-      'Path is encoded in the URL'
+      `/vault/secrets-engines/${this.backend}/kv/${encodedPath}`,
+      'Path segments are encoded but slashes are preserved'
     );
   });
 
@@ -237,10 +240,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
     await click(PAGE.list.item('foo%2fbar/'));
     await click(PAGE.list.item('world'));
+    // Slashes are NOT encoded in the URL path; each segment is encoded separately
+    // This means 'hello/foo%2fbar/world' becomes 'hello/foo%252fbar/world' (% is encoded to %25)
+    const encodedPath = pathDataOctet.split('/').map((s) => encodeURIComponent(s)).join('/');
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets-engines/${this.backend}/kv/${encodeURIComponent(pathDataOctet)}`,
-      'Path is encoded in the URL'
+      `/vault/secrets-engines/${this.backend}/kv/${encodedPath}`,
+      'Path segments are encoded but slashes are preserved'
     );
   });
 
@@ -376,7 +382,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.list.item('secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret`,
+        `/vault/secrets-engines/${backend}/kv/app/nested/secret`,
         `navigated to ${currentURL()}`
       );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret']);
@@ -425,14 +431,14 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await visit(`/vault/secrets-engines/${backend}/show/app/nested/secret`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret`,
+        `/vault/secrets-engines/${backend}/kv/app/nested/secret`,
         `navigates to overview`
       );
       // edit for secret
       await visit(`/vault/secrets-engines/${backend}/edit/app/nested/secret`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret/details/edit?version=1`,
+        `/vault/secrets-engines/${backend}/kv/app/nested/secret/details/edit?version=1`,
         `navigates to edit`
       );
     });
@@ -633,10 +639,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
     });
     // only run this test on enterprise so we are testing permissions specifically and not enterprise vs CE (which also redirects)
     test('enterprise: patch route does not redirect for users with permissions (a)', async function (assert) {
-      await visit(`/vault/secrets-engines/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/app/nested/secret/patch`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${this.backend}/kv/app%2Fnested%2Fsecret/patch`,
+        `/vault/secrets-engines/${this.backend}/kv/app/nested/secret/patch`,
         'redirects to index'
       );
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.kv.secret.patch');
@@ -729,7 +735,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret`,
+        `/vault/secrets-engines/${backend}/kv/app/nested/secret`,
         `navigated to secret overview ${currentURL()}`
       );
       await click(PAGE.secretTab('Secret'));
@@ -930,13 +936,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret`,
+        `/vault/secrets-engines/${backend}/kv/app/nested/secret`,
         `navigated to overview`
       );
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`,
+        `/vault/secrets-engines/${backend}/kv/app/nested/secret/details?version=1`,
         `navigated to ${currentURL()}`
       );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret']);
@@ -1139,13 +1145,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.list.item('secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret`,
+        `/vault/secrets-engines/${backend}/kv/app/nested/secret`,
         `goes to overview`
       );
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret/details`,
+        `/vault/secrets-engines/${backend}/kv/app/nested/secret/details`,
         `Goes to URL without version`
       );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret']);
@@ -1355,13 +1361,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret`,
+        `/vault/secrets-engines/${backend}/kv/app/nested/secret`,
         'goes to overview'
       );
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret/details`,
+        `/vault/secrets-engines/${backend}/kv/app/nested/secret/details`,
         'goes to secret detail page'
       );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret']);
@@ -1575,7 +1581,7 @@ path "${this.backend}/subkeys/*" {
 
       // For some reason when we click on the item in tests it throws a global control group error
       // But not when we visit the page directly
-      await visit(`/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app/nested/secret/details`);
       assert.true(
         await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
         'redirects to access control group route'
@@ -1594,14 +1600,14 @@ path "${this.backend}/subkeys/*" {
       await click(PAGE.list.item('secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret`,
+        `/vault/secrets-engines/${backend}/kv/app/nested/secret`,
         'goes to overview'
       );
 
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`,
+        `/vault/secrets-engines/${backend}/kv/app/nested/secret/details?version=1`,
         'goes to secret details'
       );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret']);
@@ -1827,10 +1833,10 @@ path "${this.backend}/subkeys/*" {
 
     test('it does not redirect for ent', async function (assert) {
       this.version.type = 'enterprise';
-      await visit(`/vault/secrets-engines/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/app/nested/secret/patch`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${this.backend}/kv/app%2Fnested%2Fsecret/patch`,
+        `/vault/secrets-engines/${this.backend}/kv/app/nested/secret/patch`,
         'redirects to index'
       );
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.kv.secret.patch');
@@ -1838,10 +1844,10 @@ path "${this.backend}/subkeys/*" {
 
     test('it redirects for community edition', async function (assert) {
       this.version.type = 'community';
-      await visit(`/vault/secrets-engines/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
+      await visit(`/vault/secrets-engines/${this.backend}/kv/app/nested/secret/patch`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${this.backend}/kv/app%2Fnested%2Fsecret`,
+        `/vault/secrets-engines/${this.backend}/kv/app/nested/secret`,
         'redirects to index'
       );
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.kv.secret.index');
