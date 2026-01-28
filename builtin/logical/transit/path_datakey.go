@@ -255,7 +255,7 @@ This path can be used to generate a data key: a random
 key of a certain length that can be used for encryption
 and decryption, protected by the named backend key. 128, 256,
 or 512 bits can be specified; if not specified, the default
-is 256 bits. Call with the the "wrapped" path to prevent the
+is 256 bits. Call with the "wrapped" path to prevent the
 (base64-encoded) plaintext key from being returned along with
 the encrypted key, the "plaintext" path returns both.
 `

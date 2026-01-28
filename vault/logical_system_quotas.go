@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	ErrExemptRateLimitsOnChildNs            = errors.New("exempt paths can only be be configured in the root namespace")
+	ErrExemptRateLimitsOnChildNs            = errors.New("exempt paths can only be configured in the root namespace")
 	ErrInvalidExemptPathsFromChildNs        = errors.New("exempt paths cannot be added for parent namespaces")
 	ErrInvalidQuotaDeletion                 = "cannot delete quota configured for a parent namespace"
 	ErrInvalidQuotaUpdate                   = "quotas in parent namespaces cannot be updated"

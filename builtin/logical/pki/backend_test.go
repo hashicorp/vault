@@ -4255,7 +4255,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		t.Fatal("expected certificate information from read operation")
 	}
 
-	// Issue a revoke on on /pki
+	// Issue a revoke on /pki
 	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
 		"serial_number": intermediateCertSerial,
 	})
