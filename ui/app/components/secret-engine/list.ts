@@ -8,16 +8,16 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { dropTask } from 'ember-concurrency';
-
-import type FlashMessageService from 'vault/services/flash-messages';
-import type SecretsEngineResource from 'vault/resources/secrets/engine';
-import type ApiService from 'vault/services/api';
-import type RouterService from '@ember/routing/router-service';
-import type VersionService from 'vault/services/version';
 import engineDisplayData from 'vault/helpers/engines-display-data';
-import NamespaceService from 'vault/vault/services/namespace';
 import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+
+import type ApiService from 'vault/services/api';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type NamespaceService from 'vault/services/namespace';
+import type RouterService from '@ember/routing/router-service';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import type VersionService from 'vault/services/version';
 
 /**
  * @module SecretEngineList handles the display of the list of secret engines, including the filtering.
