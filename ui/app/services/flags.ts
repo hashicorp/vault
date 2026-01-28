@@ -7,6 +7,7 @@ import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { keepLatestTask } from 'ember-concurrency';
 import { macroCondition, isDevelopingApp } from '@embroider/macros';
+import { ADMINISTRATIVE_NAMESPACE } from 'vault/services/namespace';
 
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
@@ -34,7 +35,7 @@ export default class FlagsService extends Service {
 
   // for non-managed clusters the root namespace path is technically an empty string so we return null
   get hvdManagedNamespaceRoot(): string | null {
-    return this.isHvdManaged ? 'admin' : null;
+    return this.isHvdManaged ? ADMINISTRATIVE_NAMESPACE : null;
   }
 
   getFeatureFlags = keepLatestTask(async () => {
