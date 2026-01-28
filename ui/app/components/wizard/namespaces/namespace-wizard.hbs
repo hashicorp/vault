@@ -1,0 +1,39 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Wizard
+  @currentStep={{this.currentStep}}
+  @steps={{this.steps}}
+  @onStepChange={{this.onStepChange}}
+  @onDismiss={{this.onDismiss}}
+  @canProceed={{this.canProceed}}
+  @welcomeDocLink={{doc-link "/vault/docs/enterprise/namespaces"}}
+  @wizardState={{this.wizardState}}
+  @updateWizardState={{this.updateWizardState}}
+>
+  <:welcome>
+    <Wizard::Namespaces::Welcome />
+  </:welcome>
+  <:exit>
+    {{#unless (eq this.wizardState.creationMethod this.methods.UI)}}
+      <Hds::Button @text={{this.exitText}} @color="secondary" {{on "click" this.onDismiss}} />
+    {{/unless}}
+  </:exit>
+  <:submit>
+    {{#if (eq this.wizardState.securityPolicyChoice this.policy.FLEXIBLE)}}
+      <Hds::Button @text="Done" {{on "click" this.onDismiss}} data-test-button="done" />
+    {{else if (eq this.wizardState.creationMethod this.methods.UI)}}
+      <Hds::Button @text="Apply" {{on "click" this.onSubmit}} data-test-button="apply" />
+    {{else}}
+      <Hds::Copy::Button
+        @text="Copy code"
+        @textToCopy={{this.wizardState.codeSnippet}}
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+        class="primary"
+        data-test-copy-button
+      />
+    {{/if}}
+  </:submit>
+</Wizard>

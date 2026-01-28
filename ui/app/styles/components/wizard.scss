@@ -9,26 +9,35 @@
 .wizard {
   @extend .is-flex-column;
   @extend .is-flex-grow-1;
-  // a fixed height is needed for content to stretch properly
-  height: 1px;
+
+  &.welcome {
+    @extend .has-top-margin-xxl;
+    svg {
+      flex-shrink: 0;
+    }
+  }
 
   .content {
-    // ensures button bar is always at the bottom even if content is not filled
-    @extend .is-flex-1;
-    overflow-y: auto;
+    padding-top: 40px;
+    overflow: visible;
+
+    // Non-active panels are hidden and prevented from taking up space
+    &[hidden] {
+      display: none;
+    }
   }
 
   .button-bar {
     @extend .has-padding-m;
     @extend .is-flex-between;
 
-    background: var(--token-color-surface-primary);
-    box-shadow:
-      0 2px 3px 0 rgba(59, 61, 69, 0.25),
-      0 12px 24px 0 rgba(59, 61, 69, 0.35);
-
     .hds-button-set {
       margin-left: auto;
     }
+  }
+
+  .tree {
+    border: 1px solid var(--token-color-border-primary);
+    border-radius: var(--token-border-radius-medium);
   }
 }

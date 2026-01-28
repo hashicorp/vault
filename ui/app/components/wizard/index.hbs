@@ -3,28 +3,53 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if @showWelcome}}
-  <div data-test-welcome-content>
-    {{yield to="welcome"}}
+{{#if (and (has-block "welcome") this.showWelcome)}}
+  <div data-test-welcome>
+    <Wizard::Welcome>
+      <:welcome>
+        {{yield to="welcome"}}
+        <Hds::ButtonSet>
+          <Hds::Button
+            @icon="rocket"
+            @text="Guided setup"
+            {{on "click" (fn (mut this.showWelcome) false)}}
+            data-test-button="Guided setup"
+          />
+          <Hds::Button @color="secondary" @text="Skip" {{on "click" @onDismiss}} />
+          <Hds::Link::Standalone
+            @icon="docs-link"
+            @iconPosition="trailing"
+            @text="View documentation"
+            @href={{@welcomeDocLink}}
+            class="has-left-margin-m"
+          />
+        </Hds::ButtonSet>
+      </:welcome>
+    </Wizard::Welcome>
   </div>
 {{else}}
-  <Wizard::Quickstart
+  <Wizard::GuidedSetup
     @currentStep={{@currentStep}}
     @steps={{@steps}}
     @onStepChange={{@onStepChange}}
     @onDismiss={{@onDismiss}}
-    @hasSubmitBlock={{has-block "submit"}}
+    @canProceed={{@canProceed}}
+    @wizardState={{@wizardState}}
+    @updateWizardState={{@updateWizardState}}
   >
-    <:content>
-      {{yield to="quickstart"}}
-    </:content>
-
+    <:exit>
+      {{#if (has-block "exit")}}
+        {{yield to="exit"}}
+      {{else}}
+        <Hds::Button @text="Exit" {{on "click" @onDismiss}} data-test-cancel />
+      {{/if}}
+    </:exit>
     <:submit>
       {{#if (has-block "submit")}}
         {{yield to="submit"}}
       {{else}}
-        <Hds::Button @text="Done" {{on "click" @onDismiss}} data-test-submit />
+        <Hds::Button @text="Mark as complete" {{on "click" @onDismiss}} data-test-submit />
       {{/if}}
     </:submit>
-  </Wizard::Quickstart>
+  </Wizard::GuidedSetup>
 {{/if}}

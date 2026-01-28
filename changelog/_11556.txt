@@ -1,0 +1,3 @@
+```release-note:feature
+**UI Namespace Wizard (Enterprise)**: Onboarding wizard which provides advice to users based on their intended usage and guides them through namespace creation.
+```

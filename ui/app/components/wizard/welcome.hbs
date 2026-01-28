@@ -1,0 +1,12 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div class="wizard welcome">
+  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l">
+    <Hds::Layout::Grid @columnWidth="50%" @gap="16">
+      {{yield to="welcome"}}
+    </Hds::Layout::Grid>
+  </Hds::Card::Container>
+</div>

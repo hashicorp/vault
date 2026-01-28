@@ -103,3 +103,13 @@ ${formatted.join('\n')}
 };
 
 const formatKvPairs = (indent: string, key: string, value: unknown) => `${indent}${key} = ${value}`;
+
+// Helper function to ensure valid Terraform identifiers
+// https://developer.hashicorp.com/terraform/language/syntax/configuration#identifiers
+export const sanitizeId = (name: string): string => {
+  // If the name starts with a number, prefix with 'ns_'
+  if (/^\d/.test(name)) {
+    return `ns_${name}`;
+  }
+  return name;
+};
