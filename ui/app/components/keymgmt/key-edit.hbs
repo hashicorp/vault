@@ -170,34 +170,39 @@
         Distribution details
       </h2>
       {{#if @model.provider.permissionsError}}
-        <EmptyState
-          @title="You are not authorized"
-          @subTitle="Error 403"
-          @message={{concat
-            "You must be granted permissions to see whether this key is distributed. Ask your administrator if you think you should have access to LIST /"
-            @model.backend
-            "/key/"
-            @model.name
-            "/kms."
-          }}
-          @icon="minus-circle"
-        />
+        <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
+          <A.Header @title="You are not authorized" @errorCode="403" @icon="minus-circle" />
+          <A.Body
+            @text={{concat
+              "You must be granted permissions to see whether this key is distributed. Ask your administrator if you think you should have access to LIST /"
+              @model.backend
+              "/key/"
+              @model.name
+              "/kms."
+            }}
+          />
+        </Hds::ApplicationState>
       {{else if (is-empty-value @model.provider)}}
-        <EmptyState
-          @title="Key not distributed"
-          @message="When this key is distributed to a destination, those details will appear here."
+        <Hds::ApplicationState
+          @align="center"
           data-test-keymgmt-dist-empty-state
+          class="top-padding-32 bottom-padding-32"
+          as |A|
         >
+          <A.Header @title="Key not distributed" />
+          <A.Body @text="When this key is distributed to a destination, those details will appear here." />
           {{#if @model.canListProviders}}
-            <Hds::Button
-              @text="Distribute key"
-              @icon="chevron-right"
-              @iconPosition="trailing"
-              @color="tertiary"
-              {{on "click" (fn (mut this.isDistributing) true)}}
-            />
+            <A.Footer>
+              <Hds::Button
+                @text="Distribute key"
+                @icon="chevron-right"
+                @iconPosition="trailing"
+                @color="tertiary"
+                {{on "click" (fn (mut this.isDistributing) true)}}
+              />
+            </A.Footer>
           {{/if}}
-        </EmptyState>
+        </Hds::ApplicationState>
       {{else}}
         <InfoTableRow @label="Distributed" @value={{@model.provider}}>
           <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.provider}} @query={{hash itemType="provider"}}>
@@ -220,18 +225,18 @@
             />
           {{/each}}
         {{else}}
-          <EmptyState
-            @title="You are not authorized"
-            @subTitle="Error 403"
-            @message={{concat
-              "You must be granted permissions to view distribution details for this key. Ask your administrator if you think you should have access to GET /"
-              @model.backend
-              "/key/"
-              @model.name
-              "/kms."
-            }}
-            @icon="minus-circle"
-          />
+          <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
+            <A.Header @title="You are not authorized" @errorCode="403" @icon="minus-circle" />
+            <A.Body
+              @text={{concat
+                "You must be granted permissions to view distribution details for this key. Ask your administrator if you think you should have access to GET /"
+                @model.backend
+                "/key/"
+                @model.name
+                "/kms."
+              }}
+            />
+          </Hds::ApplicationState>
         {{/if}}
       {{/if}}
     </div>
