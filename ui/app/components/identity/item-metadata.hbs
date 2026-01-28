@@ -22,7 +22,7 @@
     </div>
   </div>
 {{else}}
-  <Hds::ApplicationState class="top-padding-32" as |A|>
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
     <A.Header data-test-empty-state-title @title="No metadata for {{@model.name}}" />
     <A.Body
       data-test-empty-state-message

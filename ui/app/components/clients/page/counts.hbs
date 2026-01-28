@@ -26,7 +26,7 @@
   {{#if (eq @activity.id "no-data")}}
     <Clients::NoData @config={{@config}} />
   {{else if @activityError}}
-    <Hds::ApplicationState class="top-padding-32" as |A|>
+    <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
       <A.Header data-test-empty-state-title @title={{this.error.title}} @icon="skip" @errorCode={{this.error.httpStatus}} />
       <A.Body data-test-empty-state-message @text={{this.error.text}} />
     </Hds::ApplicationState>
@@ -85,7 +85,7 @@
       {{yield}}
     {{else if (and this.version.isCommunity (or (not @startTimestamp) (not @endTimestamp)))}}
       {{! Empty state for community without start or end query param }}
-      <Hds::ApplicationState class="top-padding-32" as |A|>
+      <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
         <A.Header data-test-empty-state-title @title="Input the start and end dates to view client attribution by path." />
         <A.Body
           data-test-empty-state-message
@@ -93,7 +93,7 @@
         />
       </Hds::ApplicationState>
     {{else}}
-      <Hds::ApplicationState class="top-padding-32" as |A|>
+      <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
         <A.Header data-test-empty-state-title @title="No data received" />
         <A.Body
           data-test-empty-state-message

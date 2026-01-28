@@ -15,7 +15,7 @@
 <hr class="has-background-gray-300" />
 
 {{#if (eq this.model.message "raft storage is not in use")}}
-  <Hds::ApplicationState as |A|>
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
     <A.Header @title="Raft storage required" @icon="info" data-test-empty-state-title />
     <A.Body @text="Raft storage must be used in order to recover data from a snapshot." data-test-empty-state-message />
     <A.Footer data-test-empty-state-actions as |F|>

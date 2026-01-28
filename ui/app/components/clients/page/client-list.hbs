@@ -55,7 +55,7 @@
 
                     <:emptyState>
                       {{#if (and (eq tabName "Secret sync") (not this.flags.secretsSyncIsActivated))}}
-                        <Hds::ApplicationState as |A|>
+                        <Hds::ApplicationState @align="center" as |A|>
                           <A.Header @title="No secret sync clients" />
                           <A.Body @text="No data is available because Secrets Sync has not been activated." />
                           <A.Body>
@@ -68,7 +68,7 @@
                           </A.Body>
                         </Hds::ApplicationState>
                       {{else}}
-                        <Hds::ApplicationState as |A|>
+                        <Hds::ApplicationState @align="center" as |A|>
                           <A.Header @title="No data found" />
                           <A.Body
                             @text="Select another client type {{if
@@ -90,7 +90,7 @@
     </:table>
   </Clients::CountsCard>
 {{else}}
-  <Hds::ApplicationState class="top-padding-32" as |A|>
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
     <A.Header data-test-empty-state-title @title="No data found" />
     <A.Body data-test-empty-state-message @text="No data to export in provided time range." />
   </Hds::ApplicationState>
