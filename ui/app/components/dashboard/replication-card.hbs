@@ -86,18 +86,20 @@
       </small>
     </div>
   {{else}}
-    <EmptyState
-      @title="Replication not set up"
-      @message="Data will be listed here. Enable a primary replication cluster to get started."
-      class="has-top-margin-m"
-      data-test-empty-state="replication"
-    >
-      <Hds::Link::Standalone
-        @icon="chevron-right"
-        @iconPosition="trailing"
-        @text="Enable replication"
-        @route="vault.cluster.replication"
+    <Hds::ApplicationState @align="center" data-test-empty-state="replication" class="has-top-margin-l" as |A|>
+      <A.Header data-test-empty-state-title @title="Replication not set up" />
+      <A.Body
+        data-test-empty-state-message
+        @text="Data will be listed here. Enable a primary replication cluster to get started."
       />
-    </EmptyState>
+      <A.Footer data-test-empty-state-actions as |F|>
+        <F.LinkStandalone
+          @icon="chevron-right"
+          @iconPosition="trailing"
+          @text="Enable replication"
+          @route="vault.cluster.replication"
+        />
+      </A.Footer>
+    </Hds::ApplicationState>
   {{/if}}
 </Hds::Card::Container>

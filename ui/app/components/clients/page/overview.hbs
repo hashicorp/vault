@@ -27,7 +27,7 @@
         @showPaginationSizeSelector={{true}}
       >
         <:emptyState>
-          <Hds::ApplicationState as |A|>
+          <Hds::ApplicationState @align="center" as |A|>
             <A.Header @title="No data found" />
             <A.Body @text="Clear or change filters to view client count data." />
             <A.Footer as |F|>

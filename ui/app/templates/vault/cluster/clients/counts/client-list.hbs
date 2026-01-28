@@ -4,7 +4,7 @@
 }}
 
 {{#if this.model.cannotRequestExport}}
-  <Hds::ApplicationState class="has-top-margin-xxl" as |A|>
+  <Hds::ApplicationState @align="center" class="has-top-margin-xxl" as |A|>
     <A.Header @icon="skip" @title="You are not authorized" data-test-empty-state-title />
 
     <A.Body data-test-empty-state-message>

@@ -250,7 +250,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       `/vault/secrets-engines/${backend}/list`,
       'Mounts and redirects to connection list page'
     );
-    assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');
+    assert.dom(GENERAL.emptyStateTitle).exists('Empty state exists');
     assert
       .dom('.active[data-test-secret-list-tab="Connections"]')
       .exists('Has Connections tab which is active');
@@ -260,7 +260,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       `/vault/secrets-engines/${backend}/overview`,
       'Tab links to overview page'
     );
-    assert.dom('[data-test-component="empty-state"]').exists('Empty state also exists on overview page');
+    assert.dom(GENERAL.emptyStateTitle).exists('Empty state also exists on overview page');
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
     await visit('/vault/secrets-engines');
     // Cleanup backend
@@ -584,16 +584,16 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await rolePage.visitCreate({ backend });
     await rolePage.name('bar');
     assert
-      .dom('[data-test-component="empty-state"]')
+      .dom(GENERAL.emptyStateTitle)
       .exists({ count: 1 }, 'One empty state exists before database selection is made');
     await clickTrigger('#database');
     assert.strictEqual(searchSelectComponent.options.length, 1, 'list shows existing connections so far');
     await selectChoose('#database', '.ember-power-select-option', 0);
     assert
-      .dom('[data-test-component="empty-state"]')
+      .dom(GENERAL.emptyStateTitle)
       .exists({ count: 2 }, 'Two empty states exist after a database is selected');
     await rolePage.roleType('static');
-    assert.dom('[data-test-component="empty-state"]').doesNotExist('Empty states go away');
+    assert.dom(GENERAL.emptyStateTitle).doesNotExist('Empty states go away');
     assert.dom(GENERAL.inputByAttr('username')).exists('Username field appears for static role');
     assert
       .dom(GENERAL.toggleInput('Rotation period'))
@@ -629,7 +629,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     // test root user flow first
     await visit(`/vault/secrets-engines/${backend}/overview`);
 
-    assert.dom('[data-test-component="empty-state"]').exists('renders empty state');
+    assert.dom(GENERAL.emptyStateTitle).exists('renders empty state');
     assert.dom('[data-test-secret-list-tab="Connections"]').exists('renders connections tab');
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('renders connections tab');
 

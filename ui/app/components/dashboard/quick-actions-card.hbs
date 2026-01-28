@@ -6,7 +6,7 @@
 <Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="quick-actions">
   <h2 class="title is-4">Quick actions</h2>
   {{#if this.filteredSecretsEngines}}
-    <div class="has-top-margin-m has-bottom-margin-m">
+    <div class="has-top-margin-m has-bottom-margin-l">
       <Hds::Form::SuperSelect::Single::Field
         @options={{this.filteredSecretsEngines}}
         @selected={{this.selectedEngine}}
@@ -85,25 +85,26 @@
         </div>
       {{/if}}
     {{else}}
-      <EmptyState
-        @title="No mount selected"
-        @message="Select a mount above to get started."
-        data-test-empty-state="no-mount-selected"
-      />
+      <Hds::ApplicationState @align="center" data-test-empty-state="no-mount-selected" as |A|>
+        <A.Header data-test-empty-state-title @title="No mount selected" />
+        <A.Body data-test-empty-state-message @text="Select a mount above to get started." />
+      </Hds::ApplicationState>
     {{/if}}
   {{else}}
-
-    <EmptyState
-      @title="Welcome to quick actions"
-      @message="Access secret engine actions easily. Enable a compatible secret engine (such as database, KV version 2, or PKI) to get started."
-      data-test-empty-state="quick-actions"
-    >
-      <Hds::Link::Standalone
-        @icon="chevron-right"
-        @iconPosition="trailing"
-        @text="Enable a secrets engine"
-        @route="vault.cluster.secrets.enable"
+    <Hds::ApplicationState @align="center" data-test-empty-state="quick-actions" as |A|>
+      <A.Header data-test-empty-state-title @title="Welcome to quick actions" />
+      <A.Body
+        data-test-empty-state-message
+        @text="Access secret engine actions easily. Enable a compatible secret engine (such as database, KV version 2, or PKI) to get started."
       />
-    </EmptyState>
+      <A.Footer data-test-empty-state-actions as |F|>
+        <F.LinkStandalone
+          @icon="chevron-right"
+          @iconPosition="trailing"
+          @text="Enable a secrets engine"
+          @route="vault.cluster.secrets.enable"
+        />
+      </A.Footer>
+    </Hds::ApplicationState>
   {{/if}}
 </Hds::Card::Container>

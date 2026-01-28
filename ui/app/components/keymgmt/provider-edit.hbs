@@ -98,7 +98,10 @@
                 {{! Only show last field if provider selected }}
                 <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
               {{else}}
-                <EmptyState @title="No provider selected" @message="Select a provider in order to configure it." />
+                <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
+                  <A.Header @title="No provider selected" />
+                  <A.Body @text="Select a provider in order to configure it." />
+                </Hds::ApplicationState>
               {{/if}}
             {{else}}
               <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
@@ -167,17 +170,18 @@
             />
 
           {{else}}
-            <EmptyState
-              @title="No keys for this provider"
-              @message="Keys for this provider will be listed here. Add a key to get started."
-            >
-              <Hds::Link::Standalone
-                @icon="plus"
-                @text="Create key"
-                @route="vault.cluster.secrets.backend.create-root"
-                @query={{hash itemType="key"}}
-              />
-            </EmptyState>
+            <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
+              <A.Header @title="No keys for this provider" />
+              <A.Body @text="Keys for this provider will be listed here. Add a key to get started." />
+              <A.Footer as |F|>
+                <F.LinkStandalone
+                  @icon="plus"
+                  @text="Create key"
+                  @route="vault.cluster.secrets.backend.create-root"
+                  @query={{hash itemType="key"}}
+                />
+              </A.Footer>
+            </Hds::ApplicationState>
           {{/if}}
         {{/let}}
       {{else}}
