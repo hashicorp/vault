@@ -361,6 +361,7 @@ module "vault_verify_secrets_engines_read" {
 module "vault_verify_secrets_engines_delete" {
   source = "./modules/verify_secrets_engines/modules/delete"
 
+  ldap_enabled      = var.verify_ldap_secrets_engine
   vault_install_dir = var.vault_install_dir
 }
 
