@@ -14,6 +14,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type NamespaceService from 'vault/services/namespace';
 import type RouterService from '@ember/routing/router-service';
 import type { HTMLElementEvent } from 'vault/forms';
+import { DISMISSED_WIZARD_KEY } from '../wizard';
 
 /**
  * @module PageNamespaces
@@ -45,8 +46,6 @@ export default class PageNamespacesComponent extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
-  // Use namespaceService alias to avoid collision with namespaces
-  // input parameter from the route.
   @service declare namespace: NamespaceService;
 
   // The `query` property is used to track the filter
@@ -54,10 +53,24 @@ export default class PageNamespacesComponent extends Component<Args> {
   // browser query param to prevent unnecessary re-renders.
   @tracked query;
   @tracked nsToDelete = null;
+  @tracked hasDismissedWizard = false;
+
+  wizardId = 'namespace';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     this.query = this.args.model.pageFilter || '';
+
+    // check if the wizard has already been dismissed
+    const dismissedWizards = localStorage.getItem(DISMISSED_WIZARD_KEY);
+    if (dismissedWizards?.includes(this.wizardId)) {
+      this.hasDismissedWizard = true;
+    }
+  }
+
+  get showWizard() {
+    // Show when there are no existing namespaces and it is not in a dismissed state
+    return !this.hasDismissedWizard && !this.args.model.namespaces?.length;
   }
 
   @action

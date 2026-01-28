@@ -4,88 +4,102 @@
 }}
 
 {{#if (has-feature "Namespaces")}}
-  <Page::Header @title="Namespaces">
-    <:breadcrumbs>
-      <Page::Breadcrumbs
-        @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="Namespaces")}}
-      />
-    </:breadcrumbs>
-  </Page::Header>
-
-  <Toolbar>
-    <ToolbarFilters>
-      <FilterInputExplicit
-        @query={{@model.pageFilter}}
-        @placeholder="Search"
-        @handleSearch={{this.handleSearch}}
-        @handleInput={{this.handleInput}}
-        @handleKeyDown={{this.handleKeyDown}}
-      />
-    </ToolbarFilters>
-    <ToolbarActions>
-      <Hds::Button
-        class="has-right-margin-4"
-        @color="secondary"
-        @icon="reload"
-        @iconPosition="trailing"
-        @text="Refresh list"
-        {{on "click" this.refreshNamespaceList}}
-        data-test-button="refresh-namespace-list"
-      />
-      <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add" data-test-link-to="create-namespace">
-        Create namespace
-      </ToolbarLink>
-    </ToolbarActions>
-  </Toolbar>
-
-  <ListView
-    @items={{@model.namespaces}}
-    @itemNoun="namespace"
-    @paginationRouteName="vault.cluster.access.namespaces"
-    @onPageChange={{this.handlePageChange}}
-    as |list|
-  >
-    {{#if @model.namespaces.length}}
-      <ListItem as |Item|>
-        <Item.content>
-          {{list.item.id}}
-        </Item.content>
-        <Item.menu>
-          <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-            <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
-            {{#let (concat this.namespace.path (if this.namespace.path "/") list.item.id) as |targetNamespace|}}
-              {{#if (includes targetNamespace this.namespace.accessibleNamespaces)}}
-                <dd.Interactive {{on "click" (fn this.switchNamespace targetNamespace)}} data-test-popup-menu="switch">Switch
-                  to namespace</dd.Interactive>
-              {{/if}}
-            {{/let}}
-            <dd.Interactive
-              @color="critical"
-              {{on "click" (fn (mut this.nsToDelete) list.item)}}
-              data-test-popup-menu="delete"
-            >Delete</dd.Interactive>
-          </Hds::Dropdown>
-          {{#if (eq this.nsToDelete list.item)}}
-            <ConfirmModal
-              @color="critical"
-              @onClose={{fn (mut this.nsToDelete) null}}
-              @onConfirm={{fn this.deleteNamespace list.item}}
-              @confirmTitle="Delete this namespace?"
-              @confirmMessage="Any engines or mounts in this namespace will also be removed."
-            />
-          {{/if}}
-        </Item.menu>
-      </ListItem>
-    {{else}}
-      <list.empty>
-        <Hds::Link::Standalone
-          @icon="learn-link"
-          @text="Secure multi-tenancy with namespaces tutorial"
-          @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
+  {{#if this.showWizard}}
+    <Wizard::Namespaces::NamespaceWizard
+      @onDismiss={{fn (mut this.hasDismissedWizard) true}}
+      @onRefresh={{this.refreshNamespaceList}}
+    />
+  {{else}}
+    <Page::Header @title="Namespaces">
+      <:breadcrumbs>
+        <Page::Breadcrumbs
+          @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="Namespaces")}}
         />
-      </list.empty>
-    {{/if}}
-  </ListView>
+      </:breadcrumbs>
+    </Page::Header>
+
+    <Toolbar>
+      <ToolbarFilters>
+        <FilterInputExplicit
+          @query={{@model.pageFilter}}
+          @placeholder="Search"
+          @handleSearch={{this.handleSearch}}
+          @handleInput={{this.handleInput}}
+          @handleKeyDown={{this.handleKeyDown}}
+        />
+      </ToolbarFilters>
+      <ToolbarActions>
+        <Hds::Button
+          class="has-right-margin-4"
+          @color="secondary"
+          @icon="reload"
+          @iconPosition="trailing"
+          @text="Refresh list"
+          {{on "click" this.refreshNamespaceList}}
+          data-test-button="refresh-namespace-list"
+        />
+        <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add" data-test-link-to="create-namespace">
+          Create namespace
+        </ToolbarLink>
+      </ToolbarActions>
+    </Toolbar>
+
+    <ListView
+      @items={{@model.namespaces}}
+      @itemNoun="namespace"
+      @paginationRouteName="vault.cluster.access.namespaces"
+      @onPageChange={{this.handlePageChange}}
+      as |list|
+    >
+      {{#if @model.namespaces.length}}
+        <ListItem as |Item|>
+          <Item.content>
+            {{list.item.id}}
+          </Item.content>
+          <Item.menu>
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="More options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              {{#let (concat this.namespace.path (if this.namespace.path "/") list.item.id) as |targetNamespace|}}
+                {{#if (includes targetNamespace this.namespace.accessibleNamespaces)}}
+                  <dd.Interactive
+                    {{on "click" (fn this.switchNamespace targetNamespace)}}
+                    data-test-popup-menu="switch"
+                  >Switch to namespace</dd.Interactive>
+                {{/if}}
+              {{/let}}
+              <dd.Interactive
+                @color="critical"
+                {{on "click" (fn (mut this.nsToDelete) list.item)}}
+                data-test-popup-menu="delete"
+              >Delete</dd.Interactive>
+            </Hds::Dropdown>
+            {{#if (eq this.nsToDelete list.item)}}
+              <ConfirmModal
+                @color="critical"
+                @onClose={{fn (mut this.nsToDelete) null}}
+                @onConfirm={{fn this.deleteNamespace list.item}}
+                @confirmTitle="Delete this namespace?"
+                @confirmMessage="Any engines or mounts in this namespace will also be removed."
+              />
+            {{/if}}
+          </Item.menu>
+        </ListItem>
+      {{else}}
+        <list.empty>
+          <Hds::Link::Standalone
+            @icon="learn-link"
+            @text="Secure multi-tenancy with namespaces tutorial"
+            @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
+          />
+        </list.empty>
+      {{/if}}
+    </ListView>
+  {{/if}}
 {{else}}
   <UpgradePage @title="Namespaces" @minimumEdition="Vault Enterprise Pro" />
 {{/if}}

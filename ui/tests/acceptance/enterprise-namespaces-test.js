@@ -20,12 +20,15 @@ import { runCmd, createNSFromPaths, deleteNSFromPaths } from 'vault/tests/helper
 import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import localStorage from 'vault/lib/local-storage';
 
 module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async () => {
     await login();
+    // dismiss wizard
+    localStorage.setItem('dismissed-wizards', ['namespace']);
   });
 
   test('it focuses the search input field when user toggles namespace picker', async function (assert) {

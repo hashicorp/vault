@@ -1,0 +1,56 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title="Namespaces Guided Start" />
+
+<div class="wizard" data-test-guided-setup>
+  <Hds::Stepper::Nav
+    class="has-top-margin-xl has-bottom-margin-xl is-flex-column is-flex-grow-1"
+    @isInteractive={{true}}
+    @onStepChange={{this.onNavStepChange}}
+    @currentStep={{@currentStep}}
+    @steps={{@steps}}
+    as |S|
+  >
+    {{#each @steps as |step|}}
+      <S.Step>
+        <:title>{{step.title}}</:title>
+      </S.Step>
+
+      <S.Panel class="content" data-test-content>
+        {{#let (component step.component) as |StepComponent|}}
+          <StepComponent @wizardState={{@wizardState}} @updateWizardState={{@updateWizardState}} />
+        {{/let}}
+      </S.Panel>
+    {{/each}}
+  </Hds::Stepper::Nav>
+
+  <div class="button-bar">
+    {{#if (gt @currentStep 0)}}
+      <Hds::Button
+        @text="Back"
+        @color="tertiary"
+        @icon="chevron-left"
+        {{on "click" (fn this.onStepChange -1)}}
+        data-test-back-button
+      />
+    {{/if}}
+
+    <Hds::ButtonSet>
+      {{yield to="exit"}}
+      {{#if this.isFinalStep}}
+        {{yield to="submit"}}
+      {{else}}
+        <Hds::Button
+          @text="Next"
+          disabled={{not @canProceed}}
+          {{on "click" (fn this.onStepChange 1)}}
+          data-test-button="Next"
+        />
+      {{/if}}
+    </Hds::ButtonSet>
+  </div>
+
+</div>

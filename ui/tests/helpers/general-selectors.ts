@@ -36,7 +36,6 @@ export const GENERAL = {
   confirmButton: '[data-test-confirm-button]', // used most often on modal or confirm popups
   confirmTrigger: '[data-test-confirm-action-trigger]',
   copyButton: '[data-test-copy-button]',
-  nextButton: '[data-test-next-button]',
   revealButton: (label: string) => `[data-test-reveal="${label}"] button`, // intended for Hds::Reveal components
   accordionButton: (label: string) => `[data-test-accordion="${label}"] button`, // intended for Hds::Accordion components
   // there should only be one submit button per view (e.g. one per form) so this does not need to be dynamic
@@ -89,6 +88,7 @@ export const GENERAL = {
   labelByGroupControlIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index}) label`,
   maskedInput: '[data-test-masked-input]',
   radioByAttr: (attr: string) => (attr ? `[data-test-radio="${attr}"]` : '[data-test-radio]'),
+  radioCardByAttr: (attr: string) => (attr ? `[data-test-radio-card="${attr}"]` : '[data-test-radio-card]'),
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   stringListByIdx: (index: number) => `[data-test-string-list-input="${index}"]`,
   textToggle: '[data-test-text-toggle]',
