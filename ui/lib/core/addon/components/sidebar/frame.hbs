@@ -33,7 +33,17 @@
           {{on "click" (fn (mut this.console.isOpen) (not this.console.isOpen))}}
           {{on "click" this.trackReplToggle}}
         />
-        {{! TODO: insert help button }}
+        <Hds::Dropdown @enableCollisionDetection={{true}} data-test-dropdown="help menu" as |dd|>
+          <dd.ToggleIcon @icon="help" @text="help menu" />
+          <dd.Title @text="Help & Support" />
+          <dd.Interactive @href="https://developer.hashicorp.com/vault/docs">Documentation</dd.Interactive>
+          <dd.Interactive @href="https://developer.hashicorp.com/vault/tutorials">Tutorials</dd.Interactive>
+          <dd.Interactive @href="https://www.hashicorp.com/en/blog/products/vault">Blogs</dd.Interactive>
+          <dd.Interactive @href="https://github.com/hashicorp/vault/blob/main/CHANGELOG.md">Changelog</dd.Interactive>
+          <dd.Separator />
+          <dd.Interactive @href="https://support.hashicorp.com/hc/en-us/requests/new">Create support ticket</dd.Interactive>
+        </Hds::Dropdown>
+
         <Sidebar::UserMenu />
       </:utilityActions>
     </Hds::AppHeader>
