@@ -37,7 +37,10 @@
       {{/each}}
     </div>
   {{else}}
-    <EmptyState @title="No role type selected" @message="Select a type of role to be able to configure it" />
+    <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
+      <A.Header data-test-empty-state-title @title="No role type selected" />
+      <A.Body data-test-empty-state-message @text="Select a type of role to be able to configure it" />
+    </Hds::ApplicationState>
   {{/if}}
 </div>
 {{! template-lint-configure simple-unless "warn"  }}
@@ -51,10 +54,13 @@
         {{/each}}
       </div>
     {{else}}
-      <EmptyState
-        @title="No role type selected"
-        @message="Select a type of role to be able to add statements for creation, revocation, and/or rotation."
-      />
+      <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
+        <A.Header data-test-empty-state-title @title="No role type selected" />
+        <A.Body
+          data-test-empty-state-message
+          @text="Select a type of role to be able to add statements for creation, revocation, and/or rotation."
+        />
+      </Hds::ApplicationState>
     {{/if}}
   </div>
 {{/unless}}

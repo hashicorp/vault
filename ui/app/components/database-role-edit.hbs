@@ -141,10 +141,10 @@
           @modelValidations={{this.modelValidations}}
         />
       {{else}}
-        <EmptyState
-          @title="No database connection selected"
-          @message="Choose a connection to be able to configure a role type."
-        />
+        <Hds::ApplicationState @align="center" class="bottom-padding-32" as |A|>
+          <A.Header data-test-empty-state-title @title="No database connection selected" />
+          <A.Body data-test-empty-state-message @text="Choose a connection to be able to configure a role type." />
+        </Hds::ApplicationState>
       {{/if}}
       <div class="field is-fullwidth box is-bottomless">
         <Hds::ButtonSet>
