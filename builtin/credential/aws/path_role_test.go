@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/helper/constants"
 	vlttesting "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
@@ -603,6 +602,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
+		"alias_metadata":                 map[string]string{},
 		"auth_type":                      ec2AuthType,
 		"bound_ami_id":                   []string{"testamiid"},
 		"bound_account_id":               []string{"testaccountid"},
@@ -633,10 +633,6 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"token_no_default_policy":        false,
 		"token_num_uses":                 0,
 		"token_type":                     "default",
-	}
-
-	if constants.IsEnterprise {
-		expected["alias_metadata"] = map[string]string{}
 	}
 
 	if resp.Data["role_id"] == nil {

@@ -16,7 +16,6 @@ import (
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
@@ -1522,6 +1521,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 		TokenParams: tokenutil.TokenParams{
 			TokenPeriod:         5 * time.Minute,
 			TokenExplicitMaxTTL: 24 * time.Hour,
+			AliasMetadata:       make(map[string]string),
 		},
 		ConfigEntry: &ldaputil.ConfigEntry{
 			Url:                      cfg.Url,
@@ -1544,9 +1544,6 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			DerefAliases:             "never",
 			MaximumPageSize:          1000,
 		},
-	}
-	if constants.IsEnterprise {
-		exp.TokenParams.AliasMetadata = make(map[string]string)
 	}
 
 	configEntry, err := b.Config(ctx, configReq)
