@@ -3,7 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="License" />
+<Page::Header @title="License">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="License")}}
+    />
+  </:breadcrumbs>
+</Page::Header>
 
 <section class="box is-sideless is-marginless is-shadowless is-fullwidth">
   <span class="title is-5">Details</span>

@@ -8,8 +8,8 @@ import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { GENERAL } from '../helpers/general-selectors';
 
-const link = (label) => `[data-test-sidebar-nav-link="${label}"]`;
 const panel = (label) => `[data-test-sidebar-nav-panel="${label}"]`;
 
 module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
@@ -24,55 +24,53 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
   test(`it should render enterprise only navigation links`, async function (assert) {
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
-    await click(link('Secrets Sync'));
+    await click(GENERAL.navLink('Secrets Sync'));
     assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'Sync route renders');
 
-    await click(link('Replication'));
+    await click(GENERAL.navLink('Replication'));
     assert.strictEqual(currentURL(), '/vault/replication', 'Replication route renders');
     assert.dom(panel('Replication')).exists(`Replication nav panel renders`);
-    assert.dom(link('Overview')).hasClass('active', 'Overview link is active');
-    assert.dom(link('Performance')).exists('Performance link exists');
-    assert.dom(link('Disaster Recovery')).exists('DR link exists');
+    assert.dom(GENERAL.navLink('Overview')).hasClass('active', 'Overview link is active');
+    assert.dom(GENERAL.navLink('Performance')).exists('Performance link exists');
+    assert.dom(GENERAL.navLink('Disaster Recovery')).exists('DR link exists');
 
-    await click(link('Performance'));
+    await click(GENERAL.navLink('Performance'));
     assert.strictEqual(
       currentURL(),
       '/vault/replication/performance',
       'Replication performance route renders'
     );
 
-    await click(link('Disaster Recovery'));
+    await click(GENERAL.navLink('Disaster Recovery'));
     assert.strictEqual(currentURL(), '/vault/replication/dr', 'Replication DR route renders');
-    await click(link('Back to main navigation'));
+    await click(GENERAL.navLink('Back to main navigation'));
 
-    await click(link('Client Count'));
+    await click(GENERAL.navLink('Client Count'));
     assert.dom(panel('Client Count')).exists('Client Count nav panel renders');
-    assert.dom(link('Client Usage')).hasClass('active', 'Client Usage link is active');
+    assert.dom(GENERAL.navLink('Client Usage')).hasClass('active', 'Client Usage link is active');
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Client counts route renders');
-    await click(link('Back to main navigation'));
+    await click(GENERAL.navLink('Back to main navigation'));
 
-    await click(link('License'));
-    assert.strictEqual(currentURL(), '/vault/license', 'License route renders');
-    await click(link('Access'));
-    await click(link('Approval workflow'));
+    await click(GENERAL.navLink('Access'));
+    await click(GENERAL.navLink('Approval workflow'));
     assert.strictEqual(currentURL(), '/vault/access/control-groups', 'Approval workflow route renders');
 
-    await click(link('Namespaces'));
+    await click(GENERAL.navLink('Namespaces'));
     assert.strictEqual(currentURL(), '/vault/access/namespaces?page=1', 'Replication route renders');
 
-    await click(link('Back to main navigation'));
-    await click(link('Access'));
-    await click(link('Role governing policies'));
+    await click(GENERAL.navLink('Back to main navigation'));
+    await click(GENERAL.navLink('Access'));
+    await click(GENERAL.navLink('Role governing policies'));
     assert.strictEqual(currentURL(), '/vault/policies/rgp', 'Role governing policies route renders');
 
-    await click(link('Endpoint governing policies'));
+    await click(GENERAL.navLink('Endpoint governing policies'));
     assert.strictEqual(currentURL(), '/vault/policies/egp', 'Endpoint governing policies route renders');
   });
 
   test('it should link to correct routes at the access level', async function (assert) {
     assert.expect(12);
 
-    await click(link('Access'));
+    await click(GENERAL.navLink('Access'));
     assert.dom(panel('Access')).exists('Access nav panel renders');
 
     const links = [
@@ -90,19 +88,25 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
     ];
 
     for (const l of links) {
-      await click(link(l.label));
+      await click(GENERAL.navLink(l.label));
       assert.ok(currentURL().includes(l.route), `${l.label} route renders`);
     }
   });
 
   test('it should navigate to the correct links from Operational tools > Custom messages ember engine (enterprise)', async function (assert) {
-    await click(link('Operational tools'));
+    await click(GENERAL.navLink('Operational tools'));
     assert.strictEqual(currentURL(), '/vault/tools/wrap', 'Tool route renders');
-    await click(link('Custom messages'));
+    await click(GENERAL.navLink('Custom messages'));
     assert.strictEqual(currentURL(), '/vault/config-ui/messages', 'Custom messages route renders');
-    await click(link('Lookup'));
+    await click(GENERAL.navLink('Lookup'));
     assert.strictEqual(currentURL(), '/vault/tools/lookup', 'Lookup route renders');
-    await click(link('UI login settings'));
+    await click(GENERAL.navLink('UI login settings'));
     assert.strictEqual(currentURL(), '/vault/config-ui/login-settings', 'UI login settings route renders');
+  });
+
+  test('it should navigate to the Licenses from Reporting level (enterprise)', async function (assert) {
+    await click(GENERAL.navLink('Reporting'));
+    await click(GENERAL.navLink('License'));
+    assert.strictEqual(currentURL(), '/vault/license', 'License route renders');
   });
 });
