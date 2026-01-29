@@ -30,12 +30,4 @@ export default Route.extend({
       return cluster;
     });
   },
-
-  afterModel(model) {
-    const replicationMode = this.paramsFor('mode').replication_mode;
-    const cluster = model[replicationMode];
-    if (!cluster.isPrimary || cluster.replicationDisabled || cluster.replicationUnsupported) {
-      return this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
-    }
-  },
 });

@@ -223,10 +223,7 @@ Router.map(function () {
       this.route('replication-dr-promote', function () {
         this.route('details');
       });
-      if (config.addRootMounts) {
-        config.addRootMounts.call(this);
-      }
-
+      this.mount('replication');
       this.route('not-found', { path: '/*path' });
     });
     this.route('not-found', { path: '/*path' });

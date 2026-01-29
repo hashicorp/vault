@@ -7,17 +7,16 @@
 // all of the CLUSTER_ROUTES that are states before you can use vault
 //
 import Route from '@ember/routing/route';
-import ClusterRoute from 'vault/mixins/cluster-route';
 
 /**
  * @type Class
  */
-export default Route.extend(ClusterRoute, {
+export default class ClusterBaseRoute extends Route {
   model() {
     return this.modelFor('vault.cluster');
-  },
+  }
 
   resetController(controller) {
     controller.reset && controller.reset();
-  },
-});
+  }
+}

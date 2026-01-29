@@ -4,12 +4,11 @@
  */
 
 import { service } from '@ember/service';
-import Base from '../cluster-route-base';
+import Route from '@ember/routing/route';
 
-export default Base.extend({
-  replicationMode: service(),
+export default class ReplicationIndexRoute extends Route {
+  @service replicationMode;
   beforeModel() {
-    this._super(...arguments);
     this.replicationMode.setMode('dr');
-  },
-});
+  }
+}
