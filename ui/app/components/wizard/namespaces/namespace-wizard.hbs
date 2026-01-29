@@ -17,9 +17,9 @@
     <Wizard::Namespaces::Welcome />
   </:welcome>
   <:exit>
-    {{#unless (eq this.wizardState.creationMethod this.methods.UI)}}
+    {{#if this.shouldShowExitButton}}
       <Hds::Button @text={{this.exitText}} @color="secondary" {{on "click" this.onDismiss}} />
-    {{/unless}}
+    {{/if}}
   </:exit>
   <:submit>
     {{#if (eq this.wizardState.securityPolicyChoice this.policy.FLEXIBLE)}}

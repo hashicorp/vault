@@ -10,6 +10,7 @@ import Component from '@glimmer/component';
 import keys from 'core/utils/keys';
 
 import type ApiService from 'vault/services/api';
+import type FlagsService from 'vault/services/flags';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type NamespaceService from 'vault/services/namespace';
 import type RouterService from '@ember/routing/router-service';
@@ -45,6 +46,7 @@ interface NamespaceModel {
 export default class PageNamespacesComponent extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
+  @service declare readonly flags: FlagsService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare namespace: NamespaceService;
 
@@ -53,6 +55,7 @@ export default class PageNamespacesComponent extends Component<Args> {
   // browser query param to prevent unnecessary re-renders.
   @tracked query;
   @tracked nsToDelete = null;
+  @tracked showSetupAlert = false;
   @tracked hasDismissedWizard = false;
 
   wizardId = 'namespace';
@@ -66,6 +69,21 @@ export default class PageNamespacesComponent extends Component<Args> {
     if (dismissedWizards?.includes(this.wizardId)) {
       this.hasDismissedWizard = true;
     }
+  }
+
+  // show the full available namespace path e.g. "root/ns1/child2", "admin/ns1/child2"
+  get namespacePath() {
+    if (this.namespace.inRootNamespace) {
+      return 'root';
+    }
+
+    // For nested namespaces, show "root/" prefix if not HVD managed and no separate user root
+    if (!this.namespace.userRootNamespace && !this.flags.isHvdManaged) {
+      return `root/${this.namespace.path}`;
+    }
+
+    // If there is a userRootNamespace or it is HVD managed, then the path alone will suffice
+    return this.namespace.path;
   }
 
   get showWizard() {
@@ -121,6 +139,11 @@ export default class PageNamespacesComponent extends Component<Args> {
     } catch (error) {
       this.flashMessages.danger('There was an error refreshing the namespace list.');
     }
+  }
+
+  @action
+  enterGuidedStart() {
+    this.hasDismissedWizard = false;
   }
 
   @action handlePageChange() {

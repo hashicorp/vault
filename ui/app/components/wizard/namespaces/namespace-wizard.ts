@@ -72,9 +72,17 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
     }
   }
 
+  get isFinalStep() {
+    return this.currentStep === this.steps.length - 1;
+  }
+
+  get shouldShowExitButton() {
+    // Show exit button unless we're on the final step with UI creation method
+    return !(this.wizardState.creationMethod === CreationMethod.UI && this.isFinalStep);
+  }
+
   get exitText() {
-    return this.currentStep === this.steps.length - 1 &&
-      this.wizardState.securityPolicyChoice === SecurityPolicy.STRICT
+    return this.isFinalStep && this.wizardState.securityPolicyChoice === SecurityPolicy.STRICT
       ? 'Done & Exit'
       : 'Exit';
   }
