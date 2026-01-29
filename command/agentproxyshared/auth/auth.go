@@ -338,11 +338,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			})
 			clientToUse = wrapClient
 		}
-		for key, values := range header {
-			for _, value := range values {
-				clientToUse.AddHeader(key, value)
-			}
-		}
+		clientToUse.SetHeaders(header)
 
 		// This should only happen if there's no preloaded token (regular auto-auth login)
 		// or if a preloaded token has expired and is now switching to auto-auth.
