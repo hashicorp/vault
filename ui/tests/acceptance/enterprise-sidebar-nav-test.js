@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentURL, visit } from '@ember/test-helpers';
+import { click, currentURL } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 
@@ -16,12 +16,12 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
-    return login();
+  hooks.beforeEach(async function () {
+    await login();
   });
 
   // common links are tested in the sidebar-nav test and will not be covered here
-  test('it should render enterprise only navigation links', async function (assert) {
+  test(`it should render enterprise only navigation links`, async function (assert) {
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
     await click(link('Secrets Sync'));
@@ -41,12 +41,9 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
       'Replication performance route renders'
     );
 
-    // for some reason clicking this link would cause the testing browser locally
-    // to navigate to 'vault/replication/dr' and halt the test runner
-    assert
-      .dom(link('Disaster Recovery'))
-      .hasAttribute('href', '/ui/vault/replication/dr', 'Replication dr route renders');
-    await visit('/vault');
+    await click(link('Disaster Recovery'));
+    assert.strictEqual(currentURL(), '/vault/replication/dr', 'Replication DR route renders');
+    await click(link('Back to main navigation'));
 
     await click(link('Client Count'));
     assert.dom(panel('Client Count')).exists('Client Count nav panel renders');

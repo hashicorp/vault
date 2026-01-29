@@ -7,13 +7,13 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { CLUSTER } from 'vault/lib/route-paths';
 
-export default class UnsealRoute extends Route {
+export default class ReplicationDrPromote extends Route {
   @service router;
 
   beforeModel() {
     const cluster = this.modelFor(CLUSTER);
-    // if it's not sealed, we don't need to unseal
-    if (!cluster.sealed) {
+    // if it's not a dr secondary, go back to cluster
+    if (!cluster?.dr?.isSecondary) {
       return this.router.replaceWith(CLUSTER);
     }
   }
