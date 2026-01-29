@@ -70,7 +70,7 @@ export default class WizardNamespacesStep3 extends Component<Args> {
       icon: 'sidebar',
       label: CreationMethod.UI,
       description:
-        'Apply changes immediately. Note: Changes made here may be overwritten if you also use Infrastructure as Code (Terraform).',
+        'Apply changes immediately. Note: Changes made in the UI will be overwritten by any future updates made via Infrastructure as Code (Terraform).',
     },
   ];
   tabOptions = ['API', 'CLI'];
