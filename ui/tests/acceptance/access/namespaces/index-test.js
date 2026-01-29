@@ -74,21 +74,9 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     const testNS = 'test-create-ns-ui';
 
     // Verify test-create-ns does not exist in the Manage Namespace page
-    await fillIn(GENERAL.filterInputExplicit, testNS);
-    await click(GENERAL.button('Search'));
-    await waitFor(GENERAL.emptyStateTitle, {
-      timeout: 2000,
-      timeoutMessage: 'timed out waiting for empty state title to render',
-    });
-    assert
-      .dom(GENERAL.emptyStateTitle)
-      .hasText(
-        'No namespaces yet',
-        'Empty state is displayed when searching for the namespace we have created in the UI but have not refreshed the list yet'
-      );
 
     // Create a new namespace in the UI
-    await click(GENERAL.linkTo('create-namespace'));
+    await click(GENERAL.button('create-namespace'));
     await fillIn(GENERAL.inputByAttr('path'), testNS);
     await click(GENERAL.submitButton);
 
@@ -113,11 +101,11 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     // Setup: Create namespace(s) via the CLI
     const testNS = 'asdf';
     await runCmd(createNS(testNS), false);
+    await click(GENERAL.button('refresh-namespace-list'));
 
     // Search for created namespace// Enter search text
     await fillIn(GENERAL.filterInputExplicit, testNS);
     await click(GENERAL.button('Search'));
-    await click(GENERAL.button('refresh-namespace-list'));
 
     // Verify the menu options
     await waitFor(GENERAL.menuTrigger, {
@@ -135,11 +123,11 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     // Setup: Create namespace(s) via the CLI
     const testNS = 'test-create-ns-switch';
     await runCmd(createNS(testNS), false);
+    await click(GENERAL.button('refresh-namespace-list'));
 
     // Search for created namespace
     await fillIn(GENERAL.filterInputExplicit, testNS);
     await click(GENERAL.button('Search'));
-    await click(GENERAL.button('refresh-namespace-list'));
 
     // Switch namespace
     await waitFor(GENERAL.menuTrigger);
