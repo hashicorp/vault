@@ -652,7 +652,9 @@ SEALFAIL:
 		if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 			coreConfig.License = envLicense
 		}
-		vault.DiagnoseCheckLicense(licenseCtx, vaultCore, coreConfig, false)
+		vault.DiagnoseCheckLicense(licenseCtx, vaultCore, coreConfig, vault.DiagnoseCheckLicenseGeneration{
+			Generate: false,
+		})
 	}
 	licenseSpan.End()
 
