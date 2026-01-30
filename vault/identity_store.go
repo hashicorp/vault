@@ -1353,13 +1353,21 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		return nil, false, fmt.Errorf("mount accessor %q is not a mount of type %q", alias.MountAccessor, alias.MountType)
 	}
 
-	// Check if an entity already exists for the given alias
-	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, true)
+	// Check if an entity already exists for the given alias.
+	// We don't clone here to avoid unnecessary allocations - if we need to
+	// return early, we'll clone at that point.
+	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, false)
 	if err != nil {
 		return nil, false, err
 	}
 	if entity != nil && changedAliasIndex(entity, alias) == -1 {
-		return entity, false, nil
+		// Entity exists and no metadata changes - clone before returning
+		// to avoid exposing internal MemDB state to callers.
+		clonedEntity, err := entity.Clone()
+		if err != nil {
+			return nil, false, err
+		}
+		return clonedEntity, false, nil
 	}
 
 	i.lock.Lock()
@@ -1369,20 +1377,31 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
-	// Check if an entity was created before acquiring the lock
-	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, true)
+	// Check if an entity was created before acquiring the lock.
+	// We don't clone here because:
+	// 1. If no changes needed, we clone before returning
+	// 2. If changes needed, we'll modify and clone at the end anyway
+	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, false)
 	if err != nil {
 		return nil, false, err
 	}
 	if entity != nil {
+		// Clone immediately to avoid modifying MemDB state directly
+		entity, err = entity.Clone()
+		if err != nil {
+			return nil, false, err
+		}
+
 		idx := changedAliasIndex(entity, alias)
 		if idx == -1 {
+			// No changes needed, return the cloned entity
 			return entity, false, nil
 		}
+
+		// Safe to modify the cloned entity
 		a := entity.Aliases[idx]
 		a.Metadata = alias.Metadata
 		a.LastUpdateTime = timestamppb.Now()
-
 		update = true
 	}
 
