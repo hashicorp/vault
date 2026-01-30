@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -66,7 +67,7 @@ func (c *Core) GetStoredThirdPartyPluginCounts(ctx context.Context, month time.T
 	return c.getStoredThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, month)
 }
 
-func combineRoleCounts(ctx context.Context, a, b *RoleCounts) *RoleCounts {
+func combineRoleCounts(a, b *RoleCounts) *RoleCounts {
 	if a == nil && b == nil {
 		return &RoleCounts{}
 	}
@@ -262,4 +263,65 @@ func (c *Core) compareCounts(current, previous int, metricName string) int {
 
 func (c *Core) GetBillingSubView() *BarrierView {
 	return c.systemBarrierView.SubView(billing.BillingSubPath)
+}
+
+// storeDataProtectionCallCountsLocked must be called with BillingStorageLock held
+func (c *Core) storeDataProtectionCallCountsLocked(ctx context.Context, maxCounts *billing.DataProtectionCallCounts, localPathPrefix string, month time.Time) error {
+	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.DataProtectionCallCountsMetric)
+	entry, err := logical.StorageEntryJSON(billingPath, maxCounts)
+	if err != nil {
+		return err
+	}
+	return c.GetBillingSubView().Put(ctx, entry)
+}
+
+// getStoredDataProtectionCallCountsLocked must be called with BillingStorageLock held
+func (c *Core) getStoredDataProtectionCallCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (*billing.DataProtectionCallCounts, error) {
+	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.DataProtectionCallCountsMetric)
+	entry, err := c.GetBillingSubView().Get(ctx, billingPath)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return &billing.DataProtectionCallCounts{}, nil
+	}
+	var maxCounts billing.DataProtectionCallCounts
+	if err := entry.DecodeJSON(&maxCounts); err != nil {
+		return nil, err
+	}
+	return &maxCounts, nil
+}
+
+func (c *Core) GetStoredDataProtectionCallCounts(ctx context.Context, month time.Time) (*billing.DataProtectionCallCounts, error) {
+	c.consumptionBilling.BillingStorageLock.RLock()
+	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	return c.getStoredDataProtectionCallCountsLocked(ctx, billing.LocalPrefix, month)
+}
+
+func (c *Core) UpdateDataProtectionCallCounts(ctx context.Context, currentMonth time.Time) (*billing.DataProtectionCallCounts, error) {
+	c.consumptionBilling.BillingStorageLock.Lock()
+	defer c.consumptionBilling.BillingStorageLock.Unlock()
+
+	// Read and atomically reset the current counter value
+	// TODO: Reset Transform call counts too (VAULT-41205)
+	currentTransitCount := atomic.SwapInt64(&billing.CurrentDataProtectionCallCounts.Transit, 0)
+
+	storedDataProtectionCallCounts, err := c.getStoredDataProtectionCallCountsLocked(ctx, billing.LocalPrefix, currentMonth)
+	if err != nil {
+		return nil, err
+	}
+	if storedDataProtectionCallCounts == nil {
+		storedDataProtectionCallCounts = &billing.DataProtectionCallCounts{}
+	}
+
+	// Sum the current count with the stored count
+	storedDataProtectionCallCounts.Transit += currentTransitCount
+	// TODO: Update Transform call counts (VAULT-41205)
+
+	err = c.storeDataProtectionCallCountsLocked(ctx, storedDataProtectionCallCounts, billing.LocalPrefix, currentMonth)
+	if err != nil {
+		return nil, err
+	}
+
+	return storedDataProtectionCallCounts, nil
 }

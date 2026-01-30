@@ -6,6 +6,7 @@
 package vault
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -37,4 +38,11 @@ func verifyExpectedRoleCounts(t *testing.T, actual *RoleCounts, baseCount int) {
 		TerraformCloudDynamicRoles: baseCount,
 	}
 	require.Equal(t, expected, actual)
+}
+
+// testCMACOperations is a no-op in OSS since CMAC is an Enterprise-only feature.
+// Returns the current count unchanged.
+func testCMACOperations(t *testing.T, core *Core, ctx context.Context, root string, currentCount int64) int64 {
+	// CMAC is not supported in OSS, so we don't perform any operations
+	return currentCount
 }

@@ -531,6 +531,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	// collection and continue to process other items.
 	warnAboutNonceUsage := false
 	successesInBatch := false
+	successfulRequests := 0
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			userErrorInBatch = true
@@ -613,6 +614,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 		batchResponseItems[i].Ciphertext = ciphertext
 		batchResponseItems[i].KeyVersion = keyVersion
+		successfulRequests++
 	}
 
 	resp := &logical.Response{}
@@ -646,6 +648,9 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	if req.Operation == logical.CreateOperation && !upserted {
 		resp.AddWarning("Attempted creation of the key during the encrypt operation, but it was created beforehand")
 	}
+
+	// Increment the counter for successful operations
+	b.incrementDataProtectionCounter(int64(successfulRequests))
 
 	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
 }

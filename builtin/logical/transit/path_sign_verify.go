@@ -409,6 +409,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 	batchInputRaw := d.Raw["batch_input"]
 	var batchInputItems []batchRequestSignItem
+	successfulRequests := 0
 	if batchInputRaw != nil {
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
@@ -458,6 +459,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			response[i].Signature = sig.Signature
 			response[i].PublicKey = sig.PublicKey
 			response[i].KeyVersion = keyVersion
+			successfulRequests++
 		}
 	}
 
@@ -489,6 +491,9 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			resp.Data["public_key"] = response[0].PublicKey
 		}
 	}
+
+	// Increment the counter for successful operations
+	b.incrementDataProtectionCounter(int64(successfulRequests))
 
 	return resp, nil
 }
@@ -694,6 +699,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	response := make([]batchResponseVerifyItem, len(batchInputItems))
 
+	successfulRequests := 0
 	for i, item := range batchInputItems {
 		pva, err := b.getPolicyVerifyArgs(ctx, p, apiArgs, item)
 		if err != nil {
@@ -716,6 +722,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 			}
 		} else {
 			response[i].Valid = valid
+			successfulRequests++
 		}
 	}
 
@@ -742,6 +749,9 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 			"valid": response[0].Valid,
 		}
 	}
+
+	// Increment the counter for successful operations
+	b.incrementDataProtectionCounter(int64(successfulRequests))
 
 	return resp, nil
 }

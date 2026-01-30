@@ -72,6 +72,7 @@ func (c *Core) updateBillingMetrics(ctx context.Context) error {
 			c.UpdateReplicatedHWMMetrics(ctx, currentMonth)
 		}
 		c.UpdateLocalHWMMetrics(ctx, currentMonth)
+		c.UpdateLocalAggregatedMetrics(ctx, currentMonth)
 	}
 	return nil
 }
@@ -112,5 +113,16 @@ func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time
 	} else {
 		c.logger.Info("updated local max external plugin counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
 	}
+
+	return nil
+}
+
+func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth time.Time) error {
+	if _, err := c.UpdateDataProtectionCallCounts(ctx, currentMonth); err != nil {
+		c.logger.Error("error updating local max data protection call counts", "error", err)
+	} else {
+		c.logger.Info("updated local max data protection call counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+	}
+
 	return nil
 }

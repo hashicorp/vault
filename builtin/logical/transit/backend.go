@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/billing"
 )
 
 const (
@@ -144,6 +146,11 @@ func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error
 		size = storedCache.Size
 	}
 	return size, nil
+}
+
+// incrementDataProtectionCounter atomically increments the data protection call counter to avoid race conditions
+func (b *backend) incrementDataProtectionCounter(count int64) {
+	atomic.AddInt64(&billing.CurrentDataProtectionCallCounts.Transit, count)
 }
 
 // Update cache size and get policy

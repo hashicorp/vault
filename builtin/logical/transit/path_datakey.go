@@ -169,6 +169,11 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		resp.Data["plaintext"] = plaintext
 	}
 
+	// Increment the counter for successful operations
+	// Since there are not batched operations, we can add one successful
+	// request to the transit request counter.
+	b.incrementDataProtectionCounter(1)
+
 	return resp, nil
 }
 

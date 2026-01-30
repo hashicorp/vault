@@ -10,13 +10,15 @@ import (
 )
 
 const (
-	BillingSubPath          = "billing/"
-	ReplicatedPrefix        = "replicated/"
-	RoleHWMCountsHWM        = "maxRoleCounts/"
-	KvHWMCountsHWM          = "maxKvCounts/"
-	LocalPrefix             = "local/"
-	ThirdPartyPluginsPrefix = "thirdPartyPluginCounts/"
-	BillingWriteInterval    = 10 * time.Minute
+	BillingSubPath                 = "billing/"
+	ReplicatedPrefix               = "replicated/"
+	RoleHWMCountsHWM               = "maxRoleCounts/"
+	KvHWMCountsHWM                 = "maxKvCounts/"
+	DataProtectionCallCountsMetric = "dataProtectionCallCounts/"
+	LocalPrefix                    = "local/"
+	ThirdPartyPluginsPrefix        = "thirdPartyPluginCounts/"
+
+	BillingWriteInterval = 10 * time.Minute
 )
 
 var BillingMonthStorageFormat = "%s%d/%02d/%s" // e.g replicated/2026/01/maxKvCounts/
@@ -41,3 +43,12 @@ func GetMonthlyBillingPath(localPrefix string, now time.Time, billingMetric stri
 	month := int(now.Month())
 	return fmt.Sprintf(BillingMonthStorageFormat, localPrefix, year, month, billingMetric)
 }
+
+type DataProtectionCallCounts struct {
+	Transit int64 `json:"transit,omitempty"`
+	// TODO: Uncomment when we add support for Transform tracking (VAULT-41205)
+	// Transform int64 `json:"transform,omitempty"`
+}
+
+// Global counter for all data protection calls on this cluster
+var CurrentDataProtectionCallCounts = DataProtectionCallCounts{}
