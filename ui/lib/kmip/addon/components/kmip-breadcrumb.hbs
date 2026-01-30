@@ -26,4 +26,7 @@
   {{#if @currentRoute}}
     <Hds::Breadcrumb::Item @text={{@currentRoute}} @current={{true}} data-test-breadcrumb={{@currentRoute}} />
   {{/if}}
+  {{#if @configRoute}}
+    <Hds::Breadcrumb::Item @text={{capitalize @configRoute}} @current={{true}} data-test-breadcrumb={{@configRoute}} />
+  {{/if}}
 </Hds::Breadcrumb>

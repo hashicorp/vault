@@ -27,7 +27,6 @@ import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-
 import engineDisplayData from 'vault/helpers/engines-display-data';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
-import { KMIP_SELECTORS } from '../helpers/kmip/selectors';
 
 // port has a lower limit of 1024
 const getRandomPort = () => Math.floor(Math.random() * 5000 + 1024);
@@ -114,15 +113,9 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     const backend = this.backend;
     await scopesPage.visit({ backend });
     await settled();
-    await click(KMIP_SELECTORS.tabs.config);
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets-engines/${backend}/kmip/configuration`,
-      'configuration navigates to the config page'
-    );
-    assert.ok(scopesPage.isEmpty, 'config page renders empty state');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Configure'));
 
-    await click(KMIP_SELECTORS.toolbar.config);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets-engines/${backend}/kmip/configure`,

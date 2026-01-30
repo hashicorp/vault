@@ -12,7 +12,7 @@ import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Controller from '@ember/controller';
 import type CapabilitiesService from 'vault/services/capabilities';
-
+import type { KmipApplicationModel } from '../application';
 interface KmipScopesController extends Controller {
   pageFilter: string | undefined;
   page: number | undefined;
@@ -35,6 +35,7 @@ export default class KmipScopesRoute extends Route {
   async model(params: { page: number; pageFilter: string }) {
     const { page, pageFilter } = params;
     const { currentPath } = this.secretMountPath;
+    const { secretsEngine } = this.modelFor('application') as KmipApplicationModel;
 
     try {
       const { keys } = await this.api.secrets.kmipListScopes(currentPath, KmipListScopesListEnum.TRUE);
@@ -45,11 +46,11 @@ export default class KmipScopesRoute extends Route {
       );
       const capabilities = paths ? await this.capabilities.fetch(paths) : {};
 
-      return { scopes, capabilities };
+      return { scopes, capabilities, secretsEngine };
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
-        return { scopes: [], capabilities: {} };
+        return { scopes: [], capabilities: {}, secretsEngine };
       }
       throw error;
     }
