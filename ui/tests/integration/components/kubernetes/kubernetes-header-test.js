@@ -106,7 +106,7 @@ module('Integration | Component | kubernetes | KubernetesHeader', function (hook
     assert.dom(GENERAL.dropdownToggle('Manage')).hasText('Manage', 'Manage dropdown renders');
     await click(GENERAL.dropdownToggle('Manage'));
     assert.dom(GENERAL.menuItem('Configure')).exists('Configure dropdown item renders');
-    assert.dom(GENERAL.menuItem('Delete')).exists('Configure dropdown item renders');
+    assert.dom(GENERAL.menuItem('Delete')).exists('Delete dropdown item renders');
   });
 
   test('it should render exit configuration button when configRoute is provided', async function (assert) {

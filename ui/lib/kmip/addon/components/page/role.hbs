@@ -3,7 +3,12 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<HeaderCredentials @role={{@roleName}} @scope={{@scopeName}} />
+<Page::Header @title={{@roleName}}>
+  <:breadcrumbs>
+    <KmipBreadcrumb @scope={{@scopeName}} @currentRoute={{@roleName}} />
+  </:breadcrumbs>
+</Page::Header>
+<KmipTabs @role={{@roleName}} @scope={{@scopeName}} @isCredentials={{true}} />
 
 <Toolbar>
   <ToolbarActions>

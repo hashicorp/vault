@@ -25,7 +25,7 @@ export default class KmipEngine extends Engine {
       'version',
       'secret-mount-path',
     ],
-    externalRoutes: ['secrets'],
+    externalRoutes: ['secrets', 'secretsGeneralSettingsConfiguration'],
   };
 }
 
