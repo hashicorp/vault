@@ -202,6 +202,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 	defer p.Unlock()
 
 	warnAboutNonceUsage := false
+	successfulRequests := 0
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			continue
@@ -281,6 +282,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 
 		batchResponseItems[i].Ciphertext = ciphertext
 		batchResponseItems[i].KeyVersion = keyVersion
+		successfulRequests++
 	}
 
 	resp := &logical.Response{}
@@ -305,6 +307,9 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 	if constants.IsFIPS() && warnAboutNonceUsage {
 		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
+
+	// Increment the counter for successful operations
+	b.incrementDataProtectionCounter(int64(successfulRequests))
 
 	return resp, nil
 }

@@ -189,6 +189,9 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 
 	response := make([]batchResponseHMACItem, len(batchInputItems))
 
+	// Count successful HMAC operations
+	successfulRequests := 0
+
 	for i, item := range batchInputItems {
 		rawInput, ok := item["input"]
 		if !ok {
@@ -225,6 +228,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 		retStr := base64.StdEncoding.EncodeToString(retBytes)
 		retStr = fmt.Sprintf("vault:v%s:%s", strconv.Itoa(ver), retStr)
 		response[i].HMAC = retStr
+		successfulRequests++
 	}
 
 	// Generate the response
@@ -249,6 +253,9 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 			"hmac": response[0].HMAC,
 		}
 	}
+
+	// Increment the counter for successful operations
+	b.incrementDataProtectionCounter(int64(successfulRequests))
 
 	return resp, nil
 }
@@ -320,6 +327,7 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 
 	response := make([]batchResponseHMACItem, len(batchInputItems))
 
+	successfulRequests := 0
 	for i, item := range batchInputItems {
 		rawInput, ok := item["input"]
 		if !ok {
@@ -398,6 +406,7 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 		hf.Write(input)
 		retBytes := hf.Sum(nil)
 		response[i].Valid = hmac.Equal(retBytes, verBytes)
+		successfulRequests++
 	}
 
 	// Generate the response
@@ -422,6 +431,9 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 			"valid": response[0].Valid,
 		}
 	}
+
+	// Increment the counter for successful operations
+	b.incrementDataProtectionCounter(int64(successfulRequests))
 
 	return resp, nil
 }

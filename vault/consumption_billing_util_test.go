@@ -23,6 +23,7 @@ import (
 	logicalDatabase "github.com/hashicorp/vault/builtin/logical/database"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
 	logicalRabbitMQ "github.com/hashicorp/vault/builtin/logical/rabbitmq"
+	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -395,6 +396,258 @@ func TestHWMKvSecretsCounts(t *testing.T) {
 	counts, err = core.GetStoredHWMKvCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 	require.Equal(t, 5, counts)
+}
+
+// TestDataProtectionCallCounts tests that we correctly store and track the data protection call counts
+func TestDataProtectionCallCounts(t *testing.T) {
+	t.Parallel()
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"transit": transit.Factory,
+		},
+		BillingConfig: billing.BillingConfig{
+			MetricsUpdateCadence: 3 * time.Second,
+		},
+	}
+
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	// Mount transit backend
+	req := logical.TestRequest(t, logical.CreateOperation, "sys/mounts/transit")
+	req.Data["type"] = "transit"
+	req.ClientToken = root
+	ctx := namespace.RootContext(context.Background())
+	_, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Reset the transit counters
+	billing.CurrentDataProtectionCallCounts.Transit = 0
+
+	// Create an encryption key
+	req = logical.TestRequest(t, logical.CreateOperation, "transit/keys/foo")
+	req.Data["type"] = "aes256-gcm96"
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Perform encryption on the key
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/encrypt/foo")
+	req.Data["plaintext"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	req.ClientToken = root
+	resp, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented (replicated mount by default)
+	require.Equal(t, int64(1), billing.CurrentDataProtectionCallCounts.Transit)
+
+	// Get the ciphertext from the encryption response
+	ciphertext, ok := resp.Data["ciphertext"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, ciphertext)
+
+	// Now perform decryption using the ciphertext
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/decrypt/foo")
+	req.Data["ciphertext"] = ciphertext
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, int64(2), billing.CurrentDataProtectionCallCounts.Transit)
+
+	// Test rewrap operation
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/rewrap/foo")
+	req.Data["ciphertext"] = ciphertext
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, int64(3), billing.CurrentDataProtectionCallCounts.Transit)
+
+	// Get the new ciphertext from rewrap
+	newCiphertext, ok := resp.Data["ciphertext"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, newCiphertext)
+
+	// Test datakey generation
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/datakey/plaintext/foo")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, int64(4), billing.CurrentDataProtectionCallCounts.Transit)
+
+	// Test HMAC generation
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/hmac/foo")
+	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, int64(5), billing.CurrentDataProtectionCallCounts.Transit)
+
+	// Get the HMAC value
+	hmacValue, ok := resp.Data["hmac"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, hmacValue)
+
+	// Test HMAC verification
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/verify/foo")
+	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	req.Data["hmac"] = hmacValue
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, int64(6), billing.CurrentDataProtectionCallCounts.Transit)
+
+	// Verify the HMAC is valid
+	hmacValid, ok := resp.Data["valid"].(bool)
+	require.True(t, ok)
+	require.True(t, hmacValid)
+
+	// Create a signing key for sign/verify operations
+	req = logical.TestRequest(t, logical.CreateOperation, "transit/keys/signing-key")
+	req.Data["type"] = "ecdsa-p256"
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Test sign operation
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/sign/signing-key")
+	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, int64(7), billing.CurrentDataProtectionCallCounts.Transit)
+
+	// Get the signature
+	signature, ok := resp.Data["signature"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, signature)
+
+	// Test verify operation
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/verify/signing-key")
+	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	req.Data["signature"] = signature
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, int64(8), billing.CurrentDataProtectionCallCounts.Transit)
+
+	// Verify the signature is valid
+	signatureValid, ok := resp.Data["valid"].(bool)
+	require.True(t, ok)
+	require.True(t, signatureValid)
+
+	// Test CMAC operations (ENT only - will be no-op in OSS)
+	currentCount := billing.CurrentDataProtectionCallCounts.Transit
+	currentCount = testCMACOperations(t, core, ctx, root, currentCount)
+
+	// Verify that the transit counter matches expected count
+	require.Equal(t, currentCount, billing.CurrentDataProtectionCallCounts.Transit)
+
+	// Now test persisting the summed counts - store and retrieve counts
+	// First, update the data protection call counts (this will sum current counter with stored value)
+	summedCounts, err := core.UpdateDataProtectionCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	require.NotNil(t, summedCounts)
+	require.Equal(t, currentCount, summedCounts.Transit)
+
+	// Verify the counter was reset after update
+	require.Equal(t, int64(0), billing.CurrentDataProtectionCallCounts.Transit, "Counter should be reset after update")
+
+	// Retrieve the stored counts
+	storedCounts, err := core.GetStoredDataProtectionCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	require.NotNil(t, storedCounts)
+	require.Equal(t, currentCount, storedCounts.Transit)
+
+	// Perform more operations to increase the counter
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/encrypt/foo")
+	req.Data["plaintext"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Counter should now be 1 (reset + 1 operation)
+	require.Equal(t, int64(1), billing.CurrentDataProtectionCallCounts.Transit)
+
+	// Update counts again - should sum the new count (1) with the stored count (currentCount)
+	summedCounts, err = core.UpdateDataProtectionCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	expectedSum := currentCount + 1
+	require.Equal(t, expectedSum, summedCounts.Transit, "Count should be sum of stored and current")
+
+	// Verify the counter was reset after update
+	require.Equal(t, int64(0), billing.CurrentDataProtectionCallCounts.Transit, "Counter should be reset after update")
+
+	// Verify stored counts are now the sum
+	storedCounts, err = core.GetStoredDataProtectionCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, expectedSum, storedCounts.Transit)
+
+	// Add more operations without manually resetting
+	for i := 0; i < 3; i++ {
+		req = logical.TestRequest(t, logical.UpdateOperation, "transit/encrypt/foo")
+		req.Data["plaintext"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+		req.ClientToken = root
+		_, err = core.HandleRequest(ctx, req)
+		require.NoError(t, err)
+	}
+
+	// Counter should be 3
+	require.Equal(t, int64(3), billing.CurrentDataProtectionCallCounts.Transit)
+
+	// Update counts - should sum 3 with the previous stored sum
+	summedCounts, err = core.UpdateDataProtectionCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	expectedSum = expectedSum + 3
+	require.Equal(t, expectedSum, summedCounts.Transit, "Count should continue to sum")
+
+	// Verify the counter was reset after update
+	require.Equal(t, int64(0), billing.CurrentDataProtectionCallCounts.Transit, "Counter should be reset after update")
+
+	// Verify stored counts
+	storedCounts, err = core.GetStoredDataProtectionCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, expectedSum, storedCounts.Transit)
+
+	// Update again without any new operations
+	// This verifies we don't double-count
+	summedCounts, err = core.UpdateDataProtectionCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, expectedSum, summedCounts.Transit, "Count should remain the same when no new operations occurred")
+
+	// Verify stored counts haven't changed
+	storedCounts, err = core.GetStoredDataProtectionCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, expectedSum, storedCounts.Transit, "Stored count should remain the same")
+
+	// Verify counter is still at 0
+	require.Equal(t, int64(0), billing.CurrentDataProtectionCallCounts.Transit, "Counter should still be 0")
 }
 
 func addRoleToStorage(t *testing.T, core *Core, mount string, key string, numberOfKeys int) {

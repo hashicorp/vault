@@ -196,6 +196,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	defer p.Unlock()
 
 	successesInBatch := false
+	successfulRequests := 0
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			continue
@@ -252,6 +253,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 		successesInBatch = true
 		batchResponseItems[i].Plaintext = plaintext
+		successfulRequests++
 	}
 
 	resp := &logical.Response{}
@@ -275,6 +277,9 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			"plaintext": batchResponseItems[0].Plaintext,
 		}
 	}
+
+	// Increment the counter for successful operations
+	b.incrementDataProtectionCounter(int64(successfulRequests))
 
 	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
 }
