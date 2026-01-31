@@ -11,6 +11,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+type DiagnoseCheckLicenseGeneration struct {
+	Generate           bool
+	GenerateIBMLicense bool
+}
+
 // GetCoreConfigInternal returns the server configuration
 // in struct format.
 func (c *Core) GetCoreConfigInternal() *server.Config {
