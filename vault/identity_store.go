@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -33,6 +33,7 @@ import (
 const (
 	groupBucketsPrefix        = "packer/group/buckets/"
 	localAliasesBucketsPrefix = "packer/local-aliases/buckets/"
+	scimBucketsPrefix         = "packer/scim/buckets/"
 )
 
 var (
@@ -95,6 +96,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	core.AddLogger(localAliasesPackerLogger)
 	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
 	core.AddLogger(groupsPackerLogger)
+	scimPackerLogger := iStore.logger.Named("storagepacker").Named("scim")
+	core.AddLogger(scimPackerLogger)
 
 	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, entitiesPackerLogger, "")
 	if err != nil {
@@ -111,19 +114,24 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, fmt.Errorf("failed to create group packer: %w", err)
 	}
 
+	iStore.scimConfigPacker, err = storagepacker.NewStoragePacker(iStore.view, scimPackerLogger, scimBucketsPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create scim packer: %w", err)
+	}
+
 	iStore.Backend = &framework.Backend{
 		BackendType:    logical.TypeLogical,
 		Paths:          iStore.paths(),
 		Invalidate:     iStore.Invalidate,
 		InitializeFunc: iStore.initialize,
-		ActivationFunc: iStore.activateDeduplication,
+		ActivationFunc: iStore.activate,
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: append([]string{
 				"oidc/.well-known/*",
 				"oidc/+/.well-known/*",
 				"oidc/provider/+/.well-known/*",
 				"oidc/provider/+/token",
-			}, identityStoreLoginMFAEntUnauthedPaths()...),
+			}),
 			LocalStorage: []string{
 				localAliasesBucketsPrefix,
 			},
@@ -165,7 +173,6 @@ func (i *IdentityStore) paths() []*framework.Path {
 		mfaDuoPaths(i),
 		mfaPingIDPaths(i),
 		mfaLoginEnforcementPaths(i),
-		mfaLoginEnterprisePaths(i),
 	)
 }
 
@@ -1346,13 +1353,21 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		return nil, false, fmt.Errorf("mount accessor %q is not a mount of type %q", alias.MountAccessor, alias.MountType)
 	}
 
-	// Check if an entity already exists for the given alias
-	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, true)
+	// Check if an entity already exists for the given alias.
+	// We don't clone here to avoid unnecessary allocations - if we need to
+	// return early, we'll clone at that point.
+	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, false)
 	if err != nil {
 		return nil, false, err
 	}
 	if entity != nil && changedAliasIndex(entity, alias) == -1 {
-		return entity, false, nil
+		// Entity exists and no metadata changes - clone before returning
+		// to avoid exposing internal MemDB state to callers.
+		clonedEntity, err := entity.Clone()
+		if err != nil {
+			return nil, false, err
+		}
+		return clonedEntity, false, nil
 	}
 
 	i.lock.Lock()
@@ -1362,20 +1377,31 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
-	// Check if an entity was created before acquiring the lock
-	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, true)
+	// Check if an entity was created before acquiring the lock.
+	// We don't clone here because:
+	// 1. If no changes needed, we clone before returning
+	// 2. If changes needed, we'll modify and clone at the end anyway
+	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, false)
 	if err != nil {
 		return nil, false, err
 	}
 	if entity != nil {
+		// Clone immediately to avoid modifying MemDB state directly
+		entity, err = entity.Clone()
+		if err != nil {
+			return nil, false, err
+		}
+
 		idx := changedAliasIndex(entity, alias)
 		if idx == -1 {
+			// No changes needed, return the cloned entity
 			return entity, false, nil
 		}
+
+		// Safe to modify the cloned entity
 		a := entity.Aliases[idx]
 		a.Metadata = alias.Metadata
 		a.LastUpdateTime = timestamppb.Now()
-
 		update = true
 	}
 
@@ -1388,13 +1414,14 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 
 		// Create a new alias
 		newAlias := &identity.Alias{
-			CanonicalID:   entity.ID,
-			Name:          alias.Name,
-			MountAccessor: alias.MountAccessor,
-			Metadata:      alias.Metadata,
-			MountPath:     mountValidationResp.MountPath,
-			MountType:     mountValidationResp.MountType,
-			Local:         alias.Local,
+			CanonicalID:    entity.ID,
+			Name:           alias.Name,
+			MountAccessor:  alias.MountAccessor,
+			Metadata:       alias.Metadata,
+			MountPath:      mountValidationResp.MountPath,
+			MountType:      mountValidationResp.MountType,
+			Local:          alias.Local,
+			CustomMetadata: alias.CustomMetadata,
 		}
 
 		err = i.sanitizeAlias(ctx, newAlias)

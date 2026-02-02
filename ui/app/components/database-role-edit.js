@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 import Component from '@glimmer/component';
@@ -55,6 +55,16 @@ export default class DatabaseRoleEdit extends Component {
     this.flashMessages.clearMessages();
     this.errorMessage = this.invalidFormAlert = '';
     this.modelValidations = null;
+  }
+
+  get title() {
+    if (this.args?.mode === 'create') {
+      return 'Create Role';
+    } else if (this.args?.mode === 'edit') {
+      return 'Edit Role';
+    } else {
+      return this.args?.model?.id;
+    }
   }
 
   get warningMessages() {

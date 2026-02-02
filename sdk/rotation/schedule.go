@@ -1,9 +1,10 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package rotation
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -18,12 +19,43 @@ const (
 
 // RotationSchedule holds the parsed and unparsed versions of the schedule, along with the projected next rotation time.
 type RotationSchedule struct {
-	Schedule          *cron.SpecSchedule `json:"schedule"`
+	Schedule          *cron.SpecSchedule `json:"-"`
 	RotationWindow    time.Duration      `json:"rotation_window"` // seconds of window
 	RotationSchedule  string             `json:"rotation_schedule"`
 	RotationPeriod    time.Duration      `json:"rotation_period"`
 	NextVaultRotation time.Time          `json:"next_vault_rotation"`
 	LastVaultRotation time.Time          `json:"last_vault_rotation"`
+}
+
+func (r *RotationSchedule) UnmarshalJSON(bt []byte) error {
+	in := &struct {
+		RotationWindow    time.Duration `json:"rotation_window"`
+		RotationSchedule  string        `json:"rotation_schedule"`
+		RotationPeriod    time.Duration `json:"rotation_period"`
+		NextVaultRotation time.Time     `json:"next_vault_rotation"`
+		LastVaultRotation time.Time     `json:"last_vault_rotation"`
+	}{}
+	if err := json.Unmarshal(bt, in); err != nil {
+		return err
+	}
+
+	var sched *cron.SpecSchedule
+	var err error
+
+	if in.RotationSchedule != "" {
+		sched, err = DefaultScheduler.Parse(in.RotationSchedule)
+		if err != nil {
+			return err
+		}
+	}
+	r.Schedule = sched
+	r.RotationWindow = in.RotationWindow
+	r.RotationSchedule = in.RotationSchedule
+	r.RotationPeriod = in.RotationPeriod
+	r.NextVaultRotation = in.NextVaultRotation
+	r.LastVaultRotation = in.LastVaultRotation
+
+	return nil
 }
 
 type Scheduler interface {
@@ -52,6 +84,10 @@ func (d *DefaultSchedule) Parse(rotationSchedule string) (*cron.SpecSchedule, er
 	if !ok {
 		return nil, fmt.Errorf("invalid rotation schedule")
 	}
+
+	// override the timezone in all cases, even if was set otherwise
+	sched.Location = time.UTC
+
 	return sched, nil
 }
 

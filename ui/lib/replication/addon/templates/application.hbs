@@ -1,9 +1,9 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::SideNav::Portal @ariaLabel="Replication Navigation Links" data-test-sidebar-nav-panel="Replication" as |Nav|>
+<Hds::AppSideNav::Portal @ariaLabel="Replication Navigation Links" data-test-sidebar-nav-panel="Replication" as |Nav|>
   <Nav.BackLink
     @route="vault"
     @current-when={{false}}
@@ -29,6 +29,6 @@
       <Nav.Link @route="mode" @model="performance" @text="Performance" data-test-sidebar-nav-link="Performance" />
     {{/if}}
   {{/if}}
-</Hds::SideNav::Portal>
+</Hds::AppSideNav::Portal>
 
 {{outlet}}

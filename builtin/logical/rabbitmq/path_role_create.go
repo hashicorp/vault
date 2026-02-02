@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package rabbitmq
@@ -122,6 +122,9 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		if success {
 			return
 		}
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeRabbitMQCredentialCreateFail, map[string]interface{}{
+			"role_name": name,
+		})
 		// Delete the user because it's in an unknown state.
 		resp, err := client.DeleteUser(username)
 		if err != nil {
@@ -209,6 +212,15 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	if lease != nil {
 		response.Secret.TTL = lease.TTL
 		response.Secret.MaxTTL = lease.MaxTTL
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeRabbitMQCredentialCreateSuccess, map[string]interface{}{
+			"role_name": name,
+			"ttl":       lease.TTL.String(),
+			"max_ttl":   lease.MaxTTL.String(),
+		})
+	} else {
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeRabbitMQCredentialCreateSuccess, map[string]interface{}{
+			"role_name": name,
+		})
 	}
 
 	return response, nil

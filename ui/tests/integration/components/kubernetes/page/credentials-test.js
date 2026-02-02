@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,10 +9,10 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
-import { Response } from 'miragejs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import timestamp from 'core/utils/timestamp';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Integration | Component | kubernetes | Page::Credentials', function (hooks) {
   setupRenderingTest(hooks);
@@ -22,7 +22,20 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
   hooks.beforeEach(function () {
     sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
     this.backend = 'kubernetes-test';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
     this.roleName = 'role-0';
+
+    this.generateStub = sinon
+      .stub(this.owner.lookup('service:api').secrets, 'kubernetesGenerateCredentials')
+      .resolves({
+        lease_duration: 3600,
+        lease_id: 'kubernetes/creds/default-role/aWczfcfJ7NKUdiirJrPXIs38',
+        data: {
+          service_account_name: 'default',
+          service_account_namespace: 'default',
+          service_account_token: 'eyJhbGciOiJSUzI1NiIsImtpZCI6Imlr',
+        },
+      });
 
     this.getCreateCredentialsError = (roleName, errorType = null) => {
       let errors;
@@ -33,29 +46,26 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
         errors = [`role '${roleName}' does not exist`];
       }
 
-      this.server.post(`/kubernetes-test/creds/${roleName}`, () => {
-        return new Response(400, {}, { errors });
-      });
+      this.generateStub.rejects(getErrorResponse({ errors }, 400));
     };
+
     this.breadcrumbs = [
       { label: this.backend, route: 'overview' },
       { label: 'Roles', route: 'roles' },
       { label: this.roleName, route: 'roles.role.details' },
       { label: 'Credentials' },
     ];
+
     this.renderComponent = () => {
-      return render(
-        hbs`<Page::Credentials @backend={{this.backend}} @roleName={{this.roleName}} @breadcrumbs={{this.breadcrumbs}}/>`,
-        {
-          owner: this.engine,
-        }
-      );
+      return render(hbs`<Page::Credentials @roleName={{this.roleName}} @breadcrumbs={{this.breadcrumbs}}/>`, {
+        owner: this.engine,
+      });
     };
   });
 
   test('it should display generate credentials form', async function (assert) {
     await this.renderComponent();
-    assert.dom('[data-test-credentials-header]').hasText('Generate credentials');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Generate credentials');
     assert
       .dom('[data-test-generate-credentials] p')
       .hasText(`This will generate credentials using the role ${this.roleName}.`);
@@ -91,21 +101,6 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
   test('it should show correct credential information after generate credentials is clicked', async function (assert) {
     assert.expect(15);
 
-    this.server.post('/kubernetes-test/creds/role-0', () => {
-      assert.true(true, 'POST request made to generate credentials');
-      return {
-        request_id: '58fefc6c-5195-c17a-94f2-8f889f3df57c',
-        lease_id: 'kubernetes/creds/default-role/aWczfcfJ7NKUdiirJrPXIs38',
-        renewable: false,
-        lease_duration: 3600,
-        data: {
-          service_account_name: 'default',
-          service_account_namespace: 'default',
-          service_account_token: 'eyJhbGciOiJSUzI1NiIsImtpZCI6Imlr',
-        },
-      };
-    });
-
     await this.renderComponent();
     await fillIn('[data-test-kubernetes-namespace]', 'kubernetes-test');
     assert.dom('[data-test-kubernetes-namespace]').hasValue('kubernetes-test', 'kubernetes-test');
@@ -114,7 +109,16 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     await fillIn('[data-test-ttl-value="Time-to-Live (TTL)"]', 2);
     await click('[data-test-generate-credentials-button]');
 
-    assert.dom('[data-test-credentials-header]').hasText('Credentials');
+    const payload = {
+      kubernetes_namespace: 'kubernetes-test',
+      cluster_role_binding: true,
+      ttl: '2s',
+    };
+    assert.true(
+      this.generateStub.calledWith(this.roleName, this.backend, payload),
+      'Generate credentials request made'
+    );
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Credentials');
     assert.dom('[data-test-k8-alert-title]').hasText('Warning');
     assert
       .dom('[data-test-k8-alert-message]')
@@ -131,9 +135,9 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
 
     assert.dom('[data-test-row-label="Lease expiry"]').hasText('Lease expiry');
     assert.dom(GENERAL.infoRowValue('Lease expiry')).hasText('April 3rd 2018, 3:15:30 PM');
-    assert.dom('[data-test-row-label="lease_id"]').hasText('lease_id');
+    assert.dom('[data-test-row-label="Lease ID"]').hasText('Lease ID');
     assert
-      .dom(GENERAL.infoRowValue('lease_id'))
+      .dom(GENERAL.infoRowValue('Lease ID'))
       .hasText('kubernetes/creds/default-role/aWczfcfJ7NKUdiirJrPXIs38');
   });
 });

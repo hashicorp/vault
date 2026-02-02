@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,12 +7,13 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, waitUntil, find, fillIn } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { Response } from 'miragejs';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import KubernetesConfigForm from 'vault/forms/secrets/kubernetes/config';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Integration | Component | kubernetes | Page::Configure', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,20 +21,18 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.newModel = this.store.createRecord('kubernetes/config', { backend: 'kubernetes-new' });
+    this.backend = 'kubernetes-test';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
+
+    this.createForm = new KubernetesConfigForm({ disable_local_ca_jwt: false }, { isNew: true });
     this.existingConfig = {
       kubernetes_host: 'https://192.168.99.100:8443',
       kubernetes_ca_cert: '-----BEGIN CERTIFICATE-----\n.....\n-----END CERTIFICATE-----',
       service_account_jwt: 'test-jwt',
       disable_local_ca_jwt: true,
     };
-    this.store.pushPayload('kubernetes/config', {
-      modelName: 'kubernetes/config',
-      backend: 'kubernetes-edit',
-      ...this.existingConfig,
-    });
-    this.editModel = this.store.peekRecord('kubernetes/config', 'kubernetes-edit');
+    this.editForm = new KubernetesConfigForm(this.existingConfig);
+    this.form = this.createForm;
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: 'kubernetes', route: 'overview' },
@@ -41,10 +40,14 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     ];
     this.expectedInferred = {
       disable_local_ca_jwt: false,
-      kubernetes_ca_cert: null,
-      kubernetes_host: null,
-      service_account_jwt: null,
     };
+
+    const { secrets } = this.owner.lookup('service:api');
+    this.checkStub = sinon.stub(secrets, 'kubernetesCheckConfiguration').resolves();
+    this.configStub = sinon.stub(secrets, 'kubernetesConfigure').resolves();
+
+    this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
+
     setRunOptions({
       rules: {
         // TODO: fix RadioCard component (replace with HDS)
@@ -52,12 +55,15 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
         'nested-interactive': { enabled: false },
       },
     });
+    this.renderComponent = () =>
+      render(hbs`<Page::Configure @form={{this.form}} @breadcrumbs={{this.breadcrumbs}} />`, {
+        owner: this.engine,
+      });
   });
 
   test('it should display proper options when toggling radio cards', async function (assert) {
-    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
+
     assert
       .dom('[data-test-radio-card="local"] input')
       .isChecked('Local cluster radio card is checked by default');
@@ -82,20 +88,11 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
   test('it should check for inferred config variables', async function (assert) {
     assert.expect(8);
 
-    let status = 404;
-    this.server.get('/:path/check', () => {
-      assert.ok(
-        waitUntil(() => find('[data-test-config] button').disabled),
-        'Button is disabled while request is in flight'
-      );
-      return new Response(status, {});
-    });
-
-    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
-      owner: this.engine,
-    });
+    this.checkStub.rejects(getErrorResponse());
+    await this.renderComponent();
 
     await click('[data-test-config] button');
+    assert.true(this.checkStub.calledWith(this.backend), 'Check config request is made');
     assert
       .dom('[data-test-icon="x-square-fill"]')
       .hasClass('has-text-danger', 'Icon is displayed for error state with correct styling');
@@ -104,10 +101,11 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     assert.dom('[data-test-config] span').hasText(error, 'Error text is displayed');
     assert.dom('[data-test-config-save]').isDisabled('Save button is disabled in error state');
 
-    status = 204;
+    this.checkStub.resolves();
     await click('[data-test-radio-card="manual"]');
     await click('[data-test-radio-card="local"]');
     await click('[data-test-config] button');
+    assert.true(this.checkStub.calledWith(this.backend), 'Check config request is made');
     assert
       .dom('[data-test-icon="check-circle-fill"]')
       .hasClass('has-text-success', 'Icon is displayed for success state with correct styling');
@@ -120,74 +118,53 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
   test('it should create new manual config', async function (assert) {
     assert.expect(2);
 
-    this.server.post('/:path/config', (schema, req) => {
-      const json = JSON.parse(req.requestBody);
-      assert.deepEqual(json, this.existingConfig, 'Values are passed to create endpoint');
-      return new Response(204, {});
-    });
-
-    const stub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-
-    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
 
     await click('[data-test-radio-card="manual"]');
-    await fillIn('[data-test-input="kubernetesHost"]', this.existingConfig.kubernetes_host);
-    await fillIn('[data-test-input="serviceAccountJwt"]', this.existingConfig.service_account_jwt);
-    await fillIn('[data-test-input="kubernetesCaCert"]', this.existingConfig.kubernetes_ca_cert);
+    await fillIn('[data-test-input="kubernetes_host"]', this.existingConfig.kubernetes_host);
+    await fillIn('[data-test-input="service_account_jwt"]', this.existingConfig.service_account_jwt);
+    await fillIn('[data-test-input="kubernetes_ca_cert"]', this.existingConfig.kubernetes_ca_cert);
     await click('[data-test-config-save]');
+    assert.true(
+      this.configStub.calledWith(this.backend, this.existingConfig),
+      'Create config request is made'
+    );
     assert.ok(
-      stub.calledWith('vault.cluster.secrets.backend.kubernetes.configuration'),
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.kubernetes.configuration'),
       'Transitions to configuration route on save success'
     );
   });
 
-  test('it should edit existing manual config', async function (assert) {
-    assert.expect(6);
+  test('it should render existing manual config data in form', async function (assert) {
+    assert.expect(5);
 
-    const stub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-
-    await render(hbs`<Page::Configure @model={{this.editModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
-      owner: this.engine,
-    });
+    this.form = this.editForm;
+    await this.renderComponent();
 
     assert.dom('[data-test-radio-card="manual"] input').isChecked('Manual config radio card is checked');
     assert
-      .dom('[data-test-input="kubernetesHost"]')
+      .dom('[data-test-input="kubernetes_host"]')
       .hasValue(this.existingConfig.kubernetes_host, 'Host field is populated');
     assert
-      .dom('[data-test-input="serviceAccountJwt"]')
+      .dom('[data-test-input="service_account_jwt"]')
       .hasValue(this.existingConfig.service_account_jwt, 'JWT field is populated');
     assert
-      .dom('[data-test-input="kubernetesCaCert"]')
+      .dom('[data-test-input="kubernetes_ca_cert"]')
       .hasValue(this.existingConfig.kubernetes_ca_cert, 'Cert field is populated');
 
-    await fillIn('[data-test-input="kubernetesHost"]', 'http://localhost:1212');
     await click('[data-test-config-cancel]');
 
     assert.ok(
-      stub.calledWith('vault.cluster.secrets.backend.kubernetes.configuration'),
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.kubernetes.configuration'),
       'Transitions to configuration route when cancelling edit'
-    );
-    assert.strictEqual(
-      this.editModel.kubernetesHost,
-      this.existingConfig.kubernetes_host,
-      'Model values are rolled back on cancel'
     );
   });
 
   test('it should display inferred success message when editing model using local values', async function (assert) {
-    this.store.pushPayload('kubernetes/config', {
-      modelName: 'kubernetes/config',
-      backend: 'kubernetes-edit-2',
-      disable_local_ca_jwt: false,
-    });
-    this.model = this.store.peekRecord('kubernetes/config', 'kubernetes-edit-2');
+    this.form = this.editForm;
+    this.form.data.disable_local_ca_jwt = false;
 
-    await render(hbs`<Page::Configure @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
 
     assert.dom('[data-test-radio-card="local"] input').isChecked('Local cluster radio card is checked');
     assert
@@ -201,17 +178,9 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
   test('it should show confirmation modal when saving edits', async function (assert) {
     assert.expect(2);
 
-    this.server.post('/:path/config', () => {
-      assert.ok(true, 'Save request made after confirmation');
-      return new Response(204, {});
-    });
+    this.form = this.editForm;
+    await this.renderComponent();
 
-    await render(
-      hbs`
-            <Page::Configure @model={{this.editModel}} @breadcrumbs={{this.breadcrumbs}} />
-    `,
-      { owner: this.engine }
-    );
     await click('[data-test-config-save]');
     assert
       .dom('[data-test-edit-config-body]')
@@ -220,18 +189,20 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
         'Confirm modal renders'
       );
     await click('[data-test-config-confirm]');
+    assert.true(
+      this.configStub.calledWith(this.backend, this.existingConfig),
+      'Config is saved after confirming'
+    );
   });
 
   test('it should validate form and show errors', async function (assert) {
-    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
 
     await click('[data-test-radio-card="manual"]');
     await click('[data-test-config-save]');
 
     assert
-      .dom(GENERAL.validationErrorByAttr('kubernetesHost'))
+      .dom(GENERAL.validationErrorByAttr('kubernetes_host'))
       .hasText('Kubernetes host is required', 'Error renders for required field');
     assert.dom('[data-test-alert]').hasText('There is an error with this form.', 'Alert renders');
   });
@@ -239,24 +210,17 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
   test('it should save inferred config', async function (assert) {
     assert.expect(2);
 
-    this.server.get('/:path/check', () => new Response(204, {}));
-    this.server.post('/:path/config', (schema, req) => {
-      const json = JSON.parse(req.requestBody);
-      assert.deepEqual(json, this.expectedInferred, 'Values are passed to create endpoint');
-      return new Response(204, {});
-    });
-
-    const stub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-
-    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
 
     await click('[data-test-config] button');
     await click('[data-test-config-save]');
 
+    assert.true(
+      this.configStub.calledWith(this.backend, this.expectedInferred),
+      'Request made to save inferred config values'
+    );
     assert.ok(
-      stub.calledWith('vault.cluster.secrets.backend.kubernetes.configuration'),
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.kubernetes.configuration'),
       'Transitions to configuration route on save success'
     );
   });
@@ -264,24 +228,20 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
   test('it should unset manual config values when saving local cluster option', async function (assert) {
     assert.expect(1);
 
-    this.server.get('/:path/check', () => new Response(204, {}));
-    this.server.post('/:path/config', (schema, req) => {
-      const json = JSON.parse(req.requestBody);
-      assert.deepEqual(json, this.expectedInferred, 'Manual config values are unset in server payload');
-      return new Response(204, {});
-    });
-
-    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
 
     await click('[data-test-radio-card="manual"]');
-    await fillIn('[data-test-input="kubernetesHost"]', this.existingConfig.kubernetes_host);
-    await fillIn('[data-test-input="serviceAccountJwt"]', this.existingConfig.service_account_jwt);
-    await fillIn('[data-test-input="kubernetesCaCert"]', this.existingConfig.kubernetes_ca_cert);
+    await fillIn('[data-test-input="kubernetes_host"]', this.existingConfig.kubernetes_host);
+    await fillIn('[data-test-input="service_account_jwt"]', this.existingConfig.service_account_jwt);
+    await fillIn('[data-test-input="kubernetes_ca_cert"]', this.existingConfig.kubernetes_ca_cert);
 
     await click('[data-test-radio-card="local"]');
     await click('[data-test-config] button');
     await click('[data-test-config-save]');
+
+    assert.true(
+      this.configStub.calledWith(this.backend, this.expectedInferred),
+      'Manual config values are unset in server payload'
+    );
   });
 });

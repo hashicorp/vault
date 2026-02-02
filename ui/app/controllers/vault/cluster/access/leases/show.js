@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -12,12 +12,20 @@ export default Controller.extend({
   clusterController: controller('vault.cluster'),
 
   backendCrumb: computed('clusterController.model.name', function () {
-    return {
-      label: 'Leases',
-      text: 'Leases',
-      path: 'vault.cluster.access.leases.list-root',
-      model: this.clusterController.model.name,
-    };
+    return [
+      {
+        label: 'Vault',
+        text: 'Vault',
+        path: 'vault.cluster.dashboard',
+        icon: 'vault',
+      },
+      {
+        label: 'Leases',
+        text: 'Leases',
+        path: 'vault.cluster.access.leases.list-root',
+        model: this.clusterController.model.name,
+      },
+    ];
   }),
 
   flashMessages: service(),

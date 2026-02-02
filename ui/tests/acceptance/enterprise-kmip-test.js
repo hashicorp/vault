@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,6 +11,7 @@ import {
   visit,
   waitUntil,
   find,
+  findAll,
   click,
 } from '@ember/test-helpers';
 import { module, test } from 'qunit';
@@ -112,20 +113,12 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     const backend = this.backend;
     await scopesPage.visit({ backend });
     await settled();
-    await scopesPage.configurationLink();
-    await settled();
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${backend}/kmip/configuration`,
-      'configuration navigates to the config page'
-    );
-    assert.ok(scopesPage.isEmpty, 'config page renders empty state');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Configure'));
 
-    await scopesPage.configureLink();
-    await settled();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/configure`,
+      `/vault/secrets-engines/${backend}/kmip/configure`,
       'configuration navigates to the configure page'
     );
     const addr = `127.0.0.1:${getRandomPort()}`;
@@ -133,17 +126,17 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/configuration`,
+      `/vault/secrets-engines/${backend}/kmip/configuration`,
       'redirects to configuration page after saving config'
     );
     assert.notOk(scopesPage.isEmpty, 'configuration page no longer renders empty state');
-    assert.dom(GENERAL.infoRowValue('Listen addrs')).hasText(addr, 'renders the correct listen address');
+    assert.dom(GENERAL.infoRowValue('Listen addresses')).hasText(addr, 'renders the correct listen address');
   });
 
   test('it can revoke from the credentials show page', async function (assert) {
     const { backend, scope, role, serial } = await generateCreds(this.backend);
     await settled();
-    await visit(`/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials/${serial}`);
+    await visit(`/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/${role}/credentials/${serial}`);
 
     // Wait for the delete/revoke button to appear
     await waitUntil(() => find(GENERAL.confirmTrigger));
@@ -157,7 +150,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/${role}/credentials`,
       'redirects to the credentials list'
     );
     assert
@@ -173,7 +166,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/create`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/create`,
       'navigates to the kmip scope create page'
     );
 
@@ -183,7 +176,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes`,
+      `/vault/secrets-engines/${backend}/kmip/scopes`,
       'navigates to the kmip scopes page after create'
     );
     assert.strictEqual(scopesPage.listItemLinks.length, 1, 'renders a single scope');
@@ -229,12 +222,12 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/create`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/create`,
       'links to the role create form'
     );
     // check that the role form looks right
-    assert.dom(GENERAL.inputByAttr('operationNone')).isChecked('allows role to perform roles by default');
-    assert.dom(GENERAL.inputByAttr('operationAll')).isChecked('operationAll is checked by default');
+    assert.dom(GENERAL.inputByAttr('operation_none')).isChecked('allows role to perform roles by default');
+    assert.dom(GENERAL.inputByAttr('operation_all')).isChecked('operation_all is checked by default');
     assert.dom('[data-test-kmip-section]').exists({ count: 2 });
     assert.dom('[data-test-kmip-operations]').exists({ count: 4 });
 
@@ -243,7 +236,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles`,
       'redirects to roles list'
     );
 
@@ -301,20 +294,20 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/edit`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/${role}/edit`,
       'navigates to role edit'
     );
     await click(GENERAL.cancelButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/${role}`,
       'cancel navigates to role show'
     );
     await click(GENERAL.confirmTrigger);
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles`,
       'redirects to the roles list'
     );
     assert.ok(rolesPage.isEmpty, 'renders an empty roles page');
@@ -329,7 +322,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials/generate`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/${role}/credentials/generate`,
       'navigates to generate credentials'
     );
     await click(GENERAL.submitButton);
@@ -361,7 +354,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials`,
+      `/vault/secrets-engines/${backend}/kmip/scopes/${scope}/roles/${role}/credentials`,
       'redirects to the credentials list'
     );
     assert.true(credentialsPage.isEmpty, 'renders an empty credentials page');
@@ -386,78 +379,89 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   // the kmip/role model relies on openApi so testing the form via an acceptance test
   module('kmip role edit form', function (hooks) {
     hooks.beforeEach(async function () {
-      this.store = this.owner.lookup('service:store');
       this.scope = 'my-scope';
       this.name = 'my-role';
+
       await login();
       await runCmd(mountEngineCmd('kmip', this.backend), false);
       await runCmd([`write ${this.backend}/scope/${this.scope} -force`]);
       await rolesPage.visit({ backend: this.backend, scope: this.scope });
-      this.setModel = async () => {
+
+      this.saveRole = async () => {
         await click(GENERAL.submitButton);
-        await visit(`/vault/secrets/${this.backend}/kmip/scopes/${this.scope}/roles/${this.name}`);
-        this.model = this.store.peekRecord('kmip/role', this.name);
+        await visit(`/vault/secrets-engines/${this.backend}/kmip/scopes/${this.scope}/roles/${this.name}`);
       };
+
+      this.iconSelector = (operation) => `[data-test-operation-field="${operation}"] svg`;
     });
 
-    // "operationNone" is the attr name for the 'Allow this role to perform KMIP operations' toggle
-    // operationNone = false => the toggle is ON and KMIP operations are allowed
-    // operationNone = true => the toggle is OFF and KMIP operations are not allowed
-    test('it submits when operationNone is toggled on', async function (assert) {
-      assert.expect(3);
-
-      await click('[data-test-role-create]');
-      await fillIn(GENERAL.inputByAttr('role'), this.name);
-      assert.dom(GENERAL.inputByAttr('operationAll')).isChecked('operationAll is checked by default');
-      await this.setModel();
-      assert.true(this.model.operationAll, 'operationAll is true');
-      assert.strictEqual(this.model.operationNone, undefined, 'operationNone is unset');
-    });
-
-    test('it submits when operationNone is toggled off', async function (assert) {
-      assert.expect(4);
-
-      await click('[data-test-role-create]');
-      await fillIn(GENERAL.inputByAttr('role'), this.name);
-      await click(GENERAL.inputByAttr('operationNone'));
-      assert
-        .dom(GENERAL.inputByAttr('operationNone'))
-        .isNotChecked('Allow this role to perform KMIP operations is toggled off');
-      assert
-        .dom(GENERAL.inputByAttr('operationAll'))
-        .doesNotExist('clicking the toggle hides KMIP operation checkboxes');
-      await this.setModel();
-      assert.strictEqual(this.model.operationAll, undefined, 'operationAll is unset');
-      assert.true(this.model.operationNone, 'operationNone is true');
-    });
-
-    test('it submits when operationAll is unchecked', async function (assert) {
+    // "operation_none" is the field name for the 'Allow this role to perform KMIP operations' toggle
+    // operation_none = false => the toggle is ON and KMIP operations are allowed
+    // operation_none = true => the toggle is OFF and KMIP operations are not allowed
+    test('it submits when operation_none is toggled on', async function (assert) {
       assert.expect(2);
 
       await click('[data-test-role-create]');
-      await fillIn(GENERAL.inputByAttr('role'), this.name);
-      await click(GENERAL.inputByAttr('operationAll'));
-      await this.setModel();
+      await fillIn(GENERAL.inputByAttr('name'), this.name);
+      assert.dom(GENERAL.inputByAttr('operation_all')).isChecked('operation_all is checked by default');
+      await this.saveRole();
+      assert
+        .dom(GENERAL.inlineError)
+        .hasText('This role allows all KMIP operations', 'operation_all was saved');
+    });
 
-      assert.strictEqual(this.model.operationAll, undefined, 'operationAll is unset');
-      assert.true(this.model.operationNone, 'operationNone is true');
+    test('it submits when operation_none is toggled off', async function (assert) {
+      assert.expect(3);
+
+      await click('[data-test-role-create]');
+      await fillIn(GENERAL.inputByAttr('name'), this.name);
+      await click(GENERAL.inputByAttr('operation_none'));
+      assert
+        .dom(GENERAL.inputByAttr('operation_none'))
+        .isNotChecked('Allow this role to perform KMIP operations is toggled off');
+      assert
+        .dom(GENERAL.inputByAttr('operation_all'))
+        .doesNotExist('clicking the toggle hides KMIP operation checkboxes');
+
+      await this.saveRole();
+      const operations = findAll('[data-test-operation-field]');
+      const notAllowed = findAll('[data-test-operation-field] svg[data-test-icon="x-square"]');
+      assert.strictEqual(notAllowed.length, operations.length, 'no operations are allowed');
+    });
+
+    test('it submits when operation_all is unchecked', async function (assert) {
+      assert.expect(2);
+
+      await click('[data-test-role-create]');
+      await fillIn(GENERAL.inputByAttr('name'), this.name);
+      await click(GENERAL.inputByAttr('operation_all'));
+      await click(GENERAL.inputByAttr('operation_create'));
+      await this.saveRole();
+
+      assert.dom(GENERAL.inlineError).doesNotExist('operation_all was not saved');
+      assert
+        .dom(this.iconSelector('operation_create'))
+        .hasAttribute('data-test-icon', 'check-circle', 'operation_create was saved');
     });
 
     test('it submits individually selected operations', async function (assert) {
-      assert.expect(6);
+      assert.expect(4);
 
       await click('[data-test-role-create]');
-      await fillIn(GENERAL.inputByAttr('role'), this.name);
-      await click(GENERAL.inputByAttr('operationAll'));
-      await click(GENERAL.inputByAttr('operationGet'));
-      await click(GENERAL.inputByAttr('operationGetAttributes'));
-      assert.dom(GENERAL.inputByAttr('operationAll')).isNotChecked();
-      assert.dom(GENERAL.inputByAttr('operationCreate')).isNotChecked(); // unchecking operationAll deselects the other checkboxes
-      await this.setModel();
-      assert.strictEqual(this.model.operationAll, undefined, 'operationAll is unset');
-      assert.strictEqual(this.model.operationNone, undefined, 'operationNone is unset');
-      assert.true(this.model.operationGet, 'operationGet is true');
-      assert.true(this.model.operationGetAttributes, 'operationGetAttributes is true');
+      await fillIn(GENERAL.inputByAttr('name'), this.name);
+      await click(GENERAL.inputByAttr('operation_all'));
+      await click(GENERAL.inputByAttr('operation_get'));
+      await click(GENERAL.inputByAttr('operation_get_attributes'));
+      assert.dom(GENERAL.inputByAttr('operation_all')).isNotChecked();
+      assert.dom(GENERAL.inputByAttr('operation_create')).isNotChecked(); // unchecking operation_all deselects the other checkboxes
+
+      await this.saveRole();
+      assert
+        .dom(this.iconSelector('operation_get'))
+        .hasAttribute('data-test-icon', 'check-circle', 'operation_get was saved');
+      assert
+        .dom(this.iconSelector('operation_get_attributes'))
+        .hasAttribute('data-test-icon', 'check-circle', 'operation_get_attributes was saved');
     });
   });
 });

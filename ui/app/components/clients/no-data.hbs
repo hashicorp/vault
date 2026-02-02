@@ -1,33 +1,40 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 {{#if (or @config.reportingEnabled (eq @config.enabled "On"))}}
-  <EmptyState
-    @title="No data received"
-    @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
-    class="is-shadowless"
-  />
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="No data received" />
+    <A.Body
+      data-test-empty-state-message
+      @text="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
+    />
+  </Hds::ApplicationState>
 {{else if @config}}
-  <EmptyState
-    @title="Data tracking is disabled"
-    @message="Tracking is disabled, and no data is being collected. To turn it on, edit the configuration."
-    class="is-shadowless"
-  >
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="Data tracking is disabled" />
+    <A.Body
+      data-test-empty-state-message
+      @text="Tracking is disabled, and no data is being collected. To turn it on, edit the configuration."
+    />
     {{#if @config.canEdit}}
-      <Hds::Link::Standalone
-        @icon="chevron-right"
-        @iconPosition="trailing"
-        @text="Go to configuration"
-        @route="vault.cluster.clients.config"
-      />
+      <A.Footer as |F|>
+        <F.LinkStandalone
+          @icon="chevron-right"
+          @iconPosition="trailing"
+          @text="Go to configuration"
+          @route="vault.cluster.clients.config"
+        />
+      </A.Footer>
     {{/if}}
-  </EmptyState>
+  </Hds::ApplicationState>
 {{else}}
-  <EmptyState
-    @title="Activity configuration data is unavailable"
-    @message="Reporting status is unknown and could be enabled or disabled. Check the Vault logs for more information."
-    class="is-shadowless"
-  />
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="Activity configuration data is unavailable" />
+    <A.Body
+      data-test-empty-state-message
+      @text="Reporting status is unknown and could be enabled or disabled. Check the Vault logs for more information."
+    />
+  </Hds::ApplicationState>
 {{/if}}

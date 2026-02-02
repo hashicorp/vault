@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package ldap
@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
@@ -514,6 +514,55 @@ func TestBackend_LoginRegression_AnonBind(t *testing.T) {
 			testAccStepUserList(t, []string{"hermes conrad"}),
 		},
 	})
+}
+
+// TestBackend_Login_EmptyPasswordDisallowed ensures that logins with empty
+// passwords are disallowed
+func TestBackend_Login_EmptyPasswordDisallowed(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	defer cleanup()
+
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			"url":            cfg.Url,
+			"userattr":       cfg.UserAttr,
+			"userdn":         cfg.UserDN,
+			"groupdn":        cfg.GroupDN,
+			"groupattr":      cfg.GroupAttr,
+			"binddn":         cfg.BindDN,
+			"bindpassword":   cfg.BindPassword,
+			"deny_null_bind": false,
+		},
+		Storage: storage,
+	}
+	resp, err := b.HandleRequest(context.Background(), configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// password is empty
+	loginReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "login/hermes conrad",
+		Data: map[string]interface{}{
+			"password": "",
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{},
+	}
+
+	resp, err = b.HandleRequest(context.Background(), loginReq)
+	if err == nil {
+		t.Fatalf("expected error but got none, resp:%#v", resp)
+	}
+
+	expectedErr := "password cannot be of zero length when passwordless binds are being denied"
+	if !strings.Contains(err.Error(), expectedErr) {
+		t.Fatalf("expected error to contain %q but got: %q", expectedErr, err.Error())
+	}
 }
 
 // TestBackend_LoginRegression_UserAttr is a test for the regression reported in
@@ -1472,6 +1521,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 		TokenParams: tokenutil.TokenParams{
 			TokenPeriod:         5 * time.Minute,
 			TokenExplicitMaxTTL: 24 * time.Hour,
+			AliasMetadata:       make(map[string]string),
 		},
 		ConfigEntry: &ldaputil.ConfigEntry{
 			Url:                      cfg.Url,
@@ -1494,9 +1544,6 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			DerefAliases:             "never",
 			MaximumPageSize:          1000,
 		},
-	}
-	if constants.IsEnterprise {
-		exp.TokenParams.AliasMetadata = make(map[string]string)
 	}
 
 	configEntry, err := b.Config(ctx, configReq)

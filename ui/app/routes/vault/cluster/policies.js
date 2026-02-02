@@ -1,22 +1,21 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import ClusterRoute from 'vault/mixins/cluster-route';
-
 const ALLOWED_TYPES = ['acl', 'egp', 'rgp'];
 
-export default Route.extend(ClusterRoute, {
-  version: service(),
+export default class PoliciesRoute extends Route {
+  @service version;
+  @service router;
 
   beforeModel() {
     return this.version.fetchFeatures().then(() => {
-      return this._super(...arguments);
+      return super.beforeModel(...arguments);
     });
-  },
+  }
 
   model(params) {
     const policyType = params.type;
@@ -24,5 +23,5 @@ export default Route.extend(ClusterRoute, {
       return this.router.transitionTo(this.routeName, ALLOWED_TYPES[0]);
     }
     return {};
-  },
-});
+  }
+}

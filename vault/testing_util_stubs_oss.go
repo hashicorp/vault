@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
@@ -20,9 +20,6 @@ func testAdjustUnderlyingStorage(tcc *TestClusterCore) {
 }
 func testApplyEntBaseConfig(coreConfig, base *CoreConfig) {}
 
-// The following are stubs for PKI certificate counting, which is an enterprise feature.
-
-func (c *TestClusterCore) StopPkiCertificateCountConsumerJob() {}
-func (c *TestClusterCore) ResetPkiCertificateCounts()          {}
-func (c *TestClusterCore) RequirePkiCertificateCounts(t testing.TB, expectedIssuedCount, expectedStoredCount int) {
-}
+// Ent specific test config for licensing
+func (c *Core) testSetTestPubKeys(config CoreConfig)       {}
+func (c *Core) testSetTestIssuerOptions(config CoreConfig) {}

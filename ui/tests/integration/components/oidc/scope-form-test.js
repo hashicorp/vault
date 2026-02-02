@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -39,7 +39,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-scope-title]').hasText('Create Scope', 'Form title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Scope', 'Form title renders');
     assert.dom(SELECTORS.scopeSaveButton).hasText('Create', 'Save button has correct label');
     await click(SELECTORS.scopeSaveButton);
 
@@ -88,7 +88,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-scope-title]').hasText('Edit Scope', 'Form title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Scope', 'Form title renders');
     assert.dom(SELECTORS.scopeSaveButton).hasText('Update', 'Save button has correct label');
     assert.dom(GENERAL.inputByAttr('name')).isDisabled('Name input is disabled when editing');
     assert.dom(GENERAL.inputByAttr('name')).hasValue('test', 'Name input is populated with model value');

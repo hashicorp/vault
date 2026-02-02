@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -92,12 +92,12 @@ module('Acceptance | database workflow', function (hooks) {
         assert.ok(true, 'rotate root called');
         new Response(204);
       });
-      await visit(`/vault/secrets/${this.backend}/overview`);
+      await visit(`/vault/secrets-engines/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
       await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/create?itemType=connection`,
+        `/vault/secrets-engines/${this.backend}/create?itemType=connection`,
         'Takes you to create page'
       );
 
@@ -110,7 +110,7 @@ module('Acceptance | database workflow', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/show/connect-${this.backend}`,
+        `/vault/secrets-engines/${this.backend}/show/connect-${this.backend}`,
         'Takes you to details page for connection'
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
@@ -125,12 +125,12 @@ module('Acceptance | database workflow', function (hooks) {
         assert.notOk(true, 'rotate root called when it should not have been');
         new Response(204);
       });
-      await visit(`/vault/secrets/${this.backend}/overview`);
+      await visit(`/vault/secrets-engines/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
       await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/create?itemType=connection`,
+        `/vault/secrets-engines/${this.backend}/create?itemType=connection`,
         'Takes you to create page'
       );
 
@@ -143,7 +143,7 @@ module('Acceptance | database workflow', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/show/connect-${this.backend}`,
+        `/vault/secrets-engines/${this.backend}/show/connect-${this.backend}`,
         'Takes you to details page for connection'
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
@@ -159,12 +159,12 @@ module('Acceptance | database workflow', function (hooks) {
         assert.ok(okay, 'rotate root called but not for bad-connection');
         new Response(204);
       });
-      await visit(`/vault/secrets/${this.backend}/overview`);
+      await visit(`/vault/secrets-engines/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
       await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/create?itemType=connection`,
+        `/vault/secrets-engines/${this.backend}/create?itemType=connection`,
         'Takes you to create page'
       );
 
@@ -183,7 +183,7 @@ module('Acceptance | database workflow', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/show/connect-${this.backend}`,
+        `/vault/secrets-engines/${this.backend}/show/connect-${this.backend}`,
         'Takes you to details page for connection'
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
@@ -194,12 +194,12 @@ module('Acceptance | database workflow', function (hooks) {
     });
 
     test('create connection with rotate failure', async function (assert) {
-      await visit(`/vault/secrets/${this.backend}/overview`);
+      await visit(`/vault/secrets-engines/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
       await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/create?itemType=connection`,
+        `/vault/secrets-engines/${this.backend}/create?itemType=connection`,
         'Takes you to create page'
       );
 
@@ -216,7 +216,7 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/show/fail-rotate`,
+        `/vault/secrets-engines/${this.backend}/show/fail-rotate`,
         'Takes you to details page for connection'
       );
     });
@@ -224,10 +224,10 @@ module('Acceptance | database workflow', function (hooks) {
   module('dynamic roles', function (hooks) {
     hooks.beforeEach(async function () {
       this.connection = `connect-${this.backend}`;
-      await visit(`/vault/secrets/${this.backend}/create`);
+      await visit(`/vault/secrets-engines/${this.backend}/create`);
       await fillOutConnection(this.connection);
       await click(GENERAL.submitButton);
-      await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);
+      await visit(`/vault/secrets-engines/${this.backend}/show/${this.connection}`);
     });
 
     test('it creates a dynamic role attached to the current connection', async function (assert) {
@@ -235,7 +235,7 @@ module('Acceptance | database workflow', function (hooks) {
       await click(PAGE.addRole);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
+        `/vault/secrets-engines/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
         'Takes you to create role page'
       );
 
@@ -265,7 +265,7 @@ module('Acceptance | database workflow', function (hooks) {
       // DETAILS
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/show/role/${roleName}`,
+        `/vault/secrets-engines/${this.backend}/show/role/${roleName}`,
         'Takes you to details page for role after save'
       );
       assert.dom(PAGE.infoRow).exists({ count: 7 }, 'correct number of info rows displayed');
@@ -288,7 +288,7 @@ module('Acceptance | database workflow', function (hooks) {
       await click(PAGE.editRole);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/edit/role/${roleName}?itemType=role`,
+        `/vault/secrets-engines/${this.backend}/edit/role/${roleName}?itemType=role`,
         'Takes you to edit page for role'
       );
       // TODO: these should be readonly not disabled
@@ -299,7 +299,7 @@ module('Acceptance | database workflow', function (hooks) {
       await click(GENERAL.submitButton);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/show/role/${roleName}`,
+        `/vault/secrets-engines/${this.backend}/show/role/${roleName}`,
         'Takes you to details page for role after save'
       );
       assert
@@ -310,7 +310,7 @@ module('Acceptance | database workflow', function (hooks) {
       await click(GENERAL.button('dynamic'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/credentials/${roleName}?roleType=dynamic`,
+        `/vault/secrets-engines/${this.backend}/credentials/${roleName}?roleType=dynamic`,
         'Takes you to credentials page for role'
       );
       assert
@@ -346,13 +346,13 @@ module('Acceptance | database workflow', function (hooks) {
     hooks.beforeEach(async function () {
       this.setup = async ({ toggleRotateOff = false }) => {
         this.connection = `connect-${this.backend}`;
-        await visit(`/vault/secrets/${this.backend}/create`);
+        await visit(`/vault/secrets-engines/${this.backend}/create`);
         await fillOutConnection(this.connection);
         if (toggleRotateOff) {
           await click(GENERAL.toggleInput('toggle-skip_static_role_rotation_import'));
         }
         await click(GENERAL.submitButton);
-        await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);
+        await visit(`/vault/secrets-engines/${this.backend}/show/${this.connection}`);
       };
     });
 
@@ -363,7 +363,7 @@ module('Acceptance | database workflow', function (hooks) {
       await click(PAGE.addRole);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
+        `/vault/secrets-engines/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
         'Takes you to create role page'
       );
 
@@ -383,7 +383,7 @@ module('Acceptance | database workflow', function (hooks) {
       await click(PAGE.addRole);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
+        `/vault/secrets-engines/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
         'Takes you to create role page'
       );
 

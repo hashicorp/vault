@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -8,7 +8,7 @@ import (
 	"errors"
 	"testing"
 
-	libgithub "github.com/google/go-github/v74/github"
+	libgithub "github.com/google/go-github/v81/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
 	"github.com/stretchr/testify/require"

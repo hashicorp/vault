@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -25,5 +25,8 @@
   {{/if}}
   {{#if @currentRoute}}
     <Hds::Breadcrumb::Item @text={{@currentRoute}} @current={{true}} data-test-breadcrumb={{@currentRoute}} />
+  {{/if}}
+  {{#if @configRoute}}
+    <Hds::Breadcrumb::Item @text={{capitalize @configRoute}} @current={{true}} data-test-breadcrumb={{@configRoute}} />
   {{/if}}
 </Hds::Breadcrumb>

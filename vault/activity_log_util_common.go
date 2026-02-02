@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	namespace "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
@@ -384,7 +385,7 @@ func (a *ActivityLog) mountPathToMountType(ctx context.Context, mountPath string
 	if mountPath == "" {
 		mountType = noMountPath
 	} else {
-		path, valResp := a.core.router.MatchingMountAndEntry(ctx, mountPath)
+		path, valResp := a.core.router.MatchingMountAndEntry(namespace.RootContext(ctx), mountPath)
 		if path == "" {
 			mountType = DeletedMountPath
 		} else {

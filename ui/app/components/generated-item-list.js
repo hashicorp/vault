@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -28,6 +28,16 @@ export default class GeneratedItemList extends Component {
   @service router;
   @service pagination;
   @tracked itemToDelete = null;
+
+  get breadcrumbs() {
+    return [
+      {
+        label: 'Auth Methods',
+        route: 'vault.cluster.access.methods',
+      },
+      { label: this.args.methodModel.id },
+    ];
+  }
 
   @action
   refreshItemList() {

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package certutil
@@ -715,15 +715,15 @@ func DefaultOrValueKeyBits(keyType string, keyBits int) (int, error) {
 // Returns default signature hash bit length for the specified key type and
 // bits, or the present value if hashBits is non-zero. Returns an error under
 // certain internal circumstances.
-func DefaultOrValueHashBits(keyType string, keyBits int, hashBits int) (int, error) {
-	if keyType == "ec" {
+func DefaultOrValueHashBits(keyType string, hashBits int) (int, error) {
+	if keyType == "ec" || keyType == "ecdsa" {
 		// Enforcement of curve moved to selectSignatureAlgorithmForECDSA. See
 		// note there about why.
 	} else if keyType == "rsa" && hashBits == 0 {
 		// To match previous behavior (and ignoring NIST's recommendations for
 		// hash size to align with RSA key sizes), default to SHA-2-256.
 		hashBits = 256
-	} else if keyType == "ed25519" || keyType == "ed448" || keyType == "any" {
+	} else if keyType == "ed25519" || keyType == "ed448" {
 		// No-op; ed25519 and ed448 internally specify their own hash and
 		// we do not need to select one. Double hashing isn't supported in
 		// certificate signing. Additionally, the any key type can't know
@@ -734,6 +734,23 @@ func DefaultOrValueHashBits(keyType string, keyBits int, hashBits int) (int, err
 	return hashBits, nil
 }
 
+func ValidateDefaultOrValueKeyType(keyType string, keyBits int) (int, error) {
+	var err error
+
+	if keyBits, err = DefaultOrValueKeyBits(keyType, keyBits); err != nil {
+		return keyBits, err
+	}
+
+	if err = ValidateKeyTypeLength(keyType, keyBits); err != nil {
+		return keyBits, err
+	}
+
+	return keyBits, nil
+}
+
+// Deprecated: be careful to only use this where the hashBits are being signed
+// by the keyType and keyBits in question.
+//
 // Validates that the combination of keyType, keyBits, and hashBits are
 // valid together; replaces individual calls to ValidateSignatureLength and
 // ValidateKeyTypeLength. Also updates the value of keyBits and hashBits on
@@ -749,7 +766,7 @@ func ValidateDefaultOrValueKeyTypeSignatureLength(keyType string, keyBits int, h
 		return keyBits, hashBits, err
 	}
 
-	if hashBits, err = DefaultOrValueHashBits(keyType, keyBits, hashBits); err != nil {
+	if hashBits, err = DefaultOrValueHashBits(keyType, hashBits); err != nil {
 		return keyBits, hashBits, err
 	}
 
@@ -763,10 +780,25 @@ func ValidateDefaultOrValueKeyTypeSignatureLength(keyType string, keyBits int, h
 	return keyBits, hashBits, nil
 }
 
+func ValidateDefaultOrValueHashBits(keyType string, hashBits int) (int, error) {
+	var err error
+	updatedHashBits, err := DefaultOrValueHashBits(keyType, hashBits)
+	if err != nil {
+		return 0, err
+	}
+
+	if err = ValidateSignatureLength(keyType, updatedHashBits); err != nil {
+		return updatedHashBits, err
+	}
+
+	return updatedHashBits, nil
+}
+
 // Validates that the length of the hash (in bits) used in the signature
 // calculation is a known, approved value.
 func ValidateSignatureLength(keyType string, hashBits int) error {
-	if keyType == "any" || keyType == "ec" || keyType == "ed25519" || keyType == "ed448" {
+	keyType = strings.ToLower(keyType)
+	if keyType == "any" || keyType == "ec" || keyType == "ecdsa" || keyType == "ed25519" || keyType == "ed448" {
 		// ed25519 and ed448 include built-in hashing and is not externally
 		// configurable. There are three modes for each of these schemes:
 		//
@@ -793,7 +825,7 @@ func ValidateSignatureLength(keyType string, hashBits int) error {
 	case 384:
 	case 512:
 	default:
-		return fmt.Errorf("unsupported hash signature algorithm: %d", hashBits)
+		return fmt.Errorf("unsupported hash signature algorithm for keyType %v: %d", keyType, hashBits)
 	}
 
 	return nil
@@ -932,6 +964,9 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 	}
 	if data.Params.NotBeforeDuration > 0 {
 		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
+	}
+	if data.Params.ZeroNotBefore {
+		certTemplate.NotBefore = time.Now()
 	}
 
 	if err := HandleOtherSANs(certTemplate, data.Params.OtherSANs); err != nil {
@@ -1296,6 +1331,9 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 	if data.Params.NotBeforeDuration > 0 {
 		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
 	}
+	if data.Params.ZeroNotBefore {
+		certTemplate.NotBefore = time.Now()
+	}
 
 	privateKeyType := data.SigningBundle.PrivateKeyType
 	if privateKeyType == ManagedPrivateKey {
@@ -1306,14 +1344,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 	case RSAPrivateKey:
 		certTemplateSetSigAlgo(certTemplate, data)
 	case ECPrivateKey:
-		switch data.Params.SignatureBits {
-		case 256:
-			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
-		case 384:
-			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA384
-		case 512:
-			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA512
-		}
+		certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(caCert.PublicKey, data.Params.SignatureBits)
 	}
 
 	if data.Params.UseCSRValues {
@@ -1325,9 +1356,22 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.IPAddresses = data.CSR.IPAddresses
 		certTemplate.URIs = data.CSR.URIs
 
-		for _, name := range data.CSR.Extensions {
-			if !name.Id.Equal(ExtensionBasicConstraintsOID) && !(len(data.Params.OtherSANs) > 0 && name.Id.Equal(ExtensionSubjectAltNameOID)) {
-				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
+		for _, ext := range data.CSR.Extensions {
+			switch {
+			case ext.Id.Equal(ExtensionBasicConstraintsOID):
+				if data.Params.UseCSRValues {
+					isCa, _, err := ParseBasicConstraintExtension(ext)
+					if err != nil {
+						return nil, errutil.UserError{Err: fmt.Sprintf("refusing to accept CSR with invalid Basic Constraints extension: %s", err.Error())}
+					}
+					if isCa {
+						return nil, errutil.UserError{Err: "refusing to accept CSR with Basic Constraints extension setting isCA=true"}
+					}
+					certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, ext)
+				}
+			case len(data.Params.OtherSANs) > 0 && ext.Id.Equal(ExtensionSubjectAltNameOID):
+			default:
+				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, ext)
 			}
 		}
 

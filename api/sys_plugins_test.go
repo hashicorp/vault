@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package api
@@ -55,7 +55,7 @@ func TestListPlugins(t *testing.T) {
 			expectedPlugins: map[PluginType][]string{
 				PluginTypeCredential: {"alicloud"},
 				PluginTypeDatabase:   {"cassandra-database-plugin"},
-				PluginTypeSecrets:    {"ad", "alicloud"},
+				PluginTypeSecrets:    {"ad", "alicloud", "vault-plugin-secrets-azure"},
 			},
 		},
 		"only auth plugins": {
@@ -73,7 +73,7 @@ func TestListPlugins(t *testing.T) {
 		"only secret plugins": {
 			input: ListPluginsInput{Type: PluginTypeSecrets},
 			expectedPlugins: map[PluginType][]string{
-				PluginTypeSecrets: {"ad", "alicloud"},
+				PluginTypeSecrets: {"ad", "alicloud", "vault-plugin-secrets-azure"},
 			},
 		},
 	} {
@@ -308,7 +308,8 @@ const listUntypedResponse = `{
     ],
     "secret": [
       "ad",
-      "alicloud"
+      "alicloud",
+      "vault-plugin-secrets-azure"
     ],
     "some_other_unexpected_key": [
       {
@@ -346,6 +347,14 @@ const listUntypedResponse = `{
         "version": "v0.13.0+builtin",
         "builtin": true,
         "deprecation_status": "supported"
+      },
+	  {	
+        "type": "secret",
+        "name": "vault-plugin-secrets-azure",
+        "version": "v0.24.0+ent",
+        "builtin": false,
+        "deprecation_status": "supported",
+		"sha256": "8ba442dba253803685b05e35ad29dcdebc48dec16774614aa7a4ebe53c1e90e1"
       }
     ]
   },

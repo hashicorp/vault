@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -28,7 +28,7 @@ module('Acceptance | auth-methods list view', function (hooks) {
   test('it navigates to auth method', async function (assert) {
     await visit('/vault/access/');
     assert.strictEqual(currentRouteName(), 'vault.cluster.access.methods', 'navigates to the correct route');
-    assert.dom('[data-test-sidebar-nav-link="Authentication Methods"]').hasClass('active');
+    assert.dom('[data-test-sidebar-nav-link="Authentication methods"]').hasClass('active');
   });
 
   test('it filters by name and auth type', async function (assert) {
@@ -83,7 +83,7 @@ module('Acceptance | auth-methods list view', function (hooks) {
         .exists({ count: 1 }, `auth method ${key} appears in list view`);
     }
     await visit('/vault/settings/auth/enable');
-    await click(GENERAL.navLink('OIDC Provider'));
+    await click(GENERAL.navLink('OIDC provider'));
     await visit('/vault/access/');
     for (const [key] of Object.entries(authPayload)) {
       assert

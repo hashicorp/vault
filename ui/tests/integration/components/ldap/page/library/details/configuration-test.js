@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,21 +11,15 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { duration } from 'core/helpers/format-duration';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { setupDetailsTest } from 'vault/tests/helpers/ldap/ldap-helpers';
 
 module('Integration | Component | ldap | Page::Library::Details::Configuration', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'ldap');
   setupMirage(hooks);
+  setupDetailsTest(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-
-    this.store.pushPayload('ldap/library', {
-      modelName: 'ldap/library',
-      backend: 'ldap-test',
-      ...this.server.create('ldap-library', { name: 'test-library' }),
-    });
-    this.model = this.store.peekRecord('ldap/library', 'test-library');
     this.renderComponent = () => {
       return render(hbs`<Page::Library::Details::Configuration @model={{this.model}} />`, {
         owner: this.engine,
@@ -44,11 +38,17 @@ module('Integration | Component | ldap | Page::Library::Details::Configuration',
     ];
     fields.forEach((field) => {
       const { label, key } = field;
-      const value = label.includes('TTL') ? duration([this.model[key]]) : this.model[key];
+      const value = this.model.library[key];
+      let formattedValue = value;
+      if (key === 'disable_check_in_enforcement') {
+        formattedValue = value ? 'Disabled' : 'Enabled';
+      } else if (['max_ttl', 'ttl'].includes(key)) {
+        formattedValue = duration([value]);
+      }
       const method = key === 'disable_check_in_enforcement' ? 'includesText' : 'hasText';
 
       assert.dom(GENERAL.infoRowLabel(label)).hasText(label, `${label} info row label renders`);
-      assert.dom(GENERAL.infoRowValue(label))[method](value, `${label} info row value renders`);
+      assert.dom(GENERAL.infoRowValue(label))[method](formattedValue, `${label} info row value renders`);
     });
 
     assert
@@ -58,7 +58,7 @@ module('Integration | Component | ldap | Page::Library::Details::Configuration',
       .dom('[data-test-check-in-icon]')
       .hasClass('icon-true', 'Correct class renders for enabled check in enforcement');
 
-    this.model.disable_check_in_enforcement = 'Disabled';
+    this.model.library.disable_check_in_enforcement = 'Disabled';
     await this.renderComponent();
 
     assert

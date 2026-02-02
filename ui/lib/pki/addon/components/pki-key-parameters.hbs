@@ -1,56 +1,49 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 {{yield}}
-{{#each @fields as |attr|}}
-  {{#if (eq attr.name "keyBits")}}
-    <div class="field" data-test-field="keyBits">
+{{#each @fields as |field|}}
+  {{#if (eq field.name "key_bits")}}
+    <div class="field" data-test-field="key_bits">
       <FormFieldLabel
-        for={{attr.name}}
-        @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-        @subText={{attr.options.subText}}
+        for={{field.name}}
+        @label={{capitalize (or field.options.label (humanize (dasherize field.name)))}}
+        @subText={{field.options.subText}}
       />
-      <div class="control is-expanded">
-        <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
-          <T.Trigger tabindex="-1">
-            <div class="select is-fullwidth">
-              <select
-                id={{attr.name}}
-                name={{attr.name}}
-                data-test-input={{attr.name}}
-                disabled={{unless @model.keyType true}}
-                {{on "change" this.onKeyBitsChange}}
-              >
-                {{#if (and attr.options.noDefault (not @model.keyType))}}
-                  <option value="">
-                    Select one
-                  </option>
-                {{/if}}
-                {{#each this.keyBitOptions as |val|}}
-                  <option selected={{loose-equal (get @model "keyBits") val}} value={{val}}>
-                    {{val}}
-                  </option>
-                {{/each}}
-              </select>
-            </div>
-          </T.Trigger>
-          {{#unless @model.keyType}}
-            <T.Content @defaultClass="tool-tip smaller-font">
-              <div class="box">
-                Choose a key type before specifying bit length.
-              </div>
-            </T.Content>
-          {{/unless}}
-        </ToolTip>
+
+      <div
+        class="select is-fullwidth"
+        {{! these extra parentheses are necessary to conditionally apply the modifier }}
+        {{! TODO: refactor this component and avoid this conditional modifier pattern }}
+        {{(unless @form.data.key_type (modifier "hds-tooltip" "Choose a key type before specifying bit length."))}}
+      >
+        <select
+          id={{field.name}}
+          name={{field.name}}
+          data-test-input={{field.name}}
+          disabled={{unless @form.data.key_type true}}
+          {{on "change" this.onKeyBitsChange}}
+        >
+          {{#if (and field.options.noDefault (not @form.data.key_type))}}
+            <option value="">
+              Select one
+            </option>
+          {{/if}}
+          {{#each this.keyBitOptions as |val|}}
+            <option selected={{loose-equal @form.data.key_bits val}} value={{val}}>
+              {{val}}
+            </option>
+          {{/each}}
+        </select>
       </div>
     </div>
   {{else}}
     <FormField
-      data-test-field={{attr}}
-      @attr={{attr}}
-      @model={{@model}}
+      data-test-field={{field}}
+      @attr={{field}}
+      @model={{@form}}
       @modelValidations={{@modelValidations}}
       @showHelpText={{false}}
       @onChange={{this.handleSelection}}

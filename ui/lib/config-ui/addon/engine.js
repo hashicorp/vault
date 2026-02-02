@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -18,7 +18,6 @@ export default class ConfigUiEngine extends Engine {
   dependencies = {
     services: [
       'auth',
-      'pagination',
       'flash-messages',
       'namespace',
       'app-router',
@@ -26,7 +25,13 @@ export default class ConfigUiEngine extends Engine {
       'custom-messages',
       'api',
       'capabilities',
+      // services needed for tools sidebar component
+      'permissions',
+      'current-cluster',
+      '-portal',
     ],
+    // 'vault', 'tool', 'messages', 'openApiExplorer', 'loginSettings' external routes are used in tools sidebar component
+    externalRoutes: ['vault', 'tool', 'messages', 'openApiExplorer', 'loginSettings'],
   };
 }
 

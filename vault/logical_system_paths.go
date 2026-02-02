@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -10,6 +10,34 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+const (
+	// Auth paths patterns
+	patternAuth     = "auth$"
+	patternAuthTune = "auth/(?P<path>.+?)/tune$"
+	patternAuthPath = "auth/(?P<path>.+)"
+
+	// Mount paths patterns
+	patternMountsTune     = "mounts/(?P<path>.+?)/tune$"
+	patternMountsAuthTune = "mounts/auth/(?P<path>.+?)/tune$"
+	patternMountsPath     = "mounts/(?P<path>.+?)"
+	patternMounts         = "mounts$"
+)
+
+var passwordPolicySchema = map[string]*framework.FieldSchema{
+	"name": {
+		Type:        framework.TypeString,
+		Description: "The name of the password policy.",
+	},
+	"policy": {
+		Type:        framework.TypeString,
+		Description: "The password policy",
+	},
+	"entropy_source": {
+		Type:        framework.TypeString,
+		Description: "The entropy source for generation",
+	},
+}
 
 func (b *SystemBackend) configPaths() []*framework.Path {
 	return []*framework.Path{
@@ -2742,60 +2770,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"type": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"description": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"accessor": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"local": {
-									Type:     framework.TypeBool,
-									Required: true,
-								},
-								"seal_wrap": {
-									Type:     framework.TypeBool,
-									Required: true,
-								},
-								"external_entropy_access": {
-									Type:     framework.TypeBool,
-									Required: true,
-								},
-								"options": {
-									Type:     framework.TypeMap,
-									Required: true,
-								},
-								"uuid": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"plugin_version": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"running_plugin_version": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"running_sha256": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"path": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"config": {
-									Type:     framework.TypeMap,
-									Required: true,
-								},
-							},
+							Fields:      internalUIMountsPathResponseFields(),
 						}},
 					},
 				},
@@ -3719,7 +3694,7 @@ func (b *SystemBackend) hostInfoPath() *framework.Path {
 func (b *SystemBackend) authPaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "auth$",
+			Pattern: patternAuth,
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "auth",
@@ -3743,75 +3718,13 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["auth-table"][1]),
 		},
 		{
-			Pattern: "auth/(?P<path>.+?)/tune$",
+			Pattern: patternAuthTune,
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "auth",
 			},
 
-			Fields: map[string]*framework.FieldSchema{
-				"path": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["auth_tune"][0]),
-				},
-				"default_lease_ttl": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
-				},
-				"max_lease_ttl": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
-				},
-				"description": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
-				},
-				"audit_non_hmac_request_keys": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_request_keys"][0]),
-				},
-				"audit_non_hmac_response_keys": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
-				},
-				"options": {
-					Type:        framework.TypeKVPairs,
-					Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
-				},
-				"listing_visibility": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
-				},
-				"passthrough_request_headers": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
-				},
-				"allowed_response_headers": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
-				},
-				"token_type": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["token_type"][0]),
-				},
-				"user_lockout_config": {
-					Type:        framework.TypeMap,
-					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
-				},
-				"plugin_version": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
-				},
-				"identity_token_key": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
-					Required:    false,
-				},
-				"trim_request_trailing_slashes": {
-					Type:     framework.TypeBool,
-					Required: false,
-				},
-			},
+			Fields: authTuneRequestFields(),
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuthTuneRead,
@@ -3824,88 +3737,7 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"description": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"default_lease_ttl": {
-									Type:     framework.TypeInt,
-									Required: true,
-								},
-								"max_lease_ttl": {
-									Type:     framework.TypeInt,
-									Required: true,
-								},
-								"force_no_cache": {
-									Type:     framework.TypeBool,
-									Required: true,
-								},
-								"external_entropy_access": {
-									Type:     framework.TypeBool,
-									Required: false,
-								},
-								"token_type": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-								"audit_non_hmac_request_keys": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"audit_non_hmac_response_keys": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"listing_visibility": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-								"passthrough_request_headers": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"allowed_response_headers": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"allowed_managed_keys": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"user_lockout_counter_reset_duration": {
-									Type:     framework.TypeInt64,
-									Required: false,
-								},
-								"user_lockout_threshold": {
-									Type:     framework.TypeInt64, // uint64
-									Required: false,
-								},
-								"user_lockout_duration": {
-									Type:     framework.TypeInt64,
-									Required: false,
-								},
-								"user_lockout_disable": {
-									Type:     framework.TypeBool,
-									Required: false,
-								},
-								"options": {
-									Type:     framework.TypeMap,
-									Required: false,
-								},
-								"plugin_version": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-								"identity_token_key": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-								"trim_request_trailing_slashes": {
-									Type:     framework.TypeBool,
-									Required: false,
-								},
-							},
+							Fields:      authTuneResponseFields(),
 						}},
 					},
 				},
@@ -3928,57 +3760,13 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["auth_tune"][1]),
 		},
 		{
-			Pattern: "auth/(?P<path>.+)",
+			Pattern: patternAuthPath,
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "auth",
 			},
 
-			Fields: map[string]*framework.FieldSchema{
-				"path": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["auth_path"][0]),
-				},
-				"type": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["auth_type"][0]),
-				},
-				"description": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
-				},
-				"config": {
-					Type:        framework.TypeMap,
-					Description: strings.TrimSpace(sysHelp["auth_config"][0]),
-				},
-				"local": {
-					Type:        framework.TypeBool,
-					Default:     false,
-					Description: strings.TrimSpace(sysHelp["mount_local"][0]),
-				},
-				"seal_wrap": {
-					Type:        framework.TypeBool,
-					Default:     false,
-					Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
-				},
-				"external_entropy_access": {
-					Type:        framework.TypeBool,
-					Default:     false,
-					Description: strings.TrimSpace(sysHelp["external_entropy_access"][0]),
-				},
-				"plugin_name": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["auth_plugin"][0]),
-				},
-				"options": {
-					Type:        framework.TypeKVPairs,
-					Description: strings.TrimSpace(sysHelp["auth_options"][0]),
-				},
-				"plugin_version": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
-				},
-			},
+			Fields: authRequestFields(),
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleReadAuth,
@@ -3990,60 +3778,7 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"type": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"description": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"accessor": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"local": {
-									Type:     framework.TypeBool,
-									Required: true,
-								},
-								"seal_wrap": {
-									Type:     framework.TypeBool,
-									Required: true,
-								},
-								"external_entropy_access": {
-									Type:     framework.TypeBool,
-									Required: true,
-								},
-								"options": {
-									Type:     framework.TypeMap,
-									Required: true,
-								},
-								"uuid": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"plugin_version": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"running_plugin_version": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"running_sha256": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"deprecation_status": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-								"config": {
-									Type:     framework.TypeMap,
-									Required: true,
-								},
-							},
+							Fields:      authResponseFields(),
 						}},
 					},
 				},
@@ -4377,17 +4112,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 				OperationSuffix: "password-policy",
 			},
 
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: "The name of the password policy.",
-				},
-				"policy": {
-					Type:        framework.TypeString,
-					Description: "The password policy",
-				},
-			},
-
+			Fields: passwordPolicySchema,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesPasswordSet,
@@ -4408,6 +4133,10 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 								"policy": {
 									Type:     framework.TypeString,
 									Required: true,
+								},
+								"entropy_source": {
+									Type:     framework.TypeString,
+									Required: false,
 								},
 							},
 						}},
@@ -4601,85 +4330,16 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 	}
 }
 
-func (b *SystemBackend) mountPaths() []*framework.Path {
+func (b *SystemBackend) mountsPaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "mounts/(?P<path>.+?)/tune$",
+			Pattern: patternMountsTune,
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "mounts",
 			},
 
-			Fields: map[string]*framework.FieldSchema{
-				"path": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["mount_path"][0]),
-				},
-				"default_lease_ttl": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
-				},
-				"max_lease_ttl": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
-				},
-				"description": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
-				},
-				"audit_non_hmac_request_keys": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_request_keys"][0]),
-				},
-				"audit_non_hmac_response_keys": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
-				},
-				"options": {
-					Type:        framework.TypeKVPairs,
-					Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
-				},
-				"listing_visibility": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
-				},
-				"passthrough_request_headers": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
-				},
-				"allowed_response_headers": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
-				},
-				"token_type": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["token_type"][0]),
-				},
-				"allowed_managed_keys": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
-				},
-				"delegated_auth_accessors": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["allowed_delegated_auth_accessors"][0]),
-				},
-				"plugin_version": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
-				},
-				"user_lockout_config": {
-					Type:        framework.TypeMap,
-					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
-				},
-				"identity_token_key": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
-				},
-				"trim_request_trailing_slashes": {
-					Type:        framework.TypeBool,
-					Description: strings.TrimSpace(sysHelp["trim_request_trailing_slashes"][0]),
-				},
-			},
+			Fields: secretsTuneRequestFields(),
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -4691,101 +4351,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"max_lease_ttl": {
-									Type:        framework.TypeInt,
-									Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
-									Required:    true,
-								},
-								"description": {
-									Type:        framework.TypeString,
-									Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
-									Required:    true,
-								},
-								"default_lease_ttl": {
-									Type:        framework.TypeInt,
-									Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
-									Required:    true,
-								},
-								"force_no_cache": {
-									Type:     framework.TypeBool,
-									Required: true,
-								},
-								"token_type": {
-									Type:        framework.TypeString,
-									Description: strings.TrimSpace(sysHelp["token_type"][0]),
-									Required:    false,
-								},
-								"allowed_managed_keys": {
-									Type:        framework.TypeCommaStringSlice,
-									Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
-									Required:    false,
-								},
-								"delegated_auth_accessors": {
-									Type:        framework.TypeCommaStringSlice,
-									Description: strings.TrimSpace(sysHelp["delegated_auth_accessors"][0]),
-									Required:    false,
-								},
-								"allowed_response_headers": {
-									Type:        framework.TypeCommaStringSlice,
-									Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
-									Required:    false,
-								},
-								"options": {
-									Type:        framework.TypeKVPairs,
-									Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
-									Required:    false,
-								},
-								"plugin_version": {
-									Type:        framework.TypeString,
-									Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
-									Required:    false,
-								},
-								"external_entropy_access": {
-									Type:     framework.TypeBool,
-									Required: false,
-								},
-								"audit_non_hmac_request_keys": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"audit_non_hmac_response_keys": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"listing_visibility": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-								"passthrough_request_headers": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"user_lockout_counter_reset_duration": {
-									Type:     framework.TypeInt64,
-									Required: false,
-								},
-								"user_lockout_threshold": {
-									Type:     framework.TypeInt64, // TODO this is actuall a Uint64 do we need a new type?
-									Required: false,
-								},
-								"user_lockout_duration": {
-									Type:     framework.TypeInt64,
-									Required: false,
-								},
-								"user_lockout_disable": {
-									Type:     framework.TypeBool,
-									Required: false,
-								},
-								"identity_token_key": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-								"trim_request_trailing_slashes": {
-									Type:     framework.TypeBool,
-									Required: false,
-								},
-							},
+							Fields:      secretsTuneResponseFields(),
 						}},
 					},
 				},
@@ -4808,75 +4374,13 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "mounts/auth/(?P<path>.+?)/tune$",
+			Pattern: patternMountsAuthTune,
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "mounts-auth",
 			},
 
-			Fields: map[string]*framework.FieldSchema{
-				"path": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["auth_tune"][0]),
-				},
-				"default_lease_ttl": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
-				},
-				"max_lease_ttl": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
-				},
-				"description": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
-				},
-				"audit_non_hmac_request_keys": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_request_keys"][0]),
-				},
-				"audit_non_hmac_response_keys": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
-				},
-				"options": {
-					Type:        framework.TypeKVPairs,
-					Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
-				},
-				"listing_visibility": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
-				},
-				"passthrough_request_headers": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
-				},
-				"allowed_response_headers": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
-				},
-				"token_type": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["token_type"][0]),
-				},
-				"user_lockout_config": {
-					Type:        framework.TypeMap,
-					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
-				},
-				"plugin_version": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
-				},
-				"identity_token_key": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
-					Required:    false,
-				},
-				"trim_request_trailing_slashes": {
-					Type:     framework.TypeBool,
-					Required: false,
-				},
-			},
+			Fields: authTuneRequestFields(),
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuthTuneRead,
@@ -4889,88 +4393,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"description": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"default_lease_ttl": {
-									Type:     framework.TypeInt,
-									Required: true,
-								},
-								"max_lease_ttl": {
-									Type:     framework.TypeInt,
-									Required: true,
-								},
-								"force_no_cache": {
-									Type:     framework.TypeBool,
-									Required: true,
-								},
-								"external_entropy_access": {
-									Type:     framework.TypeBool,
-									Required: false,
-								},
-								"token_type": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-								"audit_non_hmac_request_keys": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"audit_non_hmac_response_keys": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"listing_visibility": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-								"passthrough_request_headers": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"allowed_response_headers": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"allowed_managed_keys": {
-									Type:     framework.TypeCommaStringSlice,
-									Required: false,
-								},
-								"user_lockout_counter_reset_duration": {
-									Type:     framework.TypeInt64,
-									Required: false,
-								},
-								"user_lockout_threshold": {
-									Type:     framework.TypeInt64, // uint64
-									Required: false,
-								},
-								"user_lockout_duration": {
-									Type:     framework.TypeInt64,
-									Required: false,
-								},
-								"user_lockout_disable": {
-									Type:     framework.TypeBool,
-									Required: false,
-								},
-								"options": {
-									Type:     framework.TypeMap,
-									Required: false,
-								},
-								"plugin_version": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-								"identity_token_key": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-								"trim_request_trailing_slashes": {
-									Type:     framework.TypeBool,
-									Required: false,
-								},
-							},
+							Fields:      authTuneResponseFields(),
 						}},
 					},
 				},
@@ -4994,57 +4417,13 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "mounts/(?P<path>.+?)",
+			Pattern: patternMountsPath,
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "mounts",
 			},
 
-			Fields: map[string]*framework.FieldSchema{
-				"path": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["mount_path"][0]),
-				},
-				"type": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["mount_type"][0]),
-				},
-				"description": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["mount_desc"][0]),
-				},
-				"config": {
-					Type:        framework.TypeMap,
-					Description: strings.TrimSpace(sysHelp["mount_config"][0]),
-				},
-				"local": {
-					Type:        framework.TypeBool,
-					Default:     false,
-					Description: strings.TrimSpace(sysHelp["mount_local"][0]),
-				},
-				"seal_wrap": {
-					Type:        framework.TypeBool,
-					Default:     false,
-					Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
-				},
-				"external_entropy_access": {
-					Type:        framework.TypeBool,
-					Default:     false,
-					Description: strings.TrimSpace(sysHelp["external_entropy_access"][0]),
-				},
-				"plugin_name": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["mount_plugin_name"][0]),
-				},
-				"options": {
-					Type:        framework.TypeKVPairs,
-					Description: strings.TrimSpace(sysHelp["mount_options"][0]),
-				},
-				"plugin_version": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
-				},
-			},
+			Fields: secretsRequestFields(),
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -5056,69 +4435,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"type": {
-									Type:        framework.TypeString,
-									Description: strings.TrimSpace(sysHelp["mount_type"][0]),
-									Required:    true,
-								},
-								"description": {
-									Type:        framework.TypeString,
-									Description: strings.TrimSpace(sysHelp["mount_desc"][0]),
-									Required:    true,
-								},
-								"accessor": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"local": {
-									Type:        framework.TypeBool,
-									Default:     false,
-									Description: strings.TrimSpace(sysHelp["mount_local"][0]),
-									Required:    true,
-								},
-								"seal_wrap": {
-									Type:        framework.TypeBool,
-									Default:     false,
-									Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
-									Required:    true,
-								},
-								"external_entropy_access": {
-									Type:     framework.TypeBool,
-									Required: true,
-								},
-								"options": {
-									Type:        framework.TypeKVPairs,
-									Description: strings.TrimSpace(sysHelp["mount_options"][0]),
-									Required:    true,
-								},
-								"plugin_version": {
-									Type:        framework.TypeString,
-									Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
-									Required:    true,
-								},
-								"uuid": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"running_plugin_version": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"running_sha256": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"config": {
-									Type:        framework.TypeMap,
-									Description: strings.TrimSpace(sysHelp["mount_config"][0]),
-									Required:    true,
-								},
-								"deprecation_status": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-							},
+							Fields:      secretsResponseFields(),
 						}},
 					},
 					Summary: "Read the configuration of the secret engine at the given path.",
@@ -5155,7 +4472,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "mounts$",
+			Pattern: patternMounts,
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "mounts",

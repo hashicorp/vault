@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -42,7 +42,7 @@
           @icon={{if @isRunning "loading"}}
           @color={{if (eq @color "critical") "critical" "primary"}}
           @text="Confirm"
-          {{on "click" @onConfirm}}
+          {{on "click" (fn this.saveAndClose F.close)}}
         />
         <Hds::Button data-test-cancel @color="secondary" @text="Cancel" {{on "click" F.close}} />
       </Hds::ButtonSet>

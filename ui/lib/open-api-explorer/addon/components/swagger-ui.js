@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -24,6 +24,10 @@ export default class SwaggerUiComponent extends Component {
   @tracked swaggerLoading = true;
 
   inputId = `${guidFor(this)}-swagger`;
+
+  get breadcrumbs() {
+    return [{ label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true }, { label: 'API explorer' }];
+  }
 
   SearchFilterPlugin() {
     return {

@@ -1,0 +1,18 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div ...attributes>
+  {{#each @stanzas as |stanza idx|}}
+    <CodeGenerator::Policy::Stanza
+      @index={{idx}}
+      @onChange={{this.updateStanzas}}
+      @onDelete={{fn this.deleteStanza stanza}}
+      @stanza={{stanza}}
+      class="has-bottom-margin-m"
+    />
+  {{/each}}
+
+  <Hds::Button @icon="plus" @text="Add rule" @color="secondary" {{on "click" this.addStanza}} data-test-button="Add rule" />
+</div>

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -49,7 +49,11 @@ export default class KeyValueHeader extends Component {
     const baseKeyModel = encodePath(this.args.baseKey?.id);
 
     if (root) {
-      crumbs.push(root);
+      if (Array.isArray(root)) {
+        crumbs.push(...root);
+      } else {
+        crumbs.push(root);
+      }
     }
 
     if (!baseKey) {

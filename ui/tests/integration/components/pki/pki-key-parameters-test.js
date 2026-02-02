@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,102 +8,84 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import PkiRoleForm from 'vault/forms/secrets/pki/role';
 
 module('Integration | Component | pki key parameters', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/role', { backend: 'pki' });
-    [this.fields] = Object.values(this.model.formFieldGroups.find((g) => g['Key parameters']));
-    // TODO: remove Tooltip/ember-basic-dropdown
-    setRunOptions({
-      rules: {
-        'nested-interactive': { enabled: false },
-      },
-    });
+    this.data = { key_type: 'rsa', key_bits: 2048, signature_bits: 0 };
+    this.form = new PkiRoleForm(this.data, { isNew: true });
+    this.fields = this.form.formFieldGroups.find((g) => g['Key parameters'])['Key parameters'];
+    this.renderComponent = () =>
+      render(
+        hbs`<PkiKeyParameters @form={{this.form}} @fields={{this.fields}} @modelValidations={{this.modelValidations}} />`,
+        { owner: this.engine }
+      );
   });
 
-  test('it should render the component and display the correct defaults', async function (assert) {
+  test('it should render the component and display the correct values', async function (assert) {
     assert.expect(3);
-    await render(
-      hbs`
-      <div class="has-top-margin-xxl">
-        <PkiKeyParameters
-          @model={{this.model}}
-          @fields={{this.fields}}
-        />
-       </div>
-  `,
-      { owner: this.engine }
-    );
-    assert.dom(GENERAL.inputByAttr('keyType')).hasValue('rsa');
-    assert.dom(GENERAL.inputByAttr('keyBits')).hasValue('2048');
-    assert.dom(GENERAL.inputByAttr('signatureBits')).hasValue('0');
+
+    await this.renderComponent();
+    assert.dom(GENERAL.inputByAttr('key_type')).hasValue('rsa');
+    assert.dom(GENERAL.inputByAttr('key_bits')).hasValue('2048');
+    assert.dom(GENERAL.inputByAttr('signature_bits')).hasValue('0');
   });
 
-  test('it should set the model properties of key_type and key_bits when key_type changes', async function (assert) {
-    assert.expect(11);
-    await render(
-      hbs`
-      <div class="has-top-margin-xxl">
-        <PkiKeyParameters
-          @model={{this.model}}
-          @fields={{this.fields}}
-        />
-       </div>
-  `,
-      { owner: this.engine }
-    );
-    assert.strictEqual(this.model.keyType, 'rsa', 'sets the default value for key_type on the model.');
-    assert.strictEqual(this.model.keyBits, '2048', 'sets the default value for key_bits on the model.');
+  test('it should set values of key_type and key_bits when key_type changes', async function (assert) {
+    assert.expect(8);
+
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('key_type'), 'ec');
     assert.strictEqual(
-      this.model.signatureBits,
-      '0',
-      'sets the default value for signature_bits on the model.'
+      this.form.data.key_type,
+      'ec',
+      'sets the new selected value for key_type on the model.'
     );
-    await fillIn(GENERAL.inputByAttr('keyType'), 'ec');
-    assert.strictEqual(this.model.keyType, 'ec', 'sets the new selected value for key_type on the model.');
     assert.strictEqual(
-      this.model.keyBits,
-      '256',
+      this.form.data.key_bits,
+      256,
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
-    await fillIn(GENERAL.inputByAttr('keyType'), 'ed25519');
+    await fillIn(GENERAL.inputByAttr('key_type'), 'ed25519');
     assert.strictEqual(
-      this.model.keyType,
+      this.form.data.key_type,
       'ed25519',
       'sets the new selected value for key_type on the model.'
     );
     assert.strictEqual(
-      this.model.keyBits,
-      '0',
+      this.form.data.key_bits,
+      0,
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
-    await fillIn(GENERAL.inputByAttr('keyType'), 'ec');
-    await fillIn(GENERAL.inputByAttr('keyBits'), '384');
-    assert.strictEqual(this.model.keyType, 'ec', 'sets the new selected value for key_type on the model.');
+    await fillIn(GENERAL.inputByAttr('key_type'), 'ec');
+    await fillIn(GENERAL.inputByAttr('key_bits'), '384');
     assert.strictEqual(
-      this.model.keyBits,
+      this.form.data.key_type,
+      'ec',
+      'sets the new selected value for key_type on the model.'
+    );
+    assert.strictEqual(
+      this.form.data.key_bits,
       '384',
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
-    await fillIn(GENERAL.inputByAttr('signatureBits'), '384');
+    await fillIn(GENERAL.inputByAttr('signature_bits'), '384');
     assert.strictEqual(
-      this.model.signatureBits,
+      this.form.data.signature_bits,
       '384',
       'sets the new selected value for signature_bits on the model.'
     );
 
-    await fillIn(GENERAL.inputByAttr('signatureBits'), '0');
+    await fillIn(GENERAL.inputByAttr('signature_bits'), '0');
     assert.strictEqual(
-      this.model.signatureBits,
+      this.form.data.signature_bits,
       '0',
       'sets the default value for signature_bits on the model.'
     );

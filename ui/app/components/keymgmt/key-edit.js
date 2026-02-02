@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -30,6 +30,17 @@ export default class KeymgmtKeyEdit extends Component {
   @service router;
   @service flashMessages;
   @tracked isDeleteModalOpen = false;
+
+  get title() {
+    if (this.isDistributing) {
+      return 'Distribute Key';
+    } else if (this.args.mode === 'create') {
+      return 'Create Key';
+    } else if (this.args.mode === 'edit') {
+      return 'Edit Key';
+    }
+    return this.args.model.id;
+  }
 
   get mode() {
     return this.args.mode || 'show';

@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 // Given the architecture, distro, version, edition, and desired package type,
@@ -21,9 +21,9 @@ variable "distro" {
   type        = string
 
   validation {
-    condition     = contains(["amzn", "leap", "rhel", "sles", "ubuntu"], var.distro)
+    condition     = contains(["amzn", "rhel", "sles", "ubuntu"], var.distro)
     error_message = <<-EOF
-      distro must be one of "amzn", "leap", "rhel", "sles", "ubuntu"
+      distro must be one of "amzn", "rhel", "sles", "ubuntu"
     EOF
   }
 }
@@ -69,21 +69,18 @@ locals {
   package_extensions = {
     amd64 = {
       amzn   = local.package_extension_amd64_rpm
-      leap   = local.package_extension_amd64_rpm
       rhel   = local.package_extension_amd64_rpm
       sles   = local.package_extension_amd64_rpm
       ubuntu = local.package_extension_amd64_deb
     }
     arm64 = {
       amzn   = local.package_extension_arm64_rpm
-      leap   = local.package_extension_arm64_rpm
       rhel   = local.package_extension_arm64_rpm
       sles   = local.package_extension_arm64_rpm
       ubuntu = local.package_extension_arm64_deb
     }
     s390x = {
       amzn   = null
-      leap   = local.package_extension_s390x_rpm
       rhel   = local.package_extension_s390x_rpm
       sles   = local.package_extension_s390x_rpm
       ubuntu = local.package_extension_s390x_deb
@@ -115,7 +112,6 @@ locals {
   // file name prefixes for the install packages of vault for the various distributions and artifact types (package or bundle)
   package_prefixes = {
     amzn   = local.package_prefixes_rpm,
-    leap   = local.package_prefixes_rpm,
     rhel   = local.package_prefixes_rpm,
     sles   = local.package_prefixes_rpm,
     ubuntu = local.package_prefixes_deb,
@@ -126,7 +122,6 @@ locals {
   release_repo_apt = "hashicorp-apt-release-local*"
   release_repos = {
     amzn   = local.release_repo_rpm
-    leap   = local.release_repo_rpm
     rhel   = local.release_repo_rpm
     sles   = local.release_repo_rpm
     ubuntu = local.release_repo_apt
@@ -142,21 +137,22 @@ locals {
   release_path_deb     = "pool/${var.arch}/main"
   release_sub_path_rpm = "${local.release_package_rpm_arch[var.arch]}/stable"
   release_path_distro = {
+    // NOTE: The versions here always correspond to the output of enos_host_info.distro_version. These are used in
+    // several modules so if you change the keys here also consider the "artifact/metadata", "ec2_info",
+    // "install_packages" and "softhsm_install" modules.
     amzn = {
       "2"      = "AmazonLinux/2/${local.release_sub_path_rpm}"
       "2023"   = "AmazonLinux/latest/${local.release_sub_path_rpm}"
       "latest" = "AmazonLinux/latest/${local.release_sub_path_rpm}"
     }
-    leap = {
-      "15.6" = "RHEL/9/${local.release_sub_path_rpm}"
-    }
     rhel = {
       "8.10" = "RHEL/8/${local.release_sub_path_rpm}"
-      "9.6"  = "RHEL/9/${local.release_sub_path_rpm}"
-      "10.0" = "RHEL/10/${local.release_sub_path_rpm}"
+      "9.7"  = "RHEL/9/${local.release_sub_path_rpm}"
+      "10.1" = "RHEL/10/${local.release_sub_path_rpm}"
     }
     sles = {
-      "15.6" = "RHEL/9/${local.release_sub_path_rpm}"
+      "15.7" = "RHEL/9/${local.release_sub_path_rpm}"
+      "16.0" = "RHEL/10/${local.release_sub_path_rpm}"
     }
     ubuntu = {
       "22.04" = local.release_path_deb,

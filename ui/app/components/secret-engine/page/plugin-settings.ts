@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -76,6 +76,19 @@ export default class PluginSettingsComponent extends Component<Args> {
         return this.sshFields;
       default:
         return [];
+    }
+  }
+
+  get configRoute() {
+    const engine = this.args.model.secretsEngine;
+    const isKvv2 = engine.version === 2 && engine.effectiveEngineType === 'kv';
+    const engineMetadata = engineDisplayData(engine.effectiveEngineType);
+
+    // Kvv2 is configurable but shares metadata with Kvv1 so isConfigurable is left unset
+    if (engineMetadata.isConfigurable || isKvv2) {
+      return engineMetadata.configRoute || 'configuration.plugin-settings';
+    } else {
+      return false;
     }
   }
 

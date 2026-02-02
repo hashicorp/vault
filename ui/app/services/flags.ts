@@ -1,12 +1,13 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { keepLatestTask } from 'ember-concurrency';
-import { DEBUG } from '@glimmer/env';
+import { macroCondition, isDevelopingApp } from '@embroider/macros';
+import { ADMINISTRATIVE_NAMESPACE } from 'vault/services/namespace';
 
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
@@ -34,7 +35,7 @@ export default class FlagsService extends Service {
 
   // for non-managed clusters the root namespace path is technically an empty string so we return null
   get hvdManagedNamespaceRoot(): string | null {
-    return this.isHvdManaged ? 'admin' : null;
+    return this.isHvdManaged ? ADMINISTRATIVE_NAMESPACE : null;
   }
 
   getFeatureFlags = keepLatestTask(async () => {
@@ -48,7 +49,9 @@ export default class FlagsService extends Service {
         this.featureFlags = body.feature_flags || [];
       }
     } catch (error) {
-      if (DEBUG) console.error(error); // eslint-disable-line no-console
+      if (macroCondition(isDevelopingApp())) {
+        console.error(error);
+      }
     }
   });
 
@@ -71,7 +74,9 @@ export default class FlagsService extends Service {
       this.activatedFlags = response.data?.activated;
       return;
     } catch (error) {
-      if (DEBUG) console.error(error); // eslint-disable-line no-console
+      if (macroCondition(isDevelopingApp())) {
+        console.error(error);
+      }
     }
   });
 

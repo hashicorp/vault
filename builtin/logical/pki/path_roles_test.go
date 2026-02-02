@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -856,7 +856,7 @@ func TestPki_RolePatch(t *testing.T) {
 		// due to their non-default stored nature.
 		{
 			Field:   "key_usage",
-			Before:  []string{"DigitialSignature"},
+			Before:  []string{"DigitalSignature"},
 			Patched: []string{"DigitalSignature", "KeyAgreement"},
 		},
 		{

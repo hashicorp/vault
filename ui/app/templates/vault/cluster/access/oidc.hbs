@@ -1,16 +1,14 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 {{#if this.header}}
-  <PageHeader as |p|>
-    <p.levelLeft>
-      <h1 class="title is-3">
-        OIDC Provider
-      </h1>
-    </p.levelLeft>
-  </PageHeader>
+  <Page::Header @title="OIDC Provider">
+    <:breadcrumbs>
+      <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+    </:breadcrumbs>
+  </Page::Header>
   <div class="box is-fullwidth is-sideless is-flex-between is-shadowless is-marginless" data-test-oidc-header>
     <p>
       Configure Vault to act as an OIDC identity provider, and offer

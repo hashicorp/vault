@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -30,6 +30,14 @@ func entityPathFields() map[string]*framework.FieldSchema {
 		"name": {
 			Type:        framework.TypeString,
 			Description: "Name of the entity",
+		},
+		"external_id": {
+			Type:        framework.TypeString,
+			Description: "External ID of the entity",
+		},
+		"scim_client_id": {
+			Type:        framework.TypeString,
+			Description: "SCIM Client ID of the entity",
 		},
 		"metadata": {
 			Type: framework.TypeKVPairs,
@@ -304,106 +312,7 @@ func (i *IdentityStore) handleEntityUpdateCommon() framework.OperationFunc {
 		i.lock.Lock()
 		defer i.lock.Unlock()
 
-		entity := new(identity.Entity)
-		var err error
-
-		entityID := d.Get("id").(string)
-		if entityID != "" {
-			entity, err = i.MemDBEntityByID(entityID, true)
-			if err != nil {
-				return nil, err
-			}
-			if entity == nil {
-				return logical.ErrorResponse("entity not found from id"), nil
-			}
-		}
-
-		// Get the name
-		entityName := d.Get("name").(string)
-		if entityName != "" {
-			entityByName, err := i.MemDBEntityByName(ctx, entityName, true)
-			if err != nil {
-				return nil, err
-			}
-			switch {
-			case entityByName == nil:
-				// Not found, safe to use this name with an existing or new entity
-			case entity.ID == "":
-				// Entity by ID was not found, but and entity for the supplied
-				// name was found. Continue updating the entity.
-				entity = entityByName
-			case entity.ID == entityByName.ID:
-				// Same exact entity, carry on (this is basically a noop then)
-			default:
-				return logical.ErrorResponse("entity name is already in use"), nil
-			}
-		}
-
-		if entityName != "" {
-			entity.Name = entityName
-		}
-
-		// Update the policies if supplied
-		entityPoliciesRaw, ok := d.GetOk("policies")
-		if ok {
-			entity.Policies = strutil.RemoveDuplicates(entityPoliciesRaw.([]string), false)
-		}
-
-		if strutil.StrListContainsCaseInsensitive(entity.Policies, "root") {
-			return logical.ErrorResponse("policies cannot contain root"), nil
-		}
-
-		disabledRaw, ok := d.GetOk("disabled")
-		if ok {
-			entity.Disabled = disabledRaw.(bool)
-		}
-
-		// Get entity metadata
-		metadata, ok, err := d.GetOkErr("metadata")
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
-		}
-		if ok {
-			entity.Metadata = metadata.(map[string]string)
-		}
-
-		// At this point, if entity.ID is empty, it indicates that a new entity
-		// is being created. Using this to respond data in the response.
-		newEntity := entity.ID == ""
-
-		// ID creation and some validations
-		err = i.sanitizeEntity(ctx, entity)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := i.upsertEntity(ctx, entity, nil, true); err != nil {
-			return nil, err
-		}
-
-		// If this operation was an update to an existing entity, return 204
-		if !newEntity {
-			return nil, nil
-		}
-
-		// Prepare the response
-		respData := map[string]interface{}{
-			"id":   entity.ID,
-			"name": entity.Name,
-		}
-
-		var aliasIDs []string
-		for _, alias := range entity.Aliases {
-			aliasIDs = append(aliasIDs, alias.ID)
-		}
-
-		respData["aliases"] = aliasIDs
-
-		// Return ID of the entity that was either created or updated along with
-		// its aliases
-		return &logical.Response{
-			Data: respData,
-		}, nil
+		return i.EntityUpdateCommon(ctx, d)
 	}
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
@@ -13,7 +13,9 @@ func newReleasesListCmd() *cobra.Command {
 	}
 
 	listCmd.AddCommand(newReleasesVersionsBetweenCmd())
+	listCmd.AddCommand(newReleasesListBinaryVersionsCmd())
 	listCmd.AddCommand(newReleasesListActiveVersionsCmd())
+	listCmd.AddCommand(newReleasesListUpdatedVersionsCmd())
 
 	return listCmd
 }

@@ -1,10 +1,11 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import TransformBase, { addToList, removeFromList } from './transform-edit-base';
 import { service } from '@ember/service';
+import { computed } from '@ember/object';
 
 export default TransformBase.extend({
   flashMessages: service(),
@@ -15,6 +16,22 @@ export default TransformBase.extend({
     this._super(...arguments);
     this.set('initialTransformations', this.model.transformations);
   },
+
+  title: computed('mode', function () {
+    if (this.mode === 'create') {
+      return 'Create Role';
+    } else if (this.mode === 'edit') {
+      return 'Edit Role';
+    } else {
+      return 'Role';
+    }
+  }),
+
+  subtitle: computed('mode', 'model.id', function () {
+    if (this.mode === 'create' || this.mode === 'edit') return;
+
+    return this.model.id;
+  }),
 
   handleUpdateTransformations(updateTransformations, roleId, type = 'update') {
     if (!updateTransformations) return;

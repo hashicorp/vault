@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -38,6 +38,29 @@ module('Integration | Component | kv-v2 | Page::List', function (hooks) {
       { label: this.backend, route: 'list' },
     ];
     this.capabilities = { canRead: true, canDelete: true };
+    this.backendModel = {
+      accessor: 'kv_05319fa9',
+      config: {
+        default_lease_ttl: 2764800,
+        force_no_cache: false,
+        listing_visibility: 'hidden',
+        max_lease_ttl: 2764800,
+      },
+      description: '',
+      external_entropy_access: false,
+      local: false,
+      options: {
+        version: '2',
+      },
+      path: 'kv-engine/',
+      plugin_version: '',
+      running_plugin_version: 'v0.25.0+builtin',
+      running_sha256: '',
+      seal_wrap: false,
+      type: 'kv',
+      uuid: '0cd6346f-c93a-ecfa-b01d-6b690a745c8e',
+      id: 'kv-engine',
+    };
 
     this.renderComponent = () =>
       render(
@@ -45,6 +68,7 @@ module('Integration | Component | kv-v2 | Page::List', function (hooks) {
         <Page::List
           @secrets={{this.secrets}}
           @backend={{this.backend}}
+          @backendModel={{this.backendModel}}
           @pathToSecret={{this.pathToSecret}}
           @filterValue={{this.filterValue}}
           @failedDirectoryQuery={{this.failedDirectoryQuery}}
@@ -69,8 +93,10 @@ module('Integration | Component | kv-v2 | Page::List', function (hooks) {
     await this.renderComponent();
 
     assert.dom(PAGE.title).includesText(this.backend, 'renders mount path as page title');
-    assert.dom(PAGE.secretTab('Secrets')).exists('renders Secrets tab');
-    assert.dom(PAGE.secretTab('Configuration')).exists('renders Configuration tab');
+    assert.dom(GENERAL.tab('Secrets')).exists('renders Secrets tab');
+    assert.dom(GENERAL.dropdownToggle('Manage')).exists('renders manage dropdown');
+    await click(GENERAL.dropdownToggle('Manage'));
+    assert.dom(GENERAL.menuItem('Configure')).exists('renders configure option');
     assert.dom(PAGE.list.filter).exists('renders filter input');
     assert.dom(PAGE.list.createSecret).exists('renders create secret action');
   });

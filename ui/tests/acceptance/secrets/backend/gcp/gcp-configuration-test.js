@@ -1,9 +1,9 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, visit, currentURL, fillIn } from '@ember/test-helpers';
+import { click, currentURL, fillIn } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -12,17 +12,17 @@ import { spy } from 'sinon';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { runCmd } from 'vault/tests/helpers/commands';
+import { runCmd, mountEngineCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import {
   expectedConfigKeys,
   expectedValueOfConfigKeys,
   configUrl,
   fillInGcpConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
+import secretsNavTestHelper from '../../secrets-nav-test-helper';
 
 module('Acceptance | GCP | configuration', function (hooks) {
   setupApplicationTest(hooks);
@@ -38,30 +38,26 @@ module('Acceptance | GCP | configuration', function (hooks) {
     this.uid = uuidv4();
     this.type = 'gcp';
     this.path = `GCP-${this.uid}`;
+
+    this.mountAndConfig = (backend) => {
+      return runCmd([
+        mountEngineCmd('gcp', backend),
+        `write ${backend}/config credentials='{"some-key":"some-value"}'`,
+      ]);
+    };
+    this.expectedConfigEditRoute = 'configuration.edit';
+    this.overviewUrl = (backend) => `/vault/secrets-engines/${backend}/configuration`;
     return login();
   });
 
-  test('it should prompt configuration after mounting the GCP engine', async function (assert) {
-    await visit('/vault/secrets/mounts');
-    await mountBackend(this.type, this.path);
-
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${this.path}/configuration`,
-      'navigated to configuration view'
-    );
-    assert.dom(GENERAL.emptyStateTitle).hasText('Google Cloud not configured');
-    assert.dom(GENERAL.emptyStateActions).hasText('Configure Google Cloud');
-    // cleanup
-    await runCmd(`delete sys/mounts/${this.path}`);
-  });
+  secretsNavTestHelper(test, 'gcp');
 
   test('it should transition to configure page on click "Configure" from toolbar', async function (assert) {
     await enablePage.enable(this.type, this.path);
-    await click(SES.configure);
+    await click(GENERAL.tabLink('plugin-settings'));
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.path}/configuration/edit`,
+      `/vault/secrets-engines/${this.path}/configuration/edit`,
       'navigated to configuration edit view'
     );
     // cleanup
@@ -85,6 +81,8 @@ module('Acceptance | GCP | configuration', function (hooks) {
           return { data: { id: this.path, type: this.type, ...gcpAccountAttrs } };
         });
         await enablePage.enable(this.type, this.path);
+        await click(GENERAL.tabLink('plugin-settings'));
+
         for (const key of expectedConfigKeys(this.type)) {
           if (key === 'Credentials') continue; // not returned by the API
           const responseKeyAndValue = expectedValueOfConfigKeys(this.type, key);
@@ -93,9 +91,9 @@ module('Acceptance | GCP | configuration', function (hooks) {
             .hasText(responseKeyAndValue, `value for ${key} on the ${this.type} config details exists.`);
         }
         // check mount configuration details are present and accurate.
-        await click(SES.configurationToggle);
+        await click(GENERAL.tabLink('general-settings'));
         assert
-          .dom(GENERAL.infoRowValue('Path'))
+          .dom(GENERAL.copySnippet('path'))
           .hasText(`${this.path}/`, 'mount path is displayed in the configuration details');
         // cleanup
         await runCmd(`delete sys/mounts/${this.path}`);
@@ -105,14 +103,15 @@ module('Acceptance | GCP | configuration', function (hooks) {
     module('create', function () {
       test('it should save gcp account accessType options', async function (assert) {
         await enablePage.enable(this.type, this.path);
-        await click(SES.configTab);
-        await click(SES.configure);
+        await click(GENERAL.tabLink('plugin-settings'));
+
         await fillInGcpConfig();
         await click(GENERAL.submitButton);
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${this.path}'s configuration.`),
           'Success flash message is rendered showing the GCP model configuration was saved.'
         );
+        await click(GENERAL.tabLink('plugin-settings'));
 
         assert
           .dom(GENERAL.infoRowValue('Config TTL'))
@@ -143,6 +142,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
       test('it should save credentials', async function (assert) {
         assert.expect(3);
         const credentials = '{"some-key":"some-value"}';
+        await click(GENERAL.tabLink('plugin-settings'));
         await click(SES.configure);
 
         this.server.post(configUrl('gcp', this.path), (schema, req) => {
@@ -169,6 +169,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
 
       test('it should not save credentials if it has NOT been changed', async function (assert) {
         assert.expect(3);
+        await click(GENERAL.tabLink('plugin-settings'));
         await click(SES.configure);
 
         this.server.post(configUrl('gcp', this.path), (schema, req) => {
@@ -203,9 +204,8 @@ module('Acceptance | GCP | configuration', function (hooks) {
         this.server.post(configUrl(this.type, this.path), () => {
           return overrideResponse(400, { errors: ['my goodness, that did not work!'] });
         });
+        await click(GENERAL.tabLink('plugin-settings'));
 
-        await click(SES.configTab);
-        await click(SES.configure);
         await fillInGcpConfig();
         await click(GENERAL.submitButton);
 
@@ -214,7 +214,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
           .hasText('Error my goodness, that did not work!', 'API error shows on form');
         assert.strictEqual(
           currentURL(),
-          `/vault/secrets/${this.path}/configuration/edit`,
+          `/vault/secrets-engines/${this.path}/configuration/edit`,
           'the form did not transition because the save failed.'
         );
         // cleanup
@@ -226,7 +226,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['bad request'] });
         });
         await enablePage.enable(this.type, this.path);
-        assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
+        assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Error', 'shows the secrets backend error route');
       });
     });
   });
@@ -249,6 +249,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
         return { data: { id: this.path, type: this.type, ...this.wifAttrs } };
       });
       await enablePage.enable(this.type, this.path);
+      await click(GENERAL.tabLink('plugin-settings'));
       for (const key of expectedConfigKeys('gcp-wif')) {
         const responseKeyAndValue = expectedValueOfConfigKeys(this.type, key);
         assert
@@ -256,9 +257,9 @@ module('Acceptance | GCP | configuration', function (hooks) {
           .hasText(responseKeyAndValue, `value for ${key} on the ${this.type} config details exists.`);
       }
       // check mount configuration details are present and accurate.
-      await click(SES.configurationToggle);
+      await click(GENERAL.tabLink('general-settings'));
       assert
-        .dom(GENERAL.infoRowValue('Path'))
+        .dom(GENERAL.copySnippet('path'))
         .hasText(`${this.path}/`, 'mount path is displayed in the configuration details');
       // cleanup
       await runCmd(`delete sys/mounts/${this.path}`);
@@ -267,8 +268,8 @@ module('Acceptance | GCP | configuration', function (hooks) {
     module('Error handling', function () {
       test('it shows API error if user previously set credentials but tries to edit the configuration with wif fields', async function (assert) {
         await enablePage.enable(this.type, this.path);
-        await click(SES.configTab);
-        await click(SES.configure);
+        await click(GENERAL.tabLink('plugin-settings'));
+
         await fillInGcpConfig();
         await click(GENERAL.submitButton); // save GCP credentials
 

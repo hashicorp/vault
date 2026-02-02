@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -15,6 +15,7 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { assertSecretWrap } from 'vault/tests/helpers/components/secret-edit-toolbar';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   setupApplicationTest(hooks);
@@ -54,11 +55,12 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   });
 
   test('it does not show the option to configure', async function (assert) {
-    await visit(`/vault/secrets/cubbyhole/list`);
-    await click(SES.configTab);
-    assert.dom(SES.configure).doesNotExist('does not show the configure button');
+    await visit(`/vault/secrets-engines/cubbyhole/list`);
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Configure'));
+    assert.dom(GENERAL.tab('plugin-settings')).doesNotExist('does not show the configure button');
     // try to force it by visiting the URL
-    await visit(`/vault/secrets/cubbyhole/configuration/edit`);
-    assert.dom('[data-test-backend-error-title]').hasText('404 Not Found', 'shows 404 error');
+    await visit(`/vault/secrets-engines/cubbyhole/configuration/edit`);
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('404 Not Found', 'shows 404 error');
   });
 });

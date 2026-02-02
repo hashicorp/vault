@@ -1,77 +1,68 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
-import { hash } from 'rsvp';
+import { ModelFrom } from 'vault/route';
+import {
+  LdapListStaticRolesListEnum,
+  LdapListDynamicRolesListEnum,
+} from '@hashicorp/vault-client-typescript';
 
-import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
-import type SecretEngineModel from 'vault/models/secret-engine';
-import type LdapRoleModel from 'vault/models/ldap/role';
-import type LdapLibraryModel from 'vault/models/ldap/library';
 import type Controller from '@ember/controller';
-import type { Breadcrumb } from 'vault/vault/app-types';
-import { LdapLibraryAccountStatus } from 'vault/vault/adapters/ldap/library';
+import type { Breadcrumb } from 'vault/app-types';
+import type { LdapApplicationModel } from './application';
+import type ApiService from 'vault/services/api';
+
+export type LdapOverviewRouteModel = ModelFrom<LdapOverviewRoute>;
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
-}
-interface RouteModel {
-  backendModel: SecretEngineModel;
-  promptConfig: boolean;
-  roles: Array<LdapRoleModel>;
-  libraries: Array<LdapLibraryModel>;
-  librariesStatus: Array<LdapLibraryAccountStatus>;
+  model: LdapOverviewRouteModel;
 }
 
-@withConfig('ldap/config')
 export default class LdapOverviewRoute extends Route {
-  @service declare readonly store: Store;
+  @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;
 
-  declare promptConfig: boolean;
-
-  async fetchLibrariesStatus(libraries: Array<LdapLibraryModel>): Promise<Array<LdapLibraryAccountStatus>> {
-    const allStatuses: Array<LdapLibraryAccountStatus> = [];
-
-    for (const library of libraries) {
-      try {
-        const statuses = await library.fetchStatus();
-        allStatuses.push(...statuses);
-      } catch (error) {
-        // suppressing error
+  async model() {
+    const { promptConfig, secretsEngine } = this.modelFor('application') as LdapApplicationModel;
+    const { currentPath } = this.secretMountPath;
+    const requests = [
+      this.api.secrets.ldapListStaticRoles(currentPath, LdapListStaticRolesListEnum.TRUE),
+      this.api.secrets.ldapListDynamicRoles(currentPath, LdapListDynamicRolesListEnum.TRUE),
+    ];
+    const results = await Promise.allSettled(requests);
+    const roles = [];
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        if (result.value.keys) {
+          const type = results.indexOf(result) === 0 ? 'static' : 'dynamic';
+          roles.push(...result.value.keys.map((name) => ({ name, type, completeRoleName: name })));
+        }
       }
     }
-    return allStatuses;
+    return {
+      promptConfig,
+      secretsEngine,
+      roles,
+    };
   }
 
-  async fetchLibraries(backend: string) {
-    return this.store.query('ldap/library', { backend }).catch(() => []);
-  }
-
-  async model() {
-    const backend = this.secretMountPath.currentPath;
-    const libraries = await this.fetchLibraries(backend);
-    return hash({
-      promptConfig: this.promptConfig,
-      backendModel: this.modelFor('application'),
-      roles: this.store.query('ldap/role', { backend }).catch(() => []),
-      libraries,
-      librariesStatus: this.fetchLibrariesStatus(libraries as Array<LdapLibraryModel>),
-    });
-  }
-
-  setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {
+  setupController(
+    controller: RouteController,
+    resolvedModel: LdapOverviewRouteModel,
+    transition: Transition
+  ) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id },
+      { label: this.secretMountPath.currentPath },
     ];
   }
 }

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package issuing
@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -253,12 +254,12 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 		return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unsupported key type Value: %s", role.KeyType)}
 	}
 
-	// Before validating key lengths, update our KeyBits/SignatureBits based
+	// Before validating key lengths, update our KeyBits based
 	// on the actual CSR key type.
 	if role.KeyType == "any" {
-		// We update the Value of KeyBits and SignatureBits here (from the
+		// We update the Value of KeyBits here (from the
 		// role), using the specified key type. This allows us to convert
-		// the default Value (0) for SignatureBits and KeyBits to a
+		// the default Value (0) for KeyBits to a
 		// meaningful Value.
 		//
 		// We ignore the role's original KeyBits Value if the KeyType is any
@@ -268,8 +269,8 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 		// docs saying when key_type=any, we only enforce our specified minimums
 		// for signing operations
 		var err error
-		if role.KeyBits, role.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(
-			actualKeyType, 0, role.SignatureBits); err != nil {
+		if role.KeyBits, err = certutil.ValidateDefaultOrValueKeyType(
+			actualKeyType, 0); err != nil {
 			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unknown internal error updating default values: %v", err)}
 		}
 
@@ -280,6 +281,14 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 		if actualKeyType == "ec" {
 			role.KeyBits = 224
 		}
+	}
+
+	// We fetch the key type from the certificate because the caSign.KeyType might be ManagedKeyType which isn't an
+	// algorithm, this is awkward because of upper-lower case differences
+	underlayingCaKeyType := strings.ToLower(caSign.Certificate.PublicKeyAlgorithm.String())
+	role.SignatureBits, err = certutil.ValidateDefaultOrValueHashBits(underlayingCaKeyType, role.SignatureBits)
+	if err != nil {
+		return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unknown internal error updating default signature length value: %v", err)}
 	}
 
 	// At this point, role.KeyBits and role.SignatureBits should both
@@ -318,6 +327,7 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 	if creation.Params == nil {
 		return nil, nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
+	EntAdjustCreationBundle(b, creation)
 
 	creation.Params.IsCA = signInput.IsCA()
 	creation.Params.UseCSRValues = signInput.UseCSRValues()
@@ -327,11 +337,11 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 		creation.Params.ExcludedDNSDomains = signInput.GetExcludedDomains()
 		creation.Params.PermittedIPRanges, err = signInput.GetPermittedIpRanges()
 		if err != nil {
-			return nil, nil, errutil.UserError{Err: fmt.Sprintf("error parsinng permitted IP ranges: %v", err)}
+			return nil, nil, errutil.UserError{Err: fmt.Sprintf("error parsing permitted IP ranges: %v", err)}
 		}
 		creation.Params.ExcludedIPRanges, err = signInput.GetExcludedIpRanges()
 		if err != nil {
-			return nil, nil, errutil.UserError{Err: fmt.Sprintf("error parsinng excluded IP ranges: %v", err)}
+			return nil, nil, errutil.UserError{Err: fmt.Sprintf("error parsing excluded IP ranges: %v", err)}
 		}
 		creation.Params.PermittedEmailAddresses = signInput.GetPermittedEmailAddresses()
 		creation.Params.ExcludedEmailAddresses = signInput.GetExcludedEmailAddresses()
@@ -339,7 +349,7 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 		creation.Params.ExcludedURIDomains = signInput.GetExcludedUriDomains()
 	} else {
 		for _, ext := range csr.Extensions {
-			if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+			if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) && !signInput.UseCSRValues() {
 				warnings = append(warnings, "specified CSR contained a Basic Constraints extension that was ignored during issuance")
 			}
 		}

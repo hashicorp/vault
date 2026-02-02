@@ -1,23 +1,14 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-<PageHeader as |p|>
-  <p.top>
+
+<Page::Header @title={{this.title}}>
+  <:breadcrumbs>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq @mode "create")}}
-        Create Role
-      {{else if (eq @mode "edit")}}
-        Edit Role
-      {{else}}
-        {{@model.id}}
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+  </:breadcrumbs>
+</Page::Header>
+
 {{#if (eq @mode "show")}}
   <Toolbar>
     <ToolbarActions>
@@ -150,10 +141,10 @@
           @modelValidations={{this.modelValidations}}
         />
       {{else}}
-        <EmptyState
-          @title="No database connection selected"
-          @message="Choose a connection to be able to configure a role type."
-        />
+        <Hds::ApplicationState @align="center" class="bottom-padding-32" as |A|>
+          <A.Header data-test-empty-state-title @title="No database connection selected" />
+          <A.Body data-test-empty-state-message @text="Choose a connection to be able to configure a role type." />
+        </Hds::ApplicationState>
       {{/if}}
       <div class="field is-fullwidth box is-bottomless">
         <Hds::ButtonSet>

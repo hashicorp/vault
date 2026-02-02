@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -14,6 +14,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KUBERNETES_OVERVIEW } from 'vault/tests/helpers/kubernetes/kubernetes-selectors';
+import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 module('Integration | Component | kubernetes | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,35 +22,21 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'kubernetes_f3400dee',
-        path: 'kubernetes-test/',
-        type: 'kubernetes',
-      },
+    this.secretsEngine = new SecretsEngineResource({
+      accessor: 'kubernetes_f3400dee',
+      path: 'kubernetes-test/',
+      type: 'kubernetes',
     });
-    this.store.pushPayload('kubernetes/role', {
-      modelName: 'kubernetes/role',
-      backend: 'kubernetes-test',
-      ...this.server.create('kubernetes-role'),
-    });
-    this.store.pushPayload('kubernetes/role', {
-      modelName: 'kubernetes/role',
-      backend: 'kubernetes-test',
-      ...this.server.create('kubernetes-role'),
-    });
-    this.backend = this.store.peekRecord('secret-engine', 'kubernetes-test');
-    this.roles = this.store.peekAll('kubernetes/role');
+    this.roles = ['role-0', 'role-1'];
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: this.backend.id },
+      { label: 'kubernetes-test' },
     ];
     this.promptConfig = false;
+
     this.renderComponent = () => {
       return render(
-        hbs`<Page::Overview @promptConfig={{this.promptConfig}} @backend={{this.backend}} @roles={{this.roles}} @breadcrumbs={{this.breadcrumbs}} />`,
+        hbs`<Page::Overview @promptConfig={{this.promptConfig}} @secretsEngine={{this.secretsEngine}} @roles={{this.roles}} @breadcrumbs={{this.breadcrumbs}} />`,
         { owner: this.engine }
       );
     };

@@ -1,31 +1,32 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 {{! private_key is only available after initial save }}
-{{#if this.generatedKey.privateKey}}
+{{#if this.generatedKey.private_key}}
   <Page::PkiKeyDetails
     @key={{this.generatedKey}}
-    @canDelete={{this.generatedKey.canDelete}}
-    @canEdit={{this.generatedKey.canEdit}}
+    @canDelete={{this.generatedKeyCapabilities.canDelete}}
+    @canEdit={{this.generatedKeyCapabilities.canUpdate}}
   />
 {{else}}
   <form {{on "submit" (perform this.save)}}>
     <div class="box is-sideless is-fullwidth is-marginless">
       <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
-      <NamespaceReminder @mode={{if @model.isNew "generate" "update"}} @noun="PKI key" />
-      {{#if @model.isNew}}
-        {{#each @model.formFieldGroups as |fieldGroup|}}
+      <NamespaceReminder @mode={{if @form.isNew "generate" "update"}} @noun="PKI key" />
+
+      {{#if @form.isNew}}
+        {{#each @form.formFieldGroups as |fieldGroup|}}
           {{#each-in fieldGroup as |group fields|}}
             {{#if (eq group "Key parameters")}}
-              <PkiKeyParameters @model={{@model}} @fields={{fields}} @modelValidations={{this.modelValidations}} />
+              <PkiKeyParameters @form={{@form}} @fields={{fields}} @modelValidations={{this.modelValidations}} />
             {{else}}
-              {{#each fields as |attr|}}
+              {{#each fields as |field|}}
                 <FormField
-                  data-test-field={{attr}}
-                  @attr={{attr}}
-                  @model={{@model}}
+                  data-test-field={{field}}
+                  @attr={{field}}
+                  @model={{@form}}
                   @modelValidations={{this.modelValidations}}
                   @showHelpText={{false}}
                 />
@@ -34,18 +35,25 @@
           {{/each-in}}
         {{/each}}
       {{else}}
-        {{! only key name is edit-able }}
-        {{#let (find-by "name" "keyName" @model.formFields) as |keyName|}}
-          <FormField data-test-field={{keyName}} @attr={{keyName}} @model={{@model}} @showHelpText={{false}} />
-        {{/let}}
-        {{#let (find-by "name" "keyType" @model.formFields) as |keyType|}}
-          <ReadonlyFormField @attr={{keyType}} @value={{@model.keyType}} />
-        {{/let}}
+        {{#each @form.formFields as |field|}}
+          {{! only key name is edit-able }}
+          {{#if (eq field.name "key_name")}}
+            <FormField
+              data-test-field={{field}}
+              @attr={{field}}
+              @model={{@form}}
+              @modelValidations={{this.modelValidations}}
+              @showHelpText={{false}}
+            />
+          {{else}}
+            <ReadonlyFormField @attr={{field}} @value={{get @form.data field.name}} />
+          {{/if}}
+        {{/each}}
       {{/if}}
     </div>
     <Hds::ButtonSet class="has-top-padding-s">
       <Hds::Button
-        @text={{if @model.isNew "Generate key" "Edit key"}}
+        @text={{if @form.isNew "Generate key" "Edit key"}}
         @icon={{if this.save.isRunning "loading"}}
         type="submit"
         disabled={{this.save.isRunning}}
@@ -55,7 +63,7 @@
         @text="Cancel"
         @color="secondary"
         disabled={{this.save.isRunning}}
-        {{on "click" @onCancel}}
+        {{on "click" this.onCancel}}
         data-test-cancel
       />
     </Hds::ButtonSet>

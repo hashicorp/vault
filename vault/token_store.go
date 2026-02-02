@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/tokens"
 )
 
@@ -1070,6 +1071,41 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		}
 	}
 
+	recordObservationFunc := func() {
+		clientId, nonEntityToken := entry.CreateClientID()
+
+		var mountAccessor string
+		var mountPath string
+		var mountType string
+		mountEntry := ts.core.router.MatchingMountEntry(ctx, entry.Path)
+		if mountEntry != nil {
+			mountAccessor = mountEntry.Accessor
+			mountPath = mountEntry.Path
+			mountType = mountEntry.Type
+		}
+
+		// Note: this should not be modified to include the token's ID (the token's actual value),
+		// due to sensitivity.
+		ts.core.Observations().RecordObservationToLedger(ctx, observations.ObservationTypeTokenCreation, tokenNS, map[string]interface{}{
+			"policies":                     entry.Policies,
+			"path":                         entry.Path,
+			"display_name":                 entry.DisplayName,
+			"num_uses":                     entry.NumUses,
+			"token_type":                   entry.Type.String(),
+			"ttl":                          entry.TTL.String(),
+			"role":                         entry.Role,
+			"token_client_id":              clientId,
+			"token_entity_id":              entry.EntityID,
+			"token_client_id_is_entity_id": !nonEntityToken,
+			"mount_accessor":               mountAccessor,
+			"mount_path":                   mountPath,
+			"mount_type":                   mountType,
+		})
+		if err != nil {
+			ts.logger.Error("error recording observation for token creation", err)
+		}
+	}
+
 	switch entry.Type {
 	case logical.TokenTypeDefault, logical.TokenTypeService:
 		// In case it was default, force to service
@@ -1147,6 +1183,9 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if !userSelectedID && !ts.core.DisableSSCTokens() {
 			entry.ExternalID = ts.GenerateSSCTokenID(entry.ID, logical.IndexStateFromContext(ctx), entry)
 		}
+
+		recordObservationFunc()
+
 		return nil
 
 	case logical.TokenTypeBatch:
@@ -1215,6 +1254,8 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if tokenNS.ID != namespace.RootNamespaceID {
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
 		}
+
+		recordObservationFunc()
 
 		return nil
 

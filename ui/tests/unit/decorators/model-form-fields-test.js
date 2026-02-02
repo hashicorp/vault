@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -121,7 +121,7 @@ module('Unit | Decorators | ModelFormFields', function (hooks) {
           options: {
             label: 'URL',
             helpText:
-              'If a URL is provided the other fields can be left empty. E.g. otpauth://totp/Vault:test@test.com?secret=Y64VEVMBTSXCYIWRSHRNDZW62MPGVU2G&issuer=Vault',
+              'If a URL is provided the other fields can be left empty. E.g. otpauth://totp/Vault:test@test.com?secret=<your_secret>&issuer=Vault',
             subText: 'The TOTP key url string that can be used to configure a key.',
           },
           type: 'string',
@@ -164,17 +164,6 @@ module('Unit | Decorators | ModelFormFields', function (hooks) {
         },
       ],
       'formFields set on Model class'
-    );
-  });
-
-  test('it should set formFieldGroups on Model class', function (assert) {
-    // this model uses withFormFields with groups
-    const record = this.store.createRecord('ldap/config');
-    const groups = record.formFieldGroups.map((group) => Object.keys(group)[0]);
-    assert.deepEqual(
-      groups,
-      ['default', 'TLS options', 'More options'],
-      'formFieldGroups set on Model class with correct group labels'
     );
   });
 });

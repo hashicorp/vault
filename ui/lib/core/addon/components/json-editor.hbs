@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 <div ...attributes>
@@ -19,17 +19,18 @@
     </Hds::CodeBlock>
   {{else}}
     <Hds::CodeEditor
-      data-test-component="code-mirror-modifier"
       @ariaLabel={{this.ariaLabel}}
       @extraKeys={{@extraKeys}}
       @hasCopyButton={{true}}
-      @language={{this.mode}}
+      @hasFullScreenButton={{@hasFullScreenButton}}
       @isLintingEnabled={{eq this.mode "json"}}
-      @value={{or @value @example}}
+      @language={{this.mode}}
       @onBlur={{@onBlur}}
-      @onInput={{this.onUpdate}}
+      @onInput={{@valueUpdated}}
       @onLint={{@onLint}}
       @onSetup={{this.onSetup}}
+      @value={{or @value @example}}
+      data-test-component="code-mirror-modifier"
       as |CE|
     >
       {{#if this.getShowToolbar}}
@@ -39,15 +40,15 @@
           </CE.Title>
         {{/if}}
 
-        {{#if @subTitle}}
-          <CE.Description>
-            {{@subTitle}}
-          </CE.Description>
-        {{/if}}
-
         {{#if @helpText}}
           <CE.Description>
             {{@helpText}}
+          </CE.Description>
+        {{/if}}
+
+        {{#if (has-block "description")}}
+          <CE.Description>
+            {{yield to="description"}}
           </CE.Description>
         {{/if}}
 
@@ -56,7 +57,7 @@
 
           {{#if @example}}
             <Hds::Button
-              class="toolbar-button"
+              @color="secondary"
               @icon="reload"
               @text="Restore example"
               disabled={{not @value}}

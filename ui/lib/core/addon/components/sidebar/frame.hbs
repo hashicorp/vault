@@ -1,0 +1,78 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::AppFrame @hasSidebar={{@showSidebar}} @hasHeader={{@showSidebar}} @hasFooter={{false}} as |Frame|>
+  <Frame.Header>
+    <Hds::AppHeader @hasA11yRefocus={{false}} data-test-app-header>
+      <:logo>
+        <Hds::AppHeader::HomeLink
+          @icon="vault"
+          @isIconOnly={{true}}
+          @route="vault.cluster.dashboard"
+          @model={{this.currentCluster.cluster.name}}
+          @text="HashiCorp Vault Home Menu"
+          data-test-app-header-logo
+        />
+      </:logo>
+
+      <:globalActions>
+        {{#if (has-feature "Namespaces")}}
+          <NamespacePicker class="hds-side-nav-hide-when-minimized" />
+        {{/if}}
+      </:globalActions>
+
+      <:utilityActions>
+        <Hds::Button
+          @isIconOnly={{true}}
+          @size="medium"
+          @icon="terminal-screen"
+          @text="Console toggle"
+          data-test-console-toggle
+          {{on "click" (fn (mut this.console.isOpen) (not this.console.isOpen))}}
+          {{on "click" this.trackReplToggle}}
+        />
+        <Hds::Dropdown @enableCollisionDetection={{true}} data-test-dropdown="help menu" as |dd|>
+          <dd.ToggleIcon @icon="help" @text="help menu" />
+          <dd.Title @text="Help & Support" />
+          <dd.Interactive @href="https://developer.hashicorp.com/vault/docs">Documentation</dd.Interactive>
+          <dd.Interactive @href="https://developer.hashicorp.com/vault/tutorials">Tutorials</dd.Interactive>
+          <dd.Interactive @href="https://www.hashicorp.com/en/blog/products/vault">Blogs</dd.Interactive>
+          <dd.Interactive @href="https://github.com/hashicorp/vault/blob/main/CHANGELOG.md">Changelog</dd.Interactive>
+          <dd.Separator />
+          <dd.Interactive @href="https://support.hashicorp.com/hc/en-us/requests/new">Create support ticket</dd.Interactive>
+        </Hds::Dropdown>
+
+        <Sidebar::UserMenu />
+      </:utilityActions>
+    </Hds::AppHeader>
+  </Frame.Header>
+  <Frame.Sidebar data-test-sidebar-nav>
+    <Hds::AppSideNav @isResponsive={{true}} @hasA11yRefocus={{true}} @a11yRefocusSkipTo="app-main-content">
+      {{! this block is where the Hds::AppSideNav::Portal components render into }}
+      <Hds::AppSideNav::Portal::Target />
+    </Hds::AppSideNav>
+  </Frame.Sidebar>
+  <Frame.Main id="app-main-content" class={{if this.console.isOpen "main--console-open"}}>
+    {{! outlet for app content }}
+    <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
+    {{yield}}
+    <div data-test-console-panel class={{if this.console.isOpen "panel-open"}}>
+      {{#if this.console.isOpen}}
+        <Console::UiPanel
+          {{on "keydown" this.closeConsole}}
+          @isFullscreen={{this.consoleFullscreen}}
+          {{focus-trap
+            focusTrapOptions=(hash
+              initialFocus="#console-input"
+              escapeDeactivates=true
+              clickOutsideDeactivates=true
+              onDeactivate=this.closeConsole
+            )
+          }}
+        />
+      {{/if}}
+    </div>
+  </Frame.Main>
+</Hds::AppFrame>

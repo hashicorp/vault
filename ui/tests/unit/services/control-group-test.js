@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -45,7 +45,7 @@ module('Unit | Service | control group', function (hooks) {
     this.router.reopen({
       transitionTo: sinon.stub(),
       urlFor: sinon.stub().returns('/ui/vault/foo'),
-      currentURL: '/vault/secrets/kv/show/foo',
+      currentURL: '/vault/secrets-engines/kv/show/foo',
     });
   });
 
@@ -127,7 +127,7 @@ module('Unit | Service | control group', function (hooks) {
       creation_time: '2022-03-17T20:00:25.594Z',
       ttl: 400,
     };
-    const expected = { ...error, uiParams: { url: '/vault/secrets/kv/show/foo' } };
+    const expected = { ...error, uiParams: { url: '/vault/secrets-engines/kv/show/foo' } };
     const service = this.owner.factoryFor('service:control-group').create({
       storeControlGroupToken: sinon.spy(),
     });

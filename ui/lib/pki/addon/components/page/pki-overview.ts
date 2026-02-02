@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,24 +8,34 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 
-import type Store from '@ember-data/store';
 import type RouterService from '@ember/routing/router-service';
-import type PkiIssuerModel from 'vault/models/pki/issuer';
-import type PkiRoleModel from 'vault/models/pki/role';
 
 interface Args {
-  issuers: PkiIssuerModel[] | number;
-  roles: PkiRoleModel[] | number;
+  issuers: string[] | number;
+  roles: string[] | number;
+  certificates: string[] | number;
   engine: string;
 }
 
 export default class PkiOverview extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
-  @service declare readonly store: Store;
 
   @tracked rolesValue = '';
   @tracked certificateValue = '';
   @tracked issuerValue = '';
+
+  // format issuers, roles and certificates to pass in to SearchSelect components
+  get searchSelectOptions() {
+    const issuers = Array.isArray(this.args.issuers) ? this.args.issuers : [];
+    const roles = Array.isArray(this.args.roles) ? this.args.roles : [];
+    const certificates = Array.isArray(this.args.certificates) ? this.args.certificates : [];
+
+    return {
+      issuers: issuers.map((issuer) => ({ name: issuer, id: issuer })),
+      roles: roles.map((role) => ({ name: role, id: role })),
+      certificates: certificates.map((certificate) => ({ name: certificate, id: certificate })),
+    };
+  }
 
   @action
   transitionToViewCertificates() {

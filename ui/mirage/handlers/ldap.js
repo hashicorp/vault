@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,7 +8,7 @@ import { Response } from 'miragejs';
 export default function (server) {
   const query = (req) => {
     const { name, backend } = req.params;
-    return name ? { name } : { backend };
+    return name ? { name: decodeURIComponent(name) } : { backend };
   };
   const getRecord = (schema, req, dbKey) => {
     const record = schema.db[dbKey].findBy(query(req));
@@ -58,6 +58,17 @@ export default function (server) {
     return getRecord(schema, req, dbKey);
   };
 
+  const deleteRecord = (schema, req, type) => {
+    const dbKey = type ? 'ldapRoles' : 'ldapLibraries';
+    const lookup = type ? { type, ...query(req) } : query(req);
+    const record = schema.db[dbKey].findBy(lookup);
+    if (record) {
+      schema.db[dbKey].remove(lookup);
+      return new Response(204);
+    }
+    return new Response(404, {}, { errors: [] });
+  };
+
   // config
   server.post('/:backend/config', (schema, req) => createOrUpdateRecord(schema, req, 'ldapConfigs'));
   server.get('/:backend/config', (schema, req) => getRecord(schema, req, 'ldapConfigs'));
@@ -77,6 +88,8 @@ export default function (server) {
   server.get('/:backend/creds/:name', (schema) => ({
     data: schema.db.ldapCredentials.firstOrCreate({ type: 'dynamic' }),
   }));
+  server.delete('/:backend/static-role/*name', (schema, req) => deleteRecord(schema, req, 'static'));
+  server.delete('/:backend/role/*name', (schema, req) => deleteRecord(schema, req, 'dynamic'));
   // libraries
   server.post('/:backend/library/:name', (schema, req) => createOrUpdateRecord(schema, req, 'ldapLibraries'));
   server.get('/:backend/library/*name', (schema, req) => listOrGetRecord(schema, req));
@@ -92,7 +105,7 @@ export default function (server) {
     return { data };
   });
   // check-out / check-in
-  server.post('/:backend/library/:set_name/check-in', (schema, req) => {
+  server.post('/:backend/library/manage/:set_name/check-in', (schema, req) => {
     // Check-in makes an unavailable account available again
     const { service_account_names } = JSON.parse(req.requestBody);
     const dbCollection = schema.db['ldapAccountStatuses'];
@@ -114,8 +127,8 @@ export default function (server) {
     const { set_name, backend } = req.params;
     const dbCollection = schema.db['ldapAccountStatuses'];
     const available = dbCollection.where({ available: true });
-    if (available) {
-      return Response(404, {}, { errors: ['no accounts available to check out'] });
+    if (!available) {
+      return new Response(404, {}, { errors: ['no accounts available to check out'] });
     }
     const checkOut = {
       ...available[0],
@@ -137,4 +150,5 @@ export default function (server) {
       auth: null,
     };
   });
+  server.delete('/:backend/library/*name', (schema, req) => deleteRecord(schema, req));
 }

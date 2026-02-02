@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package ssh
@@ -45,5 +45,6 @@ func (b *backend) secretOTPRevoke(ctx context.Context, req *logical.Request, d *
 	if err != nil {
 		return nil, err
 	}
+	b.TryRecordObservationWithRequest(ctx, nil, ObservationTypeSSHOTPRevoke, nil)
 	return nil, nil
 }

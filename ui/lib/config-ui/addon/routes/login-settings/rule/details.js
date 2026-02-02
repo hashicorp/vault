@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -29,6 +29,7 @@ export default class LoginSettingsRuleDetailsRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
       { label: 'UI login settings', route: 'login-settings' },
       { label: resolvedModel.rule.name },
     ];

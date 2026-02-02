@@ -1,11 +1,11 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { click, fillIn, waitFor } from '@ember/test-helpers';
-import { fillInLoginFields, SYS_INTERNAL_UI_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
+import { fillInLoginFields, formatAuthMounts } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { module, test } from 'qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -20,7 +20,8 @@ module('Integration | Component | auth | page | listing visibility', function (h
 
   hooks.beforeEach(function () {
     setupTestContext(this);
-    this.visibleAuthMounts = SYS_INTERNAL_UI_MOUNTS;
+    this.api = this.owner.lookup('service:api');
+    this.visibleAuthMounts = formatAuthMounts(this.api);
     // extra setup for when the "oidc" is selected and the oidc-jwt component renders
     this.routerStub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
   });
@@ -75,6 +76,17 @@ module('Integration | Component | auth | page | listing visibility', function (h
     assert
       .dom(GENERAL.button('Sign in with other methods'))
       .exists('"Sign in with other methods" renders again');
+  });
+
+  test('it renders tabs for types prefixed with "ns_"', async function (assert) {
+    this.visibleAuthMounts = formatAuthMounts(this.api, { 'token/': { type: 'ns_token' } });
+    await this.renderComponent();
+    assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
+    assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'it renders 1 tab');
+    assert.dom(AUTH_FORM.tabBtn('token')).exists(`token renders as a tab`);
+    assert
+      .dom(AUTH_FORM.tabBtn('token'))
+      .hasAttribute('aria-selected', 'true', 'it selects the first type by default');
   });
 
   // integration tests for ?with= query param

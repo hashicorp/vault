@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package git
@@ -12,7 +12,7 @@ import (
 type (
 	// IgnoredMode determines how to handle ignored files
 	IgnoredMode = string
-	// IgnoredMode determines how to handle changes to submodules
+	// IgnoreSubmodulesWhen determines how to handle changes to submodules
 	IgnoreSubmodulesWhen = string
 )
 

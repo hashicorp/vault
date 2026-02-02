@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -21,7 +21,7 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
-func getGenerationParams(sc *storageContext, data *framework.FieldData) (exported bool, format string, role *issuing.RoleEntry, errorResp *logical.Response) {
+func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot bool) (exported bool, format string, role *issuing.RoleEntry, errorResp *logical.Response) {
 	exportedStr := data.Get("exported").(string)
 	switch exportedStr {
 	case "exported":
@@ -76,7 +76,16 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData) (exporte
 	}
 	*role.AllowWildcardCertificates = true
 
-	if role.KeyBits, role.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(role.KeyType, role.KeyBits, role.SignatureBits); err != nil {
+	if role.KeyBits, err = certutil.ValidateDefaultOrValueKeyType(role.KeyType, role.KeyBits); err != nil {
+		errorResp = logical.ErrorResponse(err.Error())
+	}
+
+	signingKeyType := "any"
+	if isRoot {
+		signingKeyType = role.KeyType
+	}
+
+	if role.SignatureBits, err = certutil.ValidateDefaultOrValueHashBits(signingKeyType, role.SignatureBits); err != nil {
 		errorResp = logical.ErrorResponse(err.Error())
 	}
 

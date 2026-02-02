@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -73,7 +73,7 @@ export default class ReplicationDashboard extends Component {
       // when DR and Performance is enabled on the same cluster,
       // the states should always be the same
       // we are leaving this console log statement to be sure
-      console.log('DR State: ', drState, 'Performance State: ', performanceState); // eslint-disable-line
+      console.warn('DR State: ', drState, 'Performance State: ', performanceState);
     }
 
     return drState;

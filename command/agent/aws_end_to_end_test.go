@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package agent
@@ -22,9 +22,9 @@ import (
 	agentaws "github.com/hashicorp/vault/command/agentproxyshared/auth/aws"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
-	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	thutils "github.com/hashicorp/vault/sdk/helper/testhelpers/utils"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -57,7 +57,7 @@ func TestAWSEndToEnd(t *testing.T) {
 		envVarAwsTestSecretKey,
 		envVarAwsTestRoleArn,
 	}
-	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+	thutils.SkipUnlessEnvVarsSet(t, credNames)
 
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{

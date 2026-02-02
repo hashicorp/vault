@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -141,7 +141,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 
-	exported, format, role, errorResp := getGenerationParams(sc, data)
+	// Tell getGenerationParams we are generating a root, so that we can validate signatureBits against KeyType
+	exported, format, role, errorResp := getGenerationParams(sc, data, true)
 	if errorResp != nil {
 		return errorResp, nil
 	}
@@ -176,6 +177,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		apiData: data,
 		role:    role,
 	}
+	b.adjustInputBundle(input)
 	parsedBundle, warnings, err := generateCert(sc, input, nil, true, b.Backend.GetRandomReader())
 	if err != nil {
 		switch err.(type) {
@@ -337,11 +339,18 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		observe.NewAdditionalPKIMetadata("issuer_name", myIssuer.Name),
 		observe.NewAdditionalPKIMetadata("issuer_id", myIssuer.ID),
 		observe.NewAdditionalPKIMetadata("key_id", myKey.ID),
-		observe.NewAdditionalPKIMetadata("key_id", myKey.Name),
-		observe.NewAdditionalPKIMetadata("role", role.Name),
-		observe.NewAdditionalPKIMetadata("serial_number", cb.SerialNumber),
+		observe.NewAdditionalPKIMetadata("key_name", myKey.Name),
+		observe.NewAdditionalPKIMetadata("key_type", myKey.PrivateKeyType),
+		observe.NewAdditionalPKIMetadata("role_name", role.Name),
+		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(parsedBundle.Certificate)),
 		observe.NewAdditionalPKIMetadata("type", format),
-		observe.NewAdditionalPKIMetadata("expiration", parsedBundle.Certificate.NotAfter.String()))
+		observe.NewAdditionalPKIMetadata("common_name", parsedBundle.Certificate.Subject.CommonName),
+		observe.NewAdditionalPKIMetadata("subject_key_id", parsedBundle.Certificate.SubjectKeyId),
+		observe.NewAdditionalPKIMetadata("authority_key_id", parsedBundle.Certificate.AuthorityKeyId),
+		observe.NewAdditionalPKIMetadata("public_key_algorithm", parsedBundle.Certificate.PublicKeyAlgorithm.String()),
+		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(parsedBundle.Certificate.PublicKey)),
+		observe.NewAdditionalPKIMetadata("not_after", parsedBundle.Certificate.NotAfter.Format(time.RFC3339)),
+		observe.NewAdditionalPKIMetadata("not_before", parsedBundle.Certificate.NotBefore.Format(time.RFC3339)))
 
 	return resp, nil
 }
@@ -392,7 +401,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, issuerId, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
+	signingBundle, issuer, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -428,6 +437,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		apiData: data,
 		role:    role,
 	}
+	b.adjustInputBundle(input)
 	parsedBundle, warnings, err := signCert(b.System(), input, signingBundle, true, useCSRValues)
 	if err != nil {
 		switch err.(type) {
@@ -439,7 +449,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		}
 	}
 
-	if err := issuing.VerifyCertificate(sc.GetContext(), sc.GetStorage(), issuerId, parsedBundle); err != nil {
+	if err := issuing.VerifyCertificate(issuer, sc.System(), parsedBundle); err != nil {
 		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
@@ -465,6 +475,20 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 			resp.AddWarning(fmt.Sprintf("Invalid key usage: %v", err.Error()))
 		}
 	}
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuerSignIntermediate,
+		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuer.ID),
+		observe.NewAdditionalPKIMetadata("not_after", parsedBundle.Certificate.NotAfter.Format(time.RFC3339)),
+		observe.NewAdditionalPKIMetadata("not_before", parsedBundle.Certificate.NotBefore.Format(time.RFC3339)),
+		observe.NewAdditionalPKIMetadata("common_name", parsedBundle.Certificate.Subject.CommonName),
+		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(parsedBundle.Certificate)),
+		observe.NewAdditionalPKIMetadata("public_key_algorithm", parsedBundle.Certificate.PublicKeyAlgorithm.String()),
+		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(parsedBundle.Certificate.PublicKey)),
+		observe.NewAdditionalPKIMetadata("subject_key_id", parsedBundle.Certificate.SubjectKeyId),
+		observe.NewAdditionalPKIMetadata("authority_key_id", parsedBundle.Certificate.AuthorityKeyId),
+		observe.NewAdditionalPKIMetadata("role_name", role.Name),
+		observe.NewAdditionalPKIMetadata("type", format))
 
 	return resp, nil
 }
@@ -578,7 +602,7 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 	}
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, issuing.IssuanceUsage)
+	signingBundle, issuer, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -644,6 +668,20 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 		Type:  "CERTIFICATE",
 		Bytes: newCert,
 	})
+
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuerSignSelfIssued,
+		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuer.ID.String()),
+		observe.NewAdditionalPKIMetadata("issuing_ca", signingCB.IssuingCA),
+		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(cert)),
+		observe.NewAdditionalPKIMetadata("not_after", cert.NotAfter.Format(time.RFC3339)),
+		observe.NewAdditionalPKIMetadata("not_before", cert.NotBefore.Format(time.RFC3339)),
+		observe.NewAdditionalPKIMetadata("common_name", cert.Subject.CommonName),
+		observe.NewAdditionalPKIMetadata("public_key_algorithm", cert.PublicKeyAlgorithm.String()),
+		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(cert.PublicKey)),
+		observe.NewAdditionalPKIMetadata("signing_algorithm", signingAlgorithm.String()),
+		observe.NewAdditionalPKIMetadata("subject_key_id", cert.SubjectKeyId),
+		observe.NewAdditionalPKIMetadata("authority_key_id", cert.AuthorityKeyId))
 
 	return &logical.Response{
 		Data: map[string]interface{}{

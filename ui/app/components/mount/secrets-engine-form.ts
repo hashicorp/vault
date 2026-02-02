@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,6 +9,8 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { set } from '@ember/object';
+import { capitalize } from '@ember/string';
+
 import type FlashMessagesService from 'ember-cli-flash/services/flash-messages';
 import type ApiService from 'vault/services/api';
 import type CapabilitiesService from 'vault/services/capabilities';
@@ -40,6 +42,19 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
   @tracked modelValidations: ValidationMap | null = null;
   @tracked invalidFormAlert: string | null = null;
   @tracked errorMessage: string | string[] = '';
+
+  get breadcrumbs() {
+    const breadcrumbs: { label: string; route?: string }[] = [
+      { label: 'Secrets engines', route: 'vault.cluster.secrets.backends' },
+      { label: 'Enable secrets engine', route: 'vault.cluster.secrets.enable' },
+    ];
+
+    if (this.args?.model.type) {
+      breadcrumbs.push({ label: capitalize(this.args?.model?.type) });
+    }
+
+    return breadcrumbs;
+  }
 
   get mountForm(): SecretsEngineForm {
     return this.args.model;
@@ -153,6 +168,6 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
 
   @action
   goBack() {
-    this.router.transitionTo('vault.cluster.secrets.mounts');
+    this.router.transitionTo('vault.cluster.secrets.enable');
   }
 }

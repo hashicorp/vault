@@ -1,15 +1,19 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      <LinkTo @route="vault.cluster.access.leases">Leases</LinkTo>
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title="Leases">
+  <:actions>
+    <Hds::Button
+      @text="Back to Leases"
+      @color="secondary"
+      @route="vault.cluster.access.leases"
+      data-test-button="Back to Leases"
+    />
+  </:actions>
+</Page::Header>
+
 {{! template-lint-configure simple-unless "warn" }}
 {{#unless (or (eq this.model.httpStatus 400) (eq this.model.httpStatus 404))}}
   {{this.model.message}}

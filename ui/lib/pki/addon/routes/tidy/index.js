@@ -1,38 +1,31 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
-import { PKI_DEFAULT_EMPTY_STATE_MSG } from '../overview';
-import { hash } from 'rsvp';
 import { service } from '@ember/service';
+import { PKI_DEFAULT_EMPTY_STATE_MSG } from '../overview';
 import timestamp from 'core/utils/timestamp';
 
 export default class PkiTidyIndexRoute extends Route {
-  @service store;
+  @service api;
   @service secretMountPath;
 
   async fetchTidyStatus() {
-    const adapter = this.store.adapterFor('application');
-    const tidyStatusResponse = await adapter.ajax(
-      `/v1/${this.secretMountPath.currentPath}/tidy-status`,
-      'GET'
-    );
-    const responseTimestamp = timestamp.now();
-    tidyStatusResponse.data.responseTimestamp = responseTimestamp;
-    return tidyStatusResponse.data;
+    const status = await this.api.secrets.pkiTidyStatus(this.secretMountPath.currentPath);
+    return { ...status, responseTimestamp: timestamp.now() };
   }
-
-  model() {
+  async model() {
     const { hasConfig, autoTidyConfig, engine } = this.modelFor('tidy');
+    const tidyStatus = await this.fetchTidyStatus();
 
-    return hash({
-      tidyStatus: this.fetchTidyStatus(),
+    return {
+      tidyStatus,
       hasConfig,
       autoTidyConfig,
       engine,
-    });
+    };
   }
 
   setupController(controller, resolvedModel) {

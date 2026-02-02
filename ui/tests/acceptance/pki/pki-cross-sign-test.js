@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -51,46 +51,51 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     // Sinon spy for clipboard
     const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
     // configure parent and intermediate mounts to make them cross-signable
-    await visit(`/vault/secrets/${this.intMountPath}/pki/configuration/create`);
+    await visit(`/vault/secrets-engines/${this.intMountPath}/pki/configuration`);
     await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
-    await fillIn(GENERAL.inputByAttr('commonName'), 'Short-Lived Int R1');
+    await fillIn(GENERAL.inputByAttr('common_name'), 'Short-Lived Int R1');
     await click(GENERAL.submitButton);
     await click(PKI_CROSS_SIGN.copyButton('CSR'));
     const csr = clipboardSpy.firstCall.args[0];
-    await visit(`vault/secrets/${this.parentMountPath}/pki/issuers/${this.oldParentIssuerName}/sign`);
+    await visit(`vault/secrets-engines/${this.parentMountPath}/pki/issuers/${this.oldParentIssuerName}/sign`);
     await fillIn(GENERAL.inputByAttr('csr'), csr);
     await fillIn(GENERAL.inputByAttr('format'), 'pem_bundle');
     await click('[data-test-pki-sign-intermediate-save]');
     await click(PKI_CROSS_SIGN.copyButton('CA Chain'));
     const pemBundle = clipboardSpy.secondCall.args[0].replace(/,/, '\n');
-    await visit(`vault/secrets/${this.intMountPath}/pki/configuration/create`);
+    await visit(`vault/secrets-engines/${this.intMountPath}/pki/configuration`);
     await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
     await click(GENERAL.textToggle);
     await fillIn(GENERAL.maskedInput, pemBundle);
     await click(PKI_CONFIGURE_CREATE.importSubmit);
-    await visit(`vault/secrets/${this.intMountPath}/pki/issuers`);
+    await visit(`vault/secrets-engines/${this.intMountPath}/pki/issuers`);
     await click('[data-test-is-default]');
     // name default issuer of intermediate
     const oldIntIssuerId = find(PKI_CROSS_SIGN.rowValue('Issuer ID')).innerText;
     await click(PKI_CROSS_SIGN.copyButton('Certificate'));
     const oldIntCert = clipboardSpy.thirdCall.args[0];
     await click(PKI_ISSUER_DETAILS.configure);
-    await fillIn(GENERAL.inputByAttr('issuerName'), this.intIssuerName);
+    await fillIn(GENERAL.inputByAttr('issuer_name'), this.intIssuerName);
     await click('[data-test-submit]');
 
     // perform cross-sign
-    await visit(`vault/secrets/${this.parentMountPath}/pki/issuers/${this.parentIssuerName}/cross-sign`);
+    await visit(
+      `vault/secrets-engines/${this.parentMountPath}/pki/issuers/${this.parentIssuerName}/cross-sign`
+    );
     await fillIn(PKI_CROSS_SIGN.objectListInput('intermediateMount'), this.intMountPath);
     await fillIn(PKI_CROSS_SIGN.objectListInput('intermediateIssuer'), this.intIssuerName);
     await fillIn(PKI_CROSS_SIGN.objectListInput('newCrossSignedIssuer'), this.newlySignedIssuer);
     await click(GENERAL.submitButton);
     assert
       .dom(`${PKI_CROSS_SIGN.signedIssuerCol('intermediateMount')} a`)
-      .hasAttribute('href', `/ui/vault/secrets/${this.intMountPath}/pki/overview`);
+      .hasAttribute('href', `/ui/vault/secrets-engines/${this.intMountPath}/pki/overview`);
     assert
       .dom(`${PKI_CROSS_SIGN.signedIssuerCol('intermediateIssuer')} a`)
-      .hasAttribute('href', `/ui/vault/secrets/${this.intMountPath}/pki/issuers/${oldIntIssuerId}/details`);
+      .hasAttribute(
+        'href',
+        `/ui/vault/secrets-engines/${this.intMountPath}/pki/issuers/${oldIntIssuerId}/details`
+      );
 
     // get certificate data of newly signed issuer
     await click(`${PKI_CROSS_SIGN.signedIssuerCol('newCrossSignedIssuer')} a`);
@@ -105,8 +110,8 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     allow_any_name=true \
     max_ttl="720h"`,
     ]);
-    await visit(`vault/secrets/${this.intMountPath}/pki/roles/${myRole}/generate`);
-    await fillIn(GENERAL.inputByAttr('commonName'), 'my-leaf');
+    await visit(`vault/secrets-engines/${this.intMountPath}/pki/roles/${myRole}/generate`);
+    await fillIn(GENERAL.inputByAttr('common_name'), 'my-leaf');
     await fillIn('[data-test-ttl-value="TTL"]', '3600');
     await click(GENERAL.submitButton);
     await click(PKI_CROSS_SIGN.copyButton('Certificate'));

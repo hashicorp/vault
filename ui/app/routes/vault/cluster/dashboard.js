@@ -1,16 +1,14 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-// eslint-disable-next-line ember/no-mixins
-import ClusterRoute from 'vault/mixins/cluster-route';
 import { action } from '@ember/object';
+import Route from '@ember/routing/route';
 import SecretsEngineResource from 'vault/resources/secrets/engine';
 
-export default class VaultClusterDashboardRoute extends Route.extend(ClusterRoute) {
+export default class VaultClusterDashboardRoute extends Route {
   @service store;
   @service namespace;
   @service version;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -22,7 +22,9 @@ const ROLE_TYPES = [
     credentialType: 'iam_user',
     async fillOutForm(assert) {
       // nothing to fill out
-      assert.dom('[data-test-field]').exists({ count: 1 });
+      assert
+        .dom(GENERAL.helpText)
+        .hasText('For Vault roles of credential type iam_user, there are no inputs, just submit the form.');
     },
     expectedPayload: {},
   },
@@ -75,24 +77,24 @@ module('Acceptance | aws secret backend', function (hooks) {
     await enablePage.enable('aws', path);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${path}/list`,
+      `/vault/secrets-engines/${path}/list`,
       'After enabling aws secrets engine it navigates to roles list'
     );
 
     await click(SES.createSecretLink);
-    assert.dom(SES.secretHeader).hasText('Create an AWS Role', 'It renders the create role page');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create an AWS Role', 'It renders the create role page');
 
     await fillIn(GENERAL.inputByAttr('name'), roleName);
     await click(GENERAL.submitButton);
-    await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
+    await waitUntil(() => currentURL() === `/vault/secrets-engines/${path}/show/${roleName}`); // flaky without this
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${path}/show/${roleName}`,
+      `/vault/secrets-engines/${path}/show/${roleName}`,
       'aws: navigates to the show page on creation'
     );
 
     await click(SES.crumb(path));
-    assert.strictEqual(currentURL(), `/vault/secrets/${path}/list`);
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${path}/list`);
     assert.dom(SES.secretLink(roleName)).exists();
 
     // delete role
@@ -131,17 +133,17 @@ module('Acceptance | aws secret backend', function (hooks) {
       });
       await runCmd(mountEngineCmd('aws', path));
 
-      await visit(`/vault/secrets/${path}/create`);
+      await visit(`/vault/secrets-engines/${path}/create`);
       assert.dom('h1').hasText('Create an AWS Role');
       await fillIn(GENERAL.inputByAttr('name'), roleName);
       await fillIn(GENERAL.inputByAttr('credentialType'), scenario.credentialType);
       await click(GENERAL.submitButton);
-      await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
-      assert.strictEqual(currentURL(), `/vault/secrets/${path}/show/${roleName}`);
+      await waitUntil(() => currentURL() === `/vault/secrets-engines/${path}/show/${roleName}`); // flaky without this
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${path}/show/${roleName}`);
       await click(SES.generateLink);
       assert
-        .dom(GENERAL.inputByAttr('credentialType'))
-        .hasValue(scenario.credentialType, 'credentialType matches backing role');
+        .dom(`[data-test-credential-type=${scenario.credentialType}]`)
+        .exists(scenario.credentialType, 'credentialType matches backing role');
 
       // based on credentialType, fill out form
       await scenario.fillOutForm(assert);
@@ -174,15 +176,14 @@ module('Acceptance | aws secret backend', function (hooks) {
     await runCmd(mountEngineCmd('aws', path));
     await runCmd(`write ${path}/roles/${roleName} credential_type=assumed_role`);
 
-    await visit(`/vault/secrets/${path}/list`);
+    await visit(`/vault/secrets-engines/${path}/list`);
     assert.dom(SES.secretLink(roleName)).exists();
     await click(SES.secretLink(roleName));
 
-    assert.strictEqual(currentURL(), `/vault/secrets/${path}/credentials/${roleName}`);
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${path}/credentials/${roleName}`);
     assert
       .dom(GENERAL.inputByAttr('credentialType'))
       .hasValue('iam_user', 'credentialType defaults to first in list due to no role read permissions');
-
     await fillIn(GENERAL.inputByAttr('credentialType'), 'assumed_role');
 
     await click(GENERAL.submitButton);

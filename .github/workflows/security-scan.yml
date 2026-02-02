@@ -11,11 +11,12 @@ on:
   pull_request:
     branches:
       - 'main'
-      - '!oss-merge-main*'
+      - 'release/**'
+      - 'ce/**'
 
 jobs:
   scan:
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ondemand","os=linux","type=c6a.4xlarge"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ondemand","os=linux","type=c6a.4xlarge;c6a.2xlarge;m8a.4xlarge;c6a.8xlarge"]') }}
     # The first check ensures this doesn't run on community-contributed PRs, who won't have the
     # permissions to run this job.
     if: |
@@ -23,21 +24,21 @@ jobs:
       github.actor != 'dependabot[bot]' &&
       github.actor != 'hc-github-team-secure-vault-core'
     steps:
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
     - name: Set up Go
-      uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+      uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
       with:
         cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
-        go-version-file: .go-version
+        go-version: 'stable'
 
     - name: Set up Python
-      uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
         python-version: 3.x
 
     - name: Set up Security Scanner
-      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         repository: hashicorp/security-scanner
         token: ${{ secrets.PRODSEC_SCANNER_READ_ONLY }}

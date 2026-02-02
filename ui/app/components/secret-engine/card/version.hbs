@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 <Hds::Card::Container
@@ -20,22 +20,23 @@
     <LG.Item @colspan={{3}}>
       <Hds::Text::Body
         @tag="p"
-        class="hds-border-strong has-side-padding-8 border-radius-4 is-inline-block has-bottom-margin-s"
-        data-test-engine-type
+        class="hds-border-strong has-side-padding-8 border-radius-small is-inline-block has-bottom-margin-s"
+        data-test-row-value="type"
       >{{@model.secretsEngine.type}}</Hds::Text::Body>
       {{! TODO: Verify if we want to display the full version or chop down ie. v0.17.1 vs v0.17.1-0.230942309423094... }}
       <Hds::Text::Body
         @tag="p"
-        data-test-engine-current-version
+        data-test-row-value="running_plugin_version"
       >{{@model.secretsEngine.running_plugin_version}}</Hds::Text::Body>
     </LG.Item>
   </Hds::Layout::Grid>
 
-  {{#if (gt @model.versions.length 1)}}
+  {{! TODO need to support override_pinned_version and reload before making version updates }}
+  {{!-- {{#if (gt @model.versions.length 1)}}
     <Hds::Separator />
 
     <Hds::Layout::Flex @isInline="true">
-      <Hds::Form::Select::Field name="plugin-version" data-test-versions-dropdown as |F|>
+      <Hds::Form::Select::Field name="plugin-version" data-test-input="plugin_version" as |F|>
         <F.Label>Update version to:</F.Label>
         <F.Options>
           <option value="">Select version</option>
@@ -45,5 +46,5 @@
         </F.Options>
       </Hds::Form::Select::Field>
     </Hds::Layout::Flex>
-  {{/if}}
+  {{/if}} --}}
 </Hds::Card::Container>

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package http
@@ -74,6 +74,12 @@ func wrapJSONLimitsHandler(handler http.Handler, props *vault.HandlerProperties)
 		var maxRequestSize, maxJSONDepth, maxStringValueLength, maxObjectEntryCount, maxArrayElementCount, maxToken int64
 
 		if props.ListenerConfig != nil {
+			// Check to see if limits are disabled
+			if props.ListenerConfig.DisableJSONLimitParsing {
+				handler.ServeHTTP(w, r)
+				return
+			}
+
 			maxRequestSize = props.ListenerConfig.MaxRequestSize
 			maxJSONDepth = props.ListenerConfig.CustomMaxJSONDepth
 			maxStringValueLength = props.ListenerConfig.CustomMaxJSONStringValueLength

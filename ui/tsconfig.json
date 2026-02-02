@@ -1,6 +1,8 @@
 {
   "extends": "@tsconfig/ember/tsconfig.json",
   "compilerOptions": {
+    "module": "esnext",
+    "resolveJsonModule": true,
     "experimentalDecorators": true,
     "allowJs": true,
     "strict": true,
@@ -46,6 +48,8 @@
       "kmip/test-support/*": ["lib/kmip/addon-test-support/*"],
       "ldap": ["lib/ldap/addon"],
       "ldap/*": ["lib/ldap/addon/*"],
+      "kubernetes": ["lib/kubernetes/addon"],
+      "kubernetes/*": ["lib/kubernetes/addon/*"],
       "kv": ["lib/kv/addon"],
       "kv/*": ["lib/kv/addon/*"],
       "kv/test-support": ["lib/kv/addon-test-support"],
@@ -83,6 +87,7 @@
     "lib/css/**/*",
     "lib/kmip/**/*",
     "lib/ldap/**/*",
+    "lib/kubernetes/**/*",
     "lib/open-api-explorer/**/*",
     "lib/pki/**/*",
     "lib/replication/**/*",

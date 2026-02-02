@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -40,6 +40,7 @@ type AuthEnableCommand struct {
 	flagTokenType                  string
 	flagVersion                    int
 	flagPluginVersion              string
+	flagOverridePinnedVersion      BoolPtr
 	flagIdentityTokenKey           string
 	flagTrimRequestTrailingSlashes BoolPtr
 }
@@ -211,6 +212,12 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Usage:   "Select the semantic version of the plugin to enable.",
 	})
 
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   flagNameOverridePinnedVersion,
+		Target: &c.flagOverridePinnedVersion,
+		Usage:  "Enterprise only. Specified plugin-version will override the pinned plugin version.",
+	})
+
 	f.StringVar(&StringVar{
 		Name:    flagNameIdentityTokenKey,
 		Target:  &c.flagIdentityTokenKey,
@@ -326,6 +333,11 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			authOpts.Config.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameOverridePinnedVersion && c.flagOverridePinnedVersion.IsSet() {
+			val := c.flagOverridePinnedVersion.Get()
+			authOpts.Config.OverridePinnedVersion = &val
 		}
 
 		if fl.Name == flagNameIdentityTokenKey {

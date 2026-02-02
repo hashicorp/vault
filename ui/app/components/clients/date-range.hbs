@@ -1,20 +1,21 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 <div ...attributes>
   <div class="is-flex-column align-items-end">
-    {{#if this.version.isEnterprise}}
+    {{! Enterprise should always have a @billingStartTime but as a fallback allow the user to query dates manually }}
+    {{#if (and @billingStartTime this.version.isEnterprise)}}
       <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs">
-        Change billing period
+        {{if this.flags.isHvdManaged "Change data period" "Change billing period"}}
       </Hds::Text::Display>
-      <Hds::Dropdown class="has-left-margin-xs" @matchToggleWidth={{true}} as |D|>
-        <D.ToggleButton @text="Billing start date" @color="secondary" data-test-date-range-edit />
+      <Hds::Dropdown class="has-left-margin-xs" as |D|>
+        <D.ToggleButton @text={{this.formatDropdownDate @startTimestamp}} @color="secondary" data-test-date-range-edit />
         <D.Description @text="Current period" />
         <D.Checkmark
           {{! Pass an empty string to reset query param because the current billing period is the default }}
-          {{on "click" (fn this.updateEnterpriseDateRange "")}}
+          {{on "click" (fn this.updateEnterpriseDateRange "" D.close)}}
           @selected={{this.isSelected @billingStartTime}}
           data-test-date-range-billing-start="0"
         >
@@ -25,7 +26,7 @@
           <D.Description @text="Historical periods" />
           {{#each this.historicalBillingPeriods as |period idx|}}
             <D.Checkmark
-              {{on "click" (fn this.updateEnterpriseDateRange period)}}
+              {{on "click" (fn this.updateEnterpriseDateRange period D.close)}}
               data-test-date-range-billing-start={{add idx 1}}
               @selected={{this.isSelected period}}
             >
@@ -34,7 +35,8 @@
           {{/each}}
         {{/if}}
       </Hds::Dropdown>
-    {{else}}
+    {{else if (not (and @startTimestamp @endTimestamp))}}
+      {{! Hide if the user has already made an initial query because dates can be updated by clicking "Edit" beside the date range }}
       <Hds::Button
         class="has-left-margin-xs"
         @text="Set date range"
@@ -51,62 +53,61 @@
         Edit date range
       </M.Header>
       <M.Body>
-        <Hds::Text::Body @tag="div">
+        {{#if this.version.isCommunity}}
           <p class="has-bottom-margin-s">
             Use custom date ranges to query historic client count data. Query results do not include the current month.
           </p>
-          <ul class="has-bottom-margin-s">
-            <li>
-              <strong>Start</strong>
-              sets the month and year (inclusive) for the first month of client counting.
-            </li>
-            <li>
-              <strong>End</strong>
-              sets the month and year (inclusive) for the final month of client counting.
-            </li>
-          </ul>
-          <p class="has-bottom-margin-s">
-            We recommend setting
+        {{/if}}
+        <ul class="has-bottom-margin-s">
+          <li>
             <strong>Start</strong>
-            to your Vault deploy date to get the most accurate new and total client count estimations.</p>
-
-          <div class="clients-date-range-display">
-            <div>
-              <Hds::Form::TextInput::Field
-                @type="month"
-                @value={{this.modalStart}}
-                max={{this.previousMonth}}
-                id="start-month"
-                name="modalStart"
-                {{on "change" this.updateDate}}
-                data-test-date-edit="start"
-                as |F|
-              >
-                <F.Label>Start</F.Label>
-              </Hds::Form::TextInput::Field>
-            </div>
-            <div>
-              <Hds::Form::TextInput::Field
-                @type="month"
-                @value={{this.modalEnd}}
-                max={{this.previousMonth}}
-                id="end-month"
-                name="modalEnd"
-                {{on "change" this.updateDate}}
-                data-test-date-edit="end"
-                as |F|
-              >
-                <F.Label>End</F.Label>
-              </Hds::Form::TextInput::Field>
-            </div>
+            sets the month and year (inclusive) for the first month of client counting.
+          </li>
+          <li>
+            <strong>End</strong>
+            sets the month and year (inclusive) for the final month of client counting.
+          </li>
+        </ul>
+        <p class="has-bottom-margin-s">
+          We recommend setting
+          <strong>Start</strong>
+          to your Vault deploy date to get the most accurate client counts.</p>
+        <div class="clients-date-range-display">
+          <div>
+            <Hds::Form::TextInput::Field
+              @type="month"
+              @value={{this.modalStart}}
+              max={{if this.version.isCommunity this.previousMonth (date-format this.currentMonth "yyyy-MM")}}
+              id="start-month"
+              name="modalStart"
+              {{on "change" this.updateDate}}
+              data-test-date-edit="start"
+              as |F|
+            >
+              <F.Label>Start</F.Label>
+            </Hds::Form::TextInput::Field>
           </div>
-          {{#if this.validationError}}
-            <Hds::Form::Error
-              class="has-top-margin-xs"
-              data-test-date-range-validation
-            >{{this.validationError}}</Hds::Form::Error>
-          {{/if}}
-        </Hds::Text::Body>
+          <div>
+            <Hds::Form::TextInput::Field
+              @type="month"
+              @value={{this.modalEnd}}
+              max={{if this.version.isCommunity this.previousMonth (date-format this.currentMonth "yyyy-MM")}}
+              id="end-month"
+              name="modalEnd"
+              {{on "change" this.updateDate}}
+              data-test-date-edit="end"
+              as |F|
+            >
+              <F.Label>End</F.Label>
+            </Hds::Form::TextInput::Field>
+          </div>
+        </div>
+        {{#if this.validationError}}
+          <Hds::Form::Error
+            class="has-top-margin-xs"
+            data-test-date-range-validation
+          >{{this.validationError}}</Hds::Form::Error>
+        {{/if}}
       </M.Body>
       <M.Footer as |F|>
         <Hds::Button @text="Save" {{on "click" this.handleSave}} data-test-submit />

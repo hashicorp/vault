@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
@@ -13,7 +13,8 @@ func newGithubCheckCmd() *cobra.Command {
 		Short: "Github check commands",
 		Long:  "Github check commands",
 	}
-	checkCmd.AddCommand(newCheckGithubCommitStatusCmd())
+	checkCmd.AddCommand(newGithubCheckCommitStatusCmd())
+	checkCmd.AddCommand(newGithubCheckGoModDiffCmd())
 
 	return checkCmd
 }

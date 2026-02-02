@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -12,10 +12,10 @@
   @hasConfig={{this.model.hasConfig}}
 >
   <:list as |certs|>
-    {{#each certs as |pkiCertificate|}}
+    {{#each certs as |cert|}}
       <LinkedBlock
         class="list-item-row"
-        @params={{array "certificates.certificate.details" this.model.parentModel.id pkiCertificate.id}}
+        @params={{array "certificates.certificate.details" this.model.parentModel.id cert}}
         @linkPrefix={{this.mountPoint}}
       >
         <div class="level is-mobile">
@@ -23,7 +23,7 @@
             <div>
               <Icon @name="certificate" class="has-text-grey-light" />
               <span class="has-text-weight-semibold is-underline">
-                {{pkiCertificate.id}}
+                {{cert}}
               </span>
               <div class="is-flex-row has-left-margin-l has-top-margin-xs">
               </div>
@@ -38,10 +38,7 @@
                   @hasChevron={{false}}
                   data-test-popup-menu-trigger
                 />
-                <dd.Interactive
-                  @route="certificates.certificate.details"
-                  @model={{pkiCertificate.id}}
-                >Details</dd.Interactive>
+                <dd.Interactive @route="certificates.certificate.details" @model={{cert}}>Details</dd.Interactive>
               </Hds::Dropdown>
             </div>
           </div>

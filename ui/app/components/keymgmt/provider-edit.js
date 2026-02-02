@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -37,6 +37,22 @@ export default class KeymgmtProviderEdit extends Component {
   }
 
   @tracked modelValidations;
+
+  get title() {
+    if (this.isDistributing) {
+      return 'Distribute Key to Provider';
+    } else if (this.isShowing) {
+      return 'Provider';
+    } else if (this.isCreating) {
+      return 'Create Provider';
+    }
+
+    return 'Update Credentials';
+  }
+
+  get subtitle() {
+    return this.isShowing ? this.args.model.id : '';
+  }
 
   get isShowing() {
     return this.args.mode === 'show';

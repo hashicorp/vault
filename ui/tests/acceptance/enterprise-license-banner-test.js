@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,6 +11,7 @@ import formatRFC3339 from 'date-fns/formatRFC3339';
 import { addDays, subDays } from 'date-fns';
 import timestamp from 'core/utils/timestamp';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { GENERAL } from '../helpers/general-selectors';
 
 const generateHealthResponse = (now, state) => {
   let expiry;
@@ -58,15 +59,15 @@ module('Acceptance | Enterprise | License banner warnings', function (hooks) {
     const healthResp = generateHealthResponse(this.now);
     this.server.get('/sys/health', () => healthResp);
     await visit('/vault/auth');
-    assert.dom('[data-test-license-banner-expired]').doesNotExist('expired banner does not show');
-    assert.dom('[data-test-license-banner-warning]').doesNotExist('warning banner does not show');
+    assert.dom(GENERAL.licenseBanner('expired')).doesNotExist('expired banner does not show');
+    assert.dom(GENERAL.licenseBanner('warning')).doesNotExist('warning banner does not show');
     this.server.shutdown();
   });
   test('it shows license banner warning if license expires within 30 days', async function (assert) {
     const healthResp = generateHealthResponse(this.now, 'expiring');
     this.server.get('/sys/health', () => healthResp);
     await visit('/vault/auth');
-    assert.dom('[data-test-license-banner-warning]').exists('license warning shows');
+    assert.dom(GENERAL.licenseBanner('warning')).exists('license warning shows');
     this.server.shutdown();
   });
 
@@ -74,7 +75,7 @@ module('Acceptance | Enterprise | License banner warnings', function (hooks) {
     const healthResp = generateHealthResponse(this.now, 'expired');
     this.server.get('/sys/health', () => healthResp);
     await visit('/vault/auth');
-    assert.dom('[data-test-license-banner-expired]').exists('expired license message shows');
+    assert.dom(GENERAL.licenseBanner('expired')).exists('expired license message shows');
     this.server.shutdown();
   });
 });

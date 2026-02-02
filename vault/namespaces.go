@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -13,6 +13,13 @@ var NamespaceByID func(context.Context, string, *Core) (*namespace.Namespace, er
 
 func namespaceByID(ctx context.Context, nsID string, c *Core) (*namespace.Namespace, error) {
 	if nsID == namespace.RootNamespaceID {
+		return namespace.RootNamespace, nil
+	}
+	return nil, namespace.ErrNoNamespace
+}
+
+func namespaceByPath(ctx context.Context, nsPath string, c *Core) (*namespace.Namespace, error) {
+	if nsPath == "" {
 		return namespace.RootNamespace, nil
 	}
 	return nil, namespace.ErrNoNamespace

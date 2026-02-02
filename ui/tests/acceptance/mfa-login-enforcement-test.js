@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -34,7 +34,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     });
 
     await visit('/ui/vault/access');
-    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
+    await click('[data-test-sidebar-nav-link="Multi-factor authentication"]');
     await click(GENERAL.tab('enforcements'));
     await click('[data-test-enforcement-create]');
     // Fill out form
@@ -48,11 +48,11 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
 
   test('it should create login enforcement', async function (assert) {
     await visit('/ui/vault/access');
-    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
+    await click('[data-test-sidebar-nav-link="Multi-factor authentication"]');
     await click(GENERAL.tab('enforcements'));
     await click('[data-test-enforcement-create]');
 
-    assert.dom('[data-test-mleh-title]').hasText('New enforcement', 'Title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('New enforcement', 'Title renders');
     await click('[data-test-mlef-save]');
     assert
       .dom('[data-test-inline-error-message]')
@@ -65,7 +65,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       'Cancel transitions to enforcements list'
     );
     await click('[data-test-enforcement-create]');
-    await click('.hds-breadcrumb a');
+    await click(GENERAL.breadcrumbAtIdx(1));
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.index',
@@ -117,7 +117,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       'vault.cluster.access.mfa.enforcements.enforcement.index',
       'Details more menu action transitions to enforcement route'
     );
-    await click('.hds-breadcrumb a');
+    await click(GENERAL.breadcrumbAtIdx(1));
     await click(GENERAL.menuTrigger);
     await click('[data-test-list-item-link="edit"]');
     assert.strictEqual(
@@ -133,7 +133,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     await click(`[data-test-list-item="${enforcement.name}"]`);
     // heading
     assert.dom('h1').includesText(enforcement.name, 'Name renders in title');
-    assert.dom('h1 svg').hasClass('hds-icon-lock', 'Lock icon renders in title');
+    assert.dom(GENERAL.icon('lock')).hasClass('hds-icon-lock', 'Lock icon renders in title');
     assert.dom(GENERAL.tab('targets')).hasClass('active', 'Targets tab is active by default');
     await waitFor('[data-test-target]', { timeout: 5000 });
     assert.dom('[data-test-target]').exists({ count: 4 }, 'Targets render in list');

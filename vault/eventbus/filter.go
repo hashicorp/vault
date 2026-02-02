@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package eventbus
@@ -17,7 +17,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-const globalCluster = ""
+// clusterWide is used to collect and keep track of subscriber patterns from all
+// nodes within a cluster
+const clusterWide = "__cluster_wide__"
 
 // Filters keeps track of all the event patterns that each cluster node is interested in.
 type Filters struct {
@@ -77,7 +79,7 @@ func NewFilters(self string) *Filters {
 		notifyChanges: map[clusterNodeID]*sync.Cond{},
 	}
 	f.notifyChanges[clusterNodeID(self)] = sync.NewCond(&f.lock)
-	f.notifyChanges[globalCluster] = sync.NewCond(&f.lock)
+	f.notifyChanges[clusterWide] = sync.NewCond(&f.lock)
 	return f
 }
 
@@ -95,22 +97,23 @@ func (nf *ClusterNodeFilter) String() string {
 	for _, v := range l {
 		x = append(x, v.String())
 	}
+	slices.Sort(x)
 	return strings.Join(x, ",")
 }
 
-func (f *Filters) addGlobalPattern(namespacePatterns []string, eventTypePattern string) {
-	f.addPattern(globalCluster, namespacePatterns, eventTypePattern)
+func (f *Filters) addClusterWidePattern(namespacePatterns []string, eventTypePattern string) {
+	f.addPattern(clusterWide, namespacePatterns, eventTypePattern)
 }
 
-func (f *Filters) removeGlobalPattern(namespacePatterns []string, eventTypePattern string) {
-	f.removePattern(globalCluster, namespacePatterns, eventTypePattern)
+func (f *Filters) removeClusterWidePattern(namespacePatterns []string, eventTypePattern string) {
+	f.removePattern(clusterWide, namespacePatterns, eventTypePattern)
 }
 
-func (f *Filters) clearGlobalPatterns() {
-	defer f.notify(globalCluster)
+func (f *Filters) clearClusterWidePatterns() {
+	defer f.notify(clusterWide)
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	delete(f.filters, globalCluster)
+	delete(f.filters, clusterWide)
 }
 
 func (f *Filters) getOrCreateNotify(c clusterNodeID) *sync.Cond {
@@ -157,6 +160,22 @@ func (f *Filters) copyPatternWithLock(c clusterNodeID) *ClusterNodeFilter {
 		filters.patterns = sets.New[pattern]()
 	}
 	return filters
+}
+
+func (f *Filters) makeClusterWideFilters() {
+	defer f.notify(clusterWide)
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	newPatterns := sets.New[pattern]()
+	for c, cf := range f.filters {
+		if c == clusterWide {
+			continue
+		}
+		for p := range cf.patterns {
+			newPatterns.Insert(p)
+		}
+	}
+	f.filters[clusterWide] = &ClusterNodeFilter{patterns: newPatterns}
 }
 
 // applyChanges applies the changes in the given list, atomically.
@@ -247,9 +266,9 @@ func (f *Filters) anyMatch(ns *namespace.Namespace, eventType logical.EventType)
 	return false
 }
 
-// globalMatch returns true if the global cluster's pattern list matches the arguments.
-func (f *Filters) globalMatch(ns *namespace.Namespace, eventType logical.EventType) bool {
-	return f.clusterNodeMatch(globalCluster, ns, eventType)
+// clusterWideMatch returns true if the cluster-wide's pattern list matches the arguments.
+func (f *Filters) clusterWideMatch(ns *namespace.Namespace, eventType logical.EventType) bool {
+	return f.clusterNodeMatch(clusterWide, ns, eventType)
 }
 
 // clusterNodeMatch returns true if the given cluster node's pattern list matches the arguments.
@@ -265,7 +284,7 @@ func (f *Filters) localMatch(ns *namespace.Namespace, eventType logical.EventTyp
 }
 
 // watch creates a notification channel that receives changes for the given cluster node.
-func (f *Filters) watch(ctx context.Context, clusterNode clusterNodeID) (<-chan []FilterChange, context.CancelFunc, error) {
+func (f *Filters) watch(ctx context.Context, clusterNode clusterNodeID) (<-chan []FilterChange, context.CancelFunc) {
 	notify := f.getOrCreateNotify(clusterNode)
 	ctx, cancelFunc := context.WithCancel(ctx)
 	doneCh := ctx.Done()
@@ -330,7 +349,7 @@ func (f *Filters) watch(ctx context.Context, clusterNode clusterNodeID) (<-chan 
 		}
 	}()
 
-	return ch, cancelFunc, nil
+	return ch, cancelFunc
 }
 
 // FilterChange represents a change to a cluster node's filters.

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -28,6 +28,7 @@ func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
 		groupsTableSchema,
 		groupAliasesTableSchema,
 		oidcClientsTableSchema,
+		scimConfigSchema,
 	}
 
 	for _, schemaFunc := range schemas {
@@ -130,6 +131,33 @@ func entitiesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Field: "NamespaceID",
 				},
 			},
+			// SCIM-related indexes
+			"external_id": {
+				Name:   "external_id",
+				Unique: true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{
+							Field: "NamespaceID",
+						},
+						&memdb.StringFieldIndex{
+							Field: "ExternalID",
+						},
+					},
+				},
+				AllowMissing: true,
+			},
+
+			"scim_client_id": {
+				Name:         "scim_client_id",
+				AllowMissing: true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{Field: "NamespaceID"},
+						&memdb.StringFieldIndex{Field: "ScimClientID"},
+					},
+				},
+			},
 		},
 	}
 }
@@ -185,6 +213,13 @@ func groupsTableSchema(lowerCaseName bool) *memdb.TableSchema {
 				Indexer: &memdb.StringFieldIndex{
 					Field: "NamespaceID",
 				},
+			},
+			"scim_client_id": {
+				Name: "scim_client_id",
+				Indexer: &memdb.StringFieldIndex{
+					Field: "ScimClientID",
+				},
+				AllowMissing: true,
 			},
 		},
 	}

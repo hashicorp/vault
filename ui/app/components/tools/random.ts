@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -27,6 +27,10 @@ export default class ToolsRandom extends Component {
   @tracked format = 'base64';
   @tracked randomBytes = '';
   @tracked errorMessage = '';
+
+  get breadcrumbs() {
+    return [{ label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' }, { label: 'Random bytes' }];
+  }
 
   @action
   reset() {

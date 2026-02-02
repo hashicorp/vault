@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 terraform {
@@ -52,4 +52,10 @@ variable "verify_ssh_secrets" {
   type        = bool
   description = "Flag to verify SSH secrets"
   default     = true
+}
+
+variable "ldap_enabled" {
+  type        = bool
+  description = "Whether or not we'll verify the LDAP secrets engine"
+  default     = false
 }

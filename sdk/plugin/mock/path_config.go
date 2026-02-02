@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package mock
@@ -66,6 +66,7 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 			RotationSchedule: conf.RotationSchedule,
 			RotationWindow:   conf.RotationWindow,
 			RotationPeriod:   conf.RotationPeriod,
+			RotationPolicy:   conf.RotationPolicy,
 		}
 
 		b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)

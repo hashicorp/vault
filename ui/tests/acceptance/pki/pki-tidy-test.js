@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -39,7 +39,7 @@ module('Acceptance | pki tidy', function (hooks) {
 
   test('it configures a manual tidy operation and shows its details and tidy states', async function (assert) {
     await login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/tidy`);
     await click(PKI_TIDY.tidyEmptyStateConfigure);
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
     assert.dom(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton).exists('Configure auto tidy button exists');
@@ -48,7 +48,7 @@ module('Acceptance | pki tidy', function (hooks) {
       .exists('Configure manual tidy button exists');
     await click(PKI_TIDY.tidyConfigureModal.tidyModalManualButton);
     assert.dom(PKI_TIDY_FORM.tidyFormName('manual')).exists('Manual tidy form exists');
-    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidy_cert_store'));
     await fillIn(PKI_TIDY_FORM.tidyPauseDuration, '10');
     await click(PKI_TIDY_FORM.tidySave);
     await click(PKI_TIDY.cancelTidyAction);
@@ -99,8 +99,8 @@ module('Acceptance | pki tidy', function (hooks) {
         auth: null,
       };
     });
-    await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-    await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/tidy`);
     assert.dom(PKI_TIDY.hdsAlertTitle).hasText('Tidy operation cancelled');
     assert
       .dom(PKI_TIDY.hdsAlertDescription)
@@ -112,7 +112,7 @@ module('Acceptance | pki tidy', function (hooks) {
 
   test('it configures an auto tidy operation and shows its details', async function (assert) {
     await login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/tidy`);
     await click(PKI_TIDY.tidyEmptyStateConfigure);
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
     assert.dom(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton).exists('Configure auto tidy button exists');
@@ -130,12 +130,12 @@ module('Acceptance | pki tidy', function (hooks) {
     assert
       .dom(PKI_TIDY_FORM.tidySectionHeader('ACME operations'))
       .exists('Auto tidy form enabled shows ACME operations field');
-    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidy_cert_store'));
     await click(PKI_TIDY_FORM.tidySave);
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.index');
     await click(PKI_TIDY_FORM.editAutoTidyButton);
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.configure');
-    await click(PKI_TIDY_FORM.inputByAttr('tidyRevokedCerts'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidy_revoked_certs'));
     await click(PKI_TIDY_FORM.tidySave);
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.index');
   });
@@ -143,7 +143,7 @@ module('Acceptance | pki tidy', function (hooks) {
   // test coverage for a bug where toggling acme tidy on then off caused API failure
   test('it configures a manual tidy operation', async function (assert) {
     await login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/tidy`);
     await click(PKI_TIDY.tidyEmptyStateConfigure);
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists();
     assert.dom(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton).exists();
@@ -151,7 +151,7 @@ module('Acceptance | pki tidy', function (hooks) {
     await click(PKI_TIDY.tidyConfigureModal.tidyModalManualButton);
 
     assert.dom(PKI_TIDY_FORM.tidyFormName('manual')).exists();
-    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidy_cert_store'));
 
     await click(GENERAL.ttl.toggle('Tidy ACME disabled'));
     assert
@@ -169,7 +169,7 @@ module('Acceptance | pki tidy', function (hooks) {
 
   test('it opens a tidy modal when the user clicks on the tidy toolbar action', async function (assert) {
     await login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/tidy`);
     await click(PKI_TIDY.tidyConfigureModal.tidyOptionsModal);
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
     assert.dom(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton).exists('Configure auto tidy button exists');
@@ -182,7 +182,7 @@ module('Acceptance | pki tidy', function (hooks) {
 
   test('it should show correct toolbar action depending on whether auto tidy is enabled', async function (assert) {
     await login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/tidy`);
     assert
       .dom(PKI_TIDY.tidyConfigureModal.tidyOptionsModal)
       .exists('Configure tidy modal options button exists');
@@ -190,10 +190,10 @@ module('Acceptance | pki tidy', function (hooks) {
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
     await click(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton);
     await click(GENERAL.ttl.toggle('enabled'));
-    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
-    await click(PKI_TIDY_FORM.inputByAttr('tidyRevokedCerts'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidy_cert_store'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidy_revoked_certs'));
     await click(PKI_TIDY_FORM.tidySave);
-    await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/tidy`);
     assert
       .dom(PKI_TIDY.manualTidyToolbar)
       .exists('Manual tidy toolbar action exists if auto tidy is configured');

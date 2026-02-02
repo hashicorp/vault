@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
@@ -8,8 +8,6 @@ package vault
 import (
 	"context"
 	"fmt"
-
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
@@ -110,6 +108,10 @@ func (c *Core) GetCurrentWALHeader() string {
 	return ""
 }
 
+func (c *Core) IsReplicated(secondaryID, namespacePath, mountPathRelative string) bool {
+	return false
+}
+
 func (c *Core) SecretsSyncLicensedActivated() bool { return false }
 
 func (c *Core) IsMultisealEnabled() bool { return false }
@@ -149,6 +151,7 @@ func (c *Core) IsMountTypeAllowed(mountType string) bool {
 	return true
 }
 
-func (c *Core) GetPkiCertificateCounter() logical.PkiCertificateCounter {
-	return logical.NewNullPkiCertificateCounter()
+// IsFlagEnabled returns true if the named flag is set in HCL config feature_flags.
+func (c *Core) IsFlagEnabled(name string) bool {
+	return false
 }

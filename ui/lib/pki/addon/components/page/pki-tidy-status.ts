@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,17 +8,15 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
 
-import type Store from '@ember-data/store';
+import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type VersionService from 'vault/services/version';
-import type PkiTidyModel from 'vault/models/pki/tidy';
 import type RouterService from '@ember/routing/router-service';
 
 interface Args {
-  autoTidyConfig: PkiTidyModel;
+  enabled: boolean;
   tidyStatus: TidyStatusParams;
 }
 
@@ -48,7 +46,7 @@ interface TidyStatusParams {
 }
 
 export default class PkiTidyStatusComponent extends Component<Args> {
-  @service declare readonly store: Store;
+  @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly version: VersionService;
@@ -92,7 +90,7 @@ export default class PkiTidyStatusComponent extends Component<Args> {
 
   get hasTidyConfig() {
     return !this.tidyStatusConfigFields.every(
-      (attr) => this.args.tidyStatus[attr as keyof TidyStatusParams] === null
+      (attr) => this.args.tidyStatus[attr as keyof TidyStatusParams] === undefined
     );
   }
 
@@ -147,17 +145,17 @@ export default class PkiTidyStatusComponent extends Component<Args> {
     }
   }
 
-  @task
-  @waitFor
-  *cancelTidy() {
-    try {
-      const tidyAdapter = this.store.adapterFor('pki/tidy');
-      yield tidyAdapter.cancelTidy(this.secretMountPath.currentPath);
-      this.router.transitionTo('vault.cluster.secrets.backend.pki.tidy');
-    } catch (error) {
-      this.flashMessages.danger(errorMessage(error));
-    } finally {
-      this.confirmCancelTidy = false;
-    }
-  }
+  cancelTidy = task(
+    waitFor(async () => {
+      try {
+        await this.api.secrets.pkiTidyCancel(this.secretMountPath.currentPath);
+        this.router.transitionTo('vault.cluster.secrets.backend.pki.tidy');
+      } catch (error) {
+        const { message } = await this.api.parseError(error);
+        this.flashMessages.danger(message);
+      } finally {
+        this.confirmCancelTidy = false;
+      }
+    })
+  );
 }

@@ -1,0 +1,25 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if (has-block "tabs")}}
+  <div class="tabs-container box is-marginless is-fullwidth is-paddingless">
+    <nav class="tabs" aria-label="kv tabs">
+      <ul>
+        {{yield to="tabs"}}
+      </ul>
+    </nav>
+  </div>
+{{/if}}
+
+{{#if (or (has-block "toolbarFilters") (has-block "toolbarActions"))}}
+  <Toolbar aria-label="menu items for managing KV">
+    <ToolbarFilters aria-label="filters for secrets list">
+      {{yield to="toolbarFilters"}}
+    </ToolbarFilters>
+    <ToolbarActions aria-label="actions for secrets">
+      {{yield to="toolbarActions"}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}

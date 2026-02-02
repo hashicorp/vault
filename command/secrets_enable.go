@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -35,6 +35,7 @@ type SecretsEnableCommand struct {
 	flagForceNoCache               bool
 	flagPluginName                 string
 	flagPluginVersion              string
+	flagOverridePinnedVersion      BoolPtr
 	flagOptions                    map[string]string
 	flagLocal                      bool
 	flagSealWrap                   bool
@@ -177,6 +178,12 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Completion: c.PredictVaultPlugins(api.PluginTypeSecrets, api.PluginTypeDatabase),
 		Usage: "Name of the secrets engine plugin. This plugin name must already " +
 			"exist in Vault's plugin catalog.",
+	})
+
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   "override-pinned-version",
+		Target: &c.flagOverridePinnedVersion,
+		Usage:  "Enterprise only. Specified plugin-version will override the pinned plugin version.",
 	})
 
 	f.StringVar(&StringVar{
@@ -361,6 +368,11 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			mountInput.Config.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameOverridePinnedVersion && c.flagOverridePinnedVersion.IsSet() {
+			val := c.flagOverridePinnedVersion.Get()
+			mountInput.Config.OverridePinnedVersion = &val
 		}
 
 		if fl.Name == flagNameIdentityTokenKey {

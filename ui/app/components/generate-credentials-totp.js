@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -22,6 +22,18 @@ export default class GenerateCredentialsTotp extends Component {
   constructor() {
     super(...arguments);
     this.startTimer.perform();
+  }
+
+  get breadcrumbs() {
+    return [
+      {
+        label: this.args.backendPath,
+        route: 'vault.cluster.secrets.backend',
+        model: this.args.backendPath,
+      },
+      { label: this.args.keyName, route: 'vault.cluster.secrets.backend.show', model: this.args.keyName },
+      { label: this.title },
+    ];
   }
 
   get remainingTime() {

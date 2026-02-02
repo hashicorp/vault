@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -92,5 +92,9 @@ export default class VaultClusterAccessMethodsController extends Controller {
   }
 
   // template helper
-  sortMethods = (methods) => sortObjects(methods.slice(), 'path');
+  sortMethods = (methods) => {
+    // make sure there are methods to sort otherwise slice with throw an error
+    if (!Array.isArray(methods) || methods.length === 0) return [];
+    return sortObjects(methods.slice(), 'path');
+  };
 }

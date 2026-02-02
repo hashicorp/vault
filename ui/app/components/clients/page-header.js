@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -32,6 +32,7 @@ import { task } from 'ember-concurrency';
  */
 export default class ClientsPageHeaderComponent extends Component {
   @service download;
+  @service flags;
   @service namespace;
   @service router;
   @service store;
@@ -94,10 +95,6 @@ export default class ClientsPageHeaderComponent extends Component {
     return `clients_export${ns}${csvDateRange}`;
   }
 
-  get showCommunity() {
-    return this.version.isCommunity && !!this.formattedStartDate && !!this.formattedEndDate;
-  }
-
   async getExportData() {
     const adapter = this.store.adapterFor('clients/activity');
     const { startTimestamp, endTimestamp } = this.args;
@@ -122,7 +119,7 @@ export default class ClientsPageHeaderComponent extends Component {
 
   @action
   refreshRoute() {
-    this.router.refresh();
+    this.router.refresh(this.router.currentRoute.parent.name);
   }
 
   @action

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -54,7 +54,7 @@ module('Acceptance | ldap | libraries', function (hooks) {
     await click(LDAP_SELECTORS.libraryItem('test-library'));
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.backend}/ldap/libraries/test-library/details/accounts`,
+      `/vault/secrets-engines/${this.backend}/ldap/libraries/test-library/details/accounts`,
       'Transitions to library details accounts route on list item click'
     );
     assert.dom('[data-test-account-name]').exists({ count: 2 }, 'lists the accounts');
@@ -65,14 +65,14 @@ module('Acceptance | ldap | libraries', function (hooks) {
     await click(LDAP_SELECTORS.libraryItem('admin/'));
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.backend}/ldap/libraries/subdirectory/admin/`,
+      `/vault/secrets-engines/${this.backend}/ldap/libraries/subdirectory/admin/`,
       'Transitions to subdirectory list view'
     );
 
-    await click(LDAP_SELECTORS.libraryItem('admin/test-library'));
+    await click(LDAP_SELECTORS.libraryItem('test-library'));
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.backend}/ldap/libraries/admin%2Ftest-library/details/accounts`,
+      `/vault/secrets-engines/${this.backend}/ldap/libraries/admin%2Ftest-library/details/accounts`,
       'Transitions to child library details accounts'
     );
     assert.dom('[data-test-account-name]').exists({ count: 2 }, 'lists the accounts');
@@ -109,9 +109,10 @@ module('Acceptance | ldap | libraries', function (hooks) {
     );
   });
 
-  test('it should transition to routes from library details toolbar links', async function (assert) {
+  test('it should transition to routes from library details page header dropdown', async function (assert) {
     await click('[data-test-list-item-link] a');
-    await click('[data-test-edit]');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Edit library'));
     assert.true(
       isURL('libraries/test-library/edit', this.backend),
       'Transitions to credentials route from toolbar link'

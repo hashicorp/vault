@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -51,8 +51,13 @@ export default class MessagesCreateRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: 'Messages', route: 'messages', query: { authenticated: !!resolvedModel.authenticated } },
-      { label: 'Create Message' },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      {
+        label: 'Custom messages',
+        route: 'messages',
+        query: { authenticated: !!resolvedModel.authenticated },
+      },
+      { label: 'Create message' },
     ];
   }
 }

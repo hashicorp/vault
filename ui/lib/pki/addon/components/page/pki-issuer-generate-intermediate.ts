@@ -1,14 +1,15 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import type PkiActionModel from 'vault/vault/models/pki/action';
+
+import type { Breadcrumb } from 'vault/app-types';
 
 interface Args {
-  model: PkiActionModel;
+  breadcrumbs: Breadcrumb[];
 }
 
 export default class PagePkiIssuerGenerateIntermediateComponent extends Component<Args> {

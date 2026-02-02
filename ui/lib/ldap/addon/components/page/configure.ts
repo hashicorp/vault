@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,15 +9,16 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
 
-import type LdapConfigModel from 'vault/models/ldap/config';
-import { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
+import type { LdapConfigureModel } from 'ldap/routes/configure';
+import type { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
+import type ApiService from 'vault/services/api';
+import type SecretMountPath from 'vault/services/secret-mount-path';
 
 interface Args {
-  model: LdapConfigModel;
+  model: LdapConfigureModel;
   breadcrumbs: Array<Breadcrumb>;
 }
 interface SchemaOption {
@@ -30,6 +31,8 @@ interface SchemaOption {
 export default class LdapConfigurePageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service('app-router') declare readonly router: RouterService;
+  @service declare readonly api: ApiService;
+  @service declare readonly secretMountPath: SecretMountPath;
 
   @tracked showRotatePrompt = false;
   @tracked modelValidations: ValidationMap | null = null;
@@ -66,53 +69,65 @@ export default class LdapConfigurePageComponent extends Component<Args> {
     this.router.transitionTo(`vault.cluster.secrets.backend.ldap.${route}`);
   }
 
-  validate() {
-    const { isValid, state, invalidFormMessage } = this.args.model.validate();
-    this.modelValidations = isValid ? null : state;
-    this.invalidFormMessage = isValid ? '' : invalidFormMessage;
-    return isValid;
-  }
-
   async rotateRoot() {
     try {
-      await this.args.model.rotateRoot();
+      await this.api.secrets.ldapRotateRootCredentials(this.secretMountPath.currentPath);
     } catch (error) {
       // since config save was successful at this point we only want to show the error in a flash message
-      this.flashMessages.danger(`Error rotating root password \n ${errorMessage(error)}`);
+      const { message } = await this.api.parseError(error);
+      this.flashMessages.danger(`Error rotating root password \n ${message}`);
     }
   }
 
-  @task
-  @waitFor
-  *save(event: Event | null, rotate: boolean) {
-    if (event) {
-      event.preventDefault();
-    }
-    const isValid = this.validate();
-    // show rotate creds prompt for new models when form state is valid
-    this.showRotatePrompt = isValid && this.args.model.isNew && !this.showRotatePrompt;
-
-    if (isValid && !this.showRotatePrompt) {
-      try {
-        yield this.args.model.save();
-        // if save was triggered from confirm action in rotate password prompt we need to make an additional request
-        if (rotate) {
-          yield this.rotateRoot();
-        }
-        this.flashMessages.success('Successfully configured LDAP engine');
-        this.leave('configuration');
-      } catch (error) {
-        this.error = errorMessage(error, 'Error saving configuration. Please try again or contact support.');
+  async saveConfigModelAndRotateRoot(data: LdapConfigureModel['form']['data'], rotate: boolean) {
+    try {
+      await this.api.secrets.ldapConfigure(this.secretMountPath.currentPath, data);
+      // if save was triggered from confirm action in rotate password prompt we need to make an additional request
+      if (rotate) {
+        await this.rotateRoot();
       }
+      this.flashMessages.success('Successfully configured LDAP engine');
+      this.leave('configuration');
+    } catch (error) {
+      const { message } = await this.api.parseError(
+        error,
+        'Error saving configuration. Please try again or contact support.'
+      );
+      this.error = message;
     }
   }
+
+  save = task(
+    waitFor(async (event: Event | null, rotate: boolean) => {
+      if (event) {
+        event.preventDefault();
+      }
+      const { form } = this.args.model;
+      const { isValid, state, invalidFormMessage, data } = form.toJSON();
+
+      this.modelValidations = isValid ? null : state;
+      this.invalidFormMessage = isValid ? '' : invalidFormMessage;
+      // show rotate creds prompt for new models when form state is valid
+      this.showRotatePrompt = isValid && form.isNew && !this.showRotatePrompt;
+
+      if (isValid && !this.showRotatePrompt) {
+        await this.saveConfigModelAndRotateRoot(data, rotate);
+      }
+    })
+  );
 
   @action
   cancel() {
-    const { model } = this.args;
-    const transitionRoute = model.isNew ? 'overview' : 'configuration';
-    const cleanupMethod = model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    model[cleanupMethod]();
+    const { isNew } = this.args.model.form;
+    const transitionRoute = isNew ? 'overview' : 'configuration';
     this.leave(transitionRoute);
   }
+
+  saveAndClose = task(
+    waitFor(async (rotate: boolean, close: () => void) => {
+      close();
+      const { data } = this.args.model.form.toJSON();
+      await this.saveConfigModelAndRotateRoot(data, rotate);
+    })
+  );
 }

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strings"
 
-	gh "github.com/google/go-github/v74/github"
+	gh "github.com/google/go-github/v81/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/jedib0t/go-pretty/v6/table"
 )

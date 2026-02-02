@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -143,7 +143,7 @@ module('Acceptance | Enterprise | replication-secondaries', function (hooks) {
         'Promote this cluster to a Disaster Recovery primary',
         'shows the correct description for a DR secondary'
       );
-    assert.dom('[data-test-mode]').includesText('secondary', 'shows the DR secondary mode badge');
+    assert.dom(GENERAL.badge('secondary')).includesText('secondary', 'shows the DR secondary mode badge');
 
     await click(GENERAL.linkTo('Details'));
     assert

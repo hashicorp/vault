@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -81,7 +81,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     assert
       .dom(GENERAL.emptyStateTitle)
-      .hasText('You are not authorized', 'Activity error empty state renders');
+      .hasText('ERROR 403 You are not authorized', 'Activity error empty state renders');
   });
 
   test('it should render config disabled alert', async function (assert) {

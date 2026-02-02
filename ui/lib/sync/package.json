@@ -10,7 +10,7 @@
     "ember-cli-babel": "*",
     "ember-concurrency": "*",
     "@ember/test-waiters": "*",
-    "ember-cli-typescript": "*",
+    "@embroider/macros": "*",
     "ember-auto-import": "*",
     "@types/ember": "latest",
     "@types/ember__array": "latest",

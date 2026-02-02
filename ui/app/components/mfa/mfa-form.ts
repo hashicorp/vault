@@ -1,14 +1,16 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Ember from 'ember';
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import { tracked } from '@glimmer/tracking';
+import { tracked } from 'tracked-built-ins';
+import type { TrackedSet } from 'tracked-built-ins';
 import { action } from '@ember/object';
 import { task, timeout } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
 import MfaConstraint from 'vault/resources/mfa/constraint';
 
@@ -54,7 +56,7 @@ export default class MfaForm extends Component<Args> {
   @tracked error = '';
   // Self-enrollment is per MFA method, not per login enforcement (constraint)
   // Track method IDs used to fetch a QR code so we don't re-request if a user just enrolled.
-  @tracked enrolledMethods = new Set<string>();
+  enrolledMethods: TrackedSet<string> = tracked(Set);
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -124,7 +126,7 @@ export default class MfaForm extends Component<Args> {
       await this.args.loginAndTransition.unlinked().perform(response);
     } catch (error) {
       // Reset enrolled methods if there's an error
-      this.enrolledMethods = new Set<string>();
+      this.enrolledMethods.clear();
       const errorMsg = errorMessage(error);
       const codeUsed = errorMsg.includes('code already used');
       const rateLimit = errorMsg.includes('maximum TOTP validation attempts');
@@ -141,30 +143,32 @@ export default class MfaForm extends Component<Args> {
     }
   });
 
-  fetchQrCode = task(async (mfa_method_id: string, constraint: MfaConstraint) => {
-    // Self-enrollment is an enterprise only feature
-    if (this.version.isCommunity) return;
+  fetchQrCode = task(
+    waitFor(async (mfa_method_id: string, constraint: MfaConstraint) => {
+      // Self-enrollment is an enterprise only feature
+      if (this.version.isCommunity) return;
 
-    const adapter = this.store.adapterFor('application');
-    const { mfaRequirement } = this.args.authData;
-    try {
-      const { data } = await adapter.ajax('/v1/identity/mfa/method/totp/self-enroll', 'POST', {
-        unauthenticated: true,
-        data: { mfa_method_id, mfa_request_id: mfaRequirement.mfa_request_id },
-      });
-      if (data?.url) {
-        // Set QR code which recomputes currentSelfEnrollConstraint and renders it for the user to scan
-        constraint.qrCode = data.url;
-        // Add mfa_method_id to list of already enrolled methods for client-side tracking
-        this.enrolledMethods.add(mfa_method_id);
-        return;
+      const adapter = this.store.adapterFor('application');
+      const { mfaRequirement } = this.args.authData;
+      try {
+        const { data } = await adapter.ajax('/v1/identity/mfa/method/totp/self-enroll', 'POST', {
+          unauthenticated: true,
+          data: { mfa_method_id, mfa_request_id: mfaRequirement.mfa_request_id },
+        });
+        if (data?.url) {
+          // Set QR code which recomputes currentSelfEnrollConstraint and renders it for the user to scan
+          constraint.qrCode = data.url;
+          // Add mfa_method_id to list of already enrolled methods for client-side tracking
+          this.enrolledMethods.add(mfa_method_id);
+          return;
+        }
+        // Not sure it's realistic to get here without the endpoint throwing an error, but just in case!
+        this.error = 'There was a problem generating the QR code. Please try again.';
+      } catch (error) {
+        this.error = errorMessage(error);
       }
-      // Not sure it's realistic to get here without the endpoint throwing an error, but just in case!
-      this.error = 'There was a problem generating the QR code. Please try again.';
-    } catch (error) {
-      this.error = errorMessage(error);
-    }
-  });
+    })
+  );
 
   newCodeDelay = task(async (errorMessage) => {
     let delay;

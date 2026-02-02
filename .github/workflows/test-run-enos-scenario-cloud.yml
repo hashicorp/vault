@@ -4,6 +4,8 @@ name: enos-cloud
 on:
   workflow_call:
     inputs:
+      hcp-environment:
+        type: string
       product-version:
         type: string
 

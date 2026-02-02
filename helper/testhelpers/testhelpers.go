@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package testhelpers
@@ -12,7 +12,6 @@ import (
 	"io"
 	"math/rand"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -955,16 +954,6 @@ func SetupLoginMFATOTP(t testing.TB, client *api.Client, methodName string, wait
 
 	SetupMFALoginEnforcement(t, client, enforcementConfig)
 	return entityClient, entityID, methodID
-}
-
-func SkipUnlessEnvVarsSet(t testing.TB, envVars []string) {
-	t.Helper()
-
-	for _, i := range envVars {
-		if os.Getenv(i) == "" {
-			t.Skipf("%s must be set for this test to run", strings.Join(envVars, " "))
-		}
-	}
 }
 
 // WaitForNodesExcludingSelectedStandbys is variation on WaitForActiveNodeAndStandbys.

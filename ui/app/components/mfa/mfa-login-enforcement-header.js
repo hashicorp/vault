@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -37,6 +37,23 @@ export default class MfaLoginEnforcementHeaderComponent extends Component {
   }
 
   @tracked enforcements = [];
+
+  get breadcrumbs() {
+    return [
+      {
+        label: 'Vault',
+        route: 'vault.cluster.dashboard',
+        icon: 'vault',
+      },
+      {
+        label: 'Enforcements',
+        route: 'vault.cluster.access.mfa.enforcements.index',
+      },
+      {
+        label: this.args.heading,
+      },
+    ];
+  }
 
   async fetchEnforcements() {
     try {

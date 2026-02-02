@@ -1,12 +1,12 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 //* lookup OIDs: http://oid-info.com/basic-search.htm
 export const SUBJECT_OIDs = {
   common_name: '2.5.4.3',
-  subject_serial_number: '2.5.4.5',
+  serial_number: '2.5.4.5',
   ou: '2.5.4.11',
   organization: '2.5.4.10',
   country: '2.5.4.6',
@@ -33,6 +33,15 @@ export const OTHER_OIDs = {
   subject_key_identifier: '2.5.29.14',
 };
 
+// The order of KEY_USAGE_BITS is critical because the index corresponds
+// to the bit position in a certificate.
+// The byte value "10101000" contains
+// Bit position:  0  1  2  3  4  5  6  7
+// Byte:          1  0  1  0  1  0  0  0
+//                |     |     |
+//                |     |  KeyAgreement (index 4)
+//                | KeyEncipherment (index 2)
+//          DigitalSignature (index 0)
 export const KEY_USAGE_BITS = [
   'DigitalSignature',
   'ContentCommitment',

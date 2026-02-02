@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 set -e
@@ -9,7 +9,7 @@ fail() {
   exit 1
 }
 
-if ! type getenforce &> /dev/null; then
+if ! sudo bash -c 'type getenforce'; then
   exit 0
 fi
 

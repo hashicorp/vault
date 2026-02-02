@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -29,7 +29,7 @@ module('Integration | Component | tools/random', function (hooks) {
   test('it renders defaults', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('h1').hasText('Random Bytes', 'Title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Random bytes', 'Title renders');
     assert.dom('#bytes').hasValue('32');
     assert.dom('#format').hasValue('base64');
     assert.dom(GENERAL.submitButton).hasText('Generate');

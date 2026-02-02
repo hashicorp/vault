@@ -1,19 +1,20 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
-import { hash } from 'rsvp';
 import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
+import { PkiListKeysListEnum } from '@hashicorp/vault-client-typescript';
+import { paginate } from 'core/utils/paginate-list';
 
 @withConfig()
 export default class PkiKeysIndexRoute extends Route {
-  @service pagination;
   @service secretMountPath;
-  @service store; // used by @withConfig decorator
+  @service api;
+  @service capabilities;
 
   queryParams = {
     page: {
@@ -21,26 +22,48 @@ export default class PkiKeysIndexRoute extends Route {
     },
   };
 
-  model(params) {
+  async fetchCapabilities(keyId) {
+    const { pathFor } = this.capabilities;
+    const backend = this.secretMountPath.currentPath;
+    const pathMap = {
+      import: pathFor('pkiKeysImport', { backend }),
+      generate: pathFor('pkiKeysImport', { backend }),
+      key: pathFor('pkiKey', { backend, keyId }),
+    };
+    const perms = await this.capabilities.fetch(Object.values(pathMap));
+
+    return {
+      canImportKey: perms[pathMap.import].canUpdate,
+      canGenerateKey: perms[pathMap.generate].canUpdate,
+      canRead: perms[pathMap.key].canRead,
+      canEdit: perms[pathMap.key].canUpdate,
+    };
+  }
+
+  async model(params) {
     const page = Number(params.page) || 1;
-    return hash({
+    const model = {
       hasConfig: this.pkiMountHasConfig,
       parentModel: this.modelFor('keys'),
-      keyModels: this.pagination
-        .lazyPaginatedQuery('pki/key', {
-          backend: this.secretMountPath.currentPath,
-          responsePath: 'data.keys',
-          page,
-          skipCache: page === 1,
-        })
-        .catch((err) => {
-          if (err.httpStatus === 404) {
-            return [];
-          } else {
-            throw err;
-          }
-        }),
-    });
+    };
+
+    try {
+      const response = await this.api.secrets.pkiListKeys(
+        this.secretMountPath.currentPath,
+        PkiListKeysListEnum.TRUE
+      );
+      const keys = this.api.keyInfoToArray(response, 'key_id');
+      const capabilities = await this.fetchCapabilities(keys[0].key_id);
+      Object.assign(model, { ...capabilities, keys: paginate(keys, { page }) });
+    } catch (e) {
+      if (e.response.status === 404) {
+        model.keys = [];
+      } else {
+        throw e;
+      }
+    }
+
+    return model;
   }
 
   setupController(controller, resolvedModel) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -20,5 +20,11 @@ export default class MfaEnforcementsRoute extends Route {
   }
   setupController(controller, model) {
     controller.set('model', model);
+
+    controller.breadcrumbs = [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
+      { label: 'Mfa', route: 'vault.cluster.access.mfa' },
+      { label: 'Enforcements' },
+    ];
   }
 }

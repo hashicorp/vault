@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package changed
@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v81/github"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,20 +24,30 @@ func TestFileGroupDefaultCheckers(t *testing.T) {
 		".github/scripts/pr_comment.sh":                  {FileGroupGithub, FileGroupPipeline},
 		".github/CODEOWNERS":                             {FileGroupGithub},
 		".go-version":                                    {FileGroupGoToolchain},
-		".release/ibm-pao/eboms/5900-BJ8.essentials.csv": {FileGroupEnterprise},
+		".release/ibm-pao/eboms/5900-BJ8.essentials.csv": {FileGroupEnterprise, FileGroupPipeline},
+		".release/docker/ubi-docker-entrypoint.sh":       {FileGroupPipeline},
 		"audit/backend_ce.go":                            {FileGroupGoApp, FileGroupCommunity},
 		"audit/backend_config_ent.go":                    {FileGroupGoApp, FileGroupEnterprise},
 		"builtin/logical/transit/something_ent.go":       {FileGroupGoApp, FileGroupEnterprise},
-		"buf.yml":                                           {FileGroupProto},
-		"changelog/1726.txt":                                {FileGroupChangelog},
-		"changelog/_1726.txt":                               {FileGroupChangelog},
-		"command/server/config.go":                          {FileGroupGoApp},
-		"command/operator_raft_autopilot_state.go":          {FileGroupGoApp, FileGroupAutopilot},
-		"command/agent_ent_test.go":                         {FileGroupGoApp, FileGroupEnterprise},
-		"enos/enos-samples-ce-build.hcl":                    {FileGroupCommunity, FileGroupEnos},
-		"enos/enos-samples-ent-build.hcl":                   {FileGroupEnos, FileGroupEnterprise},
-		"enos/enos-scenario-smoke.hcl":                      {FileGroupEnos},
-		"enos/enos-scenario-autopilot-ent.hcl":              {FileGroupEnos, FileGroupEnterprise},
+		"buf.yml":                                                                {FileGroupProto},
+		"changelog/1726.txt":                                                     {FileGroupChangelog},
+		"changelog/_1726.txt":                                                    {FileGroupChangelog},
+		"command/server/config.go":                                               {FileGroupGoApp},
+		"command/operator_raft_autopilot_state.go":                               {FileGroupGoApp, FileGroupAutopilot},
+		"command/agent_ent_test.go":                                              {FileGroupGoApp, FileGroupEnterprise},
+		"enos/enos-samples-ce-build.hcl":                                         {FileGroupCommunity, FileGroupEnos},
+		"enos/enos-samples-ent-build.hcl":                                        {FileGroupEnos, FileGroupEnterprise},
+		"enos/enos-scenario-smoke.hcl":                                           {FileGroupEnos},
+		"enos/enos-scenario-autopilot-ent.hcl":                                   {FileGroupEnos, FileGroupEnterprise},
+		"enos/modules/softhsm_create_vault_keys/scripts/create-keys.sh":          {FileGroupEnos},
+		"enos/modules/softhsm_create_vault_keys/scripts/get-keys.sh":             {FileGroupEnos},
+		"enos/modules/softhsm_distribute_vault_keys/main.tf":                     {FileGroupEnos},
+		"enos/modules/softhsm_distribute_vault_keys/scripts/distribute-token.sh": {FileGroupEnos},
+		"enos/modules/softhsm_init/main.tf":                                      {FileGroupEnos},
+		"enos/modules/softhsm_init/scripts/init-softhsm.sh":                      {FileGroupEnos},
+		"enos/modules/softhsm_install/main.tf":                                   {FileGroupEnos},
+		"enos/modules/softhsm_install/scripts/find-shared-object.sh":             {FileGroupEnos},
+		"enos/modules/verify_secrets_engines/scripts/identity-verify-entity.sh":  {FileGroupEnos},
 		"go.mod":                                            {FileGroupGoApp, FileGroupGoToolchain},
 		"go.sum":                                            {FileGroupGoApp, FileGroupGoToolchain},
 		"helper/identity/mfa/types.proto":                   {FileGroupProto},
@@ -49,6 +59,7 @@ func TestFileGroupDefaultCheckers(t *testing.T) {
 		"scripts/cross/Dockerfile-ent-hsm":                  {FileGroupEnterprise, FileGroupPipeline},
 		"scripts/dev/hsm/README.md":                         {FileGroupEnterprise, FileGroupPipeline},
 		"scripts/dist-ent.sh":                               {FileGroupEnterprise, FileGroupPipeline},
+		"scripts/docker/docker-entrypoint.sh":               {FileGroupPipeline},
 		"scripts/testing/test-vault-license.sh":             {FileGroupEnterprise, FileGroupPipeline},
 		"scripts/testing/upgrade/README.md":                 {FileGroupEnterprise, FileGroupPipeline},
 		"sdk/database/dbplugin/v5/proto/database_ent.pb.go": {FileGroupGoApp, FileGroupEnterprise},

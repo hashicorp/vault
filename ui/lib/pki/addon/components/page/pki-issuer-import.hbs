@@ -1,26 +1,20 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
+<Page::Header @title={{this.title}}>
+  <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-page-title>
-      {{this.title}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if @model.id}}
   <Toolbar />
 {{/if}}
 <PkiImportPemBundle
-  @model={{@model}}
+  @useIssuer={{true}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
   @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
   @onSave={{fn (mut this.title) "View imported items"}}
-  @adapterOptions={{hash actionType="import" useIssuer=true}}
 />

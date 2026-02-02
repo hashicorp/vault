@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,6 +10,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { stubFeaturesAndPermissions } from 'vault/tests/helpers/components/sidebar-nav';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { allFeatures } from 'core/utils/all-features';
 
 const renderComponent = () => {
   return render(hbs`
@@ -26,7 +27,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     this.flags = this.owner.lookup('service:flags');
     setRunOptions({
       rules: {
-        // This is an issue with Hds::SideNav::Header::HomeLink
+        // This is an issue with Hds::AppHeader::HomeLink
         'aria-prohibited-attr': { enabled: false },
         // TODO: fix use Dropdown on user-menu
         'nested-interactive': { enabled: false },
@@ -35,17 +36,13 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   });
 
   test('it should render nav headings', async function (assert) {
-    const headings = ['Vault', 'Monitoring', 'Settings'];
+    const headings = ['Vault', 'Monitoring'];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
 
-    assert
-      .dom('[data-test-sidebar-nav-heading]')
-      .exists({ count: headings.length }, 'Correct number of headings render');
+    assert.dom(GENERAL.navHeading()).exists({ count: headings.length }, 'Correct number of headings render');
     headings.forEach((heading) => {
-      assert
-        .dom(`[data-test-sidebar-nav-heading="${heading}"]`)
-        .hasText(heading, `${heading} heading renders`);
+      assert.dom(GENERAL.navHeading(heading)).hasText(heading, `${heading} heading renders`);
     });
   });
 
@@ -53,11 +50,9 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     await renderComponent();
 
     assert
-      .dom('[data-test-sidebar-nav-link]')
+      .dom(GENERAL.navLink())
       .exists({ count: 3 }, 'Nav links are hidden other than secrets, recovery and dashboard');
-    assert
-      .dom('[data-test-sidebar-nav-heading]')
-      .exists({ count: 1 }, 'Headings are hidden other than Vault');
+    assert.dom(GENERAL.navHeading()).exists({ count: 1 }, 'Headings are hidden other than Vault');
   });
 
   test('it should render nav links', async function (assert) {
@@ -67,25 +62,21 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Secrets Sync',
       'Secrets Recovery',
       'Access',
-      'Policies',
-      'Tools',
+      'Operational tools',
       'Replication',
+      'Reporting',
       'Raft Storage',
       'Client Count',
-      'Vault Usage',
-      'License',
       'Seal Vault',
-      'Custom Messages',
-      'UI Login Settings',
     ];
-    stubFeaturesAndPermissions(this.owner, true, true);
+    // do not add PKI-only Secrets feature as it hides Client Count nav link
+    const features = allFeatures().filter((feat) => feat !== 'PKI-only Secrets');
+    stubFeaturesAndPermissions(this.owner, true, true, features);
     await renderComponent();
 
-    assert
-      .dom('[data-test-sidebar-nav-link]')
-      .exists({ count: links.length }, 'Correct number of links render');
+    assert.dom(GENERAL.navLink()).exists({ count: links.length }, 'Correct number of links render');
     links.forEach((link) => {
-      assert.dom(`[data-test-sidebar-nav-link="${link}"]`).hasText(link, `${link} link renders`);
+      assert.dom(GENERAL.navLink(link)).hasText(link, `${link} link renders`);
     });
   });
 
@@ -105,15 +96,13 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     await renderComponent();
 
     assert
-      .dom('[data-test-sidebar-nav-heading="Monitoring"]')
+      .dom(GENERAL.navHeading('Monitoring'))
       .doesNotExist(
         'Monitoring heading is hidden in child namespace when user does not have access to Client Count'
       );
 
     links.forEach((link) => {
-      assert
-        .dom(`[data-test-sidebar-nav-link="${link}"]`)
-        .doesNotExist(`${link} is hidden in child namespace`);
+      assert.dom(GENERAL.navLink(link)).doesNotExist(`${link} is hidden in child namespace`);
     });
   });
 
@@ -134,13 +123,17 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
     await renderComponent();
     assert
-      .dom('[data-test-sidebar-nav-heading="Monitoring"]')
+      .dom(GENERAL.navHeading('Monitoring'))
       .doesNotExist('Monitoring heading is hidden in chroot namespace');
     links.forEach((link) => {
-      assert
-        .dom(`[data-test-sidebar-nav-link="${link}"]`)
-        .doesNotExist(`${link} is hidden in chroot namespace`);
+      assert.dom(GENERAL.navLink(link)).doesNotExist(`${link} is hidden in chroot namespace`);
     });
+  });
+
+  test('it should hide client counts link in PKI-only Secrets clusters', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, true, false);
+    await renderComponent();
+    assert.dom(GENERAL.navHeading('Client Counts')).doesNotExist('Client count link is hidden.');
   });
 
   test('it should render badge for promotional links on managed clusters', async function (assert) {
@@ -150,9 +143,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     await renderComponent();
 
     promotionalLinks.forEach((link) => {
-      assert
-        .dom(`[data-test-sidebar-nav-link="${link}"]`)
-        .hasText(`${link} Plus`, `${link} link renders Plus badge`);
+      assert.dom(GENERAL.navLink(link)).hasText(`${link} Plus`, `${link} link renders Plus badge`);
     });
   });
 
@@ -209,51 +200,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     assert.dom(GENERAL.navLink('Secrets Sync')).exists();
   });
 
-  test('it shows Vault Usage when user is enterprise and in root namespace', async function (assert) {
-    stubFeaturesAndPermissions(this.owner, true);
-    await renderComponent();
-    assert.dom(GENERAL.navLink('Vault Usage')).exists();
-  });
-
-  test('it does NOT show Vault Usage when user is user is on CE || OSS || community', async function (assert) {
-    stubFeaturesAndPermissions(this.owner, false);
-    await renderComponent();
-    assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
-  });
-
-  test('it does NOT show Vault Usage when user is enterprise but not in root namespace', async function (assert) {
-    stubFeaturesAndPermissions(this.owner, true);
-
-    this.owner.lookup('service:namespace').set('path', 'foo');
-
-    await renderComponent();
-    assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
-  });
-
-  test('it does NOT show Vault Usage when user lacks the necessary permission', async function (assert) {
-    // no permissions
-    stubFeaturesAndPermissions(this.owner, true, false, [], false);
-
-    await renderComponent();
-    assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
-  });
-
-  test('it does NOT Vault Usage if the user has the necessary permission but user is on CE || OSS || community', async function (assert) {
-    // no permissions
-    const stubs = stubFeaturesAndPermissions(this.owner, false, false, [], false);
-
-    // allow the route
-    stubs.hasNavPermission.callsFake((route) => route === 'monitoring');
-
-    await renderComponent();
-
-    assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
-  });
-
-  test('it shows Vault Usage when user is in HVD admin namespace', async function (assert) {
-    const stubs = stubFeaturesAndPermissions(this.owner, true, false, [], false);
-    stubs.hasNavPermission.callsFake((route) => route === 'monitoring');
-
+  test('it does NOT show Secrets Recovery when user is in HVD admin namespace', async function (assert) {
     this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
     const namespace = this.owner.lookup('service:namespace');
@@ -261,6 +208,6 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
     await renderComponent();
 
-    assert.dom(GENERAL.navLink('Vault Usage')).exists();
+    assert.dom(GENERAL.navLink('Secrets Recovery')).doesNotExist();
   });
 });

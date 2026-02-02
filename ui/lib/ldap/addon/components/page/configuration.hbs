@@ -1,11 +1,16 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
+<LdapHeader
+  @model={{@model.secretsEngine}}
+  @promptConfig={{@model.promptConfig}}
+  @breadcrumbs={{@breadcrumbs}}
+  @configRoute="configuration"
+>
   <:toolbarActions>
-    {{#if @configModel}}
+    {{#if @model.config}}
       <ConfirmAction
         @buttonText="Rotate root"
         class="toolbar-button"
@@ -15,34 +20,32 @@
         @confirmMessage="After rotation, Vault will generate a new root password in your directory server."
         @modalColor="warning"
         @isRunning={{this.rotateRoot.isRunning}}
-        data-test-toolbar-rotate-action
       />
     {{/if}}
-    <ToolbarLink @route="configure" data-test-toolbar-config-action>
-      {{if @configModel "Edit configuration" "Configure LDAP"}}
-    </ToolbarLink>
+    {{#if @model.config}}
+      <ToolbarLink @route="configure" data-test-secret-backend-configure>
+        Edit configuration
+      </ToolbarLink>
+    {{/if}}
   </:toolbarActions>
-</TabPageHeader>
+</LdapHeader>
 
-{{#if @configModel}}
+{{#if @model.config}}
   {{#each this.defaultFields as |field|}}
-    <InfoTableRow @label={{field.label}} @value={{field.value}} @formatTtl={{field.formatTtl}} @alwaysRender={{true}} />
+    <InfoTableRow
+      @label={{this.label field}}
+      @value={{get @model.config field}}
+      @formatTtl={{includes field (array "request_timeout" "connection_timeout")}}
+      @alwaysRender={{true}}
+    />
   {{/each}}
 
   <h2 class="title is-4 has-top-margin-xl">TLS Connection</h2>
   <hr class="is-marginless" />
 
   {{#each this.connectionFields as |field|}}
-    <InfoTableRow @label={{field.label}} @value={{field.value}} @alwaysRender={{true}} />
+    <InfoTableRow @label={{this.label field}} @value={{get @model.config field}} @alwaysRender={{true}} />
   {{/each}}
-{{else if @configError}}
-  <Page::Error @error={{@configError}} />
-{{else}}
-  <ConfigCta />
+{{else if @model.configError}}
+  <Page::Error @error={{@model.configError}} />
 {{/if}}
-
-<SecretsEngineMountConfig
-  @secretsEngine={{@backendModel}}
-  class="has-top-margin-xl has-bottom-margin-xl"
-  data-test-mount-config
-/>

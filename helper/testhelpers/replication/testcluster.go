@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package replication
@@ -33,6 +33,21 @@ func SetCorePerf(t *testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOp
 	return r
 }
 
+func SetCoreDR(t *testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *testcluster.ReplicationSet {
+	r := NewReplicationSetCore(t, conf, opts, teststorage.InmemBackendSetup)
+	t.Cleanup(r.Cleanup)
+
+	// By default NewTestCluster will mount a kv under secret/.  This isn't
+	// done by docker-based clusters, so remove this to make us more like that.
+	require.Nil(t, r.Clusters["A"].Nodes()[0].APIClient().Sys().Unmount("secret"))
+
+	err := r.StandardDRReplication(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return r
+}
+
 func NewReplicationSetCore(t *testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup teststorage.ClusterSetupMutator) *testcluster.ReplicationSet {
 	r := &testcluster.ReplicationSet{
 		Clusters: map[string]testcluster.VaultCluster{},
@@ -40,9 +55,14 @@ func NewReplicationSetCore(t *testing.T, conf *vault.CoreConfig, opts *vault.Tes
 	}
 
 	r.Builder = func(ctx context.Context, name string, baseLogger hclog.Logger) (testcluster.VaultCluster, error) {
-		conf, opts := teststorage.ClusterSetup(conf, opts, setup)
-		opts.Logger = baseLogger.Named(name)
-		return vault.NewTestCluster(t, conf, opts), nil
+		newconf, newopts := teststorage.ClusterSetup(conf, opts, setup)
+		newopts.Logger = baseLogger.Named(name)
+		if opts.NumCores > 0 {
+			opts.FirstCoreNumber += opts.NumCores
+		} else {
+			opts.FirstCoreNumber += 3
+		}
+		return vault.NewTestCluster(t, newconf, newopts), nil
 	}
 
 	a, err := r.Builder(context.TODO(), "A", r.Logger)

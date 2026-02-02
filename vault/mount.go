@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/plugincatalog"
@@ -353,6 +352,7 @@ type MountEntry struct {
 
 // MountConfig is used to hold settable options
 type MountConfig struct {
+	EntMountConfig             `mapstructure:",squash"`
 	DefaultLeaseTTL            time.Duration         `json:"default_lease_ttl,omitempty" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
 	MaxLeaseTTL                time.Duration         `json:"max_lease_ttl,omitempty" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
 	ForceNoCache               bool                  `json:"force_no_cache,omitempty" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
@@ -394,6 +394,7 @@ type APIUserLockoutConfig struct {
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
 type APIMountConfig struct {
+	EntAPIMountConfig          `mapstructure:",squash"`
 	DefaultLeaseTTL            string                `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
 	MaxLeaseTTL                string                `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache               bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
@@ -571,8 +572,13 @@ func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, e
 	}, nil
 }
 
-// Mount is used to mount a new backend to the mount table.
+// mount is used to mount a new backend to the mount table.
 func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
+	return c.mountWithRequest(ctx, entry, nil)
+}
+
+// mountWithRequest is used to mount a new backend to the mount table with a request
+func (c *Core) mountWithRequest(ctx context.Context, entry *MountEntry, request *logical.Request) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(entry.Path, "/") {
 		entry.Path += "/"
@@ -593,7 +599,7 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 	}
 
 	// Mount internally
-	if err := c.mountInternal(ctx, entry, MountTableUpdateStorage); err != nil {
+	if err := c.mountInternalWithRequest(ctx, entry, MountTableUpdateStorage, request); err != nil {
 		return err
 	}
 
@@ -601,6 +607,10 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 }
 
 func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStorage bool) error {
+	return c.mountInternalWithRequest(ctx, entry, updateStorage, nil)
+}
+
+func (c *Core) mountInternalWithRequest(ctx context.Context, entry *MountEntry, updateStorage bool, request *logical.Request) error {
 	c.mountsLock.Lock()
 	c.authLock.Lock()
 	locked := true
@@ -788,14 +798,21 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type, "version", entry.RunningVersion)
 	}
 
-	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsEnable, ns, map[string]interface{}{
+	observationData := map[string]interface{}{
 		"path":                   entry.Path,
 		"local_mount":            entry.Local,
 		"type":                   entry.Type,
 		"accessor":               entry.Accessor,
 		"plugin_version":         entry.Version,
 		"running_plugin_version": entry.RunningVersion,
-	})
+	}
+	if request != nil {
+		observationData["entity_id"] = request.EntityID
+		observationData["request_id"] = request.ID
+		observationData["client_id"] = request.ClientID
+	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsEnable, ns, observationData)
 	if err != nil {
 		c.logger.Error("failed to record observation after enabling mount backend", "path", entry.Path, "error", err)
 	}
@@ -844,9 +861,15 @@ func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry)
 	return consts.PluginTypeUnknown
 }
 
-// Unmount is used to unmount a path. The boolean indicates whether the mount
+// unmount is used to unmount a path. The boolean indicates whether the mount
 // was found.
 func (c *Core) unmount(ctx context.Context, path string) error {
+	return c.unmountWithRequest(ctx, path, nil)
+}
+
+// unmountWithRequest is used to unmount a path with a request. The boolean
+// indicates whether the mount was found.
+func (c *Core) unmountWithRequest(ctx context.Context, path string, request *logical.Request) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -860,7 +883,7 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 	}
 
 	// Unmount mount internally
-	if err := c.unmountInternal(ctx, path, MountTableUpdateStorage); err != nil {
+	if err := c.unmountInternalWithRequest(ctx, path, MountTableUpdateStorage, request); err != nil {
 		return err
 	}
 
@@ -873,6 +896,10 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 }
 
 func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage bool) error {
+	return c.unmountInternalWithRequest(ctx, path, updateStorage, nil)
+}
+
+func (c *Core) unmountInternalWithRequest(ctx context.Context, path string, updateStorage bool, request *logical.Request) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
@@ -983,14 +1010,21 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 		c.logger.Info("successfully unmounted", "path", path, "namespace", ns.Path)
 	}
 
-	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsDisable, ns, map[string]interface{}{
-		"path":                   entry.Path,
+	observationData := map[string]interface{}{
+		"path":                   path,
 		"local_mount":            entry.Local,
 		"type":                   entry.Type,
 		"accessor":               entry.Accessor,
 		"plugin_version":         entry.Version,
 		"running_plugin_version": entry.RunningVersion,
-	})
+	}
+	if request != nil {
+		observationData["entity_id"] = request.EntityID
+		observationData["request_id"] = request.ID
+		observationData["client_id"] = request.ClientID
+	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsDisable, ns, observationData)
 	if err != nil {
 		c.logger.Error("failed to record observation after enabling mount backend", "path", entry.Path, "error", err)
 	}
@@ -1791,6 +1825,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		Plugin:        entry.Type,
 		PluginVersion: pluginVersion,
 		Version:       pluginOptionsVersion,
+		IsLocal:       entry.Local,
 	})
 	if err != nil {
 		return nil, err
@@ -1840,23 +1875,6 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	addLicenseCallback(c, backend)
 
 	return backend, nil
-}
-
-// resolveMountEntryVersion allows entry.Version to be overridden if there is a
-// corresponding pinned version.
-func (c *Core) resolveMountEntryVersion(ctx context.Context, pluginType consts.PluginType, entry *MountEntry) (string, error) {
-	pluginName := entry.Type
-	if alias, ok := mountAliases[pluginName]; ok {
-		pluginName = alias
-	}
-	pinnedVersion, err := c.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
-	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
-		return "", err
-	}
-	if pinnedVersion != nil {
-		return pinnedVersion.Version, nil
-	}
-	return entry.Version, nil
 }
 
 // defaultMountTable creates a default mount table
@@ -2015,7 +2033,7 @@ func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 	}
 	c.authLock.RUnlock()
 
-	return
+	return mounts, auth
 }
 
 func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *BarrierView) {

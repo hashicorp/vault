@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package git
@@ -12,7 +12,7 @@ import (
 type (
 	// MergeStrategy are the merge strategy to use
 	MergeStrategy = string
-	// MergeStrategy are merge strategy options
+	// MergeStrategyOption are merge strategy options
 	MergeStrategyOption = string
 )
 

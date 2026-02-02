@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 <div class="has-border-bottom-light">
@@ -16,8 +16,8 @@
 </div>
 
 <div class="has-top-bottom-margin">
-  <Hds::Text::Body @tag="p" @size="100">
-    This is the dashboard for your overall client count usages. Review Vault's
+  <Hds::Text::Body @tag="p" @size="100" class="has-bottom-margin-s">
+    This is the dashboard for your overall client count usage. Review Vault's
     <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}} @isHrefExternal={{true}}>
       client counting documentation</Hds::Link::Inline>
     for more information.
@@ -26,7 +26,10 @@
   {{#if (eq @activity.id "no-data")}}
     <Clients::NoData @config={{@config}} />
   {{else if @activityError}}
-    <Clients::Counts::Error @error={{@activityError}} />
+    <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+      <A.Header data-test-empty-state-title @title={{this.error.title}} @icon="skip" @errorCode={{this.error.httpStatus}} />
+      <A.Body data-test-empty-state-message @text={{this.error.text}} />
+    </Hds::ApplicationState>
   {{else}}
     {{#if (eq @config.enabled "Off")}}
       <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
@@ -69,8 +72,12 @@
         </Hds::Alert>
       {{/if}}
 
-      {{#if this.version.isEnterprise}}
+      {{#if (and this.version.isEnterprise (not this.flags.isHvdManaged))}}
         {{! The "Client list" tab only renders for enterprise versions so there is no need for the nav bar }}
+        {{! The "Client list" tab is hidden on HVD managed clusters (for now) because the "Month" filter for that page
+        uses the `client_first_used_time` timestamp. This timestamp tracks when a client is FIRST seen in the queried date range (i.e. billing period). 
+        This is useful for self-managed customers who are billed on monthly NEW clients, but not for HVD users who are billed on TOTAL clients per 
+        month regardless of whether the client was seen in a previous month. }}
         <Clients::Counts::NavBar />
       {{/if}}
 
@@ -78,19 +85,25 @@
       {{yield}}
     {{else if (and this.version.isCommunity (or (not @startTimestamp) (not @endTimestamp)))}}
       {{! Empty state for community without start or end query param }}
-      <EmptyState
-        @title="Input the start and end dates to view client attribution by path."
-        @message="Only historical data may be queried. No data is available for the current month."
-      />
+      <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+        <A.Header data-test-empty-state-title @title="Input the start and end dates to view client attribution by path." />
+        <A.Body
+          data-test-empty-state-message
+          @text="Only historical data may be queried. No data is available for the current month."
+        />
+      </Hds::ApplicationState>
     {{else}}
-      <EmptyState
-        @title="No data received"
-        @message={{if
-          this.version.isCommunity
-          "Select a start and end date above to query client count data."
-          "Select a different date range to view client count data."
-        }}
-      />
+      <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+        <A.Header data-test-empty-state-title @title="No data received" />
+        <A.Body
+          data-test-empty-state-message
+          @text={{if
+            this.version.isCommunity
+            "Select a start and end date above to query client count data."
+            "Select a different date range to view client count data."
+          }}
+        />
+      </Hds::ApplicationState>
     {{/if}}
   {{/if}}
 </div>

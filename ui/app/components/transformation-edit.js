@@ -1,10 +1,11 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import TransformBase, { addToList, removeFromList } from './transform-edit-base';
 import { service } from '@ember/service';
+import { computed } from '@ember/object';
 
 export default TransformBase.extend({
   flashMessages: service(),
@@ -16,6 +17,22 @@ export default TransformBase.extend({
     if (!this.model) return;
     this.set('initialRoles', this.model.allowed_roles);
   },
+
+  title: computed('mode', function () {
+    if (this.mode === 'create') {
+      return 'Create Transformation';
+    } else if (this.mode === 'edit') {
+      return 'Edit Transformation';
+    } else {
+      return 'Transformation';
+    }
+  }),
+
+  subtitle: computed('mode', 'model.id', function () {
+    if (this.mode === 'create' || this.mode === 'edit') return;
+
+    return this.model.id;
+  }),
 
   async updateOrCreateRole(role, transformationId, backend) {
     const roleRecord = await this.store

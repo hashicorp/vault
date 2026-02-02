@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package aws
@@ -106,6 +106,10 @@ func (b *backend) pathLeaseWrite(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSLeaseConfigWrite, map[string]interface{}{
+		"lease":     lease.String(),
+		"lease_max": leaseMax.String(),
+	})
 	return nil, nil
 }
 
@@ -117,6 +121,11 @@ func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data 
 	if lease == nil {
 		return nil, nil
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSLeaseConfigRead, map[string]interface{}{
+		"lease":     lease.Lease.String(),
+		"lease_max": lease.LeaseMax.String(),
+	})
 
 	return &logical.Response{
 		Data: map[string]interface{}{

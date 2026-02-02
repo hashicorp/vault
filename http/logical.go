@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package http
@@ -43,7 +43,10 @@ func (b *bufferedReader) Close() error {
 	return b.rOrig.Close()
 }
 
-const MergePatchContentTypeHeader = "application/merge-patch+json"
+const (
+	MergePatchContentTypeHeader = "application/merge-patch+json"
+	ScimPatchContentTypeHeader  = "application/scim+json"
+)
 
 func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	ns, err := namespace.FromContext(r.Context())
@@ -167,7 +170,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 			return nil, nil, status, err
 		}
 
-		if contentType != MergePatchContentTypeHeader {
+		if contentType != MergePatchContentTypeHeader && contentType != ScimPatchContentTypeHeader {
 			return nil, nil, http.StatusUnsupportedMediaType, fmt.Errorf("PATCH requires Content-Type of %s, provided %s", MergePatchContentTypeHeader, contentType)
 		}
 

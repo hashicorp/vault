@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -101,18 +101,6 @@ module('Unit | Service | path-help', function (hooks) {
       await this.pathHelp.getNewModel(modelType, 'my-kv').then(() => {
         assert.true(true, 'getNewModel resolves');
       });
-    });
-  });
-
-  module('hydrateModel', function () {
-    test('it should hydrate an existing model', async function (assert) {
-      this.server.get(`/pki2/roles/example`, () => openapiStub);
-
-      const modelType = 'pki/role';
-      await this.pathHelp.hydrateModel(modelType, 'pki2');
-      const model = this.store.createRecord(modelType);
-      model.set('username', 'foobar');
-      assert.strictEqual(model.username, 'foobar', 'sets value of key that only exists in openAPI response');
     });
   });
 });

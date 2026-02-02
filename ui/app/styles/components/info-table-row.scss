@@ -1,9 +1,8 @@
-@use '../utils/font_variables';
 @use '../utils/mixins';
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -45,7 +44,7 @@
     }
 
     .helper-text {
-      font-weight: normal;
+      font-weight: var(--token-typography-font-weight-regular);
     }
     &.justify-right {
       display: flex;
@@ -58,7 +57,7 @@
   }
 
   .icon-true {
-    color: var(--token-color-palette-green-200);
+    color: var(--token-color-foreground-success);
   }
 
   .icon-false {
@@ -94,9 +93,9 @@
 
 .info-table-row-header {
   margin: 0;
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
   color: var(--token-color-palette-neutral-400);
-  font-weight: font_variables.$font-weight-semibold;
+  font-weight: var(--token-typography-font-weight-semibold);
 
   @include mixins.until(size_variables.$mobile) {
     display: none;
@@ -107,15 +106,12 @@
 }
 
 .label-overflow {
-  white-space: nowrap;
   overflow: hidden;
+  max-width: 100%;
   text-overflow: ellipsis;
-
-  // inline display necessary for nested elements so ellipsis shows
-  > div {
-    display: inline;
-  }
-  > div > span {
+  display: inline;
+  // inline display necessary so ellipsis shows
+  > span {
     display: inline;
   }
 }

@@ -1,30 +1,13 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <Hds::Breadcrumb>
-      {{#if @model.isNew}}
-        <Hds::Breadcrumb::Item @text="Providers" @route="vault.cluster.access.oidc.providers" />
-      {{else}}
-        <Hds::Breadcrumb::Item
-          @text="Details"
-          @route="vault.cluster.access.oidc.providers.provider.details"
-          @model={{@model.name}}
-        />
-      {{/if}}
-      <Hds::Breadcrumb::Item @text="{{if @model.isNew 'Create' 'Edit'}} Provider" @current={{true}} />
-    </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-oidc-provider-title>
-      {{if @model.isNew "Create" "Edit"}}
-      Provider
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title="{{if @model.isNew 'Create' 'Edit'}} Provider">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 <form {{on "submit" (perform this.save)}} {{did-insert this.setIssuer @model}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
@@ -97,7 +80,7 @@
         @fallbackComponent="string-list"
         @passObject={{true}}
         @objectKeys={{array "clientId"}}
-        @renderInfoTooltip={{this.renderInfoTooltip}}
+        @renderTooltip={{this.renderTooltip}}
       />
     {{/if}}
   </div>

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -33,6 +33,19 @@ export default class TotpEdit extends Component {
   @tracked modelValidations;
 
   successCallback;
+
+  get title() {
+    if (this.args.mode === 'create') {
+      return 'Create a TOTP key';
+    }
+    return 'TOTP key';
+  }
+
+  get subtitle() {
+    if (this.args.mode === 'create') return '';
+
+    return this.args.model.id;
+  }
 
   get defaultKeyFormFields() {
     const shared = ['name', 'generate', 'issuer', 'accountName'];

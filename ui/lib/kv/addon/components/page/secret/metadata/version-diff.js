@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -75,7 +75,7 @@ export default class KvSecretMetadataVersionDiff extends Component {
 
     this.statesMatch = !delta;
     this.visualDiff = delta
-      ? jsondiffpatch.formatters.html.format(delta, leftSecretData)
+      ? htmlformatter.format(delta, leftSecretData)
       : JSON.stringify(rightSecretData, undefined, 2);
   }
 

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -512,7 +512,7 @@ type testingPkiCertificateCounter struct {
 	StoredCount uint64
 }
 
-var _ logical.PkiCertificateCounter = (*testingPkiCertificateCounter)(nil)
+var _ logical.CertificateCounter = (*testingPkiCertificateCounter)(nil)
 
 func (c *testingPkiCertificateCounter) Reset() {
 	c.IssuedCount = 0

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package testcluster
@@ -54,8 +54,10 @@ type VaultNodeConfig struct {
 	//   ServiceRegistrationType        string
 	//   ServiceRegistrationOptions    map[string]string
 
-	StorageOptions      map[string]string
-	AdditionalListeners []VaultNodeListenerConfig
+	StorageOptions           map[string]string         `json:"-"`
+	AdditionalListeners      []VaultNodeListenerConfig `json:"-"`
+	CustomListenerConfigOpts map[string]interface{}    `json:"-"`
+	AdditionalTCPPorts       []int                     `json:"-"`
 
 	DefaultMaxRequestDuration      time.Duration `json:"default_max_request_duration"`
 	LogFormat                      string        `json:"log_format"`
@@ -67,6 +69,7 @@ type VaultNodeConfig struct {
 	MaxLeaseTTL                    time.Duration `json:"max_lease_ttl"`
 	DefaultLeaseTTL                time.Duration `json:"default_lease_ttl"`
 	ClusterCipherSuites            string        `json:"cluster_cipher_suites"`
+	PluginDirectory                string        `json:"plugin_directory"`
 	PluginFileUid                  int           `json:"plugin_file_uid"`
 	PluginFilePermissions          int           `json:"plugin_file_permissions"`
 	EnableRawEndpoint              bool          `json:"raw_storage_endpoint"`
@@ -79,6 +82,7 @@ type VaultNodeConfig struct {
 	LogRequestsLevel               string        `json:"log_requests_level"`
 	EnableResponseHeaderRaftNodeID bool          `json:"enable_response_header_raft_node_id"`
 	LicensePath                    string        `json:"license_path"`
+	FeatureFlags                   []string      `json:"feature_flags,omitempty"`
 }
 
 type ClusterNode struct {
@@ -110,6 +114,7 @@ type VaultNodeListenerConfig struct {
 	RedactAddresses   bool
 	RedactClusterName bool
 	RedactVersion     bool
+	TLSCipherSuites   []uint16
 }
 
 type CA struct {

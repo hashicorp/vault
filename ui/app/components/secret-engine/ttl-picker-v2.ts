@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,7 +8,6 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { convertFromSeconds, durationToSeconds, largestUnitFromSeconds } from 'core/utils/duration-utils';
-import { CUSTOM, SYSTEM_DEFAULT } from './page/general-settings';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
@@ -39,8 +38,6 @@ interface Args {
 
 export default class TtlPickerV2 extends Component<Args> {
   systemDefaultTtl = 0;
-  systemDefault = SYSTEM_DEFAULT;
-  custom = CUSTOM;
 
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;

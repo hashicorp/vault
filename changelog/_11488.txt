@@ -1,0 +1,4 @@
+```release-note:bug
+quotas: Vault now protects plugins with ResolveRole operations from panicking
+on quota creation.
+```

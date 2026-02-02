@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 variable "artifactory_token" {
@@ -68,26 +68,20 @@ variable "distro_version_amzn" {
   default     = "2023" // or "2", though pkcs11 has not been tested with 2
 }
 
-variable "distro_version_leap" {
-  description = "The version of openSUSE leap to use"
-  type        = string
-  default     = "15.6"
-}
-
 variable "distro_version_rhel" {
-  description = "The version of RHEL to use"
+  description = "The version of RedHat Enterprise Linux to use"
   type        = string
-  default     = "10.0" // or "8.10", "9.6"
+  default     = "10.1" // or "8.10", "9.7"
 }
 
 variable "distro_version_sles" {
-  description = "The version of SUSE SLES to use"
+  description = "The version of SUSE Enterprise Linux to use"
   type        = string
-  default     = "15.6"
+  default     = "16.0" // or "15.7"
 }
 
 variable "distro_version_ubuntu" {
-  description = "The version of ubuntu to use"
+  description = "The version of Ubuntu Linux to use"
   type        = string
   default     = "24.04" // or "22.04"
 }

@@ -1,10 +1,9 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 export const SECRET_ENGINE_SELECTORS = {
-  configTab: '[data-test-configuration-tab]',
   configure: '[data-test-secret-backend-configure]',
   configureNote: (name: string) => `[data-test-configure-note="${name}"]`,
   configureTitle: (type: string) => `[data-test-backend-configure-title="${type}"]`,
@@ -18,7 +17,7 @@ export const SECRET_ENGINE_SELECTORS = {
   secretsBackendLink: (path: string) =>
     path ? `[data-test-secrets-backend-link="${path}"]` : '[data-test-secrets-backend-link]',
   createSecretLink: '[data-test-create-secret-link]',
-  secretPath: (name: string) => `[data-test-secret-path="${name}"]`,
+  secretPath: (name: string) => (name ? `[data-test-secret-path="${name}"]` : '[data-test-secret-path]'),
   secretKey: (name: string) => `[data-test-secret-key="${name}"]`,
   secretHeader: '[data-test-secret-header]',
   secretLink: (name: string) => (name ? `[data-test-secret-link="${name}"]` : '[data-test-secret-link]'),

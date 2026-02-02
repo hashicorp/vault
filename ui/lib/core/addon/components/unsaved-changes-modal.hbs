@@ -1,0 +1,48 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if this.unsavedChanges.showModal}}
+  <Hds::Modal
+    id="unsavedChangesModal"
+    @onClose={{this.closeModal}}
+    @color="warning"
+    data-test-modal="unsaved-changes"
+    as |M|
+  >
+    <M.Header @icon="alert-triangle" data-test-modal-header="unsaved-changes">
+      Unsaved changes
+    </M.Header>
+    <M.Body data-test-modal-body="unsaved-changes">
+      <Hds::Text::Body @tag="p">You've made changes to the following:</Hds::Text::Body>
+      <br />
+      <ul class="bullet">
+        {{#each (or @changedFields this.unsavedChanges.changedFields) as |changedField|}}
+          <li class="has-left-margin-s">
+            <Hds::Text::Display>{{capitalize changedField}}</Hds::Text::Display>
+          </li>
+        {{/each}}
+      </ul>
+      <br />
+      <Hds::Text::Body @tag="p">Would you like to apply them?</Hds::Text::Body>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button
+          type="button"
+          @text="Save changes"
+          data-test-button="save"
+          {{on "click" (fn this.closeAndHandle F.close "save")}}
+        />
+        <Hds::Button
+          type="button"
+          @text="Discard changes"
+          @color="secondary"
+          data-test-button="discard"
+          {{on "click" (fn this.closeAndHandle F.close "discard")}}
+        />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

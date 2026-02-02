@@ -1,22 +1,17 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
+<Page::Header @icon="certificate" @title="Automatic Tidy Configuration">
+  <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-header-title>
-      Automatic Tidy Configuration
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+  </:breadcrumbs>
+</Page::Header>
 
 <Toolbar>
   <ToolbarActions>
-    <LinkTo @route="tidy.auto.configure" @model={{@model.id}} class="toolbar-link" data-test-pki-edit-tidy-auto-link>
+    <LinkTo @route="tidy.auto.configure" @model={{@backend}} class="toolbar-link" data-test-pki-edit-tidy-auto-link>
       Edit auto-tidy
       <Icon @name="chevron-right" />
     </LinkTo>
@@ -24,20 +19,32 @@
 </Toolbar>
 
 <main>
-  {{#each @model.allGroups as |group|}}
+  {{#each (tidy-groups) as |group|}}
     {{#each-in group as |label fields|}}
-      {{#if (not-eq label "autoTidy")}}
+      {{#if (not-eq label "default")}}
         <h2 class="title is-5 has-top-margin-l has-bottom-margin-xs" data-test-group-title={{label}}>
           {{label}}
         </h2>
       {{/if}}
 
-      {{#each fields as |attr|}}
+      {{#each fields as |field|}}
         <InfoTableRow
-          @label={{or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name))}}
-          @value={{get @model attr.name}}
-          @formatTtl={{attr.options.formatTtl}}
-          data-test-row={{attr.name}}
+          @label={{tidy-field-label field}}
+          @value={{get @model field}}
+          @formatTtl={{includes
+            field
+            (array
+              "acme_account_safety_buffer"
+              "interval_duration"
+              "min_startup_backoff_duration"
+              "max_startup_backoff_duration"
+              "issuer_safety_buffer"
+              "pause_duration"
+              "revocation_queue_safety_buffer"
+              "safety_buffer"
+            )
+          }}
+          data-test-row={{field}}
         />
       {{/each}}
     {{/each-in}}

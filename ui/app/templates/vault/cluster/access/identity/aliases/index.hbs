@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -47,17 +47,21 @@
   />
 
 {{else}}
-  <EmptyState
-    @title="No {{this.identityType}} aliases yet"
-    @message="A list of {{this.identityType}} aliases in this namespace will be listed here. Choose one of the {{pluralize
-      this.identityType
-    }} and click &quot;Add alias&quot; to get started."
-  >
-    <Hds::Link::Standalone
-      @text="Identity: entities and groups tutorial"
-      @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
-      @icon="learn-link"
-      @iconPosition="trailing"
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="No {{this.identityType}} aliases yet" />
+    <A.Body
+      data-test-empty-state-message
+      @text="A list of {{this.identityType}} aliases in this namespace will be listed here. Choose one of the {{pluralize
+        this.identityType
+      }} and click &quot;Add alias&quot; to get started."
     />
-  </EmptyState>
+    <A.Footer data-test-empty-state-actions as |F|>
+      <F.LinkStandalone
+        @text="Identity: entities and groups tutorial"
+        @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
+        @icon="learn-link"
+        @iconPosition="trailing"
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
 {{/if}}

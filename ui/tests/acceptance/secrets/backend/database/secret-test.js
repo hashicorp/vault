@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -40,8 +40,8 @@ const newConnection = async (
 };
 
 const navToConnection = async (backend, connection) => {
-  await visit('/vault/secrets');
-  await click(SES.secretsBackendLink(backend));
+  await visit('/vault/secrets-engines');
+  await click(`${GENERAL.tableData(`${backend}/`, 'path')} a`);
   await click(GENERAL.secretTab('Connections'));
   await click(SES.secretLink(connection));
   return;
@@ -247,18 +247,22 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await settled();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/list`,
+      `/vault/secrets-engines/${backend}/list`,
       'Mounts and redirects to connection list page'
     );
-    assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');
+    assert.dom(GENERAL.emptyStateTitle).exists('Empty state exists');
     assert
       .dom('.active[data-test-secret-list-tab="Connections"]')
       .exists('Has Connections tab which is active');
     await click('[data-test-tab="overview"]');
-    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/overview`, 'Tab links to overview page');
-    assert.dom('[data-test-component="empty-state"]').exists('Empty state also exists on overview page');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${backend}/overview`,
+      'Tab links to overview page'
+    );
+    assert.dom(GENERAL.emptyStateTitle).exists('Empty state also exists on overview page');
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
     // Cleanup backend
     await runCmd(deleteEngineCmd(backend), false);
   });
@@ -268,7 +272,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       assert.expect(19 + testCase.assertCount);
       const backend = this.backend;
       await connectionPage.visitCreate({ backend });
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create`, 'Correct creation URL');
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${backend}/create`, 'Correct creation URL');
       assert
         .dom('[data-test-empty-state-title]')
         .hasText('No plugin selected', 'No plugin is selected by default and empty state shows');
@@ -303,7 +307,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       await click('[data-test-enable-connection]');
       await waitFor('[data-test-component="info-table-row"]');
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/show/${testCase.name}`),
+        currentURL().startsWith(`/vault/secrets-engines/${backend}/show/${testCase.name}`),
         `Saves connection and takes you to show page for ${testCase.name}`
       );
       assert
@@ -311,7 +315,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
         .doesNotExist(`Does not show Password value on show page for ${testCase.name}`);
       await connectionPage.edit();
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/edit/${testCase.name}`),
+        currentURL().startsWith(`/vault/secrets-engines/${backend}/edit/${testCase.name}`),
         `Edit connection button and takes you to edit page for ${testCase.name}`
       );
       assert.dom(`[data-test-input="name"]`).hasAttribute('readonly');
@@ -321,7 +325,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
 
       assert.dom(GENERAL.inputByAttr('verify_connection')).isNotChecked('verify is still unchecked');
       await click(GENERAL.submitButton);
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/show/${testCase.name}`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${backend}/show/${testCase.name}`);
       // click "Add Role"
       await connectionPage.addRole();
       await settled();
@@ -333,11 +337,11 @@ module('Acceptance | secrets/database/*', function (hooks) {
       await click(GENERAL.cancelButton);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/list?tab=role`,
+        `/vault/secrets-engines/${backend}/list?tab=role`,
         'Cancel button links to role list view'
       );
       // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
-      await visit('/vault/secrets');
+      await visit('/vault/secrets-engines');
     });
   }
 
@@ -374,7 +378,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     };
     const backend = this.backend;
     await connectionPage.visitCreate({ backend });
-    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create`, 'Correct creation URL');
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${backend}/create`, 'Correct creation URL');
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('No plugin selected', 'No plugin is selected by default and empty state shows');
@@ -421,7 +425,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       };
     });
 
-    await visit(`/vault/secrets/${this.backend}/show/${connectionName}`);
+    await visit(`/vault/secrets-engines/${this.backend}/show/${connectionName}`);
     const decoded = '{{username}}/{{password}}@//localhost:1521/ORCLPDB1';
     assert
       .dom('[data-test-row-value="Connection URL"]')
@@ -446,9 +450,13 @@ module('Acceptance | secrets/database/*', function (hooks) {
         { label: 'Write concern', name: 'write_concern' },
       ],
     };
-    await visit(`/vault/secrets/${backend}/list`);
+    await visit(`/vault/secrets-engines/${backend}/list`);
     await click(SES.createSecretLink);
-    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create`, 'Create link goes to create page');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${backend}/create`,
+      'Create link goes to create page'
+    );
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('No plugin selected', 'No plugin is selected by default and empty state shows');
@@ -471,7 +479,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await connectionPage.enable();
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/show/${connectionDetails.id}`,
+      `/vault/secrets-engines/${backend}/show/${connectionDetails.id}`,
       'Saves connection and takes you to show page'
     );
     connectionDetails.fields.forEach(({ label, name, value, hideOnShow }) => {
@@ -492,12 +500,16 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await fillIn('[data-test-confirmation-modal-input="Delete connection?"]', connectionDetails.id);
     await click(GENERAL.confirmButton);
 
-    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${backend}/list`,
+      'Redirects to connection list page'
+    );
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('No connections in this backend', 'No connections listed because it was deleted');
     // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
   });
 
   test('buttons show up for managing connection', async function (assert) {
@@ -524,11 +536,11 @@ module('Acceptance | secrets/database/*', function (hooks) {
     // Check with restricted permissions
     await login(token);
     await click('[data-test-sidebar-nav-link="Secrets Engines"]');
-    assert.dom(SES.secretsBackendLink(backend)).exists('Shows backend on secret list page');
+    assert.dom(GENERAL.tableData(`${backend}/`, 'path')).exists('Shows backend on secret list page');
     await navToConnection(backend, connection);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${backend}/show/${connection}`,
+      `/vault/secrets-engines/${backend}/show/${connection}`,
       'Allows reading connection'
     );
     assert
@@ -539,7 +551,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .doesNotExist('Reset button does not show due to permissions');
     assert.dom('[data-test-add-role]').doesNotExist('Add role button does not show due to permissions');
     assert.dom('[data-test-edit-link]').doesNotExist('Edit button does not show due to permissions');
-    await visit(`/vault/secrets/${backend}/overview`);
+    await visit(`/vault/secrets-engines/${backend}/overview`);
     assert.dom('[data-test-overview-card="Connections"]').exists('Connections card exists on overview');
     assert
       .dom('[data-test-overview-card="Roles"]')
@@ -549,7 +561,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await typeIn(GENERAL.inputSearch('search-input-role'), 'blah');
     assert.dom(GENERAL.button('Get credentials')).isEnabled();
     // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
-    await visit('/vault/secrets');
+    await visit('/vault/secrets-engines');
   });
 
   test('connection_url is decoded', async function (assert) {
@@ -572,16 +584,16 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await rolePage.visitCreate({ backend });
     await rolePage.name('bar');
     assert
-      .dom('[data-test-component="empty-state"]')
+      .dom(GENERAL.emptyStateTitle)
       .exists({ count: 1 }, 'One empty state exists before database selection is made');
     await clickTrigger('#database');
     assert.strictEqual(searchSelectComponent.options.length, 1, 'list shows existing connections so far');
     await selectChoose('#database', '.ember-power-select-option', 0);
     assert
-      .dom('[data-test-component="empty-state"]')
+      .dom(GENERAL.emptyStateTitle)
       .exists({ count: 2 }, 'Two empty states exist after a database is selected');
     await rolePage.roleType('static');
-    assert.dom('[data-test-component="empty-state"]').doesNotExist('Empty states go away');
+    assert.dom(GENERAL.emptyStateTitle).doesNotExist('Empty states go away');
     assert.dom(GENERAL.inputByAttr('username')).exists('Username field appears for static role');
     assert
       .dom(GENERAL.toggleInput('Rotation period'))
@@ -615,18 +627,18 @@ module('Acceptance | secrets/database/*', function (hooks) {
     const token = await runCmd(tokenWithPolicyCmd('test-policy', NO_ROLES_POLICY));
 
     // test root user flow first
-    await visit(`/vault/secrets/${backend}/overview`);
+    await visit(`/vault/secrets-engines/${backend}/overview`);
 
-    assert.dom('[data-test-component="empty-state"]').exists('renders empty state');
+    assert.dom(GENERAL.emptyStateTitle).exists('renders empty state');
     assert.dom('[data-test-secret-list-tab="Connections"]').exists('renders connections tab');
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('renders connections tab');
 
     await click(SES.createSecretLink);
-    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create?itemType=connection`);
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${backend}/create?itemType=connection`);
 
     // Login with restricted policy
     await login(token);
-    await visit(`/vault/secrets/${backend}/overview`);
+    await visit(`/vault/secrets-engines/${backend}/overview`);
     assert.dom('[data-test-tab="overview"]').exists('renders overview tab');
     assert.dom('[data-test-secret-list-tab="Connections"]').exists('renders connections tab');
     assert
@@ -636,6 +648,6 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .dom('[data-test-overview-card="Connections"]')
       .exists({ count: 1 }, 'renders only the connection card');
     await click('[data-test-action-text="Configure new"]');
-    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create?itemType=connection`);
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${backend}/create?itemType=connection`);
   });
 });

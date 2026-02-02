@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -39,6 +39,22 @@ export default class TransformTemplateEditComponent extends Component {
       },
       { label: 'Template' },
     ];
+  }
+
+  get title() {
+    if (this.args.mode === 'create') {
+      return 'Create Template';
+    } else if (this.args.mode === 'edit') {
+      return 'Edit Template';
+    } else {
+      return 'Template';
+    }
+  }
+
+  get subtitle() {
+    if (this.args.mode === 'create' || this.args.mode === 'edit') return '';
+
+    return this.args?.model?.id;
   }
 
   transition(route = 'show') {

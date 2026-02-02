@@ -1,14 +1,31 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { isBlank } from '@ember/utils';
 import { set } from '@ember/object';
 import RoleEdit from './role-edit';
+import { computed } from '@ember/object';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default RoleEdit.extend({
+  title: computed('mode', function () {
+    if (this.mode === 'create') {
+      return 'Create an AWS Role';
+    } else if (this.mode === 'edit') {
+      return 'Edit AWS Role';
+    } else {
+      return 'AWS Role';
+    }
+  }),
+
+  subtitle: computed('mode', 'model.id', function () {
+    if (this.mode === 'create') return;
+
+    return this.model.id;
+  }),
+
   actions: {
     createOrUpdate(type, event) {
       event.preventDefault();

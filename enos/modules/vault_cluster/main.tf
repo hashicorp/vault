@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 terraform {
@@ -39,11 +39,10 @@ locals {
   }
   leader = toset(slice(local.instances, 0, 1))
   netcat_command = {
-    amzn          = "nc"
-    opensuse-leap = "netcat"
-    rhel          = "nc"
-    sles          = "nc"
-    ubuntu        = "netcat"
+    amzn   = "nc"
+    rhel   = "nc"
+    sles   = "nc"
+    ubuntu = "netcat"
   }
   recovery_shares = {
     "awskms" = 5

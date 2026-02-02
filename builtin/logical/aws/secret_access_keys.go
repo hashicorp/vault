@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package aws
@@ -514,6 +514,11 @@ func (b *backend) secretAccessKeysRenew(ctx context.Context, req *logical.Reques
 		isSTS, ok := isSTSRaw.(bool)
 		if ok {
 			if isSTS {
+				// We don't have any access to the role name, so there's not
+				// anything else we can add to the observation
+				b.TryRecordObservationWithRequest(ctx, nil, ObservationTypeAWSCredentialRenew, map[string]interface{}{
+					"is_sts": true,
+				})
 				return nil, nil
 			}
 		}
@@ -530,6 +535,22 @@ func (b *backend) secretAccessKeysRenew(ctx context.Context, req *logical.Reques
 	resp := &logical.Response{Secret: req.Secret}
 	resp.Secret.TTL = lease.Lease
 	resp.Secret.MaxTTL = lease.LeaseMax
+
+	policyRaw, ok := req.Secret.InternalData["policy"]
+	var credentialTypes []string
+	if ok {
+		policy, ok := policyRaw.(*awsRoleEntry)
+		if ok {
+			credentialTypes = policy.CredentialTypes
+		}
+	}
+
+	// The role name isn't present, so we can't add it to the observation
+	b.TryRecordObservationWithRequest(ctx, nil, ObservationTypeAWSCredentialRenew, map[string]interface{}{
+		"is_sts":           false,
+		"credential_types": credentialTypes,
+	})
+
 	return resp, nil
 }
 
@@ -542,6 +563,9 @@ func (b *backend) secretAccessKeysRevoke(ctx context.Context, req *logical.Reque
 		isSTS, ok := isSTSRaw.(bool)
 		if ok {
 			if isSTS {
+				b.TryRecordObservationWithRequest(ctx, nil, ObservationTypeAWSCredentialRevoke, map[string]interface{}{
+					"is_sts": true,
+				})
 				return nil, nil
 			}
 		} else {
@@ -566,6 +590,20 @@ func (b *backend) secretAccessKeysRevoke(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return nil, err
 	}
+
+	policyRaw, ok := req.Secret.InternalData["policy"]
+	var credentialTypes []string
+	if ok {
+		policy, ok := policyRaw.(*awsRoleEntry)
+		if ok {
+			credentialTypes = policy.CredentialTypes
+		}
+	}
+
+	b.TryRecordObservationWithRequest(ctx, nil, ObservationTypeAWSCredentialRevoke, map[string]interface{}{
+		"is_sts":           false,
+		"credential_types": credentialTypes,
+	})
 
 	return nil, nil
 }

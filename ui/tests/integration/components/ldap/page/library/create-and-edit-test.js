@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,6 +11,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import LdapLibraryForm from 'vault/forms/secrets/ldap/library';
 
 module('Integration | Component | ldap | Page::Library::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -26,15 +27,23 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
       return routerStub.calledWith(...args);
     };
 
-    this.store = this.owner.lookup('service:store');
-    this.newModel = this.store.createRecord('ldap/library', { backend: 'ldap-test' });
+    this.apiStub = sinon.stub(this.owner.lookup('service:api').secrets, 'ldapLibraryConfigure').resolves();
 
+    this.backend = 'ldap-test';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
+
+    this.createForm = new LdapLibraryForm(
+      {
+        ttl: '24h',
+        max_ttl: '24h',
+        disable_check_in_enforcement: 'Enabled',
+      },
+      { isNew: true }
+    );
     this.libraryData = this.server.create('ldap-library', { name: 'test-library' });
-    this.store.pushPayload('ldap/library', {
-      modelName: 'ldap/library',
-      backend: 'ldap-test',
-      ...this.libraryData,
-    });
+    delete this.libraryData.id;
+    this.editForm = new LdapLibraryForm({ ...this.libraryData, disable_check_in_enforcement: 'Disabled' });
+    this.form = this.editForm;
 
     this.breadcrumbs = [
       { label: 'ldap', route: 'overview' },
@@ -42,17 +51,13 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
       { label: 'Create' },
     ];
 
-    this.renderComponent = () => {
-      return render(
-        hbs`<Page::Library::CreateAndEdit @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
-        { owner: this.engine }
-      );
-    };
+    this.renderComponent = () =>
+      render(hbs`<Page::Library::CreateAndEdit @form={{this.form}} @breadcrumbs={{this.breadcrumbs}} />`, {
+        owner: this.engine,
+      });
   });
 
   test('it should populate form when editing', async function (assert) {
-    this.model = this.store.peekRecord('ldap/library', this.libraryData.name);
-
     await this.renderComponent();
 
     assert.dom('[data-test-input="name"]').hasValue(this.libraryData.name, 'Name renders');
@@ -64,25 +69,20 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
     });
     assert.dom('[data-test-ttl-value="Default lease TTL"]').hasAnyValue('Default lease ttl renders');
     assert.dom('[data-test-ttl-value="Max lease TTL"]').hasAnyValue('Max lease ttl renders');
-    const checkInValue = this.libraryData.disable_check_in_enforcement ? 'Disabled' : 'Enabled';
     assert
-      .dom(`[data-test-input-group="disable_check_in_enforcement"] input#${checkInValue}`)
+      .dom('[data-test-input-group="disable_check_in_enforcement"] input#Disabled')
       .isChecked('Correct radio is checked for check-in enforcement');
   });
 
-  test('it should go back to list route and clean up model on cancel', async function (assert) {
-    this.model = this.store.peekRecord('ldap/library', this.libraryData.name);
-    const spy = sinon.spy(this.model, 'rollbackAttributes');
-
+  test('it should go back to list route on cancel', async function (assert) {
     await this.renderComponent();
     await click('[data-test-cancel]');
 
-    assert.ok(spy.calledOnce, 'Model is rolled back on cancel');
     assert.ok(this.transitionCalledWith('libraries'), 'Transitions to libraries list route on cancel');
   });
 
   test('it should validate form fields', async function (assert) {
-    this.model = this.newModel;
+    this.form = this.createForm;
 
     await this.renderComponent();
     await click('[data-test-submit]');
@@ -101,29 +101,28 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
   test('it should create new library', async function (assert) {
     assert.expect(2);
 
-    this.server.post('/ldap-test/library/new-library', (schema, req) => {
-      const data = JSON.parse(req.requestBody);
-      const expected = {
-        service_account_names: 'foo@bar.com,bar@baz.com',
-        ttl: '24h',
-        max_ttl: '24h',
-        disable_check_in_enforcement: true,
-      };
-      assert.deepEqual(data, expected, 'POST request made with correct properties when creating library');
-    });
-
-    this.model = this.newModel;
-
+    this.form = this.createForm;
     await this.renderComponent();
 
+    const service_account_names = ['foo@bar.com', 'bar@baz.com'];
     await fillIn('[data-test-input="name"]', 'new-library');
-    await fillIn('[data-test-string-list-input="0"]', 'foo@bar.com');
+    await fillIn('[data-test-string-list-input="0"]', service_account_names[0]);
     await click('[data-test-string-list-button="add"]');
-    await fillIn('[data-test-string-list-input="1"]', 'bar@baz.com');
+    await fillIn('[data-test-string-list-input="1"]', service_account_names[1]);
     await click('[data-test-string-list-button="add"]');
     await click('[data-test-input-group="disable_check_in_enforcement"] input#Disabled');
     await click('[data-test-submit]');
 
+    const payload = {
+      service_account_names,
+      disable_check_in_enforcement: true,
+      ttl: '24h',
+      max_ttl: '24h',
+    };
+    assert.true(
+      this.apiStub.calledWith('new-library', this.backend, payload),
+      'API called to configure new library'
+    );
     assert.ok(
       this.transitionCalledWith('libraries.library.details', 'new-library'),
       'Transitions to library details route on save success'
@@ -133,25 +132,22 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
   test('it should save edited library with correct properties', async function (assert) {
     assert.expect(2);
 
-    this.server.post('/ldap-test/library/test-library', (schema, req) => {
-      const data = JSON.parse(req.requestBody);
-      const expected = {
-        service_account_names: this.libraryData.service_account_names[1],
-        ttl: this.libraryData.ttl,
-        max_ttl: this.libraryData.max_ttl,
-        disable_check_in_enforcement: true,
-      };
-      assert.deepEqual(expected, data, 'POST request made to save library with correct properties');
-    });
-
-    this.model = this.store.peekRecord('ldap/library', this.libraryData.name);
-
     await this.renderComponent();
 
     await click('[data-test-string-list-row="0"] [data-test-string-list-button="delete"]');
     await click('[data-test-input-group="disable_check_in_enforcement"] input#Disabled');
     await click('[data-test-submit]');
 
+    const payload = {
+      service_account_names: [this.libraryData.service_account_names[1]],
+      ttl: this.libraryData.ttl,
+      max_ttl: this.libraryData.max_ttl,
+      disable_check_in_enforcement: true,
+    };
+    assert.true(
+      this.apiStub.calledWith(this.libraryData.name, this.backend, payload),
+      'API called to configure existing library'
+    );
     assert.ok(
       this.transitionCalledWith('libraries.library.details', 'test-library'),
       'Transitions to library details route on save success'

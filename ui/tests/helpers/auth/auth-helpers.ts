@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,8 +7,10 @@ import { click, currentRouteName, fillIn, visit, waitUntil } from '@ember/test-h
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import AuthMethodResource from 'vault/resources/auth/method';
 
 import type { LoginFields } from 'vault/vault/auth/form';
+import type ApiService from 'vault/services/api';
 
 export const { rootToken } = VAULT_KEYS;
 
@@ -76,6 +78,7 @@ const LOGIN_DATA = {
   token: { token: 'mysupersecuretoken' },
   username: { username: 'matilda', password: 'some-password' },
   role: { role: 'some-dev' },
+  jwt: { role: 'some-dev', jwt: 'some-jwt-token' },
 };
 // maps auth type to login input data
 export const AUTH_METHOD_LOGIN_DATA = {
@@ -89,7 +92,7 @@ export const AUTH_METHOD_LOGIN_DATA = {
   radius: LOGIN_DATA.username,
   // role
   oidc: LOGIN_DATA.role,
-  jwt: LOGIN_DATA.role,
+  jwt: LOGIN_DATA.jwt,
   saml: LOGIN_DATA.role,
 };
 
@@ -118,3 +121,7 @@ export const SYS_INTERNAL_UI_MOUNTS = {
     type: 'ldap',
   },
 };
+
+// helper function to stub logic in the AuthRoute to format visibleAuthMounts for integration tests
+export const formatAuthMounts = (api: ApiService, mounts = SYS_INTERNAL_UI_MOUNTS) =>
+  api.responseObjectToArray(mounts, 'path').map((method) => new AuthMethodResource(method, this));

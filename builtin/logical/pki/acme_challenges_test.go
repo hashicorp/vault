@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/dnstest"
 	"github.com/stretchr/testify/require"
 )
 

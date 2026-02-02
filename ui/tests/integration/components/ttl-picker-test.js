@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,7 +9,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ttl-picker', function (hooks) {
   setupRenderingTest(hooks);
@@ -183,16 +183,10 @@ module('Integration | Component | ttl-picker', function (hooks) {
 
       assert.dom('[data-test-ttl-form-label]').hasText('My Label', 'Renders label correctly');
       assert.dom('[data-test-ttl-form-subtext]').doesNotExist('Subtext not rendered');
-      assert.dom('[data-test-tooltip-trigger]').doesNotExist('Description tooltip not rendered');
+      assert.dom(GENERAL.tooltip('ttl-picker')).doesNotExist('Description tooltip icon not rendered');
     });
 
     test('it shows subtext and description when passed', async function (assert) {
-      setRunOptions({
-        rules: {
-          // TODO: remove Tooltip
-          'aria-command-name': { enabled: false },
-        },
-      });
       this.set('label', 'My Label');
       await render(hbs`
         <TtlPicker
@@ -207,7 +201,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
       assert.dom('[data-test-ttl-form-label]').hasText('My Label', 'Renders label correctly');
       assert.dom('[data-test-ttl-form-subtext]').hasText('Subtext', 'Renders subtext when present');
       assert
-        .dom('[data-test-tooltip-trigger]')
+        .dom(GENERAL.tooltip('ttl-picker'))
         .exists({ count: 1 }, 'Description tooltip icon shows when description present');
     });
 

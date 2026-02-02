@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -36,7 +36,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
     this.secretPath = 'app/first-secret';
     this.urlPath = `${this.backend}/kv/${encodeURIComponent(this.secretPath)}`;
     this.navToSecret = async () => {
-      return visit(`/vault/secrets/${this.urlPath}/details?version=4`);
+      return visit(`/vault/secrets-engines/${this.urlPath}/details?version=4`);
     };
     await login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
@@ -62,7 +62,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.secretTab('Version History'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/metadata/versions`,
+        `/vault/secrets-engines/${this.urlPath}/metadata/versions`,
         'navigates to version history'
       );
       assert.dom(PAGE.versions.linkedBlock()).exists({ count: 6 });
@@ -79,7 +79,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.versions.linkedBlock(5));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/details?version=5`,
+        `/vault/secrets-engines/${this.urlPath}/details?version=5`,
         'navigates to detail at specific version'
       );
     });
@@ -88,15 +88,19 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/paths`,
+        `/vault/secrets-engines/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
-      assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
+      assert.dom(PAGE.infoRow).exists({ count: 5 }, 'shows 5 rows of information');
       assert.dom(PAGE.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(PAGE.infoRowValue('Configuration path')).hasText(`${this.backend}/data/${this.secretPath}`);
       assert.dom(PAGE.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
       assert
         .dom(PAGE.infoRowValue('API path for metadata'))
         .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
+      assert
+        .dom(PAGE.infoRowValue('Configuration metadata path'))
+        .hasText(`${this.backend}/metadata/${this.secretPath}`);
     });
   });
 
@@ -114,15 +118,19 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/paths`,
+        `/vault/secrets-engines/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
-      assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
+      assert.dom(PAGE.infoRow).exists({ count: 5 }, 'shows 5 rows of information');
       assert.dom(PAGE.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(PAGE.infoRowValue('Configuration path')).hasText(`${this.backend}/data/${this.secretPath}`);
       assert.dom(PAGE.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
       assert
         .dom(PAGE.infoRowValue('API path for metadata'))
         .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
+      assert
+        .dom(PAGE.infoRowValue('Configuration metadata path'))
+        .hasText(`${this.backend}/metadata/${this.secretPath}`);
     });
   });
 
@@ -140,15 +148,19 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/paths`,
+        `/vault/secrets-engines/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
-      assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
+      assert.dom(PAGE.infoRow).exists({ count: 5 }, 'shows 5 rows of information');
       assert.dom(PAGE.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(PAGE.infoRowValue('Configuration path')).hasText(`${this.backend}/data/${this.secretPath}`);
       assert.dom(PAGE.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
       assert
         .dom(PAGE.infoRowValue('API path for metadata'))
         .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
+      assert
+        .dom(PAGE.infoRowValue('Configuration metadata path'))
+        .hasText(`${this.backend}/metadata/${this.secretPath}`);
     });
   });
 
@@ -162,7 +174,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.secretTab('Version History'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/metadata/versions`,
+        `/vault/secrets-engines/${this.urlPath}/metadata/versions`,
         'navigates to version history'
       );
       assert.dom(PAGE.versions.linkedBlock()).exists({ count: 6 });
@@ -179,7 +191,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.versions.linkedBlock(5));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/details?version=5`,
+        `/vault/secrets-engines/${this.urlPath}/details?version=5`,
         'navigates to detail at specific version'
       );
     });
@@ -188,15 +200,19 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/paths`,
+        `/vault/secrets-engines/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
-      assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
+      assert.dom(PAGE.infoRow).exists({ count: 5 }, 'shows 5 rows of information');
       assert.dom(PAGE.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(PAGE.infoRowValue('Configuration path')).hasText(`${this.backend}/data/${this.secretPath}`);
       assert.dom(PAGE.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
       assert
         .dom(PAGE.infoRowValue('API path for metadata'))
         .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
+      assert
+        .dom(PAGE.infoRowValue('Configuration metadata path'))
+        .hasText(`${this.backend}/metadata/${this.secretPath}`);
     });
   });
 
@@ -214,15 +230,19 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/paths`,
+        `/vault/secrets-engines/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
-      assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
+      assert.dom(PAGE.infoRow).exists({ count: 5 }, 'shows 5 rows of information');
       assert.dom(PAGE.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(PAGE.infoRowValue('Configuration path')).hasText(`${this.backend}/data/${this.secretPath}`);
       assert.dom(PAGE.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
       assert
         .dom(PAGE.infoRowValue('API path for metadata'))
         .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
+      assert
+        .dom(PAGE.infoRowValue('Configuration metadata path'))
+        .hasText(`${this.backend}/metadata/${this.secretPath}`);
     });
   });
 
@@ -260,19 +280,19 @@ path "${this.backend}/*" {
       );
       await grantAccess({
         apiPath: `${this.backend}/metadata/${this.secretPath}`,
-        originUrl: `/vault/secrets/${this.urlPath}/details`,
+        originUrl: `/vault/secrets-engines/${this.urlPath}/details`,
         userToken: this.userToken,
         backend: this.backend,
       });
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/details`,
+        `/vault/secrets-engines/${this.urlPath}/details`,
         'navigates back to secret overview after authorized'
       );
       await click(PAGE.secretTab('Version History'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/metadata/versions`,
+        `/vault/secrets-engines/${this.urlPath}/metadata/versions`,
         'goes to version history page'
       );
       assert.dom(PAGE.versions.linkedBlock()).exists({ count: 6 });
@@ -289,7 +309,7 @@ path "${this.backend}/*" {
       await click(PAGE.versions.linkedBlock(5));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/details?version=5`,
+        `/vault/secrets-engines/${this.urlPath}/details?version=5`,
         'navigates to detail at specific version'
       );
     });
@@ -298,15 +318,19 @@ path "${this.backend}/*" {
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.urlPath}/paths`,
+        `/vault/secrets-engines/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
-      assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
+      assert.dom(PAGE.infoRow).exists({ count: 5 }, 'shows 5 rows of information');
       assert.dom(PAGE.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(PAGE.infoRowValue('Configuration path')).hasText(`${this.backend}/data/${this.secretPath}`);
       assert.dom(PAGE.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
       assert
         .dom(PAGE.infoRowValue('API path for metadata'))
         .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
+      assert
+        .dom(PAGE.infoRowValue('Configuration metadata path'))
+        .hasText(`${this.backend}/metadata/${this.secretPath}`);
     });
   });
 });

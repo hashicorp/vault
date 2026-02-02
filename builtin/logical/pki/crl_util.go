@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -2142,7 +2142,7 @@ func buildCRL(sc *storageContext, crlInfo *pki_backend.CrlConfig, forceNew bool,
 	revokedCerts = revoked
 
 WRITE:
-	signingBundle, caErr := sc.fetchCAInfoByIssuerId(thisIssuerId, issuing.CRLSigningUsage)
+	signingBundle, _, caErr := sc.fetchCAInfoByIssuerId(thisIssuerId, issuing.CRLSigningUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:

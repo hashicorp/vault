@@ -1,0 +1,106 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if (eq @wizardState.securityPolicyChoice this.policy.STRICT)}}
+  <div {{did-insert this.updateCodeSnippet}}>
+    <Hds::Text::Display @tag="h1" @size="400" class="has-bottom-padding-l" data-test-step-title>Choose your implementation
+      method</Hds::Text::Display>
+    <Hds::Form::RadioCard::Group @name="namespace-creation" @alignment="center" as |G|>
+      {{#each this.creationMethodOptions as |option|}}
+        <G.RadioCard
+          @alignment="left"
+          @checked={{eq option.label this.creationMethodChoice}}
+          {{on "change" (fn this.onChange option)}}
+          data-test-radio-card={{option.label}}
+          as |R|
+        >
+          <R.Icon @name={{option.icon}} />
+          <R.Label>{{option.label}}</R.Label>
+          {{#if option.isRecommended}}
+            <R.Badge @color="highlight" @text="Recommended" />
+          {{/if}}
+          <R.Description>{{option.description}}</R.Description>
+        </G.RadioCard>
+      {{/each}}
+    </Hds::Form::RadioCard::Group>
+
+    {{#unless (eq this.creationMethodChoice this.methods.UI)}}
+      <Hds::Text::Display @tag="h2" @size="400" class="has-bottom-padding-s has-top-margin-xl">Edit configuration</Hds::Text::Display>
+      <Hds::Text::Body @tag="p" class="has-bottom-padding-l">
+        {{#if (eq this.creationMethodChoice this.methods.APICLI)}}
+          This configuration is generated based on your input in the previous step. Copy it and run it in your terminal/use
+          with Vault API to apply.
+        {{else}}
+          This configuration is generated based on your input in the previous step. Copy and paste it directly to your
+          Terraform Vault Provider terminal. For more details on the configuration language, read the
+          <Hds::Link::Inline @href={{doc-link "/terraform/tutorials/configuration-language"}}>Terraform guide</Hds::Link::Inline>.
+        {{/if}}
+      </Hds::Text::Body>
+      <Hds::Card::Container @hasBorder={{true}} class="has-top-padding-m has-bottom-padding-m side-padding-24">
+        {{#if (eq this.creationMethodChoice this.methods.APICLI)}}
+          <Hds::Tabs @onClickTab={{this.onClickTab}} as |T|>
+            {{#each this.tabOptions as |tabName|}}
+              <T.Tab data-test-tab={{tabName}}>{{tabName}}</T.Tab>
+              <T.Panel>
+                <Hds::CodeBlock
+                  @language="bash"
+                  @value={{this.snippet}}
+                  @hasLineNumbers={{true}}
+                  @hasCopyButton={{true}}
+                  data-test-field="snippets"
+                />
+              </T.Panel>
+            {{/each}}
+
+          </Hds::Tabs>
+        {{else}}
+          <Hds::CodeBlock
+            @language="hcl"
+            @value={{this.snippet}}
+            @hasLineNumbers={{true}}
+            @hasCopyButton={{true}}
+            data-test-field="snippets"
+          />
+        {{/if}}
+      </Hds::Card::Container>
+    {{/unless}}
+  </div>
+{{else}}
+  <div class="is-flex-center has-bottom-margin-l">
+    <Hds::Icon @color="success" @name="check-circle-fill" />
+    <Hds::Text::Display @tag="h2" @size="400" @weight="bold" class="has-left-margin-xs" data-test-step-title>No action
+      needed, you're all set.</Hds::Text::Display>
+  </div>
+  <Hds::Card::Container @hasBorder={{true}} class="has-padding-m has-bottom-margin-l">
+    <Hds::Text::Display @tag="h3" @size="300" @weight="semibold" class="has-bottom-padding-m">Next up: build out your access
+      lists and identities</Hds::Text::Display>
+    <p class="has-bottom-margin-s">
+      Make it easier for your team to adopt Vault by using ACL (Access-Control-List) and identities to maintain security
+      without the added complexity of namespaces.
+    </p>
+    <Hds::Text::Body @tag="h4" @weight="semibold" @size="300" class="has-bottom-padding-s">Why use ACL and identities?</Hds::Text::Body>
+    <ul class="bullet has-bottom-margin-s">
+      <li>Simplified policy writing and secret access paths.</li>
+      <li>No performance or scaling issues associated with namespaces.</li>
+      <li>Much more flexible than namespaces.</li>
+    </ul>
+    <Hds::Button
+      @color="secondary"
+      @icon="arrow-right"
+      @iconPosition="trailing"
+      @route="vault.cluster.access.identity.index"
+      @model="entities"
+      @text="Set up identities"
+      data-test-button="identities"
+    />
+  </Hds::Card::Container>
+
+  <Hds::Link::Standalone
+    @icon="external-link"
+    @iconPosition="trailing"
+    @text="Learn more about namespaces"
+    @href={{doc-link "/vault/docs/enterprise/namespaces/namespace-structure"}}
+  />
+{{/if}}

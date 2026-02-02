@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,7 +9,6 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { keyMgmtMockModel } from 'vault/tests/helpers/secret-engine/mocks';
-import { SELECTORS } from 'vault/tests/helpers/secret-engine/general-settings-selectors';
 
 module('Integration | Component | SecretEngine::Card::Version', function (hooks) {
   setupRenderingTest(hooks);
@@ -24,8 +23,10 @@ module('Integration | Component | SecretEngine::Card::Version', function (hooks)
       <SecretEngine::Card::Version @model={{this.model}} />
     `);
     assert.dom(`${GENERAL.cardContainer('version')} h2`).hasText('Version');
-    assert.dom(SELECTORS.engineType).hasAnyText(keyMgmtMockModel.secretsEngine.type);
-    assert.dom(SELECTORS.currentVersion).hasAnyText(keyMgmtMockModel.secretsEngine.running_plugin_version);
-    assert.dom(SELECTORS.versionCard.versionsDropdown).doesNotExist();
+    assert.dom(GENERAL.infoRowValue('type')).hasAnyText(keyMgmtMockModel.secretsEngine.type);
+    assert
+      .dom(GENERAL.infoRowValue('running_plugin_version'))
+      .hasAnyText(keyMgmtMockModel.secretsEngine.running_plugin_version);
+    assert.dom(GENERAL.inputByAttr('plugin_version')).doesNotExist();
   });
 });

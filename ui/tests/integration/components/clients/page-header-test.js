@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -13,6 +13,7 @@ import Sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import timestamp from 'core/utils/timestamp';
 
 // this test coverage mostly is around the export button functionality
 // since everything else is static
@@ -24,6 +25,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
     this.downloadStub = Sinon.stub(this.owner.lookup('service:download'), 'download');
     this.startTimestamp = '2022-06-01T23:00:11.050Z';
     this.endTimestamp = '2022-12-01T23:00:11.050Z';
+    this.billingStartTime = this.startTimestamp;
     this.upgradesDuringActivity = [];
     this.noData = undefined;
     this.server.post('/sys/capabilities-self', () =>
@@ -33,10 +35,12 @@ module('Integration | Component | clients/page-header', function (hooks) {
     this.renderComponent = async () => {
       return render(hbs`
         <Clients::PageHeader
+          @billingStartTime={{this.billingStartTime}}
           @startTimestamp={{this.startTimestamp}}
           @endTimestamp={{this.endTimestamp}}
           @upgradesDuringActivity={{this.upgradesDuringActivity}}
           @noData={{this.noData}}
+          @activityTimestamp={{this.activityTimestamp}}
         />`);
     };
   });
@@ -160,6 +164,19 @@ module('Integration | Component | clients/page-header', function (hooks) {
     assert.dom('[data-test-export-upgrade-warning]').includesText('1.10.1 (Nov 18, 2021)');
   });
 
+  test('it refreshes route after clicking "Refresh page" button', async function (assert) {
+    const routeName = 'vault.cluster.clients.counts';
+    const router = this.owner.lookup('service:router');
+    Sinon.stub(router, 'currentRoute').value({ parent: { name: routeName } });
+    const refreshStub = Sinon.stub(router, 'refresh');
+    this.activityTimestamp = timestamp.now().toISOString();
+    await this.renderComponent();
+    await click(GENERAL.button('Refresh page'));
+    const [transitionRoute] = refreshStub.lastCall.args;
+    assert.true(refreshStub.calledOnce, 'clicking "Refresh page" calls refresh()');
+    assert.strictEqual(transitionRoute, routeName, 'it calls refresh() with parent route name');
+  });
+
   module('download naming', function () {
     test('is correct for date range', async function (assert) {
       assert.expect(2);
@@ -242,6 +259,34 @@ module('Integration | Component | clients/page-header', function (hooks) {
       await waitUntil(() => this.downloadStub.calledOnce);
       const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_bar');
+    });
+  });
+
+  module('enterprise', function (hooks) {
+    hooks.beforeEach(function () {
+      this.version = this.owner.lookup('service:version');
+      this.version.type = 'enterprise';
+    });
+
+    test('it renders billing period text', async function (assert) {
+      await this.renderComponent();
+      assert
+        .dom(this.element)
+        .hasTextContaining('Client Usage For billing period:', 'it renders billing related text');
+    });
+
+    test('it renders data period text for HVD managed clusters', async function (assert) {
+      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+      await this.renderComponent();
+      assert.dom(this.element).hasTextContaining('Client Usage For data period:');
+    });
+
+    test('it allows date editing if no billing start time is provided', async function (assert) {
+      this.billingStartTime = '';
+      await this.renderComponent();
+      assert.dom(CLIENT_COUNT.dateRange.edit).exists('it renders edit button to open modal').hasText('Edit');
+      assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText('June 2022');
+      assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText('December 2022');
     });
   });
 });

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,16 +7,15 @@ import Component from '@glimmer/component';
 import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
 import { convertToSeconds } from 'core/utils/duration-utils';
 
-import type Router from '@ember/routing/router';
+import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type ApiService from 'vault/services/api';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import type UnsavedChangesService from 'vault/services/unsaved-changes';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
-export const CUSTOM = 'Custom';
-export const SYSTEM_DEFAULT = 'System default';
 const CHARACTER_LIMIT = 500;
 
 /**
@@ -41,50 +40,42 @@ interface Args {
 }
 
 export default class GeneralSettingsComponent extends Component<Args> {
-  @service declare readonly router: Router;
+  @service declare readonly router: RouterService;
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly unsavedChanges: UnsavedChangesService;
 
   @tracked errorMessage: string | string[] | null = null;
   @tracked errors: string[] = [];
   @tracked invalidFormAlert: string | null = null;
   @tracked showUnsavedChangesModal = false;
-  @tracked changedFields: string[] = [];
 
   @tracked defaultLeaseUnit = '';
   @tracked maxLeaseUnit = '';
 
   originalModel = JSON.parse(JSON.stringify(this.args.model));
 
-  getUnsavedChanges(newModel: SecretsEngineResource, originalModel: SecretsEngineResource) {
-    for (const key in this.args.model.secretsEngine) {
-      const secretsEngineKeyType = key as keyof typeof this.args.model.secretsEngine;
+  get modalChangedFields() {
+    const changedFieldsCopy = [...this.unsavedChanges.changedFields];
+    const configIndex = this.unsavedChanges.changedFields.indexOf('config');
 
-      if (secretsEngineKeyType === 'options') {
-        return;
-      }
+    if (configIndex === -1) return this.unsavedChanges.changedFields;
 
-      if (secretsEngineKeyType === 'config') {
-        const { defaultLeaseTime, defaultLeaseUnit, maxLeaseTime, maxLeaseUnit } = this.getFormData();
+    changedFieldsCopy[configIndex] = 'Secrets duration';
 
-        const hasDefaultTtlValueChanged = this.hasTtlValueChanged(
-          defaultLeaseTime,
-          defaultLeaseUnit,
-          'default_lease_ttl'
-        );
-        const hasMaxTtlValueChanged = this.hasTtlValueChanged(maxLeaseTime, maxLeaseUnit, 'max_lease_ttl');
+    return changedFieldsCopy;
+  }
 
-        if (
-          (hasDefaultTtlValueChanged || hasMaxTtlValueChanged) &&
-          !this.changedFields.includes('Lease Duration')
-        ) {
-          this.changedFields.push('Lease Duration');
-        }
-      } else {
-        if (newModel[secretsEngineKeyType] !== originalModel[secretsEngineKeyType]) {
-          this.changedFields.push(key);
-        }
-      }
+  get configRoute() {
+    const engine = this.args.model.secretsEngine;
+    const isKvv2 = engine.version === 2 && engine.effectiveEngineType === 'kv';
+    const engineMetadata = engineDisplayData(engine.effectiveEngineType);
+
+    // Kvv2 is configurable but shares metadata with Kvv1 so isConfigurable is left unset
+    if (engineMetadata.isConfigurable || isKvv2) {
+      return engineMetadata.configRoute || 'configuration.plugin-settings';
+    } else {
+      return false;
     }
   }
 
@@ -101,7 +92,7 @@ export default class GeneralSettingsComponent extends Component<Args> {
   }
 
   validateForm() {
-    const { defaultLeaseTime, maxLeaseTime, description } = this.getFormData();
+    const { defaultLeaseTime, maxLeaseTime, description } = this.formData;
 
     const errorMessages = [];
 
@@ -129,15 +120,7 @@ export default class GeneralSettingsComponent extends Component<Args> {
     return true;
   }
 
-  hasDescriptionChanged(description: FormDataEntryValue | null) {
-    return description !== this?.originalModel?.secretsEngine?.description;
-  }
-
-  hasPluginVersionChanged(version: FormDataEntryValue | null) {
-    return version && version !== this?.originalModel?.secretsEngine?.running_plugin_version;
-  }
-
-  getFormData() {
+  get formData() {
     const form = document.getElementById('general-settings-form');
     const fd = new FormData(form as HTMLFormElement);
     const fdDefaultLeaseTime = Number(fd.get('default_lease_ttl-time'));
@@ -155,28 +138,9 @@ export default class GeneralSettingsComponent extends Component<Args> {
     };
   }
 
-  hasUnsavedChanges() {
-    const { defaultLeaseTime, defaultLeaseUnit, maxLeaseTime, maxLeaseUnit, description, version } =
-      this.getFormData();
-
-    const hasDefaultTtlValueChanged = this.hasTtlValueChanged(
-      defaultLeaseTime,
-      defaultLeaseUnit,
-      'default_lease_ttl'
-    );
-    const hasMaxTtlValueChanged = this.hasTtlValueChanged(maxLeaseTime, maxLeaseUnit, 'max_lease_ttl');
-
-    return (
-      hasDefaultTtlValueChanged ||
-      hasMaxTtlValueChanged ||
-      this.hasDescriptionChanged(description) ||
-      this.hasPluginVersionChanged(version)
-    );
-  }
-
   formatTuneParams() {
     const { defaultLeaseTime, defaultLeaseUnit, maxLeaseTime, maxLeaseUnit, description, version } =
-      this.getFormData();
+      this.formData;
 
     const hasDefaultTtlValueChanged = this.hasTtlValueChanged(
       defaultLeaseTime,
@@ -185,11 +149,14 @@ export default class GeneralSettingsComponent extends Component<Args> {
     );
 
     const hasMaxTtlValueChanged = this.hasTtlValueChanged(maxLeaseTime, maxLeaseUnit, 'max_lease_ttl');
+    const hasDescriptionChanged = description !== this?.originalModel?.secretsEngine?.description;
+    const hasPluginVersionChanged =
+      version && version !== this?.originalModel?.secretsEngine?.running_plugin_version;
 
     const defaultLeaseTtl = hasDefaultTtlValueChanged ? `${defaultLeaseTime}${defaultLeaseUnit}` : undefined;
     const maxLeaseTtl = hasMaxTtlValueChanged ? `${maxLeaseTime}${maxLeaseUnit}` : undefined;
-    const pluginVersion = this.hasPluginVersionChanged(version) ? version : undefined;
-    const pluginDescription = this.hasDescriptionChanged(description) ? description : undefined;
+    const pluginVersion = hasPluginVersionChanged ? version : undefined;
+    const pluginDescription = hasDescriptionChanged ? description : undefined;
 
     return {
       defaultLeaseTtl,
@@ -197,35 +164,6 @@ export default class GeneralSettingsComponent extends Component<Args> {
       pluginVersion,
       pluginDescription,
     };
-  }
-
-  @action
-  openUnsavedChangesModal() {
-    if (this.hasUnsavedChanges()) {
-      this.getUnsavedChanges(this.args?.model?.secretsEngine, this?.originalModel?.secretsEngine);
-      this.showUnsavedChangesModal = true;
-    } else {
-      this.showUnsavedChangesModal = false;
-    }
-  }
-
-  @action
-  closeUnsavedChangesModal() {
-    this.showUnsavedChangesModal = false;
-    this.changedFields = [];
-  }
-
-  @action
-  closeAndHandle(close: () => void, action: 'save' | 'discard') {
-    close();
-
-    if (action === 'save') {
-      this.saveGeneralSettings.perform();
-    }
-
-    if (action === 'discard') {
-      this.router.transitionTo(this.args?.model?.secretsEngine?.backendConfigurationLink);
-    }
   }
 
   saveGeneralSettings = task(async (event?) => {
@@ -247,7 +185,7 @@ export default class GeneralSettingsComponent extends Component<Args> {
 
       this.flashMessages.success('Engine settings successfully updated.', { title: 'Configuration saved' });
 
-      this.router.transitionTo(this.args?.model?.secretsEngine?.backendConfigurationLink);
+      this.unsavedChanges.transition('vault.cluster.secrets.backend.configuration.general-settings');
     } catch (e) {
       const { message } = await this.api.parseError(e);
       this.errorMessage = message;

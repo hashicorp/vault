@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -23,7 +23,7 @@ module('Integration | Component | SecretEngine::TtlPickerV2', function (hooks) {
     await render(hbs`
       <SecretEngine::TtlPickerV2 @model={{this.model}} @ttlKey={{this.ttlKey}} />
     `);
-    assert.dom(GENERAL.fieldLabelbyAttr(this.ttlKey)).hasText('Default time-to-live (TTL)');
+    assert.dom(GENERAL.fieldLabel(this.ttlKey)).hasText('Default time-to-live (TTL)');
     assert.dom(GENERAL.helpTextByAttr(this.ttlKey)).hasText('How long secrets in this engine stay valid.');
     await fillIn(GENERAL.inputByAttr(this.ttlKey), 5);
     await fillIn(GENERAL.selectByAttr(this.ttlKey), 'm');
@@ -37,7 +37,7 @@ module('Integration | Component | SecretEngine::TtlPickerV2', function (hooks) {
     await render(hbs`
       <SecretEngine::TtlPickerV2 @model={{this.model}} @ttlKey={{this.ttlKey}} />
     `);
-    assert.dom(GENERAL.fieldLabelbyAttr(this.ttlKey)).hasText('Maximum time-to-live (TTL)');
+    assert.dom(GENERAL.fieldLabel(this.ttlKey)).hasText('Maximum time-to-live (TTL)');
     assert
       .dom(GENERAL.helpTextByAttr(this.ttlKey))
       .hasText('Maximum extension for the secrets life beyond default.');

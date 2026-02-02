@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -17,7 +17,7 @@
     {{#if this.replicationAttrs.secondaries}}
       <KnownSecondariesTable @secondaries={{this.replicationAttrs.secondaries}} />
     {{else}}
-      <Hds::ApplicationState as |A|>
+      <Hds::ApplicationState @align="center" as |A|>
         <A.Header
           @title="No known {{this.cluster.replicationMode}} secondary clusters associated with this cluster"
           data-test-empty-state-title

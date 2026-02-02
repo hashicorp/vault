@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -62,7 +62,7 @@ export default class KvSecretEdit extends Component {
   get visualDiff() {
     if (this.showDiff) {
       return this.diffDelta
-        ? jsondiffpatch.formatters.html.format(this.diffDelta, this.updatedSecret)
+        ? htmlformatter.format(this.diffDelta, this.updatedSecret)
         : JSON.stringify(this.updatedSecret, undefined, 2);
     }
     return null;

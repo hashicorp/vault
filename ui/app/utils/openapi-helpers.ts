@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -208,16 +208,6 @@ export function filterPathsByItemType(pathInfo: PathInfo, itemType: string): Pat
  * This object maps model names to the openAPI path that hydrates the model, given the backend path.
  */
 const OPENAPI_POWERED_MODELS = {
-  'kmip/config': (backend: string) => `/v1/${backend}/config?help=1`,
-  'kmip/role': (backend: string) => `/v1/${backend}/scope/example/role/example?help=1`,
-  'pki/certificate/generate': (backend: string) => `/v1/${backend}/issue/example?help=1`,
-  'pki/certificate/sign': (backend: string) => `/v1/${backend}/sign/example?help=1`,
-  'pki/config/acme': (backend: string) => `/v1/${backend}/config/acme?help=1`,
-  'pki/config/cluster': (backend: string) => `/v1/${backend}/config/cluster?help=1`,
-  'pki/config/urls': (backend: string) => `/v1/${backend}/config/urls?help=1`,
-  'pki/role': (backend: string) => `/v1/${backend}/roles/example?help=1`,
-  'pki/sign-intermediate': (backend: string) => `/v1/${backend}/issuer/example/sign-intermediate?help=1`,
-  'pki/tidy': (backend: string) => `/v1/${backend}/config/auto-tidy?help=1`,
   'role-ssh': (backend: string) => `/v1/${backend}/roles/example?help=1`,
 };
 
@@ -268,9 +258,12 @@ export const expandOpenApiProps = function (
       editType = items.type + capitalize(type);
     }
 
+    // to preserve legacy behavior set the description to helpText
+    // this pattern is deprecated when used with Form class since description is better represented as subText
+    const descriptionKey = outputFormat === 'model' ? 'helpText' : 'subText';
     const attrDefn: MixedAttr = {
       editType,
-      helpText: description,
+      [descriptionKey]: description,
       possibleValues: prop['enum'],
       fieldValue: isId ? 'mutableId' : undefined,
       fieldGroup: group || 'default',

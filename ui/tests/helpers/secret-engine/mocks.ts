@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -24,7 +24,7 @@ export const keyMgmtMockModel = {
     type: 'keymgmt',
     uuid: '4ea92618-5b52-f89a-9cbe-b65dc7e65689',
     id: 'keymgmt',
-    backendConfigurationLink: `vault.cluster.secrets.backend.configuration`,
+    backendConfigurationLink: `vault.cluster.secrets.backend.configuration.general-settings`,
   },
   versions: ['v0.17.1+builtin'],
 };
