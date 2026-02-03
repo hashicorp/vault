@@ -5,6 +5,8 @@ package vault
 
 import (
 	"context"
+	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/helper/timeutil"
@@ -15,8 +17,14 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 	// We need replication (post unseal) to start before we run the consumption billing metrics worker
 	// This is because there is primary/secondary cluster specific logic
 	c.consumptionBillingLock.Lock()
+	logger := c.baseLogger.Named("billing")
+	c.AddLogger(logger)
 	c.consumptionBilling = &billing.ConsumptionBilling{
 		BillingConfig: c.billingConfig,
+		DataProtectionCallCounts: billing.DataProtectionCallCounts{
+			Transit: &atomic.Uint64{},
+		},
+		Logger: logger,
 	}
 	c.consumptionBillingLock.Unlock()
 	c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
@@ -72,7 +80,12 @@ func (c *Core) updateBillingMetrics(ctx context.Context) error {
 			c.UpdateReplicatedHWMMetrics(ctx, currentMonth)
 		}
 		c.UpdateLocalHWMMetrics(ctx, currentMonth)
-		c.UpdateLocalAggregatedMetrics(ctx, currentMonth)
+		if err := c.UpdateLocalAggregatedMetrics(ctx, currentMonth); err != nil {
+			c.logger.Error("error updating cluster data protection call counts", "error", err)
+		} else {
+			c.logger.Info("updated cluster data protection call counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+		}
+
 	}
 	return nil
 }
@@ -119,10 +132,7 @@ func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time
 
 func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth time.Time) error {
 	if _, err := c.UpdateDataProtectionCallCounts(ctx, currentMonth); err != nil {
-		c.logger.Error("error updating local max data protection call counts", "error", err)
-	} else {
-		c.logger.Info("updated local max data protection call counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+		return fmt.Errorf("could not store transit data protection call counts: %w", err)
 	}
-
 	return nil
 }

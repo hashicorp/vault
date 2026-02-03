@@ -12,7 +12,6 @@ import (
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault/billing"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
 )
@@ -22,9 +21,6 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	var err error
 
 	b, s := createBackendWithStorage(t)
-
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
 
 	batchEncryptionInput := []interface{}{
 		map[string]interface{}{"plaintext": "", "reference": "foo"},     // empty string
@@ -71,12 +67,15 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	expectedResult := "[{\"plaintext\":\"\",\"reference\":\"foo\"},{\"plaintext\":\"Cg==\",\"reference\":\"bar\"},{\"plaintext\":\"dGhlIHF1aWNrIGJyb3duIGZveA==\",\"reference\":\"baz\"}]"
 
 	jsonResponse, err := json.Marshal(batchDecryptionResponseItems)
-	if err != nil || err == nil && string(jsonResponse) != expectedResult {
+	if err != nil {
+		t.Fatalf("bad: failed to marshal response items: err=%v json=%s", err, jsonResponse)
+	}
+	if string(jsonResponse) != expectedResult {
 		t.Fatalf("bad: expected json response [%s]", jsonResponse)
 	}
 
 	// We expect 6 successful requests (3 for batch encryption, 3 for batch decryption)
-	require.Equal(t, int64(6), billing.CurrentDataProtectionCallCounts.Transit)
+	require.Equal(t, uint64(6), b.billingDataCounts.Transit.Load())
 }
 
 func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
@@ -85,9 +84,6 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 	var err error
 
 	b, s := createBackendWithStorage(t)
-
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
 
 	// Create a derived key.
 	req = &logical.Request{
@@ -291,5 +287,5 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 	}
 
 	// We expect 7 successful requests (2 for batch encryption + 1 single-item decryption + 2 batch decryption + 2 batch decryption)
-	require.Equal(t, int64(7), billing.CurrentDataProtectionCallCounts.Transit)
+	require.Equal(t, uint64(7), b.billingDataCounts.Transit.Load())
 }

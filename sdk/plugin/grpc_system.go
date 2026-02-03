@@ -36,6 +36,11 @@ type gRPCSystemViewClient struct {
 	client pb.SystemViewClient
 }
 
+func (s *gRPCSystemViewClient) GetConsumptionBillingManager() logical.ConsumptionBillingManager {
+	// Not implemented on pluginbackend
+	return nil
+}
+
 func (s *gRPCSystemViewClient) DefaultLeaseTTL() time.Duration {
 	reply, err := s.client.DefaultLeaseTTL(context.Background(), &pb.Empty{})
 	if err != nil {

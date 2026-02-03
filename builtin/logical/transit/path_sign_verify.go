@@ -492,8 +492,9 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	// Increment the counter for successful operations
-	b.incrementDataProtectionCounter(int64(successfulRequests))
+	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+		b.Logger().Error("failed to track transit sign request count", "error", err.Error())
+	}
 
 	return resp, nil
 }
@@ -750,8 +751,9 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		}
 	}
 
-	// Increment the counter for successful operations
-	b.incrementDataProtectionCounter(int64(successfulRequests))
+	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+		b.Logger().Error("failed to track transit sign verify request count", "error", err.Error())
+	}
 
 	return resp, nil
 }

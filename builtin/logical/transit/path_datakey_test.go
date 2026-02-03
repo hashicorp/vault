@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault/billing"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
 )
@@ -16,9 +15,6 @@ import (
 // TestDataKeyWithPaddingScheme validates that we properly leverage padding scheme
 // args for the returned keys
 func TestDataKeyWithPaddingScheme(t *testing.T) {
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
-
 	b, s := createBackendWithStorage(t)
 	keyName := "test"
 	createKeyReq := &logical.Request{
@@ -95,15 +91,12 @@ func TestDataKeyWithPaddingScheme(t *testing.T) {
 		})
 	}
 	// We expect 8 successful requests ((3 valid cases x 2 operations) + (2 invalid cases x 1 operation))
-	require.Equal(t, int64(8), billing.CurrentDataProtectionCallCounts.Transit)
+	require.Equal(t, uint64(8), b.billingDataCounts.Transit.Load())
 }
 
 // TestDataKeyWithPaddingSchemeInvalidKeyType validates we fail when we specify a
 // padding_scheme value on an invalid key type (non-RSA)
 func TestDataKeyWithPaddingSchemeInvalidKeyType(t *testing.T) {
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
-
 	b, s := createBackendWithStorage(t)
 	keyName := "test"
 	createKeyReq := &logical.Request{
@@ -132,5 +125,5 @@ func TestDataKeyWithPaddingSchemeInvalidKeyType(t *testing.T) {
 	require.NotNil(t, resp, "response should not be nil")
 	require.Contains(t, resp.Error().Error(), "padding_scheme argument invalid: unsupported key")
 	// We expect 0 successful requests
-	require.Equal(t, int64(0), billing.CurrentDataProtectionCallCounts.Transit)
+	require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
 }

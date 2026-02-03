@@ -308,8 +308,9 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
 
-	// Increment the counter for successful operations
-	b.incrementDataProtectionCounter(int64(successfulRequests))
+	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+		b.Logger().Error("failed to track transit rewrap request count", "error", err.Error())
+	}
 
 	return resp, nil
 }
