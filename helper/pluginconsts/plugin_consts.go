@@ -44,6 +44,7 @@ const (
 	SecretEngineLDAP         = "ldap"
 	SecretEnginePostgresql   = "postgresql"
 	SecretEngineRabbitMQ     = "rabbitmq"
+	SecretEngineSpiffe       = "spiffe"
 	SecretEngineTerraform    = "terraform"
 	SecretEngineTOTP         = "totp"
 	SecretEngineKV           = "kv"
