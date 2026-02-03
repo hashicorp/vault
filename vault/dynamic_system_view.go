@@ -401,3 +401,7 @@ func (d dynamicSystemView) DeregisterRotationJob(ctx context.Context, req *rotat
 
 	return d.core.DeregisterRotationJob(nsCtx, req)
 }
+
+func (d dynamicSystemView) GetConsumptionBillingManager() logical.ConsumptionBillingManager {
+	return d.core.GetConsumptionBillingManager()
+}

@@ -16,14 +16,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/hashicorp/vault/vault/billing"
 	"github.com/stretchr/testify/require"
 )
 
 func TestTransit_HMAC(t *testing.T) {
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
-
 	b, storage := createBackendWithSysView(t)
 
 	cases := []struct {
@@ -249,13 +245,10 @@ func TestTransit_HMAC(t *testing.T) {
 		}
 	}
 	// Verify the total successful transit requests
-	require.Equal(t, int64(72), billing.CurrentDataProtectionCallCounts.Transit)
+	require.Equal(t, uint64(72), b.billingDataCounts.Transit.Load())
 }
 
 func TestTransit_batchHMAC(t *testing.T) {
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
-
 	b, storage := createBackendWithSysView(t)
 
 	// First create a key
@@ -411,7 +404,7 @@ func TestTransit_batchHMAC(t *testing.T) {
 	}
 
 	// Verify the total successful transit requests
-	require.Equal(t, int64(5), billing.CurrentDataProtectionCallCounts.Transit)
+	require.Equal(t, uint64(5), b.billingDataCounts.Transit.Load())
 }
 
 // TestHMACBatchResultsFields checks that responses to HMAC verify requests using batch_input
@@ -439,9 +432,6 @@ func TestHMACBatchResultsFields(t *testing.T) {
 		Type: "transit",
 	})
 	require.NoError(t, err)
-
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
 
 	keyName := "hmac-test-key"
 	_, err = client.Logical().Write("transit/keys/"+keyName, map[string]interface{}{"type": "hmac", "key_size": 32})
@@ -505,5 +495,5 @@ func TestHMACBatchResultsFields(t *testing.T) {
 	}
 
 	// We expect 4 successful requests (2 for batch HMAC generation, 2 for batch verification)
-	require.Equal(t, int64(4), billing.CurrentDataProtectionCallCounts.Transit)
+	require.Equal(t, uint64(4), cores[0].GetInMemoryTransitDataProtectionCallCounts())
 }

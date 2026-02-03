@@ -118,6 +118,9 @@ type Backend struct {
 	// communicate with a plugin to activate a feature.
 	ActivationFunc func(context.Context, *logical.Request, string) error
 
+	// ConsumptionBillingManager is the consumption billing manager the backend can use to write billing data.
+	ConsumptionBillingManager logical.ConsumptionBillingManager
+
 	logger       log.Logger
 	system       logical.SystemView
 	events       logical.EventSender
@@ -440,6 +443,11 @@ func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) erro
 	b.system = config.System
 	b.events = config.EventsSender
 	b.observations = config.ObservationRecorder
+	if b.System() != nil && b.System().GetConsumptionBillingManager() != nil {
+		b.ConsumptionBillingManager = b.System().GetConsumptionBillingManager()
+	} else {
+		b.ConsumptionBillingManager = logical.NewNullConsumptionBillingManager()
+	}
 	return nil
 }
 
@@ -546,7 +554,7 @@ func (b *Backend) init() {
 	for i, p := range b.Paths {
 		// Detect the coding error of failing to initialise Pattern
 		if len(p.Pattern) == 0 {
-			panic(fmt.Sprintf("Routing pattern cannot be blank"))
+			panic("Routing pattern cannot be blank")
 		}
 
 		// Detect the coding error of attempting to define a CreateOperation without defining an ExistenceCheck

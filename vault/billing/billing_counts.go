@@ -4,19 +4,24 @@
 package billing
 
 import (
+	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
-	BillingSubPath                 = "billing/"
-	ReplicatedPrefix               = "replicated/"
-	RoleHWMCountsHWM               = "maxRoleCounts/"
-	KvHWMCountsHWM                 = "maxKvCounts/"
-	DataProtectionCallCountsMetric = "dataProtectionCallCounts/"
-	LocalPrefix                    = "local/"
-	ThirdPartyPluginsPrefix        = "thirdPartyPluginCounts/"
+	BillingSubPath                        = "billing/"
+	ReplicatedPrefix                      = "replicated/"
+	RoleHWMCountsHWM                      = "maxRoleCounts/"
+	KvHWMCountsHWM                        = "maxKvCounts/"
+	TransitDataProtectionCallCountsPrefix = "transitDataProtectionCallCounts/"
+	LocalPrefix                           = "local/"
+	ThirdPartyPluginsPrefix               = "thirdPartyPluginCounts/"
 
 	BillingWriteInterval = 10 * time.Minute
 )
@@ -27,7 +32,9 @@ type ConsumptionBilling struct {
 	// BillingStorageLock controls access to the billing storage paths
 	BillingStorageLock sync.RWMutex
 
-	BillingConfig BillingConfig
+	BillingConfig            BillingConfig
+	DataProtectionCallCounts DataProtectionCallCounts
+	Logger                   log.Logger
 }
 
 type BillingConfig struct {
@@ -45,10 +52,26 @@ func GetMonthlyBillingPath(localPrefix string, now time.Time, billingMetric stri
 }
 
 type DataProtectionCallCounts struct {
-	Transit int64 `json:"transit,omitempty"`
+	Transit *atomic.Uint64 `json:"transit,omitempty"`
 	// TODO: Uncomment when we add support for Transform tracking (VAULT-41205)
-	// Transform int64 `json:"transform,omitempty"`
+	// Transform atomic.int64 `json:"transform,omitempty"`
 }
 
-// Global counter for all data protection calls on this cluster
-var CurrentDataProtectionCallCounts = DataProtectionCallCounts{}
+var _ logical.ConsumptionBillingManager = (*ConsumptionBilling)(nil)
+
+func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType string, data map[string]interface{}) error {
+	switch mountType {
+	case "transit":
+		val, ok := data["count"].(uint64)
+		if !ok {
+			err := fmt.Errorf("invalid value type for transit")
+			return err
+		}
+
+		s.DataProtectionCallCounts.Transit.Add(val)
+	default:
+		err := fmt.Errorf("unknown metric type: %s", mountType)
+		return err
+	}
+	return nil
+}
