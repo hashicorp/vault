@@ -399,6 +399,7 @@ message HandleRequestArgs {
 message HandleRequestReply {
   Response response = 1;
   ProtoError err = 2;
+  WALIndex walIndex = 3;
 }
 
 // InitializeArgs is the args for Initialize method.
@@ -524,8 +525,14 @@ message StoragePutArgs {
   StorageEntry entry = 1;
 }
 
+message WALIndex {
+  uint64 local_index = 1;
+  uint64 replicated_index = 2;
+}
+
 message StoragePutReply {
   string err = 1;
+  WALIndex walIndex = 2;
 }
 
 message StorageDeleteArgs {
@@ -534,6 +541,7 @@ message StorageDeleteArgs {
 
 message StorageDeleteReply {
   string err = 1;
+  WALIndex walIndex = 2;
 }
 
 // Storage is the way that plugins are able read/write data. Plugins should
