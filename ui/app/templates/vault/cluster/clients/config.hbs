@@ -6,7 +6,7 @@
 <Page::Header @title="Configuration" />
 <Toolbar>
   <ToolbarActions>
-    {{#if @model.canEdit}}
+    {{#if @model.capabilities.canUpdate}}
       <LinkTo @route="vault.cluster.clients.edit" class="toolbar-link">
         Edit configuration
       </LinkTo>
@@ -14,4 +14,4 @@
   </ToolbarActions>
 </Toolbar>
 
-<Clients::Config @model={{@model}} />
+<Clients::Config @config={{@model.config}} />

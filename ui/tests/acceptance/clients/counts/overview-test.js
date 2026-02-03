@@ -25,6 +25,7 @@ import {
 } from 'vault/tests/helpers/clients/client-count-helpers';
 import { ClientFilters, flattenMounts } from 'core/utils/client-counts/helpers';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { formatByMonths } from 'core/utils/client-counts/serializers';
 
 module('Acceptance | clients | overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -34,7 +35,6 @@ module('Acceptance | clients | overview', function (hooks) {
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     // These tests use the clientsHandler which dynamically generates activity data, used for asserting date querying, etc
     clientsHandler(this.server);
-    this.store = this.owner.lookup('service:store');
     this.version = this.owner.lookup('service:version');
   });
 
@@ -174,8 +174,8 @@ module('Acceptance | clients | overview', function (hooks) {
           data: ACTIVITY_RESPONSE_STUB,
         };
       });
-      const staticActivity = await this.store.findRecord('clients/activity', 'some-activity-id');
-      this.staticMostRecentMonth = staticActivity.byMonth[staticActivity.byMonth.length - 1];
+      const byMonth = formatByMonths(ACTIVITY_RESPONSE_STUB.months);
+      this.staticMostRecentMonth = byMonth[byMonth.length - 1];
       await login();
       return visit('/vault/clients/counts/overview');
     });
@@ -282,9 +282,8 @@ module('Acceptance | clients | overview', function (hooks) {
         ok: true,
         text: () => Promise.resolve(ACTIVITY_EXPORT_STUB.trim()),
       };
-      const adapter = this.store.adapterFor('clients/activity');
-      const exportDataStub = sinon.stub(adapter, 'exportData');
-      exportDataStub.resolves(mockResponse);
+      const api = this.owner.lookup('service:api');
+      sinon.stub(api.sys, 'internalClientActivityExportRaw').resolves(mockResponse);
       const timestamp = this.staticMostRecentMonth.timestamp;
       await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
       await click(FILTERS.dropdownItem(timestamp));
@@ -299,7 +298,6 @@ module('Acceptance | clients | overview', function (hooks) {
         `${url}?month=${monthQp}&mount_path=${mPath}&mount_type=${mType}&namespace_path=${ns}`,
         'url query params match filters'
       );
-      exportDataStub.restore();
     });
   });
 

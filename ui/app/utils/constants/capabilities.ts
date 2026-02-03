@@ -61,4 +61,6 @@ export const PATH_MAP = {
   kmipScope: apiPath`${'backend'}/scopes/${'name'}`,
   kmipRole: apiPath`${'backend'}/scopes/${'scope'}/roles/${'name'}`,
   kmipCredentialsRevoke: apiPath`${'backend'}/scope/${'scope'}/role/${'role'}/credentials/revoke`,
+  clientsConfig: apiPath`sys/internal/counters/config`,
+  clientsActivityExport: apiPath`${'namespace'}/sys/internal/counters/activity/export`,
 };

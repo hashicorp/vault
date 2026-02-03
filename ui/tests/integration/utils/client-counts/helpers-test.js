@@ -21,18 +21,17 @@ module('Unit | Util | client counts | helpers', function (hooks) {
 
     hooks.beforeEach(async function () {
       clientsHandler(this.server);
-      const store = this.owner.lookup('service:store');
+      const api = this.owner.lookup('service:api');
       // format returned by model hook in routes/vault/cluster/clients.ts
-      this.versionHistory = await store.findAll('clients/version-history').then((resp) => {
-        return resp.map(({ version, previousVersion, timestampInstalled }) => {
-          return {
-            // order of keys needs to match expected order
-            previousVersion,
-            timestampInstalled,
-            version,
-          };
-        });
-      });
+      const response = await api.sys.versionHistory(true);
+      this.versionHistory = api
+        .keyInfoToArray(response, 'version')
+        .map(({ version, previous_version, timestamp_installed }) => ({
+          // order of keys needs to match expected order
+          previous_version,
+          timestamp_installed,
+          version,
+        }));
     });
 
     test('it returns version data for upgrade to notable versions: 1.9, 1.10, 1.17', async function (assert) {
@@ -40,24 +39,24 @@ module('Unit | Util | client counts | helpers', function (hooks) {
       const original = [...this.versionHistory];
       const expected = [
         {
-          previousVersion: '1.9.0',
-          timestampInstalled: '2023-08-02T00:00:00Z',
+          previous_version: '1.9.0',
+          timestamp_installed: '2023-08-02T00:00:00Z',
           version: '1.9.1',
         },
         {
-          previousVersion: '1.9.1',
-          timestampInstalled: '2023-09-02T00:00:00Z',
+          previous_version: '1.9.1',
+          timestamp_installed: '2023-09-02T00:00:00Z',
           version: '1.10.1',
         },
         {
-          previousVersion: '1.16.0',
-          timestampInstalled: '2023-12-02T00:00:00Z',
+          previous_version: '1.16.0',
+          timestamp_installed: '2023-12-02T00:00:00Z',
           version: '1.17.0',
         },
       ];
       // set start/end times longer than version history to test all relevant upgrades return
-      const startTime = '2023-06-02T00:00:00Z'; // first upgrade installed '2023-07-02T00:00:00Z'
-      const endTime = '2024-03-04T16:14:21Z'; // latest upgrade installed '2023-12-02T00:00:00Z'
+      const startTime = new Date('2023-06-02T00:00:00Z'); // first upgrade installed '2023-07-02T00:00:00Z'
+      const endTime = new Date('2024-03-04T16:14:21Z'); // latest upgrade installed '2023-12-02T00:00:00Z'
       const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
       assert.deepEqual(
         JSON.stringify(filteredHistory),
@@ -68,8 +67,8 @@ module('Unit | Util | client counts | helpers', function (hooks) {
         filteredHistory,
         {
           version: '1.9.0',
-          previousVersion: null,
-          timestampInstalled: '2023-07-02T00:00:00Z',
+          previous_version: null,
+          timestamp_installed: '2023-07-02T00:00:00Z',
         },
         'does not include version history if previous_version is null'
       );
@@ -80,18 +79,18 @@ module('Unit | Util | client counts | helpers', function (hooks) {
       assert.expect(2);
       const expected = [
         {
-          previousVersion: '1.9.0',
-          timestampInstalled: '2023-08-02T00:00:00Z',
+          previous_version: '1.9.0',
+          timestamp_installed: '2023-08-02T00:00:00Z',
           version: '1.9.1',
         },
         {
-          previousVersion: '1.9.1',
-          timestampInstalled: '2023-09-02T00:00:00Z',
+          previous_version: '1.9.1',
+          timestamp_installed: '2023-09-02T00:00:00Z',
           version: '1.10.1',
         },
       ];
-      const startTime = '2023-08-02T00:00:00Z'; // same date as 1.9.1 install date to catch same day edge cases
-      const endTime = '2023-11-02T00:00:00Z';
+      const startTime = new Date('2023-08-02T00:00:00Z'); // same date as 1.9.1 install date to catch same day edge cases
+      const endTime = new Date('2023-11-02T00:00:00Z');
       const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
       assert.deepEqual(
         JSON.stringify(filteredHistory),
@@ -102,8 +101,8 @@ module('Unit | Util | client counts | helpers', function (hooks) {
         filteredHistory,
         {
           version: '1.10.3',
-          previousVersion: '1.10.1',
-          timestampInstalled: '2023-09-23T00:00:00Z',
+          previous_version: '1.10.1',
+          timestamp_installed: '2023-09-23T00:00:00Z',
         },
         'it does not return subsequent patch versions of the same notable upgrade version'
       );

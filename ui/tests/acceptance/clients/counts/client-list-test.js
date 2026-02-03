@@ -41,15 +41,9 @@ module('Acceptance | clients | counts | client list', function (hooks) {
       }),
     };
     const api = this.owner.lookup('service:api');
-    this.exportDataStub = sinon.stub(api.sys, 'internalClientActivityExportRaw');
-    this.exportDataStub.resolves(mockResponse);
-
+    this.exportDataStub = sinon.stub(api.sys, 'internalClientActivityExportRaw').resolves(mockResponse);
     await login();
     return visit('/vault');
-  });
-
-  hooks.afterEach(async function () {
-    this.exportDataStub.restore();
   });
 
   test('it hides client list tab on community', async function (assert) {

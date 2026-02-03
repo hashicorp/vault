@@ -16,6 +16,7 @@ import {
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { CLIENT_TYPES } from 'core/utils/client-counts/helpers';
+import { Response } from 'miragejs';
 
 /*
 HOW TO ADD NEW TYPES:
@@ -326,7 +327,7 @@ export default function (server) {
       data = generateActivityResponse(start_time, end_time);
       activities.create(data);
     }
-    return {
+    const response = {
       request_id: 'some-activity-id',
       lease_id: '',
       renewable: false,
@@ -340,6 +341,8 @@ export default function (server) {
           ],
       auth: null,
     };
+    // need to set Content-Length header for api service to show warnings
+    return new Response(200, { 'Content-Length': JSON.stringify(response).length }, response);
   });
 
   // client counting has changed in different ways since 1.9 see link below for details

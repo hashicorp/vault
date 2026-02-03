@@ -45,7 +45,7 @@ export interface MountClients extends TotalClients {
   namespace_path: string;
 }
 
-export interface ByMonthClients extends TotalClients {
+export interface ByMonthClients extends TotalClientsSometimes {
   timestamp: string;
   namespaces: ByNamespaceClients[];
   new_clients: ByMonthNewClients;
@@ -125,3 +125,11 @@ export interface Counts {
   non_entity_clients: number;
   secret_syncs: number;
 }
+
+export type Activity = {
+  start_time?: Date;
+  end_time?: Date;
+  total: TotalClients;
+  by_month: ByMonthClients[];
+  by_namespace: ByNamespaceClients[];
+};

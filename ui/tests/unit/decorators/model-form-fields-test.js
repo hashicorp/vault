@@ -142,28 +142,4 @@ module('Unit | Decorators | ModelFormFields', function (hooks) {
       'allFields set on Model class'
     );
   });
-
-  test('it should set formFields prop on Model class', function (assert) {
-    // this model uses withFormFields
-    const record = this.store.createRecord('clients/config');
-    assert.deepEqual(
-      record.formFields,
-      [
-        {
-          name: 'enabled',
-          options: {},
-          type: 'string',
-        },
-        {
-          name: 'retentionMonths',
-          options: {
-            label: 'Retention period',
-            subText: 'The number of months of activity logs to maintain for client tracking.',
-          },
-          type: 'number',
-        },
-      ],
-      'formFields set on Model class'
-    );
-  });
 });

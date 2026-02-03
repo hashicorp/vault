@@ -4,9 +4,9 @@
 }}
 <div class="has-border-bottom-light">
   <Clients::PageHeader
-    @billingStartTime={{this.formattedBillingStartDate}}
-    @retentionMonths={{@config.retentionMonths}}
-    @activityTimestamp={{@activity.responseTimestamp}}
+    @billingStartTime={{@config.billing_start_timestamp}}
+    @retentionMonths={{@config.retention_months}}
+    @activityTimestamp={{@responseTimestamp}}
     @startTimestamp={{@startTimestamp}}
     @endTimestamp={{@endTimestamp}}
     @upgradesDuringActivity={{this.upgradesDuringActivity}}
@@ -23,26 +23,18 @@
     for more information.
   </Hds::Text::Body>
 
-  {{#if (eq @activity.id "no-data")}}
-    <Clients::NoData @config={{@config}} />
-  {{else if @activityError}}
-    <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-      <A.Header data-test-empty-state-title @title={{this.error.title}} @icon="skip" @errorCode={{this.error.httpStatus}} />
-      <A.Body data-test-empty-state-message @text={{this.error.text}} />
-    </Hds::ApplicationState>
-  {{else}}
-    {{#if (eq @config.enabled "Off")}}
-      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
-        <A.Title data-test-counts-disabled>Tracking is disabled</A.Title>
-        <A.Description>
-          Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will need
-          to
-          <Hds::Link::Inline @route="vault.cluster.clients.edit">edit the configuration</Hds::Link::Inline>
-          to enable tracking again.
-        </A.Description>
-      </Hds::Alert>
-    {{/if}}
+  {{#if this.trackingDisabled}}
+    <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+      <A.Title data-test-counts-disabled>Tracking is disabled</A.Title>
+      <A.Description>
+        Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will need to
+        <Hds::Link::Inline @route="vault.cluster.clients.edit">edit the configuration</Hds::Link::Inline>
+        to enable tracking again.
+      </A.Description>
+    </Hds::Alert>
+  {{/if}}
 
+  {{#if @activity}}
     {{#if @activity.total}}
       {{#if this.upgradeExplanations}}
         <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-m" as |A|>
@@ -83,16 +75,8 @@
 
       {{! CLIENT COUNT PAGE COMPONENTS RENDER HERE }}
       {{yield}}
-    {{else if (and this.version.isCommunity (or (not @startTimestamp) (not @endTimestamp)))}}
-      {{! Empty state for community without start or end query param }}
-      <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-        <A.Header data-test-empty-state-title @title="Input the start and end dates to view client attribution by path." />
-        <A.Body
-          data-test-empty-state-message
-          @text="Only historical data may be queried. No data is available for the current month."
-        />
-      </Hds::ApplicationState>
     {{else}}
+      {{! Empty state for no data in the selected date range }}
       <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
         <A.Header data-test-empty-state-title @title="No data received" />
         <A.Body
@@ -105,5 +89,16 @@
         />
       </Hds::ApplicationState>
     {{/if}}
+  {{else if (and this.version.isCommunity (or (not @startTimestamp) (not @endTimestamp)))}}
+    {{! Empty state for community without start or end query param }}
+    <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+      <A.Header data-test-empty-state-title @title="Input the start and end dates to view client attribution by path." />
+      <A.Body
+        data-test-empty-state-message
+        @text="Only historical data may be queried. No data is available for the current month."
+      />
+    </Hds::ApplicationState>
+  {{else}}
+    <Clients::NoData @config={{@config}} @canUpdate={{@canUpdateConfig}} />
   {{/if}}
 </div>

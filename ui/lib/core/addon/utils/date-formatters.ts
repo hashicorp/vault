@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { format, parse, parseISO } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import isValid from 'date-fns/isValid';
 
 export const datetimeLocalStringFormat = "yyyy-MM-dd'T'HH:mm";
@@ -23,21 +23,28 @@ export const ARRAY_OF_MONTHS = [
   'December',
 ];
 
-// convert API timestamp ( '2021-03-21T00:00:00Z' ) to date object, optionally format
-export const parseAPITimestamp = (timestamp: string, style?: string): Date | string | null => {
-  if (!timestamp || typeof timestamp !== 'string') return null;
-
-  if (!style) {
-    // If no style, return a date object in UTC
-    const parsed = parseISO(timestamp) as Date;
-    return isValid(parsed) ? parsed : null;
+// datetime may be returned from the API client as either a Date object or an ISO string
+// strings will be converted from an ISO string ('2021-03-21T00:00:00Z') to date object and optionally formatted
+// the timezone of the formatted output will be in UTC and not the local timezone of the user
+export function parseAPITimestamp(timestamp: string | Date, style: string): string;
+export function parseAPITimestamp(timestamp: string | Date): Date | null;
+export function parseAPITimestamp(timestamp: string | Date, style?: string) {
+  if (timestamp) {
+    if (timestamp instanceof Date && isValid(timestamp)) {
+      // if no style (format) is provided return the Date object as is since there is nothing more to parse
+      return style ? formatInTimeZone(timestamp, 'UTC', style) : timestamp;
+    } else if (typeof timestamp === 'string') {
+      // if no style return a date object
+      if (!style) {
+        const date = new Date(timestamp);
+        return isValid(date) ? date : null;
+      }
+      // otherwise format it as a calendar date that is in UTC.
+      return formatInTimeZone(timestamp, 'UTC', style);
+    }
   }
-
-  // Otherwise format it as a calendar date that is timezone agnostic.
-  const yearMonthDay = timestamp.split('T')[0] ?? '';
-  const date = parse(yearMonthDay, 'yyyy-MM-dd', new Date()); // 'yyyy-MM-dd' lets parse() know the format of yearMonthDay
-  return format(date, style) as string;
-};
+  return null;
+}
 
 export const buildISOTimestamp = (args: { monthIdx: number; year: number; isEndDate: boolean }) => {
   const { monthIdx, year, isEndDate } = args;
