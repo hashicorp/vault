@@ -17,6 +17,16 @@ import (
 	"github.com/hashicorp/vault/sdk/rotation"
 )
 
+// ldapConfigEntry extends ldaputil.ConfigEntry with additional fields for LDAP auth
+type ldapConfigEntry struct {
+	tokenutil.TokenParams
+	automatedrotationutil.AutomatedRotationParams
+	*ldaputil.ConfigEntry
+	PasswordPolicy string `json:"password_policy"`
+	RotationUrl    string `json:"rotation_url"`
+	Schema         string `json:"schema"`
+}
+
 const userFilterWarning = "userfilter configured does not consider userattr and may result in colliding entity aliases on logins"
 
 const rootRotationJobName = "ldap-auth-root-creds"
@@ -72,6 +82,14 @@ func pathConfig(b *backend) *framework.Path {
 		Required:    false,
 	}
 
+	// Add schema field for AD/OpenLDAP distinction
+	p.Fields["schema"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: "The LDAP schema type (e.g., 'ad' for Active Directory, 'openldap' for OpenLDAP). Defaults to 'openldap'.",
+		Default:     "openldap",
+		Required:    false,
+	}
+
 	return p
 }
 
@@ -103,7 +121,10 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 		result.UsePre111GroupCNBehavior = new(bool)
 		*result.UsePre111GroupCNBehavior = false
 
-		return &ldapConfigEntry{ConfigEntry: result}, nil
+		return &ldapConfigEntry{
+			ConfigEntry: result,
+			Schema:      "openldap", // Default to openldap
+		}, nil
 	}
 
 	// Deserialize stored configuration.
@@ -125,6 +146,12 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 	if result.UsePre111GroupCNBehavior == nil {
 		result.UsePre111GroupCNBehavior = new(bool)
 		*result.UsePre111GroupCNBehavior = true
+		persistNeeded = true
+	}
+
+	if result.Schema == "" {
+		// Default to openldap for backward compatibility
+		result.Schema = "openldap"
 		persistNeeded = true
 	}
 
@@ -159,6 +186,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 
 	data["password_policy"] = cfg.PasswordPolicy
 	data[rootRotationUrlKey] = cfg.RotationUrl
+	data["schema"] = cfg.Schema
 
 	resp := &logical.Response{
 		Data: data,
@@ -238,6 +266,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	if rotationUrl, ok := d.GetOk(rootRotationUrlKey); ok {
 		cfg.RotationUrl = rotationUrl.(string)
 	}
+	if schema, ok := d.GetOk("schema"); ok {
+		cfg.Schema = schema.(string)
+	}
 
 	var rotOp string
 	if cfg.ShouldDeregisterRotationJob() {
@@ -315,21 +346,12 @@ func (b *backend) getConfigFieldData() (*framework.FieldData, error) {
 
 	raw := make(map[string]interface{}, len(configPath.Fields))
 
-	fd := framework.FieldData{
+	fd := &framework.FieldData{
 		Raw:    raw,
 		Schema: configPath.Fields,
 	}
 
-	return &fd, nil
-}
-
-type ldapConfigEntry struct {
-	tokenutil.TokenParams
-	*ldaputil.ConfigEntry
-	automatedrotationutil.AutomatedRotationParams
-
-	PasswordPolicy string `json:"password_policy"`
-	RotationUrl    string `json:"rotation_url"`
+	return fd, nil
 }
 
 const pathConfigHelpSyn = `
