@@ -102,7 +102,6 @@ export default class AuthRoute extends Route {
         const { default_auth_type, backup_auth_types } = response.data;
         return {
           defaultType: default_auth_type,
-          // TODO WIP backend PR consistently return empty array when no backup_auth_types
           backupTypes: backup_auth_types?.length ? backup_auth_types : null,
         };
       }
