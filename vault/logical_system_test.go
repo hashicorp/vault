@@ -4377,7 +4377,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 			}
 			if errExpected {
 				if !resp.IsError() {
-					t.Fatalf("bad: got error response: %#v", *resp)
+					t.Fatalf("bad: got no error response: %#v", *resp)
 				}
 				return nil
 			} else {
@@ -4435,6 +4435,13 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	req.Data["format"] = "hex"
 	doRequest(req, false, "hex", 24)
 
+	// Test PRNG with large output
+	req.Path = "tools/random/1024768"
+	req.Data["format"] = "hex"
+	req.Data["drbg"] = "hmacdrbg"
+	doRequest(req, false, "hex", 1024768)
+	delete(req.Data, "drbg")
+
 	// Test bad input/format
 	req.Path = "tools/random"
 	req.Data["format"] = "base92"
@@ -4445,7 +4452,12 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	doRequest(req, true, "", 0)
 
 	req.Data["format"] = "hex"
-	req.Data["bytes"] = maxBytes + 1
+	req.Data["bytes"] = random.APIMaxBytes + 1
+	doRequest(req, true, "", 0)
+
+	req.Path = "tools/random/seal"
+	req.Data["format"] = "hex"
+	req.Data["bytes"] = random.SealMaxBytes + 1
 	doRequest(req, true, "", 0)
 }
 
