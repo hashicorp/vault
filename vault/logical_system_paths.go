@@ -2586,6 +2586,12 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 					Default:     "platform",
 					Description: `Which system to source random data from, ether "platform", "seal", or "all".`,
 				},
+				"drbg": {
+					Type:    framework.TypeString,
+					Default: "",
+					Description: "If set, seed a secure DRBG from the source and use it to generate the bytes.  This can be more performant when using the seal source." +
+						" Possible values are unset (don't use a DRBG), \"auto\" and \"hmacdrbg\" which are equivalent.",
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
