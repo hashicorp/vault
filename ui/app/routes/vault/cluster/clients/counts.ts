@@ -5,18 +5,28 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { formatExportData, formatQueryParams } from 'core/utils/client-counts/serializers';
+import {
+  formatExportData,
+  formatQueryParams,
+  destructureClientCounts,
+  formatByMonths,
+  formatByNamespace,
+} from 'core/utils/client-counts/serializers';
+import { ModelFrom } from 'vault/route';
+import timestamp from 'core/utils/timestamp';
 
-import type AdapterError from '@ember-data/adapter/error';
 import type ApiService from 'vault/services/api';
 import type FlagsService from 'vault/services/flags';
 import type NamespaceService from 'vault/services/namespace';
-import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
-import type { ModelFrom } from 'vault/vault/route';
-import type ClientsRoute from '../clients';
+import type { ClientsRouteModel } from '../clients';
 import type ClientsCountsController from 'vault/controllers/vault/cluster/clients/counts';
-import type ClientsActivityModel from 'vault/vault/models/clients/activity';
+import type {
+  ByNamespaceClients,
+  NamespaceObject,
+  Counts,
+  ActivityMonthBlock,
+} from 'vault/client-counts/activity-api';
 
 export interface ClientsCountsRouteParams {
   start_time?: string;
@@ -27,18 +37,12 @@ export interface ClientsCountsRouteParams {
   month?: string;
 }
 
-interface ActivityAdapterQuery {
-  start_time: string | undefined;
-  end_time: string | undefined;
-}
-
 export type ClientsCountsRouteModel = ModelFrom<ClientsCountsRoute>;
 
 export default class ClientsCountsRoute extends Route {
   @service declare readonly api: ApiService;
   @service declare readonly flags: FlagsService;
   @service declare readonly namespace: NamespaceService;
-  @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
   queryParams = {
@@ -56,31 +60,29 @@ export default class ClientsCountsRoute extends Route {
     return this.flags.fetchActivatedFlags();
   }
 
-  async getActivity(params: ClientsCountsRouteParams): Promise<{
-    activity?: ClientsActivityModel;
-    activityError?: AdapterError;
-  }> {
-    let activity, activityError;
+  async getActivity(params: ClientsCountsRouteParams) {
     // if CE without both start time and end time, we want to skip the activity call
     // so that the user is forced to choose a date range
     if (this.version.isEnterprise || (this.version.isCommunity && params.start_time && params.end_time)) {
-      const query: ActivityAdapterQuery = {
-        start_time: params?.start_time,
-        end_time: params?.end_time,
-      };
-      try {
-        activity = await this.store.queryRecord('clients/activity', query);
-      } catch (error) {
-        activityError = error as AdapterError;
+      const response = await this.api.sys.internalClientActivityReportCounts(
+        undefined,
+        params?.end_time || undefined,
+        undefined,
+        params?.start_time || undefined
+      );
+      if (response) {
+        return {
+          ...response,
+          by_namespace: formatByNamespace(response.by_namespace as NamespaceObject[] | null),
+          by_month: formatByMonths(response.months as ActivityMonthBlock[]),
+          total: destructureClientCounts(response.total as ByNamespaceClients | Counts),
+        };
       }
     }
-    return {
-      activity,
-      activityError,
-    };
+    return undefined;
   }
 
-  async fetchAndFormatExportData(startTimestamp: string | undefined, endTimestamp: string | undefined) {
+  async fetchAndFormatExportData(startTimestamp: Date | undefined, endTimestamp: Date | undefined) {
     // The "Client List" tab is only available on enterprise versions
     // For now, it is also hidden on HVD managed clusters
     if (this.version.isEnterprise && !this.flags.isHvdManaged) {
@@ -91,9 +93,9 @@ export default class ClientsCountsRoute extends Route {
       let exportData, cannotRequestExport;
       try {
         const { raw } = await this.api.sys.internalClientActivityExportRaw({
-          end_time,
+          end_time: end_time?.toISOString(),
           format: 'json', // the API only accepts json or csv
-          start_time,
+          start_time: start_time?.toISOString(),
         });
 
         // If it's not a 200 but didn't throw an error then it's likely a 204 (empty response).
@@ -120,22 +122,22 @@ export default class ClientsCountsRoute extends Route {
   }
 
   async model(params: ClientsCountsRouteParams) {
-    const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ModelFrom<ClientsRoute>;
-    const { activity, activityError } = await this.getActivity(params);
+    const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ClientsRouteModel;
+    const activity = await this.getActivity(params);
     const { exportData, cannotRequestExport } = await this.fetchAndFormatExportData(
-      activity?.startTime,
-      activity?.endTime
+      activity?.start_time,
+      activity?.end_time
     );
     return {
       activity,
-      activityError,
       cannotRequestExport,
       config,
       exportData,
       // We always want to return the start and end time from the activity response
       // so they serve as the source of truth for the time period of the displayed client count data
-      startTimestamp: activity?.startTime,
-      endTimestamp: activity?.endTime,
+      startTimestamp: activity?.start_time,
+      endTimestamp: activity?.end_time,
+      responseTimestamp: timestamp.now(),
       versionHistory,
     };
   }

@@ -6,7 +6,7 @@
 <Clients::RunningTotal @byMonthClients={{this.byMonthClients}} @runningTotals={{@activity.total}} />
 
 {{! by_namespace is an empty array when there is no client count activity data }}
-{{#if @activity.byNamespace}}
+{{#if @activity.by_namespace}}
   <Clients::CountsCard @title="Client attribution">
     <:subheader>
       <Clients::FilterToolbar

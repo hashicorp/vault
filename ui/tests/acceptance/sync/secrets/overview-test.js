@@ -172,7 +172,12 @@ module('Acceptance | sync | overview', function (hooks) {
         assert.expect(3);
 
         this.server.get('/sys/activation-flags', (_, req) => {
-          assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
+          const expectedHeaders = { 'x-vault-namespace': '', 'x-vault-token': '' };
+          assert.deepEqual(
+            req.requestHeaders,
+            expectedHeaders,
+            'Request is unauthenticated and in root namespace'
+          );
           return {
             data: {
               activated: [''],
@@ -217,7 +222,12 @@ module('Acceptance | sync | overview', function (hooks) {
         flagService.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
         this.server.get('/sys/activation-flags', (_, req) => {
-          assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
+          const expectedHeaders = { 'x-vault-namespace': '', 'x-vault-token': '' };
+          assert.deepEqual(
+            req.requestHeaders,
+            expectedHeaders,
+            'Request is unauthenticated and in root namespace'
+          );
           return {
             data: {
               activated: [''],

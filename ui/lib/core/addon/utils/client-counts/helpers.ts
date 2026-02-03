@@ -7,7 +7,7 @@ import { isSameMonthUTC, parseAPITimestamp } from 'core/utils/date-formatters';
 import { isWithinInterval } from 'date-fns';
 import { ROOT_NAMESPACE } from 'vault/services/namespace';
 
-import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
+import type { VersionHistory } from 'vault/client-counts';
 import type {
   ActivityExportData,
   ByNamespaceClients,
@@ -43,20 +43,16 @@ export const EXPORT_CLIENT_TYPES = ['non-entity-token', 'pki-acme', 'secret-sync
 
 // returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
 // that occurred between timestamps (i.e. queried activity data)
-export const filterVersionHistory = (
-  versionHistory: ClientsVersionHistoryModel[],
-  start: string,
-  end: string
-) => {
+export const filterVersionHistory = (versionHistory: VersionHistory[], start?: Date, end?: Date) => {
   if (versionHistory && start && end) {
-    const upgrades = versionHistory.reduce((array: ClientsVersionHistoryModel[], upgradeData) => {
+    const upgrades = versionHistory.reduce((array: VersionHistory[], upgradeData) => {
       const isRelevantHistory = (v: string) => {
         return (
           upgradeData.version.match(v) &&
           // only add if there is a previous version, otherwise this upgrade is the users' first version
-          upgradeData.previousVersion &&
+          upgradeData.previous_version &&
           // only add first match, disregard subsequent patch releases of the same version
-          !array.some((d: ClientsVersionHistoryModel) => d.version.match(v))
+          !array.some((d: VersionHistory) => d.version.match(v))
         );
       };
 
@@ -69,11 +65,9 @@ export const filterVersionHistory = (
 
     // if there are noteworthy upgrades, only return those during queried date range
     if (upgrades.length) {
-      const startDate = parseAPITimestamp(start) as Date;
-      const endDate = parseAPITimestamp(end) as Date;
-      return upgrades.filter(({ timestampInstalled }) => {
-        const upgradeDate = parseAPITimestamp(timestampInstalled) as Date;
-        return isWithinInterval(upgradeDate, { start: startDate, end: endDate });
+      return upgrades.filter(({ timestamp_installed }) => {
+        const upgradeDate = parseAPITimestamp(timestamp_installed) as Date;
+        return isWithinInterval(upgradeDate, { start, end });
       });
     }
   }

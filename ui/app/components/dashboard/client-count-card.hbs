@@ -40,7 +40,7 @@
         </small>
       </div>
     {{else}}
-      <Clients::NoData @config={{this.activityConfig}} />
+      <Clients::NoData @config={{this.activityConfig}} @canUpdate={{this.canUpdateActivityConfig}} />
     {{/if}}
   {{/if}}
 </Hds::Card::Container>

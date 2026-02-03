@@ -23,13 +23,14 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
   hooks.beforeEach(function () {
     this.downloadStub = Sinon.stub(this.owner.lookup('service:download'), 'download');
-    this.startTimestamp = '2022-06-01T23:00:11.050Z';
-    this.endTimestamp = '2022-12-01T23:00:11.050Z';
+    this.startTimestamp = new Date('2022-06-01T23:00:11.050Z');
+    this.endTimestamp = new Date('2022-12-01T23:00:11.050Z');
     this.billingStartTime = this.startTimestamp;
     this.upgradesDuringActivity = [];
     this.noData = undefined;
+
     this.server.post('/sys/capabilities-self', () =>
-      capabilitiesStub('sys/internal/counters/activity/export', ['sudo'])
+      capabilitiesStub('/sys/internal/counters/activity/export', ['sudo'])
     );
 
     this.renderComponent = async () => {
@@ -45,12 +46,12 @@ module('Integration | Component | clients/page-header', function (hooks) {
     };
   });
 
-  test('it shows the export button if user does has SUDO capabilities', async function (assert) {
+  test('it shows the export button if user does have SUDO capabilities', async function (assert) {
     await this.renderComponent();
     assert.dom(CLIENT_COUNT.exportButton).exists();
   });
 
-  test('it hides the export button if user does has SUDO capabilities but there is no data', async function (assert) {
+  test('it hides the export button if user does have SUDO capabilities but there is no data', async function (assert) {
     this.noData = true;
     await this.renderComponent();
     assert.dom(CLIENT_COUNT.exportButton).doesNotExist();
@@ -58,7 +59,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
   test('it hides the export button if user does not have SUDO capabilities', async function (assert) {
     this.server.post('/sys/capabilities-self', () =>
-      capabilitiesStub('sys/internal/counters/activity/export', ['read'])
+      capabilitiesStub('/sys/internal/counters/activity/export', ['read'])
     );
 
     await this.renderComponent();
@@ -133,7 +134,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
     const namespaceSvc = this.owner.lookup('service:namespace');
     namespaceSvc.path = 'foo';
     this.server.get('/sys/internal/counters/activity/export', function (_, req) {
-      assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'foo');
+      assert.strictEqual(req.requestHeaders['x-vault-namespace'], 'foo');
       return new Response(200, { 'Content-Type': 'text/csv' }, '');
     });
 
@@ -200,7 +201,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
     test('is correct for a single month', async function (assert) {
       assert.expect(2);
-      this.endTimestamp = '2022-06-21T23:00:11.050Z';
+      this.endTimestamp = new Date('2022-06-21T23:00:11.050Z');
       this.server.get('/sys/internal/counters/activity/export', function (_, req) {
         assert.deepEqual(req.queryParams, {
           format: 'csv',

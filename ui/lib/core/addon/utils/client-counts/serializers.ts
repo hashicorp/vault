@@ -11,6 +11,7 @@ import type {
   ActivityMonthBlock,
   ActivityMonthEmpty,
   ActivityMonthStandard,
+  ByMonthClients,
   ByMonthNewClients,
   ByNamespaceClients,
   ClientTypes,
@@ -38,7 +39,7 @@ export const destructureClientCounts = (verboseObject: Counts | ByNamespaceClien
   );
 };
 
-export const formatByMonths = (monthsArray: ActivityMonthBlock[]): ByMonthNewClients[] => {
+export const formatByMonths = (monthsArray: ActivityMonthBlock[]): ByMonthClients[] => {
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
   return sortedPayload?.map((m) => {
     const { timestamp } = m;
@@ -107,9 +108,9 @@ export const formatExportData = async (resp: Response, { isDownload = false }) =
   return lines.map((line: string) => JSON.parse(line));
 };
 
-export const formatQueryParams = (query: { start_time?: string; end_time?: string } = {}) => {
+export const formatQueryParams = (query: { start_time?: Date; end_time?: Date } = {}) => {
   const { start_time, end_time } = query;
-  const formattedQuery: Partial<Record<'start_time' | 'end_time', string>> = {};
+  const formattedQuery: Partial<Record<'start_time' | 'end_time', Date>> = {};
 
   if (start_time && isValid(parseJSON(start_time))) {
     formattedQuery.start_time = start_time;

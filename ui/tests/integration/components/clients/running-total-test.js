@@ -17,6 +17,11 @@ import timestamp from 'core/utils/timestamp';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import {
+  destructureClientCounts,
+  formatByMonths,
+  formatByNamespace,
+} from 'core/utils/client-counts/serializers';
 
 const START_TIME = getUnixTime(LICENSE_START);
 
@@ -30,13 +35,16 @@ module('Integration | Component | clients/running-total', function (hooks) {
     this.flags.activatedFlags = ['secrets-sync'];
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     clientsHandler(this.server);
-    const store = this.owner.lookup('service:store');
-    const activityQuery = {
-      start_time: { timestamp: START_TIME },
-      end_time: { timestamp: getUnixTime(timestamp.now()) },
+    const activityResponse = await this.owner
+      .lookup('service:api')
+      .sys.internalClientActivityReportCounts(undefined, getUnixTime(timestamp.now()), undefined, START_TIME);
+    this.activity = {
+      ...activityResponse,
+      by_namespace: formatByNamespace(activityResponse.by_namespace),
+      by_month: formatByMonths(activityResponse.months),
+      total: destructureClientCounts(activityResponse.total),
     };
-    this.activity = await store.queryRecord('clients/activity', activityQuery);
-    this.byMonthClients = this.activity.byMonth.map((d) => d.new_clients);
+    this.byMonthClients = this.activity.by_month.map((d) => d.new_clients);
 
     this.renderComponent = async () => {
       await render(hbs`
