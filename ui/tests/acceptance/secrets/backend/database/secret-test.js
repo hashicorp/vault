@@ -535,7 +535,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('[data-test-edit-link]').hasText('Edit configuration', 'Edit button exists with correct text');
     // Check with restricted permissions
     await login(token);
-    await click('[data-test-sidebar-nav-link="Secrets Engines"]');
+    await click(GENERAL.navLink('Secrets'));
     assert.dom(GENERAL.tableData(`${backend}/`, 'path')).exists('Shows backend on secret list page');
     await navToConnection(backend, connection);
     assert.strictEqual(

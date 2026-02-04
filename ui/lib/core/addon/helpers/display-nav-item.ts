@@ -15,6 +15,7 @@ import type PermissionsService from 'vault/services/permissions';
 import type FlagsService from 'vault/services/flags';
 
 export enum RouteName {
+  SECRETS_SYNC = 'secrets-sync',
   SECRETS_RECOVERY = 'secrets-recovery',
   SEAL = 'seal',
   REPLICATION = 'replication',
@@ -36,10 +37,13 @@ export default class NavBar extends Helper {
   @service declare readonly flags: FlagsService;
 
   compute([navItem]: string[]) {
-    const { SECRETS_RECOVERY, SEAL, REPLICATION, VAULT_USAGE, LICENSE } = RouteName;
+    const { SECRETS_RECOVERY, SEAL, REPLICATION, VAULT_USAGE, LICENSE, SECRETS_SYNC } = RouteName;
     const { RESILIENCE_AND_RECOVERY, REPORTING, CLIENT_COUNT } = NavSection;
 
     switch (navItem) {
+      // secrets sync nav items
+      case SECRETS_SYNC:
+        return this.supportsSecretsSync;
       // client count nav items
       case CLIENT_COUNT:
         return this.supportsClientCount;
@@ -130,6 +134,21 @@ export default class NavBar extends Helper {
       !this.hasChrootNamespace &&
       !this.version.hasPKIOnly
     );
+  }
+
+  get supportsSecretsSync() {
+    // always show for HVD managed clusters
+    if (this.flags.isHvdManaged) return true;
+
+    if (this.flags.secretsSyncIsActivated) {
+      // activating the feature requires different permissions than using the feature.
+      // we want to show the link to allow activation regardless of permissions to sys/sync
+      // and only check permissions if the feature has been activated
+      return this.permissions.hasNavPermission('sync');
+    }
+
+    // otherwise we show the link depending on whether or not the feature exists
+    return this.version.hasSecretsSync;
   }
 }
 
