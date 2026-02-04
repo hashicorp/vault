@@ -471,4 +471,88 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		require.NoError(t, err)
 		resp.Body.Close()
 	})
+
+	// Test AWS ALB mTLS passthrough with URL,DER decoders.
+	// AWS ALB URL-encodes PEM certificates using PathEscape, which only escapes spaces
+	// and newlines, leaving +=/ characters unescaped. This test verifies that Vault
+	// correctly handles this encoding format.
+	t.Run("aws_alb_mtls_passthrough_url_der", func(t *testing.T) {
+		t.Parallel()
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
+			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if len(r.TLS.PeerCertificates) == 0 {
+					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte("no client certificates found"))
+					return
+				}
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("certificate parsed successfully"))
+			})
+			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
+			listenerConfig.XForwardedForClientCertHeader = "X-Amzn-Mtls-Clientcert"
+			listenerConfig.XForwardedForClientCertHeaderDecoders = "URL,DER"
+			return WrapForwardedForHandler(origHandler, listenerConfig)
+		}
+
+		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+			HandlerFunc: HandlerFunc(testHandler),
+		})
+		cluster.Start()
+		defer cluster.Cleanup()
+		client := cluster.Cores[0].Client
+
+		// PEM certificate containing + characters in base64-encoded data, as would be
+		// sent by AWS ALB in the X-Amzn-Mtls-Clientcert header.
+		pemCert := `-----BEGIN CERTIFICATE-----
+MIIDtTCCAp2gAwIBAgIUf+jhKTFBnqSs34II0WS1L4QsbbAwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLZXhhbXBsZS5jb20wHhcNMTYwMjI5MDIyNzQxWhcNMjUw
+MTA1MTAyODExWjAbMRkwFwYDVQQDExBjZXJ0LmV4YW1wbGUuY29tMIIBIjANBgkq
+hkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsZx0Svr82YJpFpIy4fJNW5fKA6B8mhxS
+TRAVnygAftetT8puHflY0ss7Y6X2OXjsU0PRn+1PswtivhKi+eLtgWkUF9cFYFGn
+SgMld6ZWRhNheZhA6ZfQmeM/BF2pa5HK2SDF36ljgjL9T+nWrru2Uv0BCoHzLAmi
+YYMiIWplidMmMO5NTRG3k+3AN0TkfakB6JVzjLGhTcXdOcVEMXkeQVqJMAuGouU5
+donyqtnaHuIJGuUdy54YDnX86txhOQhAv6r7dHXzZxS4pmLvw8UI1rsSf/GLcUVG
+B+5+AAGF5iuHC3N2DTl4xz3FcN4Cb4w9pbaQ7+mCzz+anqiJfyr2nwIDAQABo4H1
+MIHyMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAdBgNVHQ4EFgQUm++e
+HpyM3p708bgZJuRYEdX1o+UwHwYDVR0jBBgwFoAUncSzT/6HMexyuiU9/7EgHu+o
+k5swOwYIKwYBBQUHAQEELzAtMCsGCCsGAQUFBzAChh9odHRwOi8vMTI3LjAuMC4x
+OjgyMDAvdjEvcGtpL2NhMCEGA1UdEQQaMBiCEGNlcnQuZXhhbXBsZS5jb22HBH8A
+AAEwMQYDVR0fBCowKDAmoCSgIoYgaHR0cDovLzEyNy4wLjAuMTo4MjAwL3YxL3Br
+aS9jcmwwDQYJKoZIhvcNAQELBQADggEBABsuvmPSNjjKTVN6itWzdQy+SgMIrwfs
+X1Yb9Lefkkwmp9ovKFNQxa4DucuCuzXcQrbKwWTfHGgR8ct4rf30xCRoA7dbQWq4
+aYqNKFWrRaBRAaaYZ/O1ApRTOrXqRx9Eqr0H1BXLsoAq+mWassL8sf6siae+CpwA
+KqBko5G0dNXq5T4i2LQbmoQSVetIrCJEeMrU+idkuqfV2h1BQKgSEhFDABjFdTCN
+QDAHsEHsi2M4/jRW9fqEuhHSDfl2n7tkFUI8wTHUUCl7gXwweJ4qtaSXIwKXYzNj
+xqKHA8Purc1Yfybz4iE1JCROi9fInKlzr5xABq8nb9Qc/J9DIQM+Xmk=
+-----END CERTIFICATE-----`
+
+		// AWS ALB URL-encodes the certificate using PathEscape, which escapes spaces
+		// and newlines but leaves +=/ characters unescaped. Go's PathEscape escapes
+		// + to %2B, so we revert it to match AWS ALB's actual behavior.
+		albEncoded := url.PathEscape(pemCert)
+		albEncoded = strings.ReplaceAll(albEncoded, "%2B", "+")
+		albEncoded = strings.ReplaceAll(albEncoded, "%2F", "/")
+
+		req := client.NewRequest("GET", "/")
+		req.Headers = make(http.Header)
+		req.Headers.Set("x-forwarded-for", "1.2.3.4")
+		req.Headers.Set("X-Amzn-Mtls-Clientcert", albEncoded)
+
+		resp, err := client.RawRequest(req)
+		if err != nil {
+			if strings.Contains(err.Error(), "malformed certificate") ||
+				strings.Contains(err.Error(), "failed to parse") ||
+				strings.Contains(err.Error(), "failed to convert") {
+				t.Fatalf("Failed to parse client certificate from AWS ALB header: %v", err)
+			}
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		defer resp.Body.Close()
+
+		buf := bytes.NewBuffer(nil)
+		buf.ReadFrom(resp.Body)
+		if !strings.Contains(buf.String(), "certificate parsed successfully") {
+			t.Fatalf("Certificate not parsed: %s", buf.String())
+		}
+	})
 }
