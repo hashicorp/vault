@@ -7,23 +7,16 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 
 import type FlagsService from 'vault/services/flags';
+import { RouteName } from 'core/helpers/display-nav-item';
 
 interface Args {
-  isActivated: boolean;
+  isEngine?: boolean;
 }
 
-export default class LandingCtaComponent extends Component<Args> {
+export default class SidebarNavSecretsComponent extends Component<Args> {
   @service declare readonly flags: FlagsService;
 
-  breadcrumbs = [
-    {
-      label: 'Vault',
-      route: 'vault',
-      icon: 'vault',
-      linkExternal: true,
-    },
-    {
-      label: 'Secrets sync',
-    },
-  ];
+  routeName = {
+    secretsSync: RouteName.SECRETS_SYNC,
+  };
 }

@@ -59,7 +59,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
 
     const links = [
       { label: 'Raft Storage', route: '/vault/storage/raft' },
-      { label: 'Secrets Engines', route: '/vault/secrets-engines' },
+      { label: 'Secrets', route: '/vault/secrets-engines' },
       { label: 'Dashboard', route: '/vault/dashboard' },
     ];
 

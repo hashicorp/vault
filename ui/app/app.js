@@ -169,10 +169,19 @@ export default class App extends Application {
           'api',
           'capabilities',
           'version',
+          // services needed for Secrets sidebar component
+          'current-cluster',
+          'permissions',
+          '-portal',
+          'namespace',
         ],
         externalRoutes: {
           kvSecretOverview: 'vault.cluster.secrets.backend.kv.secret.index',
           clientCountOverview: 'vault.cluster.clients',
+          // routes needed for Secrets sidebar component
+          secrets: 'vault.cluster.secrets',
+          sync: 'vault.cluster.sync',
+          vault: 'vault.cluster',
         },
       },
     },

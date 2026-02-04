@@ -47,6 +47,46 @@ module('Unit | Helper | displayNavItem', function (hooks) {
     this.permissionsStub.restore();
   });
 
+  module('secrets sync', function () {
+    test('it returns true when it is hvd managed', function (assert) {
+      this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+
+      const supportsClientCount = computeNavBar(this, RouteName.SECRETS_SYNC);
+
+      assert.true(supportsClientCount);
+    });
+
+    test('it returns true when it is secrets sync activated but not hvd managed', function (assert) {
+      this.flags.featureFlags = [];
+      this.flags.activatedFlags = [RouteName.SECRETS_SYNC];
+      this.permissionsStub.returns(true);
+
+      const supportsClientCount = computeNavBar(this, RouteName.SECRETS_SYNC);
+
+      assert.true(supportsClientCount);
+    });
+
+    test('it returns false when it is secrets sync activated but not hvd managed and permissions is false', function (assert) {
+      this.flags.featureFlags = [];
+      this.flags.activatedFlags = [RouteName.SECRETS_SYNC];
+      this.permissionsStub.returns(false);
+
+      const supportsClientCount = computeNavBar(this, RouteName.SECRETS_SYNC);
+
+      assert.false(supportsClientCount);
+    });
+
+    test('it returns false when it is enterprise', function (assert) {
+      this.flags.featureFlags = [];
+      this.version.type = 'community';
+      this.features = [];
+
+      const supportsClientCount = computeNavBar(this, RouteName.SECRETS_SYNC);
+
+      assert.false(supportsClientCount);
+    });
+  });
+
   module('client count', function () {
     test('it returns true when there are permissions and cluster is not secondary', function (assert) {
       this.permissionsStub.returns(true);

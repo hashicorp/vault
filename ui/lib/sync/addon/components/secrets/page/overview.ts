@@ -48,6 +48,18 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
     }
   }
 
+  breadcrumbs = [
+    {
+      label: 'Vault',
+      route: 'vault',
+      icon: 'vault',
+      linkExternal: true,
+    },
+    {
+      label: 'Secrets sync',
+    },
+  ];
+
   fetchAssociationsForDestinations = task(this, {}, async (page = 1) => {
     try {
       const total = page * this.pageSize;

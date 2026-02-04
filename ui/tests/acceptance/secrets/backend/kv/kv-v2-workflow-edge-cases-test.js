@@ -573,7 +573,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
   setupApplicationTest(hooks);
 
   const navToEngine = async (backend) => {
-    await click(GENERAL.navLink('Secrets Engines'));
+    await click(GENERAL.navLink('Secrets'));
     return await click(`${GENERAL.tableData(`${backend}/`, 'path')} a`);
   };
 

@@ -62,7 +62,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     assert.expect(2);
 
     await this.renderComponent();
-    assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Select Destination Create Destination');
+    assert.dom(GENERAL.breadcrumbs).hasText('Vault Secrets sync Select destination Create destination');
     await click(PAGE.cancelButton);
     const transition = this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations.create');
     assert.true(transition, 'transitions to vault.cluster.sync.secrets.destinations.create on cancel');
@@ -92,7 +92,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     assert.expect(2);
 
     await this.renderComponent();
-    assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Destinations Destination Edit Destination');
+    assert.dom(GENERAL.breadcrumbs).hasText('Vault Secrets sync Destinations Destination Edit destination');
 
     await click(PAGE.cancelButton);
     const transition = this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations.destination');

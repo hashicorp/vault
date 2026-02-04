@@ -61,8 +61,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   test('it should render nav links', async function (assert) {
     const links = [
       'Dashboard',
-      'Secrets Engines',
-      'Secrets Sync',
+      'Secrets',
       'Access',
       'Operational tools',
       'Resilience and recovery',
@@ -128,70 +127,6 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     stubFeaturesAndPermissions(this.owner, true, false);
     await renderComponent();
     assert.dom(GENERAL.navHeading('Client Counts')).doesNotExist('Client count link is hidden.');
-  });
-
-  test('it should render badge for promotional links on managed clusters', async function (assert) {
-    this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
-    const promotionalLinks = ['Secrets Sync'];
-    stubFeaturesAndPermissions(this.owner, true, true);
-    await renderComponent();
-
-    promotionalLinks.forEach((link) => {
-      assert.dom(GENERAL.navLink(link)).hasText(`${link} Plus`, `${link} link renders Plus badge`);
-    });
-  });
-
-  // Secrets Sync side nav link has multiple combinations of three variables to test:
-  // 1. cluster type: enterprise (on and off license), HVD managed or community
-  // 2. activation status: activated or not
-  // 3. permissions: policy access to sys/sync routes or not
-
-  test('community: it hides Secrets Sync nav link', async function (assert) {
-    stubFeaturesAndPermissions(this.owner, false, false);
-    await renderComponent();
-    assert.dom(GENERAL.navLink('Secrets Sync')).doesNotExist();
-  });
-
-  test('ent but feature is not on license: it hides Secrets Sync nav link', async function (assert) {
-    stubFeaturesAndPermissions(this.owner, true, false, []);
-    await renderComponent();
-    assert.dom(GENERAL.navLink('Secrets Sync')).doesNotExist();
-  });
-
-  test('ent (on license), activated and permissions: it shows Secrets Sync nav link', async function (assert) {
-    stubFeaturesAndPermissions(this.owner, true, false, ['Secrets Sync']);
-    this.flags.activatedFlags = ['secrets-sync'];
-    await renderComponent();
-    assert.dom(GENERAL.navLink('Secrets Sync')).exists();
-  });
-
-  test('ent (on license), activated and no permissions: it hides Secrets Sync nav link', async function (assert) {
-    stubFeaturesAndPermissions(this.owner, true, false, ['Secrets Sync'], false);
-    this.flags.activatedFlags = ['secrets-sync'];
-    await renderComponent();
-    assert.dom(GENERAL.navLink('Secrets Sync')).doesNotExist();
-  });
-
-  test('ent (on license), not activated and permissions: it shows Secrets Sync nav link', async function (assert) {
-    stubFeaturesAndPermissions(this.owner, true, false, ['Secrets Sync']);
-    this.flags.activatedFlags = [];
-    await renderComponent();
-    assert.dom(GENERAL.navLink('Secrets Sync')).exists();
-  });
-
-  test('ent (on license), not activated and no permissions: it shows Secrets Sync nav link', async function (assert) {
-    stubFeaturesAndPermissions(this.owner, true, false, ['Secrets Sync'], false);
-    this.flags.activatedFlags = [];
-    await renderComponent();
-    assert.dom(GENERAL.navLink('Secrets Sync')).exists();
-  });
-
-  test('hvd managed: it shows Secrets Sync nav link regardless of activation status or permissions', async function (assert) {
-    stubFeaturesAndPermissions(this.owner, true, false, [], false);
-    this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
-    this.flags.activatedFlags = [];
-    await renderComponent();
-    assert.dom(GENERAL.navLink('Secrets Sync')).exists();
   });
 
   test('it does NOT show Secrets Recovery when user is in HVD admin namespace', async function (assert) {

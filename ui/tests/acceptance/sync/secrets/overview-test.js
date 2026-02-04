@@ -68,7 +68,8 @@ module('Acceptance | sync | overview', function (hooks) {
 
     test('it should transition to correct routes when performing actions', async function (assert) {
       syncScenario(this.server);
-      await click(ts.navLink('Secrets Sync'));
+      await click(GENERAL.navLink('Secrets'));
+      await click(GENERAL.navLink('Secrets sync'));
       await click(ts.destinations.list.create);
       await click(ts.createCancel);
       await click(ts.overviewCard.actionText('Create new'));
@@ -77,7 +78,7 @@ module('Acceptance | sync | overview', function (hooks) {
       await click(ts.overview.table.actionToggle(0));
       await click(ts.overview.table.action('sync'));
       await click(GENERAL.cancelButton);
-      await click(ts.breadcrumbLink('Secrets Sync'));
+      await click(ts.breadcrumbLink('Secrets sync'));
       await waitFor(ts.overview.table.actionToggle(0));
       await click(ts.overview.table.actionToggle(0));
       await click(ts.overview.table.action('details'));
@@ -196,7 +197,8 @@ module('Acceptance | sync | overview', function (hooks) {
 
         // confirm we're in admin/foo
         assert.dom('[data-test-badge-namespace]').hasText('foo');
-        await click(ts.navLink('Secrets Sync'));
+        await click(GENERAL.navLink('Secrets'));
+        await click(GENERAL.navLink('Secrets sync'));
         await click(ts.overview.optInBanner.enable);
         await click(ts.overview.activationModal.checkbox);
         await click(ts.overview.activationModal.confirm);
@@ -247,7 +249,8 @@ module('Acceptance | sync | overview', function (hooks) {
         // confirm we're in admin/foo
         assert.dom('[data-test-badge-namespace]').hasText('foo');
 
-        await click(ts.navLink('Secrets Sync'));
+        await click(GENERAL.navLink('Secrets'));
+        await click(GENERAL.navLink('Secrets sync'));
         await click(ts.overview.optInBanner.enable);
         await click(ts.overview.activationModal.checkbox);
         await click(ts.overview.activationModal.confirm);
