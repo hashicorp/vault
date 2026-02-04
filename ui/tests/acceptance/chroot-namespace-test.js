@@ -36,7 +36,7 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item in chroot listener`);
     });
     // Client count is not root-only, but it is hidden for chroot
-    ['Replication', 'Raft Storage', 'License', 'Seal Vault', 'Client Count'].forEach((nav) => {
+    ['Replication', 'Raft Storage', 'License', 'Seal Vault', 'Client count'].forEach((nav) => {
       assert.dom(navLink(nav)).doesNotExist(`Does not show ${nav} nav item in chroot listener`);
     });
 
@@ -57,7 +57,7 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     [('Dashboard', 'Secrets Engines', 'Access', 'Operational tools')].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item for user with default policy`);
     });
-    ['Client Count', 'Replication', 'Raft Storage', 'License', 'Seal Vault'].forEach((nav) => {
+    ['Client count', 'Replication', 'Raft Storage', 'License', 'Seal Vault'].forEach((nav) => {
       assert.dom(navLink(nav)).doesNotExist(`Does not show ${nav} nav item for user with default policy`);
     });
 
@@ -87,7 +87,7 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     ['Dashboard', 'Secrets Engines', 'Access', 'Operational tools'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item for user with read access policy`);
     });
-    ['Replication', 'Raft Storage', 'License', 'Seal Vault', 'Client Count'].forEach((nav) => {
+    ['Replication', 'Raft Storage', 'License', 'Seal Vault', 'Client count'].forEach((nav) => {
       assert.dom(navLink(nav)).doesNotExist(`Does not show ${nav} nav item for user with read access policy`);
     });
 
@@ -119,7 +119,7 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     ['Dashboard', 'Secrets Engines', 'Access', 'Operational tools'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item`);
     });
-    ['Client Count', 'Replication', 'Raft Storage', 'License', 'Seal Vault'].forEach((nav) => {
+    ['Client count', 'Replication', 'Raft Storage', 'License', 'Seal Vault'].forEach((nav) => {
       assert.dom(navLink(nav)).doesNotExist(`Does not show ${nav} nav item`);
     });
 
@@ -128,7 +128,7 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     ['Dashboard', 'Secrets Engines', 'Access', 'Operational tools'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item within child namespace`);
     });
-    ['Replication', 'Raft Storage', 'License', 'Seal Vault', 'Client Count'].forEach((nav) => {
+    ['Replication', 'Raft Storage', 'License', 'Seal Vault', 'Client count'].forEach((nav) => {
       assert.dom(navLink(nav)).doesNotExist(`Does not show ${nav} nav item within child namespace`);
     });
 

@@ -60,20 +60,21 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     await this.setupMocks(STATUS_DISABLED_RESPONSE);
     await visit('/vault/replication');
 
-    await assertTitle(assert, 'Enable Replication');
+    await assertTitle(assert, 'Enable replication');
 
     // Nav links
-    assert.dom(GENERAL.navLink('Performance')).exists('shows performance link');
-    assert.dom(GENERAL.navLink('Disaster Recovery')).exists('shows dr link');
+    assert.dom(GENERAL.navHeading('Replication')).exists('shows replication nav heading');
+    assert.dom(GENERAL.navLink('Performance replication')).exists('shows performance link');
+    assert.dom(GENERAL.navLink('Disaster recovery')).exists('shows dr link');
 
-    await click(GENERAL.navLink('Performance'));
+    await click(GENERAL.navLink('Performance replication'));
     assert.strictEqual(currentURL(), '/vault/replication/performance', 'it navigates to the correct page');
     await settled();
     assert.dom(s.enableForm).exists();
 
-    await click(GENERAL.navLink('Disaster Recovery'));
+    await click(GENERAL.navLink('Disaster recovery'));
 
-    await assertTitle(assert, 'Enable Disaster Recovery Replication', 'dr');
+    await assertTitle(assert, 'Enable disaster recovery replication', 'dr');
   });
 
   ['primary', 'secondary'].forEach((mode) => {
@@ -89,16 +90,16 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
       assert.dom(s.detailLink('dr')).hasText('Enable', 'CTA to enable dr');
 
       // Nav links
-      assert.dom(GENERAL.navLink('Performance')).exists('shows performance link');
-      assert.dom(GENERAL.navLink('Disaster Recovery')).exists('shows dr link');
+      assert.dom(GENERAL.navLink('Performance replication')).exists('shows performance link');
+      assert.dom(GENERAL.navLink('Disaster recovery')).exists('shows dr link');
 
-      await click(GENERAL.navLink('Performance'));
+      await click(GENERAL.navLink('Performance replication'));
       assert.strictEqual(currentURL(), `/vault/replication/performance`, `goes to correct URL`);
       await waitFor(s.dashboard);
       assert.dom(s.dashboard).exists(`it shows the replication dashboard`);
 
-      await click(GENERAL.navLink('Disaster Recovery'));
-      await assertTitle(assert, 'Enable Disaster Recovery Replication', 'dr');
+      await click(GENERAL.navLink('Disaster recovery'));
+      await assertTitle(assert, 'Enable disaster recovery replication', 'dr');
       assert.dom(s.enableForm).exists('it shows the enable view for dr');
     });
   });
@@ -114,16 +115,16 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     assert.dom(s.detailLink('dr')).hasText('Details', 'CTA to see dr details');
 
     // Nav links
-    assert.dom(GENERAL.navLink('Performance')).exists('shows performance link');
-    assert.dom(GENERAL.navLink('Disaster Recovery')).exists('shows dr link');
+    assert.dom(GENERAL.navLink('Performance replication')).exists('shows performance link');
+    assert.dom(GENERAL.navLink('Disaster recovery')).exists('shows dr link');
 
-    await click(GENERAL.navLink('Performance'));
+    await click(GENERAL.navLink('Performance replication'));
     assert.strictEqual(currentURL(), `/vault/replication/performance`, `goes to correct URL`);
     await waitFor(s.enableForm);
     assert.dom(s.enableForm).exists('it shows the enable view for performance');
 
-    await click(GENERAL.navLink('Disaster Recovery'));
-    await assertTitle(assert, 'Disaster Recovery', 'Disaster Recovery');
+    await click(GENERAL.navLink('Disaster recovery'));
+    await assertTitle(assert, 'Disaster recovery', 'Disaster recovery');
     assert.dom(GENERAL.badge('primary')).exists('shows primary badge for dr');
     assert.dom(s.dashboard).exists(`it shows the replication dashboard`);
   });
@@ -134,17 +135,17 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
       performance: mockReplicationBlock('primary'),
     });
     await visit('/vault/replication');
-    await assertTitle(assert, 'Disaster Recovery & Performance', 'Disaster Recovery & Performance');
+    await assertTitle(assert, 'Disaster recovery and performance', 'Disaster recovery and performance');
     assert.dom(GENERAL.badge('primary')).exists('shows primary badge for dr');
     assert.dom(s.summaryCard).exists({ count: 2 }, 'shows 2 summary cards');
 
-    await click(GENERAL.navLink('Performance'));
+    await click(GENERAL.navLink('Performance replication'));
     await assertTitle(assert, 'Performance', 'Performance');
     assert.dom(GENERAL.badge('primary')).exists('shows primary badge for dr');
     assert.dom(s.enableForm).doesNotExist();
 
-    await click(GENERAL.navLink('Disaster Recovery'));
-    await assertTitle(assert, 'Disaster Recovery', 'Disaster Recovery');
+    await click(GENERAL.navLink('Disaster recovery'));
+    await assertTitle(assert, 'Disaster recovery', 'Disaster recovery');
     assert.dom(GENERAL.badge('primary')).exists('shows primary badge for dr');
     assert.dom(s.enableForm).doesNotExist();
   });

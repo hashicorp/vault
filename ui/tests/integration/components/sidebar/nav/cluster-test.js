@@ -51,7 +51,10 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
     assert
       .dom(GENERAL.navLink())
-      .exists({ count: 3 }, 'Nav links are hidden other than secrets, recovery and dashboard');
+      .exists(
+        { count: 3 },
+        'Nav links are hidden other than secrets, recovery (nested in Resilience and recovery nav link) and dashboard'
+      );
     assert.dom(GENERAL.navHeading()).exists({ count: 1 }, 'Headings are hidden other than Vault');
   });
 
@@ -60,16 +63,14 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Dashboard',
       'Secrets Engines',
       'Secrets Sync',
-      'Secrets Recovery',
       'Access',
       'Operational tools',
-      'Replication',
+      'Resilience and recovery',
       'Reporting',
       'Raft Storage',
-      'Client Count',
-      'Seal Vault',
+      'Client count',
     ];
-    // do not add PKI-only Secrets feature as it hides Client Count nav link
+    // do not add PKI-only Secrets feature as it hides Client count nav link
     const features = allFeatures().filter((feat) => feat !== 'PKI-only Secrets');
     stubFeaturesAndPermissions(this.owner, true, true, features);
     await renderComponent();
@@ -81,14 +82,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   });
 
   test('it should hide enterprise related links in child namespace', async function (assert) {
-    const links = [
-      'Disaster Recovery',
-      'Performance',
-      'Replication',
-      'Raft Storage',
-      'License',
-      'Seal Vault',
-    ];
+    const links = ['Raft Storage', 'License'];
     this.owner.lookup('service:namespace').set('path', 'foo');
     const stubs = stubFeaturesAndPermissions(this.owner, true, true);
     stubs.hasNavPermission.callsFake((route) => route !== 'clients');

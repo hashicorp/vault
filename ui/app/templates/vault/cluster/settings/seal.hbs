@@ -2,8 +2,15 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
+<Sidebar::Nav::ResilienceAndRecovery />
 
-<Page::Header @title="Seal this Vault" />
+<Page::Header @title="Seal Vault">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="Seal Vault")}}
+    />
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if this.model.seal.canUpdate}}
   <SealAction @onSeal={{action "seal"}} />

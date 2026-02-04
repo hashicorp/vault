@@ -5,14 +5,20 @@
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
+import { NavSection } from 'core/helpers/display-nav-item';
 
 export default class SidebarNavClusterComponent extends Component {
   @service currentCluster;
   @service flags;
   @service version;
-  @service auth;
   @service namespace;
   @service permissions;
+
+  navSection = {
+    resilienceAndRecovery: NavSection.RESILIENCE_AND_RECOVERY,
+    reporting: NavSection.REPORTING,
+    clientCount: NavSection.CLIENT_COUNT,
+  };
 
   get cluster() {
     return this.currentCluster.cluster;
@@ -25,22 +31,6 @@ export default class SidebarNavClusterComponent extends Component {
   get isRootNamespace() {
     // should only return true if we're in the true root namespace
     return this.namespace.inRootNamespace && !this.hasChrootNamespace;
-  }
-
-  get canAccessVaultUsageDashboard() {
-    /*
-    A user can access Vault Usage if they satisfy the following conditions:
-      1) They have access to sys/v1/utilization-report endpoint
-      2) They are either
-        a) enterprise cluster and root namespace
-        b) hvd cluster and /admin namespace
-    */
-
-    const hasPermission = this.permissions.hasNavPermission('monitoring');
-    const isEnterprise = this.version.isEnterprise;
-    const isCorrectNamespace = this.isRootNamespace || this.namespace.inHvdAdminNamespace;
-
-    return hasPermission && isEnterprise && isCorrectNamespace;
   }
 
   get showSecretsSync() {

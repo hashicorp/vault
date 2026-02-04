@@ -71,7 +71,7 @@ module('Acceptance | clients | counts | client list', function (hooks) {
 
   test('it navigates to client list tab', async function (assert) {
     assert.expect(3);
-    await click(GENERAL.navLink('Client Count'));
+    await click(GENERAL.navLink('Client count'));
     await click(GENERAL.tab('client list'));
     assert.strictEqual(currentURL(), '/vault/clients/counts/client-list', 'it navigates to client list tab');
     assert.dom(GENERAL.tab('client list')).hasClass('active');
