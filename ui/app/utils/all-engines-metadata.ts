@@ -32,7 +32,6 @@ export interface EngineDisplayData {
   requiresEnterprise?: boolean;
   isConfigurable?: boolean; // for secret engines that have additional configuration pages and actions.
   isOnlyMountable?: boolean; // The UI only supports configuration views for these secrets engines. The CLI must be used to manage other engine resources (i.e. roles, credentials).
-  isOldEngine?: boolean; // flag for engine views, if set to true, the engine will show pre-existing page design, if not, then the new views will be used. This is temporary until all engines have been migrated to the new design.
   type: string;
   value?: string;
   configRoute?: string; // override for custom route if not "configuration.plugin-settings" (used for Ember engines)
@@ -77,7 +76,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'AppRole',
     glyph: 'cpu',
-    isOldEngine: true,
     mountCategory: ['auth'],
     type: 'approle',
     value: 'approle',
@@ -124,7 +122,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'cloud',
     displayName: 'GitHub',
     glyph: 'github-color',
-    isOldEngine: true,
     mountCategory: ['auth'],
     type: 'github',
     value: 'github',
@@ -150,7 +147,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'JWT',
     glyph: 'jwt',
-    isOldEngine: true,
     mountCategory: ['auth'],
     type: 'jwt',
     value: 'jwt',
@@ -225,7 +221,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'OIDC',
     glyph: 'openid-color',
-    isOldEngine: true,
     mountCategory: ['auth'],
     type: 'oidc',
     value: 'oidc',
@@ -234,7 +229,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'infra',
     displayName: 'Okta',
     glyph: 'okta-color',
-    isOldEngine: true,
     mountCategory: ['auth'],
     type: 'okta',
     value: 'okta',
@@ -253,7 +247,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'infra',
     displayName: 'RADIUS',
     glyph: 'mainframe',
-    isOldEngine: true,
     mountCategory: ['auth'],
     type: 'radius',
     value: 'radius',
@@ -269,7 +262,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'SAML',
     glyph: 'saml-color',
-    isOldEngine: true,
     mountCategory: ['auth'],
     requiresEnterprise: true,
     type: 'saml',
@@ -287,7 +279,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'TLS Certificates',
     glyph: 'certificate',
-    isOldEngine: true,
     mountCategory: ['auth'],
     type: 'cert',
     value: 'cert',
@@ -308,7 +299,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   },
   {
     displayName: 'Token',
-    isOldEngine: true,
     type: 'token',
     mountCategory: ['auth'],
   },
@@ -316,7 +306,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'Userpass',
     glyph: 'users',
-    isOldEngine: true,
     mountCategory: ['auth'],
     type: 'userpass',
     value: 'userpass',
