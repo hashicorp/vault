@@ -4,13 +4,19 @@
 }}
 
 {{#if @replicationDisabled}}
-  <Page::Header @title={{this.title}} />
+  <Page::Header @title={{this.title}}>
+    <:breadcrumbs>
+      <Page::Breadcrumbs
+        @breadcrumbs={{array (hash label="Vault" route="vault" icon="vault" linkExternal=true) (hash label=this.title)}}
+      />
+    </:breadcrumbs>
+  </Page::Header>
 
   <div class="box is-sideless is-fullwidth is-marginless">
     {{#if (eq @replicationMode "dr")}}
       <h2 class="title is-flex-center is-5 is-marginless">
         <Icon @size="24" @name="replication-direct" />
-        Disaster Recovery (DR) Replication
+        Disaster recovery (DR) replication
       </h2>
       <p class="help has-text-grey-dark">
         {{replication-mode-description "dr"}}
@@ -18,7 +24,7 @@
     {{else if (eq @replicationMode "performance")}}
       <h2 class="title is-flex-center is-5 is-marginless">
         <Icon @size="24" @name="replication-perf" />
-        Performance Replication
+        Performance replication
       </h2>
       {{#if (has-feature "Performance Replication")}}
         <p class="help has-text-grey-dark">
@@ -26,7 +32,7 @@
         </p>
       {{else}}
         <p class="help has-text-grey-dark">
-          Performance Replication is a feature of Vault Enterprise Premium
+          Performance replication is a feature of Vault Enterprise Premium
         </p>
       {{/if}}
     {{/if}}

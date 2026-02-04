@@ -38,7 +38,7 @@ export default class RecoverySnapshotsRoute extends Route {
   }
 
   redirect(model: SnapshotsRouteModel) {
-    if (model.snapshots.length === 1) {
+    if (Array.isArray(model.snapshots) && model.snapshots.length === 1) {
       const snapshot_id = model.snapshots[0];
       this.router.transitionTo('vault.cluster.recovery.snapshots.snapshot.manage', snapshot_id);
     }
@@ -59,6 +59,13 @@ export default class RecoverySnapshotsRoute extends Route {
       if (error.status === 404) {
         return [];
       }
+
+      if (error.message === 'raft storage is not in use') {
+        return {
+          showRaftStorageMessage: true,
+        };
+      }
+
       throw {
         httpStatus: error.status,
         ...error,

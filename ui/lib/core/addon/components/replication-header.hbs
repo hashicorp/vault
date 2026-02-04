@@ -5,11 +5,11 @@
 
 <Page::Header @title={{@title}}>
   <:breadcrumbs>
-    {{#if (not (or @isSummaryDashboard @isSecondary))}}
+    {{#unless @isSecondary}}
       <Page::Breadcrumbs
-        @breadcrumbs={{array (hash label="Replication" route="vault.cluster.replication.index") (hash label=@title)}}
+        @breadcrumbs={{array (hash label="Vault" route="vault" icon="vault" linkExternal=true) (hash label=@title)}}
       />
-    {{/if}}
+    {{/unless}}
   </:breadcrumbs>
   <:badges>
     {{#if @data.anyReplicationEnabled}}

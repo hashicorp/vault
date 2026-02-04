@@ -16,14 +16,16 @@
       data-test-sidebar-nav-link="Secrets Sync"
     />
   {{/if}}
-  {{#unless (or this.cluster.dr.isSecondary this.flags.isHvdManaged)}}
+
+  {{#if (display-nav-item this.navSection.resilienceAndRecovery)}}
     <Nav.Link
-      @route="vault.cluster.recovery.snapshots"
-      @text="Secrets Recovery"
-      @badge={{if this.version.isCommunity "Enterprise" ""}}
-      data-test-sidebar-nav-link="Secrets Recovery"
+      @route="vault.cluster.resilience-recovery"
+      @text="Resilience and recovery"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Resilience and recovery"
     />
-  {{/unless}}
+  {{/if}}
+
   {{#if (or (has-permission "access") (has-permission "policies"))}}
     <Nav.Link
       @route={{this.accessRoute}}
@@ -44,26 +46,11 @@
   {{/if}}
   {{#if
     (or
-      (and this.isRootNamespace (has-permission "status" routeParams=(array "replication" "raft" "license" "seal")))
+      (and this.isRootNamespace (has-permission "status" routeParams="raft"))
       (and (has-permission "clients" routeParams="activity") (not this.hasChrootNamespace))
     )
   }}
     <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
-  {{/if}}
-  {{#if
-    (and
-      this.version.isEnterprise
-      this.isRootNamespace
-      (not this.cluster.replicationRedacted)
-      (has-permission "status" routeParams="replication")
-    )
-  }}
-    <Nav.Link
-      @route="vault.cluster.replication.index"
-      @text="Replication"
-      data-test-sidebar-nav-link="Replication"
-      @hasSubItems={{true}}
-    />
   {{/if}}
   {{#if (and this.cluster.usingRaft this.isRootNamespace (has-permission "status" routeParams="raft"))}}
     <Nav.Link
@@ -73,32 +60,7 @@
       data-test-sidebar-nav-link="Raft Storage"
     />
   {{/if}}
-  {{#if
-    (and
-      (has-permission "clients" routeParams="activity")
-      (not this.cluster.dr.isSecondary)
-      (not this.hasChrootNamespace)
-      (not this.version.hasPKIOnly)
-    )
-  }}
-    <Nav.Link
-      @route="vault.cluster.clients"
-      @text="Client Count"
-      @hasSubItems={{true}}
-      data-test-sidebar-nav-link="Client Count"
-    />
-  {{/if}}
-  {{#if
-    (or
-      this.canAccessVaultUsageDashboard
-      (and
-        this.version.features
-        this.isRootNamespace
-        (has-permission "status" routeParams="license")
-        (not this.cluster.dr.isSecondary)
-      )
-    )
-  }}
+  {{#if (display-nav-item this.navSection.reporting)}}
     <Nav.Link
       @route={{if this.canAccessVaultUsageDashboard "vault.cluster.usage-reporting" "vault.cluster.license"}}
       @text="Reporting"
@@ -106,12 +68,12 @@
       @hasSubItems={{true}}
     />
   {{/if}}
-  {{#if (and this.isRootNamespace (has-permission "status" routeParams="seal") (not this.cluster.dr.isSecondary))}}
+  {{#if (display-nav-item this.navSection.clientCount)}}
     <Nav.Link
-      @route="vault.cluster.settings.seal"
-      @model={{this.cluster.name}}
-      @text="Seal Vault"
-      data-test-sidebar-nav-link="Seal Vault"
+      @route="vault.cluster.clients"
+      @text="Client count"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Client count"
     />
   {{/if}}
 </Hds::AppSideNav::Portal>

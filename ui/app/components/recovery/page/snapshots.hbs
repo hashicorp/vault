@@ -4,46 +4,64 @@
 }}
 
 <Recovery::Page::Header
-  @title="Secrets Recovery"
+  @title="Secrets recovery"
   @subtitle="Recover lost or deleted data from a raft snapshot. Supported data includes KV v1 and Cubbyhole secrets or Database static roles."
   @breadcrumbs={{@breadcrumbs}}
 />
 
-{{#if @model.showCommunityMessage}}
-  <EmptyState
-    @title="Secrets Recovery is an enterprise feature"
-    @icon="sync-reverse"
-    @message="Secrets Recovery allows you to restore accidentally deleted or lost secrets from a snapshot. The snapshots can be provided via upload or loaded from external storage."
-  >
-    <Hds::Button
-      @text="Learn more about upgrading"
-      @color="tertiary"
-      @icon="docs-link"
-      @iconPosition="trailing"
-      @href={{doc-link "/vault/docs/enterprise"}}
-      @isHrefExternal={{true}}
-    />
-  </EmptyState>
-{{else if (not @model.snapshots)}}
-  {{! Currently, only a single snapshot is supported and the UI automatically redirects users to "recovery.snapshots.snapshot.manage" if one exists.
-  In the future, this may change to support multiple loaded snapshots and a LIST view will be built then. }}
-  {{#let (get this.emptyStateDetails this.state) as |d|}}
-    <EmptyState @title={{d.title}} @icon={{d.icon}} @message={{d.message}}>
+{{#if @model.snapshots.showRaftStorageMessage}}
+  <hr class="has-background-gray-300" />
 
-      {{#if (eq this.state this.viewState.ALLOW_UPLOAD)}}
-        <Hds::Button @text={{d.buttonText}} @color={{d.buttonColor}} @route="vault.cluster.recovery.snapshots.load" />
-      {{else}}
-        <Hds::Button
-          @text={{d.buttonText}}
-          @color={{d.buttonColor}}
-          @icon={{d.buttonIcon}}
-          @iconPosition="trailing"
-          @route={{d.buttonRoute}}
-          @query={{if d.buttonRoute (hash namespace="")}}
-          @href={{doc-link d.buttonHref}}
-          @isHrefExternal={{if d.buttonHref true}}
-        />
-      {{/if}}
+  <Hds::ApplicationState as |A|>
+    <A.Header @title="Raft storage required" @icon="info" data-test-empty-state-title />
+    <A.Body @text="Raft storage must be used in order to recover data from a snapshot." data-test-empty-state-message />
+    <A.Footer data-test-empty-state-actions as |F|>
+      <F.LinkStandalone
+        @text="Snapshot management"
+        @icon="docs-link"
+        @iconPosition="trailing"
+        @href={{doc-link "/vault/docs/sysadmin/snapshots"}}
+        @isHrefExternal={{true}}
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
+{{else}}
+  {{#if @model.showCommunityMessage}}
+    <EmptyState
+      @title="Secrets Recovery is an enterprise feature"
+      @icon="sync-reverse"
+      @message="Secrets Recovery allows you to restore accidentally deleted or lost secrets from a snapshot. The snapshots can be provided via upload or loaded from external storage."
+    >
+      <Hds::Button
+        @text="Learn more about upgrading"
+        @color="tertiary"
+        @icon="docs-link"
+        @iconPosition="trailing"
+        @href={{doc-link "/vault/docs/enterprise"}}
+        @isHrefExternal={{true}}
+      />
     </EmptyState>
-  {{/let}}
+  {{else if (not @model.snapshots)}}
+    {{! Currently, only a single snapshot is supported and the UI automatically redirects users to "recovery.snapshots.snapshot.manage" if one exists.
+  In the future, this may change to support multiple loaded snapshots and a LIST view will be built then. }}
+    {{#let (get this.emptyStateDetails this.state) as |d|}}
+      <EmptyState @title={{d.title}} @icon={{d.icon}} @message={{d.message}}>
+
+        {{#if (eq this.state this.viewState.ALLOW_UPLOAD)}}
+          <Hds::Button @text={{d.buttonText}} @color={{d.buttonColor}} @route="vault.cluster.recovery.snapshots.load" />
+        {{else}}
+          <Hds::Button
+            @text={{d.buttonText}}
+            @color={{d.buttonColor}}
+            @icon={{d.buttonIcon}}
+            @iconPosition="trailing"
+            @route={{d.buttonRoute}}
+            @query={{if d.buttonRoute (hash namespace="")}}
+            @href={{doc-link d.buttonHref}}
+            @isHrefExternal={{if d.buttonHref true}}
+          />
+        {{/if}}
+      </EmptyState>
+    {{/let}}
+  {{/if}}
 {{/if}}
