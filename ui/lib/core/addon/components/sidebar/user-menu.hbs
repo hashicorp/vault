@@ -4,7 +4,7 @@
 }}
 
 <Hds::Dropdown @enableCollisionDetection={{true}} @width="210px" data-test-user-menu as |D|>
-  <D.ToggleIcon @size="medium" @icon="user" @text="User menu" @hasChevron={{false}} data-test-button="user-menu-trigger" />
+  <D.ToggleIcon @size="medium" @icon="user" @text="User menu" data-test-button="user-menu-trigger" />
   <D.Title @text={{capitalize this.auth.authData.displayName}} data-test-user-menu-item="title" />
   {{#if this.auth.allowExpiration}}
     <D.Header data-test-user-menu-item="token alert">
