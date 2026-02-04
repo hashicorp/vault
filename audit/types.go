@@ -44,6 +44,9 @@ type request struct {
 	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
 	RequestURI                    string                 `json:"request_uri,omitempty"`
 	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
+	// SupplementalAuditData A plugin can influence the request logged within an audit entry of type response, to
+	// provide additional details on the parsed request. Useful for binary protocols.
+	SupplementalAuditData map[string]any `json:"supplemental_audit_data,omitempty"`
 }
 
 type response struct {
@@ -61,6 +64,10 @@ type response struct {
 	Secret                *secret                `json:"secret,omitempty"`
 	WrapInfo              *responseWrapInfo      `json:"wrap_info,omitempty"`
 	Warnings              []string               `json:"warnings,omitempty"`
+	// SupplementalAuditData A plugin can influence the response logged within an audit entry of type response, to
+	// provide additional details on the response outside what was returned within the Data map.
+	// Useful for binary protocols.
+	SupplementalAuditData map[string]any `json:"supplemental_audit_data,omitempty"`
 }
 
 type auth struct {
