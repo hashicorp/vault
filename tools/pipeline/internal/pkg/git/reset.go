@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// ResetMode is is mode to use when resetting the repository
+// ResetMode is the mode to use when resetting the repository
 type ResetMode string
 
 const (
