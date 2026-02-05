@@ -16,7 +16,7 @@ import (
 	"strings"
 
 	libgithub "github.com/google/go-github/v81/github"
-	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
+	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
 )

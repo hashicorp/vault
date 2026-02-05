@@ -14,8 +14,12 @@ import (
 type (
 	// File is a changed file in a PR or commit
 	File struct {
-		File   *gh.CommitFile `json:"file,omitempty"`
-		Groups FileGroups     `json:"groups,omitempty"`
+		// When listing changed files directly from Github we'll have a commit file
+		GithubCommitFile *gh.CommitFile `json:"github_commit_file,omitempty"`
+		// When getting changed files directly from git we currently only use the filename
+		Filename string `json:"file,omitempty"`
+		// Group are any changed file groups that are associated with the file
+		Groups FileGroups `json:"groups,omitempty"`
 	}
 	// Files is a slice of changed files in a PR or commit
 	Files []*File
@@ -44,11 +48,15 @@ const (
 
 // Name is the file name of the changed file
 func (f *File) Name() string {
-	if f == nil || f.File == nil {
+	if f == nil {
 		return ""
 	}
 
-	return f.File.GetFilename()
+	if f.GithubCommitFile != nil {
+		return f.GithubCommitFile.GetFilename()
+	}
+
+	return f.Filename
 }
 
 // Add takes a variadic set of groups and adds them to the ordered set of groups
@@ -92,6 +100,24 @@ func (g FileGroups) Any(groups FileGroups) bool {
 	}
 
 	return false
+}
+
+// Intersection takes another FileGroups and returns a new FileGroups containing only
+// the groups that are present in both FileGroups. If there is no intersection, the
+// result will be empty.
+func (g FileGroups) Intersection(groups FileGroups) FileGroups {
+	if g == nil || groups == nil {
+		return FileGroups{}
+	}
+
+	result := FileGroups{}
+	for _, group := range g {
+		if _, in := groups.In(group); in {
+			result = append(result, group)
+		}
+	}
+
+	return result
 }
 
 // Groups returns the FileGroups as a slice of strings
