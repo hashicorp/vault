@@ -24,6 +24,6 @@
   </LinkedBlock>
 {{else}}
   <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header data-test-empty-state-title @title="No policies associated with {{@model.name}} yet" />
+    <A.Header data-test-empty-state-title @title="No policies associated with {{@model.name}} yet" @titleTag="h2" />
   </Hds::ApplicationState>
 {{/each}}

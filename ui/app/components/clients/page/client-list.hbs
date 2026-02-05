@@ -56,20 +56,20 @@
                     <:emptyState>
                       {{#if (and (eq tabName "Secret sync") (not this.flags.secretsSyncIsActivated))}}
                         <Hds::ApplicationState @align="center" as |A|>
-                          <A.Header @title="No secret sync clients" />
+                          <A.Header @title="No secret sync clients" @titleTag="h2" />
                           <A.Body @text="No data is available because Secrets Sync has not been activated." />
-                          <A.Body>
-                            <Hds::Link::Standalone
+                          <A.Footer as |F|>
+                            <F.LinkStandalone
                               @icon="chevron-right"
                               @iconPosition="trailing"
                               @text="Activate Secrets Sync"
                               @route="vault.cluster.sync.secrets.overview"
                             />
-                          </A.Body>
+                          </A.Footer>
                         </Hds::ApplicationState>
                       {{else}}
                         <Hds::ApplicationState @align="center" as |A|>
-                          <A.Header @title="No data found" />
+                          <A.Header @title="No data found" @titleTag="h2" />
                           <A.Body
                             @text="Select another client type {{if
                               this.filtersAreApplied
@@ -91,7 +91,7 @@
   </Clients::CountsCard>
 {{else}}
   <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header data-test-empty-state-title @title="No data found" />
+    <A.Header data-test-empty-state-title @title="No data found" @titleTag="h2" />
     <A.Body data-test-empty-state-message @text="No data to export in provided time range." />
   </Hds::ApplicationState>
 {{/if}}

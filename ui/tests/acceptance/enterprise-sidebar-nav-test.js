@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentURL } from '@ember/test-helpers';
+import { click, currentURL, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from '../helpers/general-selectors';
@@ -24,29 +24,13 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
   test(`it should render enterprise only navigation links`, async function (assert) {
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
-    await click(GENERAL.navLink('Secrets Sync'));
+    await click(GENERAL.navLink('Secrets'));
+    await click(GENERAL.navLink('Secrets sync'));
     assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'Sync route renders');
-
-    await click(GENERAL.navLink('Replication'));
-    assert.strictEqual(currentURL(), '/vault/replication', 'Replication route renders');
-    assert.dom(panel('Replication')).exists(`Replication nav panel renders`);
-    assert.dom(GENERAL.navLink('Overview')).hasClass('active', 'Overview link is active');
-    assert.dom(GENERAL.navLink('Performance')).exists('Performance link exists');
-    assert.dom(GENERAL.navLink('Disaster Recovery')).exists('DR link exists');
-
-    await click(GENERAL.navLink('Performance'));
-    assert.strictEqual(
-      currentURL(),
-      '/vault/replication/performance',
-      'Replication performance route renders'
-    );
-
-    await click(GENERAL.navLink('Disaster Recovery'));
-    assert.strictEqual(currentURL(), '/vault/replication/dr', 'Replication DR route renders');
     await click(GENERAL.navLink('Back to main navigation'));
 
-    await click(GENERAL.navLink('Client Count'));
-    assert.dom(panel('Client Count')).exists('Client Count nav panel renders');
+    await click(GENERAL.navLink('Client count'));
+    assert.dom(panel('Client count')).exists('Client count nav panel renders');
     assert.dom(GENERAL.navLink('Client Usage')).hasClass('active', 'Client Usage link is active');
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Client counts route renders');
     await click(GENERAL.navLink('Back to main navigation'));
@@ -108,5 +92,17 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
     await click(GENERAL.navLink('Reporting'));
     await click(GENERAL.navLink('License'));
     assert.strictEqual(currentURL(), '/vault/license', 'License route renders');
+  });
+
+  test('it should navigate to Resilience and recovery level > Replication (enterprise)', async function (assert) {
+    await visit('/vault/replication');
+    await click(GENERAL.navLink('Performance replication'));
+    assert.dom(GENERAL.navLink('Performance replication')).exists('Performance link exists');
+    await click(GENERAL.navLink('Overview'));
+    assert.strictEqual(currentURL(), '/vault/replication', 'replication route renders');
+    await click(GENERAL.navLink('Disaster recovery'));
+    assert.strictEqual(currentURL(), '/vault/replication/dr', 'Replication DR route renders');
+    await click(GENERAL.navLink('Secrets recovery'));
+    assert.strictEqual(currentURL(), '/vault/recovery/snapshots', 'snapshots route renders');
   });
 });

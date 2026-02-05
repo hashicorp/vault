@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault/billing"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ed25519"
@@ -33,9 +32,6 @@ type signOutcome struct {
 }
 
 func TestTransit_SignVerify_ECDSA(t *testing.T) {
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
-
 	t.Run("256", func(t *testing.T) {
 		testTransit_SignVerify_ECDSA(t, 256)
 	})
@@ -45,9 +41,6 @@ func TestTransit_SignVerify_ECDSA(t *testing.T) {
 	t.Run("521", func(t *testing.T) {
 		testTransit_SignVerify_ECDSA(t, 521)
 	})
-
-	// Verify the total successful transit requests
-	require.Equal(t, int64(84), billing.CurrentDataProtectionCallCounts.Transit)
 }
 
 func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
@@ -330,6 +323,7 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 	verifyRequest(req, false, "", sig)
 	// Now try the v1
 	verifyRequest(req, true, "", v1sig)
+	require.Equal(t, uint64(28), b.billingDataCounts.Transit.Load())
 }
 
 func validatePublicKey(t *testing.T, in string, sig string, pubKeyRaw []byte, expectValid bool, postpath string, b *backend) {
@@ -380,9 +374,6 @@ func validatePublicKey(t *testing.T, in string, sig string, pubKeyRaw []byte, ex
 // TestTransit_SignVerify_Ed25519Behavior makes sure the options on ENT for a
 // Ed25519ph/ctx signature fail on CE and ENT if invalid
 func TestTransit_SignVerify_Ed25519Behavior(t *testing.T) {
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
-
 	b, storage := createBackendWithSysView(t)
 
 	// First create a key
@@ -477,17 +468,14 @@ func TestTransit_SignVerify_Ed25519Behavior(t *testing.T) {
 	}
 	// Verify the total successful transit requests
 	if constants.IsEnterprise {
-		require.Equal(t, int64(4), billing.CurrentDataProtectionCallCounts.Transit)
+		require.Equal(t, uint64(4), b.billingDataCounts.Transit.Load())
 	} else {
 		// We expect 0 successful calls on CE because we expect the verify to fail
-		require.Equal(t, int64(0), billing.CurrentDataProtectionCallCounts.Transit)
+		require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
 	}
 }
 
 func TestTransit_SignVerify_ED25519(t *testing.T) {
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
-
 	b, storage := createBackendWithSysView(t)
 
 	// First create a key
@@ -832,7 +820,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	verifyRequest(req, false, outcome, "bar", goodsig, true)
 
 	// Verify the total successful transit requests
-	require.Equal(t, int64(24), billing.CurrentDataProtectionCallCounts.Transit)
+	require.Equal(t, uint64(24), b.billingDataCounts.Transit.Load())
 }
 
 func TestTransit_SignVerify_RSA_PSS(t *testing.T) {

@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -113,7 +112,6 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 	if err != nil {
 		return nil, err
 	}
-
 	b.setupEnt()
 
 	return &b, nil
@@ -124,6 +122,10 @@ type backend struct {
 	entBackend
 
 	lm *keysutil.LockManager
+	// billingDataCounts tracks successful data protection operations
+	// for this backend instance. It's intended for test assertions and avoids
+	// cross-test/package contamination from global counters.
+	billingDataCounts billing.DataProtectionCallCounts
 	// Lock to make changes to any of the backend's cache configuration.
 	configMutex          sync.RWMutex
 	cacheSizeChanged     bool
@@ -148,9 +150,17 @@ func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error
 	return size, nil
 }
 
-// incrementDataProtectionCounter atomically increments the data protection call counter to avoid race conditions
-func (b *backend) incrementDataProtectionCounter(count int64) {
-	atomic.AddInt64(&billing.CurrentDataProtectionCallCounts.Transit, count)
+// incrementBillingCounts atomically increments the transit billing data counts
+func (b *backend) incrementBillingCounts(ctx context.Context, count uint64) error {
+	// If we are a test, we need to increment this testing structure to verify the counts are correct.
+	if b.billingDataCounts.Transit != nil {
+		b.billingDataCounts.Transit.Add(count)
+	}
+
+	// Write billling data
+	return b.ConsumptionBillingManager.WriteBillingData(ctx, "transit", map[string]interface{}{
+		"count": count,
+	})
 }
 
 // Update cache size and get policy

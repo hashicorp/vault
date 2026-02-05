@@ -24,5 +24,8 @@
     <Mfa::MethodListItem @model={{item}} />
   {{/each}}
 {{else}}
-  <EmptyState @title="No methods found." @message="Add a new one to get started." />
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header @title="No methods found." @titleTag="h2" />
+    <A.Body @text="Add a new one to get started." />
+  </Hds::ApplicationState>
 {{/if}}

@@ -23,6 +23,6 @@
   {{/each}}
 {{else}}
   <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header data-test-empty-state-title @title="This group has no parent groups yet" />
+    <A.Header data-test-empty-state-title @title="This group has no parent groups yet" @titleTag="h2" />
   </Hds::ApplicationState>
 {{/if}}

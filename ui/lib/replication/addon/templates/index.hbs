@@ -7,13 +7,31 @@
   <div class="container is-widescreen">
     {{#if (eq this.model.mode "unsupported")}}
       {{! Replication is unsupported in non-enterprise or when using non-transactional storage (eg inmem) }}
-      <Page::Header @title="Replication unsupported" />
+      <Page::Header @title="Replication unsupported">
+        <:breadcrumbs>
+          <Page::Breadcrumbs
+            @breadcrumbs={{array
+              (hash label="Vault" route="vault" icon="vault" linkExternal=true)
+              (hash label="Replication unsupported")
+            }}
+          />
+        </:breadcrumbs>
+      </Page::Header>
 
       <EmptyState @title="The current cluster configuration does not support replication" />
     {{else if this.model.replicationIsInitializing}}
       <LayoutLoading />
     {{else if this.model.allReplicationDisabled}}
-      <Page::Header @title="Enable Replication" />
+      <Page::Header @title="Enable replication">
+        <:breadcrumbs>
+          <Page::Breadcrumbs
+            @breadcrumbs={{array
+              (hash label="Vault" route="vault" icon="vault" linkExternal=true)
+              (hash label="Enable replication")
+            }}
+          />
+        </:breadcrumbs>
+      </Page::Header>
 
       <div class="box is-sideless is-fullwidth is-marginless">
         <p class="has-text-grey-dark box is-shadowless is-fullwidth has-slim-padding">
@@ -102,7 +120,16 @@
       </ReplicationPage>
     {{else}}
       {{! Renders when at least one mode is not enabled }}
-      <Page::Header @title="Replication" />
+      <Page::Header @title="Replication">
+        <:breadcrumbs>
+          <Page::Breadcrumbs
+            @breadcrumbs={{array
+              (hash label="Vault" route="vault" icon="vault" linkExternal=true)
+              (hash label="Replication")
+            }}
+          />
+        </:breadcrumbs>
+      </Page::Header>
 
       <div class="box is-sideless is-fullwidth is-marginless flex-col">
         <ReplicationOverviewMode

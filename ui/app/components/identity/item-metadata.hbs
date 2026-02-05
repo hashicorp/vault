@@ -23,7 +23,7 @@
   </div>
 {{else}}
   <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header data-test-empty-state-title @title="No metadata for {{@model.name}}" />
+    <A.Header data-test-empty-state-title @title="No metadata for {{@model.name}}" @titleTag="h2" />
     <A.Body
       data-test-empty-state-message
       @text='You can store custom data that you want to associate with this {{lowercase

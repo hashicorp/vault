@@ -66,7 +66,7 @@ func (s *GRPCStorageClient) Put(ctx context.Context, entry *logical.StorageEntry
 		return errors.New(reply.Err)
 	}
 	ws := logical.IndexStateFromContext(ctx)
-	if ws != nil {
+	if ws != nil && reply.WalIndex != nil {
 		ws.ReplicatedIndex = reply.WalIndex.ReplicatedIndex
 		ws.LocalIndex = reply.WalIndex.LocalIndex
 	}
@@ -85,7 +85,7 @@ func (s *GRPCStorageClient) Delete(ctx context.Context, key string) error {
 		return errors.New(reply.Err)
 	}
 	ws := logical.IndexStateFromContext(ctx)
-	if ws != nil {
+	if ws != nil && reply.WalIndex != nil {
 		ws.ReplicatedIndex = reply.WalIndex.ReplicatedIndex
 		ws.LocalIndex = reply.WalIndex.LocalIndex
 	}

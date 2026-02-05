@@ -95,7 +95,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
     await this.renderComponent();
 
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets Sync', 'Page title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets sync', 'Page title renders');
     assert.dom(cta.summary).doesNotExist('CTA does not render');
     assert.dom(tab('Overview')).hasText('Overview', 'Overview tab renders');
     assert.dom(tab('Destinations')).hasText('Destinations', 'Destinations tab renders');
@@ -115,7 +115,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     await this.renderComponent();
 
     assert.dom(overview.optInBanner.container).doesNotExist('Opt-in banner is not shown');
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets Sync');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets sync');
     assert.dom(GENERAL.badge('Plus feature')).hasText('Plus feature', 'Plus feature badge renders');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
     assert.dom(cta.summary).exists();
@@ -158,7 +158,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     this.isActivated = true;
     await this.renderComponent();
 
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets Sync');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets sync');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
     assert.dom(cta.summary).exists();
   });

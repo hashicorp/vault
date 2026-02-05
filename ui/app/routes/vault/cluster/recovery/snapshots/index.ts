@@ -29,7 +29,7 @@ export default class RecoverySnapshotsIndexRoute extends Route {
 
     controller.breadcrumbs = [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
-      { label: 'Secrets Recovery' },
+      { label: 'Secrets recovery' },
     ];
   }
 }

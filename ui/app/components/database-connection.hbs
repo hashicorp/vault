@@ -144,7 +144,7 @@
           {{/each}}
         {{else}}
           <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-            <A.Header data-test-empty-state-title @title="No plugin selected" />
+            <A.Header data-test-empty-state-title @title="No plugin selected" @titleTag="h2" />
             <A.Body data-test-empty-state-message @text="Select a plugin type to be able to configure it." />
           </Hds::ApplicationState>
         {{/if}}
@@ -158,7 +158,7 @@
         <h3 class="title is-5">Statements</h3>
         {{#if (eq @model.statementFields null)}}
           <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-            <A.Header data-test-empty-state-title @title="No plugin selected" />
+            <A.Header data-test-empty-state-title @title="No plugin selected" @titleTag="h2" />
             <A.Body data-test-empty-state-message @text="Select a plugin type to be able to configure it." />
           </Hds::ApplicationState>
         {{else}}
@@ -309,11 +309,17 @@
   </form>
 {{else if (eq @model.isAvailablePlugin false)}}
   <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header data-test-empty-state-title @icon="skip" @title="Database type unavailable" />
-    <A.Body data-test-empty-state-message>
-      <p>Not supported in the UI</p>
-      <p>This database type cannot be viewed in the UI. You will have to use the API or CLI to perform actions here.</p>
-    </A.Body>
+    <A.Header
+      data-test-empty-state-title
+      @icon="skip"
+      class="align-items-end"
+      @title="Database type unavailable"
+      @titleTag="h2"
+    />
+    <A.Body
+      data-test-empty-state-message
+      @text="This database type cannot be viewed in the UI. You will have to use the API or CLI to perform actions here."
+    />
     <A.Footer data-test-empty-state-actions as |F|>
       <F.LinkStandalone @icon="chevron-left" @text="Go back" @route="vault.cluster.secrets.backend.list-root" />
       <F.LinkStandalone

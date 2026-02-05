@@ -5,7 +5,7 @@
 
 {{#if this.unwrapTokenError}}
   <Hds::ApplicationState @align="center" class="has-top-margin-xxl" data-test-page-error as |A|>
-    <A.Header @title="Authentication error" />
+    <A.Header @title="Authentication error" @titleTag="h2" />
     <A.Body @text="Token unwrap failed" />
     <A.Body @text="Error: {{this.unwrapTokenError}}" />
     <A.Footer as |F|>

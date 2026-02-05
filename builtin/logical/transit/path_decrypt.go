@@ -278,8 +278,9 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	// Increment the counter for successful operations
-	b.incrementDataProtectionCounter(int64(successfulRequests))
+	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+		b.Logger().Error("failed to track transit decrypt request count", "error", err.Error())
+	}
 
 	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
 }

@@ -163,17 +163,17 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 	sc := b.makeStorageContext(ctx, request.Storage)
 	cfg, err := b.CrlBuilder().GetConfigWithUpdate(sc)
 	if err != nil || cfg.OcspDisable || (isUnifiedOcspPath(request) && !cfg.UnifiedCRL) {
-		return OcspUnauthorizedResponse, nil
+		return wrapWithAuditError(OcspUnauthorizedResponse, fmt.Errorf("OCSP disabled")), nil
 	}
 
 	derReq, err := fetchDerEncodedRequest(request, data)
 	if err != nil {
-		return OcspMalformedResponse, nil
+		return wrapWithAuditError(OcspMalformedResponse, fmt.Errorf("failed to DER decode: %w", err)), nil
 	}
 
 	ocspReq, err := ocsp.ParseRequest(derReq)
 	if err != nil {
-		return OcspMalformedResponse, nil
+		return wrapWithAuditError(OcspMalformedResponse, fmt.Errorf("failed to parse request: %w", err)), nil
 	}
 
 	useUnifiedStorage := canUseUnifiedStorage(request, cfg)
@@ -196,12 +196,12 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 			// we should be responding with an Unauthorized response as we don't have the
 			// ability to sign the response.
 			// https://www.rfc-editor.org/rfc/rfc5019#section-2.2.3
-			return OcspUnauthorizedResponse, nil
+			return wrapWithAuditError(OcspUnauthorizedResponse, errors.New("issuer is missing OCSP usage")), nil
 		}
 		return logAndReturnInternalError(b.Logger(), err), nil
 	}
 
-	byteResp, err := genResponse(cfg, caBundle, ocspStatus, ocspReq.HashAlgorithm, issuer.RevocationSigAlg)
+	byteResp, ocspResp, err := genResponse(cfg, caBundle, ocspStatus, ocspReq.HashAlgorithm, issuer.RevocationSigAlg)
 	if err != nil {
 		return logAndReturnInternalError(b.Logger(), err), nil
 	}
@@ -218,13 +218,53 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 		observe.NewAdditionalPKIMetadata("ocsp_status", ocspStatus.ocspStatus),
 	)
 
+	auditReq, auditResp := genAuditFields(ocspReq, ocspResp, ocspStatus.issuerID)
+
 	return &logical.Response{
 		Data: map[string]interface{}{
 			logical.HTTPContentType: ocspResponseContentType,
 			logical.HTTPStatusCode:  http.StatusOK,
 			logical.HTTPRawBody:     byteResp,
 		},
+		SupplementalAuditRequestData:  auditReq,
+		SupplementalAuditResponseData: auditResp,
 	}, nil
+}
+
+func genAuditFields(ocspReq *ocsp.Request, ocspResp *ocsp.Response, issuerID issuing.IssuerID) (map[string]any, map[string]any) {
+	serialNumber := parsing.SerialFromBigInt(ocspReq.SerialNumber)
+
+	auditRequest := map[string]any{
+		"serial_number":  serialNumber,
+		"hash_algorithm": ocspReq.HashAlgorithm.String(),
+	}
+
+	auditResp := map[string]any{
+		"serial_number": serialNumber,
+		"ocsp_status":   ocspStatusToString(ocspResp.Status),
+		"issuer_id":     issuerID.String(),
+	}
+
+	if !ocspResp.ThisUpdate.IsZero() {
+		auditResp["this_update"] = ocspResp.ThisUpdate.Format(time.RFC3339)
+	}
+
+	if !ocspResp.NextUpdate.IsZero() {
+		auditResp["next_update"] = ocspResp.NextUpdate.Format(time.RFC3339)
+	}
+
+	if !ocspResp.ProducedAt.IsZero() {
+		auditResp["produced_at"] = ocspResp.ProducedAt.Format(time.RFC3339)
+	}
+
+	if ocspResp.Status == ocsp.Revoked {
+		if !ocspResp.RevokedAt.IsZero() {
+			auditResp["revoked_at"] = ocspResp.RevokedAt.Format(time.RFC3339)
+		}
+		auditResp["revocation_reason"] = revokedReasonToString(ocspResp.RevocationReason)
+	}
+
+	return auditRequest, auditResp
 }
 
 func canUseUnifiedStorage(req *logical.Request, cfg *pki_backend.CrlConfig) bool {
@@ -275,10 +315,12 @@ func generateUnknownResponse(cfg *pki_backend.CrlConfig, sc *storageContext, ocs
 		ocspStatus:   ocsp.Unknown,
 	}
 
-	byteResp, err := genResponse(cfg, caBundle, info, ocspReq.HashAlgorithm, issuer.RevocationSigAlg)
+	byteResp, ocspResp, err := genResponse(cfg, caBundle, info, ocspReq.HashAlgorithm, issuer.RevocationSigAlg)
 	if err != nil {
 		return logAndReturnInternalError(sc.Logger(), err)
 	}
+
+	auditReq, auditResp := genAuditFields(ocspReq, ocspResp, issuer.ID)
 
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -286,6 +328,50 @@ func generateUnknownResponse(cfg *pki_backend.CrlConfig, sc *storageContext, ocs
 			logical.HTTPStatusCode:  http.StatusOK,
 			logical.HTTPRawBody:     byteResp,
 		},
+		SupplementalAuditRequestData:  auditReq,
+		SupplementalAuditResponseData: auditResp,
+	}
+}
+
+func ocspStatusToString(status int) string {
+	switch status {
+	case ocsp.Good:
+		return "Good"
+	case ocsp.Revoked:
+		return "Revoked"
+	case ocsp.Unknown:
+		return "Unknown"
+	case ocsp.ServerFailed:
+		return "ServerFailed"
+	default:
+		return fmt.Sprintf("Unknown OCSP status (%d)", status)
+	}
+}
+
+func revokedReasonToString(reason int) string {
+	switch reason {
+	case ocsp.Unspecified:
+		return "Unspecified"
+	case ocsp.KeyCompromise:
+		return "KeyCompromise"
+	case ocsp.CACompromise:
+		return "CACompromise"
+	case ocsp.AffiliationChanged:
+		return "AffiliationChanged"
+	case ocsp.Superseded:
+		return "Superseded"
+	case ocsp.CessationOfOperation:
+		return "CessationOfOperation"
+	case ocsp.CertificateHold:
+		return "CertificateHold"
+	case ocsp.RemoveFromCRL:
+		return "RemoveFromCRL"
+	case ocsp.PrivilegeWithdrawn:
+		return "PrivilegeWithdrawn"
+	case ocsp.AACompromise:
+		return "AACompromise"
+	default:
+		return fmt.Sprintf("Unknown OCSP revocation reason (%d)", reason)
 	}
 }
 
@@ -336,7 +422,16 @@ func logAndReturnInternalError(logger hclog.Logger, err error) *logical.Response
 	// errors, so we rely on the log statement to help in debugging possible
 	// issues in the field.
 	logger.Debug("OCSP internal error", "error", err)
-	return OcspInternalErrorResponse
+	return wrapWithAuditError(OcspInternalErrorResponse, err)
+}
+
+func wrapWithAuditError(response *logical.Response, err error) *logical.Response {
+	return &logical.Response{
+		Data: response.Data,
+		SupplementalAuditResponseData: map[string]interface{}{
+			"ocsp_error": err.Error(),
+		},
+	}
 }
 
 func getOcspStatus(sc *storageContext, ocspReq *ocsp.Request, useUnifiedStorage bool) (*ocspRespInfo, error) {
@@ -491,11 +586,11 @@ func doesRequestMatchIssuer(parsedBundle *certutil.ParsedCertBundle, req *ocsp.R
 	return bytes.Equal(req.IssuerKeyHash, issuerKeyHash) && bytes.Equal(req.IssuerNameHash, issuerNameHash), nil
 }
 
-func genResponse(cfg *pki_backend.CrlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, error) {
+func genResponse(cfg *pki_backend.CrlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, *ocsp.Response, error) {
 	curTime := time.Now()
 	duration, err := parseutil.ParseDurationSecond(cfg.OcspExpiry)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// x/crypto/ocsp lives outside of the standard library's crypto/x509 and includes
@@ -541,7 +636,11 @@ func genResponse(cfg *pki_backend.CrlConfig, caBundle *certutil.ParsedCertBundle
 		template.RevocationReason = ocsp.Unspecified
 	}
 
-	return ocsp.CreateResponse(caBundle.Certificate, caBundle.Certificate, template, caBundle.PrivateKey)
+	byteResp, err := ocsp.CreateResponse(caBundle.Certificate, caBundle.Certificate, template, caBundle.PrivateKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	return byteResp, &template, nil
 }
 
 const pathOcspHelpSyn = `

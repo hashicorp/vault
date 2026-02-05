@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault/billing"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,9 +17,6 @@ func TestTransit_BatchRewrapCase1(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, s := createBackendWithStorage(t)
-
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
 
 	// Upsert the key and encrypt the data
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
@@ -119,7 +115,7 @@ func TestTransit_BatchRewrapCase1(t *testing.T) {
 	}
 
 	// We expect 2 successful requests (1 for encrypt, 1 for rewrap)
-	require.Equal(t, int64(2), billing.CurrentDataProtectionCallCounts.Transit)
+	require.Equal(t, uint64(2), b.billingDataCounts.Transit.Load())
 }
 
 // Check the normal flow of rewrap with upserted key
@@ -127,9 +123,6 @@ func TestTransit_BatchRewrapCase2(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, s := createBackendWithStorage(t)
-
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
 
 	// Upsert the key and encrypt the data
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
@@ -229,16 +222,13 @@ func TestTransit_BatchRewrapCase2(t *testing.T) {
 		t.Fatalf("unexpected key version; got: %d, expected: %d", keyVersion, 2)
 	}
 	// We expect 2 successful transit requests (1 for encrypt, 1 for rewrap)
-	require.Equal(t, int64(2), billing.CurrentDataProtectionCallCounts.Transit)
+	require.Equal(t, uint64(2), b.billingDataCounts.Transit.Load())
 }
 
 // Batch encrypt plaintexts, rotate the keys and rewrap all the ciphertexts
 func TestTransit_BatchRewrapCase3(t *testing.T) {
 	var resp *logical.Response
 	var err error
-
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
 
 	b, s := createBackendWithStorage(t)
 
@@ -341,16 +331,13 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		}
 	}
 	// We expect 6 successful transit requests (2 for batch encryption, 2 for batch rewrap, and 2 for decryption)
-	require.Equal(t, int64(6), billing.CurrentDataProtectionCallCounts.Transit)
+	require.Equal(t, uint64(6), b.billingDataCounts.Transit.Load())
 }
 
 // TestTransit_BatchRewrapCase4 batch rewrap leveraging RSA padding schemes
 func TestTransit_BatchRewrapCase4(t *testing.T) {
 	var resp *logical.Response
 	var err error
-
-	// Reset the transit counter
-	billing.CurrentDataProtectionCallCounts.Transit = 0
 
 	b, s := createBackendWithStorage(t)
 
@@ -459,5 +446,5 @@ func TestTransit_BatchRewrapCase4(t *testing.T) {
 		}
 	}
 	// We expect 6 succcessful calls to the transit backend (2 for batch encryption, 2 for batch decryption, and 2 for batch rewrap)
-	require.Equal(t, int64(6), billing.CurrentDataProtectionCallCounts.Transit)
+	require.Equal(t, uint64(6), b.billingDataCounts.Transit.Load())
 }

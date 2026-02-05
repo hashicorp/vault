@@ -82,7 +82,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - uses: hashicorp/action-setup-enos@80a17fa25605989a7a53199137dae1244e32353f # v1.40
+      - uses: hashicorp/action-setup-enos@17b90fcf9591275b468a94aefb9dc6a93017de8a # v1.50
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Set Up Git

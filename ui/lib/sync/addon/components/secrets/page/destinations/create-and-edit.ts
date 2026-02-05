@@ -55,22 +55,24 @@ export default class DestinationsCreateForm extends Component<Args> {
       ? {
           title: `Create Destination for ${typeDisplayName}`,
           breadcrumbs: [
-            { label: 'Secrets Sync', route: 'secrets.overview' },
-            { label: 'Select Destination', route: 'secrets.destinations.create' },
-            { label: 'Create Destination' },
+            { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+            { label: 'Secrets sync', route: 'secrets.overview' },
+            { label: 'Select destination', route: 'secrets.destinations.create' },
+            { label: 'Create destination' },
           ],
         }
       : {
           title: `Edit ${name}`,
           breadcrumbs: [
-            { label: 'Secrets Sync', route: 'secrets.overview' },
+            { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+            { label: 'Secrets sync', route: 'secrets.overview' },
             { label: 'Destinations', route: 'secrets.destinations' },
             {
               label: 'Destination',
               route: 'secrets.destinations.destination.secrets',
               model: { name, type },
             },
-            { label: 'Edit Destination' },
+            { label: 'Edit destination' },
           ],
         };
   }

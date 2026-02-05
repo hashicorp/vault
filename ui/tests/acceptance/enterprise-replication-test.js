@@ -49,7 +49,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled();
     assert
       .dom(GENERAL.hdsPageHeaderTitle)
-      .includesText('Disaster Recovery', 'it displays the replication type correctly');
+      .includesText('Disaster recovery', 'it displays the replication type correctly');
     assert.dom(GENERAL.badge('primary')).includesText('primary', 'it displays the cluster mode correctly');
 
     await addSecondary(secondaryName);
@@ -256,7 +256,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .doesNotExist(`does not render replication summary card when both modes are not enabled as primary`);
 
     // enable DR primary replication
-    await click('[data-test-sidebar-nav-link="Disaster Recovery"]');
+    await click(GENERAL.navLink('Disaster recovery'));
     // let the controller set replicationMode in afterModel
     await waitFor('[data-test-replication-enable-form]');
     await click(GENERAL.submitButton);

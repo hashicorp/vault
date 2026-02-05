@@ -114,7 +114,9 @@
     </div>
   </LinkedBlock>
 {{else}}
-  <EmptyState @title="No Authentication Methods found" />
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header @title="No Authentication Methods found" @titleTag="h2" />
+  </Hds::ApplicationState>
 {{/each}}
 
 {{#if this.methodToDisable}}

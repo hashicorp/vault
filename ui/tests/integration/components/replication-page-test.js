@@ -61,7 +61,7 @@ module('Integration | Component | replication-page', function (hooks) {
     await render(
       hbs`<ReplicationPage @model={{this.model}} as |Page|><Page.header @showTabs={{false}} /></ReplicationPage>`
     );
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Disaster Recovery');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Disaster recovery');
 
     this.model.replicationMode = 'performance';
     await render(

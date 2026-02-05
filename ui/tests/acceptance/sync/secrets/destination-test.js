@@ -30,7 +30,7 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
 
   test('it should transition to overview route via breadcrumb', async function (assert) {
     await visit('vault/sync/secrets/destinations/aws-sm/destination-aws/secrets');
-    await click(ts.breadcrumbAtIdx(0));
+    await click(ts.breadcrumbAtIdx(1));
     assert.strictEqual(
       currentURL(),
       '/vault/sync/secrets/overview',
@@ -39,7 +39,8 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
   });
 
   test('it should transition to correct routes when performing actions', async function (assert) {
-    await click(ts.navLink('Secrets Sync'));
+    await click(GENERAL.navLink('Secrets'));
+    await click(GENERAL.navLink('Secrets sync'));
     await click(GENERAL.tab('Destinations'));
     await click(GENERAL.listItemLink);
     assert.dom(GENERAL.tab('Secrets')).hasClass('active', 'Secrets hdsTab is active');

@@ -2,11 +2,20 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
+<Sidebar::Nav::ResilienceAndRecovery />
 
-<Page::Header @title="Seal this Vault" />
+<Page::Header @title="Seal Vault">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="Seal Vault")}}
+    />
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if this.model.seal.canUpdate}}
   <SealAction @onSeal={{action "seal"}} />
 {{else}}
-  <EmptyState @title="This token does not have sufficient capabilities to seal this vault" />
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header @title="This token does not have sufficient capabilities to seal this vault" @titleTag="h2" />
+  </Hds::ApplicationState>
 {{/if}}

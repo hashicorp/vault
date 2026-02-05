@@ -40,7 +40,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
   });
 
   test('it should link to correct routes at the cluster level', async function (assert) {
-    assert.expect(9);
+    assert.expect(8);
 
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
@@ -59,8 +59,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
 
     const links = [
       { label: 'Raft Storage', route: '/vault/storage/raft' },
-      { label: 'Seal Vault', route: '/vault/settings/seal' },
-      { label: 'Secrets Engines', route: '/vault/secrets-engines' },
+      { label: 'Secrets', route: '/vault/secrets-engines' },
       { label: 'Dashboard', route: '/vault/dashboard' },
     ];
 
@@ -115,8 +114,8 @@ module('Acceptance | sidebar navigation', function (hooks) {
 
   test('it should link to correct routes at the client counts level', async function (assert) {
     assert.expect(7);
-    await click(link('Client Count'));
-    assert.dom(panel('Client Count')).exists('Client counts nav panel renders');
+    await click(link('Client count'));
+    assert.dom(panel('Client count')).exists('Client counts nav panel renders');
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Top level nav link renders overview');
     assert.dom(link('Client Usage')).hasClass('active');
     await click(link('Configuration'));

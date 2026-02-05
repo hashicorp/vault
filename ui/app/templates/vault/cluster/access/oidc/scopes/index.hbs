@@ -55,16 +55,16 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState
-    @title="No scopes yet"
-    @message="Use scope to define identity information about the authenticated user."
-    data-test-oidc-scope-empty-state
-  >
-    <Hds::Link::Standalone
-      @iconPosition="trailing"
-      @icon="docs-link"
-      @text="OIDC provider scopes"
-      @href={{doc-link "/vault/docs/concepts/oidc-provider#scopes"}}
-    />
-  </EmptyState>
+  <Hds::ApplicationState @align="center" class="top-padding-32" data-test-oidc-scope-empty-state as |A|>
+    <A.Header data-test-empty-state-title @title="No scopes yet" @titleTag="h2" />
+    <A.Body data-test-empty-state-message @text="Use scope to define identity information about the authenticated user." />
+    <A.Footer data-test-empty-state-actions as |F|>
+      <F.LinkStandalone
+        @iconPosition="trailing"
+        @icon="docs-link"
+        @text="OIDC provider scopes"
+        @href={{doc-link "/vault/docs/concepts/oidc-provider#scopes"}}
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
 {{/if}}
