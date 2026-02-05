@@ -31,9 +31,12 @@ Usage: vault transit <subcommand> [options] [args]
 
   $ vault transit import transit/keys/newly-imported @path/to/key type=rsa-2048
 
+  To encrypt a file using envelope encryption (Enterprise only),:
+
+  $ vault transit envelope encrypt transit/keys/kek myfile.txt
+
   Please see the individual subcommand help for detailed usage information.
 `
-
 	return strings.TrimSpace(helpText)
 }
 

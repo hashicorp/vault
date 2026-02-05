@@ -54,5 +54,5 @@ func (c *TransitImportVersionCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *TransitImportVersionCommand) Run(args []string) int {
-	return ImportKey(c.BaseCommand, "import_version", transitImportKeyPath, c.Flags(), args)
+	return ImportKey(c.BaseCommand, "import_version", transitKeyPath, c.Flags(), args)
 }

@@ -25,7 +25,7 @@ import (
 var (
 	_       cli.Command             = (*TransitImportCommand)(nil)
 	_       cli.CommandAutocomplete = (*TransitImportCommand)(nil)
-	keyPath                         = regexp.MustCompile("^(.*)/keys/([^/]*)$")
+	keyPath                         = regexp.MustCompile("^(.+)/keys/([^/]+)$")
 )
 
 type TransitImportCommand struct {
@@ -67,10 +67,10 @@ func (c *TransitImportCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *TransitImportCommand) Run(args []string) int {
-	return ImportKey(c.BaseCommand, "import", transitImportKeyPath, c.Flags(), args)
+	return ImportKey(c.BaseCommand, "import", transitKeyPath, c.Flags(), args)
 }
 
-func transitImportKeyPath(s string, operation string) (path string, apiPath string, err error) {
+func transitKeyPath(s string, operation string) (path string, apiPath string, err error) {
 	parts := keyPath.FindStringSubmatch(s)
 	if len(parts) != 3 {
 		return "", "", errors.New("expected transit path and key name in the form :path:/keys/:name:")
@@ -82,10 +82,10 @@ func transitImportKeyPath(s string, operation string) (path string, apiPath stri
 	return path, apiPath, nil
 }
 
-type ImportKeyFunc func(s string, operation string) (path string, apiPath string, err error)
+type TransitKeyFunc func(s string, operation string) (path string, apiPath string, err error)
 
 // error codes: 1: user error, 2: internal computation error, 3: remote api call error
-func ImportKey(c *BaseCommand, operation string, pathFunc ImportKeyFunc, flags *FlagSets, args []string) int {
+func ImportKey(c *BaseCommand, operation string, pathFunc TransitKeyFunc, flags *FlagSets, args []string) int {
 	// Parse and validate the arguments.
 	if err := flags.Parse(args); err != nil {
 		c.UI.Error(err.Error())

@@ -723,6 +723,31 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"transit envelope": func() (cli.Command, error) {
+			return &TransitEnvelopeCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+
+		"transit envelope encrypt": func() (cli.Command, error) {
+			return &TransitEncryptCommand{
+				transitEnvEncCommand: transitEnvEncCommand{
+					BaseCommand: getBaseCommand(),
+				},
+			}, nil
+		},
+		"transit envelope decrypt": func() (cli.Command, error) {
+			return &TransitDecryptCommand{
+				transitEnvEncCommand: transitEnvEncCommand{
+					BaseCommand: getBaseCommand(),
+				},
+			}, nil
+		},
+		"transit envelope header": func() (cli.Command, error) {
+			return &TransitEnvHeaderCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"transit import": func() (cli.Command, error) {
 			return &TransitImportCommand{
 				BaseCommand: getBaseCommand(),

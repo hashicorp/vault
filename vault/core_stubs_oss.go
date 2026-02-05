@@ -36,7 +36,7 @@ func (c *Core) EntGetLicense() (string, error) {
 	return "", nil
 }
 
-func (c *Core) EntReloadLicenseAndConfig(testLicenseConfigChange *LicensingEntitlementSelectionConfig) error {
+func (c *Core) EntReloadLicenseAndConfig(mockLicenseConfigChange *LicensingEntitlementSelectionConfig) error {
 	return nil
 }
 
