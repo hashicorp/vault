@@ -5,7 +5,7 @@
 
 {{#if (or @config.reporting_enabled (eq @config.enabled "default-enabled") (eq @config.enabled "enable"))}}
   <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header data-test-empty-state-title @title="No data received" />
+    <A.Header data-test-empty-state-title @title="No data received" @titleTag="h2" />
     <A.Body
       data-test-empty-state-message
       @text="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
@@ -13,7 +13,7 @@
   </Hds::ApplicationState>
 {{else if @config}}
   <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header data-test-empty-state-title @title="Data tracking is disabled" />
+    <A.Header data-test-empty-state-title @title="Data tracking is disabled" @titleTag="h2" />
     <A.Body
       data-test-empty-state-message
       @text="Tracking is disabled, and no data is being collected. To turn it on, edit the configuration."
@@ -32,7 +32,7 @@
   </Hds::ApplicationState>
 {{else}}
   <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header data-test-empty-state-title @title="Activity configuration data is unavailable" />
+    <A.Header data-test-empty-state-title @title="Activity configuration data is unavailable" @titleTag="h2" />
     <A.Body
       data-test-empty-state-message
       @text="Reporting status is unknown and could be enabled or disabled. Check the Vault logs for more information."

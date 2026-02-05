@@ -99,7 +99,7 @@
                 <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
               {{else}}
                 <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
-                  <A.Header @title="No provider selected" />
+                  <A.Header @title="No provider selected" @titleTag="h2" />
                   <A.Body @text="Select a provider in order to configure it." />
                 </Hds::ApplicationState>
               {{/if}}
@@ -171,7 +171,7 @@
 
           {{else}}
             <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
-              <A.Header @title="No keys for this provider" />
+              <A.Header @title="No keys for this provider" @titleTag="h2" />
               <A.Body @text="Keys for this provider will be listed here. Add a key to get started." />
               <A.Footer as |F|>
                 <F.LinkStandalone

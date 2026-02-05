@@ -171,7 +171,13 @@
       </h2>
       {{#if @model.provider.permissionsError}}
         <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
-          <A.Header @title="You are not authorized" @errorCode="403" @icon="minus-circle" />
+          <A.Header
+            @title="You are not authorized"
+            @titleTag="h2"
+            @errorCode="403"
+            @icon="minus-circle"
+            class="align-items-end"
+          />
           <A.Body
             @text={{concat
               "You must be granted permissions to see whether this key is distributed. Ask your administrator if you think you should have access to LIST /"
@@ -189,7 +195,7 @@
           class="top-padding-32 bottom-padding-32"
           as |A|
         >
-          <A.Header @title="Key not distributed" />
+          <A.Header @title="Key not distributed" @titleTag="h2" />
           <A.Body @text="When this key is distributed to a destination, those details will appear here." />
           {{#if @model.canListProviders}}
             <A.Footer>
@@ -226,7 +232,13 @@
           {{/each}}
         {{else}}
           <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
-            <A.Header @title="You are not authorized" @errorCode="403" @icon="minus-circle" />
+            <A.Header
+              @title="You are not authorized"
+              @titleTag="h2"
+              @errorCode="403"
+              @icon="minus-circle"
+              class="align-items-end"
+            />
             <A.Body
               @text={{concat
                 "You must be granted permissions to view distribution details for this key. Ask your administrator if you think you should have access to GET /"

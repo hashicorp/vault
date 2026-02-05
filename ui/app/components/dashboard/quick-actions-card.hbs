@@ -86,13 +86,13 @@
       {{/if}}
     {{else}}
       <Hds::ApplicationState @align="center" data-test-empty-state="no-mount-selected" as |A|>
-        <A.Header data-test-empty-state-title @title="No mount selected" />
+        <A.Header data-test-empty-state-title @title="No mount selected" @titleTag="h2" />
         <A.Body data-test-empty-state-message @text="Select a mount above to get started." />
       </Hds::ApplicationState>
     {{/if}}
   {{else}}
     <Hds::ApplicationState @align="center" data-test-empty-state="quick-actions" as |A|>
-      <A.Header data-test-empty-state-title @title="Welcome to quick actions" />
+      <A.Header data-test-empty-state-title @title="Welcome to quick actions" @titleTag="h2" />
       <A.Body
         data-test-empty-state-message
         @text="Access secret engine actions easily. Enable a compatible secret engine (such as database, KV version 2, or PKI) to get started."
