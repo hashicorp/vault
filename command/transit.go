@@ -33,6 +33,7 @@ Usage: vault transit <subcommand> [options] [args]
 
   Please see the individual subcommand help for detailed usage information.
 `
+
 	return strings.TrimSpace(helpText)
 }
 
