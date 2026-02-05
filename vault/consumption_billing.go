@@ -57,6 +57,8 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 			case <-endOfMonth.C:
 				// Reset the timer for the next month
 				endOfMonth.Reset(time.Until(timeutil.StartOfNextMonth(time.Now())))
+				// Reset KMIP enabled flag for the new billing month
+				c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
 				// On month boundary, we need to flush the current in-memory counts to storage
 				if err := c.updateBillingMetrics(ctx); err != nil {
 					c.logger.Error("error updating billing metrics at month boundary", "error", err)
@@ -126,11 +128,18 @@ func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time
 	} else {
 		c.logger.Info("updated local max external plugin counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
 	}
+	if _, err := c.UpdateKmipEnabled(ctx, currentMonth); err != nil {
+		c.logger.Error("error updating local kmip enabled", "error", err)
+	} else {
+		c.logger.Info("updated local kmip enabled", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+	}
 
 	return nil
 }
 
+// UpdateLocalAggregatedMetrics updates local metrics that are aggregated across all replicated clusters
 func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth time.Time) error {
+	// Update aggregrated count of data protection calls
 	if _, err := c.UpdateDataProtectionCallCounts(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store transit data protection call counts: %w", err)
 	}
