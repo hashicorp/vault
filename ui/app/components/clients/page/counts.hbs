@@ -78,7 +78,7 @@
     {{else}}
       {{! Empty state for no data in the selected date range }}
       <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-        <A.Header data-test-empty-state-title @title="No data received" />
+        <A.Header data-test-empty-state-title @title="No data received" @titleTag="h2" />
         <A.Body
           data-test-empty-state-message
           @text={{if
@@ -92,7 +92,11 @@
   {{else if (and this.version.isCommunity (or (not @startTimestamp) (not @endTimestamp)))}}
     {{! Empty state for community without start or end query param }}
     <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-      <A.Header data-test-empty-state-title @title="Input the start and end dates to view client attribution by path." />
+      <A.Header
+        data-test-empty-state-title
+        @title="Input the start and end dates to view client attribution by path."
+        @titleTag="h2"
+      />
       <A.Body
         data-test-empty-state-message
         @text="Only historical data may be queried. No data is available for the current month."
