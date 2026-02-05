@@ -290,7 +290,7 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	allowedInactiveCEChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr("changelog/_2837.md"),
 				},
@@ -305,14 +305,14 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	onlyEnterpriseChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr(".github/workflows/build-artifacts-ent.yml"),
 				},
 				Groups: changed.FileGroups{"enterprise", "pipeline"},
 			},
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr("vault/vault_ent/go.mod"),
 				},
@@ -327,14 +327,14 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	mixedCEAndEnterpriseChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("e1c10eae02e13f5a090b9c29b0b1a3003e8ca7f6"),
 					Filename: libgithub.Ptr("go.mod"),
 				},
 				Groups: changed.FileGroups{"app", "gotoolchain"},
 			},
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("a6397662ea1d5fdde744ff3e4246377cf369197a"),
 					Filename: libgithub.Ptr("vault_ent/go.mod"),
 				},
@@ -349,14 +349,14 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	allCEChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr(".github/workflows/build.yml"),
 				},
 				Groups: changed.FileGroups{"pipeline"},
 			},
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr("go.mod"),
 				},

@@ -50,6 +50,18 @@ func GroupFiles(ctx context.Context, files []*File, checkers ...FileGroupCheck) 
 	}
 }
 
+// Groups takes a set Files and returns a set of all all FileGroups
+func Groups(files Files) FileGroups {
+	groups := FileGroups{}
+	for _, file := range files {
+		for _, group := range file.Groups {
+			groups = groups.Add(group)
+		}
+	}
+
+	return groups
+}
+
 // FileGroupCheckerApp is a file group checker that groups based on the file being part of the Vault
 // Go app
 func FileGroupCheckerApp(ctx context.Context, file *File) FileGroups {
@@ -155,6 +167,18 @@ func FileGroupCheckerEnos(ctx context.Context, file *File) FileGroups {
 func FileGroupCheckerEnterprise(ctx context.Context, file *File) FileGroups {
 	name := file.Name()
 
+	// Explicit exceptions. When we implement the pipeline.hcl config syntax for
+	// changed files we'll need to add these here or change them to something
+	// that doesn't trip the rest of our criteria.
+	switch {
+	case hasBaseDir(name, "website"): // ignore the website entirely
+		return nil
+	case name == ".github/workflows/backport-automation-ent.yml":
+		return nil
+	case name == ".github/workflows/build-artifacts-ent.yml":
+		return nil
+	}
+
 	// Base directory checks
 	switch {
 	case
@@ -249,6 +273,7 @@ func FileGroupCheckerPipeline(ctx context.Context, file *File) FileGroups {
 		hasBaseDir(name, filepath.Join(".github", "workflows")),
 		hasBaseDir(name, filepath.Join(".github", "actions")),
 		hasBaseDir(name, filepath.Join(".github", "scripts")),
+		hasBaseDir(name, ".hooks"),
 		hasBaseDir(name, ".release"),
 		hasBaseDir(name, "scripts"),
 		hasBaseDir(name, filepath.Join("tools", "pipeline")),
