@@ -22,6 +22,7 @@ const (
 	TransitDataProtectionCallCountsPrefix = "transitDataProtectionCallCounts/"
 	LocalPrefix                           = "local/"
 	ThirdPartyPluginsPrefix               = "thirdPartyPluginCounts/"
+	KmipEnabledPrefix                     = "kmipEnabled/"
 
 	BillingWriteInterval = 10 * time.Minute
 )
@@ -35,6 +36,10 @@ type ConsumptionBilling struct {
 	BillingConfig            BillingConfig
 	DataProtectionCallCounts DataProtectionCallCounts
 	Logger                   log.Logger
+
+	// KmipSeenEnabledThisMonth tracks whether KMIP has been enabled during the current billing month.
+	// This is used to avoid scanning all mounts every 10 minutes for KMIP billing detection.
+	KmipSeenEnabledThisMonth atomic.Bool
 }
 
 type BillingConfig struct {

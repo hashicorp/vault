@@ -329,3 +329,59 @@ func (c *Core) UpdateDataProtectionCallCounts(ctx context.Context, currentMonth 
 
 	return storedDataProtectionCallCounts, nil
 }
+
+func (c *Core) storeKmipEnabledLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, kmipEnabled bool) error {
+	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, currentMonth, billing.KmipEnabledPrefix)
+	entry, err := logical.StorageEntryJSON(billingPath, kmipEnabled)
+	if err != nil {
+		return err
+	}
+	return c.GetBillingSubView().Put(ctx, entry)
+}
+
+func (c *Core) getStoredKmipEnabledLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (bool, error) {
+	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, currentMonth, billing.KmipEnabledPrefix)
+	entry, err := c.GetBillingSubView().Get(ctx, billingPath)
+	if err != nil {
+		return false, err
+	}
+	if entry == nil {
+		return false, nil
+	}
+	var kmipEnabled bool
+	if err := entry.DecodeJSON(&kmipEnabled); err != nil {
+		return false, err
+	}
+	return kmipEnabled, nil
+}
+
+func (c *Core) GetStoredKmipEnabled(ctx context.Context, currentMonth time.Time) (bool, error) {
+	c.consumptionBilling.BillingStorageLock.RLock()
+	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	return c.getStoredKmipEnabledLocked(ctx, billing.LocalPrefix, currentMonth)
+}
+
+// UpdateKmipEnabled updates the KMIP enabled status for the current month.
+// Note that each cluster is billed independently, so we only store the status at the local prefix.
+// Additionally, KMIP usage detection covers both local and replicated mounts, meaning if primary has KMIP,
+// secondary also detects it and gets charged. This is intentional, as the KMIP usage is per cluster.
+// We only store true when KMIP is enabled; we never store false. This means storing true multiple times
+// is idempotent and safe.
+func (c *Core) UpdateKmipEnabled(ctx context.Context, currentMonth time.Time) (bool, error) {
+	c.consumptionBilling.BillingStorageLock.Lock()
+	defer c.consumptionBilling.BillingStorageLock.Unlock()
+
+	// Check if KMIP is currently enabled, including replicated mounts
+	kmipEnabled, err := c.IsKMIPEnabled(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	if kmipEnabled {
+		if err := c.storeKmipEnabledLocked(ctx, billing.LocalPrefix, currentMonth, true); err != nil {
+			return false, err
+		}
+	}
+
+	return kmipEnabled, nil
+}
