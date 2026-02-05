@@ -87,7 +87,7 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 
 	// Data protection call counts are stored to local path only
 	// Each cluster tracks its own total requests to avoid double counting
-	localDataProtectionCallCounts, err := b.Core.UpdateDataProtectionCallCounts(ctx, currentMonth)
+	localDataProtectionCallCounts, err := b.Core.UpdateTransitCallCounts(ctx, currentMonth)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving local max data protection call counts: %w", err)
 	}
@@ -121,7 +121,7 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 	}
 
 	// Data protection counts for previous month
-	localPreviousMonthDataProtectionCallCounts, err := b.Core.GetStoredDataProtectionCallCounts(ctx, previousMonth)
+	localPreviousMonthTransitCallCounts, err := b.Core.GetStoredTransitCallCounts(ctx, previousMonth)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving local max data protection call counts for previous month: %w", err)
 	}
@@ -129,7 +129,7 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 	combinedPreviousMonthRoleCounts := combineRoleCounts(replicatedPreviousMonthRoleCounts, localPreviousMonthRoleCounts)
 	combinedPreviousMonthKvHWMCounts := replicatedPreviousMonthKvHWMCounts + localPreviousMonthKvHWMCounts
 	// Data protection counts are not combined - each cluster reports its own total
-	combinedPreviousMonthDataProtectionCallCounts := localPreviousMonthDataProtectionCallCounts
+	combinedPreviousMonthTransitCallCounts := localPreviousMonthTransitCallCounts
 
 	resp := map[string]interface{}{
 		"current_month": map[string]interface{}{
@@ -142,7 +142,7 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 			"timestamp":                   previousMonth,
 			"maximum_role_counts":         combinedPreviousMonthRoleCounts,
 			"maximum_kv_counts":           combinedPreviousMonthKvHWMCounts,
-			"data_protection_call_counts": combinedPreviousMonthDataProtectionCallCounts,
+			"data_protection_call_counts": combinedPreviousMonthTransitCallCounts,
 		},
 	}
 
