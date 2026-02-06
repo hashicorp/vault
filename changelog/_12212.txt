@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki (enterprise): Address cache invalidation issues with CMPv2 on performance standby nodes.
+```
