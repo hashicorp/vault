@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
-package git
+package client
 
 import (
 	"testing"
@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test our opts structs ability to render the correct flags in the correct order
-// NOTE: Many of thests use incompatible options but that's not what we care about,
-// we're simply asserting that the rendered string matches what ought to be there
-// give the config.
-// We have chosen not to try and very flag combinations. Instead we render it
-// and execute it and rely on git to handle validation of options.
+// Test the various Opts structs ability to render the correct flags in the
+// correct order.
+// NOTE: Many of these tests use incompatible options combinations but that's
+// not what we care about, we're simply asserting that the rendered string
+// matches what ought to be there given the config. Verifying flag options is
+// not currently part of the library.
 func TestOptsStringers(t *testing.T) {
 	t.Parallel()
 
@@ -796,6 +796,13 @@ func TestOptsStringers(t *testing.T) {
 			},
 			"--diff-algorithm=histogram --diff-merges=dense-combined --format=medium --no-color --no-patch --output=/path/to/my.diff --patch --quiet --raw HEAD -- go.mod go.sum",
 		},
+		"show pretty none name only": {
+			&ShowOpts{
+				Pretty:   LogPrettyFormatNone,
+				NameOnly: true,
+			},
+			"--pretty= --name-only ",
+		},
 		"status": {
 			&StatusOpts{
 				AheadBehind:      true,
@@ -817,6 +824,224 @@ func TestOptsStringers(t *testing.T) {
 				PathSpec:         []string{"go.mod", "go.sum"},
 			},
 			"--ahead-behind --branch --column=always --find-renames=12 --ignored=matching --ignore-submodules=dirty --long --no-ahead-behind --no-column --no-renames --porcelain --renames --short --show-stash --untracked-files=all --verbose -- go.mod go.sum",
+		},
+		"log 1/3 opts": {
+			&LogOpts{
+				MaxCount:         10,
+				Skip:             5,
+				Since:            "2 weeks ago",
+				After:            "1 week ago",
+				Until:            "yesterday",
+				Before:           "today",
+				Author:           "John Doe",
+				Committer:        "Jane Smith",
+				Grep:             "bug fix",
+				AllMatch:         true,
+				InvertGrep:       true,
+				RegexpIgnoreCase: true,
+				Merges:           true,
+				NoMerges:         true,
+				FirstParent:      true,
+			},
+			"--max-count=10 --skip=5 --since=2 weeks ago --after=1 week ago --until=yesterday --before=today --author=John Doe --committer=Jane Smith --grep=bug fix --all-match --invert-grep --regexp-ignore-case --merges --no-merges --first-parent",
+		},
+		"log 2/3 opts": {
+			&LogOpts{
+				All:            true,
+				Branches:       []string{"main", "develop"},
+				Tags:           []string{"v1.0", "v2.0"},
+				Remotes:        []string{"origin", "upstream"},
+				Oneline:        true,
+				Pretty:         LogPrettyFormatFull,
+				Format:         "%h %an %s",
+				AbbrevCommit:   true,
+				NoAbbrevCommit: true,
+				Abbrev:         7,
+				Decorate:       LogDecorateFormatShort,
+				DecorateRefs:   []string{"refs/heads/*", "refs/tags/*"},
+				Source:         true,
+				Graph:          true,
+				Date:           LogDateFormatRelative,
+				RelativeDate:   true,
+			},
+			"--all --branches=main --branches=develop --tags=v1.0 --tags=v2.0 --remotes=origin --remotes=upstream --oneline --pretty=full --format=%h %an %s --abbrev-commit --no-abbrev-commit --abbrev=7 --decorate=short --decorate-refs=refs/heads/* --decorate-refs=refs/tags/* --source --graph --date=relative --relative-date",
+		},
+		"log 3/3 opts": {
+			&LogOpts{
+				Patch:                true,
+				NoPatch:              true,
+				Stat:                 true,
+				Shortstat:            true,
+				NameOnly:             true,
+				NameStatus:           true,
+				DiffMerges:           DiffMergeFormatCombined,
+				CombinedDiff:         true,
+				DenseCombined:        true,
+				Follow:               true,
+				FullDiff:             true,
+				DateOrder:            true,
+				AuthorDateOrder:      true,
+				TopoOrder:            true,
+				Reverse:              true,
+				SimplifyByDecoration: true,
+				FullHistory:          true,
+				AncestryPath:         true,
+				ShowPulls:            true,
+				WalkReflogs:          true,
+				Color:                true,
+				NoColor:              true,
+				NullSep:              true,
+				Target:               "HEAD~5..HEAD",
+				PathSpec:             []string{"go.mod", "go.sum"},
+			},
+			"HEAD~5..HEAD --patch --no-patch --stat --shortstat --name-only --name-status --diff-merges=combined -c --cc --follow --full-diff --date-order --author-date-order --topo-order --reverse --simplify-by-decoration --full-history --ancestry-path --show-pulls --walk-reflogs --color --no-color -z -- go.mod go.sum",
+		},
+		"log oneline": {
+			&LogOpts{
+				Oneline:  true,
+				MaxCount: 10,
+			},
+			"--max-count=10 --oneline",
+		},
+		"log with author and grep": {
+			&LogOpts{
+				Author:           "example@hashicorp.com",
+				Grep:             "fix",
+				RegexpIgnoreCase: true,
+				NoMerges:         true,
+			},
+			"--author=example@hashicorp.com --grep=fix --regexp-ignore-case --no-merges",
+		},
+		"log graph with decoration": {
+			&LogOpts{
+				Graph:    true,
+				Oneline:  true,
+				All:      true,
+				Decorate: LogDecorateFormatShort,
+			},
+			"--all --oneline --decorate=short --graph",
+		},
+		"log with pathspec": {
+			&LogOpts{
+				Patch:    true,
+				Follow:   true,
+				PathSpec: []string{"path/to/file.go"},
+			},
+			"--patch --follow -- path/to/file.go",
+		},
+		"log date range": {
+			&LogOpts{
+				Since:    "2024-01-01",
+				Until:    "2024-12-31",
+				Pretty:   LogPrettyFormatShort,
+				NoMerges: true,
+			},
+			"--since=2024-01-01 --until=2024-12-31 --no-merges --pretty=short",
+		},
+		"log pretty none": {
+			&LogOpts{
+				Pretty: LogPrettyFormatNone,
+			},
+			"--pretty=",
+		},
+		"log with diff-filter multiple": {
+			&LogOpts{
+				DiffFilter: []LogDiffFilter{
+					LogDiffFilterAdded,
+					LogDiffFilterModified,
+					LogDiffFilterDeleted,
+				},
+				NameStatus: true,
+				MaxCount:   10,
+			},
+			"--max-count=10 --name-status --diff-filter=AMD",
+		},
+		"log with diff-filter added": {
+			&LogOpts{
+				DiffFilter: []LogDiffFilter{LogDiffFilterAdded},
+				NameOnly:   true,
+			},
+			"--name-only --diff-filter=A",
+		},
+		"log with diff-filter copied": {
+			&LogOpts{
+				DiffFilter: []LogDiffFilter{LogDiffFilterCopied},
+				Stat:       true,
+			},
+			"--stat --diff-filter=C",
+		},
+		"log with diff-filter deleted": {
+			&LogOpts{
+				DiffFilter: []LogDiffFilter{LogDiffFilterDeleted},
+				NameStatus: true,
+			},
+			"--name-status --diff-filter=D",
+		},
+		"log with diff-filter modified": {
+			&LogOpts{
+				DiffFilter: []LogDiffFilter{LogDiffFilterModified},
+				Patch:      true,
+			},
+			"--patch --diff-filter=M",
+		},
+		"log with diff-filter renamed": {
+			&LogOpts{
+				DiffFilter: []LogDiffFilter{LogDiffFilterRenamed},
+				NameOnly:   true,
+			},
+			"--name-only --diff-filter=R",
+		},
+		"log with diff-filter type-changed": {
+			&LogOpts{
+				DiffFilter: []LogDiffFilter{LogDiffFilterTypeChanged},
+				NameStatus: true,
+			},
+			"--name-status --diff-filter=T",
+		},
+		"log with diff-filter unmerged": {
+			&LogOpts{
+				DiffFilter: []LogDiffFilter{LogDiffFilterUnmerged},
+				Stat:       true,
+			},
+			"--stat --diff-filter=U",
+		},
+		"log with diff-filter unknown": {
+			&LogOpts{
+				DiffFilter: []LogDiffFilter{LogDiffFilterUnknown},
+				NameOnly:   true,
+			},
+			"--name-only --diff-filter=X",
+		},
+		"log with diff-filter broken": {
+			&LogOpts{
+				DiffFilter: []LogDiffFilter{LogDiffFilterBroken},
+				NameStatus: true,
+			},
+			"--name-status --diff-filter=B",
+		},
+		"log with diff-filter all": {
+			&LogOpts{
+				DiffFilter: []LogDiffFilter{LogDiffFilterAll},
+				Stat:       true,
+			},
+			"--stat --diff-filter=*",
+		},
+		"log with diff-filter all types": {
+			&LogOpts{
+				DiffFilter: []LogDiffFilter{
+					LogDiffFilterAdded,
+					LogDiffFilterCopied,
+					LogDiffFilterDeleted,
+					LogDiffFilterModified,
+					LogDiffFilterRenamed,
+					LogDiffFilterTypeChanged,
+					LogDiffFilterUnmerged,
+					LogDiffFilterUnknown,
+					LogDiffFilterBroken,
+				},
+				NameStatus: true,
+			},
+			"--name-status --diff-filter=ACDMRTUXB",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
