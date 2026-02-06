@@ -67,7 +67,8 @@ export default class LdapRoleCredentialsRoute extends Route {
       return [currentPath, role.type, childResource];
     };
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: currentPath, route: 'overview' },
       { label: 'Roles', route: 'roles' },
       ...ldapBreadcrumbs(role.name, routeParams, roleRoutes),

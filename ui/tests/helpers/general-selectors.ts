@@ -194,4 +194,5 @@ export const GENERAL = {
   licenseBanner: (name: string) => `[data-test-license-banner="${name}"]`,
   tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
   tooltipText: '.hds-tooltip-container',
+  textDisplay: (attr: string) => `[data-test-text-display="${attr}"]`,
 };

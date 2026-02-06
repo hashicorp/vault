@@ -239,7 +239,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(PKI_ROLE_DETAILS.createRoleLink);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/roles/create`);
       assert.dom(GENERAL.breadcrumbs).exists({ count: 1 }, 'breadcrumbs are rendered');
-      assert.dom(GENERAL.breadcrumb).exists({ count: 4 }, 'Shows 4 breadcrumbs');
+      assert.dom(GENERAL.breadcrumb).exists({ count: 5 }, 'Shows 5 breadcrumbs');
       assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a PKI Role');
 
       await fillIn(GENERAL.inputByAttr('name'), roleName);
@@ -253,7 +253,7 @@ module('Acceptance | pki workflow', function (hooks) {
         currentURL(),
         `/vault/secrets-engines/${this.mountPath}/pki/roles/${roleName}/details`
       );
-      assert.dom(GENERAL.breadcrumb).exists({ count: 4 }, 'Shows 4 breadcrumbs');
+      assert.dom(GENERAL.breadcrumb).exists({ count: 5 }, 'Shows 5 breadcrumbs');
       assert.dom(GENERAL.hdsPageHeaderTitle).hasText('PKI Role');
       assert.dom(GENERAL.hdsPageHeaderSubtitle).hasText(roleName);
     });

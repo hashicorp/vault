@@ -271,15 +271,27 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
     test('it renders billing period text', async function (assert) {
       await this.renderComponent();
+
       assert
-        .dom(this.element)
-        .hasTextContaining('Client Usage For billing period:', 'it renders billing related text');
+        .dom(GENERAL.hdsPageHeaderTitle)
+        .hasTextContaining('Client usage', 'it renders page header title');
+      assert.dom(GENERAL.breadcrumbs).hasTextContaining('Vault Client usage', 'it renders breadcrumbs');
+      assert
+        .dom(GENERAL.textDisplay('change-billing-data'))
+        .hasTextContaining('Change billing period', 'it renders change billing period text');
     });
 
     test('it renders data period text for HVD managed clusters', async function (assert) {
       this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
       await this.renderComponent();
-      assert.dom(this.element).hasTextContaining('Client Usage For data period:');
+
+      assert
+        .dom(GENERAL.hdsPageHeaderTitle)
+        .hasTextContaining('Client usage', 'it renders page header title');
+      assert.dom(GENERAL.breadcrumbs).hasTextContaining('Vault Client usage', 'it renders breadcrumbs');
+      assert
+        .dom(GENERAL.textDisplay('change-billing-data'))
+        .hasTextContaining('Change data period', 'it renders change data period text');
     });
 
     test('it allows date editing if no billing start time is provided', async function (assert) {

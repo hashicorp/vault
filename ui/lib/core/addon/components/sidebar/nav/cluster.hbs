@@ -54,7 +54,7 @@
   {{/if}}
   {{#if (display-nav-item this.navSection.reporting)}}
     <Nav.Link
-      @route={{if this.canAccessVaultUsageDashboard "vault.cluster.usage-reporting" "vault.cluster.license"}}
+      @route={{if (display-nav-item this.routeName.vaultUsage) "vault.cluster.usage-reporting" "vault.cluster.license"}}
       @text="Reporting"
       data-test-sidebar-nav-link="Reporting"
       @hasSubItems={{true}}

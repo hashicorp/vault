@@ -31,7 +31,8 @@ export default class ConfigurationIndexRoute extends Route {
 
     controller.notConfiguredMessage = PKI_DEFAULT_EMPTY_STATE_MSG;
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: resolvedModel.engine.id, route: 'overview', model: resolvedModel.engine.id },
       { label: 'Configuration' },
     ];

@@ -87,6 +87,7 @@ export default class App extends Application {
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
+          vault: 'vault.cluster',
           secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
         },
       },
@@ -97,6 +98,7 @@ export default class App extends Application {
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
           secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
+          vault: 'vault.cluster',
         },
       },
     },
@@ -111,6 +113,7 @@ export default class App extends Application {
           'capabilities',
         ],
         externalRoutes: {
+          vault: 'vault.cluster',
           secrets: 'vault.cluster.secrets.backends',
           secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
           secretsPluginSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.plugin-settings',
@@ -131,6 +134,7 @@ export default class App extends Application {
           'version',
         ],
         externalRoutes: {
+          vault: 'vault.cluster',
           secrets: 'vault.cluster.secrets.backends',
           syncDestination: 'vault.cluster.sync.secrets.destinations.destination',
           secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
@@ -152,6 +156,7 @@ export default class App extends Application {
           'version',
         ],
         externalRoutes: {
+          vault: 'vault.cluster',
           secrets: 'vault.cluster.secrets.backends',
           externalMountIssuer: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
           secretsListRootConfiguration: 'vault.cluster.secrets.backend.configuration',

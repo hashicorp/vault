@@ -31,13 +31,13 @@ module('Acceptance | kubernetes | credentials', function (hooks) {
   test('it should have correct breadcrumb links in credentials view', async function (assert) {
     assert.expect(3);
     await this.visitRoleCredentials();
-    await click('[data-test-breadcrumbs] li:nth-child(3) a');
+    await click(GENERAL.breadcrumbAtIdx(4));
     this.validateRoute(assert, 'roles.role.details', 'Transitions to role details route on breadcrumb click');
     await this.visitRoleCredentials();
-    await click('[data-test-breadcrumbs] li:nth-child(2) a');
+    await click(GENERAL.breadcrumbAtIdx(3));
     this.validateRoute(assert, 'roles.index', 'Transitions to roles route on breadcrumb click');
     await this.visitRoleCredentials();
-    await click('[data-test-breadcrumbs] li:nth-child(1) a');
+    await click(GENERAL.breadcrumbAtIdx(2));
     this.validateRoute(assert, 'overview', 'Transitions to overview route on breadcrumb click');
   });
 

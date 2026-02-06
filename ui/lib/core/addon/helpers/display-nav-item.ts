@@ -120,6 +120,7 @@ export default class NavBar extends Helper {
 
   get supportsLicense() {
     return (
+      this.version.isEnterprise &&
       this?.version?.features &&
       this.isRootNamespace &&
       this.permissions.hasNavPermission('status', 'license') &&

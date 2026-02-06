@@ -34,6 +34,8 @@ export default class LdapRolesCreateRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'Roles', route: 'roles' },
       { label: 'Create' },

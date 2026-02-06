@@ -77,7 +77,7 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     await fillIn(GENERAL.inputByAttr('default_lease_ttl'), 11);
     await fillIn(GENERAL.selectByAttr('default_lease_ttl'), 'm');
     await fillIn(GENERAL.textareaByAttr('description'), 'Updated awesome description.');
-    await click(GENERAL.breadcrumbAtIdx(1));
+    await click(GENERAL.breadcrumbAtIdx(2));
     assert.dom(GENERAL.modal.container('unsaved-changes')).exists('Unsaved changes exists');
     await click(GENERAL.button('save'));
     await waitUntil(() => currentRouteName() === 'vault.cluster.secrets.backend.list-root');
@@ -96,7 +96,8 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     await fillIn(GENERAL.inputByAttr('default_lease_ttl'), 12);
     await fillIn(GENERAL.selectByAttr('default_lease_ttl'), 'm');
     await fillIn(GENERAL.textareaByAttr('description'), 'Some awesome description.');
-    await click(GENERAL.breadcrumbAtIdx(1));
+
+    await click(GENERAL.breadcrumbAtIdx(2));
     assert.dom(GENERAL.modal.container('unsaved-changes')).exists('Unsaved changes exists');
     await click(GENERAL.button('discard'));
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list-root');

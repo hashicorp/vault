@@ -44,7 +44,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await click(GENERAL.cardContainer('aws'));
     await fillIn(GENERAL.inputByAttr('path'), 'aws_engine');
     await click(GENERAL.submitButton);
-    await click(GENERAL.breadcrumbLink('Secrets'));
+    await click(GENERAL.breadcrumbLink('Secrets engines'));
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backends',
@@ -75,7 +75,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await click(GENERAL.dropdownToggle('Manage'));
     assert.dom(GENERAL.menuItem('Configure')).exists();
 
-    await click(GENERAL.breadcrumbLink('Secrets'));
+    await click(GENERAL.breadcrumbLink('Secrets engines'));
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backends',

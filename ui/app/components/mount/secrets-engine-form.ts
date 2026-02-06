@@ -44,7 +44,8 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
   @tracked errorMessage: string | string[] = '';
 
   get breadcrumbs() {
-    const breadcrumbs: { label: string; route?: string }[] = [
+    const breadcrumbs: { label: string; route?: string; icon?: string }[] = [
+      { label: 'Vault', route: 'vault.cluster', icon: 'vault' },
       { label: 'Secrets engines', route: 'vault.cluster.secrets.backends' },
       { label: 'Enable secrets engine', route: 'vault.cluster.secrets.enable' },
     ];

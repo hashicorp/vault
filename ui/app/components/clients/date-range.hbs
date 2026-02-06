@@ -7,7 +7,7 @@
   <div class="is-flex-column align-items-end">
     {{! Enterprise should always have a @billingStartTime but as a fallback allow the user to query dates manually }}
     {{#if (and @billingStartTime this.version.isEnterprise)}}
-      <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs">
+      <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs" data-test-text-display="change-billing-data">
         {{if this.flags.isHvdManaged "Change data period" "Change billing period"}}
       </Hds::Text::Display>
       <Hds::Dropdown class="has-left-margin-xs" as |D|>
