@@ -304,6 +304,10 @@ module "vault_test_ui" {
   ui_run_tests = var.ui_run_tests
 }
 
+module "vault_run_blackbox_test" {
+  source = "./modules/vault_run_blackbox_test"
+}
+
 module "vault_unseal_replication_followers" {
   source = "./modules/vault_unseal_replication_followers"
 

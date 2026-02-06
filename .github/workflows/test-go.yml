@@ -168,7 +168,7 @@ jobs:
         run: |
           # testonly tests need additional build tag though let's exclude them anyway for clarity
           (
-            make all-packages | grep -v "_binary" | grep -v "vault/integ" | grep -v "testonly" | gotestsum tool ci-matrix --debug \
+            make all-packages | grep -v "_binary\|testonly\|vault/integ\|vault/external_tests/blackbox" | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files '${{ steps.local-metadata.outputs.go-test-dir }}/*.json' > matrix.json
           )

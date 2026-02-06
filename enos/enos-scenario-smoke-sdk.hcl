@@ -1,14 +1,11 @@
 // Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
-scenario "smoke" {
+scenario "smoke_sdk" {
   description = <<-EOF
-    The smoke scenario verifies a Vault cluster in a fresh installation. The build can be a local branch,
-    any CRT built Vault artifact saved to the local machine, or any CRT built Vault artifact in the
-    stable channel in Artifactory.
-
-    The scenario deploys a Vault cluster with the candidate build and performs an extended
-    set of baseline verification.
+    The smoke_sdk scenario deploys a Vault cluster and runs a comprehensive suite of blackbox SDK tests
+    instead of enos-based verification. This scenario validates core Vault functionality including leader election,
+    secrets engines, UI assets, replication status, and backend-specific features using the blackbox SDK.
 
     # How to run this scenario
 
@@ -62,10 +59,10 @@ scenario "smoke" {
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    // softhsm packages not available for sles (at the time of development)
+    // softhsm packages not available for leap/sles.
     exclude {
       seal   = ["pkcs11"]
-      distro = ["sles"]
+      distro = ["leap", "sles"]
     }
 
     // Testing in IPV6 mode is currently implemented for integrated Raft storage only
@@ -87,6 +84,7 @@ scenario "smoke" {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
       amzn   = provider.enos.ec2_user
+      leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
       ubuntu = provider.enos.ubuntu
@@ -359,7 +357,7 @@ scenario "smoke" {
   }
 
   // Wait for our cluster to elect a leader
-  step "wait_for_new_leader" {
+  step "wait_for_leader" {
     description = global.description.wait_for_cluster_to_have_leader
     module      = module.vault_wait_for_leader
     depends_on  = [step.create_vault_cluster]
@@ -371,78 +369,6 @@ scenario "smoke" {
     verifies = [
       quality.vault_api_sys_leader_read,
       quality.vault_unseal_ha_leader_election,
-    ]
-
-    variables {
-      timeout           = 120 // seconds
-      ip_version        = matrix.ip_version
-      hosts             = step.create_vault_cluster_targets.hosts
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
-  step "get_leader_ip_for_step_down" {
-    description = global.description.get_vault_cluster_ip_addresses
-    module      = module.vault_get_cluster_ips
-    depends_on  = [step.wait_for_new_leader]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_api_sys_ha_status_read,
-      quality.vault_api_sys_leader_read,
-      quality.vault_cli_operator_members,
-    ]
-
-    variables {
-      hosts             = step.create_vault_cluster_targets.hosts
-      ip_version        = matrix.ip_version
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
-  // Force a step down to trigger a new leader election
-  step "vault_leader_step_down" {
-    description = global.description.vault_leader_step_down
-    module      = module.vault_step_down
-    depends_on  = [step.get_leader_ip_for_step_down]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_api_sys_step_down_steps_down,
-      quality.vault_cli_operator_step_down,
-    ]
-
-    variables {
-      leader_host       = step.get_leader_ip_for_step_down.leader_host
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
-  // Wait for our cluster to elect a leader
-  step "wait_for_leader" {
-    description = global.description.wait_for_cluster_to_have_leader
-    module      = module.vault_wait_for_leader
-    depends_on  = [step.vault_leader_step_down]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_api_sys_leader_read,
-      quality.vault_cli_operator_step_down,
     ]
 
     variables {
@@ -479,305 +405,48 @@ scenario "smoke" {
     }
   }
 
-  step "verify_vault_unsealed" {
-    description = global.description.verify_vault_unsealed
-    module      = module.vault_wait_for_cluster_unsealed
-    depends_on  = [step.wait_for_leader]
+  // Define smoke test suite
+  locals {
+    smoke_tests = [
+      "TestStepdownAndLeaderElection",
+      "TestSecretsEngineCreate",
+      "TestUnsealedStatus",
+      "TestVaultVersion",
+      "TestSecretsEngineRead",
+      "TestReplicationStatus",
+      "TestUIAssets",
+      "TestSecretsEngineDelete"
+    ]
+
+    // Add backend-specific tests
+    smoke_tests_with_backend = concat(
+      local.smoke_tests,
+      matrix.backend == "raft" ? [
+        "TestRaftVoters",
+        "TestNodeRemovalAndRejoin"
+      ] : []
+    )
+  }
+
+  // Run all blackbox SDK smoke tests
+  step "run_blackbox_tests" {
+    description = "Run blackbox SDK smoke tests: ${join(", ", local.smoke_tests_with_backend)}"
+    module      = module.vault_run_blackbox_test
+    depends_on  = [step.get_vault_cluster_ips]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
-    verifies = [
-      quality.vault_seal_awskms,
-      quality.vault_seal_pkcs11,
-      quality.vault_seal_shamir,
-    ]
-
     variables {
-      hosts             = step.create_vault_cluster_targets.hosts
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      leader_host      = step.get_vault_cluster_ips.leader_host
+      leader_public_ip = step.get_vault_cluster_ips.leader_public_ip
+      vault_root_token = step.create_vault_cluster.root_token
+      test_names       = local.smoke_tests_with_backend
+      test_package     = "./vault/external_tests/blackbox"
     }
   }
 
-  step "verify_vault_version" {
-    description = global.description.verify_vault_version
-    module      = module.vault_verify_version
-    depends_on  = [step.verify_vault_unsealed]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_api_sys_version_history_keys,
-      quality.vault_api_sys_version_history_key_info,
-      quality.vault_version_build_date,
-      quality.vault_version_edition,
-      quality.vault_version_release,
-    ]
-
-    variables {
-      hosts                 = step.create_vault_cluster_targets.hosts
-      vault_addr            = step.create_vault_cluster.api_addr_localhost
-      vault_edition         = matrix.edition
-      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
-      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
-      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
-      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
-      vault_root_token      = step.create_vault_cluster.root_token
-    }
-  }
-
-
-  step "verify_raft_auto_join_voter" {
-    description = global.description.verify_raft_cluster_all_nodes_are_voters
-    skip_step   = matrix.backend != "raft"
-    module      = module.vault_verify_raft_auto_join_voter
-    depends_on  = [step.verify_vault_unsealed]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = quality.vault_raft_voters
-
-    variables {
-      hosts             = step.create_vault_cluster_targets.hosts
-      ip_version        = matrix.ip_version
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
-  step "vault_remove_node_and_verify" {
-    description = <<-EOF
-      Remove a follower and ensure that it's marked as removed and can be added back once its data has been deleted
-    EOF
-    module      = matrix.backend == "raft" ? "vault_raft_remove_node_and_verify" : "vault_verify_removed_node_shim"
-    depends_on = [
-      step.create_vault_cluster,
-      step.get_vault_cluster_ips,
-      step.verify_vault_unsealed,
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_api_sys_storage_raft_remove_peer_write_removes_peer,
-      quality.vault_cli_operator_raft_remove_peer,
-      quality.vault_raft_removed_after_restart,
-      quality.vault_raft_removed_statuses,
-      quality.vault_raft_removed_cant_rejoin,
-      quality.vault_raft_removed_rejoin_after_deletion,
-    ]
-
-    variables {
-      add_back_nodes    = true
-      cluster_port      = step.create_vault_cluster.cluster_port
-      hosts             = step.get_vault_cluster_ips.follower_hosts
-      ip_version        = matrix.ip_version
-      listener_port     = step.create_vault_cluster.listener_port
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_leader_host = step.get_vault_cluster_ips.leader_host
-      vault_root_token  = step.create_vault_cluster.root_token
-      vault_seal_type   = matrix.seal
-      vault_unseal_keys = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
-    }
-  }
-
-  step "verify_secrets_engines_create" {
-    description = global.description.verify_secrets_engines_create
-    module      = module.vault_verify_secrets_engines_create
-    depends_on = [
-      step.get_vault_cluster_ips,
-      step.vault_remove_node_and_verify,
-      step.verify_vault_version
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_api_auth_userpass_login_write,
-      quality.vault_api_auth_userpass_user_write,
-      quality.vault_api_identity_entity_write,
-      quality.vault_api_identity_entity_alias_write,
-      quality.vault_api_identity_group_write,
-      quality.vault_api_identity_oidc_config_write,
-      quality.vault_api_identity_oidc_introspect_write,
-      quality.vault_api_identity_oidc_key_write,
-      quality.vault_api_identity_oidc_key_rotate_write,
-      quality.vault_api_identity_oidc_role_write,
-      quality.vault_api_identity_oidc_token_read,
-      quality.vault_api_sys_auth_userpass_user_write,
-      quality.vault_api_sys_policy_write,
-      quality.vault_mount_auth,
-      quality.vault_mount_kv,
-      quality.vault_secrets_kmip_write_config,
-      quality.vault_secrets_kv_write,
-      quality.vault_secrets_ldap_write_config,
-    ]
-
-    variables {
-      hosts                  = step.create_vault_cluster_targets.hosts
-      ip_version             = matrix.ip_version
-      integration_host_state = step.set_up_external_integration_target.state
-      leader_host            = step.get_vault_cluster_ips.leader_host
-      ports                  = global.ports
-      ipv4_cidr              = step.create_vpc.ipv4_cidr
-      vault_addr             = step.create_vault_cluster.api_addr_localhost
-      vault_edition          = matrix.edition
-      vault_install_dir      = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token       = step.create_vault_cluster.root_token
-    }
-  }
-
-  step "verify_replication" {
-    description = global.description.verify_replication_status
-    module      = module.vault_verify_replication
-    depends_on  = [step.vault_remove_node_and_verify]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_replication_ce_disabled,
-      quality.vault_replication_ent_dr_available,
-      quality.vault_replication_ent_pr_available,
-    ]
-
-    variables {
-      hosts         = step.create_vault_cluster_targets.hosts
-      vault_addr    = step.create_vault_cluster.api_addr_localhost
-      vault_edition = matrix.edition
-    }
-  }
-
-  step "verify_secrets_engines_read" {
-    description = global.description.verify_secrets_engines_read
-    module      = module.vault_verify_secrets_engines_read
-    depends_on = [
-      step.verify_secrets_engines_create,
-      step.verify_replication
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_api_auth_userpass_login_write,
-      quality.vault_api_identity_entity_read,
-      quality.vault_api_identity_oidc_config_read,
-      quality.vault_api_identity_oidc_key_read,
-      quality.vault_api_identity_oidc_role_read,
-      quality.vault_secrets_kv_read
-    ]
-
-    variables {
-      create_state      = step.verify_secrets_engines_create.state
-      hosts             = step.get_vault_cluster_ips.follower_hosts
-      ip_version        = matrix.ip_version
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_edition     = matrix.edition
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
-  step "verify_log_secrets" {
-    skip_step = !var.vault_enable_audit_devices || !var.verify_log_secrets
-
-    description = global.description.verify_log_secrets
-    module      = module.verify_log_secrets
-    depends_on = [
-      step.verify_secrets_engines_read,
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_audit_log_secrets,
-      quality.vault_journal_secrets,
-      quality.vault_radar_index_create,
-      quality.vault_radar_scan_file,
-    ]
-
-    variables {
-      audit_log_file_path = step.create_vault_cluster.audit_device_file_path
-      leader_host         = step.get_vault_cluster_ips.leader_host
-      vault_addr          = step.create_vault_cluster.api_addr_localhost
-      vault_root_token    = step.create_vault_cluster.root_token
-    }
-  }
-
-  step "verify_secrets_engines_delete" {
-    description = global.description.verify_secrets_engines_delete
-    module      = module.vault_verify_secrets_engines_delete
-    depends_on = [
-      step.verify_secrets_engines_create,
-      step.verify_secrets_engines_read
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_api_ssh_role_delete
-    ]
-
-    variables {
-      create_state      = step.verify_secrets_engines_create.state
-      hosts             = step.get_vault_cluster_ips.follower_hosts
-      leader_host       = step.get_vault_cluster_ips.leader_host
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
-  step "verify_ui" {
-    description = global.description.verify_ui
-    module      = module.vault_verify_ui
-    depends_on  = [step.vault_remove_node_and_verify]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = quality.vault_ui_assets
-
-    variables {
-      hosts      = step.create_vault_cluster_targets.hosts
-      vault_addr = step.create_vault_cluster.api_addr_localhost
-    }
-  }
-
-  output "audit_device_file_path" {
-    description = "The file path for the file audit device, if enabled"
-    value       = step.create_vault_cluster.audit_device_file_path
-  }
-
-  output "external_integration_server_ldap" {
-    description = "The LDAP test servers info"
-    value       = step.set_up_external_integration_target.state.ldap
-  }
-
-  output "integration_host_kmip_state" {
-    description = "The KMIP test servers info"
-    value       = step.set_up_external_integration_target.state.kmip
-  }
 
   output "cluster_name" {
     description = "The Vault cluster name"
@@ -817,12 +486,6 @@ scenario "smoke" {
   output "recovery_keys_hex" {
     description = "The Vault cluster recovery keys hex"
     value       = step.create_vault_cluster.recovery_keys_hex
-  }
-
-  output "secrets_engines_state" {
-    description = "The state of configured secrets engines"
-    sensitive   = true
-    value       = step.verify_secrets_engines_create.state
   }
 
   output "seal_key_attributes" {
