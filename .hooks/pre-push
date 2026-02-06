@@ -60,7 +60,7 @@ fail() {
 # that of hashicorp/vault-enterprise, otherwise it returns 1.
 remote_url_is_enterprise() {
   case "$1" in
-    git@github.com:hashicorp/vault-enterprise.git | https://github.com/hashicorp/vault-enterprise.git)
+    git@github.com:hashicorp/vault-enterprise* | https://github.com/hashicorp/vault-enterprise*)
       return 0
       ;;
     *)
