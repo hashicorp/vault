@@ -398,8 +398,8 @@ func TestHWMKvSecretsCounts(t *testing.T) {
 	require.Equal(t, 5, counts)
 }
 
-// TestTransitDataProtectionCallCounts tests that we correctly store and track the transit data protection call counts
-func TestTransitDataProtectionCallCounts(t *testing.T) {
+// TestDataProtectionCallCounts tests that we correctly store and track the data protection call counts
+func TestDataProtectionCallCounts(t *testing.T) {
 	t.Parallel()
 	coreConfig := &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -568,17 +568,19 @@ func TestTransitDataProtectionCallCounts(t *testing.T) {
 
 	// Now test persisting the summed counts - store and retrieve counts
 	// First, update the data protection call counts (this will sum current counter with stored value)
-	summedCounts, err := core.UpdateTransitCallCounts(ctx, time.Now())
+	summedCounts, err := core.UpdateDataProtectionCallCounts(ctx, time.Now())
 	require.NoError(t, err)
-	require.Equal(t, currentCount, summedCounts)
+	require.NotNil(t, summedCounts)
+	require.Equal(t, currentCount, summedCounts.Transit.Load())
 
 	// Verify the counter was reset after update
 	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts(), "Counter should be reset after update")
 
 	// Retrieve the stored counts
-	storedCounts, err := core.GetStoredTransitCallCounts(ctx, time.Now())
+	storedCounts, err := core.GetStoredDataProtectionCallCounts(ctx, time.Now())
 	require.NoError(t, err)
-	require.Equal(t, currentCount, storedCounts)
+	require.NotNil(t, storedCounts)
+	require.Equal(t, currentCount, storedCounts.Transit.Load())
 
 	// Perform more operations to increase the counter
 	req = logical.TestRequest(t, logical.UpdateOperation, "transit/encrypt/foo")
@@ -591,18 +593,18 @@ func TestTransitDataProtectionCallCounts(t *testing.T) {
 	require.Equal(t, uint64(1), core.GetInMemoryTransitDataProtectionCallCounts())
 
 	// Update counts again - should sum the new count (1) with the stored count (currentCount)
-	summedCounts, err = core.UpdateTransitCallCounts(ctx, time.Now())
+	summedCounts, err = core.UpdateDataProtectionCallCounts(ctx, time.Now())
 	require.NoError(t, err)
 	expectedSum := currentCount + 1
-	require.Equal(t, expectedSum, summedCounts, "Count should be sum of stored and current")
+	require.Equal(t, expectedSum, summedCounts.Transit.Load(), "Count should be sum of stored and current")
 
 	// Verify the counter was reset after update
 	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts(), "Counter should be reset after update")
 
 	// Verify stored counts are now the sum
-	storedCounts, err = core.GetStoredTransitCallCounts(ctx, time.Now())
+	storedCounts, err = core.GetStoredDataProtectionCallCounts(ctx, time.Now())
 	require.NoError(t, err)
-	require.Equal(t, expectedSum, storedCounts)
+	require.Equal(t, expectedSum, storedCounts.Transit.Load())
 
 	// Add more operations without manually resetting
 	for i := 0; i < 3; i++ {
@@ -617,29 +619,29 @@ func TestTransitDataProtectionCallCounts(t *testing.T) {
 	require.Equal(t, uint64(3), core.GetInMemoryTransitDataProtectionCallCounts())
 
 	// Update counts - should sum 3 with the previous stored sum
-	summedCounts, err = core.UpdateTransitCallCounts(ctx, time.Now())
+	summedCounts, err = core.UpdateDataProtectionCallCounts(ctx, time.Now())
 	require.NoError(t, err)
 	expectedSum = expectedSum + 3
-	require.Equal(t, expectedSum, summedCounts, "Count should continue to sum")
+	require.Equal(t, expectedSum, summedCounts.Transit.Load(), "Count should continue to sum")
 
 	// Verify the counter was reset after update
 	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts(), "Counter should be reset after update")
 
 	// Verify stored counts
-	storedCounts, err = core.GetStoredTransitCallCounts(ctx, time.Now())
+	storedCounts, err = core.GetStoredDataProtectionCallCounts(ctx, time.Now())
 	require.NoError(t, err)
-	require.Equal(t, expectedSum, storedCounts)
+	require.Equal(t, expectedSum, storedCounts.Transit.Load())
 
 	// Update again without any new operations
 	// This verifies we don't double-count
-	summedCounts, err = core.UpdateTransitCallCounts(ctx, time.Now())
+	summedCounts, err = core.UpdateDataProtectionCallCounts(ctx, time.Now())
 	require.NoError(t, err)
-	require.Equal(t, expectedSum, summedCounts, "Count should remain the same when no new operations occurred")
+	require.Equal(t, expectedSum, summedCounts.Transit.Load(), "Count should remain the same when no new operations occurred")
 
 	// Verify stored counts haven't changed
-	storedCounts, err = core.GetStoredTransitCallCounts(ctx, time.Now())
+	storedCounts, err = core.GetStoredDataProtectionCallCounts(ctx, time.Now())
 	require.NoError(t, err)
-	require.Equal(t, expectedSum, storedCounts, "Stored count should remain the same")
+	require.Equal(t, expectedSum, storedCounts.Transit.Load(), "Stored count should remain the same")
 
 	// Verify counter is still at 0
 	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts(), "Counter should still be 0")

@@ -15,15 +15,14 @@ import (
 )
 
 const (
-	BillingSubPath                          = "billing/"
-	ReplicatedPrefix                        = "replicated/"
-	RoleHWMCountsHWM                        = "maxRoleCounts/"
-	KvHWMCountsHWM                          = "maxKvCounts/"
-	TransitDataProtectionCallCountsPrefix   = "transitDataProtectionCallCounts/"
-	TransformDataProtectionCallCountsPrefix = "transformDataProtectionCallCounts/"
-	LocalPrefix                             = "local/"
-	ThirdPartyPluginsPrefix                 = "thirdPartyPluginCounts/"
-	KmipEnabledPrefix                       = "kmipEnabled/"
+	BillingSubPath                        = "billing/"
+	ReplicatedPrefix                      = "replicated/"
+	RoleHWMCountsHWM                      = "maxRoleCounts/"
+	KvHWMCountsHWM                        = "maxKvCounts/"
+	TransitDataProtectionCallCountsPrefix = "transitDataProtectionCallCounts/"
+	LocalPrefix                           = "local/"
+	ThirdPartyPluginsPrefix               = "thirdPartyPluginCounts/"
+	KmipEnabledPrefix                     = "kmipEnabled/"
 
 	BillingWriteInterval = 10 * time.Minute
 )
@@ -58,8 +57,9 @@ func GetMonthlyBillingPath(localPrefix string, now time.Time, billingMetric stri
 }
 
 type DataProtectionCallCounts struct {
-	Transit   *atomic.Uint64 `json:"transit,omitempty"`
-	Transform *atomic.Uint64 `json:"transform,omitempty"`
+	Transit *atomic.Uint64 `json:"transit,omitempty"`
+	// TODO: Uncomment when we add support for Transform tracking (VAULT-41205)
+	// Transform atomic.int64 `json:"transform,omitempty"`
 }
 
 var _ logical.ConsumptionBillingManager = (*ConsumptionBilling)(nil)
@@ -74,14 +74,6 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.DataProtectionCallCounts.Transit.Add(val)
-	case "transform":
-		val, ok := data["count"].(uint64)
-		if !ok {
-			err := fmt.Errorf("invalid value type for transform")
-			return err
-		}
-
-		s.DataProtectionCallCounts.Transform.Add(val)
 	default:
 		err := fmt.Errorf("unknown metric type: %s", mountType)
 		return err

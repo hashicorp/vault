@@ -3,18 +3,10 @@
 
 package vault
 
-func (c *Core) ResetInMemoryTransitDataProtectionCallCounts() {
+func (c *Core) ResetInMemoryDataProtectionCallCounts() {
 	c.consumptionBilling.DataProtectionCallCounts.Transit.Store(0)
 }
 
 func (c *Core) GetInMemoryTransitDataProtectionCallCounts() uint64 {
 	return c.consumptionBilling.DataProtectionCallCounts.Transit.Load()
-}
-
-func (c *Core) ResetInMemoryTransformDataProtectionCallCounts() {
-	c.consumptionBilling.DataProtectionCallCounts.Transform.Store(0)
-}
-
-func (c *Core) GetInMemoryTransformDataProtectionCallCounts() uint64 {
-	return c.consumptionBilling.DataProtectionCallCounts.Transform.Load()
 }
