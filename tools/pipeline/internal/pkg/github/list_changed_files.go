@@ -68,13 +68,11 @@ func (r *ListChangedFilesReq) Run(ctx context.Context, client *gh.Client) (*List
 	}
 
 	if r.GroupFiles {
+		// Add group metadata to each file
 		changed.GroupFiles(ctx, res.Files, changed.DefaultFileGroupCheckers...)
-		res.Groups = changed.FileGroups{}
-		for _, file := range res.Files {
-			for _, group := range file.Groups {
-				res.Groups = res.Groups.Add(group)
-			}
-		}
+
+		// Add the total unique set of groups
+		res.Groups = changed.Groups(res.Files)
 	}
 
 	return res, nil
@@ -114,7 +112,7 @@ func (r *ListChangedFilesReq) getCommitFiles(ctx context.Context, client *gh.Cli
 		}
 
 		for _, f := range commit.Files {
-			files = append(files, &changed.File{File: f})
+			files = append(files, &changed.File{GithubCommitFile: f})
 		}
 
 		if res.NextPage == 0 {
@@ -136,7 +134,7 @@ func (r *ListChangedFilesReq) getPullFiles(ctx context.Context, client *gh.Clien
 		}
 
 		for _, f := range fl {
-			files = append(files, &changed.File{File: f})
+			files = append(files, &changed.File{GithubCommitFile: f})
 		}
 
 		if res.NextPage == 0 {

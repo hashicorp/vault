@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
+	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	slogctx "github.com/veqryn/slog-context"
 )
 

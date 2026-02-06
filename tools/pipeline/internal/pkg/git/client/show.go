@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
-package git
+package client
 
 import (
 	"context"
@@ -36,6 +36,8 @@ type ShowOpts struct {
 	DiffAlgorithm DiffAlgorithm   // --diff-algorithm=<algo>
 	DiffMerges    DiffMergeFormat // --diff-merges=<format>
 	Format        string          // --format <format>
+	Pretty        LogPrettyFormat // --pretty<format>
+	NameOnly      bool            // --name-only
 	NoColor       bool            // --no-color
 	NoPatch       bool            // --no-patch
 	Patch         bool            // --patch
@@ -76,6 +78,18 @@ func (o *ShowOpts) Strings() []string {
 
 	if o.Format != "" {
 		opts = append(opts, fmt.Sprintf("--format=%s", string(o.Format)))
+	}
+
+	if o.Pretty != "" {
+		if o.Pretty == LogPrettyFormatNone {
+			opts = append(opts, "--pretty=")
+		} else {
+			opts = append(opts, fmt.Sprintf("--pretty=%s", string(o.Pretty)))
+		}
+	}
+
+	if o.NameOnly {
+		opts = append(opts, "--name-only")
 	}
 
 	if o.NoColor {

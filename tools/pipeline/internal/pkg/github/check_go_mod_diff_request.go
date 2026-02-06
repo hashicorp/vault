@@ -12,7 +12,7 @@ import (
 	"os"
 
 	libgithub "github.com/google/go-github/v81/github"
-	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
+	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/golang"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/pmezard/go-difflib/difflib"
