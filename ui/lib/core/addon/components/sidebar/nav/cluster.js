@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import { NavSection } from 'core/helpers/display-nav-item';
+import { NavSection, RouteName } from 'core/helpers/display-nav-item';
 
 export default class SidebarNavClusterComponent extends Component {
   @service currentCluster;
@@ -18,6 +18,10 @@ export default class SidebarNavClusterComponent extends Component {
     resilienceAndRecovery: NavSection.RESILIENCE_AND_RECOVERY,
     reporting: NavSection.REPORTING,
     clientCount: NavSection.CLIENT_COUNT,
+  };
+
+  routeName = {
+    vaultUsage: RouteName.VAULT_USAGE,
   };
 
   get cluster() {

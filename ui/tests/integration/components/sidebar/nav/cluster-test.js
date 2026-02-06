@@ -29,8 +29,6 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       rules: {
         // This is an issue with Hds::AppHeader::HomeLink
         'aria-prohibited-attr': { enabled: false },
-        // TODO: fix use Dropdown on user-menu
-        'nested-interactive': { enabled: false },
       },
     });
   });
@@ -56,6 +54,27 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
         'Nav links are hidden other than secrets, recovery (nested in Resilience and recovery nav link) and dashboard'
       );
     assert.dom(GENERAL.navHeading()).exists({ count: 1 }, 'Headings are hidden other than Vault');
+  });
+
+  test('it should render nav links on community version', async function (assert) {
+    const links = [
+      'Dashboard',
+      'Secrets',
+      'Resilience and recovery',
+      'Access',
+      'Operational tools',
+      'Raft Storage',
+      'Client count',
+    ];
+
+    const features = allFeatures().filter((feat) => feat !== 'PKI-only Secrets');
+    stubFeaturesAndPermissions(this.owner, false, true, features);
+    await renderComponent();
+
+    assert.dom(GENERAL.navLink()).exists({ count: links.length }, 'Correct number of links render');
+    links.forEach((link) => {
+      assert.dom(GENERAL.navLink(link)).hasText(link, `${link} link renders`);
+    });
   });
 
   test('it should render nav links', async function (assert) {

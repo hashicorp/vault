@@ -3,7 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Configuration" />
+<Page::Header @title="Configuration">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="Configuration")}}
+    />
+  </:breadcrumbs>
+</Page::Header>
 <Toolbar>
   <ToolbarActions>
     {{#if @model.capabilities.canUpdate}}

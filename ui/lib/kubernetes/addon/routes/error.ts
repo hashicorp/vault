@@ -26,7 +26,8 @@ export default class KubernetesErrorRoute extends Route {
   setupController(controller: RouteController, resolvedModel: KubernetesErrorModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
     ];
     const { secretsEngine } = this.modelFor('application') as KubernetesApplicationModel;

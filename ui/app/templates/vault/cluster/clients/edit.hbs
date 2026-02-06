@@ -3,6 +3,15 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Edit Configuration" />
+<Page::Header @title="Edit configuration">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label="Edit configuration")
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
 
 <Clients::Config @config={{@model}} @mode="edit" />

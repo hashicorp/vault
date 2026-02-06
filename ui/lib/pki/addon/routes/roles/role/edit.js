@@ -39,7 +39,8 @@ export default class PkiRoleEditRoute extends Route {
     const { form } = resolvedModel;
     const { name } = form.data;
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
       { label: 'Roles', route: 'roles.index', model: this.secretMountPath.currentPath },
       { label: name, route: 'roles.role.details', models: [this.secretMountPath.currentPath, name] },

@@ -34,11 +34,8 @@ export default class PkiPageHeader extends Component<Args> {
   @tracked engineToDisable = undefined;
   get breadcrumbs() {
     return [
-      {
-        label: 'Secrets',
-        route: 'secrets',
-        linkExternal: true,
-      },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       {
         label: this.args?.backend?.id,
       },

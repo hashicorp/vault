@@ -55,7 +55,8 @@ export default class LdapLibrariesSubdirectoryRoute extends LdapLibrariesRoute {
     const currentLevelPath = resolvedModel.path_to_library;
 
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: resolvedModel.secretsEngine.id, route: 'overview' },
       { label: 'Libraries', route: 'libraries' },
       ...ldapBreadcrumbs(currentLevelPath, routeParams, libraryRoutes, true),

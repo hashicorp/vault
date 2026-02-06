@@ -24,7 +24,8 @@ export default class KvConfigurationRoute extends Route {
     const backend = this.modelFor('application');
     controller.backend = backend;
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: backend.id, route: 'list', model: backend.id },
       { label: 'Configuration' },
     ];

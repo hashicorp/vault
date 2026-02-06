@@ -3,7 +3,12 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Client Usage">
+<Page::Header @title="Client usage">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="Client usage")}}
+    />
+  </:breadcrumbs>
   <:subtitle>
     {{#if @activityTimestamp}}
       Dashboard last updated:

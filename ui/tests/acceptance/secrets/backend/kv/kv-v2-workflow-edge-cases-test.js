@@ -201,8 +201,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
           `Sorry, we were unable to find any content at /v1/${backend}/metadata/${root}/${subdirectory}.`
         );
 
-      assert.dom(GENERAL.breadcrumbAtIdx(0)).hasText('Secrets');
-      assert.dom(GENERAL.breadcrumbAtIdx(1)).hasText(backend);
+      assert.dom(GENERAL.breadcrumbAtIdx(1)).hasText('Secrets engines');
+      assert.dom(GENERAL.breadcrumbAtIdx(2)).hasText(backend);
       assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('is-active');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('is-active');
     });

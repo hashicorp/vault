@@ -145,6 +145,7 @@ module('Unit | Helper | displayNavItem', function (hooks) {
   module('license', function () {
     test('it returns true when there are permissions and is enterprise', function (assert) {
       this.permissionsStub.returns(true);
+      this.version.type = 'enterprise';
       this.version.features = ['Secrets sync'];
       this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
       this.namespace.path = ROOT_NAMESPACE;

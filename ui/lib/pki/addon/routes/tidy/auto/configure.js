@@ -20,7 +20,8 @@ export default class PkiTidyAutoConfigureRoute extends Route {
     const { currentPath } = this.secretMountPath;
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: currentPath, route: 'overview', model: currentPath },
       { label: 'Configuration', route: 'configuration.index', model: currentPath },
       { label: 'Tidy', route: 'tidy', model: currentPath },
