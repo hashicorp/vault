@@ -92,6 +92,11 @@ variable "local_build_path" {
 
 data "enos_environment" "localhost" {}
 
+# Get current git SHA for unique cluster naming
+resource "enos_local_exec" "git_sha" {
+  inline = ["git rev-parse --short HEAD"]
+}
+
 resource "random_string" "id" {
   length  = 4
   lower   = true
@@ -101,11 +106,13 @@ resource "random_string" "id" {
 }
 
 locals {
-  // Generate a unique identifier for our scenario. If we've been given a
-  // min_vault_version we'll use that as it will likely be the version and
-  // a SHA of a custom image. Make sure it doesn't have special characters.
-  // Otherwise, just use a random string.
-  id = var.min_vault_version != null ? try(replace(var.min_vault_version, "/[^0-9A-Za-z]/", "-"), random_string.id.result) : random_string.id.result
+  // Generate a unique identifier for our scenario using git SHA for uniqueness.
+  // If min_vault_version contains a SHA (indicating a custom build), use that SHA.
+  // Otherwise, use the current git commit SHA to ensure uniqueness.
+  has_custom_sha = var.min_vault_version != null ? can(regex("\\+[a-z]+.*-[0-9a-f]{7,}", var.min_vault_version)) : false
+  custom_sha     = local.has_custom_sha ? regex("([0-9a-f]{7,})", var.min_vault_version)[0] : ""
+  git_sha        = trimspace(enos_local_exec.git_sha.stdout)
+  id             = local.has_custom_sha ? "custom-${local.custom_sha}" : "git-${local.git_sha}"
 }
 
 resource "hcp_hvn" "default" {
