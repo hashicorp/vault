@@ -129,6 +129,8 @@ jobs:
             kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
+            kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
+            kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
       - if: steps.global-metadata.outputs.is-ent-repo == 'true'
         name: Setup Git configuration (private)
         id: setup-git-private
@@ -309,6 +311,8 @@ jobs:
             kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
+            kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
+            kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
       - if: needs.test-matrix.outputs.is-ent-repo == 'true'
         id: setup-git-private
         name: Setup Git configuration (private)
