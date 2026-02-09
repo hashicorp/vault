@@ -22,7 +22,8 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 	c.consumptionBilling = &billing.ConsumptionBilling{
 		BillingConfig: c.billingConfig,
 		DataProtectionCallCounts: billing.DataProtectionCallCounts{
-			Transit: &atomic.Uint64{},
+			Transit:   &atomic.Uint64{},
+			Transform: &atomic.Uint64{},
 		},
 		Logger: logger,
 	}
@@ -139,9 +140,11 @@ func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time
 
 // UpdateLocalAggregatedMetrics updates local metrics that are aggregated across all replicated clusters
 func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth time.Time) error {
-	// Update aggregrated count of data protection calls
-	if _, err := c.UpdateDataProtectionCallCounts(ctx, currentMonth); err != nil {
+	if _, err := c.UpdateTransitCallCounts(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store transit data protection call counts: %w", err)
+	}
+	if _, err := c.UpdateTransformCallCounts(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store transform data protection call counts: %w", err)
 	}
 	return nil
 }
