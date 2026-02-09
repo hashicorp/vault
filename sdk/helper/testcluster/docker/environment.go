@@ -464,6 +464,11 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 	}
 
 	if err := dc.setupDockerCluster(ctx, opts); err != nil {
+		// check the lenght of the clustername
+        if len(opts.ClusterName) > 64 {
+            dc.Logger.Error("cluster name length exceeded the maximum allowed. length of clustername %v : clustername : %s",
+                len(opts.ClusterName), opts.ClusterName)
+        }
 		dc.Cleanup()
 		return nil, err
 	}
