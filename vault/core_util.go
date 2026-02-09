@@ -11,6 +11,7 @@ import (
 	"io"
 
 	"github.com/hashicorp/go-hclog"
+	cserver "github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/limits"
@@ -209,6 +210,10 @@ func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
 
 func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig, generateInput DiagnoseCheckLicenseGeneration) (bool, []string) {
 	return false, nil
+}
+
+func SetDiagnoseCheckLicenseEntitlement(config *cserver.Config, coreConfig CoreConfig) CoreConfig {
+	return coreConfig
 }
 
 // createCustomMessageManager is a function implemented differently for the

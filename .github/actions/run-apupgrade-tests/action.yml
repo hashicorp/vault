@@ -42,6 +42,8 @@ runs:
           kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
           kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
           kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
+          kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
+          kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
     - name: Setup Git configuration (private)
       id: setup-git-private
       if: github.repository == 'hashicorp/vault-enterprise'

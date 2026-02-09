@@ -16,6 +16,12 @@ type DiagnoseCheckLicenseGeneration struct {
 	GenerateIBMLicense bool
 }
 
+// LicensingEntitlementSelectionConfig contains configuration options for selecting an IBM license entitlement
+type LicensingEntitlementSelectionConfig struct {
+	Edition string
+	AddOns  []string
+}
+
 // GetCoreConfigInternal returns the server configuration
 // in struct format.
 func (c *Core) GetCoreConfigInternal() *server.Config {

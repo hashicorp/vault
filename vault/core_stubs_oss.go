@@ -36,6 +36,10 @@ func (c *Core) EntGetLicense() (string, error) {
 	return "", nil
 }
 
+func (c *Core) EntReloadLicenseAndConfig(mockLicenseConfigChange *LicensingEntitlementSelectionConfig) error {
+	return nil
+}
+
 func (c *Core) EntReloadLicense() error {
 	return nil
 }
