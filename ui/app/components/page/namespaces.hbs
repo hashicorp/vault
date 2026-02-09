@@ -5,10 +5,7 @@
 
 {{#if (has-feature "Namespaces")}}
   {{#if this.showWizard}}
-    <Wizard::Namespaces::NamespaceWizard
-      @onDismiss={{fn (mut this.hasDismissedWizard) true}}
-      @onRefresh={{this.refreshNamespaceList}}
-    />
+    <Wizard::Namespaces::NamespaceWizard @onRefresh={{this.refreshNamespaceList}} />
   {{else}}
     <Page::Header @title="Namespaces">
       <:breadcrumbs>

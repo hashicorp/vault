@@ -30,6 +30,20 @@ class Block {
     this.orgs = orgs;
   }
 
+  hasMultipleItems(list: Org[] | Project[]): boolean {
+    return list.filter((item) => Boolean(item.name)).length > 1;
+  }
+
+  // The Carbon tree chart only supports datasets with at least 1 "fork" in the tree.
+  // This checks whether a global node has multiple orgs or a org node has multiple project nodes
+  // to determine whether the tree chart should be shown. If this criteria is not met, the tree flashes
+  // briefly and then remains blank.
+  get hasMultipleNodes() {
+    const hasMultipleOrgs = this.hasMultipleItems(this.orgs);
+    const orgHasMultipleProjects = this.orgs.some((org) => this.hasMultipleItems(org.projects));
+    return hasMultipleOrgs || orgHasMultipleProjects;
+  }
+
   validateInput(value: string): string {
     if (value.includes('/')) {
       return '"/" is not allowed in namespace names';
@@ -84,19 +98,19 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
 
   isValidNesting(block: Block) {
     // If there are non-empty orgs but no global, then it is invalid
-    if (block.orgs.some((org) => org.name.trim()) && !block.global.trim()) {
+    if (block.orgs.some((org) => org.name) && !block.global) {
       return false;
     }
 
     // Check all projects have proper parents (global and org)
     return block.orgs.every((org) => {
-      const hasProjects = org.projects.some((project) => project.name.trim());
-      return !hasProjects || (block.global.trim() && org.name.trim());
+      const hasProjects = org.projects.some((project) => project.name);
+      return !hasProjects || (block.global && org.name);
     });
   }
 
   checkForDuplicateGlobals() {
-    const globals = this.blocks.map((block) => block.global.trim()).filter((global) => global !== '');
+    const globals = this.blocks.map((block) => block.global).filter((global) => global !== '');
     const globalCounts = new Map();
 
     globals.forEach((global) => {
@@ -141,8 +155,9 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
     const target = event.target as HTMLInputElement;
     const block = this.blocks[blockIndex];
     if (block) {
-      block.global = target.value;
-      block.globalError = block.validateInput(target.value);
+      const value = target.value.trim();
+      block.global = value;
+      block.globalError = block.validateInput(value);
       this.checkForDuplicateGlobals();
       this.updateWizardState();
     }
@@ -151,7 +166,7 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   @action
   updateOrgValue(block: Block, orgToUpdate: Org, event: Event) {
     const target = event.target as HTMLInputElement;
-    const value = target.value;
+    const value = target.value.trim();
     const isDuplicate = block.orgs.some((org) => org !== orgToUpdate && org.name === value);
 
     const updatedOrgs = block.orgs.map((org) => {
@@ -178,7 +193,6 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
 
   @action
   removeOrg(block: Block, orgToRemove: Org) {
-    if (block.orgs.length <= 1) return;
     block.orgs = block.orgs.filter((org) => org !== orgToRemove);
 
     // Trigger tree reactivity
@@ -188,7 +202,7 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   @action
   updateProjectValue(block: Block, org: Org, projectToUpdate: Project, event: Event) {
     const target = event.target as HTMLInputElement;
-    const value = target.value;
+    const value = target.value.trim();
     const isDuplicate = org.projects.some((project) => project !== projectToUpdate && project.name === value);
 
     const updatedOrgs = block.orgs.map((currentOrg) => {
@@ -253,12 +267,12 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
       return {
         name: block.global,
         children: block.orgs
-          .filter((org) => org.name.trim() !== '')
+          .filter((org) => org.name !== '')
           .map((org) => {
             return {
               name: org.name,
               children: org.projects
-                .filter((project) => project.name.trim() !== '')
+                .filter((project) => project.name !== '')
                 .map((project) => {
                   return {
                     name: project.name,
@@ -275,28 +289,15 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   // The Carbon tree chart only supports displaying nodes with at least 1 "fork" i.e. at least 2 globals, 2 orgs or 2 projects
   get shouldShowTreeChart(): boolean {
     // Count total globals across blocks
-    const globalsCount = this.blocks.filter((block) => block.global.trim() !== '').length;
+    const globalsCount = this.blocks.filter((block) => block.global !== '').length;
 
     // Check if there are multiple globals
     if (globalsCount > 1) {
       return true;
     }
 
-    // Check if any block has multiple orgs
-    const hasMultipleOrgs = this.blocks.some(
-      (block) => block.orgs.filter((org) => org.name.trim() !== '').length > 1
-    );
-
-    if (hasMultipleOrgs) {
-      return true;
-    }
-
-    // Check if any org has multiple projects
-    const hasMultipleProjects = this.blocks.some((block) =>
-      block.orgs.some((org) => org.projects.filter((project) => project.name.trim() !== '').length > 1)
-    );
-
-    return hasMultipleProjects;
+    // Check for multiple projects or orgs within a block
+    return this.blocks.some((block) => block.hasMultipleNodes);
   }
 
   // Store namespace paths to be used for code snippets in the format "global", "global/org", "global/org/project"
@@ -306,23 +307,23 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
         const results: string[] = [];
 
         // Add global namespace if it exists
-        if (block.global.trim() !== '') {
+        if (block.global !== '') {
           results.push(block.global);
         }
 
         block.orgs.forEach((org) => {
-          if (org.name.trim() !== '') {
+          if (org.name !== '') {
             // Add global/org namespace
-            const globalOrg = [block.global, org.name].filter((value) => value.trim() !== '').join('/');
+            const globalOrg = [block.global, org.name].filter((value) => value !== '').join('/');
             if (globalOrg && !results.includes(globalOrg)) {
               results.push(globalOrg);
             }
 
             org.projects.forEach((project) => {
-              if (project.name.trim() !== '') {
+              if (project.name !== '') {
                 // Add global/org/project namespace
                 const fullNamespace = [block.global, org.name, project.name]
-                  .filter((value) => value.trim() !== '')
+                  .filter((value) => value !== '')
                   .join('/');
                 if (fullNamespace && !results.includes(fullNamespace)) {
                   results.push(fullNamespace);

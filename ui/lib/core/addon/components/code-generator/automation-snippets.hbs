@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::Tabs as |T|>
+<Hds::Tabs @onClickTab={{this.handleTabChange}} as |T|>
   {{! key="key" tells Ember to track each tab by its key property rather than array index. }}
   {{! This prevents the tabs from re-rendering and jarring page flashes when this.tabs recalculates. }}
   {{#each this.tabs key="key" as |tab|}}

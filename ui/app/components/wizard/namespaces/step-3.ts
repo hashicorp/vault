@@ -9,7 +9,6 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { SecurityPolicy } from './step-1';
 import type NamespaceService from 'vault/services/namespace';
-import { HTMLElementEvent } from 'vault/forms';
 import {
   generateApiSnippet,
   generateCliSnippet,
@@ -42,7 +41,7 @@ interface CreationMethodChoice {
 export default class WizardNamespacesStep3 extends Component<Args> {
   @service declare readonly namespace: NamespaceService;
   @tracked creationMethodChoice: CreationMethod;
-  @tracked selectedTab = 'API';
+  @tracked selectedTabIdx = 0;
 
   methods = CreationMethod;
   policy = SecurityPolicy;
@@ -73,20 +72,26 @@ export default class WizardNamespacesStep3 extends Component<Args> {
         'Apply changes immediately. Note: Changes made in the UI will be overwritten by any future updates made via Infrastructure as Code (Terraform).',
     },
   ];
-  tabOptions = ['API', 'CLI'];
 
-  get snippet() {
+  get tfSnippet() {
     const { namespacePaths } = this.args.wizardState;
-    switch (this.creationMethodChoice) {
-      case CreationMethod.TERRAFORM:
-        return generateTerraformSnippet(namespacePaths, this.namespace.path);
-      case CreationMethod.APICLI:
-        return this.selectedTab === 'API'
-          ? generateApiSnippet(namespacePaths, this.namespace.path)
-          : generateCliSnippet(namespacePaths, this.namespace.path);
-      default:
-        return null;
-    }
+    return generateTerraformSnippet(namespacePaths, this.namespace.path);
+  }
+
+  get customTabs() {
+    const { namespacePaths } = this.args.wizardState;
+    return [
+      {
+        key: 'api',
+        label: 'API',
+        snippet: generateApiSnippet(namespacePaths, this.namespace.path),
+      },
+      {
+        key: 'cli',
+        label: 'CLI',
+        snippet: generateCliSnippet(namespacePaths, this.namespace.path),
+      },
+    ];
   }
 
   @action
@@ -98,8 +103,9 @@ export default class WizardNamespacesStep3 extends Component<Args> {
   }
 
   @action
-  onClickTab(_event: HTMLElementEvent<HTMLInputElement>, idx: number) {
-    this.selectedTab = this.tabOptions[idx]!;
+  onTabChange(idx: number) {
+    this.selectedTabIdx = idx;
+
     // Update the code snippet whenever the tab changes
     this.updateCodeSnippet();
   }
@@ -107,15 +113,11 @@ export default class WizardNamespacesStep3 extends Component<Args> {
   // Update the wizard state with the current code snippet
   @action
   updateCodeSnippet() {
-    this.args.updateWizardState('codeSnippet', this.snippet);
-  }
-
-  // Helper function to ensure valid Terraform identifiers
-  sanitizeId(name: string): string {
-    // If the name starts with a number, prefix with 'ns_'
-    if (/^\d/.test(name)) {
-      return `ns_${name}`;
+    if (this.creationMethodChoice === CreationMethod.TERRAFORM) {
+      this.args.updateWizardState('codeSnippet', this.tfSnippet);
+    } else if (this.creationMethodChoice === CreationMethod.APICLI) {
+      const snippet = this.customTabs[this.selectedTabIdx]?.snippet;
+      this.args.updateWizardState('codeSnippet', snippet);
     }
-    return name;
   }
 }

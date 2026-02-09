@@ -15,7 +15,7 @@
             {{on "click" (fn (mut this.showWelcome) false)}}
             data-test-button="Guided setup"
           />
-          <Hds::Button @color="secondary" @text="Skip" {{on "click" @onDismiss}} />
+          <Hds::Button @color="secondary" @text="Skip" {{on "click" @onDismiss}} data-test-button="Skip" />
           <Hds::Link::Standalone
             @icon="docs-link"
             @iconPosition="trailing"

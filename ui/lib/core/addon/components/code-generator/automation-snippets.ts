@@ -5,12 +5,14 @@
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
+import { action } from '@ember/object';
 import { terraformResourceTemplate } from 'core/utils/code-generators/terraform';
 import { cliTemplate } from 'core/utils/code-generators/cli';
 
 import type NamespaceService from 'vault/services/namespace';
 import type { CliTemplateArgs } from 'core/utils/code-generators/cli';
 import type { TerraformResourceTemplateArgs } from 'core/utils/code-generators/terraform';
+import type { HTMLElementEvent } from 'vault/forms';
 
 interface SnippetOption {
   key: string;
@@ -23,6 +25,7 @@ interface Args {
   customTabs?: SnippetOption[];
   tfvpArgs?: TerraformResourceTemplateArgs;
   cliArgs?: CliTemplateArgs;
+  onTabChange?: (tabIdx: number) => void;
 }
 
 export default class CodeGeneratorAutomationSnippets extends Component<Args> {
@@ -57,5 +60,13 @@ export default class CodeGeneratorAutomationSnippets extends Component<Args> {
       return { ...tfvpArgs, resourceArgs: { namespace: `"${this.namespace.path}"`, ...resourceArgs } };
     }
     return tfvpArgs;
+  }
+
+  @action
+  handleTabChange(_event: HTMLElementEvent<HTMLInputElement>, tabIndex: number) {
+    const { onTabChange } = this.args;
+    if (onTabChange) {
+      onTabChange(tabIndex);
+    }
   }
 }
