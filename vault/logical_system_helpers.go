@@ -291,8 +291,8 @@ func ceSysInitialize(b *SystemBackend) func(context.Context, *logical.Initializa
 			return fmt.Errorf("failed to initialize activation flags: %w", err)
 		}
 
-		b.Core.pkiCertCountManager.StartConsumerJob(func(issuedCount, storedCount uint64) {
-			b.Core.consumePkiCertCounts(issuedCount, storedCount)
+		b.Core.pkiCertCountManager.StartConsumerJob(func(increment logical.CertCount) {
+			b.Core.consumePkiCertCounts(increment)
 		})
 		return nil
 	}
@@ -300,10 +300,10 @@ func ceSysInitialize(b *SystemBackend) func(context.Context, *logical.Initializa
 
 // consumePkiCertCounts updates the PKI certificate counts in storage if we are
 // running on the active node; otherwise it forwards them to the active node.
-func (c *Core) consumePkiCertCounts(issuedCount uint64, storedCount uint64) {
+func (c *Core) consumePkiCertCounts(inc logical.CertCount) {
 	var consumed bool
 	haState := c.HAStateWithLock()
-	if issuedCount == 0 && storedCount == 0 {
+	if inc.IsZero() {
 		return
 	}
 
@@ -311,10 +311,10 @@ func (c *Core) consumePkiCertCounts(issuedCount uint64, storedCount uint64) {
 	case consts.Standby:
 		consumed = true
 	case consts.PerfStandby:
-		consumed = forwardPkiCertCounts(c, issuedCount, storedCount)
+		consumed = forwardPkiCertCounts(c, inc.IssuedCerts, inc.StoredCerts)
 	case consts.Active:
-		c.logger.Info("storing PKI certificate counts", "issuedCerts", issuedCount, "storedCerts", storedCount)
-		err := pki_cert_count.IncrementStoredCounts(c.activeContext, c.barrier, issuedCount, storedCount)
+		c.logger.Info("storing PKI certificate counts", "issuedCerts", inc.IssuedCerts, "storedCerts", inc.StoredCerts)
+		err := pki_cert_count.IncrementStoredCounts(c.activeContext, c.barrier, inc)
 		if err != nil {
 			c.logger.Error("error storing PKI certificate counts", "error", err)
 		} else {
@@ -324,7 +324,7 @@ func (c *Core) consumePkiCertCounts(issuedCount uint64, storedCount uint64) {
 		c.logger.Error("Unexpected HA state when consuming PKI certificate counts", "ha_state", haState)
 	}
 	if !consumed {
-		c.pkiCertCountManager.IncrementCount(issuedCount, storedCount)
+		c.pkiCertCountManager.AddCount(inc)
 	}
 }
 

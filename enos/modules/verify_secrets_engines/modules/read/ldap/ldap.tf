@@ -80,6 +80,12 @@ variable "enable_rollback_verification" {
   default     = true
 }
 
+variable "enable_static_role_verification" {
+  type        = bool
+  description = "Enable LDAP secrets engine static role verification"
+  default     = true
+}
+
 resource "enos_remote_exec" "ldap_verify_auth" {
   count = var.enable_auth_verification ? 1 : 0
   environment = {
@@ -294,6 +300,32 @@ resource "enos_remote_exec" "ldap_library_checkout_lease_renew" {
   }
 
   scripts = [abspath("${path.module}/../../../scripts/ldap-lease-renew.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
+# Verify Static role
+resource "enos_remote_exec" "ldap_static_roles" {
+  count = var.enable_static_role_verification ? 1 : 0
+
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets
+  ]
+  environment = {
+    MOUNT             = "${var.create_state.ldap.ldap_mount}"
+    LDAP_SERVER       = "${var.create_state.ldap.host.private_ip}"
+    LDAP_PORT         = "${var.create_state.ldap.port}"
+    LDAP_USERNAME     = "${var.create_state.ldap.username}"
+    LDAP_ADMIN_PW     = "${var.create_state.ldap.pw}"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+  scripts = [abspath("${path.module}/../../../scripts/ldap/static-roles.sh")]
 
   transport = {
     ssh = {

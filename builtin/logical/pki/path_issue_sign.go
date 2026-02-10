@@ -484,7 +484,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	b.pkiCertificateCounter.AddIssuedCertificate(!role.NoStore)
+	b.pkiCertificateCounter.Increment().AddIssuedCertificate(!role.NoStore)
 
 	if useCSR {
 		if role.UseCSRCommonName && data.Get("common_name").(string) != "" {

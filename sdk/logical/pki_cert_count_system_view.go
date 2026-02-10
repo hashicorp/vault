@@ -9,10 +9,11 @@ type PkiCertificateCountSystemView interface {
 
 type nullPkiCertificateCounter struct{}
 
-func (n *nullPkiCertificateCounter) IncrementCount(_, _ uint64) {
+func (n *nullPkiCertificateCounter) AddCount(_ CertCount) {
 }
 
-func (n *nullPkiCertificateCounter) AddIssuedCertificate(_ bool) {
+func (n *nullPkiCertificateCounter) Increment() CertCountIncrementer {
+	return NewCertCountIncrementer(n)
 }
 
 var _ CertificateCounter = (*nullPkiCertificateCounter)(nil)
