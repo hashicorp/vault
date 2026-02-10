@@ -14,8 +14,8 @@ import type FlagsService from 'vault/services/flags';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type NamespaceService from 'vault/services/namespace';
 import type RouterService from '@ember/routing/router-service';
+import type WizardService from 'vault/services/wizard';
 import type { HTMLElementEvent } from 'vault/forms';
-import { DISMISSED_WIZARD_KEY } from '../wizard';
 
 /**
  * @module PageNamespaces
@@ -48,6 +48,7 @@ export default class PageNamespacesComponent extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly flags: FlagsService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly wizard: WizardService;
   @service declare namespace: NamespaceService;
 
   // The `query` property is used to track the filter
@@ -56,19 +57,12 @@ export default class PageNamespacesComponent extends Component<Args> {
   @tracked query;
   @tracked nsToDelete = null;
   @tracked showSetupAlert = false;
-  @tracked hasDismissedWizard = false;
 
   wizardId = 'namespace';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     this.query = this.args.model.pageFilter || '';
-
-    // check if the wizard has already been dismissed
-    const dismissedWizards = localStorage.getItem(DISMISSED_WIZARD_KEY);
-    if (dismissedWizards?.includes(this.wizardId)) {
-      this.hasDismissedWizard = true;
-    }
   }
 
   // show the full available namespace path e.g. "root/ns1/child2", "admin/ns1/child2"
@@ -88,7 +82,7 @@ export default class PageNamespacesComponent extends Component<Args> {
 
   get showWizard() {
     // Show when there are no existing namespaces and it is not in a dismissed state
-    return !this.hasDismissedWizard && !this.args.model.namespaces?.length;
+    return !this.wizard.isDismissed(this.wizardId) && !this.args.model.namespaces?.length;
   }
 
   @action
@@ -143,7 +137,8 @@ export default class PageNamespacesComponent extends Component<Args> {
 
   @action
   enterGuidedStart() {
-    this.hasDismissedWizard = false;
+    // Reset the wizard dismissal state to allow re-entering the wizard
+    this.wizard.reset(this.wizardId);
   }
 
   @action handlePageChange() {
