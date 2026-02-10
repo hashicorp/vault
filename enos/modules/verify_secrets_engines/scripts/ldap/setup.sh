@@ -51,6 +51,9 @@ userPassword: $LDAP_ADMIN_PW
 EOF
 ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${ADMIN_LDIF}
 
+# Dedicated LDAP user for static role tests
+LDAP_STATIC_USERNAME="${LDAP_STATIC_USERNAME:-vault-static-user}"
+
 echo "OpenLDAP: Creating User LDIF file and adding user to LDAP"
 USER_LDIF="user.ldif"
 cat << EOF > ${USER_LDIF}
@@ -60,6 +63,14 @@ objectClass: inetOrgPerson
 sn: $LDAP_USERNAME
 cn: $LDAP_USERNAME user
 uid: $LDAP_USERNAME
+userPassword: $LDAP_ADMIN_PW
+
+# Static-role test user (Vault-managed)
+dn: uid=$LDAP_STATIC_USERNAME,ou=users,dc=$LDAP_USERNAME,dc=com
+objectClass: inetOrgPerson
+sn: $LDAP_STATIC_USERNAME
+cn: $LDAP_STATIC_USERNAME user
+uid: $LDAP_STATIC_USERNAME
 userPassword: $LDAP_ADMIN_PW
 
 # Group: devs
