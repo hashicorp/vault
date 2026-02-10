@@ -3,39 +3,39 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { module, test, skip } from 'qunit';
-import { v4 as uuidv4 } from 'uuid';
 import {
   click,
   currentRouteName,
   currentURL,
+  fillIn,
   find,
   findAll,
-  fillIn,
   typeIn,
   visit,
-  waitUntil,
   waitFor,
+  waitUntil,
 } from '@ember/test-helpers';
+import { module, skip, test } from 'qunit';
+import { v4 as uuidv4 } from 'uuid';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import {
   createPolicyCmd,
+  createTokenCmd,
   deleteEngineCmd,
   mountEngineCmd,
   runCmd,
-  createTokenCmd,
   tokenWithPolicyCmd,
 } from 'vault/tests/helpers/commands';
-import { personas } from 'vault/tests/helpers/kv/policy-generator';
+import { grantAccess, setupControlGroup } from 'vault/tests/helpers/control-groups';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import {
   addSecretMetadataCmd,
   writeSecret,
   writeVersionedSecret,
 } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
+import { personas } from 'vault/tests/helpers/kv/policy-generator';
 
 const secretPath = `my-#:$=?-secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
@@ -44,6 +44,9 @@ const secretPathUrlEncoded = `my-%23:$=%3F-secret`;
 const ALL_TABS = ['Overview', 'Secret', 'Metadata', 'Paths', 'Version History'];
 const navToBackend = async (backend) => {
   await visit(`/vault/secrets-engines`);
+  // Use search to find the specific backend instead of relying on pagination
+  await fillIn(GENERAL.inputSearch('secret-engine-path'), backend);
+  await waitUntil(() => find(`${GENERAL.tableData(`${backend}/`, 'path')} a`));
   return click(`${GENERAL.tableData(`${backend}/`, 'path')} a`);
 };
 const assertPolicyGenerator = async (assert, expectedPaths) => {

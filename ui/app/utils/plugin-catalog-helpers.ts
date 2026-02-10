@@ -4,8 +4,9 @@
  */
 
 import { isEmpty } from '@ember/utils';
-import type { EngineDisplayData } from './all-engines-metadata';
 import type { PluginCatalogPlugin } from 'vault/services/plugin-catalog';
+import type { EngineDisplayData } from './all-engines-metadata';
+import { getBuiltinTypeFromExternalPlugin, isKnownExternalPlugin } from './external-plugin-helpers';
 
 /**
  * Constants for plugin catalog functionality
@@ -127,8 +128,14 @@ export function enhanceEnginesWithCatalogData(
 
   // Process secret engines from the detailed array
   secretEnginesDetailed.forEach((plugin) => {
-    // Skip if this plugin already exists in static metadata
-    if (staticEngineTypes.has(plugin.name)) {
+    // Skip if this plugin already exists in static metadata or is a builtin plugin
+    if (staticEngineTypes.has(plugin.name) || plugin.builtin) {
+      return;
+    }
+
+    // Skip plugins that have known builtin mappings - these should appear in their
+    // respective categories (e.g., KV, AWS) rather than in the "External" category
+    if (isKnownExternalPlugin(plugin.name)) {
       return;
     }
 
@@ -143,7 +150,7 @@ export function enhanceEnginesWithCatalogData(
       return plugin.name.includes(engine.type) || plugin.name.includes(engine.type.replace('-', ''));
     });
 
-    // Create external engine metadata with defaults
+    // Only create external engines for custom external plugins (external plugins without mappings to builtin Vault plugins)
     const externalEngine: EnhancedEngineDisplayData = {
       type: plugin.name,
       displayName: plugin.name
@@ -211,4 +218,88 @@ export function getPluginVersionsFromEngineType(list: PluginCatalogPlugin[] | un
     if (item.name === name) acc.push(item.version);
     return acc;
   }, []);
+}
+
+/**
+ * Version information for a specific plugin engine
+ */
+export interface EngineVersionInfo {
+  version: string;
+  pluginName: string;
+  isBuiltin: boolean;
+}
+
+/**
+ * Result containing version information and unversioned plugin detection
+ */
+export interface EngineVersionResult {
+  versions: EngineVersionInfo[];
+  hasUnversionedPlugins: boolean;
+}
+
+/**
+ * Retrieves all available plugin versions for a specific engine type from the catalog.
+ * This enables users to choose between builtin and external plugin variants when mounting
+ * secrets engines, supporting both standard Vault engines and custom external plugins.
+ *
+ * The function handles the mapping between external plugin names (e.g., "vault-plugin-secrets-kv")
+ * and their corresponding engine types (e.g., "kv") to provide a unified version selection experience.
+ *
+ * @param secretEnginesDetailed - Array of detailed secret engine info from catalog API
+ * @param engineType - The engine type to get versions for (e.g., 'kv', 'aws')
+ * @param pluginType - Optional plugin type filter ('secret', 'auth', 'database')
+ * @returns Object containing version information array and flag for unversioned plugins
+ */
+export function getAllVersionsForEngineType(
+  secretEnginesDetailed: PluginCatalogPlugin[] | undefined,
+  engineType: string,
+  pluginType = 'secret'
+): EngineVersionResult {
+  if (
+    !engineType ||
+    !secretEnginesDetailed ||
+    typeof engineType !== 'string' ||
+    !Array.isArray(secretEnginesDetailed)
+  ) {
+    return { versions: [], hasUnversionedPlugins: false };
+  }
+
+  let hasUnversionedPlugins = false;
+  const filteredVersions: EngineVersionInfo[] = [];
+
+  secretEnginesDetailed.forEach((plugin) => {
+    // Basic validation
+    if (!plugin?.name || typeof plugin?.builtin !== 'boolean' || typeof plugin?.version !== 'string') {
+      return;
+    }
+
+    // Filter by plugin type (secret, auth, database)
+    if (plugin.type !== pluginType) {
+      return;
+    }
+
+    // Check if this plugin matches the engine type
+    const isDirectMatch = plugin.name === engineType;
+    const builtin = getBuiltinTypeFromExternalPlugin(plugin.name);
+    const isExternalMatch = builtin === engineType;
+
+    if (!isDirectMatch && !isExternalMatch) {
+      return;
+    }
+
+    // Check for unversioned plugins (empty version strings)
+    if (plugin.version === '') {
+      hasUnversionedPlugins = true;
+      return; // Don't include in versions array
+    }
+
+    // Include versioned plugins
+    filteredVersions.push({
+      version: plugin.version,
+      pluginName: plugin.name,
+      isBuiltin: plugin.builtin,
+    });
+  });
+
+  return { versions: filteredVersions, hasUnversionedPlugins };
 }
