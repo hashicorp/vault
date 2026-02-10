@@ -5,12 +5,12 @@
 
 <PkiPaginatedList @backend={{@backend}} @listRoute="keys.index" @list={{@keys}} @hasConfig={{@hasConfig}}>
   <:actions>
-    {{#if @canImportKey}}
+    {{#if @canImportKeys}}
       <ToolbarLink @route="keys.import" @model={{@backend}} @type="upload" data-test-pki-key-import>
         Import
       </ToolbarLink>
     {{/if}}
-    {{#if @canGenerateKey}}
+    {{#if @canGenerateKeys}}
       <ToolbarLink @route="keys.create" @model={{@backend}} @type="add" data-test-pki-key-generate>
         Generate
       </ToolbarLink>

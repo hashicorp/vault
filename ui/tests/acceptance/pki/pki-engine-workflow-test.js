@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
-
+import sinon from 'sinon';
 import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
@@ -36,6 +36,8 @@ module('Acceptance | pki workflow', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.capabilities = this.owner.lookup('service:capabilities');
+    this.capabilitiesFetchSpy = sinon.spy(this.capabilities, 'fetch');
     await login();
     // Setup PKI engine
     const mountPath = `pki-workflow-${uuidv4()}`;
@@ -293,6 +295,19 @@ module('Acceptance | pki workflow', function (hooks) {
         );
       let keyId = find(PKI_KEYS.keyId).innerText;
       assert.dom('.linked-block').exists({ count: 1 }, 'One key is in list');
+      const [requestedPaths] = this.capabilitiesFetchSpy.lastCall.args;
+      const expectedPaths = [
+        this.capabilities.pathFor('pkiKeysImport', { backend: this.mountPath }),
+        this.capabilities.pathFor('pkiKeysGenerate', { backend: this.mountPath }),
+        this.capabilities.pathFor('pkiKey', { backend: this.mountPath, keyId }),
+      ];
+      expectedPaths.forEach((expected, idx) => {
+        assert.strictEqual(
+          expected,
+          requestedPaths[idx],
+          `index route makes capabilities request to: ${expected}`
+        );
+      });
       await click('.linked-block');
       // details page
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/details`);
