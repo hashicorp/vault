@@ -40,28 +40,14 @@
       </Hds::Text::Body>
       <Hds::Card::Container @hasBorder={{true}} class="has-top-padding-m has-bottom-padding-m side-padding-24">
         {{#if (eq this.creationMethodChoice this.methods.APICLI)}}
-          <Hds::Tabs @onClickTab={{this.onClickTab}} as |T|>
-            {{#each this.tabOptions as |tabName|}}
-              <T.Tab data-test-tab={{tabName}}>{{tabName}}</T.Tab>
-              <T.Panel>
-                <Hds::CodeBlock
-                  @language="bash"
-                  @value={{this.snippet}}
-                  @hasLineNumbers={{true}}
-                  @hasCopyButton={{true}}
-                  data-test-field="snippets"
-                />
-              </T.Panel>
-            {{/each}}
-
-          </Hds::Tabs>
+          <CodeGenerator::AutomationSnippets @customTabs={{this.customTabs}} @onTabChange={{this.onTabChange}} />
         {{else}}
           <Hds::CodeBlock
             @language="hcl"
-            @value={{this.snippet}}
+            @value={{this.tfSnippet}}
             @hasLineNumbers={{true}}
             @hasCopyButton={{true}}
-            data-test-field="snippets"
+            data-test-field="terraform"
           />
         {{/if}}
       </Hds::Card::Container>

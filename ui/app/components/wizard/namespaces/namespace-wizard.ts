@@ -7,16 +7,15 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import Component from '@glimmer/component';
-import localStorage from 'vault/lib/local-storage';
 import { SecurityPolicy } from 'vault/components/wizard/namespaces/step-1';
 import { CreationMethod } from 'vault/components/wizard/namespaces/step-3';
-import { DISMISSED_WIZARD_KEY } from 'vault/components/wizard';
 
 import type ApiService from 'vault/services/api';
 import type Block from 'vault/components/wizard/namespaces/step-2';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type NamespaceService from 'vault/services/namespace';
 import type RouterService from '@ember/routing/router-service';
+import type WizardService from 'vault/services/wizard';
 
 const DEFAULT_STEPS = [
   { title: 'Select setup', component: 'wizard/namespaces/step-1' },
@@ -25,7 +24,6 @@ const DEFAULT_STEPS = [
 ];
 
 interface Args {
-  onDismiss: CallableFunction;
   onRefresh: CallableFunction;
 }
 
@@ -41,6 +39,7 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly wizard: WizardService;
   @service declare namespace: NamespaceService;
 
   @tracked steps = DEFAULT_STEPS;
@@ -129,10 +128,8 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
 
   @action
   async onDismiss() {
-    const item = localStorage.getItem(DISMISSED_WIZARD_KEY) ?? [];
-    localStorage.setItem(DISMISSED_WIZARD_KEY, [...item, this.wizardId]);
+    this.wizard.dismiss(this.wizardId);
     await this.args.onRefresh();
-    this.args.onDismiss();
   }
 
   @action
@@ -155,7 +152,6 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
       const { message } = await this.api.parseError(error);
       this.flashMessages.danger(`Error creating namespaces: ${message}`);
     } finally {
-      await this.args.onRefresh();
       this.onDismiss();
     }
   }
