@@ -25,7 +25,7 @@ type PkiCertificateCount struct {
 	StoredCertificateCountsByDay []uint64 `json:"storedCertificateCountsByDay"`
 }
 
-func IncrementStoredCounts(ctx context.Context, storage logical.Storage, issuedCount, storedCount uint64) error {
+func IncrementStoredCounts(ctx context.Context, storage logical.Storage, inc logical.CertCount) error {
 	year, month, day := time.Now().Date()
 
 	storagePath := getStoragePath(year, month)
@@ -47,8 +47,8 @@ func IncrementStoredCounts(ctx context.Context, storage logical.Storage, issuedC
 		currentMonthCounts.StoredCertificateCountsByDay = make([]uint64, daysInMonth+1)
 	}
 
-	currentMonthCounts.IssuedCertificateCountsByDay[day] += issuedCount
-	currentMonthCounts.StoredCertificateCountsByDay[day] += storedCount
+	currentMonthCounts.IssuedCertificateCountsByDay[day] += inc.IssuedCerts
+	currentMonthCounts.StoredCertificateCountsByDay[day] += inc.StoredCerts
 
 	countBytes, err := json.Marshal(currentMonthCounts)
 	if err != nil {
@@ -68,33 +68,31 @@ func IncrementStoredCounts(ctx context.Context, storage logical.Storage, issuedC
 	return nil
 }
 
-func ReadStoredCounts(ctx context.Context, storage logical.Storage, date time.Time) (issuedCount uint64, storedCount uint64, err error) {
-	issuedCount = 0
-	storedCount = 0
-
+func ReadStoredCounts(ctx context.Context, storage logical.Storage, date time.Time) (count logical.CertCount, err error) {
 	year, month, _ := date.Date()
 
 	entry, err := storage.Get(ctx, getStoragePath(year, month))
 	if err != nil {
-		return 0, 0, fmt.Errorf("error reading from storage: %w", err)
+		return logical.CertCount{}, fmt.Errorf("error reading from storage: %w", err)
 	}
 
 	if entry == nil {
-		return 0, 0, fmt.Errorf("certificate counts not found for %d-%02d", year, month)
+		return logical.CertCount{}, fmt.Errorf("certificate counts not found for %d-%02d", year, month)
 	}
 
 	var certificateCounts PkiCertificateCount
 	err = json.Unmarshal(entry.Value, &certificateCounts)
 	if err != nil {
-		return 0, 0, fmt.Errorf("error unmarshalling certificate counts from storage: %w", err)
+		return logical.CertCount{}, fmt.Errorf("error unmarshalling certificate counts from storage: %w", err)
 	}
 
+	ret := logical.CertCount{}
 	for i := range certificateCounts.IssuedCertificateCountsByDay {
-		issuedCount += certificateCounts.IssuedCertificateCountsByDay[i]
-		storedCount += certificateCounts.StoredCertificateCountsByDay[i]
+		ret.IssuedCerts += certificateCounts.IssuedCertificateCountsByDay[i]
+		ret.StoredCerts += certificateCounts.StoredCertificateCountsByDay[i]
 	}
 
-	return issuedCount, storedCount, nil
+	return ret, nil
 }
 
 func getStoragePath(year int, month time.Month) string {

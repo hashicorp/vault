@@ -6,7 +6,6 @@ package pki_cert_count
 import (
 	"os"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -22,7 +21,7 @@ const envVaultDisableCertCount = "VAULT_DISABLE_CERT_COUNT"
 var consumerJobInterval = 1 * time.Minute
 
 // PkiCertificateCountConsumer is a callback for consumers of the PKI certificate counts.
-type PkiCertificateCountConsumer func(issuedCount, storedCount uint64)
+type PkiCertificateCountConsumer func(logical.CertCount)
 
 // PkiCertificateCountManager keeps track of issued and stored PKI certificate counts.
 type PkiCertificateCountManager interface {
@@ -42,8 +41,8 @@ type PkiCertificateCountManager interface {
 
 // certCountManager is an implementation of PkiCertificateCountManager.
 type certCountManager struct {
-	issuedCount *atomic.Uint64
-	storedCount *atomic.Uint64
+	count     logical.CertCount
+	countLock sync.RWMutex
 
 	reportTimerStop     chan struct{}
 	reportTimerStopLock sync.Mutex
@@ -66,8 +65,7 @@ func InitPkiCertificateCountManager(logger hclog.Logger) PkiCertificateCountMana
 
 func newPkiCertificateCountManager(logger hclog.Logger) PkiCertificateCountManager {
 	ret := &certCountManager{
-		issuedCount:     &atomic.Uint64{},
-		storedCount:     &atomic.Uint64{},
+		count:           logical.CertCount{},
 		reportTimerStop: nil,
 		logger:          logger,
 	}
@@ -102,9 +100,13 @@ func (m *certCountManager) reportLoop(stop chan struct{}, consumer PkiCertificat
 }
 
 func (m *certCountManager) consumeCount(consumer PkiCertificateCountConsumer) {
-	issuedCount := m.issuedCount.Swap(0)
-	storedCount := m.storedCount.Swap(0)
-	consumer(issuedCount, storedCount)
+	m.countLock.Lock()
+	defer m.countLock.Unlock()
+
+	increment := m.count
+	m.count = logical.CertCount{}
+
+	consumer(increment)
 }
 
 func (m *certCountManager) StopConsumerJob() {
@@ -124,22 +126,23 @@ func (m *certCountManager) stopConsumerJobWithLock() {
 	}
 }
 
-func (m *certCountManager) AddIssuedCertificate(stored bool) {
-	if stored {
-		m.IncrementCount(1, 1)
-	} else {
-		m.IncrementCount(1, 0)
-	}
+func (m *certCountManager) AddCount(params logical.CertCount) {
+	m.countLock.Lock()
+	defer m.countLock.Unlock()
+
+	m.count.Add(params)
+
+	m.logger.Trace("incremented in-memory PKI certificate counts", "issuedCerts", m.count.IssuedCerts, "storedCerts", m.count.StoredCerts)
 }
 
-func (m *certCountManager) IncrementCount(issuedCerts, storedCerts uint64) {
-	issued := m.issuedCount.Add(issuedCerts)
-	stored := m.storedCount.Add(storedCerts)
-	m.logger.Trace("incremented in-memory PKI certificate counts", "issuedCerts", issued, "storedCerts", stored)
+func (m *certCountManager) Increment() logical.CertCountIncrementer {
+	return logical.NewCertCountIncrementer(m)
 }
 
 func (m *certCountManager) GetCounts() (issuedCount, storedCount uint64) {
-	return m.issuedCount.Load(), m.storedCount.Load()
+	m.countLock.RLock()
+	defer m.countLock.RUnlock()
+	return m.count.IssuedCerts, m.count.StoredCerts
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -153,8 +156,12 @@ func newNullPkiCertificateCountManager() PkiCertificateCountManager {
 	return &nullPkiCertificateCountManager{}
 }
 
-func (n *nullPkiCertificateCountManager) IncrementCount(_, _ uint64) {
+func (n *nullPkiCertificateCountManager) AddCount(_ logical.CertCount) {
 	// nothing to do
+}
+
+func (n *nullPkiCertificateCountManager) Increment() logical.CertCountIncrementer {
+	return logical.NewCertCountIncrementer(n)
 }
 
 func (n *nullPkiCertificateCountManager) AddIssuedCertificate(_ bool) {
