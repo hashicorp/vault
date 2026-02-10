@@ -18,12 +18,20 @@ func (c *Core) storeThirdPartyPluginCountsLocked(ctx context.Context, localPathP
 		Key:   billingPath,
 		Value: []byte(strconv.Itoa(thirdPartyPluginCounts)),
 	}
-	return c.GetBillingSubView().Put(ctx, entry)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
 }
 
 func (c *Core) getStoredThirdPartyPluginCountsLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (int, error) {
 	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, currentMonth, billing.ThirdPartyPluginsPrefix)
-	entry, err := c.GetBillingSubView().Get(ctx, billingPath)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, nil
+	}
+	entry, err := view.Get(ctx, billingPath)
 	if err != nil {
 		return 0, err
 	}
@@ -107,13 +115,21 @@ func (c *Core) storeMaxKvCountsLocked(ctx context.Context, maxKvCounts int, loca
 		Key:   billingPath,
 		Value: []byte(strconv.Itoa(maxKvCounts)),
 	}
-	return c.GetBillingSubView().Put(ctx, entry)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
 }
 
 // getStoredMaxKvCountsLocked must be called with BillingStorageLock held
 func (c *Core) getStoredMaxKvCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (int, error) {
 	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.KvHWMCountsHWM)
-	entry, err := c.GetBillingSubView().Get(ctx, billingPath)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, nil
+	}
+	entry, err := view.Get(ctx, billingPath)
 	if err != nil {
 		return 0, err
 	}
@@ -184,7 +200,11 @@ func (c *Core) storeMaxRoleCountsLocked(ctx context.Context, maxRoleCounts *Role
 	if err != nil {
 		return err
 	}
-	return c.GetBillingSubView().Put(ctx, entry)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
 }
 
 func (c *Core) UpdateMaxRoleCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time) (*RoleCounts, error) {
@@ -239,7 +259,11 @@ func (c *Core) GetStoredHWMRoleCounts(ctx context.Context, localPathPrefix strin
 func (c *Core) getStoredRoleCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (*RoleCounts, error) {
 	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.RoleHWMCountsHWM)
 	var maxRoleCounts *RoleCounts
-	maxRoleCountsRaw, err := c.GetBillingSubView().Get(ctx, billingPath)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return &RoleCounts{}, nil
+	}
+	maxRoleCountsRaw, err := view.Get(ctx, billingPath)
 	if err != nil {
 		return nil, err
 	}
@@ -260,8 +284,15 @@ func (c *Core) compareCounts(current, previous int, metricName string) int {
 	return current
 }
 
-func (c *Core) GetBillingSubView() *BarrierView {
-	return c.systemBarrierView.SubView(billing.BillingSubPath)
+func (c *Core) GetBillingSubView() (*BarrierView, bool) {
+	c.mountsLock.RLock()
+	view := c.systemBarrierView
+	c.mountsLock.RUnlock()
+
+	if view == nil {
+		return nil, false
+	}
+	return view.SubView(billing.BillingSubPath), true
 }
 
 // storeTransitCallCountsLocked must be called with BillingStorageLock held
@@ -272,14 +303,22 @@ func (c *Core) storeTransitCallCountsLocked(ctx context.Context, transitCount ui
 		Key:   billingPath,
 		Value: []byte(strconv.FormatUint(transitCount, 10)),
 	}
-	return c.GetBillingSubView().Put(ctx, entry)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
 }
 
 // getStoredTransitCallCountsLocked must be called with BillingStorageLock held
 func (c *Core) getStoredTransitCallCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (uint64, error) {
 	// Retrieve count for each data protection type separately because they are atomic counters
 	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.TransitDataProtectionCallCountsPrefix)
-	entry, err := c.GetBillingSubView().Get(ctx, billingPath)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, nil
+	}
+	entry, err := view.Get(ctx, billingPath)
 	if err != nil {
 		return 0, err
 	}
@@ -325,12 +364,20 @@ func (c *Core) storeKmipEnabledLocked(ctx context.Context, localPathPrefix strin
 	if err != nil {
 		return err
 	}
-	return c.GetBillingSubView().Put(ctx, entry)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
 }
 
 func (c *Core) getStoredKmipEnabledLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (bool, error) {
 	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, currentMonth, billing.KmipEnabledPrefix)
-	entry, err := c.GetBillingSubView().Get(ctx, billingPath)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return false, nil
+	}
+	entry, err := view.Get(ctx, billingPath)
 	if err != nil {
 		return false, err
 	}
