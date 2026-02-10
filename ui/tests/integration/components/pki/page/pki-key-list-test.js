@@ -32,8 +32,8 @@ module('Integration | Component | pki key list page', function (hooks) {
       },
     ];
     this.keys.meta = STANDARD_META;
-    this.canImportKey = true;
-    this.canGenerateKey = true;
+    this.canImportKeys = true;
+    this.canGenerateKeys = true;
     this.canRead = true;
     this.canEdit = true;
 
@@ -43,8 +43,8 @@ module('Integration | Component | pki key list page', function (hooks) {
         <Page::PkiKeyList
           @keys={{this.keys}}
           @mountPoint="vault.cluster.secrets.backend.pki"
-          @canImportKey={{this.canImportKey}}
-          @canGenerateKey={{this.canGenerateKey}}
+          @canImportKeys={{this.canImportKeys}}
+          @canGenerateKeys={{this.canGenerateKeys}}
           @canRead={{this.canRead}}
           @canEdit={{this.canEdit}}
         />,
@@ -90,8 +90,8 @@ module('Integration | Component | pki key list page', function (hooks) {
   test('it hides actions when permission denied', async function (assert) {
     assert.expect(3);
 
-    this.canImportKey = false;
-    this.canGenerateKey = false;
+    this.canImportKeys = false;
+    this.canGenerateKeys = false;
     this.canRead = false;
     this.canEdit = false;
 

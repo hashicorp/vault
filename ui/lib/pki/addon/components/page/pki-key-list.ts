@@ -10,8 +10,8 @@ interface Args {
   keys: { key_id: string; is_default: boolean; key_name: string }[];
   mountPoint: string;
   backend: string;
-  canImportKey: boolean;
-  canGenerateKey: boolean;
+  canImportKeys: boolean;
+  canGenerateKeys: boolean;
   canRead: boolean;
   canEdit: boolean;
   hasConfig: boolean;

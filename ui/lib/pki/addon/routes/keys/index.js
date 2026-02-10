@@ -27,14 +27,14 @@ export default class PkiKeysIndexRoute extends Route {
     const backend = this.secretMountPath.currentPath;
     const pathMap = {
       import: pathFor('pkiKeysImport', { backend }),
-      generate: pathFor('pkiKeysImport', { backend }),
+      generate: pathFor('pkiKeysGenerate', { backend }),
       key: pathFor('pkiKey', { backend, keyId }),
     };
     const perms = await this.capabilities.fetch(Object.values(pathMap));
 
     return {
-      canImportKey: perms[pathMap.import].canUpdate,
-      canGenerateKey: perms[pathMap.generate].canUpdate,
+      canImportKeys: perms[pathMap.import].canUpdate,
+      canGenerateKeys: perms[pathMap.generate].canUpdate,
       canRead: perms[pathMap.key].canRead,
       canEdit: perms[pathMap.key].canUpdate,
     };
