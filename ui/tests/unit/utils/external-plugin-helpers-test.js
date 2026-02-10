@@ -7,8 +7,9 @@ import { module, test } from 'qunit';
 import {
   EXTERNAL_PLUGIN_TO_BUILTIN_MAP,
   getBuiltinTypeFromExternalPlugin,
-  isKnownExternalPlugin,
   getEffectiveEngineType,
+  getExternalPluginNameFromBuiltin,
+  isKnownExternalPlugin,
 } from 'vault/utils/external-plugin-helpers';
 
 module('Unit | Utility | external-plugin-helpers', function () {
@@ -118,6 +119,77 @@ module('Unit | Utility | external-plugin-helpers', function () {
     });
   });
 
+  module('getExternalPluginNameFromBuiltin', function () {
+    test('it returns external plugin name for known builtin types', function (assert) {
+      assert.strictEqual(
+        getExternalPluginNameFromBuiltin('keymgmt'),
+        'vault-plugin-secrets-keymgmt',
+        'returns vault-plugin-secrets-keymgmt for keymgmt'
+      );
+
+      assert.strictEqual(
+        getExternalPluginNameFromBuiltin('azure'),
+        'vault-plugin-secrets-azure',
+        'returns vault-plugin-secrets-azure for azure'
+      );
+
+      assert.strictEqual(
+        getExternalPluginNameFromBuiltin('gcp'),
+        'vault-plugin-secrets-gcp',
+        'returns vault-plugin-secrets-gcp for gcp'
+      );
+    });
+
+    test('it returns null for unknown builtin types', function (assert) {
+      assert.strictEqual(
+        getExternalPluginNameFromBuiltin('unknown-engine'),
+        null,
+        'returns null for unknown builtin type'
+      );
+    });
+
+    test('it returns null for external plugin names', function (assert) {
+      assert.strictEqual(
+        getExternalPluginNameFromBuiltin('vault-plugin-secrets-keymgmt'),
+        null,
+        'returns null for external plugin name'
+      );
+    });
+
+    test('it returns null for empty string', function (assert) {
+      assert.strictEqual(getExternalPluginNameFromBuiltin(''), null, 'returns null for empty string');
+    });
+
+    test('it handles case sensitivity correctly', function (assert) {
+      assert.strictEqual(
+        getExternalPluginNameFromBuiltin('KEYMGMT'),
+        null,
+        'returns null for uppercase builtin type'
+      );
+
+      assert.strictEqual(
+        getExternalPluginNameFromBuiltin('KeyMgmt'),
+        null,
+        'returns null for mixed case builtin type'
+      );
+    });
+
+    test('it works with all mapped builtin types', function (assert) {
+      // Test that every builtin type in the map can be reverse-looked up
+      const builtinTypes = Object.values(EXTERNAL_PLUGIN_TO_BUILTIN_MAP);
+      const uniqueBuiltinTypes = [...new Set(builtinTypes)];
+
+      uniqueBuiltinTypes.forEach((builtinType) => {
+        const externalName = getExternalPluginNameFromBuiltin(builtinType);
+        assert.ok(externalName, `found external name for builtin type: ${builtinType}`);
+        assert.true(
+          externalName.startsWith('vault-plugin-'),
+          `external name ${externalName} follows expected pattern`
+        );
+      });
+    });
+  });
+
   module('future extensibility', function () {
     test('mapping can be easily extended', function (assert) {
       // Test that we can add more mappings (conceptually)
@@ -128,6 +200,25 @@ module('Unit | Utility | external-plugin-helpers', function () {
 
       assert.strictEqual(testMap['vault-plugin-secrets-keymgmt'], 'keymgmt', 'existing mapping is preserved');
       assert.strictEqual(testMap['vault-plugin-auth-example'], 'example-auth', 'new mapping can be added');
+    });
+
+    test('reverse lookup works with extended mappings', function (assert) {
+      // Test conceptual extensibility of the reverse lookup
+      // This verifies that the reverse lookup algorithm is robust
+      const originalFunction = getExternalPluginNameFromBuiltin('keymgmt');
+      assert.strictEqual(
+        originalFunction,
+        'vault-plugin-secrets-keymgmt',
+        'reverse lookup works for existing mappings'
+      );
+
+      // Test that non-existent mappings return null as expected
+      const nonExistentResult = getExternalPluginNameFromBuiltin('hypothetical-auth');
+      assert.strictEqual(
+        nonExistentResult,
+        null,
+        'reverse lookup correctly returns null for non-mapped types'
+      );
     });
   });
 });
