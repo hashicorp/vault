@@ -238,6 +238,7 @@
                           {{#if this.showPasswordField}}
                             <Input
                               {{on "change" (fn this.updatePassword attr.name)}}
+                              aria-label="New password"
                               @type="password"
                               @value={{get @model attr.name}}
                               name={{attr.name}}
