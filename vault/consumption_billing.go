@@ -70,6 +70,15 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 }
 
 func (c *Core) updateBillingMetrics(ctx context.Context) error {
+	// Check if systemBarrierView is initialized
+	c.mountsLock.RLock()
+	initialized := c.systemBarrierView != nil
+	c.mountsLock.RUnlock()
+
+	if !initialized {
+		return nil
+	}
+
 	if c.PerfStandby() {
 		// We do not update billing metrics on performance standbys
 		// Instead we send any in memory counts to the primary. This doesn't apply
