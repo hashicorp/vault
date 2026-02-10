@@ -75,3 +75,10 @@ func (t *TestObservationRecorder) LastObservationOfType(observationType string) 
 	}
 	return ofType[len(ofType)-1]
 }
+
+// Reset empties the list of recorded observations.
+func (t *TestObservationRecorder) Reset() {
+	t.l.Lock()
+	defer t.l.Unlock()
+	t.observationsByType = make(map[string][]*TestObservation)
+}

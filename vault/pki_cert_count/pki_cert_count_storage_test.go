@@ -53,13 +53,13 @@ func TestGetCertificateCount(t *testing.T) {
 
 	for name, tt := range testCases {
 		t.Run(name, func(t *testing.T) {
-			issuedCount, storedCount, err := ReadStoredCounts(context.Background(), storage, tt.date)
+			count, err := ReadStoredCounts(context.Background(), storage, tt.date)
 			if tt.expectErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tt.expectedIssued, issuedCount)
-				require.Equal(t, tt.expectedStored, storedCount)
+				require.Equal(t, tt.expectedIssued, count.IssuedCerts)
+				require.Equal(t, tt.expectedStored, count.StoredCerts)
 			}
 		})
 	}
@@ -71,17 +71,19 @@ func TestStoreCertificateCounts(t *testing.T) {
 
 	storage := logical.NewLogicalStorage(backend)
 
-	var expectedIssuedCount uint64 = 5
-	var expectedStoredCount uint64 = 3
+	expectedCount := logical.CertCount{
+		IssuedCerts: 5,
+		StoredCerts: 3,
+	}
 
-	err = IncrementStoredCounts(context.Background(), storage, expectedIssuedCount, expectedStoredCount)
+	err = IncrementStoredCounts(context.Background(), storage, expectedCount)
 	require.NoError(t, err)
 
 	year, month, day := time.Now().Date()
 	counts := retrieveCertificateCountsFromStorage(t, storage, year, month)
 
-	require.Equal(t, expectedIssuedCount, counts.IssuedCertificateCountsByDay[day])
-	require.Equal(t, expectedStoredCount, counts.StoredCertificateCountsByDay[day])
+	require.Equal(t, expectedCount.IssuedCerts, counts.IssuedCertificateCountsByDay[day])
+	require.Equal(t, expectedCount.StoredCerts, counts.StoredCertificateCountsByDay[day])
 }
 
 func TestReadAfterStore(t *testing.T) {
@@ -90,16 +92,17 @@ func TestReadAfterStore(t *testing.T) {
 
 	storage := logical.NewLogicalStorage(backend)
 
-	var expectedIssuedCount uint64 = 5
-	var expectedStoredCount uint64 = 3
+	expectedCount := logical.CertCount{
+		IssuedCerts: 5,
+		StoredCerts: 3,
+	}
 
-	err = IncrementStoredCounts(context.Background(), storage, expectedIssuedCount, expectedStoredCount)
+	err = IncrementStoredCounts(context.Background(), storage, expectedCount)
 	require.NoError(t, err)
 
-	issued, stored, err := ReadStoredCounts(context.Background(), storage, time.Now())
+	actual, err := ReadStoredCounts(context.Background(), storage, time.Now())
 	require.NoError(t, err)
-	require.Equal(t, expectedIssuedCount, issued)
-	require.Equal(t, expectedStoredCount, stored)
+	require.Equal(t, expectedCount, actual)
 }
 
 func retrieveCertificateCountsFromStorage(t *testing.T, storage logical.Storage, year int, month time.Month) *PkiCertificateCount {

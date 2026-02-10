@@ -508,33 +508,26 @@ func findOpenSSL() (string, string, bool) {
 }
 
 type testingPkiCertificateCounter struct {
-	IssuedCount uint64
-	StoredCount uint64
+	count logical.CertCount
 }
 
 var _ logical.CertificateCounter = (*testingPkiCertificateCounter)(nil)
 
 func (c *testingPkiCertificateCounter) Reset() {
-	c.IssuedCount = 0
-	c.StoredCount = 0
+	c.count = logical.CertCount{}
 }
 
-func (c *testingPkiCertificateCounter) IncrementCount(issuedCerts, storedCerts uint64) {
-	c.IssuedCount += issuedCerts
-	c.StoredCount += storedCerts
+func (c *testingPkiCertificateCounter) AddCount(params logical.CertCount) {
+	c.count.Add(params)
 }
 
-func (c *testingPkiCertificateCounter) AddIssuedCertificate(stored bool) {
-	if stored {
-		c.IncrementCount(1, 1)
-	} else {
-		c.IncrementCount(1, 0)
-	}
+func (c *testingPkiCertificateCounter) Increment() logical.CertCountIncrementer {
+	return logical.NewCertCountIncrementer(c)
 }
 
 func (c *testingPkiCertificateCounter) RequireCount(t require.TestingT, issuedCerts, storedCerts uint64) {
-	require.Equal(t, issuedCerts, c.IssuedCount, "issued certificates count mismatch %s")
-	require.Equal(t, storedCerts, c.StoredCount, "stored certificates count mismatch %s")
+	require.Equal(t, issuedCerts, c.count.IssuedCerts, "issued certificates count mismatch %s")
+	require.Equal(t, storedCerts, c.count.StoredCerts, "stored certificates count mismatch %s")
 }
 
 func (c *testingPkiCertificateCounter) RequireZero(t require.TestingT) {
