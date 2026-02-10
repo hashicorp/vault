@@ -49,6 +49,9 @@ func TestPkiCertificateCountManager_IncrementAndConsume(t *testing.T) {
 	// Calling stop again should not panic.
 	manager.StopConsumerJob()
 
+	jobCountLock.Lock()
+	defer jobCountLock.Unlock()
+
 	require.Equal(t, uint64(5), jobCount.IssuedCerts, "issued count mismatch")
 	require.Equal(t, uint64(6), jobCount.StoredCerts, "stored count mismatch")
 	require.Zero(t, firstConsumerTotalCount.Load(), "first consumer should not have been called")

@@ -5,6 +5,8 @@
 
 package vault
 
-func forwardPkiCertCounts(c *Core, issuedCount uint64, storedCount uint64) bool {
+import "github.com/hashicorp/vault/sdk/logical"
+
+func forwardPkiCertCounts(c *Core, inc logical.CertCount) bool {
 	return false
 }
