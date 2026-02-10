@@ -56,7 +56,7 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 	if err != nil {
 		return 0, err
 	}
-	currentThirdPartyPluginCounts, err := c.ListExternalSecretPlugins(ctx)
+	currentThirdPartyPluginCounts, err := c.ListDeduplicatedExternalSecretPlugins(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -157,7 +157,7 @@ func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, cu
 	local := localPathPrefix == billing.LocalPrefix
 
 	// Get the current count of kv version 1 secrets
-	currentKvCounts, err := c.GetKvUsageMetricsByNamespace(ctx, "1", "", local, !local)
+	currentKvCounts, err := c.GetKvUsageMetricsByNamespace(ctx, "1", "", local, !local, false)
 	if err != nil {
 		c.logger.Error("error getting count of kv version 1 secrets", "error", err)
 		return 0, err
@@ -165,7 +165,7 @@ func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, cu
 	totalKvCounts := getTotalSecretsAcrossAllNamespaces(currentKvCounts)
 
 	// Get the current count of kv version 2 secrets
-	currentKvCounts, err = c.GetKvUsageMetricsByNamespace(ctx, "2", "", local, !local)
+	currentKvCounts, err = c.GetKvUsageMetricsByNamespace(ctx, "2", "", local, !local, false)
 	if err != nil {
 		c.logger.Error("error getting current count of kv version 2 secrets", "error", err)
 		return 0, err
@@ -212,7 +212,7 @@ func (c *Core) UpdateMaxRoleCounts(ctx context.Context, localPathPrefix string, 
 	defer c.consumptionBilling.BillingStorageLock.Unlock()
 
 	local := localPathPrefix == billing.LocalPrefix
-	currentRoleCounts := c.getRoleCountsInternal(local, !local)
+	currentRoleCounts := c.getRoleCountsInternal(local, !local, true)
 
 	maxRoleCounts, err := c.getStoredRoleCountsLocked(ctx, localPathPrefix, currentMonth)
 	if maxRoleCounts == nil {

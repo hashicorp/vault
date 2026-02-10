@@ -546,7 +546,7 @@ func TestCore_ListExternalSecretPlugins(t *testing.T) {
 	)
 	core.mountsLock.Unlock()
 
-	got, err := core.ListExternalSecretPlugins(ctx)
+	got, err := core.ListDeduplicatedExternalSecretPlugins(ctx)
 	require.NoError(t, err)
 
 	// Expect only the non-builtin external secrets plugin v2, v3 and v1.
