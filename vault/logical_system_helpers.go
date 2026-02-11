@@ -311,7 +311,7 @@ func (c *Core) consumePkiCertCounts(inc logical.CertCount) {
 	case consts.Standby:
 		consumed = true
 	case consts.PerfStandby:
-		consumed = forwardPkiCertCounts(c, inc.IssuedCerts, inc.StoredCerts)
+		consumed = forwardPkiCertCounts(c, inc)
 	case consts.Active:
 		c.logger.Info("storing PKI certificate counts", "issuedCerts", inc.IssuedCerts, "storedCerts", inc.StoredCerts)
 		err := pki_cert_count.IncrementStoredCounts(c.activeContext, c.barrier, inc)

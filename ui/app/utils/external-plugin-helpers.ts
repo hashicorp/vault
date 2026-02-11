@@ -63,3 +63,20 @@ export function isKnownExternalPlugin(pluginName: string): boolean {
 export function getEffectiveEngineType(pluginType: string): string {
   return getBuiltinTypeFromExternalPlugin(pluginType) || pluginType;
 }
+
+/**
+ * Get the external plugin name for a given builtin engine type.
+ * This function performs a reverse lookup on the external plugin mapping.
+ *
+ * @param builtinType - The builtin engine type (e.g., "keymgmt")
+ * @returns The external plugin name if a mapping exists, otherwise null
+ */
+export function getExternalPluginNameFromBuiltin(builtinType: string): string | null {
+  // Find the external plugin name that maps to this builtin type
+  for (const [externalName, mappedBuiltin] of Object.entries(EXTERNAL_PLUGIN_TO_BUILTIN_MAP)) {
+    if (mappedBuiltin === builtinType) {
+      return externalName;
+    }
+  }
+  return null;
+}
