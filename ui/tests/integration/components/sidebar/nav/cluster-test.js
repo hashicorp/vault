@@ -61,9 +61,9 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Dashboard',
       'Secrets',
       'Resilience and recovery',
-      'Access',
+      'Access control',
       'Operational tools',
-      'Raft Storage',
+      'Raft storage',
       'Client count',
     ];
 
@@ -81,11 +81,11 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     const links = [
       'Dashboard',
       'Secrets',
-      'Access',
+      'Access control',
       'Operational tools',
       'Resilience and recovery',
       'Reporting',
-      'Raft Storage',
+      'Raft storage',
       'Client count',
     ];
     // do not add PKI-only Secrets feature as it hides Client count nav link
@@ -100,7 +100,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   });
 
   test('it should hide enterprise related links in child namespace', async function (assert) {
-    const links = ['Raft Storage', 'License'];
+    const links = ['Raft storage', 'License'];
     this.owner.lookup('service:namespace').set('path', 'foo');
     const stubs = stubFeaturesAndPermissions(this.owner, true, true);
     stubs.hasNavPermission.callsFake((route) => route !== 'clients');
@@ -131,7 +131,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       usingRaft: true,
       hasChrootNamespace: true,
     });
-    const links = ['Client Counts', 'Replication', 'Raft Storage', 'License', 'Seal Vault'];
+    const links = ['Client Counts', 'Replication', 'Raft storage', 'License', 'Seal Vault'];
 
     await renderComponent();
     assert

@@ -88,7 +88,7 @@ module('Acceptance | auth-methods list view', function (hooks) {
     for (const [key] of Object.entries(authPayload)) {
       assert
         .dom(GENERAL.linkedBlock(sanitizePath(key)))
-        .exists({ count: 1 }, `auth method ${key} appears in list view after navigating from OIDC Provider`);
+        .exists({ count: 1 }, `auth method ${key} appears in list view after navigating from OIDC provider`);
     }
   });
 

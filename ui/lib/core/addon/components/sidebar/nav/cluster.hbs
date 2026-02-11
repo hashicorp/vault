@@ -17,14 +17,13 @@
       data-test-sidebar-nav-link="Resilience and recovery"
     />
   {{/if}}
-
   {{#if (or (has-permission "access") (has-permission "policies"))}}
     <Nav.Link
       @route={{this.accessRoute}}
       @models={{this.accessRouteModels}}
-      @text="Access"
+      @text="Access control"
       @hasSubItems={{true}}
-      data-test-sidebar-nav-link="Access"
+      data-test-sidebar-nav-link="Access control"
     />
   {{/if}}
   {{#if (has-permission "tools")}}
@@ -44,14 +43,6 @@
   }}
     <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
   {{/if}}
-  {{#if (and this.cluster.usingRaft this.isRootNamespace (has-permission "status" routeParams="raft"))}}
-    <Nav.Link
-      @route="vault.cluster.storage"
-      @model={{this.cluster.name}}
-      @text="Raft Storage"
-      data-test-sidebar-nav-link="Raft Storage"
-    />
-  {{/if}}
   {{#if (display-nav-item this.navSection.reporting)}}
     <Nav.Link
       @route={{if (display-nav-item this.routeName.vaultUsage) "vault.cluster.usage-reporting" "vault.cluster.license"}}
@@ -66,6 +57,14 @@
       @text="Client count"
       @hasSubItems={{true}}
       data-test-sidebar-nav-link="Client count"
+    />
+  {{/if}}
+  {{#if (and this.cluster.usingRaft this.isRootNamespace (has-permission "status" routeParams="raft"))}}
+    <Nav.Link
+      @route="vault.cluster.storage"
+      @model={{this.cluster.name}}
+      @text="Raft storage"
+      data-test-sidebar-nav-link="Raft storage"
     />
   {{/if}}
 </Hds::AppSideNav::Portal>

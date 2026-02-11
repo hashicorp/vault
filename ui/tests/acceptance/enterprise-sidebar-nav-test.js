@@ -31,11 +31,11 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
 
     await click(GENERAL.navLink('Client count'));
     assert.dom(panel('Client count')).exists('Client count nav panel renders');
-    assert.dom(GENERAL.navLink('Client Usage')).hasClass('active', 'Client Usage link is active');
+    assert.dom(GENERAL.navLink('Client usage')).hasClass('active', 'Client usage link is active');
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Client counts route renders');
     await click(GENERAL.navLink('Back to main navigation'));
 
-    await click(GENERAL.navLink('Access'));
+    await click(GENERAL.navLink('Access control'));
     await click(GENERAL.navLink('Approval workflow'));
     assert.strictEqual(currentURL(), '/vault/access/control-groups', 'Approval workflow route renders');
 
@@ -43,7 +43,7 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/access/namespaces?page=1', 'Replication route renders');
 
     await click(GENERAL.navLink('Back to main navigation'));
-    await click(GENERAL.navLink('Access'));
+    await click(GENERAL.navLink('Access control'));
     await click(GENERAL.navLink('Role governing policies'));
     assert.strictEqual(currentURL(), '/vault/policies/rgp', 'Role governing policies route renders');
 
@@ -54,8 +54,8 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
   test('it should link to correct routes at the access level', async function (assert) {
     assert.expect(12);
 
-    await click(GENERAL.navLink('Access'));
-    assert.dom(panel('Access')).exists('Access nav panel renders');
+    await click(GENERAL.navLink('Access control'));
+    assert.dom(panel('Access control')).exists('Access nav panel renders');
 
     const links = [
       { label: 'ACL policies', route: '/vault/policies/acl' },
