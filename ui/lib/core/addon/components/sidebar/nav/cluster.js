@@ -53,23 +53,24 @@ export default class SidebarNavClusterComponent extends Component {
   }
 
   get accessRoute() {
-    if (this.permissions.hasPermission('policies')) {
+    if (this.permissions.hasNavPermission('policies')) {
       return 'vault.cluster.policies';
     }
 
-    if (this.permissions.hasPermission('access')) {
-      return 'vault.cluster.access';
+    if (this.permissions.hasNavPermission('access')) {
+      return this.permissions.navPathParams('access').route;
     }
 
     return null;
   }
 
   get accessRouteModels() {
-    if (this.permissions.hasPermission('policies')) {
-      return this.routeParamsFor('policies').models;
+    if (this.permissions.hasNavPermission('policies')) {
+      return this.routeParamsFor('policies')?.models;
     }
-    if (this.permissions.hasPermission('access')) {
-      return this.routeParamsFor('access').models;
+
+    if (this.permissions.hasNavPermission('access')) {
+      return this.routeParamsFor('access')?.models;
     }
 
     return null;

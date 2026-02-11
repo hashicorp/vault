@@ -45,7 +45,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
     const subNavs = [
-      { label: 'Access', route: 'policies/acl' },
+      { label: 'Access control', route: 'policies/acl' },
       { label: 'Operational tools', route: 'tools/wrap' },
     ];
 
@@ -58,7 +58,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
     }
 
     const links = [
-      { label: 'Raft Storage', route: '/vault/storage/raft' },
+      { label: 'Raft storage', route: '/vault/storage/raft' },
       { label: 'Secrets', route: '/vault/secrets-engines' },
       { label: 'Dashboard', route: '/vault/dashboard' },
     ];
@@ -72,8 +72,8 @@ module('Acceptance | sidebar navigation', function (hooks) {
   test('it should link to correct routes at the access level', async function (assert) {
     assert.expect(8);
 
-    await click(link('Access'));
-    assert.dom(panel('Access')).exists('Access nav panel renders');
+    await click(link('Access control'));
+    assert.dom(panel('Access control')).exists('Access nav panel renders');
 
     const links = [
       { label: 'ACL policies', route: '/vault/policies/acl' },
@@ -117,23 +117,23 @@ module('Acceptance | sidebar navigation', function (hooks) {
     await click(link('Client count'));
     assert.dom(panel('Client count')).exists('Client counts nav panel renders');
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Top level nav link renders overview');
-    assert.dom(link('Client Usage')).hasClass('active');
+    assert.dom(link('Client usage')).hasClass('active');
     await click(link('Configuration'));
     assert.strictEqual(currentURL(), '/vault/clients/config', 'Clients configuration renders');
     assert.dom(link('Configuration')).hasClass('active');
-    await click(link('Client Usage'));
+    await click(link('Client usage'));
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Sub nav link navigates to overview');
-    assert.dom(link('Client Usage')).hasClass('active');
+    assert.dom(link('Client usage')).hasClass('active');
   });
 
   test('it should display access nav when mounting and configuring auth methods', async function (assert) {
-    await click(link('Access'));
+    await click(link('Access control'));
     await click('[data-test-sidebar-nav-link="Authentication methods"]');
     await click('[data-test-auth-enable]');
-    assert.dom('[data-test-sidebar-nav-panel="Access"]').exists('Access nav panel renders');
+    assert.dom('[data-test-sidebar-nav-panel="Access control"]').exists('Access nav panel renders');
     await click(link('Authentication methods'));
     await click(GENERAL.linkedBlock('token'));
     await click('[data-test-configure-link]');
-    assert.dom('[data-test-sidebar-nav-panel="Access"]').exists('Access nav panel renders');
+    assert.dom('[data-test-sidebar-nav-panel="Access control"]').exists('Access nav panel renders');
   });
 });
