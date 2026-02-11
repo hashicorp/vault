@@ -15,7 +15,7 @@ var checkGitChangedFiles = &git.CheckChangedFilesReq{}
 
 func newGitCheckChangedFilesCmd() *cobra.Command {
 	changedFilesCmd := &cobra.Command{
-		Use:   "changed-files [--branch <branch> | --range <range> | --commit <sha>] --group <group>...",
+		Use:   "changed-files [--branch <branch> | --range <range> | --commit <sha>] --disallowed-group <group>...",
 		Short: "Check if any changed files are matching disallowed groups",
 		Long:  "Check if any changed files are matching disallowed groups",
 		RunE:  runGitCheckChangedFilesCmd,
@@ -25,7 +25,7 @@ func newGitCheckChangedFilesCmd() *cobra.Command {
 	changedFilesCmd.PersistentFlags().StringVarP(&checkGitChangedFiles.Branch, "branch", "b", "", "The branch to compare against")
 	changedFilesCmd.PersistentFlags().StringVarP(&checkGitChangedFiles.Range, "range", "r", "", "The commit range to compare (e.g., HEAD~5..HEAD)")
 	changedFilesCmd.PersistentFlags().StringVarP(&checkGitChangedFiles.Commit, "commit", "c", "", "The specific commit SHA to analyze")
-	changedFilesCmd.PersistentFlags().StringSliceVarP(&checkGitChangedFiles.CheckGroups, "groups", "g", nil, "File group(s) to check changed files for")
+	changedFilesCmd.PersistentFlags().StringSliceVarP(&checkGitChangedFiles.CheckGroups, "disallowed-groups", "g", nil, "File group(s) to check changed files for")
 	changedFilesCmd.PersistentFlags().BoolVar(&checkGitChangedFiles.WriteToGithubOutput, "github-output", false, "Whether or not to write 'changed-files' to $GITHUB_OUTPUT")
 
 	return changedFilesCmd
