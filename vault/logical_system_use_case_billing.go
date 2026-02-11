@@ -87,9 +87,13 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 
 	// Data protection call counts are stored to local path only
 	// Each cluster tracks its own total requests to avoid double counting
-	localDataProtectionCallCounts, err := b.Core.UpdateTransitCallCounts(ctx, currentMonth)
+	localTransitCallCounts, err := b.Core.UpdateTransitCallCounts(ctx, currentMonth)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving local max data protection call counts: %w", err)
+		return nil, fmt.Errorf("error retrieving local transit call counts: %w", err)
+	}
+	localTransformCallCounts, err := b.Core.UpdateTransformCallCounts(ctx, currentMonth)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving local transform call counts: %w", err)
 	}
 
 	// If we are the primary, then combine the replicated and local max role counts. Else just output the local
@@ -97,7 +101,10 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 	combinedMaxRoleCounts := combineRoleCounts(replicatedMaxRoleCounts, localMaxRoleCounts)
 	combinedMaxKvCounts := replicatedKvHWMCounts + localKvHWMCounts
 	// Data protection counts are not combined - each cluster reports its own total
-	combinedMaxDataProtectionCallCounts := localDataProtectionCallCounts
+	combinedMaxDataProtectionCallCounts := map[string]interface{}{
+		"transit":   localTransitCallCounts,
+		"transform": localTransformCallCounts,
+	}
 
 	var replicatedPreviousMonthRoleCounts *RoleCounts
 	replicatedPreviousMonthKvHWMCounts := 0
@@ -123,13 +130,20 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 	// Data protection counts for previous month
 	localPreviousMonthTransitCallCounts, err := b.Core.GetStoredTransitCallCounts(ctx, previousMonth)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving local max data protection call counts for previous month: %w", err)
+		return nil, fmt.Errorf("error retrieving local transit call counts for previous month: %w", err)
+	}
+	localPreviousMonthTransformCallCounts, err := b.Core.GetStoredTransformCallCounts(ctx, previousMonth)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving local transform call counts for previous month: %w", err)
 	}
 
 	combinedPreviousMonthRoleCounts := combineRoleCounts(replicatedPreviousMonthRoleCounts, localPreviousMonthRoleCounts)
 	combinedPreviousMonthKvHWMCounts := replicatedPreviousMonthKvHWMCounts + localPreviousMonthKvHWMCounts
 	// Data protection counts are not combined - each cluster reports its own total
-	combinedPreviousMonthTransitCallCounts := localPreviousMonthTransitCallCounts
+	combinedPreviousMonthDataProtectionCallCounts := map[string]interface{}{
+		"transit":   localPreviousMonthTransitCallCounts,
+		"transform": localPreviousMonthTransformCallCounts,
+	}
 
 	resp := map[string]interface{}{
 		"current_month": map[string]interface{}{
@@ -139,11 +153,10 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 			"data_protection_call_counts": combinedMaxDataProtectionCallCounts,
 		},
 		"previous_month": map[string]interface{}{
-			"timestamp":           previousMonth,
-			"maximum_role_counts": combinedPreviousMonthRoleCounts,
-			"maximum_kv_counts":   combinedPreviousMonthKvHWMCounts,
-			// TODO: Add transform data protection call counts
-			"data_protection_call_counts": combinedPreviousMonthTransitCallCounts,
+			"timestamp":                   previousMonth,
+			"maximum_role_counts":         combinedPreviousMonthRoleCounts,
+			"maximum_kv_counts":           combinedPreviousMonthKvHWMCounts,
+			"data_protection_call_counts": combinedPreviousMonthDataProtectionCallCounts,
 		},
 	}
 
