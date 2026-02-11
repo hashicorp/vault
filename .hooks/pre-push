@@ -97,7 +97,7 @@ main() {
 
     local output
     if ! output=$(builtin type pipeline 2>&1); then
-      fail "Unable to locate the 'pipeline' binary your \$PATH" "Please make sure you have the latest pipeline tool installed and that your '\$GOBIN' is in your '\$PATH'. You can use 'make tools-pipeline' to build and install the latest version of the 'pipeline' tool. The tool is required to check your branch's changed files before pushing to either 'hashicorp/vault' or 'ce/*\' branches in 'hashicorp/vault-enterprise'. Reach out to #team-vault-automation') for help! ${output}"
+      fail "Unable to locate the 'pipeline' binary your \$PATH" "Please make sure you have the latest pipeline tool installed and that your '\$GOBIN' is in your '\$PATH'. You can use 'make tools-pipeline' to build and install the latest version of the 'pipeline' tool. The tool is required to check your branch's changed files before pushing to either 'hashicorp/vault' or 'ce/*\' branches in 'hashicorp/vault-enterprise'. Reach out to #team-vault-automation for help! ${output}"
     fi
 
     # Determine our "zero" object ID.
