@@ -46,6 +46,8 @@ type ConsumptionBilling struct {
 type BillingConfig struct {
 	// For testing purposes. The cadence at which billing metrics are updated
 	MetricsUpdateCadence time.Duration
+	// For testing purposes. The cadence at which plugin counts are sent from perf standby to active
+	PluginCountsSendCadence time.Duration
 }
 
 func GetMonthlyBillingPath(localPrefix string, now time.Time, billingMetric string) string {
@@ -65,6 +67,10 @@ type DataProtectionCallCounts struct {
 var _ logical.ConsumptionBillingManager = (*ConsumptionBilling)(nil)
 
 func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType string, data map[string]interface{}) error {
+	if s == nil {
+		return nil
+	}
+
 	switch mountType {
 	case "transit":
 		val, ok := data["count"].(uint64)

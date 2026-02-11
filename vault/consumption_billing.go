@@ -30,6 +30,13 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 	c.consumptionBillingLock.Unlock()
 	c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
 		c.consumptionBillingMetricsWorker(ctx)
+		// Start the perf standby plugin counts worker if this is a perf standby
+		// Access perfStandby field directly to avoid deadlock during post-unseal
+		if c.perfStandby {
+			go c.perfStandbyPluginCountsWorker(ctx)
+		}
+		// Active nodes don't need a separate worker - they flush counts via
+		// the existing consumptionBillingMetricsWorker -> updateBillingMetrics path
 	})
 
 	return nil
