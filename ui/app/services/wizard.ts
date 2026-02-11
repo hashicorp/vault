@@ -17,6 +17,7 @@ const DISMISSED_WIZARD_KEY = 'dismissed-wizards';
  */
 export default class WizardService extends Service {
   @tracked dismissedWizards: string[] = this.loadDismissedWizards();
+  @tracked introVisibleState: Record<string, boolean> = {};
 
   /**
    * Load dismissed wizards from localStorage
@@ -53,6 +54,8 @@ export default class WizardService extends Service {
   reset(wizardId: string): void {
     this.dismissedWizards = this.dismissedWizards.filter((id: string) => id !== wizardId);
     localStorage.setItem(DISMISSED_WIZARD_KEY, this.dismissedWizards);
+    // Reset intro visibility when wizard is reset
+    this.setIntroVisible(wizardId, true);
   }
 
   /**
@@ -61,5 +64,33 @@ export default class WizardService extends Service {
   resetAll(): void {
     this.dismissedWizards = [];
     localStorage.removeItem(DISMISSED_WIZARD_KEY);
+    this.introVisibleState = {};
+  }
+
+  /**
+   * Check if the intro is visible for a specific wizard
+   * @param wizardId - The unique identifier for the wizard
+   * @returns true if the intro is visible, false otherwise (defaults to true if wizard not dismissed, false if dismissed)
+   */
+  isIntroVisible(wizardId: string): boolean {
+    // If intro visibility has been explicitly set, use that value
+    if (this.introVisibleState[wizardId] !== undefined) {
+      return this.introVisibleState[wizardId];
+    }
+    // Otherwise, default to true if wizard is not dismissed (first time showing)
+    // and false if wizard is dismissed
+    return !this.isDismissed(wizardId);
+  }
+
+  /**
+   * Set the intro visibility state for a specific wizard
+   * @param wizardId - The unique identifier for the wizard
+   * @param visible - Whether the intro should be visible
+   */
+  setIntroVisible(wizardId: string, visible: boolean): void {
+    this.introVisibleState = {
+      ...this.introVisibleState,
+      [wizardId]: visible,
+    };
   }
 }

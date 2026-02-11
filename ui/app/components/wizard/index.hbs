@@ -3,39 +3,27 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if (and (has-block "welcome") this.showWelcome)}}
-  <div data-test-welcome>
-    <Wizard::Welcome>
-      <:welcome>
-        {{yield to="welcome"}}
-        <Hds::ButtonSet>
-          <Hds::Button
-            @icon="rocket"
-            @text="Guided setup"
-            {{on "click" (fn (mut this.showWelcome) false)}}
-            data-test-button="Guided setup"
-          />
-          <Hds::Button @color="secondary" @text="Skip" {{on "click" @onDismiss}} data-test-button="Skip" />
-          <Hds::Link::Standalone
-            @icon="docs-link"
-            @iconPosition="trailing"
-            @text="View documentation"
-            @href={{@welcomeDocLink}}
-            class="has-left-margin-m"
-          />
-        </Hds::ButtonSet>
-      </:welcome>
-    </Wizard::Welcome>
-  </div>
+{{#if (and (has-block "intro") this.isIntroVisible)}}
+  {{! pass @onDismiss on for modal closure via clicking outside modal @onClose}}
+  <Wizard::Intro @isModal={{@isModal}} @title={{@title}} @onDismiss={{@onDismiss}} data-test-intro>
+    <:body>
+      {{yield to="intro"}}
+    </:body>
+    <:actions>
+      {{yield to="introActions"}}
+    </:actions>
+  </Wizard::Intro>
 {{else}}
-  <Wizard::GuidedSetup
+  <Wizard::GuidedStart
+    @canProceed={{@canProceed}}
     @currentStep={{@currentStep}}
     @steps={{@steps}}
-    @onStepChange={{@onStepChange}}
-    @onDismiss={{@onDismiss}}
-    @canProceed={{@canProceed}}
+    @title={{@title}}
     @wizardState={{@wizardState}}
     @updateWizardState={{@updateWizardState}}
+    @onStepChange={{@onStepChange}}
+    @onDismiss={{@onDismiss}}
+    data-test-guided-start
   >
     <:exit>
       {{#if (has-block "exit")}}
@@ -51,5 +39,5 @@
         <Hds::Button @text="Mark as complete" {{on "click" @onDismiss}} data-test-submit />
       {{/if}}
     </:submit>
-  </Wizard::GuidedSetup>
+  </Wizard::GuidedStart>
 {{/if}}

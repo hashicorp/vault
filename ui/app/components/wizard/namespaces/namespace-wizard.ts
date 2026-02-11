@@ -24,6 +24,7 @@ const DEFAULT_STEPS = [
 ];
 
 interface Args {
+  isIntroModal: boolean;
   onRefresh: CallableFunction;
 }
 
@@ -42,6 +43,7 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
   @service declare readonly wizard: WizardService;
   @service declare namespace: NamespaceService;
 
+  @tracked currentStep = 0;
   @tracked steps = DEFAULT_STEPS;
   @tracked wizardState: WizardState = {
     securityPolicyChoice: null,
@@ -50,7 +52,6 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
     creationMethod: null,
     codeSnippet: null,
   };
-  @tracked currentStep = 0;
 
   methods = CreationMethod;
   policy = SecurityPolicy;
@@ -130,6 +131,11 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
   async onDismiss() {
     this.wizard.dismiss(this.wizardId);
     await this.args.onRefresh();
+  }
+
+  @action
+  onIntroChange(visible: boolean) {
+    this.wizard.setIntroVisible(this.wizardId, visible);
   }
 
   @action

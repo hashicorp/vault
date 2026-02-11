@@ -13,10 +13,10 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   content: '[data-test-content]',
-  guidedSetup: '[data-test-guided-setup]',
+  guidedStart: '[data-test-guided-start]',
   stepTitle: '[data-test-step-title]',
   tree: '[data-test-tree]',
-  welcome: '[data-test-welcome]',
+  intro: '[data-test-intro]',
   inputRow: (index) => (index ? `[data-test-input-row="${index}"]` : '[data-test-input-row]'),
 };
 
@@ -44,12 +44,12 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
 
   test('it shows wizard when no namespaces exist', async function (assert) {
     await this.renderComponent();
-    assert.dom(SELECTORS.welcome).exists('Wizard welcome is rendered');
+    assert.dom(SELECTORS.intro).exists('Wizard intro is rendered');
   });
 
   test('it progresses through wizard steps with strict policy', async function (assert) {
     await this.renderComponent();
-    await click(GENERAL.button('Guided setup'));
+    await click(GENERAL.button('Guided start'));
 
     // Step 1: Choose security policy
     assert.dom(GENERAL.button('Next')).isDisabled('Next button disabled with no policy choice');
@@ -70,7 +70,7 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
 
   test('it skips step 2 with flexible policy', async function (assert) {
     await this.renderComponent();
-    await click(GENERAL.button('Guided setup'));
+    await click(GENERAL.button('Guided start'));
 
     // Step 1: Choose flexible policy
     await click(GENERAL.radioByAttr('flexible'));
@@ -84,7 +84,7 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
 
   test('it shows different code snippets per creation method option', async function (assert) {
     await this.renderComponent();
-    await click(GENERAL.button('Guided setup'));
+    await click(GENERAL.button('Guided start'));
     await click(GENERAL.radioByAttr('strict'));
     await click(GENERAL.button('Next'));
 
@@ -116,7 +116,7 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
 
   test('it allows adding and removing blocks, org, and project inputs', async function (assert) {
     await this.renderComponent();
-    await click(GENERAL.button('Guided setup'));
+    await click(GENERAL.button('Guided start'));
     await click(GENERAL.radioByAttr('strict'));
     await click(GENERAL.button('Next'));
 
@@ -147,7 +147,7 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
       .doesNotExist('Second org input was removed');
   });
 
-  test('it dismisses from the welcome page', async function (assert) {
+  test('it dismisses from the intro page', async function (assert) {
     await this.renderComponent();
 
     assert.false(this.wizardService.isDismissed('namespace'), 'Wizard is not dismissed initially');
@@ -158,9 +158,9 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
     assert.true(this.refreshSpy.calledOnce, 'onRefresh callback was called');
   });
 
-  test('it dismisses from the guided setup', async function (assert) {
+  test('it dismisses from the Guided start', async function (assert) {
     await this.renderComponent();
-    await click(GENERAL.button('Guided setup'));
+    await click(GENERAL.button('Guided start'));
 
     assert.false(this.wizardService.isDismissed('namespace'), 'Wizard is not dismissed initially');
 
@@ -172,7 +172,7 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
 
   test('it dismisses after completing flexible policy flow', async function (assert) {
     await this.renderComponent();
-    await click(GENERAL.button('Guided setup'));
+    await click(GENERAL.button('Guided start'));
     await click(GENERAL.radioByAttr('flexible'));
     await click(GENERAL.button('Next'));
 
@@ -186,7 +186,7 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
 
   test('it shows tree chart only when there are multiple globals, orgs, or projects', async function (assert) {
     await this.renderComponent();
-    await click(GENERAL.button('Guided setup'));
+    await click(GENERAL.button('Guided start'));
     await click(GENERAL.radioByAttr('strict'));
     await click(GENERAL.button('Next'));
 

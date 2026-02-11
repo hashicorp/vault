@@ -178,4 +178,58 @@ module('Unit | Service | wizard', function (hooks) {
       assert.true(this.removeItemStub.calledWith(DISMISSED_WIZARD_KEY), 'removes key from localStorage');
     });
   });
+
+  module('#isIntroVisible', function () {
+    test('returns true by default when wizard not dismissed and intro visibility not set', function (assert) {
+      this.service.dismissedWizards = [];
+
+      assert.true(
+        this.service.isIntroVisible('onboarding'),
+        'returns true for non-dismissed wizard with unset visibility'
+      );
+    });
+
+    test('returns false by default when wizard is dismissed', function (assert) {
+      this.service.dismissedWizards = ['onboarding'];
+
+      assert.false(this.service.isIntroVisible('onboarding'), 'returns false for dismissed wizard');
+    });
+
+    test('returns true when intro visibility is set to true', function (assert) {
+      this.service.introVisibleState = { onboarding: true };
+      assert.true(this.service.isIntroVisible('onboarding'), 'returns true when set');
+    });
+
+    test('returns false when intro visibility is set to false', function (assert) {
+      this.service.introVisibleState = { onboarding: false };
+
+      assert.false(this.service.isIntroVisible('onboarding'), 'returns false when set to false');
+    });
+  });
+
+  module('#setIntroVisible', function () {
+    test('sets intro visibility to false', function (assert) {
+      this.service.setIntroVisible('onboarding', false);
+
+      assert.false(this.service.introVisibleState.onboarding, 'sets intro visibility to false in state');
+      assert.false(this.service.isIntroVisible('onboarding'), 'isIntroVisible returns false');
+    });
+
+    test('sets intro visibility to true', function (assert) {
+      this.service.setIntroVisible('onboarding', true);
+
+      assert.true(this.service.introVisibleState.onboarding, 'sets intro visibility to true in state');
+      assert.true(this.service.isIntroVisible('onboarding'), 'isIntroVisible returns true');
+    });
+
+    test('handles multiple wizards independently', function (assert) {
+      this.service.setIntroVisible('wizard1', false);
+      this.service.setIntroVisible('wizard2', true);
+      this.service.setIntroVisible('wizard3', false);
+
+      assert.false(this.service.isIntroVisible('wizard1'), 'wizard1 is not visible');
+      assert.true(this.service.isIntroVisible('wizard2'), 'wizard2 is visible');
+      assert.false(this.service.isIntroVisible('wizard3'), 'wizard3 is not visible');
+    });
+  });
 });
