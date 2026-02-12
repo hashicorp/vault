@@ -7,6 +7,7 @@
   <:breadcrumbs>
     <Page::Breadcrumbs
       @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
         (hash label="Enforcements" route="vault.cluster.access.mfa.enforcements.index")
         (hash label=this.model.name)
       }}
@@ -102,10 +103,10 @@
       </LinkedBlock>
     {{/each}}
   {{else}}
-    <EmptyState
-      @title="No target exists for this enforcement"
-      @message="A target might have been deleted after the enforcement was created."
-    />
+    <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+      <A.Header @title="No target exists for this enforcement" @titleTag="h2" />
+      <A.Body @text="A target might have been deleted after the enforcement was created." />
+    </Hds::ApplicationState>
   {{/if}}
 {{else if (eq this.tab "methods")}}
   {{#each this.model.mfa_methods as |method|}}

@@ -117,6 +117,9 @@ type SystemView interface {
 
 	// ExtractVerifyPlugin extracts and verifies the plugin artifact
 	DownloadExtractVerifyPlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error
+
+	// GetConsumptionBillingManager returns the consumption billing manager
+	GetConsumptionBillingManager() ConsumptionBillingManager
 }
 
 type PasswordPolicy interface {
@@ -318,6 +321,10 @@ func (d StaticSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.R
 
 func (d StaticSystemView) DownloadExtractVerifyPlugin(_ context.Context, _ *pluginutil.PluginRunner) error {
 	return errors.New("DownloadExtractVerifyPlugin is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) GetConsumptionBillingManager() ConsumptionBillingManager {
+	return nil
 }
 
 // PluginLicenseUtil defines the functions needed to request License and PluginEnv

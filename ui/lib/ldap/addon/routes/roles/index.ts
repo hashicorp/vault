@@ -49,7 +49,8 @@ export default class LdapRolesIndexRoute extends LdapRolesRoute {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: resolvedModel.secretsEngine.id, route: 'overview' },
       { label: 'Roles' },
     ];

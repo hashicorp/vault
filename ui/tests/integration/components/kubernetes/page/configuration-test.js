@@ -49,16 +49,15 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
     };
   });
 
-  test('it should render tab page header, config cta and mount config', async function (assert) {
+  test('it should render tab page header', async function (assert) {
     await this.renderComponent();
     assert
       .dom(GENERAL.icon('kubernetes-color'))
       .hasClass('hds-icon-kubernetes-color', 'Kubernetes icon renders in title');
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('kubernetes-test', 'Mount path renders in title');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText('kubernetes-test configuration', 'Mount path renders in title');
     assert.dom(SES.configure).doesNotExist('Toolbar action does not render when engine is not configured');
-    assert.dom(GENERAL.emptyStateTitle).hasText('Kubernetes not configured');
-    assert.dom(GENERAL.emptyStateActions).hasText('Configure Kubernetes');
-    assert.dom('[data-test-mount-config]').exists('Mount config renders');
   });
 
   test('it should render message for inferred configuration', async function (assert) {

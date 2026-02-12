@@ -3,7 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Rewrap Token" />
+<Page::Header @title="Rewrap token">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if this.rewrappedToken}}
   <div class="box is-sideless is-fullwidth is-marginless">

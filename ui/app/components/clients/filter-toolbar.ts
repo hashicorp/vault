@@ -9,7 +9,7 @@ import { action } from '@ember/object';
 import { debounce } from '@ember/runloop';
 import { capitalize } from '@ember/string';
 import { buildISOTimestamp, parseAPITimestamp } from 'core/utils/date-formatters';
-import { ClientFilters } from 'core/utils/client-count-utils';
+import { ClientFilters } from 'core/utils/client-counts/helpers';
 
 import type {
   ActivityExportData,

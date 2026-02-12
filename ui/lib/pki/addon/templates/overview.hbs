@@ -5,15 +5,7 @@
 
 <PkiPageHeader @backend={{this.model.engine}} />
 
-<Toolbar>
-  <ToolbarActions>
-    {{#unless this.model.hasConfig}}
-      <ToolbarLink @route="configuration.create" @model={{this.model.engine.id}}>
-        Configure PKI
-      </ToolbarLink>
-    {{/unless}}
-  </ToolbarActions>
-</Toolbar>
+<Toolbar />
 
 {{#if this.model.hasConfig}}
   <Page::PkiOverview

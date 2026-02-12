@@ -41,10 +41,6 @@ func TestACMEBilling(t *testing.T) {
 		activeCore = activeNode.(*vault.TestClusterCore)
 	}
 	activeCore.StopPkiCertificateCountConsumerJob()
-	// The new root and int should have been counted, but we are not asserting that here
-	// to avoid a possible race condition with the consumer job.
-	activeCore.ResetPkiCertificateCounts()
-
 	dns := dnstest.SetupResolver(t, "dadgarcorp.com")
 	defer dns.Cleanup()
 
@@ -52,6 +48,10 @@ func TestACMEBilling(t *testing.T) {
 	setupAcmeBackendOnClusterAtPath(t, cluster, client, "pki2")
 	setupAcmeBackendOnClusterAtPath(t, cluster, client, "ns1/pki")
 	setupAcmeBackendOnClusterAtPath(t, cluster, client, "ns2/pki")
+
+	// The new root and int should have been counted, but we are not asserting that here
+	// to avoid a possible race condition with the consumer job.
+	activeCore.ResetPkiCertificateCounts()
 
 	// Enable custom DNS resolver for testing.
 	for _, mount := range []string{"pki", "pki2", "ns1/pki", "ns2/pki"} {

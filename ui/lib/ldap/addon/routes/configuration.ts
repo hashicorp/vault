@@ -28,7 +28,8 @@ export default class LdapConfigurationRoute extends Route {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: resolvedModel.secretsEngine.id, route: 'overview', model: resolvedModel.secretsEngine.id },
       { label: 'Configuration' },
     ];

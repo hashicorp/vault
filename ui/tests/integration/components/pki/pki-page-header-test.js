@@ -50,8 +50,5 @@ module('Integration | Component | pki page header test', function (hooks) {
       .dom('[data-test-secret-list-tab="Certificates"]')
       .hasText('Certificates', 'Certificates tab renders');
     assert.dom('[data-test-secret-list-tab="Tidy"]').hasText('Tidy', 'Tidy tab renders');
-    assert
-      .dom('[data-test-secret-list-tab="Configuration"]')
-      .hasText('Configuration', 'Configuration tab renders');
   });
 });

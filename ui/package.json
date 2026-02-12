@@ -218,6 +218,7 @@
   "dependencies": {
     "@babel/core": "7.26.10",
     "@babel/eslint-parser": "^7.28.5",
+    "@carbon/charts": "^1.27.2",
     "@hashicorp-internal/vault-reporting": "file:vault-reporting/0.8.0.tgz",
     "@hashicorp/design-system-components": "4.24.1",
     "@hashicorp/design-system-tokens": "3.0.0",

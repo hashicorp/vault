@@ -17,31 +17,19 @@ module('Integration | Component | clients/no-data', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-    this.store = this.owner.lookup('service:store');
-    this.setConfig = async (data) => {
-      // the clients/config model does some funky serializing for the "enabled" param
-      // so stubbing the request here instead of just the model for additional coverage
-      this.server.get('sys/internal/counters/config', () => {
-        return {
-          request_id: '25a94b99-b49a-c4ac-cb7b-5ba0eb390a25',
-          data,
-        };
-      });
-      return this.store.queryRecord('clients/config', {});
-    };
+    this.canUpdate = false;
+    this.setConfig = (enabled, reporting_enabled) => ({
+      enabled: enabled ? 'default-enabled' : 'default-disabled',
+      reporting_enabled,
+    });
     this.renderComponent = async () => {
-      return render(hbs`<Clients::NoData @config={{this.config}} />`);
+      return render(hbs`<Clients::NoData @config={{this.config}} @canUpdate={{this.canUpdate}} />`);
     };
   });
 
-  test('it renders empty state when enabled is "on"', async function (assert) {
+  test('it renders empty state when enabled', async function (assert) {
     assert.expect(2);
-    const data = {
-      enabled: 'default-enabled',
-      reporting_enabled: false,
-    };
-    ``;
-    this.config = await this.setConfig(data);
+    this.config = this.setConfig(true, false);
     await this.renderComponent();
     assert.dom(GENERAL.emptyStateTitle).hasText('No data received');
     assert
@@ -49,13 +37,9 @@ module('Integration | Component | clients/no-data', function (hooks) {
       .hasText('Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes.');
   });
 
-  test('it renders empty state when reporting_enabled is true', async function (assert) {
+  test('it renders empty state when reporting is fully enabled', async function (assert) {
     assert.expect(2);
-    const data = {
-      enabled: 'default-disabled',
-      reporting_enabled: true,
-    };
-    this.config = await this.setConfig(data);
+    this.config = this.setConfig(true, true);
     await this.renderComponent();
     assert.dom(GENERAL.emptyStateTitle).hasText('No data received');
     assert
@@ -64,12 +48,8 @@ module('Integration | Component | clients/no-data', function (hooks) {
   });
 
   test('it renders empty state when reporting is fully disabled', async function (assert) {
-    assert.expect(2);
-    const data = {
-      enabled: 'default-disabled',
-      reporting_enabled: false,
-    };
-    this.config = await this.setConfig(data);
+    assert.expect(4);
+    this.config = this.setConfig(false, false);
     await this.renderComponent();
     assert.dom(GENERAL.emptyStateTitle).hasText('Data tracking is disabled');
     assert
@@ -77,6 +57,11 @@ module('Integration | Component | clients/no-data', function (hooks) {
       .hasText(
         'Tracking is disabled, and no data is being collected. To turn it on, edit the configuration.'
       );
+    assert.dom(GENERAL.linkTo('config')).doesNotExist('Config link does not render without capabilities');
+
+    this.canUpdate = true;
+    await this.renderComponent();
+    assert.dom(GENERAL.linkTo('config')).exists('Config link renders with update capabilities');
   });
 
   test('it renders empty state when config data is not available', async function (assert) {

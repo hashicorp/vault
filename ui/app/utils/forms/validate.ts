@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* eslint-disable no-console */
-
 import validators from 'vault/utils/forms/validators';
 import { get } from '@ember/object';
 

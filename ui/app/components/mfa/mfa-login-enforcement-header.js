@@ -41,6 +41,11 @@ export default class MfaLoginEnforcementHeaderComponent extends Component {
   get breadcrumbs() {
     return [
       {
+        label: 'Vault',
+        route: 'vault.cluster.dashboard',
+        icon: 'vault',
+      },
+      {
         label: 'Enforcements',
         route: 'vault.cluster.access.mfa.enforcements.index',
       },

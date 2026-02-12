@@ -67,7 +67,8 @@ export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {
     };
 
     const crumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: secretsEngine.id, route: 'overview' },
       { label: 'Roles', route: 'roles' },
       ...ldapBreadcrumbs(roleAncestry.path_to_role, routeParams, roleRoutes, true),

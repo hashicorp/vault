@@ -28,7 +28,7 @@ module('Integration | Component | tools/lookup', function (hooks) {
   test('it renders defaults', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('h1').hasText('Lookup Token', 'Title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Lookup token', 'Title renders');
     assert.dom('label').hasText('Wrapped token');
     assert.dom(TS.toolsInput('wrapping-token')).hasValue('');
     assert.dom(GENERAL.button('Done')).doesNotExist();

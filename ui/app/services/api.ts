@@ -210,7 +210,7 @@ export default class ApiService extends Service {
 
     // log out generic error for ease of debugging in dev env
     if (config.environment === 'development') {
-      console.log('API Error:', e); // eslint-disable-line no-console
+      console.error('API Error:', e);
     }
 
     return {

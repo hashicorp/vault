@@ -3,7 +3,16 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title={{titleize (pluralize this.identityType)}} />
+<Page::Header @title={{titleize (pluralize this.identityType)}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label=(titleize (pluralize this.identityType)))
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
 
 <nav class="tabs" aria-label="navigation for entities">
   <ul>

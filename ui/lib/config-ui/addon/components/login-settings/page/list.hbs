@@ -3,7 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="UI Login Settings" />
+<Page::Header @title="UI login settings">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 <Toolbar />
 

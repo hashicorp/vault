@@ -3,7 +3,21 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<HeaderScope />
+<Page::Header
+  @title="{{@secretsEngine.id}} configuration"
+  @description="KMIP"
+  @icon={{@secretsEngine.icon}}
+  @configRoute="configuration"
+>
+  <:breadcrumbs>
+    <KmipBreadcrumb @showPath={{true}} @configRoute="configuration" />
+  </:breadcrumbs>
+  <:actions>
+    <Hds::Button @color="secondary" @route="scopes" @text="Exit configuration" data-test-button="Exit configuration" />
+  </:actions>
+</Page::Header>
+
+<KmipTabs @path={{@secretsEngine.id}} @configRoute="configuration" />
 
 <Toolbar>
   <ToolbarActions>

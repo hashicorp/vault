@@ -54,7 +54,8 @@ export default class SecretsBackendConfigurationGeneralSettingsRoute extends Rou
     const { secretsEngine } = resolvedModel;
 
     const breadcrumbs = [
-      { label: 'Secrets', route: 'vault.cluster.secrets' },
+      { label: 'Vault', route: 'vault.cluster', icon: 'vault' },
+      { label: 'Secrets engines', route: 'vault.cluster.secrets' },
       { label: secretsEngine.id, route: 'vault.cluster.secrets.backend.list-root', model: secretsEngine.id },
       { label: 'Configuration' },
     ];

@@ -57,6 +57,15 @@ func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d 
 	}
 	resp.Secret.TTL = result.TTL
 	resp.Secret.MaxTTL = result.MaxTTL
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeConsulCredentialRenew, map[string]interface{}{
+		"role_name":  role,
+		"ttl":        result.TTL.String(),
+		"max_ttl":    result.MaxTTL.String(),
+		"token_type": result.TokenType,
+		"local":      result.Local,
+	})
+
 	return resp, nil
 }
 
@@ -106,15 +115,23 @@ func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d
 	switch version {
 	case "":
 		// Pre 1.4 tokens
-		_, err := c.ACL().Destroy(tokenRaw.(string), nil)
+		token := tokenRaw.(string)
+		_, err := c.ACL().Destroy(token, nil)
 		if err != nil {
 			return nil, err
 		}
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeConsulCredentialRevoke, map[string]interface{}{
+			"role_name": req.Secret.InternalData["role"],
+		})
 	case tokenPolicyType:
-		_, err := c.ACL().TokenDelete(tokenRaw.(string), revokeWriteOptions)
+		token := tokenRaw.(string)
+		_, err := c.ACL().TokenDelete(token, revokeWriteOptions)
 		if err != nil {
 			return nil, err
 		}
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeConsulCredentialRevoke, map[string]interface{}{
+			"role_name": req.Secret.InternalData["role"],
+		})
 	default:
 		return nil, fmt.Errorf("Invalid version string in data: %s", version)
 	}

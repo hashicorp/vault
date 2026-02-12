@@ -33,7 +33,8 @@ export default class LdapRolesRoleDetailsRoute extends Route {
     };
 
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'Roles', route: 'roles' },
       ...ldapBreadcrumbs(resolvedModel.role.name, routeParams, roleRoutes, true),

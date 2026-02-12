@@ -1661,7 +1661,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	// Attempt mount
-	if err := b.Core.mount(ctx, me); err != nil {
+	if err := b.Core.mountWithRequest(ctx, me, req); err != nil {
 		b.Backend.Logger().Error("error occurred during enable mount", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -1792,8 +1792,13 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 		return handleError(fmt.Errorf("unable to find storage for path: %q", path))
 	}
 
+	// Unsync secrets during mount deletion
+	if err := b.callUnsyncMountHelper(ctx, path); err != nil {
+		b.Backend.Logger().Error("failed to unsync secrets during mount deletion", "error", err)
+	}
+
 	// Attempt unmount
-	if err := b.Core.unmount(ctx, path); err != nil {
+	if err := b.Core.unmountWithRequest(ctx, path, req); err != nil {
 		b.Backend.Logger().Error("unmount failed", "path", path, "error", err)
 		return handleError(err)
 	}
@@ -3344,7 +3349,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	// Attempt enabling
-	if err := b.Core.enableCredential(ctx, me); err != nil {
+	if err := b.Core.enableCredentialWithRequest(ctx, me, req); err != nil {
 		b.Backend.Logger().Error("error occurred during enable credential", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -3462,7 +3467,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 	}
 
 	// Attempt disable
-	if err := b.Core.disableCredential(ctx, path); err != nil {
+	if err := b.Core.disableCredentialWithRequest(ctx, path, req); err != nil {
 		b.Backend.Logger().Error("disable auth mount failed", "path", path, "error", err)
 		return handleError(err)
 	}

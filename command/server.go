@@ -1763,7 +1763,7 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			// Reload license file
-			if err = core.EntReloadLicense(); err != nil {
+			if err = core.EntReloadLicenseAndConfig(nil); err != nil {
 				c.UI.Error(err.Error())
 			}
 

@@ -1,0 +1,60 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Wizard
+  @wizardId={{this.wizardId}}
+  @canProceed={{this.canProceed}}
+  @currentStep={{this.currentStep}}
+  @isModal={{@this.isIntroModal}}
+  @steps={{this.steps}}
+  @title="Namespaces"
+  @wizardState={{this.wizardState}}
+  @updateWizardState={{this.updateWizardState}}
+  @onDismiss={{this.onDismiss}}
+  @onStepChange={{this.onStepChange}}
+>
+  <:intro>
+    <Wizard::Namespaces::Intro />
+  </:intro>
+  <:introActions>
+    <Hds::ButtonSet>
+      <Hds::Button
+        @icon="rocket"
+        @text="Guided start"
+        {{on "click" (fn this.onIntroChange false)}}
+        data-test-button="Guided start"
+      />
+      <Hds::Button @color="secondary" @text="Skip" {{on "click" this.onDismiss}} data-test-button="Skip" />
+      <Hds::Link::Standalone
+        @icon="docs-link"
+        @iconPosition="trailing"
+        @text="View documentation"
+        @href={{doc-link "/vault/docs/enterprise/namespaces"}}
+        class="has-left-margin-m"
+      />
+    </Hds::ButtonSet>
+  </:introActions>
+  {{! The yielded blocks below are used in the Guided Start }}
+  <:exit>
+    {{#if this.shouldShowExitButton}}
+      <Hds::Button @text={{this.exitText}} @color="secondary" {{on "click" this.onDismiss}} data-test-button="Exit" />
+    {{/if}}
+  </:exit>
+  <:submit>
+    {{#if (eq this.wizardState.securityPolicyChoice this.policy.FLEXIBLE)}}
+      <Hds::Button @text="Done" {{on "click" this.onDismiss}} data-test-button="Done" />
+    {{else if (eq this.wizardState.creationMethod this.methods.UI)}}
+      <Hds::Button @text="Apply" {{on "click" this.onSubmit}} data-test-button="Apply" />
+    {{else}}
+      <Hds::Copy::Button
+        @text="Copy code"
+        @textToCopy={{this.wizardState.codeSnippet}}
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+        class="primary"
+        data-test-copy-button
+      />
+    {{/if}}
+  </:submit>
+</Wizard>

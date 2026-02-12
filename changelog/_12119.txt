@@ -1,0 +1,6 @@
+```release-note:improvement
+secrets/transit, core: Boost the limit of random bytes retrievable via random byte
+APIs.  And add the option to get PRNG random bytes seeded by random sources. 
+Note that requests for large numbers of bytes will increase Vault memory
+usage accordingly.
+```

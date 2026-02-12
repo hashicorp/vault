@@ -8,18 +8,14 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import keys from 'core/utils/keys';
+import errorMessage from 'vault/utils/error-message';
 
 import type CapabilitiesService from 'vault/services/capabilities';
 import type Router from 'vault/router';
 import type NamespaceService from 'vault/services/namespace';
-import type AuthService from 'vault/vault/services/auth';
+import type { NamespaceOption } from 'vault/services/namespace';
+import type AuthService from 'vault/services/auth';
 import type Store from '@ember-data/store';
-import errorMessage from 'vault/utils/error-message';
-
-interface NamespaceOption {
-  path: string;
-  label: string;
-}
 
 /**
  * @module NamespacePicker
@@ -55,7 +51,7 @@ export default class NamespacePicker extends Component {
   }
 
   get allNamespaces(): NamespaceOption[] {
-    return this.getOptions(this.namespace?.accessibleNamespaces);
+    return this.namespace.getOptions();
   }
 
   get selectedNamespace(): NamespaceOption | null {
@@ -68,38 +64,6 @@ export default class NamespacePicker extends Component {
 
   private getSelected(options: NamespaceOption[], currentPath: string): NamespaceOption | undefined {
     return options.find((option) => this.matchesPath(option, currentPath));
-  }
-
-  private getOptions(accessibleNamespaces: string[]): NamespaceOption[] {
-    /* Each namespace option has 2 properties: { path and label }
-     *   - path: full namespace path (used to navigate to the namespace)
-     *   - label: text displayed inside the namespace picker dropdown (if root, then path is "", else label = path)
-     *
-     *  Example:
-     *   | path           | label          |
-     *   | ----           | -----          |
-     *   | ''             | 'root'         |
-     *   | 'parent'       | 'parent'       |
-     *   | 'parent/child' | 'parent/child' |
-     */
-    const options = (accessibleNamespaces || []).map((ns: string) => ({ path: ns, label: ns }));
-
-    // Add the user's root namespace because `sys/internal/ui/namespaces` does not include it.
-    const userRootNamespace = this.auth.authData?.userRootNamespace;
-    if (!options?.find((o) => o.path === userRootNamespace)) {
-      // the 'root' namespace is technically an empty string so we manually add the 'root' label.
-      const label = userRootNamespace === '' ? 'root' : userRootNamespace;
-      options.unshift({ path: userRootNamespace, label });
-    }
-
-    // If there are no namespaces returned by the internal endpoint, add the current namespace
-    // to the list of options. This is a fallback for when the user has access to a single namespace.
-    if (options.length === 0) {
-      // 'path' defined in the namespace service is the full namespace path
-      options.push({ path: this.namespace.path, label: this.namespace.path });
-    }
-
-    return options;
   }
 
   get hasSearchInput(): boolean {

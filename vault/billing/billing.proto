@@ -1,0 +1,17 @@
+// Copyright IBM Corp. 2016, 2025
+// SPDX-License-Identifier: MPL-2.0
+
+syntax = "proto3";
+
+package billing;
+
+import "google/protobuf/any.proto";
+
+option go_package = "github.com/hashicorp/vault/vault/billing";
+
+// PluginBillingDataRequest contains the in-memory data protection call counts
+// from a performance standby node to be sent to the active node
+message PluginBillingDataRequest {
+  // Map of plugin type to count (e.g., "transit" -> count)
+  map<string, google.protobuf.Any> plugin_data = 1;
+}

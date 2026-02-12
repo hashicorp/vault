@@ -3,14 +3,21 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Form from 'vault/forms/form';
-import FormField from 'vault/utils/forms/field';
 import { tracked } from '@glimmer/tracking';
+import Form from 'vault/forms/form';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import FormField from 'vault/utils/forms/field';
 import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 
 import type { Validations } from 'vault/app-types';
 import type { SecretsEngineFormData } from 'vault/secrets/engine';
+import type { EngineVersionInfo } from 'vault/utils/plugin-catalog-helpers';
 import type { AuthMethodFormData } from 'vault/vault/auth/methods';
+
+type ConfigWithPluginVersion = {
+  plugin_version?: string;
+  [key: string]: any;
+};
 
 // common fields and validations shared between secrets engine and auth methods (mounts)
 // used in form classes for consistency and to avoid duplication
@@ -79,9 +86,83 @@ export default class MountForm<T extends SecretsEngineFormData | AuthMethodFormD
     }),
   };
 
-  // namespaces introduced types with a `ns_` prefix for built-in engines so we will strip that out for consistency
+  // normalizes type for UI configuration purposes by:
+  // 1. stripping `ns_` prefix (for namespaced types)
+  // 2. mapping external plugins to their builtin equivalents for consistent UI experience
   get normalizedType() {
-    return (this.type || '').replace(/^ns_/, '');
+    const baseType = (this.type || '').replace(/^ns_/, '');
+    return getEffectiveEngineType(baseType);
+  }
+
+  /**
+   * Sets up plugin version configuration for the form.
+   * Since plugin version is handled manually in the template, this method
+   * only manages the data model setup.
+   *
+   * @param availableVersions - Array of available plugin versions
+   */
+  setupPluginVersionField(availableVersions: EngineVersionInfo[] | null | undefined) {
+    if (!availableVersions || availableVersions.length === 0) {
+      return;
+    }
+
+    // Initialize plugin_version as empty (default option)
+    (this.data.config as ConfigWithPluginVersion).plugin_version = '';
+  }
+
+  /**
+   * Updates the form data with the selected plugin version information.
+   * For external plugins, this also updates the engine type to match the plugin name,
+   * enabling proper mounting of external plugins with their specific names.
+   *
+   * @param versionInfo - The selected version information containing plugin name, version, and builtin status
+   */
+  setPluginVersionData(versionInfo: EngineVersionInfo) {
+    // Set the version in config
+    (this.data.config as ConfigWithPluginVersion).plugin_version = versionInfo.version;
+
+    // For external plugins, update the type to the plugin name
+    if (!versionInfo.isBuiltin) {
+      this.type = versionInfo.pluginName;
+    }
+  }
+
+  /**
+   * Locates the version information object that matches a user-selected value.
+   * This bridges the gap between the selected version value and the underlying plugin metadata needed for mounting.
+   *
+   * @param selectedValue - The selected version value from the UI dropdown (actual semantic version)
+   * @param availableVersions - Available version options from the plugin catalog
+   * @returns The matching version info or undefined if no match found
+   */
+  findVersionByLabel(
+    selectedValue: string,
+    availableVersions: EngineVersionInfo[]
+  ): EngineVersionInfo | undefined {
+    // Handle the empty value (default option) - return undefined so we don't send plugin_version
+    if (!selectedValue || selectedValue === '') {
+      return undefined;
+    }
+
+    return availableVersions.find((v) => v.version === selectedValue);
+  }
+
+  /**
+   * Handles plugin version changes and updates the type if needed
+   * This method should be called whenever the plugin version field changes
+   */
+  handlePluginVersionChange(availableVersions: EngineVersionInfo[]) {
+    const config = this.data.config as ConfigWithPluginVersion;
+    const selectedVersion = config?.plugin_version;
+    if (!selectedVersion || !availableVersions) {
+      return;
+    }
+
+    // Find the selected version info
+    const selectedVersionInfo = this.findVersionByLabel(selectedVersion, availableVersions);
+    if (selectedVersionInfo) {
+      this.setPluginVersionData(selectedVersionInfo);
+    }
   }
 
   toJSON() {
@@ -95,6 +176,13 @@ export default class MountForm<T extends SecretsEngineFormData | AuthMethodFormD
         listing_visibility: config?.listing_visibility ? 'unauth' : 'hidden',
       },
     };
+
+    // Remove plugin_version if it's empty (let server choose default)
+    const configWithPluginVersion = data.config as ConfigWithPluginVersion;
+    if (!configWithPluginVersion.plugin_version || configWithPluginVersion.plugin_version === '') {
+      delete configWithPluginVersion.plugin_version;
+    }
+
     // options are only relevant for kv/generic engines
     if (!['kv', 'generic'].includes(this.type)) {
       delete data.options;

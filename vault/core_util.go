@@ -11,7 +11,7 @@ import (
 	"io"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-licensing/v4"
+	cserver "github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/limits"
@@ -39,7 +39,6 @@ func (e entCoreConfig) Clone() entCoreConfig {
 
 type LicensingConfig struct {
 	AdditionalPublicKeys []interface{}
-	IssuerOptions        licensing.IssuerOptions
 }
 
 func coreInit(c *Core, conf *CoreConfig) error {
@@ -209,8 +208,12 @@ func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
 	return false
 }
 
-func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig, generate bool) (bool, []string) {
+func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig, generateInput DiagnoseCheckLicenseGeneration) (bool, []string) {
 	return false, nil
+}
+
+func SetDiagnoseCheckLicenseEntitlement(config *cserver.Config, coreConfig CoreConfig) CoreConfig {
+	return coreConfig
 }
 
 // createCustomMessageManager is a function implemented differently for the

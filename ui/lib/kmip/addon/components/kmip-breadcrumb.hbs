@@ -4,7 +4,14 @@
 }}
 
 <Hds::Breadcrumb>
-  <Hds::Breadcrumb::Item @text="Secrets" @route="secrets" @isRouteExternal={{true}} data-test-breadcrumb="Secrets" />
+  <Hds::Breadcrumb::Item
+    @text="Vault"
+    @route="vault"
+    @icon="vault"
+    @isRouteExternal={{true}}
+    data-test-breadcrumb="Secrets"
+  />
+  <Hds::Breadcrumb::Item @text="Secrets engines" @route="secrets" @isRouteExternal={{true}} data-test-breadcrumb="Secrets" />
   {{#if this.shouldShowPath}}
     <Hds::Breadcrumb::Item
       @text={{this.secretMountPath.currentPath}}
@@ -25,5 +32,8 @@
   {{/if}}
   {{#if @currentRoute}}
     <Hds::Breadcrumb::Item @text={{@currentRoute}} @current={{true}} data-test-breadcrumb={{@currentRoute}} />
+  {{/if}}
+  {{#if @configRoute}}
+    <Hds::Breadcrumb::Item @text={{capitalize @configRoute}} @current={{true}} data-test-breadcrumb={{@configRoute}} />
   {{/if}}
 </Hds::Breadcrumb>

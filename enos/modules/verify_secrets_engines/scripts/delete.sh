@@ -18,8 +18,25 @@ binpath="${VAULT_INSTALL_DIR}/vault"
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_FORMAT=json
-if output=$("$binpath" delete "$REQPATH" 2>&1); then
+
+echo "Vault DELETE request to path: $REQPATH"
+
+set +e
+output=$("$binpath" delete "$REQPATH" 2>&1)
+exit_code=$?
+set -e
+
+# Always print output
+if [ "$exit_code" -eq 0 ]; then
   printf "%s\n" "$output"
 else
-  fail "failed to delete path: $REQPATH out=$output"
+  printf "%s\n" "$output" >&2
+  # Handle expected errors gracefully (idempotent delete)
+  # Exit code 2 typically means "not found" - acceptable for idempotent cleanup
+  if [ "$exit_code" -eq 2 ]; then
+    echo "Note: Path not found (exit code 2), treating as successful cleanup: $REQPATH" >&2
+    exit 0
+  fi
+  # For other errors, fail the test
+  fail "failed to delete path: $REQPATH exit_code=${exit_code}"
 fi

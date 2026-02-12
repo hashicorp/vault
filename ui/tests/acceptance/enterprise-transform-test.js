@@ -90,7 +90,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets-engines/${backend}/list`,
       'mounts and redirects to the transformations list page'
     );
-    assert.ok(transformationsPage.isEmpty, 'renders empty state');
+    assert.ok(GENERAL.emptyStateTitle, 'renders empty state');
     assert
       .dom('.active[data-test-secret-list-tab="Transformations"]')
       .exists('Has Transformations tab which is active');

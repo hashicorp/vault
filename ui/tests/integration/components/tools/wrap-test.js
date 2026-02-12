@@ -45,7 +45,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
 
     await waitFor('.cm-editor');
 
-    assert.dom('h1').hasText('Wrap Data', 'Title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Wrap data', 'Title renders');
     assert.dom('[data-test-toggle-label="json"]').hasText('JSON');
     assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap');
     assert.dom('.hds-code-editor__description').hasText('json-formatted');

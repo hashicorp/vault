@@ -104,7 +104,7 @@ jobs:
       vault-version-package: ${{ steps.metadata.outputs.vault-version-package }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       # Make sure we check out correct ref based on PR labels and such
       - uses: ./.github/actions/checkout
         id: checkout
@@ -191,7 +191,7 @@ jobs:
     needs:
       - setup
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       # Get the elevated github token
       - id: vault-auth
         name: Vault Authenticate
@@ -295,7 +295,7 @@ jobs:
     outputs:
       cache-key: ui-${{ steps.ui-hash.outputs.ui-hash }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
       - name: Get UI hash
@@ -303,7 +303,7 @@ jobs:
         run: echo "ui-hash=$(git ls-tree HEAD ui --object-only)" | tee -a "$GITHUB_OUTPUT"
       - name: Set up UI asset cache
         id: cache-ui-assets
-        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           enableCrossOsArchive: true
           lookup-only: true
@@ -313,13 +313,13 @@ jobs:
           key: ui-${{ steps.ui-hash.outputs.ui-hash }}
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Install PNPM
-        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
         with:
           run_install: false
           package_json_file: './ui/package.json'
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Set up node and pnpm
-        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
           node-version-file: ui/package.json
           cache: pnpm
@@ -395,17 +395,20 @@ jobs:
   hcp-image:
     if: |
       needs.setup.outputs.is-ent-branch == 'true' &&
-      needs.setup.outputs.workflow-trigger == 'pull_request' &&
-      (
-        contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') ||
-        contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
+        (
+          contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') ||
+          contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+        )
       )
     needs:
       - setup
       - artifacts-ent
     uses: ./.github/workflows/build-hcp-image.yml
     with:
-      pull-request: ${{ github.event.pull_request.number }}
+      pull-request: ${{ needs.setup.outputs.workflow-trigger == 'pull_request' && github.event.pull_request.number || '' }}
+      branch: ${{ needs.setup.outputs.workflow-trigger == 'schedule' && 'main' || '' }}
       create-aws-image: true
       create-azure-image: false
       hcp-environment: int
@@ -481,6 +484,7 @@ jobs:
       - hcp-image
     uses: ./.github/workflows/test-run-enos-scenario-cloud.yml
     with:
+      hcp-environment: int
       product-version: ${{ fromJSON(needs.hcp-image.outputs.image).product_version }}
 
   completed-successfully:
@@ -510,7 +514,7 @@ jobs:
       - test-containers
       - test-hcp-image
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: disallow-merge-on-ce
         if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&

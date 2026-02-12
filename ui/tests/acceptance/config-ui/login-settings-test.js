@@ -51,7 +51,8 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
       await fillIn(GENERAL.inputByAttr('token'), rootToken);
       await click(GENERAL.submitButton);
       await waitUntil(() => currentRouteName() === 'vault.cluster.dashboard');
-      await click(GENERAL.navLink('UI Login Settings'));
+      await click(GENERAL.navLink('Operational tools'));
+      await click(GENERAL.navLink('UI login settings'));
     });
 
     test('it renders login rules', async function (assert) {

@@ -51,6 +51,9 @@ userPassword: $LDAP_ADMIN_PW
 EOF
 ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${ADMIN_LDIF}
 
+# Dedicated LDAP user for static role tests
+LDAP_STATIC_USERNAME="${LDAP_STATIC_USERNAME:-vault-static-user}"
+
 echo "OpenLDAP: Creating User LDIF file and adding user to LDAP"
 USER_LDIF="user.ldif"
 cat << EOF > ${USER_LDIF}
@@ -62,6 +65,14 @@ cn: $LDAP_USERNAME user
 uid: $LDAP_USERNAME
 userPassword: $LDAP_ADMIN_PW
 
+# Static-role test user (Vault-managed)
+dn: uid=$LDAP_STATIC_USERNAME,ou=users,dc=$LDAP_USERNAME,dc=com
+objectClass: inetOrgPerson
+sn: $LDAP_STATIC_USERNAME
+cn: $LDAP_STATIC_USERNAME user
+uid: $LDAP_STATIC_USERNAME
+userPassword: $LDAP_ADMIN_PW
+
 # Group: devs
 dn: cn=devs,ou=groups,dc=$LDAP_USERNAME,dc=com
 objectClass: groupOfNames
@@ -69,3 +80,35 @@ cn: devs
 member: uid=$LDAP_USERNAME,ou=users,dc=$LDAP_USERNAME,dc=com
 EOF
 ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${USER_LDIF}
+
+echo "Vault: Adding vault-admins group and adding existing user to it"
+ADMIN_GROUP_LDIF="vault-admins.ldif"
+cat << EOF > ${ADMIN_GROUP_LDIF}
+dn: cn=vault-admins,ou=groups,dc=$LDAP_USERNAME,dc=com
+objectClass: groupOfNames
+cn: vault-admins
+member: uid=$LDAP_USERNAME,ou=users,dc=$LDAP_USERNAME,dc=com
+EOF
+
+ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" \
+  -D "cn=admin,dc=${LDAP_USERNAME},dc=com" \
+  -w "${LDAP_ADMIN_PW}" \
+  -f ${ADMIN_GROUP_LDIF}
+echo "LDAP configuration completed successfully."
+
+"$binpath" auth enable "${MOUNT}" > /dev/null 2>&1 || echo "Warning: Vault ldap auth already enabled"
+echo "Vault: Creating Admin Policy and mapping to vault-admins group"
+VAULT_ADMIN_POLICY_FILE="admin-policy.hcl"
+cat << EOF > ${VAULT_ADMIN_POLICY_FILE}
+path "*" {
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+EOF
+
+VAULT_ADMIN_POLICY="admin-policy"
+"$binpath" policy write ${VAULT_ADMIN_POLICY} "${VAULT_ADMIN_POLICY_FILE}"
+
+echo "Vault: Mapping ldap group vault-admins to admin-policy"
+"$binpath" write "auth/${MOUNT}/groups/vault-admins" \
+  policies="${VAULT_ADMIN_POLICY}"
+echo "Vault: vault-admins group mapped to admin-policy ✅"

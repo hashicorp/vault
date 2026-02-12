@@ -42,13 +42,13 @@ jobs:
       runs-on: ${{ steps.get-outputs.outputs.runs-on }}
       vault_edition: ${{ steps.get-outputs.outputs.vault_edition }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/metadata
         id: metadata
       - id: get-outputs
         run: |
           if [[ '${{ steps.metadata.outputs.is-ent-repo }}' == 'true' ]]; then
-            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m5d.4xlarge']" >> "$GITHUB_OUTPUT"
+            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m8a.4xlarge;m7a.4xlarge;m5d.4xlarge']" >> "$GITHUB_OUTPUT"
           else
             echo "runs-on=\"custom-linux-xl-vault-latest\"" >> "$GITHUB_OUTPUT"
           fi
@@ -78,23 +78,23 @@ jobs:
       GOPRIVATE: github.com/hashicorp
     steps:
       - name: Checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - uses: hashicorp/action-setup-enos@80a17fa25605989a7a53199137dae1244e32353f # v1.40
+      - uses: hashicorp/action-setup-enos@17b90fcf9591275b468a94aefb9dc6a93017de8a # v1.50
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Set Up Git
         run: git config --global url."https://${{ secrets.elevated_github_token }}:@github.com".insteadOf "https://github.com"
       - name: Set Up Node
-        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
           node-version-file: './ui/package.json'
           cache: pnpm
           cache-dependency-path: ui/pnpm-lock.yaml
       - name: Install PNPM
-        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
         with:
           package_json_file: './ui/package.json'
       - name: Set Up Terraform

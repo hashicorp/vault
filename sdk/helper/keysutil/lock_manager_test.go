@@ -6,6 +6,7 @@ package keysutil
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -97,4 +98,19 @@ func TestImportPolicy(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRestorePolicy_NilPolicy(t *testing.T) {
+	lm, err := NewLockManager(false, 0)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	storage := &logical.InmemStorage{}
+
+	// Create backup data without "policy" field (causes nil Policy)
+	invalidBackup := base64.StdEncoding.EncodeToString([]byte(`{"archived_keys": null}`))
+
+	err = lm.RestorePolicy(ctx, storage, "test-key", invalidBackup, false)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "backup data does not contain a valid policy")
 }

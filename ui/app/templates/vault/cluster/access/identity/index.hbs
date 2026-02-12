@@ -96,8 +96,8 @@
   />
 
 {{else}}
-  <Hds::ApplicationState class="top-padding-32" as |A|>
-    <A.Header data-test-empty-state-title @title="No {{pluralize this.identityType}} yet" />
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="No {{pluralize this.identityType}} yet" @titleTag="h2" />
     <A.Body
       data-test-empty-state-message
       @text="A list of {{pluralize

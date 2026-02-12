@@ -42,7 +42,6 @@ module('Acceptance | pki action forms test', function (hooks) {
   });
 
   hooks.afterEach(async function () {
-    await login();
     // Cleanup engine
     await runCmd([`delete sys/mounts/${this.mountPath}`]);
   });
@@ -60,7 +59,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(`${GENERAL.emptyStateActions} a`);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
-      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Configure PKI');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${this.mountPath} configuration`);
       assert.dom(GENERAL.emptyStateTitle).exists({ count: 1 }, 'Shows empty state by default');
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(GENERAL.emptyStateTitle).doesNotExist();
@@ -77,7 +76,6 @@ module('Acceptance | pki action forms test', function (hooks) {
         `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
-      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View imported items');
       assert.dom(PKI_CONFIGURE_CREATE.importForm).doesNotExist('import form is hidden after save');
       assert.dom(PKI_CONFIGURE_CREATE.importMapping).exists('import mapping is shown after save');
       await click('[data-test-done]');
@@ -89,7 +87,7 @@ module('Acceptance | pki action forms test', function (hooks) {
     });
     test('with many imports', async function (assert) {
       await login();
-      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
       await click(GENERAL.textToggle);
@@ -101,7 +99,7 @@ module('Acceptance | pki action forms test', function (hooks) {
         `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
-      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View imported items');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${this.mountPath} configuration`);
       assert.dom(PKI_CONFIGURE_CREATE.importForm).doesNotExist('import form is hidden after save');
       assert.dom(PKI_CONFIGURE_CREATE.importMapping).exists('import mapping is shown after save');
       assert
@@ -126,7 +124,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       });
 
       await login();
-      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
       await click(GENERAL.textToggle);
@@ -148,7 +146,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       });
 
       await login();
-      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
       await click(GENERAL.textToggle);
@@ -172,7 +170,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(`${GENERAL.emptyStateActions} a`);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
-      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Configure PKI');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${this.mountPath} configuration`);
       assert.dom(GENERAL.emptyStateTitle).exists({ count: 1 }, 'Shows empty state by default');
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-root'));
       assert.dom(GENERAL.emptyStateTitle).doesNotExist();
@@ -192,9 +190,8 @@ module('Acceptance | pki action forms test', function (hooks) {
         `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
-      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View Root Certificate');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${this.mountPath} configuration`);
       assert.dom(PKI_CONFIGURE_CREATE.nextStepsBanner).doesNotExist('no private key warning');
-      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View Root Certificate', 'Updates title on page');
       assert.dom(PKI_GENERATE_ROOT.saved.certificate).exists('Copyable certificate exists');
       assert.dom(PKI_GENERATE_ROOT.saved.issuerName).hasText(issuerName);
       assert.dom(PKI_GENERATE_ROOT.saved.issuerLink).exists('Issuer link exists');
@@ -208,7 +205,7 @@ module('Acceptance | pki action forms test', function (hooks) {
     test('type=exported', async function (assert) {
       const commonName = 'my-exported-name';
       await login();
-      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-root'));
       // Fill in form
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
@@ -220,11 +217,10 @@ module('Acceptance | pki action forms test', function (hooks) {
         `/vault/secrets-engines/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
-      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View Root Certificate');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${this.mountPath} configuration`);
       assert
         .dom(PKI_CONFIGURE_CREATE.nextStepsBanner)
         .hasText('Next steps The private_key is only available once. Make sure you copy and save it now.');
-      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View Root Certificate', 'Updates title on page');
       assert.dom(PKI_GENERATE_ROOT.saved.certificate).exists('Copyable certificate exists');
       assert
         .dom(PKI_GENERATE_ROOT.saved.issuerName)
@@ -245,12 +241,12 @@ module('Acceptance | pki action forms test', function (hooks) {
       await login();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
       await click(`${GENERAL.emptyStateActions} a`);
-      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Configure PKI');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${this.mountPath} configuration`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await fillIn(GENERAL.inputByAttr('common_name'), 'my-common-name');
       await click('[data-test-submit]');
-      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View Generated CSR');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${this.mountPath} configuration`);
       await assert.dom(PKI_CONFIGURE_CREATE.csrDetails).exists('renders CSR details after save');
       await click('[data-test-done]');
       assert.strictEqual(
@@ -268,7 +264,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await fillIn(GENERAL.inputByAttr('common_name'), 'my-common-name');
       await click('[data-test-submit]');
       await assert.dom(PKI_CONFIGURE_CREATE.csrDetails).exists('renders CSR details after save');
-      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View Generated CSR');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${this.mountPath} configuration`);
       assert
         .dom('[data-test-next-steps-csr]')
         .hasText(

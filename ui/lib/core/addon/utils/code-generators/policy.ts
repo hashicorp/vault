@@ -17,7 +17,11 @@ export type AclCapability = (typeof ACL_CAPABILITIES)[number]; // 'create' | 're
 
 export class PolicyStanza {
   @tracked capabilities: Set<AclCapability> = new Set();
-  @tracked path = '';
+  @tracked path;
+
+  constructor({ path = '' } = {}) {
+    this.path = path;
+  }
 
   get preview() {
     return aclTemplate(this.path, Array.from(this.capabilities));
@@ -26,12 +30,12 @@ export class PolicyStanza {
 
 export const formatStanzas = (stanzas: PolicyStanza[]) => stanzas.map((s) => s.preview).join('\n');
 
-export const policySnippetArgs = (policyName: string, stanzas: PolicyStanza[]) => {
-  const policy = formatEot(formatStanzas(stanzas));
-  const resourceArgs = { name: `"${policyName}"`, policy };
+export const policySnippetArgs = (policyName: string, policy: string) => {
+  const formattedPolicy = formatEot(policy);
+  const resourceArgs = { name: `"${policyName}"`, policy: formattedPolicy };
   return {
     terraform: { resource: 'vault_policy', resourceArgs },
-    cli: { command: `policy write ${policyName}`, content: `- ${policy}` },
+    cli: { command: `policy write ${policyName}`, content: `- ${formattedPolicy}` },
   };
 };
 

@@ -24,12 +24,24 @@ export default class App extends Application {
           'custom-messages',
           'api',
           'capabilities',
+          // services needed for tools sidebar component
+          'permissions',
+          'current-cluster',
+          '-portal',
         ],
+        externalRoutes: {
+          vault: 'vault.cluster',
+          tool: 'vault.cluster.tools.tool',
+          messages: 'vault.cluster.config-ui.messages',
+          openApiExplorer: 'vault.cluster.tools.open-api-explorer',
+          loginSettings: 'vault.cluster.config-ui.login-settings',
+        },
       },
     },
     'open-api-explorer': {
       dependencies: {
         services: ['auth', 'flash-messages', 'namespace', { 'app-router': 'router' }, 'version'],
+        externalRoutes: { vault: 'vault.cluster' },
       },
     },
     replication: {
@@ -43,11 +55,19 @@ export default class App extends Application {
           { 'app-router': 'router' },
           'store',
           'version',
+          // services needed for tools sidebar component
+          'permissions',
+          'current-cluster',
+          'flags',
           '-portal',
+          'control-group',
         ],
         externalRoutes: {
           replication: 'vault.cluster.replication.index',
           vault: 'vault.cluster',
+          recoverySnapshots: 'vault.cluster.recovery.snapshots',
+          settingsSeal: 'vault.cluster.settings.seal',
+          replicationMode: 'vault.cluster.replication.mode',
         },
       },
     },
@@ -62,13 +82,13 @@ export default class App extends Application {
           'namespace',
           'path-help',
           { 'app-router': 'router' },
-          'store',
-          'pagination',
           'version',
           'secret-mount-path',
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
+          vault: 'vault.cluster',
+          secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
         },
       },
     },
@@ -78,6 +98,7 @@ export default class App extends Application {
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
           secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
+          vault: 'vault.cluster',
         },
       },
     },
@@ -92,6 +113,7 @@ export default class App extends Application {
           'capabilities',
         ],
         externalRoutes: {
+          vault: 'vault.cluster',
           secrets: 'vault.cluster.secrets.backends',
           secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
           secretsPluginSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.plugin-settings',
@@ -112,6 +134,7 @@ export default class App extends Application {
           'version',
         ],
         externalRoutes: {
+          vault: 'vault.cluster',
           secrets: 'vault.cluster.secrets.backends',
           syncDestination: 'vault.cluster.sync.secrets.destinations.destination',
           secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
@@ -133,9 +156,11 @@ export default class App extends Application {
           'version',
         ],
         externalRoutes: {
+          vault: 'vault.cluster',
           secrets: 'vault.cluster.secrets.backends',
           externalMountIssuer: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
           secretsListRootConfiguration: 'vault.cluster.secrets.backend.configuration',
+          secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
         },
       },
     },
@@ -149,10 +174,19 @@ export default class App extends Application {
           'api',
           'capabilities',
           'version',
+          // services needed for Secrets sidebar component
+          'current-cluster',
+          'permissions',
+          '-portal',
+          'namespace',
         ],
         externalRoutes: {
           kvSecretOverview: 'vault.cluster.secrets.backend.kv.secret.index',
           clientCountOverview: 'vault.cluster.clients',
+          // routes needed for Secrets sidebar component
+          secrets: 'vault.cluster.secrets',
+          sync: 'vault.cluster.sync',
+          vault: 'vault.cluster',
         },
       },
     },

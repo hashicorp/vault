@@ -14,4 +14,16 @@ interface Args {
 
 export default class LandingCtaComponent extends Component<Args> {
   @service declare readonly flags: FlagsService;
+
+  breadcrumbs = [
+    {
+      label: 'Vault',
+      route: 'vault',
+      icon: 'vault',
+      linkExternal: true,
+    },
+    {
+      label: 'Secrets sync',
+    },
+  ];
 }

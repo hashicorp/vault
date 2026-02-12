@@ -27,14 +27,14 @@ export default class PkiKeysIndexRoute extends Route {
     const backend = this.secretMountPath.currentPath;
     const pathMap = {
       import: pathFor('pkiKeysImport', { backend }),
-      generate: pathFor('pkiKeysImport', { backend }),
+      generate: pathFor('pkiKeysGenerate', { backend }),
       key: pathFor('pkiKey', { backend, keyId }),
     };
     const perms = await this.capabilities.fetch(Object.values(pathMap));
 
     return {
-      canImportKey: perms[pathMap.import].canUpdate,
-      canGenerateKey: perms[pathMap.generate].canUpdate,
+      canImportKeys: perms[pathMap.import].canUpdate,
+      canGenerateKeys: perms[pathMap.generate].canUpdate,
       canRead: perms[pathMap.key].canRead,
       canEdit: perms[pathMap.key].canUpdate,
     };
@@ -69,7 +69,8 @@ export default class PkiKeysIndexRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: resolvedModel.parentModel.id },
       { label: 'Keys', route: 'keys.index', model: resolvedModel.parentModel.id },
     ];

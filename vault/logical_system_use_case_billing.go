@@ -31,6 +31,10 @@ func (b *SystemBackend) useCaseConsumptionBillingPaths() []*framework.Path {
 									Type:        framework.TypeMap,
 									Description: "High watermark (for this month) role counts for this cluster.",
 								},
+								"data_protection_call_counts": {
+									Type:        framework.TypeMap,
+									Description: "Count of data protection calls on this cluster.",
+								},
 							},
 						}},
 						http.StatusNoContent: {{
@@ -81,10 +85,26 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 		return nil, fmt.Errorf("error retrieving local max kv counts: %w", err)
 	}
 
+	// Data protection call counts are stored to local path only
+	// Each cluster tracks its own total requests to avoid double counting
+	localTransitCallCounts, err := b.Core.UpdateTransitCallCounts(ctx, currentMonth)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving local transit call counts: %w", err)
+	}
+	localTransformCallCounts, err := b.Core.UpdateTransformCallCounts(ctx, currentMonth)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving local transform call counts: %w", err)
+	}
+
 	// If we are the primary, then combine the replicated and local max role counts. Else just output the local
 	// max role counts. replicatedMaxRoleCounts will be empty if we are not a primary, so this is taken care of for us.
-	combinedMaxRoleCounts := combineRoleCounts(ctx, replicatedMaxRoleCounts, localMaxRoleCounts)
+	combinedMaxRoleCounts := combineRoleCounts(replicatedMaxRoleCounts, localMaxRoleCounts)
 	combinedMaxKvCounts := replicatedKvHWMCounts + localKvHWMCounts
+	// Data protection counts are not combined - each cluster reports its own total
+	combinedMaxDataProtectionCallCounts := map[string]interface{}{
+		"transit":   localTransitCallCounts,
+		"transform": localTransformCallCounts,
+	}
 
 	var replicatedPreviousMonthRoleCounts *RoleCounts
 	replicatedPreviousMonthKvHWMCounts := 0
@@ -107,19 +127,36 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 		return nil, fmt.Errorf("error retrieving local max kv counts for previous month: %w", err)
 	}
 
-	combinedPreviousMonthRoleCounts := combineRoleCounts(ctx, replicatedPreviousMonthRoleCounts, localPreviousMonthRoleCounts)
+	// Data protection counts for previous month
+	localPreviousMonthTransitCallCounts, err := b.Core.GetStoredTransitCallCounts(ctx, previousMonth)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving local transit call counts for previous month: %w", err)
+	}
+	localPreviousMonthTransformCallCounts, err := b.Core.GetStoredTransformCallCounts(ctx, previousMonth)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving local transform call counts for previous month: %w", err)
+	}
+
+	combinedPreviousMonthRoleCounts := combineRoleCounts(replicatedPreviousMonthRoleCounts, localPreviousMonthRoleCounts)
 	combinedPreviousMonthKvHWMCounts := replicatedPreviousMonthKvHWMCounts + localPreviousMonthKvHWMCounts
+	// Data protection counts are not combined - each cluster reports its own total
+	combinedPreviousMonthDataProtectionCallCounts := map[string]interface{}{
+		"transit":   localPreviousMonthTransitCallCounts,
+		"transform": localPreviousMonthTransformCallCounts,
+	}
 
 	resp := map[string]interface{}{
 		"current_month": map[string]interface{}{
-			"timestamp":           timeutil.StartOfMonth(currentMonth),
-			"maximum_role_counts": combinedMaxRoleCounts,
-			"maximum_kv_counts":   combinedMaxKvCounts,
+			"timestamp":                   timeutil.StartOfMonth(currentMonth),
+			"maximum_role_counts":         combinedMaxRoleCounts,
+			"maximum_kv_counts":           combinedMaxKvCounts,
+			"data_protection_call_counts": combinedMaxDataProtectionCallCounts,
 		},
 		"previous_month": map[string]interface{}{
-			"timestamp":           previousMonth,
-			"maximum_role_counts": combinedPreviousMonthRoleCounts,
-			"maximum_kv_counts":   combinedPreviousMonthKvHWMCounts,
+			"timestamp":                   previousMonth,
+			"maximum_role_counts":         combinedPreviousMonthRoleCounts,
+			"maximum_kv_counts":           combinedPreviousMonthKvHWMCounts,
+			"data_protection_call_counts": combinedPreviousMonthDataProtectionCallCounts,
 		},
 	}
 

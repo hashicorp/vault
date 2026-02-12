@@ -24,13 +24,13 @@ import Component from '@glimmer/component';
 export default class PageModeIndex extends Component {
   get title() {
     if (this.args.replicationMode === 'dr') {
-      return 'Enable Disaster Recovery Replication';
+      return 'Enable disaster recovery replication';
     }
     if (this.args.replicationMode === 'performance') {
-      return 'Enable Performance Replication';
+      return 'Enable performance replication';
     }
     // should never get here, but have safe fallback just in case
-    return 'Enable Replication';
+    return 'Enable replication';
   }
 
   canEnable = (type) => {

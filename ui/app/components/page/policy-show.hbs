@@ -1,0 +1,83 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title={{@model.id}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+
+  <:actions>
+    <DownloadButton
+      @color="secondary"
+      @filename={{@model.name}}
+      @data={{@model.policy}}
+      @extension={{if (eq @model.policyType "acl") @model.format "sentinel"}}
+      @text="Download policy"
+    />
+    {{#if (and (not-eq @model.id "root") (or @model.canUpdate @model.canDelete))}}
+      <Hds::Button
+        @icon="edit"
+        @text="Edit policy"
+        @route="vault.cluster.policy.edit"
+        @models={{array @model.policyType @model.id}}
+        data-test-button="Edit policy"
+      />
+    {{/if}}
+  </:actions>
+
+  <:badges>
+    {{#if @model.enforcementLevel}}
+      <Hds::Badge @text={{@model.enforcementLevel}} aria-label="Enforcement level: {{@model.enforcementLevel}}" />
+    {{/if}}
+  </:badges>
+</Page::Header>
+
+{{#if @model.policy}}
+  <Hds::CodeBlock
+    @value={{@model.policy}}
+    @hasCopyButton={{true}}
+    @maxHeight="300px"
+    @language="ruby"
+    class="top-margin-32"
+    as |CB|
+  >
+    <CB.Title @tag="h3">
+      Policy
+    </CB.Title>
+    <CB.Description>
+      {{#if (eq @model.policyType "acl")}}
+        {{uppercase @model.format}}
+        format
+      {{/if}}
+    </CB.Description>
+  </Hds::CodeBlock>
+
+{{/if}}
+
+{{#if @model.paths}}
+  <Hds::Card::Container class="top-margin-32">
+    <Hds::Text::Display @tag="h4" @weight="semibold" @size="300">
+      Paths
+    </Hds::Text::Display>
+    <ul data-test-egp-paths>
+      {{#each @model.paths as |path|}}
+        <li class="box has-slim-padding no-top-shadow is-marginless">
+          <code class="has-text-black">{{path}}</code>
+        </li>
+      {{/each}}
+    </ul>
+  </Hds::Card::Container>
+{{/if}}
+
+{{#if (eq @model.policyType "acl")}}
+  <Hds::Accordion class="top-margin-32" @size="medium" as |A|>
+    <A.Item data-test-accordion="Automation snippets">
+      <:toggle>Automation snippets</:toggle>
+      <:content>
+        <CodeGenerator::AutomationSnippets @cliArgs={{this.snippetArgs.cli}} @tfvpArgs={{this.snippetArgs.terraform}} />
+      </:content>
+    </A.Item>
+  </Hds::Accordion>
+{{/if}}

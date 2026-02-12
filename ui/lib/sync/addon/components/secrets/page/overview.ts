@@ -48,6 +48,18 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
     }
   }
 
+  breadcrumbs = [
+    {
+      label: 'Vault',
+      route: 'vault',
+      icon: 'vault',
+      linkExternal: true,
+    },
+    {
+      label: 'Secrets sync',
+    },
+  ];
+
   fetchAssociationsForDestinations = task(this, {}, async (page = 1) => {
     try {
       const total = page * this.pageSize;
@@ -108,7 +120,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @action
   onModalError(errorMsg: string) {
     if (macroCondition(isDevelopingApp())) {
-      console.error(errorMsg); // eslint-disable-line no-console
+      console.error(errorMsg);
     }
 
     const errors = [errorMsg];

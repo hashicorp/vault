@@ -55,8 +55,8 @@ func (s *GRPCStorageClient) Get(ctx context.Context, key string) (*logical.Stora
 }
 
 func (s *GRPCStorageClient) Put(ctx context.Context, entry *logical.StorageEntry) error {
-	ctx = logicalCtxToPBMetadataCtx(ctx)
-	reply, err := s.client.Put(ctx, &pb.StoragePutArgs{
+	pbmctx := logicalCtxToPBMetadataCtx(ctx)
+	reply, err := s.client.Put(pbmctx, &pb.StoragePutArgs{
 		Entry: pb.LogicalStorageEntryToProtoStorageEntry(entry),
 	}, largeMsgGRPCCallOpts...)
 	if err != nil {
@@ -64,6 +64,11 @@ func (s *GRPCStorageClient) Put(ctx context.Context, entry *logical.StorageEntry
 	}
 	if reply.Err != "" {
 		return errors.New(reply.Err)
+	}
+	ws := logical.IndexStateFromContext(ctx)
+	if ws != nil && reply.WalIndex != nil {
+		ws.ReplicatedIndex = reply.WalIndex.ReplicatedIndex
+		ws.LocalIndex = reply.WalIndex.LocalIndex
 	}
 	return nil
 }
@@ -79,6 +84,11 @@ func (s *GRPCStorageClient) Delete(ctx context.Context, key string) error {
 	if reply.Err != "" {
 		return errors.New(reply.Err)
 	}
+	ws := logical.IndexStateFromContext(ctx)
+	if ws != nil && reply.WalIndex != nil {
+		ws.ReplicatedIndex = reply.WalIndex.ReplicatedIndex
+		ws.LocalIndex = reply.WalIndex.LocalIndex
+	}
 	return nil
 }
 
@@ -92,7 +102,11 @@ func (s *GRPCStorageServer) List(ctx context.Context, args *pb.StorageListArgs) 
 	if s.impl == nil {
 		return nil, errMissingStorage
 	}
-	ctx = pbMetadataCtxToLogicalCtx(ctx)
+	ctx, err := pbMetadataCtxToLogicalCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	keys, err := s.impl.List(ctx, args.Prefix)
 	return &pb.StorageListReply{
 		Keys: keys,
@@ -104,7 +118,10 @@ func (s *GRPCStorageServer) Get(ctx context.Context, args *pb.StorageGetArgs) (*
 	if s.impl == nil {
 		return nil, errMissingStorage
 	}
-	ctx = pbMetadataCtxToLogicalCtx(ctx)
+	ctx, err := pbMetadataCtxToLogicalCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
 	storageEntry, err := s.impl.Get(ctx, args.Key)
 	if storageEntry == nil {
 		return &pb.StorageGetReply{
@@ -122,10 +139,18 @@ func (s *GRPCStorageServer) Put(ctx context.Context, args *pb.StoragePutArgs) (*
 	if s.impl == nil {
 		return nil, errMissingStorage
 	}
-	ctx = pbMetadataCtxToLogicalCtx(ctx)
-	err := s.impl.Put(ctx, pb.ProtoStorageEntryToLogicalStorageEntry(args.Entry))
+	ctx, err := pbMetadataCtxToLogicalCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = s.impl.Put(ctx, pb.ProtoStorageEntryToLogicalStorageEntry(args.Entry))
+	ws := logical.IndexStateFromContext(ctx)
 	return &pb.StoragePutReply{
 		Err: pb.ErrToString(err),
+		WalIndex: &pb.WALIndex{
+			LocalIndex:      ws.LocalIndex,
+			ReplicatedIndex: ws.ReplicatedIndex,
+		},
 	}, nil
 }
 
@@ -133,10 +158,18 @@ func (s *GRPCStorageServer) Delete(ctx context.Context, args *pb.StorageDeleteAr
 	if s.impl == nil {
 		return nil, errMissingStorage
 	}
-	ctx = pbMetadataCtxToLogicalCtx(ctx)
-	err := s.impl.Delete(ctx, args.Key)
+	ctx, err := pbMetadataCtxToLogicalCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = s.impl.Delete(ctx, args.Key)
+	ws := logical.IndexStateFromContext(ctx)
 	return &pb.StorageDeleteReply{
 		Err: pb.ErrToString(err),
+		WalIndex: &pb.WALIndex{
+			LocalIndex:      ws.LocalIndex,
+			ReplicatedIndex: ws.ReplicatedIndex,
+		},
 	}, nil
 }
 

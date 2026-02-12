@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/billing"
 )
 
 const (
@@ -111,7 +112,6 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 	if err != nil {
 		return nil, err
 	}
-
 	b.setupEnt()
 
 	return &b, nil
@@ -122,6 +122,10 @@ type backend struct {
 	entBackend
 
 	lm *keysutil.LockManager
+	// billingDataCounts tracks successful data protection operations
+	// for this backend instance. It's intended for test assertions and avoids
+	// cross-test/package contamination from global counters.
+	billingDataCounts billing.DataProtectionCallCounts
 	// Lock to make changes to any of the backend's cache configuration.
 	configMutex          sync.RWMutex
 	cacheSizeChanged     bool
@@ -144,6 +148,19 @@ func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error
 		size = storedCache.Size
 	}
 	return size, nil
+}
+
+// incrementBillingCounts atomically increments the transit billing data counts
+func (b *backend) incrementBillingCounts(ctx context.Context, count uint64) error {
+	// If we are a test, we need to increment this testing structure to verify the counts are correct.
+	if b.billingDataCounts.Transit != nil {
+		b.billingDataCounts.Transit.Add(count)
+	}
+
+	// Write billling data
+	return b.ConsumptionBillingManager.WriteBillingData(ctx, "transit", map[string]interface{}{
+		"count": count,
+	})
 }
 
 // Update cache size and get policy

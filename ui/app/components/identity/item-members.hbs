@@ -45,7 +45,7 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <Hds::ApplicationState class="top-padding-32" as |A|>
-    <A.Header data-test-empty-state-title @title="No members in this group yet" />
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="No members in this group yet" @titleTag="h2" />
   </Hds::ApplicationState>
 {{/if}}

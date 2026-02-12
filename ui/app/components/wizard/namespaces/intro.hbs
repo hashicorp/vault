@@ -1,0 +1,29 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Wizard::IntroContent
+  @isOptional={{true}}
+  @setupTime="15min"
+  @description="Namespaces let you create secure, isolated environments where independent teams can manage their own secrets engines, auth methods, and policies within a single Vault cluster."
+  @imageAlt="namespace hierarchy example"
+  @imageCaption="Namespaces provide necessary isolation based on your company's organization and access requirements."
+  @imageSrc={{img-path "~/namespaces-intro.png"}}
+>
+  <:features>
+    <Wizard::IntroContent::Feature @icon="service">
+      Use for multi-tenancy: strict
+      <strong>administrative and configuration isolation</strong>
+      between business units and client environments.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="database">
+      Namespaces allow you to segment your cluster into
+      <strong>separate logical partitions</strong>, with isolated data, policy, and tokens.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="org">
+      Namespaces should not be used like folders. Use them for
+      <strong>large-scale, highly-regulated</strong>
+      environments.
+    </Wizard::IntroContent::Feature>
+  </:features>
+</Wizard::IntroContent>

@@ -3,6 +3,38 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.21.3
+### February 05, 2026
+
+SECURITY:
+
+* auth/cert: ensure that the certificate being renewed matches the certificate attached to the session.
+
+CHANGES:
+
+* core: Bump Go version to 1.25.6
+
+FEATURES:
+
+* **UI: Hashi-Built External Plugin Support**: Recognize and support Hashi-built plugins when run as external binaries
+
+IMPROVEMENTS:
+
+* core/managed-keys (enterprise): Allow GCP managed keys to leverage workload identity federation credentials
+* sdk: Add alias_metadata to tokenutil fields that auth method roles use.
+* secret-sync (enterprise): Added telemetry counters for reconciliation loop operations, including the number of corrections detected, retry attempts, and operation outcomes (success or failure with internal/external cause labels).
+* secret-sync (enterprise): Added telemetry counters for sync/unsync operations with status breakdown by destination type, and exposed operation counters in the destinations list API response.
+
+BUG FIXES:
+
+* agent: Fix Vault Agent discarding cached tokens on transient server errors instead of retrying
+* core (enterprise): Fix crash when seal HSM is disconnected
+* default-auth: Fix issue when specifying "root" explicitly in Default Auth UI
+* identity: Fix issue where Vault may consume more memory than intended under heavy authentication load.
+* secrets/pki (enterprise): Fix SCEP related digest errors when requests contained compound octet strings
+* ui: Fixes login form so `?with=<path>` query param correctly displays only the specified mount when multiple mounts of the same auth type are configured with `listing_visibility="unauth"`
+* ui: Reverts Kubernetes CA Certificate auth method configuration form field type to file selector
+
 ## 1.21.2
 ### January 07, 2026
 
@@ -294,6 +326,31 @@ BUG FIXES:
 * ui: Include user's root namespace in the namespace picker if it's a namespace other than the actual root ("")
 * ui: Revert camelizing of parameters returned from `sys/internal/ui/mounts` so mount paths match serve value
 * ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`
+
+## 1.20.8 Enterprise
+### February 05, 2026
+
+SECURITY:
+
+* auth/cert: ensure that the certificate being renewed matches the certificate attached to the session.
+
+CHANGES:
+
+* core: Bump Go version to 1.25.6
+
+IMPROVEMENTS:
+
+* core/managed-keys (enterprise): Allow GCP managed keys to leverage workload identity federation credentials
+* secret-sync (enterprise): Added telemetry counters for reconciliation loop operations, including the number of corrections detected,retry attempts, and operation outcomes (success or failure with internal/external cause labels).
+* secret-sync (enterprise): Added telemetry counters for sync/unsync operations with status breakdown by destination type, and exposed operation counters in the destinations list API response.
+
+BUG FIXES:
+
+* agent: Fix Vault Agent discarding cached tokens on transient server errors instead of retrying
+* core (enterprise): Fix crash when seal HSM is disconnected
+* default-auth: Fix issue when specifying "root" explicitly in Default Auth UI
+* identity: Fix issue where Vault may consume more memory than intended under heavy authentication load.
+* secrets/pki (enterprise): Fix SCEP related digest errors when requests contained compound octet strings
 
 ## 1.20.7 Enterprise
 ### January 07, 2026
@@ -692,6 +749,29 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.14 Enterprise
+### February 05, 2026
+
+SECURITY:
+
+* auth/cert: ensure that the certificate being renewed matches the certificate attached to the session.
+
+CHANGES:
+
+* core: Bump Go version to 1.25.6
+
+IMPROVEMENTS:
+
+* core/managed-keys (enterprise): Allow GCP managed keys to leverage workload identity federation credentials
+* secret-sync (enterprise): Added telemetry counters for reconciliation loop operations, including the number of corrections detected, 
+retry attempts, and operation outcomes (success or failure with internal/external cause labels).
+* secret-sync (enterprise): Added telemetry counters for sync/unsync operations with status breakdown by destination type, and exposed operation counters in the destinations list API response.
+
+BUG FIXES:
+
+* agent: Fix Vault Agent discarding cached tokens on transient server errors instead of retrying
+* identity: Fix issue where Vault may consume more memory than intended under heavy authentication load.
 
 ## 1.19.13 Enterprise
 ### January 07, 2026
@@ -2505,6 +2585,29 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.30
+### February 05, 2026
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* auth/cert: ensure that the certificate being renewed matches the certificate attached to the session.
+
+CHANGES:
+
+* core: Bump Go version to 1.24.12
+
+IMPROVEMENTS:
+
+* secret-sync (enterprise): Added telemetry counters for reconciliation loop operations, including the number of corrections detected, retry attempts, and operation outcomes (success or failure with internal/external cause labels).
+* secret-sync (enterprise): Added telemetry counters for sync/unsync operations with status breakdown by destination type, and exposed operation counters in the destinations list API response.
+
+BUG FIXES:
+
+* agent: Fix Vault Agent discarding cached tokens on transient server errors instead of retrying
+
 
 ## 1.16.29 Enterprise
 ### January 07, 2026

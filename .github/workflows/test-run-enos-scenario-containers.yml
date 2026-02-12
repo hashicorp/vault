@@ -41,10 +41,10 @@ jobs:
       sample: ${{ steps.metadata.outputs.sample }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.vault-revision }}
-      - uses: hashicorp/action-setup-enos@80a17fa25605989a7a53199137dae1244e32353f # v1.40
+      - uses: hashicorp/action-setup-enos@17b90fcf9591275b468a94aefb9dc6a93017de8a # v1.50
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/metadata
@@ -73,7 +73,7 @@ jobs:
   run:
     needs: metadata
     name: run ${{ matrix.scenario.id.filter }}
-    runs-on: ${{ fromJSON(needs.metadata.outputs.is-ent-repo == 'true' && (contains(inputs.build-artifact-name, 'arm64') && '["self-hosted","ondemand","os=ubuntu-arm","type=c6g.xlarge"]' || '["self-hosted","ubuntu-latest-x64"]') || (contains(inputs.build-artifact-name, 'arm64') && '"ubuntu-22.04-arm"' || '"ubuntu-latest"')) }}
+    runs-on: ${{ fromJSON(needs.metadata.outputs.is-ent-repo == 'true' && (contains(inputs.build-artifact-name, 'arm64') && '["self-hosted","ondemand","os=ubuntu-arm","type=c6g.xlarge;c6g.2xlarge;c6g.4xlarge"]' || '["self-hosted","ubuntu-latest-x64"]') || (contains(inputs.build-artifact-name, 'arm64') && '"ubuntu-22.04-arm"' || '"ubuntu-latest"')) }}
     strategy:
       fail-fast: false # don't fail as that can skip required cleanup steps for jobs
       matrix:
@@ -81,13 +81,13 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
-      - uses: hashicorp/action-setup-enos@80a17fa25605989a7a53199137dae1244e32353f # v1.40
+      - uses: hashicorp/action-setup-enos@17b90fcf9591275b468a94aefb9dc6a93017de8a # v1.50
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Download Docker Image

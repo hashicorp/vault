@@ -3,7 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, findAll, currentURL, visit, settled, waitFor } from '@ember/test-helpers';
+import {
+  click,
+  fillIn,
+  findAll,
+  currentURL,
+  currentRouteName,
+  visit,
+  settled,
+  waitFor,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
@@ -40,7 +49,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled();
     assert
       .dom(GENERAL.hdsPageHeaderTitle)
-      .includesText('Disaster Recovery', 'it displays the replication type correctly');
+      .includesText('Disaster recovery', 'it displays the replication type correctly');
     assert.dom(GENERAL.badge('primary')).includesText('primary', 'it displays the cluster mode correctly');
 
     await addSecondary(secondaryName);
@@ -84,7 +93,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     assert.ok(findAll('[data-test-demote-warning]').length, 'displays the demotion warning');
   });
 
-  test('DR primary: shows empty state when secondary mode is not enabled and we navigated to the secondary details page', async function (assert) {
+  test('DR primary: redirects to cluster route when navigating to the secondary details page', async function (assert) {
     // enable dr replication
 
     await visit('/vault/replication/dr');
@@ -94,16 +103,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled(); // eslint-disable-line
     await pollCluster(this.owner);
     await visit('/vault/replication-dr-promote/details');
-
-    assert
-      .dom('[data-test-component="empty-state"]')
-      .exists('Empty state is shown when no secondary is configured');
-    assert
-      .dom('[data-test-empty-state-message]')
-      .hasText(
-        'This Disaster Recovery secondary has not been enabled. You can do so from the Disaster Recovery Primary.',
-        'Renders the correct message for when a primary is enabled but no secondary is configured and we have navigated to the secondary details page.'
-      );
+    assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'redirects to the cluster route');
   });
 
   test('DR primary: runs analytics service when enabled', async function (assert) {
@@ -124,22 +124,6 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     // Clean up spy
     addAnalyticsSpy.restore();
-  });
-
-  test('DR secondary: shows empty state when replication is not enabled', async function (assert) {
-    await visit('/vault/replication-dr-promote/details');
-
-    assert.dom('[data-test-component="empty-state"]').exists();
-    assert
-      .dom(GENERAL.emptyStateTitle)
-      .includesText('Disaster Recovery secondary not set up', 'shows the correct title of the empty state');
-
-    assert
-      .dom(GENERAL.emptyStateMessage)
-      .hasText(
-        'This cluster has not been enabled as a Disaster Recovery Secondary. You can do so by enabling replication and adding a secondary from the Disaster Recovery Primary.',
-        'renders default message specific to when no replication is enabled'
-      );
   });
 
   test('Performance primary: add secondary and delete config', async function (assert) {
@@ -272,7 +256,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .doesNotExist(`does not render replication summary card when both modes are not enabled as primary`);
 
     // enable DR primary replication
-    await click('[data-test-sidebar-nav-link="Disaster Recovery"]');
+    await click(GENERAL.navLink('Disaster recovery'));
     // let the controller set replicationMode in afterModel
     await waitFor('[data-test-replication-enable-form]');
     await click(GENERAL.submitButton);

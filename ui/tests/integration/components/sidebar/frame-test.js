@@ -86,6 +86,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
     assert.dom('.panel-open').exists('Console ui panel opens');
 
     assert.dom('[data-test-user-menu]').exists('User menu renders');
+    assert.dom(GENERAL.dropdownToggle('help menu')).exists('Help menu renders');
     await click('[data-test-console-toggle]');
     assert.dom('.panel-open').doesNotExist('Console ui panel closes');
   });

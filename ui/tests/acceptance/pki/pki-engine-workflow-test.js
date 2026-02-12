@@ -6,8 +6,8 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
-
-import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import sinon from 'sinon';
+import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/pki/policy-generator';
@@ -36,6 +36,8 @@ module('Acceptance | pki workflow', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.capabilities = this.owner.lookup('service:capabilities');
+    this.capabilitiesFetchSpy = sinon.spy(this.capabilities, 'fetch');
     await login();
     // Setup PKI engine
     const mountPath = `pki-workflow-${uuidv4()}`;
@@ -43,17 +45,16 @@ module('Acceptance | pki workflow', function (hooks) {
     this.mountPath = mountPath;
   });
 
-  hooks.afterEach(async function () {
-    await login();
-    // Cleanup engine
-    await runCmd([`delete sys/mounts/${this.mountPath}`]);
-  });
-
   module('not configured', function (hooks) {
     hooks.beforeEach(async function () {
       await login();
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
       this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
+    });
+    hooks.afterEach(async function () {
+      await login();
+      // Cleanup engine
+      await runCmd([`delete sys/mounts/${this.mountPath}`]);
     });
 
     test('empty state messages are correct when PKI not configured', async function (assert) {
@@ -116,6 +117,11 @@ module('Acceptance | pki workflow', function (hooks) {
         tokenWithPolicyCmd(`pki-editor-${this.mountPath}`, pki_editor_policy)
       );
       this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
+    });
+    hooks.afterEach(async function () {
+      await login();
+      // Cleanup engine
+      await runCmd([`delete sys/mounts/${this.mountPath}`]);
     });
 
     test('shows correct items if user has all permissions', async function (assert) {
@@ -235,7 +241,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(PKI_ROLE_DETAILS.createRoleLink);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/roles/create`);
       assert.dom(GENERAL.breadcrumbs).exists({ count: 1 }, 'breadcrumbs are rendered');
-      assert.dom(GENERAL.breadcrumb).exists({ count: 4 }, 'Shows 4 breadcrumbs');
+      assert.dom(GENERAL.breadcrumb).exists({ count: 5 }, 'Shows 5 breadcrumbs');
       assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a PKI Role');
 
       await fillIn(GENERAL.inputByAttr('name'), roleName);
@@ -249,7 +255,7 @@ module('Acceptance | pki workflow', function (hooks) {
         currentURL(),
         `/vault/secrets-engines/${this.mountPath}/pki/roles/${roleName}/details`
       );
-      assert.dom(GENERAL.breadcrumb).exists({ count: 4 }, 'Shows 4 breadcrumbs');
+      assert.dom(GENERAL.breadcrumb).exists({ count: 5 }, 'Shows 5 breadcrumbs');
       assert.dom(GENERAL.hdsPageHeaderTitle).hasText('PKI Role');
       assert.dom(GENERAL.hdsPageHeaderSubtitle).hasText(roleName);
     });
@@ -266,6 +272,11 @@ module('Acceptance | pki workflow', function (hooks) {
       this.pkiKeyReader = await runCmd(tokenWithPolicyCmd(`pki-reader-${this.mountPath}`, pki_reader_policy));
       this.pkiKeyEditor = await runCmd(tokenWithPolicyCmd(`pki-editor-${this.mountPath}`, pki_editor_policy));
       this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
+    });
+    hooks.afterEach(async function () {
+      await login();
+      // Cleanup engine
+      await runCmd([`delete sys/mounts/${this.mountPath}`]);
     });
 
     test('shows correct items if user has all permissions', async function (assert) {
@@ -284,6 +295,19 @@ module('Acceptance | pki workflow', function (hooks) {
         );
       let keyId = find(PKI_KEYS.keyId).innerText;
       assert.dom('.linked-block').exists({ count: 1 }, 'One key is in list');
+      const [requestedPaths] = this.capabilitiesFetchSpy.lastCall.args;
+      const expectedPaths = [
+        this.capabilities.pathFor('pkiKeysImport', { backend: this.mountPath }),
+        this.capabilities.pathFor('pkiKeysGenerate', { backend: this.mountPath }),
+        this.capabilities.pathFor('pkiKey', { backend: this.mountPath, keyId }),
+      ];
+      expectedPaths.forEach((expected, idx) => {
+        assert.strictEqual(
+          expected,
+          requestedPaths[idx],
+          `index route makes capabilities request to: ${expected}`
+        );
+      });
       await click('.linked-block');
       // details page
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/details`);
@@ -387,6 +411,11 @@ module('Acceptance | pki workflow', function (hooks) {
       await runCmd([
         `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
       ]);
+    });
+    hooks.afterEach(async function () {
+      await login();
+      // Cleanup engine
+      await runCmd([`delete sys/mounts/${this.mountPath}`]);
     });
     test('lists the correct issuer metadata info', async function (assert) {
       await login(this.pkiAdminToken);
@@ -496,6 +525,10 @@ module('Acceptance | pki workflow', function (hooks) {
       await login();
       await runCmd([`write ${this.mountPath}/root/generate/internal issuer_name="existing-issuer"`]);
     });
+    hooks.afterEach(async function () {
+      // Cleanup engine
+      await runCmd([`delete sys/mounts/${this.mountPath}`]);
+    });
     test('it renders a warning banner when parent issuer has unsupported OIDs', async function (assert) {
       await login();
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/create`);
@@ -535,7 +568,7 @@ module('Acceptance | pki workflow', function (hooks) {
       this.mixedConfigCapabilities = await runCmd(
         tokenWithPolicyCmd(`pki-reader-${this.mountPath}`, mixed_config_policy)
       );
-      await visit('/vault/logout');
+      await logout();
     });
 
     test('it updates config when user only has permission to some endpoints', async function (assert) {

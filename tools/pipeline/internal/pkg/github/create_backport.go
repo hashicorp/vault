@@ -15,9 +15,9 @@ import (
 	"slices"
 	"strings"
 
-	libgithub "github.com/google/go-github/v74/github"
+	libgithub "github.com/google/go-github/v81/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
-	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
+	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"

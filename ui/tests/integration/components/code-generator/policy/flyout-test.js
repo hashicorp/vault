@@ -5,18 +5,26 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, fillIn, typeIn, waitUntil, find } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import Sinon from 'sinon';
 
+const SELECTORS = {
+  pathByContainer: (idx) => `${GENERAL.cardContainer(idx)} ${GENERAL.inputByAttr('path')}`,
+  checkboxByContainer: (idx, cap) => `${GENERAL.cardContainer(idx)} ${GENERAL.checkboxByAttr(cap)}`,
+};
+
 module('Integration | Component | code-generator/policy/flyout', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    this.version = this.owner.lookup('service:version');
+    this.version.type = 'enterprise'; // the flyout is only available for enterprise versions
+    this.onClose = undefined;
     this.assertSaveRequest = (assert, expectedPolicy, msg = 'policy content is correct') => {
       this.server.post('/sys/policies/acl/:name', (_, req) => {
         const { policy } = JSON.parse(req.requestBody);
@@ -27,11 +35,24 @@ module('Integration | Component | code-generator/policy/flyout', function (hooks
       });
     };
     this.renderComponent = async ({ open = true } = {}) => {
-      await render(hbs`<CodeGenerator::Policy::Flyout />`);
+      await render(hbs`<CodeGenerator::Policy::Flyout @onClose={{this.onClose}} />`);
       if (open) {
         await click(GENERAL.button('Generate policy'));
       }
     };
+  });
+
+  test('it calls onClose callback', async function (assert) {
+    this.onClose = Sinon.spy();
+    await this.renderComponent();
+    await click(GENERAL.cancelButton);
+    assert.true(this.onClose.calledOnce, 'onClose callback is called');
+  });
+
+  test('it does not render for community versions', async function (assert) {
+    this.version.type = 'community';
+    await this.renderComponent({ open: false });
+    assert.dom(GENERAL.button('Generate policy')).doesNotExist('Button does not render for CE version');
   });
 
   test('it renders button trigger and opens and closes the flyout', async function (assert) {
@@ -49,6 +70,73 @@ module('Integration | Component | code-generator/policy/flyout', function (hooks
 
     await click(GENERAL.cancelButton);
     assert.dom(GENERAL.flyout).doesNotExist('flyout closes after clicking cancel');
+  });
+
+  test('it yields custom trigger component', async function (assert) {
+    await render(hbs`<Hds::Dropdown as |D|>
+      <D.ToggleButton @text="Toolbox" data-test-dropdown="Toolbox" />
+      <CodeGenerator::Policy::Flyout>
+        <:customTrigger as |openFlyout|>
+          <D.Interactive @icon="shield-check" {{on "click" openFlyout}} data-test-button="Make me a policy!">
+            Make me a policy!
+          </D.Interactive>
+        </:customTrigger>
+      </CodeGenerator::Policy::Flyout>
+      <D.Interactive @icon="wand" data-test-button="Magic stuff">Magic stuff</D.Interactive>
+    </Hds::Dropdown>`);
+    await click(GENERAL.dropdownToggle('Toolbox'));
+    assert.dom(GENERAL.flyout).doesNotExist();
+    assert
+      .dom(GENERAL.button('Make me a policy!'))
+      .exists()
+      .hasText('Make me a policy!', 'custom trigger renders');
+    await click(GENERAL.button('Make me a policy!'));
+    assert.dom(GENERAL.flyout).exists('flyout opens after clicking custom trigger');
+  });
+
+  // This test is to demonstrate how to implement closing the dropdown when the flyout trigger is a dropdown element
+  test('it closes dropdown if custom trigger is a dropdown item', async function (assert) {
+    await render(hbs`<Hds::Dropdown as |D|>
+      <D.ToggleButton @text="Toolbox" data-test-dropdown="Toolbox" />
+      <CodeGenerator::Policy::Flyout @onClose={{D.close}} >
+        <:customTrigger as |openFlyout|>
+          <D.Interactive @icon="shield-check" {{on "click" openFlyout}} data-test-button="Make me a policy!">
+            Make me a policy!
+          </D.Interactive>
+        </:customTrigger>
+      </CodeGenerator::Policy::Flyout>
+      <D.Interactive @icon="wand" data-test-button="Magic stuff">Magic stuff</D.Interactive>
+    </Hds::Dropdown>`);
+    await click(GENERAL.dropdownToggle('Toolbox'));
+    assert.dom(GENERAL.dropdownToggle('Toolbox')).hasAttribute('aria-expanded', 'true');
+    await click(GENERAL.button('Make me a policy!'));
+    assert.dom(GENERAL.flyout).exists('flyout is open');
+    await click(GENERAL.cancelButton);
+    assert.dom(GENERAL.flyout).doesNotExist('flyout is closed');
+    const dropdown = find(GENERAL.dropdownToggle('Toolbox'));
+    await waitUntil(() => dropdown.ariaExpanded === 'false');
+    assert
+      .dom(GENERAL.dropdownToggle('Toolbox'))
+      .hasAttribute('aria-expanded', 'false', 'dropdown closes when flyout is closed');
+  });
+
+  test('it does not render yielded custom trigger component on community', async function (assert) {
+    this.version.type = 'community';
+    await this.renderComponent({ open: false });
+    await render(hbs`<Hds::Dropdown as |D|>
+      <D.ToggleButton @text="Toolbox" data-test-dropdown="Toolbox" />
+      <CodeGenerator::Policy::Flyout>
+        <:customTrigger as |openFlyout|>
+          <D.Interactive @icon="shield-check" {{on "click" openFlyout}} data-test-button="Make me a policy!">
+            Make me a policy!
+          </D.Interactive>
+        </:customTrigger>
+      </CodeGenerator::Policy::Flyout>
+      <D.Interactive @icon="wand" data-test-button="Magic stuff">Magic stuff</D.Interactive>
+    </Hds::Dropdown>`);
+    await click(GENERAL.dropdownToggle('Toolbox'));
+    assert.dom(GENERAL.button('Magic stuff')).exists('dropdown opens');
+    assert.dom(GENERAL.button('Make me a policy!')).doesNotExist();
   });
 
   test('it preserves state when re-opened', async function (assert) {
@@ -193,8 +281,8 @@ EOT`;
     await click(GENERAL.checkboxByAttr('read'));
 
     await click(GENERAL.button('Add rule'));
-    await fillIn(`${GENERAL.cardContainer('1')} ${GENERAL.inputByAttr('path')}`, 'second/path');
-    await click(`${GENERAL.cardContainer('1')} ${GENERAL.checkboxByAttr('update')}`);
+    await fillIn(SELECTORS.pathByContainer(1), 'second/path');
+    await click(SELECTORS.checkboxByContainer(1, 'update'));
 
     await click(GENERAL.submitButton);
   });
@@ -256,5 +344,85 @@ EOT`;
     await click(GENERAL.button('Generate policy'));
     assert.dom(GENERAL.messageError).doesNotExist('error banner is cleared');
     assert.dom(GENERAL.validationErrorByAttr('name')).doesNotExist('validation error is cleared');
+  });
+
+  module('capabilities', function (hooks) {
+    hooks.beforeEach(function () {
+      this.capabilities = this.owner.lookup('service:capabilities');
+    });
+
+    test('it renders when no capabilities have been requested', async function (assert) {
+      this.capabilities.requestedPaths = new Set([]);
+      await this.renderComponent();
+      assert.dom(SELECTORS.pathByContainer(0)).hasValue('');
+    });
+
+    test('it prepopulates with a single capability path', async function (assert) {
+      this.capabilities.requestedPaths = new Set(['super-secret/data']);
+      await this.renderComponent();
+      assert.dom(SELECTORS.pathByContainer(0)).hasValue('super-secret/data');
+      assert.dom(GENERAL.cardContainer()).exists({ count: 1 });
+    });
+
+    test('it prepopulates with a multiple capability paths', async function (assert) {
+      this.capabilities.requestedPaths = new Set(['path/one', 'path/two']);
+      await this.renderComponent();
+      assert.dom(SELECTORS.pathByContainer(0)).hasValue('path/one');
+      assert.dom(SELECTORS.pathByContainer(1)).hasValue('path/two');
+      assert.dom(GENERAL.cardContainer()).exists({ count: 2 });
+    });
+
+    test('it does not override user changes to a preset path on reopen', async function (assert) {
+      this.capabilities.requestedPaths = new Set(['super-secret/data']);
+      await this.renderComponent();
+
+      // User updates path
+      await typeIn(SELECTORS.pathByContainer(0), '/*');
+      // Close and reopen
+      await click(GENERAL.cancelButton);
+      await click(GENERAL.button('Generate policy'));
+      assert
+        .dom(SELECTORS.pathByContainer(0))
+        .hasValue('super-secret/data/*', 'user path changes are preserved');
+      assert.dom(GENERAL.cardContainer()).exists({ count: 1 });
+    });
+
+    test('it does not override user capabilities selection for a preset path on reopen', async function (assert) {
+      this.capabilities.requestedPaths = new Set(['super-secret/data']);
+      await this.renderComponent();
+
+      // User updates path
+      await click(SELECTORS.checkboxByContainer(0, 'read'));
+      // Close and reopen
+      await click(GENERAL.cancelButton);
+      await click(GENERAL.button('Generate policy'));
+      assert
+        .dom(SELECTORS.checkboxByContainer(0, 'read'))
+        .isChecked('user capabilities changes are preserved');
+      assert.dom(GENERAL.cardContainer()).exists({ count: 1 });
+    });
+
+    test('it does not override user added stanza on reopen', async function (assert) {
+      this.capabilities.requestedPaths = new Set(['super-secret/data']);
+      await this.renderComponent();
+      await click(GENERAL.button('Add rule'));
+      await fillIn(SELECTORS.pathByContainer(1), 'new/path/*');
+      // Close and reopen
+      await click(GENERAL.cancelButton);
+      await click(GENERAL.button('Generate policy'));
+      assert.dom(GENERAL.cardContainer()).exists({ count: 2 }, 'it renders two stanzas after reopening');
+      assert.dom(SELECTORS.pathByContainer(0)).hasValue('super-secret/data', 'preset path still exists');
+      assert.dom(SELECTORS.pathByContainer(1)).hasValue('new/path/*', 'user added path still exists');
+    });
+
+    test('it does not save prepopulated paths as policy content', async function (assert) {
+      assert.expect(3);
+      this.capabilities.requestedPaths = new Set(['path/one', 'path/two']);
+      await this.renderComponent();
+      // Fill in name and save to make sure policyContent is empty
+      this.assertSaveRequest(assert, '', 'policy content is empty despite pre-filled paths');
+      await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+      await click(GENERAL.submitButton);
+    });
   });
 });

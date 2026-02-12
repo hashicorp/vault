@@ -47,8 +47,8 @@
   />
 
 {{else}}
-  <Hds::ApplicationState class="top-padding-32" as |A|>
-    <A.Header data-test-empty-state-title @title="No {{this.identityType}} aliases yet" />
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="No {{this.identityType}} aliases yet" @titleTag="h2" />
     <A.Body
       data-test-empty-state-message
       @text="A list of {{this.identityType}} aliases in this namespace will be listed here. Choose one of the {{pluralize

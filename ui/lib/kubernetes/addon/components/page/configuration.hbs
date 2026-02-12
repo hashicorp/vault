@@ -3,8 +3,12 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{! TODO: VAULT-40884 Add @configRoute argument with value "configuration" so mount config tabs show }}
-<KubernetesHeader @model={{@secretsEngine}} @promptConfig={{@promptConfig}} @breadcrumbs={{@breadcrumbs}}>
+<KubernetesHeader
+  @model={{@secretsEngine}}
+  @promptConfig={{@promptConfig}}
+  @breadcrumbs={{@breadcrumbs}}
+  @configRoute="configuration"
+>
   {{#if @config}}
     <ToolbarLink @route="configure" data-test-secret-backend-configure>
       Edit configuration
@@ -29,12 +33,4 @@
       </span>
     </div>
   {{/if}}
-{{else}}
-  <ConfigCta />
 {{/if}}
-
-<SecretsEngineMountConfig
-  @secretsEngine={{@secretsEngine}}
-  class="has-top-margin-xl has-bottom-margin-xl"
-  data-test-mount-config
-/>

@@ -3,26 +3,34 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title={{@model.id}} @icon={{@model.icon}}>
+<Page::Header
+  @title={{if @configRoute (concat @model.id " configuration") @model.id}}
+  @icon={{@model.icon}}
+  @subtitle="Kubernetes"
+>
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </:breadcrumbs>
   <:actions>
-    <Hds::Dropdown as |D|>
-      <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
-      <D.Interactive
-        @icon="settings"
-        @route={{if @promptConfig "configure" "configuration"}}
-        @model={{@model.id}}
-        data-test-popup-menu="Configure"
-      >Configure</D.Interactive>
-      <D.Interactive
-        {{on "click" (fn (mut this.engineToDisable) @model)}}
-        @color="critical"
-        @icon="trash"
-        data-test-popup-menu="Delete"
-      >Delete</D.Interactive>
-    </Hds::Dropdown>
+    {{#if @configRoute}}
+      <Hds::Button @color="secondary" @route="overview" @text="Exit configuration" data-test-button="Exit configuration" />
+    {{else}}
+      <Hds::Dropdown as |D|>
+        <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
+        <D.Interactive
+          @icon="settings"
+          @route={{if @promptConfig "configure" "configuration"}}
+          @model={{@model.id}}
+          data-test-popup-menu="Configure"
+        >Configure</D.Interactive>
+        <D.Interactive
+          {{on "click" (fn (mut this.engineToDisable) @model)}}
+          @color="critical"
+          @icon="trash"
+          data-test-popup-menu="Delete"
+        >Delete</D.Interactive>
+      </Hds::Dropdown>
+    {{/if}}
   </:actions>
 </Page::Header>
 
@@ -38,7 +46,6 @@
     <ul>
       <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
       <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
-      <li><LinkTo @route="configuration" data-test-tab="config">Configuration</LinkTo></li>
     </ul>
   </nav>
 {{/if}}

@@ -96,7 +96,9 @@
       <span class="has-text-weight-semibold">{{or item.keyWithoutParent item.id}}</span>
     </LinkTo>
   {{else}}
-    <EmptyState @title="There are no leases matching &quot;{{this.filter}}&quot;" />
+    <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+      <A.Header @title="There are no leases matching &quot;{{this.filter}}&quot;" @titleTag="h2" />
+    </Hds::ApplicationState>
   {{/each}}
   {{#unless this.filter}}
     <Hds::Pagination::Numbered
@@ -109,5 +111,7 @@
     />
   {{/unless}}
 {{else}}
-  <EmptyState @title={{this.emptyTitle}} />
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header @title={{this.emptyTitle}} @titleTag="h2" />
+  </Hds::ApplicationState>
 {{/if}}

@@ -207,6 +207,7 @@ export default class SecretEngineModel extends Model {
       'config.auditNonHmacResponseKeys',
       'config.passthroughRequestHeaders',
       'config.allowedResponseHeaders',
+      'config.plugin_version',
     ];
 
     switch (this.engineType) {

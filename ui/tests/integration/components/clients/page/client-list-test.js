@@ -11,7 +11,7 @@ import { ACTIVITY_EXPORT_STUB } from 'vault/tests/helpers/clients/client-count-h
 import { CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
-import { ClientFilters } from 'core/utils/client-count-utils';
+import { ClientFilters } from 'core/utils/client-counts/helpers';
 
 const EXPORT_TAB_TO_TYPE = {
   Entity: 'entity',

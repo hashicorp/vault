@@ -7,12 +7,18 @@ import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { keepLatestTask } from 'ember-concurrency';
 import { macroCondition, isDevelopingApp } from '@embroider/macros';
+import { ADMINISTRATIVE_NAMESPACE } from 'vault/services/namespace';
 
-import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
+import type ApiService from 'vault/services/api';
 
 const FLAGS = {
   vaultCloudNamespace: 'VAULT_CLOUD_ADMIN_NAMESPACE',
+};
+
+export type ActivationFlags = {
+  activated: string[];
+  unactivated: string[];
 };
 
 /**
@@ -23,7 +29,7 @@ const FLAGS = {
 
 export default class FlagsService extends Service {
   @service declare readonly version: VersionService;
-  @service declare readonly store: Store;
+  @service declare readonly api: ApiService;
 
   @tracked activatedFlags: string[] = [];
   @tracked featureFlags: string[] = [];
@@ -34,22 +40,21 @@ export default class FlagsService extends Service {
 
   // for non-managed clusters the root namespace path is technically an empty string so we return null
   get hvdManagedNamespaceRoot(): string | null {
-    return this.isHvdManaged ? 'admin' : null;
+    return this.isHvdManaged ? ADMINISTRATIVE_NAMESPACE : null;
   }
 
   getFeatureFlags = keepLatestTask(async () => {
     try {
-      const result = await fetch('/v1/sys/internal/ui/feature-flags', {
-        method: 'GET',
-      });
-
-      if (result.status === 200) {
-        const body = await result.json();
-        this.featureFlags = body.feature_flags || [];
-      }
+      // unable to use internalUiListEnabledFeatureFlags method since the response does not conform to expected format
+      // example -> { feature_flags: string[] } instead of the standard { data: { feature_flags: string[] } }
+      // since it is typed as JSONApiResponse and not VoidResponse the client attempts to parse the body at
+      const response = await this.api.request.get('/sys/internal/ui/feature-flags');
+      const { feature_flags } = await response.json();
+      this.featureFlags = feature_flags || [];
     } catch (error) {
+      const { response } = await this.api.parseError(error);
       if (macroCondition(isDevelopingApp())) {
-        console.error(error); // eslint-disable-line no-console
+        console.error(response);
       }
     }
   });
@@ -67,14 +72,15 @@ export default class FlagsService extends Service {
     // Fire off endpoint without checking if activated features are already set.
     if (this.version.isCommunity) return;
     try {
-      const response = await this.store
-        .adapterFor('application')
-        .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null });
-      this.activatedFlags = response.data?.activated;
+      const { data } = await this.api.sys.readActivationFlags(
+        this.api.buildHeaders({ token: '', namespace: '' })
+      );
+      this.activatedFlags = (data as ActivationFlags)?.activated;
       return;
     } catch (error) {
+      const { response } = await this.api.parseError(error);
       if (macroCondition(isDevelopingApp())) {
-        console.error(error); // eslint-disable-line no-console
+        console.error(response);
       }
     }
   });

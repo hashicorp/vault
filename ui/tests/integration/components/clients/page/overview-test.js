@@ -12,8 +12,13 @@ import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients/client-count
 import { CHARTS, CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
-import { ClientFilters, flattenMounts } from 'core/utils/client-count-utils';
+import { ClientFilters, flattenMounts } from 'core/utils/client-counts/helpers';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import {
+  destructureClientCounts,
+  formatByMonths,
+  formatByNamespace,
+} from 'core/utils/client-counts/serializers';
 
 module('Integration | Component | clients/page/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -26,10 +31,15 @@ module('Integration | Component | clients/page/overview', function (hooks) {
         data: ACTIVITY_RESPONSE_STUB,
       };
     });
-
-    this.store = this.owner.lookup('service:store');
-    this.activity = await this.store.queryRecord('clients/activity', {});
-    this.mostRecentMonth = this.activity.byMonth[this.activity.byMonth.length - 1];
+    this.api = this.owner.lookup('service:api');
+    const response = await this.api.sys.internalClientActivityReportCounts();
+    this.activity = {
+      ...response,
+      by_namespace: formatByNamespace(response.by_namespace),
+      by_month: formatByMonths(response.months),
+      total: destructureClientCounts(response.total),
+    };
+    this.mostRecentMonth = this.activity.by_month[this.activity.by_month.length - 1];
     this.onFilterChange = sinon.spy();
     this.filterQueryParams = { namespace_path: '', mount_path: '', mount_type: '', month: '' };
     this.renderComponent = () =>
@@ -41,7 +51,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       />`);
 
     this.assertTableData = async (assert, filterKey, filterValue) => {
-      const expectedData = flattenMounts(this.activity.byNamespace).filter(
+      const expectedData = flattenMounts(this.activity.by_namespace).filter(
         (d) => d[filterKey] === filterValue
       );
       // Find all rendered rows and assert they satisfy the filter value and table data matches expected values
@@ -81,14 +91,20 @@ module('Integration | Component | clients/page/overview', function (hooks) {
         },
       };
     });
-    this.activity = await this.store.queryRecord('clients/activity', {});
+    const response = await this.api.sys.internalClientActivityReportCounts();
+    this.activity = {
+      ...response,
+      by_namespace: formatByNamespace(response.by_namespace),
+      by_month: formatByMonths(response.months),
+      total: destructureClientCounts(response.total),
+    };
     await this.renderComponent();
     assert.dom(CLIENT_COUNT.card('Client attribution')).doesNotExist('it does not render attribution card');
   });
 
   test('it initially renders attribution with by_namespace data', async function (assert) {
     await this.renderComponent();
-    const topNamespace = this.activity.byNamespace[0];
+    const topNamespace = this.activity.by_namespace[0];
     const topMount = topNamespace.mounts[0];
     // Assert table renders namespace with the highest counts at the top
     assert.dom(GENERAL.tableData(0, 'namespace_path')).hasText(topNamespace.label);
@@ -96,10 +112,10 @@ module('Integration | Component | clients/page/overview', function (hooks) {
   });
 
   test('it renders dropdown lists from activity response to filter table data', async function (assert) {
-    const expectedMonths = this.activity.byMonth
+    const expectedMonths = this.activity.by_month
       .map((m) => parseAPITimestamp(m.timestamp, 'MMMM yyyy'))
       .reverse();
-    const mounts = flattenMounts(this.activity.byNamespace);
+    const mounts = flattenMounts(this.activity.by_namespace);
     const expectedNamespaces = [...new Set(mounts.map((m) => m.namespace_path))];
     const expectedMountPaths = [...new Set(mounts.map((m) => m.mount_path))];
     const expectedMountTypes = [...new Set(mounts.map((m) => m.mount_type))];

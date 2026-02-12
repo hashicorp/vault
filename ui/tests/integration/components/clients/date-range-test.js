@@ -9,7 +9,7 @@ import { click, fillIn, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
-import { format } from 'date-fns';
+import { format, subYears } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 
@@ -21,18 +21,26 @@ module('Integration | Component | clients/date-range', function (hooks) {
     this.version = this.owner.lookup('service:version');
     Sinon.replace(timestamp, 'now', Sinon.fake.returns(new Date('2018-04-03T14:15:30')));
     this.now = timestamp.now();
-    this.startTimestamp = '2018-01-01T14:15:30';
-    this.endTimestamp = '2019-01-31T14:15:30';
+    this.startTimestamp = new Date('2018-01-01T14:15:30');
+    this.endTimestamp = new Date('2019-01-31T14:15:30');
     this.billingStartTime = '';
     this.retentionMonths = 48;
-    this.onChange = Sinon.spy();
+    this.onChange = Sinon.stub();
     this.setEditModalVisible = Sinon.stub().callsFake((visible) => {
       this.set('showEditModal', visible);
     });
     this.showEditModal = false;
     this.renderComponent = async () => {
       await render(
-        hbs`<Clients::DateRange @startTimestamp={{this.startTimestamp}} @endTimestamp={{this.endTimestamp}} @onChange={{this.onChange}} @billingStartTime={{this.billingStartTime}} @retentionMonths={{this.retentionMonths}} @setEditModalVisible={{this.setEditModalVisible}} @showEditModal={{this.showEditModal}}/>`
+        hbs`<Clients::DateRange
+          @startTimestamp={{this.startTimestamp}}
+          @endTimestamp={{this.endTimestamp}}
+          @onChange={{this.onChange}}
+          @billingStartTime={{this.billingStartTime}}
+          @retentionMonths={{this.retentionMonths}}
+          @setEditModalVisible={{this.setEditModalVisible}}
+          @showEditModal={{this.showEditModal}}
+        />`
       );
     };
   });
@@ -127,7 +135,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
     hooks.beforeEach(function () {
       this.version = this.owner.lookup('service:version');
       this.version.type = 'enterprise';
-      this.billingStartTime = '2018-01-01T14:15:30';
+      this.billingStartTime = new Date('2018-01-01T14:15:30');
     });
 
     test('it renders billing start date dropdown for enterprise', async function (assert) {
@@ -161,7 +169,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
     });
 
     test('it updates toggle text when a new date is selected', async function (assert) {
-      this.onChange = ({ start_time }) => this.set('startTimestamp', start_time);
+      this.onChange.callsFake(({ start_time }) => this.set('startTimestamp', new Date(start_time)));
 
       await this.renderComponent();
       assert.dom(DATE_RANGE.edit).hasText('January 2018').hasAttribute('aria-expanded', 'false');
@@ -185,6 +193,27 @@ module('Integration | Component | clients/date-range', function (hooks) {
       this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
       await this.renderComponent();
       assert.dom(this.element).hasText('Change data period January 2018');
+    });
+
+    test('it should send an empty string for start_time when selecting current period', async function (assert) {
+      await this.renderComponent();
+
+      await click(DATE_RANGE.edit);
+      await click(DATE_RANGE.dropdownOption(1));
+      assert.true(
+        this.onChange.calledWith({
+          start_time: subYears(this.billingStartTime, 1).toISOString(),
+          end_time: '',
+        }),
+        'correct start_time sent on change for prior period'
+      );
+
+      await click(DATE_RANGE.edit);
+      await click(DATE_RANGE.dropdownOption(0));
+      assert.true(
+        this.onChange.calledWith({ start_time: '', end_time: '' }),
+        'start_time is empty string on current period change'
+      );
     });
   });
 });

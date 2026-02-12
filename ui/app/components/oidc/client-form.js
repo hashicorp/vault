@@ -33,14 +33,18 @@ export default class OidcClientForm extends Component {
       : 'limited';
 
   get breadcrumbs() {
-    const firstBreadcrumb = this.args.model.isNew
+    const applicationOrDetailsBreadcrumb = this.args.model.isNew
       ? { label: 'Applications', route: 'vault.cluster.access.oidc.clients' }
       : {
           label: 'Details',
           route: 'vault.cluster.access.oidc.clients.client.details',
           model: this.args.model.name,
         };
-    return [firstBreadcrumb, { label: this.args.model.isNew ? 'Create Application' : 'Edit Application' }];
+    return [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
+      applicationOrDetailsBreadcrumb,
+      { label: this.args.model.isNew ? 'Create Application' : 'Edit Application' },
+    ];
   }
 
   get modelAssignments() {

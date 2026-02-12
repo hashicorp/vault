@@ -51,7 +51,10 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
 
     this.totalApiPaths = Object.keys(this.openApiResponse.paths).length;
 
-    this.renderComponent = () => render(hbs`<SwaggerUi/>`, { owner: this.engine });
+    this.renderComponent = async () => {
+      await render(hbs`<SwaggerUi/>`, { owner: this.engine });
+      await waitFor(SELECTORS.searchInput);
+    };
   });
 
   test('it renders', async function (assert) {

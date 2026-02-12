@@ -28,7 +28,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
   test('it renders defaults', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('h1').hasText('Unwrap Data', 'Title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Unwrap data', 'Title renders');
     assert.dom(GENERAL.submitButton).hasText('Unwrap data');
     assert.dom(TS.toolsInput('unwrap-token')).hasValue('');
     assert.dom(GENERAL.hdsTab('data')).doesNotExist();

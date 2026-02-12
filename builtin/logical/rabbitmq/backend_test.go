@@ -14,9 +14,11 @@ import (
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/observations"
 	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -69,7 +71,10 @@ func prepareRabbitMQTestContainer(t *testing.T) (func(), string) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	b, _ := Factory(context.Background(), logical.TestBackendConfig())
+	backendConfig := logical.TestBackendConfig()
+	or := observations.NewTestObservationRecorder()
+	backendConfig.ObservationRecorder = or
+	b, _ := Factory(context.Background(), backendConfig)
 
 	cleanup, uri := prepareRabbitMQTestContainer(t)
 	defer cleanup()
@@ -80,7 +85,7 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, uri, ""),
 			testAccStepRole(t),
-			testAccStepReadCreds(t, b, uri, roleName),
+			testAccStepReadCreds(t, b, or, uri, roleName),
 		},
 	})
 }
@@ -140,6 +145,8 @@ func TestBackend_roleWithPasswordPolicy(t *testing.T) {
 	}
 
 	backendConfig := logical.TestBackendConfig()
+	or := observations.NewTestObservationRecorder()
+	backendConfig.ObservationRecorder = or
 	passGen := func() (password string, err error) {
 		return base62.Random(30)
 	}
@@ -155,7 +162,7 @@ func TestBackend_roleWithPasswordPolicy(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, uri, "testpolicy"),
 			testAccStepRole(t),
-			testAccStepReadCreds(t, b, uri, roleName),
+			testAccStepReadCreds(t, b, or, uri, roleName),
 		},
 	})
 }
@@ -209,7 +216,7 @@ func testAccStepDeleteRole(t *testing.T, n string) logicaltest.TestStep {
 	}
 }
 
-func testAccStepReadCreds(t *testing.T, b logical.Backend, uri, name string) logicaltest.TestStep {
+func testAccStepReadCreds(t *testing.T, b logical.Backend, or *observations.TestObservationRecorder, uri, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
@@ -245,6 +252,17 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, uri, name string) log
 			if err != nil {
 				return err
 			}
+			require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQConnectionConfigWrite))
+			require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateFail))
+			require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateSuccess))
+			require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRenew))
+			require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRevoke))
+			require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigRead))
+			require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigWrite))
+			require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleDelete))
+			require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleRead))
+			require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQRoleWrite))
+
 			if resp != nil {
 				if resp.IsError() {
 					return fmt.Errorf("error on resp: %#v", *resp)

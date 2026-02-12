@@ -7,6 +7,7 @@
   <:breadcrumbs>
     <Page::Breadcrumbs
       @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
         (hash label="Methods" route="vault.cluster.access.mfa.methods.index")
         (hash label=this.model.method.name)
       }}
@@ -91,10 +92,12 @@
   </Toolbar>
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#if (is-empty this.model.enforcements)}}
-      <EmptyState
-        @title="No enforcements found."
-        @message="No enforcements are applied to this MFA method. Edit an existing enforcement or add a new one to get started."
-      />
+      <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
+        <A.Header @title="No enforcements found." @titleTag="h2" />
+        <A.Body
+          @text="No enforcements are applied to this MFA method. Edit an existing enforcement or add a new one to get started."
+        />
+      </Hds::ApplicationState>
     {{else}}
       {{#each this.model.enforcements as |item|}}
         <Mfa::LoginEnforcementListItem @model={{item}} />

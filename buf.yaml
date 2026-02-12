@@ -51,6 +51,7 @@ lint:
       - sdk/plugin/pb/backend.proto
       - sdk/plugin/pb/system_view_service_ent.proto
       - vault/activity/activity_log.proto
+      - vault/billing/billing.proto
       - sdk/helper/clientcountutil/generation/generate_data.proto
       - vault/hcp_link/proto/link_control/link_control.proto
       - vault/hcp_link/proto/meta/meta.proto
@@ -85,6 +86,7 @@ lint:
       - sdk/plugin/pb/backend.proto
       - sdk/plugin/pb/system_view_service_ent.proto
       - vault/activity/activity_log.proto
+      - vault/billing/billing.proto
       - sdk/helper/clientcountutil/generation/generate_data.proto
       - vault/hcp_link/proto/link_control/link_control.proto
       - vault/hcp_link/proto/meta/meta.proto

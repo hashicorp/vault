@@ -18,6 +18,11 @@ import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import {
+  destructureClientCounts,
+  formatByMonths,
+  formatByNamespace,
+} from 'core/utils/client-counts/serializers';
 
 const START_TIME = LICENSE_START.toISOString();
 const END_TIME = STATIC_PREVIOUS_MONTH.toISOString();
@@ -32,15 +37,22 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     clientsHandler(this.server);
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-    this.store = this.owner.lookup('service:store');
-    const activityQuery = {
-      start_time: START_TIME,
-      end_time: END_TIME,
+    this.api = this.owner.lookup('service:api');
+    const response = await this.api.sys.internalClientActivityReportCounts(
+      undefined,
+      END_TIME,
+      undefined,
+      START_TIME
+    );
+    this.activity = {
+      ...response,
+      by_namespace: formatByNamespace(response.by_namespace),
+      by_month: formatByMonths(response.months),
+      total: destructureClientCounts(response.total),
     };
-    this.activity = await this.store.queryRecord('clients/activity', activityQuery);
-    this.config = await this.store.queryRecord('clients/config', {});
-    this.startTimestamp = START_ISO;
-    this.endTimestamp = END_ISO;
+    this.config = await this.api.sys.internalClientActivityReadConfiguration();
+    this.startTimestamp = new Date(START_ISO);
+    this.endTimestamp = new Date(END_ISO);
     this.versionHistory = [];
     this.renderComponent = () =>
       render(hbs`
@@ -66,32 +78,26 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   });
 
   test('it should render no data empty state', async function (assert) {
-    this.activity = { id: 'no-data' };
+    this.activity = undefined;
 
     await this.renderComponent();
 
     assert.dom(GENERAL.emptyStateTitle).hasText('No data received', 'No data empty state renders');
   });
 
-  test('it should render activity error', async function (assert) {
-    this.activity = null;
-    this.activityError = { httpStatus: 403 };
-
-    await this.renderComponent();
-
-    assert
-      .dom(GENERAL.emptyStateTitle)
-      .hasText('ERROR 403 You are not authorized', 'Activity error empty state renders');
-  });
-
   test('it should render config disabled alert', async function (assert) {
-    this.config.enabled = 'Off';
-
+    this.config.enabled = 'default-disabled';
     await this.renderComponent();
-
     assert
       .dom(CLIENT_COUNT.counts.configDisabled)
       .hasText('Tracking is disabled', 'Config disabled alert renders');
+
+    // ensure the alert also renders when there is no activity data
+    this.activity = undefined;
+    await this.renderComponent();
+    assert
+      .dom(CLIENT_COUNT.counts.configDisabled)
+      .hasText('Tracking is disabled', 'Config disabled alert renders with no activity data');
   });
 
   const jan23start = '2023-01-01T00:00:00Z';
@@ -128,8 +134,8 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       this.owner.lookup('service:version').type = 'community';
       this.onFilterChange = (params) => {
         assert.deepEqual(params, testCase.expected, 'Correct values sent on filter change');
-        this.set('startTimestamp', params?.start_time ? params.start_time : START_ISO);
-        this.set('endTimestamp', params?.end_time ? params.end_time : END_ISO);
+        this.set('startTimestamp', params?.start_time ? new Date(params.start_time) : new Date(START_ISO));
+        this.set('endTimestamp', params?.end_time ? new Date(params.end_time) : new Date(END_ISO));
       };
       await this.renderComponent();
       await click(CLIENT_COUNT.dateRange.edit);
@@ -155,15 +161,9 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
   test('it renders alert if upgrade happened within queried activity', async function (assert) {
     assert.expect(5);
-    this.versionHistory = await this.store.findAll('clients/version-history').then((resp) => {
-      return resp.map(({ version, previousVersion, timestampInstalled }) => {
-        return {
-          version,
-          previousVersion,
-          timestampInstalled,
-        };
-      });
-    });
+
+    const response = await this.api.sys.versionHistory(true);
+    this.versionHistory = this.api.keyInfoToArray(response, 'version');
 
     await this.renderComponent();
 
@@ -204,7 +204,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   test('it should render empty state for no start or no end when CE', async function (assert) {
     this.owner.lookup('service:version').type = 'community';
     this.startTimestamp = null;
-    this.activity = {};
+    this.activity = null;
 
     await this.renderComponent();
 

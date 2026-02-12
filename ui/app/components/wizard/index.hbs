@@ -3,28 +3,41 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if @showWelcome}}
-  <div data-test-welcome-content>
-    {{yield to="welcome"}}
-  </div>
+{{#if (and (has-block "intro") this.isIntroVisible)}}
+  {{! pass @onDismiss on for modal closure via clicking outside modal @onClose}}
+  <Wizard::Intro @isModal={{@isModal}} @title={{@title}} @onDismiss={{@onDismiss}} data-test-intro>
+    <:body>
+      {{yield to="intro"}}
+    </:body>
+    <:actions>
+      {{yield to="introActions"}}
+    </:actions>
+  </Wizard::Intro>
 {{else}}
-  <Wizard::Quickstart
+  <Wizard::GuidedStart
+    @canProceed={{@canProceed}}
     @currentStep={{@currentStep}}
     @steps={{@steps}}
+    @title={{@title}}
+    @wizardState={{@wizardState}}
+    @updateWizardState={{@updateWizardState}}
     @onStepChange={{@onStepChange}}
     @onDismiss={{@onDismiss}}
-    @hasSubmitBlock={{has-block "submit"}}
+    data-test-guided-start
   >
-    <:content>
-      {{yield to="quickstart"}}
-    </:content>
-
+    <:exit>
+      {{#if (has-block "exit")}}
+        {{yield to="exit"}}
+      {{else}}
+        <Hds::Button @text="Exit" {{on "click" @onDismiss}} data-test-cancel />
+      {{/if}}
+    </:exit>
     <:submit>
       {{#if (has-block "submit")}}
         {{yield to="submit"}}
       {{else}}
-        <Hds::Button @text="Done" {{on "click" @onDismiss}} data-test-submit />
+        <Hds::Button @text="Mark as complete" {{on "click" @onDismiss}} data-test-submit />
       {{/if}}
     </:submit>
-  </Wizard::Quickstart>
+  </Wizard::GuidedStart>
 {{/if}}

@@ -37,6 +37,7 @@ module('Acceptance | Community | config-ui/messages', function (hooks) {
   });
 
   test('it should hide the sidebar settings section on community', async function (assert) {
+    await click(GENERAL.navLink('Operational tools'));
     assert.dom(CUSTOM_MESSAGES.navLink).doesNotExist();
   });
 });
@@ -212,6 +213,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   });
 
   test('it should display preview a message when all required fields are filled out', async function (assert) {
+    await click(GENERAL.navLink('Operational tools'));
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('After user logs in'));
     await click(GENERAL.button('Create message'));
@@ -233,6 +235,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   });
 
   test('it should not display preview a message when all required fields are not filled out', async function (assert) {
+    await click(GENERAL.navLink('Operational tools'));
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('After user logs in'));
     await click(GENERAL.button('Create message'));
@@ -298,6 +301,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   });
 
   test('it should show info message about sensitive information on create and edit form', async function (assert) {
+    await click(GENERAL.navLink('Operational tools'));
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('On login page'));
     await click(GENERAL.button('Create message'));
@@ -309,6 +313,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   });
 
   test('it should allow you to preview a message when all required fields are filled out', async function (assert) {
+    await click(GENERAL.navLink('Operational tools'));
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('On login page'));
     await click(GENERAL.button('Create message'));
@@ -330,6 +335,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   });
 
   test('it should not display a preview of a message when all required fields are not filled out', async function (assert) {
+    await click(GENERAL.navLink('Operational tools'));
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('On login page'));
     await click(GENERAL.button('Create message'));

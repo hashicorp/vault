@@ -9,13 +9,21 @@ import (
 	"testing"
 	"time"
 
+	logicalAlicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
 	logicalAzure "github.com/hashicorp/vault-plugin-secrets-azure"
 	logicalGcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
+	logicalKubernetes "github.com/hashicorp/vault-plugin-secrets-kubernetes"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	logicalMongoDBAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
 	logicalLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
+	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
+	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
 	logicalDatabase "github.com/hashicorp/vault/builtin/logical/database"
+	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
+	logicalRabbitMQ "github.com/hashicorp/vault/builtin/logical/rabbitmq"
+	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -24,13 +32,20 @@ import (
 )
 
 var roleLogicalBackends = map[string]logical.Factory{
-	pluginconsts.SecretEngineAWS:      logicalAws.Factory,
-	pluginconsts.SecretEngineAzure:    logicalAzure.Factory,
-	pluginconsts.SecretEngineGCP:      logicalGcp.Factory,
-	pluginconsts.SecretEngineKV:       logicalKv.Factory,
-	pluginconsts.SecretEngineLDAP:     logicalLDAP.Factory,
-	pluginconsts.SecretEngineDatabase: logicalDatabase.Factory,
-	pluginconsts.SecretEngineOpenLDAP: logicalLDAP.Factory,
+	pluginconsts.SecretEngineAWS:          logicalAws.Factory,
+	pluginconsts.SecretEngineAzure:        logicalAzure.Factory,
+	pluginconsts.SecretEngineGCP:          logicalGcp.Factory,
+	pluginconsts.SecretEngineKV:           logicalKv.Factory,
+	pluginconsts.SecretEngineLDAP:         logicalLDAP.Factory,
+	pluginconsts.SecretEngineDatabase:     logicalDatabase.Factory,
+	pluginconsts.SecretEngineOpenLDAP:     logicalLDAP.Factory,
+	pluginconsts.SecretEngineAlicloud:     logicalAlicloud.Factory,
+	pluginconsts.SecretEngineRabbitMQ:     logicalRabbitMQ.Factory,
+	pluginconsts.SecretEngineConsul:       logicalConsul.Factory,
+	pluginconsts.SecretEngineNomad:        logicalNomad.Factory,
+	pluginconsts.SecretEngineKubernetes:   logicalKubernetes.Factory,
+	pluginconsts.SecretEngineMongoDBAtlas: logicalMongoDBAtlas.Factory,
+	pluginconsts.SecretEngineTerraform:    logicalTerraform.Factory,
 }
 
 // TestStoreAndGetMaxRoleCounts verifies that we can store and retrieve the HWM role counts correctly
@@ -105,6 +120,7 @@ func TestStoreAndGetMaxRoleCounts(t *testing.T) {
 			require.Equal(t, tc.roleCounts.AWSDynamicRoles, retrievedCounts.AWSDynamicRoles)
 			require.Equal(t, tc.roleCounts.AWSStaticRoles, retrievedCounts.AWSStaticRoles)
 			require.Equal(t, tc.roleCounts.AzureDynamicRoles, retrievedCounts.AzureDynamicRoles)
+			require.Equal(t, tc.roleCounts.AzureStaticRoles, retrievedCounts.AzureStaticRoles)
 			require.Equal(t, tc.roleCounts.GCPStaticAccounts, retrievedCounts.GCPStaticAccounts)
 			require.Equal(t, tc.roleCounts.GCPImpersonatedAccounts, retrievedCounts.GCPImpersonatedAccounts)
 			require.Equal(t, tc.roleCounts.OpenLDAPDynamicRoles, retrievedCounts.OpenLDAPDynamicRoles)
@@ -114,6 +130,13 @@ func TestStoreAndGetMaxRoleCounts(t *testing.T) {
 			require.Equal(t, tc.roleCounts.DatabaseDynamicRoles, retrievedCounts.DatabaseDynamicRoles)
 			require.Equal(t, tc.roleCounts.DatabaseStaticRoles, retrievedCounts.DatabaseStaticRoles)
 			require.Equal(t, tc.roleCounts.GCPRolesets, retrievedCounts.GCPRolesets)
+			require.Equal(t, tc.roleCounts.AlicloudDynamicRoles, retrievedCounts.AlicloudDynamicRoles)
+			require.Equal(t, tc.roleCounts.RabbitMQDynamicRoles, retrievedCounts.RabbitMQDynamicRoles)
+			require.Equal(t, tc.roleCounts.ConsulDynamicRoles, retrievedCounts.ConsulDynamicRoles)
+			require.Equal(t, tc.roleCounts.NomadDynamicRoles, retrievedCounts.NomadDynamicRoles)
+			require.Equal(t, tc.roleCounts.KubernetesDynamicRoles, retrievedCounts.KubernetesDynamicRoles)
+			require.Equal(t, tc.roleCounts.MongoDBAtlasDynamicRoles, retrievedCounts.MongoDBAtlasDynamicRoles)
+			require.Equal(t, tc.roleCounts.TerraformCloudDynamicRoles, retrievedCounts.TerraformCloudDynamicRoles)
 		})
 	}
 }
@@ -154,6 +177,11 @@ func TestHWMRoleCounts(t *testing.T) {
 		"Azure Dynamic Roles": {
 			mount:        pluginconsts.SecretEngineAzure,
 			key:          "roles/",
+			numberOfKeys: 5,
+		},
+		"Azure Static Roles": {
+			mount:        pluginconsts.SecretEngineAzure,
+			key:          "static-roles/",
 			numberOfKeys: 5,
 		},
 		"Database Dynamic Roles": {
@@ -201,6 +229,41 @@ func TestHWMRoleCounts(t *testing.T) {
 			key:          "static-role/",
 			numberOfKeys: 5,
 		},
+		"Alicloud Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineAlicloud,
+			key:          "role/",
+			numberOfKeys: 5,
+		},
+		"RabbitMQ Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineRabbitMQ,
+			key:          "role/",
+			numberOfKeys: 5,
+		},
+		"Consul Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineConsul,
+			key:          "policy/",
+			numberOfKeys: 5,
+		},
+		"Nomad Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineNomad,
+			key:          "role/",
+			numberOfKeys: 5,
+		},
+		"Kubernetes Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineKubernetes,
+			key:          "roles/",
+			numberOfKeys: 5,
+		},
+		"MongoDB Atlas Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineMongoDBAtlas,
+			key:          "roles/",
+			numberOfKeys: 5,
+		},
+		"Terraform Cloud Dynamic Roles": {
+			mount:        pluginconsts.SecretEngineTerraform,
+			key:          "role/",
+			numberOfKeys: 5,
+		},
 	}
 
 	// Sleep to prevent race conditions during the role initialization
@@ -213,56 +276,17 @@ func TestHWMRoleCounts(t *testing.T) {
 	}
 
 	firstCounts := core.GetRoleCounts()
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         5,
-		AWSStaticRoles:          5,
-		AzureDynamicRoles:       5,
-		DatabaseDynamicRoles:    5,
-		DatabaseStaticRoles:     5,
-		GCPImpersonatedAccounts: 5,
-		GCPRolesets:             5,
-		GCPStaticAccounts:       5,
-		LDAPDynamicRoles:        5,
-		LDAPStaticRoles:         5,
-		OpenLDAPDynamicRoles:    5,
-		OpenLDAPStaticRoles:     5,
-	}, firstCounts)
+	verifyExpectedRoleCounts(t, firstCounts, 5)
 
 	counts, err := core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         5,
-		AWSStaticRoles:          5,
-		AzureDynamicRoles:       5,
-		DatabaseDynamicRoles:    5,
-		DatabaseStaticRoles:     5,
-		GCPImpersonatedAccounts: 5,
-		GCPRolesets:             5,
-		GCPStaticAccounts:       5,
-		LDAPDynamicRoles:        5,
-		LDAPStaticRoles:         5,
-		OpenLDAPDynamicRoles:    5,
-		OpenLDAPStaticRoles:     5,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 5)
 
 	counts, err = core.GetStoredHWMRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 	// Verify that the max role counts are as expected
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         5,
-		AWSStaticRoles:          5,
-		AzureDynamicRoles:       5,
-		DatabaseDynamicRoles:    5,
-		DatabaseStaticRoles:     5,
-		GCPImpersonatedAccounts: 5,
-		GCPRolesets:             5,
-		GCPStaticAccounts:       5,
-		LDAPDynamicRoles:        5,
-		LDAPStaticRoles:         5,
-		OpenLDAPDynamicRoles:    5,
-		OpenLDAPStaticRoles:     5,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 5)
 
 	// Reduce the number of roles. The max counts should remain the same
 	for _, tc := range testCases {
@@ -273,38 +297,12 @@ func TestHWMRoleCounts(t *testing.T) {
 	counts, err = core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         5,
-		AWSStaticRoles:          5,
-		AzureDynamicRoles:       5,
-		DatabaseDynamicRoles:    5,
-		DatabaseStaticRoles:     5,
-		GCPImpersonatedAccounts: 5,
-		GCPRolesets:             5,
-		GCPStaticAccounts:       5,
-		LDAPDynamicRoles:        5,
-		LDAPStaticRoles:         5,
-		OpenLDAPDynamicRoles:    5,
-		OpenLDAPStaticRoles:     5,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 5)
 
 	counts, err = core.GetStoredHWMRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         5,
-		AWSStaticRoles:          5,
-		AzureDynamicRoles:       5,
-		DatabaseDynamicRoles:    5,
-		DatabaseStaticRoles:     5,
-		GCPImpersonatedAccounts: 5,
-		GCPRolesets:             5,
-		GCPStaticAccounts:       5,
-		LDAPDynamicRoles:        5,
-		LDAPStaticRoles:         5,
-		OpenLDAPDynamicRoles:    5,
-		OpenLDAPStaticRoles:     5,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 5)
 
 	// Increase the number of roles. The max counts should update
 	for _, tc := range testCases {
@@ -315,38 +313,12 @@ func TestHWMRoleCounts(t *testing.T) {
 	counts, err = core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         8,
-		AWSStaticRoles:          8,
-		AzureDynamicRoles:       8,
-		DatabaseDynamicRoles:    8,
-		DatabaseStaticRoles:     8,
-		GCPImpersonatedAccounts: 8,
-		GCPRolesets:             8,
-		GCPStaticAccounts:       8,
-		LDAPDynamicRoles:        8,
-		LDAPStaticRoles:         8,
-		OpenLDAPDynamicRoles:    8,
-		OpenLDAPStaticRoles:     8,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 8)
 
 	counts, err = core.GetStoredHWMRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         8,
-		AWSStaticRoles:          8,
-		AzureDynamicRoles:       8,
-		DatabaseDynamicRoles:    8,
-		DatabaseStaticRoles:     8,
-		GCPImpersonatedAccounts: 8,
-		GCPRolesets:             8,
-		GCPStaticAccounts:       8,
-		LDAPDynamicRoles:        8,
-		LDAPStaticRoles:         8,
-		OpenLDAPDynamicRoles:    8,
-		OpenLDAPStaticRoles:     8,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 8)
 
 	// Decrease the number of roles back to 5. The max counts should remain at 8
 	for _, tc := range testCases {
@@ -357,37 +329,11 @@ func TestHWMRoleCounts(t *testing.T) {
 	counts, err = core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         8,
-		AWSStaticRoles:          8,
-		AzureDynamicRoles:       8,
-		DatabaseDynamicRoles:    8,
-		DatabaseStaticRoles:     8,
-		GCPImpersonatedAccounts: 8,
-		GCPRolesets:             8,
-		GCPStaticAccounts:       8,
-		LDAPDynamicRoles:        8,
-		LDAPStaticRoles:         8,
-		OpenLDAPDynamicRoles:    8,
-		OpenLDAPStaticRoles:     8,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 8)
 
 	counts, err = core.GetStoredHWMRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
-	require.Equal(t, &RoleCounts{
-		AWSDynamicRoles:         8,
-		AWSStaticRoles:          8,
-		AzureDynamicRoles:       8,
-		DatabaseDynamicRoles:    8,
-		DatabaseStaticRoles:     8,
-		GCPImpersonatedAccounts: 8,
-		GCPRolesets:             8,
-		GCPStaticAccounts:       8,
-		LDAPDynamicRoles:        8,
-		LDAPStaticRoles:         8,
-		OpenLDAPDynamicRoles:    8,
-		OpenLDAPStaticRoles:     8,
-	}, counts)
+	verifyExpectedRoleCounts(t, counts, 8)
 }
 
 // TestHWMKvSecretsCounts tests that we correctly store and track the HWM kv counts
@@ -450,6 +396,253 @@ func TestHWMKvSecretsCounts(t *testing.T) {
 	counts, err = core.GetStoredHWMKvCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 	require.Equal(t, 5, counts)
+}
+
+// TestTransitDataProtectionCallCounts tests that we correctly store and track the transit data protection call counts
+func TestTransitDataProtectionCallCounts(t *testing.T) {
+	t.Parallel()
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"transit": transit.Factory,
+		},
+		BillingConfig: billing.BillingConfig{
+			MetricsUpdateCadence: 3 * time.Second,
+		},
+	}
+
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	// Mount transit backend
+	req := logical.TestRequest(t, logical.CreateOperation, "sys/mounts/transit")
+	req.Data["type"] = "transit"
+	req.ClientToken = root
+	ctx := namespace.RootContext(context.Background())
+	_, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Create an encryption key
+	req = logical.TestRequest(t, logical.CreateOperation, "transit/keys/foo")
+	req.Data["type"] = "aes256-gcm96"
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Perform encryption on the key
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/encrypt/foo")
+	req.Data["plaintext"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	req.ClientToken = root
+	resp, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, uint64(1), core.GetInMemoryTransitDataProtectionCallCounts())
+
+	// Get the ciphertext from the encryption response
+	ciphertext, ok := resp.Data["ciphertext"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, ciphertext)
+
+	// Now perform decryption using the ciphertext
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/decrypt/foo")
+	req.Data["ciphertext"] = ciphertext
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, uint64(2), core.GetInMemoryTransitDataProtectionCallCounts())
+
+	// Test rewrap operation
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/rewrap/foo")
+	req.Data["ciphertext"] = ciphertext
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, uint64(3), core.GetInMemoryTransitDataProtectionCallCounts())
+
+	// Get the new ciphertext from rewrap
+	newCiphertext, ok := resp.Data["ciphertext"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, newCiphertext)
+
+	// Test datakey generation
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/datakey/plaintext/foo")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, uint64(4), core.GetInMemoryTransitDataProtectionCallCounts())
+
+	// Test HMAC operation
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/hmac/foo")
+	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, uint64(5), core.GetInMemoryTransitDataProtectionCallCounts())
+
+	// Get the HMAC value
+	hmacValue, ok := resp.Data["hmac"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, hmacValue)
+
+	// Test HMAC verification
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/verify/foo")
+	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	req.Data["hmac"] = hmacValue
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, uint64(6), core.GetInMemoryTransitDataProtectionCallCounts())
+
+	// Verify the HMAC is valid
+	hmacValid, ok := resp.Data["valid"].(bool)
+	require.True(t, ok)
+	require.True(t, hmacValid)
+
+	// Create a signing key for sign/verify operations
+	req = logical.TestRequest(t, logical.CreateOperation, "transit/keys/signing-key")
+	req.Data["type"] = "ecdsa-p256"
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Test sign operation
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/sign/signing-key")
+	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, uint64(7), core.GetInMemoryTransitDataProtectionCallCounts())
+
+	// Get the signature
+	signature, ok := resp.Data["signature"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, signature)
+
+	// Test verify operation
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/verify/signing-key")
+	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	req.Data["signature"] = signature
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify that the transit counter is incremented
+	require.Equal(t, uint64(8), core.GetInMemoryTransitDataProtectionCallCounts())
+
+	// Verify the signature is valid
+	signatureValid, ok := resp.Data["valid"].(bool)
+	require.True(t, ok)
+	require.True(t, signatureValid)
+
+	// Test CMAC operations (ENT only - will be no-op in OSS)
+	currentCount := core.GetInMemoryTransitDataProtectionCallCounts()
+	currentCount = testCMACOperations(t, core, ctx, root, currentCount)
+
+	// Verify that the transit counter matches expected count
+	require.Equal(t, currentCount, core.GetInMemoryTransitDataProtectionCallCounts())
+
+	// Now test persisting the summed counts - store and retrieve counts
+	// First, update the data protection call counts (this will sum current counter with stored value)
+	summedCounts, err := core.UpdateTransitCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, currentCount, summedCounts)
+
+	// Verify the counter was reset after update
+	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts(), "Counter should be reset after update")
+
+	// Retrieve the stored counts
+	storedCounts, err := core.GetStoredTransitCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, currentCount, storedCounts)
+
+	// Perform more operations to increase the counter
+	req = logical.TestRequest(t, logical.UpdateOperation, "transit/encrypt/foo")
+	req.Data["plaintext"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Counter should now be 1 (reset + 1 operation)
+	require.Equal(t, uint64(1), core.GetInMemoryTransitDataProtectionCallCounts())
+
+	// Update counts again - should sum the new count (1) with the stored count (currentCount)
+	summedCounts, err = core.UpdateTransitCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	expectedSum := currentCount + 1
+	require.Equal(t, expectedSum, summedCounts, "Count should be sum of stored and current")
+
+	// Verify the counter was reset after update
+	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts(), "Counter should be reset after update")
+
+	// Verify stored counts are now the sum
+	storedCounts, err = core.GetStoredTransitCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, expectedSum, storedCounts)
+
+	// Add more operations without manually resetting
+	for i := 0; i < 3; i++ {
+		req = logical.TestRequest(t, logical.UpdateOperation, "transit/encrypt/foo")
+		req.Data["plaintext"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
+		req.ClientToken = root
+		_, err = core.HandleRequest(ctx, req)
+		require.NoError(t, err)
+	}
+
+	// Counter should be 3
+	require.Equal(t, uint64(3), core.GetInMemoryTransitDataProtectionCallCounts())
+
+	// Update counts - should sum 3 with the previous stored sum
+	summedCounts, err = core.UpdateTransitCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	expectedSum = expectedSum + 3
+	require.Equal(t, expectedSum, summedCounts, "Count should continue to sum")
+
+	// Verify the counter was reset after update
+	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts(), "Counter should be reset after update")
+
+	// Verify stored counts
+	storedCounts, err = core.GetStoredTransitCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, expectedSum, storedCounts)
+
+	// Update again without any new operations
+	// This verifies we don't double-count
+	summedCounts, err = core.UpdateTransitCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, expectedSum, summedCounts, "Count should remain the same when no new operations occurred")
+
+	// Verify stored counts haven't changed
+	storedCounts, err = core.GetStoredTransitCallCounts(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, expectedSum, storedCounts, "Stored count should remain the same")
+
+	// Verify counter is still at 0
+	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts(), "Counter should still be 0")
 }
 
 func addRoleToStorage(t *testing.T, core *Core, mount string, key string, numberOfKeys int) {

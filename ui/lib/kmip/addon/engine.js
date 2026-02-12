@@ -22,12 +22,10 @@ export default class KmipEngine extends Engine {
       'namespace',
       'path-help',
       'app-router',
-      'store',
-      'pagination',
       'version',
       'secret-mount-path',
     ],
-    externalRoutes: ['secrets'],
+    externalRoutes: ['secrets', 'secretsGeneralSettingsConfiguration', 'vault'],
   };
 }
 

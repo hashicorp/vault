@@ -24,9 +24,9 @@ interface Args {
   onChange: (callback: OnChangeParams) => void;
   setEditModalVisible: (visible: boolean) => void;
   showEditModal: boolean;
-  startTimestamp: string;
-  endTimestamp: string;
-  billingStartTime: string;
+  startTimestamp: Date;
+  endTimestamp: Date;
+  billingStartTime: Date;
   retentionMonths: number;
 }
 /**
@@ -66,15 +66,16 @@ export default class ClientsDateRangeComponent extends Component<Args> {
 
   get historicalBillingPeriods() {
     // we want whole billing periods
+    const { billingStartTime } = this.args;
     const totalMonths = this.args.retentionMonths || 48;
     const count = Math.floor(totalMonths / 12);
-    const periods: string[] = [];
+    const periods: Date[] = [];
 
     for (let i = 1; i <= count; i++) {
-      const startDate = parseAPITimestamp(this.args.billingStartTime) as Date;
+      const startDate = new Date(billingStartTime);
       const utcYear = startDate.getUTCFullYear() - i;
       startDate.setUTCFullYear(utcYear);
-      periods.push(startDate.toISOString());
+      periods.push(startDate);
     }
     return periods;
   }
@@ -122,9 +123,10 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   }
 
   @action
-  updateEnterpriseDateRange(start: string, close: CallableFunction) {
+  updateEnterpriseDateRange(start: Date, close: CallableFunction) {
     // We do not send an end_time so the backend handles computing the expected billing period
-    this.args.onChange({ start_time: start, end_time: '' });
+    const start_time = start ? start.toISOString() : '';
+    this.args.onChange({ start_time, end_time: '' });
     close();
   }
 
@@ -138,20 +140,20 @@ export default class ClientsDateRangeComponent extends Component<Args> {
 
   setTrackedFromArgs() {
     if (this.args.startTimestamp) {
-      this.modalStart = parseAPITimestamp(this.args.startTimestamp, 'yyyy-MM') as string;
+      this.modalStart = this.formatDate(this.args.startTimestamp, 'yyyy-MM');
     }
     if (this.args.endTimestamp) {
-      this.modalEnd = parseAPITimestamp(this.args.endTimestamp, 'yyyy-MM') as string;
+      this.modalEnd = this.formatDate(this.args.endTimestamp, 'yyyy-MM');
     }
   }
 
   // TEMPLATE HELPERS
-  formatDropdownDate = (isoTimestamp: string) => parseAPITimestamp(isoTimestamp, 'MMMM yyyy');
+  formatDate = (date: Date, displayFormat = 'MMMM yyyy') => parseAPITimestamp(date, displayFormat);
 
-  isSelected = (dropdownTimestamp: string) => {
+  isSelected = (dropdownTimestamp: Date) => {
     // Compare against this.args.startTimestamp because it's from the URL query param
     // which is used to query the client count activity API.
-    const selectedStart = this.formatDropdownDate(this.args.startTimestamp);
-    return this.formatDropdownDate(dropdownTimestamp) === selectedStart;
+    const selectedStart = this.formatDate(this.args.startTimestamp);
+    return this.formatDate(dropdownTimestamp) === selectedStart;
   };
 }

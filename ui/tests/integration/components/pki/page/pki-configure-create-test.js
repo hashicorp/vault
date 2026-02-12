@@ -20,11 +20,6 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
   hooks.beforeEach(function () {
     this.context = { owner: this.engine }; // this.engine set by setupEngine
     this.cancelSpy = sinon.spy();
-    this.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: 'pki', route: 'overview', model: 'pki' },
-      { label: 'Configure' },
-    ];
     this.capabilities = configCapabilities;
   });
 
@@ -32,15 +27,12 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
     await render(
       hbs`
         <Page::PkiConfigureCreate
-          @breadcrumbs={{this.breadcrumbs}}
           @capabilities={{this.capabilities}}
           @onCancel={{this.cancelSpy}}
         />
     `,
       this.context
     );
-    assert.dom(GENERAL.breadcrumbs).exists();
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Configure PKI');
     assert.dom(PKI_CONFIGURE_CREATE.option).exists({ count: 3 });
     assert.dom(GENERAL.cancelButton).exists('Cancel link is shown');
     assert.dom(GENERAL.submitButton).isDisabled('Done button is disabled');

@@ -53,7 +53,7 @@ jobs:
       sample: ${{ steps.metadata.outputs.sample }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.vault-revision }}
       - if: inputs.vault-edition != 'ce'
@@ -70,7 +70,7 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
-      - uses: hashicorp/action-setup-enos@80a17fa25605989a7a53199137dae1244e32353f # v1.40
+      - uses: hashicorp/action-setup-enos@17b90fcf9591275b468a94aefb9dc6a93017de8a # v1.50
         with:
           github-token: ${{ github.repository == 'hashicorp/vault' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/create-dynamic-config
@@ -113,7 +113,7 @@ jobs:
       id-token: write # vault-auth
       contents: read
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.vault-revision }}
       - if: needs.metadata.outputs.is-ent-repo == 'true'
@@ -214,7 +214,7 @@ jobs:
           role-to-assume: ${{ steps.secrets.outputs.aws-role-arn }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
-      - uses: hashicorp/action-setup-enos@80a17fa25605989a7a53199137dae1244e32353f # v1.40
+      - uses: hashicorp/action-setup-enos@17b90fcf9591275b468a94aefb9dc6a93017de8a # v1.50
         with:
           github-token: ${{ steps.secrets.outputs.github-token }}
       - uses: ./.github/actions/create-dynamic-config

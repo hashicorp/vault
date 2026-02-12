@@ -40,7 +40,6 @@ module('Acceptance | auth config form', function (hooks) {
       'config.audit_non_hmac_response_keys',
       'config.passthrough_request_headers',
       'config.allowed_response_headers',
-      'config.plugin_version',
     ];
     this.tokensGroup = {
       Tokens: [

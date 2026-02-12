@@ -15,7 +15,7 @@ export default class LdapEngine extends Engine {
   Resolver = Resolver;
   dependencies = {
     services: ['app-router', 'secret-mount-path', 'flash-messages', 'auth', 'api', 'capabilities'],
-    externalRoutes: ['secrets', 'secretsGeneralSettingsConfiguration'],
+    externalRoutes: ['secrets', 'secretsGeneralSettingsConfiguration', 'vault'],
   };
 }
 

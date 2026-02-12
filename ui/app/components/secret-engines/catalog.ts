@@ -46,6 +46,11 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
   get breadcrumbs() {
     return [
       {
+        label: 'Vault',
+        icon: 'vault',
+        route: 'vault.cluster',
+      },
+      {
         label: 'Secrets engines',
         route: 'vault.cluster.secrets.backends',
       },

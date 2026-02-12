@@ -11,6 +11,17 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+type DiagnoseCheckLicenseGeneration struct {
+	Generate           bool
+	GenerateIBMLicense bool
+}
+
+// LicensingEntitlementSelectionConfig contains configuration options for selecting an IBM license entitlement
+type LicensingEntitlementSelectionConfig struct {
+	Edition string
+	AddOns  []string
+}
+
 // GetCoreConfigInternal returns the server configuration
 // in struct format.
 func (c *Core) GetCoreConfigInternal() *server.Config {
@@ -68,4 +79,12 @@ func (c *Core) setupHeaderHMACKey(ctx context.Context, isPerfStandby bool) error
 	}
 	c.IndexHeaderHMACKey.Store([]byte(key))
 	return nil
+}
+
+func (c *Core) GetPkiCertificateCounter() logical.CertificateCounter {
+	return c.pkiCertCountManager
+}
+
+func (c *Core) GetConsumptionBillingManager() logical.ConsumptionBillingManager {
+	return c.consumptionBilling
 }

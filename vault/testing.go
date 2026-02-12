@@ -33,7 +33,6 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-licensing/v4"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
@@ -1835,11 +1834,6 @@ func (cluster *TestCluster) StartCore(t testing.TB, idx int, opts *TestClusterOp
 	tcc.Logger().Info("restarted test core", "core", idx)
 }
 
-type TestLicenseOptions struct {
-	PubKey        ed25519.PublicKey
-	IssuerOptions licensing.IssuerOptions
-}
-
 func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []*TestListener, pubKey ed25519.PublicKey) (func(), *Core, CoreConfig, http.Handler) {
 	localConfig := *coreConfig
 	cleanupFunc := func() {}
@@ -1974,11 +1968,12 @@ func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreC
 		localConfig.Seal.SetCore(c)
 	}
 
+	// Ent specific test config for licensing
 	// Set test public keys in the core for tests that call license reloads
-	c.testSetTestPubKeys(localConfig.LicensingConfig.AdditionalPublicKeys)
+	c.testSetTestPubKeys(localConfig)
 
 	// Set test license issuer  options in the core for tests that call license reloads
-	c.testSetTestIssuerOptions(localConfig.LicensingConfig.IssuerOptions)
+	c.testSetTestIssuerOptions(localConfig)
 
 	return cleanupFunc, c, localConfig, handler
 }

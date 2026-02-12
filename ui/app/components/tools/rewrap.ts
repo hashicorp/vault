@@ -28,6 +28,10 @@ export default class ToolsRewrap extends Component {
   @tracked rewrappedToken = '';
   @tracked errorMessage = '';
 
+  get breadcrumbs() {
+    return [{ label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' }, { label: 'Rewrap token' }];
+  }
+
   @action
   reset() {
     this.originalToken = '';

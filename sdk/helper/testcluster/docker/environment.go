@@ -1253,11 +1253,9 @@ func (dc *DockerCluster) AddNode(ctx context.Context, opts *DockerClusterOptions
 	return dc.joinNode(ctx, len(dc.ClusterNodes)-1, leaderIdx)
 }
 
+const MaxContainerNameLen = 63
+
 func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions) error {
-	tag, err := dc.setupImage(ctx, opts)
-	if err != nil {
-		return err
-	}
 	i := len(dc.ClusterNodes)
 	nodeID := fmt.Sprintf("core-%d", i)
 	node := &DockerClusterNode{
@@ -1267,8 +1265,18 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 		WorkDir:   filepath.Join(dc.tmpDir, nodeID),
 		Logger:    dc.Logger.Named(nodeID),
 		ImageRepo: opts.ImageRepo,
-		ImageTag:  tag,
 	}
+	if len(node.Name()) > MaxContainerNameLen {
+		return fmt.Errorf("ClusterName too long, results in node name %q which exceeds max container name len of %d",
+			node.Name(), MaxContainerNameLen)
+	}
+
+	tag, err := dc.setupImage(ctx, opts)
+	if err != nil {
+		return err
+	}
+	node.ImageTag = tag
+
 	dc.ClusterNodes = append(dc.ClusterNodes, node)
 	if err := os.MkdirAll(node.WorkDir, 0o755); err != nil {
 		return err

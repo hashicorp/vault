@@ -27,8 +27,7 @@ export default class AnalyticsService extends Service {
 
   private log(...args: unknown[]) {
     if (this.debug) {
-      // eslint-disable-next-line no-console
-      console.log(`[Analytics - ${this.provider.name}]`, ...args);
+      console.info(`[Analytics - ${this.provider.name}]`, ...args);
     }
   }
 

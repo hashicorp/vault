@@ -7,6 +7,7 @@
   <:breadcrumbs>
     <Page::Breadcrumbs
       @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
         (hash label=(concat (uppercase this.policyType) " policies") route="vault.cluster.policies" model=this.policyType)
         (hash label=this.model.id route="vault.cluster.policy.show" model=this.model.id)
         (hash label="Edit")
@@ -33,7 +34,7 @@
         />
         <div class="toolbar-separator"></div>
       {{/if}}
-      <ToolbarLink @route="vault.cluster.policy.show" @model={{this.model.id}} data-test-policy-edit-toggle>
+      <ToolbarLink @route="vault.cluster.policy.show" @model={{this.model.id}} data-test-button="Back to policy">
         Back to policy
       </ToolbarLink>
     </ToolbarActions>

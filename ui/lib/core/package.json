@@ -6,6 +6,7 @@
   "dependencies": {
     "autosize": "*",
     "date-fns": "*",
+    "date-fns-tz": "*",
     "@icholy/duration": "*",
     "base64-js": "*",
     "dompurify": "*",

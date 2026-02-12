@@ -556,7 +556,7 @@ scenario "smoke" {
     description = <<-EOF
       Remove a follower and ensure that it's marked as removed and can be added back once its data has been deleted
     EOF
-    module      = semverconstraint(var.vault_product_version, ">=1.19.0-0") && matrix.backend == "raft" ? "vault_raft_remove_node_and_verify" : "vault_verify_removed_node_shim"
+    module      = matrix.backend == "raft" ? "vault_raft_remove_node_and_verify" : "vault_verify_removed_node_shim"
     depends_on = [
       step.create_vault_cluster,
       step.get_vault_cluster_ips,

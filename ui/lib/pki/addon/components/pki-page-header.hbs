@@ -3,28 +3,68 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @icon={{@backend.icon}} @title={{@backend.id}}>
+<Page::Header
+  @icon={{@backend.icon}}
+  @title={{if @configRoute (concat @backend.id " configuration") @backend.id}}
+  @subtitle={{if @configRoute "PKI Certificates"}}
+>
   <:breadcrumbs>
-    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+    <Page::Breadcrumbs @breadcrumbs={{(or @breadcrumbs this.breadcrumbs)}} />
   </:breadcrumbs>
+
+  <:actions>
+    {{#if @configRoute}}
+      <Hds::Button @color="secondary" @route="overview" @text="Exit configuration" data-test-button="Exit configuration" />
+    {{else}}
+      <Hds::Dropdown as |D|>
+        <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
+        <D.Interactive
+          @icon="settings"
+          @route="configuration"
+          @model={{@backend.id}}
+          data-test-popup-menu="Configure"
+        >Configure</D.Interactive>
+        <D.Interactive
+          {{on "click" (fn (mut this.engineToDisable) @backend)}}
+          @color="critical"
+          @icon="trash"
+          data-test-popup-menu="Delete"
+        >Delete</D.Interactive>
+      </Hds::Dropdown>
+    {{/if}}
+  </:actions>
 </Page::Header>
 
-<nav class="tabs" aria-label="pki tabs">
-  <ul>
-    <li><LinkTo @route="overview" @model={{@backend.id}} data-test-secret-list-tab="Overview">Overview</LinkTo></li>
-    <li><LinkTo @route="roles" @model={{@backend.id}} data-test-secret-list-tab="Roles">Roles</LinkTo></li>
-    <li><LinkTo @route="issuers" @model={{@backend.id}} data-test-secret-list-tab="Issuers">Issuers</LinkTo></li>
-    <li><LinkTo @route="keys" @model={{@backend.id}} data-test-secret-list-tab="Keys">Keys</LinkTo></li>
-    <li><LinkTo
-        @route="certificates"
-        @model={{@backend.id}}
-        data-test-secret-list-tab="Certificates"
-      >Certificates</LinkTo></li>
-    <li><LinkTo @route="tidy" @model={{@backend.id}} data-test-secret-list-tab="Tidy">Tidy</LinkTo></li>
-    <li><LinkTo
-        @route="configuration"
-        @model={{@backend.id}}
-        data-test-secret-list-tab="Configuration"
-      >Configuration</LinkTo></li>
-  </ul>
-</nav>
+{{#if @configRoute}}
+  <Mount::ConfigureTabs
+    @configRoute={{@configRoute}}
+    @displayName="PKI Certificates"
+    @path={{@backend.id}}
+    @externalRoute="secretsGeneralSettingsConfiguration"
+  />
+{{else}}
+  <nav class="tabs" aria-label="pki tabs">
+    <ul>
+      <li><LinkTo @route="overview" @model={{@backend.id}} data-test-secret-list-tab="Overview">Overview</LinkTo></li>
+      <li><LinkTo @route="roles" @model={{@backend.id}} data-test-secret-list-tab="Roles">Roles</LinkTo></li>
+      <li><LinkTo @route="issuers" @model={{@backend.id}} data-test-secret-list-tab="Issuers">Issuers</LinkTo></li>
+      <li><LinkTo @route="keys" @model={{@backend.id}} data-test-secret-list-tab="Keys">Keys</LinkTo></li>
+      <li><LinkTo
+          @route="certificates"
+          @model={{@backend.id}}
+          data-test-secret-list-tab="Certificates"
+        >Certificates</LinkTo></li>
+      <li><LinkTo @route="tidy" @model={{@backend.id}} data-test-secret-list-tab="Tidy">Tidy</LinkTo></li>
+    </ul>
+  </nav>
+{{/if}}
+
+{{#if this.engineToDisable}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="Any data in this engine will be permanently deleted."
+    @confirmTitle="Disable engine?"
+    @onClose={{fn (mut this.engineToDisable) null}}
+    @onConfirm={{perform this.disableEngine this.engineToDisable}}
+  />
+{{/if}}

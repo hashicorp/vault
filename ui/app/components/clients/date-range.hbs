@@ -7,11 +7,11 @@
   <div class="is-flex-column align-items-end">
     {{! Enterprise should always have a @billingStartTime but as a fallback allow the user to query dates manually }}
     {{#if (and @billingStartTime this.version.isEnterprise)}}
-      <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs">
+      <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs" data-test-text-display="change-billing-data">
         {{if this.flags.isHvdManaged "Change data period" "Change billing period"}}
       </Hds::Text::Display>
       <Hds::Dropdown class="has-left-margin-xs" as |D|>
-        <D.ToggleButton @text={{this.formatDropdownDate @startTimestamp}} @color="secondary" data-test-date-range-edit />
+        <D.ToggleButton @text={{this.formatDate @startTimestamp}} @color="secondary" data-test-date-range-edit />
         <D.Description @text="Current period" />
         <D.Checkmark
           {{! Pass an empty string to reset query param because the current billing period is the default }}
@@ -19,7 +19,7 @@
           @selected={{this.isSelected @billingStartTime}}
           data-test-date-range-billing-start="0"
         >
-          {{this.formatDropdownDate @billingStartTime}}
+          {{this.formatDate @billingStartTime}}
         </D.Checkmark>
         {{#if this.historicalBillingPeriods.length}}
           <D.Separator class="has-bottom-margin-xs" />
@@ -30,7 +30,7 @@
               data-test-date-range-billing-start={{add idx 1}}
               @selected={{this.isSelected period}}
             >
-              {{this.formatDropdownDate period}}
+              {{this.formatDate period}}
             </D.Checkmark>
           {{/each}}
         {{/if}}
@@ -77,7 +77,7 @@
             <Hds::Form::TextInput::Field
               @type="month"
               @value={{this.modalStart}}
-              max={{if this.version.isCommunity this.previousMonth (date-format this.currentMonth "yyyy-MM")}}
+              max={{if this.version.isCommunity this.previousMonth (this.formatDate this.currentMonth "yyyy-MM")}}
               id="start-month"
               name="modalStart"
               {{on "change" this.updateDate}}
@@ -91,7 +91,7 @@
             <Hds::Form::TextInput::Field
               @type="month"
               @value={{this.modalEnd}}
-              max={{if this.version.isCommunity this.previousMonth (date-format this.currentMonth "yyyy-MM")}}
+              max={{if this.version.isCommunity this.previousMonth (this.formatDate this.currentMonth "yyyy-MM")}}
               id="end-month"
               name="modalEnd"
               {{on "change" this.updateDate}}

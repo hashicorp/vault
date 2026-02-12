@@ -189,6 +189,9 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 
 	response := make([]batchResponseHMACItem, len(batchInputItems))
 
+	// Count successful HMAC operations
+	successfulRequests := 0
+
 	for i, item := range batchInputItems {
 		rawInput, ok := item["input"]
 		if !ok {
@@ -225,6 +228,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 		retStr := base64.StdEncoding.EncodeToString(retBytes)
 		retStr = fmt.Sprintf("vault:v%s:%s", strconv.Itoa(ver), retStr)
 		response[i].HMAC = retStr
+		successfulRequests++
 	}
 
 	// Generate the response
@@ -248,6 +252,10 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 		resp.Data = map[string]interface{}{
 			"hmac": response[0].HMAC,
 		}
+	}
+
+	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+		b.Logger().Error("failed to track transit hmac request count", "error", err.Error())
 	}
 
 	return resp, nil
@@ -320,6 +328,7 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 
 	response := make([]batchResponseHMACItem, len(batchInputItems))
 
+	successfulRequests := 0
 	for i, item := range batchInputItems {
 		rawInput, ok := item["input"]
 		if !ok {
@@ -398,6 +407,7 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 		hf.Write(input)
 		retBytes := hf.Sum(nil)
 		response[i].Valid = hmac.Equal(retBytes, verBytes)
+		successfulRequests++
 	}
 
 	// Generate the response
@@ -421,6 +431,10 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 		resp.Data = map[string]interface{}{
 			"valid": response[0].Valid,
 		}
+	}
+
+	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+		b.Logger().Error("failed to track transit hmac verify request count", "error", err.Error())
 	}
 
 	return resp, nil

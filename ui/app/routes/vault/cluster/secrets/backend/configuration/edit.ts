@@ -84,7 +84,8 @@ export default class SecretsBackendConfigurationEdit extends Route {
     const { secretsEngine } = resolvedModel;
 
     const breadcrumbs = [
-      { label: 'Secrets', route: 'vault.cluster.secrets' },
+      { label: 'Vault', route: 'vault.cluster', icon: 'vault' },
+      { label: 'Secrets engines', route: 'vault.cluster.secrets' },
       { label: secretsEngine.id, route: 'vault.cluster.secrets.backend.list-root', model: secretsEngine.id },
       { label: 'Configuration', route: 'vault.cluster.secrets.backend.configuration.plugin-settings' },
       { label: 'Configure' },

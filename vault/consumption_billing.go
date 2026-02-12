@@ -5,6 +5,8 @@ package vault
 
 import (
 	"context"
+	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/helper/timeutil"
@@ -15,12 +17,26 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 	// We need replication (post unseal) to start before we run the consumption billing metrics worker
 	// This is because there is primary/secondary cluster specific logic
 	c.consumptionBillingLock.Lock()
+	logger := c.baseLogger.Named("billing")
+	c.AddLogger(logger)
 	c.consumptionBilling = &billing.ConsumptionBilling{
 		BillingConfig: c.billingConfig,
+		DataProtectionCallCounts: billing.DataProtectionCallCounts{
+			Transit:   &atomic.Uint64{},
+			Transform: &atomic.Uint64{},
+		},
+		Logger: logger,
 	}
 	c.consumptionBillingLock.Unlock()
 	c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
 		c.consumptionBillingMetricsWorker(ctx)
+		// Start the perf standby plugin counts worker if this is a perf standby
+		// Access perfStandby field directly to avoid deadlock during post-unseal
+		if c.perfStandby {
+			go c.perfStandbyPluginCountsWorker(ctx)
+		}
+		// Active nodes don't need a separate worker - they flush counts via
+		// the existing consumptionBillingMetricsWorker -> updateBillingMetrics path
 	})
 
 	return nil
@@ -49,6 +65,8 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 			case <-endOfMonth.C:
 				// Reset the timer for the next month
 				endOfMonth.Reset(time.Until(timeutil.StartOfNextMonth(time.Now())))
+				// Reset KMIP enabled flag for the new billing month
+				c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
 				// On month boundary, we need to flush the current in-memory counts to storage
 				if err := c.updateBillingMetrics(ctx); err != nil {
 					c.logger.Error("error updating billing metrics at month boundary", "error", err)
@@ -59,6 +77,15 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 }
 
 func (c *Core) updateBillingMetrics(ctx context.Context) error {
+	// Check if systemBarrierView is initialized
+	c.mountsLock.RLock()
+	initialized := c.systemBarrierView != nil
+	c.mountsLock.RUnlock()
+
+	if !initialized {
+		return nil
+	}
+
 	if c.PerfStandby() {
 		// We do not update billing metrics on performance standbys
 		// Instead we send any in memory counts to the primary. This doesn't apply
@@ -72,6 +99,12 @@ func (c *Core) updateBillingMetrics(ctx context.Context) error {
 			c.UpdateReplicatedHWMMetrics(ctx, currentMonth)
 		}
 		c.UpdateLocalHWMMetrics(ctx, currentMonth)
+		if err := c.UpdateLocalAggregatedMetrics(ctx, currentMonth); err != nil {
+			c.logger.Error("error updating cluster data protection call counts", "error", err)
+		} else {
+			c.logger.Info("updated cluster data protection call counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+		}
+
 	}
 	return nil
 }
@@ -103,6 +136,31 @@ func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time
 		c.logger.Error("error updating local max kv counts", "error", err)
 	} else {
 		c.logger.Info("updated local max kv counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+	}
+	// The count of external plugins is per cluster, and we do not de-duplicate across clusters.
+	// For that reason, we will always store the count at the "local" prefix, so that the count does not
+	// get replicated.
+	if _, err := c.UpdateMaxThirdPartyPluginCounts(ctx, currentMonth); err != nil {
+		c.logger.Error("error updating local max external plugin counts", "error", err)
+	} else {
+		c.logger.Info("updated local max external plugin counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+	}
+	if _, err := c.UpdateKmipEnabled(ctx, currentMonth); err != nil {
+		c.logger.Error("error updating local kmip enabled", "error", err)
+	} else {
+		c.logger.Info("updated local kmip enabled", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+	}
+
+	return nil
+}
+
+// UpdateLocalAggregatedMetrics updates local metrics that are aggregated across all replicated clusters
+func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth time.Time) error {
+	if _, err := c.UpdateTransitCallCounts(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store transit data protection call counts: %w", err)
+	}
+	if _, err := c.UpdateTransformCallCounts(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store transform data protection call counts: %w", err)
 	}
 	return nil
 }

@@ -16,5 +16,10 @@
 {{else if (eq this.selectedAction "wrap")}}
   <Tools::Wrap />
 {{else}}
-  <EmptyState @title="Tool not available" />
+  {{! This center aligns error message on the page }}
+  <div class="is-flex is-flex-grow-1">
+    <Hds::ApplicationState @align="center" class="align-self-center" as |A|>
+      <A.Header @title="Tool not available" @titleTag="h2" />
+    </Hds::ApplicationState>
+  </div>
 {{/if}}

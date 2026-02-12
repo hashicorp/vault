@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -419,6 +420,59 @@ type kvMount struct {
 	RunningPluginVersion string
 }
 
+// findOfficialKvMounts differs from findKvMounts in that it will ignore any sideloaded
+// or externally compiled KV mounts that are still of type KV.
+// It's a simple function that's slightly reimplemented to prevent needing a context
+// in findKvMounts.
+func (c *Core) findOfficialKvMounts(ctx context.Context) []*kvMount {
+	mounts := make([]*kvMount, 0)
+
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	// we don't grab the statelock, so this code might run during or after the seal process.
+	// Therefore, we need to check if c.mounts is nil. If we do not, this will panic when
+	// run after seal.
+	if c.mounts == nil {
+		return mounts
+	}
+
+	for _, entry := range c.mounts.Entries {
+		if entry.Type == pluginconsts.SecretEngineKV || entry.Type == pluginconsts.SecretEngineGeneric {
+			version, ok := entry.Options["version"]
+			if !ok || version == "" {
+				version = "1"
+			}
+
+			pluginName := getAdjustedPluginType(entry)
+			if pluginName == "" {
+				continue
+			}
+
+			pluginVersion := entry.RunningVersion
+			runner, err := c.pluginCatalog.Get(ctx, pluginName, consts.PluginTypeSecrets, pluginVersion)
+			if err != nil {
+				continue
+			}
+
+			if !(isOfficialOrBuiltin(runner)) {
+				continue
+			}
+
+			mounts = append(mounts, &kvMount{
+				Namespace:            entry.namespace,
+				MountPoint:           entry.Path,
+				MountAccessor:        entry.Accessor,
+				Version:              version,
+				NumSecrets:           0,
+				Local:                entry.Local,
+				RunningPluginVersion: entry.RunningVersion,
+			})
+		}
+	}
+	return mounts
+}
+
 func (c *Core) findKvMounts() []*kvMount {
 	mounts := make([]*kvMount, 0)
 
@@ -766,36 +820,46 @@ func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsu
 }
 
 type RoleCounts struct {
-	AWSDynamicRoles         int `json:"aws_dynamic_roles"`
-	AWSStaticRoles          int `json:"aws_static_roles"`
-	AzureDynamicRoles       int `json:"azure_dynamic_roles"`
-	DatabaseDynamicRoles    int `json:"database_dynamic_roles"`
-	DatabaseStaticRoles     int `json:"database_static_roles"`
-	GCPRolesets             int `json:"gcp_rolesets"`
-	GCPStaticAccounts       int `json:"gcp_static_accounts"`
-	GCPImpersonatedAccounts int `json:"gcp_impersonated_accounts"`
-	LDAPDynamicRoles        int `json:"ldap_dynamic_roles"`
-	LDAPStaticRoles         int `json:"ldap_static_roles"`
-	OpenLDAPDynamicRoles    int `json:"openldap_dynamic_roles"`
-	OpenLDAPStaticRoles     int `json:"openldap_static_roles"`
+	AWSDynamicRoles            int `json:"aws_dynamic_roles"`
+	AWSStaticRoles             int `json:"aws_static_roles"`
+	AzureDynamicRoles          int `json:"azure_dynamic_roles"`
+	AzureStaticRoles           int `json:"azure_static_roles"`
+	DatabaseDynamicRoles       int `json:"database_dynamic_roles"`
+	DatabaseStaticRoles        int `json:"database_static_roles"`
+	GCPRolesets                int `json:"gcp_rolesets"`
+	GCPStaticAccounts          int `json:"gcp_static_accounts"`
+	GCPImpersonatedAccounts    int `json:"gcp_impersonated_accounts"`
+	LDAPDynamicRoles           int `json:"ldap_dynamic_roles"`
+	LDAPStaticRoles            int `json:"ldap_static_roles"`
+	OpenLDAPDynamicRoles       int `json:"openldap_dynamic_roles"`
+	OpenLDAPStaticRoles        int `json:"openldap_static_roles"`
+	AlicloudDynamicRoles       int `json:"alicloud_dynamic_roles"`
+	RabbitMQDynamicRoles       int `json:"rabbitmq_dynamic_roles"`
+	ConsulDynamicRoles         int `json:"consul_dynamic_roles"`
+	NomadDynamicRoles          int `json:"nomad_dynamic_roles"`
+	KubernetesDynamicRoles     int `json:"kubernetes_dynamic_roles"`
+	MongoDBAtlasDynamicRoles   int `json:"mongodb_atlas_dynamic_roles"`
+	TerraformCloudDynamicRoles int `json:"terraformcloud_dynamic_roles"`
 }
 
-func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool) *RoleCounts {
+// getRoleCountsInternal gets the role counts for plugins.
+// includeLocal determines if local mounts are included
+// includeReplicated determines if replicated mounts are included
+// officialPluginsOnly determines if this function should include only plugins that are official,
+// which would exclude, for example, a custom built version of these plugins.
+func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool, officialPluginsOnly bool) *RoleCounts {
 	if c.Sealed() {
 		c.logger.Debug("core is sealed, cannot access mounts table")
 		return nil
 	}
 
-	c.mountsLock.RLock()
-	defer c.mountsLock.RUnlock()
-
+	ctx := namespace.RootContext(c.activeContext)
 	apiList := func(entry *MountEntry, apiPath string) []string {
 		listRequest := &logical.Request{
 			Operation: logical.ListOperation,
 			Path:      entry.namespace.Path + entry.Path + apiPath,
 		}
 
-		ctx := namespace.ContextWithNamespace(c.activeContext, namespace.RootNamespace)
 		resp, err := c.router.Route(ctx, listRequest)
 		if err != nil || resp == nil {
 			return nil
@@ -811,6 +875,9 @@ func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool) 
 		return keys
 	}
 
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
 	var roles RoleCounts
 	for _, entry := range c.mounts.Entries {
 		if !entry.Local && !includeReplicated {
@@ -819,9 +886,26 @@ func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool) 
 		if entry.Local && !includeLocal {
 			continue
 		}
-		secretType := entry.Type
 
-		switch secretType {
+		pluginName := getAdjustedPluginType(entry)
+		if pluginName == "" {
+			continue
+		}
+
+		pluginVersion := entry.RunningVersion
+
+		if officialPluginsOnly {
+			runner, err := c.pluginCatalog.Get(ctx, pluginName, consts.PluginTypeSecrets, pluginVersion)
+			if err != nil {
+				continue
+			}
+
+			if !(isOfficialOrBuiltin(runner)) {
+				continue
+			}
+		}
+
+		switch pluginName {
 		case pluginconsts.SecretEngineAWS:
 			dynamicRoles := apiList(entry, "roles")
 			roles.AWSDynamicRoles += len(dynamicRoles)
@@ -831,6 +915,8 @@ func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool) 
 		case pluginconsts.SecretEngineAzure:
 			dynamicRoles := apiList(entry, "roles")
 			roles.AzureDynamicRoles += len(dynamicRoles)
+			staticRoles := apiList(entry, "static-roles")
+			roles.AzureStaticRoles += len(staticRoles)
 
 		case pluginconsts.SecretEngineDatabase:
 			dynamicRoles := apiList(entry, "roles")
@@ -857,6 +943,34 @@ func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool) 
 			roles.OpenLDAPDynamicRoles += len(dynamicRoles)
 			staticRoles := apiList(entry, "static-role")
 			roles.OpenLDAPStaticRoles += len(staticRoles)
+
+		case pluginconsts.SecretEngineAlicloud:
+			dynamicRoles := apiList(entry, "role")
+			roles.AlicloudDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineRabbitMQ:
+			dynamicRoles := apiList(entry, "roles")
+			roles.RabbitMQDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineConsul:
+			dynamicRoles := apiList(entry, "roles")
+			roles.ConsulDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineNomad:
+			dynamicRoles := apiList(entry, "role")
+			roles.NomadDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineKubernetes:
+			dynamicRoles := apiList(entry, "roles")
+			roles.KubernetesDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineMongoDBAtlas:
+			dynamicRoles := apiList(entry, "roles")
+			roles.MongoDBAtlasDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineTerraform:
+			dynamicRoles := apiList(entry, "role")
+			roles.TerraformCloudDynamicRoles += len(dynamicRoles)
 		}
 	}
 
@@ -864,21 +978,24 @@ func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool) 
 }
 
 func (c *Core) GetRoleCounts() *RoleCounts {
-	return c.getRoleCountsInternal(true, true)
+	return c.getRoleCountsInternal(true, true, false)
 }
 
 func (c *Core) GetRoleCountsForCluster() *RoleCounts {
-	return c.getRoleCountsInternal(true, c.isPrimary())
+	return c.getRoleCountsInternal(true, c.isPrimary(), false)
 }
 
 // GetKvUsageMetrics returns a map of namespace paths to KV secret counts.
 func (c *Core) GetKvUsageMetrics(ctx context.Context, kvVersion string) (map[string]int, error) {
-	return c.GetKvUsageMetricsByNamespace(ctx, kvVersion, "", true, true)
+	return c.GetKvUsageMetricsByNamespace(ctx, kvVersion, "", true, true, true)
 }
 
 // GetKvUsageMetricsByNamespace returns a map of namespace paths to KV secret counts within a specific namespace.
-func (c *Core) GetKvUsageMetricsByNamespace(ctx context.Context, kvVersion string, nsPath string, includeLocal bool, includeReplicated bool) (map[string]int, error) {
+func (c *Core) GetKvUsageMetricsByNamespace(ctx context.Context, kvVersion string, nsPath string, includeLocal bool, includeReplicated bool, includeUnofficial bool) (map[string]int, error) {
 	mounts := c.findKvMounts()
+	if !includeUnofficial {
+		mounts = c.findOfficialKvMounts(ctx)
+	}
 	results := make(map[string]int)
 
 	if kvVersion == "1" || kvVersion == "2" {
@@ -924,4 +1041,124 @@ func (c *Core) GetKvUsageMetricsByNamespace(ctx context.Context, kvVersion strin
 	}
 
 	return results, nil
+}
+
+// isOfficialOrBuiltin determines if a plugin is official based on its runner.
+// We treat it as official if runner is nil to avoid overcharging, but ensure
+// that it is properly scanned if it _is_ an official mount.
+func isOfficialOrBuiltin(runner *pluginutil.PluginRunner) bool {
+	return runner == nil || runner.Builtin || runner.Tier == consts.PluginTierOfficial
+}
+
+// ListOfficialAndExternalSecretPlugins gets a list of all secret plugins, official and external.
+// The union of both sets is the set of all secret plugins.
+// Returns a list of official plugins, external plugins, and error, in that order.
+func (c *Core) ListOfficialAndExternalSecretPlugins(ctx context.Context) ([]*MountEntry, []*MountEntry, error) {
+	if c == nil || c.pluginCatalog == nil {
+		return nil, nil, fmt.Errorf("core or plugin catalog is nil")
+	}
+
+	mounts, err := c.ListMounts()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error listing mounts: %w", err)
+	}
+
+	var official []*MountEntry
+	var external []*MountEntry
+	for _, entry := range mounts {
+		if entry == nil {
+			continue
+		}
+
+		// Only secrets-engine mounts live in the mounts table. Exclude the known
+		// non-secrets mounts and database mounts (PluginTypeDatabase).
+		if entry.Table != mountTableType {
+			continue
+		}
+
+		pluginName := getAdjustedPluginType(entry)
+		if pluginName == "" {
+			continue
+		}
+
+		pluginVersion := entry.RunningVersion
+
+		runner, err := c.pluginCatalog.Get(ctx, pluginName, consts.PluginTypeSecrets, pluginVersion)
+		if err != nil {
+			continue
+		}
+
+		if isOfficialOrBuiltin(runner) {
+			official = append(official, entry)
+		} else {
+			external = append(external, entry)
+		}
+	}
+
+	return official, external, nil
+}
+
+// ListOfficialSecretPlugins gets a list of all 'official'/builtin secret plugins.
+func (c *Core) ListOfficialSecretPlugins(ctx context.Context) ([]*MountEntry, error) {
+	internalPlugins, _, err := c.ListOfficialAndExternalSecretPlugins(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return internalPlugins, nil
+}
+
+// getAdjustedPluginType gets the adjusted plugin type for an entry. In most cases
+// this will be entry.Type, but it will correctly return the type for legacy (pre-Vault 1.0) plugins.
+func getAdjustedPluginType(entry *MountEntry) string {
+	if entry == nil {
+		return ""
+	}
+	pluginName := entry.Type
+	if pluginName == mountTypePlugin && entry.Config.PluginName != "" {
+		pluginName = entry.Config.PluginName
+	}
+	return pluginName
+}
+
+// ListDeduplicatedExternalSecretPlugins returns the enabled secret engines
+// that are not builtin and not official-tier.
+//
+// This is useful for identifying "third-party" secrets mounts (e.g. community or
+// partner tier external plugins) while excluding builtins and official HashiCorp
+// plugins.
+// Note: This will include all mounts that have been built externally (even if they are
+// Hashicorp owned). This will happen if the plugin was built from a Github repo or from an
+// artifact.
+func (c *Core) ListDeduplicatedExternalSecretPlugins(ctx context.Context) ([]*MountEntry, error) {
+	_, externalPlugins, err := c.ListOfficialAndExternalSecretPlugins(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]struct{})
+	var result []*MountEntry
+	for _, entry := range externalPlugins {
+		if entry == nil {
+			continue
+		}
+
+		pluginName := getAdjustedPluginType(entry)
+		if pluginName == "" {
+			continue
+		}
+
+		pluginVersion := entry.RunningVersion
+
+		// De-dupe: multiple mounts can point at the same underlying plugin+version.
+		// We want to charge for each unique plugin+version pair.
+		key := pluginName + "\x00" + pluginVersion
+		if _, ok := seen[key]; ok {
+			continue
+		}
+
+		result = append(result, entry)
+		seen[key] = struct{}{}
+	}
+
+	return result, nil
 }

@@ -58,7 +58,7 @@ module('Acceptance | mfa-method', function (hooks) {
       'vault.cluster.access.mfa.methods.create',
       'New method link transitions to create route'
     );
-    await click('.hds-breadcrumb a');
+    await click(GENERAL.breadcrumbAtIdx(1));
 
     const methods = this.getMethods();
     const model = this.store.peekRecord('mfa-method', methods[0].id);
@@ -78,7 +78,7 @@ module('Acceptance | mfa-method', function (hooks) {
       'vault.cluster.access.mfa.methods.method.index',
       'Details more menu action transitions to method route'
     );
-    await click('.hds-breadcrumb a');
+    await click(GENERAL.breadcrumbAtIdx(1));
     await click(GENERAL.menuTrigger);
     await click('[data-test-mfa-method-menu-link="edit"]');
     assert.strictEqual(
@@ -154,7 +154,7 @@ module('Acceptance | mfa-method', function (hooks) {
         }
         assert.dom(GENERAL.infoRowValue(label)).hasText(value, `${label} value renders`);
       });
-      await click('.hds-breadcrumb a');
+      await click(GENERAL.breadcrumbAtIdx(1));
     }
 
     await click('[data-test-mfa-method-list-item]');
@@ -210,7 +210,7 @@ module('Acceptance | mfa-method', function (hooks) {
         'vault.cluster.access.mfa.methods.method.index',
         `${type} method is displayed on save`
       );
-      await click('.hds-breadcrumb a');
+      await click(GENERAL.breadcrumbAtIdx(1));
       assert
         .dom('[data-test-mfa-method-list-item]')
         .exists({ count: methodCount + index + 1 }, `List updates with new ${type} method`);
@@ -233,7 +233,7 @@ module('Acceptance | mfa-method', function (hooks) {
     );
     await click('[data-test-tab="enforcements"]');
     assert.dom('[data-test-list-item]').hasTextContaining('bar', 'Enforcement is listed in method view');
-    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
+    await click('[data-test-sidebar-nav-link="Multi-factor authentication"]');
     await click('[data-test-tab="enforcements"]');
     assert
       .dom('[data-test-list-item="bar"]')

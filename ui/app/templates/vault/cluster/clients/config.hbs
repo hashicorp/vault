@@ -3,10 +3,16 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Configuration" />
+<Page::Header @title="Configuration">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="Configuration")}}
+    />
+  </:breadcrumbs>
+</Page::Header>
 <Toolbar>
   <ToolbarActions>
-    {{#if @model.canEdit}}
+    {{#if @model.capabilities.canUpdate}}
       <LinkTo @route="vault.cluster.clients.edit" class="toolbar-link">
         Edit configuration
       </LinkTo>
@@ -14,4 +20,4 @@
   </ToolbarActions>
 </Toolbar>
 
-<Clients::Config @model={{@model}} />
+<Clients::Config @config={{@model.config}} />

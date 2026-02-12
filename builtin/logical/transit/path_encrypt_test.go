@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransit_MissingPlaintext(t *testing.T) {
@@ -45,6 +46,8 @@ func TestTransit_MissingPlaintext(t *testing.T) {
 	if resp == nil || !resp.IsError() {
 		t.Fatalf("expected error due to missing plaintext in request, err:%v resp:%#v", err, resp)
 	}
+	// We expect 0 successful calls
+	require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
 }
 
 func TestTransit_MissingPlaintextInBatchInput(t *testing.T) {
@@ -81,6 +84,8 @@ func TestTransit_MissingPlaintextInBatchInput(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error due to missing plaintext in request, err:%v resp:%#v", err, resp)
 	}
+	// We expect 0 successful calls
+	require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
 }
 
 // Case1: Ensure that batch encryption did not affect the normal flow of
@@ -143,6 +148,9 @@ func TestTransit_BatchEncryptionCase1(t *testing.T) {
 	if resp.Data["plaintext"] != plaintext {
 		t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, resp.Data["plaintext"])
 	}
+
+	// We expect 2 successful requests (1 for encrypt, 1 for decrypt)
+	require.Equal(t, uint64(2), b.billingDataCounts.Transit.Load())
 }
 
 // Case2: Ensure that batch encryption did not affect the normal flow of
@@ -205,6 +213,9 @@ func TestTransit_BatchEncryptionCase2(t *testing.T) {
 	if resp.Data["plaintext"] != plaintext {
 		t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, resp.Data["plaintext"])
 	}
+
+	// We expect 2 successful requests (1 for encrypt, 1 for decrypt)
+	require.Equal(t, uint64(2), b.billingDataCounts.Transit.Load())
 }
 
 // Case3: If batch encryption input is not base64 encoded, it should fail.
@@ -228,6 +239,9 @@ func TestTransit_BatchEncryptionCase3(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
+
+	// We expect 0 successful requests
+	require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
 }
 
 // Case4: Test batch encryption with an existing key (and test references)
@@ -297,6 +311,9 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 			t.Fatalf("reference mismatch.  Expected %s, Actual: %s", inputItem["reference"], item.Reference)
 		}
 	}
+
+	// We expect 4 successful requests (2 batch requests + 2 decrypt requests)
+	require.Equal(t, uint64(4), b.billingDataCounts.Transit.Load())
 }
 
 // Case5: Test batch encryption with an existing derived key
@@ -370,6 +387,8 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 			t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, resp.Data["plaintext"])
 		}
 	}
+	// We expect 4 successful transit requests (2 for batch encryption, 2 for batch decryption)
+	require.Equal(t, uint64(4), b.billingDataCounts.Transit.Load())
 }
 
 // Case6: Test batch encryption with an upserted non-derived key
@@ -430,6 +449,9 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 			t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, resp.Data["plaintext"])
 		}
 	}
+
+	// We expect 4 successful transit requests (2 for batch encryption, 2 for batch decryption)
+	require.Equal(t, uint64(4), b.billingDataCounts.Transit.Load())
 }
 
 // Case7: Test batch encryption with an upserted derived key
@@ -486,6 +508,8 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 			t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, resp.Data["plaintext"])
 		}
 	}
+	// We expect 4 successful transit requests (2 for batch encryption, 2 for batch decryption)
+	require.Equal(t, uint64(4), b.billingDataCounts.Transit.Load())
 }
 
 // Case8: If plaintext is not base64 encoded, encryption should fail
@@ -539,6 +563,8 @@ func TestTransit_BatchEncryptionCase8(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
+	// We expect 0 successful transit requests
+	require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
 }
 
 // Case9: If both plaintext and batch inputs are supplied, plaintext should be
@@ -573,6 +599,9 @@ func TestTransit_BatchEncryptionCase9(t *testing.T) {
 	if ok {
 		t.Fatal("ciphertext field should not be set")
 	}
+
+	// We expect 2 successful batch encryptions
+	require.Equal(t, uint64(2), b.billingDataCounts.Transit.Load())
 }
 
 // Case10: Inconsistent presence of 'context' in batch input should be caught
@@ -600,6 +629,8 @@ func TestTransit_BatchEncryptionCase10(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
+	// We expect no successful transit requests
+	require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
 }
 
 // Case11: Incorrect inputs for context and nonce should not fail the operation
@@ -626,6 +657,8 @@ func TestTransit_BatchEncryptionCase11(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// We expect 1 successful encryption out of the 2-item batch
+	require.Equal(t, uint64(1), b.billingDataCounts.Transit.Load())
 }
 
 // Case12: Invalid batch input
@@ -651,6 +684,8 @@ func TestTransit_BatchEncryptionCase12(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
+	// We expect no successful requests
+	require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
 }
 
 // Case13: Incorrect input for nonce when we aren't in convergent encryption should fail the operation
@@ -693,6 +728,8 @@ func TestTransit_EncryptionCase13(t *testing.T) {
 	if v, ok := resp.Data["http_status_code"]; !ok || v.(int) != http.StatusBadRequest {
 		t.Fatal("expected request error")
 	}
+	// We expect no successful transit requests
+	require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
 }
 
 // Case14: Incorrect input for nonce when we are in convergent version 3 should fail
@@ -750,6 +787,8 @@ func TestTransit_EncryptionCase14(t *testing.T) {
 	if v, ok := resp.Data["http_status_code"]; !ok || v.(int) != http.StatusBadRequest {
 		t.Fatal("expected request error")
 	}
+	// We expect no successful transit requests
+	require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
 }
 
 // Test that the fast path function decodeBatchRequestItems behave like mapstructure.Decode() to decode []BatchRequestItem.

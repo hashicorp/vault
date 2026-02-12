@@ -8,13 +8,10 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import replicationHandlers from 'vault/mirage/handlers/replication';
-import { click } from '@ember/test-helpers';
+import { click, visit } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
-  navReplication: '[data-test-sidebar-nav-link="Replication"]',
-  navPerformance: '[data-test-sidebar-nav-link="Performance"]',
-  navDR: '[data-test-sidebar-nav-link="Disaster Recovery"]',
   title: '[data-test-replication-title]',
   primaryCluster: `${GENERAL.infoRowValue('primary_cluster_addr')}`,
   replicationSet: `${GENERAL.infoRowValue('Replication set')}`,
@@ -30,10 +27,11 @@ module('Acceptance | Enterprise | replication navigation', function (hooks) {
   });
 
   test('navigate between replication types updates page', async function (assert) {
-    await click(SELECTORS.navReplication);
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Disaster Recovery & Performance');
+    await visit('/vault/replication');
+    await click(GENERAL.navLink('Overview'));
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Disaster recovery and performance');
     assert.dom(GENERAL.badge('primary')).exists('shows primary badge for dr');
-    await click(SELECTORS.navPerformance);
+    await click(GENERAL.navLink('Performance replication'));
 
     // Ensure data is expected for performance
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Performance');
@@ -43,8 +41,8 @@ module('Acceptance | Enterprise | replication navigation', function (hooks) {
     assert.dom(SELECTORS.knownSecondariesTitle).hasText('0 Known secondaries');
 
     // Nav to DR and see updated data
-    await click(SELECTORS.navDR);
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Disaster Recovery');
+    await click(GENERAL.navLink('Disaster recovery'));
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Disaster recovery');
     assert.dom(GENERAL.badge('primary')).exists('shows primary badge for dr');
     assert.dom(SELECTORS.primaryCluster).hasText('dr-foobar');
     assert.dom(SELECTORS.replicationSet).hasText('dr-cluster-id');

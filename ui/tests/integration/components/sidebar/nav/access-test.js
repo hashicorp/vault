@@ -26,18 +26,15 @@ module('Integration | Component | sidebar-nav-access', function (hooks) {
       rules: {
         // This is an issue with Hds::AppHeader::HomeLink
         'aria-prohibited-attr': { enabled: false },
-        // TODO: fix use Dropdown on user-menu
-        'nested-interactive': { enabled: false },
       },
     });
   });
 
   test('it should render nav headings', async function (assert) {
-    const headings = ['Authentication', 'Access Control', 'Organization', 'Administration'];
+    const headings = ['Access control', 'Authentication', 'Organization'];
 
     stubFeaturesAndPermissions(this.owner);
     await renderComponent();
-
     assert
       .dom('[data-test-sidebar-nav-heading]')
       .exists({ count: headings.length }, 'Correct number of headings render');
@@ -61,18 +58,20 @@ module('Integration | Component | sidebar-nav-access', function (hooks) {
   test('it should render nav links', async function (assert) {
     const links = [
       'Back to main navigation',
-      'Authentication Methods',
-      'Multi-Factor Authentication',
-      'OIDC Provider',
-      'Control Groups',
+      'ACL policies',
+      'Role governing policies',
+      'Endpoint governing policies',
+      'Approval workflow',
+      'Leases',
+      'Authentication methods',
+      'Multi-factor authentication',
+      'OIDC provider',
       'Namespaces',
       'Groups',
       'Entities',
-      'Leases',
     ];
     stubFeaturesAndPermissions(this.owner);
     await renderComponent();
-
     assert
       .dom('[data-test-sidebar-nav-link]')
       .exists({ count: links.length }, 'Correct number of links render');
