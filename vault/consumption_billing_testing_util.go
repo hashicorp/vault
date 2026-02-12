@@ -18,3 +18,11 @@ func (c *Core) ResetInMemoryTransformDataProtectionCallCounts() {
 func (c *Core) GetInMemoryTransformDataProtectionCallCounts() uint64 {
 	return c.consumptionBilling.DataProtectionCallCounts.Transform.Load()
 }
+
+func (c *Core) SetInMemoryTransitDataProtectionCallCounts(count uint64) {
+	c.consumptionBilling.DataProtectionCallCounts.Transit.Store(count)
+}
+
+func (c *Core) SetInMemoryTransformDataProtectionCallCounts(count uint64) {
+	c.consumptionBilling.DataProtectionCallCounts.Transform.Store(count)
+}

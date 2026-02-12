@@ -13,7 +13,7 @@ import (
 )
 
 func (c *Core) storeThirdPartyPluginCountsLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, thirdPartyPluginCounts int) error {
-	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, currentMonth, billing.ThirdPartyPluginsPrefix)
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.ThirdPartyPluginsPrefix)
 	entry := &logical.StorageEntry{
 		Key:   billingPath,
 		Value: []byte(strconv.Itoa(thirdPartyPluginCounts)),
@@ -26,7 +26,7 @@ func (c *Core) storeThirdPartyPluginCountsLocked(ctx context.Context, localPathP
 }
 
 func (c *Core) getStoredThirdPartyPluginCountsLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (int, error) {
-	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, currentMonth, billing.ThirdPartyPluginsPrefix)
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.ThirdPartyPluginsPrefix)
 	view, ok := c.GetBillingSubView()
 	if !ok {
 		return 0, nil
@@ -110,7 +110,7 @@ func combineRoleCounts(a, b *RoleCounts) *RoleCounts {
 
 // storeMaxKvCountsLocked must be called with BillingStorageLock held
 func (c *Core) storeMaxKvCountsLocked(ctx context.Context, maxKvCounts int, localPathPrefix string, month time.Time) error {
-	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.KvHWMCountsHWM)
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.KvHWMCountsHWM)
 	entry := &logical.StorageEntry{
 		Key:   billingPath,
 		Value: []byte(strconv.Itoa(maxKvCounts)),
@@ -124,7 +124,7 @@ func (c *Core) storeMaxKvCountsLocked(ctx context.Context, maxKvCounts int, loca
 
 // getStoredMaxKvCountsLocked must be called with BillingStorageLock held
 func (c *Core) getStoredMaxKvCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (int, error) {
-	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.KvHWMCountsHWM)
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.KvHWMCountsHWM)
 	view, ok := c.GetBillingSubView()
 	if !ok {
 		return 0, nil
@@ -195,7 +195,7 @@ func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, cu
 
 // storeMaxRoleCountsLocked must be called with BillingStorageLock held
 func (c *Core) storeMaxRoleCountsLocked(ctx context.Context, maxRoleCounts *RoleCounts, localPathPrefix string, month time.Time) error {
-	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.RoleHWMCountsHWM)
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.RoleHWMCountsHWM)
 	entry, err := logical.StorageEntryJSON(billingPath, maxRoleCounts)
 	if err != nil {
 		return err
@@ -257,7 +257,7 @@ func (c *Core) GetStoredHWMRoleCounts(ctx context.Context, localPathPrefix strin
 }
 
 func (c *Core) getStoredRoleCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (*RoleCounts, error) {
-	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.RoleHWMCountsHWM)
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.RoleHWMCountsHWM)
 	var maxRoleCounts *RoleCounts
 	view, ok := c.GetBillingSubView()
 	if !ok {
@@ -298,7 +298,7 @@ func (c *Core) GetBillingSubView() (*BarrierView, bool) {
 // storeTransitCallCountsLocked must be called with BillingStorageLock held
 func (c *Core) storeTransitCallCountsLocked(ctx context.Context, transitCount uint64, localPathPrefix string, month time.Time) error {
 	// Store count for each data protection type separately because they are atomic counters
-	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.TransitDataProtectionCallCountsPrefix)
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.TransitDataProtectionCallCountsPrefix)
 	entry := &logical.StorageEntry{
 		Key:   billingPath,
 		Value: []byte(strconv.FormatUint(transitCount, 10)),
@@ -313,7 +313,7 @@ func (c *Core) storeTransitCallCountsLocked(ctx context.Context, transitCount ui
 // getStoredTransitCallCountsLocked must be called with BillingStorageLock held
 func (c *Core) getStoredTransitCallCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (uint64, error) {
 	// Retrieve count for each data protection type separately because they are atomic counters
-	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, month, billing.TransitDataProtectionCallCountsPrefix)
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.TransitDataProtectionCallCountsPrefix)
 	view, ok := c.GetBillingSubView()
 	if !ok {
 		return 0, nil
@@ -359,7 +359,7 @@ func (c *Core) UpdateTransitCallCounts(ctx context.Context, currentMonth time.Ti
 }
 
 func (c *Core) storeKmipEnabledLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, kmipEnabled bool) error {
-	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, currentMonth, billing.KmipEnabledPrefix)
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.KmipEnabledPrefix)
 	entry, err := logical.StorageEntryJSON(billingPath, kmipEnabled)
 	if err != nil {
 		return err
@@ -372,7 +372,7 @@ func (c *Core) storeKmipEnabledLocked(ctx context.Context, localPathPrefix strin
 }
 
 func (c *Core) getStoredKmipEnabledLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (bool, error) {
-	billingPath := billing.GetMonthlyBillingPath(localPathPrefix, currentMonth, billing.KmipEnabledPrefix)
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.KmipEnabledPrefix)
 	view, ok := c.GetBillingSubView()
 	if !ok {
 		return false, nil
