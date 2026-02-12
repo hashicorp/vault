@@ -5,6 +5,7 @@ package http
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -427,6 +428,17 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			return
 		}
 
+		// For binary paths we expect the plugin to read directly from the body so we need to ensure
+		// the original body is still available for the forwarding case on entity creation on a perf standby
+		var binaryBuf *bytes.Buffer
+		ra := core.RouterAccess()
+		if ra.IsBinaryPath(r.Context(), trimmedPath) {
+			binaryBuf = &bytes.Buffer{}
+			binaryTeeReader := io.NopCloser(io.TeeReader(r.Body, binaryBuf))
+			r.Body = binaryTeeReader
+			r = r.WithContext(logical.CreateContextOriginalBody(r.Context(), binaryTeeReader))
+		}
+
 		// Make the internal request. We attach the connection info
 		// as well in case this is an authentication request that requires
 		// it. Vault core handles stripping this if we need to. This also
@@ -442,6 +454,12 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			return
 		case needsForward && !noForward:
 			if origBody != nil {
+				if binaryBuf != nil && binaryBuf.Len() > 0 {
+					// If this is a binary path, we may need to use the buffered body for forwarding
+					// since the original body has been consumed by the plugin. We can use the buffered
+					// data to create a new reader for the forward request.
+					origBody = newMultiReaderCloser(origBody, binaryBuf)
+				}
 				r.Body = origBody
 			}
 			forwardRequest(core, w, r)
