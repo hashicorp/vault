@@ -38,7 +38,7 @@ interface Args {
   updateWizardState?: CallableFunction;
 }
 
-export default class GuidedSetup extends Component<Args> {
+export default class GuidedStart extends Component<Args> {
   get isFinalStep() {
     return this.args.currentStep === this.args.steps.length - 1;
   }

@@ -3,9 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Namespaces Guided Start" />
+<Page::Header @title={{concat @title " Guided Start"}} />
 
-<div class="wizard" data-test-guided-setup>
+<div class="wizard guided-start" ...attributes>
   <Hds::Stepper::Nav
     class="has-top-margin-xl has-bottom-margin-xl is-flex-column is-flex-grow-1"
     @isInteractive={{true}}

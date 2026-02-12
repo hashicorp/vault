@@ -1,0 +1,28 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+{{#if @isModal}}
+  <Hds::Modal id={{@title "-intro-modal"}} @size="large" @onClose={{@onDismiss}} class="wizard intro" ...attributes as |M|>
+    <M.Header>Welcome to {{@title}} </M.Header>
+    <M.Body>
+      <Hds::Layout::Flex @align="start">
+        {{yield to="body"}}
+      </Hds::Layout::Flex>
+    </M.Body>
+    <M.Footer>
+      {{yield to="actions"}}
+    </M.Footer>
+  </Hds::Modal>
+{{else}}
+  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="wizard intro has-padding-l" ...attributes>
+    <Hds::Text::Display @tag="h1" @size="400" @weight="bold">
+      Welcome to
+      {{@title}}
+    </Hds::Text::Display>
+    <Hds::Layout::Grid @columnWidth="50%" @gap="16">
+      {{yield to="body"}}
+    </Hds::Layout::Grid>
+    {{yield to="actions"}}
+  </Hds::Card::Container>
+{{/if}}

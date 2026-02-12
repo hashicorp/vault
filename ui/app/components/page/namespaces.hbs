@@ -4,9 +4,7 @@
 }}
 
 {{#if (has-feature "Namespaces")}}
-  {{#if this.showWizard}}
-    <Wizard::Namespaces::NamespaceWizard @onRefresh={{this.refreshNamespaceList}} />
-  {{else}}
+  {{#if this.showPageHeader}}
     <Page::Header @title="Namespaces">
       <:breadcrumbs>
         <Page::Breadcrumbs
@@ -18,25 +16,33 @@
       </:badges>
       <:actions>
         {{#unless @model.namespaces}}
+          {{#unless this.showWizard}}
+            <Hds::Button
+              class="has-right-margin-4"
+              @color="secondary"
+              @icon="bulb"
+              @text="New to Namespaces?"
+              {{on "click" this.showIntroPage}}
+              data-test-button="guided-start"
+            />
+          {{/unless}}
           <Hds::Button
-            class="has-right-margin-4"
-            @color="secondary"
-            @icon="bulb"
-            @text="New to Namespaces?"
-            {{on "click" this.enterGuidedStart}}
-            data-test-button="guided-start"
-          />
-          <Hds::Button
-            class="has-right-margin-4"
+            @color={{if this.showWizard "secondary" "primary"}}
             @icon="plus"
             @route="vault.cluster.access.namespaces.create"
             @text="Create namespace"
+            class="has-right-margin-4"
             data-test-button="create-namespace"
           />
         {{/unless}}
       </:actions>
     </Page::Header>
+  {{/if}}
 
+  {{#if this.showWizard}}
+    <Wizard::Namespaces::NamespaceWizard @isIntroModal={{this.isIntroModal}} @onRefresh={{this.refreshNamespaceList}} />
+  {{else}}
+    {{! Show namespace list }}
     {{#if @model.namespaces}}
       <Toolbar>
         <ToolbarFilters>
@@ -120,6 +126,7 @@
         {{/if}}
       </ListView>
     {{else}}
+      {{! Show empty state }}
       {{#if this.showSetupAlert}}
         <Hds::Alert @type="inline" class="top-margin-32" as |A|>
           <A.Title>Your current setup is 1 namespace.</A.Title>

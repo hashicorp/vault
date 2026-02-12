@@ -57,6 +57,7 @@ export default class PageNamespacesComponent extends Component<Args> {
   @tracked query;
   @tracked nsToDelete = null;
   @tracked showSetupAlert = false;
+  @tracked isIntroModal = false;
 
   wizardId = 'namespace';
 
@@ -78,6 +79,12 @@ export default class PageNamespacesComponent extends Component<Args> {
 
     // If there is a userRootNamespace or it is HVD managed, then the path alone will suffice
     return this.namespace.path;
+  }
+
+  // Show header and breadcrumbs when viewing the intro page or during the list view.
+  // Do not show during Guided Start as that has its own header
+  get showPageHeader() {
+    return !this.showWizard || this.wizard.isIntroVisible(this.wizardId);
   }
 
   get showWizard() {
@@ -136,9 +143,10 @@ export default class PageNamespacesComponent extends Component<Args> {
   }
 
   @action
-  enterGuidedStart() {
+  showIntroPage() {
     // Reset the wizard dismissal state to allow re-entering the wizard
     this.wizard.reset(this.wizardId);
+    this.isIntroModal = true;
   }
 
   @action handlePageChange() {

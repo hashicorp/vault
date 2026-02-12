@@ -3,10 +3,27 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { service } from '@ember/service';
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
+import type WizardService from 'vault/services/wizard';
 
 interface Args {
+  /**
+   * The unique identifier for the wizard used for handling wizard dismissal and intro visibility state
+   */
+  wizardId: string;
+  /**
+   * Whether the intro page is in the default view or in modal view depending on how it is triggered
+   */
+  isModal: boolean;
+  /**
+   * Title of the wizard
+   */
+  title: string;
+  /**
+   * Whether the current step allows proceeding to the next step
+   */
+  canProceed: boolean;
   /**
    * The active step. Steps are zero-indexed.
    */
@@ -20,27 +37,24 @@ interface Args {
    */
   onDismiss: CallableFunction;
   /**
-   * Callback to update the current step when navigating backwards or
-   * forwards through the wizard
+   * Whether the current step allows proceeding to the next step
    */
   onStepChange: CallableFunction;
   /**
-   * Whether the current step allows proceeding to the next step
-   */
-  canProceed?: boolean;
-  /**
    * State tracked across steps.
    */
-  wizardState?: unknown;
+  wizardState: unknown;
   /**
    * Callback to update state tracked across steps.
    */
-  updateWizardState?: CallableFunction;
+  updateWizardState: CallableFunction;
 }
 
-// each wizard implementation can track whether the user has already dismissed the wizard via local storage
-export const DISMISSED_WIZARD_KEY = 'dismissed-wizards';
+export default class WizardComponent extends Component<Args> {
+  @service declare readonly wizard: WizardService;
 
-export default class Wizard extends Component<Args> {
-  @tracked showWelcome = true;
+  get isIntroVisible(): boolean {
+    // If wizardId is provided, use the wizard service to check intro visibility
+    return this.wizard.isIntroVisible(this.args.wizardId);
+  }
 }

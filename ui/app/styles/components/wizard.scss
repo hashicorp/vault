@@ -7,11 +7,14 @@
  */
 
 .wizard {
-  @extend .is-flex-column;
-  @extend .is-flex-grow-1;
+  &.guided-start {
+    @extend .is-flex-column;
+    @extend .is-flex-grow-1;
+  }
 
-  &.welcome {
-    @extend .has-top-margin-xxl;
+  &.intro {
+    @extend .top-margin-32;
+
     svg {
       flex-shrink: 0;
     }
