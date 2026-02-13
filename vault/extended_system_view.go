@@ -33,7 +33,17 @@ func (e extendedSystemViewImpl) ForwardGenericRequest(ctx context.Context, req *
 		ctx = namespace.ContextWithNamespace(ctx, e.mountEntry.Namespace())
 		ctx = logical.IndexStateContext(ctx, &logical.WALState{})
 		ctx = context.WithValue(ctx, ctxKeyForwardedRequestMountAccessor{}, e.mountEntry.Accessor)
-		return forward(ctx, e.core, req)
+		resp, err := forward(ctx, e.core, req)
+		if err != nil {
+			return nil, err
+		}
+		if req.LastRemoteWAL() > 0 && !e.core.EntWaitUntilWALShipped(ctx, req.LastRemoteWAL()) {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("Timeout hit while waiting for local replicated cluster to apply primary's write; this client may encounter stale reads of values written during this operation.")
+		}
+		return resp, nil
 	}
 
 	return nil, logical.ErrReadOnly
