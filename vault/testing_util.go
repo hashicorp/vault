@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/vault/pki_cert_count"
+	"github.com/hashicorp/vault/vault/cert_count"
 	"github.com/hashicorp/vault/version"
 	"github.com/stretchr/testify/require"
 )
@@ -23,19 +23,18 @@ func init() {
 }
 
 func (c *TestClusterCore) StopPkiCertificateCountConsumerJob() {
-	mgr := c.Core.pkiCertCountManager.(pki_cert_count.PkiCertificateCountManager)
+	mgr := c.Core.certCountManager.(cert_count.CertificateCountManager)
 	mgr.StopConsumerJob()
 }
 
 func (c *TestClusterCore) ResetPkiCertificateCounts() {
-	mgr := c.Core.pkiCertCountManager.(pki_cert_count.PkiCertificateCountManager)
-
+	mgr := c.Core.certCountManager.(cert_count.CertificateCountManager)
 	c.pkiCertificateCountData = mgr.GetCounts()
 }
 
 func (c *TestClusterCore) RequirePkiCertificateCounts(t testing.TB, expectedIssuedCount, expectedStoredCount int) {
 	t.Helper()
-	mgr := c.Core.pkiCertCountManager.(pki_cert_count.PkiCertificateCountManager)
+	mgr := c.Core.certCountManager.(cert_count.CertificateCountManager)
 	actualCount := mgr.GetCounts()
 
 	actualCount.IssuedCerts -= c.pkiCertificateCountData.IssuedCerts
