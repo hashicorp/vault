@@ -264,27 +264,42 @@ message Alias {
   string scim_client_id = 15;
 }
 
-// ScimConfig defines the stored configuration for a single SCIM client.
+// ScimClient defines the stored configuration for a single SCIM client.
 // This configuration links a client's identity within Vault to its specific
 // role and capabilities within the SCIM server.
-message ScimConfig {
-  // ClientId is a unique, user-defined identifier for this specific SCIM
-  // client configuration (e.g., 'Okta-Prod', 'SailPoint-Dev').
+message ScimClient {
+  // ClientId is a unique identifier for this specific SCIM
+  // client configuration.
+  // @inject_tag: sentinel:"-"
   string client_id = 1;
 
   // ClientRole defines the client's function and authoritative power.
   // It must be either "IGA" (authoritative) or "IdP" (standard).
+  // @inject_tag: sentinel:"-"
   string client_role = 2;
 
   // AccessGrantPrincipal is the Vault Entity ID that represents the SCIM
   // client application itself. This is the principal that will be granted the
   // necessary permissions to perform SCIM operations.
+  // @inject_tag: sentinel:"-"
   string access_grant_principal = 3;
 
   // AliasMountAccessor is an optional field that specifies the mount accessor
   // of an auth method where login aliases should be created for provisioned users.
   // This is typically used for clients with the 'IdP' role.
+  // @inject_tag: sentinel:"-"
   string alias_mount_accessor = 4;
+
+  // ClientName is an user defined identifier for this specific SCIM
+  // client configuration. (e.g., 'Okta-Prod', 'SailPoint-Dev').
+  // @inject_tag: sentinel:"-"
+  string client_name = 5;
+
+  // NamespaceID is the identifier of the namespace to which this entity
+  // belongs to. Do not return this value over the API when reading the
+  // entity.
+  // @inject_tag: sentinel:"-"
+  string namespace_id = 6;
 }
 
 // Deprecated. Retained for backwards compatibility.

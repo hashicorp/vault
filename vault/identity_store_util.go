@@ -104,6 +104,10 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 			return fmt.Errorf("failed to load cached local alias entities: %w", err)
 		}
 
+		if err := i.loadSCIMClients(ctx); err != nil {
+			return fmt.Errorf("failed to load SCIM clients: %w", err)
+		}
+
 		return nil
 	}
 

@@ -100,10 +100,6 @@ type IdentityStore struct {
 	// buckets
 	groupPacker *storagepacker.StoragePacker
 
-	// groupPacker is used to pack multiple group storage entries into 256
-	// buckets
-	scimConfigPacker *storagepacker.StoragePacker
-
 	// disableLowerCaseNames indicates whether or not identity artifacts are
 	// operated case insensitively
 	disableLowerCasedNames bool
