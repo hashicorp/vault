@@ -1,0 +1,4 @@
+```release-note:improvement
+core (enterprise): enable rotation manager to send rotation information required by plugin backends during registration and rotation operations.
+This allows plugin backends to have the necessary context for managing their rotation state effectively.
+```
