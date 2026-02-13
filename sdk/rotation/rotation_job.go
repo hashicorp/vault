@@ -70,6 +70,18 @@ type RotationInfoResponse struct {
 	TTL int64
 }
 
+// RotationInfo is the response struct returned by SystemView.RegisterRotationJobWithResponse.
+type RotationInfo struct {
+	// RotationID is the ID of the rotation job.
+	RotationID string
+
+	// NextVaultRotation is the scheduled time of the next rotation.
+	NextVaultRotation time.Time
+
+	// LastVaultRotation is the time this credential was last rotated.
+	LastVaultRotation time.Time
+}
+
 func (s *RotationJob) Validate() error {
 	if s.MountPoint == "" {
 		return fmt.Errorf("MountPoint is required")

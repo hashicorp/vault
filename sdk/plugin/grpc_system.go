@@ -247,7 +247,7 @@ func (s *gRPCSystemViewClient) GetRotationInformation(ctx context.Context, req *
 	}, nil
 }
 
-func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (id string, retErr error) {
+func (s *gRPCSystemViewClient) RegisterRotationJobWithResponse(ctx context.Context, req *rotation.RotationJobConfigureRequest) (*rotation.RotationInfo, error) {
 	cfgReq := &pb.RegisterRotationJobRequest{
 		Job: &pb.RotationJobInput{
 			Name:             req.Name,
@@ -261,11 +261,25 @@ func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rot
 			RotationPeriod: int64(req.RotationPeriod.Seconds()),
 		},
 	}
-	resp, err := s.client.RegisterRotationJob(ctx, cfgReq)
+	resp, err := s.client.RegisterRotationJobWithResponse(ctx, cfgReq)
+	if err != nil {
+		return nil, err
+	}
+	return &rotation.RotationInfo{
+		RotationID: resp.Info.RotationID,
+		// ensure UTC location on conversion
+		NextVaultRotation: time.Unix(resp.Info.NextVaultRotation, 0).UTC(),
+		LastVaultRotation: time.Unix(resp.Info.LastVaultRotation, 0).UTC(),
+	}, nil
+}
+
+func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (string, error) {
+	info, err := s.RegisterRotationJobWithResponse(ctx, req)
 	if err != nil {
 		return "", err
 	}
-	return resp.RotationID, nil
+
+	return info.RotationID, nil
 }
 
 func (s *gRPCSystemViewClient) DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) error {
@@ -503,6 +517,38 @@ func (s *gRPCSystemViewServer) GetRotationInformation(ctx context.Context, req *
 		IssueTime:  resp.LastVaultRotation.Unix(),
 		ExpireTime: resp.NextVaultRotation.Unix(),
 		TTL:        resp.TTL,
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) RegisterRotationJobWithResponse(ctx context.Context, req *pb.RegisterRotationJobRequest) (*pb.RegisterRotationJobWithResponseReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	cfgReq := &rotation.RotationJobConfigureRequest{
+		Name:             req.Job.Name,
+		MountPoint:       req.Job.MountPoint,
+		ReqPath:          req.Job.Path,
+		RotationSchedule: req.Job.RotationSchedule,
+		RotationPolicy:   req.Job.RotationPolicy,
+		// on the side inbound to vault, we convert seconds back to time.Duration
+		// Note: this value is seconds (as per the outbound client call, despite being int64)
+		// The field is int64 because of gRPC reasons, not time.Duration reasons
+		RotationWindow: time.Duration(req.Job.RotationWindow) * time.Second,
+		RotationPeriod: time.Duration(req.Job.RotationPeriod) * time.Second,
+	}
+
+	resp, err := s.impl.RegisterRotationJobWithResponse(ctx, cfgReq)
+	if err != nil {
+		return &pb.RegisterRotationJobWithResponseReply{}, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.RegisterRotationJobWithResponseReply{
+		Info: &pb.RotationInfo{
+			RotationID:        resp.RotationID,
+			NextVaultRotation: resp.NextVaultRotation.Unix(),
+			LastVaultRotation: resp.LastVaultRotation.Unix(),
+		},
 	}, nil
 }
 

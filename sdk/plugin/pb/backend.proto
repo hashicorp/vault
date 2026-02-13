@@ -172,6 +172,9 @@ message Request {
   // request is a recover request where the source path is the same as the
   // destination path
   string recover_source_path = 22;
+
+  // RotationInfo returned by RM to plugins to maintain rotation state
+  RotationInfo rotation_info = 23;
 }
 
 message Auth {
@@ -641,8 +644,19 @@ message RotationInfoReply {
   int64 ttl = 3;
 }
 
+message RotationInfo {
+  string rotation_id = 1;
+  int64 next_vault_rotation = 2;
+  int64 last_vault_rotation = 3;
+}
+
 message RegisterRotationJobRequest {
   RotationJobInput job = 1;
+}
+
+message RegisterRotationJobWithResponseReply {
+  RotationInfo info = 1;
+  string err = 2;
 }
 
 message RegisterRotationJobResponse {
@@ -733,6 +747,9 @@ service SystemView {
 
   // RegisterRotationJob returns a rotation ID for the requested plugin credential.
   rpc RegisterRotationJob(RegisterRotationJobRequest) returns (RegisterRotationJobResponse);
+
+  // RegisterRotationJob returns the rotation info for the requested plugin credential.
+  rpc RegisterRotationJobWithResponse(RegisterRotationJobRequest) returns (RegisterRotationJobWithResponseReply);
 
   // DeregisterRotationJob returns any errors in de-registering a credential from the Rotation Manager.
   rpc DeregisterRotationJob(DeregisterRotationJobRequest) returns (Empty);
