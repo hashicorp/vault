@@ -29,20 +29,21 @@ func (c *TestClusterCore) StopPkiCertificateCountConsumerJob() {
 
 func (c *TestClusterCore) ResetPkiCertificateCounts() {
 	mgr := c.Core.pkiCertCountManager.(pki_cert_count.PkiCertificateCountManager)
-	c.pkiCertificateCountData.ignoredIssuedCount, c.pkiCertificateCountData.ignoredStoredCount = mgr.GetCounts()
+
+	c.pkiCertificateCountData = mgr.GetCounts()
 }
 
 func (c *TestClusterCore) RequirePkiCertificateCounts(t testing.TB, expectedIssuedCount, expectedStoredCount int) {
 	t.Helper()
 	mgr := c.Core.pkiCertCountManager.(pki_cert_count.PkiCertificateCountManager)
-	actualIssuedCount, actualStoredCount := mgr.GetCounts()
+	actualCount := mgr.GetCounts()
 
-	actualIssuedCount -= c.pkiCertificateCountData.ignoredIssuedCount
-	actualStoredCount -= c.pkiCertificateCountData.ignoredStoredCount
+	actualCount.IssuedCerts -= c.pkiCertificateCountData.IssuedCerts
+	actualCount.StoredCerts -= c.pkiCertificateCountData.StoredCerts
 
-	c.pkiCertificateCountData.ignoredIssuedCount += uint64(expectedIssuedCount)
-	c.pkiCertificateCountData.ignoredStoredCount += uint64(expectedStoredCount)
+	c.pkiCertificateCountData.IssuedCerts += uint64(expectedIssuedCount)
+	c.pkiCertificateCountData.StoredCerts += uint64(expectedStoredCount)
 
-	require.Equal(t, expectedIssuedCount, int(actualIssuedCount), "PKI certificate issued count mismatch")
-	require.Equal(t, expectedStoredCount, int(actualStoredCount), "PKI certificate stored count mismatch")
+	require.Equal(t, expectedIssuedCount, int(actualCount.IssuedCerts), "PKI certificate issued count mismatch")
+	require.Equal(t, expectedStoredCount, int(actualCount.StoredCerts), "PKI certificate stored count mismatch")
 }

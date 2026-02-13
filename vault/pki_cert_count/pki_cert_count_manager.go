@@ -4,6 +4,7 @@
 package pki_cert_count
 
 import (
+	"crypto/x509"
 	"os"
 	"sync"
 	"time"
@@ -36,7 +37,7 @@ type PkiCertificateCountManager interface {
 
 	// GetCounts returns the current counts of issued and stored certificates, without
 	// consuming them. Meant to ease unit testing.
-	GetCounts() (issuedCount, storedCount uint64)
+	GetCounts() logical.CertCount
 }
 
 // certCountManager is an implementation of PkiCertificateCountManager.
@@ -139,10 +140,12 @@ func (m *certCountManager) Increment() logical.CertCountIncrementer {
 	return logical.NewCertCountIncrementer(m)
 }
 
-func (m *certCountManager) GetCounts() (issuedCount, storedCount uint64) {
+func (m *certCountManager) GetCounts() (issuedCount logical.CertCount) {
 	m.countLock.RLock()
 	defer m.countLock.RUnlock()
-	return m.count.IssuedCerts, m.count.StoredCerts
+	ret := logical.CertCount{}
+	ret.Add(m.count)
+	return ret
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -164,7 +167,7 @@ func (n *nullPkiCertificateCountManager) Increment() logical.CertCountIncremente
 	return logical.NewCertCountIncrementer(n)
 }
 
-func (n *nullPkiCertificateCountManager) AddIssuedCertificate(_ bool) {
+func (n *nullPkiCertificateCountManager) AddIssuedCertificate(_ bool, _ *x509.Certificate) {
 	// nothing to do
 }
 
@@ -176,6 +179,6 @@ func (n *nullPkiCertificateCountManager) StopConsumerJob() {
 	// nothing to do
 }
 
-func (n *nullPkiCertificateCountManager) GetCounts() (issuedCount, storedCount uint64) {
-	return 0, 0
+func (n *nullPkiCertificateCountManager) GetCounts() (issuedCount logical.CertCount) {
+	return logical.CertCount{}
 }

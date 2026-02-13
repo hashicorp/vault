@@ -1073,7 +1073,7 @@ type TestClusterCore struct {
 	UnderlyingHAStorage     physical.HABackend
 	Barrier                 SecurityBarrier
 	NodeID                  string
-	pkiCertificateCountData struct{ ignoredIssuedCount, ignoredStoredCount uint64 }
+	pkiCertificateCountData logical.CertCount
 }
 
 type PhysicalBackendBundle struct {
