@@ -63,10 +63,10 @@ import (
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/billing"
+	"github.com/hashicorp/vault/vault/cert_count"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/eventbus"
 	"github.com/hashicorp/vault/vault/observations"
-	"github.com/hashicorp/vault/vault/pki_cert_count"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
@@ -768,9 +768,9 @@ type Core struct {
 	// reportingScanDirectory is where the files emitted by /sys/reporting/scan go.
 	reportingScanDirectory string
 
-	// pkiCertCountManager keeps track of issued and stored PKI certificate counts for
-	// PKI-only billing purposes.
-	pkiCertCountManager pki_cert_count.PkiCertificateCountManager
+	// certCountManager keeps track of issued and stored PKI certificate counts for
+	// billing purposes.
+	certCountManager cert_count.CertificateCountManager
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -1152,7 +1152,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		reportingScanDirectory:         conf.ReportingScanDirectory,
 	}
 
-	c.pkiCertCountManager = pki_cert_count.InitPkiCertificateCountManager(c.logger)
+	c.certCountManager = cert_count.InitCertificateCountManager(c.logger)
 
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)

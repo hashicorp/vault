@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
-package pki_cert_count
+package cert_count
 
 import (
 	"crypto/x509"
@@ -17,19 +17,19 @@ import (
 // all certificate counting.
 const envVaultDisableCertCount = "VAULT_DISABLE_CERT_COUNT"
 
-// consumerJobInterval is the interval the PkiCertificateCountManager uses
+// consumerJobInterval is the interval the CertificateCountManager uses
 // for StartConsumerJob. It is a variable so that unit tests can override it.
 var consumerJobInterval = 1 * time.Minute
 
-// PkiCertificateCountConsumer is a callback for consumers of the PKI certificate counts.
-type PkiCertificateCountConsumer func(logical.CertCount)
+// CertificateCountConsumer is a callback for consumers of the certificate counts.
+type CertificateCountConsumer func(logical.CertCount)
 
-// PkiCertificateCountManager keeps track of issued and stored PKI certificate counts.
-type PkiCertificateCountManager interface {
+// CertificateCountManager keeps track of issued and stored certificate counts.
+type CertificateCountManager interface {
 	logical.CertificateCounter
 	// StartConsumerJob starts a background job that periodically reports the counts to the
 	// given consumer. If a job is already running, it will be stopped and replaced.
-	StartConsumerJob(consumer PkiCertificateCountConsumer)
+	StartConsumerJob(consumer CertificateCountConsumer)
 
 	// StopConsumerJob stops the background job for the certificate count consumer, if one
 	// is running.
@@ -40,7 +40,7 @@ type PkiCertificateCountManager interface {
 	GetCounts() logical.CertCount
 }
 
-// certCountManager is an implementation of PkiCertificateCountManager.
+// certCountManager is an implementation of CertificateCountManager.
 type certCountManager struct {
 	count     logical.CertCount
 	countLock sync.RWMutex
@@ -51,20 +51,20 @@ type certCountManager struct {
 	logger hclog.Logger
 }
 
-var _ PkiCertificateCountManager = (*certCountManager)(nil)
+var _ CertificateCountManager = (*certCountManager)(nil)
 
-// InitPkiCertificateCountManager creates a new PkiCertificateCountManager, or a null
+// InitCertificateCountManager creates a new CertificateCountManager, or a null
 // implementation if certificate counting is disabled via the presence of the
 // VAULT_DISABLE_CERT_COUNT environment variable (with any value).
-func InitPkiCertificateCountManager(logger hclog.Logger) PkiCertificateCountManager {
+func InitCertificateCountManager(logger hclog.Logger) CertificateCountManager {
 	if os.Getenv(envVaultDisableCertCount) != "" {
-		logger.Warn("PKI certificate counting disabled via environment variable")
-		return newNullPkiCertificateCountManager()
+		logger.Warn("certificate counting disabled via environment variable")
+		return newNullCertificateCountManager()
 	}
-	return newPkiCertificateCountManager(logger)
+	return newCertificateCountManager(logger)
 }
 
-func newPkiCertificateCountManager(logger hclog.Logger) PkiCertificateCountManager {
+func newCertificateCountManager(logger hclog.Logger) CertificateCountManager {
 	ret := &certCountManager{
 		count:           logical.CertCount{},
 		reportTimerStop: nil,
@@ -73,7 +73,7 @@ func newPkiCertificateCountManager(logger hclog.Logger) PkiCertificateCountManag
 	return ret
 }
 
-func (m *certCountManager) StartConsumerJob(consumer PkiCertificateCountConsumer) {
+func (m *certCountManager) StartConsumerJob(consumer CertificateCountConsumer) {
 	m.reportTimerStopLock.Lock()
 	defer m.reportTimerStopLock.Unlock()
 
@@ -83,7 +83,7 @@ func (m *certCountManager) StartConsumerJob(consumer PkiCertificateCountConsumer
 	go m.reportLoop(m.reportTimerStop, consumer)
 }
 
-func (m *certCountManager) reportLoop(stop chan struct{}, consumer PkiCertificateCountConsumer) {
+func (m *certCountManager) reportLoop(stop chan struct{}, consumer CertificateCountConsumer) {
 	reportTicker := time.NewTicker(consumerJobInterval)
 	defer reportTicker.Stop()
 
@@ -100,7 +100,7 @@ func (m *certCountManager) reportLoop(stop chan struct{}, consumer PkiCertificat
 	}
 }
 
-func (m *certCountManager) consumeCount(consumer PkiCertificateCountConsumer) {
+func (m *certCountManager) consumeCount(consumer CertificateCountConsumer) {
 	m.countLock.Lock()
 	defer m.countLock.Unlock()
 
@@ -133,7 +133,7 @@ func (m *certCountManager) AddCount(params logical.CertCount) {
 
 	m.count.Add(params)
 
-	m.logger.Trace("incremented in-memory PKI certificate counts", "issuedCerts", m.count.IssuedCerts, "storedCerts", m.count.StoredCerts)
+	m.logger.Trace("incremented in-memory certificate counts", "issuedCerts", m.count.IssuedCerts, "storedCerts", m.count.StoredCerts)
 }
 
 func (m *certCountManager) Increment() logical.CertCountIncrementer {
@@ -149,36 +149,36 @@ func (m *certCountManager) GetCounts() (issuedCount logical.CertCount) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// nullPkiCertificateCountManager
+// nullCertificateCountManager
 
-type nullPkiCertificateCountManager struct{}
+type nullCertificateCountManager struct{}
 
-var _ PkiCertificateCountManager = (*nullPkiCertificateCountManager)(nil)
+var _ CertificateCountManager = (*nullCertificateCountManager)(nil)
 
-func newNullPkiCertificateCountManager() PkiCertificateCountManager {
-	return &nullPkiCertificateCountManager{}
+func newNullCertificateCountManager() CertificateCountManager {
+	return &nullCertificateCountManager{}
 }
 
-func (n *nullPkiCertificateCountManager) AddCount(_ logical.CertCount) {
+func (n *nullCertificateCountManager) AddCount(_ logical.CertCount) {
 	// nothing to do
 }
 
-func (n *nullPkiCertificateCountManager) Increment() logical.CertCountIncrementer {
+func (n *nullCertificateCountManager) Increment() logical.CertCountIncrementer {
 	return logical.NewCertCountIncrementer(n)
 }
 
-func (n *nullPkiCertificateCountManager) AddIssuedCertificate(_ bool, _ *x509.Certificate) {
+func (n *nullCertificateCountManager) AddIssuedCertificate(_ bool, _ *x509.Certificate) {
 	// nothing to do
 }
 
-func (n *nullPkiCertificateCountManager) StartConsumerJob(_ PkiCertificateCountConsumer) {
+func (n *nullCertificateCountManager) StartConsumerJob(_ CertificateCountConsumer) {
 	// nothing to do
 }
 
-func (n *nullPkiCertificateCountManager) StopConsumerJob() {
+func (n *nullCertificateCountManager) StopConsumerJob() {
 	// nothing to do
 }
 
-func (n *nullPkiCertificateCountManager) GetCounts() (issuedCount logical.CertCount) {
+func (n *nullCertificateCountManager) GetCounts() (issuedCount logical.CertCount) {
 	return logical.CertCount{}
 }

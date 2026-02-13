@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
-package pki_cert_count
+package cert_count
 
 import (
 	"crypto/rand"
@@ -47,10 +47,10 @@ func createTestCertificate(t *testing.T, validity time.Duration) *x509.Certifica
 	return cert
 }
 
-// TestPkiCertificateCountManager_IncrementAndConsume tests the behaviour of
-// PkiCertificateCountManager.
-func TestPkiCertificateCountManager_IncrementAndConsume(t *testing.T) {
-	manager := newPkiCertificateCountManager(hclog.NewNullLogger())
+// TestCertificateCountManager_IncrementAndConsume tests the behaviour of
+// CertificateCountManager.
+func TestCertificateCountManager_IncrementAndConsume(t *testing.T) {
+	manager := newCertificateCountManager(hclog.NewNullLogger())
 	consumerJobInterval = 10 * time.Millisecond
 
 	firstConsumerTotalCount := &atomic.Uint64{}
