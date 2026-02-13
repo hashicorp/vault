@@ -15,6 +15,7 @@ const (
 	groupsTable        = "groups"
 	groupAliasesTable  = "group_aliases"
 	oidcClientsTable   = "oidc_clients"
+	scimClientsTable   = "scim_clients"
 )
 
 func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
@@ -28,7 +29,7 @@ func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
 		groupsTableSchema,
 		groupAliasesTableSchema,
 		oidcClientsTableSchema,
-		scimConfigSchema,
+		scimClientSchema,
 	}
 
 	for _, schemaFunc := range schemas {

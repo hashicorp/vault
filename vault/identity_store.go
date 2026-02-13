@@ -33,7 +33,6 @@ import (
 const (
 	groupBucketsPrefix        = "packer/group/buckets/"
 	localAliasesBucketsPrefix = "packer/local-aliases/buckets/"
-	scimBucketsPrefix         = "packer/scim/buckets/"
 )
 
 var (
@@ -112,11 +111,6 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	iStore.groupPacker, err = storagepacker.NewStoragePacker(iStore.view, groupsPackerLogger, groupBucketsPrefix)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create group packer: %w", err)
-	}
-
-	iStore.scimConfigPacker, err = storagepacker.NewStoragePacker(iStore.view, scimPackerLogger, scimBucketsPrefix)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create scim packer: %w", err)
 	}
 
 	iStore.Backend = &framework.Backend{
@@ -661,6 +655,8 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	case strings.HasPrefix(key, localAliasesBucketsPrefix):
 		// key is for a local alias bucket in storage.
 		i.invalidateLocalAliasesBucket(ctx, key)
+	case strings.HasPrefix(key, scimClientStoragePrefix):
+		i.invalidateSCIMClient(ctx, key)
 	}
 }
 
@@ -947,8 +943,8 @@ func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key st
 	//
 	// The logic iterates over every local alias stored at the invalidated key.
 	// For each local alias read from the storage entry, the set of local
-	// aliases read from MemDB is searched for the same local alias. If it can't
-	// be found, it means that it needs to be inserted into MemDB. However, if
+	// aliases read from MemDB is searched for the same local alias. If it can't be
+	// found, it means that it needs to be inserted into MemDB. However, if
 	// it's found, it must be compared with the local alias from the storage. If
 	// they don't match, it means that the local alias in MemDB needs to be
 	// updated. If they did match, it means that this particular local alias did
