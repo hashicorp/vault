@@ -11,6 +11,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -26,6 +27,10 @@ const (
 	KmipEnabledPrefix                       = "kmipEnabled/"
 
 	BillingWriteInterval = 10 * time.Minute
+	// pluginCountsSendTimeout is the timeout for sending plugin counts to the active node
+	PluginCountsSendTimeout = 30 * time.Second
+	// pluginCountsStandbyTime is how long to wait before sending plugin counts from a perf standby
+	PluginCountsStandbyTime = 10 * time.Minute
 )
 
 var BillingMonthStorageFormat = "%s%d/%02d/%s" // e.g replicated/2026/01/maxKvCounts/
@@ -48,15 +53,22 @@ type BillingConfig struct {
 	MetricsUpdateCadence time.Duration
 	// For testing purposes. The cadence at which plugin counts are sent from perf standby to active
 	PluginCountsSendCadence time.Duration
+	// For testin purposes. TestOverrideClock holds a custom clock to modify time.Now, time.Ticker, time.Timer.
+	// If nil, the default functions from the time package are used
+	TestOverrideClock timeutil.Clock
 }
 
-func GetMonthlyBillingPath(localPrefix string, now time.Time, billingMetric string) string {
+func GetMonthlyBillingMetricPath(localPrefix string, now time.Time, billingMetric string) string {
 	// Normalize to avoid double slashes since our prefixes include trailing "/".
 	// Example: localPrefix="replicated/", billingMetric="maxKvCounts/" =>
 	// "replicated/2026/01/maxKvCounts/"
 	year := now.Year()
 	month := int(now.Month())
 	return fmt.Sprintf(BillingMonthStorageFormat, localPrefix, year, month, billingMetric)
+}
+
+func GetMonthlyBillingPath(localPrefix string, now time.Time) string {
+	return fmt.Sprintf(BillingMonthStorageFormat, localPrefix, now.Year(), int(now.Month()), "")
 }
 
 type DataProtectionCallCounts struct {
