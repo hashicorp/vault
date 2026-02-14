@@ -64,10 +64,20 @@ func NewOASDocumentFromMap(input map[string]interface{}) (*OASDocument, error) {
 		return inputRaw, nil
 	}
 
+	// mapstructure does a strings.EqualFold check between a struct key and a map key.
+	// This does not work for $ref key, a custom match is needed to cover this edge case.
+	matchName := func(mapKey, fieldName string) bool {
+		if strings.HasPrefix(mapKey, "$") {
+			return strings.EqualFold(mapKey[1:], fieldName)
+		}
+		return strings.EqualFold(mapKey, fieldName)
+	}
+
 	doc := new(OASDocument)
 
 	config := &mapstructure.DecoderConfig{
 		DecodeHook: decodeHook,
+		MatchName:  matchName,
 		Result:     doc,
 	}
 
