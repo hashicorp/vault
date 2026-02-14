@@ -3777,7 +3777,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 			entry.PathSuffix = data.Get("path_suffix").(string)
 		}
 
-		if strings.Contains(entry.PathSuffix, "..") {
+		if consts.PathContainsParentReferences(entry.PathSuffix) {
 			return logical.ErrorResponse(fmt.Sprintf("error registering path suffix: %s", consts.ErrPathContainsParentReferences)), nil
 		}
 
