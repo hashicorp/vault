@@ -593,6 +593,7 @@ func (c *AgentCommand) Run(args []string) int {
 			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
 			UserAgent:                    useragent.AgentAutoAuthString(),
 			MetricsSignifier:             "agent",
+			LeaseRenewalThreshold:        config.AutoAuth.Method.LeaseRenewalThreshold,
 		})
 
 		ss = sink.NewSinkServer(&sink.SinkServerConfig{

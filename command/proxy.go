@@ -573,6 +573,7 @@ func (c *ProxyCommand) Run(args []string) int {
 			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
 			UserAgent:                    useragent.ProxyAutoAuthString(),
 			MetricsSignifier:             "proxy",
+			LeaseRenewalThreshold:        config.AutoAuth.Method.LeaseRenewalThreshold,
 		})
 
 		authInProgress = ah.AuthInProgress
