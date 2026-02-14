@@ -377,7 +377,7 @@ func (b *FileBackend) expandPath(k string) (string, string) {
 
 func (b *FileBackend) validatePath(path string) error {
 	switch {
-	case strings.Contains(path, ".."):
+	case consts.PathContainsParentReferences(path):
 		return consts.ErrPathContainsParentReferences
 	}
 
