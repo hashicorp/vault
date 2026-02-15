@@ -4,8 +4,12 @@
 package ldap
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
+	"strings"
+	"unicode/utf16"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -31,7 +35,7 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 				ForwardPerformanceStandby:   true,
 			},
 		},
-
+		Fields:          map[string]*framework.FieldSchema{},
 		HelpSynopsis:    pathConfigRotateRootHelpSyn,
 		HelpDescription: pathConfigRotateRootHelpDesc,
 	}
@@ -118,7 +122,22 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 		return err
 	}
 
-	lreq.Replace("userPassword", []string{newPassword})
+	// Support both OpenLDAP and AD root rotation
+	if cfg.Schema == "ad" {
+		// AD requires unicodePwd, UTF-16LE encoding, and quoted string
+		// AD password changes must be done over a secure connection (LDAPS)
+		quotedPwd := "\"" + newPassword + "\""
+		utf16Pwd := utf16leEncode(quotedPwd)
+		lreq.Replace("unicodePwd", []string{utf16Pwd})
+
+		// Log a warning if not using LDAPS for AD
+		if !strings.HasPrefix(strings.ToLower(rotateConfig.Url), "ldaps://") {
+			b.Logger().Warn("Active Directory password rotation should use LDAPS (ldaps://) for security")
+		}
+	} else {
+		// OpenLDAP uses userPassword attribute with plain text
+		lreq.Replace("userPassword", []string{newPassword})
+	}
 
 	err = conn.Modify(lreq)
 	if err != nil {
@@ -136,6 +155,15 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 	}
 
 	return nil
+}
+
+func utf16leEncode(s string) string {
+	utf := utf16.Encode([]rune(s))
+	buf := new(bytes.Buffer)
+	for _, v := range utf {
+		binary.Write(buf, binary.LittleEndian, v)
+	}
+	return buf.String()
 }
 
 const pathConfigRotateRootHelpSyn = `

@@ -287,6 +287,11 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Description: "If true, matching sAMAccountName attribute values will be allowed to login when upndomain is defined.",
 			Default:     false,
 		},
+		"schema": {
+			Type:        framework.TypeString,
+			Description: "The LDAP schema type (e.g., 'ad' for Active Directory, 'openldap' for OpenLDAP). Defaults to 'openldap'.",
+			Default:     "openldap",
+		},
 	}
 }
 
@@ -469,6 +474,14 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.EnableSamaccountnameLogin = d.Get("enable_samaccountname_login").(bool)
 	}
 
+	if _, ok := d.Raw["schema"]; ok || !hadExisting {
+		cfg.Schema = strings.ToLower(d.Get("schema").(string))
+		// Default to openldap if not specified
+		if cfg.Schema == "" {
+			cfg.Schema = "openldap"
+		}
+	}
+
 	return cfg, nil
 }
 
@@ -498,6 +511,7 @@ type ConfigEntry struct {
 	ConnectionTimeout        int    `json:"connection_timeout"` // deprecated: use RequestTimeout
 	DerefAliases             string `json:"dereference_aliases"`
 	MaximumPageSize          int    `json:"max_page_size"`
+	Schema                   string `json:"schema"` // LDAP schema type: "ad" for Active Directory, "openldap" for OpenLDAP
 
 	// These json tags deviate from snake case because there was a past issue
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.
@@ -541,6 +555,7 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"dereference_aliases":         c.DerefAliases,
 		"max_page_size":               c.MaximumPageSize,
 		"enable_samaccountname_login": c.EnableSamaccountnameLogin,
+		"schema":                      c.Schema,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames
