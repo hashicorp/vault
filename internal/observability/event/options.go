@@ -21,14 +21,17 @@ type Option func(*options) error
 
 // Options are used to represent configuration for an Event.
 type options struct {
-	withID          string
-	withNow         time.Time
-	withFacility    string
-	withTag         string
-	withSocketType  string
-	withMaxDuration time.Duration
-	withFileMode    *os.FileMode
-	withLogger      hclog.Logger
+	withID              string
+	withNow             time.Time
+	withFacility        string
+	withTag             string
+	withSocketType      string
+	withMaxDuration     time.Duration
+	withFileMode        *os.FileMode
+	withMaxFiles        int
+	withMaxBytes        int64
+	withMaxDurationFile time.Duration
+	withLogger          hclog.Logger
 }
 
 // getDefaultOptions returns Options with their default values.
@@ -36,12 +39,15 @@ func getDefaultOptions() options {
 	fileMode := os.FileMode(0o600)
 
 	return options{
-		withNow:         time.Now(),
-		withFacility:    "AUTH",
-		withTag:         "vault",
-		withSocketType:  "tcp",
-		withMaxDuration: 2 * time.Second,
-		withFileMode:    &fileMode,
+		withNow:             time.Now(),
+		withFacility:        "AUTH",
+		withTag:             "vault",
+		withSocketType:      "tcp",
+		withMaxDuration:     2 * time.Second,
+		withFileMode:        &fileMode,
+		withMaxFiles:        0,
+		withMaxBytes:        0,
+		withMaxDurationFile: 24 * time.Hour,
 	}
 }
 
@@ -200,6 +206,69 @@ func WithFileMode(mode string) Option {
 			m := os.FileMode(raw)
 			o.withFileMode = &m
 		}
+
+		return nil
+	}
+}
+
+// WithMaxFiles provides an Option to represent a maximum number of older log
+// files to keep.
+func WithMaxFiles(number string) Option {
+	return func(o *options) error {
+		number = strings.TrimSpace(number)
+
+		if number == "" {
+			return nil
+		}
+
+		parsed, err := strconv.Atoi(number)
+		if err != nil {
+			return fmt.Errorf("unable to parse max files: %w", ErrExternalOptions)
+		}
+
+		o.withMaxFiles = parsed
+
+		return nil
+	}
+}
+
+// WithMaxBytes provides an Option to represent a maximum number of bytes
+// that should be written to a log before it needs to be rotated.
+func WithMaxBytes(number string) Option {
+	return func(o *options) error {
+		number = strings.TrimSpace(number)
+
+		if number == "" {
+			return nil
+		}
+
+		parsed, err := strconv.ParseInt(number, 10, 64)
+		if err != nil {
+			return fmt.Errorf("unable to parse max file bytes: %w", ErrExternalOptions)
+		}
+
+		o.withMaxBytes = parsed
+
+		return nil
+	}
+}
+
+// WithMaxDurationFile provides an Option to represent the max duration a log
+// should be written to before it needs to be rotated.
+func WithMaxDurationFile(duration string) Option {
+	return func(o *options) error {
+		duration = strings.TrimSpace(duration)
+
+		if duration == "" {
+			return nil
+		}
+
+		parsed, err := parseutil.ParseDurationSecond(duration)
+		if err != nil {
+			return fmt.Errorf("unable to parse max file duration: %w: %w", ErrExternalOptions, err)
+		}
+
+		o.withMaxDurationFile = parsed
 
 		return nil
 	}

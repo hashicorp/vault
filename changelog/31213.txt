@@ -1,0 +1,3 @@
+```release-note:improvement
+core/audit: Support audit log file rotation.
+```
