@@ -315,14 +315,12 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 				// Calculate remaining duration until initial token lease expires
 				remainingLeaseDuration = initialTime.Add(time.Duration(initLeaseDuration) * time.Second).Sub(time.Now())
 				if errorBackoff == nil {
-					errorBackoff = &backoff.ExponentialBackOff{
-						MaxElapsedTime:      remainingLeaseDuration,
-						RandomizationFactor: backoff.DefaultRandomizationFactor,
-						InitialInterval:     initialRetryInterval,
-						MaxInterval:         5 * time.Minute,
-						Multiplier:          2,
-						Clock:               backoff.SystemClock,
-					}
+					errorBackoff = backoff.NewExponentialBackOff(
+						backoff.WithMaxElapsedTime(remainingLeaseDuration),
+						backoff.WithInitialInterval(initialRetryInterval),
+						backoff.WithMaxInterval(5*time.Minute),
+						backoff.WithMultiplier(2),
+					)
 					errorBackoff.Reset()
 				}
 				break
