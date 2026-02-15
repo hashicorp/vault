@@ -13,6 +13,7 @@
           <Icon @name="pencil-tool" /><Icon @name="git-branch" />
         </div>
       </div>
+      <Hds::Link::Standalone @text="Showcase" @icon="package" @color="secondary" @route="vault.cluster.showcase" />
     {{/if}}
   </AF.ExtraBefore>
   <AF.Link @href={{changelog-url-for this.version.version}} data-test-footer-version>
