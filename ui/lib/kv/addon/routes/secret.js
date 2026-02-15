@@ -92,7 +92,7 @@ export default class KvSecretRoute extends Route {
 
   async model() {
     const backend = this.secretMountPath.currentPath;
-    const { name: path } = this.paramsFor('secret');
+    const { path_to_secret: path } = this.paramsFor('secret');
     const capabilities = await this.fetchCapabilities(backend, path);
     const subkeys = await this.fetchSubkeys(backend, path);
     const metadata = await this.fetchSecretMetadata(backend, path);
