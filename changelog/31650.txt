@@ -1,0 +1,3 @@
+```release-note:bug
+http: allow empty request bodies in JSON parsing
+```

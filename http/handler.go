@@ -896,7 +896,10 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 		reader = io.NopCloser(io.TeeReader(reader, origBody))
 	}
 	err := jsonutil.DecodeJSONFromReader(reader, out)
-	if err != nil && err != io.EOF {
+	if err == io.EOF {
+		// Empty body is not an error.
+		err = nil
+	} else if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON input: %w", err)
 	}
 	if origBody != nil {
