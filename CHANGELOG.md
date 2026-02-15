@@ -1138,7 +1138,6 @@ BUG FIXES:
 
 SECURITY:
 
-* raft/snapshotagent (enterprise): upgrade raft-snapshotagent to v0.0.0-20241115202008-166203013d8e
 * raft/snapshotagent (enterprise): upgrade raft-snapshotagent to v0.2.0
 
 CHANGES:
