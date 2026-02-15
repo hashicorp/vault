@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
@@ -449,7 +450,23 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			return nil, fmt.Errorf("error signing/generating certificate: %w", err)
 		}
 	}
-
+	// Validation Code, assuming we need to validate the entire chain of constraints
+	certChainPool := x509.NewCertPool()
+	for _, certificate := range parsedBundle.CAChain {
+		certChainPool.AddCert(certificate.Certificate)
+	}
+	options := x509.VerifyOptions{
+		Intermediates:             nil, // We aren't verifying the chain here, this would do more work
+		Roots:                     certChainPool,
+		CurrentTime:               time.Time{},
+		KeyUsages:                 nil,
+		MaxConstraintComparisions: 0, // This means infinite
+		//
+	}
+	_, err = parsedBundle.Certificate.Verify(options) // By default this does name constraints
+	if err != nil {
+		return nil, err
+	}
 	generateLease := false
 	if role.GenerateLease != nil && *role.GenerateLease {
 		generateLease = true
