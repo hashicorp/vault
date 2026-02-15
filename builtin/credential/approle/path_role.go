@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -108,6 +109,7 @@ type roleIDStorageEntry struct {
 // role/<role_name>/secret-id/destroy - For deleting a secret_id
 // role/<role_name>/secret-id-accessor/lookup - For reading secret_id using accessor
 // role/<role_name>/secret-id-accessor/destroy - For deleting secret_id using accessor
+// role/<role_name>/secret-id/lookup-by-metadata - For looking up secret_ids by metadata
 func rolePaths(b *backend) []*framework.Path {
 	defTokenFields := tokenutil.TokenFields()
 
@@ -1119,6 +1121,36 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-accessor"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-accessor"][1]),
+		},
+		{
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/lookup-by-metadata",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixAppRole,
+				OperationSuffix: "secret-id-by-metadata",
+				OperationVerb:   "look-up",
+			},
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": {
+					Type:        framework.TypeString,
+					Required:    true,
+					Description: "Name of the role.",
+				},
+				"alias": {
+					Type:        framework.TypeString,
+					Description: "Alias to filter secret IDs by.",
+				},
+				"cidr": {
+					Type:        framework.TypeString,
+					Description: "CIDR to filter secret IDs by (exact string match).",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleSecretIDLookupByMetadata,
+				},
+			},
+			HelpSynopsis:    "Look up a secret_id by metadata.",
+			HelpDescription: "This endpoint looks up secret_ids for a role based on metadata such as alias or CIDR.",
 		},
 		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-accessor/destroy/?$",
@@ -3140,6 +3172,27 @@ func (b *backend) roleIDEntryDelete(ctx context.Context, s logical.Storage, role
 	return s.Delete(ctx, entryIndex)
 }
 
+// getSecretIDEntryByAccessor retrieves a secretID entry using its accessor
+func (b *backend) getSecretIDEntryByAccessor(ctx context.Context, s logical.Storage, role *roleStorageEntry, secretIDAccessor string) (*secretIDStorageEntry, error) {
+	// Get the accessor entry
+	accessorEntry, err := b.secretIDAccessorEntry(ctx, s, secretIDAccessor, role.SecretIDPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read secret ID accessor entry: %w", err)
+	}
+	if accessorEntry == nil {
+		return nil, nil
+	}
+
+	// Get the role name HMAC
+	roleNameHMAC, err := createHMAC(role.HMACKey, role.name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HMAC of role_name: %w", err)
+	}
+
+	// Get the secret ID entry
+	return b.nonLockedSecretIDStorageEntry(ctx, s, role.SecretIDPrefix, roleNameHMAC, accessorEntry.SecretIDHMAC)
+}
+
 var roleHelp = map[string][2]string{
 	"role-list": {
 		"Lists all the roles registered with the backend.",
@@ -3290,4 +3343,120 @@ will pick up the new value during its next renewal.`,
 This can only be set during role creation and once set, it can't be
 reset later.`,
 	},
+}
+
+func (b *backend) pathRoleSecretIDLookupByMetadata(
+	ctx context.Context,
+	req *logical.Request,
+	data *framework.FieldData,
+) (*logical.Response, error) {
+	roleName := data.Get("role_name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	aliasFilter := data.Get("alias").(string)
+	cidrFilter := data.Get("cidr").(string)
+
+	if aliasFilter == "" && cidrFilter == "" {
+		return logical.ErrorResponse("at least one filter (alias or cidr) must be provided"), nil
+	}
+
+	// Lock role for read-only access
+	roleLock := b.roleLock(roleName)
+	roleLock.RLock()
+	defer roleLock.RUnlock()
+
+	// Load role definition
+	role, err := b.roleEntry(ctx, req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse(fmt.Sprintf("role %q not found", roleName)), nil
+	}
+
+	// List all secret ID accessors for the role
+	listResp, err := b.pathRoleSecretIDList(ctx, req, data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list secret IDs for role %q: %w", roleName, err)
+	}
+	if listResp == nil || listResp.Data["keys"] == nil {
+		return logical.ListResponse([]string{}), nil
+	}
+
+	// Normalize accessor list
+	var accessors []string
+	switch raw := listResp.Data["keys"].(type) {
+	case []string:
+		accessors = raw
+	case []interface{}:
+		for _, v := range raw {
+			if s, ok := v.(string); ok {
+				accessors = append(accessors, s)
+			}
+		}
+	}
+
+	var matchingAccessors []string
+	for _, accessor := range accessors {
+		entry, err := b.getSecretIDEntryByAccessor(ctx, req.Storage, role, accessor)
+		if err != nil {
+			b.Logger().Warn("failed to get secret ID entry for accessor, skipping",
+				"accessor", accessor, "error", err)
+			continue
+		}
+		if entry == nil {
+			continue
+		}
+
+		// Apply alias filter
+		alias := ""
+		if entry.Metadata != nil {
+			alias = entry.Metadata["alias"]
+		}
+		if aliasFilter != "" && alias != aliasFilter {
+			continue
+		}
+
+		// Gather CIDRs from metadata if present (support comma-separated or single)
+		var cidrs []string
+		if entry.Metadata != nil && entry.Metadata["cidr"] != "" {
+			cidrs = strings.Split(entry.Metadata["cidr"], ",")
+		}
+
+		// Apply CIDR filter
+		if cidrFilter != "" {
+			matched := false
+			ip := net.ParseIP(cidrFilter)
+			if ip != nil {
+				// User provided an IP; match if contained in any stored CIDR
+				for _, cidr := range cidrs {
+					_, network, err := net.ParseCIDR(strings.TrimSpace(cidr))
+					if err != nil {
+						continue
+					}
+					if network.Contains(ip) {
+						matched = true
+						break
+					}
+				}
+			} else {
+				// User provided a CIDR; match if any stored CIDR matches exactly (after trimming)
+				for _, cidr := range cidrs {
+					if strings.TrimSpace(cidr) == cidrFilter {
+						matched = true
+						break
+					}
+				}
+			}
+			if !matched {
+				continue
+			}
+		}
+
+		matchingAccessors = append(matchingAccessors, accessor)
+	}
+
+	return logical.ListResponse(matchingAccessors), nil
 }
