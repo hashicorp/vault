@@ -13,7 +13,8 @@
             @models={{array "groups" gid "details"}}
             class="is-block has-text-black has-text-weight-semibold"
           >
-            <Icon @name="folder" class="has-text-grey-light" />{{gid}}
+            <Icon @name="folder" class="has-text-grey-light" />
+            <Identity::GroupName @groupId={{gid}} />
           </LinkTo>
         </div>
         <div class="column has-text-right">
