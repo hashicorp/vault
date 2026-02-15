@@ -1,0 +1,19 @@
+{
+	"name": "Hashicorp - Vault",
+	"image": "hashicorp/vault",
+	"containerEnv": {
+		"VAULT_ADDR": "http://127.0.0.1:8200"
+	},
+	"postStartCommand": "sh -c 'vault server -dev'",
+	"forwardPorts": [8200, 8201],
+	"portsAttributes": {
+		"8200": {
+			"label": "Vault UI",
+			"onAutoForward": "notify"
+		},
+		"8201": {
+			"label": "Vault API",
+			"onAutoForward": "notify"
+		}
+	}
+}
