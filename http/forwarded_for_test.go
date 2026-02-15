@@ -335,6 +335,88 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 	})
 
+	// Next: test a valid (unverified) certificate being sent in urlencoded PEM format
+	t.Run("pass_cert_pem", func(t *testing.T) {
+		t.Parallel()
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
+			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(base64.StdEncoding.EncodeToString(r.TLS.PeerCertificates[0].Raw)))
+			})
+			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
+			listenerConfig.XForwardedForClientCertHeader = "X-Forwarded-Tls-Client-Cert"
+			listenerConfig.XForwardedForClientCertHeaderDecoders = "URL,DER"
+			return WrapForwardedForHandler(origHandler, listenerConfig)
+		}
+
+		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+			HandlerFunc: HandlerFunc(testHandler),
+		})
+		cluster.Start()
+		defer cluster.Cleanup()
+		client := cluster.Cores[0].Client
+
+		req := client.NewRequest("GET", "/")
+		req.Headers = make(http.Header)
+		req.Headers.Set("x-forwarded-for", "5.6.7.8")
+		testcertificate := `-----BEGIN%20CERTIFICATE-----%0AMIIDtTCCAp2gAwIBAgIUf%2BjhKTFBnqSs34II0WS1L4QsbbAwDQYJKoZIhvcNAQEL%0ABQAwFjEUMBIGA1UEAxMLZXhhbXBsZS5jb20wHhcNMTYwMjI5MDIyNzQxWhcNMjUw%0AMTA1MTAyODExWjAbMRkwFwYDVQQDExBjZXJ0LmV4YW1wbGUuY29tMIIBIjANBgkq%0AhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsZx0Svr82YJpFpIy4fJNW5fKA6B8mhxS%0ATRAVnygAftetT8puHflY0ss7Y6X2OXjsU0PRn%2B1PswtivhKi%2BeLtgWkUF9cFYFGn%0ASgMld6ZWRhNheZhA6ZfQmeM/BF2pa5HK2SDF36ljgjL9T%2BnWrru2Uv0BCoHzLAmi%0AYYMiIWplidMmMO5NTRG3k%2B3AN0TkfakB6JVzjLGhTcXdOcVEMXkeQVqJMAuGouU5%0AdonyqtnaHuIJGuUdy54YDnX86txhOQhAv6r7dHXzZxS4pmLvw8UI1rsSf/GLcUVG%0AB%2B5%2BAAGF5iuHC3N2DTl4xz3FcN4Cb4w9pbaQ7%2BmCzz%2BanqiJfyr2nwIDAQABo4H1%0AMIHyMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAdBgNVHQ4EFgQUm%2B%2Be%0AHpyM3p708bgZJuRYEdX1o%2BUwHwYDVR0jBBgwFoAUncSzT/6HMexyuiU9/7EgHu%2Bo%0Ak5swOwYIKwYBBQUHAQEELzAtMCsGCCsGAQUFBzAChh9odHRwOi8vMTI3LjAuMC4x%0AOjgyMDAvdjEvcGtpL2NhMCEGA1UdEQQaMBiCEGNlcnQuZXhhbXBsZS5jb22HBH8A%0AAAEwMQYDVR0fBCowKDAmoCSgIoYgaHR0cDovLzEyNy4wLjAuMTo4MjAwL3YxL3Br%0AaS9jcmwwDQYJKoZIhvcNAQELBQADggEBABsuvmPSNjjKTVN6itWzdQy%2BSgMIrwfs%0AX1Yb9Lefkkwmp9ovKFNQxa4DucuCuzXcQrbKwWTfHGgR8ct4rf30xCRoA7dbQWq4%0AaYqNKFWrRaBRAaaYZ/O1ApRTOrXqRx9Eqr0H1BXLsoAq%2BmWassL8sf6siae%2BCpwA%0AKqBko5G0dNXq5T4i2LQbmoQSVetIrCJEeMrU%2BidkuqfV2h1BQKgSEhFDABjFdTCN%0AQDAHsEHsi2M4/jRW9fqEuhHSDfl2n7tkFUI8wTHUUCl7gXwweJ4qtaSXIwKXYzNj%0AxqKHA8Purc1Yfybz4iE1JCROi9fInKlzr5xABq8nb9Qc/J9DIQM%2BXmk%3D%0A-----END%20CERTIFICATE-----%0A`
+		req.Headers.Set("x-forwarded-tls-client-cert", testcertificate)
+		resp, err := client.RawRequest(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		buf := bytes.NewBuffer(nil)
+		buf.ReadFrom(resp.Body)
+		testcertificate, _ = url.PathUnescape(testcertificate)
+		// Strip begin/end for comparison
+		expectedCert := testcertificate[27 : len(testcertificate)-26]
+		if !strings.Contains(buf.String(), strings.ReplaceAll(expectedCert, "\n", "")) {
+			t.Fatalf("bad body: %v vs %v", buf.String(), expectedCert)
+		}
+	})
+
+	// Next: test a valid (unverified) certificate being sent in urlencoded PEM format with Amazon ALB specific encoding
+	t.Run("pass_cert_pem_alb", func(t *testing.T) {
+		t.Parallel()
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
+			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(base64.StdEncoding.EncodeToString(r.TLS.PeerCertificates[0].Raw)))
+			})
+			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
+			listenerConfig.XForwardedForClientCertHeader = "X-Forwarded-Tls-Client-Cert"
+			listenerConfig.XForwardedForClientCertHeaderDecoders = "URL,DER"
+			return WrapForwardedForHandler(origHandler, listenerConfig)
+		}
+
+		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+			HandlerFunc: HandlerFunc(testHandler),
+		})
+		cluster.Start()
+		defer cluster.Cleanup()
+		client := cluster.Cores[0].Client
+
+		req := client.NewRequest("GET", "/")
+		req.Headers = make(http.Header)
+		req.Headers.Set("x-forwarded-for", "5.6.7.8")
+		testcertificate := `-----BEGIN%20CERTIFICATE-----%0AMIIDtTCCAp2gAwIBAgIUf+jhKTFBnqSs34II0WS1L4QsbbAwDQYJKoZIhvcNAQEL%0ABQAwFjEUMBIGA1UEAxMLZXhhbXBsZS5jb20wHhcNMTYwMjI5MDIyNzQxWhcNMjUw%0AMTA1MTAyODExWjAbMRkwFwYDVQQDExBjZXJ0LmV4YW1wbGUuY29tMIIBIjANBgkq%0AhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsZx0Svr82YJpFpIy4fJNW5fKA6B8mhxS%0ATRAVnygAftetT8puHflY0ss7Y6X2OXjsU0PRn+1PswtivhKi+eLtgWkUF9cFYFGn%0ASgMld6ZWRhNheZhA6ZfQmeM/BF2pa5HK2SDF36ljgjL9T+nWrru2Uv0BCoHzLAmi%0AYYMiIWplidMmMO5NTRG3k+3AN0TkfakB6JVzjLGhTcXdOcVEMXkeQVqJMAuGouU5%0AdonyqtnaHuIJGuUdy54YDnX86txhOQhAv6r7dHXzZxS4pmLvw8UI1rsSf/GLcUVG%0AB+5+AAGF5iuHC3N2DTl4xz3FcN4Cb4w9pbaQ7+mCzz+anqiJfyr2nwIDAQABo4H1%0AMIHyMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAdBgNVHQ4EFgQUm++e%0AHpyM3p708bgZJuRYEdX1o+UwHwYDVR0jBBgwFoAUncSzT/6HMexyuiU9/7EgHu+o%0Ak5swOwYIKwYBBQUHAQEELzAtMCsGCCsGAQUFBzAChh9odHRwOi8vMTI3LjAuMC4x%0AOjgyMDAvdjEvcGtpL2NhMCEGA1UdEQQaMBiCEGNlcnQuZXhhbXBsZS5jb22HBH8A%0AAAEwMQYDVR0fBCowKDAmoCSgIoYgaHR0cDovLzEyNy4wLjAuMTo4MjAwL3YxL3Br%0AaS9jcmwwDQYJKoZIhvcNAQELBQADggEBABsuvmPSNjjKTVN6itWzdQy+SgMIrwfs%0AX1Yb9Lefkkwmp9ovKFNQxa4DucuCuzXcQrbKwWTfHGgR8ct4rf30xCRoA7dbQWq4%0AaYqNKFWrRaBRAaaYZ/O1ApRTOrXqRx9Eqr0H1BXLsoAq+mWassL8sf6siae+CpwA%0AKqBko5G0dNXq5T4i2LQbmoQSVetIrCJEeMrU+idkuqfV2h1BQKgSEhFDABjFdTCN%0AQDAHsEHsi2M4/jRW9fqEuhHSDfl2n7tkFUI8wTHUUCl7gXwweJ4qtaSXIwKXYzNj%0AxqKHA8Purc1Yfybz4iE1JCROi9fInKlzr5xABq8nb9Qc/J9DIQM+Xmk=%0A-----END%20CERTIFICATE-----%0A`
+		req.Headers.Set("x-forwarded-tls-client-cert", testcertificate)
+		resp, err := client.RawRequest(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		buf := bytes.NewBuffer(nil)
+		buf.ReadFrom(resp.Body)
+		testcertificate, _ = url.PathUnescape(testcertificate)
+		// Strip begin/end for comparison
+		expectedCert := testcertificate[27 : len(testcertificate)-26]
+		if !strings.Contains(buf.String(), strings.ReplaceAll(expectedCert, "\n", "")) {
+			t.Fatalf("bad body: %v vs %v", buf.String(), expectedCert)
+		}
+	})
+	
 	// Test RFC 9440/8941 Structured Headers "byte sequence" format
 	t.Run("pass_cert_rfc9440_format", func(t *testing.T) {
 		t.Parallel()
