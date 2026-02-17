@@ -46,25 +46,29 @@ export function paginate<T>(data: T[], options: PaginateOptions = {}) {
       });
     }
 
-    const lastPage = Math.ceil(filteredData.length / pageSize);
+    const fullFilteredData = filteredData;
+
+    const lastPage = Math.ceil(fullFilteredData.length / pageSize);
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
-    filteredData = filteredData.slice(start, end);
+
+    const pageData = fullFilteredData.slice(start, end);
+
     // add meta data previously from lazyPaginatedQuery since components expect it
-    Object.defineProperty(filteredData, 'meta', {
+    Object.defineProperty(pageData, 'meta', {
       value: {
         currentPage: page,
         lastPage,
         nextPage: page + 1,
         prevPage: page - 1,
         total: data.length,
-        filteredTotal: filteredData.length,
+        filteredTotal: fullFilteredData.length,
         pageSize,
       },
       writable: false,
     });
 
-    return filteredData as T[] & PaginatedMetadata;
+    return pageData as T[] & PaginatedMetadata;
   }
 
   return data;
