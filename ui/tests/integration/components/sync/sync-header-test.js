@@ -9,8 +9,9 @@ import { setupEngine } from 'ember-engines/test-support';
 import hbs from 'htmlbars-inline-precompile';
 import { render } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-const { title, breadcrumb } = PAGE;
+const { breadcrumb } = PAGE;
 
 module('Integration | Component | sync | SyncHeader', function (hooks) {
   setupRenderingTest(hooks);
@@ -42,7 +43,7 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
       this.version.features = ['Secrets Sync'];
       await this.renderComponent();
 
-      assert.dom(title).hasText('Secrets Sync');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets Sync');
     });
   });
 
@@ -54,22 +55,8 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
 
     test('it should render title and plus badge', async function (assert) {
       await this.renderComponent();
-      assert.dom(title).hasText('Secrets Sync Plus feature');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets Sync');
+      assert.dom(GENERAL.badge('Plus feature')).hasText('Plus feature', 'Plus feature badge renders');
     });
-  });
-
-  test('it should yield actions block', async function (assert) {
-    await render(
-      hbs`
-      <SyncHeader @title={{this.title}} @breadcrumbs={{this.breadcrumbs}}>
-        <:actions>
-          <span data-test-action-block>Test</span>
-        </:actions>
-      </SyncHeader>
-    `,
-      { owner: this.engine }
-    );
-
-    assert.dom('[data-test-action-block]').exists('Component yields block for actions');
   });
 });

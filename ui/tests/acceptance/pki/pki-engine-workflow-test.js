@@ -6,8 +6,8 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
-
-import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import sinon from 'sinon';
+import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/pki/policy-generator';
@@ -15,7 +15,7 @@ import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CERTIFICATES, clearRecords } from 'vault/tests/helpers/pki/pki-helpers';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 import {
   PKI_CONFIGURE_CREATE,
   PKI_CONFIG_EDIT,
@@ -36,19 +36,13 @@ module('Acceptance | pki workflow', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
+    this.capabilities = this.owner.lookup('service:capabilities');
+    this.capabilitiesFetchSpy = sinon.spy(this.capabilities, 'fetch');
     await login();
     // Setup PKI engine
     const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
-    clearRecords(this.store);
-  });
-
-  hooks.afterEach(async function () {
-    await login();
-    // Cleanup engine
-    await runCmd([`delete sys/mounts/${this.mountPath}`]);
   });
 
   module('not configured', function (hooks) {
@@ -56,7 +50,11 @@ module('Acceptance | pki workflow', function (hooks) {
       await login();
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
       this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
-      clearRecords(this.store);
+    });
+    hooks.afterEach(async function () {
+      await login();
+      // Cleanup engine
+      await runCmd([`delete sys/mounts/${this.mountPath}`]);
     });
 
     test('empty state messages are correct when PKI not configured', async function (assert) {
@@ -119,7 +117,11 @@ module('Acceptance | pki workflow', function (hooks) {
         tokenWithPolicyCmd(`pki-editor-${this.mountPath}`, pki_editor_policy)
       );
       this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
-      clearRecords(this.store);
+    });
+    hooks.afterEach(async function () {
+      await login();
+      // Cleanup engine
+      await runCmd([`delete sys/mounts/${this.mountPath}`]);
     });
 
     test('shows correct items if user has all permissions', async function (assert) {
@@ -239,22 +241,23 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(PKI_ROLE_DETAILS.createRoleLink);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/roles/create`);
       assert.dom(GENERAL.breadcrumbs).exists({ count: 1 }, 'breadcrumbs are rendered');
-      assert.dom(GENERAL.breadcrumb).exists({ count: 4 }, 'Shows 4 breadcrumbs');
-      assert.dom(GENERAL.title).hasText('Create a PKI Role');
+      assert.dom(GENERAL.breadcrumb).exists({ count: 5 }, 'Shows 5 breadcrumbs');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a PKI Role');
 
       await fillIn(GENERAL.inputByAttr('name'), roleName);
       await click(GENERAL.submitButton);
       assert.strictEqual(
         flash.latestMessage,
-        `Successfully created the role ${roleName}.`,
+        `Successfully saved the role ${roleName}.`,
         'renders success flash upon creation'
       );
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${this.mountPath}/pki/roles/${roleName}/details`
       );
-      assert.dom(GENERAL.breadcrumb).exists({ count: 4 }, 'Shows 4 breadcrumbs');
-      assert.dom(GENERAL.title).hasText(`PKI Role ${roleName}`);
+      assert.dom(GENERAL.breadcrumb).exists({ count: 5 }, 'Shows 5 breadcrumbs');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('PKI Role');
+      assert.dom(GENERAL.hdsPageHeaderSubtitle).hasText(roleName);
     });
   });
 
@@ -269,7 +272,11 @@ module('Acceptance | pki workflow', function (hooks) {
       this.pkiKeyReader = await runCmd(tokenWithPolicyCmd(`pki-reader-${this.mountPath}`, pki_reader_policy));
       this.pkiKeyEditor = await runCmd(tokenWithPolicyCmd(`pki-editor-${this.mountPath}`, pki_editor_policy));
       this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
-      clearRecords(this.store);
+    });
+    hooks.afterEach(async function () {
+      await login();
+      // Cleanup engine
+      await runCmd([`delete sys/mounts/${this.mountPath}`]);
     });
 
     test('shows correct items if user has all permissions', async function (assert) {
@@ -288,6 +295,19 @@ module('Acceptance | pki workflow', function (hooks) {
         );
       let keyId = find(PKI_KEYS.keyId).innerText;
       assert.dom('.linked-block').exists({ count: 1 }, 'One key is in list');
+      const [requestedPaths] = this.capabilitiesFetchSpy.lastCall.args;
+      const expectedPaths = [
+        this.capabilities.pathFor('pkiKeysImport', { backend: this.mountPath }),
+        this.capabilities.pathFor('pkiKeysGenerate', { backend: this.mountPath }),
+        this.capabilities.pathFor('pkiKey', { backend: this.mountPath, keyId }),
+      ];
+      expectedPaths.forEach((expected, idx) => {
+        assert.strictEqual(
+          expected,
+          requestedPaths[idx],
+          `index route makes capabilities request to: ${expected}`
+        );
+      });
       await click('.linked-block');
       // details page
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/details`);
@@ -303,7 +323,7 @@ module('Acceptance | pki workflow', function (hooks) {
         'navigates back to details on cancel'
       );
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/edit`);
-      await fillIn(GENERAL.inputByAttr('keyName'), 'test-key');
+      await fillIn(GENERAL.inputByAttr('key_name'), 'test-key');
       await click(GENERAL.submitButton);
       assert.strictEqual(
         currentURL(),
@@ -317,7 +337,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(PKI_KEYS.generateKey);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/create`);
       await fillIn(GENERAL.inputByAttr('type'), 'exported'); // exported keys generated private_key data
-      await fillIn(GENERAL.inputByAttr('keyType'), 'rsa');
+      await fillIn(GENERAL.inputByAttr('key_type'), 'rsa');
       await click(GENERAL.submitButton);
       keyId = find(GENERAL.infoRowValue('Key ID')).textContent?.trim();
       assert.strictEqual(
@@ -376,7 +396,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(PKI_KEYS.keyDeleteButton).doesNotExist('Delete key button is not shown');
       await click(PKI_KEYS.keyEditLink);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/edit`);
-      assert.dom(GENERAL.title).hasText('Edit Key');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Key');
       await click(GENERAL.cancelButton);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/keys/${keyId}/details`);
     });
@@ -391,7 +411,11 @@ module('Acceptance | pki workflow', function (hooks) {
       await runCmd([
         `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
       ]);
-      clearRecords(this.store);
+    });
+    hooks.afterEach(async function () {
+      await login();
+      // Cleanup engine
+      await runCmd([`delete sys/mounts/${this.mountPath}`]);
     });
     test('lists the correct issuer metadata info', async function (assert) {
       await login(this.pkiAdminToken);
@@ -442,7 +466,7 @@ module('Acceptance | pki workflow', function (hooks) {
         currentURL().match(`/vault/secrets-engines/${this.mountPath}/pki/issuers/.+/details`),
         `/vault/secrets-engines/${this.mountPath}/pki/issuers/my-issuer/details`
       );
-      assert.dom(GENERAL.title).hasText('View Issuer Certificate');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View Issuer Certificate');
 
       ['Certificate', 'CA Chain', 'Common name', 'Issuer name', 'Issuer ID', 'Default key ID'].forEach(
         (label) => {
@@ -491,7 +515,7 @@ module('Acceptance | pki workflow', function (hooks) {
         'it navigates to root rotate form'
       );
       assert
-        .dom('[data-test-input="commonName"]')
+        .dom('[data-test-input="common_name"]')
         .hasValue('Hashicorp Test', 'form prefilled with parent issuer cn');
     });
   });
@@ -500,6 +524,10 @@ module('Acceptance | pki workflow', function (hooks) {
     hooks.beforeEach(async function () {
       await login();
       await runCmd([`write ${this.mountPath}/root/generate/internal issuer_name="existing-issuer"`]);
+    });
+    hooks.afterEach(async function () {
+      // Cleanup engine
+      await runCmd([`delete sys/mounts/${this.mountPath}`]);
     });
     test('it renders a warning banner when parent issuer has unsupported OIDs', async function (assert) {
       await login();
@@ -520,8 +548,8 @@ module('Acceptance | pki workflow', function (hooks) {
           'Not all of the certificate values can be parsed and transferred to a new root',
           'it renders warning banner'
         );
-      assert.dom('[data-test-input="commonName"]').hasValue('fancy-cert-unsupported-subj-and-ext-oids');
-      await fillIn('[data-test-input="issuerName"]', 'existing-issuer');
+      assert.dom('[data-test-input="common_name"]').hasValue('fancy-cert-unsupported-subj-and-ext-oids');
+      await fillIn('[data-test-input="issuer_name"]', 'existing-issuer');
       await click(GENERAL.submitButton);
       assert
         .dom('[data-test-rotate-error]')
@@ -540,7 +568,7 @@ module('Acceptance | pki workflow', function (hooks) {
       this.mixedConfigCapabilities = await runCmd(
         tokenWithPolicyCmd(`pki-reader-${this.mountPath}`, mixed_config_policy)
       );
-      await visit('/vault/logout');
+      await logout();
     });
 
     test('it updates config when user only has permission to some endpoints', async function (assert) {

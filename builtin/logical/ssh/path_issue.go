@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -105,10 +106,10 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 	}
 
 	// Issue certificate
-	return b.pathIssueCertificate(ctx, req, data, role, keySpecs)
+	return b.pathIssueCertificate(ctx, req, data, role, keySpecs, roleName)
 }
 
-func (b *backend) pathIssueCertificate(ctx context.Context, req *logical.Request, data *framework.FieldData, role *sshRole, keySpecs *keySpecs) (*logical.Response, error) {
+func (b *backend) pathIssueCertificate(ctx context.Context, req *logical.Request, data *framework.FieldData, role *sshRole, keySpecs *keySpecs, roleName string) (*logical.Response, error) {
 	publicKey, privateKey, err := generateSSHKeyPair(rand.Reader, keySpecs.Type, keySpecs.Bits)
 	if err != nil {
 		return nil, err
@@ -120,7 +121,7 @@ func (b *backend) pathIssueCertificate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(fmt.Sprintf("failed to parse public_key as SSH key: %s", err)), nil
 	}
 
-	response, err := b.pathSignIssueCertificateHelper(ctx, req, data, role, userPublicKey)
+	response, certMetadata, err := b.pathSignIssueCertificateHelper(ctx, req, data, role, userPublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +133,11 @@ func (b *backend) pathIssueCertificate(ctx context.Context, req *logical.Request
 	response.Data["private_key"] = privateKey
 	response.Data["private_key_type"] = keySpecs.Type
 
+	metadata := role.observationMetadata(roleName)
+	metadata["key_type"] = keySpecs.Type
+	metadata["key_bits"] = keySpecs.Bits
+	maps.Copy(metadata, certMetadata)
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHIssue, metadata)
 	return response, nil
 }
 

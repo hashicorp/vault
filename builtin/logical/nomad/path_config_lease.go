@@ -63,9 +63,11 @@ func pathConfigLease(b *backend) *framework.Path {
 
 // Sets the lease configuration parameters
 func (b *backend) pathLeaseUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	ttl := time.Second * time.Duration(d.Get("ttl").(int))
+	maxTTL := time.Second * time.Duration(d.Get("max_ttl").(int))
 	entry, err := logical.StorageEntryJSON("config/lease", &configLease{
-		TTL:    time.Second * time.Duration(d.Get("ttl").(int)),
-		MaxTTL: time.Second * time.Duration(d.Get("max_ttl").(int)),
+		TTL:    ttl,
+		MaxTTL: maxTTL,
 	})
 	if err != nil {
 		return nil, err
@@ -73,6 +75,10 @@ func (b *backend) pathLeaseUpdate(ctx context.Context, req *logical.Request, d *
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadConfigLeaseWrite, map[string]interface{}{
+		"ttl":     ttl.String(),
+		"max_ttl": maxTTL.String(),
+	})
 
 	return nil, nil
 }
@@ -82,6 +88,7 @@ func (b *backend) pathLeaseDelete(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadConfigLeaseDelete, nil)
 	return nil, nil
 }
 
@@ -95,6 +102,10 @@ func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data 
 		return nil, nil
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadConfigLeaseRead, map[string]interface{}{
+		"ttl":     lease.TTL.String(),
+		"max_ttl": lease.MaxTTL.String(),
+	})
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"ttl":     int64(lease.TTL.Seconds()),

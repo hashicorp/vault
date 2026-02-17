@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"runtime/debug"
 	"strings"
@@ -503,6 +504,7 @@ func newResponse(resp *logical.Response, req *logical.Request, isElisionRequired
 		Secret:                s,
 		WrapInfo:              wrapInfo,
 		Warnings:              warnings,
+		SupplementalAuditData: resp.SupplementalAuditResponseData,
 	}, nil
 }
 
@@ -544,6 +546,12 @@ func (f *entryFormatter) createEntry(ctx context.Context, a *Event) (*entry, err
 		resp, err = newResponse(data.Response, data.Request, shouldElide)
 		if err != nil {
 			return nil, fmt.Errorf("cannot convert response: %w", err)
+		}
+
+		// If the plugin's response contained any additional audit request fields,
+		// lets populate them on our original request.
+		if data.Response != nil && data.Response.SupplementalAuditRequestData != nil {
+			req.SupplementalAuditData = maps.Clone(data.Response.SupplementalAuditRequestData)
 		}
 	}
 

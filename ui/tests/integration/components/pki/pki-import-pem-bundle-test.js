@@ -8,162 +8,97 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/pki/pki-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
 
 const { issuerPemBundle } = CERTIFICATES;
 module('Integration | Component | PkiImportPemBundle', function (hooks) {
   setupRenderingTest(hooks);
-  setupMirage(hooks);
   setupEngine(hooks, 'pki'); // https://github.com/ember-engines/ember-engines/pull/653
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/action');
     this.backend = 'pki-test';
-    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
-    this.secretMountPath.currentPath = this.backend;
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
     this.pemBundle = issuerPemBundle;
-    this.onComplete = () => {};
+    this.onComplete = sinon.stub();
+    this.onCancel = sinon.stub();
+    this.onSave = sinon.stub();
+
+    const response = {
+      request_id: 'test',
+      data: {
+        mapping: { 'issuer-id': 'key-id' },
+      },
+    };
+    const api = this.owner.lookup('service:api');
+    this.issuersImportStub = sinon.stub(api.secrets, 'pkiIssuersImportBundle').resolves(response);
+    this.importStub = sinon.stub(api.secrets, 'pkiConfigureCa').resolves(response);
+
+    this.renderComponent = () =>
+      render(
+        hbs`
+        <PkiImportPemBundle
+          @useIssuer={{this.useIssuer}}
+          @onCancel={{this.onCancel}}
+          @onSave={{this.onSave}}
+          @onComplete={{this.onComplete}}
+      />`,
+        { owner: this.engine }
+      );
   });
 
-  test('it renders import and updates model', async function (assert) {
-    assert.expect(3);
-    await render(
-      hbs`
-      <PkiImportPemBundle
-         @model={{this.model}}
-         @onCancel={{this.onCancel}}
-         @onSave={{this.onSave}}
-         @onComplete={{this.onComplete}}
-       />
-      `,
-      { owner: this.engine }
-    );
+  test('it renders import form', async function (assert) {
+    assert.expect(2);
+
+    await this.renderComponent();
 
     assert.dom('[data-test-pki-import-pem-bundle-form]').exists('renders form');
     assert.dom('[data-test-component="text-file"]').exists('renders text file input');
-    await click(GENERAL.textToggle);
-    await fillIn(GENERAL.maskedInput, this.pemBundle);
-    assert.strictEqual(this.model.pemBundle, this.pemBundle);
   });
 
   test('it sends correct payload to import endpoint', async function (assert) {
-    assert.expect(4);
-    this.server.post(`/${this.backend}/issuers/import/bundle`, (schema, req) => {
-      assert.ok(true, 'Request made to the correct endpoint to import issuer');
-      const request = JSON.parse(req.requestBody);
-      assert.propEqual(
-        request,
-        {
-          pem_bundle: `${this.pemBundle}`,
-        },
-        'sends params in correct type'
-      );
-      return {
-        request_id: 'test',
-        data: {
-          mapping: { 'issuer-id': 'key-id' },
-        },
-      };
-    });
+    assert.expect(2);
 
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
-
-    await render(
-      hbs`
-      <PkiImportPemBundle
-         @model={{this.model}}
-         @onCancel={{this.onCancel}}
-         @onSave={{this.onSave}}
-         @onComplete={{this.onComplete}}
-         @adapterOptions={{hash actionType="import" useIssuer=true}}
-       />
-      `,
-      { owner: this.engine }
-    );
+    await this.renderComponent();
 
     await click(GENERAL.textToggle);
     await fillIn(GENERAL.maskedInput, this.pemBundle);
-    assert.strictEqual(this.model.pemBundle, this.pemBundle, 'PEM bundle updated on model');
     await click(PKI_CONFIGURE_CREATE.importSubmit);
+    assert.true(this.importStub.calledWith(this.backend, { pem_bundle: this.pemBundle }));
+    assert.true(this.onSave.calledOnce, 'onSave callback fires on save success');
   });
 
-  test('it hits correct endpoint when userIssuer=false', async function (assert) {
-    assert.expect(4);
-    this.server.post(`${this.backend}/config/ca`, (schema, req) => {
-      assert.ok(true, 'Request made to the correct endpoint to import issuer');
-      const request = JSON.parse(req.requestBody);
-      assert.propEqual(
-        request,
-        {
-          pem_bundle: `${this.pemBundle}`,
-        },
-        'sends params in correct type'
-      );
-      return {
-        request_id: 'test',
-        data: {
-          mapping: {},
-        },
-      };
-    });
+  test('it hits correct endpoint when userIssuer=true', async function (assert) {
+    assert.expect(2);
 
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
-
-    await render(
-      hbs`
-      <PkiImportPemBundle
-         @model={{this.model}}
-         @onCancel={{this.onCancel}}
-         @onSave={{this.onSave}}
-         @onComplete={{this.onComplete}}
-         @adapterOptions={{hash actionType="import" useIssuer=false}}
-       />
-      `,
-      { owner: this.engine }
-    );
+    this.useIssuer = true;
+    await this.renderComponent();
 
     await click(GENERAL.textToggle);
     await fillIn(GENERAL.maskedInput, this.pemBundle);
-    assert.strictEqual(this.model.pemBundle, this.pemBundle);
     await click(PKI_CONFIGURE_CREATE.importSubmit);
+    assert.true(this.issuersImportStub.calledWith(this.backend, { pem_bundle: this.pemBundle }));
+    assert.true(this.onSave.calledOnce, 'onSave callback fires on save success');
   });
 
   test('it shows the bundle mapping on success', async function (assert) {
-    assert.expect(9);
-    this.server.post(`/${this.backend}/issuers/import/bundle`, () => {
-      return {
-        request_id: 'test',
-        data: {
-          imported_issuers: ['issuer-id', 'another-issuer'],
-          imported_keys: ['key-id', 'another-key'],
-          mapping: { 'issuer-id': 'key-id', 'another-issuer': null },
-        },
-      };
+    assert.expect(10);
+
+    this.importStub.resolves({
+      imported_issuers: ['issuer-id', 'another-issuer'],
+      imported_keys: ['key-id', 'another-key'],
+      mapping: { 'issuer-id': 'key-id', 'another-issuer': null },
     });
-
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
-    this.onComplete = () => assert.ok(true, 'onComplete callback fires on done button click');
-
-    await render(
-      hbs`
-      <PkiImportPemBundle
-         @model={{this.model}}
-         @onCancel={{this.onCancel}}
-         @onSave={{this.onSave}}
-         @onComplete={{this.onComplete}}
-         @adapterOptions={{hash actionType="import" useIssuer=true}}
-       />
-      `,
-      { owner: this.engine }
-    );
+    await this.renderComponent();
 
     await click(GENERAL.textToggle);
     await fillIn(GENERAL.maskedInput, this.pemBundle);
     await click(PKI_CONFIGURE_CREATE.importSubmit);
+
+    assert.true(this.onSave.calledOnce, 'onSave callback fires on save success');
+    assert.true(this.importStub.calledOnce, 'import endpoint called once');
 
     assert
       .dom('[data-test-import-pair]')
@@ -178,24 +113,14 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
     assert.dom('[data-test-import-pair="_another-key"] [data-test-imported-issuer]').hasText('None');
     assert.dom('[data-test-import-pair="_another-key"] [data-test-imported-key]').hasText('another-key');
     await click('[data-test-done]');
+
+    assert.true(this.onComplete.calledOnce, 'onComplete callback fires on done button click');
   });
 
-  test('it should unload record on cancel', async function (assert) {
-    assert.expect(2);
-    this.onCancel = () => assert.ok(true, 'onCancel callback fires');
-    await render(
-      hbs`
-        <PkiImportPemBundle
-          @model={{this.model}}
-          @onCancel={{this.onCancel}}
-          @onComplete={{this.onComplete}}
-          @onSave={{this.onSave}}
-        />
-      `,
-      { owner: this.engine }
-    );
-
+  test('it should fire callback on cancel', async function (assert) {
+    assert.expect(1);
+    await this.renderComponent();
     await click('[data-test-pki-ca-cert-cancel]');
-    assert.true(this.model.isDestroyed, 'new model is unloaded on cancel');
+    assert.true(this.onCancel.calledOnce, 'onCancel callback fires on cancel click');
   });
 });

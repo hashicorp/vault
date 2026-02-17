@@ -91,7 +91,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	if err != nil {
 		b.Logger().Error("failed to rotate key on user request", "name", name, "error", err.Error())
 	} else {
-		b.Logger().Info("succesfully rotated key on user request", "name", name)
+		b.Logger().Info("successfully rotated key on user request", "name", name)
 	}
 	// formatKeyPolicy returns a response even on error so be sure to return both.
 	return resp, err

@@ -3,23 +3,15 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
+<Page::Header
+  @title={{if @form.isNew "Create Role" "Edit Role"}}
+  @description="A role in Vault dictates what will be generated for Kubernetes and what kind of rules will be used to do so. It is not a
+  Kubernetes role."
+>
+  <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{if @model.isNew "Create Role" "Edit Role"}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-
-<hr class="is-marginless has-background-gray-200" />
-
-<p class="has-top-margin-m">
-  A role in Vault dictates what will be generated for Kubernetes and what kind of rules will be used to do so. It is not a
-  Kubernetes role.
-</p>
+  </:breadcrumbs>
+</Page::Header>
 
 <div class="is-flex-row has-top-margin-s">
   {{#each this.generationPreferences as |pref|}}
@@ -28,7 +20,7 @@
       @description={{pref.description}}
       @icon="token"
       @value={{pref.value}}
-      @groupValue={{@model.generationPreference}}
+      @groupValue={{@form.generationPreference}}
       @onChange={{this.changePreference}}
       data-test-radio-card={{pref.value}}
     />
@@ -42,14 +34,14 @@
   <hr class="is-marginless has-background-gray-200" />
 </div>
 
-{{#if @model.generationPreference}}
-  <form id="role" {{on "submit" this.onSave}} data-test-policy-form>
+{{#if @form.generationPreference}}
+  <form id="role" {{on "submit" (perform this.save)}} data-test-policy-form>
     {{#if this.errorBanner}}
       <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{/if}}
 
-    {{#each @model.filteredFormFields as |field|}}
-      <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+    {{#each @form.formFields as |field|}}
+      <FormField @attr={{field}} @model={{@form}} @modelValidations={{this.modelValidations}} />
     {{/each}}
 
     <div class="has-bottom-margin-s">
@@ -77,8 +69,8 @@
               <KvObjectEditor
                 class="has-top-margin-m"
                 data-test-kv={{field.type}}
-                @value={{get @model field.key}}
-                @onChange={{fn (mut (get @model field.key))}}
+                @value={{get @form.data field.key}}
+                @onChange={{fn (mut (get @form.data field.key))}}
               />
             </div>
             <hr />
@@ -87,7 +79,7 @@
       {{/if}}
     </div>
 
-    {{#if (eq @model.generationPreference "full")}}
+    {{#if (eq @form.generationPreference "full")}}
       <div class="has-top-margin-m has-bottom-margin-l" data-test-generated-role-rules>
         <h2 class="title is-4">
           Generated role rules
@@ -144,7 +136,7 @@
     @icon={{if this.save.isRunning "loading"}}
     type="submit"
     form="role"
-    disabled={{or (not @model.generationPreference) this.save.isRunning}}
+    disabled={{or (not @form.generationPreference) this.save.isRunning}}
     data-test-submit
   />
   <Hds::Button @text="Back" @color="secondary" class="has-left-margin-s" data-test-cancel {{on "click" this.cancel}} />

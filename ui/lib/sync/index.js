@@ -20,6 +20,10 @@ module.exports = buildEngine({
     plugins: [require.resolve('ember-concurrency/async-arrow-task-transform')],
   },
 
+  'ember-cli-babel': {
+    enableTypeScriptTransform: true,
+  },
+
   isDevelopingAddon() {
     return true;
   },

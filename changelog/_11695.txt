@@ -1,0 +1,3 @@
+```release-note:security
+auth/cert: ensure that the certificate being renewed matches the certificate attached to the session.
+```

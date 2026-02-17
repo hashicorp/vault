@@ -6,21 +6,20 @@
 {{#if this.showLicenseError}}
   <div class="section is-flex-v-centered-tablet is-flex-grow-1 is-fullwidth">
     <div class="columns is-centered is-gapless is-fullwidth">
-      <EmptyState
-        class="empty-state-transparent"
-        @title="License required"
-        @subTitle="Vault license has terminated"
-        @icon="skip"
-        @bottomBorder={{true}}
-        @message="Your Vault license has terminated and Vault is sealed. To unseal, add a current license to your configuration and restart Vault."
-      >
-        <Hds::Link::Standalone
-          @icon="learn-link"
-          @iconPosition="trailing"
-          @text="Install an enterprise license tutorial"
-          @href={{doc-link "/vault/tutorials/enterprise/hashicorp-enterprise-license"}}
+      <Hds::ApplicationState @align="center" as |A|>
+        <A.Header @title="License required" @titleTag="h2" @icon="skip" class="align-items-end" />
+        <A.Body
+          @text="Your Vault license has terminated and Vault is sealed. To unseal, add a current license to your configuration and restart Vault."
         />
-      </EmptyState>
+        <A.Footer as |F|>
+          <F.LinkStandalone
+            @icon="learn-link"
+            @iconPosition="trailing"
+            @text="Install an enterprise license tutorial"
+            @href={{doc-link "/vault/tutorials/enterprise/hashicorp-enterprise-license"}}
+          />
+        </A.Footer>
+      </Hds::ApplicationState>
     </div>
   </div>
 {{else}}

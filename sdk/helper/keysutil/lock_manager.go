@@ -162,6 +162,11 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 		return err
 	}
 
+	// Validate that the policy exists in the backup data
+	if keyData.Policy == nil {
+		return errors.New("backup data does not contain a valid policy")
+	}
+
 	// Set a different name if desired
 	if name != "" {
 		keyData.Policy.Name = name

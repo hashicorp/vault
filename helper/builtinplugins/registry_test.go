@@ -110,7 +110,7 @@ func Test_RegistryKeyCounts(t *testing.T) {
 			name:       "number of secrets plugins",
 			pluginType: consts.PluginTypeSecrets,
 			want:       19,
-			entWant:    3,
+			entWant:    4,
 		},
 	}
 	for _, tt := range tests {

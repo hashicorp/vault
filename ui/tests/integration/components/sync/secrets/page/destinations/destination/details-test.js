@@ -13,6 +13,7 @@ import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { syncDestinations, findDestination } from 'vault/helpers/sync-destinations';
 import { toLabel } from 'vault/helpers/to-label';
 import { setupDataStubs } from 'vault/tests/helpers/sync/setup-hooks';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SYNC_DESTINATIONS = syncDestinations();
 module(
@@ -119,7 +120,7 @@ module(
           assert
             .dom(PAGE.destinations.details.sectionHeader)
             .doesNotExist('does not render Custom tags header');
-          assert.dom(PAGE.title).hasTextContaining(this.destination.name);
+          assert.dom(GENERAL.hdsPageHeaderTitle).hasTextContaining(this.destination.name);
           assert.dom(PAGE.icon(findDestination(destination.type).icon)).exists();
           assert.dom(PAGE.infoRowValue('Name')).hasText(this.destination.name);
 

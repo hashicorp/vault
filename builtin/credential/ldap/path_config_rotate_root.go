@@ -45,7 +45,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		b.Logger().Error("failed to rotate root credential on user request", "path", req.Path, "error", err.Error())
 	} else {
 		// err is nil in this case
-		b.Logger().Info("succesfully rotated root credential on user request", "path", req.Path)
+		b.Logger().Info("successfully rotated root credential on user request", "path", req.Path)
 	}
 	var responseError responseError
 	if errors.As(err, &responseError) {

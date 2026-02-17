@@ -27,7 +27,6 @@ export default class MessagesList extends Component {
   @service customMessages;
   @service flashMessages;
   @service namespace;
-  @service pagination;
   @service('app-router') router;
   @service api;
 
@@ -73,8 +72,10 @@ export default class MessagesList extends Component {
   }
 
   get breadcrumbs() {
-    const label = this.args.authenticated ? 'After User Logs In' : 'On Login Page';
-    return [{ label: 'Messages' }, { label }];
+    return [
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Custom messages' },
+    ];
   }
 
   // callback from HDS pagination to set the queryParams page

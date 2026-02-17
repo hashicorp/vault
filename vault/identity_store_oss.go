@@ -24,6 +24,10 @@ func identityStoreLoginMFAEntUnauthedPaths() []string {
 	return []string{}
 }
 
+func identityStoreSCIMUnauthedPaths() []string {
+	return []string{}
+}
+
 func mfaLoginEnterprisePaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{}
 }

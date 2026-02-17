@@ -6,14 +6,14 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
-import { hash } from 'rsvp';
 import { getCliMessage } from 'pki/routes/overview';
+import { PkiListCertsListEnum } from '@hashicorp/vault-client-typescript';
+import { paginate } from 'core/utils/paginate-list';
 
 @withConfig()
 export default class PkiCertificatesIndexRoute extends Route {
-  @service pagination;
   @service secretMountPath;
-  @service store; // used by @withConfig decorator
+  @service api;
 
   queryParams = {
     page: {
@@ -21,30 +21,28 @@ export default class PkiCertificatesIndexRoute extends Route {
     },
   };
 
-  async fetchCertificates(params) {
-    try {
-      const page = Number(params.page) || 1;
-      return await this.pagination.lazyPaginatedQuery('pki/certificate/base', {
-        backend: this.secretMountPath.currentPath,
-        responsePath: 'data.keys',
-        page,
-        skipCache: page === 1,
-      });
-    } catch (e) {
-      if (e.httpStatus === 404) {
-        return { parentModel: this.modelFor('certificates') };
-      }
-      throw e;
-    }
-  }
-
-  model(params) {
-    return hash({
+  async model(params) {
+    const model = {
       hasConfig: this.pkiMountHasConfig,
-      certificates: this.fetchCertificates(params),
       parentModel: this.modelFor('certificates'),
       pageFilter: params.pageFilter,
-    });
+      certificates: [],
+    };
+
+    try {
+      const page = Number(params.page) || 1;
+      const { keys: certificates } = await this.api.secrets.pkiListCerts(
+        this.secretMountPath.currentPath,
+        PkiListCertsListEnum.TRUE
+      );
+      model.certificates = paginate(certificates, { page });
+    } catch (e) {
+      if (e.response.status !== 404) {
+        throw e;
+      }
+    }
+
+    return model;
   }
 
   setupController(controller, resolvedModel) {

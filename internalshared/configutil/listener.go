@@ -152,6 +152,11 @@ type Listener struct {
 
 	// JSON-specific limits
 
+	// DisableJSONLimitParsing disables the checking for JSON limits. This is only applicable to
+	// the listener config passed into the Cluster listener since this would impact forwarded
+	// requests that have already been checked via the API listener on the originating node.
+	DisableJSONLimitParsing bool `hcl:"-"`
+
 	// CustomMaxJSONDepth specifies the maximum nesting depth of a JSON object.
 	CustomMaxJSONDepthRaw interface{} `hcl:"max_json_depth"`
 	CustomMaxJSONDepth    int64       `hcl:"-"`

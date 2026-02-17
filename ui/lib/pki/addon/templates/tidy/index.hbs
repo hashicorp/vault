@@ -6,7 +6,7 @@
 <PkiPageHeader @backend={{this.model.engine}} />
 
 {{#if this.model.hasConfig}}
-  <Page::PkiTidyStatus @autoTidyConfig={{this.model.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />
+  <Page::PkiTidyStatus @enabled={{this.model.autoTidyConfig.enabled}} @tidyStatus={{this.tidyStatus}} />
 {{else}}
   <Toolbar />
   <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>

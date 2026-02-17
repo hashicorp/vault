@@ -5,7 +5,7 @@
 
 export const PAGE = {
   // General selectors that are common between pages
-  title: '[data-test-header-title]',
+  title: '.hds-page-header__title',
   breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
@@ -56,7 +56,7 @@ export const PAGE = {
     toggleDiffDescription: '[data-test-diff-description]',
   },
   list: {
-    createSecret: '[data-test-toolbar-create-secret]',
+    createSecret: '[data-test-button="create secret"]',
     item: (secret) => (!secret ? '[data-test-list-item]' : `[data-test-list-item="${secret}"]`),
     menuItem: (label) => `[data-test-list-menu-item="${label}"]`,
     filter: `[data-test-kv-list-filter]`,

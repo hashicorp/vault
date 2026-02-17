@@ -3,26 +3,19 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::PageHeader class="has-top-padding-l has-bottom-padding-m" as |PH|>
-  {{#if @breadcrumbs}}
-    <PH.Breadcrumb>
+<Page::Header @title={{@title}} @subtitle={{@subtitle}}>
+  <:breadcrumbs>
+    {{#if @breadcrumbs}}
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-    </PH.Breadcrumb>
-  {{/if}}
-
-  <PH.Title>
-    {{@title}}
+    {{/if}}
+  </:breadcrumbs>
+  <:badges>
     {{#if this.version.isCommunity}}
       <Hds::Badge @text="Enterprise" @color="highlight" data-test-badge="enterprise" />
     {{/if}}
-  </PH.Title>
-
-  <PH.Subtitle>
-    {{@subtitle}}
-  </PH.Subtitle>
-
-  {{#if @action}}
-    <PH.Actions>
+  </:badges>
+  <:actions>
+    {{#if @action}}
       <Hds::Button
         @text={{@action.text}}
         @icon={{@action.icon}}
@@ -31,6 +24,6 @@
         @route={{@action.route}}
         @models={{@action.models}}
       />
-    </PH.Actions>
-  {{/if}}
-</Hds::PageHeader>
+    {{/if}}
+  </:actions>
+</Page::Header>

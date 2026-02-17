@@ -51,12 +51,10 @@
           class="is-flex-grow-1"
           @ariaLabel="Role"
           @selectLimit="1"
-          @models={{array "pki/role"}}
-          @backend={{@engine.id}}
+          @options={{this.searchSelectOptions.roles}}
           @placeholder="Type to find a role..."
           @disallowNewItems={{true}}
           @onChange={{this.handleRolesInput}}
-          @fallbackComponent="input-search"
           data-test-issue-certificate-input
         />
         <Hds::Button
@@ -79,12 +77,10 @@
           class="is-flex-grow-1"
           @ariaLabel="Certificate serial number"
           @selectLimit="1"
-          @models={{array "pki/certificate/base"}}
-          @backend={{@engine.id}}
+          @options={{this.searchSelectOptions.certificates}}
           @placeholder="33:a3:..."
           @disallowNewItems={{true}}
           @onChange={{this.handleCertificateInput}}
-          @fallbackComponent="input-search"
           data-test-view-certificate-input
         />
         <Hds::Button
@@ -106,14 +102,10 @@
           class="is-flex-grow-1"
           @ariaLabel="Issuer name or ID"
           @selectLimit="1"
-          @models={{array "pki/issuer"}}
-          @backend={{@engine.id}}
+          @options={{this.searchSelectOptions.issuers}}
           @placeholder="Type to find an issuer..."
           @disallowNewItems={{true}}
           @onChange={{this.handleIssuerSearch}}
-          @fallbackComponent="input-search"
-          @shouldRenderName={{true}}
-          @nameKey="issuerName"
           data-test-issue-issuer-input
         />
         <Hds::Button

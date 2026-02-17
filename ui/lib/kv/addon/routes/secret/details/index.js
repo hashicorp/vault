@@ -11,7 +11,8 @@ export default class KvSecretDetailsIndexRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     const breadcrumbsArray = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
       ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.path, true),
     ];

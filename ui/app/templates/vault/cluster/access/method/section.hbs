@@ -3,19 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <Hds::Breadcrumb>
-      <Hds::Breadcrumb::Item @text="Auth Methods" @route="vault.cluster.access.methods" />
-      <Hds::Breadcrumb::Item @text={{this.model.id}} @current={{true}} />
-    </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{this.model.id}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title={{this.model.id}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array (hash label="Auth Methods" route="vault.cluster.access.methods") (hash label=this.model.id)}}
+    />
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if (not (includes this.model.type (supported-managed-auth-backends)))}}
   <div class="has-text-grey has-top-bottom-margin" data-test-doc-link={{this.model.id}}>

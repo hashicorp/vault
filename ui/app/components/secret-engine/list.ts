@@ -8,13 +8,18 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { dropTask } from 'ember-concurrency';
-
-import type FlashMessageService from 'vault/services/flash-messages';
-import type SecretsEngineResource from 'vault/resources/secrets/engine';
-import type ApiService from 'vault/services/api';
-import type RouterService from '@ember/routing/router-service';
-import type VersionService from 'vault/services/version';
 import engineDisplayData from 'vault/helpers/engines-display-data';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+
+import type ApiService from 'vault/services/api';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type NamespaceService from 'vault/services/namespace';
+import type RouterService from '@ember/routing/router-service';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import type VersionService from 'vault/services/version';
+import type WizardService from 'vault/services/wizard';
+import { WIZARD_ID } from '../wizard/secret-engines/secret-engines-wizard';
 
 /**
  * @module SecretEngineList handles the display of the list of secret engines, including the filtering.
@@ -32,10 +37,12 @@ interface Args {
 }
 
 export default class SecretEngineList extends Component<Args> {
-  @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;
+  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly namespace: NamespaceService;
   @service declare readonly router: RouterService;
   @service declare readonly version: VersionService;
+  @service declare readonly wizard: WizardService;
 
   @tracked secretEngineOptions: Array<string> | [] = [];
   @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
@@ -50,6 +57,9 @@ export default class SecretEngineList extends Component<Args> {
   @tracked versionSearchText = '';
 
   @tracked selectedItems = Array<string>();
+
+  @tracked shouldRenderIntroModal = false;
+  wizardId = WIZARD_ID;
 
   tableColumns = [
     {
@@ -82,8 +92,17 @@ export default class SecretEngineList extends Component<Args> {
     },
   ];
 
-  get clusterName() {
-    return this.version.clusterName;
+  get breadcrumbs() {
+    return [
+      {
+        label: 'Vault',
+        route: 'vault.cluster.dashboard',
+        icon: 'vault',
+      },
+      {
+        label: 'Secrets engines',
+      },
+    ];
   }
 
   get displayableBackends() {
@@ -100,9 +119,10 @@ export default class SecretEngineList extends Component<Args> {
 
     // filters by engine type, ex: 'kv'
     if (this.engineTypeFilters.length > 0) {
-      sortedBackends = sortedBackends.filter((backend) =>
-        this.engineTypeFilters.includes(backend.engineType)
-      );
+      sortedBackends = sortedBackends.filter((backend) => {
+        const effectiveType = getEffectiveEngineType(backend.engineType);
+        return this.engineTypeFilters.includes(effectiveType);
+      });
     }
 
     // filters by engine version, ex: 'v1.21.0...'
@@ -126,9 +146,10 @@ export default class SecretEngineList extends Component<Args> {
   get typeFilterOptions() {
     // if there is search text, filter types by that
     if (this.typeSearchText.trim() !== '') {
-      return this.displayableBackends.filter((backend) =>
-        backend.engineType.toLowerCase().includes(this.typeSearchText.toLowerCase())
-      );
+      return this.displayableBackends.filter((backend) => {
+        const effectiveType = getEffectiveEngineType(backend.engineType);
+        return effectiveType.toLowerCase().includes(this.typeSearchText.toLowerCase());
+      });
     }
 
     return this.displayableBackends;
@@ -148,14 +169,16 @@ export default class SecretEngineList extends Component<Args> {
 
   // Returns filtered engines list by type
   get secretEngineArrayByType() {
-    const arrayOfAllEngineTypes = this.typeFilterOptions.map((modelObject) => modelObject.engineType);
-    // filter out repeated engineTypes (e.g. [kv, kv] => [kv])
-    const arrayOfUniqueEngineTypes = [...new Set(arrayOfAllEngineTypes)];
+    const arrayOfAllEffectiveTypes = this.typeFilterOptions.map((modelObject) =>
+      getEffectiveEngineType(modelObject.engineType)
+    );
+    // filter out repeated effective types (e.g. [kv, kv] => [kv])
+    const arrayOfUniqueEffectiveTypes = [...new Set(arrayOfAllEffectiveTypes)];
 
-    return arrayOfUniqueEngineTypes.map((engineType) => ({
-      name: engineType,
-      id: engineType,
-      icon: engineDisplayData(engineType)?.glyph ?? 'lock',
+    return arrayOfUniqueEffectiveTypes.map((effectiveType) => ({
+      name: effectiveType,
+      id: effectiveType,
+      icon: engineDisplayData(effectiveType)?.glyph ?? 'lock',
     }));
   }
 
@@ -170,6 +193,32 @@ export default class SecretEngineList extends Component<Args> {
       version,
       id: version,
     }));
+  }
+
+  // The backend does not directly indicate which engines were mounted by default and which have been mounted by the user
+  // Currently the cubbyhole/, sys/, identity/ engines are mounted by default. (secret/ is mounted in dev mode as well)
+  // The sys/ and identity/ engines are non-displayable engines.
+  // While not ideal, we can check whether there are other engines than the default cubbyhole/ engine
+  // to determine whether we should show the intro page
+  get hasOnlyDefaultEngines() {
+    const listedEngines = this.sortedDisplayableBackends;
+    return !listedEngines.length || (listedEngines.length === 1 && listedEngines[0]?.path === 'cubbyhole/');
+  }
+
+  get showWizard() {
+    return !this.wizard.isDismissed(this.wizardId) && this.hasOnlyDefaultEngines;
+  }
+
+  @action
+  showIntroPage() {
+    // Reset the wizard dismissal state to allow re-entering the wizard
+    this.wizard.reset(this.wizardId);
+    this.shouldRenderIntroModal = true;
+  }
+
+  @action
+  refreshSecretEngineList() {
+    this.router.refresh('vault.cluster.secrets.backends');
   }
 
   // Returns engine resource data for a given engine path, needed to get icon and other metadata from SecretEnginesResource
@@ -189,8 +238,8 @@ export default class SecretEngineList extends Component<Args> {
       } else {
         return `${displayData.displayName}`;
       }
-    } else if (displayData.type === 'unknown') {
-      // If a mounted engine type doesn't match any known type, the type is returned as 'unknown' and set this tooltip.
+    } else if (!ALL_ENGINES.find((engine) => engine.type === backend.type)) {
+      // If a mounted engine type doesn't match any known type in our static metadata, set this tooltip.
       // Handles issue when a user externally mounts an engine that doesn't follow the expected naming conventions for what's in the binary, despite being a valid engine.
       return `This engine's type is not recognized by the UI. Please use the CLI to manage this engine.`;
     } else {

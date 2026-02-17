@@ -8,13 +8,13 @@ import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { convertToSeconds } from 'core/utils/duration-utils';
-import { action } from '@ember/object';
 
-import type Router from '@ember/routing/router';
+import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type ApiService from 'vault/services/api';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type UnsavedChangesService from 'vault/services/unsaved-changes';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const CHARACTER_LIMIT = 500;
 
@@ -40,7 +40,7 @@ interface Args {
 }
 
 export default class GeneralSettingsComponent extends Component<Args> {
-  @service declare readonly router: Router;
+  @service declare readonly router: RouterService;
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly unsavedChanges: UnsavedChangesService;
@@ -64,6 +64,19 @@ export default class GeneralSettingsComponent extends Component<Args> {
     changedFieldsCopy[configIndex] = 'Secrets duration';
 
     return changedFieldsCopy;
+  }
+
+  get configRoute() {
+    const engine = this.args.model.secretsEngine;
+    const isKvv2 = engine.version === 2 && engine.effectiveEngineType === 'kv';
+    const engineMetadata = engineDisplayData(engine.effectiveEngineType);
+
+    // Kvv2 is configurable but shares metadata with Kvv1 so isConfigurable is left unset
+    if (engineMetadata.isConfigurable || isKvv2) {
+      return engineMetadata.configRoute || 'configuration.plugin-settings';
+    } else {
+      return false;
+    }
   }
 
   validateTtl(ttlValue: FormDataEntryValue | number | null) {
@@ -172,17 +185,10 @@ export default class GeneralSettingsComponent extends Component<Args> {
 
       this.flashMessages.success('Engine settings successfully updated.', { title: 'Configuration saved' });
 
-      this.unsavedChanges.showModal = false;
-      this.router.transitionTo(this.router.currentRouteName);
+      this.unsavedChanges.transition('vault.cluster.secrets.backend.configuration.general-settings');
     } catch (e) {
       const { message } = await this.api.parseError(e);
       this.errorMessage = message;
     }
   });
-
-  @action
-  discardChanges() {
-    const currentRouteName = this.router.currentRouteName;
-    this.router.transitionTo(currentRouteName);
-  }
 }

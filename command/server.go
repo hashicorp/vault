@@ -1295,6 +1295,8 @@ func (c *ServerCommand) Run(args []string) int {
 		infoKeys = append(infoKeys, expKey)
 	}
 
+	entAugmentInfoKeys(config, info, infoKeys)
+
 	ctx := context.Background()
 
 	setSealResponse, secureRandomReader, err := c.configureSeals(ctx, config, backend, infoKeys, info)
@@ -1427,8 +1429,14 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	status, lns, clusterAddrs, errMsg := c.InitListeners(config, disableClustering, &infoKeys, &info)
+	listenerErrMsg := entCheckListenerConfig(c.logger, core, config)
+	if listenerErrMsg != nil {
+		c.UI.Output("Error in listener configuration.")
+		c.UI.Error(listenerErrMsg.Error())
+		return 1
+	}
 
+	status, lns, clusterAddrs, errMsg := c.InitListeners(config, disableClustering, &infoKeys, &info)
 	if status != 0 {
 		c.UI.Output("Error parsing listener configuration.")
 		c.UI.Error(errMsg.Error())
@@ -1506,8 +1514,10 @@ func (c *ServerCommand) Run(args []string) int {
 	// mode if it's set
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterHandler(vaulthttp.Handler.Handler(&vault.HandlerProperties{
-		Core:           core,
-		ListenerConfig: &configutil.Listener{},
+		Core: core,
+		ListenerConfig: &configutil.Listener{
+			DisableJSONLimitParsing: true,
+		},
 	}))
 
 	// Attempt unsealing in a background goroutine. This is needed for when a
@@ -1753,7 +1763,7 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			// Reload license file
-			if err = core.EntReloadLicense(); err != nil {
+			if err = core.EntReloadLicenseAndConfig(nil); err != nil {
 				c.UI.Error(err.Error())
 			}
 

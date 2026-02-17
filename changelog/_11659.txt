@@ -1,0 +1,3 @@
+```release-note:feature
+**UI: Mount versioned external plugins**: Adds ability to mount previously registered, external plugins and specify a version when enabling secrets engines.
+```

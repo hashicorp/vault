@@ -5,14 +5,13 @@
 
 import Component from '@glimmer/component';
 import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
-import type PkiKeyModel from 'vault/models/pki/key';
 
 interface Args {
-  keyModels: PkiKeyModel[];
+  keys: { key_id: string; is_default: boolean; key_name: string }[];
   mountPoint: string;
   backend: string;
-  canImportKey: boolean;
-  canGenerateKey: boolean;
+  canImportKeys: boolean;
+  canGenerateKeys: boolean;
   canRead: boolean;
   canEdit: boolean;
   hasConfig: boolean;

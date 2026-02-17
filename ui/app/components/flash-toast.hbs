@@ -5,7 +5,22 @@
 
 <Hds::Toast @color={{this.color}} @onDismiss={{@close}} class="has-bottom-margin-m" data-test-flash-toast as |T|>
   <T.Title data-test-flash-toast-title>{{this.title}}</T.Title>
-  <T.Description data-test-flash-message-body>
-    <p class="is-word-break">{{@flash.message}}</p>
-  </T.Description>
+  {{#if @flash.message}}
+    <T.Description data-test-flash-message-body>
+      <p class="is-word-break">{{@flash.message}}</p>
+    </T.Description>
+  {{/if}}
+  {{#if @flash.link}}
+    <T.LinkStandalone
+      @color="secondary"
+      @iconPosition="trailing"
+      @text={{@flash.link.text}}
+      @icon={{or @flash.link.icon "arrow-right"}}
+      @route={{@flash.link.route}}
+      @models={{@flash.link.models}}
+      {{! @isHrefExternal is true by default when @href is set }}
+      @href={{@flash.link.href}}
+      data-test-link-to={{@flash.link.text}}
+    />
+  {{/if}}
 </Hds::Toast>

@@ -136,3 +136,15 @@ tools/codechecker/.bin
 tools/pipeline/.bin
 tools/pipeline/pipeline
 .ci-bootstrap
+
+# Ignore stubmaker outputs on ent so they don't get checked in
+*_stubs_ent.go
+
+# scratch directory holding random stuff
+scratch
+
+# ignore Idea/Goland .run directory
+.run
+
+# bob
+.bob/notes

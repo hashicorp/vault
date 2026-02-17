@@ -24,6 +24,18 @@ export default class GenerateCredentialsTotp extends Component {
     this.startTimer.perform();
   }
 
+  get breadcrumbs() {
+    return [
+      {
+        label: this.args.backendPath,
+        route: 'vault.cluster.secrets.backend',
+        model: this.args.backendPath,
+      },
+      { label: this.args.keyName, route: 'vault.cluster.secrets.backend.show', model: this.args.keyName },
+      { label: this.title },
+    ];
+  }
+
   get remainingTime() {
     const { totpCodePeriod } = this.args;
 

@@ -4,36 +4,25 @@
  */
 
 import Route from '@ember/routing/route';
-import { hash } from 'rsvp';
 import { service } from '@ember/service';
+import { ModelFrom } from 'vault/route';
 
-import type Store from '@ember-data/store';
+import type ApiService from 'vault/services/api';
+import type CapabilitiesService from 'vault/services/capabilities';
+import { VersionHistoryListEnum } from '@hashicorp/vault-client-typescript';
+
+export type ClientsRouteModel = ModelFrom<ClientsRoute>;
 
 export default class ClientsRoute extends Route {
-  @service declare readonly store: Store;
+  @service declare readonly api: ApiService;
+  @service declare readonly capabilities: CapabilitiesService;
 
-  getVersionHistory(): Promise<
-    Array<{ version: string; previousVersion: string; timestampInstalled: string }>
-  > {
-    return this.store
-      .findAll('clients/version-history')
-      .then((response) => {
-        return response.map(({ version, previousVersion, timestampInstalled }) => {
-          return {
-            version,
-            previousVersion,
-            timestampInstalled,
-          };
-        });
-      })
-      .catch(() => []);
-  }
-
-  model() {
-    // swallow config error so activity can show if no config permissions
-    return hash({
-      config: this.store.queryRecord('clients/config', {}).catch(() => ({})),
-      versionHistory: this.getVersionHistory(),
-    });
+  async model() {
+    const { canRead: canReadConfig, canUpdate: canUpdateConfig } =
+      await this.capabilities.for('clientsConfig');
+    const response = await this.api.sys.versionHistory(VersionHistoryListEnum.TRUE).catch(() => undefined);
+    const versionHistory = response ? this.api.keyInfoToArray(response, 'version') : [];
+    const config = await this.api.sys.internalClientActivityReadConfiguration().catch(() => ({}));
+    return { canReadConfig, canUpdateConfig, versionHistory, config };
   }
 }

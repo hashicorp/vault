@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v81/github"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,15 +15,17 @@ func TestFileGroupDefaultCheckers(t *testing.T) {
 	t.Parallel()
 
 	for filename, groups := range map[string]FileGroups{
-		".build/entrypoint.sh":                           {FileGroupPipeline},
-		".github/actions/changed-files/actions.yml":      {FileGroupGithub, FileGroupPipeline},
-		".github/workflows/build.yml":                    {FileGroupGithub, FileGroupPipeline},
-		".github/workflows/build-artifacts-ce.yml":       {FileGroupCommunity, FileGroupGithub, FileGroupPipeline},
-		".github/workflows/build-artifacts-ent.yml":      {FileGroupEnterprise, FileGroupGithub, FileGroupPipeline},
+		".build/entrypoint.sh":                      {FileGroupPipeline},
+		".github/actions/changed-files/actions.yml": {FileGroupGithub, FileGroupPipeline},
+		".github/workflows/build.yml":               {FileGroupGithub, FileGroupPipeline},
+		".github/workflows/build-artifacts-ce.yml":  {FileGroupCommunity, FileGroupGithub, FileGroupPipeline},
+		// TODO: Remove this when we've dealt with exceptions
+		// ".github/workflows/build-artifacts-ent.yml":      {FileGroupEnterprise, FileGroupGithub, FileGroupPipeline},
 		".github/workflows/backport-ce-ent.yml":          {FileGroupCommunity, FileGroupGithub, FileGroupPipeline},
 		".github/scripts/pr_comment.sh":                  {FileGroupGithub, FileGroupPipeline},
 		".github/CODEOWNERS":                             {FileGroupGithub},
 		".go-version":                                    {FileGroupGoToolchain},
+		".hooks/pre-push":                                {FileGroupPipeline},
 		".release/ibm-pao/eboms/5900-BJ8.essentials.csv": {FileGroupEnterprise, FileGroupPipeline},
 		".release/docker/ubi-docker-entrypoint.sh":       {FileGroupPipeline},
 		"audit/backend_ce.go":                            {FileGroupGoApp, FileGroupCommunity},
@@ -79,9 +81,16 @@ func TestFileGroupDefaultCheckers(t *testing.T) {
 		"Makefile":                                          {FileGroupPipeline},
 		"README.md":                                         {FileGroupDocs},
 	} {
-		t.Run(filename, func(t *testing.T) {
+		t.Run("file name only: "+filename, func(t *testing.T) {
 			t.Parallel()
-			file := &File{File: &github.CommitFile{Filename: &filename}}
+			file := &File{Filename: filename}
+			Group(context.Background(), file, DefaultFileGroupCheckers...)
+			require.Equal(t, groups, file.Groups)
+		})
+
+		t.Run("github file: "+filename, func(t *testing.T) {
+			t.Parallel()
+			file := &File{GithubCommitFile: &github.CommitFile{Filename: &filename}}
 			Group(context.Background(), file, DefaultFileGroupCheckers...)
 			require.Equal(t, groups, file.Groups)
 		})

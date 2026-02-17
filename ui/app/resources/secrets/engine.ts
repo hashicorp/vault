@@ -9,6 +9,7 @@ import {
   SupportedSecretBackendsEnum,
 } from 'vault/helpers/supported-secret-backends';
 import { isAddonEngine } from 'vault/utils/all-engines-metadata';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
 import type { Mount } from 'vault/mount';
@@ -47,10 +48,14 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
     return engineData?.glyph || 'lock';
   }
 
+  get effectiveEngineType() {
+    return getEffectiveEngineType(this.engineType);
+  }
+
   get isV2KV() {
     return (
       this.version === 2 &&
-      (this.engineType === SupportedSecretBackendsEnum.KV || this.engineType === 'generic')
+      (this.effectiveEngineType === SupportedSecretBackendsEnum.KV || this.effectiveEngineType === 'generic')
     );
   }
 
@@ -59,15 +64,15 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
   }
 
   get isSupportedBackend() {
-    return supportedSecretBackends().includes(this.engineType as SupportedSecretBackendsEnum);
+    return supportedSecretBackends().includes(this.effectiveEngineType as SupportedSecretBackendsEnum);
   }
 
   get backendLink() {
-    if (this.engineType === 'database') {
+    if (this.effectiveEngineType === 'database') {
       return 'vault.cluster.secrets.backend.overview';
     }
-    if (isAddonEngine(this.engineType, this.version)) {
-      const engine = engineDisplayData(this.engineType);
+    if (isAddonEngine(this.effectiveEngineType, this.version)) {
+      const engine = engineDisplayData(this.effectiveEngineType); // Use effective type to get proper metadata
       if (engine?.engineRoute) {
         return `vault.cluster.secrets.backend.${engine.engineRoute}`;
       }
@@ -80,10 +85,12 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
   }
 
   get backendConfigurationLink() {
-    if (isAddonEngine(this.engineType, this.version)) {
-      return `vault.cluster.secrets.backend.${this.engineType}.configuration`;
+    const { isConfigurable, configRoute } = engineDisplayData(this.effectiveEngineType);
+    if (isConfigurable) {
+      const route = configRoute || 'configuration.plugin-settings';
+      return `vault.cluster.secrets.backend.${route}`;
     }
-    return `vault.cluster.secrets.backend.configuration`;
+    return `vault.cluster.secrets.backend.configuration.general-settings`;
   }
 
   get localDisplay() {
@@ -91,11 +98,11 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
   }
 
   get supportsRecovery() {
-    if (!SUPPORTS_RECOVERY.includes(this.engineType as RecoverySupportedEngines)) {
+    if (!SUPPORTS_RECOVERY.includes(this.effectiveEngineType as RecoverySupportedEngines)) {
       return false;
     }
 
-    if (this.engineType === SupportedSecretBackendsEnum.KV) {
+    if (this.effectiveEngineType === SupportedSecretBackendsEnum.KV) {
       return !this.isV2KV;
     }
 

@@ -131,7 +131,7 @@ scenario "ui" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
+      ami_id          = step.ec2_info.ami_ids["amd64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = local.vault_tag_key
       common_tags     = local.tags
       seal_key_names  = step.create_seal_key.resource_names

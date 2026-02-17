@@ -26,7 +26,7 @@ module('Integration | Component | tools/hash', function (hooks) {
   test('it renders form', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('h1').hasText('Hash Data');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Hash data');
     assert.dom(TS.toolsInput('hash-input')).hasValue('');
     assert.dom('#algorithm').hasValue('sha2-256');
     assert.dom('#format').hasValue('base64');

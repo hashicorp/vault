@@ -1,0 +1,4 @@
+```release-note:improvement
+core (enterprise): Allow setting of an entropy source on password generation
+policies, and with it the selection of "seal" to use entropy augmentation.
+```

@@ -24,6 +24,6 @@ module('Integration | Component | kubernetes | ConfigCta', function (hooks) {
         'Get started by establishing the URL of the Kubernetes API to connect to, along with some additional options.',
         'Message renders'
       );
-    assert.dom('[data-test-config-cta] a').hasText('Configure Kubernetes', 'Action renders');
+    assert.dom('a').hasText('Configure Kubernetes', 'Action link renders');
   });
 });

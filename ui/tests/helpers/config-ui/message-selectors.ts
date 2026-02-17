@@ -7,7 +7,7 @@ export const CUSTOM_MESSAGES = {
   // General selectors that are common between custom messages
   inlineErrorMessage: `[data-test-inline-error-message]`,
   unauthCreateFormInfo: '[data-test-unauth-info]',
-  navLink: '[data-test-sidebar-nav-link="Custom Messages"]',
+  navLink: '[data-test-sidebar-nav-link="Custom messages"]',
   radio: (radioName: string) => `[data-test-radio="${radioName}"]`,
   field: (fieldName: string) => `[data-test-field="${fieldName}"]`,
   input: (input: string) => `[data-test-input="${input}"]`,

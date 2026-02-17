@@ -2,17 +2,11 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-
-<PageHeader as |p|>
-  <p.top>
+<Page::Header @title={{if this.isNew "Create Role" "Edit Role"}}>
+  <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{if @model.isNew "Create Role" "Edit Role"}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+  </:breadcrumbs>
+</Page::Header>
 
 <hr class="is-marginless has-background-gray-200" />
 
@@ -25,9 +19,9 @@
   <Hds::Form::RadioCard::Group @name="role type options" class="has-bottom-margin-m" as |RadioGroup|>
     {{#each this.roleTypeOptions as |option|}}
       <RadioGroup.RadioCard
-        @checked={{eq option.value @model.type}}
-        @disabled={{not @model.isNew}}
-        {{on "change" (fn (mut @model.type) option.value)}}
+        @checked={{eq option.value this.roleType}}
+        @disabled={{not this.isNew}}
+        {{on "change" (fn this.onTypeChange option)}}
         data-test-radio-card={{option.value}}
         as |Card|
       >
@@ -38,20 +32,24 @@
     {{/each}}
   </Hds::Form::RadioCard::Group>
 
-  {{#each @model.formFields as |field|}}
+  {{#each this.fields as |field|}}
     {{! display section heading ahead of ldif fields }}
-    {{#if field.options.sectionHeading}}
+    {{#if (eq field "creation_ldif")}}
       <hr class="has-background-gray-200" />
-      <h2 class="title is-4 has-top-margin-xl">{{field.options.sectionHeading}}</h2>
+      <h2 class="title is-4 has-top-margin-xl">LDIF Statements</h2>
     {{/if}}
-    <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+    <FormField
+      @attr={{find-by "name" field this.form.formFields}}
+      @model={{this.form}}
+      @modelValidations={{this.modelValidations}}
+    />
   {{/each}}
 
   <hr class="has-background-gray-200 has-top-margin-l" />
 
   <div class="has-top-margin-l has-bottom-margin-l is-flex">
     <Hds::Button
-      @text={{if @model.isNew "Create role" "Save"}}
+      @text={{if this.isNew "Create role" "Save"}}
       data-test-submit
       type="submit"
       disabled={{this.save.isRunning}}

@@ -10,7 +10,6 @@ import Controller from '@ember/controller';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 import ListController from 'core/mixins/list-controller';
 import { keyIsFolder } from 'core/utils/key-utils';
-import engineDisplayData from 'vault/helpers/engines-display-data';
 import { task } from 'ember-concurrency';
 
 export default Controller.extend(ListController, BackendCrumbMixin, {
@@ -20,11 +19,6 @@ export default Controller.extend(ListController, BackendCrumbMixin, {
   queryParams: ['page', 'pageFilter', 'tab'],
 
   tab: '',
-
-  // Check if the current engine is an old engine - for showing old UI designs
-  get isOldEngine() {
-    return engineDisplayData(this.backendType)?.isOldEngine;
-  },
 
   // callback from HDS pagination to set the queryParams page
   get paginationQueryParams() {

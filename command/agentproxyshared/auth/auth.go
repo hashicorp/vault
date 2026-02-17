@@ -16,6 +16,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/backoff"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -126,6 +127,22 @@ func backoffSleep(ctx context.Context, backoff *autoAuthBackoff) bool {
 	case <-ctx.Done():
 	}
 	return true
+}
+
+// isTransientError determines if an error should be retried using
+// retryablehttp.DefaultRetryPolicy. Returns true for transient errors
+// (5xx, network errors, timeouts), false for permanent errors (4xx).
+func (ah *AuthHandler) isTransientError(ctx context.Context, err error) bool {
+	var resp *http.Response
+	if respErr, ok := err.(*api.ResponseError); ok {
+		resp = &http.Response{
+			StatusCode: respErr.StatusCode,
+		}
+		err = nil
+	}
+
+	shouldRetry, _ := retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+	return shouldRetry
 }
 
 func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
@@ -250,15 +267,35 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 			secret, err = clientToUse.Auth().Token().LookupSelfWithContext(ctx)
 			if err != nil {
-				ah.logger.Error("could not look up token", "err", err, "backoff", backoffCfg)
-				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
-				// Set unauthenticated when authentication fails
-				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
+				// Classify and handle error based on type
+				if ah.isTransientError(ctx, err) {
+					// Transient error (5xx, network, etc.) - retry the lookup
+					ah.logger.Warn("transient error during token lookup, will retry",
+						"err", err, "backoff", backoffCfg)
+					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+					metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
-				if backoffSleep(ctx, backoffCfg) {
-					continue
+					if backoffSleep(ctx, backoffCfg) {
+						// Reset first flag to retry lookup-self with same token
+						first = true
+						continue
+					}
+					return err
+				} else {
+					// Permanent error (4xx like 403/404) - discard token and re-authenticate
+					ah.logger.Error("permanent error during token lookup, will re-authenticate",
+						"err", err, "backoff", backoffCfg)
+					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+					metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
+
+					// Clear the token so we don't retry with it
+					ah.token = ""
+
+					if backoffSleep(ctx, backoffCfg) {
+						continue
+					}
+					return err
 				}
-				return err
 			}
 
 			duration, _ := secret.Data["ttl"].(json.Number).Int64()

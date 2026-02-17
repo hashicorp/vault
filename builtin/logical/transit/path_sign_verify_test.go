@@ -323,6 +323,7 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 	verifyRequest(req, false, "", sig)
 	// Now try the v1
 	verifyRequest(req, true, "", v1sig)
+	require.Equal(t, uint64(28), b.billingDataCounts.Transit.Load())
 }
 
 func validatePublicKey(t *testing.T, in string, sig string, pubKeyRaw []byte, expectValid bool, postpath string, b *backend) {
@@ -464,6 +465,13 @@ func TestTransit_SignVerify_Ed25519Behavior(t *testing.T) {
 				require.ErrorContains(t, err, "invalid request", "expected verify request to fail with invalid request")
 			}
 		})
+	}
+	// Verify the total successful transit requests
+	if constants.IsEnterprise {
+		require.Equal(t, uint64(4), b.billingDataCounts.Transit.Load())
+	} else {
+		// We expect 0 successful calls on CE because we expect the verify to fail
+		require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
 	}
 }
 
@@ -735,6 +743,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	// Repeat with the other key
 	sig = signRequest(req, false, "bar")
 	verifyRequest(req, false, outcome, "bar", sig, true)
+	// Now try the v1
 	verifyRequest(req, true, outcome, "bar", v1sig, true)
 
 	// Test Batch Signing
@@ -809,6 +818,9 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	outcome[1].requestOk = true
 	outcome[1].valid = false
 	verifyRequest(req, false, outcome, "bar", goodsig, true)
+
+	// Verify the total successful transit requests
+	require.Equal(t, uint64(24), b.billingDataCounts.Transit.Load())
 }
 
 func TestTransit_SignVerify_RSA_PSS(t *testing.T) {

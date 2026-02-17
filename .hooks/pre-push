@@ -1,23 +1,139 @@
 #!/usr/bin/env bash
 
-remote="$1"
-remote_url=$(git remote get-url $remote)
+# A pre-push hook to verify that no enterprise files exist in the change
+# set that we intend to push. This script will exit non-zero if we detect
+# any enterprise files destined for either hashicorp/vault, or any ce/*
+# branches in hashicorp/vault-enterprise.
+#
+# NOTE: If you're reading this because you're running into issues, feel free to
+# reach out to #team-vault-automation if you need further assistance or if you
+# believe you've found an issue. Before you reach out, please make sure that
+# you've updated the pipeline tool (make tools-pipeline) and have your $GOBIN
+# in the path. Thanks!
+#
+# NOTE: If you're debugging this hook and would like include additional information
+#   you can do any of the following:
+#
+#   - Use `set -x` to see all commands that are run.
+#   - Add `--log debug` to any `pipeline` commands that are being run.
+#   - Use `pipeline git list changed-files --range (git merge-base HEAD main)..HEAD`
+#     to see the changed files on your branch. Replace 'main' with whatever branch
+#     you intend to merge into. Use the --branch <branch> flag in place of --range
+#     if you're pushing a new branch.
+#   - Use `pipeline git check changed-files --range (git merge-base HEAD main)..HEAD -b enterprise`
+#     to see the changed files on your branch that we detect as enterprise files.
+#     Replace 'main' with whatever branch you intend to merge into. Use the
+#     --branch <branch> flag in place of --range if you're pushing a new branch.
+#
+# Git calls this hook with the following parameters:
+#
+# $1 -- Name of the remote to which the push is being done
+# $2 -- URL to which the push is being done
+#
+# If pushing without using a named remote those arguments will be equal.
+#
+# Information about the commits which are being pushed are written to STDIN by
+# git in the form of:
+#
+#   <local ref> <local oid> <remote ref> <remote oid>
+#
+# We use these values to determine what type of push operation is happening and
+# what commits are going to be pushed. Depending on the operation and commit
+# we employ slightly different methods to determine the changed file list. The
+# `pipeline git check changed-files` utility will handle gathering, grouping,
+# and checking for disallowed changed files.
 
-if [[ $remote_url == *"vault-enterprise"* ]]; then
-    exit 0
-fi
+set -eou pipefail
 
-if [ "$remote" = "enterprise" ]; then
-    exit 0
-fi
+# fail takes two arguments. The first is the failure reasons and the second is
+# an explanation. Both will be written to STDERR. The script will then exit 1.
+fail() {
+  if test -t 1; then
+    printf '\x1b[1;31;49m%s\x1b[0m\n%s\n' "$1" "$2" >&2
+  else
+    printf "%s\n%s\n" "$1" "$2" >&2
+  fi
+  exit 1
+}
 
-if [ "$remote" = "ent" ]; then
-    exit 0
-fi
+# remote_url_is_enterprise returns 0 if the given URL argument matches
+# that of hashicorp/vault-enterprise, otherwise it returns 1.
+remote_url_is_enterprise() {
+  case "$1" in
+    git@github.com:hashicorp/vault-enterprise* | https://github.com/hashicorp/vault-enterprise*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
 
-if [ -f command/version_ent.go ]; then
-    echo "Found enterprise version file while pushing to oss remote"
-    exit 1
-fi
+# remote_ref_is_ce returns 0 if the given git ref argument matches a ce/* branch,
+# otherwise it returns 1.
+remote_ref_is_ce() {
+  if [[ "$1" == "refs/heads/ce/"* ]]; then
+    return 0
+  fi
 
-exit 0
+  return 1
+}
+
+# main is our main function. It currently takes a single argument that is the
+# URL of the remote that we're pushing to.
+main() {
+  # Git writes the commit information to STDIN. Read it into our local variables
+  # and then determine how to verify the changed files.
+  local _local_ref
+  local local_oid
+  local remote_ref
+  local remote_oid
+  while read -r _local_ref local_oid remote_ref remote_oid; do
+    if remote_url_is_enterprise "$1" && ! remote_ref_is_ce "${remote_ref}"; then
+      # If we're pushing to vault-enterprise and the branch is not ce/* then
+      # we don't need to enforce the no enterprise files policy.
+      exit 0
+    fi
+
+    local output
+    if ! output=$(builtin type pipeline 2>&1); then
+      fail "Unable to locate the 'pipeline' binary your \$PATH" "Please make sure you have the latest pipeline tool installed and that your '\$GOBIN' is in your '\$PATH'. You can use 'make tools-pipeline' to build and install the latest version of the 'pipeline' tool. The tool is required to check your branch's changed files before pushing to either 'hashicorp/vault' or 'ce/*\' branches in 'hashicorp/vault-enterprise'. Reach out to #team-vault-automation for help! ${output}"
+    fi
+
+    # Determine our "zero" object ID.
+    local zero
+    zero=$(git hash-object --stdin < /dev/null | tr '0-9a-f' '0')
+
+    if test "${local_oid}" = "${zero}"; then
+      # Our local object ID is zero, that means we're deleting the remote branch.
+      # We can safely ignore the "changes" on the local branch because we're not
+      # pushing anything.
+      exit 0
+    else
+      # We're either creating a new branch or updating an exiting one.
+      if test "${remote_oid}" = "${zero}"; then
+        # We're pushing a new branch. Check the entire branch history for
+        # changed enterprise files. We'll swallow the output by default and only
+        # show it if there are enterprise files.
+        if ! output=$(pipeline git check changed-files --branch "${local_oid}" -g enterprise 2>&1); then
+          fail "Cannot push changes to a new community edition branch. Please make sure no enterprise files are included in your branch history" "${output}"
+        fi
+        exit 0
+      else
+        # We're updating an existing branch. Check only the new commit history
+        # for changed enterprise files. We'll swallow the output by default and
+        # only show it if there are enterprise files.
+        if ! output=$(pipeline git check changed-files --range "${remote_oid}..${local_oid}" -g enterprise 2>&1); then
+          fail "Cannot push updates to community edition branch. Please make sure no enterprise files are included in your change set" "${output}"
+        fi
+        exit 0
+      fi
+    fi
+  done
+
+  fail "git pre-push hook failed!" "git did not write expected commit information to STDIN! Please reach out to #team-vault-automation for help!"
+}
+
+# Call the main function. We currently only care about the URL so we'll pass in
+# $2 as the only argument.
+main "$2"

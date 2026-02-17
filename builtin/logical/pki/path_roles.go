@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -898,17 +897,13 @@ func (b *backend) GetRole(ctx context.Context, s logical.Storage, n string) (*is
 	}
 
 	// Ensure the role is valid after updating.
-	_, err = validateRole(b, result, ctx, s)
+	_, _, err = validateRole(b, result, ctx, s)
 	if err != nil {
 		return nil, err
 	}
 
 	if result.WasModified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
-		jsonEntry, err := logical.StorageEntryJSON("role/"+n, result)
-		if err != nil {
-			return nil, err
-		}
-		if err := s.Put(ctx, jsonEntry); err != nil {
+		if err := issuing.WriteRole(ctx, s, result); err != nil {
 			// Only perform upgrades on replication primary
 			if !strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 				return nil, err
@@ -948,8 +943,9 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		return nil, nil
 	}
 
-	resp := &logical.Response{
-		Data: role.ToResponseData(),
+	warnings, err := entValidateRole(b, role, logical.ReadOperation)
+	if err != nil {
+		return nil, err
 	}
 
 	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIRoleRead,
@@ -957,7 +953,10 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		observe.NewAdditionalPKIMetadata("role_name", role.Name),
 	)
 
-	return resp, nil
+	return &logical.Response{
+		Data:     role.ToResponseData(),
+		Warnings: warnings,
+	}, nil
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
@@ -1059,23 +1058,25 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		}
 	}
 
-	resp, err := validateRole(b, entry, ctx, req.Storage)
+	userError, warnings, err := validateRole(b, entry, ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 	if warning != "" {
-		resp.AddWarning(warning)
+		warnings = append(warnings, warning)
 	}
-	if resp.IsError() {
-		return resp, nil
+	if userError != "" {
+		return logical.ErrorResponse(userError), nil
+	}
+
+	if entWarnings, err := entValidateRole(b, entry, logical.UpdateOperation); err != nil {
+		return nil, err
+	} else {
+		warnings = append(warnings, entWarnings...)
 	}
 
 	// Store it
-	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
-	if err != nil {
-		return nil, err
-	}
-	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+	if err := issuing.WriteRole(ctx, req.Storage, entry); err != nil {
 		return nil, err
 	}
 
@@ -1089,42 +1090,44 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		observe.NewAdditionalPKIMetadata("not_before_duration", entry.NotBeforeDuration.String()),
 	)
 
-	return resp, nil
+	return &logical.Response{
+		Warnings: warnings,
+		Data:     entry.ToResponseData(),
+	}, nil
 }
 
-func validateRole(b *backend, entry *issuing.RoleEntry, ctx context.Context, s logical.Storage) (*logical.Response, error) {
-	resp := &logical.Response{}
-	var err error
-
+// validateRole takes a role and performs various checks and mutations against it.
+// If it returns an error, the calling handler should also return an error as
+// opposed to a logical response.  If instead it returns a nonempty string,
+// that should be returned as a logical.ErrorResponse to the client.  Otherwise,
+// the warnings should be included in any response to the client.
+func validateRole(b *backend, entry *issuing.RoleEntry, ctx context.Context, s logical.Storage) (string, []string, error) {
 	if entry.MaxTTL > 0 && entry.TTL > entry.MaxTTL {
-		return logical.ErrorResponse(
-			`"ttl" value must be less than "max_ttl" value`,
-		), nil
+		return `"ttl" value must be less than "max_ttl" value`, nil, nil
 	}
 
-	if entry.KeyBits, entry.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(entry.KeyType, entry.KeyBits, entry.SignatureBits); err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+	keyBits, err := certutil.ValidateDefaultOrValueKeyType(entry.KeyType, entry.KeyBits)
+	if err != nil {
+		return fmt.Sprintf("error setting keyBits %v on role for keyType %v: %v", entry.KeyBits, entry.KeyType, err.Error()), nil, nil
 	}
 
 	if entry.SerialNumberSource != "" &&
 		entry.SerialNumberSource != "json-csr" &&
 		entry.SerialNumberSource != "json" {
-		return logical.ErrorResponse("unknown serial_number_source %s", entry.SerialNumberSource), nil
+		return fmt.Sprintf("unknown serial_number_source %s", entry.SerialNumberSource), nil, nil
 	}
 
 	if len(entry.ExtKeyUsageOIDs) > 0 {
 		for _, oidstr := range entry.ExtKeyUsageOIDs {
-			_, err := certutil.StringToOid(oidstr)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for an extended key usage", oidstr)), nil
+			if _, err := certutil.StringToOid(oidstr); err != nil {
+				return fmt.Sprintf("%q could not be parsed as a valid oid for an extended key usage", oidstr), nil, nil
 			}
 		}
 	}
 
 	if len(entry.PolicyIdentifiers) > 0 {
-		_, err := certutil.CreatePolicyInformationExtensionFromStorageStrings(entry.PolicyIdentifiers)
-		if err != nil {
-			return nil, err
+		if _, err := certutil.CreatePolicyInformationExtensionFromStorageStrings(entry.PolicyIdentifiers); err != nil {
+			return "", nil, err
 		}
 	}
 
@@ -1132,36 +1135,65 @@ func validateRole(b *backend, entry *issuing.RoleEntry, ctx context.Context, s l
 	// resolve the reference (to an issuerId) at role creation time; instead,
 	// resolve it at use time. This allows values such as `default` or other
 	// user-assigned names to "float" and change over time.
-	if len(entry.Issuer) == 0 {
-		entry.Issuer = defaultRef
+	var issuerId issuing.IssuerID
+	issuer := entry.Issuer
+	if len(issuer) == 0 {
+		issuer = defaultRef
 	}
+
+	var warnings []string
 	// Check that the issuers reference set resolves to something
 	if !b.UseLegacyBundleCaStorage() {
 		sc := b.makeStorageContext(ctx, s)
-		issuerId, err := sc.resolveIssuerReference(entry.Issuer)
+		issuerId, err = sc.resolveIssuerReference(issuer)
 		if err != nil {
 			if issuerId == issuing.IssuerRefNotFound {
-				resp = &logical.Response{}
 				if entry.Issuer == defaultRef {
-					resp.AddWarning("Issuing Certificate was set to default, but no default issuing certificate (configurable at /config/issuers) is currently set")
+					warnings = append(warnings, "Issuing Certificate was set to default, but no default issuing certificate (configurable at /config/issuers) is currently set")
 				} else {
-					resp.AddWarning(fmt.Sprintf("Issuing Certificate was set to %s but no issuing certificate currently has that name", entry.Issuer))
+					warnings = append(warnings, fmt.Sprintf("Issuing Certificate was set to %s but no issuing certificate currently has that name", issuer))
 				}
 			} else {
-				return nil, err
+				return "", nil, err
 			}
 		}
+	}
 
+	// Validate SignatureBits Against Issuer, if there is one, this is just to set a warning, so don't error out here:
+	var signatureBits int
+	if issuerId != issuing.IssuerRefNotFound {
+		if b.UseLegacyBundleCaStorage() {
+			issuerId = issuing.LegacyBundleShimID
+		}
+		issuerEntry, _, err := issuing.FetchCertBundleByIssuerId(ctx, s, issuerId, false)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("Failed to fetch entry for issuer %q to validate against: %v", entry.Issuer, err))
+		} else {
+			issuerCertificate, err := issuerEntry.GetCertificate()
+			if err != nil {
+				warnings = append(warnings, fmt.Sprintf("Unable to get certificate for issuer %s to validate against: %v", entry.Issuer, err))
+			}
+			issuerKeyType := strings.ToLower(issuerCertificate.PublicKeyAlgorithm.String())
+			signatureBits, err = certutil.ValidateDefaultOrValueHashBits(issuerKeyType, entry.SignatureBits)
+			if err != nil {
+				warnings = append(warnings, fmt.Sprintf("The Issuing Certificate %v for this role has a key algorithm, %v, incompatible with the set role signature bits, %v", entry.Issuer, issuerKeyType, entry.SignatureBits))
+			}
+		}
+	} else {
+		// We still want to update to keep default value of 256 bits
+		if signatureBits == 0 {
+			signatureBits = 256
+		}
 	}
 
 	// Ensures CNValidations are alright
-	entry.CNValidations, err = checkCNValidations(entry.CNValidations)
+	cnValidations, err := checkCNValidations(entry.CNValidations)
 	if err != nil {
-		return nil, errutil.UserError{Err: err.Error()}
+		return err.Error(), nil, nil
 	}
 
-	resp.Data = entry.ToResponseData()
-	return resp, nil
+	entry.CNValidations, entry.Issuer, entry.KeyBits, entry.SignatureBits = cnValidations, issuer, keyBits, signatureBits
+	return "", warnings, nil
 }
 
 func getWithExplicitDefault(data *framework.FieldData, field string, defaultValue interface{}) interface{} {
@@ -1239,6 +1271,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		NotBeforeDuration:             getTimeWithExplicitDefault(data, "not_before_duration", oldEntry.NotBeforeDuration),
 		NotAfter:                      getWithExplicitDefault(data, "not_after", oldEntry.NotAfter).(string),
 		Issuer:                        getWithExplicitDefault(data, "issuer_ref", oldEntry.Issuer).(string),
+		Name:                          oldEntry.Name,
 	}
 
 	allowedOtherSANsData, wasSet := data.GetOk("allowed_other_sans")
@@ -1284,23 +1317,25 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		}
 	}
 
-	resp, err := validateRole(b, entry, ctx, req.Storage)
+	userError, warnings, err := validateRole(b, entry, ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 	if warning != "" {
-		resp.AddWarning(warning)
+		warnings = append(warnings, warning)
 	}
-	if resp.IsError() {
-		return resp, nil
+	if userError != "" {
+		return logical.ErrorResponse(userError), nil
+	}
+
+	if entWarnings, err := entValidateRole(b, entry, logical.PatchOperation); err != nil {
+		return nil, err
+	} else {
+		warnings = append(warnings, entWarnings...)
 	}
 
 	// Store it
-	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
-	if err != nil {
-		return nil, err
-	}
-	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+	if err := issuing.WriteRole(ctx, req.Storage, entry); err != nil {
 		return nil, err
 	}
 
@@ -1314,7 +1349,10 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		observe.NewAdditionalPKIMetadata("not_before_duration", entry.NotBeforeDuration.String()),
 	)
 
-	return resp, nil
+	return &logical.Response{
+		Warnings: warnings,
+		Data:     entry.ToResponseData(),
+	}, nil
 }
 
 func checkCNValidations(validations []string) ([]string, error) {

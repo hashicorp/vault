@@ -4,9 +4,9 @@
  */
 
 import Component from '@glimmer/component';
-import { getOwner } from '@ember/owner';
 import { action } from '@ember/object';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import routerLookup from 'core/utils/router-lookup';
 
 /**
  * @module LinkedBlock
@@ -26,13 +26,8 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  */
 
 export default class LinkedBlockComponent extends Component {
-  // We don't import the router service here because Ember Engine's use the alias 'app-router'
-  // Since this component is shared across engines, we look up the router dynamically using getOwner instead.
-  // This way we avoid throwing an error by looking up a service that doesn't exist.
-  // https://guides.emberjs.com/release/services/#toc_accessing-services
   get router() {
-    const owner = getOwner(this);
-    return owner.lookup('service:router') || owner.lookup('service:app-router');
+    return routerLookup(this);
   }
 
   @action

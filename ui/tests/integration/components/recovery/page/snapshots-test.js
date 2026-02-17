@@ -24,6 +24,23 @@ module('Integration | Component | recovery/snapshots', function (hooks) {
     this.renderComponent = () => render(hbs`<Recovery::Page::Snapshots @model={{this.model}}/>`);
   });
 
+  test('it displays raft empty state if showRaftStorageMessage is passed into model', async function (assert) {
+    this.model = { snapshots: { showRaftStorageMessage: true } };
+
+    await render(hbs`<Recovery::Page::Snapshots @model={{this.model}}/>`);
+
+    assert
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('Raft storage required ', ' Raft storage required empty state title renders');
+    assert
+      .dom(GENERAL.emptyStateMessage)
+      .hasText(
+        'Raft storage must be used in order to recover data from a snapshot.',
+        'Raft storage empty state message'
+      );
+    assert.dom(GENERAL.emptyStateActions).hasText('Snapshot management', 'Raft storage empty state action');
+  });
+
   test('it displays empty state in CE', async function (assert) {
     this.model = { snapshots: [], showCommunityMessage: true };
 

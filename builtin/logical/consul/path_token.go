@@ -96,6 +96,16 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		})
 		s.Secret.TTL = roleConfigData.TTL
 		s.Secret.MaxTTL = roleConfigData.MaxTTL
+
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeConsulTokenRead, map[string]interface{}{
+			"token_descriptor": tokenName,
+			"role_name":        role,
+			"ttl":              roleConfigData.TTL.String(),
+			"max_ttl":          roleConfigData.MaxTTL.String(),
+			"token_type":       roleConfigData.TokenType,
+			"local":            roleConfigData.Local,
+		})
+
 		return s, nil
 	}
 
@@ -145,6 +155,15 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	})
 	s.Secret.TTL = roleConfigData.TTL
 	s.Secret.MaxTTL = roleConfigData.MaxTTL
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeConsulTokenRead, map[string]interface{}{
+		"token_descriptor": tokenName,
+		"role_name":        role,
+		"ttl":              roleConfigData.TTL.String(),
+		"max_ttl":          roleConfigData.MaxTTL.String(),
+		"token_type":       roleConfigData.TokenType,
+		"local":            roleConfigData.Local,
+	})
 
 	return s, nil
 }

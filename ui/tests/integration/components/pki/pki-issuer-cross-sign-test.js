@@ -7,12 +7,12 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
-import { setupMirage } from 'ember-cli-mirage/test-support';
-import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 import { PKI_CROSS_SIGN } from 'vault/tests/helpers/pki/pki-selectors';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import sinon from 'sinon';
 
 const FIELDS = [
   {
@@ -39,10 +39,8 @@ const { intIssuerCert, newCSR, newlySignedCert, oldParentIssuerCert, parentIssue
 module('Integration | Component | pki issuer cross sign', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
-  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    const store = this.owner.lookup('service:store');
     this.backend = 'my-parent-issuer-mount';
     this.intMountPath = 'int-mount';
     this.owner.lookup('service:secret-mount-path').update(this.backend);
@@ -96,98 +94,114 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
       usage: 'crl-signing,issuing-certificates,ocsp-signing,read-only',
     };
 
+    this.certData = {
+      can_parse: true,
+      common_name: 'Short-Lived Int R1',
+      country: null,
+      exclude_cn_from_sans: false,
+      key_usage: 'CertSign, CRLSign',
+      locality: null,
+      max_path_length: undefined,
+      not_valid_after: 1677371103,
+      not_valid_before: 1674606273,
+      organization: null,
+      ou: null,
+      parsing_errors: [],
+      postal_code: null,
+      province: null,
+      signature_bits: '256',
+      street_address: null,
+      serial_number: null,
+      ttl: '768h',
+      use_pss: false,
+    };
+
     this.testInputs = {
       intermediateMount: this.intMountPath,
       intermediateIssuer: this.intIssuerData.issuer_name,
       newCrossSignedIssuer: this.newIssuerData.issuer_name,
     };
 
-    store.pushPayload('pki/issuer', { modelName: 'pki/issuer', data: this.parentIssuerData });
-    this.parentIssuerModel = store.peekRecord('pki/issuer', this.parentIssuerData.issuer_id);
+    const api = this.owner.lookup('service:api');
+    this.listStub = sinon.stub(api.secrets, 'pkiListIssuers').resolves({
+      keys: [this.parentIssuerData.issuer_id],
+      key_info: { [this.parentIssuerData.issuer_id]: this.parentIssuerData },
+    });
+    this.readStub = sinon.stub(api.secrets, 'pkiReadIssuer').resolves(this.intIssuerData);
+    this.generateStub = sinon
+      .stub(api.secrets, 'pkiGenerateIntermediate')
+      .resolves({ csr: newCSR.csr, key_id: this.intIssuerData.key_id });
+    this.signStub = sinon
+      .stub(api.secrets, 'pkiIssuerSignIntermediate')
+      .resolves({ ca_chain: [newlySignedCert, parentIssuerCert] });
+    this.importStub = sinon
+      .stub(api.secrets, 'pkiIssuersImportBundle')
+      .resolves({ mapping: { [this.newIssuerData.issuer_id]: this.intIssuerData.key_id } });
+    this.writeStub = sinon.stub(api.secrets, 'pkiWriteIssuer').resolves(this.newIssuerData);
+
+    this.renderComponent = () =>
+      render(hbs`<PkiIssuerCrossSign @parentIssuer={{this.parentIssuerData}} /> `, {
+        owner: this.engine,
+      });
   });
 
   test('it makes requests to the correct endpoints', async function (assert) {
-    assert.expect(18);
-    this.server.get(`/${this.intMountPath}/issuer/${this.intIssuerData.issuer_name}`, () => {
-      assert.ok(true, 'Step 1. GET request is made to fetch existing issuer data');
-      return { data: this.intIssuerData };
-    });
-    this.server.post(`/${this.intMountPath}/intermediate/generate/existing`, (schema, req) => {
-      assert.ok(true, 'Step 2. POST request is made to generate new CSR');
-      assert.propEqual(
-        JSON.parse(req.requestBody),
-        {
-          common_name: newCSR.common_name,
-          country: null,
-          exclude_cn_from_sans: false,
-          format: 'pem',
-          locality: null,
-          organization: null,
-          ou: null,
-          province: null,
-          key_ref: this.intIssuerData.key_id,
-        },
-        'payload contains correct key ref'
-      );
-      return {
-        data: { csr: newCSR.csr, key_id: this.intIssuerData.key_id },
-        request_id: '1234',
-      };
-    });
-    this.server.post(
-      `/${this.backend}/issuer/${this.parentIssuerData.issuer_name}/sign-intermediate`,
-      (schema, req) => {
-        assert.ok(true, 'Step 3. POST request is made to sign CSR with new parent issuer');
-        assert.propEqual(JSON.parse(req.requestBody), newCSR, 'payload has common name and csr');
-        return {
-          data: { ca_chain: [newlySignedCert, parentIssuerCert] },
-          request_id: '1234',
-        };
-      }
-    );
-    this.server.post(`/${this.intMountPath}/issuers/import/bundle`, (schema, req) => {
-      assert.ok(true, 'Step 4. POST request made to import issuer');
-      assert.propEqual(
-        JSON.parse(req.requestBody),
-        { pem_bundle: [newlySignedCert, parentIssuerCert].join('\n') },
-        'payload contains pem bundle'
-      );
-      return {
-        request_id: '1234',
-        data: {
-          imported_issuers: null,
-          imported_keys: null,
-          mapping: { [this.newIssuerData.issuer_id]: this.intIssuerData.key_id },
-        },
-      };
-    });
-    this.server.get(`/${this.intMountPath}/issuer/${this.newIssuerData.issuer_id}`, () => {
-      assert.ok(true, 'Step 5. GET request is made to newly imported issuer');
-      return { data: this.newIssuerData };
-    });
+    assert.expect(15);
 
-    this.server.post(`/${this.intMountPath}/issuer/${this.newIssuerData.issuer_id}`, (schema, req) => {
-      assert.ok(true, 'Step 6. POST request is made to update issuer name');
-      assert.propEqual(
-        JSON.parse(req.requestBody),
-        {
-          issuer_name: 'newly-cross-signed-cert',
-          leaf_not_after_behavior: 'err',
-          usage: 'crl-signing,issuing-certificates,ocsp-signing,read-only',
-        },
-        'payload has correct data '
-      );
-      return { data: this.newIssuerData };
-    });
+    this.readStub.onSecondCall().resolves(this.newIssuerData);
 
-    await render(hbs`<PkiIssuerCrossSign @parentIssuer={{this.parentIssuerModel}} /> `, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
     // fill out form and submit
     for (const field of FIELDS) {
       await fillIn(PKI_CROSS_SIGN.objectListInput(field.key), this.testInputs[field.key]);
     }
     await click(GENERAL.submitButton);
+
+    assert.true(
+      this.listStub.calledWith(this.intMountPath),
+      'Step 0. GET request is made to list issuers in intermediate mount for name validation'
+    );
+
+    assert.true(
+      this.readStub.calledWith(this.intIssuerData.issuer_name, this.intMountPath),
+      'Step 1. GET request is made to fetch existing issuer data'
+    );
+
+    assert.true(
+      this.generateStub.calledWith('existing', this.intMountPath, {
+        ...this.certData,
+        key_ref: this.intIssuerData.key_id,
+      }),
+      'Step 2. POST request is made to generate new CSR'
+    );
+
+    assert.true(
+      this.signStub.calledWith(this.parentIssuerData.issuer_name, this.backend, {
+        ...newCSR,
+        ...this.certData,
+      }),
+      'Step 3. POST request is made to sign CSR with new parent issuer'
+    );
+
+    assert.true(
+      this.importStub.calledWith(this.intMountPath, {
+        pem_bundle: [newlySignedCert, parentIssuerCert].join('\n'),
+      }),
+      'Step 4. POST request is made to import issuer'
+    );
+
+    assert.true(
+      this.readStub.calledWith(this.newIssuerData.issuer_id, this.intMountPath),
+      'Step 5. GET request is made to newly imported issuer'
+    );
+
+    assert.true(
+      this.writeStub.calledWith(this.newIssuerData.issuer_id, this.intMountPath, {
+        ...this.newIssuerData,
+        issuer_name: this.newIssuerData.issuer_name,
+      }),
+      'Step 6. POST request is made to update issuer name'
+    );
 
     assert.dom(PKI_CROSS_SIGN.statusCount).hasText('Cross-signing complete (1 successful, 0 errors)');
     assert
@@ -202,7 +216,8 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
   });
 
   test('it cross-signs multiple certs', async function (assert) {
-    assert.expect(13);
+    assert.expect(10);
+
     const nonexistentIssuer = {
       intermediateMount: this.intMountPath,
       intermediateIssuer: 'some-fake-issuer',
@@ -214,32 +229,21 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
       newCrossSignedIssuer: 'failed-cert-2',
     };
 
-    this.server.get(`/${this.intMountPath}/issuer/${this.intIssuerData.issuer_name}`, () => {
-      assert.ok(true, 'request is made to sign first cert');
-      return { data: this.intIssuerData };
-    });
+    const error = getErrorResponse(
+      {
+        errors: [
+          `1 error occurred:\n\t* unable to find PKI issuer for reference: ${nonexistentIssuer.intermediateIssuer}\n\n`,
+        ],
+      },
+      500
+    );
+    this.readStub.onCall(1).rejects(error);
+    this.readStub
+      .onCall(2)
+      .resolves({ issuer_name: unsupportedCert.intermediateIssuer, certificate: unsupportedOids });
+    this.readStub.onCall(3).rejects(error);
 
-    this.server.get(`/${this.intMountPath}/issuer/${nonexistentIssuer.intermediateIssuer}`, () => {
-      assert.ok(true, 'request is made to second cert');
-      return new Response(
-        500,
-        { 'Content-Type': 'application/json' },
-        JSON.stringify({
-          errors: [
-            `1 error occurred:\n\t* unable to find PKI issuer for reference: ${nonexistentIssuer.intermediateIssuer}\n\n`,
-          ],
-        })
-      );
-    });
-
-    this.server.get(`/${this.intMountPath}/issuer/${unsupportedCert.intermediateIssuer}`, () => {
-      assert.ok(true, 'request is made to third cert');
-      return { data: { isser_name: unsupportedCert.intermediateIssuer, certificate: unsupportedOids } };
-    });
-
-    await render(hbs`<PkiIssuerCrossSign @parentIssuer={{this.parentIssuerModel}} /> `, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
 
     // fill out form and submit
     for (const field of FIELDS) {
@@ -275,19 +279,15 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
   test('it returns API errors when a request fails', async function (assert) {
     assert.expect(7);
-    this.server.get(`/${this.intMountPath}/issuer/${this.intIssuerData.issuer_name}`, () => {
-      return new Response(
-        500,
-        { 'Content-Type': 'application/json' },
-        JSON.stringify({
-          errors: ['1 error occurred:\n\t* unable to find PKI issuer for reference: nonexistent-mount\n\n'],
-        })
-      );
-    });
 
-    await render(hbs`<PkiIssuerCrossSign @parentIssuer={{this.parentIssuerModel}} /> `, {
-      owner: this.engine,
-    });
+    this.readStub.rejects(
+      getErrorResponse(
+        { errors: ['1 error occurred:\n\t* unable to find PKI issuer for reference: nonexistent-mount\n\n'] },
+        500
+      )
+    );
+
+    await this.renderComponent();
 
     // fill out form and submit
     for (const field of FIELDS) {
@@ -314,14 +314,12 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
   test('it returns an error when a certificate contains unsupported values', async function (assert) {
     assert.expect(7);
-    const unsupportedIssuerCert = { ...this.intIssuerData, certificate: unsupportedOids };
-    this.server.get(`/${this.intMountPath}/issuer/${this.intIssuerData.issuer_name}`, () => {
-      return { data: unsupportedIssuerCert };
-    });
 
-    await render(hbs`<PkiIssuerCrossSign @parentIssuer={{this.parentIssuerModel}} /> `, {
-      owner: this.engine,
-    });
+    const unsupportedIssuerCert = { ...this.intIssuerData, certificate: unsupportedOids };
+    this.readStub.resolves(unsupportedIssuerCert);
+
+    await this.renderComponent();
+
     // fill out form and submit
     for (const field of FIELDS) {
       await fillIn(PKI_CROSS_SIGN.objectListInput(field.key), this.testInputs[field.key]);
@@ -349,18 +347,17 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
   test('it returns an error when attempting to self-cross-sign', async function (assert) {
     assert.expect(7);
+
     this.testInputs = {
       intermediateMount: this.backend,
       intermediateIssuer: this.parentIssuerData.issuer_name,
       newCrossSignedIssuer: this.newIssuerData.issuer_name,
     };
-    this.server.get(`/${this.backend}/issuer/${this.parentIssuerData.issuer_name}`, () => {
-      return { data: this.parentIssuerData };
-    });
 
-    await render(hbs`<PkiIssuerCrossSign @parentIssuer={{this.parentIssuerModel}} /> `, {
-      owner: this.engine,
-    });
+    this.readStub.resolves(this.parentIssuerData);
+
+    await this.renderComponent();
+
     // fill out form and submit
     for (const field of FIELDS) {
       await fillIn(PKI_CROSS_SIGN.objectListInput(field.key), this.testInputs[field.key]);

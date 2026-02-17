@@ -37,6 +37,7 @@ module('Acceptance | Community | config-ui/messages', function (hooks) {
   });
 
   test('it should hide the sidebar settings section on community', async function (assert) {
+    await click(GENERAL.navLink('Operational tools'));
     assert.dom(CUSTOM_MESSAGES.navLink).doesNotExist();
   });
 });
@@ -130,13 +131,15 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   test('authenticated it should create, edit, view, and delete a message', async function (assert) {
     // create first message
     await this.createMessageRepl({ title: 'new-message' });
-    assert.dom(GENERAL.title).hasText('new-message', 'message title shows on the details screen');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText('new-message', 'message title shows on the details screen');
     // edit message
     await click(GENERAL.linkTo('edit'));
     await fillIn(CUSTOM_MESSAGES.input('title'), `Edited new-message`);
     await click(GENERAL.submitButton);
     assert
-      .dom(GENERAL.title)
+      .dom(GENERAL.hdsPageHeaderTitle)
       .hasText(`Edited new-message`, 'edited message title shows on the details screen');
     await this.deleteMessages();
     const linkedBlocks = findAll('[data-test-list-item]');
@@ -210,6 +213,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   });
 
   test('it should display preview a message when all required fields are filled out', async function (assert) {
+    await click(GENERAL.navLink('Operational tools'));
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('After user logs in'));
     await click(GENERAL.button('Create message'));
@@ -231,6 +235,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   });
 
   test('it should not display preview a message when all required fields are not filled out', async function (assert) {
+    await click(GENERAL.navLink('Operational tools'));
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('After user logs in'));
     await click(GENERAL.button('Create message'));
@@ -256,14 +261,14 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       authenticated: false,
     });
     assert
-      .dom(GENERAL.title)
+      .dom(GENERAL.hdsPageHeaderTitle)
       .hasText('unauthenticated create edit view delete', 'title shows on the details screen');
     // navigate to edit the title
     await click(GENERAL.linkTo('edit'));
     await fillIn(CUSTOM_MESSAGES.input('title'), `Edited ${'unauthenticated create edit view delete'}`);
     await click(GENERAL.submitButton);
     assert
-      .dom(GENERAL.title)
+      .dom(GENERAL.hdsPageHeaderTitle)
       .hasText(
         `Edited ${'unauthenticated create edit view delete'}`,
         'edited title shows on the details screen'
@@ -296,6 +301,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   });
 
   test('it should show info message about sensitive information on create and edit form', async function (assert) {
+    await click(GENERAL.navLink('Operational tools'));
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('On login page'));
     await click(GENERAL.button('Create message'));
@@ -307,6 +313,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   });
 
   test('it should allow you to preview a message when all required fields are filled out', async function (assert) {
+    await click(GENERAL.navLink('Operational tools'));
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('On login page'));
     await click(GENERAL.button('Create message'));
@@ -328,6 +335,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   });
 
   test('it should not display a preview of a message when all required fields are not filled out', async function (assert) {
+    await click(GENERAL.navLink('Operational tools'));
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('On login page'));
     await click(GENERAL.button('Create message'));

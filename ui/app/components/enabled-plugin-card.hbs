@@ -11,7 +11,7 @@
     @level={{if isDisabled "base" "mid"}}
     @background={{if isDisabled "neutral-secondary" "neutral-primary"}}
     @hasBorder={{true}}
-    @ariaLabel="{{@type.displayName}} - {{if isDisabled 'disabled' 'enabled'}} engine type"
+    aria-label="{{@type.displayName}} - {{if isDisabled 'disabled' 'enabled'}} engine type"
     tabindex="0"
     {{on "click" this.handleSelection}}
     {{on "keydown" this.handleKeyDown}}

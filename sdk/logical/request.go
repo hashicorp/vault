@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/rotation"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -203,9 +204,14 @@ type Request struct {
 	// X-Vault-MFA header
 	MFACreds MFACreds `json:"mfa_creds" structs:"mfa_creds" mapstructure:"mfa_creds" sentinel:""`
 
+	// Deprecated: use RotationID in RotationInfo instead
 	// RotationID is set by the Rotation Manager
 	// when making rotate requests to plugin backends
 	RotationID string
+
+	// RotationInfo is set by the Rotation Manager
+	// when making rotate requests to plugin backends
+	RotationInfo *rotation.RotationInfo
 
 	// Cached token entry. This avoids another lookup in request handling when
 	// we've already looked it up at http handling time. Note that this token

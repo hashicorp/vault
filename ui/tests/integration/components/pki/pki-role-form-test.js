@@ -9,23 +9,40 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import PkiRoleForm from 'vault/forms/secrets/pki/role';
 
 module('Integration | Component | pki-role-form', function (hooks) {
   setupRenderingTest(hooks);
-  setupMirage(hooks);
   setupEngine(hooks, 'pki'); // https://github.com/ember-engines/ember-engines/pull/653
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.role = this.store.createRecord('pki/role');
-    this.store.createRecord('pki/issuer', { issuerName: 'issuer-0', issuerId: 'abcd-efgh' });
-    this.store.createRecord('pki/issuer', { issuerName: 'issuer-1', issuerId: 'ijkl-mnop' });
-    this.issuers = this.store.peekAll('pki/issuer');
-    this.role.backend = 'pki';
+    this.backend = 'pki';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
+
+    this.writeStub = sinon.stub(this.owner.lookup('service:api').secrets, 'pkiWriteRole');
+
+    this.issuers = [
+      { issuer_name: 'issuer-0', issuer_id: 'abcd-efgh' },
+      { issuer_name: 'issuer-1', issuer_id: 'ijkl-mnop' },
+    ];
     this.onCancel = sinon.spy();
+    this.onSave = sinon.spy();
+
+    this.formDefaults = {
+      allow_ip_sans: true,
+      allow_localhost: true,
+      client_flag: true,
+      enforce_hostnames: true,
+      key_usage: ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'],
+      not_before_duration: 30,
+      serial_number_source: 'json-csr',
+      server_flag: true,
+      use_csr_common_name: true,
+      use_csr_sans: true,
+    };
+
     setRunOptions({
       rules: {
         // TODO: fix RadioCard component (replace with HDS)
@@ -33,30 +50,29 @@ module('Integration | Component | pki-role-form', function (hooks) {
         'nested-interactive': { enabled: false },
       },
     });
+
+    this.renderComponent = () => {
+      this.form = new PkiRoleForm(this.role, { isNew: !this.role });
+      return render(
+        hbs`<PkiRoleForm @form={{this.form}} @issuers={{this.issuers}} @onCancel={{this.onCancel}} @onSave={{this.onSave}} />`,
+        { owner: this.engine }
+      );
+    };
   });
 
   test('it should render default fields and toggle groups', async function (assert) {
-    await render(
-      hbs`
-      <PkiRoleForm
-         @role={{this.role}}
-         @issuers={{this.issuers}}
-         @onCancel={{this.onCancel}}
-         @onSave={{this.onSave}}
-       />
-  `,
-      { owner: this.engine }
-    );
-    assert.dom(GENERAL.ttl.toggle('issuerRef-toggle')).exists();
+    await this.renderComponent();
+
+    assert.dom(GENERAL.ttl.toggle('issuer_ref-toggle')).exists();
     assert.dom(GENERAL.ttl.input('Backdate validity')).exists();
     assert.dom(GENERAL.fieldByAttr('customTtl')).exists();
     assert.dom(GENERAL.ttl.toggle('Max TTL')).exists();
-    assert.dom(GENERAL.fieldByAttr('generateLease')).exists();
-    assert.dom(GENERAL.fieldByAttr('noStore')).exists();
+    assert.dom(GENERAL.fieldByAttr('generate_lease')).exists();
+    assert.dom(GENERAL.fieldByAttr('no_store')).exists();
     assert
-      .dom(GENERAL.fieldByAttr('noStoreMetadata'))
-      .doesNotExist('noStoreMetadata is not shown b/c not enterprise');
-    assert.dom(GENERAL.inputByAttr('basicConstraintsValidForNonCa')).exists();
+      .dom(GENERAL.fieldByAttr('no_store_metadata'))
+      .doesNotExist('no_store_metadata is not shown for community edition');
+    assert.dom(GENERAL.inputByAttr('basic_constraints_valid_for_non_ca')).exists();
     assert.dom(GENERAL.button('Domain handling')).exists('shows form-field group add domain handling');
     assert.dom(GENERAL.button('Key parameters')).exists('shows form-field group key params');
     assert.dom(GENERAL.button('Key usage')).exists('shows form-field group key usage');
@@ -68,57 +84,16 @@ module('Integration | Component | pki-role-form', function (hooks) {
   });
 
   test('it renders enterprise-only values in enterprise edition', async function (assert) {
-    const version = this.owner.lookup('service:version');
-    version.type = 'enterprise';
-    await render(
-      hbs`
-      <PkiRoleForm
-         @role={{this.role}}
-         @issuers={{this.issuers}}
-         @onCancel={{this.onCancel}}
-         @onSave={{this.onSave}}
-       />
-  `,
-      { owner: this.engine }
-    );
-    assert.dom(GENERAL.fieldByAttr('noStoreMetadata')).exists();
+    this.owner.lookup('service:version').type = 'enterprise';
+    await this.renderComponent();
+    assert.dom(GENERAL.fieldByAttr('no_store_metadata')).exists();
   });
 
   test('it should save a new pki role with various options selected', async function (assert) {
     // Key usage, Key params and Not valid after options are tested in their respective component tests
-    assert.expect(7);
-    this.server.post(`/${this.role.backend}/roles/test-role`, (schema, req) => {
-      assert.ok(true, 'Request made to save role');
-      const request = JSON.parse(req.requestBody);
-      const allowedDomainsTemplate = request.allowed_domains_template;
-      const policyIdentifiers = request.policy_identifiers;
-      const allowedUriSansTemplate = request.allow_uri_sans_template;
-      const allowedSerialNumbers = request.allowed_serial_numbers;
+    assert.expect(3);
 
-      assert.true(allowedDomainsTemplate, 'correctly sends allowed_domains_template');
-      assert.strictEqual(policyIdentifiers[0], 'some-oid', 'correctly sends policy_identifiers');
-      assert.true(allowedUriSansTemplate, 'correctly sends allowed_uri_sans_template');
-      assert.strictEqual(
-        allowedSerialNumbers[0],
-        'some-serial-number',
-        'correctly sends allowed_serial_numbers'
-      );
-      return {};
-    });
-
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
-
-    await render(
-      hbs`
-      <PkiRoleForm
-         @role={{this.role}}
-         @issuers={{this.issuers}}
-         @onCancel={{this.onCancel}}
-         @onSave={{this.onSave}}
-       />
-  `,
-      { owner: this.engine }
-    );
+    await this.renderComponent();
 
     await click(GENERAL.submitButton);
 
@@ -126,124 +101,84 @@ module('Integration | Component | pki-role-form', function (hooks) {
       .dom(GENERAL.validationErrorByAttr('name'))
       .includesText('Name is required.', 'show correct error message');
 
-    await fillIn(GENERAL.inputByAttr('name'), 'test-role');
-    await click('[data-test-input="basicConstraintsValidForNonCa"]');
+    const name = 'test-role';
+    await fillIn(GENERAL.inputByAttr('name'), name);
+    await click('[data-test-input="basic_constraints_valid_for_non_ca"]');
     await click(GENERAL.button('Domain handling'));
-    await click('[data-test-input="allowedDomainsTemplate"]');
+    await click('[data-test-input="allowed_domains_template"]');
     await click(GENERAL.button('Policy identifiers'));
-    await fillIn('[data-test-input="policyIdentifiers"] [data-test-string-list-input="0"]', 'some-oid');
+    await fillIn('[data-test-input="policy_identifiers"] [data-test-string-list-input="0"]', 'some-oid');
     await click(GENERAL.button('Subject Alternative Name (SAN) Options'));
-    await click('[data-test-input="allowUriSansTemplate"]');
+    await click('[data-test-input="allowed_uri_sans_template"]');
     await click(GENERAL.button('Additional subject fields'));
     await fillIn(
-      '[data-test-input="allowedSerialNumbers"] [data-test-string-list-input="0"]',
+      '[data-test-input="allowed_serial_numbers"] [data-test-string-list-input="0"]',
       'some-serial-number'
     );
 
     await click(GENERAL.submitButton);
-  });
-
-  test('it should update attributes on the model on update', async function (assert) {
-    assert.expect(1);
-
-    this.store.pushPayload('pki/role', {
-      modelName: 'pki/role',
-      name: 'test-role',
-      backend: 'pki-test',
-      id: 'role-id',
-    });
-
-    this.role = this.store.peekRecord('pki/role', 'role-id');
-
-    await render(
-      hbs`
-      <PkiRoleForm
-        @role={{this.role}}
-        @issuers={{this.issuers}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-      `,
-      { owner: this.engine }
+    const payload = {
+      ...this.formDefaults,
+      allowed_domains_template: true,
+      basic_constraints_valid_for_non_ca: true,
+      policy_identifiers: ['some-oid'],
+      allowed_uri_sans_template: true,
+      allowed_serial_numbers: ['some-serial-number'],
+    };
+    assert.true(
+      this.writeStub.calledWith(name, this.backend, payload),
+      'Correct endpoint is called to save role'
     );
-    await click(GENERAL.ttl.toggle('issuerRef-toggle'));
-    await fillIn(GENERAL.selectByAttr('issuerRef'), 'issuer-1');
-    await click(GENERAL.submitButton);
-    assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
+    assert.true(this.onSave.calledWith(name), 'onSave called with role name after successful save');
   });
 
   test('it should edit a role', async function (assert) {
-    assert.expect(8);
-    this.server.post(`/pki-test/roles/test-role`, (schema, req) => {
-      assert.ok(true, 'Request made to correct endpoint to update role');
-      const request = JSON.parse(req.requestBody);
-      assert.propEqual(
-        request,
-        {
-          allow_ip_sans: true,
-          issuer_ref: 'issuer-1',
-          key_bits: '224',
-          key_type: 'ec',
-          key_usage: ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'],
-          not_before_duration: '30s',
-          require_cn: true,
-          serial_number_source: 'json-csr',
-          signature_bits: '384',
-          use_csr_common_name: true,
-          use_csr_sans: true,
-        },
-        'sends role params in correct type'
-      );
-      return {};
-    });
+    assert.expect(7);
 
-    this.store.pushPayload('pki/role', {
-      modelName: 'pki/role',
+    this.role = {
       name: 'test-role',
-      backend: 'pki-test',
-      id: 'role-id',
+      issuer_ref: 'default',
       key_type: 'rsa',
       key_bits: 3072, // string type in dropdown, API returns as numbers
       signature_bits: 512, // string type in dropdown, API returns as numbers
-    });
+    };
+    await this.renderComponent();
 
-    this.role = this.store.peekRecord('pki/role', 'role-id');
-
-    await render(
-      hbs`
-      <PkiRoleForm
-        @role={{this.role}}
-        @issuers={{this.issuers}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-      `,
-      { owner: this.engine }
-    );
-
-    await click(GENERAL.ttl.toggle('issuerRef-toggle'));
-    await fillIn(GENERAL.selectByAttr('issuerRef'), 'issuer-1');
+    await click(GENERAL.ttl.toggle('issuer_ref-toggle'));
+    await fillIn(GENERAL.selectByAttr('issuer_ref'), 'issuer-1');
 
     await click(GENERAL.button('Key parameters'));
-    assert.dom(GENERAL.inputByAttr('keyType')).hasValue('rsa');
+    assert.dom(GENERAL.inputByAttr('key_type')).hasValue('rsa');
     assert
-      .dom(GENERAL.inputByAttr('keyBits'))
+      .dom(GENERAL.inputByAttr('key_bits'))
       .hasValue('3072', 'dropdown has model value, not default value (2048)');
     assert
-      .dom(GENERAL.inputByAttr('signatureBits'))
+      .dom(GENERAL.inputByAttr('signature_bits'))
       .hasValue('512', 'dropdown has model value, not default value (0)');
 
-    await fillIn(GENERAL.inputByAttr('keyType'), 'ec');
-    await fillIn(GENERAL.inputByAttr('keyBits'), '224');
+    await fillIn(GENERAL.inputByAttr('key_type'), 'ec');
+    await fillIn(GENERAL.inputByAttr('key_bits'), '224');
     assert
-      .dom(GENERAL.inputByAttr('keyBits'))
+      .dom(GENERAL.inputByAttr('key_bits'))
       .hasValue('224', 'dropdown has selected value, not default value (256)');
-    await fillIn(GENERAL.inputByAttr('signatureBits'), '384');
+    await fillIn(GENERAL.inputByAttr('signature_bits'), '384');
     assert
-      .dom(GENERAL.inputByAttr('signatureBits'))
+      .dom(GENERAL.inputByAttr('signature_bits'))
       .hasValue('384', 'dropdown has selected value, not default value (0)');
 
     await click(GENERAL.submitButton);
-    assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
+
+    const payload = {
+      ...this.formDefaults,
+      issuer_ref: 'issuer-1',
+      key_bits: '224',
+      key_type: 'ec',
+      signature_bits: '384',
+    };
+    assert.true(
+      this.writeStub.calledWith('test-role', this.backend, payload),
+      'Correct endpoint is called to save role'
+    );
+    assert.true(this.onSave.calledWith('test-role'), 'onSave called with role name after successful save');
   });
 });

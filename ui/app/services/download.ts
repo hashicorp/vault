@@ -6,7 +6,7 @@
 import Service from '@ember/service';
 import timestamp from 'core/utils/timestamp';
 
-interface Extensions {
+export interface Extensions {
   csv: string;
   hcl: string;
   sentinel: string;

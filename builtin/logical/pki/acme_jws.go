@@ -190,7 +190,10 @@ func verifyEabPayload(acmeState *acmeState, ac *acmeContext, outer *jwsCtx, expe
 	if !ok {
 		return nil, fmt.Errorf("missing required field 'protected': %w", ErrMalformed)
 	}
-	jwkBase64 := rawProtectedBase64.(string)
+	jwkBase64, ok := rawProtectedBase64.(string)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse 'protected' field: %w", ErrMalformed)
+	}
 
 	jwkBytes, err := base64.RawURLEncoding.DecodeString(jwkBase64)
 	if err != nil {

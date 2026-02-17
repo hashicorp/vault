@@ -114,6 +114,13 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 		return resp, pb.ProtoErrToErr(reply.Err)
 	}
 
+	if reply.WalIndex != nil {
+		req.SetResponseState(&logical.WALState{
+			LocalIndex:      reply.WalIndex.LocalIndex,
+			ReplicatedIndex: reply.WalIndex.ReplicatedIndex,
+		})
+	}
+
 	return resp, nil
 }
 

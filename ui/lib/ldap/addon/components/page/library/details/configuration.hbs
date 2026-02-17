@@ -3,24 +3,16 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#each @model.displayFields as |field|}}
-  {{#let (get @model field.name) as |value|}}
-    {{#if (eq field.name "disable_check_in_enforcement")}}
-      <InfoTableRow @label={{field.options.label}}>
-        <Icon
-          class="is-flex-v-centered {{if (eq value 'Enabled') 'icon-true' 'icon-false'}}"
-          @name={{if (eq value "Enabled") "check-circle" "x-square"}}
-          data-test-check-in-icon
-        />
-        <span>{{value}}</span>
-      </InfoTableRow>
-    {{else}}
-      <InfoTableRow
-        data-test-filtered-field
-        @label={{or field.options.detailsLabel field.options.label}}
-        @value={{value}}
-        @formatTtl={{eq field.options.editType "ttl"}}
-      />
-    {{/if}}
-  {{/let}}
-{{/each}}
+<InfoTableRow data-test-field="name" @label="Library name" @value={{@model.library.name}} />
+<InfoTableRow data-test-field="ttl" @label="TTL" @value={{@model.library.ttl}} @formatTtl={{true}} />
+<InfoTableRow data-test-field="max_ttl" @label="Max TTL" @value={{@model.library.max_ttl}} @formatTtl={{true}} />
+{{#let @model.library.disable_check_in_enforcement as |value|}}
+  <InfoTableRow @label="Check-in enforcement">
+    <Icon
+      class="is-flex-v-centered {{if value 'icon-false' 'icon-true'}}"
+      @name={{if value "x-square" "check-circle"}}
+      data-test-check-in-icon
+    />
+    <span>{{if value "Disabled" "Enabled"}}</span>
+  </InfoTableRow>
+{{/let}}

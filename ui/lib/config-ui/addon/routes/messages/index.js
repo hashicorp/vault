@@ -76,8 +76,11 @@ export default class MessagesRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    const label = controller.authenticated ? 'After User Logs In' : 'On Login Page';
-    controller.breadcrumbs = [{ label: 'Messages' }, { label }];
+
+    controller.breadcrumbs = [
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Custom messages' },
+    ];
   }
 
   resetController(controller, isExiting) {

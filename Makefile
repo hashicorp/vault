@@ -198,26 +198,26 @@ static-assets-dir:
 
 install-ui-dependencies:
 	@echo "==> Installing JavaScript assets"
-	@cd ui && yarn
+	@cd ui && pnpm i
 
 test-ember: install-ui-dependencies
 	@echo "==> Running ember tests"
-	@cd ui && yarn run test:oss
+	@cd ui && pnpm run test:oss
 
 test-ember-enos: install-ui-dependencies
 	@echo "==> Running ember tests with a real backend"
-	@cd ui && yarn run test:enos
+	@cd ui && pnpm run test:enos
 
 ember-dist: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
 	@echo "==> Building Ember application"
-	@cd ui && yarn run build
+	@cd ui && pnpm run build
 	@rm -rf ui/if-you-need-to-delete-this-open-an-issue-async-disk-cache
 
 ember-dist-dev: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
 	@echo "==> Building Ember application"
-	@cd ui && yarn run build:dev
+	@cd ui && pnpm run build:dev
 
 static-dist: ember-dist
 static-dist-dev: ember-dist-dev

@@ -1,0 +1,73 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title="{{@backend.id}} configuration" @description="KV" @icon={{@backend.icon}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+  <:badges>
+    <Hds::Badge @text="version 2" data-test-badge />
+  </:badges>
+  <:actions>
+    <Hds::Button @color="secondary" @route="list" @text="Exit configuration" data-test-button="Exit configuration" />
+  </:actions>
+</Page::Header>
+
+<Mount::ConfigureTabs
+  @configRoute="configure"
+  @displayName="KV"
+  @path={{@backend.id}}
+  @externalRoute="secretsGeneralSettingsConfiguration"
+/>
+
+<KvTabsToolbar>
+  <:toolbarActions>
+    <ToolbarLink @route="configure" data-test-secret-backend-configure>
+      Edit configuration
+    </ToolbarLink>
+  </:toolbarActions>
+</KvTabsToolbar>
+
+<form {{on "submit" (perform this.save)}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode="update" @noun="KV secret metadata" />
+    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+    {{#each @form.metadataFields as |field|}}
+      {{#unless (eq field.name "custom_metadata")}}
+        <FormField @attr={{field}} @model={{@form}} @modelValidations={{this.modelValidations}} />
+      {{/unless}}
+    {{/each}}
+  </div>
+
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <div class="has-top-padding-s">
+      <Hds::Button
+        @text="Save"
+        @icon={{if this.save.isRunning "loading"}}
+        type="submit"
+        disabled={{this.save.isRunning}}
+        data-test-kv-save
+      />
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
+        class="has-left-margin-s"
+        disabled={{this.save.isRunning}}
+        {{on "click" this.navigateToConfiguration}}
+        data-test-kv-cancel
+      />
+      {{#if this.invalidFormAlert}}
+        <div class="control">
+          <AlertInline
+            data-test-invalid-form-alert
+            @type="danger"
+            class="has-top-padding-s"
+            @message={{this.invalidFormAlert}}
+          />
+        </div>
+      {{/if}}
+    </div>
+  </div>
+</form>

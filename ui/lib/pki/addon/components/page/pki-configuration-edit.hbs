@@ -11,7 +11,7 @@
         <ul class={{if (gt this.errors.length 1) "bullet"}}>
           {{#each this.errors as |error|}}
             <li>
-              <code>POST config/{{error.modelName}}</code>:
+              <code>POST config/{{error.type}}</code>:
               {{error.message}}
             </li>
           {{/each}}
@@ -24,9 +24,9 @@
       <h2 class="title is-size-5 has-border-bottom-light page-header">
         Cluster Config
       </h2>
-      {{#if @cluster.canSet}}
-        {{#each @cluster.allFields as |attr|}}
-          <FormField @attr={{attr}} @model={{@cluster}} @showHelpText={{false}} />
+      {{#if @capabilities.canSetCluster}}
+        {{#each @clusterForm.formFields as |field|}}
+          <FormField @attr={{field}} @model={{@clusterForm}} @showHelpText={{false}} />
         {{/each}}
       {{else}}
         <EmptyState
@@ -43,9 +43,9 @@
       <h2 class="title is-size-5 has-border-bottom-light page-header">
         ACME Config
       </h2>
-      {{#if @acme.canSet}}
-        {{#each @acme.allFields as |attr|}}
-          <FormField @attr={{attr}} @model={{@acme}} @showHelpText={{false}} @backend={{@backend}} />
+      {{#if @capabilities.canSetAcme}}
+        {{#each @acmeForm.formFields as |field|}}
+          <FormField @attr={{field}} @model={{@acmeForm}} @showHelpText={{false}} />
         {{/each}}
       {{else}}
         <EmptyState
@@ -62,9 +62,9 @@
       <h2 class="title is-size-5 has-border-bottom-light page-header">
         Global URLs
       </h2>
-      {{#if @urls.canSet}}
-        {{#each @urls.allFields as |attr|}}
-          <FormField @attr={{attr}} @model={{@urls}} @showHelpText={{false}} />
+      {{#if @capabilities.canSetUrls}}
+        {{#each @urlsForm.formFields as |field|}}
+          <FormField @attr={{field}} @model={{@urlsForm}} @showHelpText={{false}} />
         {{/each}}
       {{else}}
         <EmptyState
@@ -78,36 +78,36 @@
     </fieldset>
 
     <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-crl-edit-section>
-      {{#if @crl.canSet}}
-        {{#each @crl.formFieldGroups as |fieldGroup|}}
+      {{#if @capabilities.canSetCrl}}
+        {{#each @crlForm.formFieldGroups as |fieldGroup|}}
           {{#each-in fieldGroup as |group fields|}}
             {{#if (or (not-eq group "Unified Revocation") this.isEnterprise)}}
               <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-crl-header={{group}}>
                 {{group}}
               </h2>
             {{/if}}
-            {{#each fields as |attr|}}
-              {{#if (eq attr.options.editType "ttl")}}
-                {{#if (or (includes attr.name (array "expiry" "ocspExpiry")) (not @crl.disable))}}
-                  {{#let (get @crl attr.options.mapToBoolean) as |enabled|}}
+            {{#each fields as |field|}}
+              {{#if (eq field.options.editType "ttl")}}
+                {{#if (or (includes field.name (array "expiry" "ocsp_expiry")) (not @crlForm.disable))}}
+                  {{#let (get @crlForm field.options.mapToBoolean) as |enabled|}}
                     {{! 'enabled' is the pki/crl model's boolean attr that corresponds to the duration set by the ttl }}
                     <div class="field">
                       <TtlPicker
-                        data-test-input={{attr.name}}
-                        @onChange={{fn this.handleTtl attr}}
-                        @label={{attr.options.label}}
-                        @labelDisabled={{attr.options.labelDisabled}}
-                        @helperTextDisabled={{attr.options.helperTextDisabled}}
-                        @helperTextEnabled={{attr.options.helperTextEnabled}}
-                        @initialEnabled={{if attr.options.isOppositeValue (not enabled) enabled}}
-                        @initialValue={{get @crl attr.name}}
+                        data-test-input={{field.name}}
+                        @onChange={{fn this.handleTtl field}}
+                        @label={{field.options.label}}
+                        @labelDisabled={{field.options.labelDisabled}}
+                        @helperTextDisabled={{field.options.helperTextDisabled}}
+                        @helperTextEnabled={{field.options.helperTextEnabled}}
+                        @initialEnabled={{if field.options.isOppositeValue (not enabled) enabled}}
+                        @initialValue={{get @crlForm field.name}}
                       />
                     </div>
                   {{/let}}
                 {{/if}}
               {{else}}
                 {{#if this.isEnterprise}}
-                  <FormField @attr={{attr}} @model={{@crl}} />
+                  <FormField @attr={{field}} @model={{@crlForm}} />
                 {{/if}}
               {{/if}}
             {{/each}}
@@ -125,7 +125,7 @@
 
     <hr class="has-background-gray-100" />
     <Hds::ButtonSet>
-      {{#if (or @urls.canSet @crl.canSet)}}
+      {{#if (or @capabilities.canSetUrls @capabilities.canSetCrl)}}
         <Hds::Button
           @text="Save"
           @icon={{if this.save.isRunning "loading"}}

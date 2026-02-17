@@ -8,21 +8,25 @@
     <ReplicationPage @model={{this.model}} as |Page|>
       <Page.header @showTabs={{true}} />
       {{#if Page.isDisabled}}
-        <EmptyState
-          @title="Disaster Recovery secondary not set up"
-          @message={{Page.message}}
-          @icon="alert-circle"
-          @bottomBorder={{true}}
-        >
-          <Hds::Link::Standalone @icon="chevron-left" @text="Go back" @route="vault.cluster.secrets.backends" />
-          <Hds::Link::Standalone
-            @icon="learn-link"
-            @iconPosition="trailing"
-            @color="secondary"
-            @text="Disaster recovery tutorial"
-            @href={{doc-link "/vault/tutorials/enterprise/disaster-recovery"}}
+        <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+          <A.Header
+            @title="Disaster Recovery secondary not set up"
+            @titleTag="h2"
+            @icon="alert-circle"
+            class="align-items-end"
           />
-        </EmptyState>
+          <A.Body @text={{Page.message}} />
+          <A.Footer as |F|>
+            <F.LinkStandalone @icon="chevron-left" @text="Go back" @route="vault.cluster.secrets.backends" />
+            <F.LinkStandalone
+              @icon="learn-link"
+              @iconPosition="trailing"
+              @color="secondary"
+              @text="Disaster recovery tutorial"
+              @href={{doc-link "/vault/tutorials/enterprise/disaster-recovery"}}
+            />
+          </A.Footer>
+        </Hds::ApplicationState>
       {{else}}
         <section>
           <ReplicationActions @replicationMode="dr" @model={{this.model}} @onPromote={{action "onPromote"}} />

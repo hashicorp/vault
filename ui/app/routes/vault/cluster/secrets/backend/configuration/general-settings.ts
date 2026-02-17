@@ -20,6 +20,7 @@ import type SecretEngineModel from 'vault/models/secret-engine';
 interface RouteModel {
   secretsEngine: SecretEngineModel;
   versions: string[];
+  config: Record<string, unknown>;
 }
 
 interface RouteController extends Controller {
@@ -33,17 +34,19 @@ export default class SecretsBackendConfigurationGeneralSettingsRoute extends Rou
   @service declare readonly pluginCatalog: PluginCatalogService;
   @service declare readonly unsavedChanges: UnsavedChangesService;
 
-  oldModel: Record<string, unknown> | undefined;
-
   async model() {
     const secretsEngine = this.modelFor('vault.cluster.secrets.backend') as SecretsEngineResource;
     const { data } = await this.pluginCatalog.getRawPluginCatalogData();
+    const { config } = this.modelFor('vault.cluster.secrets.backend.configuration') as Record<
+      string,
+      unknown
+    >;
     const versions = getPluginVersionsFromEngineType(data?.secret, secretsEngine.type);
 
     const model = { secretsEngine, versions };
     this.unsavedChanges.initialState = JSON.parse(JSON.stringify(model.secretsEngine));
 
-    return { secretsEngine, versions };
+    return { secretsEngine, versions, config };
   }
 
   setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {
@@ -51,7 +54,8 @@ export default class SecretsBackendConfigurationGeneralSettingsRoute extends Rou
     const { secretsEngine } = resolvedModel;
 
     const breadcrumbs = [
-      { label: 'Secrets', route: 'vault.cluster.secrets' },
+      { label: 'Vault', route: 'vault.cluster', icon: 'vault' },
+      { label: 'Secrets engines', route: 'vault.cluster.secrets' },
       { label: secretsEngine.id, route: 'vault.cluster.secrets.backend.list-root', model: secretsEngine.id },
       { label: 'Configuration' },
     ];
@@ -63,22 +67,16 @@ export default class SecretsBackendConfigurationGeneralSettingsRoute extends Rou
   willTransition(transition: Transition) {
     // eslint-disable-next-line ember/no-controller-access-in-routes
     const controller = this.controllerFor(this.routeName) as RouteController;
-
     const { model } = controller;
 
+    const state = model ? (model['secretsEngine'] as Record<string, unknown> | undefined) : {};
+    this.unsavedChanges.setup(state);
     // Only intercept transition if leaving THIS route and there are changes
     const targetRoute = transition?.to?.name ?? '';
-    // Saving transitions to the index route, so we do not one to intercept the transition then
-    if (this.routeName !== targetRoute && this.oldModel && model) {
-      const oldModel = this.oldModel['secretsEngine'] as Record<string, unknown> | undefined;
-      const currentModel = model['secretsEngine'] as Record<string, unknown> | undefined;
-      this.unsavedChanges.setupProperties(oldModel, currentModel);
-      this.unsavedChanges.getDiff();
 
-      if (this.unsavedChanges.hasChanges) {
-        transition.abort();
-        this.unsavedChanges.showModal = true;
-      }
+    if (this.routeName !== targetRoute && this.unsavedChanges.hasChanges) {
+      transition.abort();
+      this.unsavedChanges.show(transition);
     }
     return true;
   }

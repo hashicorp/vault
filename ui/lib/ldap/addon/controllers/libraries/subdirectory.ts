@@ -6,13 +6,13 @@
 import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import type { Breadcrumb } from 'vault/vault/app-types';
-import type LdapLibraryModel from 'vault/models/ldap/library';
-import type SecretEngineModel from 'vault/models/secret-engine';
+import type { LdapLibrary } from 'vault/secrets/ldap';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 interface RouteModel {
-  backendModel: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   path_to_library: string;
-  libraries: Array<LdapLibraryModel>;
+  libraries: Array<LdapLibrary>;
 }
 
 export default class LdapLibrariesSubdirectoryController extends Controller {

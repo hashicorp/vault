@@ -63,6 +63,7 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
 
     const paths = [
       { label: 'API path', expected: `/v1/${this.backend}/data/${this.path}` },
+      { label: 'Configuration path', expected: `${this.backend}/data/${this.path}` },
       { label: 'CLI path', expected: `-mount="${this.backend}" "${this.path}"` },
     ];
     for (const [index, path] of paths.entries()) {
@@ -84,8 +85,10 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
   test('it renders copyable paths', async function (assert) {
     const paths = [
       { label: 'API path', expected: `/v1/${this.backend}/data/${this.path}` },
+      { label: 'Configuration path', expected: `${this.backend}/data/${this.path}` },
       { label: 'CLI path', expected: `-mount="${this.backend}" "${this.path}"` },
       { label: 'API path for metadata', expected: `/v1/${this.backend}/metadata/${this.path}` },
+      { label: 'Configuration metadata path', expected: `${this.backend}/metadata/${this.path}` },
     ];
 
     await this.renderComponent();
@@ -105,6 +108,10 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
       {
         label: 'API path',
         expected: `/v1/${backend}/data/${path}`,
+      },
+      {
+        label: 'Configuration path',
+        expected: `${backend}/data/${path}`,
       },
       { label: 'CLI path', expected: `-mount="${this.backend}" "${this.path}"` },
       {

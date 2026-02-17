@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	crand "crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
@@ -52,6 +53,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/billing"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 	"github.com/hashicorp/vault/version"
@@ -189,6 +191,9 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 			LocalStorage: []string{
 				expirationSubPath,
 				countersSubPath,
+				rotationLocalSubPath,
+				orphanLocalSubPath,
+				billing.BillingSubPath + billing.LocalPrefix,
 			},
 
 			SealWrapStorage: []string{
@@ -1656,7 +1661,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	// Attempt mount
-	if err := b.Core.mount(ctx, me); err != nil {
+	if err := b.Core.mountWithRequest(ctx, me, req); err != nil {
 		b.Backend.Logger().Error("error occurred during enable mount", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -1787,8 +1792,13 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 		return handleError(fmt.Errorf("unable to find storage for path: %q", path))
 	}
 
+	// Unsync secrets during mount deletion
+	if err := b.callUnsyncMountHelper(ctx, path); err != nil {
+		b.Backend.Logger().Error("failed to unsync secrets during mount deletion", "error", err)
+	}
+
 	// Attempt unmount
-	if err := b.Core.unmount(ctx, path); err != nil {
+	if err := b.Core.unmountWithRequest(ctx, path, req); err != nil {
 		b.Backend.Logger().Error("unmount failed", "path", path, "error", err)
 		return handleError(err)
 	}
@@ -3339,7 +3349,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	// Attempt enabling
-	if err := b.Core.enableCredential(ctx, me); err != nil {
+	if err := b.Core.enableCredentialWithRequest(ctx, me, req); err != nil {
 		b.Backend.Logger().Error("error occurred during enable credential", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -3457,7 +3467,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 	}
 
 	// Attempt disable
-	if err := b.Core.disableCredential(ctx, path); err != nil {
+	if err := b.Core.disableCredentialWithRequest(ctx, path, req); err != nil {
 		b.Backend.Logger().Error("disable auth mount failed", "path", path, "error", err)
 		return handleError(err)
 	}
@@ -3623,7 +3633,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		}
 
 		// Update the policy
-		if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
+		if err := b.Core.policyStore.SetPolicyWithRequest(ctx, policy, req); err != nil {
 			return handleError(err)
 		}
 
@@ -3643,7 +3653,7 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 
-		if err := b.Core.policyStore.DeletePolicy(ctx, name, policyType); err != nil {
+		if err := b.Core.policyStore.DeletePolicyWithRequest(ctx, name, policyType, req); err != nil {
 			return handleError(err)
 		}
 		return nil, nil
@@ -3651,7 +3661,8 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 }
 
 type passwordPolicyConfig struct {
-	HCLPolicy string `json:"policy"`
+	HCLPolicy     string `json:"policy"`
+	EntropySource string `json:"entropy_source,omitempty"`
 }
 
 func getPasswordPolicyKey(policyName string) string {
@@ -3704,6 +3715,15 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 			fmt.Sprintf("passwords must be between %d and %d characters", minPasswordLength, maxPasswordLength))
 	}
 
+	entropySource := data.Get("entropy_source").(string)
+	switch entropySource {
+	case "":
+	case "seal":
+	case "platform":
+	default:
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unsupported entropy source %s", entropySource))
+	}
+
 	// Attempt to construct a test password from the rules to ensure that the policy isn't impossible
 	var testPassword []rune
 
@@ -3745,7 +3765,8 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 	}
 
 	cfg := passwordPolicyConfig{
-		HCLPolicy: rawPolicy,
+		HCLPolicy:     rawPolicy,
+		EntropySource: entropySource,
 	}
 	entry, err := logical.StorageEntryJSON(getPasswordPolicyKey(policyName), cfg)
 	if err != nil {
@@ -3780,6 +3801,10 @@ func (*SystemBackend) handlePoliciesPasswordGet(ctx context.Context, req *logica
 		Data: map[string]interface{}{
 			"policy": cfg.HCLPolicy,
 		},
+	}
+
+	if cfg.EntropySource != "" {
+		resp.Data["entropy_source"] = cfg.EntropySource
 	}
 
 	return resp, nil
@@ -3821,7 +3846,7 @@ func (*SystemBackend) handlePoliciesPasswordDelete(ctx context.Context, req *log
 }
 
 // handlePoliciesPasswordGenerate generates a password from the specified password policy
-func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	policyName := data.Get("name").(string)
 	if policyName == "" {
 		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
@@ -3841,7 +3866,11 @@ func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *l
 			"stored password policy configuration failed to parse")
 	}
 
-	password, err := policy.Generate(ctx, nil)
+	rng, err := b.Core.GetConfigurableRNG(cfg.EntropySource, crand.Reader)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("failed to retrieve rng: %v", err))
+	}
+	password, err := policy.Generate(ctx, rng)
 	if err != nil {
 		return nil, logical.CodedError(http.StatusInternalServerError,
 			fmt.Sprintf("failed to generate password from policy: %s", err))

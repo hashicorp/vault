@@ -9,7 +9,7 @@ fail() {
   exit 1
 }
 
-if ! type getenforce &> /dev/null; then
+if ! sudo bash -c 'type getenforce'; then
   exit 0
 fi
 

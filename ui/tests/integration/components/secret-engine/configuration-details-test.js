@@ -12,39 +12,39 @@ import {
   expectedConfigKeys,
   expectedValueOfConfigKeys,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
-import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
+const configs = {
+  aws: {
+    region: 'us-west-2',
+    access_key: '123-key',
+    iam_endpoint: 'iam-endpoint',
+    sts_endpoint: 'sts-endpoint',
+    max_retries: 1,
+  },
+  azure: {
+    client_secret: 'client-secret',
+    subscription_id: 'subscription-id',
+    tenant_id: 'tenant-id',
+    client_id: 'client-id',
+    root_password_ttl: '1800000s',
+    environment: 'AZUREPUBLICCLOUD',
+  },
+  gcp: {
+    credentials: '{"some-key":"some-value"}',
+    ttl: '100s',
+    max_ttl: '101s',
+  },
+  ssh: {
+    public_key: 'public-key',
+    generate_signing_key: true,
+  },
+};
 module('Integration | Component | SecretEngine::ConfigurationDetails', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.configs = {
-      aws: {
-        region: 'us-west-2',
-        access_key: '123-key',
-        iam_endpoint: 'iam-endpoint',
-        sts_endpoint: 'sts-endpoint',
-        max_retries: 1,
-      },
-      azure: {
-        client_secret: 'client-secret',
-        subscription_id: 'subscription-id',
-        tenant_id: 'tenant-id',
-        client_id: 'client-id',
-        root_password_ttl: '1800000s',
-        environment: 'AZUREPUBLICCLOUD',
-      },
-      gcp: {
-        credentials: '{"some-key":"some-value"}',
-        ttl: '100s',
-        max_ttl: '101s',
-      },
-      ssh: {
-        public_key: 'public-key',
-        generate_signing_key: true,
-      },
-    };
+    this.configs = configs;
   });
 
   test('it shows prompt message if no config models are passed in', async function (assert) {
@@ -58,9 +58,7 @@ module('Integration | Component | SecretEngine::ConfigurationDetails', function 
       .hasText(`Get started by configuring your Display Name secrets engine.`);
   });
 
-  for (const type of ALL_ENGINES.filter((engine) => engine.isConfigurable ?? false).map(
-    (engine) => engine.type
-  )) {
+  for (const type of Object.keys(configs)) {
     test(`${type}: it shows config details if configModel(s) are passed in`, async function (assert) {
       this.config = this.configs[type];
       this.typeDisplay = engineDisplayData(type).displayName;

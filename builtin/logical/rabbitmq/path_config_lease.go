@@ -57,16 +57,22 @@ func pathConfigLease(b *backend) *framework.Path {
 
 // Sets the lease configuration parameters
 func (b *backend) pathLeaseUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entry, err := logical.StorageEntryJSON("config/lease", &configLease{
+	cl := configLease{
 		TTL:    time.Second * time.Duration(d.Get("ttl").(int)),
 		MaxTTL: time.Second * time.Duration(d.Get("max_ttl").(int)),
-	})
+	}
+	entry, err := logical.StorageEntryJSON("config/lease", &cl)
 	if err != nil {
 		return nil, err
 	}
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeRabbitMQLeaseConfigWrite, map[string]interface{}{
+		"ttl":     cl.TTL.String(),
+		"max_ttl": cl.MaxTTL.String(),
+	})
 
 	return nil, nil
 }
@@ -83,6 +89,11 @@ func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data 
 
 	lease.TTL = lease.TTL / time.Second
 	lease.MaxTTL = lease.MaxTTL / time.Second
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeRabbitMQLeaseConfigRead, map[string]interface{}{
+		"ttl":     lease.TTL.String(),
+		"max_ttl": lease.MaxTTL.String(),
+	})
 
 	return &logical.Response{
 		Data: structs.New(lease).Map(),

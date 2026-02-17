@@ -1,0 +1,70 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::AppSideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
+  <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
+
+  <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
+  <Nav.Link @route="vault.cluster.secrets" @text="Secrets" @hasSubItems={{true}} data-test-sidebar-nav-link="Secrets" />
+
+  {{#if (display-nav-item this.navSection.resilienceAndRecovery)}}
+    <Nav.Link
+      @route="vault.cluster.resilience-recovery"
+      @text="Resilience and recovery"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Resilience and recovery"
+    />
+  {{/if}}
+  {{#if (or (has-permission "access") (has-permission "policies"))}}
+    <Nav.Link
+      @route={{this.accessRoute}}
+      @models={{this.accessRouteModels}}
+      @text="Access control"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Access control"
+    />
+  {{/if}}
+  {{#if (has-permission "tools")}}
+    <Nav.Link
+      @route="vault.cluster.tools.tool"
+      @models={{get (route-params-for "tools") "models"}}
+      @text="Operational tools"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Operational tools"
+    />
+  {{/if}}
+  {{#if
+    (or
+      (and this.isRootNamespace (has-permission "status" routeParams="raft"))
+      (and (has-permission "clients" routeParams="activity") (not this.hasChrootNamespace))
+    )
+  }}
+    <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
+  {{/if}}
+  {{#if (display-nav-item this.navSection.reporting)}}
+    <Nav.Link
+      @route={{if (display-nav-item this.routeName.vaultUsage) "vault.cluster.usage-reporting" "vault.cluster.license"}}
+      @text="Reporting"
+      data-test-sidebar-nav-link="Reporting"
+      @hasSubItems={{true}}
+    />
+  {{/if}}
+  {{#if (display-nav-item this.navSection.clientCount)}}
+    <Nav.Link
+      @route="vault.cluster.clients"
+      @text="Client count"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Client count"
+    />
+  {{/if}}
+  {{#if (and this.cluster.usingRaft this.isRootNamespace (has-permission "status" routeParams="raft"))}}
+    <Nav.Link
+      @route="vault.cluster.storage"
+      @model={{this.cluster.name}}
+      @text="Raft storage"
+      data-test-sidebar-nav-link="Raft storage"
+    />
+  {{/if}}
+</Hds::AppSideNav::Portal>

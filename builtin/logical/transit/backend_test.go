@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/billing"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
 )
@@ -52,6 +54,9 @@ func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 	err := b.Backend.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
+	}
+	b.billingDataCounts = billing.DataProtectionCallCounts{
+		Transit: &atomic.Uint64{},
 	}
 	return b, config.StorageView
 }
@@ -74,6 +79,9 @@ func createBackendWithSysView(t testing.TB) (*backend, logical.Storage) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	b.billingDataCounts = billing.DataProtectionCallCounts{
+		Transit: &atomic.Uint64{},
+	}
 
 	return b, storage
 }
@@ -94,6 +102,9 @@ func createBackendWithSysViewWithStorage(t testing.TB, s logical.Storage) *backe
 	err := b.Backend.Setup(context.Background(), conf)
 	if err != nil {
 		t.Fatal(err)
+	}
+	b.billingDataCounts = billing.DataProtectionCallCounts{
+		Transit: &atomic.Uint64{},
 	}
 
 	return b
@@ -116,6 +127,9 @@ func createBackendWithForceNoCacheWithSysViewWithStorage(t testing.TB, s logical
 	err := b.Backend.Setup(context.Background(), conf)
 	if err != nil {
 		t.Fatal(err)
+	}
+	b.billingDataCounts = billing.DataProtectionCallCounts{
+		Transit: &atomic.Uint64{},
 	}
 
 	return b

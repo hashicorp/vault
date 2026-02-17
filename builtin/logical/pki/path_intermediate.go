@@ -122,7 +122,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	data.Raw["use_pss"] = false
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	exported, format, role, errorResp := getGenerationParams(sc, data)
+	exported, format, role, errorResp := getGenerationParams(sc, data, false)
 	if errorResp != nil {
 		return errorResp, nil
 	}

@@ -75,7 +75,7 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 }
 
 func (b *databaseBackend) rotateRootCredential(ctx context.Context, req *logical.Request) error {
-	name, err := b.getDatabaseConfigNameFromRotationID(req.RotationID)
+	name, err := b.getDatabaseConfigNameFromRotationID(req.RotationInfo.RotationID)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		if err != nil {
 			b.Logger().Error("failed to rotate root credential on user request", "path", req.Path, "error", err.Error())
 		} else {
-			b.Logger().Info("succesfully rotated root credential on user request", "path", req.Path)
+			b.Logger().Info("successfully rotated root credential on user request", "path", req.Path)
 		}
 		return resp, err
 	}
@@ -295,7 +295,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 					AdditionalDatabaseMetadata{key: "credential_ttl", value: s.CredentialTTL().String()},
 					AdditionalDatabaseMetadata{key: "rotation_period", value: s.RotationPeriod.String()},
 					AdditionalDatabaseMetadata{key: "rotation_schedule", value: s.RotationSchedule},
-					AdditionalDatabaseMetadata{key: "next_vault_rotation", value: s.NextVaultRotation.String()})
+					AdditionalDatabaseMetadata{key: "next_vault_rotation", value: s.NextVaultRotation.Format(time.RFC3339)})
 			} else {
 				recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseRotateStaticRoleFailure,
 					AdditionalDatabaseMetadata{key: "role_name", value: name},

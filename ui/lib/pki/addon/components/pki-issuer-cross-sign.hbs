@@ -55,9 +55,9 @@
                     <LinkToExternal
                       class="has-text-black has-text-weight-semibold"
                       @route="externalMountIssuer"
-                      @models={{array (get crossSignRow "intermediateMount") data.issuerId}}
+                      @models={{array (get crossSignRow "intermediateMount") data.issuer_id}}
                     >
-                      {{data.issuerRef}}
+                      {{or data.issuer_name data.issuer_id}}
                     </LinkToExternal>
                   {{/if}}
                 </div>

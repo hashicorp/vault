@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | upgrade page', function (hooks) {
   setupRenderingTest(hooks);
@@ -16,7 +17,7 @@ module('Integration | Component | upgrade page', function (hooks) {
       {{upgrade-page}}
           `);
 
-    assert.dom('.page-header .title').hasText('Vault Enterprise', 'renders default page title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Vault Enterprise', 'renders default page title');
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('Upgrade to use this feature', 'renders default title');
@@ -34,7 +35,7 @@ module('Integration | Component | upgrade page', function (hooks) {
       {{upgrade-page title="Test Feature Title" minimumEdition="Vault Enterprise Premium"}}
           `);
 
-    assert.dom('.page-header .title').hasText('Test Feature Title', 'renders custom page title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Test Feature Title', 'renders custom page title');
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('Upgrade to use Test Feature Title', 'renders custom title');

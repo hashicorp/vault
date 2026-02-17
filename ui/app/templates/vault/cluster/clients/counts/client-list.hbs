@@ -3,28 +3,33 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if this.model.exportError}}
-  <Clients::Counts::Error
-    @title={{if (eq this.model.exportError.message "No data to export in provided time range.") "No data found"}}
-    @error={{this.model.exportError}}
-  >
-    <:actions>
-      {{#if (eq this.model.exportError.httpStatus 403)}}
-        <Hds::Text::Body @tag="p" @color="faint" class="has-bottom-margin-s">
-          Viewing export data requires
-          <Hds::Text::Code class="code-in-text">sudo</Hds::Text::Code>
-          permissions.
-          <Hds::Link::Standalone
-            @icon="docs-link"
-            @iconPosition="trailing"
-            @text="Client Export Documentation"
-            @isHrefExternal={{true}}
-            @href={{doc-link "/vault/api-docs/system/internal-counters#activity-export"}}
-          />
-        </Hds::Text::Body>
-      {{/if}}
-    </:actions>
-  </Clients::Counts::Error>
+{{#if this.model.cannotRequestExport}}
+  <Hds::ApplicationState @align="center" class="has-top-margin-xxl" as |A|>
+    <A.Header
+      @icon="skip"
+      class="align-items-end"
+      @title="You are not authorized"
+      @titleTag="h2"
+      data-test-empty-state-title
+    />
+
+    <A.Body data-test-empty-state-message>
+      Viewing export data requires
+      <Hds::Text::Code class="code-in-text">sudo</Hds::Text::Code>
+      permissions to
+      <Hds::Text::Code class="code-in-text">/sys/internal/counters/activity/export</Hds::Text::Code>.
+    </A.Body>
+
+    <A.Footer data-test-empty-state-actions>
+      <Hds::Link::Standalone
+        @icon="docs-link"
+        @iconPosition="trailing"
+        @text="Client Export Documentation"
+        @isHrefExternal={{true}}
+        @href={{doc-link "/vault/api-docs/system/internal-counters#activity-export"}}
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
 {{else}}
   <Clients::Page::ClientList
     @exportData={{this.model.exportData}}

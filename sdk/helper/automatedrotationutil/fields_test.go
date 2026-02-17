@@ -42,6 +42,13 @@ var schemaMap = map[string]*framework.FieldSchema{
 			Group: "default",
 		},
 	},
+	"rotation_policy": {
+		Type:        framework.TypeString,
+		Description: "Defines the rotation policy to use when performing automated rotations.",
+		DisplayAttrs: &framework.DisplayAttributes{
+			Group: "default",
+		},
+	},
 }
 
 func TestParseAutomatedRotationFields(t *testing.T) {
@@ -252,6 +259,7 @@ func TestPopulateAutomatedRotationData(t *testing.T) {
 				"rotation_schedule":          "*/15 * * * *",
 				"rotation_window":            time.Duration(60).Seconds(),
 				"rotation_period":            time.Duration(0).Seconds(),
+				"rotation_policy":            "",
 				"disable_automated_rotation": false,
 			},
 			inputParams: &AutomatedRotationParams{

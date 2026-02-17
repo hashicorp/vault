@@ -23,6 +23,19 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_FORMAT=json
 
+# Wait for LDAP server to be ready (increased timeout for IPv4)
+echo "OpenLDAP: Waiting for LDAP server to be ready at ${LDAP_SERVER}:${LDAP_PORT}"
+for i in {1..60}; do
+  if ldapsearch -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=com" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -s base > /dev/null 2>&1; then
+    echo "OpenLDAP: Server is ready"
+    break
+  fi
+  if [ "$i" -eq 60 ]; then
+    fail "LDAP server did not become ready after 60 attempts"
+  fi
+  sleep 2
+done
+
 echo "OpenLDAP: Checking for OpenLDAP Server Connection: ${LDAP_SERVER}:${LDAP_PORT}"
 ldapsearch -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=com" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}"
 
@@ -38,7 +51,9 @@ dn: ou=groups,dc=$LDAP_USERNAME,dc=com
 objectClass: organizationalUnit
 ou: groups
 EOF
-ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${GROUP_LDIF}
+if ! ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${GROUP_LDIF} 2>&1; then
+  echo "Warning: Organization may already exist"
+fi
 
 echo "OpenLDAP: Creating User LDIF file and adding user to LDAP"
 USER_LDIF="user.ldif"
@@ -57,7 +72,9 @@ objectClass: groupOfNames
 cn: devs
 member: uid=$LDAP_USERNAME,ou=users,dc=$LDAP_USERNAME,dc=com
 EOF
-ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${USER_LDIF}
+if ! ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${USER_LDIF} 2>&1; then
+  echo "Warning: User or group may already exist"
+fi
 
 echo "Vault: Creating ldap auth and creating auth/ldap/config route"
 "$binpath" auth enable "${MOUNT}" > /dev/null 2>&1 || echo "Warning: Vault ldap auth already enabled"

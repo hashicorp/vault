@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/cert_count"
 )
 
 type enterprisePathStub struct {
@@ -289,7 +290,41 @@ func ceSysInitialize(b *SystemBackend) func(context.Context, *logical.Initializa
 		if err != nil {
 			return fmt.Errorf("failed to initialize activation flags: %w", err)
 		}
+
+		b.Core.certCountManager.StartConsumerJob(func(increment logical.CertCount) {
+			b.Core.consumeCertCounts(increment)
+		})
 		return nil
+	}
+}
+
+// consumeCertCounts updates the certificate counts in storage if we are
+// running on the active node; otherwise it forwards them to the active node.
+func (c *Core) consumeCertCounts(inc logical.CertCount) {
+	var consumed bool
+	haState := c.HAStateWithLock()
+	if inc.IsZero() {
+		return
+	}
+
+	switch haState {
+	case consts.Standby:
+		consumed = true
+	case consts.PerfStandby:
+		consumed = forwardCertCounts(c, inc)
+	case consts.Active:
+		c.logger.Info("storing certificate counts", "issuedCerts", inc.IssuedCerts, "storedCerts", inc.StoredCerts)
+		err := cert_count.IncrementStoredCounts(c.activeContext, c.barrier, inc)
+		if err != nil {
+			c.logger.Error("error storing certificate counts", "error", err)
+		} else {
+			consumed = true
+		}
+	default:
+		c.logger.Error("Unexpected HA state when consuming certificate counts", "ha_state", haState)
+	}
+	if !consumed {
+		c.certCountManager.AddCount(inc)
 	}
 }
 

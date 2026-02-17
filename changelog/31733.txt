@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/transit: Fix nil pointer panic when restoring malformed backup data.
+```

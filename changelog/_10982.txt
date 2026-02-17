@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update the sidenav design and add top navbar.
+```

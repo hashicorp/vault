@@ -23,7 +23,7 @@ import { getOwner } from '@ember/owner';
  */
 
 const MODE = {
-  dr: 'Disaster Recovery',
+  dr: 'Disaster recovery',
   performance: 'Performance',
 };
 
@@ -74,7 +74,7 @@ export default class ReplicationPage extends Component {
   get formattedReplicationMode() {
     // dr or performance 🤯
     if (this.isSummaryDashboard) {
-      return 'Disaster Recovery & Performance';
+      return 'Disaster recovery and performance';
     }
     const mode = this.args.model.replicationMode;
     return MODE[mode];

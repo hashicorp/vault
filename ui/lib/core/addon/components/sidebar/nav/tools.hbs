@@ -1,0 +1,53 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::AppSideNav::Portal @ariaLabel="Tools Navigation Links" data-test-sidebar-nav-panel="Operational tools" as |Nav|>
+  <Nav.BackLink
+    @route={{if @isEngine "vault" "vault.cluster"}}
+    @isRouteExternal={{@isEngine}}
+    @current-when={{false}}
+    @icon="arrow-left"
+    @text="Back to main navigation"
+    data-test-sidebar-nav-link="Back to main navigation"
+  />
+
+  <Nav.Title data-test-sidebar-nav-heading="Operational tools">Operational tools</Nav.Title>
+
+  {{#each (tools-actions) as |supportedAction|}}
+    {{#if (has-permission "tools" routeParams=supportedAction)}}
+      <Nav.Link
+        @route={{if @isEngine "tool" "vault.cluster.tools.tool"}}
+        @isRouteExternal={{@isEngine}}
+        @model={{supportedAction}}
+        @text={{capitalize supportedAction}}
+        data-test-sidebar-nav-link={{capitalize supportedAction}}
+      />
+    {{/if}}
+  {{/each}}
+  <Nav.Link
+    @route={{if @isEngine "openApiExplorer" "vault.cluster.tools.open-api-explorer"}}
+    @isRouteExternal={{@isEngine}}
+    @text="API explorer"
+    data-test-sidebar-nav-link="API explorer"
+  />
+
+  {{#if (and this.version.isEnterprise (has-permission "settings"))}}
+    <Nav.Link
+      @route={{if @isEngine "messages" "vault.cluster.config-ui.messages"}}
+      @isRouteExternal={{@isEngine}}
+      @text="Custom messages"
+      data-test-sidebar-nav-link="Custom messages"
+    />
+    {{#if (or this.isRootNamespace this.namespace.isHvdAdminNamespace)}}
+      <Nav.Link
+        @route={{if @isEngine "loginSettings" "vault.cluster.config-ui.login-settings"}}
+        @isRouteExternal={{@isEngine}}
+        @text="UI login settings"
+        data-test-sidebar-nav-link="UI login settings"
+      />
+    {{/if}}
+  {{/if}}
+
+</Hds::AppSideNav::Portal>

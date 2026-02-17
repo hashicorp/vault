@@ -38,14 +38,15 @@ variable "timeout" {
 
 locals {
   packages = var.include_tools ? {
-    // These packages match the distros that are currently defined in the `ec2_info` module.
+    // NOTE: The versions here always correspond to the output of enos_host_info.distro_version. These are used in
+    // several modules so if you change the keys here also consider the "artifact/metadata", "ec2_info",
     amzn = {
       "2023" = ["softhsm", "opensc"]
     }
     rhel = {
       "8.10" = ["softhsm", "opensc"]
-      "9.6"  = ["softhsm", "opensc"]
-      "10.0" = ["softhsm", "opensc"]
+      "9.7"  = ["softhsm", "opensc"]
+      "10.1" = ["softhsm", "opensc"]
     }
     ubuntu = {
       "22.04" = ["softhsm", "opensc"]
@@ -57,8 +58,8 @@ locals {
     }
     rhel = {
       "8.10" = ["softhsm"]
-      "9.6"  = ["softhsm"]
-      "10.0" = ["softhsm"]
+      "9.7"  = ["softhsm"]
+      "10.1" = ["softhsm"]
     }
     ubuntu = {
       "22.04" = ["softhsm"]

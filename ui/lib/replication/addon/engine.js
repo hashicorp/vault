@@ -23,9 +23,14 @@ const Eng = Engine.extend({
       'app-router',
       'store',
       'version',
+      // services needed for tools sidebar component
+      'permissions',
+      'current-cluster',
+      'flags',
       '-portal',
+      'control-group',
     ],
-    externalRoutes: ['replication', 'vault'],
+    externalRoutes: ['replication', 'vault', 'recoverySnapshots', 'settingsSeal', 'replicationMode'],
   },
 });
 

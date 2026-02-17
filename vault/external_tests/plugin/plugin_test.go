@@ -12,8 +12,10 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -21,6 +23,7 @@ import (
 	lplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 // logicalVersionMap is a map of version to test plugin
@@ -72,6 +75,18 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 			}
 			if resp == nil {
 				t.Fatalf("bad: response should not be nil")
+			}
+
+			req = logical.TestRequest(t, logical.CreateOperation, "mock-0/config")
+			req.ClientToken = core.Client.Token()
+			resp, err = core.HandleRequest(namespace.RootContext(testCtx), req)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			wspost := req.ResponseState()
+			if constants.IsEnterprise {
+				require.NotZero(t, wspost.ReplicatedIndex)
+				require.NotZero(t, wspost.LocalIndex)
 			}
 
 			// Seal the cluster
@@ -630,7 +645,7 @@ func TestSystemBackend_PluginReload_WarningIfNoneReloaded(t *testing.T) {
 func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType logical.BackendType, pluginVersion string) *vault.TestCluster {
 	t.Helper()
 	pluginDir := corehelpers.MakeTestPluginDir(t)
-	coreConfig := &vault.CoreConfig{
+	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"plugin": plugin.Factory,
 		},
@@ -638,15 +653,13 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 			"plugin": plugin.Factory,
 		},
 		PluginDirectory: pluginDir,
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc:        vaulthttp.Handler,
+	}, &vault.TestClusterOptions{
 		KeepStandbysSealed: true,
 		NumCores:           numCores,
 		TempDir:            pluginDir,
-	})
-	cluster.Start()
+	}, teststorage.InmemBackendSetup)
+
+	cluster := vault.NewTestCluster(t, conf, opts)
 
 	core := cluster.Cores[0]
 	vault.TestWaitActive(t, core.Core)

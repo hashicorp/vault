@@ -9,6 +9,7 @@ package command
 
 import (
 	"github.com/hashicorp/cli"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/vault"
 )
@@ -31,3 +32,9 @@ func entCheckRequestLimiter(_cmd *ServerCommand, _config *server.Config) {
 }
 
 func entExtendAddonHandlers(handlers *vaultHandlers) {}
+
+func entCheckListenerConfig(_ hclog.Logger, core *vault.Core, config *server.Config) error {
+	return nil
+}
+
+func entAugmentInfoKeys(config *server.Config, info map[string]string, infoKeys []string) {}

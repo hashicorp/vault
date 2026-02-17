@@ -19,6 +19,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -657,7 +658,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	var akid []byte
 	var skid []byte
 	if cert != nil {
-		serialNumber = cert.SerialNumber.String()
+		serialNumber = parsing.SerialFromCert(cert)
 		isCa = cert.IsCA
 		akid = cert.AuthorityKeyId
 		skid = cert.SubjectKeyId

@@ -950,15 +950,16 @@ func TestCore_ShutdownDone(t *testing.T) {
 	c := TestCoreWithSealAndUINoCleanup(t, &CoreConfig{})
 	testCoreUnsealed(t, c)
 	doneCh := c.ShutdownDone()
+
+	errCh := make(chan error)
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		err := c.Shutdown()
-		if err != nil {
-			t.Fatal(err)
-		}
+		errCh <- c.Shutdown()
 	}()
 
 	select {
+	case err := <-errCh:
+		t.Fatal(err)
 	case <-doneCh:
 		if !c.Sealed() {
 			t.Fatalf("shutdown done called prematurely!")

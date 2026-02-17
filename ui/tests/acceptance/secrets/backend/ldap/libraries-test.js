@@ -109,9 +109,10 @@ module('Acceptance | ldap | libraries', function (hooks) {
     );
   });
 
-  test('it should transition to routes from library details toolbar links', async function (assert) {
+  test('it should transition to routes from library details page header dropdown', async function (assert) {
     await click('[data-test-list-item-link] a');
-    await click('[data-test-edit]');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Edit library'));
     assert.true(
       isURL('libraries/test-library/edit', this.backend),
       'Transitions to credentials route from toolbar link'

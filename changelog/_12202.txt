@@ -1,0 +1,3 @@
+```release-note:bug
+plugins: Fix regression in plugin sdk where external plugins may panic when doing storage writes/deletes.
+```

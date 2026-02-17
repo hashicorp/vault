@@ -24,7 +24,6 @@ module('Acceptance | clients | counts', function (hooks) {
     this.timestampStub = sinon.stub(timestamp, 'now');
     this.timestampStub.returns(STATIC_NOW);
     clientsHandler(this.server);
-    this.store = this.owner.lookup('service:store');
     return login();
   });
 
@@ -62,12 +61,10 @@ module('Acceptance | clients | counts', function (hooks) {
       return overrideResponse(403);
     });
     await visit('/vault/clients/counts/overview');
-    assert.dom(GENERAL.emptyStateTitle).hasText('You are not authorized');
+    assert.dom(GENERAL.pageError.errorTitle('403')).hasText('Not authorized');
     assert
-      .dom(GENERAL.emptyStateMessage)
-      .hasText(
-        'You must be granted permissions to view this page. Ask your administrator if you think you should have access to the /v1/sys/internal/counters/activity endpoint.'
-      );
+      .dom(GENERAL.pageError.errorSubtitle)
+      .hasText('You are not authorized to access content at /v1/sys/internal/counters/activity.');
   });
 
   test('it should use the response start_time as the timestamp', async function (assert) {
@@ -151,7 +148,7 @@ module('Acceptance | clients | counts', function (hooks) {
       await click(CLIENT_COUNT.dateRange.edit);
       await click(CLIENT_COUNT.dateRange.dropdownOption(1));
       assert
-        .dom(CLIENT_COUNT.activityTimestamp)
+        .dom(GENERAL.hdsPageHeaderSubtitle)
         .hasTextContaining(`Dashboard last updated: ${format(STATIC_NOW, 'MMM d yyyy')}`);
       // Save URL with query params before clicking refresh
       const url = currentURL();
@@ -163,7 +160,7 @@ module('Acceptance | clients | counts', function (hooks) {
       assert.true(this.refreshSpy.calledOnce, 'router.refresh() is called once');
       assert.strictEqual(currentURL(), url, 'url is the same after clicking refresh');
       assert
-        .dom(CLIENT_COUNT.activityTimestamp)
+        .dom(GENERAL.hdsPageHeaderSubtitle)
         .hasTextContaining(`Dashboard last updated: ${format(fakeUpdatedNow, 'MMM d yyyy')}`);
     });
 
@@ -178,7 +175,7 @@ module('Acceptance | clients | counts', function (hooks) {
       await click(CLIENT_COUNT.dateRange.edit);
       await click(CLIENT_COUNT.dateRange.dropdownOption(1));
       assert
-        .dom(CLIENT_COUNT.activityTimestamp)
+        .dom(GENERAL.hdsPageHeaderSubtitle)
         .hasTextContaining(`Dashboard last updated: ${format(STATIC_NOW, 'MMM d yyyy')}`);
       // Save URL with query params before clicking refresh
       const url = currentURL();
@@ -190,7 +187,7 @@ module('Acceptance | clients | counts', function (hooks) {
       assert.true(this.refreshSpy.calledOnce, 'router.refresh() is called once');
       assert.strictEqual(currentURL(), url, 'url is the same after clicking refresh');
       assert
-        .dom(CLIENT_COUNT.activityTimestamp)
+        .dom(GENERAL.hdsPageHeaderSubtitle)
         .hasTextContaining(`Dashboard last updated: ${format(fakeUpdatedNow, 'MMM d yyyy')}`);
     });
   });

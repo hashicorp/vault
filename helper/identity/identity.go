@@ -93,6 +93,25 @@ func (p *Alias) Clone() (*Alias, error) {
 	return &clonedAlias, nil
 }
 
+func (s *ScimClient) Clone() (*ScimClient, error) {
+	if s == nil {
+		return nil, fmt.Errorf("nil scim client")
+	}
+
+	marshaled, err := proto.Marshal(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal scim client: %w", err)
+	}
+
+	var cloned ScimClient
+	err = proto.Unmarshal(marshaled, &cloned)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal scim client: %w", err)
+	}
+
+	return &cloned, nil
+}
+
 // ToSDKAlias converts the provided alias to an SDK compatible alias.
 func ToSDKAlias(a *Alias) *logical.Alias {
 	if a == nil {

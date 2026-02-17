@@ -13,7 +13,6 @@ import { next } from '@ember/runloop';
 import apiMethodResolver from 'sync/utils/api-method-resolver';
 
 import type RouterService from '@ember/routing/router-service';
-import type PaginationService from 'vault/services/pagination';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { CapabilitiesMap, EngineOwner } from 'vault/app-types';
 import type { DestinationName, DestinationType, ListDestination } from 'vault/sync';
@@ -30,7 +29,6 @@ interface Args {
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
-  @service declare readonly pagination: PaginationService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;
 

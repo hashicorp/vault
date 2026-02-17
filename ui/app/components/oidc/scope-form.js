@@ -39,6 +39,21 @@ export default class OidcScopeFormComponent extends Component {
   "groups": {{identity.entity.groups.names}}
 }`;
 
+  get breadcrumbs() {
+    const scopesOrDetailsBreadcrumb = this.args.model.isNew
+      ? { label: 'Scopes', route: 'vault.cluster.access.oidc.scopes' }
+      : {
+          label: 'Details',
+          route: 'vault.cluster.access.oidc.scopes.scope.details',
+          model: this.args.model.name,
+        };
+    return [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
+      scopesOrDetailsBreadcrumb,
+      { label: this.args.model.isNew ? 'Create Scope' : 'Edit Scope' },
+    ];
+  }
+
   @task
   *save(event) {
     event.preventDefault();

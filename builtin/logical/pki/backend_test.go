@@ -1493,9 +1493,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				roleVals.KeyBits = plan.roleKeyBits
 				issueTestStep.ErrorOk = plan.errorOk
 
-				addTests(getCnCheck(issueVals.CommonName, roleVals, plan.privKey, x509.KeyUsage(parsedKeyUsage), extUsage, validity))
+				addTests(getCnCheck(issueVals.CommonName, roleVals, plan.privKey, parsedKeyUsage, extUsage, validity))
 			} else {
-				addTests(getCnCheck(issueVals.CommonName, roleVals, nil, x509.KeyUsage(parsedKeyUsage), extUsage, validity))
+				addTests(getCnCheck(issueVals.CommonName, roleVals, nil, parsedKeyUsage, extUsage, validity))
 			}
 		}
 	}

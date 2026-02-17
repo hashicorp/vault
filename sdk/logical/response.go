@@ -89,6 +89,18 @@ type Response struct {
 	// MountType, if non-empty, provides some information about what kind
 	// of mount this secret came from.
 	MountType string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
+
+	// SupplementalAuditResponseData, provides additional keys to be formatted by the audit engine that
+	// don't appear within the final client response. Useful when implementing binary responses to clients, this
+	// can provide parseable values within the audit log. Keys will appear within the type response log entries
+	// within the response "supplemental_audit_data" section.
+	SupplementalAuditResponseData map[string]any `json:"supplemental_audit_response_data" structs:"supplemental_audit_response_data" mapstructure:"supplemental_audit_response_data"`
+
+	// SupplementalAuditRequestData, provides additional keys to be formatted by the audit engine that
+	// don't appear within the final client response. These values will appear in the request section of
+	// audit records of type response within the "supplemental_audit_data", they do not influence the
+	// original request audit log.
+	SupplementalAuditRequestData map[string]any `json:"supplemental_audit_request_data" structs:"supplemental_audit_request_data" mapstructure:"supplemental_audit_request_data"`
 }
 
 // AddWarning adds a warning into the response's warning list

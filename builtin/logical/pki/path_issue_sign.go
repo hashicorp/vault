@@ -16,6 +16,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -409,7 +410,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 
 	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, issuing.IssuanceUsage)
+	signingBundle, issuer, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -420,21 +421,19 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 				"error fetching CA certificate: %s", caErr)}
 		}
 	}
-	issuerId, err := issuing.ResolveIssuerReference(ctx, req.Storage, role.Issuer)
-	if err != nil {
-		if issuerId == issuing.IssuerRefNotFound {
-			b.Logger().Warn("could not resolve issuer reference, may be using a legacy CA bundle")
-		} else {
-			return nil, err
-		}
+	if issuer.ID == issuing.LegacyBundleShimID {
+		b.Logger().Warn("could not resolve issuer reference, using a legacy CA bundle")
 	}
+
 	input := &inputBundle{
 		req:     req,
 		apiData: data,
 		role:    role,
 	}
+	b.adjustInputBundle(input)
 	var parsedBundle *certutil.ParsedCertBundle
 	var warnings []string
+	var err error
 	if useCSR {
 		parsedBundle, warnings, err = signCert(b.System(), input, signingBundle, false, useCSRValues)
 	} else {
@@ -461,7 +460,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		return nil, err
 	}
 
-	if err = issuing.VerifyCertificate(sc.GetContext(), sc.GetStorage(), issuerId, parsedBundle); err != nil {
+	if err = issuing.VerifyCertificate(issuer, sc.System(), parsedBundle); err != nil {
 		return nil, err
 	}
 
@@ -478,14 +477,14 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			// TODO: Should we clean up the original cert here?
 			return nil, err
 		}
-		err = storeCertMetadata(ctx, req.Storage, issuerId, role.Name, parsedBundle.Certificate, metadataBytes)
+		err = storeCertMetadata(ctx, req.Storage, issuer.ID, role.Name, parsedBundle.Certificate, metadataBytes)
 		if err != nil {
 			// TODO: Should we clean up the original cert here?
 			return nil, err
 		}
 	}
 
-	b.pkiCertificateCounter.AddIssuedCertificate(!role.NoStore)
+	b.pkiCertificateCounter.Increment().AddIssuedCertificate(!role.NoStore, parsedBundle.Certificate)
 
 	if useCSR {
 		if role.UseCSRCommonName && data.Get("common_name").(string) != "" {
@@ -499,7 +498,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	resp = addWarnings(resp, warnings)
 
 	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssue,
-		observe.NewAdditionalPKIMetadata("issuer_id", issuerId),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuer.ID),
 		observe.NewAdditionalPKIMetadata("issuer_name", role.Issuer),
 		observe.NewAdditionalPKIMetadata("signed", useCSR),
 		observe.NewAdditionalPKIMetadata("role_name", role.Name),
@@ -509,7 +508,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		observe.NewAdditionalPKIMetadata("not_before", parsedBundle.Certificate.NotBefore.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("subject_key_id", parsedBundle.Certificate.SubjectKeyId),
 		observe.NewAdditionalPKIMetadata("authority_key_id", parsedBundle.Certificate.AuthorityKeyId),
-		observe.NewAdditionalPKIMetadata("serial_number", parsedBundle.Certificate.SerialNumber.String()),
+		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(parsedBundle.Certificate)),
 		observe.NewAdditionalPKIMetadata("public_key_algorithm", parsedBundle.Certificate.PublicKeyAlgorithm.String()),
 		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(parsedBundle.Certificate.PublicKey)),
 		observe.NewAdditionalPKIMetadata("lease_generated", generateLease),

@@ -5,6 +5,15 @@
 
 package server
 
+import "fmt"
+
 func (c *Config) IsMultisealEnabled() bool {
 	return false
+}
+
+func validateFeatureFlags(featureFlags []string) error {
+	if len(featureFlags) > 0 {
+		return fmt.Errorf("feature_flags are enterprise-only")
+	}
+	return nil
 }

@@ -83,9 +83,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       />
     `);
     await click(GENERAL.button('More options'));
-    assert
-      .dom('[data-test-oidc-client-title]')
-      .hasText('Create Application', 'Form title renders correct text');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Application', 'Form title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Create', 'Save button has correct text');
     assert.strictEqual(findAll('[data-test-field]').length, 6, 'renders all attribute fields');
     assert
@@ -150,7 +148,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       />
     `);
     await click(GENERAL.button('More options'));
-    assert.dom('[data-test-oidc-client-title]').hasText('Edit Application', 'Title renders correct text');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Application', 'Title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test-app', 'Name input is populated with model value');

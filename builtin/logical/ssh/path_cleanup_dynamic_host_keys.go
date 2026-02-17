@@ -42,6 +42,10 @@ func (b *backend) handleCleanupKeys(ctx context.Context, req *logical.Request, d
 		}
 	}
 
+	b.Backend.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHTidyDynamicKeys, map[string]interface{}{
+		"keys_deleted": len(names),
+	})
+
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"message": fmt.Sprintf("Removed %v of %v host keys.", len(names), len(names)),

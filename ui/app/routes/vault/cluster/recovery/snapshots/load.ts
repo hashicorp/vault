@@ -59,8 +59,9 @@ export default class RecoverySnapshotsLoadRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: 'Secrets Recovery', route: 'vault.cluster.recovery.snapshots' },
-      { label: 'Upload', route: 'vault.cluster.recovery.snapshots.load' },
+      { label: 'Vault', route: 'vault.cluster.dashboard' },
+      { label: 'Secrets recovery', route: 'vault.cluster.recovery.snapshots' },
+      { label: 'Upload' },
     ];
   }
 }

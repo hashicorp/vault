@@ -13,64 +13,68 @@ import {
   expectedConfigKeys,
   expectedValueOfConfigKeys,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
-import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+
+const configurableEngines = {
+  aws: {
+    secretsEngine: {
+      type: 'aws',
+    },
+    config: {
+      region: 'us-west-2',
+      access_key: '123-key',
+      iam_endpoint: 'iam-endpoint',
+      sts_endpoint: 'sts-endpoint',
+      max_retries: 1,
+    },
+  },
+  azure: {
+    secretsEngine: {
+      type: 'azure',
+    },
+    config: {
+      client_secret: 'client-secret',
+      subscription_id: 'subscription-id',
+      tenant_id: 'tenant-id',
+      client_id: 'client-id',
+      root_password_ttl: '1800000s',
+      environment: 'AZUREPUBLICCLOUD',
+    },
+  },
+  gcp: {
+    secretsEngine: {
+      type: 'gcp',
+    },
+    config: {
+      credentials: '{"some-key":"some-value"}',
+      ttl: '100s',
+      max_ttl: '101s',
+    },
+  },
+  ssh: {
+    secretsEngine: {
+      type: 'ssh',
+    },
+    config: {
+      public_key: 'public-key',
+      generate_signing_key: true,
+    },
+  },
+};
+
+const notConfigurableEngines = {
+  keymgmt: {
+    secretsEngine: {
+      type: 'keymgmt',
+    },
+    config: null,
+  },
+};
 
 module('Integration | Component | SecretEngine::Page::PluginSettings', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.models = {
-      keymgmt: {
-        secretsEngine: {
-          type: 'keymgmt',
-        },
-        config: null,
-      },
-      aws: {
-        secretsEngine: {
-          type: 'aws',
-        },
-        config: {
-          region: 'us-west-2',
-          access_key: '123-key',
-          iam_endpoint: 'iam-endpoint',
-          sts_endpoint: 'sts-endpoint',
-          max_retries: 1,
-        },
-      },
-      azure: {
-        secretsEngine: {
-          type: 'azure',
-        },
-        config: {
-          client_secret: 'client-secret',
-          subscription_id: 'subscription-id',
-          tenant_id: 'tenant-id',
-          client_id: 'client-id',
-          root_password_ttl: '1800000s',
-          environment: 'AZUREPUBLICCLOUD',
-        },
-      },
-      gcp: {
-        secretsEngine: {
-          type: 'gcp',
-        },
-        config: {
-          credentials: '{"some-key":"some-value"}',
-          ttl: '100s',
-          max_ttl: '101s',
-        },
-      },
-      ssh: {
-        secretsEngine: {
-          type: 'ssh',
-        },
-        config: {
-          public_key: 'public-key',
-          generate_signing_key: true,
-        },
-      },
-    };
+    this.models = { ...configurableEngines, ...notConfigurableEngines };
   });
 
   test('it shows empty state when the engine is not configurable', async function (assert) {
@@ -96,9 +100,7 @@ module('Integration | Component | SecretEngine::Page::PluginSettings', function 
       );
   });
 
-  for (const type of ALL_ENGINES.filter((engine) => engine.isConfigurable ?? false).map(
-    (engine) => engine.type
-  )) {
+  for (const type of Object.keys(configurableEngines)) {
     test(`${type}: it shows config details if configModel(s) are passed in`, async function (assert) {
       this.model = this.models[type];
       this.breadcrumbs = [

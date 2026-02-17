@@ -48,4 +48,4 @@ find vault-reporting -name "*.tgz" ! -name "$LATEST_VERSION.tgz" -delete
 FILENAME="$LATEST_VERSION.tgz"
 jq --arg version "$LATEST_VERSION" --arg filename "$FILENAME" '.dependencies["@hashicorp-internal/vault-reporting"] = "file:vault-reporting/" + $filename' package.json > tmp.json && mv tmp.json package.json
 # Install dependencies
-yarn install
+pnpm install

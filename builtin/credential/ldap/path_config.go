@@ -249,7 +249,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 
 		err := b.System().DeregisterRotationJob(ctx, dr)
 		if err != nil {
-			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+			return logical.ErrorResponse("error deregistering rotation job: %s", err), nil
 		}
 	} else if cfg.ShouldRegisterRotationJob() {
 		rotOp = rotation.PerformedRegistration

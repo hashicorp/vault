@@ -244,7 +244,7 @@ module('Unit | Service | api', function (hooks) {
     });
 
     test('it should log out error in development environment', async function (assert) {
-      const consoleStub = sinon.stub(console, 'log');
+      const consoleStub = sinon.stub(console, 'error');
       sinon.stub(config, 'environment').value('development');
       const error = new Error('some js type error');
       await this.apiService.parseError(error);

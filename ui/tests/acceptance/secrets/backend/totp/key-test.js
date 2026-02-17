@@ -74,7 +74,8 @@ module('Acceptance | totp key backend', function (hooks) {
     await click(GENERAL.menuTrigger);
     await click(`${GENERAL.menuItem('details')}`);
 
-    assert.dom('.title').hasText(`TOTP key ${this.keyName}`);
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('TOTP key');
+    assert.dom(GENERAL.hdsPageHeaderSubtitle).hasText(this.keyName);
     assert.dom('[data-test-totp-key-details]').exists();
 
     assert.strictEqual(
@@ -101,7 +102,7 @@ module('Acceptance | totp key backend', function (hooks) {
 
   test('it creates a key with Vault as the provider', async function (assert) {
     await click(SES.createSecretLink);
-    assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a TOTP key', 'It renders the create key page');
 
     await createVaultKey(this.keyName, this.issuer, this.accountName);
     assert.dom('[data-test-qrcode]').exists('QR code exists');
@@ -121,7 +122,7 @@ module('Acceptance | totp key backend', function (hooks) {
 
   test('it creates a key with another service as the provider with URL', async function (assert) {
     await click(SES.createSecretLink);
-    assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a TOTP key', 'It renders the create key page');
     await createNonVaultKey(this.keyName, this.issuer, this.accountName, this.url);
     await waitUntil(() => currentURL() === `/vault/secrets-engines/${this.path}/show/${this.keyName}`);
     assert.strictEqual(
@@ -136,7 +137,7 @@ module('Acceptance | totp key backend', function (hooks) {
 
   test('it creates a key with another service as the provider with key', async function (assert) {
     await click(SES.createSecretLink);
-    assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a TOTP key', 'It renders the create key page');
     await createNonVaultKey(this.keyName, this.issuer, this.accountName, undefined, this.key);
     await waitUntil(() => currentURL() === `/vault/secrets-engines/${this.path}/show/${this.keyName}`);
     assert.strictEqual(

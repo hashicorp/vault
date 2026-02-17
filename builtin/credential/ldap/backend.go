@@ -87,7 +87,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		return "", nil, logical.ErrorResponse("ldap backend not configured"), nil, nil
 	}
 
-	if cfg.DenyNullBind && len(password) == 0 {
+	if len(password) == 0 {
 		return "", nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied"), nil, nil
 	}
 

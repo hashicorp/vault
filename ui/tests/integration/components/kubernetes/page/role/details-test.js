@@ -15,13 +15,13 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const allFields = [
   { label: 'Role name', key: 'name' },
-  { label: 'Kubernetes role type', key: 'kubernetesRoleType' },
-  { label: 'Kubernetes role name', key: 'kubernetesRoleName' },
-  { label: 'Service account name', key: 'serviceAccountName' },
-  { label: 'Allowed Kubernetes namespaces', key: 'allowedKubernetesNamespaces' },
-  { label: 'Max Lease TTL', key: 'tokenMaxTtl' },
-  { label: 'Default Lease TTL', key: 'tokenDefaultTtl' },
-  { label: 'Name template', key: 'nameTemplate' },
+  { label: 'Kubernetes role type', key: 'kubernetes_role_type' },
+  { label: 'Kubernetes role name', key: 'kubernetes_role_name' },
+  { label: 'Service account name', key: 'service_account_name' },
+  { label: 'Allowed Kubernetes namespaces', key: 'allowed_kubernetes_namespaces' },
+  { label: 'Max lease TTL', key: 'token_max_ttl' },
+  { label: 'Default lease TTL', key: 'token_default_ttl' },
+  { label: 'Name template', key: 'name_template' },
 ];
 
 module('Integration | Component | kubernetes | Page::Role::Details', function (hooks) {
@@ -30,28 +30,24 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    const store = this.owner.lookup('service:store');
-    this.server.post('/sys/capabilities-self', () => ({
-      data: {
-        capabilities: ['root'],
-      },
-    }));
+    this.backend = 'kubernetes-test';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
+
     this.renderComponent = (trait) => {
-      const data = this.server.create('kubernetes-role', trait);
-      store.pushPayload('kubernetes/role', {
-        modelName: 'kubernetes/role',
-        backend: 'kubernetes-test',
-        ...data,
-      });
-      this.model = store.peekRecord('kubernetes/role', data.name);
+      this.role = this.server.create('kubernetes-role', trait);
+      this.capabilities = { canUpdate: true, canDelete: true, canGenerateCreds: true };
       this.breadcrumbs = [
-        { label: this.model.backend, route: 'overview' },
+        { label: this.backend, route: 'overview' },
         { label: 'Roles', route: 'roles' },
-        { label: this.model.name },
+        { label: this.role.name },
       ];
-      return render(hbs`<Page::Role::Details @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
-        owner: this.engine,
-      });
+
+      return render(
+        hbs`<Page::Role::Details @role={{this.role}} @capabilities={{this.capabilities}} @breadcrumbs={{this.breadcrumbs}} />`,
+        {
+          owner: this.engine,
+        }
+      );
     };
 
     this.assertFilteredFields = (hiddenIndices, assert) => {
@@ -63,19 +59,19 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
         assert
           .dom(`[data-test-row-label="${field.label}"]`)
           .hasText(field.label, `${field.label} label renders`);
-        const modelValue = this.model[field.key];
-        const value = field.key.includes('Ttl') ? duration([modelValue]) : modelValue;
+        const fieldValue = this.role[field.key];
+        const value = field.key.includes('ttl') ? duration([fieldValue]) : fieldValue;
         assert.dom(`[data-test-row-value="${field.label}"]`).hasText(value, `${field.label} value renders`);
       });
     };
 
-    this.assertExtraFields = (modelKeys, assert) => {
-      modelKeys.forEach((modelKey) => {
-        for (const key in this.model[modelKey]) {
-          assert.dom(`[data-test-row-label="${key}"]`).hasText(key, `${modelKey} key renders`);
+    this.assertExtraFields = (roleKeys, assert) => {
+      roleKeys.forEach((roleKey) => {
+        for (const key in this.role[roleKey]) {
+          assert.dom(`[data-test-row-label="${key}"]`).hasText(key, `${roleKey} key renders`);
           assert
             .dom(`[data-test-row-value="${key}"]`)
-            .hasText(this.model[modelKey][key], `${modelKey} value renders`);
+            .hasText(this.role[roleKey][key], `${roleKey} value renders`);
         }
       });
     };
@@ -83,37 +79,34 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
 
   test('it should render header with role name and breadcrumbs', async function (assert) {
     await this.renderComponent();
-    assert.dom('[data-test-header-title]').hasText(this.model.name, 'Role name renders in header');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText(this.role.name, 'Role name renders in header');
+    assert.dom(GENERAL.breadcrumbAtIdx(0)).containsText(this.backend, 'Overview breadcrumb renders');
+    assert.dom(GENERAL.breadcrumbAtIdx(1)).containsText('Roles', 'Roles breadcrumb renders');
     assert
-      .dom('[data-test-breadcrumbs] li:nth-child(1)')
-      .containsText(this.model.backend, 'Overview breadcrumb renders');
-    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('Roles', 'Roles breadcrumb renders');
-    assert
-      .dom('[data-test-breadcrumbs] li:nth-child(3)')
-      .containsText(this.model.name, 'Role breadcrumb renders');
+      .dom(GENERAL.currentBreadcrumb(this.role.name))
+      .containsText(this.role.name, 'Role name breadcrumb renders');
   });
 
-  test('it should render toolbar actions', async function (assert) {
+  test('it should render role page header dropdown', async function (assert) {
     assert.expect(5);
 
     const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
+    const deleteStub = sinon
+      .stub(this.owner.lookup('service:api').secrets, 'kubernetesDeleteRole')
+      .resolves();
 
     await this.renderComponent();
-
-    this.server.delete(`/${this.model.backend}/roles/${this.model.name}`, () => {
-      assert.ok(true, 'Request made to delete role');
-      return;
-    });
-
-    assert.dom('[data-test-delete]').hasText('Delete role', 'Delete action renders');
+    await click(GENERAL.dropdownToggle('Manage'));
+    assert.dom(GENERAL.menuItem('Delete role')).hasText('Delete role', 'Delete action renders in dropdown');
     assert
-      .dom('[data-test-generate-credentials]')
+      .dom(GENERAL.menuItem('Generate credentials'))
       .hasText('Generate credentials', 'Generate credentials action renders');
-    assert.dom('[data-test-edit]').hasText('Edit role', 'Edit action renders');
-
-    await click('[data-test-delete]');
+    assert.dom(GENERAL.menuItem('Edit role')).hasText('Edit role', 'Edit action renders');
+    await click(GENERAL.menuItem('Delete role'));
     await click(GENERAL.confirmButton);
-    assert.ok(
+
+    assert.true(deleteStub.calledWith(this.role.name, this.backend), 'Request made to delete role');
+    assert.true(
       transitionStub.calledWith('vault.cluster.secrets.backend.kubernetes.roles'),
       'Transitions to roles route on delete success'
     );
@@ -121,26 +114,32 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
 
   test('it should render fields that correspond to basic creation', async function (assert) {
     assert.expect(13);
+
     await this.renderComponent();
     this.assertFilteredFields([1, 2, 7], assert);
+
     assert.dom('[data-test-generated-role-rules]').doesNotExist('Generated role rules do not render');
     assert.dom('[data-test-extra-fields]').doesNotExist('Annotations and labels do not render');
   });
 
   test('it should render fields that correspond to expanded creation', async function (assert) {
     assert.expect(21);
+
     await this.renderComponent('withRoleName');
     this.assertFilteredFields([3], assert);
+
     assert.dom('[data-test-generated-role-rules]').doesNotExist('Generated role rules do not render');
-    this.assertExtraFields(['extraAnnotations'], assert);
+    this.assertExtraFields(['extra_annotations'], assert);
     assert.dom('[data-test-extra-fields="Labels"]').doesNotExist('Labels do not render');
   });
 
   test('it should render fields that correspond to full creation', async function (assert) {
     assert.expect(22);
+
     await this.renderComponent('withRoleRules');
     this.assertFilteredFields([2, 3], assert);
+
     assert.dom('[data-test-generated-role-rules]').exists('Generated role rules render');
-    this.assertExtraFields(['extraAnnotations', 'extraLabels'], assert);
+    this.assertExtraFields(['extra_annotations', 'extra_labels'], assert);
   });
 });

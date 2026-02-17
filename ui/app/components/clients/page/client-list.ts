@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { HTMLElementEvent } from 'vault/forms';
-import { filterIsSupported, filterTableData } from 'core/utils/client-count-utils';
+import { filterIsSupported, filterTableData } from 'core/utils/client-counts/helpers';
 import { service } from '@ember/service';
 import FlagsService from 'vault/services/flags';
 
@@ -44,13 +44,15 @@ export default class ClientsClientListPageComponent extends Component<Args> {
   constructor(owner: unknown, args: Args) {
     super(owner, args);
 
-    this.args.exportData.forEach((data: ActivityExportData) => {
-      const tabName = CLIENT_TYPE_MAP[data.client_type];
-      this.exportDataByTab[tabName].push(data);
-    });
+    if (this.args.exportData) {
+      this.args.exportData.forEach((data: ActivityExportData) => {
+        const tabName = CLIENT_TYPE_MAP[data.client_type];
+        this.exportDataByTab[tabName].push(data);
+      });
 
-    const firstTab = Object.keys(this.exportDataByTab)[0] as ClientListTabs;
-    this.selectedTab = firstTab;
+      const firstTab = Object.keys(this.exportDataByTab)[0] as ClientListTabs;
+      this.selectedTab = firstTab;
+    }
   }
 
   get selectedTabIndex() {

@@ -1,0 +1,22 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Layout::Flex @align="start" @direction="column" as |LF|>
+  <LF.Item class="has-bottom-margin-xs has-top-margin-xs">
+    <Hds::Badge @text={{concat "Setup time: " @setupTime}} />
+    {{#if @isOptional}}
+      <Hds::Badge @text="Optional" @type="outlined" class="has-left-margin-xs" />
+    {{/if}}
+  </LF.Item>
+
+  <Hds::Text::Body @tag="p" class="has-bottom-margin-l">{{@description}}</Hds::Text::Body>
+
+  {{yield to="features"}}
+</Hds::Layout::Flex>
+
+<Hds::Layout::Flex @direction="column">
+  <img src={{@imageSrc}} alt={{@imageAlt}} />
+  <Hds::Text::Body @align="left" @color="faint" @size="100" @tag="p">{{@imageCaption}}</Hds::Text::Body>
+</Hds::Layout::Flex>

@@ -24,7 +24,8 @@ export default class LdapErrorRoute extends Route {
   setupController(controller: LdapErrorController, resolvedModel: AdapterError, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
     ];
     controller.backend = this.modelFor('application') as SecretEngineModel;

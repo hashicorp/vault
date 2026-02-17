@@ -8,7 +8,7 @@
 {{else}}
   <div class="level is-mobile">
     <div class="level-left label-row">
-      <label id="text-file-input-{{this.elementId}}" data-test-text-file-label>
+      <label id="text-file-input-{{this.elementId}}">
         {{or @label "File"}}
       </label>
       {{#if @helpText}}
@@ -58,7 +58,7 @@
     <Hds::Form::FileInput::Field
       {{on "change" this.handleFileUpload}}
       aria-labelledby="text-file-input-{{this.elementId}}"
-      data-test-text-file-input
+      data-test-file-input
       as |F|
     >
       <F.HelperText>

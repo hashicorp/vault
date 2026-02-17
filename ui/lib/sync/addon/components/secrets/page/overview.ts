@@ -9,7 +9,7 @@ import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { action } from '@ember/object';
 import Ember from 'ember';
-import { DEBUG } from '@glimmer/env';
+import { macroCondition, isDevelopingApp } from '@embroider/macros';
 import { findDestination } from 'core/helpers/sync-destinations';
 
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -47,6 +47,18 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
       this.fetchAssociationsForDestinations.perform();
     }
   }
+
+  breadcrumbs = [
+    {
+      label: 'Vault',
+      route: 'vault',
+      icon: 'vault',
+      linkExternal: true,
+    },
+    {
+      label: 'Secrets sync',
+    },
+  ];
 
   fetchAssociationsForDestinations = task(this, {}, async (page = 1) => {
     try {
@@ -107,7 +119,9 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
   @action
   onModalError(errorMsg: string) {
-    if (DEBUG) console.error(errorMsg); // eslint-disable-line no-console
+    if (macroCondition(isDevelopingApp())) {
+      console.error(errorMsg);
+    }
 
     const errors = [errorMsg];
 

@@ -3,13 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{this.title}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title={{this.title}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label=this.title)}}
+    />
+  </:breadcrumbs>
+</Page::Header>
 
 <EmptyState
   @title="Upgrade to use {{this.featureName}}"

@@ -31,6 +31,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().StringVarP(&rootCfg.format, "format", "f", "table", "The output format. Can be 'json', 'table', and sometimes 'markdown'")
 
 	rootCmd.AddCommand(newGenerateCmd())
+	rootCmd.AddCommand(newGitCmd())
 	rootCmd.AddCommand(newGithubCmd())
 	rootCmd.AddCommand(newGoCmd())
 	rootCmd.AddCommand(newHCPCmd())

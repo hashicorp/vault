@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const DATA = {
   anyReplicationEnabled: true,
@@ -37,7 +38,7 @@ module('Integration | Component | replication-header', function (hooks) {
             <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}}/>
     `);
 
-    assert.dom('[data-test-replication-header]').exists();
+    assert.dom(GENERAL.hdsPageHeaderTitle).exists();
   });
 
   test('it renders with mode and secondaryId when set', async function (assert) {
@@ -45,8 +46,8 @@ module('Integration | Component | replication-header', function (hooks) {
             <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}} @secondaryId={{this.secondaryId}}/>
     `);
 
-    assert.dom('[data-test-secondaryId]').includesText(SECONDARY_ID, `shows the correct secondaryId value`);
-    assert.dom('[data-test-mode]').includesText('secondary', `shows the correct mode value`);
+    assert.dom(GENERAL.badge(SECONDARY_ID)).includesText(SECONDARY_ID, `shows the correct secondaryId value`);
+    assert.dom(GENERAL.badge('secondary')).includesText('secondary', `shows the correct mode value`);
   });
 
   test('it does not render mode or secondaryId when replication is not enabled', async function (assert) {
@@ -60,7 +61,7 @@ module('Integration | Component | replication-header', function (hooks) {
     `);
 
     assert.dom('[data-test-secondaryId]').doesNotExist();
-    assert.dom('[data-test-mode]').doesNotExist();
+    assert.dom(GENERAL.badge('secondary')).doesNotExist();
   });
 
   test('it does not show tabs when showTabs is not set', async function (assert) {

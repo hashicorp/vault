@@ -1,0 +1,3 @@
+```release-note:bug
+plugins (enterprise): Fix bug where requests to external plugins that modify storage weren't populating the X-Vault-Index response header.
+```

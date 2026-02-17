@@ -61,17 +61,36 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await visit('/vault/secrets-engines');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
-    await click(GENERAL.menuItem('view-configuration'));
+    await click(GENERAL.menuItem('View configuration'));
+    // since ldap hasn't been configured yet, it should redirect to configure page
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets-engines/${path}/${type}/configuration`,
+      `/vault/secrets-engines/${path}/${type}/configure`,
       'navigates to the config page for ember engine'
     );
     // clean up
     await runCmd(deleteEngineCmd(path));
   });
 
-  test('it navigates to non-ember engine configuration page', async function (assert) {
+  test('it navigates to non-ember engine general configuration page', async function (assert) {
+    const type = 'keymgmt';
+    const path = `keymgmt-${this.uid}`;
+
+    await visit('/vault/secrets-engines/enable');
+    await runCmd(mountEngineCmd(type, path), false);
+    await visit(`/vault/secrets-engines/${path}/configuration/general-settings`);
+
+    // since non-ember engines haven't been configured yet, it should redirect to general settings page
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${path}/configuration/general-settings`,
+      'navigates to the general settings config page for non-ember engine'
+    );
+    // clean up
+    await runCmd(deleteEngineCmd(path));
+  });
+
+  test('it navigates to edit configuration page if engine is configurable and not set', async function (assert) {
     const type = 'ssh';
     const path = `ssh-${this.uid}`;
 
@@ -80,11 +99,13 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await visit('/vault/secrets-engines');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
-    await click(GENERAL.menuItem('view-configuration'));
+    await click(GENERAL.menuItem('View configuration'));
+
+    // since the engine hasn't been configured yet & is configurable, it should redirect to configuration edit page
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets-engines/${path}/configuration`,
-      'navigates to the config page for non-ember engine'
+      `/vault/secrets-engines/${path}/configuration/edit`,
+      'navigates to the config page for configurable engine'
     );
     // clean up
     await runCmd(deleteEngineCmd(path));
