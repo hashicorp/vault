@@ -16,7 +16,7 @@ import (
 )
 
 func (b *SystemBackend) useCaseConsumptionBillingPaths() []*framework.Path {
-	return []*framework.Path{
+	paths := []*framework.Path{
 		{
 			Pattern: "billing/overview$",
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -51,6 +51,10 @@ func (b *SystemBackend) useCaseConsumptionBillingPaths() []*framework.Path {
 			},
 		},
 	}
+	if p := b.consumptionBillingWritePath(); p != nil {
+		paths = append(paths, p)
+	}
+	return paths
 }
 
 func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
