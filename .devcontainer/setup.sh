@@ -3,14 +3,17 @@ set -e
 
 echo "📦 Setting up Vault UI development environment..."
 
-# Install Vault from HashiCorp's official APT repository
-echo "🔐 Adding HashiCorp APT repository..."
-wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
-  | sudo tee /etc/apt/sources.list.d/hashicorp.list
+# Install Vault by downloading the binary directly
+echo "🔐 Downloading Vault binary..."
+VAULT_VERSION="1.21.3"
+wget -q "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip"
 
 echo "🔐 Installing Vault..."
-sudo apt-get update && sudo SKIP_SETCAP=1 apt-get install -y vault
+sudo apt-get update && sudo apt-get install -y unzip
+unzip -q "vault_${VAULT_VERSION}_linux_amd64.zip"
+sudo mv vault /usr/local/bin/vault
+sudo chmod +x /usr/local/bin/vault
+rm "vault_${VAULT_VERSION}_linux_amd64.zip"
 
 echo "📦 Installing pnpm..."
 npm install -g pnpm@10.22.0
