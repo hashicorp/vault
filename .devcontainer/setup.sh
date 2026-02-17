@@ -10,7 +10,7 @@ wget -q "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VER
 
 echo "🔐 Installing Vault..."
 sudo apt-get update && sudo apt-get install -y unzip
-unzip -q "vault_${VAULT_VERSION}_linux_amd64.zip"
+unzip -o -q "vault_${VAULT_VERSION}_linux_amd64.zip"
 sudo mv vault /usr/local/bin/vault
 sudo chmod +x /usr/local/bin/vault
 rm "vault_${VAULT_VERSION}_linux_amd64.zip"
