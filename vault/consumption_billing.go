@@ -185,12 +185,12 @@ func (c *Core) updateBillingMetrics(ctx context.Context, currentMonth time.Time)
 }
 
 func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time.Time) error {
-	_, err := c.UpdateMaxRoleCounts(ctx, billing.ReplicatedPrefix, currentMonth)
+	_, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, currentMonth)
 	if err != nil {
-		c.logger.Error("error updating replicated max role counts", "error", err)
+		c.logger.Error("error updating replicated max role and managed key counts", "error", err)
 		// We won't return an error. Instead we will log the errors and attempt to continue
 	} else {
-		c.logger.Info("updated replicated hwm role counts", "prefix", billing.ReplicatedPrefix, "currentMonth", currentMonth)
+		c.logger.Info("updated replicated hwm role and managed key counts", "prefix", billing.ReplicatedPrefix, "currentMonth", currentMonth)
 	}
 	if _, err = c.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, currentMonth); err != nil {
 		// We won't return an error. Instead we will log the errors and attempt to continue
@@ -202,10 +202,10 @@ func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time
 }
 
 func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time) error {
-	if _, err := c.UpdateMaxRoleCounts(ctx, billing.LocalPrefix, currentMonth); err != nil {
-		c.logger.Error("error updating local max role counts", "error", err)
+	if _, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.LocalPrefix, currentMonth); err != nil {
+		c.logger.Error("error updating local max role and managed key counts", "error", err)
 	} else {
-		c.logger.Info("updated local max role counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+		c.logger.Info("updated local max role and managed key counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
 	}
 	if _, err := c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth); err != nil {
 		c.logger.Error("error updating local max kv counts", "error", err)

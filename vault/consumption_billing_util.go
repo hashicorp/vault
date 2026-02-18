@@ -239,21 +239,39 @@ func (c *Core) storeMaxRoleCountsLocked(ctx context.Context, maxRoleCounts *Role
 	return view.Put(ctx, entry)
 }
 
-func (c *Core) UpdateMaxRoleCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time) (*RoleCounts, error) {
+func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time) (*RoleCounts, *ManagedKeyCounts, error) {
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
 	c.consumptionBillingLock.RUnlock()
 
 	if cb == nil {
-		return nil, ErrConsumptionBillingNotInitialized
+		return nil, nil, ErrConsumptionBillingNotInitialized
 	}
 
 	cb.BillingStorageLock.Lock()
 	defer cb.BillingStorageLock.Unlock()
 
 	local := localPathPrefix == billing.LocalPrefix
-	currentRoleCounts := c.getRoleCountsInternal(local, !local, true)
+	currentRoleCounts, currentManagedKeyCounts := c.getRoleAndManagedKeyCountsInternal(local, !local, true)
 
+	// get max role counts
+	maxRoleCounts, err := c.updateMaxRoleCounts(ctx, currentRoleCounts, localPathPrefix, currentMonth)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	maxManagedKeyCounts := &ManagedKeyCounts{}
+
+	// get max totp key counts
+	maxTotpKeyCounts, err := c.updateMaxTotpKeyCounts(ctx, currentManagedKeyCounts.TotpKeys, localPathPrefix, currentMonth)
+	if err != nil {
+		return nil, nil, err
+	}
+	maxManagedKeyCounts.TotpKeys = maxTotpKeyCounts
+	return maxRoleCounts, maxManagedKeyCounts, nil
+}
+
+func (c *Core) updateMaxRoleCounts(ctx context.Context, currentRoleCounts *RoleCounts, localPathPrefix string, currentMonth time.Time) (*RoleCounts, error) {
 	maxRoleCounts, err := c.getStoredRoleCountsLocked(ctx, localPathPrefix, currentMonth)
 	if maxRoleCounts == nil {
 		maxRoleCounts = &RoleCounts{}
@@ -330,6 +348,78 @@ func (c *Core) compareCounts(current, previous int, metricName string) int {
 	}
 	c.logger.Debug("updating max counts", "metricName", metricName, "previous", previous, "current", current)
 	return current
+}
+
+func (c *Core) updateMaxTotpKeyCounts(ctx context.Context, currentKeyCounts int, localPathPrefix string, currentMonth time.Time) (int, error) {
+	maxKeyCounts, err := c.getStoredTotpKeyCountsLocked(ctx, localPathPrefix, currentMonth)
+	if err != nil {
+		c.logger.Error("error getting stored max totp key counts", "error", err)
+		return 0, err
+	}
+	if maxKeyCounts == 0 {
+		maxKeyCounts = currentKeyCounts
+	}
+
+	if currentKeyCounts > maxKeyCounts {
+		c.logger.Debug("updating max totp counts", "totalTotpKeyCounts", currentKeyCounts, "maxTotpKeyCounts", maxKeyCounts)
+		maxKeyCounts = currentKeyCounts
+	}
+
+	err = c.storeMaxTotpKeyCountsLocked(ctx, maxKeyCounts, localPathPrefix, currentMonth)
+	if err != nil {
+		return 0, err
+	}
+
+	return maxKeyCounts, nil
+}
+
+// storeMaxTotpKeyCountsLocked must be called with BillingStorageLock held
+func (c *Core) storeMaxTotpKeyCountsLocked(ctx context.Context, maxKeyCounts int, localPathPrefix string, month time.Time) error {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.TotpHWMCountsHWM)
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(strconv.Itoa(maxKeyCounts)),
+	}
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
+}
+
+func (c *Core) GetStoredHWMTotpCounts(ctx context.Context, localPathPrefix string, month time.Time) (int, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+	return c.getStoredTotpKeyCountsLocked(ctx, localPathPrefix, month)
+}
+
+func (c *Core) getStoredTotpKeyCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (int, error) {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.TotpHWMCountsHWM)
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, nil
+	}
+	entry, err := view.Get(ctx, billingPath)
+	if err != nil {
+		return 0, err
+	}
+	if entry == nil {
+		return 0, nil
+	}
+	totpKeyCount, err := strconv.Atoi(string(entry.Value))
+	if err != nil {
+		return 0, err
+	}
+	return totpKeyCount, nil
 }
 
 func (c *Core) GetBillingSubView() (*BarrierView, bool) {

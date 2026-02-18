@@ -23,6 +23,7 @@ import (
 	logicalDatabase "github.com/hashicorp/vault/builtin/logical/database"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
 	logicalRabbitMQ "github.com/hashicorp/vault/builtin/logical/rabbitmq"
+	"github.com/hashicorp/vault/builtin/logical/totp"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
@@ -278,7 +279,7 @@ func TestHWMRoleCounts(t *testing.T) {
 	firstCounts := core.GetRoleCounts()
 	verifyExpectedRoleCounts(t, firstCounts, 5)
 
-	counts, err := core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	counts, _, err := core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 5)
@@ -294,7 +295,7 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 2)
 	}
 
-	counts, err = core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 5)
@@ -310,7 +311,7 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 8)
 	}
 
-	counts, err = core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 8)
@@ -326,7 +327,7 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 5)
 	}
 
-	counts, err = core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 8)
@@ -396,6 +397,124 @@ func TestHWMKvSecretsCounts(t *testing.T) {
 	counts, err = core.GetStoredHWMKvCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
 	require.NoError(t, err)
 	require.Equal(t, 5, counts)
+}
+
+// TestStoreAndGetMaxTotpKeyCounts verifies that we can store and retrieve the HWM totp key counts correctly
+func TestStoreAndGetMaxTotpKeyCounts(t *testing.T) {
+	coreConfig := &CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			pluginconsts.AuthTypeUserpass: userpass.Factory,
+		},
+	}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	testCases := []struct {
+		description     string
+		localPathPrefix string
+		monthOffset     int
+		keyCounts       int
+	}{
+		{
+			description:     "Local storage, current month",
+			localPathPrefix: billing.LocalPrefix,
+			monthOffset:     0,
+			keyCounts:       10,
+		},
+		{
+			description:     "Replicated storage, previous month",
+			localPathPrefix: billing.ReplicatedPrefix,
+			monthOffset:     -1,
+			keyCounts:       5,
+		},
+		{
+			description:     "Replicated storage, current month",
+			localPathPrefix: billing.ReplicatedPrefix,
+			monthOffset:     0,
+			keyCounts:       15,
+		},
+		{
+			description:     "Local storage, previous month",
+			localPathPrefix: billing.LocalPrefix,
+			monthOffset:     -1,
+			keyCounts:       4,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			month := time.Now().AddDate(0, tc.monthOffset, 0)
+			err := core.storeMaxTotpKeyCountsLocked(context.Background(), tc.keyCounts, tc.localPathPrefix, month)
+			require.NoError(t, err)
+
+			retrievedCounts, err := core.GetStoredHWMTotpCounts(context.Background(), tc.localPathPrefix, month)
+			require.NoError(t, err)
+
+			require.Equal(t, tc.keyCounts, retrievedCounts)
+		})
+	}
+}
+
+// TestHWMTotpKeyCounts tests that we correctly store and track the HWM totp key counts.
+func TestHWMTotpKeyCounts(t *testing.T) {
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"totp": totp.Factory,
+		},
+		BillingConfig: billing.BillingConfig{
+			MetricsUpdateCadence: 3 * time.Second,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	// Add 2 totp mounts in root namespace
+	for _, mount := range []string{"totp", "totp2"} {
+		req := logical.TestRequest(t, logical.CreateOperation, fmt.Sprintf("sys/mounts/%v", mount))
+		req.Data["type"] = pluginconsts.SecretEngineTOTP
+		req.ClientToken = root
+		ctx := namespace.RootContext(context.Background())
+
+		_, err := core.HandleRequest(ctx, req)
+		require.NoError(t, err)
+	}
+
+	// Add two keys to each totp mount
+	for _, mount := range []string{"totp", "totp2"} {
+		for i := 0; i < 2; i++ {
+			keyName := fmt.Sprintf("my-key-%d", i)
+			addTotpKeyToStorage(t, namespace.RootContext(context.Background()), core, mount, root, keyName)
+		}
+	}
+
+	// verify if the keys have been added to storage
+	for _, mount := range []string{"totp", "totp2"} {
+		verifyTotpKeysInStorage(t, namespace.RootContext(context.Background()), core, mount, root, 2)
+	}
+
+	// Verify that the max totp key counts are as expected
+	require.Eventually(t, func() bool {
+		counts, err := core.GetStoredHWMTotpCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+		return err == nil && counts == 4
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// Add one more key to the totp mount
+	addTotpKeyToStorage(t, namespace.RootContext(context.Background()), core, "totp", root, "my-key-3")
+	verifyTotpKeysInStorage(t, namespace.RootContext(context.Background()), core, "totp", root, 3)
+
+	// Verify that the max totp key counts are updated
+	require.Eventually(t, func() bool {
+		counts, err := core.GetStoredHWMTotpCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+		return err == nil && counts == 5
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// Now delete one secret from the totp mount
+	deleteTotpKeyFromStorage(t, namespace.RootContext(context.Background()), core, "totp", root, "my-key-3")
+	verifyTotpKeysInStorage(t, namespace.RootContext(context.Background()), core, "totp", root, 2)
+
+	// Verify that the max totp key counts are still the same
+	require.Eventually(t, func() bool {
+		counts, err := core.GetStoredHWMTotpCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+		return err == nil && counts == 5
+	}, 5*time.Second, 100*time.Millisecond)
 }
 
 // TestTransitDataProtectionCallCounts tests that we correctly store and track the transit data protection call counts
@@ -726,6 +845,37 @@ func deleteKvSecretFromStorage(t *testing.T, ctx context.Context, core *Core, mo
 	default:
 		t.Fatalf("invalid kv version: %s", kvVersion)
 	}
+	req.ClientToken = token
+	_, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+}
+
+func addTotpKeyToStorage(t *testing.T, ctx context.Context, core *Core, mount string, token string, keyName string) {
+	var req *logical.Request
+	req = logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("%v/keys/%s", mount, keyName))
+	req.Data["generate"] = true
+	req.Data["issuer"] = "hashicorp"
+	req.Data["account_name"] = "vault"
+
+	req.ClientToken = token
+	writeResp, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, writeResp)
+}
+
+func verifyTotpKeysInStorage(t *testing.T, ctx context.Context, core *Core, mount string, token string, expectedKeys int) {
+	req := logical.TestRequest(t, logical.ListOperation, fmt.Sprintf("%v/keys", mount))
+	req.ClientToken = token
+	listResp, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, listResp.Data)
+	keys := listResp.Data["keys"].([]string)
+	require.Len(t, keys, expectedKeys)
+}
+
+func deleteTotpKeyFromStorage(t *testing.T, ctx context.Context, core *Core, mount string, token string, keyName string) {
+	var req *logical.Request
+	req = logical.TestRequest(t, logical.DeleteOperation, fmt.Sprintf("%v/keys/%s", mount, keyName))
 	req.ClientToken = token
 	_, err := core.HandleRequest(ctx, req)
 	require.NoError(t, err)

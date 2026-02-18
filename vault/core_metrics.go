@@ -842,15 +842,19 @@ type RoleCounts struct {
 	TerraformCloudDynamicRoles int `json:"terraformcloud_dynamic_roles"`
 }
 
-// getRoleCountsInternal gets the role counts for plugins.
+type ManagedKeyCounts struct {
+	TotpKeys int `json:"totp_keys"`
+}
+
+// getRoleAndManagedKeyCountsInternal gets the role counts for plugins and managed key counts
 // includeLocal determines if local mounts are included
 // includeReplicated determines if replicated mounts are included
 // officialPluginsOnly determines if this function should include only plugins that are official,
 // which would exclude, for example, a custom built version of these plugins.
-func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool, officialPluginsOnly bool) *RoleCounts {
+func (c *Core) getRoleAndManagedKeyCountsInternal(includeLocal bool, includeReplicated bool, officialPluginsOnly bool) (*RoleCounts, *ManagedKeyCounts) {
 	if c.Sealed() {
 		c.logger.Debug("core is sealed, cannot access mounts table")
-		return nil
+		return nil, nil
 	}
 
 	ctx := namespace.RootContext(c.activeContext)
@@ -879,6 +883,7 @@ func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool, 
 	defer c.mountsLock.RUnlock()
 
 	var roles RoleCounts
+	var keyCounts ManagedKeyCounts
 	for _, entry := range c.mounts.Entries {
 		if !entry.Local && !includeReplicated {
 			continue
@@ -971,18 +976,24 @@ func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool, 
 		case pluginconsts.SecretEngineTerraform:
 			dynamicRoles := apiList(entry, "role")
 			roles.TerraformCloudDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineTOTP:
+			keyCountPerEntry := apiList(entry, "keys")
+			keyCounts.TotpKeys += len(keyCountPerEntry)
 		}
 	}
 
-	return &roles
+	return &roles, &keyCounts
 }
 
 func (c *Core) GetRoleCounts() *RoleCounts {
-	return c.getRoleCountsInternal(true, true, false)
+	roleCounts, _ := c.getRoleAndManagedKeyCountsInternal(true, true, false)
+	return roleCounts
 }
 
 func (c *Core) GetRoleCountsForCluster() *RoleCounts {
-	return c.getRoleCountsInternal(true, c.isPrimary(), false)
+	roleCounts, _ := c.getRoleAndManagedKeyCountsInternal(true, c.isPrimary(), false)
+	return roleCounts
 }
 
 // GetKvUsageMetrics returns a map of namespace paths to KV secret counts.

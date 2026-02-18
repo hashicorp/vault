@@ -19,6 +19,7 @@ const (
 	BillingSubPath                          = "billing/"
 	ReplicatedPrefix                        = "replicated/"
 	RoleHWMCountsHWM                        = "maxRoleCounts/"
+	TotpHWMCountsHWM                        = "maxTotpCounts/"
 	KvHWMCountsHWM                          = "maxKvCounts/"
 	TransitDataProtectionCallCountsPrefix   = "transitDataProtectionCallCounts/"
 	TransformDataProtectionCallCountsPrefix = "transformDataProtectionCallCounts/"
