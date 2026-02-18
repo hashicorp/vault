@@ -25,6 +25,7 @@ const (
 	LocalPrefix                             = "local/"
 	ThirdPartyPluginsPrefix                 = "thirdPartyPluginCounts/"
 	KmipEnabledPrefix                       = "kmipEnabled/"
+	PkiDurationAdjustedCountPrefix          = "normalizedCertsIssued/"
 
 	BillingWriteInterval = 10 * time.Minute
 	// pluginCountsSendTimeout is the timeout for sending plugin counts to the active node

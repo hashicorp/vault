@@ -15,6 +15,8 @@ import (
 	"github.com/hashicorp/vault/vault/billing"
 )
 
+const pkiDurationAjustedCountMetricName = "pki_units"
+
 func (b *SystemBackend) useCaseConsumptionBillingPaths() []*framework.Path {
 	return []*framework.Path{
 		{
@@ -162,5 +164,20 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 
 	return &logical.Response{
 		Data: resp,
+	}, nil
+}
+
+// generatePkiBillingMetric generates the billing metric for PKI duration-adjusted certificate counts.
+func (b *SystemBackend) generatePkiBillingMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
+	count, err := b.Core.GetStoredPkiDurationAdjustedCount(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving PKI duration-adjusted count for month: %w", err)
+	}
+
+	return map[string]interface{}{
+		"metric_name": pkiDurationAjustedCountMetricName,
+		"metric_data": map[string]interface{}{
+			"total": count,
+		},
 	}, nil
 }

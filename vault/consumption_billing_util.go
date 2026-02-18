@@ -5,6 +5,8 @@ package vault
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -498,4 +500,87 @@ func (c *Core) UpdateKmipEnabled(ctx context.Context, currentMonth time.Time) (b
 	}
 
 	return kmipEnabled, nil
+}
+
+// GetStoredPkiDurationAdjustedCount retrieves the stored PKI duration-adjusted certificate count
+// for the specified month. The count is stored as a float64 string with 4 decimal places of precision.
+// Returns 0 if no count has been stored for the given month.
+func (c *Core) GetStoredPkiDurationAdjustedCount(ctx context.Context, currentMonth time.Time) (float64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, errors.New("consumption billing is not initialized")
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+
+	return c.getStoredPkiDurationAdjustedCountLocked(ctx, billing.LocalPrefix, currentMonth)
+}
+
+// UpdatePkiDurationAdjustedCount increments the stored PKI duration-adjusted certificate count
+// for the specified month by the given increment value. The increment must be non-negative.
+// The count is stored as a float64 string with 4 decimal places of precision.
+func (c *Core) UpdatePkiDurationAdjustedCount(ctx context.Context, inc float64, currentMonth time.Time) error {
+	if inc < 0 {
+		return fmt.Errorf("PKI duration-adjusted increment must be non-negative, got %f", inc)
+	}
+
+	if c.consumptionBilling == nil {
+		return errors.New("consumption billing is not initialized")
+	}
+
+	c.consumptionBilling.BillingStorageLock.Lock()
+	defer c.consumptionBilling.BillingStorageLock.Unlock()
+
+	return c.storePkiDurationAdjustedCountLocked(ctx, billing.LocalPrefix, currentMonth, inc)
+}
+
+func (c *Core) getStoredPkiDurationAdjustedCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (float64, error) {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.PkiDurationAdjustedCountPrefix)
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, errors.New("error reading PKI duration-adjusted count: billing subview not available")
+	}
+
+	se, err := view.Get(ctx, billingPath)
+	if se == nil || err != nil {
+		return 0, err
+	}
+
+	currentCount, err := strconv.ParseFloat(string(se.Value), 64)
+	if err != nil {
+		return 0, fmt.Errorf("error decoding current PKI duration adjusted cert count: %w", err)
+	}
+
+	return currentCount, nil
+}
+
+func (c *Core) storePkiDurationAdjustedCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, inc float64) error {
+	currentCount, err := c.getStoredPkiDurationAdjustedCountLocked(ctx, localPathPrefix, currentMonth)
+	if err != nil {
+		return err
+	}
+
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.PkiDurationAdjustedCountPrefix)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return errors.New("error storing PKI duration-adjusted count: billing subview not available")
+	}
+
+	// Write new value
+	newCount := currentCount + inc
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(strconv.FormatFloat(newCount, 'f', 4, 64)),
+	}
+
+	if err := view.Put(ctx, entry); err != nil {
+		return fmt.Errorf("error writing PKI duration adjusted cert count: %w", err)
+	}
+
+	return nil
 }

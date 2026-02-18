@@ -102,10 +102,9 @@ func (m *certCountManager) reportLoop(stop chan struct{}, consumer CertificateCo
 
 func (m *certCountManager) consumeCount(consumer CertificateCountConsumer) {
 	m.countLock.Lock()
-	defer m.countLock.Unlock()
-
 	increment := m.count
 	m.count = logical.CertCount{}
+	m.countLock.Unlock()
 
 	consumer(increment)
 }
@@ -133,7 +132,8 @@ func (m *certCountManager) AddCount(params logical.CertCount) {
 
 	m.count.Add(params)
 
-	m.logger.Trace("incremented in-memory certificate counts", "issuedCerts", m.count.IssuedCerts, "storedCerts", m.count.StoredCerts)
+	m.logger.Trace("incremented in-memory certificate counts", "issuedCerts", m.count.IssuedCerts,
+		"storedCerts", m.count.StoredCerts, "pkiDurationAdjustedCerts", m.count.PkiDurationAdjustedCerts)
 }
 
 func (m *certCountManager) Increment() logical.CertCountIncrementer {

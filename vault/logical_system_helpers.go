@@ -301,31 +301,42 @@ func ceSysInitialize(b *SystemBackend) func(context.Context, *logical.Initializa
 // consumeCertCounts updates the certificate counts in storage if we are
 // running on the active node; otherwise it forwards them to the active node.
 func (c *Core) consumeCertCounts(inc logical.CertCount) {
-	var consumed bool
 	haState := c.HAStateWithLock()
 	if inc.IsZero() {
 		return
 	}
 
+	unconsumed := inc
 	switch haState {
 	case consts.Standby:
-		consumed = true
+		// nothing to do
 	case consts.PerfStandby:
-		consumed = forwardCertCounts(c, inc)
+		if forwardCertCounts(c, inc) {
+			unconsumed = logical.CertCount{}
+		}
 	case consts.Active:
-		c.logger.Info("storing certificate counts", "issuedCerts", inc.IssuedCerts, "storedCerts", inc.StoredCerts)
+		c.logger.Info("storing certificate counts", "pkiIssuedCerts", inc.IssuedCerts, "pkiStoredCerts", inc.StoredCerts)
 		err := cert_count.IncrementStoredCounts(c.activeContext, c.barrier, inc)
 		if err != nil {
 			c.logger.Error("error storing certificate counts", "error", err)
 		} else {
-			consumed = true
+			unconsumed.IssuedCerts = 0
+			unconsumed.StoredCerts = 0
 		}
+
+		c.logger.Info("storing duration adjusted count", "pkiDurationAdjustedCount", inc.PkiDurationAdjustedCerts)
+		err = c.UpdatePkiDurationAdjustedCount(c.activeContext, inc.PkiDurationAdjustedCerts, time.Now())
+		if err != nil {
+			c.logger.Error("error storing duration adjusted certificate counts", "error", err)
+		} else {
+			unconsumed.PkiDurationAdjustedCerts = 0
+		}
+
 	default:
 		c.logger.Error("Unexpected HA state when consuming certificate counts", "ha_state", haState)
 	}
-	if !consumed {
-		c.certCountManager.AddCount(inc)
-	}
+	// Add any unconsumed counts to the in-memory count so they can be included in the next increment
+	c.certCountManager.AddCount(unconsumed)
 }
 
 // Contains the config for a global plugin reload
