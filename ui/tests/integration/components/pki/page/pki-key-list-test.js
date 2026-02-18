@@ -34,8 +34,26 @@ module('Integration | Component | pki key list page', function (hooks) {
     this.keys.meta = STANDARD_META;
     this.canImportKeys = true;
     this.canGenerateKeys = true;
-    this.canRead = true;
-    this.canEdit = true;
+    this.keyPermsById = {
+      '724862ff-6438-bad0-b598-77a6c7f4e934': {
+        canCreate: true,
+        canDelete: true,
+        canList: true,
+        canPatch: true,
+        canRead: true,
+        canSudo: true,
+        canUpdate: true,
+      },
+      '9fdddf12-9ce3-0268-6b34-dc1553b00175': {
+        canCreate: true,
+        canDelete: true,
+        canList: true,
+        canPatch: true,
+        canRead: true,
+        canSudo: true,
+        canUpdate: true,
+      },
+    };
 
     this.renderComponent = () =>
       render(
@@ -45,8 +63,7 @@ module('Integration | Component | pki key list page', function (hooks) {
           @mountPoint="vault.cluster.secrets.backend.pki"
           @canImportKeys={{this.canImportKeys}}
           @canGenerateKeys={{this.canGenerateKeys}}
-          @canRead={{this.canRead}}
-          @canEdit={{this.canEdit}}
+          @keyPermsById={{this.keyPermsById}}
         />,
       `,
         { owner: this.engine }
@@ -92,9 +109,10 @@ module('Integration | Component | pki key list page', function (hooks) {
 
     this.canImportKeys = false;
     this.canGenerateKeys = false;
-    this.canRead = false;
-    this.canEdit = false;
-
+    this.keyPermsById = {
+      '724862ff-6438-bad0-b598-77a6c7f4e934': { canRead: false, canUpdate: false },
+      '9fdddf12-9ce3-0268-6b34-dc1553b00175': { canRead: false, canUpdate: false },
+    };
     await this.renderComponent();
 
     assert.dom(PKI_KEYS.importKey).doesNotExist('renders import action');

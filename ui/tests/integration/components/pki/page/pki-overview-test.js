@@ -24,10 +24,19 @@ module('Integration | Component | Page::PkiOverview', function (hooks) {
     this.roles = ['role-0', 'role-1', 'role-2'];
     this.certificates = ['22:2222:22222:2222', '33:3333:33333:3333'];
     this.engineId = 'pki';
+    this.canListCertificates = true;
+    this.canListRoles = true;
 
     this.renderComponent = () =>
       render(
-        hbs`<Page::PkiOverview @issuers={{this.issuers}} @roles={{this.roles}} @cretificates={{this.certificates}} @engine={{this.engineId}} />`,
+        hbs`<Page::PkiOverview
+          @issuers={{this.issuers}}
+          @roles={{this.roles}}
+          @certificates={{this.certificates}}
+          @engine={{this.engineId}}
+          @canListCertificates={{this.canListCertificates}}
+          @canListRoles={{this.canListRoles}}
+        />`,
         { owner: this.engine }
       );
   });
@@ -39,6 +48,14 @@ module('Integration | Component | Page::PkiOverview', function (hooks) {
       .hasText(
         'Issuers View issuers The total number of issuers in this PKI mount. Includes both root and intermediate certificates. 2'
       );
+
+    this.issuers = [];
+    await this.renderComponent();
+    assert
+      .dom(overviewCard.container('Issuers'))
+      .hasText(
+        'Issuers View issuers The total number of issuers in this PKI mount. Includes both root and intermediate certificates. 0'
+      );
   });
 
   test('shows the correct information on roles card', async function (assert) {
@@ -48,7 +65,7 @@ module('Integration | Component | Page::PkiOverview', function (hooks) {
       .hasText(
         'Roles View roles The total number of roles in this PKI mount that have been created to generate certificates. 3'
       );
-    this.roles = 404;
+    this.roles = [];
     await this.renderComponent();
     assert
       .dom(overviewCard.container('Roles'))
@@ -57,17 +74,42 @@ module('Integration | Component | Page::PkiOverview', function (hooks) {
       );
   });
 
-  test('shows the input search fields for View Certificates card', async function (assert) {
+  test('shows the search select dropdown for View Certificates card', async function (assert) {
+    await this.renderComponent();
+    assert.dom(overviewCard.title('View certificate')).hasText('View certificate');
+    assert
+      .dom(overviewCard.description('View certificate'))
+      .hasText('Quickly view a certificate by looking up its serial number.');
+    assert.dom(PKI_OVERVIEW.viewCertificateInput).exists();
+    assert.dom(GENERAL.inputSearch('certificate')).doesNotExist('it does not render certificate input');
+    assert.dom(PKI_OVERVIEW.viewCertificateButton).hasText('View');
+  });
+
+  test('shows the search select dropdown for Issue Certificates card', async function (assert) {
     await this.renderComponent();
     assert.dom(overviewCard.title('Issue certificate')).hasText('Issue certificate');
+    assert
+      .dom(overviewCard.description('Issue certificate'))
+      .hasText('Begin issuing a certificate by choosing a role.');
     assert.dom(PKI_OVERVIEW.issueCertificateInput).exists();
+    assert.dom(GENERAL.inputSearch('role')).doesNotExist('it does not render role input');
     assert.dom(PKI_OVERVIEW.issueCertificateButton).hasText('Issue');
   });
 
-  test('shows the input search fields for Issue Certificates card', async function (assert) {
+  test('it renders manual search inputs when no list permission', async function (assert) {
+    this.canListCertificates = false;
+    this.canListRoles = false;
     await this.renderComponent();
-    assert.dom(overviewCard.title('View certificate')).hasText('View certificate');
-    assert.dom(PKI_OVERVIEW.viewCertificateInput).exists();
-    assert.dom(PKI_OVERVIEW.viewCertificateButton).hasText('View');
+    assert.dom(overviewCard.container('Roles')).doesNotExist();
+    assert
+      .dom(overviewCard.description('View certificate'))
+      .hasText('Quickly view a certificate by providing its serial number.');
+    assert
+      .dom(overviewCard.description('Issue certificate'))
+      .hasText('Begin issuing a certificate by entering a role.');
+    assert.dom(PKI_OVERVIEW.issueCertificateInput).doesNotExist('role search select does not render');
+    assert.dom(GENERAL.inputSearch('role')).exists('it renders input instead of search select');
+    assert.dom(PKI_OVERVIEW.viewCertificateInput).doesNotExist('certificate search select does not render');
+    assert.dom(GENERAL.inputSearch('certificate')).exists('it renders input instead of search selects');
   });
 });

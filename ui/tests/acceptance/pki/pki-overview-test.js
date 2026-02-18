@@ -80,10 +80,11 @@ module('Acceptance | pki overview', function (hooks) {
     assert.dom(`${overviewCard.container('Roles')} p`).hasText('1');
   });
 
-  test('hides roles card if user does not have permissions', async function (assert) {
+  test('hides roles and certificates card if user does not have permissions', async function (assert) {
     await login(this.pkiIssuersList);
     await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
     assert.dom(overviewCard.title('Roles')).doesNotExist('Roles card does not exist');
+    assert.dom(overviewCard.title('Certificates')).doesNotExist('Certificates card does not exist');
     assert.dom(overviewCard.title('Issuers')).hasText('Issuers');
   });
 

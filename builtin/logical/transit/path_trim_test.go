@@ -9,10 +9,11 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransit_Trim(t *testing.T) {
-	b, storage := createBackendWithSysView(t)
+	b, storage, obsRecorder := createBackendWithObservationRecorder(t)
 
 	doReq := func(t *testing.T, req *logical.Request) *logical.Response {
 		t.Helper()
@@ -270,4 +271,9 @@ func TestTransit_Trim(t *testing.T) {
 	if len(archive.Keys) != 4 {
 		t.Fatalf("bad: len of archived keys; expected: 4, actual: %d", len(archive.Keys))
 	}
+
+	trimObservations := obsRecorder.ObservationsByType(ObservationTypeTransitKeyTrim)
+	require.Len(t, trimObservations, 2)
+	require.Equal(t, trimObservations[0].Data["key_name"], "aes")
+	require.Equal(t, trimObservations[1].Data["key_name"], "aes")
 }

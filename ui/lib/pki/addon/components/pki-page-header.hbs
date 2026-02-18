@@ -13,6 +13,7 @@
   </:breadcrumbs>
 
   <:actions>
+    <CodeGenerator::Policy::Flyout @policyPaths={{this.policyPaths}} />
     {{#if @configRoute}}
       <Hds::Button @color="secondary" @route="overview" @text="Exit configuration" data-test-button="Exit configuration" />
     {{else}}

@@ -44,34 +44,36 @@
           </div>
           <div class="level-right is-flex is-paddingless is-marginless">
             <div class="level-item">
-              {{#if (or @canRead @canEdit)}}
-                <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-                  <dd.ToggleIcon
-                    @icon="more-horizontal"
-                    @text="Manage key"
-                    @hasChevron={{false}}
-                    data-test-popup-menu-trigger
-                  />
-                  {{#if @canRead}}
-                    <dd.Interactive
-                      @route="keys.key.details"
-                      @models={{array @backend pkiKey.key_id}}
-                      data-test-key-menu-link="details"
-                    >
-                      Details
-                    </dd.Interactive>
-                  {{/if}}
-                  {{#if @canEdit}}
-                    <dd.Interactive
-                      @route="keys.key.edit"
-                      @models={{array @backend pkiKey.key_id}}
-                      data-test-key-menu-link="edit"
-                    >
-                      Edit
-                    </dd.Interactive>
-                  {{/if}}
-                </Hds::Dropdown>
-              {{/if}}
+              {{#let (get @keyPermsById pkiKey.key_id) as |perms|}}
+                {{#if (or perms.canRead perms.canUpdate)}}
+                  <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                    <dd.ToggleIcon
+                      @icon="more-horizontal"
+                      @text="Manage key"
+                      @hasChevron={{false}}
+                      data-test-popup-menu-trigger
+                    />
+                    {{#if perms.canRead}}
+                      <dd.Interactive
+                        @route="keys.key.details"
+                        @models={{array @backend pkiKey.key_id}}
+                        data-test-key-menu-link="details"
+                      >
+                        Details
+                      </dd.Interactive>
+                    {{/if}}
+                    {{#if perms.canUpdate}}
+                      <dd.Interactive
+                        @route="keys.key.edit"
+                        @models={{array @backend pkiKey.key_id}}
+                        data-test-key-menu-link="edit"
+                      >
+                        Edit
+                      </dd.Interactive>
+                    {{/if}}
+                  </Hds::Dropdown>
+                {{/if}}
+              {{/let}}
             </div>
           </div>
         </div>

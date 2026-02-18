@@ -24,9 +24,9 @@ export const getCliMessage = (msg) => {
 
 @withConfig()
 export default class PkiOverviewRoute extends Route {
-  @service secretMountPath;
-  @service auth;
   @service api;
+  @service capabilities;
+  @service secretMountPath;
 
   async fetchAllCertificates() {
     try {
@@ -36,7 +36,10 @@ export default class PkiOverviewRoute extends Route {
       );
       return keys;
     } catch (e) {
-      return e.response.status;
+      const { status } = await this.api.parseError(e);
+      // If there was a permissions (403) or some other error
+      // swallow because this data is for rendering overview cards
+      return status === 404 ? [] : null;
     }
   }
 
@@ -48,7 +51,10 @@ export default class PkiOverviewRoute extends Route {
       );
       return keys;
     } catch (e) {
-      return e.response.status;
+      const { status } = await this.api.parseError(e);
+      // If there was a permissions (403) or some other error
+      // swallow because this data is for rendering overview cards
+      return status === 404 ? [] : null;
     }
   }
 
@@ -60,17 +66,39 @@ export default class PkiOverviewRoute extends Route {
       );
       return keys;
     } catch (e) {
-      return e.response.status;
+      const { status } = await this.api.parseError(e);
+      return status === 404 ? [] : null;
     }
   }
 
+  async fetchCapabilities() {
+    const { pathFor } = this.capabilities;
+    const backend = this.secretMountPath.currentPath;
+    // the issuers list endpoint is unauthenticated so we do not need to check capabilities for it
+    const pathMap = {
+      certificates: pathFor('pkiCertificates', { backend }),
+      roles: pathFor('pkiRoles', { backend }),
+    };
+    const apiPaths = Object.values(pathMap);
+    const perms = await this.capabilities.fetch(apiPaths, {
+      routeForCache: 'vault.cluster.secrets.backend.pki.overview',
+    });
+    return {
+      canListCertificates: perms[pathMap.certificates].canList,
+      canListRoles: perms[pathMap.roles].canList,
+    };
+  }
+
   async model() {
+    const { canListCertificates, canListRoles } = await this.fetchCapabilities();
     return hash({
       hasConfig: this.pkiMountHasConfig,
       engine: this.modelFor('application'),
-      roles: this.fetchAllRoles(),
+      roles: canListRoles ? this.fetchAllRoles() : null,
       issuers: this.fetchAllIssuers(),
-      certificates: this.fetchAllCertificates(),
+      certificates: canListCertificates ? this.fetchAllCertificates() : null,
+      canListCertificates,
+      canListRoles,
     });
   }
 
