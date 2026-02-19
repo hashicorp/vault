@@ -47,7 +47,7 @@ func TestMountTableMetrics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	nonlocalLogicalMountsize, err := gaugeSearchHelper(data, 3)
+	nonlocalLogicalMountsize, err := gaugeSearchHelper(data, 4)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -67,7 +67,7 @@ func TestMountTableMetrics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	nonlocalLogicalMountsizeAfterMount, err := gaugeSearchHelper(data, 4)
+	nonlocalLogicalMountsizeAfterMount, err := gaugeSearchHelper(data, 5)
 	if err != nil {
 		t.Error(err.Error())
 	}

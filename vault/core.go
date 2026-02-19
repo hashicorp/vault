@@ -771,6 +771,8 @@ type Core struct {
 	// certCountManager keeps track of issued and stored PKI certificate counts for
 	// billing purposes.
 	certCountManager cert_count.CertificateCountManager
+
+	agentRegistry *AgentRegistry
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -1572,6 +1574,18 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 		}
 
 		return idStore, nil
+	}
+
+	logicalBackends[mountTypeAgentRegistry] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		agentRegistryLogger := logger.Named("agent_registry")
+		c.AddLogger(agentRegistryLogger)
+
+		agentRegistry, err := NewAgentRegistry(c, config, agentRegistryLogger)
+		if err != nil {
+			return nil, fmt.Errorf("error creating agent registry: %w", err)
+		}
+
+		return agentRegistry, nil
 	}
 
 	c.logicalBackends = logicalBackends
@@ -2780,6 +2794,12 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			return c.EntSetupUIDefaultAuth(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			if c.agentRegistry == nil {
+				return nil
+			}
+			return c.agentRegistry.loadRegistrations(ctx, isActive)
 		})
 	}
 

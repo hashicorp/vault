@@ -300,7 +300,7 @@ func TestPredict_Mounts(t *testing.T) {
 		{
 			"good_path",
 			client,
-			[]string{"cubbyhole/", "identity/", "secret/", "sys/"},
+			[]string{"agent-registry/", "cubbyhole/", "identity/", "secret/", "sys/"},
 		},
 	}
 
