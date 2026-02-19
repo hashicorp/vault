@@ -18,6 +18,7 @@ var (
 	ErrConsumptionBillingNotInitialized = fmt.Errorf("consumption billing is not initialized")
 )
 
+// random comment
 func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 	// We need replication (post unseal) to start before we run the consumption billing metrics worker
 	// This is because there is primary/secondary cluster specific logic
