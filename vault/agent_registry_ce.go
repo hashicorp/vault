@@ -9,12 +9,13 @@ import (
 	"context"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// NewAgentRegistry
-
-type AgentRegistry struct{}
+type AgentRegistry struct {
+	*framework.Backend
+}
 
 func (ar *AgentRegistry) loadRegistrations(_ context.Context, _ bool) error {
 	return nil
