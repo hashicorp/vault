@@ -69,21 +69,23 @@ const (
 	// ListingVisibilityUnauth is the unauth type for listing visibility
 	ListingVisibilityUnauth ListingVisibilityType = "unauth"
 
-	mountPathSystem    = "sys/"
-	mountPathIdentity  = "identity/"
-	mountPathCubbyhole = "cubbyhole/"
+	mountPathSystem        = "sys/"
+	mountPathIdentity      = "identity/"
+	mountPathCubbyhole     = "cubbyhole/"
+	mountPathAgentRegistry = "agent-registry/"
 
-	mountTypeSystem      = "system"
-	mountTypeNSSystem    = "ns_system"
-	mountTypeIdentity    = "identity"
-	mountTypeNSIdentity  = "ns_identity"
-	mountTypeCubbyhole   = "cubbyhole"
-	mountTypePlugin      = "plugin"
-	mountTypeKV          = "kv"
-	mountTypeNSCubbyhole = "ns_cubbyhole"
-	mountTypeToken       = "token"
-	mountTypeNSToken     = "ns_token"
-	mountTypeDatabase    = "database"
+	mountTypeSystem        = "system"
+	mountTypeNSSystem      = "ns_system"
+	mountTypeIdentity      = "identity"
+	mountTypeNSIdentity    = "ns_identity"
+	mountTypeCubbyhole     = "cubbyhole"
+	mountTypePlugin        = "plugin"
+	mountTypeKV            = "kv"
+	mountTypeNSCubbyhole   = "ns_cubbyhole"
+	mountTypeToken         = "token"
+	mountTypeNSToken       = "ns_token"
+	mountTypeDatabase      = "database"
+	mountTypeAgentRegistry = "agent_registry"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
@@ -107,11 +109,13 @@ var (
 		mountPathSystem,
 		mountPathCubbyhole,
 		mountPathIdentity,
+		mountPathAgentRegistry,
 	}
 
 	untunableMounts = []string{
 		mountPathCubbyhole,
 		mountPathSystem,
+		mountPathAgentRegistry,
 		"audit/",
 	}
 
@@ -122,6 +126,7 @@ var (
 		mountTypeSystem,
 		mountTypeToken,
 		mountTypeIdentity,
+		mountTypeAgentRegistry,
 	}
 
 	// mountAliases maps old backend names to new backend names, allowing us
@@ -2000,9 +2005,36 @@ func (c *Core) requiredMountTable() *MountTable {
 		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
+	agentRegistryUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity mount entry UUID: %v", err))
+	}
+	agentRegistryAccessor, err := c.generateMountAccessor("agent-registry")
+	if err != nil {
+		panic(fmt.Sprintf("could not generate identity accessor: %v", err))
+	}
+	agentRegistryBackendUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity backend UUID: %v", err))
+	}
+	agentRegistryMount := &MountEntry{
+		Table:            mountTableType,
+		Path:             "agent-registry/",
+		Type:             "agent_registry",
+		Description:      "agent registry",
+		UUID:             agentRegistryUUID,
+		Accessor:         agentRegistryAccessor,
+		BackendAwareUUID: agentRegistryBackendUUID,
+		Config: MountConfig{
+			PassthroughRequestHeaders: []string{"Authorization"},
+		},
+		RunningVersion: versions.DefaultBuiltinVersion,
+	}
+
 	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
 	table.Entries = append(table.Entries, identityMount)
+	table.Entries = append(table.Entries, agentRegistryMount)
 
 	return table
 }
@@ -2048,6 +2080,8 @@ func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *
 		c.cubbyholeBackend = ch
 	case mountTypeIdentity:
 		c.identityStore = backend.(*IdentityStore)
+	case mountTypeAgentRegistry:
+		c.agentRegistry = backend.(*AgentRegistry)
 	}
 }
 
