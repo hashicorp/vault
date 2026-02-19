@@ -22,6 +22,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 	"github.com/tink-crypto/tink-go/v2/kwp/subtle"
 )
 
@@ -92,7 +93,7 @@ func getKey(t *testing.T, keyType string) interface{} {
 
 func TestTransit_ImportNSSEd25519Key(t *testing.T) {
 	generateKeys(t)
-	b, s := createBackendWithStorage(t)
+	b, s, obsRecorder := createBackendWithObservationRecorder(t)
 
 	wrappingKey, err := b.getWrappingKey(context.Background(), s)
 	if err != nil || wrappingKey == nil {
@@ -121,11 +122,16 @@ func TestTransit_ImportNSSEd25519Key(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to import NSS-formatted Ed25519 key: %v", err)
 	}
+
+	// Verify observation was recorded
+	importObservations := obsRecorder.ObservationsByType(ObservationTypeTransitKeyImport)
+	require.Len(t, importObservations, 1)
+	require.Equal(t, "nss-ed25519", importObservations[0].Data["key_name"])
 }
 
 func TestTransit_ImportRSAPSS(t *testing.T) {
 	generateKeys(t)
-	b, s := createBackendWithStorage(t)
+	b, s, obsRecorder := createBackendWithObservationRecorder(t)
 
 	wrappingKey, err := b.getWrappingKey(context.Background(), s)
 	if err != nil || wrappingKey == nil {
@@ -154,12 +160,21 @@ func TestTransit_ImportRSAPSS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to import RSA-PSS private key: %v", err)
 	}
+
+	importObservations := obsRecorder.ObservationsByType(ObservationTypeTransitKeyImport)
+	require.Len(t, importObservations, 1)
+	require.Equal(t, "rsa-pss", importObservations[0].Data["key_name"])
 }
 
 func TestTransit_Import(t *testing.T) {
 	generateKeys(t)
-	b, s := createBackendWithStorage(t)
-
+	b, s, obsRecorder := createBackendWithObservationRecorder(t)
+	checkImportObservation := func(t *testing.T, keyName string) {
+		t.Helper()
+		obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyImport)
+		require.NotNil(t, obs)
+		require.Equal(t, keyName, obs.Data["key_name"])
+	}
 	t.Run(
 		"import into a key fails before wrapping key is read",
 		func(t *testing.T) {
@@ -259,6 +274,7 @@ func TestTransit_Import(t *testing.T) {
 					if err != nil {
 						t.Fatalf("failed to import valid key: %s", err)
 					}
+					checkImportObservation(t, keyID)
 				},
 			)
 
@@ -380,6 +396,7 @@ func TestTransit_Import(t *testing.T) {
 				t.Fatalf("failed to import key: %s", err)
 			}
 
+			checkImportObservation(t, keyID)
 			// Rotate key
 			req = &logical.Request{
 				Storage:   s,
@@ -390,6 +407,10 @@ func TestTransit_Import(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to rotate key: %s", err)
 			}
+
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyRotateSuccess)
+			require.NotNil(t, obs)
+			require.Equal(t, obs.Data["key_name"], keyID)
 		},
 	)
 
@@ -417,6 +438,8 @@ func TestTransit_Import(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to import key: %s", err)
 			}
+
+			checkImportObservation(t, keyID)
 
 			// Rotate key
 			req = &logical.Request{
@@ -461,6 +484,7 @@ func TestTransit_Import(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to import ed25519 key: %v", err)
 			}
+			checkImportObservation(t, keyID)
 		})
 
 	t.Run(
@@ -493,12 +517,13 @@ func TestTransit_Import(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to import public key: %s", err)
 			}
+			checkImportObservation(t, keyID)
 		})
 }
 
 func TestTransit_ImportVersion(t *testing.T) {
 	generateKeys(t)
-	b, s := createBackendWithStorage(t)
+	b, s, obsRecorder := createBackendWithObservationRecorder(t)
 
 	t.Run(
 		"import into a key version fails before wrapping key is read",
@@ -686,13 +711,19 @@ func TestTransit_ImportVersion(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to update key: %s", err)
 			}
+
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyImport)
+			require.NotNil(t, obs)
+			require.Equal(t, keyID, obs.Data["key_name"])
+			require.Equal(t, keyType, obs.Data["type"])
+			require.NotContains(t, obs.Data, "import_version")
 		},
 	)
 }
 
 func TestTransit_ImportVersionWithPublicKeys(t *testing.T) {
 	generateKeys(t)
-	b, s := createBackendWithStorage(t)
+	b, s, obsRecorder := createBackendWithObservationRecorder(t)
 
 	// Retrieve public wrapping key
 	wrappingKey, err := b.getWrappingKey(context.Background(), s)
@@ -930,6 +961,11 @@ func TestTransit_ImportVersionWithPublicKeys(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to import private key: %s", err)
 			}
+
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyImport)
+			require.NotNil(t, obs)
+			require.Equal(t, keyID, obs.Data["key_name"])
+			require.Equal(t, 1, obs.Data["import_version"])
 
 			// We should still have two keys on export
 			req = &logical.Request{
