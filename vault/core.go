@@ -449,7 +449,7 @@ type Core struct {
 	// consumptionBilling is used to track use case consumption-based billing metrics
 	consumptionBilling *billing.ConsumptionBilling
 
-	// consumptionBillingLock protects the consumptionBillingConfig
+	// consumptionBillingLock protects the consumptionBilling struct
 	consumptionBillingLock sync.RWMutex
 
 	// metricsCh is used to stop the metrics streaming

@@ -995,6 +995,7 @@ scenario "pr_replication" {
       verify_pki_certs        = false
       verify_aws_engine_creds = false
       verify_ssh_secrets      = false
+      vault_audit_log_path    = step.create_secondary_cluster.audit_device_file_path
     }
   }
 

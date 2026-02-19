@@ -12,11 +12,44 @@ import type ApiService from 'vault/services/api';
 import type NamespaceService from 'vault/services/namespace';
 import type { Capabilities, CapabilitiesMap, CapabilitiesData, CapabilityTypes } from 'vault/app-types';
 
+type CapabilityFetchOptions = {
+  routeForCache?: string;
+};
+
 export default class CapabilitiesService extends Service {
   @service declare readonly api: ApiService;
   @service declare readonly namespace: NamespaceService;
 
-  @tracked requestedPaths = new Set<string>([]);
+  /*
+   * API path caching for <CodeGeneratorPolicyFlyout />
+   * Cache API paths when capabilities are fetched during route model hooks
+   * so the flyout can prefill with relevant policy paths.
+   */
+  @tracked routePathCache = new Map<string, Set<string>>();
+
+  // Cache API paths requested for a particular route
+  cacheRoutePaths(route: string, apiPaths: string[]) {
+    this.routePathCache.set(route, new Set(apiPaths));
+  }
+
+  // Lookup the paths for a route. Returns exact match first then falls back to longest matching route prefix.
+  lookupRoutePaths(route: string) {
+    const exactMatch = this.routePathCache.get(route);
+    if (exactMatch) {
+      return exactMatch;
+    }
+
+    const routes = Array.from(this.routePathCache.keys());
+    const matchingRoutes = routes.filter((r) => route.includes(r));
+    if (matchingRoutes.length) {
+      // Return longest matching cached route which is the most specific parent
+      const bestMatch = matchingRoutes.reduce((a, b) => (a.length > b.length ? a : b), '');
+      return this.routePathCache.get(bestMatch);
+    }
+
+    return null;
+  }
+  /* End logic for <CodeGeneratorPolicyFlyout /> API path caching */
 
   /*
   Add API paths to the PATH_MAP constant using a friendly key, e.g. 'syncDestinations'.
@@ -31,6 +64,10 @@ export default class CapabilitiesService extends Service {
       throw new Error(`Path not found for key: ${key}`);
     }
     return path(params || {});
+  }
+
+  pathsForList(paths: (keyof typeof PATH_MAP)[], params: object) {
+    return paths.map((path) => this.pathFor(path, params));
   }
 
   /*
@@ -85,8 +122,11 @@ export default class CapabilitiesService extends Service {
     }, {});
   }
 
-  async fetch(paths: string[]): Promise<CapabilitiesMap> {
-    this.requestedPaths = new Set(paths);
+  async fetch(paths: string[], fetchOptions: CapabilityFetchOptions = {}): Promise<CapabilitiesMap> {
+    // Cache API paths if route name provided
+    if (fetchOptions?.routeForCache) {
+      this.cacheRoutePaths(fetchOptions.routeForCache, paths);
+    }
 
     const payload = { paths: paths.map((path) => this.relativeNamespacePath(path)) };
 
@@ -116,16 +156,16 @@ export default class CapabilitiesService extends Service {
 
   // convenience method for fetching capabilities for a singular path without needing to use pathFor
   // ex: capabilities.for('syncDestinations', { type: 'github', name: 'org-sync' });
-  async for<T>(key: keyof typeof PATH_MAP, params?: T) {
+  async for<T>(key: keyof typeof PATH_MAP, params?: T, fetchOptions: CapabilityFetchOptions = {}) {
     const path = this.pathFor(key, params);
-    return this.fetchPathCapabilities(path);
+    return this.fetchPathCapabilities(path, fetchOptions);
   }
 
   /*
   this method returns all of the capabilities for a singular path 
   */
-  async fetchPathCapabilities(path: string) {
-    const capabilities = await this.fetch([path]);
+  async fetchPathCapabilities(path: string, fetchOptions: CapabilityFetchOptions = {}) {
+    const capabilities = await this.fetch([path], fetchOptions);
     return capabilities[path] as Capabilities;
   }
 

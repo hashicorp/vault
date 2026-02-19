@@ -45,6 +45,12 @@ func (r *errorResolver) ResolveEntities(ctx context.Context, existing, duplicate
 		return false, nil
 	}
 
+	// Uniqueness is enforced on the primary key in memdb, so if the IDs match
+	// this is an update.
+	if existing.ID == duplicate.ID {
+		return false, nil
+	}
+
 	r.logger.Warn(errDuplicateIdentityName.Error(),
 		"entity_name", duplicate.Name,
 		"duplicate_of_name", existing.Name,
@@ -62,6 +68,12 @@ func (r *errorResolver) ResolveGroups(ctx context.Context, existing, duplicate *
 		return false, nil
 	}
 
+	// Uniqueness is enforced on the primary key in memdb, so if the IDs match
+	// this is an update.
+	if existing.ID == duplicate.ID {
+		return false, nil
+	}
+
 	r.logger.Warn(errDuplicateIdentityName.Error(),
 		"group_name", duplicate.Name,
 		"duplicate_of_name", existing.Name,
@@ -76,6 +88,12 @@ func (r *errorResolver) ResolveGroups(ctx context.Context, existing, duplicate *
 // putting the system in case-sensitive mode.
 func (r *errorResolver) ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) (bool, error) {
 	if existing == nil {
+		return false, nil
+	}
+
+	// Uniqueness is enforced on the primary key in memdb, so if the IDs match
+	// this is an update.
+	if existing.ID == duplicate.ID {
 		return false, nil
 	}
 
@@ -391,6 +409,12 @@ func (r *renameResolver) ResolveEntities(ctx context.Context, existing, duplicat
 		return false, nil
 	}
 
+	// Uniqueness is enforced on the primary key in memdb, so if the IDs match
+	// this is an update.
+	if existing.ID == duplicate.ID {
+		return false, nil
+	}
+
 	duplicate.Name = duplicate.Name + "-" + duplicate.ID
 	if duplicate.Metadata == nil {
 		duplicate.Metadata = make(map[string]string)
@@ -416,6 +440,12 @@ func (r *renameResolver) ResolveEntities(ctx context.Context, existing, duplicat
 // resolve it permanently by renaming or deleting explicitly.
 func (r *renameResolver) ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) (bool, error) {
 	if existing == nil {
+		return false, nil
+	}
+
+	// Uniqueness is enforced on the primary key in memdb, so if the IDs match
+	// this is an update.
+	if existing.ID == duplicate.ID {
 		return false, nil
 	}
 

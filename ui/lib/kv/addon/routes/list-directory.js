@@ -57,7 +57,11 @@ export default class KvSecretsListRoute extends Route {
     const backend = this.secretMountPath.currentPath;
     const filterValue = pathToSecret ? (pageFilter ? pathToSecret + pageFilter : pathToSecret) : pageFilter;
     const secrets = await this.fetchMetadata(backend, pathToSecret, params);
-    const capabilities = await this.capabilities.for('kvMetadata', { backend, path: path_to_secret });
+    const capabilities = await this.capabilities.for(
+      'kvMetadata',
+      { backend, path: path_to_secret },
+      { routeForCache: 'vault.cluster.secrets.backend.kv' }
+    );
     const backendModel = this.modelFor('application');
 
     return {

@@ -28,6 +28,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     this.version = this.owner.lookup('service:version');
     this.router = this.owner.lookup('service:router');
     this.router.transitionTo = sinon.stub();
+    this.router.refresh = sinon.stub();
     this.flashMessages = this.owner.lookup('service:flash-messages');
     this.flashMessages.registerTypes(['success', 'danger']);
     this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
@@ -42,6 +43,11 @@ module('Integration | Component | secret-engine/list', function (hooks) {
       createSecretsEngine(undefined, 'nomad', 'nomad-test'),
       createSecretsEngine(undefined, 'badType', 'external-test'),
     ];
+  });
+
+  hooks.afterEach(async function () {
+    // ensure clean state
+    localStorage.clear();
   });
 
   test('it allows you to disable an engine', async function (assert) {
@@ -171,5 +177,37 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     assert
       .dom(GENERAL.tableData('aws-1/', 'path'))
       .hasClass('text-overflow-ellipsis', 'secret engine name has text overflow class ');
+  });
+
+  test('it shows the intro page when only default engines are enabled', async function (assert) {
+    // Only cubbyhole engine exists (default engine)
+    const defaultEngines = [createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole')];
+    this.secretEngineModels = defaultEngines;
+
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+
+    assert.dom('[data-test-intro]').exists('Intro page is shown');
+    assert.dom(GENERAL.button('intro')).exists('Shows intro button');
+    assert.dom(GENERAL.button('Skip')).exists('Shows skip button');
+  });
+
+  test('it does not show the intro page when other engines exist', async function (assert) {
+    // Has engines beyond the default cubbyhole
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+
+    assert.dom('[data-test-intro]').doesNotExist('Intro modal is not shown when engines exist');
+    assert.dom(GENERAL.button('intro')).doesNotExist('Intro button is not shown');
+  });
+
+  test('it can show the intro modal after dismissal', async function (assert) {
+    const defaultEngines = [createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole')];
+    this.secretEngineModels = defaultEngines;
+
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+    await click(GENERAL.button('Skip'));
+    assert.dom('[data-test-intro]').doesNotExist('Intro is dismissed');
+
+    await click(GENERAL.button('intro'));
+    assert.dom('[data-test-intro]').exists('Intro can be shown again after reset');
   });
 });

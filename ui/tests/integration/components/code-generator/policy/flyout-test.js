@@ -25,6 +25,7 @@ module('Integration | Component | code-generator/policy/flyout', function (hooks
     this.version = this.owner.lookup('service:version');
     this.version.type = 'enterprise'; // the flyout is only available for enterprise versions
     this.onClose = undefined;
+    this.policyPaths = undefined;
     this.assertSaveRequest = (assert, expectedPolicy, msg = 'policy content is correct') => {
       this.server.post('/sys/policies/acl/:name', (_, req) => {
         const { policy } = JSON.parse(req.requestBody);
@@ -35,7 +36,9 @@ module('Integration | Component | code-generator/policy/flyout', function (hooks
       });
     };
     this.renderComponent = async ({ open = true } = {}) => {
-      await render(hbs`<CodeGenerator::Policy::Flyout @onClose={{this.onClose}} />`);
+      await render(
+        hbs`<CodeGenerator::Policy::Flyout @onClose={{this.onClose}} @policyPaths={{this.policyPaths}} />`
+      );
       if (open) {
         await click(GENERAL.button('Generate policy'));
       }
@@ -70,6 +73,20 @@ module('Integration | Component | code-generator/policy/flyout', function (hooks
 
     await click(GENERAL.cancelButton);
     assert.dom(GENERAL.flyout).doesNotExist('flyout closes after clicking cancel');
+  });
+
+  test('it presets with paths from @policyPaths array', async function (assert) {
+    this.policyPaths = ['some/preset/path'];
+    await this.renderComponent();
+    assert.dom(SELECTORS.pathByContainer(0)).hasValue('some/preset/path');
+    assert.dom(GENERAL.cardContainer()).exists({ count: 1 });
+  });
+
+  test('it handles empty @policyPaths array', async function (assert) {
+    this.policyPaths = [];
+    await this.renderComponent();
+
+    assert.dom(SELECTORS.pathByContainer(0)).hasValue('', 'does not prepopulate with empty array');
   });
 
   test('it yields custom trigger component', async function (assert) {
@@ -346,83 +363,138 @@ EOT`;
     assert.dom(GENERAL.validationErrorByAttr('name')).doesNotExist('validation error is cleared');
   });
 
-  module('capabilities', function (hooks) {
+  module('capabilities service prepopulating', function (hooks) {
     hooks.beforeEach(function () {
       this.capabilities = this.owner.lookup('service:capabilities');
+      const router = this.owner.lookup('service:router');
+      this.currentRouteNameStub = Sinon.stub(router, 'currentRouteName');
+      this.cacheCapabilityPaths = (route, paths) => {
+        this.capabilities.cacheRoutePaths(route, paths);
+      };
     });
 
-    test('it renders when no capabilities have been requested', async function (assert) {
-      this.capabilities.requestedPaths = new Set([]);
+    hooks.afterEach(function () {
+      this.currentRouteNameStub.restore();
+    });
+
+    test('it handles null currentRouteName gracefully', async function (assert) {
+      this.currentRouteNameStub.value(null);
+      await this.renderComponent();
+      assert.dom(SELECTORS.pathByContainer(0)).hasValue('', 'does not prepopulate when route name is null');
+      assert.dom(GENERAL.cardContainer()).exists({ count: 1 });
+    });
+
+    test('it does not prepopulate when no paths have been cached', async function (assert) {
       await this.renderComponent();
       assert.dom(SELECTORS.pathByContainer(0)).hasValue('');
     });
 
-    test('it prepopulates with a single capability path', async function (assert) {
-      this.capabilities.requestedPaths = new Set(['super-secret/data']);
+    test('it does not prepopulate paths when cached capabilities route is unrelated to the current route', async function (assert) {
+      this.currentRouteNameStub.value('vault.cluster.secrets.secret');
+      this.cacheCapabilityPaths('vault.cluster.settings', ['some/settings']);
+      await this.renderComponent();
+      assert.dom(SELECTORS.pathByContainer(0)).hasValue('');
+    });
+
+    test('it prepopulates paths when cached capabilities route equals current route', async function (assert) {
+      this.currentRouteNameStub.value('vault.cluster.secrets.secret');
+      this.cacheCapabilityPaths('vault.cluster.secrets.secret', ['super-secret/data']);
       await this.renderComponent();
       assert.dom(SELECTORS.pathByContainer(0)).hasValue('super-secret/data');
       assert.dom(GENERAL.cardContainer()).exists({ count: 1 });
     });
 
-    test('it prepopulates with a multiple capability paths', async function (assert) {
-      this.capabilities.requestedPaths = new Set(['path/one', 'path/two']);
+    test('it prepopulates paths from longest matching parent route', async function (assert) {
+      // Cache paths for parent route
+      this.cacheCapabilityPaths('vault.cluster.secrets.backend.kv.secret', [
+        'kv/data/my-secret',
+        'kv/metadata/my-secret',
+      ]);
+      this.cacheCapabilityPaths('vault.cluster.secrets.backend.kv', ['should/not/cache']);
+      // Current route is a child (e.g., secret.details)
+      this.currentRouteNameStub.value('vault.cluster.secrets.backend.kv.secret.details');
       await this.renderComponent();
-      assert.dom(SELECTORS.pathByContainer(0)).hasValue('path/one');
-      assert.dom(SELECTORS.pathByContainer(1)).hasValue('path/two');
+      assert.dom(SELECTORS.pathByContainer(0)).hasValue('kv/data/my-secret', 'uses parent paths');
+      assert.dom(SELECTORS.pathByContainer(1)).hasValue('kv/metadata/my-secret', 'includes all parent paths');
       assert.dom(GENERAL.cardContainer()).exists({ count: 2 });
     });
 
-    test('it does not override user changes to a preset path on reopen', async function (assert) {
-      this.capabilities.requestedPaths = new Set(['super-secret/data']);
-      await this.renderComponent();
+    // All of these tests run with the current route stubbed and cached paths
+    module('when the flyout is prepopulated', function (hooks) {
+      hooks.beforeEach(function () {
+        this.cacheCapabilityPaths('vault.cluster.secrets.secret', ['super-secret/data']);
+        this.currentRouteNameStub.value('vault.cluster.secrets.secret');
+      });
 
-      // User updates path
-      await typeIn(SELECTORS.pathByContainer(0), '/*');
-      // Close and reopen
-      await click(GENERAL.cancelButton);
-      await click(GENERAL.button('Generate policy'));
-      assert
-        .dom(SELECTORS.pathByContainer(0))
-        .hasValue('super-secret/data/*', 'user path changes are preserved');
-      assert.dom(GENERAL.cardContainer()).exists({ count: 1 });
-    });
+      test('paths from arg take precedence over capabilities service', async function (assert) {
+        this.policyPaths = ['super-explicit/path'];
+        await this.renderComponent();
+        assert.dom(SELECTORS.pathByContainer(0)).hasValue('super-explicit/path');
+        assert.dom(GENERAL.cardContainer()).exists({ count: 1 });
+      });
 
-    test('it does not override user capabilities selection for a preset path on reopen', async function (assert) {
-      this.capabilities.requestedPaths = new Set(['super-secret/data']);
-      await this.renderComponent();
+      test('it prepopulates with a single capability path', async function (assert) {
+        await this.renderComponent();
+        assert.dom(SELECTORS.pathByContainer(0)).hasValue('super-secret/data');
+        assert.dom(GENERAL.cardContainer()).exists({ count: 1 });
+      });
 
-      // User updates path
-      await click(SELECTORS.checkboxByContainer(0, 'read'));
-      // Close and reopen
-      await click(GENERAL.cancelButton);
-      await click(GENERAL.button('Generate policy'));
-      assert
-        .dom(SELECTORS.checkboxByContainer(0, 'read'))
-        .isChecked('user capabilities changes are preserved');
-      assert.dom(GENERAL.cardContainer()).exists({ count: 1 });
-    });
+      test('it prepopulates with multiple capability paths', async function (assert) {
+        this.cacheCapabilityPaths('vault.cluster.secrets.secret', ['path/one', 'path/two']);
+        await this.renderComponent();
+        assert.dom(SELECTORS.pathByContainer(0)).hasValue('path/one');
+        assert.dom(SELECTORS.pathByContainer(1)).hasValue('path/two');
+        assert.dom(GENERAL.cardContainer()).exists({ count: 2 });
+      });
 
-    test('it does not override user added stanza on reopen', async function (assert) {
-      this.capabilities.requestedPaths = new Set(['super-secret/data']);
-      await this.renderComponent();
-      await click(GENERAL.button('Add rule'));
-      await fillIn(SELECTORS.pathByContainer(1), 'new/path/*');
-      // Close and reopen
-      await click(GENERAL.cancelButton);
-      await click(GENERAL.button('Generate policy'));
-      assert.dom(GENERAL.cardContainer()).exists({ count: 2 }, 'it renders two stanzas after reopening');
-      assert.dom(SELECTORS.pathByContainer(0)).hasValue('super-secret/data', 'preset path still exists');
-      assert.dom(SELECTORS.pathByContainer(1)).hasValue('new/path/*', 'user added path still exists');
-    });
+      test('it does not override user changes to a preset path on reopen', async function (assert) {
+        await this.renderComponent();
+        // User updates path
+        await typeIn(SELECTORS.pathByContainer(0), '/*');
+        // Close and reopen
+        await click(GENERAL.cancelButton);
+        await click(GENERAL.button('Generate policy'));
+        assert
+          .dom(SELECTORS.pathByContainer(0))
+          .hasValue('super-secret/data/*', 'user path changes are preserved');
+        assert.dom(GENERAL.cardContainer()).exists({ count: 1 });
+      });
 
-    test('it does not save prepopulated paths as policy content', async function (assert) {
-      assert.expect(3);
-      this.capabilities.requestedPaths = new Set(['path/one', 'path/two']);
-      await this.renderComponent();
-      // Fill in name and save to make sure policyContent is empty
-      this.assertSaveRequest(assert, '', 'policy content is empty despite pre-filled paths');
-      await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
-      await click(GENERAL.submitButton);
+      test('it does not override user capabilities selection for a preset path on reopen', async function (assert) {
+        await this.renderComponent();
+
+        // User updates path
+        await click(SELECTORS.checkboxByContainer(0, 'read'));
+        // Close and reopen
+        await click(GENERAL.cancelButton);
+        await click(GENERAL.button('Generate policy'));
+        assert
+          .dom(SELECTORS.checkboxByContainer(0, 'read'))
+          .isChecked('user capabilities changes are preserved');
+        assert.dom(GENERAL.cardContainer()).exists({ count: 1 });
+      });
+
+      test('it does not override user added stanza on reopen', async function (assert) {
+        await this.renderComponent();
+        await click(GENERAL.button('Add rule'));
+        await fillIn(SELECTORS.pathByContainer(1), 'new/path/*');
+        // Close and reopen
+        await click(GENERAL.cancelButton);
+        await click(GENERAL.button('Generate policy'));
+        assert.dom(GENERAL.cardContainer()).exists({ count: 2 }, 'it renders two stanzas after reopening');
+        assert.dom(SELECTORS.pathByContainer(0)).hasValue('super-secret/data', 'preset path still exists');
+        assert.dom(SELECTORS.pathByContainer(1)).hasValue('new/path/*', 'user added path still exists');
+      });
+
+      test('it does not save prepopulated paths as policy content', async function (assert) {
+        assert.expect(3);
+        this.cacheCapabilityPaths('vault.cluster.secrets.secret', ['path/one', 'path/two']);
+        await this.renderComponent();
+        // Fill in name and save to make sure policyContent is empty
+        this.assertSaveRequest(assert, '', 'policy content is empty despite pre-filled paths');
+        await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+        await click(GENERAL.submitButton);
+      });
     });
   });
 });

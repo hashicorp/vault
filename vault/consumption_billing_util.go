@@ -49,8 +49,16 @@ func (c *Core) getStoredThirdPartyPluginCountsLocked(ctx context.Context, localP
 // Note that this count is per cluster. It does NOT de-duplicate across clusters. For that reason,
 // we will always store the count at the "local" prefix.
 func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth time.Time) (int, error) {
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 
 	previousThirdPartyPluginCounts, err := c.getStoredThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, currentMonth)
 	if err != nil {
@@ -69,8 +77,16 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 }
 
 func (c *Core) GetStoredThirdPartyPluginCounts(ctx context.Context, month time.Time) (int, error) {
-	c.consumptionBilling.BillingStorageLock.RLock()
-	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
 	return c.getStoredThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, month)
 }
 
@@ -144,15 +160,31 @@ func (c *Core) getStoredMaxKvCountsLocked(ctx context.Context, localPathPrefix s
 }
 
 func (c *Core) GetStoredHWMKvCounts(ctx context.Context, localPathPrefix string, month time.Time) (int, error) {
-	c.consumptionBilling.BillingStorageLock.RLock()
-	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
 	return c.getStoredMaxKvCountsLocked(ctx, localPathPrefix, month)
 }
 
 // UpdateMaxKvCounts updates the HWM kv counts for the given month, and returns the value that was stored.
 func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time) (int, error) {
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 
 	local := localPathPrefix == billing.LocalPrefix
 
@@ -208,8 +240,16 @@ func (c *Core) storeMaxRoleCountsLocked(ctx context.Context, maxRoleCounts *Role
 }
 
 func (c *Core) UpdateMaxRoleCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time) (*RoleCounts, error) {
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return nil, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 
 	local := localPathPrefix == billing.LocalPrefix
 	currentRoleCounts := c.getRoleCountsInternal(local, !local, true)
@@ -251,8 +291,16 @@ func (c *Core) UpdateMaxRoleCounts(ctx context.Context, localPathPrefix string, 
 }
 
 func (c *Core) GetStoredHWMRoleCounts(ctx context.Context, localPathPrefix string, month time.Time) (*RoleCounts, error) {
-	c.consumptionBilling.BillingStorageLock.RLock()
-	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return nil, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
 	return c.getStoredRoleCountsLocked(ctx, localPathPrefix, month)
 }
 
@@ -333,22 +381,36 @@ func (c *Core) getStoredTransitCallCountsLocked(ctx context.Context, localPathPr
 }
 
 func (c *Core) GetStoredTransitCallCounts(ctx context.Context, month time.Time) (uint64, error) {
-	c.consumptionBilling.BillingStorageLock.RLock()
-	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
 	return c.getStoredTransitCallCountsLocked(ctx, billing.LocalPrefix, month)
 }
 
 func (c *Core) UpdateTransitCallCounts(ctx context.Context, currentMonth time.Time) (uint64, error) {
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
 
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 	storedTransitCount, err := c.getStoredTransitCallCountsLocked(ctx, billing.LocalPrefix, currentMonth)
 	if err != nil {
 		return 0, err
 	}
 
 	// Sum the current count with the stored count
-	transitCount := c.consumptionBilling.DataProtectionCallCounts.Transit.Swap(0) + storedTransitCount
+	transitCount := cb.DataProtectionCallCounts.Transit.Swap(0) + storedTransitCount
 
 	err = c.storeTransitCallCountsLocked(ctx, transitCount, billing.LocalPrefix, currentMonth)
 	if err != nil {
@@ -392,8 +454,16 @@ func (c *Core) getStoredKmipEnabledLocked(ctx context.Context, localPathPrefix s
 }
 
 func (c *Core) GetStoredKmipEnabled(ctx context.Context, currentMonth time.Time) (bool, error) {
-	c.consumptionBilling.BillingStorageLock.RLock()
-	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return false, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
 	return c.getStoredKmipEnabledLocked(ctx, billing.LocalPrefix, currentMonth)
 }
 
@@ -404,8 +474,16 @@ func (c *Core) GetStoredKmipEnabled(ctx context.Context, currentMonth time.Time)
 // We only store true when KMIP is enabled; we never store false. This means storing true multiple times
 // is idempotent and safe.
 func (c *Core) UpdateKmipEnabled(ctx context.Context, currentMonth time.Time) (bool, error) {
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return false, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 
 	// Check if KMIP is currently enabled, including replicated mounts
 	kmipEnabled, err := c.IsKMIPEnabled(ctx)

@@ -10,6 +10,7 @@ import { formatStanzas, policySnippetArgs, PolicyStanza } from 'core/utils/code-
 import { validate } from 'vault/utils/forms/validate';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
+import routerLookup from 'core/utils/router-lookup';
 
 import type { HTMLElementEvent } from 'vault/forms';
 import type { PolicyData } from './builder';
@@ -18,9 +19,11 @@ import type ApiService from 'vault/services/api';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type FlashMessageService from 'ember-cli-flash/services/flash-messages';
 import type VersionService from 'vault/services/version';
+import type RouterService from '@ember/routing/router-service';
 
 interface Args {
   onClose?: CallableFunction;
+  policyPaths: string[];
 }
 
 export default class CodeGeneratorPolicyFlyout extends Component<Args> {
@@ -41,6 +44,10 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
   @tracked showFlyout = false;
   @tracked stanzas: PolicyStanza[] = this.defaultStanzas;
   @tracked validationErrors: ValidationMap | null = null;
+
+  get router(): RouterService {
+    return routerLookup(this);
+  }
 
   validationError = (param: string) => {
     const { isValid, errors } = this.validationErrors?.[param] ?? {};
@@ -97,16 +104,14 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
   @action
   openFlyout() {
     this.showFlyout = true;
-    const presetStanzas = Array.from(this.capabilities.requestedPaths).map(
-      (path) => new PolicyStanza({ path })
-    );
 
     const defaultState = formatStanzas(this.defaultStanzas);
     const currentState = formatStanzas(this.stanzas);
     const noChanges = currentState === defaultState;
     // Only preset stanzas if no changes have been made to the flyout
-    if (presetStanzas.length && noChanges) {
-      this.stanzas = presetStanzas;
+    if (noChanges) {
+      const presetStanzas = this.computePolicyPaths();
+      this.stanzas = presetStanzas ? presetStanzas : this.stanzas;
     }
   }
 
@@ -126,5 +131,25 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
     this.policyName = '';
     this.policyContent = '';
     this.stanzas = [new PolicyStanza()];
+  }
+
+  computePolicyPaths() {
+    // Explicit policy paths take precedence
+    if (this.args.policyPaths) {
+      return this.presetStanzas(this.args.policyPaths);
+    }
+
+    const currentRouteName = this.router.currentRouteName;
+    if (!currentRouteName) {
+      return null;
+    }
+
+    const routePolicyPaths = this.capabilities.lookupRoutePaths(currentRouteName);
+    return routePolicyPaths ? this.presetStanzas(Array.from(routePolicyPaths)) : null;
+  }
+
+  presetStanzas(paths: string[]) {
+    const presetStanzas = paths.map((path) => new PolicyStanza({ path }));
+    return presetStanzas.length ? presetStanzas : null;
   }
 }

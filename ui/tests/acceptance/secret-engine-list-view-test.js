@@ -19,6 +19,7 @@ import {
 } from 'vault/tests/helpers/commands';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
+import localStorage from 'vault/lib/local-storage';
 
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
@@ -32,9 +33,11 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await click(SES.crumb(enginePath));
   };
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    return login();
+    await login();
+    // dismiss wizard
+    localStorage.setItem('dismissed-wizards', ['secret-engines']);
   });
 
   // the new API service camelizes response keys, so this tests is to assert that does NOT happen when we re-implement it
@@ -146,6 +149,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
     await loginNs(this.namespace);
+    localStorage.setItem('dismissed-wizards', ['secret-engines']);
     await visit(`/vault/secrets-engines?namespace=${this.namespace}`);
     await click(`${GENERAL.tableData('cubbyhole/', 'path')} a`);
 

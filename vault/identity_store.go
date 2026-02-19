@@ -113,6 +113,14 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, fmt.Errorf("failed to create group packer: %w", err)
 	}
 
+	unauthenticatedPaths := []string{
+		"oidc/.well-known/*",
+		"oidc/+/.well-known/*",
+		"oidc/provider/+/.well-known/*",
+		"oidc/provider/+/token",
+	}
+	unauthenticatedPaths = append(unauthenticatedPaths, identityStoreLoginMFAEntUnauthedPaths()...)
+	unauthenticatedPaths = append(unauthenticatedPaths, identityStoreSCIMUnauthedPaths()...)
 	iStore.Backend = &framework.Backend{
 		BackendType:    logical.TypeLogical,
 		Paths:          iStore.paths(),
@@ -120,12 +128,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		InitializeFunc: iStore.initialize,
 		ActivationFunc: iStore.activate,
 		PathsSpecial: &logical.Paths{
-			Unauthenticated: append([]string{
-				"oidc/.well-known/*",
-				"oidc/+/.well-known/*",
-				"oidc/provider/+/.well-known/*",
-				"oidc/provider/+/token",
-			}),
+			Unauthenticated: unauthenticatedPaths,
 			LocalStorage: []string{
 				localAliasesBucketsPrefix,
 			},
@@ -167,6 +170,8 @@ func (i *IdentityStore) paths() []*framework.Path {
 		mfaDuoPaths(i),
 		mfaPingIDPaths(i),
 		mfaLoginEnforcementPaths(i),
+		mfaLoginEnterprisePaths(i),
+		scimPaths(i),
 	)
 }
 

@@ -86,9 +86,7 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 	}
 
 	loadFunc := func(context.Context) error {
-		i.logger.Debug("loading identity store artifacts with",
-			"case_sensitive", !i.disableLowerCasedNames,
-			"conflict_resolver", i.conflictResolver)
+		i.logger.Debug("loading identity store artifacts", "case_sensitive", !i.disableLowerCasedNames)
 
 		if err := loadFuncEntities(ctx); err != nil {
 			return fmt.Errorf("failed to load entities: %w", err)

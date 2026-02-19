@@ -7,6 +7,8 @@ package vault
 
 import (
 	"context"
+
+	"github.com/hashicorp/vault/sdk/framework"
 )
 
 func (i *IdentityStore) loadSCIMClients(ctx context.Context) error {
@@ -14,4 +16,8 @@ func (i *IdentityStore) loadSCIMClients(ctx context.Context) error {
 }
 
 func (i *IdentityStore) invalidateSCIMClient(ctx context.Context, key string) {
+}
+
+func scimPaths(_ *IdentityStore) []*framework.Path {
+	return []*framework.Path{}
 }

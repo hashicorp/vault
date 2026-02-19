@@ -42,7 +42,8 @@
     "test:server": "node scripts/start-vault.js --server",
     "test:dev": "node scripts/start-vault.js",
     "vault": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8200 vault server -log-level=error -dev -dev-root-token-id=root -dev-ha -dev-transactional",
-    "vault:cluster": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8202 vault server -log-level=error -dev -dev-root-token-id=root -dev-listen-address=127.0.0.1:8202 -dev-ha -dev-transactional"
+    "vault:cluster": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8202 vault server -log-level=error -dev -dev-root-token-id=root -dev-listen-address=127.0.0.1:8202 -dev-ha -dev-transactional",
+    "vault:e2e": "vault server"
   },
   "devDependencies": {
     "@babel/cli": "~7.27.0",
@@ -67,9 +68,11 @@
     "@glint/template": "^1.7.3",
     "@icholy/duration": "~5.1.0",
     "@lineal-viz/lineal": "~0.5.1",
+    "@playwright/test": "^1.58.0",
     "@tsconfig/ember": "~2.0.0",
     "@types/d3-array": "~3.2.1",
     "@types/ember-data": "~4.4.16",
+    "@types/node": "^25.1.0",
     "@types/qunit": "~2.19.12",
     "@types/rsvp": "~4.0.9",
     "@types/shell-quote": "~1.7.5",

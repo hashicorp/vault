@@ -129,6 +129,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 			retKeys[k] = exportKey
 		}
 
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyExport, b.keyPolicyObservationMetadata(p))
 	default:
 		var versionValue int
 		if version == "latest" {
@@ -155,6 +156,9 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 		}
 
 		retKeys[strconv.Itoa(versionValue)] = exportKey
+		metadata := b.keyPolicyObservationMetadata(p)
+		metadata["export_version"] = versionValue
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyExport, metadata)
 	}
 
 	resp := &logical.Response{

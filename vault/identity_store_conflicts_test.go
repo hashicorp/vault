@@ -174,7 +174,7 @@ func (l *identityTestWarnLogger) Warn(msg string, args ...interface{}) {
 		panic("args must be key-value pairs")
 	}
 	for i := 0; i < len(args); i += 2 {
-		l.buf.WriteString(fmt.Sprintf(" %s=%q", args[i], args[i+1]))
+		fmt.Fprintf(&l.buf, " %s=%q", args[i], args[i+1])
 	}
 	l.buf.WriteString("\n")
 }
@@ -207,10 +207,14 @@ func TestDuplicateRenameResolver(t *testing.T) {
 	seenEntities := make(map[string]*identity.Entity)
 	seenGroups := make(map[string]*identity.Group)
 
+	// Use a global counter to ensure all entity IDs are unique across namespaces,
+	// simulating real-world behavior where entity IDs are UUIDs.
+	idCounter := 0
 	for ns, entityList := range entities {
-		for i, name := range entityList {
+		for _, name := range entityList {
 
-			id := fmt.Sprintf("00000000-0000-0000-0000-%012d", i)
+			id := fmt.Sprintf("00000000-0000-0000-0000-%012d", idCounter)
+			idCounter++
 			// Create a new entity with the name/ns pair
 			entity := &identity.Entity{
 				ID:          id,
@@ -256,4 +260,173 @@ func TestDuplicateRenameResolver(t *testing.T) {
 	}
 
 	// No need to test entity alias merges here, since that's handled separately.
+}
+
+// TestErrorResolver_ResolveEntities tests that errorResolver logs warnings for
+// true duplicates but not for entity updates (same ID) or new entities.
+func TestErrorResolver_ResolveEntities(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		existingID  string
+		duplicateID string
+		expectWarn  bool
+	}{
+		{"new entity", "", "entity-789", false},
+		{"update same ID", "entity-123", "entity-123", false},
+		{"duplicate different IDs", "entity-123", "entity-456", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var logBuf bytes.Buffer
+			logger := log.New(
+				&log.LoggerOptions{
+					Output: &logBuf,
+					Level:  log.Warn,
+				},
+			)
+
+			resolver := &errorResolver{logger: logger}
+
+			var existing *identity.Entity
+			if tt.existingID != "" {
+				existing = &identity.Entity{
+					ID:          tt.existingID,
+					Name:        "test-entity",
+					NamespaceID: "root",
+				}
+			}
+
+			duplicate := &identity.Entity{
+				ID:          tt.duplicateID,
+				Name:        "test-entity",
+				NamespaceID: "root",
+			}
+
+			_, _ = resolver.ResolveEntities(context.Background(), existing, duplicate)
+
+			if tt.expectWarn {
+				require.NotEmpty(t, logBuf.String(), "Expected warning to be logged")
+			} else {
+				require.Empty(t, logBuf.String(), "Expected no warnings to be logged")
+			}
+		})
+	}
+}
+
+// TestErrorResolver_ResolveGroups tests that errorResolver logs warnings for
+// true duplicates but not for group updates (same ID) or new groups.
+func TestErrorResolver_ResolveGroups(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		existingID  string
+		duplicateID string
+		expectWarn  bool
+	}{
+		{"new group", "", "group-789", false},
+		{"update same ID", "group-123", "group-123", false},
+		{"duplicate different IDs", "group-123", "group-456", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var logBuf bytes.Buffer
+			logger := log.New(
+				&log.LoggerOptions{
+					Output: &logBuf,
+					Level:  log.Warn,
+				},
+			)
+
+			resolver := &errorResolver{logger: logger}
+
+			var existing *identity.Group
+			if tt.existingID != "" {
+				existing = &identity.Group{
+					ID:          tt.existingID,
+					Name:        "test-group",
+					NamespaceID: "root",
+				}
+			}
+
+			duplicate := &identity.Group{
+				ID:          tt.duplicateID,
+				Name:        "test-group",
+				NamespaceID: "root",
+			}
+
+			_, _ = resolver.ResolveGroups(context.Background(), existing, duplicate)
+
+			if tt.expectWarn {
+				require.NotEmpty(t, logBuf.String(), "Expected warning to be logged")
+			} else {
+				require.Empty(t, logBuf.String(), "Expected no warnings to be logged")
+			}
+		})
+	}
+}
+
+// TestErrorResolver_ResolveAliases tests that errorResolver logs warnings for
+// true duplicates but not for alias updates (same ID) or new aliases.
+func TestErrorResolver_ResolveAliases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		existingID  string
+		duplicateID string
+		expectWarn  bool
+	}{
+		{"new alias", "", "alias-789", false},
+		{"update same ID", "alias-123", "alias-123", false},
+		{"duplicate different IDs", "alias-123", "alias-456", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var logBuf bytes.Buffer
+			logger := log.New(
+				&log.LoggerOptions{
+					Output: &logBuf,
+					Level:  log.Warn,
+				},
+			)
+
+			resolver := &errorResolver{logger: logger}
+			parent := &identity.Entity{
+				ID:          "entity-123",
+				Name:        "test-entity",
+				NamespaceID: "root",
+			}
+
+			var existing *identity.Alias
+			if tt.existingID != "" {
+				existing = &identity.Alias{
+					ID:            tt.existingID,
+					CanonicalID:   "entity-123",
+					Name:          "user@example.com",
+					MountAccessor: "auth_mount_123",
+				}
+			}
+
+			duplicate := &identity.Alias{
+				ID:            tt.duplicateID,
+				CanonicalID:   "entity-123",
+				Name:          "user@example.com",
+				MountAccessor: "auth_mount_123",
+			}
+
+			_, _ = resolver.ResolveAliases(context.Background(), parent, existing, duplicate)
+
+			if tt.expectWarn {
+				require.NotEmpty(t, logBuf.String(), "Expected warning to be logged")
+			} else {
+				require.Empty(t, logBuf.String(), "Expected no warnings to be logged")
+			}
+		})
+	}
 }

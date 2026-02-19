@@ -12,189 +12,212 @@
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
   <:actions>
-    <Hds::Button @text="Enable new engine" @icon="plus" @route="vault.cluster.secrets.enable" data-test-enable-engine />
+    {{#unless this.showWizard}}
+      {{#if this.hasOnlyDefaultEngines}}
+        <Hds::Button
+          @color="secondary"
+          @icon="bulb"
+          @text="New to Secret engines?"
+          {{on "click" this.showIntroPage}}
+          data-test-button="intro"
+        />
+      {{/if}}
+      <Hds::Button @text="Enable new engine" @icon="plus" @route="vault.cluster.secrets.enable" data-test-enable-engine />
+    {{/unless}}
   </:actions>
 </Page::Header>
 
-{{! Filters section }}
-<Hds::SegmentedGroup class="has-top-margin-m" as |SG|>
-  <SG.TextInput
-    @width="300px"
-    @type="search"
-    placeholder="Search by path"
-    aria-label="Search"
-    data-test-input-search="secret-engine-path"
-    {{on "input" (fn this.setSearchText "path")}}
+{{#if this.showWizard}}
+  <Wizard::SecretEngines::SecretEnginesWizard
+    @isIntroModal={{this.shouldRenderIntroModal}}
+    @onRefresh={{this.refreshSecretEngineList}}
   />
-  <SG.Dropdown @width="175px" as |D|>
-    <D.Header @hasDivider={{true}}>
-      <SG.TextInput @type="search" placeholder="Search" aria-label="Search" {{on "input" (fn this.setSearchText "type")}} />
-    </D.Header>
-    <D.ToggleButton @color="secondary" @text="Engine type" data-test-toggle-input="filter-by-engine-type" />
-    {{#each this.secretEngineArrayByType as |type|}}
-      <D.Checkbox
-        value={{type.name}}
-        checked={{includes type.name this.engineTypeFilters}}
-        {{on "click" (fn this.filterByEngineType type.name)}}
-        data-test-checkbox={{type.name}}
-      ><Hds::Icon @name={{type.icon}} @isInline={{true}} /> {{type.name}}</D.Checkbox>
-    {{/each}}
-  </SG.Dropdown>
-  <SG.Dropdown @width="250px" as |D|>
-    <D.ToggleButton @color="secondary" @text="Version" data-test-toggle-input="filter-by-engine-version" />
-    {{#if this.engineTypeFilters.length}}
+{{else}}
+  {{! Filters section }}
+  <Hds::SegmentedGroup class="has-top-margin-m" as |SG|>
+    <SG.TextInput
+      @width="300px"
+      @type="search"
+      placeholder="Search by path"
+      aria-label="Search"
+      data-test-input-search="secret-engine-path"
+      {{on "input" (fn this.setSearchText "path")}}
+    />
+    <SG.Dropdown @width="175px" as |D|>
       <D.Header @hasDivider={{true}}>
         <SG.TextInput
           @type="search"
           placeholder="Search"
           aria-label="Search"
-          {{on "input" (fn this.setSearchText "version")}}
+          {{on "input" (fn this.setSearchText "type")}}
         />
       </D.Header>
-      {{#each this.secretEngineArrayByVersions as |backend|}}
+      <D.ToggleButton @color="secondary" @text="Engine type" data-test-toggle-input="filter-by-engine-type" />
+      {{#each this.secretEngineArrayByType as |type|}}
         <D.Checkbox
-          value={{backend.version}}
-          checked={{includes backend.version this.engineVersionFilters}}
-          {{on "click" (fn this.filterByEngineVersion backend.version)}}
-          data-test-checkbox={{backend.version}}
-        >
-          {{backend.version}}
-        </D.Checkbox>
+          value={{type.name}}
+          checked={{includes type.name this.engineTypeFilters}}
+          {{on "click" (fn this.filterByEngineType type.name)}}
+          data-test-checkbox={{type.name}}
+        ><Hds::Icon @name={{type.icon}} @isInline={{true}} /> {{type.name}}</D.Checkbox>
       {{/each}}
-    {{else}}
-      <D.Description class="has-top-padding-s" @text="Select an engine type first to filter by versions." />
-    {{/if}}
-  </SG.Dropdown>
-</Hds::SegmentedGroup>
+    </SG.Dropdown>
+    <SG.Dropdown @width="250px" as |D|>
+      <D.ToggleButton @color="secondary" @text="Version" data-test-toggle-input="filter-by-engine-version" />
+      {{#if this.engineTypeFilters.length}}
+        <D.Header @hasDivider={{true}}>
+          <SG.TextInput
+            @type="search"
+            placeholder="Search"
+            aria-label="Search"
+            {{on "input" (fn this.setSearchText "version")}}
+          />
+        </D.Header>
+        {{#each this.secretEngineArrayByVersions as |backend|}}
+          <D.Checkbox
+            value={{backend.version}}
+            checked={{includes backend.version this.engineVersionFilters}}
+            {{on "click" (fn this.filterByEngineVersion backend.version)}}
+            data-test-checkbox={{backend.version}}
+          >
+            {{backend.version}}
+          </D.Checkbox>
+        {{/each}}
+      {{else}}
+        <D.Description class="has-top-padding-s" @text="Select an engine type first to filter by versions." />
+      {{/if}}
+    </SG.Dropdown>
+  </Hds::SegmentedGroup>
 
-<Hds::Layout::Flex @gap="8" class="has-top-margin-xs has-bottom-margin-xs" @align="center">
-  {{#if (and (not this.engineTypeFilters) (not this.engineVersionFilters))}}
-    <Hds::Text::Body class="has-top-padding-xs">No filters applied.</Hds::Text::Body>
+  <Hds::Layout::Flex @gap="8" class="has-top-margin-xs has-bottom-margin-xs" @align="center">
+    {{#if (and (not this.engineTypeFilters) (not this.engineVersionFilters))}}
+      <Hds::Text::Body class="has-top-padding-xs">No filters applied.</Hds::Text::Body>
+    {{else}}
+      <Hds::Text::Body>Filters applied:</Hds::Text::Body>
+      {{#each this.engineTypeFilters as |type|}}
+        <Hds::Tag @text={{type}} @onDismiss={{fn this.filterByEngineType type}} data-test-button={{type}} />
+      {{/each}}
+      {{#each this.engineVersionFilters as |version|}}
+        <Hds::Tag @text={{version}} @onDismiss={{fn this.filterByEngineVersion version}} data-test-button={{version}} />
+      {{/each}}
+      <Hds::Button
+        @text="Clear all"
+        @color="tertiary"
+        @icon="x"
+        @size="small"
+        data-test-button="Clear all"
+        {{on "click" this.clearAllFilters}}
+      />
+    {{/if}}
+  </Hds::Layout::Flex>
+  {{! End Filters Section }}
+
+  {{! Table Section }}
+  {{#if this.sortedDisplayableBackends}}
+    <ListTable
+      class="has-top-margin-xs"
+      @columns={{this.tableColumns}}
+      @selectionKey="path"
+      @data={{this.sortedDisplayableBackends}}
+      @onSelectionChange={{this.updateSelectedItems}}
+    >
+      <:selectedItems>
+        {{#if this.selectedItems}}
+          <Hds::Layout::Flex
+            @gap="8"
+            @direction="row"
+            @justify="end"
+            @align="center"
+            class="has-bottom-margin-s has-top-margin-negative-xxl"
+            @isInline="true"
+          >
+            <Hds::Text::Body role="status" @tag="p" @size="200" @color="foreground-primary">
+              {{this.selectedItems.length}}
+              selected out of
+              {{this.sortedDisplayableBackends.length}}
+            </Hds::Text::Body>
+            <Hds::Button
+              @text="Disable engines"
+              @color="critical"
+              @icon="trash"
+              {{on "click" (fn (mut this.enginesToDisable) this.selectedItems)}}
+            />
+          </Hds::Layout::Flex>
+        {{/if}}
+      </:selectedItems>
+      <:customTableItem as |itemData|>
+        {{#let (this.getEngineResourceData itemData.path) as |backendData|}}
+          <Hds::TooltipButton
+            aria-label="Type of backend"
+            @text={{this.generateToolTipText backendData}}
+            data-test-tooltip="Backend type"
+            isInline={{true}}
+            class="is-v-centered"
+          >
+            <Hds::Icon @name={{if backendData.icon backendData.icon "lock"}} />
+          </Hds::TooltipButton>
+          {{#if backendData.isSupportedBackend}}
+            <Hds::Link::Inline
+              @route={{backendData.backendLink}}
+              @model={{backendData.id}}
+              @color="secondary"
+              class="has-text-weight-semibold"
+            >{{backendData.path}}</Hds::Link::Inline>
+          {{else}}
+            {{backendData.path}}
+          {{/if}}
+        {{/let}}
+      </:customTableItem>
+
+      <:popupMenu as |rowData|>
+        {{#let (this.getEngineResourceData rowData.path) as |backendData|}}
+          <Hds::Dropdown @isInline={{true}} as |dd|>
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="{{if backendData.isSupportedBackend 'supported' 'unsupported'}} secrets engine menu"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger
+            />
+            <dd.Interactive
+              @route={{backendData.backendConfigurationLink}}
+              @model={{backendData.id}}
+              data-test-popup-menu="View configuration"
+              @icon="settings"
+            >View configuration</dd.Interactive>
+            {{#if (not-eq backendData.type "cubbyhole")}}
+              <dd.Interactive
+                @color="critical"
+                {{on "click" (fn (mut this.engineToDisable) backendData)}}
+                data-test-popup-menu="Delete"
+                @icon="trash"
+              >Delete</dd.Interactive>
+            {{/if}}
+          </Hds::Dropdown>
+        {{/let}}
+      </:popupMenu>
+    </ListTable>
   {{else}}
-    <Hds::Text::Body>Filters applied:</Hds::Text::Body>
-    {{#each this.engineTypeFilters as |type|}}
-      <Hds::Tag @text={{type}} @onDismiss={{fn this.filterByEngineType type}} data-test-button={{type}} />
-    {{/each}}
-    {{#each this.engineVersionFilters as |version|}}
-      <Hds::Tag @text={{version}} @onDismiss={{fn this.filterByEngineVersion version}} data-test-button={{version}} />
-    {{/each}}
-    <Hds::Button
-      @text="Clear all"
-      @color="tertiary"
-      @icon="x"
-      @size="small"
-      data-test-button="Clear all"
-      {{on "click" this.clearAllFilters}}
+    <EmptyState @title="No Secrets engines found" />
+  {{/if}}
+  {{! End Table Section }}
+
+  {{#if this.engineToDisable}}
+    <ConfirmModal
+      @color="critical"
+      @confirmMessage="Any data in this engine will be permanently deleted."
+      @confirmTitle="Disable engine?"
+      @onClose={{fn (mut this.engineToDisable) null}}
+      @onConfirm={{perform this.disableEngine this.engineToDisable}}
     />
   {{/if}}
-</Hds::Layout::Flex>
-{{! End Filters Section }}
 
-{{! Table Section }}
-{{#if this.sortedDisplayableBackends}}
-  <ListTable
-    class="has-top-margin-xs"
-    @columns={{this.tableColumns}}
-    @selectionKey="path"
-    @data={{this.sortedDisplayableBackends}}
-    @onSelectionChange={{this.updateSelectedItems}}
-  >
-    <:selectedItems>
-      {{#if this.selectedItems}}
-        <Hds::Layout::Flex
-          @gap="8"
-          @direction="row"
-          @justify="end"
-          @align="center"
-          class="has-bottom-margin-s has-top-margin-negative-xxl"
-          @isInline="true"
-        >
-          <Hds::Text::Body role="status" @tag="p" @size="200" @color="foreground-primary">
-            {{this.selectedItems.length}}
-            selected out of
-            {{this.sortedDisplayableBackends.length}}
-          </Hds::Text::Body>
-          <Hds::Button
-            @text="Disable engines"
-            @color="critical"
-            @icon="trash"
-            {{on "click" (fn (mut this.enginesToDisable) this.selectedItems)}}
-          />
-        </Hds::Layout::Flex>
-      {{/if}}
-    </:selectedItems>
-    <:customTableItem as |itemData|>
-      {{#let (this.getEngineResourceData itemData.path) as |backendData|}}
-        <Hds::TooltipButton
-          aria-label="Type of backend"
-          @text={{this.generateToolTipText backendData}}
-          data-test-tooltip="Backend type"
-          isInline={{true}}
-          class="is-v-centered"
-        >
-          <Hds::Icon @name={{if backendData.icon backendData.icon "lock"}} />
-        </Hds::TooltipButton>
-        {{#if backendData.isSupportedBackend}}
-          <Hds::Link::Inline
-            @route={{backendData.backendLink}}
-            @model={{backendData.id}}
-            @color="secondary"
-            class="has-text-weight-semibold"
-          >{{backendData.path}}</Hds::Link::Inline>
-        {{else}}
-          {{backendData.path}}
-        {{/if}}
-      {{/let}}
-    </:customTableItem>
-
-    <:popupMenu as |rowData|>
-      {{#let (this.getEngineResourceData rowData.path) as |backendData|}}
-        <Hds::Dropdown @isInline={{true}} as |dd|>
-          <dd.ToggleIcon
-            @icon="more-horizontal"
-            @text="{{if backendData.isSupportedBackend 'supported' 'unsupported'}} secrets engine menu"
-            @hasChevron={{false}}
-            data-test-popup-menu-trigger
-          />
-          <dd.Interactive
-            @route={{backendData.backendConfigurationLink}}
-            @model={{backendData.id}}
-            data-test-popup-menu="View configuration"
-            @icon="settings"
-          >View configuration</dd.Interactive>
-          {{#if (not-eq backendData.type "cubbyhole")}}
-            <dd.Interactive
-              @color="critical"
-              {{on "click" (fn (mut this.engineToDisable) backendData)}}
-              data-test-popup-menu="Delete"
-              @icon="trash"
-            >Delete</dd.Interactive>
-          {{/if}}
-        </Hds::Dropdown>
-      {{/let}}
-    </:popupMenu>
-  </ListTable>
-{{else}}
-  <EmptyState @title="No Secrets engines found" />
-{{/if}}
-{{! End Table Section }}
-
-{{#if this.engineToDisable}}
-  <ConfirmModal
-    @color="critical"
-    @confirmMessage="Any data in this engine will be permanently deleted."
-    @confirmTitle="Disable engine?"
-    @onClose={{fn (mut this.engineToDisable) null}}
-    @onConfirm={{perform this.disableEngine this.engineToDisable}}
-  />
-{{/if}}
-
-{{#if this.enginesToDisable}}
-  <ConfirmModal
-    @color="critical"
-    @confirmMessage="Any data in these engines will be permanently deleted."
-    @confirmTitle="Disable engines?"
-    @onClose={{fn (mut this.enginesToDisable) null}}
-    @onConfirm={{perform this.disableMultipleEngines this.enginesToDisable}}
-  />
+  {{#if this.enginesToDisable}}
+    <ConfirmModal
+      @color="critical"
+      @confirmMessage="Any data in these engines will be permanently deleted."
+      @confirmTitle="Disable engines?"
+      @onClose={{fn (mut this.enginesToDisable) null}}
+      @onConfirm={{perform this.disableMultipleEngines this.enginesToDisable}}
+    />
+  {{/if}}
 {{/if}}

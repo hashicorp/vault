@@ -13,7 +13,10 @@ import (
 	"github.com/hashicorp/vault/vault/billing"
 )
 
-var ErrCouldNotGetBillingSubView = fmt.Errorf("could not get billing sub view")
+var (
+	ErrCouldNotGetBillingSubView        = fmt.Errorf("could not get billing sub view")
+	ErrConsumptionBillingNotInitialized = fmt.Errorf("consumption billing is not initialized")
+)
 
 func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 	// We need replication (post unseal) to start before we run the consumption billing metrics worker
@@ -142,6 +145,8 @@ func (c *Core) deletePreviousMonthBillingMetrics(ctx context.Context, currentMon
 func (c *Core) resetInMemoryBillingMetrics() error {
 	// Reset Transit/Tranform DP counts
 	c.logger.Info("resetting in memory billing metrics")
+	c.consumptionBillingLock.Lock()
+	defer c.consumptionBillingLock.Unlock()
 	c.consumptionBilling.DataProtectionCallCounts.Transit.Store(0)
 	c.consumptionBilling.DataProtectionCallCounts.Transform.Store(0)
 	c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)

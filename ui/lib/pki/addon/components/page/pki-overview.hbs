@@ -19,11 +19,11 @@
     </:action>
     <:content>
       <Hds::Text::Display @tag="p" @size="400" @weight="medium" class="has-top-margin-m">
-        {{format-number (if (eq @issuers 404) 0 @issuers.length)}}
+        {{format-number @issuers.length}}
       </Hds::Text::Display>
     </:content>
   </OverviewCard>
-  {{#if (not-eq @roles 403)}}
+  {{#if @canListRoles}}
     <OverviewCard
       @cardTitle="Roles"
       @subText="The total number of roles in this PKI mount that have been created to generate certificates."
@@ -39,24 +39,37 @@
       </:action>
       <:content>
         <Hds::Text::Display @tag="p" @size="400" @weight="medium" class="has-top-margin-m">
-          {{format-number (if (eq @roles 404) 0 @roles.length)}}
+          {{format-number @roles.length}}
         </Hds::Text::Display>
       </:content>
     </OverviewCard>
   {{/if}}
-  <OverviewCard @cardTitle="Issue certificate" @subText="Begin issuing a certificate by choosing a role.">
+  <OverviewCard
+    @cardTitle="Issue certificate"
+    @subText="Begin issuing a certificate by {{if @canListRoles 'choosing' 'entering'}} a role."
+  >
     <:content>
       <div class="has-top-margin-m is-flex">
-        <SearchSelect
-          class="is-flex-grow-1"
-          @ariaLabel="Role"
-          @selectLimit="1"
-          @options={{this.searchSelectOptions.roles}}
-          @placeholder="Type to find a role..."
-          @disallowNewItems={{true}}
-          @onChange={{this.handleRolesInput}}
-          data-test-issue-certificate-input
-        />
+        {{#if @canListRoles}}
+          <SearchSelect
+            class="is-flex-grow-1"
+            @ariaLabel="Role"
+            @selectLimit="1"
+            @options={{this.searchSelectOptions.roles}}
+            @placeholder="Type to find a role..."
+            @disallowNewItems={{true}}
+            @onChange={{this.handleRolesInput}}
+            data-test-issue-certificate-input
+          />
+        {{else}}
+          <InputSearch
+            class="is-flex-grow-1"
+            @placeholder="Input a role.."
+            @onChange={{this.handleRolesInput}}
+            @changeEvent="input"
+            @id="role"
+          />
+        {{/if}}
         <Hds::Button
           @text="Issue"
           @color="secondary"
@@ -70,19 +83,32 @@
     </:content>
   </OverviewCard>
 
-  <OverviewCard @cardTitle="View certificate" @subText="Quickly view a certificate by typing its serial number.">
+  <OverviewCard
+    @cardTitle="View certificate"
+    @subText="Quickly view a certificate by {{if @canListCertificates 'looking up' 'providing'}} its serial number."
+  >
     <:content>
       <div class="has-top-margin-m {{unless this.certificateValue 'is-flex'}}">
-        <SearchSelect
-          class="is-flex-grow-1"
-          @ariaLabel="Certificate serial number"
-          @selectLimit="1"
-          @options={{this.searchSelectOptions.certificates}}
-          @placeholder="33:a3:..."
-          @disallowNewItems={{true}}
-          @onChange={{this.handleCertificateInput}}
-          data-test-view-certificate-input
-        />
+        {{#if @canListCertificates}}
+          <SearchSelect
+            class="is-flex-grow-1"
+            @ariaLabel="Certificate serial number"
+            @selectLimit="1"
+            @options={{this.searchSelectOptions.certificates}}
+            @placeholder="33:a3:..."
+            @disallowNewItems={{true}}
+            @onChange={{this.handleCertificateInput}}
+            data-test-view-certificate-input
+          />
+        {{else}}
+          <InputSearch
+            class="is-flex-grow-1"
+            @placeholder="33:a3:..."
+            @onChange={{this.handleCertificateInput}}
+            @changeEvent="input"
+            @id="certificate"
+          />
+        {{/if}}
         <Hds::Button
           @text="View"
           @color="secondary"

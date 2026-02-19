@@ -18,6 +18,8 @@ import type NamespaceService from 'vault/services/namespace';
 import type RouterService from '@ember/routing/router-service';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type VersionService from 'vault/services/version';
+import type WizardService from 'vault/services/wizard';
+import { WIZARD_ID } from '../wizard/secret-engines/secret-engines-wizard';
 
 /**
  * @module SecretEngineList handles the display of the list of secret engines, including the filtering.
@@ -35,11 +37,12 @@ interface Args {
 }
 
 export default class SecretEngineList extends Component<Args> {
-  @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;
+  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly namespace: NamespaceService;
   @service declare readonly router: RouterService;
   @service declare readonly version: VersionService;
-  @service declare readonly namespace: NamespaceService;
+  @service declare readonly wizard: WizardService;
 
   @tracked secretEngineOptions: Array<string> | [] = [];
   @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
@@ -54,6 +57,9 @@ export default class SecretEngineList extends Component<Args> {
   @tracked versionSearchText = '';
 
   @tracked selectedItems = Array<string>();
+
+  @tracked shouldRenderIntroModal = false;
+  wizardId = WIZARD_ID;
 
   tableColumns = [
     {
@@ -187,6 +193,32 @@ export default class SecretEngineList extends Component<Args> {
       version,
       id: version,
     }));
+  }
+
+  // The backend does not directly indicate which engines were mounted by default and which have been mounted by the user
+  // Currently the cubbyhole/, sys/, identity/ engines are mounted by default. (secret/ is mounted in dev mode as well)
+  // The sys/ and identity/ engines are non-displayable engines.
+  // While not ideal, we can check whether there are other engines than the default cubbyhole/ engine
+  // to determine whether we should show the intro page
+  get hasOnlyDefaultEngines() {
+    const listedEngines = this.sortedDisplayableBackends;
+    return !listedEngines.length || (listedEngines.length === 1 && listedEngines[0]?.path === 'cubbyhole/');
+  }
+
+  get showWizard() {
+    return !this.wizard.isDismissed(this.wizardId) && this.hasOnlyDefaultEngines;
+  }
+
+  @action
+  showIntroPage() {
+    // Reset the wizard dismissal state to allow re-entering the wizard
+    this.wizard.reset(this.wizardId);
+    this.shouldRenderIntroModal = true;
+  }
+
+  @action
+  refreshSecretEngineList() {
+    this.router.refresh('vault.cluster.secrets.backends');
   }
 
   // Returns engine resource data for a given engine path, needed to get icon and other metadata from SecretEnginesResource

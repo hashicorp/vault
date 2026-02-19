@@ -13,6 +13,8 @@
     @roles={{this.model.roles}}
     @certificates={{this.model.certificates}}
     @engine={{this.model.engine}}
+    @canListCertificates={{this.model.canListCertificates}}
+    @canListRoles={{this.model.canListRoles}}
   />
 {{else}}
   <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>

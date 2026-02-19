@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/observations"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/billing"
@@ -133,6 +134,27 @@ func createBackendWithForceNoCacheWithSysViewWithStorage(t testing.TB, s logical
 	}
 
 	return b
+}
+
+func createBackendWithObservationRecorder(t testing.TB) (*backend, logical.Storage, *observations.TestObservationRecorder) {
+	config := logical.TestBackendConfig()
+	obsRecorder := observations.NewTestObservationRecorder()
+	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = obsRecorder
+
+	b, _ := Backend(context.Background(), config)
+	require.NotNil(t, b)
+	err := b.Backend.Setup(context.Background(), config)
+	require.NoError(t, err)
+	return b, config.StorageView, obsRecorder
+}
+
+func factoryWithObservationRecorder(t testing.TB) (logical.Factory, *observations.TestObservationRecorder) {
+	obsRecorder := observations.NewTestObservationRecorder()
+	return func(ctx context.Context, bc *logical.BackendConfig) (logical.Backend, error) {
+		bc.ObservationRecorder = obsRecorder
+		return Factory(ctx, bc)
+	}, obsRecorder
 }
 
 func TestTransit_RSA(t *testing.T) {
@@ -361,56 +383,59 @@ func testTransit_RSA(t *testing.T, keyType string) {
 }
 
 func TestBackend_basic(t *testing.T) {
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
-			testAccStepWritePolicy(t, "test", false),
+			testAccStepWritePolicy(t, "test", false, obsRecorder),
 			testAccStepListPolicy(t, "test", false),
-			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepReadPolicy(t, "test", false, false, obsRecorder),
 			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepEncrypt(t, "test", "", decryptData),
 			testAccStepDecrypt(t, "test", "", decryptData),
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
 			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepWritePolicy(t, "test", false),
+			testAccStepDeletePolicy(t, "test", obsRecorder),
+			testAccStepWritePolicy(t, "test", false, obsRecorder),
 			testAccStepEnableDeletion(t, "test"),
 			testAccStepDisableDeletion(t, "test"),
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
 			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepDeletePolicy(t, "test", obsRecorder),
+			testAccStepReadPolicy(t, "test", true, false, obsRecorder),
 		},
 	})
 }
 
 func TestBackend_upsert(t *testing.T) {
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
-			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepReadPolicy(t, "test", true, false, obsRecorder),
 			testAccStepListPolicy(t, "test", true),
 			testAccStepEncryptUpsert(t, "test", testPlaintext, decryptData),
 			testAccStepListPolicy(t, "test", false),
-			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepReadPolicy(t, "test", false, false, obsRecorder),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 		},
 	})
 }
 
 func TestBackend_datakey(t *testing.T) {
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	dataKeyInfo := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
-			testAccStepWritePolicy(t, "test", false),
+			testAccStepWritePolicy(t, "test", false, obsRecorder),
 			testAccStepListPolicy(t, "test", false),
-			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepReadPolicy(t, "test", false, false, nil),
 			testAccStepWriteDatakey(t, "test", false, 256, dataKeyInfo),
 			testAccStepDecryptDatakey(t, "test", dataKeyInfo),
 			testAccStepWriteDatakey(t, "test", true, 128, dataKeyInfo),
@@ -428,11 +453,12 @@ func TestBackend_rotation(t *testing.T) {
 func testBackendRotation(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	encryptHistory := make(map[int]map[string]interface{})
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
-			testAccStepWritePolicy(t, "test", false),
+			testAccStepWritePolicy(t, "test", false, obsRecorder),
 			testAccStepListPolicy(t, "test", false),
 			testAccStepEncryptVX(t, "test", testPlaintext, decryptData, 0, encryptHistory),
 			testAccStepEncryptVX(t, "test", testPlaintext, decryptData, 1, encryptHistory),
@@ -460,7 +486,7 @@ func testBackendRotation(t *testing.T) {
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
 			testAccStepAdjustPolicyMinDecryption(t, "test", 3),
 			testAccStepAdjustPolicyMinEncryption(t, "test", 4),
-			testAccStepReadPolicyWithVersions(t, "test", false, false, 3, 4),
+			testAccStepReadPolicyWithVersions(t, "test", false, false, 3, 4, obsRecorder),
 			testAccStepLoadVX(t, "test", decryptData, 0, encryptHistory),
 			testAccStepDecryptExpectFailure(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 1, encryptHistory),
@@ -472,7 +498,7 @@ func testBackendRotation(t *testing.T) {
 			testAccStepLoadVX(t, "test", decryptData, 4, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepAdjustPolicyMinDecryption(t, "test", 1),
-			testAccStepReadPolicyWithVersions(t, "test", false, false, 1, 4),
+			testAccStepReadPolicyWithVersions(t, "test", false, false, 1, 4, obsRecorder),
 			testAccStepLoadVX(t, "test", decryptData, 0, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 1, encryptHistory),
@@ -482,8 +508,8 @@ func testBackendRotation(t *testing.T) {
 			testAccStepRewrap(t, "test", decryptData, 4),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepDeletePolicy(t, "test", obsRecorder),
+			testAccStepReadPolicy(t, "test", true, false, obsRecorder),
 			testAccStepListPolicy(t, "test", true),
 		},
 	})
@@ -491,28 +517,42 @@ func testBackendRotation(t *testing.T) {
 
 func TestBackend_basic_derived(t *testing.T) {
 	decryptData := make(map[string]interface{})
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
-			testAccStepWritePolicy(t, "test", true),
+			testAccStepWritePolicy(t, "test", true, obsRecorder),
 			testAccStepListPolicy(t, "test", false),
-			testAccStepReadPolicy(t, "test", false, true),
+			testAccStepReadPolicy(t, "test", false, true, obsRecorder),
 			testAccStepEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", true, true),
+			testAccStepDeletePolicy(t, "test", obsRecorder),
+			testAccStepReadPolicy(t, "test", true, true, obsRecorder),
 		},
 	})
 }
 
-func testAccStepWritePolicy(t *testing.T, name string, derived bool) logicaltest.TestStep {
+func testAccStepWritePolicy(t *testing.T, name string, derived bool, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	ts := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name,
 		Data: map[string]interface{}{
 			"derived": derived,
+		},
+		Check: func(resp *logical.Response) error {
+			if obsRecorder == nil {
+				return nil
+			}
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyWrite)
+			if obs == nil {
+				return fmt.Errorf("no observation")
+			}
+			if name != obs.Data["key_name"] {
+				return fmt.Errorf("expected name %s, got %s", name, obs.Data["key_name"])
+			}
+			return nil
 		},
 	}
 	if os.Getenv("TRANSIT_ACC_KEY_TYPE") == "CHACHA" {
@@ -597,10 +637,24 @@ func testAccStepEnableDeletion(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testAccStepDeletePolicy(t *testing.T, name string) logicaltest.TestStep {
+func testAccStepDeletePolicy(t *testing.T, name string, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.DeleteOperation,
 		Path:      "keys/" + name,
+		Check: func(_ *logical.Response) error {
+			if obsRecorder == nil {
+				return nil
+			}
+
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyDelete)
+			if obs == nil {
+				return fmt.Errorf("expected observation of type %s but got none", ObservationTypeTransitKeyDelete)
+			}
+			if obs.Data["key_name"] != name {
+				return fmt.Errorf("expected name %s, got %s", name, obs.Data["key_name"])
+			}
+			return nil
+		},
 	}
 }
 
@@ -621,11 +675,11 @@ func testAccStepDeleteNotDisabledPolicy(t *testing.T, name string) logicaltest.T
 	}
 }
 
-func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) logicaltest.TestStep {
-	return testAccStepReadPolicyWithVersions(t, name, expectNone, derived, 1, 0)
+func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
+	return testAccStepReadPolicyWithVersions(t, name, expectNone, derived, 1, 0, obsRecorder)
 }
 
-func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, derived bool, minDecryptionVersion int, minEncryptionVersion int) logicaltest.TestStep {
+func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, derived bool, minDecryptionVersion int, minEncryptionVersion int, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "keys/" + name,
@@ -686,6 +740,25 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 			if derived && d.KDF != "hkdf_sha256" {
 				return fmt.Errorf("bad: %#v", d)
 			}
+
+			if obsRecorder == nil {
+				return nil
+			}
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyRead)
+			if obs == nil {
+				return fmt.Errorf("expected key read observation but found none")
+			}
+			if obs.Data == nil {
+				return fmt.Errorf("observation data should not be nil")
+			}
+			keyName, ok := obs.Data["key_name"]
+			if !ok {
+				return fmt.Errorf("observation data missing key_name field")
+			}
+			if keyName != name {
+				return fmt.Errorf("observation key_name mismatch: expected %s, got %v", name, keyName)
+			}
+
 			return nil
 		},
 	}

@@ -1,0 +1,30 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Wizard::IntroContent
+  @setupTime="15 min"
+  @description="Secrets engines in Vault securely manage, store, and dynamically generate secrets, certificates, and encryption keys."
+  @imageAlt="Flow of secret engine access control by policy"
+  @imageCaption="Access to secrets within an engine is governed by policies. Users must be granted explicit access to the engine's unique path."
+  @imageSrc={{img-path "~/secret-engines-intro.png"}}
+>
+  <:features>
+    <Wizard::IntroContent::Feature @icon="service">
+      Store
+      <strong>static</strong>
+      application passwords (KV), generate dynamic, time-limited credentials for databases and cloud platforms.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="replication-direct">
+      One cluster can support multiple instances of the same engine type, with a
+      <strong>unique path</strong>
+      and granular access control.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="lock">
+      You’ll need a
+      <strong>privileged account</strong>
+      on the target system (root DB user or AWS Admin) that Vault can use to generate dynamic credentials, and appropriate
+      ACL policies to control which users can interact with those secrets.
+    </Wizard::IntroContent::Feature>
+  </:features>
+</Wizard::IntroContent>
