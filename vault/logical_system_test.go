@@ -250,6 +250,25 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			"running_sha256":         "",
 		},
+		"agent-registry/": map[string]interface{}{
+			"description":             "agent registry",
+			"type":                    "agent_registry",
+			"external_entropy_access": false,
+			"accessor":                resp.Data["agent-registry/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["agent-registry/"].(map[string]interface{})["uuid"],
+			"config": map[string]interface{}{
+				"default_lease_ttl":           resp.Data["agent-registry/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["agent-registry/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Authorization"},
+			},
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
+		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
 		t.Fatalf("bad, diff: %#v", diff)
@@ -387,6 +406,25 @@ func TestSystemBackend_mount(t *testing.T) {
 			"plugin_version":         "",
 			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			"running_sha256":         "",
+		},
+		"agent-registry/": map[string]interface{}{
+			"description":             "agent registry",
+			"type":                    "agent_registry",
+			"external_entropy_access": false,
+			"accessor":                resp.Data["agent-registry/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["agent-registry/"].(map[string]interface{})["uuid"],
+			"config": map[string]interface{}{
+				"default_lease_ttl":           resp.Data["agent-registry/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["agent-registry/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Authorization"},
+			},
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
 		},
 		"prod/secret/": map[string]interface{}{
 			"description":             "",
@@ -4576,6 +4614,26 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"plugin_version":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 				"running_sha256":         "",
+			},
+			"agent-registry/": map[string]interface{}{
+				"description":             "agent registry",
+				"type":                    "agent_registry",
+				"external_entropy_access": false,
+
+				"accessor": resp.Data["secret"].(map[string]interface{})["agent-registry/"].(map[string]interface{})["accessor"],
+				"uuid":     resp.Data["secret"].(map[string]interface{})["agent-registry/"].(map[string]interface{})["uuid"],
+				"config": map[string]interface{}{
+					"default_lease_ttl":           resp.Data["secret"].(map[string]interface{})["agent-registry/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+					"max_lease_ttl":               resp.Data["secret"].(map[string]interface{})["agent-registry/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []string{"Authorization"},
+				},
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                map[string]string(nil),
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.DefaultBuiltinVersion,
 			},
 		},
 		"auth": map[string]interface{}{
