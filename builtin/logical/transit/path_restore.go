@@ -61,7 +61,16 @@ func (b *backend) pathRestoreUpdate(ctx context.Context, req *logical.Request, d
 		return nil, ErrInvalidKeyName
 	}
 
-	return nil, b.lm.RestorePolicy(ctx, req.Storage, keyName, backupB64, force)
+	restoredKeyName, err := b.lm.RestorePolicy(ctx, req.Storage, keyName, backupB64, force)
+	if err != nil {
+		return nil, err
+	}
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyRestore, map[string]interface{}{
+		"key_name": restoredKeyName,
+		"force":    force,
+	})
+	// ignore-nil-nil-function-check
+	return nil, nil
 }
 
 const (

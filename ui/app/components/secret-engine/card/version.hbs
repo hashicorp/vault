@@ -31,7 +31,8 @@
     </LG.Item>
   </Hds::Layout::Grid>
 
-  {{#if (gt @model.versions.length 1)}}
+  {{! TODO need to support override_pinned_version and reload before making version updates }}
+  {{!-- {{#if (gt @model.versions.length 1)}}
     <Hds::Separator />
 
     <Hds::Layout::Flex @isInline="true">
@@ -45,5 +46,5 @@
         </F.Options>
       </Hds::Form::Select::Field>
     </Hds::Layout::Flex>
-  {{/if}}
+  {{/if}} --}}
 </Hds::Card::Container>
