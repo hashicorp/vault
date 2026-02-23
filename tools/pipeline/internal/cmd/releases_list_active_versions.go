@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
@@ -15,14 +14,12 @@ var listReleaseActiveVersionsReq = &releases.ListActiveVersionsReq{}
 
 func newReleasesListActiveVersionsCmd() *cobra.Command {
 	activeVersionsCmd := &cobra.Command{
-		Use:   "active-versions [.release/versions.hcl]",
+		Use:   "active-versions [--versions-config .release/versions.hcl]",
 		Short: "List the active versions from .release/versions.hcl",
 		Long:  "List the active versions from .release/versions.hcl",
 		RunE:  runListActiveVersionsReq,
-		Args:  cobra.MaximumNArgs(1), // path to .release/versions.hcl
+		Args:  cobra.NoArgs,
 	}
-
-	activeVersionsCmd.PersistentFlags().UintVarP(&listReleaseActiveVersionsReq.Recurse, "recurse", "r", 0, "If no path to a config file is given, recursively search backwards for it and stop at root or until we've his the configured depth.")
 
 	activeVersionsCmd.PersistentFlags().BoolVar(&listReleaseActiveVersionsReq.WriteToGithubOutput, "github-output", false, "Whether or not to write 'active-versions' to $GITHUB_OUTPUT")
 
@@ -32,11 +29,8 @@ func newReleasesListActiveVersionsCmd() *cobra.Command {
 func runListActiveVersionsReq(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	if len(args) > 0 {
-		listReleaseActiveVersionsReq.ReleaseVersionConfigPath = args[0]
-	}
-
-	res, err := listReleaseActiveVersionsReq.Run(context.TODO())
+	listReleaseActiveVersionsReq.VersionsDecodeRes = rootCfg.versionsDecodeRes
+	res, err := listReleaseActiveVersionsReq.Run(cmd.Context(), rootCfg.git)
 	if err != nil {
 		return err
 	}

@@ -7,6 +7,7 @@ ignore internal/pkg/golang/fixtures
 
 require (
 	github.com/Masterminds/semver v1.5.0
+	github.com/PuerkitoBio/goquery v1.11.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/google/go-github/v81 v81.0.0
 	github.com/hashicorp/hcl/v2 v2.24.0
@@ -17,13 +18,14 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/veqryn/slog-context v0.8.0
-	github.com/zclconf/go-cty v1.16.4
+	github.com/zclconf/go-cty v1.17.0
 	golang.org/x/mod v0.29.0
 	golang.org/x/oauth2 v0.31.0
 )
 
 require (
 	github.com/agext/levenshtein v1.2.3 // indirect
+	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

@@ -6,18 +6,17 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/google/go-github/v81/github"
-	git "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/shurcooL/githubv4"
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
 )
 
 type githubCommandState struct {
-	Git      *git.Client
 	GithubV3 *github.Client
 	GithubV4 *githubv4.Client
 }
@@ -25,7 +24,6 @@ type githubCommandState struct {
 var githubCmdState = &githubCommandState{
 	GithubV3: github.NewClient(nil),
 	GithubV4: githubv4.NewClient(nil),
-	Git:      git.NewClient(git.WithLoadTokenFromEnv()),
 }
 
 func newGithubCmd() *cobra.Command {
@@ -42,7 +40,7 @@ func newGithubCmd() *cobra.Command {
 					),
 				)
 			} else {
-				fmt.Println("\x1b[1;33;49mWARNING\x1b[0m: GITHUB_TOKEN has not been set. While not always required for read actions on public repositories you're likely to get throttled without it")
+				slog.Default().WarnContext(cmd.Context(), "GITHUB_TOKEN has not been set. While not always required for read actions on public repositories you're likely to get throttled without it")
 			}
 
 			return nil

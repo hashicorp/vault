@@ -13,7 +13,9 @@ func newReleasesListCmd() *cobra.Command {
 	}
 
 	listCmd.AddCommand(newReleasesVersionsBetweenCmd())
+	listCmd.AddCommand(newReleasesListBinaryVersionsCmd())
 	listCmd.AddCommand(newReleasesListActiveVersionsCmd())
+	listCmd.AddCommand(newReleasesListUpdatedVersionsCmd())
 
 	return listCmd
 }
