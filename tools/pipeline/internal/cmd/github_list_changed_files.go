@@ -34,6 +34,7 @@ func newGithubListChangedFilesCmd() *cobra.Command {
 func runListGithubChangedFilesCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
+	listGithubChangedFiles.DecodeRes = rootCfg.configDecodeRes
 	res, err := listGithubChangedFiles.Run(context.TODO(), githubCmdState.GithubV3)
 	if err != nil {
 		return fmt.Errorf("listing changed files: %w", err)

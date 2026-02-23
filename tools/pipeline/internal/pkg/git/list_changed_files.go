@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
@@ -23,6 +24,9 @@ import (
 
 // ListChangedFilesReq holds the state and configuration for listing changed files
 type ListChangedFilesReq struct {
+	// DecodeRes is the result of decoding the pipeline configuration.
+	DecodeRes *config.DecodeRes
+
 	// Branch specifies the branch to compare against
 	Branch string
 	// Range specifies the commit range to compare (e.g., HEAD~5..HEAD)
@@ -30,6 +34,7 @@ type ListChangedFilesReq struct {
 	// Commit specifies a specific commit SHA to analyze
 	Commit string
 	// GroupFiles requests that changed groups are added to each file
+
 	GroupFiles bool
 	// Write a specially formatted response to $GITHUB_OUTPUT
 	WriteToGithubOutput bool
@@ -37,8 +42,9 @@ type ListChangedFilesReq struct {
 
 // ListChangedFilesRes represents the response from listing changed files
 type ListChangedFilesRes struct {
-	Files  changed.Files      `json:"files,omitempty"`
-	Groups changed.FileGroups `json:"groups,omitempty"`
+	ChangedConfig *changed.Config    `json:"changed_config,omitempty"`
+	Files         changed.Files      `json:"files,omitempty"`
+	Groups        changed.FileGroups `json:"groups,omitempty"`
 }
 
 // ListChangedFilesGithubOutput is our GITHUB_OUTPUT type. It's a slimmed down
@@ -52,28 +58,30 @@ type ListChangedFilesGithubOutput struct {
 func (g *ListChangedFilesReq) Run(ctx context.Context, client *libgit.Client) (*ListChangedFilesRes, error) {
 	slog.Default().DebugContext(ctx, "listing changed files from git")
 
-	err := g.validate()
+	err := g.validate(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	execRes, err := g.getChangedFilesFromGit(ctx, client)
 	if err != nil {
 		return nil, err
 	}
 
 	res := &ListChangedFilesRes{}
-	var execRes *libgit.ExecResponse
-	execRes, err = g.getChangedFilesFromGit(ctx, client)
-	if err != nil {
-		return nil, err
-	}
-
-	res.Files, err = g.parseChangedFiles(ctx, client, execRes.Stdout)
+	res.Files, err = g.parseChangedFiles(ctx, execRes.Stdout)
 	if err != nil {
 		return nil, err
 	}
 
 	if g.GroupFiles {
-		// Add group metadata to each file
-		changed.GroupFiles(ctx, res.Files, changed.DefaultFileGroupCheckers...)
+		// Store the changed config in the response
+		res.ChangedConfig = g.DecodeRes.Config.ChangedFiles
 
-		// Add the total unique set of groups
+		// Add group metadata to each file using the changed config file grouper.
+		changed.GroupFiles(ctx, res.Files, res.ChangedConfig.FileGroups)
+
+		// Get a set of all file groups from all changed files.
 		res.Groups = changed.Groups(res.Files)
 	}
 
@@ -156,7 +164,7 @@ func (r *ListChangedFilesRes) String() string {
 }
 
 // validate checks that exactly one option is provided
-func (g *ListChangedFilesReq) validate() error {
+func (g *ListChangedFilesReq) validate(ctx context.Context) error {
 	if g == nil {
 		return errors.New("uninitialized")
 	}
@@ -181,11 +189,21 @@ func (g *ListChangedFilesReq) validate() error {
 		return errors.New("can only specify one of: --branch, --range, or --commit")
 	}
 
+	if g.GroupFiles {
+		if err := g.DecodeRes.Validate(ctx); err != nil {
+			return err
+		}
+
+		if g.DecodeRes.Config.ChangedFiles == nil {
+			return errors.New("changed file grouping was enabled but no changed file grouping config was found in pipeline.hcl")
+		}
+	}
+
 	return nil
 }
 
 // parseChangedFiles parses the raw client output into changed.Files
-func (g *ListChangedFilesReq) parseChangedFiles(ctx context.Context, client *libgit.Client, stdout []byte) (changed.Files, error) {
+func (g *ListChangedFilesReq) parseChangedFiles(ctx context.Context, stdout []byte) (changed.Files, error) {
 	slog.Default().DebugContext(ctx, "parsing changed files from git client output")
 	scanner := bufio.NewScanner(bytes.NewReader(stdout))
 	files := map[string]struct{}{}
