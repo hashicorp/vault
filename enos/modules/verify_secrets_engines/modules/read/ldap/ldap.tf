@@ -8,6 +8,9 @@ terraform {
     }
   }
 }
+locals {
+  dynamic_role_name = "dynamic-role"
+}
 
 variable "hosts" {
   type = map(object({
@@ -78,6 +81,17 @@ variable "enable_rollback_verification" {
   type        = bool
   description = "Enable LDAP secrets engine rollback verification"
   default     = true
+}
+
+variable "enable_dynamic_role_verification" {
+  type        = bool
+  description = "Enable LDAP secrets engine dynamic role"
+  default     = true
+}
+
+variable "vault_audit_log_path" {
+  type        = string
+  description = "The file path for the audit device"
 }
 
 variable "enable_static_role_verification" {
@@ -307,6 +321,43 @@ resource "enos_remote_exec" "ldap_library_checkout_lease_renew" {
     }
   }
 }
+# Configure and verify LDAP secrets engine rollback behavior
+resource "enos_remote_exec" "verify_dynamic_role" {
+  count = var.enable_dynamic_role_verification ? 1 : 0
+
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets,
+    enos_remote_exec.ldap_verify_rotation
+  ]
+  environment = {
+    MOUNT             = var.create_state.ldap.ldap_mount
+    LDAP_SERVER       = var.create_state.ldap.host.private_ip
+    LDAP_PORT         = var.create_state.ldap.port
+    LDAP_USERNAME     = var.create_state.ldap.username
+    LDAP_ADMIN_PW     = var.create_state.ldap.pw
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+    ROLE_NAME         = local.dynamic_role_name
+    DEFAULT_TTL       = tostring(var.default_ttl)
+    MAX_TTL           = tostring(var.max_ttl)
+  }
+
+  scripts = [
+    abspath("${path.module}/../../../scripts/ldap/Dynamic-roles/dynamic-roles.sh"),
+    abspath("${path.module}/../../../scripts/ldap/Dynamic-roles/dynamic-roles-validation.sh"),
+    abspath("${path.module}/../../../scripts/ldap/Dynamic-roles/dynamic-roles-listing.sh"),
+    abspath("${path.module}/../../../scripts/ldap/Dynamic-roles/dynamic-roles-audit.sh"),
+    abspath("${path.module}/../../../scripts/ldap/Dynamic-roles/dynamic-roles-rollback.sh"),
+    abspath("${path.module}/../../../scripts/ldap/Dynamic-roles/dynamic-roles-deletion.sh")
+  ]
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
 
 # Verify Static role
 resource "enos_remote_exec" "ldap_static_roles" {
@@ -333,3 +384,4 @@ resource "enos_remote_exec" "ldap_static_roles" {
     }
   }
 }
+
