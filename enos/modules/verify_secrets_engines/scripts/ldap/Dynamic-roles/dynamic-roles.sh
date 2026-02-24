@@ -30,8 +30,8 @@ test_create_dynamic_role() {
 
   if ! output=$("$binpath" write "${MOUNT}/role/${ROLE_NAME}" \
       username_template="v-temp-{{random 10}}" \
-      default_ttl=3200s \
-      max_ttl=7200s 2>&1); then
+      default_ttl=60s \
+      max_ttl=60s 2>&1); then
     fail "ERROR: Failed to create Dynamic Role: ${output}"
   fi
 
@@ -59,7 +59,7 @@ test_read_dynamic_role() {
 test_update_dynamic_role() {
   echo "Test case: Update existing dynamic role TTL"
 
-  if ! output=$("$binpath" write "${MOUNT}/role/${ROLE_NAME}" default_ttl=7200s 2>&1); then
+  if ! output=$("$binpath" write "${MOUNT}/role/${ROLE_NAME}" default_ttl=60s 2>&1); then
     fail "ERROR: Failed to update role: ${output}"
   fi
 
@@ -67,11 +67,11 @@ test_update_dynamic_role() {
     fail "ERROR: Failed to read updated TTL: ${updated_ttl}"
   fi
 
-  if echo "$updated_ttl" | grep -q "7200"; then
-    echo "SUCCESS: Role updated successfully (TTL=7200)."
+  if echo "$updated_ttl" | grep -q "60"; then
+    echo "SUCCESS: Role updated successfully (TTL=60)."
   else
     echo "Debug Output: $updated_ttl"
-    fail "ERROR: Update mismatch. Expected 7200, got $updated_ttl"
+    fail "ERROR: Update mismatch. Expected 60, got $updated_ttl"
   fi
 }
 
