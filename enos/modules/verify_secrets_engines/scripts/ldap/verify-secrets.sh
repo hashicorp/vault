@@ -69,6 +69,7 @@ EOF
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
+[[ -z "$STRONG_POLICY" ]] && fail "STRONG_POLICY env variable has not been set"
 
 binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
@@ -81,7 +82,6 @@ INVALID_ROLE_NAME="invalid-role"
 
 # Define password policy constants
 readonly DEFAULT_POLICY="default-policy"
-readonly STRONG_POLICY="strong-policy"
 readonly DEFAULT_LENGTH=20
 readonly DEFAULT_MIN_CHARS=1
 readonly STRONG_POLICY_LENGTH=24

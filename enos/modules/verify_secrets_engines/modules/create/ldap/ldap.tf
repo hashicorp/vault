@@ -278,3 +278,28 @@ resource "enos_remote_exec" "ldap_library_self_checkin" {
     }
   }
 }
+
+resource "enos_remote_exec" "ldap_password_policy" {
+  depends_on = [
+    enos_remote_exec.secrets_enable_ldap_secret
+  ]
+
+  environment = {
+    MOUNT             = local.ldap_output.ldap_mount
+    LDAP_SERVER       = local.ldap_output.host.private_ip
+    LDAP_PORT         = local.ldap_output.port
+    LDAP_USERNAME     = local.ldap_output.username
+    LDAP_ADMIN_PW     = local.ldap_output.pw
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/ldap/add-ldap-password-policy.sh")]
+
+  transport = {
+    ssh = {
+      host = var.leader_host.public_ip
+    }
+  }
+}
