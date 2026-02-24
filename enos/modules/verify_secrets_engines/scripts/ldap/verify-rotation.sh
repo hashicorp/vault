@@ -36,7 +36,6 @@ binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_FORMAT=json
-AUDIT_LOG="${VAULT_AUDIT_LOG:-/var/log/vault/vault_audit.log}"
 ROLE_NAME="dynamic-role"
 
 # Verifying LDAP Server Configs
@@ -163,10 +162,6 @@ test_password_change_verification() {
   if [[ "$FIRST_ROTATED_PASSWORD" == "$SECOND_ROTATED_PASSWORD" ]]; then
     fail "ERROR: Second rotation did not change the password! First and second rotated passwords are the same."
   fi
-
-  # Check audit logs for rotation and generation events
-  echo "Checking audit logs for rotation and credential generation events"
-  sudo grep -E "rotate-root" "$AUDIT_LOG" > /dev/null 2>&1 && echo "Audit log updated"
 
 }
 # Running all tests

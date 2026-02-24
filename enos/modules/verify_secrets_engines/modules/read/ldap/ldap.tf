@@ -41,6 +41,11 @@ variable "vault_root_token" {
   default     = null
 }
 
+variable "vault_audit_log_path" {
+  type        = string
+  description = "The file path for the audit device, if enabled"
+}
+
 variable "credential_ttl_buffer" {
   description = "Buffer (seconds) to wait after LDAP credential TTL expiry"
   type        = number
@@ -89,9 +94,14 @@ variable "enable_dynamic_role_verification" {
   default     = true
 }
 
-variable "vault_audit_log_path" {
-  type        = string
-  description = "The file path for the audit device"
+variable "enable_password_policy_verification" {
+  type        = bool
+  description = "Enable LDAP authentication verification"
+  default     = true
+}
+
+locals {
+  strong_password_policy = "strong-policy"
 }
 
 variable "enable_static_role_verification" {
@@ -125,17 +135,18 @@ resource "enos_remote_exec" "ldap_verify_secrets" {
   count = var.enable_secrets_verification ? 1 : 0
 
   environment = {
-    MOUNT                 = "${var.create_state.ldap.ldap_mount}"
-    LDAP_SERVER           = "${var.create_state.ldap.host.private_ip}"
-    LDAP_PORT             = "${var.create_state.ldap.port}"
-    LDAP_USERNAME         = "${var.create_state.ldap.username}"
-    LDAP_ADMIN_PW         = "${var.create_state.ldap.pw}"
+    MOUNT                 = var.create_state.ldap.ldap_mount
+    LDAP_SERVER           = var.create_state.ldap.host.private_ip
+    LDAP_PORT             = var.create_state.ldap.port
+    LDAP_USERNAME         = var.create_state.ldap.username
+    LDAP_ADMIN_PW         = var.create_state.ldap.pw
     VAULT_ADDR            = var.vault_addr
     VAULT_INSTALL_DIR     = var.vault_install_dir
     VAULT_TOKEN           = var.vault_root_token
     CREDENTIAL_TTL_BUFFER = tostring(var.credential_ttl_buffer)
     DEFAULT_TTL           = tostring(var.default_ttl)
     MAX_TTL               = tostring(var.max_ttl)
+    STRONG_POLICY         = local.strong_password_policy
   }
 
   scripts = [abspath("${path.module}/../../../scripts/ldap/verify-secrets.sh")]
@@ -155,11 +166,11 @@ resource "enos_remote_exec" "ldap_verify_rotation" {
     enos_remote_exec.ldap_verify_secrets
   ]
   environment = {
-    MOUNT             = "${var.create_state.ldap.ldap_mount}"
-    LDAP_SERVER       = "${var.create_state.ldap.host.private_ip}"
-    LDAP_PORT         = "${var.create_state.ldap.port}"
-    LDAP_USERNAME     = "${var.create_state.ldap.username}"
-    LDAP_ADMIN_PW     = "${var.create_state.ldap.pw}"
+    MOUNT             = var.create_state.ldap.ldap_mount
+    LDAP_SERVER       = var.create_state.ldap.host.private_ip
+    LDAP_PORT         = var.create_state.ldap.port
+    LDAP_USERNAME     = var.create_state.ldap.username
+    LDAP_ADMIN_PW     = var.create_state.ldap.pw
     VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token
@@ -385,3 +396,48 @@ resource "enos_remote_exec" "ldap_static_roles" {
   }
 }
 
+resource "enos_remote_exec" "ldap_verify_password_policy" {
+  count = var.enable_password_policy_verification ? 1 : 0
+
+  depends_on = [
+    enos_remote_exec.ldap_verify_rollback,
+    enos_remote_exec.ldap_static_roles
+  ]
+  environment = {
+    MOUNT             = var.create_state.ldap.ldap_mount
+    LDAP_SERVER       = var.create_state.ldap.host.private_ip
+    LDAP_PORT         = var.create_state.ldap.port
+    LDAP_USERNAME     = var.create_state.ldap.username
+    LDAP_ADMIN_PW     = var.create_state.ldap.pw
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+    STRONG_POLICY     = local.strong_password_policy
+  }
+  scripts = [abspath("${path.module}/../../../scripts/ldap/verify-password-policy.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
+resource "enos_remote_exec" "verify_audit_log" {
+  count = var.enable_password_policy_verification && var.vault_audit_log_path != null ? 1 : 0
+
+  depends_on = [
+    enos_remote_exec.ldap_verify_rotation,
+    enos_remote_exec.ldap_verify_password_policy
+  ]
+  environment = {
+    VAULT_AUDIT_LOG = var.vault_audit_log_path
+  }
+  scripts = [abspath("${path.module}/../../../scripts/ldap/audit-verify.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
