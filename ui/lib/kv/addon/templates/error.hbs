@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title={{@path}} @icon={{this.backend.icon}}>
+<Page::Header @title={{this.mountName}} @icon={{this.backend.icon}}>
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
@@ -20,4 +20,4 @@
   </:tabs>
 </KvTabsToolbar>
 
-<Page::Error @error={{this.model}} />
+<Page::Error @error={{this.model}} @titleTag="h2" />

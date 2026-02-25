@@ -53,9 +53,11 @@ Vagrantfile
 *.hcl
 !.copywrite.hcl
 !.release/ci.hcl
+!.release/pipeline.hcl
 !.release/security-scan.hcl
 !.release/linux/package/etc/vault.d/vault.hcl
 !enos/**/*.hcl
+!**/fixtures/*.hcl
 !**/test-fixtures/**/*.hcl
 !**/testdata/*.hcl
 

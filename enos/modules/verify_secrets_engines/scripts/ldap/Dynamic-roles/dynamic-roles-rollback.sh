@@ -25,6 +25,17 @@ export VAULT_FORMAT=json
 
 ROLE_NAME="${ROLE_NAME:-dynamic-role}"
 
+# Create deletion LDIF file for testing
+cat > deletion.ldif << EOF
+dn: cn={{.Username}},ou=users,dc=${LDAP_USERNAME},dc=com
+changetype: delete
+EOF
+
+cat > rollback.ldif << EOF
+dn: cn={{.Username}},ou=users,dc=${LDAP_USERNAME},dc=com
+changetype: delete
+EOF
+
 # Advanced LDAP dynamic role tests: Rollback, Deletion, Negative scenarios
 # Test Case: Rollback on Creation Failure
 test_rollback_on_creation_failure() {
@@ -53,11 +64,11 @@ changetype: delete
 EOF
 
   "$binpath" write ldap/role/$FAIL_ROLE_NAME \
-      creation_ldif=@create_for_rollback.ldif \
-      deletion_ldif=@deletion.ldif \
-      rollback_ldif=@rollback.ldif \
-      username_template="$FIXED_USER" \
-      default_ttl=3600s > /dev/null
+    creation_ldif=@create_for_rollback.ldif \
+    deletion_ldif=@deletion.ldif \
+    rollback_ldif=@rollback.ldif \
+    username_template="$FIXED_USER" \
+    default_ttl=3600s > /dev/null
 
   echo "Triggering credential generation for $FAIL_ROLE_NAME (Expected to FAIL)..."
 
@@ -70,10 +81,10 @@ EOF
   echo "Verifying Rollback: Checking if '$FIXED_USER' was properly cleaned up..."
 
   SEARCH_RES=$(ldapsearch -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" \
-      -b "ou=users,dc=${LDAP_USERNAME},dc=com" \
-      -D "cn=admin,dc=${LDAP_USERNAME},dc=com" \
-      -w "${LDAP_ADMIN_PW}" \
-      "(uid=$FIXED_USER)" 2>&1)
+    -b "ou=users,dc=${LDAP_USERNAME},dc=com" \
+    -D "cn=admin,dc=${LDAP_USERNAME},dc=com" \
+    -w "${LDAP_ADMIN_PW}" \
+    "(uid=$FIXED_USER)" 2>&1)
 
   if grep -q "^dn:" <<< "$SEARCH_RES"; then
     fail "ERROR: user $FIXED_USER found in ldap."

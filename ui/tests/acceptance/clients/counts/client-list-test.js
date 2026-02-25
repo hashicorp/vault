@@ -152,7 +152,7 @@ module('Acceptance | clients | counts | client list', function (hooks) {
     const error = { errors: ['uh oh'] };
     this.exportDataStub.rejects(getErrorResponse(error, 500));
     await visit('/vault/clients/counts/client-list');
-    assert.dom(GENERAL.pageError.title(500)).hasText('500 Error');
+    assert.dom(GENERAL.pageError.title(500)).hasText('ERROR 500 Error');
     assert.dom(GENERAL.pageError.details).hasText('uh oh');
   });
 });

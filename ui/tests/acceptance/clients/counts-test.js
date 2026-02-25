@@ -67,7 +67,7 @@ module('Acceptance | clients | counts', function (hooks) {
       'route transitions to clients error substate'
     );
     assert.dom('[data-test-sidebar-nav-panel="Client count"]').exists('sidebar nav panel still renders');
-    assert.dom(GENERAL.pageError.title('403')).hasText('403 Not Authorized');
+    assert.dom(GENERAL.pageError.title('403')).hasText('ERROR 403 Not authorized');
     assert
       .dom(GENERAL.pageError.message)
       .hasText('You are not authorized to access content at /v1/sys/internal/counters/activity.');

@@ -21,6 +21,7 @@ const (
 	RoleHWMCountsHWM                        = "maxRoleCounts/"
 	TotpHWMCountsHWM                        = "maxTotpCounts/"
 	KvHWMCountsHWM                          = "maxKvCounts/"
+	KmseHWMCountsHWM                        = "maxKmseCounts/"
 	TransitDataProtectionCallCountsPrefix   = "transitDataProtectionCallCounts/"
 	TransformDataProtectionCallCountsPrefix = "transformDataProtectionCallCounts/"
 	LocalPrefix                             = "local/"

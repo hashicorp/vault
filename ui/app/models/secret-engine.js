@@ -10,15 +10,11 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
-import { ALL_ENGINES, isAddonEngine } from 'vault/utils/all-engines-metadata';
+import { ALL_ENGINES, INTERNAL_ENGINE_TYPES, isAddonEngine } from 'vault/utils/all-engines-metadata';
 import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const LINKED_BACKENDS = supportedSecretBackends();
-
-// identity will be managed separately and the inclusion
-// of the system backend is an implementation detail
-const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
 const validations = {
   path: [
@@ -136,7 +132,7 @@ export default class SecretEngineModel extends Model {
   }
 
   get shouldIncludeInList() {
-    return !LIST_EXCLUDED_BACKENDS.includes(this.engineType);
+    return !INTERNAL_ENGINE_TYPES.includes(this.engineType);
   }
 
   get isSupportedBackend() {

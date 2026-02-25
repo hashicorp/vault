@@ -90,7 +90,7 @@ module('Acceptance | reset password', function (hooks) {
     assert
       .dom(GENERAL.button('user-menu-trigger'))
       .hasAttribute('aria-expanded', 'false', 'dropdown closes after navigating');
-    assert.dom(GENERAL.pageError.title(403)).hasText('403 Not Authorized');
+    assert.dom(GENERAL.pageError.title(403)).hasText('ERROR 403 Not authorized');
     assert
       .dom(GENERAL.pageError.message)
       .hasText(
@@ -125,7 +125,7 @@ module('Acceptance | reset password', function (hooks) {
       'vault.cluster.access.reset-password_error',
       'redirects to reset password route'
     );
-    assert.dom(GENERAL.pageError.title(403)).hasText('403 Not Authorized');
+    assert.dom(GENERAL.pageError.title(403)).hasText('ERROR 403 Not authorized');
     assert.dom(GENERAL.pageError.message).hasText('Password reset is not available for the current user.');
     assert
       .dom(`${GENERAL.pageError.error} a`)

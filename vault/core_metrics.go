@@ -844,6 +844,7 @@ type RoleCounts struct {
 
 type ManagedKeyCounts struct {
 	TotpKeys int `json:"totp_keys"`
+	KmseKeys int `json:"kmse_keys"`
 }
 
 // getRoleAndManagedKeyCountsInternal gets the role counts for plugins and managed key counts
@@ -980,6 +981,10 @@ func (c *Core) getRoleAndManagedKeyCountsInternal(includeLocal bool, includeRepl
 		case pluginconsts.SecretEngineTOTP:
 			keyCountPerEntry := apiList(entry, "keys")
 			keyCounts.TotpKeys += len(keyCountPerEntry)
+
+		case pluginconsts.SecretEngineKeymgmt:
+			keyCountPerEntry := apiList(entry, "key")
+			keyCounts.KmseKeys += len(keyCountPerEntry)
 		}
 	}
 

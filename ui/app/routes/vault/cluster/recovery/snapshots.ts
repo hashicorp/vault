@@ -66,10 +66,7 @@ export default class RecoverySnapshotsRoute extends Route {
         };
       }
 
-      throw {
-        httpStatus: error.status,
-        ...error,
-      };
+      throw error;
     }
   }
 }

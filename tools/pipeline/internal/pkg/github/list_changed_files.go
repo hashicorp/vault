@@ -12,34 +12,38 @@ import (
 
 	gh "github.com/google/go-github/v81/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-type (
-	// ListChangedFilesReq is a request to list workflows runs. The fields represent
-	// various criteria we can use to filter.
-	ListChangedFilesReq struct {
-		Owner               string
-		Repo                string
-		PullNumber          int
-		CommitSHA           string
-		GroupFiles          bool
-		WriteToGithubOutput bool
-	}
+// ListChangedFilesReq is a request to list workflows runs. The fields represent
+// various criteria we can use to filter.
+type ListChangedFilesReq struct {
+	// DecodeRes is the result of decoding the pipeline configuration.
+	DecodeRes *config.DecodeRes
+	// Our target information
+	Owner      string
+	Repo       string
+	PullNumber int
+	CommitSHA  string
+	// Options
+	GroupFiles          bool
+	WriteToGithubOutput bool
+}
 
-	// ListChangedFilesRes is a list workflows response.
-	ListChangedFilesRes struct {
-		Files  changed.Files      `json:"files,omitempty"`
-		Groups changed.FileGroups `json:"groups,omitempty"`
-	}
+// ListChangedFilesRes is a list workflows response.
+type ListChangedFilesRes struct {
+	ChangedConfig *changed.Config    `json:"changed_config,omitempty"`
+	Files         changed.Files      `json:"files,omitempty"`
+	Groups        changed.FileGroups `json:"groups,omitempty"`
+}
 
-	// ListChangedFilesGithubOutput is out GITHUB_OUTPUT type. It's a slimmed down
-	// type that only include file names and groups.
-	ListChangedFilesGithubOutput struct {
-		Files  []string           `json:"files,omitempty"`
-		Groups changed.FileGroups `json:"groups,omitempty"`
-	}
-)
+// ListChangedFilesGithubOutput is out GITHUB_OUTPUT type. It's a slimmed down
+// type that only include file names and groups.
+type ListChangedFilesGithubOutput struct {
+	Files  []string           `json:"files,omitempty"`
+	Groups changed.FileGroups `json:"groups,omitempty"`
+}
 
 // Run runs the request to gather all instances of the workflow that match
 // our filter criteria.
@@ -47,7 +51,7 @@ func (r *ListChangedFilesReq) Run(ctx context.Context, client *gh.Client) (*List
 	var err error
 	res := &ListChangedFilesRes{}
 
-	if err = r.validate(); err != nil {
+	if err = r.validate(ctx); err != nil {
 		return nil, fmt.Errorf("validating request: %w", err)
 	}
 
@@ -68,10 +72,13 @@ func (r *ListChangedFilesReq) Run(ctx context.Context, client *gh.Client) (*List
 	}
 
 	if r.GroupFiles {
-		// Add group metadata to each file
-		changed.GroupFiles(ctx, res.Files, changed.DefaultFileGroupCheckers...)
+		// Store the changed config in the response
+		res.ChangedConfig = r.DecodeRes.Config.ChangedFiles
 
-		// Add the total unique set of groups
+		// Add group metadata to each file using the changed config file grouper.
+		changed.GroupFiles(ctx, res.Files, res.ChangedConfig.FileGroups)
+
+		// Get a set of all file groups from all changed files.
 		res.Groups = changed.Groups(res.Files)
 	}
 
@@ -81,7 +88,7 @@ func (r *ListChangedFilesReq) Run(ctx context.Context, client *gh.Client) (*List
 // validate ensures that we've been given the minimum filter arguments necessary to complete a
 // request. It is always recommended that additional fitlers be given to reduce the response size
 // and not exhaust API limits.
-func (r *ListChangedFilesReq) validate() error {
+func (r *ListChangedFilesReq) validate(ctx context.Context) error {
 	if r == nil {
 		return errors.New("failed to initialize request")
 	}
@@ -96,6 +103,16 @@ func (r *ListChangedFilesReq) validate() error {
 
 	if r.PullNumber == 0 && r.CommitSHA == "" {
 		return errors.New("no pull request number or commit SHA has been provided")
+	}
+
+	if r.GroupFiles {
+		if err := r.DecodeRes.Validate(ctx); err != nil {
+			return err
+		}
+
+		if r.DecodeRes.Config.ChangedFiles == nil {
+			return errors.New("changed file grouping was enabled but no changed file grouping config was found in pipeline.hcl")
+		}
 	}
 
 	return nil

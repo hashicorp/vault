@@ -90,7 +90,7 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 // buildMonthBillingData constructs billing data for a specific month
 func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Time, refreshData bool) (map[string]interface{}, error) {
 	// Retrieve all billing metrics
-	combinedRoleCounts, combinedMaxTotpCounts, err := b.Core.getRoleAndManagedKeyCounts(ctx, month, refreshData)
+	combinedRoleCounts, combinedManagedKeyCounts, err := b.Core.getRoleAndManagedKeyCounts(ctx, month, refreshData)
 	if err != nil {
 		return nil, err
 	}
@@ -171,13 +171,16 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 	usageMetrics = append(usageMetrics, pkiMetric)
 
 	managedKeysDetails := []map[string]interface{}{}
-	if combinedMaxTotpCounts > 0 {
-		managedKeysDetails = append(managedKeysDetails, map[string]interface{}{"type": "totp", "count": combinedMaxTotpCounts})
+	if combinedManagedKeyCounts.TotpKeys > 0 {
+		managedKeysDetails = append(managedKeysDetails, map[string]interface{}{"type": "totp", "count": combinedManagedKeyCounts.TotpKeys})
+	}
+	if combinedManagedKeyCounts.KmseKeys > 0 {
+		managedKeysDetails = append(managedKeysDetails, map[string]interface{}{"type": "kmse", "count": combinedManagedKeyCounts.KmseKeys})
 	}
 	usageMetrics = append(usageMetrics, map[string]interface{}{
 		"metric_name": "managed_keys",
 		"metric_data": map[string]interface{}{
-			"total":          combinedMaxTotpCounts,
+			"total":          combinedManagedKeyCounts.TotpKeys + combinedManagedKeyCounts.KmseKeys,
 			"metric_details": managedKeysDetails,
 		},
 	})
@@ -347,27 +350,33 @@ func (b *SystemBackend) buildPkiBillingMetric(ctx context.Context, month time.Ti
 }
 
 // getRoleCounts retrieves and combines role and managed key counts from replicated and local storage
-func (c *Core) getRoleAndManagedKeyCounts(ctx context.Context, month time.Time, updateCounts bool) (*RoleCounts, int, error) {
+func (c *Core) getRoleAndManagedKeyCounts(ctx context.Context, month time.Time, updateCounts bool) (*RoleCounts, *ManagedKeyCounts, error) {
 	var replicatedRoleCounts *RoleCounts
 	var replicatedManagedKeyCounts *ManagedKeyCounts
 	replicatedTotpHWMValue := 0
+	replicatedKmseHWMValue := 0
 	var err error
 
 	if c.isPrimary() {
 		if updateCounts {
 			replicatedRoleCounts, replicatedManagedKeyCounts, err = c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, month)
 			if err != nil {
-				return nil, 0, fmt.Errorf("error updating replicated max role and managed key counts: %w", err)
+				return nil, nil, fmt.Errorf("error updating replicated max role and managed key counts: %w", err)
 			}
 			replicatedTotpHWMValue = replicatedManagedKeyCounts.TotpKeys
+			replicatedKmseHWMValue = replicatedManagedKeyCounts.KmseKeys
 		} else {
 			replicatedRoleCounts, err = c.GetStoredHWMRoleCounts(ctx, billing.ReplicatedPrefix, month)
 			if err != nil {
-				return nil, 0, fmt.Errorf("error retrieving replicated max role counts: %w", err)
+				return nil, nil, fmt.Errorf("error retrieving replicated max role counts: %w", err)
 			}
 			replicatedTotpHWMValue, err = c.GetStoredHWMTotpCounts(ctx, billing.ReplicatedPrefix, month)
 			if err != nil {
-				return nil, 0, fmt.Errorf("error retrieving replicated max managed key count: %w", err)
+				return nil, nil, fmt.Errorf("error retrieving replicated max managed key count: %w", err)
+			}
+			replicatedKmseHWMValue, err = c.GetStoredHWMKmseCounts(ctx, billing.ReplicatedPrefix, month)
+			if err != nil {
+				return nil, nil, fmt.Errorf("error retrieving replicated max kmse key count: %w", err)
 			}
 		}
 	}
@@ -375,24 +384,35 @@ func (c *Core) getRoleAndManagedKeyCounts(ctx context.Context, month time.Time, 
 	var localRoleCounts *RoleCounts
 	var localManagedKeyCounts *ManagedKeyCounts
 	localTotpHWMValue := 0
+	localKmseHWMValue := 0
 	if updateCounts {
 		localRoleCounts, localManagedKeyCounts, err = c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.LocalPrefix, month)
 		if err != nil {
-			return nil, 0, fmt.Errorf("error updating local max role and managed key counts: %w", err)
+			return nil, nil, fmt.Errorf("error updating local max role and managed key counts: %w", err)
 		}
 		localTotpHWMValue = localManagedKeyCounts.TotpKeys
+		localKmseHWMValue = localManagedKeyCounts.KmseKeys
 	} else {
 		localRoleCounts, err = c.GetStoredHWMRoleCounts(ctx, billing.LocalPrefix, month)
 		if err != nil {
-			return nil, 0, fmt.Errorf("error retrieving local max role counts: %w", err)
+			return nil, nil, fmt.Errorf("error retrieving local max role counts: %w", err)
 		}
 		localTotpHWMValue, err = c.GetStoredHWMTotpCounts(ctx, billing.LocalPrefix, month)
 		if err != nil {
-			return nil, 0, fmt.Errorf("error retrieving local max totp key count: %w", err)
+			return nil, nil, fmt.Errorf("error retrieving local max totp key count: %w", err)
+		}
+		localKmseHWMValue, err = c.GetStoredHWMKmseCounts(ctx, billing.LocalPrefix, month)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error retrieving local max kmse key count: %w", err)
 		}
 	}
 
-	return combineRoleCounts(replicatedRoleCounts, localRoleCounts), localTotpHWMValue + replicatedTotpHWMValue, nil
+	combinedManagedKeyCounts := &ManagedKeyCounts{
+		TotpKeys: localTotpHWMValue + replicatedTotpHWMValue,
+		KmseKeys: localKmseHWMValue + replicatedKmseHWMValue,
+	}
+
+	return combineRoleCounts(replicatedRoleCounts, localRoleCounts), combinedManagedKeyCounts, nil
 }
 
 // getKvCounts retrieves and combines KV secret counts from replicated and local storage

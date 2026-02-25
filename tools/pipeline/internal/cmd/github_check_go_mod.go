@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -70,7 +69,7 @@ func newGithubCheckGoModDiffCmd() *cobra.Command {
 func runCheckGithubGoModCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := checkGithubGoModReq.Run(context.TODO(), githubCmdState.GithubV3, githubCmdState.Git)
+	res, err := checkGithubGoModReq.Run(cmd.Context(), githubCmdState.GithubV3, rootCfg.git)
 	if err != nil {
 		return err
 	}

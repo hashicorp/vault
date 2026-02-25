@@ -16,8 +16,8 @@
  * - Facilitate dynamic engine rendering and behavior based on metadata.
  *
  * Example usage:
- * // If an enterprise license is present, return all secret engines;
- * // otherwise, return only the secret engines supported in OSS.
+ * If an enterprise license is present, return all secret engines;
+ * otherwise, return only the secret engines supported in OSS.
  * return filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: this.version.isEnterprise });
  */
 
@@ -63,6 +63,11 @@ export function isAddonEngine(type: string, version: number) {
   const engineRoute = ALL_ENGINES.find((engine) => engine.type === type)?.engineRoute;
   return !!engineRoute;
 }
+
+//  The "sys/mounts" and "sys/internal/ui/mounts" endpoints return a "secret/" key containing
+//  all mounts enabled in Vault. Some types are internal Vault APIs, not user-mountable secrets engines,
+//  and should be filtered in some scenarios, such as listing secrets engines.
+export const INTERNAL_ENGINE_TYPES = ['system', 'identity', 'agent_registry'];
 
 export const ALL_ENGINES: EngineDisplayData[] = [
   {

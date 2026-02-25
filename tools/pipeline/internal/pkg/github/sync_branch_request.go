@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	libgithub "github.com/google/go-github/v81/github"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	gitpkg "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	gitclient "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -36,7 +37,9 @@ type SyncBranchReq struct {
 	ToBranch   string
 	RepoDir    string
 	// Optional changed files checking
-	CheckGroups []string
+	DisallowedGroups []string
+	// Mandatory pipeline configuration
+	DecodeRes *config.DecodeRes
 }
 
 // SyncBranchRes is a copy pull request response.
@@ -54,7 +57,7 @@ func (r *SyncBranchReq) Run(
 	var err error
 	res := &SyncBranchRes{Request: r}
 
-	checkGroupsStr := strings.Join(r.CheckGroups, ", ")
+	disallowedGroupsStr := strings.Join(r.DisallowedGroups, ", ")
 	slog.Default().DebugContext(slogctx.Append(ctx,
 		slog.String("from-owner", r.FromOwner),
 		slog.String("from-repo", r.FromRepo),
@@ -65,12 +68,13 @@ func (r *SyncBranchReq) Run(
 		slog.String("to-origin", r.ToOrigin),
 		slog.String("to-branch", r.ToBranch),
 		slog.String("repo-dir", r.RepoDir),
-		slog.String("disallowed-groups", checkGroupsStr),
+		slog.String("disallowed-groups", disallowedGroupsStr),
 	), "synchronizing branches")
 
 	// Make sure we have required and valid fields
 	err = r.Validate(ctx)
 	if err != nil {
+		res.Error = err
 		return res, err
 	}
 
@@ -129,17 +133,18 @@ func (r *SyncBranchReq) Run(
 	// reference.
 	fromBranch := "remotes/" + r.FromOrigin + "/" + r.FromBranch
 
-	// Verify that our local branch does not contain and files that are in
+	// Verify that our local branch does not contain any files that are in
 	// disallowed changed files groups.
-	if len(r.CheckGroups) > 0 {
+	if len(r.DisallowedGroups) > 0 {
 		slog.Default().DebugContext(ctx, "checking branch history for changed files in disallowed groups")
 
 		checkChangedFiles := gitpkg.CheckChangedFilesReq{
-			// Using the branch option here will inspect the entirely history of
-			// added files to the branch to ensure that we don't accidentally have
-			// some disallowed files in the branch history.
+			// Using the branch option here will inspect the entire history of added
+			// files to the branch to ensure that we don't accidentally have some
+			// disallowed files in the branch history.
 			Branch:              fromBranch,
-			CheckGroups:         r.CheckGroups,
+			DisallowedGroups:    r.DisallowedGroups,
+			DecodeRes:           r.DecodeRes,
 			WriteToGithubOutput: false,
 		}
 
@@ -151,7 +156,7 @@ func (r *SyncBranchReq) Run(
 		if l := len(checkChangedFilesRes.MatchedFiles); l > 0 {
 			return res, fmt.Errorf(
 				"found %d files that matched disallowed-groups %s: %s",
-				l, checkGroupsStr, strings.Join(checkChangedFilesRes.MatchedFiles.Names(), ", "),
+				l, disallowedGroupsStr, strings.Join(checkChangedFilesRes.MatchedFiles.Names(), ", "),
 			)
 		}
 	}
@@ -221,6 +226,18 @@ func (r *SyncBranchReq) Validate(ctx context.Context) error {
 
 	if r.ToBranch == "" {
 		return errors.New("no github to branch has been provided")
+	}
+
+	if len(r.DisallowedGroups) > 0 {
+		// Check for decode and validation errors
+		if err := r.DecodeRes.Validate(ctx); err != nil {
+			return err
+		}
+
+		// Make sure tha we actually have configuration
+		if r.DecodeRes.Config == nil {
+			return errors.New("disallowed groups have been provided but no changed files config has been provided")
+		}
 	}
 
 	return nil

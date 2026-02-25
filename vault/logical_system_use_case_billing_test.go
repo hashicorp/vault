@@ -363,7 +363,7 @@ func TestSystemBackend_BillingOverview_MetricFormats(t *testing.T) {
 		case "managed_keys":
 			require.Contains(t, metricData, "total")
 			total, ok := metricData["total"].(int)
-			require.True(t, ok, "pki_units total should be float64")
+			require.True(t, ok, "managed_keys total should be int")
 			require.GreaterOrEqual(t, total, 0)
 			require.Contains(t, metricData, "metric_details")
 		}

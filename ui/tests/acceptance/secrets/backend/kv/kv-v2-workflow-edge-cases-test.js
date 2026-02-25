@@ -186,7 +186,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     });
 
     test('it handles errors when attempting to view details of a secret that is a directory', async function (assert) {
-      assert.expect(7);
+      assert.expect(8);
       const backend = this.backend;
       const [root, subdirectory] = this.fullSecretPath.split('/');
       setupOnerror((error) => assert.strictEqual(error.response.status, 404), '404 error is thrown'); // catches error so qunit test doesn't fail
@@ -194,13 +194,15 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/${subdirectory}`); // intentionally leave out trailing slash
       await click(GENERAL.submitButton);
-      assert.dom(GENERAL.pageError.title(404)).hasText('404 Not Found');
+      assert.dom(GENERAL.pageError.title(404)).hasText('ERROR 404 Not found');
       assert
         .dom(GENERAL.pageError.message)
         .hasText(
           `Sorry, we were unable to find any content at /v1/${backend}/metadata/${root}/${subdirectory}.`
         );
-
+      assert
+        .dom(GENERAL.pageError.error)
+        .doesNotContainText('Double check the URL or return to the dashboard. Go to dashboard');
       assert.dom(GENERAL.breadcrumbAtIdx(1)).hasText('Secrets engines');
       assert.dom(GENERAL.breadcrumbAtIdx(2)).hasText(backend);
       assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('is-active');

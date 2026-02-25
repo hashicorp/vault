@@ -93,12 +93,13 @@ module('Acceptance | aws | configuration', function (hooks) {
       );
       // directly navigate to old URL
       await visit(`/vault/settings/secrets/configure/${path}`);
-      assert.dom(GENERAL.pageError.title(404)).hasText('404 Not Found');
+      assert.dom(GENERAL.pageError.title(404)).hasText('ERROR 404 Not found');
       assert
         .dom(GENERAL.pageError.message)
-        .hasText(
-          `Sorry, we were unable to find any content at settings/secrets/configure/${path}. Double check the url or go back home.`
-        );
+        .hasText(`Sorry, we were unable to find any content at settings/secrets/configure/${path}.`);
+      assert
+        .dom(GENERAL.pageError.error)
+        .hasTextContaining('Double check the URL or return to the dashboard. Go to dashboard');
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });
@@ -402,7 +403,6 @@ module('Acceptance | aws | configuration', function (hooks) {
       });
 
       test('it should show API error when AWS configuration read fails', async function (assert) {
-        assert.expect(1);
         const path = `aws-${this.uid}`;
         const type = 'aws';
         await enablePage.enable(type, path);
@@ -411,7 +411,16 @@ module('Acceptance | aws | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['bad request'] });
         });
         await visit(`/vault/secrets-engines/${path}/configuration/edit`);
-        assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Error', 'shows the secrets backend error route');
+        assert.strictEqual(
+          currentRouteName(),
+          'vault.cluster.secrets.backend.error',
+          'it redirects to the secrets backend error route'
+        );
+        assert.dom(GENERAL.pageError.title(400)).hasText('ERROR 400 Error');
+        assert
+          .dom(GENERAL.pageError.message)
+          .hasText('A problem has occurred. Check the Vault logs or console for more details.');
+        assert.dom(GENERAL.pageError.details).hasText('bad request');
       });
     });
   });

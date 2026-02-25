@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
@@ -15,9 +14,9 @@ var listGitChangedFiles = &git.ListChangedFilesReq{}
 
 func newGitListChangedFilesCmd() *cobra.Command {
 	changedFilesCmd := &cobra.Command{
-		Use:   "changed-files [--branch <branch> | --range <range> | --commit <sha>]",
+		Use:   "changed-files (--branch <branch> | --range <range> | --commit <sha>) [--pipeline-config .release/pipeline.hcl]",
 		Short: "List changed files using git",
-		Long:  "List changed files using git by specifying a branch, range, or commit",
+		Long:  "List changed files using git by specifying a branch, range, or commit. You must specify a path to a pipeline.hcl of enable auto recusive search for one.",
 		RunE:  runGitListChangedFilesCmd,
 		Args:  cobra.NoArgs,
 	}
@@ -34,7 +33,8 @@ func newGitListChangedFilesCmd() *cobra.Command {
 func runGitListChangedFilesCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := listGitChangedFiles.Run(context.TODO(), githubCmdState.Git)
+	listGitChangedFiles.DecodeRes = rootCfg.configDecodeRes
+	res, err := listGitChangedFiles.Run(cmd.Context(), rootCfg.git)
 	if err != nil {
 		return fmt.Errorf("listing changed files: %w", err)
 	}

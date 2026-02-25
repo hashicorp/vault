@@ -65,5 +65,4 @@ test('tools workflow', async ({ page }) => {
   await expect(page.locator('#operations-0-tokenLookUpAccessor')).toContainText(
     '/auth/token/lookup-accessor'
   );
-  await expect(page.locator('#operations-0-tokenLookUpAccessor')).toContainText('tokenLookUpAccessor');
 });

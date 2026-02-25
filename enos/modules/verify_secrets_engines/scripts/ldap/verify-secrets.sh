@@ -83,7 +83,7 @@ INVALID_ROLE_NAME="invalid-role"
 # Define password policy constants
 readonly DEFAULT_POLICY="default-policy"
 readonly DEFAULT_LENGTH=20
-readonly DEFAULT_MIN_CHARS=1
+readonly DEFAULT_MIN_CHARS=2
 readonly STRONG_POLICY_LENGTH=24
 readonly SPECIAL_CHARS="!@#\$%^&*"
 

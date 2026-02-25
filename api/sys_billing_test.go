@@ -117,12 +117,16 @@ const billingOverviewResponse = `{
           {
             "metric_name": "managed_keys",
             "metric_data": {
-              "total": 5,
+              "total": 10,
               "metric_details": [
                 {
                   "type": "totp",
                   "count": 5
-                }
+                },
+				{
+				  "type": "kmse",
+				  "count": 5
+				}
               ]
             }
           }

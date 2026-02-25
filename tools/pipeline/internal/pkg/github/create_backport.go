@@ -17,6 +17,7 @@ import (
 
 	libgithub "github.com/google/go-github/v81/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -56,15 +57,15 @@ type CreateBackportReq struct {
 	// If the directory is configured it either must exist. When unset, a
 	// temporary directory will be created and used automatically.
 	RepoDir string
-
-	// ReleaseVersionConfigPath is the path to .release/versions.hcl. We use this
-	// file to determine which branches are active so that we can automatically
-	// determine which origins to backport depending on the given tags.
-	ReleaseVersionConfigPath string
-	// ReleaseRecurseDepth defined how many directories back we're allowed to
-	// scan to search for .release/versions.hcl. This is incompatible with
-	// ReleaseVersionConfigPath.
-	ReleaseRecurseDepth uint
+	// VersionsDecodeRes is the result of decoding the versions configuration.
+	// We use this to determine which branches are active so that we can
+	// automatically determine which origins to backport depending on the given
+	// tags.
+	VersionsDecodeRes *releases.DecodeRes
+	// DecodeRes is the result of decoding the pipeline configuration. We use this
+	// for changed file  groupings so we know which files to exclude when doing
+	// and enterprise -> ce backport.
+	ConfigDecodeRes *config.DecodeRes
 
 	// CEExclude are changed files groups for files that ought to be excluded
 	// when creating CE backports. E.g. ["enterprise"]
@@ -121,16 +122,13 @@ type CreateBackportAttempt struct {
 // CreateBackportPRReq.
 func NewCreateBackportReq(opts ...NewCreateBackportReqOpt) *CreateBackportReq {
 	req := &CreateBackportReq{
-		Owner:               "hashicorp",
-		Repo:                "vault-enterprise",
-		ReleaseRecurseDepth: 3,
-		CEExclude:           changed.FileGroups{changed.FileGroupEnterprise},
-		CEBranchPrefix:      "ce",
-		CEAllowInactiveGroups: changed.FileGroups{
-			changed.FileGroupChangelog,
-		},
-		BaseOrigin:          "origin",
-		BackportLabelPrefix: "backport",
+		Owner:                 "hashicorp",
+		Repo:                  "vault-enterprise",
+		CEAllowInactiveGroups: changed.FileGroups{},
+		CEExclude:             changed.FileGroups{changed.FileGroup("enterprise")},
+		CEBranchPrefix:        "ce",
+		BaseOrigin:            "origin",
+		BackportLabelPrefix:   "backport",
 	}
 
 	for _, opt := range opts {
@@ -175,10 +173,10 @@ func WithCreateBrackportReqBaseOrigin(origin string) NewCreateBackportReqOpt {
 	}
 }
 
-// WithCreateBrackportReqReleaseRecurseDepth sets the ReleaseRecurseDepth
-func WithCreateBrackportReqReleaseRecurseDepth(depth uint) NewCreateBackportReqOpt {
+// WithCreateBrackportReqVersionsDecodeRes sets the VersionsDecodeRes
+func WithCreateBrackportReqVersionsDecodeRes(res *releases.DecodeRes) NewCreateBackportReqOpt {
 	return func(req *CreateBackportReq) {
-		req.ReleaseRecurseDepth = depth
+		req.VersionsDecodeRes = res
 	}
 }
 
@@ -193,6 +191,13 @@ func WithCreateBrackportReqCEExclude(exclude changed.FileGroups) NewCreateBackpo
 func WithCreateBrackportReqCEBranchPrefix(prefix string) NewCreateBackportReqOpt {
 	return func(req *CreateBackportReq) {
 		req.CEBranchPrefix = prefix
+	}
+}
+
+// WithCreateBrackportReqConfigDecodeRes sets the DecodeRes
+func WithCreateBrackportReqConfigDecodeRes(res *config.DecodeRes) NewCreateBackportReqOpt {
+	return func(req *CreateBackportReq) {
+		req.ConfigDecodeRes = res
 	}
 }
 
@@ -220,7 +225,7 @@ func WithCreateBrackportReqBackportLabelPrefix(prefix string) NewCreateBackportR
 // Run runs the backport request to create backports for every target branch
 // as needed.
 //
-// If the base references is to an enteprise branch, that is, the base reference
+// If the base references is to an enterprise branch, that is, the base reference
 // branch does not contain the CEBranchPrefix, then a backport to the
 // corresponding CE branch is assumed and will be created.
 //
@@ -229,13 +234,13 @@ func WithCreateBrackportReqBackportLabelPrefix(prefix string) NewCreateBackportR
 //
 // Backport labels should be listed in the same schema as .release/versions.hcl:
 // E.g. "release/1.19.x". The correct backport branches will be used depending
-// on whether or not base branch of the PR is enteprise or CE.
+// on whether or not base branch of the PR is enterprise or CE.
 //
 // Enterprise branches will only ever backport to the corresponding ce branch
 // and to other enterprise branches. When those enterprise branches are merged
 // we'll create the CE backports.
 //
-// There are many factors to conside when backporting to a CE branch. The
+// There are many factors to consider when backporting to a CE branch. The
 // request will automatically inspect the changed files of a PR to determine
 // if the PR contains non-enterprise files that need to be backported. In the
 // event we've only changed enterprise files we'll skip the CE backport.
@@ -245,7 +250,7 @@ func WithCreateBrackportReqBackportLabelPrefix(prefix string) NewCreateBackportR
 // We also factor in whether or not a CE branch is "active". If the branch is
 // inactive we'll skip backporting unless the change includes docs, pipeline
 // changes, or README changes. This allows docs authors to write docs against
-// enteprise branches and have them backported without having to do it manually.
+// enterprise branches and have them backported without having to do it manually.
 //
 // We also do our best to update the source pull request with a comment that
 // outlines each backport and its status.
@@ -269,8 +274,6 @@ func (r *CreateBackportReq) Run(
 		slog.String("repo-dir", r.RepoDir),
 		slog.Uint64("pull-number", uint64(r.PullNumber)),
 		slog.String("base-origin", r.BaseOrigin),
-		slog.String("config-path", r.ReleaseVersionConfigPath),
-		slog.Uint64("config-path-recurse-depth", uint64(r.ReleaseRecurseDepth)),
 		slog.String("ce-branch-prefix", r.CEBranchPrefix),
 		slog.String("ce-allow-inactive", strings.Join(r.CEAllowInactiveGroups.Groups(), ",")),
 		slog.String("ce-exclude", strings.Join(r.CEExclude.Groups(), ",")),
@@ -343,7 +346,7 @@ func (r *CreateBackportReq) Run(
 	// working directory since the path given could be relative to the original
 	// path.
 	var activeVersions map[string]*releases.Version
-	activeVersions, res.Error = r.getActiveVersions(ctx)
+	activeVersions, res.Error = r.getActiveVersions()
 	if res.Error != nil {
 		return res
 	}
@@ -435,6 +438,14 @@ func (r *CreateBackportReq) Validate(ctx context.Context) error {
 		return errors.New("no pull request number or commit SHA has been provided")
 	}
 
+	if err := r.ConfigDecodeRes.Validate(ctx); err != nil {
+		return err
+	}
+
+	if r.ConfigDecodeRes.Config == nil {
+		return errors.New("no pipeline.hcl configuration was provided")
+	}
+
 	if r.CEBranchPrefix == "" {
 		return errors.New("no ce branch prefix has been configured")
 	}
@@ -449,6 +460,16 @@ func (r *CreateBackportReq) Validate(ctx context.Context) error {
 
 	if r.BackportLabelPrefix == "" {
 		return errors.New("no backport label prefix has been configured")
+	}
+
+	// Check for versions decode and validation errors
+	if err := r.VersionsDecodeRes.Validate(ctx); err != nil {
+		return err
+	}
+
+	// Extract and validate VersionsConfig
+	if r.VersionsDecodeRes.Config == nil {
+		return errors.New("no .releases/versions.hcl configuration has been provided")
 	}
 
 	return nil
@@ -927,19 +948,11 @@ func (r *CreateBackportReq) determineBackportRefs(
 }
 
 // getActiveVersions gets the active versions from .release/versions.hcl
-func (r *CreateBackportReq) getActiveVersions(
-	ctx context.Context,
-) (map[string]*releases.Version, error) {
-	req := &releases.ListActiveVersionsReq{
-		Recurse:                  r.ReleaseRecurseDepth,
-		ReleaseVersionConfigPath: r.ReleaseVersionConfigPath,
+func (r *CreateBackportReq) getActiveVersions() (map[string]*releases.Version, error) {
+	if r.VersionsDecodeRes == nil || r.VersionsDecodeRes.Config == nil || r.VersionsDecodeRes.Config.ActiveVersion == nil {
+		return nil, fmt.Errorf("no active version are in the .release/versions.hcl")
 	}
-	res, err := req.Run(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return res.VersionsConfig.ActiveVersion.Versions, nil
+	return r.VersionsDecodeRes.Config.ActiveVersion.Versions, nil
 }
 
 // getChangedFiles gets a list of files that changed in the PR and determines
@@ -950,6 +963,7 @@ func (r *CreateBackportReq) getChangedFiles(
 	github *libgithub.Client,
 ) (*ListChangedFilesRes, error) {
 	req := ListChangedFilesReq{
+		DecodeRes:  r.ConfigDecodeRes,
 		Owner:      r.Owner,
 		Repo:       r.Repo,
 		PullNumber: int(r.PullNumber),

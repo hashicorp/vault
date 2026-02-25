@@ -25,6 +25,26 @@ export VAULT_FORMAT=json
 
 ROLE_NAME="${ROLE_NAME:-dynamic-role}"
 
+# Create LDIF files for dynamic role testing
+cat > creation.ldif << EOF
+dn: cn={{.Username}},ou=users,dc=${LDAP_USERNAME},dc=com
+objectClass: person
+objectClass: top
+cn: {{.Username}}
+sn: {{.Password | utf16le | base64}}
+userPassword: {{.Password}}
+EOF
+
+cat > deletion.ldif << EOF
+dn: cn={{.Username}},ou=users,dc=${LDAP_USERNAME},dc=com
+changetype: delete
+EOF
+
+cat > rollback.ldif << EOF
+dn: cn={{.Username}},ou=users,dc=${LDAP_USERNAME},dc=com
+changetype: delete
+EOF
+
 # Test Case: Validate dynamic role Schema
 test_validate_schema() {
   echo "Test: Validate dynamic role schema"

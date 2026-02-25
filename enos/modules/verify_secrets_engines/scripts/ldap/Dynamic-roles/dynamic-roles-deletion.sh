@@ -43,6 +43,27 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 export VAULT_FORMAT=json
 
 ROLE_NAME="${ROLE_NAME:-dynamic-role}"
+
+# Create LDIF files for dynamic role testing
+cat > creation.ldif << EOF
+dn: cn={{.Username}},ou=users,dc=${LDAP_USERNAME},dc=com
+objectClass: person
+objectClass: top
+cn: {{.Username}}
+sn: {{.Password | utf16le | base64}}
+userPassword: {{.Password}}
+EOF
+
+cat > deletion.ldif << EOF
+dn: cn={{.Username}},ou=users,dc=${LDAP_USERNAME},dc=com
+changetype: delete
+EOF
+
+cat > rollback.ldif << EOF
+dn: cn={{.Username}},ou=users,dc=${LDAP_USERNAME},dc=com
+changetype: delete
+EOF
+
 # Test Case: Delete a dynamic role
 test_delete_nonexistent_role() {
   echo "Test Case: Delete a nonexistent dynamic role"

@@ -8,7 +8,7 @@ import {
   supportedSecretBackends,
   SupportedSecretBackendsEnum,
 } from 'vault/helpers/supported-secret-backends';
-import { isAddonEngine } from 'vault/utils/all-engines-metadata';
+import { INTERNAL_ENGINE_TYPES, isAddonEngine } from 'vault/utils/all-engines-metadata';
 import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
@@ -25,7 +25,7 @@ export type RecoverySupportedEngines = (typeof SUPPORTS_RECOVERY)[number];
 export default class SecretsEngineResource extends baseResourceFactory<Mount>() {
   id: string;
 
-  #LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
+  #LIST_EXCLUDED_BACKENDS = INTERNAL_ENGINE_TYPES;
 
   constructor(data: Mount) {
     super(data);

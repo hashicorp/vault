@@ -10,6 +10,7 @@ import (
 
 	libgithub "github.com/google/go-github/v81/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
 	"github.com/stretchr/testify/require"
 )
@@ -18,45 +19,125 @@ import (
 func TestCreateBackportReq_Validate(t *testing.T) {
 	t.Parallel()
 
+	changedCfg := func() *changed.Config {
+		return &changed.Config{
+			Groups: []*changed.GroupConfig{
+				{
+					Name: "go",
+					Match: changed.Matchers{
+						{Extension: []string{".go"}},
+					},
+				},
+				{
+					Name: "python",
+					Match: changed.Matchers{
+						{Extension: []string{".py"}},
+					},
+				},
+			},
+		}
+	}
+
+	versionsCfg := func() *releases.VersionsConfig {
+		return &releases.VersionsConfig{
+			Schema: 1,
+			ActiveVersion: &releases.ActiveVersion{
+				Versions: map[string]*releases.Version{
+					"1.19.x": {CEActive: true, LTS: true},
+					"1.18.x": {CEActive: true, LTS: false},
+					"1.17.x": {CEActive: false, LTS: false},
+					"1.16.x": {CEActive: false, LTS: true},
+				},
+			},
+		}
+	}
+	configDecodeRes := func() *config.DecodeRes {
+		return &config.DecodeRes{
+			Config: &config.Config{
+				ChangedFiles: changedCfg(),
+			},
+		}
+	}
+	versionsDecodeRes := func() *releases.DecodeRes {
+		return &releases.DecodeRes{
+			Config: versionsCfg(),
+		}
+	}
+
 	for name, test := range map[string]struct {
 		req   *CreateBackportReq
 		valid bool
 	}{
 		"empty": {nil, false},
-		"valid": {NewCreateBackportReq(WithCreateBrackportReqPullNumber(1234)), true},
+		"valid": {
+			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBrackportReqPullNumber(1234),
+			), true,
+		},
+		"no changed file config": {
+			NewCreateBackportReq(
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBrackportReqPullNumber(1234),
+			), false,
+		},
+		"no versions config": {
+			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqPullNumber(1234),
+			), false,
+		},
 		"no owner": {
 			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
 				WithCreateBrackportReqPullNumber(1234),
 				WithCreateBackportReqOwner(""),
 			), false,
 		},
 		"no repo": {
 			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
 				WithCreateBrackportReqPullNumber(1234),
 				WithCreateBrackportReqRepo(""),
 			), false,
 		},
-		"no pull number": {NewCreateBackportReq(), false},
+		"no pull number": {
+			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
+			), false,
+		},
 		"no ce branch prefix": {
 			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
 				WithCreateBrackportReqPullNumber(1234),
 				WithCreateBrackportReqCEBranchPrefix(""),
 			), false,
 		},
 		"no base origin": {
 			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
 				WithCreateBrackportReqPullNumber(1234),
 				WithCreateBrackportReqBaseOrigin(""),
 			), false,
 		},
 		"uninitialized exclude groups": {
 			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
 				WithCreateBrackportReqPullNumber(1234),
 				WithCreateBrackportReqCEExclude(nil),
 			), false,
 		},
 		"uninitialized inactive groups": {
 			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
 				WithCreateBrackportReqPullNumber(1234),
 				WithCreateBrackportReqAllowInactiveGroups(nil),
 			), false,
@@ -566,7 +647,9 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			req := NewCreateBackportReq()
+			req := NewCreateBackportReq(
+				WithCreateBrackportReqAllowInactiveGroups(changed.FileGroups{changed.FileGroup("changelog")}),
+			)
 			msg, skip := req.shouldSkipRef(
 				context.Background(),
 				test.baseRefVersion,

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentURL, visit, waitFor } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, visit, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -31,12 +31,13 @@ module('Acceptance | ssh | configuration', function (hooks) {
     const sshPath = `ssh-${this.uid}`;
     await enablePage.enable('ssh', sshPath);
     await visit(`/vault/settings/secrets/configure/${sshPath}`);
-    assert.dom(GENERAL.pageError.title(404)).hasText('404 Not Found');
+    assert.dom(GENERAL.pageError.title(404)).hasText('ERROR 404 Not found');
     assert
       .dom(GENERAL.pageError.message)
-      .hasText(
-        `Sorry, we were unable to find any content at settings/secrets/configure/${sshPath}. Double check the url or go back home.`
-      );
+      .hasText(`Sorry, we were unable to find any content at settings/secrets/configure/${sshPath}.`);
+    assert
+      .dom(GENERAL.pageError.error)
+      .hasTextContaining('Double check the URL or return to the dashboard. Go to dashboard');
     // cleanup
     await runCmd(`delete sys/mounts/${sshPath}`);
   });
@@ -116,7 +117,6 @@ module('Acceptance | ssh | configuration', function (hooks) {
   });
 
   test('it should show API error when SSH configuration read fails', async function (assert) {
-    assert.expect(1);
     const path = `ssh-${this.uid}`;
     const type = 'ssh';
     await enablePage.enable(type, path);
@@ -126,6 +126,15 @@ module('Acceptance | ssh | configuration', function (hooks) {
     });
     await click(GENERAL.dropdownToggle('Manage'));
     await click(GENERAL.menuItem('Configure'));
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Error', 'shows the secrets backend error route');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.error',
+      'it redirects to the secrets backend error route'
+    );
+    assert.dom(GENERAL.pageError.title(400)).hasText('ERROR 400 Error');
+    assert
+      .dom(GENERAL.pageError.message)
+      .hasText('A problem has occurred. Check the Vault logs or console for more details.');
+    assert.dom(GENERAL.pageError.details).hasText('bad request');
   });
 });

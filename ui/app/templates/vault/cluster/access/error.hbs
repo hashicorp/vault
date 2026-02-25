@@ -3,17 +3,4 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if (eq this.model.httpStatus 404)}}
-  <Page::Error @error={{hash httpStatus=404 path=this.model.path}} />
-{{else}}
-  <Page::Header @title={{if (eq this.model.httpStatus 403) "Not authorized" "Error"}} />
-
-  <div class="box is-sideless has-background-white-bis has-text-grey has-text-centered">
-    {{#if this.model.message}}
-      <p>{{this.model.message}}</p>
-    {{/if}}
-    {{#each this.model.errors as |error|}}
-      <p>{{error}}</p>
-    {{/each}}
-  </div>
-{{/if}}
+<Page::Error @error={{this.model}} @isFullPage={{true}} />

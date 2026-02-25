@@ -270,6 +270,13 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 		return nil, nil, err
 	}
 	maxManagedKeyCounts.TotpKeys = maxTotpKeyCounts
+
+	// get max kmse key counts
+	maxKmseKeyCounts, err := c.updateMaxKmseKeyCounts(ctx, currentManagedKeyCounts.KmseKeys, localPathPrefix, currentMonth)
+	if err != nil {
+		return nil, nil, err
+	}
+	maxManagedKeyCounts.KmseKeys = maxKmseKeyCounts
 	return maxRoleCounts, maxManagedKeyCounts, nil
 }
 

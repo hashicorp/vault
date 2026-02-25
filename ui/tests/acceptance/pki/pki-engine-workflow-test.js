@@ -212,7 +212,7 @@ module('Acceptance | pki workflow', function (hooks) {
       );
       assert
         .dom(GENERAL.pageError.error)
-        .hasText(`403 Not Authorized You are not authorized to access content at ${path('keys')}.`);
+        .hasText(`ERROR 403 Not authorized You are not authorized to access content at ${path('keys')}.`);
       // Now test certificates error state
       await click(GENERAL.tab('Certificates'));
       assert.dom(GENERAL.tab('Certificates')).hasClass('active', `Certificates tab is active after clicking`);
@@ -230,7 +230,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert
         .dom(GENERAL.pageError.error)
         .hasText(
-          `403 Not Authorized You are not authorized to access content at ${path('certs')}.`,
+          `ERROR 403 Not authorized You are not authorized to access content at ${path('certs')}.`,
           'message updates to reference certs'
         );
     });
