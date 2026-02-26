@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { assert } from '@ember/debug';
 import { set } from '@ember/object';
-import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
+import { service } from '@ember/service';
+import { filterEnginesByMountCategory, isAddonEngine } from 'core/utils/all-engines-metadata';
+import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
+import { hash } from 'rsvp';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { isAddonEngine, filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+import { getEnginePathParam } from 'vault/utils/backend-route-helpers';
 import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 import { getModelTypeForEngine } from 'vault/utils/model-helpers/secret-engine-helpers';
-import { service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
-import { getEnginePathParam } from 'vault/utils/backend-route-helpers';
-import { assert } from '@ember/debug';
-import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
-import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 

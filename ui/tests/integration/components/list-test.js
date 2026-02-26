@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, click, findAll, triggerEvent, fillIn, find } from '@ember/test-helpers';
+import { render, click, findAll, triggerEvent, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { v4 as uuidv4 } from 'uuid';
 import sinon from 'sinon';
@@ -58,11 +58,8 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     });
     await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
 
-    assert
-      .dom(GENERAL.tableData(`${enginePath}/`, 'path'))
-      .exists('shows the link for the kvv2 secrets engine');
-    const row = GENERAL.tableRow(`${enginePath}/`);
-    await click(`${row} ${GENERAL.menuTrigger}`);
+    assert.dom(GENERAL.linkTo(`${enginePath}/`)).exists('shows the link for the kvv2 secrets engine');
+    await click(`${GENERAL.listItem(`${enginePath}/`)} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('Delete'));
     await click(GENERAL.confirmButton);
 
@@ -125,13 +122,10 @@ module('Integration | Component | secret-engine/list', function (hooks) {
 
   test('path name does not render as link for unsupported secret engines', async function (assert) {
     await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
-    const unsupportedPath = find(`${GENERAL.tableData('nomad-test/', 'path')} a`);
     assert
-      .dom(unsupportedPath)
+      .dom(GENERAL.linkTo('nomad-test/'))
       .doesNotExist(`path text doesn't render as a link for unsupported nomad engine.`);
-
-    const supportedPath = find(`${GENERAL.tableData('aws-1/', 'path')} a`);
-    assert.dom(supportedPath).exists(`path text renders as a link for supported aws engines.`);
+    assert.dom(GENERAL.linkTo('aws-1/')).exists(`path text renders as a link for supported aws engines.`);
   });
 
   test('it filters by engine path and engine type', async function (assert) {
@@ -175,8 +169,8 @@ module('Integration | Component | secret-engine/list', function (hooks) {
   test('it applies overflow styling', async function (assert) {
     await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
     assert
-      .dom(GENERAL.tableData('aws-1/', 'path'))
-      .hasClass('text-overflow-ellipsis', 'secret engine name has text overflow class ');
+      .dom(GENERAL.tableData(0, 'path'))
+      .hasClass('text-overflow-ellipsis', 'secret engine path has text overflow class ');
   });
 
   test('it shows the intro page when only default engines are enabled', async function (assert) {

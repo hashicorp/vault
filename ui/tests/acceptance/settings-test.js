@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentURL, visit, click, fillIn, currentRouteName, waitUntil } from '@ember/test-helpers';
-import { module, test } from 'qunit';
+import { click, currentRouteName, currentURL, fillIn, visit, waitUntil } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
+import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | secret engine mount settings', function (hooks) {
   setupApplicationTest(hooks);
@@ -63,7 +63,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await visit('/vault/secrets-engines');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
-    await click(GENERAL.menuItem('View configuration'));
+    await click(GENERAL.menuItem('Configure'));
     // since ldap hasn't been configured yet, it should redirect to configure page
     assert.strictEqual(
       currentURL(),
@@ -93,7 +93,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await visit('/vault/secrets-engines');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
-    await click(GENERAL.menuItem('View configuration'));
+    await click(GENERAL.menuItem('Configure'));
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.configuration.general-settings');
     assert.strictEqual(
       currentURL(),
@@ -125,7 +125,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await visit('/vault/secrets-engines');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
     await click(GENERAL.menuTrigger);
-    await click(GENERAL.menuItem('View configuration'));
+    await click(GENERAL.menuItem('Configure'));
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.configuration.edit');
     assert.strictEqual(
       currentURL(),

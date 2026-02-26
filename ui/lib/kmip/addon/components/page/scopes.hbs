@@ -7,21 +7,7 @@
     <KmipBreadcrumb @currentRoute={{this.secretMountPath.currentPath}} />
   </:breadcrumbs>
   <:actions>
-    <Hds::Dropdown as |D|>
-      <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
-      <D.Interactive
-        @icon="settings"
-        @route="configuration"
-        @model={{@secretsEngine.id}}
-        data-test-popup-menu="Configure"
-      >Configure</D.Interactive>
-      <D.Interactive
-        {{on "click" (fn (mut this.engineToDisable) @secretsEngine)}}
-        @color="critical"
-        @icon="trash"
-        data-test-popup-menu="Delete"
-      >Delete</D.Interactive>
-    </Hds::Dropdown>
+    <ManageDropdown @model={{@secretsEngine}} @configRoute="configuration" />
   </:actions>
 </Page::Header>
 <KmipTabs />
@@ -117,14 +103,4 @@
       <Hds::Link::Standalone @icon="plus" @text="Create a scope" @route="scopes.create" />
     </EmptyState>
   {{/if}}
-{{/if}}
-
-{{#if this.engineToDisable}}
-  <ConfirmModal
-    @color="critical"
-    @confirmMessage="Any data in this engine will be permanently deleted."
-    @confirmTitle="Disable engine?"
-    @onClose={{fn (mut this.engineToDisable) null}}
-    @onConfirm={{perform this.disableEngine this.engineToDisable}}
-  />
 {{/if}}

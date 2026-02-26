@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { ALL_ENGINES } from 'core/utils/all-engines-metadata';
 import MountForm from 'vault/forms/mount';
-import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 import { isKnownExternalPlugin } from 'vault/utils/external-plugin-helpers';
 import FormField from 'vault/utils/forms/field';
 import FormFieldGroup from 'vault/utils/forms/field-group';

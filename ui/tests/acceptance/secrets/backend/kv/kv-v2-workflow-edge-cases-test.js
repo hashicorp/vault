@@ -576,7 +576,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
 
   const navToEngine = async (backend) => {
     await click(GENERAL.navLink('Secrets'));
-    return await click(`${GENERAL.tableData(`${backend}/`, 'path')} a`);
+    return await click(GENERAL.linkTo(`${backend}/`));
   };
 
   const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
@@ -734,6 +734,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
 
       // undelete flow
       await click(PAGE.detail.undelete);
+      await waitFor(GENERAL.overviewCard.container('Current version'));
       assert
         .dom(GENERAL.overviewCard.container('Current version'))
         .hasTextContaining('Current version Create new The current version of this secret.');
@@ -748,6 +749,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await click(PAGE.detail.deleteConfirm);
       await click(PAGE.secretTab('Secret'));
       assertDeleteActions(assert, []);
+      await waitFor(GENERAL.emptyStateTitle);
       assert
         .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been permanently destroyed', 'Shows destroyed message');

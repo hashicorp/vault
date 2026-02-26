@@ -114,110 +114,45 @@
 
   {{! Table Section }}
   {{#if this.sortedDisplayableBackends}}
-    <ListTable
-      class="has-top-margin-xs"
-      @columns={{this.tableColumns}}
-      @selectionKey="path"
-      @data={{this.sortedDisplayableBackends}}
-      @onSelectionChange={{this.updateSelectedItems}}
-    >
-      <:selectedItems>
-        {{#if this.selectedItems}}
-          <Hds::Layout::Flex
-            @gap="8"
-            @direction="row"
-            @justify="end"
-            @align="center"
-            class="has-bottom-margin-s has-top-margin-negative-xxl"
-            @isInline="true"
-          >
-            <Hds::Text::Body role="status" @tag="p" @size="200" @color="foreground-primary">
-              {{this.selectedItems.length}}
-              selected out of
-              {{this.sortedDisplayableBackends.length}}
-            </Hds::Text::Body>
-            <Hds::Button
-              @text="Disable engines"
-              @color="critical"
-              @icon="trash"
-              {{on "click" (fn (mut this.enginesToDisable) this.selectedItems)}}
-            />
-          </Hds::Layout::Flex>
-        {{/if}}
-      </:selectedItems>
+    <ListTable class="has-top-margin-xs" @columns={{this.tableColumns}} @data={{this.sortedDisplayableBackends}}>
       <:customTableItem as |itemData|>
         {{#let (this.getEngineResourceData itemData.path) as |backendData|}}
-          <Hds::TooltipButton
-            aria-label="Type of backend"
-            @text={{this.generateToolTipText backendData}}
-            data-test-tooltip="Backend type"
-            isInline={{true}}
-            class="is-v-centered"
-          >
-            <Hds::Icon @name={{if backendData.icon backendData.icon "lock"}} />
-          </Hds::TooltipButton>
-          {{#if backendData.isSupportedBackend}}
-            <Hds::Link::Inline
-              @route={{backendData.backendLink}}
-              @model={{backendData.id}}
-              @color="secondary"
-              class="has-text-weight-semibold"
-            >{{backendData.path}}</Hds::Link::Inline>
-          {{else}}
-            {{backendData.path}}
+          {{! Only render if we have backendData, so this doesn't try to render while data for the list refreshes }}
+          {{#if backendData}}
+            <Hds::TooltipButton
+              aria-label="Type of backend"
+              @text={{this.generateToolTipText backendData}}
+              data-test-tooltip="Backend type"
+              isInline={{true}}
+              class="is-v-centered"
+            >
+              <Hds::Icon @name={{if backendData.icon backendData.icon "lock"}} />
+            </Hds::TooltipButton>
+            {{#if backendData.isSupportedBackend}}
+              <Hds::Link::Inline
+                @route={{backendData.backendLink}}
+                @model={{backendData.id}}
+                @color="secondary"
+                class="has-text-weight-semibold"
+                data-test-link-to={{itemData.path}}
+              >{{backendData.path}}</Hds::Link::Inline>
+            {{else}}
+              {{backendData.path}}
+            {{/if}}
           {{/if}}
         {{/let}}
       </:customTableItem>
 
       <:popupMenu as |rowData|>
         {{#let (this.getEngineResourceData rowData.path) as |backendData|}}
-          <Hds::Dropdown @isInline={{true}} as |dd|>
-            <dd.ToggleIcon
-              @icon="more-horizontal"
-              @text="{{if backendData.isSupportedBackend 'supported' 'unsupported'}} secrets engine menu"
-              @hasChevron={{false}}
-              data-test-popup-menu-trigger
-            />
-            <dd.Interactive
-              @route={{backendData.backendConfigurationLink}}
-              @model={{backendData.id}}
-              data-test-popup-menu="View configuration"
-              @icon="settings"
-            >View configuration</dd.Interactive>
-            {{#if (not-eq backendData.type "cubbyhole")}}
-              <dd.Interactive
-                @color="critical"
-                {{on "click" (fn (mut this.engineToDisable) backendData)}}
-                data-test-popup-menu="Delete"
-                @icon="trash"
-              >Delete</dd.Interactive>
-            {{/if}}
-          </Hds::Dropdown>
+          {{! Only render if we have backendData, so this doesn't try to render while data for the list refreshes }}
+          {{#if backendData}}
+            <ManageDropdown @model={{backendData}} @variant="icon" @configRoute={{backendData.backendConfigurationLink}} />
+          {{/if}}
         {{/let}}
       </:popupMenu>
     </ListTable>
   {{else}}
     <EmptyState @title="No Secrets engines found" />
-  {{/if}}
-  {{! End Table Section }}
-
-  {{#if this.engineToDisable}}
-    <ConfirmModal
-      @color="critical"
-      @confirmMessage="Any data in this engine will be permanently deleted."
-      @confirmTitle="Disable engine?"
-      @onClose={{fn (mut this.engineToDisable) null}}
-      @onConfirm={{perform this.disableEngine this.engineToDisable}}
-    />
-  {{/if}}
-
-  {{#if this.enginesToDisable}}
-    <ConfirmModal
-      @color="critical"
-      @confirmMessage="Any data in these engines will be permanently deleted."
-      @confirmTitle="Disable engines?"
-      @onClose={{fn (mut this.enginesToDisable) null}}
-      @onConfirm={{perform this.disableMultipleEngines this.enginesToDisable}}
-    />
   {{/if}}
 {{/if}}

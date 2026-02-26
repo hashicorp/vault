@@ -3,4 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export { default } from 'core/helpers/engines-display-data';
+const OVERRIDE_CONFIGS = {};
+
+export default OVERRIDE_CONFIGS;

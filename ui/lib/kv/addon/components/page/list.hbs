@@ -11,8 +11,7 @@
     <Hds::Badge @text="version 2" data-test-badge />
   </:badges>
   <:actions>
-    <Hds::Dropdown as |D|>
-      <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
+    <ManageDropdown @model={{@backendModel}} @configRoute="configuration" as |D|>
       <CodeGenerator::Policy::Flyout @onClose={{D.close}}>
         <:customTrigger as |openFlyout|>
           <D.Interactive @icon="shield-check" {{on "click" openFlyout}} data-test-popup-menu="Generate policy">
@@ -20,19 +19,7 @@
           </D.Interactive>
         </:customTrigger>
       </CodeGenerator::Policy::Flyout>
-      <D.Interactive
-        @icon="settings"
-        @route="configuration"
-        @model={{@backendModel.id}}
-        data-test-popup-menu="Configure"
-      >Configure</D.Interactive>
-      <D.Interactive
-        {{on "click" (fn (mut this.engineToDisable) @backendModel)}}
-        @color="critical"
-        @icon="trash"
-        data-test-popup-menu="Delete"
-      >Delete</D.Interactive>
-    </Hds::Dropdown>
+    </ManageDropdown>
 
     <Hds::Button
       @text="Create secret"
@@ -197,14 +184,4 @@
       />
     {{/if}}
   {{/if}}
-{{/if}}
-
-{{#if this.engineToDisable}}
-  <ConfirmModal
-    @color="critical"
-    @confirmMessage="Any data in this engine will be permanently deleted."
-    @confirmTitle="Disable engine?"
-    @onClose={{fn (mut this.engineToDisable) null}}
-    @onConfirm={{perform this.disableEngine this.engineToDisable}}
-  />
 {{/if}}

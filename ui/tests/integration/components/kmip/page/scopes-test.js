@@ -3,15 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
-import { setupEngine } from 'ember-engines/test-support';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, fillIn, render } from '@ember/test-helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setupEngine } from 'ember-engines/test-support';
+import { setupRenderingTest } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
+import { module, test } from 'qunit';
 import sinon from 'sinon';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import SecretsEngineResource from 'vault/resources/secrets/engine';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kmip | Page::Scopes', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,6 +21,7 @@ module('Integration | Component | kmip | Page::Scopes', function (hooks) {
 
   hooks.beforeEach(function () {
     this.backend = 'kmip-test';
+    this.secretsEngine = new SecretsEngineResource({ path: this.backend, type: 'kmip' });
     this.owner.lookup('service:secret-mount-path').update(this.backend);
 
     const { secrets } = this.owner.lookup('service:api');
@@ -51,7 +53,7 @@ module('Integration | Component | kmip | Page::Scopes', function (hooks) {
 
     this.renderComponent = () =>
       render(
-        hbs`<Page::Scopes @scopes={{this.scopes}} @capabilities={{this.capabilities}} @filterValue={{this.filterValue}} />`,
+        hbs`<Page::Scopes @secretsEngine={{this.secretsEngine}} @scopes={{this.scopes}} @capabilities={{this.capabilities}} @filterValue={{this.filterValue}} />`,
         { owner: this.engine }
       );
   });

@@ -4,15 +4,14 @@
  */
 
 import Model, { attr, belongsTo } from '@ember-data/model';
-import { computed } from '@ember/object'; // eslint-disable-line
-import { equal } from '@ember/object/computed'; // eslint-disable-line
-import { withModelValidations } from 'vault/decorators/model-validations';
+import { ALL_ENGINES, isAddonEngine } from 'core/utils/all-engines-metadata';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
-import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
-import { ALL_ENGINES, INTERNAL_ENGINE_TYPES, isAddonEngine } from 'vault/utils/all-engines-metadata';
-import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import { withModelValidations } from 'vault/decorators/model-validations';
 import engineDisplayData from 'vault/helpers/engines-display-data';
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { INTERNAL_ENGINE_TYPES } from 'vault/utils/all-engines-metadata';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 
 const LINKED_BACKENDS = supportedSecretBackends();
 

@@ -17,21 +17,7 @@
     {{#if @configRoute}}
       <Hds::Button @color="secondary" @route="overview" @text="Exit configuration" data-test-button="Exit configuration" />
     {{else}}
-      <Hds::Dropdown as |D|>
-        <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
-        <D.Interactive
-          @icon="settings"
-          @route="configuration"
-          @model={{@backend.id}}
-          data-test-popup-menu="Configure"
-        >Configure</D.Interactive>
-        <D.Interactive
-          {{on "click" (fn (mut this.engineToDisable) @backend)}}
-          @color="critical"
-          @icon="trash"
-          data-test-popup-menu="Delete"
-        >Delete</D.Interactive>
-      </Hds::Dropdown>
+      <ManageDropdown @model={{@backend}} @configRoute="configuration" />
     {{/if}}
   </:actions>
 </Page::Header>
@@ -58,14 +44,4 @@
       <li><LinkTo @route="tidy" @model={{@backend.id}} data-test-secret-list-tab="Tidy">Tidy</LinkTo></li>
     </ul>
   </nav>
-{{/if}}
-
-{{#if this.engineToDisable}}
-  <ConfirmModal
-    @color="critical"
-    @confirmMessage="Any data in this engine will be permanently deleted."
-    @confirmTitle="Disable engine?"
-    @onClose={{fn (mut this.engineToDisable) null}}
-    @onConfirm={{perform this.disableEngine this.engineToDisable}}
-  />
 {{/if}}

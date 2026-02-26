@@ -3,4 +3,4 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export { default } from 'core/helpers/engines-display-data';
+export { default } from 'core/components/manage-dropdown';

@@ -3,14 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@glimmer/component';
-import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/owner';
+import { service } from '@ember/service';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
-import { task } from 'ember-concurrency';
 
 /**
  * @module List
@@ -32,7 +31,6 @@ export default class KvListPageComponent extends Component {
 
   @tracked secretPath;
   @tracked metadataToDelete = null; // set to the metadata intended to delete
-  @tracked engineToDisable = undefined;
 
   // used for KV list and list-directory view
   // ex: beep/
@@ -57,24 +55,6 @@ export default class KvListPageComponent extends Component {
         page,
       };
     };
-  }
-
-  @task
-  *disableEngine(engine) {
-    const { engineType, id, path } = engine;
-
-    try {
-      yield this.api.sys.mountsDisableSecretsEngine(id);
-      this.flashMessages.success(`The ${engineType} Secrets Engine at ${path} has been disabled.`);
-      this.router.transitionTo('vault.cluster.secrets.backends');
-    } catch (err) {
-      const { message } = yield this.api.parseError(err);
-      this.flashMessages.danger(
-        `There was an error disabling the ${engineType} Secrets Engine at ${path}: ${message}.`
-      );
-    } finally {
-      this.engineToDisable = undefined;
-    }
   }
 
   @action

@@ -78,3 +78,110 @@ export function overrideResponse(httpStatus = 200, payload = {}) {
 }
 
 export const formatError = (msg) => JSON.stringify({ errors: [msg] });
+
+/**
+ * Minimal OpenAPI spec fixture for testing.
+ * Contains only the mounts-enable-secrets-engine operation.
+ */
+export const OAS_STUB = {
+  openapi: '3.0.0',
+  info: {
+    title: 'Vault API',
+    version: '1.0.0',
+  },
+  paths: {
+    '/sys/mounts/{path}': {
+      description: 'Mount a new backend at a new path.',
+      parameters: [
+        {
+          name: 'path',
+          description: 'The path to mount to. Example: "aws/east"',
+          in: 'path',
+          schema: { type: 'string' },
+          required: true,
+        },
+      ],
+      post: {
+        summary: 'Enable a new secrets engine at the given path.',
+        operationId: 'mounts-enable-secrets-engine',
+        tags: ['system'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/MountsEnableSecretsEngineRequest',
+              },
+            },
+          },
+        },
+        responses: {
+          204: { description: 'OK' },
+        },
+      },
+    },
+  },
+  components: {
+    schemas: {
+      MountsEnableSecretsEngineRequest: {
+        type: 'object',
+        properties: {
+          config: {
+            type: 'object',
+            description: 'Configuration for this mount, such as default_lease_ttl and max_lease_ttl.',
+          },
+          description: {
+            type: 'string',
+            description: 'User-friendly description for this mount.',
+          },
+          external_entropy_access: {
+            type: 'boolean',
+            description: "Whether to give the mount access to Vault's external entropy.",
+            default: false,
+            deprecated: true,
+          },
+          local: {
+            type: 'boolean',
+            description:
+              'Mark the mount as a local mount, which is not replicated and is unaffected by replication.',
+            default: false,
+          },
+          options: {
+            type: 'object',
+            description:
+              'The options to pass into the backend. Should be a json object with string keys and values.',
+          },
+          plugin_name: {
+            type: 'string',
+            description: 'Name of the plugin to mount based from the name registered in the plugin catalog.',
+          },
+          plugin_version: {
+            type: 'string',
+            description: 'The semantic version of the plugin to use, or image tag if oci_image is provided.',
+          },
+          seal_wrap: {
+            type: 'boolean',
+            description: 'Whether to turn on seal wrapping for the mount.',
+            default: false,
+            'x-vault-displayAttrs': {
+              name: 'Seal Wrap',
+              group: 'Advanced',
+            },
+          },
+          type: {
+            type: 'string',
+            description: 'The type of the backend. Example: "passthrough"',
+          },
+          allowed_managed_keys: {
+            type: 'array',
+            description: 'List of managed key names allowed for this mount.',
+            'x-vault-displayAttrs': {
+              name: 'Allowed Managed Keys',
+              group: 'Advanced',
+            },
+          },
+        },
+      },
+    },
+  },
+};
