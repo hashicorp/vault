@@ -34,6 +34,8 @@ export default Service.extend({
   isRenewing: false,
   mfaErrors: null,
   isRootToken: false,
+  allowExpiration: false,
+  canRenewSelf: false,
 
   get tokenExpired() {
     const expiration = this.tokenExpirationDate;
@@ -207,6 +209,25 @@ export default Service.extend({
       .ajax('/v1/auth/token/lookup-self', 'GET', { headers: { 'X-Vault-Token': token } });
   },
 
+  async checkRenewSelfCapability() {
+    try {
+      const response = await this.ajax('/v1/sys/capabilities-self', 'POST', {
+        data: JSON.stringify({
+          paths: ['auth/token/renew-self'],
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Vault-Token': this.currentToken,
+        },
+      });
+
+      const capabilities = response?.data?.['auth/token/renew-self'] || [];
+      this.set('canRenewSelf', capabilities.includes('update'));
+    } catch (e) {
+      this.set('canRenewSelf', false);
+    }
+  },
+
   revokeCurrentToken() {
     const namespace = this.authData.userRootNamespace;
     const url = '/v1/auth/token/revoke-self';
@@ -298,6 +319,7 @@ export default Service.extend({
     const tokenName = this.generateTokenName({ backend: authMethodType, clusterId }, policies);
     this.set('tokens', addToArray(this.tokens, tokenName));
     this.setTokenData(tokenName, persistedTokenData);
+    await this.checkRenewSelfCapability();
     return resolve({
       namespace: currentNamespace || persistedTokenData.userRootNamespace,
       token: tokenName,

@@ -36,6 +36,10 @@ export default class TokenExpireWarning extends Component {
     yield this.handleRenew();
   }
 
+  get canShowRenew() {
+    return this.auth?.authData?.renewable === true && this.auth?.canRenewSelf === true;
+  }
+
   get queryParams() {
     // Bring user back to current page after login
     return { redirect_to: this.router.currentURL };
