@@ -21,7 +21,7 @@ module('Integration | Component | token-expire-warning', function (hooks) {
     assert.dom('[data-test-token-expired-banner]').includesText('Your auth token expired on');
   });
 
-  test('Does not render a warning when the token is not expired', async function (assert) {
+  test('it does not render a warning when the token is not expired', async function (assert) {
     const expirationDate = addMinutes(Date.now(), 30);
     this.set('expirationDate', expirationDate);
 
@@ -56,7 +56,7 @@ module('Integration | Component | token-expire-warning', function (hooks) {
     assert.dom('[data-test-content]').hasText('This is the content');
   });
 
-  test('it does not render a warning if no expiration date', async function (assert) {
+  test('Does not render a warning if no expiration date', async function (assert) {
     this.set('expirationDate', null);
     this.set('allowingExpiration', true);
 
