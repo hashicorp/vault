@@ -43,7 +43,7 @@ const secretPathUrlEncoded = `my-%23:$=%3F-secret`;
 const ALL_TABS = ['Overview', 'Secret', 'Metadata', 'Paths', 'Version History'];
 const navToBackend = async (backend) => {
   await visit(`/vault/secrets`);
-  return click(`${GENERAL.tableData(`${backend}/`, 'path')} a`);
+  return click(GENERAL.linkTo(`${backend}/`));
 };
 const assertCorrectBreadcrumbs = (assert, expected) => {
   assert.dom(PAGE.breadcrumbs).hasText(expected.join(' '));
