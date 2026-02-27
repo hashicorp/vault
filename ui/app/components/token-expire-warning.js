@@ -12,7 +12,23 @@ import { task } from 'ember-concurrency';
 export default class TokenExpireWarning extends Component {
   @service auth;
   @service router;
+  @service capabilities;
   @tracked canDismiss = true;
+  @tracked canRenewSelf = true;
+
+  constructor(owner, args) {
+    super(owner, args);
+    this.fetchRenewCapability();
+  }
+
+  async fetchRenewCapability() {
+    try {
+      const { canUpdate } = await this.capabilities.fetchPathCapabilities('auth/token/renew-self');
+      this.canRenewSelf = canUpdate;
+    } catch {
+      this.canRenewSelf = true;
+    }
+  }
 
   handleRenew() {
     return new Promise((resolve) => {
@@ -37,7 +53,7 @@ export default class TokenExpireWarning extends Component {
   }
 
   get canShowRenew() {
-    return this.auth?.authData?.renewable === true && this.auth?.canRenewSelf === true;
+    return this.auth?.authData?.renewable === true && this.canRenewSelf === true;
   }
 
   get queryParams() {

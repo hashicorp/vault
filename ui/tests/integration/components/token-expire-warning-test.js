@@ -73,12 +73,19 @@ module('Integration | Component | token-expire-warning', function (hooks) {
   });
 
   test('it shows Renew button when token is renewable and capability allowed', async function (assert) {
-    // Stub auth service
     this.owner.register(
       'service:auth',
       class extends Service {
         authData = { renewable: true };
-        canRenewSelf = true;
+      }
+    );
+
+    this.owner.register(
+      'service:capabilities',
+      class extends Service {
+        async fetchPathCapabilities() {
+          return { canUpdate: true };
+        }
       }
     );
 
@@ -101,7 +108,15 @@ module('Integration | Component | token-expire-warning', function (hooks) {
       'service:auth',
       class extends Service {
         authData = { renewable: true };
-        canRenewSelf = false;
+      }
+    );
+
+    this.owner.register(
+      'service:capabilities',
+      class extends Service {
+        async fetchPathCapabilities() {
+          return { canUpdate: false };
+        }
       }
     );
 
@@ -124,7 +139,15 @@ module('Integration | Component | token-expire-warning', function (hooks) {
       'service:auth',
       class extends Service {
         authData = { renewable: false };
-        canRenewSelf = true;
+      }
+    );
+
+    this.owner.register(
+      'service:capabilities',
+      class extends Service {
+        async fetchPathCapabilities() {
+          return { canUpdate: true };
+        }
       }
     );
 
@@ -140,5 +163,36 @@ module('Integration | Component | token-expire-warning', function (hooks) {
     `);
 
     assert.dom('[data-test-renew-token-button]').doesNotExist();
+  });
+
+  test('it shows Renew button if capability check fails (fail-open behavior)', async function (assert) {
+    this.owner.register(
+      'service:auth',
+      class extends Service {
+        authData = { renewable: true };
+      }
+    );
+
+    this.owner.register(
+      'service:capabilities',
+      class extends Service {
+        async fetchPathCapabilities() {
+          throw new Error('network error');
+        }
+      }
+    );
+
+    const expirationDate = addMinutes(Date.now(), 3);
+    this.set('expirationDate', expirationDate);
+    this.set('allowingExpiration', true);
+
+    await render(hbs`
+      <TokenExpireWarning
+        @expirationDate={{this.expirationDate}}
+        @allowingExpiration={{this.allowingExpiration}}
+      />
+    `);
+
+    assert.dom('[data-test-renew-token-button]').exists('Renew button is shown when capability check fails');
   });
 });
