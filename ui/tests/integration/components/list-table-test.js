@@ -5,9 +5,10 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, render, waitFor, find } from '@ember/test-helpers';
+import { click, fillIn, render, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
 
 const MOCK_DATA = [
   { island: 'Maldives', visit_length: 5, trip_date: '2025-06-22T00:00:00.000Z' },
@@ -21,33 +22,35 @@ module('Integration | Component | list-table', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(async function () {
-    this.data = undefined;
+    this.data = MOCK_DATA;
+    this.onSelectionChange = undefined;
+    this.selectionKeyField = undefined;
     this.columns = [
       { key: 'island', label: 'Islands', isSortable: true },
       { key: 'visit_length', label: 'Visit length', customTableItem: true },
       { key: 'trip_date', label: 'Date trip starts' },
       { key: 'popupMenu', label: 'Action' },
     ];
-    this;
 
     this.renderComponent = async () => {
       return render(hbs`
           <ListTable
             @columns={{this.columns}}
             @data={{this.data}}
-            @selectionKey="island"
+            @selectionKeyField={{this.selectionKeyField}}
+            @onSelectionChange={{this.onSelectionChange}}
           >
             <:customTableItem as |itemData|>
-            Custom Table Item rendered!
+              <Hds::BadgeCount @text={{itemData.visit_length}} @type="outlined" />            
             </:customTableItem>
 
             <:popupMenu as |rowData|>
-            <Hds::Dropdown as |D|>
-            <D.ToggleButton @text="Menu" data-test-popup-menu-trigger />
-            <D.Title @text="Title Text" />
-            <D.Description @text="Sample text" />
-            <D.Interactive @route="components" @icon="trash" @color="critical">Delete</D.Interactive>
-            </Hds::Dropdown>
+              <Hds::Dropdown as |D|>
+              <D.ToggleButton @text="Menu" data-test-popup-menu-trigger />
+              <D.Title @text={{rowData.island}} />
+              <D.Description @text="Sample text" />
+              <D.Interactive @route="components" @icon="trash" @color="critical">Delete</D.Interactive>
+              </Hds::Dropdown>
             </:popupMenu>
 
           </ListTable>`);
@@ -55,59 +58,123 @@ module('Integration | Component | list-table', function (hooks) {
   });
 
   test('it renders and paginates data', async function (assert) {
-    this.data = MOCK_DATA;
     await this.renderComponent();
+    assert.dom('input[type="checkbox"]').doesNotExist('table is not selectable by default');
     assert.dom(GENERAL.paginationInfo).hasText(`1–6 of ${this.data.length}`);
-
-    await fillIn(GENERAL.paginationSizeSelector, '5'); // Default is 10, so change to something else
+    // Default is 10, so change to something else to test pagination
+    await fillIn(GENERAL.paginationSizeSelector, '5');
+    assert.dom(GENERAL.paginationInfo).hasText(`1–5 of ${this.data.length}`);
+    assert.dom(GENERAL.tableRow()).exists({ count: 5 }, 'only 5 rows render');
     await click(GENERAL.nextPage);
-    assert.dom(GENERAL.tableRow('Seychelles', 'island')).exists('it paginates the data');
+    assert.dom(GENERAL.paginationInfo).hasText(`6–6 of ${this.data.length}`);
+    assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'only 1 row renders on second page');
+    assert.dom(GENERAL.tableData(0, 'island')).hasText('Seychelles', 'second page has expected row');
+  });
+
+  test('it does not render popup menu if @columns does not include a popupMenu key', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    await this.renderComponent();
+    assert.dom(GENERAL.menuTrigger).doesNotExist();
+  });
+
+  test('it stringifies object and array values for non-custom columns', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands' },
+      { key: 'trip_details', label: 'Trip details' },
+      { key: 'tags', label: 'Tags' },
+    ];
+    this.data = [
+      {
+        island: 'Maldives',
+        trip_details: { hotel: 'Atoll Inn', nights: 5 },
+        tags: ['beach', 'snorkel'],
+      },
+    ];
+
+    await this.renderComponent();
+    assert.dom(GENERAL.tableData(0, 'trip_details')).hasText('{ "hotel": "Atoll Inn", "nights": 5 }');
+    assert.dom(GENERAL.tableData(0, 'tags')).hasText('[ "beach", "snorkel" ]');
+  });
+
+  test('it does not render popup menu if parent does not yield one', async function (assert) {
+    await render(hbs`
+          <ListTable
+            @columns={{this.columns}}
+            @data={{this.data}}
+            @selectionKeyField={{this.selectionKeyField}}
+            @onSelectionChange={{this.onSelectionChange}}
+          />`);
+    assert.dom(GENERAL.menuTrigger).doesNotExist();
   });
 
   test('it sorts table data by a sortable column', async function (assert) {
-    this.data = MOCK_DATA;
-    const assertSortOrder = (expectedValues, { column, page }) => {
-      expectedValues.forEach((value, idx) => {
-        assert
-          .dom(GENERAL.tableData(value, column))
-          .hasText(value, `page ${page}, row ${idx} has ${column}: ${value}`);
-      });
-    };
-
     await this.renderComponent();
-    const column = find(GENERAL.icon('swap-vertical'));
-    await click(column);
-    assertSortOrder(['Bora Bora', 'Fiji', 'Maldives', 'Maui', 'Santorini', 'Seychelles'], {
-      column: 'island',
-      page: 1,
+    await click(GENERAL.icon('swap-vertical'));
+    const expectedOrder = ['Bora Bora', 'Fiji', 'Maldives', 'Maui', 'Santorini', 'Seychelles'];
+    expectedOrder.forEach((island, idx) => {
+      assert.dom(GENERAL.tableData(idx, 'island')).hasText(island);
     });
   });
 
   test('action column renders provided yield block with popup menu', async function (assert) {
-    this.data = MOCK_DATA;
     await this.renderComponent();
-
-    assert.dom(GENERAL.tableData('Maldives', 'popupMenu')).exists('action column renders');
-    assert.dom(GENERAL.menuTrigger).exists('button trigger exists for popup menu');
+    assert.dom(GENERAL.menuTrigger).exists({ count: this.data.length }, 'popup trigger exists for each item');
+    await click(`${GENERAL.tableRow(2)} ${GENERAL.menuTrigger}`);
+    assert.dom('li').hasText(this.data[2].island, 'popup menu renders relevant row data');
   });
 
-  test('selectable column renders when isSelectable is true', async function (assert) {
-    this.data = MOCK_DATA;
+  test('selectable checkboxes render and are selectable when selectionKeyField is provided', async function (assert) {
+    this.selectionKeyField = 'island';
+    const count = this.data.length + 1;
+    this.onSelectionChange = sinon.spy();
     await this.renderComponent();
-
     assert
-      .dom(`${GENERAL.tableRow('Maldives')} > .hds-advanced-table__th`)
-      .hasClass('hds-advanced-table__th--is-selectable', 'selectable column renders for row');
+      .dom('input[type="checkbox"]')
+      .exists({ count }, 'it renders a checkbox for each row plus the header to select all');
+    assert
+      .dom(`${GENERAL.tableRow(0)} input[type="checkbox"]`)
+      .hasAttribute(
+        'aria-label',
+        `Select row ${this.data[0][this.selectionKeyField]}`,
+        'selection aria label suffix uses selectionKeyField in value'
+      );
+    await click(`${GENERAL.tableRow(0)} input[type="checkbox"]`);
+    await click(`${GENERAL.tableRow(2)} input[type="checkbox"]`);
+    assert.true(this.onSelectionChange.calledTwice, 'onSelectionChange is called twice');
+    const [callbackArgs] = this.onSelectionChange.lastCall.args;
+    const { selectionKey, selectedRowsKeys, selectableRowsStates } = callbackArgs;
+    const lastItemSelected = this.data[2];
+    assert.strictEqual(selectionKey, lastItemSelected.island, 'selectionKey is last selected row');
+    assert.propEqual(selectedRowsKeys, ['Maldives', 'Fiji'], 'callback passes selectedRowKeys');
+    const expectedRowStates = [
+      { selectionKey: 'Maldives', isSelected: true },
+      { selectionKey: 'Bora Bora', isSelected: false },
+      { selectionKey: 'Fiji', isSelected: true },
+      { selectionKey: 'Santorini', isSelected: false },
+      { selectionKey: 'Maui', isSelected: false },
+      { selectionKey: 'Seychelles', isSelected: false },
+    ];
+    assert.propEqual(selectableRowsStates, expectedRowStates, 'callback contains selectableRowsStates');
   });
 
-  // check that a custom item block will render
+  test('it is still selectable when selection callback is not provided', async function (assert) {
+    this.selectionKeyField = 'island';
+    await this.renderComponent();
+    assert.dom('input[type="checkbox"]').exists({ count: this.data.length + 1 });
+    const firstRowCheckbox = '[data-test-table-row="0"] input[type="checkbox"]';
+    await click(firstRowCheckbox);
+    assert.dom(firstRowCheckbox).isChecked('row checkbox can be toggled without @onSelectionChange');
+  });
+
   test('custom item renders provided yield block with customTableItem for a column has customTableItem set to true', async function (assert) {
-    this.data = MOCK_DATA;
     await this.renderComponent();
-
     assert
-      .dom(GENERAL.tableData('Maldives', 'visit_length'))
-      .hasText('Custom Table Item rendered!', 'custom item renders');
+      .dom(`${GENERAL.tableData(0, 'visit_length')} .hds-badge-count`)
+      .hasText('5', 'custom table item renders yielded badge');
   });
 
   test('it resets pagination when data changes', async function (assert) {
@@ -122,7 +189,6 @@ module('Integration | Component | list-table', function (hooks) {
     this.data = [...MOCK_DATA, ...moreData];
     await this.renderComponent();
     await click(GENERAL.nextPage);
-    ``;
     assert.dom(GENERAL.paginationInfo).hasText(`11–12 of ${this.data.length}`, 'it navigates to next page');
     // Changing the @data arg should trigger an update and reset pagination
     this.set('data', [

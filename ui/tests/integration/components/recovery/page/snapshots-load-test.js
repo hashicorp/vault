@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
+import { click, fillIn, render, triggerEvent, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import recoveryHandler from 'vault/mirage/handlers/recovery';
@@ -32,9 +32,11 @@ module('Integration | Component | recovery/snapshots-load', function (hooks) {
     this.version.type = 'enterprise';
 
     this.router = this.owner.lookup('service:router');
-    this.transitionStub = sinon
-      .stub(this.router, 'transitionTo')
-      .returns({ followRedirects: () => Promise.resolve() });
+    this.transitionStub = sinon.stub(this.router, 'transitionTo');
+  });
+
+  hooks.afterEach(function () {
+    this.transitionStub.restore();
   });
 
   test('it should validate form fields', async function (assert) {
@@ -57,7 +59,7 @@ module('Integration | Component | recovery/snapshots-load', function (hooks) {
       .dom(GENERAL.validationErrorByAttr('file'))
       .hasText('Please upload a snapshot file', 'File error renders.');
 
-    assert.false(this.transitionStub.called, 'transitionTo is NOT called');
+    assert.true(this.transitionStub.notCalled, 'transitionTo is NOT called');
   });
 
   test('it loads a manual snapshot successfully', async function (assert) {
@@ -78,8 +80,8 @@ module('Integration | Component | recovery/snapshots-load', function (hooks) {
 
     await click(GENERAL.inputByAttr('manual'));
     await triggerEvent('[data-test-file-input]', 'change', { files: [file] });
+    await waitFor('[data-test-file-info]');
     await click(GENERAL.submitButton);
-
     assert.true(
       this.transitionStub.calledWith('vault.cluster.recovery.snapshots'),
       'Route transitions correctly on submit success'
@@ -105,7 +107,6 @@ module('Integration | Component | recovery/snapshots-load', function (hooks) {
     await click('[data-option-index]');
     await fillIn(GENERAL.inputByAttr('url'), 'test-snapshot-url');
     await click(GENERAL.submitButton);
-
     assert.true(
       this.transitionStub.calledWith('vault.cluster.recovery.snapshots'),
       'Route transitions correctly on submit success'

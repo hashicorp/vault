@@ -99,7 +99,7 @@
   <ListTable
     class="has-top-margin-xs"
     @columns={{this.tableColumns}}
-    @selectionKey="path"
+    @selectionKeyField="path"
     @data={{this.sortedDisplayableBackends}}
     @onSelectionChange={{this.updateSelectedItems}}
   >
@@ -129,52 +129,59 @@
     </:selectedItems>
     <:customTableItem as |itemData|>
       {{#let (this.getEngineResourceData itemData.path) as |backendData|}}
-        <Hds::TooltipButton
-          aria-label="Type of backend"
-          @text={{this.generateToolTipText backendData}}
-          data-test-tooltip="Backend type"
-          isInline={{true}}
-          class="is-v-centered"
-        >
-          <Hds::Icon @name={{if backendData.icon backendData.icon "lock"}} />
-        </Hds::TooltipButton>
-        {{#if backendData.isSupportedBackend}}
-          <Hds::Link::Inline
-            @route={{backendData.backendLink}}
-            @model={{backendData.id}}
-            @color="secondary"
-            class="has-text-weight-semibold"
-          >{{backendData.path}}</Hds::Link::Inline>
-        {{else}}
-          {{backendData.path}}
+        {{! Only render if we have backendData, so this doesn't try to render while data for the list refreshes }}
+        {{#if backendData}}
+          <Hds::TooltipButton
+            aria-label="Type of backend"
+            @text={{this.generateToolTipText backendData}}
+            data-test-tooltip="Backend type"
+            isInline={{true}}
+            class="is-v-centered"
+          >
+            <Hds::Icon @name={{if backendData.icon backendData.icon "lock"}} />
+          </Hds::TooltipButton>
+          {{#if backendData.isSupportedBackend}}
+            <Hds::Link::Inline
+              @route={{backendData.backendLink}}
+              @model={{backendData.id}}
+              @color="secondary"
+              class="has-text-weight-semibold"
+              data-test-link-to={{itemData.path}}
+            >{{backendData.path}}</Hds::Link::Inline>
+          {{else}}
+            {{backendData.path}}
+          {{/if}}
         {{/if}}
       {{/let}}
     </:customTableItem>
 
     <:popupMenu as |rowData|>
       {{#let (this.getEngineResourceData rowData.path) as |backendData|}}
-        <Hds::Dropdown @isInline={{true}} as |dd|>
-          <dd.ToggleIcon
-            @icon="more-horizontal"
-            @text="{{if backendData.isSupportedBackend 'supported' 'unsupported'}} secrets engine menu"
-            @hasChevron={{false}}
-            data-test-popup-menu-trigger
-          />
-          <dd.Interactive
-            @route={{backendData.backendConfigurationLink}}
-            @model={{backendData.id}}
-            data-test-popup-menu="view-configuration"
-            @icon="settings"
-          >View configuration</dd.Interactive>
-          {{#if (not-eq backendData.type "cubbyhole")}}
+        {{! Only render if we have backendData, so this doesn't try to render while data for the list refreshes }}
+        {{#if backendData}}
+          <Hds::Dropdown @isInline={{true}} as |dd|>
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="{{if backendData.isSupportedBackend 'supported' 'unsupported'}} secrets engine menu"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger
+            />
             <dd.Interactive
-              @color="critical"
-              {{on "click" (fn (mut this.engineToDisable) backendData)}}
-              data-test-popup-menu="disable-engine"
-              @icon="trash"
-            >Disable</dd.Interactive>
-          {{/if}}
-        </Hds::Dropdown>
+              @route={{backendData.backendConfigurationLink}}
+              @model={{backendData.id}}
+              data-test-popup-menu="view-configuration"
+              @icon="settings"
+            >View configuration</dd.Interactive>
+            {{#if (not-eq backendData.type "cubbyhole")}}
+              <dd.Interactive
+                @color="critical"
+                {{on "click" (fn (mut this.engineToDisable) backendData)}}
+                data-test-popup-menu="disable-engine"
+                @icon="trash"
+              >Disable</dd.Interactive>
+            {{/if}}
+          </Hds::Dropdown>
+        {{/if}}
       {{/let}}
     </:popupMenu>
   </ListTable>

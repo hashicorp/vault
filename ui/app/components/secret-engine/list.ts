@@ -280,7 +280,7 @@ export default class SecretEngineList extends Component<Args> {
   *disableEngine(engine: SecretsEngineResource) {
     try {
       yield this.disableSingleEngine(engine);
-      this.router.transitionTo('vault.cluster.secrets.backends');
+      this.router.refresh('vault.cluster.secrets.backends');
     } finally {
       this.engineToDisable = undefined;
     }
