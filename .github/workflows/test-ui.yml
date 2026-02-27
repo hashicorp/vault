@@ -135,7 +135,7 @@ jobs:
             kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
             kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
       - name: Install Chrome
-        uses: browser-actions/setup-chrome@b94431e051d1c52dcbe9a7092a4f10f827795416 # v2.1.0
+        uses: browser-actions/setup-chrome@4f8e94349a351df0f048634f25fec36c3c91eded # v2.1.1
         with:
           chrome-version: stable
       - name: Setup pnpm
