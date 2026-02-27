@@ -195,6 +195,18 @@ export default Service.extend({
     });
   },
 
+  renewCurrentToken() {
+    const namespace = this.authData.userRootNamespace;
+    const url = '/v1/auth/token/renew-self';
+    return this.ajax(url, 'POST', { namespace });
+  },
+
+  async lookupSelf(token) {
+    return this.store
+      .adapterFor('application')
+      .ajax('/v1/auth/token/lookup-self', 'GET', { headers: { 'X-Vault-Token': token } });
+  },
+
   revokeCurrentToken() {
     const namespace = this.authData.userRootNamespace;
     const url = '/v1/auth/token/revoke-self';
