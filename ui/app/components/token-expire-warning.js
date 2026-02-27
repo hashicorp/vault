@@ -22,12 +22,8 @@ export default class TokenExpireWarning extends Component {
   }
 
   async fetchRenewCapability() {
-    try {
-      const { canUpdate } = await this.capabilities.fetchPathCapabilities('auth/token/renew-self');
-      this.canRenewSelf = canUpdate;
-    } catch {
-      this.canRenewSelf = true;
-    }
+    const { canUpdate } = await this.capabilities.fetchPathCapabilities('auth/token/renew-self');
+    this.canRenewSelf = canUpdate;
   }
 
   handleRenew() {
@@ -53,7 +49,7 @@ export default class TokenExpireWarning extends Component {
   }
 
   get canShowRenew() {
-    return this.auth?.authData?.renewable === true && this.canRenewSelf === true;
+    return this.auth?.authData?.renewable && this.canRenewSelf;
   }
 
   get queryParams() {
