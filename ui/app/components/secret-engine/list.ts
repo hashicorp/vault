@@ -39,9 +39,7 @@ export default class SecretEngineList extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly version: VersionService;
 
-  @tracked secretEngineOptions: Array<string> | [] = [];
   @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
-  @tracked enginesToDisable: Array<SecretsEngineResource> | null = null;
 
   @tracked engineTypeFilters: Array<string> = [];
   @tracked engineVersionFilters: Array<string> = [];
@@ -50,8 +48,6 @@ export default class SecretEngineList extends Component<Args> {
   // search text for dropdown filters
   @tracked typeSearchText = '';
   @tracked versionSearchText = '';
-
-  @tracked selectedItems = Array<string>();
 
   tableColumns = [
     {
@@ -241,11 +237,6 @@ export default class SecretEngineList extends Component<Args> {
     this.engineVersionFilters = [];
   }
 
-  @action
-  updateSelectedItems(tableData: { selectedRowsKeys: string[] }) {
-    this.selectedItems = tableData.selectedRowsKeys;
-  }
-
   async disableSingleEngine(engine: SecretsEngineResource) {
     const { engineType, id, path } = engine;
     try {
@@ -256,23 +247,6 @@ export default class SecretEngineList extends Component<Args> {
       this.flashMessages.danger(
         `There was an error disabling the ${engineType} Secrets Engine at ${path}: ${message}.`
       );
-    }
-  }
-
-  @dropTask
-  *disableMultipleEngines(enginePathsToDisable: Array<string>) {
-    const enginesToDisable = this.displayableBackends.filter((engine: SecretsEngineResource) =>
-      enginePathsToDisable.includes(engine.path)
-    );
-    try {
-      for (const engine of enginesToDisable) {
-        yield this.disableSingleEngine(engine);
-      }
-
-      // Navigate once all operations are complete
-      this.router.transitionTo('vault.cluster.secrets.backends');
-    } finally {
-      this.enginesToDisable = null;
     }
   }
 
