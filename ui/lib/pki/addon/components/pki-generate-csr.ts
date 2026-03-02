@@ -17,8 +17,8 @@ import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type { ValidationMap } from 'vault/app-types';
 import type {
-  PkiGenerateIntermediateExportedEnum,
-  PkiIssuersGenerateIntermediateExportedEnum,
+  SecretsApiPkiGenerateIntermediateExportedEnum,
+  SecretsApiPkiIssuersGenerateIntermediateExportedEnum,
   PkiGenerateIntermediateRequest,
   PkiGenerateIntermediateResponse,
   PkiIssuersGenerateIntermediateRequest,
@@ -100,13 +100,13 @@ export default class PkiGenerateCsrComponent extends Component<Args> {
   generateCsr(canUseIssuer: boolean, data: PkiConfigGenerateForm['data']) {
     if (canUseIssuer) {
       return this.api.secrets.pkiIssuersGenerateIntermediate(
-        this.form.data.type as PkiIssuersGenerateIntermediateExportedEnum,
+        this.form.data.type as SecretsApiPkiIssuersGenerateIntermediateExportedEnum,
         this.secretMountPath.currentPath,
         data as PkiIssuersGenerateIntermediateRequest
       );
     } else {
       return this.api.secrets.pkiGenerateIntermediate(
-        this.form.data.type as PkiGenerateIntermediateExportedEnum,
+        this.form.data.type as SecretsApiPkiGenerateIntermediateExportedEnum,
         this.secretMountPath.currentPath,
         data as PkiGenerateIntermediateRequest
       );

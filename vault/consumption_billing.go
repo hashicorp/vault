@@ -32,7 +32,13 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 		},
 		Logger: logger,
 	}
+	if c.systemBarrierView != nil {
+		c.consumptionBillingSubView = c.systemBarrierView.SubView(billing.BillingSubPath)
+	} else {
+		c.consumptionBilling.Logger.Error("system barrier view is not initialized, consumption billing view is not initialized")
+	}
 	c.consumptionBillingLock.Unlock()
+
 	c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
 		c.consumptionBillingMetricsWorker(ctx)
 		// Start the perf standby plugin counts worker if this is a perf standby
@@ -74,18 +80,18 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 			}
 			return d
 		}
-		endOfMonth := clock.NewTimer(untilNextMonth(clock.Now()))
+		endOfMonth := clock.NewTimer(untilNextMonth(clock.Now().UTC()))
 		for {
 			select {
 			case <-ticker.C:
-				if err := c.updateBillingMetrics(ctx, clock.Now()); err != nil {
+				if err := c.updateBillingMetrics(ctx, clock.Now().UTC()); err != nil {
 					c.logger.Error("error updating billing metrics", "error", err)
 				}
 			case <-ctx.Done():
 				return
 			case <-endOfMonth.C:
 				// Reset the timer for the next month
-				currentMonth := clock.Now()
+				currentMonth := clock.Now().UTC()
 				c.logger.Debug("reached end of month, resetting timer", "currentMonth", currentMonth)
 				previousMonth := timeutil.StartOfPreviousMonth(currentMonth)
 				// On month boundary, we need to flush the current in-memory counts to storage
@@ -113,6 +119,8 @@ func (c *Core) HandleStartOfMonth(ctx context.Context, currentMonth time.Time) {
 	if err := c.resetInMemoryBillingMetrics(); err != nil {
 		c.logger.Error("error resetting in memory billing metrics", "error", err)
 	}
+	// Reset the metrics last update time to zero time to indicate new month data hasn't been updated yet
+	c.UpdateMetricsLastUpdateTime(ctx, currentMonth, time.Time{})
 }
 
 func (c *Core) deletePreviousMonthBillingMetrics(ctx context.Context, currentMonth time.Time) error {
@@ -153,7 +161,8 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	return nil
 }
 
-func (c *Core) updateBillingMetrics(ctx context.Context, currentMonth time.Time) error {
+// updateBillingMetricsLocked must be called with stateLock already held.
+func (c *Core) updateBillingMetricsLocked(ctx context.Context, currentMonth time.Time) error {
 	// Check if systemBarrierView is initialized
 	c.mountsLock.RLock()
 	initialized := c.systemBarrierView != nil
@@ -162,11 +171,11 @@ func (c *Core) updateBillingMetrics(ctx context.Context, currentMonth time.Time)
 	if !initialized {
 		return nil
 	}
-	if c.PerfStandby() {
+	if c.perfStandby {
 		// We do not update billing metrics on performance standbys
 		// Instead we send any in memory counts to the primary. This doesn't apply
 		// to role counts, but will be used for other metrics
-	} else if standby, _ := c.Standby(); standby {
+	} else if c.standby {
 		// Do nothing if we are a standby. All requests get forwarded anyway
 	} else {
 		// The active node will need to flush max role counts to storage
@@ -180,9 +189,19 @@ func (c *Core) updateBillingMetrics(ctx context.Context, currentMonth time.Time)
 			c.logger.Info("updated cluster data protection call counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
 		}
 
-		c.consumptionBilling.LastMetricsUpdate.Store(time.Now().UTC())
+		// Store the last metrics update time. This is used to determine the freshness of the billing data.
+		// We store this on the active node only, since this is the node that updates the billing metrics.
+		// The standby nodes will replicate this value, so it will be available on all nodes, but we avoid
+		// having all nodes write to this value to avoid write conflicts.
+		c.UpdateMetricsLastUpdateTime(ctx, currentMonth, time.Now().UTC())
 	}
 	return nil
+}
+
+func (c *Core) updateBillingMetrics(ctx context.Context, currentMonth time.Time) error {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	return c.updateBillingMetricsLocked(ctx, currentMonth)
 }
 
 func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time.Time) error {

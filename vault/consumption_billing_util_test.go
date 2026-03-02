@@ -399,6 +399,51 @@ func TestHWMKvSecretsCounts(t *testing.T) {
 	require.Equal(t, 5, counts)
 }
 
+// TestStoreAndGetMetricsLastUpdateTimeLocked tests the store/get helpers
+// that operate under the BillingStorageLock
+func TestStoreAndGetMetricsLastUpdateTimeLocked(t *testing.T) {
+	coreConfig := &CoreConfig{}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	ctx := namespace.RootContext(context.Background())
+	month := time.Now()
+	updateTime := time.Now().UTC().Truncate(time.Second)
+
+	// Acquire billing storage lock as required by the helper contract
+	core.consumptionBilling.BillingStorageLock.Lock()
+	defer core.consumptionBilling.BillingStorageLock.Unlock()
+
+	// Store under local prefix and verify
+	err := core.storeMetricsLastUpdateTimeLocked(ctx, billing.LocalPrefix, month, updateTime)
+	require.NoError(t, err)
+
+	got, err := core.getMetricsLastUpdateTimeLocked(ctx, billing.LocalPrefix, month)
+	require.NoError(t, err)
+	require.Equal(t, updateTime.Format(time.RFC3339), got.Format(time.RFC3339))
+
+	// Ensure other prefix returns zero when not set
+	gotReplicated, err := core.getMetricsLastUpdateTimeLocked(ctx, billing.ReplicatedPrefix, month)
+	require.NoError(t, err)
+	require.True(t, gotReplicated.IsZero(), "replicated prefix should have no stored timestamp")
+}
+
+// TestUpdateAndGetMetricsLastUpdateTime tests the public Update/Get helpers for the metrics last update time
+func TestUpdateAndGetMetricsLastUpdateTime(t *testing.T) {
+	coreConfig := &CoreConfig{}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	ctx := namespace.RootContext(context.Background())
+	month := time.Now()
+	updateTime := time.Now().UTC().Truncate(time.Second)
+
+	err := core.UpdateMetricsLastUpdateTime(ctx, month, updateTime)
+	require.NoError(t, err)
+
+	got, err := core.GetMetricsLastUpdateTime(ctx, month)
+	require.NoError(t, err)
+	require.Equal(t, updateTime.Format(time.RFC3339), got.Format(time.RFC3339))
+}
+
 // TestStoreAndGetMaxTotpKeyCounts verifies that we can store and retrieve the HWM totp key counts correctly
 func TestStoreAndGetMaxTotpKeyCounts(t *testing.T) {
 	coreConfig := &CoreConfig{

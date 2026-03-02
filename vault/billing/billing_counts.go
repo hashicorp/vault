@@ -28,6 +28,7 @@ const (
 	ThirdPartyPluginsPrefix                 = "thirdPartyPluginCounts/"
 	KmipEnabledPrefix                       = "kmipEnabled/"
 	PkiDurationAdjustedCountPrefix          = "normalizedCertsIssued/"
+	MetricsLastUpdatedAtPrefix              = "metricsLastUpdatedAt/"
 
 	BillingWriteInterval = 10 * time.Minute
 	// pluginCountsSendTimeout is the timeout for sending plugin counts to the active node
@@ -49,11 +50,6 @@ type ConsumptionBilling struct {
 	// KmipSeenEnabledThisMonth tracks whether KMIP has been enabled during the current billing month.
 	// This is used to avoid scanning all mounts every 10 minutes for KMIP billing detection.
 	KmipSeenEnabledThisMonth atomic.Bool
-
-	// LastMetricsUpdate tracks when billing metrics were last updated, either by the background worker
-	// or by the billing endpoint API call. This timestamp is used by the billing overview endpoint to
-	// indicate data freshness.
-	LastMetricsUpdate atomic.Value
 }
 
 type BillingConfig struct {

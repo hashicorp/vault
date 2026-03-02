@@ -11,12 +11,9 @@ test('userpass workflow', async ({ page }) => {
   await page.getByRole('link', { name: 'Access control' }).click();
   await page.getByRole('link', { name: 'Authentication methods' }).click();
 
-  // if intro page is visible, click enable method there otherwise click enable method in toolbar
-  if (await page.getByRole('link', { name: 'Enable a new method' }).isVisible()) {
-    await page.getByRole('link', { name: 'Enable a new method' }).click();
-  } else {
-    await page.getByRole('link', { name: 'Enable new method' }).click();
-  }
+  // dismiss intro page and click enable method in toolbar
+  await page.getByRole('button', { name: 'Skip' }).click();
+  await page.getByRole('link', { name: 'Enable new method' }).click();
 
   // enable userpass auth method
   await page.getByLabel('Userpass - enabled engine type').click();

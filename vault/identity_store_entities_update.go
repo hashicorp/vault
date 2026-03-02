@@ -139,9 +139,13 @@ func (b *EntityBuilder) WithDisabled(disabled bool) *EntityBuilder {
 }
 
 // WithMetadata sets the metadata for the entity.
+// The original entity's value for duplicate_of_canonical_id will be preserved.
 func (b *EntityBuilder) WithMetadata(metadata map[string]string) *EntityBuilder {
 	if b.err != nil {
 		return b
+	}
+	if value, ok := b.entity.Metadata[duplicateCanonicalIDMetadataKey]; ok {
+		metadata[duplicateCanonicalIDMetadataKey] = value
 	}
 	b.entity.Metadata = metadata
 	return b

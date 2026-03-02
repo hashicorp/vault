@@ -28,6 +28,7 @@ jobs:
     outputs:
       changed-files: ${{ steps.changed-files.outputs.changed-files }}
       checkout-ref: ${{ steps.checkout.outputs.ref }}
+      compute-build: ${{ steps.metadata.outputs.compute-build }}
       compute-small: ${{ steps.metadata.outputs.compute-small }}
       compute-test-go: ${{ steps.metadata.outputs.compute-test-go }}
       compute-test-ui: ${{ steps.metadata.outputs.compute-test-ui }}
@@ -38,6 +39,7 @@ jobs:
       is-fork: ${{ steps.metadata.outputs.is-fork }}
       labels: ${{ steps.metadata.outputs.labels }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
+      run-ui-tests: ${{ steps.ui-should-run.outputs.run-ui-tests }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       # Make sure we check out correct ref based on PR labels and such
@@ -78,6 +80,12 @@ jobs:
           # Don't download them on a cache hit during setup, just make sure they're cached before
           # subsequent workflows are run.
           no-restore: true
+      # Run the UI tests if our UI has changed, or a 'ui' label is present, or our workflow trigger
+      # was triggered by a merge to main or releases/*.
+      - id: ui-should-run
+        name: Determine whether or not we should run UI tests
+        run: |
+          echo "run-ui-tests=${{ contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'ui') || steps.metadata.outputs.workflow-trigger == 'push' || contains(steps.metadata.outputs.labels, 'ui') }}" | tee -a "$GITHUB_OUTPUT"
 
   test-autopilot-upgrade:
     name: Run Autopilot upgrade tool
@@ -252,120 +260,16 @@ jobs:
 
   test-ui:
     name: Test UI
-    # Run the UI tests if our UI has changed, or a 'ui' label is present, or our workflow trigger
-    # was triggered by a merge to main or releases/*.
-    if: |
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui') ||
-      needs.setup.outputs.workflow-trigger == 'push' ||
-      contains(needs.setup.outputs.labels, 'ui')
     needs: setup
-    permissions:
-      id-token: write
-      contents: read
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-test-ui) }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        name: status
-        with:
-          ref: ${{ needs.setup.outputs.checkout-ref }}
-      - uses: ./.github/actions/set-up-go
-        with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - name: Install PNPM
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
-        with:
-          run_install: false
-          package_json_file: './ui/package.json'
-
-      # Setup node.js with caching using the pnpm-lock.yaml file
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
-        with:
-          node-version-file: './ui/package.json'
-          cache: pnpm
-          cache-dependency-path: ui/pnpm-lock.yaml
-
-      - uses: browser-actions/setup-chrome@b94431e051d1c52dcbe9a7092a4f10f827795416 # v2.1.0
-      - name: ui-dependencies
-        working-directory: ./ui
-        run: |
-          pnpm i
-          npm rebuild node-sass
-      - if: needs.setup.outputs.is-ent-repo != 'true'
-        name: Rebuild font cache on Github hosted runner
-        # Fix `Fontconfig error: No writable cache directories` error on Github hosted runners
-        # This seems to have been introduced with this runner image: https://github.com/actions/runner-images/releases/tag/ubuntu22%2F20240818.1
-        # Hopefully this will resolve itself at some point with a newer image and we can remove it
-        run: fc-cache -f -v
-      - if: needs.setup.outputs.is-ent-repo == 'true'
-        id: vault-auth
-        name: Authenticate to Vault
-        run: vault-auth
-      - if: needs.setup.outputs.is-ent-repo == 'true'
-        id: secrets
-        name: Fetch secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
-        with:
-          url: ${{ steps.vault-auth.outputs.addr }}
-          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
-          token: ${{ steps.vault-auth.outputs.token }}
-          secrets: |
-            kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
-            kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
-            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
-      - if: needs.setup.outputs.is-ent-repo == 'true'
-        name: Set up Git
-        run: git config --global url."https://${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
-      - uses: ./.github/actions/install-tools
-      - name: build-go-dev
-        run: |
-          rm -rf ./pkg
-          mkdir ./pkg
-          make prep dev
-      - name: test-ui
-        env:
-          VAULT_LICENSE: ${{ steps.secrets.outputs.VAULT_LICENSE }}
-        run: |
-          export PATH="${PWD}/bin:${PATH}"
-          # Run Ember tests
-          cd ui
-          mkdir -p test-results/qunit
-          pnpm ${{ needs.setup.outputs.is-ent-branch == 'true' && 'test' || 'test:oss' }}
-      - if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: test-results-ui
-          path: ui/test-results
-      - name: Prepare datadog-ci
-        if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
-        continue-on-error: true
-        run: |
-          if type datadog-ci > /dev/null 2>&1; then
-            exit 0
-          fi
-          # Curl does not always exit 1 if things go wrong. To determine if this is successful
-          # we'll silence all non-error output and check the results to determine success.
-          if ! out="$(curl -sSL --fail https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64 --output /usr/local/bin/datadog-ci 2>&1)"; then
-            printf "failed to download datadog-ci: %s" "$out"
-          fi
-          if [[ -n "$out" ]]; then
-            printf "failed to download datadog-ci: %s" "$out"
-          fi
-          chmod +x /usr/local/bin/datadog-ci
-      - name: Upload test results to DataDog
-        if: success() || failure()
-        continue-on-error: true
-        env:
-          DD_ENV: ci
-        run: |
-          if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
-            export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
-          fi
-          datadog-ci junit upload --service "$GITHUB_REPOSITORY" 'ui/test-results/qunit/results.xml'
-      - if: always()
-        uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
-        with:
-          paths: "ui/test-results/qunit/results.xml"
-          show: "fail"
+    if: needs.setup.outputs.run-ui-tests == 'true'
+    uses: ./.github/workflows/test-ui.yml
+    with:
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
+      runs-on: ${{ needs.setup.outputs.compute-build }}
+      runs-on-small: ${{ needs.setup.outputs.compute-test-ui }}
+      is-ent-repo: ${{ needs.setup.outputs.is-ent-repo }}
+      is-ent-branch: ${{ needs.setup.outputs.is-ent-branch }}
+    secrets: inherit
 
   tests-completed:
     needs:
@@ -430,8 +334,7 @@ jobs:
           secrets: |
             kv/data/github/${{ github.repository }}/slack feed-vault-ci-official-webhook-url | slackbot-webhook-url;
       - id: slackbot-webhook-url
-        run:
-          echo "slackbot-webhook-url=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL || steps.secrets.outputs.slackbot-webhook-url }}" >> "$GITHUB_OUTPUT"
+        run: echo "slackbot-webhook-url=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL || steps.secrets.outputs.slackbot-webhook-url }}" >> "$GITHUB_OUTPUT"
       - if: |
           always() &&
           needs.setup.outputs.workflow-trigger == 'push' &&

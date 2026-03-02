@@ -396,6 +396,11 @@ func TestSystemBackend_BillingOverview_PreviousMonth(t *testing.T) {
 	c.consumptionBilling.BillingStorageLock.Unlock()
 	require.NoError(t, err)
 
+	// Store metrics last update timestamp for previous month so it's detected as having data
+	testUpdateTime := time.Date(previousMonth.Year(), previousMonth.Month(), 15, 12, 0, 0, 0, time.UTC)
+	err = c.UpdateMetricsLastUpdateTime(ctx, previousMonth, testUpdateTime)
+	require.NoError(t, err)
+
 	// Make a request to the billing overview endpoint
 	req := logical.TestRequest(t, logical.ReadOperation, "billing/overview")
 	resp, err := b.HandleRequest(ctx, req)
@@ -422,8 +427,8 @@ func TestSystemBackend_BillingOverview_PreviousMonth(t *testing.T) {
 	require.NoError(t, err)
 
 	// The updated_at for previous month should be at the end of that month
-	expectedEndOfMonth := timeutil.StartOfMonth(previousMonth.AddDate(0, 1, 0)).Add(-time.Second)
-	require.WithinDuration(t, expectedEndOfMonth, parsedTime, time.Minute)
+	expectedEndOfMonth := timeutil.EndOfMonth(previousMonth).UTC()
+	require.Equal(t, expectedEndOfMonth, parsedTime)
 }
 
 // TestSystemBackend_BillingOverview_EmptyMetrics verifies that the billing overview
@@ -508,12 +513,12 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 		case "pki_units":
 			total, ok := metricData["total"].(float64)
 			require.True(t, ok, "pki_units total should be float64")
-			require.Equal(t, float64(0), total, "data_protection_calls total should be 0")
+			require.Equal(t, float64(0), total, "pki units total should be 0")
 
 		case "managed_keys":
 			total, ok := metricData["total"].(int)
 			require.True(t, ok, "managed_keys total should be float64")
-			require.Equal(t, int(0), total, "data_protection_calls total should be 0")
+			require.Equal(t, int(0), total, "managed keys total should be 0")
 			details, ok := metricData["metric_details"].([]map[string]interface{})
 			require.True(t, ok, "%s metric_details should be array", metricName)
 			require.Empty(t, details, "%s metric_details should be empty when total is 0", metricName)
@@ -598,7 +603,7 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
 	ctx := namespace.RootContext(nil)
 
-	// First, call with refresh_data set to set the LastMetricsUpdate timestamp
+	// First, call with refresh_data set to set the metrics last update timestamp
 	req := logical.TestRequest(t, logical.ReadOperation, "billing/overview")
 	req.Data["refresh_data"] = true
 	resp, err := b.HandleRequest(ctx, req)
@@ -612,18 +617,29 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp(t *testing.T) {
 	currentMonth, ok := months[0].(map[string]interface{})
 	require.True(t, ok)
 
-	// Get the updated_at timestamp from the first call
+	previousMonth, ok := months[1].(map[string]interface{})
+	require.True(t, ok)
+
+	// Get the updated_at timestamp from the first call (current month)
 	firstUpdatedAt, ok := currentMonth["updated_at"].(string)
 	require.True(t, ok)
 	firstTime, err := time.Parse(time.RFC3339, firstUpdatedAt)
 	require.NoError(t, err)
 
-	// Verify LastMetricsUpdate was set
-	lastUpdate := c.consumptionBilling.LastMetricsUpdate.Load()
-	require.NotNil(t, lastUpdate, "LastMetricsUpdate should be set after refresh")
-	storedTime, ok := lastUpdate.(time.Time)
+	// Verify the metrics last update time was set
+	lastUpdate, err := c.GetMetricsLastUpdateTime(ctx, time.Now().UTC())
+	require.NoError(t, err)
+	require.Equal(t, firstTime, lastUpdate, "stored timestamp should match response timestamp")
+
+	// Verify previous month timestamp is zero time (no data stored for previous month)
+	prevMonthUpdatedAt, ok := previousMonth["updated_at"].(string)
 	require.True(t, ok)
-	require.WithinDuration(t, firstTime, storedTime, time.Second, "stored timestamp should match response timestamp")
+	prevMonthTime, err := time.Parse(time.RFC3339, prevMonthUpdatedAt)
+	require.NoError(t, err)
+
+	// Previous month should be zero time since we haven't stored any data for it
+	require.True(t, prevMonthTime.IsZero(),
+		"previous month updated_at should be zero time when no data is stored")
 
 	// Wait a moment to ensure time difference
 	time.Sleep(100 * time.Millisecond)
@@ -642,17 +658,116 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp(t *testing.T) {
 	currentMonth, ok = months[0].(map[string]interface{})
 	require.True(t, ok)
 
-	// Get the updated_at timestamp from the second call
+	previousMonth, ok = months[1].(map[string]interface{})
+	require.True(t, ok)
+
+	// Get the updated_at timestamp from the second call (current month)
 	secondUpdatedAt, ok := currentMonth["updated_at"].(string)
 	require.True(t, ok)
 	secondTime, err := time.Parse(time.RFC3339, secondUpdatedAt)
 	require.NoError(t, err)
 
 	// The timestamp should be the same as the first call because we didn't refresh the data
-	require.WithinDuration(t, firstTime, secondTime, time.Second,
-		"updated_at without refresh should use stored LastMetricsUpdate timestamp")
+	require.Equal(t, firstTime, secondTime,
+		"updated_at without refresh should use stored metrics last update timestamp")
 
 	// Verify the timestamps are equal
 	require.Equal(t, firstUpdatedAt, secondUpdatedAt,
 		"updated_at without refresh should be identical to the stored timestamp")
+
+	// Verify previous month timestamp remains the same (zero time)
+	secondPrevMonthUpdatedAt, ok := previousMonth["updated_at"].(string)
+	require.True(t, ok)
+	require.Equal(t, prevMonthUpdatedAt, secondPrevMonthUpdatedAt,
+		"previous month updated_at should remain zero time")
+}
+
+// TestSystemBackend_BillingOverview_UpdatedAtTimestamp_NoStoredTimestamp tests the behavior
+// when the metrics last update time is zero time (background worker hasn't run yet)
+func TestSystemBackend_BillingOverview_UpdatedAtTimestamp_NoStoredTimestamp(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	ctx := namespace.RootContext(nil)
+
+	// Verify the metrics last update time is zero time initially
+	lastUpdate, err := c.GetMetricsLastUpdateTime(ctx, time.Now().UTC())
+	require.NoError(t, err)
+	require.True(t, lastUpdate.IsZero(), "metrics last update time should be zero time initially")
+
+	// Call without refresh_data when timestamp is zero
+	req := logical.TestRequest(t, logical.ReadOperation, "billing/overview")
+	req.Data["refresh_data"] = false
+	resp, err := b.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	months, ok := resp.Data["months"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, months, 2)
+
+	currentMonth, ok := months[0].(map[string]interface{})
+	require.True(t, ok)
+
+	// Get the updated_at timestamp
+	updatedAt, ok := currentMonth["updated_at"].(string)
+	require.True(t, ok)
+	updatedTime, err := time.Parse(time.RFC3339, updatedAt)
+	require.NoError(t, err)
+
+	// Verify it's zero time to indicate data hasn't been updated yet
+	require.True(t, updatedTime.IsZero(),
+		"updated_at should be zero time when the metrics last update time is zero")
+
+	// Verify previous month is also zero time (no stored timestamp for previous month)
+	previousMonth, ok := months[1].(map[string]interface{})
+	require.True(t, ok)
+	prevMonthUpdatedAt, ok := previousMonth["updated_at"].(string)
+	require.True(t, ok)
+	prevMonthTime, err := time.Parse(time.RFC3339, prevMonthUpdatedAt)
+	require.NoError(t, err)
+
+	// Previous month should also be zero time since no timestamp is stored
+	require.True(t, prevMonthTime.IsZero(),
+		"previous month updated_at should be zero time when no stored timestamp exists")
+}
+
+// TestSystemBackend_BillingOverview_PreviousMonth_WithError tests the behavior
+// when retrieving the previous month's timestamp fails with an error.
+// This ensures the endpoint gracefully handles storage errors by returning zero time.
+func TestSystemBackend_BillingOverview_PreviousMonth_WithError(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	ctx := namespace.RootContext(nil)
+
+	// Store some data for previous month
+	previousMonth := timeutil.StartOfPreviousMonth(time.Now())
+
+	// Store counts but intentionally do NOT store the metrics last update timestamp
+	// This simulates a scenario where data exists but timestamp retrieval might fail
+	c.consumptionBilling.BillingStorageLock.Lock()
+	err := c.storeMaxKvCountsLocked(ctx, 5, "local/", previousMonth)
+	c.consumptionBilling.BillingStorageLock.Unlock()
+	require.NoError(t, err)
+
+	// Make a request to the billing overview endpoint
+	req := logical.TestRequest(t, logical.ReadOperation, "billing/overview")
+	resp, err := b.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	months, ok := resp.Data["months"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, months, 2)
+
+	// Check previous month data
+	previousMonthData, ok := months[1].(map[string]interface{})
+	require.True(t, ok)
+
+	// Verify updated_at is zero time when no timestamp is stored
+	updatedAt, ok := previousMonthData["updated_at"].(string)
+	require.True(t, ok)
+	parsedTime, err := time.Parse(time.RFC3339, updatedAt)
+	require.NoError(t, err)
+
+	// Should be zero time since no timestamp was stored for previous month
+	require.True(t, parsedTime.IsZero(),
+		"previous month updated_at should be zero time when timestamp is not stored")
 }

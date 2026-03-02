@@ -262,6 +262,14 @@ message Alias {
   // an IGA) can only be performed by the client that owns the resource.
   // @inject_tag: sentinel:"-"
   string scim_client_id = 15;
+
+  // external_id is the unique external identifier for an entity managed via
+  // an external IdP. This field does not always map 1:1 to a claim external_id.
+  // This mapping is done via configuration.
+  string external_id = 16;
+
+  // issuer is the issuer claim for this alias
+  string issuer = 17;
 }
 
 // ScimClient defines the stored configuration for a single SCIM client.

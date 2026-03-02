@@ -5513,6 +5513,8 @@ type SealStatusResponse struct {
 
 type SealBackendStatus struct {
 	Name           string `json:"name"`
+	Configured     bool   `json:"configured"`
+	Disabled       bool   `json:"disabled"`
 	Healthy        bool   `json:"healthy"`
 	UnhealthySince string `json:"unhealthy_since,omitempty"`
 }
@@ -5642,10 +5644,12 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 	if a, ok := c.seal.(*autoSeal); ok {
 		r.Healthy = c.seal.Healthy()
 		var uhMin time.Time
-		for _, sealWrapper := range a.GetConfiguredSealWrappersByPriority() {
+		for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
 			b := SealBackendStatus{
-				Name:    sealWrapper.Name,
-				Healthy: sealWrapper.IsHealthy(),
+				Name:       sealWrapper.Name,
+				Configured: sealWrapper.Configured,
+				Healthy:    sealWrapper.IsHealthy(),
+				Disabled:   sealWrapper.Disabled,
 			}
 			if !sealWrapper.IsHealthy() {
 				lastSeenHealthy := sealWrapper.LastSeenHealthy()
@@ -5661,11 +5665,21 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 		if !uhMin.IsZero() {
 			r.UnhealthySince = uhMin.String()
 		}
+		if c.IsInSealMigrationMode(false) {
+			r.Backends = append(r.Backends, SealBackendStatus{
+				Name:       "shamir",
+				Configured: true,
+				Healthy:    true,
+				Disabled:   true,
+			})
+		}
 	} else {
 		r.Backends = []SealBackendStatus{
 			{
-				Name:    "shamir", // "default?"
-				Healthy: true,
+				Name:       "shamir",
+				Configured: true,
+				Healthy:    true,
+				Disabled:   false,
 			},
 		}
 		r.Healthy = true

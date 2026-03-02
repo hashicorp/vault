@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
 )
@@ -254,7 +255,18 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 	defer cb.BillingStorageLock.Unlock()
 
 	local := localPathPrefix == billing.LocalPrefix
-	currentRoleCounts, currentManagedKeyCounts := c.getRoleAndManagedKeyCountsInternal(local, !local, true)
+	currentRoleCounts, currentManagedKeyCounts, err := c.getRoleAndManagedKeyCountsInternal(local, !local, true)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Add nil checks before dereferencing
+	if currentRoleCounts == nil {
+		currentRoleCounts = &RoleCounts{}
+	}
+	if currentManagedKeyCounts == nil {
+		currentManagedKeyCounts = &ManagedKeyCounts{}
+	}
 
 	// get max role counts
 	maxRoleCounts, err := c.updateMaxRoleCounts(ctx, currentRoleCounts, localPathPrefix, currentMonth)
@@ -432,14 +444,13 @@ func (c *Core) getStoredTotpKeyCountsLocked(ctx context.Context, localPathPrefix
 }
 
 func (c *Core) GetBillingSubView() (*BarrierView, bool) {
-	c.mountsLock.RLock()
-	view := c.systemBarrierView
-	c.mountsLock.RUnlock()
-
-	if view == nil {
-		return nil, false
+	c.consumptionBillingLock.RLock()
+	defer c.consumptionBillingLock.RUnlock()
+	if c.consumptionBillingSubView == nil {
+		// Initialize the consumption billing sub view
+		c.consumptionBillingSubView = c.systemBarrierView.SubView(billing.BillingSubPath)
 	}
-	return view.SubView(billing.BillingSubPath), true
+	return c.consumptionBillingSubView, true
 }
 
 // storeTransitCallCountsLocked must be called with BillingStorageLock held
@@ -680,4 +691,78 @@ func (c *Core) storePkiDurationAdjustedCountLocked(ctx context.Context, localPat
 	}
 
 	return nil
+}
+
+// storeMetricsLastUpdateTimeLocked must be called with BillingStorageLock held
+func (c *Core) storeMetricsLastUpdateTimeLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, updateTime time.Time) error {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.MetricsLastUpdatedAtPrefix)
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(updateTime.Format(time.RFC3339)),
+	}
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
+}
+
+// getMetricsLastUpdateTimeLocked retrieves timestamp of the last billing metrics update for the given month. If the value does not exist, the 0 timestamp will be returned.
+func (c *Core) getMetricsLastUpdateTimeLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (time.Time, error) {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.MetricsLastUpdatedAtPrefix)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return time.Time{}, nil
+	}
+	entry, err := view.Get(ctx, billingPath)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if entry == nil {
+		return time.Time{}, nil
+	}
+	updateTime, err := time.Parse(time.RFC3339, string(entry.Value))
+	if err != nil {
+		return time.Time{}, err
+	}
+	return updateTime, nil
+}
+
+func (c *Core) GetMetricsLastUpdateTime(ctx context.Context, currentMonth time.Time) (time.Time, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return time.Time{}, ErrConsumptionBillingNotInitialized
+	}
+
+	// Normalize month to UTC start-of-month to avoid timezone/midnight mismatches
+	normalizedMonth := timeutil.StartOfMonth(currentMonth.UTC())
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+	return c.getMetricsLastUpdateTimeLocked(ctx, billing.LocalPrefix, normalizedMonth)
+}
+
+// UpdateMetricsLastUpdateTime updates the last update time for billing metrics for the given month, and returns the value that was stored.
+// Note that this last metrics update time is per cluster. It does NOT de-duplicate across clusters. For that reason,
+// we will always store the time at the "local" prefix.
+func (c *Core) UpdateMetricsLastUpdateTime(ctx context.Context, currentMonth, updateTime time.Time) error {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return ErrConsumptionBillingNotInitialized
+	}
+
+	// Normalize month to UTC start-of-month and ensure updateTime is in UTC
+	normalizedMonth := timeutil.StartOfMonth(currentMonth.UTC())
+	updateTime = updateTime.UTC()
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
+
+	return c.storeMetricsLastUpdateTimeLocked(ctx, billing.LocalPrefix, normalizedMonth, updateTime)
 }

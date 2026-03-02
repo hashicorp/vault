@@ -7899,3 +7899,79 @@ func TestIssuance_ValidityPeriodContainedByCA(t *testing.T) {
 		})
 	}
 }
+
+// TestBackend_SignIntermediate_IgnoresCSR_BasicConstraint verifies that when signing an intermediate CSR,
+// with use_csr_values set to true, we ignore the CSR's Basic constraint extension as we do
+// not properly support max_path_length.
+func TestBackend_SignIntermediate_IgnoresCSR_BasicConstraint(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Generate root CA with max_path_length of 2
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name":     "Root CA",
+		"ttl":             "180h",
+		"max_path_length": 2,
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	// Generate private key for CSR
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed to generate private key")
+
+	bcExt, err := certutil.CreateBasicConstraintExtension(true, 5)
+	require.NoError(t, err, "failed to create basic constraint extension")
+
+	// Create CSR template
+	csrTemplate := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: "Intermediate CA",
+		},
+		ExtraExtensions: []pkix.Extension{bcExt},
+	}
+
+	// Create the CSR
+	csrDER, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, privateKey)
+	require.NoError(t, err, "failed to create CSR")
+
+	csrPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csrDER,
+	})
+
+	// Sign the intermediate CSR
+	signParams := map[string]interface{}{
+		"csr":            string(csrPEM),
+		"common_name":    "Intermediate CA",
+		"use_csr_values": true,
+		"ttl":            "87600h",
+	}
+
+	resp, err = CBWrite(b, s, "root/sign-intermediate", signParams)
+	require.NoError(t, err, "failed to sign intermediate")
+	require.NotNil(t, resp, "expected response")
+	require.NotEmpty(t, resp.Data["certificate"], "expected certificate in response")
+
+	// Parse the signed certificate
+	certPEM := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(certPEM))
+	require.NotNil(t, block, "failed to decode certificate PEM")
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	require.NoError(t, err, "failed to parse certificate")
+
+	// Verify Basic Constraints extension exists and is critical
+	hasBasicConstraints := false
+	for _, ext := range cert.Extensions {
+		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+			hasBasicConstraints = true
+			require.True(t, ext.Critical, "Basic Constraints should be marked as critical")
+			isCA, maxPathLen, err := certutil.ParseBasicConstraintExtension(ext)
+			require.NoError(t, err, "failed to parse Basic Constraints extension")
+			require.True(t, isCA, "Basic Constraints should be marked as CA")
+			require.Equal(t, 1, maxPathLen, "max_path_length should be set to 1, root of 2-1")
+			break
+		}
+	}
+	require.True(t, hasBasicConstraints, "certificate should have Basic Constraints extension")
+}

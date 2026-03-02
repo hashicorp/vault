@@ -6,8 +6,8 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import {
-  LdapLibraryListListEnum,
-  LdapLibraryListLibraryPathListEnum,
+  SecretsApiLdapLibraryListListEnum,
+  SecretsApiLdapLibraryListLibraryPathListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 import type ApiService from 'vault/services/api';
@@ -29,9 +29,9 @@ export default class LdapLibrariesRoute extends Route {
         ? await this.api.secrets.ldapLibraryListLibraryPath(
             path_to_library,
             currentPath,
-            LdapLibraryListLibraryPathListEnum.TRUE
+            SecretsApiLdapLibraryListLibraryPathListEnum.TRUE
           )
-        : await this.api.secrets.ldapLibraryList(currentPath, LdapLibraryListListEnum.TRUE);
+        : await this.api.secrets.ldapLibraryList(currentPath, SecretsApiLdapLibraryListListEnum.TRUE);
 
       const libraries =
         keys?.map((name) => {

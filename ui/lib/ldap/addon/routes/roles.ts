@@ -9,10 +9,10 @@ import { paginate, PaginateOptions } from 'core/utils/paginate-list';
 import sortObjects from 'vault/utils/sort-objects';
 import { fetchRoleCapabilities } from 'ldap/utils/capabilities-helper';
 import {
-  LdapListStaticRolesListEnum,
-  LdapListDynamicRolesListEnum,
-  LdapListStaticRolePathListEnum,
-  LdapListRolePathListEnum,
+  SecretsApiLdapListStaticRolesListEnum,
+  SecretsApiLdapListDynamicRolesListEnum,
+  SecretsApiLdapListStaticRolePathListEnum,
+  SecretsApiLdapListRolePathListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 import type ApiService from 'vault/services/api';
@@ -39,12 +39,18 @@ export default class LdapRolesRoute extends Route {
     if (path) {
       requests =
         subType === 'static'
-          ? [this.api.secrets.ldapListStaticRolePath(currentPath, path, LdapListStaticRolePathListEnum.TRUE)]
-          : [this.api.secrets.ldapListRolePath(currentPath, path, LdapListRolePathListEnum.TRUE)];
+          ? [
+              this.api.secrets.ldapListStaticRolePath(
+                currentPath,
+                path,
+                SecretsApiLdapListStaticRolePathListEnum.TRUE
+              ),
+            ]
+          : [this.api.secrets.ldapListRolePath(currentPath, path, SecretsApiLdapListRolePathListEnum.TRUE)];
     } else {
       requests = [
-        this.api.secrets.ldapListStaticRoles(currentPath, LdapListStaticRolesListEnum.TRUE),
-        this.api.secrets.ldapListDynamicRoles(currentPath, LdapListDynamicRolesListEnum.TRUE),
+        this.api.secrets.ldapListStaticRoles(currentPath, SecretsApiLdapListStaticRolesListEnum.TRUE),
+        this.api.secrets.ldapListDynamicRoles(currentPath, SecretsApiLdapListDynamicRolesListEnum.TRUE),
       ];
     }
     const results = await Promise.allSettled(requests);

@@ -33,9 +33,11 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/eventbus"
 	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -79,6 +81,23 @@ const (
 	genericIrrevocableErrorMessage = "unknown"
 
 	outOfRetriesMessage = "out of retries"
+
+	// event notification types for leases
+	leaseEventTypeExpired      = "lease/expired"
+	leaseEventTypeRevokeFailed = "lease/revoke_failed"
+	leaseEventTypeRevoked      = "lease/revoked"
+	leaseEventTypeRenewFailed  = "lease/renew_failed"
+	leaseEventTypeRenewed      = "lease/renewed"
+	leaseEventTypeIssued       = "lease/issued"
+
+	// event notification operations for leases
+	leaseOperationExpire = "expire"
+	leaseOperationRevoke = "revoke"
+	leaseOperationRenew  = "renew"
+	leaseOperationIssue  = "issue"
+
+	// lease metadata
+	leaseMetadataLeaseID = "lease_id"
 
 	// maximum number of irrevocable leases we return to the irrevocable lease
 	// list API **without** the `force` flag set
@@ -233,8 +252,16 @@ func (r *revocationJob) Execute() error {
 	default:
 	}
 
+	// send a lease event for expiration
+	le, err := r.m.loadEntry(revokeCtx, r.leaseID)
+	if err != nil {
+		r.m.logger.Error("failed to load lease for expiration event", "error", err)
+	} else if le != nil {
+		r.m.sendLeaseEvent(revokeCtx, le, leaseEventTypeExpired, leaseOperationExpire, false)
+	}
+
 	r.m.coreStateLock.RLock()
-	err := r.m.Revoke(revokeCtx, r.leaseID)
+	err = r.m.Revoke(revokeCtx, r.leaseID)
 	r.m.coreStateLock.RUnlock()
 
 	return err
@@ -1045,6 +1072,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	// Revoke the entry
 	if !skipToken || le.Auth == nil {
 		if err := m.revokeEntry(ctx, le); err != nil {
+			m.sendLeaseEvent(ctx, le, leaseEventTypeRevokeFailed, leaseOperationRevoke, false)
 			if !force {
 				return err
 			}
@@ -1113,6 +1141,10 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 				return err
 			}
 		}
+	}
+
+	if !skipToken {
+		m.sendLeaseEvent(ctx, le, leaseEventTypeRevoked, leaseOperationRevoke, true)
 	}
 
 	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
@@ -1276,6 +1308,7 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 
 	// Check if the lease is renewable
 	if _, err := le.renewable(); err != nil {
+		m.sendLeaseEvent(ctx, le, leaseEventTypeRenewFailed, leaseOperationRenew, false)
 		return nil, err
 	}
 
@@ -1303,12 +1336,14 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 	// Attempt to renew the entry
 	resp, err := m.renewEntry(ctx, le, increment)
 	if err != nil {
+		m.sendLeaseEvent(ctx, le, leaseEventTypeRenewFailed, leaseOperationRenew, false)
 		return nil, err
 	}
 	if resp == nil {
 		return nil, nil
 	}
 	if resp.IsError() {
+		m.sendLeaseEvent(ctx, le, leaseEventTypeRenewFailed, leaseOperationRenew, false)
 		return &logical.Response{
 			Data: resp.Data,
 		}, nil
@@ -1377,6 +1412,8 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 	// Update the expiration time
 	m.updatePending(le)
 
+	m.sendLeaseEvent(ctx, le, leaseEventTypeRenewed, leaseOperationRenew, true)
+
 	// Return the response
 	return resp, nil
 }
@@ -1433,18 +1470,21 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 	// Check if the lease is renewable. Note that this also checks for a nil
 	// lease and errors in that case as well.
 	if _, err := le.renewable(); err != nil {
+		m.sendLeaseEvent(ctx, le, leaseEventTypeRenewFailed, leaseOperationRenew, false)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	// Attempt to renew the auth entry
 	resp, err := m.renewAuthEntry(ctx, req, le, increment)
 	if err != nil {
+		m.sendLeaseEvent(ctx, le, leaseEventTypeRenewFailed, leaseOperationRenew, false)
 		return nil, err
 	}
 	if resp == nil {
 		return nil, nil
 	}
 	if resp.IsError() {
+		m.sendLeaseEvent(ctx, le, leaseEventTypeRenewFailed, leaseOperationRenew, false)
 		return &logical.Response{
 			Data: resp.Data,
 		}, nil
@@ -1505,6 +1545,8 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 	if err != nil {
 		return nil, err
 	}
+
+	m.sendLeaseEvent(ctx, le, leaseEventTypeRenewed, leaseOperationRenew, true)
 
 	retResp.Auth = resp.Auth
 	return retResp, nil
@@ -1646,6 +1688,8 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 	// Setup revocation timer if there is a lease
 	m.updatePending(le)
 
+	m.sendLeaseEvent(ctx, le, leaseEventTypeIssued, leaseOperationIssue, true)
+
 	// We round here because the clock will have already started
 	// ticking, so we'll end up always returning 299 instead of 300 or
 	// 26399 instead of 26400, say, even if it's just a few
@@ -1745,6 +1789,8 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 		tok := m.tokenStore.GenerateSSCTokenID(auth.ClientToken, logical.IndexStateFromContext(ctx), &generatedTokenEntry)
 		te.ExternalID = tok
 	}
+
+	m.sendLeaseEvent(ctx, &le, leaseEventTypeIssued, leaseOperationIssue, true)
 
 	return nil
 }
@@ -1919,6 +1965,36 @@ func (m *ExpirationManager) updatePending(le *leaseEntry) {
 	defer m.pendingLock.Unlock()
 
 	m.updatePendingInternal(le)
+}
+
+// sendLeaseEvent sends an event notification for a lease operations
+func (m *ExpirationManager) sendLeaseEvent(ctx context.Context, le *leaseEntry, eventType string, operation string, modified bool) {
+	if le == nil || le.namespace == nil || m.core == nil || m.core.events == nil {
+		return
+	}
+
+	ev, err := logical.NewEvent()
+	if err != nil {
+		m.logger.Error("Error creating lease event", "error", err)
+		return
+	}
+
+	metadata := map[string]string{
+		logical.EventMetadataPath:      le.Path,
+		logical.EventMetadataOperation: operation,
+		logical.EventMetadataModified:  strconv.FormatBool(modified),
+		leaseMetadataLeaseID:           le.LeaseID,
+	}
+
+	ev.Metadata = &structpb.Struct{Fields: make(map[string]*structpb.Value, len(metadata))}
+	for key, value := range metadata {
+		ev.Metadata.Fields[key] = structpb.NewStringValue(value)
+	}
+
+	err = m.core.events.SendEventInternal(ctx, le.namespace, nil, logical.EventType(eventType), false, ev)
+	if err != nil && !errors.Is(err, eventbus.ErrNotStarted) {
+		m.logger.Error("Error sending lease event", "path", le.Path, "operation", operation, "error", err)
+	}
 }
 
 // updatePendingInternal is the locked version of updatePending; do not call

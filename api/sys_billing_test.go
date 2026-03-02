@@ -33,32 +33,45 @@ func TestSys_BillingOverview(t *testing.T) {
 	currentMonth := resp.Months[0]
 	require.Equal(t, "2026-01", currentMonth.Month)
 	require.Equal(t, "2026-01-14T10:49:00Z", currentMonth.UpdatedAt)
-	require.Len(t, currentMonth.UsageMetrics, 4)
+	require.Len(t, currentMonth.UsageMetrics, 8, "should have all 8 metrics")
 
-	// Verify static_secrets metric
-	staticSecretsMetric := currentMonth.UsageMetrics[0]
-	require.Equal(t, "static_secrets", staticSecretsMetric.MetricName)
-	require.NotNil(t, staticSecretsMetric.MetricData)
+	// Create a map to verify all expected metrics are present
+	metricsMap := make(map[string]UsageMetric)
+	for _, metric := range currentMonth.UsageMetrics {
+		metricsMap[metric.MetricName] = metric
+	}
+
+	// Verify all expected metrics are present
+	expectedMetrics := []string{
+		"static_secrets",
+		"dynamic_roles",
+		"auto_rotated_roles",
+		"kmip",
+		"external_plugins",
+		"data_protection_calls",
+		"pki_units",
+		"managed_keys",
+	}
+
+	for _, metricName := range expectedMetrics {
+		metric, exists := metricsMap[metricName]
+		require.True(t, exists, "metric %s should be present", metricName)
+		require.NotNil(t, metric.MetricData, "metric_data should not be nil for %s", metricName)
+	}
+
+	// Verify specific metric structures
+	staticSecretsMetric := metricsMap["static_secrets"]
 	require.Contains(t, staticSecretsMetric.MetricData, "total")
 	require.Contains(t, staticSecretsMetric.MetricData, "metric_details")
 
-	// Verify kmip metric
-	kmipMetric := currentMonth.UsageMetrics[1]
-	require.Equal(t, "kmip", kmipMetric.MetricName)
-	require.NotNil(t, kmipMetric.MetricData)
+	kmipMetric := metricsMap["kmip"]
 	require.Contains(t, kmipMetric.MetricData, "used_in_month")
 	require.Equal(t, true, kmipMetric.MetricData["used_in_month"])
 
-	// Verify pki_units metric
-	pkiMetric := currentMonth.UsageMetrics[2]
-	require.Equal(t, "pki_units", pkiMetric.MetricName)
-	require.NotNil(t, pkiMetric.MetricData)
+	pkiMetric := metricsMap["pki_units"]
 	require.Contains(t, pkiMetric.MetricData, "total")
 
-	// Verify managed_keys metric
-	managedKeysMetric := currentMonth.UsageMetrics[3]
-	require.Equal(t, "managed_keys", managedKeysMetric.MetricName)
-	require.NotNil(t, managedKeysMetric.MetricData)
+	managedKeysMetric := metricsMap["managed_keys"]
 	require.Contains(t, managedKeysMetric.MetricData, "total")
 	require.Contains(t, managedKeysMetric.MetricData, "metric_details")
 
@@ -103,9 +116,67 @@ const billingOverviewResponse = `{
             }
           },
           {
+            "metric_name": "dynamic_roles",
+            "metric_data": {
+              "total": 15,
+              "metric_details": [
+                {
+                  "type": "aws_dynamic",
+                  "count": 5
+                },
+                {
+                  "type": "azure_dynamic",
+                  "count": 5
+                },
+                {
+                  "type": "database_dynamic",
+                  "count": 5
+                }
+              ]
+            }
+          },
+          {
+            "metric_name": "auto_rotated_roles",
+            "metric_data": {
+              "total": 10,
+              "metric_details": [
+                {
+                  "type": "aws_static",
+                  "count": 5
+                },
+                {
+                  "type": "azure_static",
+                  "count": 5
+                }
+              ]
+            }
+          },
+          {
             "metric_name": "kmip",
             "metric_data": {
               "used_in_month": true
+            }
+          },
+          {
+            "metric_name": "external_plugins",
+            "metric_data": {
+              "total": 3
+            }
+          },
+          {
+            "metric_name": "data_protection_calls",
+            "metric_data": {
+              "total": 100,
+              "metric_details": [
+                {
+                  "type": "transit",
+                  "count": 50
+                },
+                {
+                  "type": "transform",
+                  "count": 50
+                }
+              ]
             }
           },
           {

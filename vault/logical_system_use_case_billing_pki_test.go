@@ -90,8 +90,7 @@ func TestGeneratePkiBillingMetric(t *testing.T) {
 		overview, err := backend.buildPkiBillingMetric(ctx, month)
 		require.NoError(t, err)
 
-		// Verify it uses the constant pkiDurationAjustedCountMetricName
-		require.Equal(t, pkiDurationAjustedCountMetricName, overview["metric_name"])
+		// Verify it uses the right metric name
 		require.Equal(t, "pki_units", overview["metric_name"])
 	})
 }

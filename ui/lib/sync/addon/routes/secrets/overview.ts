@@ -6,8 +6,8 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import {
-  SystemListSyncDestinationsListEnum,
-  SystemListSyncAssociationsListEnum,
+  SystemApiSystemListSyncDestinationsListEnum,
+  SystemApiSystemListSyncAssociationsListEnum,
 } from '@hashicorp/vault-client-typescript';
 import { listDestinationsTransform } from 'sync/utils/api-transforms';
 
@@ -35,8 +35,12 @@ export default class SyncSecretsOverviewRoute extends Route {
     const requests = isActivated
       ? [
           capabilitiesReq,
-          this.api.sys.systemListSyncAssociations(SystemListSyncAssociationsListEnum.TRUE).catch(() => []),
-          this.api.sys.systemListSyncDestinations(SystemListSyncDestinationsListEnum.TRUE).catch(() => []),
+          this.api.sys
+            .systemListSyncAssociations(SystemApiSystemListSyncAssociationsListEnum.TRUE)
+            .catch(() => []),
+          this.api.sys
+            .systemListSyncDestinations(SystemApiSystemListSyncDestinationsListEnum.TRUE)
+            .catch(() => []),
         ]
       : [capabilitiesReq, [], []];
 

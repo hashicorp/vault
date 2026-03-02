@@ -20,7 +20,7 @@ import type { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
 import type {
   PkiGenerateRootResponse,
   PkiReadIssuerResponse,
-  PkiRotateRootExportedEnum,
+  SecretsApiPkiRotateRootExportedEnum,
   PkiRotateRootRequest,
 } from '@hashicorp/vault-client-typescript';
 import type { ParsedCertificateData } from 'vault/vault/utils/parse-pki-cert';
@@ -113,7 +113,7 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
         const { type } = this.newRootForm.data;
         try {
           this.newRoot = await this.api.secrets.pkiRotateRoot(
-            type as PkiRotateRootExportedEnum,
+            type as SecretsApiPkiRotateRootExportedEnum,
             this.secretMountPath.currentPath,
             data as PkiRotateRootRequest
           );

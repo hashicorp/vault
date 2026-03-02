@@ -452,6 +452,9 @@ type Core struct {
 	// consumptionBillingLock protects the consumptionBilling struct
 	consumptionBillingLock sync.RWMutex
 
+	// consumptionBillingSubView is the sub-view of the system barrier view that is used to store consumption billing metrics
+	consumptionBillingSubView *BarrierView
+
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
 

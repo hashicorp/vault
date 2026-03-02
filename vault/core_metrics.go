@@ -852,10 +852,9 @@ type ManagedKeyCounts struct {
 // includeReplicated determines if replicated mounts are included
 // officialPluginsOnly determines if this function should include only plugins that are official,
 // which would exclude, for example, a custom built version of these plugins.
-func (c *Core) getRoleAndManagedKeyCountsInternal(includeLocal bool, includeReplicated bool, officialPluginsOnly bool) (*RoleCounts, *ManagedKeyCounts) {
+func (c *Core) getRoleAndManagedKeyCountsInternal(includeLocal bool, includeReplicated bool, officialPluginsOnly bool) (*RoleCounts, *ManagedKeyCounts, error) {
 	if c.Sealed() {
-		c.logger.Debug("core is sealed, cannot access mounts table")
-		return nil, nil
+		return nil, nil, fmt.Errorf("core is sealed, cannot access mounts table")
 	}
 
 	ctx := namespace.RootContext(c.activeContext)
@@ -988,16 +987,16 @@ func (c *Core) getRoleAndManagedKeyCountsInternal(includeLocal bool, includeRepl
 		}
 	}
 
-	return &roles, &keyCounts
+	return &roles, &keyCounts, nil
 }
 
 func (c *Core) GetRoleCounts() *RoleCounts {
-	roleCounts, _ := c.getRoleAndManagedKeyCountsInternal(true, true, false)
+	roleCounts, _, _ := c.getRoleAndManagedKeyCountsInternal(true, true, false)
 	return roleCounts
 }
 
 func (c *Core) GetRoleCountsForCluster() *RoleCounts {
-	roleCounts, _ := c.getRoleAndManagedKeyCountsInternal(true, c.isPrimary(), false)
+	roleCounts, _, _ := c.getRoleAndManagedKeyCountsInternal(true, c.isPrimary(), false)
 	return roleCounts
 }
 
