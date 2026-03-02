@@ -40,7 +40,7 @@ runs:
         else
           echo "go-version=${{ inputs.go-version }}" | tee -a "$GITHUB_OUTPUT"
         fi
-    - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
       with:
         go-version: ${{ steps.go-version.outputs.go-version }}
         cache: false # We use our own caching strategy
