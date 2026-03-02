@@ -731,7 +731,7 @@ func validateCaKeyUsages(keyUsages []string) error {
 			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("unrecognized key usage %s", usage))
 		}
 	}
-	if invalidKeyUsages != nil {
+	if len(invalidKeyUsages) > 0 {
 		return errors.New(strings.Join(invalidKeyUsages, "; "))
 	}
 	return nil
