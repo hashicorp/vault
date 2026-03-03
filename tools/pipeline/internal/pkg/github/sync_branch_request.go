@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	libgithub "github.com/google/go-github/v81/github"
+	libgithub "github.com/google/go-github/v83/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	gitpkg "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	gitclient "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"

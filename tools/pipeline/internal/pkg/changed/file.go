@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	gh "github.com/google/go-github/v81/github"
+	gh "github.com/google/go-github/v83/github"
 )
 
 // File represents a changed file in a PR or commit.

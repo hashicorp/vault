@@ -8,7 +8,7 @@ import (
 	"errors"
 	"testing"
 
-	libgithub "github.com/google/go-github/v81/github"
+	libgithub "github.com/google/go-github/v83/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"

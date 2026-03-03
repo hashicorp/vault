@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	gh "github.com/google/go-github/v81/github"
+	gh "github.com/google/go-github/v83/github"
 	"github.com/stretchr/testify/require"
 )
 
