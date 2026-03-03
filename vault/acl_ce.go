@@ -12,7 +12,8 @@ import (
 )
 
 type (
-	entAcl struct{}
+	entAcl         struct{}
+	entAuthResults struct{}
 )
 
 func (a *ACL) performEnterpriseAclChecks(_ context.Context, _ *logical.Request, _ bool) (ret *ACLResults) {

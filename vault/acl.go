@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/armon/go-radix"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -47,6 +48,16 @@ type PolicyCheckOpts struct {
 	Unauth                     bool
 	CheckSourcePath            bool
 	RecoverAlternateCapability *logical.Operation
+}
+
+type AuthResults struct {
+	entAuthResults
+	ACLResults      *ACLResults
+	SentinelResults *SentinelResults
+	Allowed         bool
+	RootPrivs       bool
+	DeniedError     bool
+	Error           *multierror.Error
 }
 
 type ACLResults struct {
