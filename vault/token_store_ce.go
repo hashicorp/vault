@@ -16,6 +16,6 @@ func getEnterpriseTokenId(_ string) string {
 	return ""
 }
 
-func (ts *TokenStore) handleTidyEnterpriseTokens(ctx context.Context, req *logical.Request, data *framework.FieldData) {
+func (ts *TokenStore) handleTidyEnterpriseTokens(ctx context.Context, req *logical.Request, data *framework.FieldData) error {
 	return nil
 }
