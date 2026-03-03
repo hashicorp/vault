@@ -468,10 +468,16 @@ jobs:
     # been configured with the correct label.
     if: |
       needs.setup.outputs.is-ent-branch == 'true' &&
-      needs.setup.outputs.workflow-trigger == 'pull_request' &&
+      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
       needs.artifacts-ent.result == 'success' &&
       needs.hcp-image.result == 'success' &&
       contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+      ) ||
+      ( needs.setup.outputs.workflow-trigger == 'schedule' &&
+        needs.artifacts-ent.result == 'success' &&
+        needs.hcp-image.result == 'success'
+      )
     needs:
       - setup
       - artifacts-ent
