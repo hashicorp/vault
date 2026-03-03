@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"strings"
 
-	libgithub "github.com/google/go-github/v81/github"
+	libgithub "github.com/google/go-github/v83/github"
 	slogctx "github.com/veqryn/slog-context"
 )
 
