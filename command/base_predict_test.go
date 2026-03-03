@@ -383,6 +383,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"openldap",
 				"pcf", // Deprecated.
 				"pki",
+				"pki-external-ca",
 				"postgresql-database-plugin",
 				"rabbitmq",
 				"radius",
@@ -414,51 +415,13 @@ func TestPredict_Plugins(t *testing.T) {
 
 				act := p.plugins()
 
-				if !strutil.StrListContains(act, "keymgmt") {
-					for i, v := range tc.exp {
-						if v == "keymgmt" {
-							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
-							break
-						}
-					}
-				}
-				if !strutil.StrListContains(act, "kmip") {
-					for i, v := range tc.exp {
-						if v == "kmip" {
-							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
-							break
-						}
-					}
-				}
-				if !strutil.StrListContains(act, "transform") {
-					for i, v := range tc.exp {
-						if v == "transform" {
-							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
-							break
-						}
-					}
-				}
-				if !strutil.StrListContains(act, "saml") {
-					for i, v := range tc.exp {
-						if v == "saml" {
-							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
-							break
-						}
-					}
-				}
-				if !strutil.StrListContains(act, "scep") {
-					for i, v := range tc.exp {
-						if v == "scep" {
-							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
-							break
-						}
-					}
-				}
-				if !strutil.StrListContains(act, "spiffe") {
-					for i, v := range tc.exp {
-						if v == "spiffe" {
-							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
-							break
+				for _, pluginName := range []string{"keymgmt", "kmip", "transform", "saml", "scep", "spiffe", "pki-external-ca"} {
+					if !strutil.StrListContains(act, pluginName) {
+						for i, v := range tc.exp {
+							if v == pluginName {
+								tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+								break
+							}
 						}
 					}
 				}

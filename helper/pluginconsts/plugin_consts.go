@@ -42,6 +42,7 @@ const (
 	SecretEngineNomad         = "nomad"
 	SecretEngineOpenLDAP      = "openldap"
 	SecretEngineLDAP          = "ldap"
+	SecretEnginePkiExternalCa = "pki-external-ca"
 	SecretEnginePostgresql    = "postgresql"
 	SecretEngineRabbitMQ      = "rabbitmq"
 	SecretEngineSpiffe        = "spiffe"
