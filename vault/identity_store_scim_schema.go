@@ -5,6 +5,9 @@ package vault
 
 import "github.com/hashicorp/go-memdb"
 
+// SCIM client storage prefix
+const scimClientStoragePrefix = "scim/client/"
+
 func scimClientSchema(_ bool) *memdb.TableSchema {
 	return &memdb.TableSchema{
 		Name: scimClientsTable,

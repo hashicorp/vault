@@ -8,14 +8,14 @@ package vault
 import (
 	"context"
 
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/namespace"
 )
 
 func getEnterpriseTokenId(_ string) string {
 	return ""
 }
 
-func (ts *TokenStore) handleTidyEnterpriseTokens(ctx context.Context, req *logical.Request, data *framework.FieldData) error {
+func (ts *TokenStore) handleTidyEnterpriseTokens(_ context.Context, _ *namespace.Namespace, _ *multierror.Error) error {
 	return nil
 }
