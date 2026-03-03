@@ -13,7 +13,7 @@ import (
 	"regexp"
 	"slices"
 
-	gh "github.com/google/go-github/v81/github"
+	gh "github.com/google/go-github/v83/github"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
 )
