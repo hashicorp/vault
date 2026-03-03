@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/go-github/v81/github"
+	"github.com/google/go-github/v83/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/stretchr/testify/require"
 	"github.com/zclconf/go-cty/cty"

@@ -15,7 +15,7 @@ import (
 	"slices"
 	"strings"
 
-	libgithub "github.com/google/go-github/v81/github"
+	libgithub "github.com/google/go-github/v83/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
@@ -757,6 +757,21 @@ func (r *CreateBackportReq) backportRef(
 	)
 	if err != nil {
 		res.Error = fmt.Errorf("assigning ownership to backport pull request %w", err)
+		return res
+	}
+
+	// Copy non-backport labels from the original PR to the backport PR
+	labelsToAdd := filterNonBackportLabels(pr.Labels, r.BackportLabelPrefix)
+	err = addLabelsToIssue(
+		ctx,
+		github,
+		r.Owner,
+		r.Repo,
+		int(res.PullRequest.GetNumber()),
+		labelsToAdd,
+	)
+	if err != nil {
+		res.Error = fmt.Errorf("adding labels to backport PR: %w", err)
 		return res
 	}
 
