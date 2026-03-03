@@ -6,5 +6,5 @@
 package logical
 
 type (
-	entToken struct{}
+	EntToken struct{}
 )
