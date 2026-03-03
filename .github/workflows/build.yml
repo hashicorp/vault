@@ -474,10 +474,16 @@ jobs:
     # been configured with the correct label.
     if: |
       needs.setup.outputs.is-ent-branch == 'true' &&
-      needs.setup.outputs.workflow-trigger == 'pull_request' &&
-      needs.artifacts-ent.result == 'success' &&
-      needs.hcp-image.result == 'success' &&
-      contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
+        needs.artifacts-ent.result == 'success' &&
+        needs.hcp-image.result == 'success' &&
+        contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+      ) ||
+      ( needs.setup.outputs.workflow-trigger == 'schedule' &&
+        needs.artifacts-ent.result == 'success' &&
+        needs.hcp-image.result == 'success'
+      )
     needs:
       - setup
       - artifacts-ent
@@ -617,7 +623,7 @@ jobs:
         with:
           version: ${{ needs.setup.outputs.vault-version-metadata }}
           product: ${{ needs.setup.outputs.vault-binary-name }}
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: steps.generate-metadata-file.outcome == 'success' # upload our metadata if we created it
         with:
           name: metadata.json
