@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/armon/go-radix"
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -26,6 +25,8 @@ import (
 // ACL is used to wrap a set of policies to provide
 // an efficient interface for access control.
 type ACL struct {
+	entAcl
+
 	// exactRules contains the path policies that are exact
 	exactRules *radix.Tree
 
@@ -46,15 +47,6 @@ type PolicyCheckOpts struct {
 	Unauth                     bool
 	CheckSourcePath            bool
 	RecoverAlternateCapability *logical.Operation
-}
-
-type AuthResults struct {
-	ACLResults      *ACLResults
-	SentinelResults *SentinelResults
-	Allowed         bool
-	RootPrivs       bool
-	DeniedError     bool
-	Error           *multierror.Error
 }
 
 type ACLResults struct {
@@ -358,6 +350,11 @@ func (a *ACL) Capabilities(ctx context.Context, path string) []string {
 
 // AllowOperation is used to check if the given operation is permitted.
 func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheckOnly bool) (ret *ACLResults) {
+	ret = a.performEnterpriseAclChecks(ctx, req, capCheckOnly)
+	if ret != nil {
+		return ret
+	}
+
 	ret = new(ACLResults)
 
 	// Fast-path root
