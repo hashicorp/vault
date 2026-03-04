@@ -432,8 +432,8 @@ importers:
         specifier: 2.0.0
         version: 2.0.0
       tracked-built-ins:
-        specifier: ~3.4.0
-        version: 3.4.0(@babel/core@7.26.10)
+        specifier: ~4.1.0
+        version: 4.1.0(@babel/core@7.26.10)
       typescript:
         specifier: ~5.5.4
         version: 5.5.4
@@ -7731,9 +7731,6 @@ packages:
   topojson-client@3.1.0:
     resolution: {integrity: sha512-605uxS6bcYxGXw9qi62XyrV6Q3xwbndjachmNxu8HWTtVPxZfEJN9fd/SZS1Q54Sn2y0TMyMxFj/cJINqGHrKw==}
     hasBin: true
-
-  tracked-built-ins@3.4.0:
-    resolution: {integrity: sha512-aRwWQXC3VkY50oYxS7wKZiavkjf3uaN+UYUH30D5gxUqbxDN2LnNsfWyDfckmxHUGw4gJDH5lpRS0jX/tim0vw==}
 
   tracked-built-ins@4.1.0:
     resolution: {integrity: sha512-v1+jca3sD3LgbAFVsontSONTv7HsZll3yeUB00L6KPwLilFRrY77gvgptDe35fTalk9ea7mmrM2wABD56pTvuw==}
@@ -18624,15 +18621,6 @@ snapshots:
   topojson-client@3.1.0:
     dependencies:
       commander: 2.20.3
-
-  tracked-built-ins@3.4.0(@babel/core@7.26.10):
-    dependencies:
-      '@embroider/addon-shim': 1.10.2
-      decorator-transforms: 2.3.1(@babel/core@7.26.10)
-      ember-tracked-storage-polyfill: 1.0.0
-    transitivePeerDependencies:
-      - '@babel/core'
-      - supports-color
 
   tracked-built-ins@4.1.0(@babel/core@7.26.10):
     dependencies:
