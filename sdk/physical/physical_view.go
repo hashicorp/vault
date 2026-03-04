@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"strings"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 var ErrRelativePath = errors.New("relative paths not supported")
@@ -80,7 +82,7 @@ func (v *View) Delete(ctx context.Context, key string) error {
 
 // sanityCheck is used to perform a sanity check on a key
 func (v *View) sanityCheck(key string) error {
-	if strings.Contains(key, "..") {
+	if consts.PathContainsParentReferences(key) {
 		return ErrRelativePath
 	}
 	return nil
