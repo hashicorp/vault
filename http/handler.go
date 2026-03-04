@@ -684,7 +684,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 					for _, action := range actions {
 						switch action {
 						case "URL":
-							decoded, err := url.QueryUnescape(v)
+							decoded, err := url.PathUnescape(v)
 							if err != nil {
 								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to url unescape the client certificate: %w", err))
 								return
