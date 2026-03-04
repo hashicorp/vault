@@ -16,7 +16,7 @@ test('tools workflow', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Value' }).fill('bar');
   await page.locator('label').filter({ hasText: 'Wrap TTL Vault will use the' }).click();
   await page.getByRole('textbox', { name: 'Number of units' }).fill('20');
-  await page.getByLabel('ttl-unit').selectOption('h');
+  await page.getByLabel('TTL unit for Wrap TTL').selectOption('h');
   await page.getByRole('button', { name: 'Wrap data' }).click();
   await page.getByRole('button', { name: 'copy hvs.' }).click();
   // access the clipboard to get the copied token value
