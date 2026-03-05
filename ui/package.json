@@ -176,7 +176,7 @@
   "pnpm": {
     "overrides": {
       "@babel/runtime": "7.27.0",
-      "@embroider/macros": "1.15.0",
+      "@embroider/macros": "^1.20.1",
       "@messageformat/runtime": "3.0.2",
       "ajv@6.12.6": "6.14.0",
       "ajv@8.17.1": "8.18.0",
