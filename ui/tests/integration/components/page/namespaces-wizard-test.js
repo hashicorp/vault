@@ -26,11 +26,14 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
 
   hooks.beforeEach(function () {
     this.refreshSpy = sinon.spy();
+    this.flexiblePolicyCompleteSpy = sinon.spy();
     this.wizardService = this.owner.lookup('service:wizard');
 
     this.renderComponent = () => {
       return render(hbs`
         <Wizard::Namespaces::NamespaceWizard
+          @isIntroModal={{false}}
+          @onFlexiblePolicyComplete={{this.flexiblePolicyCompleteSpy}}
           @onRefresh={{this.refreshSpy}}
         />
       `);
@@ -182,6 +185,7 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
 
     assert.true(this.wizardService.isDismissed('namespace'), 'Wizard was marked as dismissed after Done');
     assert.true(this.refreshSpy.calledOnce, 'onRefresh callback was called');
+    assert.true(this.flexiblePolicyCompleteSpy.calledOnce, 'flexiblePolicyComplete callback was called');
   });
 
   test('it shows tree chart only when there are multiple globals, orgs, or projects', async function (assert) {

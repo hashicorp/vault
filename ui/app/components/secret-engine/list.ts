@@ -194,8 +194,19 @@ export default class SecretEngineList extends Component<Args> {
   // While not ideal, we can check whether there are other engines than the default cubbyhole/ engine
   // to determine whether we should show the intro page
   get hasOnlyDefaultEngines() {
-    const listedEngines = this.sortedDisplayableBackends;
+    // use displayableBackends to check against unfiltered results to avoid flashing intro page when a filter has no results
+    const listedEngines = this.displayableBackends;
     return !listedEngines.length || (listedEngines.length === 1 && listedEngines[0]?.path === 'cubbyhole/');
+  }
+
+  get showContent() {
+    // Show when the 1) wizard is not shown OR 2) wizard intro modal is shown
+    // This ensures the wizard intro modal is shown on top of the list view and the background content is not blank behind the modal
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(WIZARD_ID));
+  }
+
+  get showIntroButton() {
+    return this.showContent && this.hasOnlyDefaultEngines;
   }
 
   get showWizard() {

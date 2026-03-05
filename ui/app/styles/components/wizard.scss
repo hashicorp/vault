@@ -7,40 +7,52 @@
  */
 
 .wizard {
-  &.guided-start {
-    @extend .is-flex-column;
-    @extend .is-flex-grow-1;
-  }
-
   &.intro {
-    @extend .top-margin-32;
+    &.full {
+      @extend .top-margin-32;
+      @extend .has-padding-l;
+      .margin-left-auto {
+        @extend .has-left-margin-m;
+      }
+    }
+
+    &.modal {
+      .margin-left-auto {
+        margin-left: auto;
+      }
+    }
 
     svg {
       flex-shrink: 0;
     }
   }
 
-  .content {
-    padding-top: 40px;
-    overflow: visible;
+  &.guided-start {
+    @extend .is-flex-column;
+    @extend .is-flex-grow-1;
 
-    // Non-active panels are hidden and prevented from taking up space
-    &[hidden] {
-      display: none;
+    .content {
+      padding-top: 40px;
+      overflow: visible;
+
+      // Non-active panels are hidden and prevented from taking up space
+      &[hidden] {
+        display: none;
+      }
     }
-  }
 
-  .button-bar {
-    @extend .has-padding-m;
-    @extend .is-flex-between;
+    .button-bar {
+      @extend .has-padding-m;
+      @extend .is-flex-between;
 
-    .hds-button-set {
-      margin-left: auto;
+      .hds-button-set {
+        margin-left: auto;
+      }
     }
-  }
 
-  .tree {
-    border: 1px solid var(--token-color-border-primary);
-    border-radius: var(--token-border-radius-medium);
+    .tree {
+      border: 1px solid var(--token-color-border-primary);
+      border-radius: var(--token-border-radius-medium);
+    }
   }
 }

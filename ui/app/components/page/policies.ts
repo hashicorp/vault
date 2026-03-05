@@ -43,15 +43,6 @@ export default class PagePoliciesComponent extends Component<Args> {
     this.filter = this.args.filter || '';
   }
 
-  // callback from HDS pagination to set the queryParams page
-  get paginationQueryParams() {
-    return (page: number) => {
-      return {
-        page,
-      };
-    };
-  }
-
   // Check if the filter exactly matches a policy ID
   get filterMatchesKey(): boolean {
     const filter = this.filter;
@@ -81,15 +72,30 @@ export default class PagePoliciesComponent extends Component<Args> {
     return this.args.model.meta?.total <= expectedLength;
   }
 
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page: number) => {
+      return {
+        page,
+      };
+    };
+  }
+
+  get showContent() {
+    // Show when the 1) wizard is not shown OR 2) wizard intro modal is shown
+    // This ensures the wizard intro modal is shown on top of the list view and the background content is not blank behind the modal
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(WIZARD_ID));
+  }
+
+  get showIntroButton() {
+    return this.showContent && this.hasOnlyDefaultPolicies;
+  }
+
   // Show when it is not in a dismissed state and there are no non-default policies and
   get showWizard() {
     if (this.args.policyType !== 'acl') return false;
     // Use total instead of filtered total to avoid flashing wizard when filtering with no results
     return !this.wizard.isDismissed(WIZARD_ID) && this.hasOnlyDefaultPolicies;
-  }
-
-  get showIntroButton() {
-    return !this.showWizard && this.hasOnlyDefaultPolicies;
   }
 
   @action
