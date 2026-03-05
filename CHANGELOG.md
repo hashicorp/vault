@@ -3,6 +3,41 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.21.4
+### March 05, 2026
+
+SECURITY:
+
+* Upgrade `cloudflare/circl` to v1.6.3 to resolve CVE-2026-1229
+* Upgrade `filippo.io/edwards25519` to v1.1.1 to resolve GO-2026-4503
+* vault/sdk: Upgrade `cloudflare/circl` to v1.6.3 to resolve CVE-2026-1229
+* vault/sdk: Upgrade `go.opentelemetry.io/otel/sdk` to v1.40.0 to resolve GO-2026-4394
+
+CHANGES:
+
+* core: Bump Go version to 1.25.7
+* mfa/duo: Upgrade duo_api_golang client to 0.2.0 to include the new Duo certificate authorities
+* ui: Remove ability to bulk delete secrets engines from the list view.
+
+IMPROVEMENTS:
+
+* core/seal: Enhance sys/seal-backend-status to provide more information about seal backends.
+* secrets/kmip (Enterprise): Obey configured best_effort_wal_wait_duration when forwarding kmip requests.
+* secrets/pki (enterprise): Return the POSTPKIOperation capability within SCEP GetCACaps endpoint for better legacy client support.
+
+BUG FIXES:
+
+* core (enterprise): Buffer the POST body on binary paths to allow re-reading on non-logical forwarding attempts. Addresses an issue for SCEP, EST and CMPv2 certificate issuances with slow replication of entities
+* core/identity (enterprise): Fix excessive logging when updating existing aliases
+* core/managed-keys (enterprise): client credentials should not be required when using Azure Managed Identities in managed keys.
+* plugins (enterprise): Fix bug where requests to external plugins that modify storage weren't populating the X-Vault-Index response header.
+* secrets (pki): Allow issuance of certificates without the server_flag key usage from SCEP, EST and CMPV2 protocols.
+* secrets/pki (enterprise): Address cache invalidation issues with CMPv2 on performance standby nodes.
+* secrets/pki (enterprise): Address issues using SCEP on performance standby nodes failing due to configuration invalidation issues along with errors writing to storage
+* secrets/pki (enterprise): Modify the SCEP GetCACaps endpoint to dynamically reflect the configured encryption and digest algorithms.
+* secrets/pki: The root/sign-intermediate endpoint should not fail when provided a CSR with a basic constraint extension containing isCa set to true
+* secrets/pki: allow glob-style DNS names in alt_names.
+
 ## 1.21.3
 ### February 05, 2026
 
@@ -326,6 +361,40 @@ BUG FIXES:
 * ui: Include user's root namespace in the namespace picker if it's a namespace other than the actual root ("")
 * ui: Revert camelizing of parameters returned from `sys/internal/ui/mounts` so mount paths match serve value
 * ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`
+
+## 1.20.9 Enterprise
+### March 05, 2026
+
+SECURITY:
+
+* Upgrade `cloudflare/circl` to v1.6.3 to resolve CVE-2026-1229
+* Upgrade `filippo.io/edwards25519` to v1.1.1 to resolve GO-2026-4503
+* vault/sdk: Upgrade `cloudflare/circl` to v1.6.3 to resolve CVE-2026-1229
+* vault/sdk: Upgrade `go.opentelemetry.io/otel/sdk` to v1.40.0 to resolve GO-2026-4394
+
+CHANGES:
+
+* core: Bump Go version to 1.25.7
+* mfa/duo: Upgrade duo_api_golang client to 0.2.0 to include the new Duo certificate authorities
+
+IMPROVEMENTS:
+
+* core/seal: Enhance sys/seal-backend-status to provide more information about seal backends.
+* secrets/kmip (Enterprise): Obey configured best_effort_wal_wait_duration when forwarding kmip requests.
+* secrets/pki (enterprise): Return the POSTPKIOperation capability within SCEP GetCACaps endpoint for better legacy client support.
+
+BUG FIXES:
+
+* core (enterprise): Buffer the POST body on binary paths to allow re-reading on non-logical forwarding attempts. Addresses an issue for SCEP, EST and CMPv2 certificate issuances with slow replication of entities
+* core/identity (enterprise): Fix excessive logging when updating existing aliases
+* core/managed-keys (enterprise): client credentials should not be required when using Azure Managed Identities in managed keys.
+* plugins (enterprise): Fix bug where requests to external plugins that modify storage weren't populating the X-Vault-Index response header.
+* secrets (pki): Allow issuance of certificates without the server_flag key usage from SCEP, EST and CMPV2 protocols.
+* secrets/pki (enterprise): Address cache invalidation issues with CMPv2 on performance standby nodes.
+* secrets/pki (enterprise): Address issues using SCEP on performance standby nodes failing due to configuration invalidation issues along with errors writing to storage
+* secrets/pki (enterprise): Modify the SCEP GetCACaps endpoint to dynamically reflect the configured encryption and digest algorithms.
+* secrets/pki: allow glob-style DNS names in alt_names.
+* ui: Fixes login form so `?with=<path>` query param correctly displays only the specified mount when multiple mounts of the same auth type are configured with `listing_visibility="unauth"`
 
 ## 1.20.8 Enterprise
 ### February 05, 2026
@@ -749,6 +818,33 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.15 Enterprise
+### March 05, 2026
+
+SECURITY:
+
+* Upgrade `filippo.io/edwards25519` to v1.1.1 to resolve GO-2026-4503
+* vault/sdk: Upgrade `go.opentelemetry.io/otel/sdk` to v1.40.0 to resolve GO-2026-4394
+
+CHANGES:
+
+* core: Bump Go version to 1.25.7
+* mfa/duo: Upgrade duo_api_golang client to 0.2.0 to include the new Duo certificate authorities
+
+IMPROVEMENTS:
+
+* core/seal: Enhance sys/seal-backend-status to provide more information about seal backends.
+* secrets/kmip (Enterprise): Obey configured best_effort_wal_wait_duration when forwarding kmip requests.
+
+BUG FIXES:
+
+* core (enterprise): Buffer the POST body on binary paths to allow re-reading on non-logical forwarding attempts. Addresses an issue for SCEP, EST and CMPv2 certificate issuances with slow replication of entities
+* core/identity (enterprise): Fix excessive logging when updating existing aliases
+* core/managed-keys (enterprise): client credentials should not be required when using Azure Managed Identities in managed keys.
+* secrets (pki): Allow issuance of certificates without the server_flag key usage from SCEP, EST and CMPV2 protocols.
+* secrets/pki (enterprise): Address cache invalidation issues with CMPv2 on performance standby nodes.
+* secrets/pki: allow glob-style DNS names in alt_names.
 
 ## 1.19.14 Enterprise
 ### February 05, 2026
@@ -2586,7 +2682,26 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
 
-## 1.16.30
+## 1.16.31 Enterprise
+### March 05, 2026
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* Upgrade `filippo.io/edwards25519` to v1.1.1 to resolve GO-2026-4503
+* vault/sdk: Upgrade `go.opentelemetry.io/otel/sdk` to v1.40.0 to resolve GO-2026-4394
+
+CHANGES:
+
+* core: Bump Go version to 1.24.13
+* mfa/duo: Upgrade duo_api_golang client to 0.2.0 to include the new Duo certificate authorities
+
+IMPROVEMENTS:
+
+* core/seal: Enhance sys/seal-backend-status to provide more information about seal backends.
+
+## 1.16.30 Enterprise
 ### February 05, 2026
 
 **Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
