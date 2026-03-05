@@ -677,8 +677,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 			return nil, false, false, fmt.Errorf("nil token entry")
 		}
 
-		if te.Type != logical.TokenTypeService {
-			return logical.ErrorResponse(`cubbyhole operations are only supported by "service" type tokens`), false, false, nil
+		if te.Type != logical.TokenTypeService && te.Type != logical.TokenTypeEnt {
+			return logical.ErrorResponse(`cubbyhole operations are only supported by "service" or enterprise type tokens`), false, false, nil
 		}
 
 		switch {
