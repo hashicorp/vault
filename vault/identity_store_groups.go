@@ -313,12 +313,15 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		group.Name = groupName
 	}
 
-	_, ok = d.Schema["scim_client_id"]
+	originalSCIMID := group.ScimClientID
+	scimClientID, ok := d.GetOk("scim_client_id")
 	if ok {
-		entitSCIMClientID := d.Get("scim_client_id").(string)
-		group.ScimClientID = entitSCIMClientID
+		group.ScimClientID = scimClientID.(string)
 	}
 
+	if err := i.scimResourceCheck(ctx, group, originalSCIMID, newGroup); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
 	metadata, ok, err := d.GetOkErr("metadata")
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
@@ -523,6 +526,11 @@ func (i *IdentityStore) handleGroupDeleteCommon(ctx context.Context, key string,
 	}
 	if group.NamespaceID != ns.ID {
 		return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
+	}
+
+	scimID := scimClientIDFromContext(ctx)
+	if scimID != group.ScimClientID {
+		return logical.ErrorResponse("SCIM-managed resources must be modified through SCIM"), logical.ErrPermissionDenied
 	}
 
 	// Delete group alias from memdb
