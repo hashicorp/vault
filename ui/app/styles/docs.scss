@@ -7,12 +7,13 @@
 
 .docs-collapse-toggle {
   .hds-button {
-    color: var(--token-side-nav-color-foreground-primary);
-    background: var(--token-side-nav-color-surface-primary);
+    color: var(--token-color-palette-neutral-200);
+    background: var(--token-color-foreground-strong);
     border-color: transparent;
-    border-radius: var(--token-side-nav-body-list-item-border-radius);
+    border-radius: var(--token-border-radius-small);
+
     &:hover {
-      background: var(--token-side-nav-color-surface-interactive-hover);
+      background: var(--token-color-palette-neutral-600);
       border-color: transparent;
     }
   }
@@ -47,6 +48,7 @@
 
   ul {
     list-style: disc;
+
     li {
       margin-top: 1rem;
     }
@@ -93,13 +95,16 @@
   table {
     border: none;
     border-collapse: collapse;
+
     td {
       padding-left: 0.5rem;
       padding-right: 0.5rem;
+
       code {
         background: none;
       }
     }
+
     tr {
       border-bottom: 1px solid var(--token-color-palette-neutral-300);
     }
