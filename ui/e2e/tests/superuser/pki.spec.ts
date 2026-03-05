@@ -108,6 +108,7 @@ test('pki workflow', async ({ page }) => {
   await page.getByRole('button', { name: 'Revoke certificate' }).click();
   await page.getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByText('Revocation time')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Revoke certificate' })).not.toBeVisible();
 
   // generate issuer
   await page.getByRole('link', { name: 'pki-engine' }).click();
