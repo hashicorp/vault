@@ -92,8 +92,14 @@ export default class PageAuthMethodsComponent extends Component<Args> {
     return this.args.model.methods.length === 1;
   }
 
+  get showContent() {
+    // Show when the 1) wizard is not shown OR 2) wizard intro modal is shown
+    // This ensures the wizard intro modal is shown on top of the list view and the background content is not blank behind the modal
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(WIZARD_ID));
+  }
+
   get showIntroButton() {
-    return !this.showWizard && this.hasOnlyDefaultMethods;
+    return this.showContent && this.hasOnlyDefaultMethods;
   }
 
   get showWizard() {

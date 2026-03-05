@@ -23,7 +23,7 @@
         <Hds::Button
           @color="secondary"
           @icon="bulb"
-          @text="New to ACL Policies?"
+          @text="New to ACL policies?"
           {{on "click" this.showIntroPage}}
           data-test-button="intro"
         />
@@ -33,7 +33,9 @@
 
   {{#if this.showWizard}}
     <Wizard::AclPolicies::AclWizard @isIntroModal={{this.shouldRenderIntroModal}} @onRefresh={{this.refreshPolicyList}} />
-  {{else}}
+  {{/if}}
+
+  {{#if this.showContent}}
     <Toolbar>
       {{#if @model.meta.total}}
         <ToolbarFilters>

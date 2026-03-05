@@ -26,7 +26,7 @@
         {{/if}}
         {{#unless this.hasNamespaces}}
           <Hds::Button
-            @color={{if this.showWizard "secondary" "primary"}}
+            @color={{if this.showContent "primary" "secondary"}}
             @icon="plus"
             @route="vault.cluster.access.namespaces.create"
             @text="Create namespace"
@@ -40,9 +40,12 @@
   {{#if this.showWizard}}
     <Wizard::Namespaces::NamespaceWizard
       @isIntroModal={{this.shouldRenderIntroModal}}
+      @onFlexiblePolicyComplete={{fn (mut this.showSetupAlert) true}}
       @onRefresh={{this.refreshNamespaceList}}
     />
-  {{else}}
+  {{/if}}
+
+  {{#if this.showContent}}
     {{! Show namespace list }}
     {{#if this.hasNamespaces}}
       <Toolbar>
@@ -135,7 +138,7 @@
         </Hds::Alert>
       {{/if}}
 
-      <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+      <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
         <A.Header
           @title="No namespaces yet"
           @titleTag="h2"

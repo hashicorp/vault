@@ -14,7 +14,7 @@
           class="has-right-margin-4"
           @color="secondary"
           @icon="bulb"
-          @text="New to Auth Methods?"
+          @text="New to Auth methods?"
           {{on "click" this.showIntroPage}}
           data-test-button="intro"
         />
@@ -25,7 +25,9 @@
 
 {{#if this.showWizard}}
   <Wizard::Methods::MethodsWizard @isIntroModal={{this.shouldRenderIntroModal}} @onRefresh={{this.refreshMethodsList}} />
-{{else}}
+{{/if}}
+
+{{#if this.showContent}}
   <Toolbar>
     <ToolbarFilters>
       <SearchSelect
