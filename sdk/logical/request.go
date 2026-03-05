@@ -137,6 +137,9 @@ type Request struct {
 	// hashed.
 	ClientToken string `json:"client_token" structs:"client_token" mapstructure:"client_token" sentinel:""`
 
+	// EnterpriseTokenMetadata is used to store metadata related to enterprise token based requests.
+	EnterpriseTokenMetadata string `json:"enterprise_token_metadata" structs:"enterprise_token_metadata" mapstructure:"enterprise_token_metadata" sentinel:""`
+
 	// ClientTokenAccessor is provided to the core so that the it can get
 	// logged as part of request audit logging.
 	ClientTokenAccessor string `json:"client_token_accessor" structs:"client_token_accessor" mapstructure:"client_token_accessor" sentinel:""`
