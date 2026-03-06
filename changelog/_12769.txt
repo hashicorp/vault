@@ -1,0 +1,9 @@
+```release-note:bug
+core/managed-keys (enterprise): Fix a problem that prevented 'mac' and 'generate_random' key usages from being set.
+```
+```release-note:change
+core/managed-keys (enterprise): The response to API endpoint GET sys/managed-keys/:type/:name now
+returns an array of string values for key usages, rather than an array of integer values. The
+strings used are 'encrypt' (1), 'decrypt' (2), 'sign' (3), 'verify' (4), 'wrap' (5), 'unwrap' (6),
+'generate_random' (7), and 'mac' (8).
+```
