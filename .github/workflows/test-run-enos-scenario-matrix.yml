@@ -70,7 +70,7 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
-      - uses: hashicorp/action-setup-enos@17b90fcf9591275b468a94aefb9dc6a93017de8a # v1.50
+      - uses: hashicorp/action-setup-enos@3a9f736b68564c957cefbfcfb3d16b68e581a5b2 # v1.51
         with:
           github-token: ${{ github.repository == 'hashicorp/vault' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/create-dynamic-config
@@ -214,7 +214,7 @@ jobs:
           role-to-assume: ${{ steps.secrets.outputs.aws-role-arn }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
-      - uses: hashicorp/action-setup-enos@17b90fcf9591275b468a94aefb9dc6a93017de8a # v1.50
+      - uses: hashicorp/action-setup-enos@3a9f736b68564c957cefbfcfb3d16b68e581a5b2 # v1.51
         with:
           github-token: ${{ steps.secrets.outputs.github-token }}
       - uses: ./.github/actions/create-dynamic-config

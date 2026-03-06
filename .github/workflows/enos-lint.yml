@@ -45,7 +45,7 @@ jobs:
       - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
         with:
           terraform_wrapper: false
-      - uses: hashicorp/action-setup-enos@17b90fcf9591275b468a94aefb9dc6a93017de8a # v1.50
+      - uses: hashicorp/action-setup-enos@3a9f736b68564c957cefbfcfb3d16b68e581a5b2 # v1.51
       - name: Ensure shellcheck is available for linting
         run: which shellcheck || (sudo apt update && sudo apt install -y shellcheck)
       - name: lint
