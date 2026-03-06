@@ -1,0 +1,3 @@
+```release-note:bug
+core/managed-keys (enterprise): Fix a bug that prevented the max_parallel field of PKCS#11 managed keys from being updated.
+```
