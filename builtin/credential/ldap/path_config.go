@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -19,9 +20,17 @@ import (
 
 const userFilterWarning = "userfilter configured does not consider userattr and may result in colliding entity aliases on logins"
 
-const rootRotationJobName = "ldap-auth-root-creds"
-
-const rootRotationUrlKey = "rotation_url"
+const (
+	rootRotationJobName           = "ldap-auth-root-creds"
+	rootRotationUrlKey            = "rotation_url"
+	rootRotationSchemaKey         = "rotation_schema"
+	rootRotationCredentialTypeKey = "rotation_credential_type"
+	schemaOpenLDAP                = "openldap"
+	schemaAD                      = "ad"
+	schemaRACF                    = "racf"
+	credentialTypePassword        = "password"
+	credentialTypePhrase          = "phrase"
+)
 
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
@@ -72,6 +81,21 @@ func pathConfig(b *backend) *framework.Path {
 		Required:    false,
 	}
 
+	p.Fields[rootRotationSchemaKey] = &framework.FieldSchema{
+		Type:          framework.TypeString,
+		Description:   "The desired LDAP schema used when modifying user account passwords. Available options are 'openldap', 'ad', and 'racf'. If not specified, 'openldap' will be used.",
+		Default:       schemaOpenLDAP,
+		Required:      false,
+		AllowedValues: []interface{}{schemaOpenLDAP, schemaAD, schemaRACF},
+	}
+	p.Fields[rootRotationCredentialTypeKey] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: "The type of credential to manage. Options include: " +
+			"'password', 'phrase'. Defaults to 'password'. Will only affect RACF schema.",
+		Default:       credentialTypePassword,
+		Required:      false,
+		AllowedValues: []interface{}{credentialTypePassword, credentialTypePhrase},
+	}
 	return p
 }
 
@@ -103,7 +127,11 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 		result.UsePre111GroupCNBehavior = new(bool)
 		*result.UsePre111GroupCNBehavior = false
 
-		return &ldapConfigEntry{ConfigEntry: result}, nil
+		return &ldapConfigEntry{
+			ConfigEntry:            result,
+			RotationCredentialType: credentialTypePassword,
+			RotationSchema:         schemaOpenLDAP,
+		}, nil
 	}
 
 	// Deserialize stored configuration.
@@ -125,6 +153,16 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 	if result.UsePre111GroupCNBehavior == nil {
 		result.UsePre111GroupCNBehavior = new(bool)
 		*result.UsePre111GroupCNBehavior = true
+		persistNeeded = true
+	}
+
+	if result.RotationSchema == "" {
+		result.RotationSchema = schemaOpenLDAP
+		persistNeeded = true
+	}
+
+	if result.RotationCredentialType == "" {
+		result.RotationCredentialType = credentialTypePassword
 		persistNeeded = true
 	}
 
@@ -159,6 +197,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 
 	data["password_policy"] = cfg.PasswordPolicy
 	data[rootRotationUrlKey] = cfg.RotationUrl
+	data[rootRotationSchemaKey] = cfg.RotationSchema
+	data[rootRotationCredentialTypeKey] = cfg.RotationCredentialType
 
 	resp := &logical.Response{
 		Data: data,
@@ -237,6 +277,24 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	}
 	if rotationUrl, ok := d.GetOk(rootRotationUrlKey); ok {
 		cfg.RotationUrl = rotationUrl.(string)
+	}
+	if rotationSchema, ok := d.GetOk(rootRotationSchemaKey); ok {
+		schema := rotationSchema.(string)
+		if !strutil.StrListContains([]string{schemaOpenLDAP, schemaRACF, schemaAD}, schema) {
+			return logical.ErrorResponse("invalid value for %s: %s", rootRotationSchemaKey, schema), logical.ErrInvalidRequest
+		}
+		cfg.RotationSchema = schema
+	} else {
+		cfg.RotationSchema = schemaOpenLDAP
+	}
+	if rotationCredentialType, ok := d.GetOk(rootRotationCredentialTypeKey); ok {
+		credentialType := rotationCredentialType.(string)
+		if !strutil.StrListContains([]string{credentialTypePassword, credentialTypePhrase}, credentialType) {
+			return logical.ErrorResponse("invalid value for %s: %s", rootRotationCredentialTypeKey, credentialType), logical.ErrInvalidRequest
+		}
+		cfg.RotationCredentialType = credentialType
+	} else {
+		cfg.RotationCredentialType = credentialTypePassword
 	}
 
 	var rotOp string
@@ -328,8 +386,10 @@ type ldapConfigEntry struct {
 	*ldaputil.ConfigEntry
 	automatedrotationutil.AutomatedRotationParams
 
-	PasswordPolicy string `json:"password_policy"`
-	RotationUrl    string `json:"rotation_url"`
+	PasswordPolicy         string `json:"password_policy"`
+	RotationUrl            string `json:"rotation_url"`
+	RotationSchema         string `json:"rotation_schema"`
+	RotationCredentialType string `json:"rotation_credential_type"`
 }
 
 const pathConfigHelpSyn = `
