@@ -63,6 +63,6 @@ jobs:
         cat ${{ steps.scan.outputs.sarif-file-path }}
 
     - name: Upload SARIF 
-      uses: github/codeql-action/upload-sarif@3096afedf9873361b2b2f65e1445b13272c83eb8  # TSCCR: could not find entry for github/codeql-action/upload-sarif
+      uses: github/codeql-action/upload-sarif@ab28d5ce09b08e4700b2296d39d684a7ac71d1e7  # v4
       with:
         sarif_file: ${{ steps.scan.outputs.sarif-file-path }}

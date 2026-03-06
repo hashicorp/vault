@@ -287,28 +287,28 @@ jobs:
       # https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
       - if: ${{ always() && ! cancelled() }}
         name: Notify launch failed
-        uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
+        uses: hashicorp/actions-slack-status@38d0699d80d50038000c0af77944c3531c6e97c0  # v2.0.1
         with:
           failure-message: "enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.launch.outcome }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify retry launch failed
-        uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
+        uses: hashicorp/actions-slack-status@38d0699d80d50038000c0af77944c3531c6e97c0  # v2.0.1
         with:
           failure-message: "retry enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.launch_retry.outcome }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify destroy failed
-        uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
+        uses: hashicorp/actions-slack-status@38d0699d80d50038000c0af77944c3531c6e97c0  # v2.0.1
         with:
           failure-message: "enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.destroy.outcome }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify retry destroy failed
-        uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
+        uses: hashicorp/actions-slack-status@38d0699d80d50038000c0af77944c3531c6e97c0  # v2.0.1
         with:
           failure-message: "retry enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.destroy_retry.outcome }}
