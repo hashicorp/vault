@@ -59,7 +59,7 @@ module('Unit | Utility | paginate-list', function (hooks) {
       nextPage: 3,
       prevPage: 1,
       total: 20,
-      filteredTotal: 3,
+      filteredTotal: 20,
       pageSize: 3,
     };
     assert.deepEqual(meta, expectedMeta, 'returns correct meta data');
@@ -69,5 +69,34 @@ module('Unit | Utility | paginate-list', function (hooks) {
     const paginatedData = paginate(this.items, { page: 7, pageSize: 3 });
     const expected = [18, 19];
     assert.deepEqual(paginatedData, expected, 'returns correct items for last page');
+  });
+
+  test('filteredTotal should reflect full filtered dataset, not page slice', function (assert) {
+    const data = Array.from({ length: 120 }, (_, i) => `item-${i}`);
+
+    const result = paginate(data, {
+      page: 1,
+      pageSize: 100,
+      filter: 'item-1',
+    });
+
+    // total should always reflect full dataset
+    assert.strictEqual(result.meta.total, 120, 'total reflects full dataset size');
+
+    // Count actual matches manually
+    const expectedFilteredCount = data.filter((item) => item.toLowerCase().includes('item-1')).length;
+
+    assert.strictEqual(
+      result.meta.filteredTotal,
+      expectedFilteredCount,
+      'filteredTotal reflects full filtered dataset size'
+    );
+
+    const expectedLastPage = Math.ceil(expectedFilteredCount / 100);
+    assert.strictEqual(
+      result.meta.lastPage,
+      expectedLastPage,
+      'lastPage is calculated from full filtered dataset'
+    );
   });
 });
