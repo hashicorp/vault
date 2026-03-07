@@ -250,11 +250,12 @@ func (s *gRPCSystemViewClient) GetRotationInformation(ctx context.Context, req *
 func (s *gRPCSystemViewClient) RegisterRotationJobWithResponse(ctx context.Context, req *rotation.RotationJobConfigureRequest) (*rotation.RotationInfo, error) {
 	cfgReq := &pb.RegisterRotationJobRequest{
 		Job: &pb.RotationJobInput{
-			Name:             req.Name,
-			MountPoint:       req.MountPoint,
-			Path:             req.ReqPath,
-			RotationSchedule: req.RotationSchedule,
-			RotationPolicy:   req.RotationPolicy,
+			Name:                           req.Name,
+			MountPoint:                     req.MountPoint,
+			Path:                           req.ReqPath,
+			RotationSchedule:               req.RotationSchedule,
+			RotationPolicy:                 req.RotationPolicy,
+			MigratedLegacyNextRotationTime: req.MigratedLegacyNextRotationTime.Unix(),
 
 			// on the side outbound from the plugin, we convert duration to seconds, so seconds get sent over the wire
 			RotationWindow: int64(req.RotationWindow.Seconds()),
@@ -534,8 +535,9 @@ func (s *gRPCSystemViewServer) RegisterRotationJobWithResponse(ctx context.Conte
 		// on the side inbound to vault, we convert seconds back to time.Duration
 		// Note: this value is seconds (as per the outbound client call, despite being int64)
 		// The field is int64 because of gRPC reasons, not time.Duration reasons
-		RotationWindow: time.Duration(req.Job.RotationWindow) * time.Second,
-		RotationPeriod: time.Duration(req.Job.RotationPeriod) * time.Second,
+		RotationWindow:                 time.Duration(req.Job.RotationWindow) * time.Second,
+		RotationPeriod:                 time.Duration(req.Job.RotationPeriod) * time.Second,
+		MigratedLegacyNextRotationTime: time.Unix(req.Job.MigratedLegacyNextRotationTime, 0).UTC(),
 	}
 
 	resp, err := s.impl.RegisterRotationJobWithResponse(ctx, cfgReq)
@@ -566,8 +568,9 @@ func (s *gRPCSystemViewServer) RegisterRotationJob(ctx context.Context, req *pb.
 		// on the side inbound to vault, we convert seconds back to time.Duration
 		// Note: this value is seconds (as per the outbound client call, despite being int64)
 		// The field is int64 because of gRPC reasons, not time.Duration reasons
-		RotationWindow: time.Duration(req.Job.RotationWindow) * time.Second,
-		RotationPeriod: time.Duration(req.Job.RotationPeriod) * time.Second,
+		RotationWindow:                 time.Duration(req.Job.RotationWindow) * time.Second,
+		RotationPeriod:                 time.Duration(req.Job.RotationPeriod) * time.Second,
+		MigratedLegacyNextRotationTime: time.Unix(req.Job.MigratedLegacyNextRotationTime, 0).UTC(),
 	}
 
 	rotationID, err := s.impl.RegisterRotationJob(ctx, cfgReq)
