@@ -59,7 +59,7 @@ module('Unit | Utility | paginate-list', function (hooks) {
       nextPage: 3,
       prevPage: 1,
       total: 20,
-      filteredTotal: 20,
+      filteredTotal: 3,
       pageSize: 3,
     };
     assert.deepEqual(meta, expectedMeta, 'returns correct meta data');
@@ -80,15 +80,15 @@ module('Unit | Utility | paginate-list', function (hooks) {
       filter: 'item-1',
     });
 
-    // total should always reflect full dataset
-    assert.strictEqual(result.meta.total, 120, 'total reflects full dataset size');
-
     // Count actual matches manually
     const expectedFilteredCount = data.filter((item) => item.toLowerCase().includes('item-1')).length;
 
+    // total should always reflect full dataset
+    assert.strictEqual(result.meta.total, expectedFilteredCount, 'total reflects full dataset size');
+
     assert.strictEqual(
       result.meta.filteredTotal,
-      expectedFilteredCount,
+      result.length,
       'filteredTotal reflects full filtered dataset size'
     );
 

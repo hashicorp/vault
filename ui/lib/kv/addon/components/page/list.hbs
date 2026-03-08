@@ -182,7 +182,7 @@
       @route={{this.router.currentRoute.localName}}
       @showSizeSelector={{false}}
       @models={{@currentRouteParams}}
-      @totalItems={{if @filterValue @secrets.meta.filteredTotal @secrets.meta.total}}
+      @totalItems={{@secrets.meta.total}}
       @queryFunction={{this.paginationQueryParams}}
       data-test-pagination
     />
