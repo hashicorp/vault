@@ -284,6 +284,70 @@ func TestPopulateAutomatedRotationData(t *testing.T) {
 	}
 }
 
+func TestPopulateSetAutomatedRotationData(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputParams *AutomatedRotationParams
+		expected    map[string]interface{}
+		unexpected  map[string]interface{}
+	}{
+		{
+			name: "only schedule and window set",
+			expected: map[string]interface{}{
+				"rotation_schedule":          "*/15 * * * *",
+				"rotation_window":            time.Duration(60).Seconds(),
+				"rotation_policy":            "",
+				"disable_automated_rotation": false,
+			},
+			unexpected: map[string]interface{}{
+				"rotation_period": "",
+			},
+			inputParams: &AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           60,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+			},
+		},
+		{
+			name: "only period set",
+			expected: map[string]interface{}{
+				"rotation_period":            time.Duration(120).Seconds(),
+				"rotation_policy":            "",
+				"disable_automated_rotation": false,
+			},
+			unexpected: map[string]interface{}{
+				"rotation_schedule": "",
+				"rotation_window":   "",
+			},
+			inputParams: &AutomatedRotationParams{
+				RotationSchedule:         "",
+				RotationWindow:           0,
+				RotationPeriod:           120,
+				DisableAutomatedRotation: false,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := make(map[string]interface{})
+
+			tt.inputParams.PopulateSetAutomatedRotationData(m)
+
+			if !reflect.DeepEqual(m, tt.expected) {
+				t.Errorf("PopulateSetAutomatedRotationData() error comparing values; got %v, expected %v", m, tt.expected)
+			}
+
+			for k, v := range tt.unexpected {
+				if m[k] == v {
+					t.Errorf("PopulateSetAutomatedRotationData() unexpected value for key %s; got %v", k, m[k])
+				}
+			}
+		})
+	}
+}
+
 func TestShouldRegisterRotationJob(t *testing.T) {
 	tests := []struct {
 		name        string
