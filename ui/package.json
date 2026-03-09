@@ -183,7 +183,7 @@
     "kind-of": "6.0.3",
     "micromatch": "4.0.8",
     "prismjs": "1.30.0",
-    "rollup": "2.79.2",
+    "rollup": "2.80.0",
     "serialize-javascript": "3.1.0",
     "underscore": "1.13.7",
     "@embroider/macros": "1.15.0",
