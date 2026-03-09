@@ -738,6 +738,7 @@ type TestCluster struct {
 	LicensePublicKey  ed25519.PublicKey
 	LicensePrivateKey ed25519.PrivateKey
 	opts              *TestClusterOptions
+	cleanupOnce       sync.Once
 }
 
 func (c *TestCluster) SetRootToken(token string) {
@@ -991,6 +992,7 @@ func (c *TestClusterCore) NetworkLayer() cluster.NetworkLayer {
 }
 
 func (c *TestCluster) Cleanup() {
+	c.cleanupOnce.Do(func() {
 	c.Logger.Info("cleaning up vault cluster")
 	if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {
 		tl.StopLogging()
@@ -1021,6 +1023,7 @@ func (c *TestCluster) Cleanup() {
 	if c.CleanupFunc != nil {
 		c.CleanupFunc()
 	}
+	})
 }
 
 func (c *TestCluster) ensureCoresSealed() error {
@@ -1731,6 +1734,10 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		// once, otherwise when they re-initialize themselves they can yield 500s.
 		time.Sleep(coreConfig.PeriodicLeaderRefreshInterval)
 	}
+
+	// Register cleanup with t.Cleanup so it's automatically called when the test ends
+	t.Cleanup(testCluster.Cleanup)
+
 	return &testCluster
 }
 
