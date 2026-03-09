@@ -80,6 +80,7 @@ type DockerCluster struct {
 	storage      testcluster.ClusterStorage
 	disableMlock bool
 	disableTLS   bool
+	cleanupOnce  sync.Once
 }
 
 func (dc *DockerCluster) NamedLogger(s string) log.Logger {
@@ -142,7 +143,9 @@ func (dc *DockerCluster) GetCACertPEMFile() string {
 }
 
 func (dc *DockerCluster) Cleanup() {
+	dc.cleanupOnce.Do(func() {
 	dc.cleanup()
+	})
 }
 
 func (dc *DockerCluster) cleanup() error {
@@ -422,8 +425,10 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 	t.Cleanup(cancel)
 
 	dc, err := NewDockerCluster(ctx, opts)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil {
+		dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
+		// Register cleanup with t.Cleanup so it's automatically called when the test ends
+		t.Cleanup(dc.Cleanup)
 	}
 	dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
 	return dc
