@@ -2300,7 +2300,7 @@ func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEnt
 	tokenNS := namespace.RootNamespace
 	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
 	_, nsID := namespace.SplitIDFromString(token)
-	if nsID != "" {
+	if nsID != "" && !IsEnterpriseToken(token) {
 		var err error
 		tokenNS, err = NamespaceByID(ctx, nsID, m.core)
 		if err != nil {
@@ -2309,6 +2309,16 @@ func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEnt
 		if tokenNS != nil {
 			saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
 		}
+	}
+
+	// If it's an enterprise token, we cannot get the ID from the token,
+	// so let's get it from the lease.
+	if IsEnterpriseToken(token) {
+		ns, err := m.getNamespaceFromLeaseID(ctx, le.LeaseID)
+		if err != nil {
+			return err
+		}
+		tokenNS = ns
 	}
 
 	saltedID, err := m.tokenStore.SaltID(saltCtx, token)
