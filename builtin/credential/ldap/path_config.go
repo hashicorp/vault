@@ -128,6 +128,12 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 		persistNeeded = true
 	}
 
+	// Upgrade path: Set default schema for configs created before schema field was added
+	if result.Schema == "" {
+		result.Schema = ldaputil.SchemaOpenLDAP
+		persistNeeded = true
+	}
+
 	if persistNeeded && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		entry, err := logical.StorageEntryJSON("config", result)
 		if err != nil {
