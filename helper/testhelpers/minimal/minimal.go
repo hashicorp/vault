@@ -76,6 +76,5 @@ func NewTestSoloCluster(t testing.TB, config *vault.CoreConfig) *vault.TestClust
 		HandlerFunc: http.Handler,
 		Logger:      logger,
 	})
-	t.Cleanup(cluster.Cleanup)
 	return cluster
 }

@@ -739,6 +739,7 @@ type TestCluster struct {
 	LicensePublicKey  ed25519.PublicKey
 	LicensePrivateKey ed25519.PrivateKey
 	opts              *TestClusterOptions
+	cleanupOnce       sync.Once
 }
 
 func (c *TestCluster) SetRootToken(token string) {
@@ -992,36 +993,38 @@ func (c *TestClusterCore) NetworkLayer() cluster.NetworkLayer {
 }
 
 func (c *TestCluster) Cleanup() {
-	c.Logger.Info("cleaning up vault cluster")
-	if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {
-		tl.StopLogging()
-	}
+	c.cleanupOnce.Do(func() {
+		c.Logger.Info("cleaning up vault cluster")
+		if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {
+			tl.StopLogging()
+		}
 
-	wg := &sync.WaitGroup{}
-	for _, core := range c.Cores {
-		wg.Add(1)
-		lc := core
+		wg := &sync.WaitGroup{}
+		for _, core := range c.Cores {
+			wg.Add(1)
+			lc := core
 
-		go func() {
-			defer wg.Done()
-			if err := lc.stop(); err != nil {
-				// Note that this log won't be seen if using TestLogger, due to
-				// the above call to StopLogging.
-				lc.Logger().Error("error during cleanup", "error", err)
-			}
-		}()
-	}
+			go func() {
+				defer wg.Done()
+				if err := lc.stop(); err != nil {
+					// Note that this log won't be seen if using TestLogger, due to
+					// the above call to StopLogging.
+					lc.Logger().Error("error during cleanup", "error", err)
+				}
+			}()
+		}
 
-	wg.Wait()
+		wg.Wait()
 
-	// Remove any temp dir that exists
-	if c.TempDir != "" {
-		os.RemoveAll(c.TempDir)
-	}
+		// Remove any temp dir that exists
+		if c.TempDir != "" {
+			os.RemoveAll(c.TempDir)
+		}
 
-	if c.CleanupFunc != nil {
-		c.CleanupFunc()
-	}
+		if c.CleanupFunc != nil {
+			c.CleanupFunc()
+		}
+	})
 }
 
 func (c *TestCluster) ensureCoresSealed() error {
@@ -1733,6 +1736,10 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		// once, otherwise when they re-initialize themselves they can yield 500s.
 		time.Sleep(coreConfig.PeriodicLeaderRefreshInterval)
 	}
+
+	// Register cleanup with t.Cleanup so it's automatically called when the test ends
+	t.Cleanup(testCluster.Cleanup)
+
 	return &testCluster
 }
 
