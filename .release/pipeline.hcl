@@ -125,6 +125,7 @@ changed_files {
     // Ignore whole directories where no enterprise only code should ever exist.
     ignore {
       base_dir = [
+        "website",
         joinpath(".release", "docker"),
         joinpath("enos", "modules"),
         joinpath("scripts", "docker"),
@@ -169,8 +170,13 @@ changed_files {
       contains = [
         "_ent.go",
         "_ent_test.go",
+      ]
+    }
+
+    match {
+      extension = [".pb.go"]
+      contains = [
         "_ent",
-        "_ent.pb.go",
       ]
     }
 
