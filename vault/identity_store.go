@@ -78,7 +78,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		mountLister:            core,
 		mfaBackend:             core.loginMFABackend,
 		aliasLocks:             locksutil.CreateLocks(),
-		renameDuplicates:       core.FeatureActivationFlags,
+		activationManager:      core.FeatureActivationFlags,
 		activationErrorHandler: core,
 	}
 

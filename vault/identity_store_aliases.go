@@ -562,6 +562,10 @@ func (i *IdentityStore) handleAliasReadCommon(ctx context.Context, alias *identi
 	respData["namespace_id"] = alias.NamespaceID
 	respData["local"] = alias.Local
 
+	if i.scimEnabled {
+		respData["scim_client_id"] = alias.ScimClientID
+	}
+
 	if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 		respData["mount_path"] = mountValidationResp.MountPath
 		respData["mount_type"] = mountValidationResp.MountType
