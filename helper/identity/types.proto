@@ -308,6 +308,11 @@ message ScimClient {
   // entity.
   // @inject_tag: sentinel:"-"
   string namespace_id = 6;
+
+  // Deleting indicates that the SCIM client is in the process of being deleted.
+  // This allows cascading cleanup to be eventually handled even if there are failures during the deletion process.
+  // @inject_tag: sentinel:"-"
+  bool deleting = 7;
 }
 
 // Deprecated. Retained for backwards compatibility.

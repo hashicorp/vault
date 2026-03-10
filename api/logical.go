@@ -393,6 +393,15 @@ func (c *Logical) DeleteWithContext(ctx context.Context, path string) (*Secret, 
 	return c.DeleteWithDataWithContext(ctx, path, nil)
 }
 
+func (c *Logical) DeleteRaw(path string) (*Response, error) {
+	return c.DeleteRawWithContext(context.Background(), path)
+}
+
+func (c *Logical) DeleteRawWithContext(ctx context.Context, path string) (*Response, error) {
+	r := c.c.NewRequest(http.MethodDelete, "/v1/"+path)
+	return c.c.RawRequestWithContext(ctx, r)
+}
+
 func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret, error) {
 	return c.DeleteWithDataWithContext(context.Background(), path, data)
 }

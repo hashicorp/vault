@@ -3115,6 +3115,10 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, err)
 	}
 
+	if c.identityStore != nil {
+		c.identityStore.stopSCIMDeletingClientCleanup()
+	}
+
 	if c.autoRotateCancel != nil {
 		c.autoRotateCancel()
 		c.autoRotateCancel = nil
