@@ -387,24 +387,34 @@ jobs:
     secrets: inherit
 
   hcp-image:
+    # Logic: Run HCP image job if:
+    #   if needs.setup.outputs.is-ent-branch != 'true' then
+    #     false
+    #   elseif needs.setup.outputs.workflow-trigger == 'schedule' then
+    #     true
+    #   elseif needs.setup.outputs.workflow-trigger == 'pull_request' and (
+    #       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') or
+    #       contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') or
+    #       contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+    #     ) then
+    #     true
+    #   end
     if: |
-      needs.setup.outputs.is-ent-branch == 'true' && (
-      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      ( needs.setup.outputs.is-ent-branch != 'true' ) && false ||
+      ( needs.setup.outputs.workflow-trigger == 'schedule' ) && true ||
       ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
-        (
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') ||
+        ( contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') ||
           contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') ||
           contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
         )
-      )
-      )
+      ) && true
     needs:
       - setup
       - artifacts-ent
     uses: ./.github/workflows/build-hcp-image.yml
     with:
-      pull-request: ${{ needs.setup.outputs.workflow-trigger == 'pull_request' && github.event.pull_request && github.event.pull_request.number || '' }}
-      branch: ${{ needs.setup.outputs.workflow-trigger == 'schedule' && 'main' || '' }}
+      pull-request: ${{ github.event_name == 'pull_request' && github.event.pull_request && github.event.pull_request.number || '' }}
+      branch: ${{ github.event_name == 'schedule' && 'main' || '' }}
       create-aws-image: true
       create-azure-image: false
       hcp-environment: int
