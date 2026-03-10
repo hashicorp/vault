@@ -29,19 +29,20 @@ const (
 )
 
 type RoleEntry struct {
-	LeaseMax                      string        `json:"lease_max"`
-	Lease                         string        `json:"lease"`
-	DeprecatedMaxTTL              string        `json:"max_ttl"`
-	DeprecatedTTL                 string        `json:"ttl"`
-	TTL                           time.Duration `json:"ttl_duration"`
-	MaxTTL                        time.Duration `json:"max_ttl_duration"`
-	AllowLocalhost                bool          `json:"allow_localhost"`
-	AllowedBaseDomain             string        `json:"allowed_base_domain"`
-	AllowedDomainsOld             string        `json:"allowed_domains,omitempty"`
-	AllowedDomains                []string      `json:"allowed_domains_list"`
-	AllowedDomainsTemplate        bool          `json:"allowed_domains_template"`
-	AllowBaseDomain               bool          `json:"allow_base_domain"`
-	AllowBareDomains              bool          `json:"allow_bare_domains"`
+	LeaseMax               string        `json:"lease_max"`
+	Lease                  string        `json:"lease"`
+	DeprecatedMaxTTL       string        `json:"max_ttl"`
+	DeprecatedTTL          string        `json:"ttl"`
+	TTL                    time.Duration `json:"ttl_duration"`
+	MaxTTL                 time.Duration `json:"max_ttl_duration"`
+	AllowLocalhost         bool          `json:"allow_localhost"`
+	AllowedBaseDomain      string        `json:"allowed_base_domain"`
+	AllowedDomainsOld      string        `json:"allowed_domains,omitempty"`
+	AllowedDomains         []string      `json:"allowed_domains_list"`
+	AllowedDomainsTemplate bool          `json:"allowed_domains_template"`
+	AllowBaseDomain        bool          `json:"allow_base_domain"`
+	AllowBareDomains       bool          `json:"allow_bare_domains"`
+	// Deprecated: AllowTokenDisplayName is retained for backward compatibility but has not been writeable since v0.4.0
 	AllowTokenDisplayName         bool          `json:"allow_token_displayname"`
 	AllowSubdomains               bool          `json:"allow_subdomains"`
 	AllowGlobDomains              bool          `json:"allow_glob_domains"`
