@@ -28,6 +28,31 @@ const BASE_REQUEST_DATA = {
 };
 
 export const RESPONSE_STUBS = {
+  cert: {
+    ...BASE_REQUEST_DATA,
+    data: null,
+    auth: {
+      client_token: 'hvs.myvaultgeneratedgithubtoken',
+      accessor: 'bSdIXwG3bor6qPpsXYPXDesS',
+      policies: ['app-policy', 'default'],
+      token_policies: ['app-policy', 'default'],
+      metadata: {
+        authority_key_id: '57:4e:bd:2b:c5:64:57:18:85:fe:ba:65:74:fe:51:d8:07:b3:c8:7c',
+        cert_name: 'app-client',
+        common_name: '123-vault-auth-client',
+        serial_number: '203007388920717447074631125239238186446913014802',
+        subject_key_id: 'a8:09:b6:a2:2d:ac:a7:ad:67:6c:ff:b2:23:ef:eb:cd:c4:b7:68:eb',
+      },
+      lease_duration: 2764800,
+      renewable: true,
+      entity_id: '9caa5721-97dc-e082-5b37-6f21ae6effbd',
+      token_type: 'service',
+      orphan: true,
+      mfa_requirement: null,
+      num_uses: 0,
+    },
+    mount_type: '',
+  },
   github: {
     ...BASE_REQUEST_DATA,
     data: null,
@@ -317,9 +342,19 @@ export const RESPONSE_STUBS = {
   },
 };
 
-// Once the auth service authentication method is simplified and no longer handles every auth type
-// the "backend" key should be completely removable
 export const TOKEN_DATA = {
+  cert: {
+    authMethodType: 'cert',
+    authMountPath: 'cert',
+    displayName: `${RESPONSE_STUBS.cert.auth.metadata.cert_name}/${RESPONSE_STUBS.cert.auth.metadata.common_name}`,
+    entityId: RESPONSE_STUBS.cert.auth.entity_id,
+    policies: RESPONSE_STUBS.cert.auth.policies,
+    renewable: RESPONSE_STUBS.cert.auth.renewable,
+    token: RESPONSE_STUBS.cert.auth.client_token,
+    tokenExpirationEpoch: 1752352843223,
+    ttl: RESPONSE_STUBS.cert.auth.lease_duration,
+    userRootNamespace: '',
+  },
   github: {
     authMethodType: 'github',
     authMountPath: 'github',
