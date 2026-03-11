@@ -17,7 +17,7 @@ func Test_durationAdjustedCertificateCount(t *testing.T) {
 		{
 			name:            "zero duration",
 			validitySeconds: 0,
-			want:            0.0,
+			want:            0, // If the duration is zero, the normalized unit should be zero
 		},
 		{
 			name:            "1 hour",
@@ -72,12 +72,12 @@ func Test_durationAdjustedCertificateCount(t *testing.T) {
 		{
 			name:            "very small duration - 1 second",
 			validitySeconds: 1,
-			want:            0.0, // 1/3600/730 = 0.00000038... rounds to 0.0
+			want:            0.0001, // 1/3600/730 = 0.00000038... rounds to 0.0 but should return default minimum 0.0001
 		},
 		{
 			name:            "very small duration - 60 seconds",
 			validitySeconds: 60,
-			want:            0.0, // 60/3600/730 = 0.000023... rounds to 0.0
+			want:            0.0001, // 60/3600/730 = 0.000023... rounds to 0.0 and should return default minimum 0.0001
 		},
 		{
 			name:            "very small duration - 600 seconds",

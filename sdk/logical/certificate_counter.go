@@ -58,7 +58,12 @@ func durationAdjustedCertificateCount(validitySeconds int64) float64 {
 	validityHours := float64(validitySeconds) / 3600.0
 	units := validityHours / standardDuration
 	// Round to 4 decimal places
-	return math.Round(units*10000) / 10000
+	ret := math.Round(units*10000) / 10000
+	if ret == 0.0 && validitySeconds > 0 {
+		// Ensure we don't return 0.0, which would be interpreted as no billable units.
+		return 0.0001
+	}
+	return ret
 }
 
 type CertCountIncrementer interface {
