@@ -94,6 +94,12 @@ const (
 	// to pass the snapshot ID
 	VaultSnapshotRecoverHeader = "X-Vault-Recover-Snapshot-Id"
 
+	// DefaultMaxTokenHeaderSize is the default maximum size in bytes for an
+	// authentication token passed in the X-Vault-Token and Authorization: Bearer
+	// headers. This is to prevent a denial of service attack via unbounded
+	// header values. Can be overridden per listener.
+	DefaultMaxTokenHeaderSize = 8 * 1024 // 8 KB
+
 	// CustomMaxJSONDepth specifies the maximum nesting depth of a JSON object.
 	// This limit is designed to prevent stack exhaustion attacks from deeply
 	// nested JSON payloads, which could otherwise lead to a denial-of-service
@@ -180,6 +186,25 @@ var (
 	}
 	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
 )
+
+// TokenHeaderMaxBytes returns the http.Server.MaxHeaderBytes value for the
+// given listener configuration. A negative CustomMaxTokenHeaderSize disables
+// the limit; zero falls back to DefaultMaxTokenHeaderSize.
+func TokenHeaderMaxBytes(lnConfig *configutil.Listener) int {
+	if lnConfig == nil {
+		return DefaultMaxTokenHeaderSize
+	}
+	switch {
+	case lnConfig.CustomMaxTokenHeaderSize < 0:
+		// Limit explicitly disabled; leave http.Server.MaxHeaderBytes unset so
+		// the stdlib default (1 MB) applies.
+		return 0
+	case lnConfig.CustomMaxTokenHeaderSize > 0:
+		return int(lnConfig.CustomMaxTokenHeaderSize)
+	default:
+		return DefaultMaxTokenHeaderSize
+	}
+}
 
 func init() {
 	alwaysRedirectPaths.AddPaths([]string{
@@ -313,6 +338,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
 	wrappedHandler = entWrapGenericHandler(core, wrappedHandler, props)
 	wrappedHandler = wrapMaxRequestSizeHandler(wrappedHandler, props)
+	wrappedHandler = wrapTokenHeaderSizeHandler(wrappedHandler, props)
 	wrappedHandler = priority.WrapRequestPriorityHandler(wrappedHandler)
 
 	// Add an extra wrapping handler if the DisablePrintableCheck listener
