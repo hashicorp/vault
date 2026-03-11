@@ -203,6 +203,8 @@ func (b *backend) GenerateOTPCredential(ctx context.Context, req *logical.Reques
 	if err := req.Storage.Put(ctx, newEntry); err != nil {
 		return "", err
 	}
+
+	b.sshCertificateCounter.Increment().AddSSHOTP()
 	return otp, nil
 }
 
