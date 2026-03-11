@@ -40,6 +40,7 @@ func TestSysRekey_Verification(t *testing.T) {
 func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 	opts := &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
 	}
 	switch {
 	case recovery:

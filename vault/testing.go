@@ -1173,6 +1173,7 @@ type TestClusterOptions struct {
 
 	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
 	ABCDLoggerNames bool
+	DisableTLS      bool
 }
 
 type TestPluginConfig struct {
@@ -1374,6 +1375,10 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		})
 	}
 
+	scheme := "https"
+	if opts.DisableTLS {
+		scheme = "http"
+	}
 	//
 	// Listener setup
 	//
@@ -1430,9 +1435,13 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		tlsConfigs = append(tlsConfigs, tlsConfig)
 		lns := []*TestListener{
 			{
-				Listener: tls.NewListener(ln, tlsConfig),
-				Address:  ln.Addr().(*net.TCPAddr),
+				Address: ln.Addr().(*net.TCPAddr),
 			},
+		}
+		if opts.DisableTLS {
+			lns[0].Listener = ln
+		} else {
+			lns[0].Listener = tls.NewListener(ln, tlsConfig)
 		}
 		listeners = append(listeners, lns)
 		var handler http.Handler = http.NewServeMux()
@@ -1461,8 +1470,8 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 			audit.TypeSocket: audit.NewSocketBackend,
 			audit.TypeSyslog: audit.NewSyslogBackend,
 		},
-		RedirectAddr:    fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
-		ClusterAddr:     "https://127.0.0.1:0",
+		RedirectAddr:    fmt.Sprintf(scheme+"://127.0.0.1:%d", listeners[0][0].Address.Port),
+		ClusterAddr:     scheme + "://127.0.0.1:0",
 		DisableMlock:    true,
 		EnableUI:        true,
 		EnableRaw:       true,
@@ -1559,6 +1568,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
 		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
 		coreConfig.ObservationSystemConfig = base.ObservationSystemConfig
+		coreConfig.EnableUnauthenticatedAccess = base.EnableUnauthenticatedAccess
 
 		testApplyEntBaseConfig(coreConfig, base)
 	}
@@ -1856,7 +1866,11 @@ func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreC
 		firstCoreNumber = opts.FirstCoreNumber
 	}
 
-	localConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[0].Address.Port)
+	scheme := "https"
+	if opts != nil && opts.DisableTLS {
+		scheme = "http"
+	}
+	localConfig.RedirectAddr = fmt.Sprintf(scheme+"://127.0.0.1:%d", listeners[0].Address.Port)
 
 	// if opts.SealFunc is provided, use that to generate a seal for the config instead
 	if opts != nil && opts.SealFunc != nil {
@@ -1920,10 +1934,10 @@ func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreC
 
 	if opts != nil && opts.ClusterLayers != nil {
 		localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[idx]
-		localConfig.ClusterAddr = "https://" + localConfig.ClusterNetworkLayer.Listeners()[0].Addr().String()
+		localConfig.ClusterAddr = scheme + "://" + localConfig.ClusterNetworkLayer.Listeners()[0].Addr().String()
 	}
 	if opts != nil && opts.BaseClusterListenPort != 0 {
-		localConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", opts.BaseClusterListenPort+idx)
+		localConfig.ClusterAddr = fmt.Sprintf(scheme+"://127.0.0.1:%d", opts.BaseClusterListenPort+idx)
 	}
 
 	switch {
@@ -2144,7 +2158,11 @@ func (testCluster *TestCluster) getAPIClient(
 	port int, tlsConfig *tls.Config,
 ) *api.Client {
 	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = tlsConfig.Clone()
+	scheme := "http"
+	if opts != nil && !opts.DisableTLS {
+		scheme = "https"
+		transport.TLSClientConfig = tlsConfig.Clone()
+	}
 	if err := http2.ConfigureTransport(transport); err != nil {
 		t.Fatal(err)
 	}
@@ -2159,7 +2177,7 @@ func (testCluster *TestCluster) getAPIClient(
 	if config.Error != nil {
 		t.Fatal(config.Error)
 	}
-	config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
+	config.Address = fmt.Sprintf(scheme+"://127.0.0.1:%d", port)
 	config.HttpClient = client
 	config.MaxRetries = 0
 	apiClient, err := api.NewClient(config)

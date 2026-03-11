@@ -236,6 +236,19 @@ var _ vault.HandlerHandler = HandlerFunc(func(props *vault.HandlerProperties) ht
 // handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
 func handler(props *vault.HandlerProperties) http.Handler {
+	handlerUnauth := handlerWithUnauthRekey(props, true)
+	handlerAuth := handlerWithUnauthRekey(props, false)
+
+	return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+		if props.Core.GetEnableUnauthRekey() {
+			handlerUnauth.ServeHTTP(writer, req)
+		} else {
+			handlerAuth.ServeHTTP(writer, req)
+		}
+	})
+}
+
+func handlerWithUnauthRekey(props *vault.HandlerProperties, unauthRekey bool) http.Handler {
 	core := props.Core
 
 	// Create the muxer to handle the actual endpoints
@@ -275,12 +288,18 @@ func handler(props *vault.HandlerProperties) http.Handler {
 			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
 		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
 			handleAuditNonLogical(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy))))
-		mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
-		mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
-		mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
-		mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
-		mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
-		mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+
+		// Register rekey endpoints as unauthenticated handlers only if unauthRekey is true.
+		// When false (the default), these endpoints will be handled by the sys backend as authenticated endpoints.
+		if unauthRekey {
+			mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
+			mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
+			mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
+			mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
+			mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
+			mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+		}
+
 		mux.Handle("/v1/sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
 		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
 		mux.Handle("/v1/sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
@@ -1480,6 +1499,23 @@ func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logic
 	if resp != nil {
 		if data := resp.Data["data"]; data != nil {
 			respondErrorAndData(w, statusCode, data, newErr)
+			return true
+		}
+		if body := resp.Data[logical.HTTPRawBodyError]; body != nil {
+			if code := resp.Data[logical.HTTPStatusCode]; code != nil {
+				if i, ok := code.(int); ok {
+					// Defensively ignore non-int status codes
+					statusCode = i
+				}
+			}
+			switch v := body.(type) {
+			case string:
+				logical.RespondWithBody(w, statusCode, v)
+			case []byte:
+				logical.RespondWithBody(w, statusCode, string(v))
+			default:
+				respondError(w, http.StatusInternalServerError, fmt.Errorf("unable to decode body: %w", newErr))
+			}
 			return true
 		}
 	}

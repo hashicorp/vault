@@ -56,6 +56,8 @@ type Config struct {
 
 	Experiments []string `hcl:"experiments"`
 
+	EnableUnauthenticatedAccess []string `hcl:"enable_unauthenticated_access"`
+
 	CacheSize                int         `hcl:"cache_size"`
 	DisableCache             bool        `hcl:"-"`
 	DisableCacheRaw          interface{} `hcl:"disable_cache"`
@@ -519,6 +521,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.entConfig = c.entConfig.Merge(c2.entConfig)
 
 	result.Experiments = mergeExperiments(c.Experiments, c2.Experiments)
+
+	result.EnableUnauthenticatedAccess = c.EnableUnauthenticatedAccess
+	if len(c2.EnableUnauthenticatedAccess) > 0 {
+		result.EnableUnauthenticatedAccess = c2.EnableUnauthenticatedAccess
+	}
 
 	return result
 }
@@ -1414,6 +1421,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"log_requests_level": c.LogRequestsLevel,
 		"experiments":        c.Experiments,
+
+		"enable_unauthenticated_access": c.EnableUnauthenticatedAccess,
 
 		"detect_deadlocks": c.DetectDeadlocks,
 
