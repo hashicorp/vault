@@ -432,3 +432,68 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 		}
 	}
 }
+
+// TestCopy_request_EnterpriseTokenFields verifies that copystructure.Copy
+// correctly deep-copies a logical.Request that carries enterprise token fields,
+// including EnterpriseTokenAuthorizationDetails which is []map[string]any and
+// would silently lose data under a shallow copy.
+func TestCopy_request_EnterpriseTokenFields(t *testing.T) {
+	expected := logical.Request{
+		Data: map[string]interface{}{
+			"foo": "bar",
+		},
+		EnterpriseTokenMetadata: "test-token-abc",
+		EnterpriseTokenIssuer:   "https://issuer.example.com",
+		EnterpriseTokenAudience: []string{"vault", "api"},
+		EnterpriseTokenAuthorizationDetails: []logical.AuthorizationDetail{
+			{
+				"type":            "vault:path_access",
+				"path_constraint": "secret/data/users/alice",
+				"action":          "read",
+			},
+			{
+				"type":            "vault:path_access",
+				"path_constraint": "secret/data/config/general",
+				"action":          "update",
+			},
+		},
+	}
+	arg := expected
+
+	dup, err := copystructure.Copy(&arg)
+	require.NoError(t, err)
+
+	arg2 := dup.(*logical.Request)
+	require.EqualValues(t, expected, *arg2)
+}
+
+// TestHashRequest_EnterpriseTokenFieldsInMetadata verifies that enterprise token
+// fields stored in auth.Metadata are not HMAC'd by hashAuth. These values are
+// not secrets and must appear as cleartext in the audit log.
+func TestHashRequest_EnterpriseTokenFieldsInMetadata(t *testing.T) {
+	// Enterprise token fields are now stored in auth.Metadata by createEntry().
+	// Verify that hashAuth does not HMAC metadata values.
+	auditAuth := &auth{
+		ClientToken: "secret-token",
+		Metadata: map[string]string{
+			"enterprise_token_metadata": "test-token-xyz",
+			"enterprise_token_issuer":   "https://issuer.example.com",
+			"actor_entity_id":           "actor-123",
+			"actor_entity_name":         "actor-service",
+		},
+	}
+
+	salter := &testSalter{}
+	err := hashAuth(context.Background(), salter, auditAuth, false)
+	require.NoError(t, err)
+
+	// ClientToken must be HMAC'd — it is a secret.
+	require.NotEqual(t, "secret-token", auditAuth.ClientToken)
+	require.Contains(t, auditAuth.ClientToken, "hmac-sha256:")
+
+	// Metadata values must pass through unchanged — they are not secrets.
+	require.Equal(t, "test-token-xyz", auditAuth.Metadata["enterprise_token_metadata"])
+	require.Equal(t, "https://issuer.example.com", auditAuth.Metadata["enterprise_token_issuer"])
+	require.Equal(t, "actor-123", auditAuth.Metadata["actor_entity_id"])
+	require.Equal(t, "actor-service", auditAuth.Metadata["actor_entity_name"])
+}
