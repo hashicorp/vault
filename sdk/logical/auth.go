@@ -90,6 +90,12 @@ type Auth struct {
 	// matching groups, the entity ID of the user will be added.
 	GroupAliases []*Alias `json:"group_aliases" mapstructure:"group_aliases" structs:"group_aliases"`
 
+	// ActorEntityID is the entity ID of the actor performing the request.
+	ActorEntityID string `json:"actor_entity_id,omitempty" mapstructure:"actor_entity_id" structs:"actor_entity_id"`
+
+	// ActorEntityName is the name of the actor entity performing the request.
+	ActorEntityName string `json:"actor_entity_name,omitempty" mapstructure:"actor_entity_name" structs:"actor_entity_name"`
+
 	// The set of CIDRs that this token can be used with
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
 

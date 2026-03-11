@@ -242,7 +242,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	var secondEntity *identity.Entity
 	if IsEnterpriseToken(req.ClientToken) {
-		isValidEnterpriseToken, tokenMetadataContainer, entity, entity2, err := c.validateEnterpriseTokenAndFetchEntity(ctx, req.ClientToken)
+		isValidEnterpriseToken, tokenMetadataContainer, entity, actorEntity, err := c.validateEnterpriseTokenAndFetchEntity(ctx, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to validate enterprise token", "error", err)
 		}
@@ -250,8 +250,11 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
 		req.EnterpriseTokenMetadata = getEnterpriseTokenMetadata(tokenMetadataContainer)
-		secondEntity = entity2
-		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity)
+		req.EnterpriseTokenIssuer = getEnterpriseTokenIssuer(tokenMetadataContainer)
+		req.EnterpriseTokenAudience = getEnterpriseTokenAudience(tokenMetadataContainer)
+		req.EnterpriseTokenAuthorizationDetails = getEnterpriseTokenAuthorizationDetails(tokenMetadataContainer)
+		secondEntity = actorEntity
+		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity, actorEntity)
 		if err != nil {
 			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing enterprise token"))
 		}
@@ -280,6 +283,14 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	// Ensure the token is valid
 	if te == nil {
 		return nil, nil, nil, nil, multierror.Append(logical.ErrPermissionDenied, logical.ErrInvalidToken)
+	}
+
+	if secondEntity != nil {
+		if req.Auth == nil {
+			req.Auth = &logical.Auth{}
+		}
+		req.Auth.ActorEntityID = secondEntity.ID
+		req.Auth.ActorEntityName = secondEntity.Name
 	}
 
 	// CIDR checks bind all tokens except non-expiring root tokens
@@ -570,6 +581,11 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		}
 		clientID, isTWE = te.CreateClientID()
 		req.ClientID = clientID
+	}
+
+	if req.Auth != nil {
+		auth.ActorEntityID = req.Auth.ActorEntityID
+		auth.ActorEntityName = req.Auth.ActorEntityName
 	}
 
 	twoStepRecover := req.Operation == logical.RecoverOperation && req.RecoverSourcePath != "" && req.RecoverSourcePath != req.Path
