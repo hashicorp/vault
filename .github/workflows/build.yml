@@ -386,6 +386,44 @@ jobs:
       web-ui-cache-key: ${{ needs.ui.outputs.cache-key }}
     secrets: inherit
 
+  # Setup HCP input parameters with proper validation
+  hcp-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      pull-request-number: ${{ steps.pr-logic.outputs.pull-request-number }}
+      branch-name: ${{ steps.branch-logic.outputs.branch-name }}
+    steps:
+      - id: pr-logic
+        name: Determine pull request number
+        run: |
+          echo "Analyzing PR context for event: ${{ github.event_name }}"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
+            if [[ -n "$PR_NUM" && "$PR_NUM" != "null" ]]; then
+              echo "PR context detected, using number: $PR_NUM"
+            else
+              echo "PR context but no valid number found, using 0"
+              PR_NUM="0"
+            fi
+          else
+            PR_NUM="0"
+            echo "Non-PR context, using fallback value: $PR_NUM"
+          fi
+          echo "pull-request-number=$PR_NUM" >> "$GITHUB_OUTPUT"
+
+      - id: branch-logic
+        name: Determine branch name
+        run: |
+          echo "Analyzing branch context for event: ${{ github.event_name }}"
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            BRANCH="main"
+            echo "Schedule context, using branch: $BRANCH"
+          else
+            BRANCH=""
+            echo "Non-schedule context, using empty branch"
+          fi
+          echo "branch-name=$BRANCH" >> "$GITHUB_OUTPUT"
+
   hcp-image:
     # Logic: Run HCP image job if:
     #   if needs.setup.outputs.is-ent-branch != 'true' then
@@ -411,10 +449,11 @@ jobs:
     needs:
       - setup
       - artifacts-ent
+      - hcp-setup
     uses: ./.github/workflows/build-hcp-image.yml
     with:
-      pull-request: ${{ github.event_name == 'pull_request' && github.event.pull_request && github.event.pull_request.number || '' }}
-      branch: ${{ github.event_name == 'schedule' && 'main' || '' }}
+      pull-request: ${{ fromJSON(needs.hcp-setup.outputs.pull-request-number) }}
+      branch: ${{ needs.hcp-setup.outputs.branch-name }}
       create-aws-image: true
       create-azure-image: false
       hcp-environment: int
