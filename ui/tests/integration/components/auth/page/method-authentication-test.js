@@ -91,6 +91,21 @@ module('Integration | Component | auth | page | method authentication', function
     window.localStorage.clear();
   });
 
+  module('cert', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.authType = 'cert';
+      this.loginData = { name: 'app-client' };
+      this.path = this.authType;
+      this.response = RESPONSE_STUBS.cert;
+      this.tokenName = 'vault-cert☃1';
+      this.stubRequests = () => {
+        this.server.post(`/auth/${this.path}/login`, () => this.response);
+      };
+    });
+
+    methodAuthenticationTests(test);
+  });
+
   module('github', function (hooks) {
     hooks.beforeEach(async function () {
       this.authType = 'github';
