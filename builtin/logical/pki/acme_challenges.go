@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -118,6 +119,60 @@ func buildDialerConfig(config *acmeConfigEntry) (*net.Dialer, error) {
 	}, nil
 }
 
+func isDisallowedACMEValidationIP(ip net.IP) bool {
+	if ip == nil {
+		return true
+	}
+
+	// Vault is often deployed on private networks, so avoid a blanket private
+	// range denylist here and instead reject obviously unsafe targets.
+	if ip.IsLoopback() || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return true
+	}
+
+	return !ip.IsGlobalUnicast()
+}
+
+func dialACMEValidationTarget(ctx context.Context, dialer *net.Dialer, network string, address string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return dialer.DialContext(ctx, network, address)
+	}
+
+	if ip := net.ParseIP(host); ip != nil {
+		if isDisallowedACMEValidationIP(ip) {
+			return nil, fmt.Errorf("%w: validation target resolved to a disallowed ip range", ErrRejectedIdentifier)
+		}
+
+		return dialer.DialContext(ctx, network, address)
+	}
+
+	if dialer.Resolver == nil {
+		return dialer.DialContext(ctx, network, address)
+	}
+
+	ips, err := dialer.Resolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+
+	var chosen net.IP
+	for _, candidate := range ips {
+		if isDisallowedACMEValidationIP(candidate.IP) {
+			continue
+		}
+
+		chosen = candidate.IP
+		break
+	}
+
+	if chosen == nil {
+		return nil, fmt.Errorf("%w: validation target resolved to a disallowed ip range", ErrRejectedIdentifier)
+	}
+
+	return dialer.DialContext(ctx, network, net.JoinHostPort(chosen.String(), port))
+}
+
 // Validates a given ACME http-01 challenge against the specified domain,
 // per RFC 8555.
 //
@@ -142,7 +197,9 @@ func ValidateHTTP01Challenge(domain string, token string, thumbprint string, con
 
 		// We'd rather timeout and re-attempt validation later than hang
 		// too many validators waiting for slow hosts.
-		DialContext:           dialer.DialContext,
+		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+			return dialACMEValidationTarget(ctx, dialer, network, address)
+		},
 		ResponseHeaderTimeout: 10 * time.Second,
 	}
 
@@ -167,6 +224,10 @@ func ValidateHTTP01Challenge(domain string, token string, thumbprint string, con
 
 	resp, err := client.Get(path)
 	if err != nil {
+		if errors.Is(err, ErrRejectedIdentifier) {
+			return false, fmt.Errorf("%w: http-01: validation target resolved to a disallowed ip range", ErrRejectedIdentifier)
+		}
+
 		return false, fmt.Errorf("%w: %s", ErrConnection, fmt.Errorf("http-01: failed to fetch path %v: %w", path, err).Error())
 	}
 
@@ -469,8 +530,12 @@ func ValidateTLSALPN01Challenge(domain string, token string, thumbprint string, 
 	// > 3. The ACME server initiates a TLS connection to the chosen IP
 	// >    address. This connection MUST use TCP port 443.
 	address := fmt.Sprintf("%v:"+ALPNPort, domain)
-	conn, err := dialer.Dial("tcp", address)
+	conn, err := dialACMEValidationTarget(context.Background(), dialer, "tcp", address)
 	if err != nil {
+		if errors.Is(err, ErrRejectedIdentifier) {
+			return false, fmt.Errorf("%w: tls-alpn-01: validation target resolved to a disallowed ip range", ErrRejectedIdentifier)
+		}
+
 		return false, fmt.Errorf("%w: %s", ErrConnection, fmt.Errorf("tls-alpn-01: failed to dial host: %w", err).Error())
 	}
 
