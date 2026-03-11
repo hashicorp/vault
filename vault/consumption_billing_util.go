@@ -846,7 +846,7 @@ func (c *Core) storeSSHDurationAdjustedCertCountLocked(ctx context.Context, loca
 // GetStoredSSHOTPCount retrieves the stored SSH OTP count
 // for the specified month. The count is stored as a uint64.
 // Returns 0 if no count has been stored for the given month.
-func (c *Core) GetStoredSSHOTPCount(ctx context.Context, currentMonth time.Time) (uint64, error) {
+func (c *Core) GetStoredSSHOTPCount(ctx context.Context, currentMonth time.Time) (float64, error) {
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
 	c.consumptionBillingLock.RUnlock()
@@ -861,7 +861,7 @@ func (c *Core) GetStoredSSHOTPCount(ctx context.Context, currentMonth time.Time)
 	return c.getStoredSSHOTPCountLocked(ctx, billing.LocalPrefix, currentMonth)
 }
 
-func (c *Core) getStoredSSHOTPCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (uint64, error) {
+func (c *Core) getStoredSSHOTPCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (float64, error) {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHOTPMetric)
 
 	view, ok := c.GetBillingSubView()
@@ -874,7 +874,7 @@ func (c *Core) getStoredSSHOTPCountLocked(ctx context.Context, localPathPrefix s
 		return 0, err
 	}
 
-	var otpCount uint64
+	var otpCount float64
 	err = se.DecodeJSON(&otpCount)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current OTP cert count: %w", err)
@@ -883,7 +883,7 @@ func (c *Core) getStoredSSHOTPCountLocked(ctx context.Context, localPathPrefix s
 	return otpCount, nil
 }
 
-func (c *Core) UpdateStoredSSHOTPCount(ctx context.Context, currentMonth time.Time, otpCount uint64) (uint64, error) {
+func (c *Core) UpdateStoredSSHOTPCount(ctx context.Context, currentMonth time.Time, otpCount float64) (float64, error) {
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
 	c.consumptionBillingLock.RUnlock()
@@ -906,7 +906,7 @@ func (c *Core) UpdateStoredSSHOTPCount(ctx context.Context, currentMonth time.Ti
 	return otpCount, nil
 }
 
-func (c *Core) storeSSHOTPCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, otpCount uint64) error {
+func (c *Core) storeSSHOTPCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, otpCount float64) error {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHOTPMetric)
 
 	countBytes, err := jsonutil.EncodeJSON(otpCount)
