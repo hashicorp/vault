@@ -199,6 +199,9 @@ func (c *Core) IsNewInstall(ctx context.Context) bool {
 	return oldestVersion == "" && newestVersion == ""
 }
 
+// IsJWT validates if a token is of JWT format, which was historically
+// a possibility for wrapping tokens, though not something we
+// encourage today.
 func IsJWT(token string) bool {
 	return len(token) > 3 && strings.Count(token, ".") == 2 &&
 		(token[3] != '.' && token[1] != '.')

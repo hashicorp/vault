@@ -32,9 +32,4 @@ export default class WizardSecretEnginesWizardComponent extends Component<Args> 
     this.wizard.dismiss(this.wizardId);
     this.args.onRefresh();
   }
-
-  @action
-  onIntroChange(visible: boolean) {
-    this.wizard.setIntroVisible(this.wizardId, visible);
-  }
 }

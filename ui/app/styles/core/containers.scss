@@ -17,6 +17,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  padding: 0 size_variables.$spacing-64;
 }
 
 .section {
@@ -38,8 +39,14 @@
 
 .container {
   flex-grow: 1;
-  margin: size_variables.$spacing-24 size_variables.$spacing-64;
+  margin: size_variables.$spacing-24 0;
   max-width: 1032px;
   position: relative;
   width: auto;
+}
+
+.centered-container {
+  margin: 0 auto;
+  max-width: 1032px;
+  padding: size_variables.$spacing-24;
 }

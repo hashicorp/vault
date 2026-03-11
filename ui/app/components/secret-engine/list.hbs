@@ -12,18 +12,16 @@
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
   <:actions>
-    {{#unless this.showWizard}}
-      {{#if this.hasOnlyDefaultEngines}}
-        <Hds::Button
-          @color="secondary"
-          @icon="bulb"
-          @text="New to Secret engines?"
-          {{on "click" this.showIntroPage}}
-          data-test-button="intro"
-        />
-      {{/if}}
-      <Hds::Button @text="Enable new engine" @icon="plus" @route="vault.cluster.secrets.enable" data-test-enable-engine />
-    {{/unless}}
+    {{#if this.showIntroButton}}
+      <Hds::Button
+        @color="secondary"
+        @icon="bulb"
+        @text="New to Secret engines?"
+        {{on "click" this.showIntroPage}}
+        data-test-button="intro"
+      />
+    {{/if}}
+    <Hds::Button @text="Enable new engine" @icon="plus" @route="vault.cluster.secrets.enable" data-test-enable-engine />
   </:actions>
 </Page::Header>
 
@@ -32,7 +30,9 @@
     @isIntroModal={{this.shouldRenderIntroModal}}
     @onRefresh={{this.refreshSecretEngineList}}
   />
-{{else}}
+{{/if}}
+
+{{#if this.showContent}}
   {{! Filters section }}
   <Hds::SegmentedGroup class="has-top-margin-m" as |SG|>
     <SG.TextInput

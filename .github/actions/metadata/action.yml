@@ -159,6 +159,7 @@ runs:
           is_ce_in_enterprise=$([[ $base_ref == ce/* ]] && echo "true" || echo "false")
           if [ "$is_ce_in_enterprise" = 'true' ]; then
             is_enterprise="false"
+            is_ent_branch="false"
             go_tags=''
             version_metadata='${{ inputs.vault-version }}'
           else

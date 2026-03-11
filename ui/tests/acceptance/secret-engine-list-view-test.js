@@ -14,9 +14,11 @@ import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/com
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 import localStorage from 'vault/lib/local-storage';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   const createSecret = async (path, key, value, enginePath) => {
     await click(SES.createSecretLink);
@@ -173,6 +175,28 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     // cleanup
     await runCmd(deleteEngineCmd(enginePath1));
+  });
+
+  test('it can navigate to the enablement page from the intro', async function (assert) {
+    // stub the mount response to meet the empty state criteria for showing the intro page
+    this.server.get('/sys/internal/ui/mounts', () => ({
+      data: {
+        secret: {
+          'cubbyhole/': {
+            type: 'cubbyhole',
+            local: true,
+            path: 'cubbyhole/',
+          },
+        },
+      },
+    }));
+    await visit(`/vault/secrets-engines`);
+    await click(GENERAL.button('intro'));
+    await click(GENERAL.button('enable'));
+
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/enable`, 'It navigates to the enablement page');
+    assert.dom('[data-test-guided-setup]').doesNotExist('The guided setup is not shown');
+    assert.dom('[data-test-intro]').doesNotExist('The intro is not shown');
   });
 
   module('enterprise | namespaces', function (hooks) {

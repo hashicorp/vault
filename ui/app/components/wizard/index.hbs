@@ -5,7 +5,7 @@
 
 {{#if (and (has-block "intro") this.isIntroVisible)}}
   {{! pass @onDismiss on for modal closure via clicking outside modal @onClose}}
-  <Wizard::Intro @isModal={{@isModal}} @title={{@title}} @onDismiss={{@onDismiss}} data-test-intro>
+  <Wizard::Intro @isModal={{@isModal}} @title={{@title}} @onDismiss={{@onDismiss}} class="wizard intro" data-test-intro>
     <:body>
       {{yield to="intro"}}
     </:body>
@@ -23,6 +23,7 @@
     @updateWizardState={{@updateWizardState}}
     @onStepChange={{@onStepChange}}
     @onDismiss={{@onDismiss}}
+    class="wizard"
     data-test-guided-start
   >
     <:exit>

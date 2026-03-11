@@ -15,10 +15,11 @@ import (
 
 // EntityBuilder is used to construct or update an identity.Entity.
 type EntityBuilder struct {
-	store  *IdentityStore
-	entity *identity.Entity
-	isNew  bool
-	err    error
+	store          *IdentityStore
+	entity         *identity.Entity
+	isNew          bool
+	originalSCIMID string
+	err            error
 }
 
 // NewEntityBuilder creates a new builder instance.
@@ -57,6 +58,7 @@ func (b *EntityBuilder) WithID(id string) *EntityBuilder {
 	}
 
 	b.entity = entity
+	b.originalSCIMID = b.entity.ScimClientID
 	b.isNew = false
 	return b
 }
@@ -76,6 +78,7 @@ func (b *EntityBuilder) WithExternalID(ctx context.Context, externalID string) *
 	if entityByExternalID != nil {
 		// An entity with this external ID already exists, so we'll update it.
 		b.entity = entityByExternalID
+		b.originalSCIMID = b.entity.ScimClientID
 		b.isNew = false
 	} else {
 		// No entity found, so we're just setting the external ID on the current one.
@@ -103,6 +106,7 @@ func (b *EntityBuilder) WithName(ctx context.Context, name string) *EntityBuilde
 	case b.isNew:
 		// We haven't loaded an entity yet, but one with this name exists. Let's update it.
 		b.entity = entityByName
+		b.originalSCIMID = b.entity.ScimClientID
 		b.isNew = false
 	case b.entity.ID == entityByName.ID:
 		// The loaded entity and the one found by name are the same. No-op.
@@ -165,6 +169,10 @@ func (b *EntityBuilder) Build(ctx context.Context) (*logical.Response, error) {
 	// If any previous step set an error, return it immediately.
 	if b.err != nil {
 		return logical.ErrorResponse(b.err.Error()), nil
+	}
+
+	if err := b.store.scimResourceCheck(ctx, b.entity, b.originalSCIMID, b.isNew); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrPermissionDenied
 	}
 
 	// Sanitize and persist the entity

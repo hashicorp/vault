@@ -192,3 +192,15 @@ func ToSDKGroups(groups []*Group) []*logical.Group {
 	}
 	return ret
 }
+
+func (g *Group) SCIMClientID() string {
+	return g.ScimClientID
+}
+
+func (e *Entity) SCIMClientID() string {
+	return e.ScimClientID
+}
+
+func (a *Alias) SCIMClientID() string {
+	return a.ScimClientID
+}

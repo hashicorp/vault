@@ -5,6 +5,7 @@ package ldaputil
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -68,6 +69,292 @@ func TestConfig(t *testing.T) {
 			t.Errorf("expected false UseTokenGroups from JSON but got %t", configFromJSON.UseTokenGroups)
 		}
 	})
+
+	t.Run("default_schema_type", func(t *testing.T) {
+		if config.Schema != SchemaOpenLDAP {
+			t.Errorf("expected default Schema %s but got %s", SchemaOpenLDAP, config.Schema)
+		}
+	})
+}
+
+func TestNormalizedSchema(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "empty_string_defaults_to_openldap",
+			input:    "",
+			expected: SchemaOpenLDAP,
+		},
+		{
+			name:     "lowercase_ad",
+			input:    "ad",
+			expected: SchemaAD,
+		},
+		{
+			name:     "uppercase_AD",
+			input:    "AD",
+			expected: SchemaAD,
+		},
+		{
+			name:     "mixed_case_Ad",
+			input:    "Ad",
+			expected: SchemaAD,
+		},
+		{
+			name:     "lowercase_openldap",
+			input:    "openldap",
+			expected: SchemaOpenLDAP,
+		},
+		{
+			name:     "uppercase_OPENLDAP",
+			input:    "OPENLDAP",
+			expected: SchemaOpenLDAP,
+		},
+		{
+			name:     "mixed_case_OpenLDAP",
+			input:    "OpenLDAP",
+			expected: SchemaOpenLDAP,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NormalizedSchema(tt.input)
+			if result != tt.expected {
+				t.Errorf("NormalizedSchema(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSchemaInConfigEntry(t *testing.T) {
+	t.Run("new_config_defaults_to_openldap", func(t *testing.T) {
+		s := &framework.FieldData{Schema: ConfigFields()}
+		config, err := NewConfigEntry(nil, s)
+		if err != nil {
+			t.Fatal("error getting default config")
+		}
+
+		if config.Schema != SchemaOpenLDAP {
+			t.Errorf("expected default Schema %s but got %s", SchemaOpenLDAP, config.Schema)
+		}
+	})
+
+	t.Run("schema_normalized_on_create", func(t *testing.T) {
+		schema := ConfigFields()
+		data := &framework.FieldData{
+			Raw: map[string]interface{}{
+				"schema": "AD",
+			},
+			Schema: schema,
+		}
+
+		config, err := NewConfigEntry(nil, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if config.Schema != SchemaAD {
+			t.Errorf("expected normalized Schema 'ad' but got %s", config.Schema)
+		}
+	})
+
+	t.Run("schema_in_passwordless_map", func(t *testing.T) {
+		config := &ConfigEntry{
+			Schema: SchemaAD,
+		}
+
+		m := config.PasswordlessMap()
+		schema, ok := m["schema"]
+		if !ok {
+			t.Error("schema not found in PasswordlessMap")
+		}
+
+		if schema != SchemaAD {
+			t.Errorf("expected schema %s in map but got %v", SchemaAD, schema)
+		}
+	})
+
+	t.Run("schema_update_existing_config", func(t *testing.T) {
+		existingConfig := &ConfigEntry{
+			Url:    "ldap://127.0.0.1",
+			Schema: SchemaOpenLDAP,
+		}
+
+		schema := ConfigFields()
+		data := &framework.FieldData{
+			Raw: map[string]interface{}{
+				"schema": "AD",
+			},
+			Schema: schema,
+		}
+
+		updatedConfig, err := NewConfigEntry(existingConfig, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if updatedConfig.Schema != SchemaAD {
+			t.Errorf("expected updated Schema 'ad' but got %s", updatedConfig.Schema)
+		}
+	})
+}
+
+func TestSupportedSchemas(t *testing.T) {
+	schemas := SupportedSchemas()
+
+	expectedSchemas := []string{SchemaOpenLDAP, SchemaAD}
+	if len(schemas) != len(expectedSchemas) {
+		t.Errorf("expected %d schemas but got %d", len(expectedSchemas), len(schemas))
+	}
+
+	for _, expected := range expectedSchemas {
+		found := false
+		for _, schema := range schemas {
+			if schema == expected {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected schema %q not found in SupportedSchemas()", expected)
+		}
+	}
+}
+
+func TestSchemaValidation(t *testing.T) {
+	t.Run("valid_openldap_schema", func(t *testing.T) {
+		config := &ConfigEntry{
+			Url:           "ldap://127.0.0.1",
+			UserDN:        "ou=users,dc=example,dc=com",
+			Schema:        SchemaOpenLDAP,
+			TLSMinVersion: "tls12",
+			TLSMaxVersion: "tls12",
+		}
+
+		if err := config.Validate(); err != nil {
+			t.Errorf("expected no error for valid openldap schema, got: %v", err)
+		}
+	})
+
+	t.Run("valid_ad_schema", func(t *testing.T) {
+		config := &ConfigEntry{
+			Url:           "ldap://127.0.0.1",
+			UserDN:        "ou=users,dc=example,dc=com",
+			Schema:        SchemaAD,
+			TLSMinVersion: "tls12",
+			TLSMaxVersion: "tls12",
+		}
+
+		if err := config.Validate(); err != nil {
+			t.Errorf("expected no error for valid ad schema, got: %v", err)
+		}
+	})
+
+	t.Run("empty_schema_passes_validation", func(t *testing.T) {
+		config := &ConfigEntry{
+			Url:           "ldap://127.0.0.1",
+			UserDN:        "ou=users,dc=example,dc=com",
+			Schema:        "",
+			TLSMinVersion: "tls12",
+			TLSMaxVersion: "tls12",
+		}
+
+		if err := config.Validate(); err != nil {
+			t.Errorf("expected no error for empty schema (defaults to openldap), got: %v", err)
+		}
+	})
+
+	t.Run("generic_unsupported_schema_fails_validation", func(t *testing.T) {
+		config := &ConfigEntry{
+			Url:           "ldap://127.0.0.1",
+			UserDN:        "ou=users,dc=example,dc=com",
+			Schema:        "unsupported_schema",
+			TLSMinVersion: "tls12",
+			TLSMaxVersion: "tls12",
+		}
+
+		err := config.Validate()
+		if err == nil {
+			t.Error("expected error for unsupported schema, got nil")
+		}
+
+		if err != nil && !strings.Contains(err.Error(), "unsupported schema") {
+			t.Errorf("expected error message to contain 'unsupported schema', got: %v", err)
+		}
+	})
+
+	t.Run("freeipa_schema_fails_validation", func(t *testing.T) {
+		config := &ConfigEntry{
+			Url:           "ldap://127.0.0.1",
+			UserDN:        "ou=users,dc=example,dc=com",
+			Schema:        "freeipa",
+			TLSMinVersion: "tls12",
+			TLSMaxVersion: "tls12",
+		}
+
+		err := config.Validate()
+		if err == nil {
+			t.Error("expected error for unsupported schema 'freeipa', got nil")
+		}
+
+		if err != nil && !strings.Contains(err.Error(), "freeipa") {
+			t.Errorf("expected error message to include 'freeipa', got: %v", err)
+		}
+	})
+
+	t.Run("typo_in_schema_fails_validation", func(t *testing.T) {
+		// Test common typos like "adc" instead of "ad"
+		config := &ConfigEntry{
+			Url:           "ldap://127.0.0.1",
+			UserDN:        "ou=users,dc=example,dc=com",
+			Schema:        "adc",
+			TLSMinVersion: "tls12",
+			TLSMaxVersion: "tls12",
+		}
+
+		err := config.Validate()
+		if err == nil {
+			t.Error("expected error for typo schema 'adc', got nil")
+		}
+
+		// Verify error message is helpful
+		if err != nil && !strings.Contains(err.Error(), "unsupported schema") {
+			t.Errorf("expected error message to contain 'unsupported schema', got: %v", err)
+		}
+		if err != nil && !strings.Contains(err.Error(), "adc") {
+			t.Errorf("expected error message to include the unsupported value 'adc', got: %v", err)
+		}
+	})
+
+	t.Run("normalized_unsupported_schema_fails_validation", func(t *testing.T) {
+		// Test that even after normalization (lowercase), unsupported schemas fail
+		schema := ConfigFields()
+		data := &framework.FieldData{
+			Raw: map[string]interface{}{
+				"url":    "ldap://127.0.0.1",
+				"userdn": "ou=users,dc=example,dc=com",
+				"schema": "UNSUPPORTED_SCHEMAS",
+			},
+			Schema: schema,
+		}
+
+		// NewConfigEntry should fail because schema validation happens during creation
+		_, err := NewConfigEntry(nil, data)
+		if err == nil {
+			t.Error("expected error from NewConfigEntry for unsupported schema, got nil")
+		}
+
+		// Verify the error message is helpful
+		if err != nil {
+			if !strings.Contains(err.Error(), "unsupported schema") {
+				t.Errorf("expected error message to contain %q, got: %v", "unsupported schema", err)
+			}
+		}
+	})
 }
 
 func testConfig(t *testing.T) *ConfigEntry {
@@ -84,6 +371,7 @@ func testConfig(t *testing.T) *ConfigEntry {
 		ConnectionTimeout: 15,
 		ClientTLSCert:     "",
 		ClientTLSKey:      "",
+		Schema:            SchemaOpenLDAP,
 	}
 }
 
@@ -144,7 +432,8 @@ var jsonConfig = []byte(`{
 	"request_timeout": 30,
 	"connection_timeout": 15,
 	"ClientTLSCert":  "",
-	"ClientTLSKey":   ""
+	"ClientTLSKey":   "",
+	"schema": "openldap"
 }`)
 
 var jsonConfigDefault = []byte(`
@@ -179,6 +468,7 @@ var jsonConfigDefault = []byte(`
   "CaseSensitiveNames": false,
   "ClientTLSCert": "",
   "ClientTLSKey": "",
-  "enable_samaccountname_login": false
+  "enable_samaccountname_login": false,
+  "schema": "openldap"
 }
 `)

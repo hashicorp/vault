@@ -672,6 +672,7 @@ message RotationJobInput {
   int64 rotation_window = 5;
   int64 rotation_period = 6;
   string rotation_policy = 7;
+  int64 migrated_legacy_next_rotation_time = 8;
 }
 
 message DeregisterRotationRequestInput {

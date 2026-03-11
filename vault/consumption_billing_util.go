@@ -191,21 +191,13 @@ func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, cu
 
 	local := localPathPrefix == billing.LocalPrefix
 
-	// Get the current count of kv version 1 secrets
-	currentKvCounts, err := c.GetKvUsageMetricsByNamespace(ctx, "1", "", local, !local, false)
+	// Get the current count of all KV secrets
+	currentKvCounts, err := c.GetKvUsageMetricsByNamespace(ctx, "0", "", local, !local, false)
 	if err != nil {
-		c.logger.Error("error getting count of kv version 1 secrets", "error", err)
+		c.logger.Error("error getting count of all KV secrets", "error", err)
 		return 0, err
 	}
 	totalKvCounts := getTotalSecretsAcrossAllNamespaces(currentKvCounts)
-
-	// Get the current count of kv version 2 secrets
-	currentKvCounts, err = c.GetKvUsageMetricsByNamespace(ctx, "2", "", local, !local, false)
-	if err != nil {
-		c.logger.Error("error getting current count of kv version 2 secrets", "error", err)
-		return 0, err
-	}
-	totalKvCounts += getTotalSecretsAcrossAllNamespaces(currentKvCounts)
 
 	// Get the stored max kv counts
 	maxKvCounts, err := c.getStoredMaxKvCountsLocked(ctx, localPathPrefix, currentMonth)

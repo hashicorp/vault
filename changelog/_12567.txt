@@ -1,0 +1,6 @@
+```release-note:security
+vault/sdk: Upgrade `cloudflare/circl` to v1.6.3 to resolve CVE-2026-1229
+```
+```release-note:security
+Upgrade `cloudflare/circl` to v1.6.3 to resolve CVE-2026-1229
+```

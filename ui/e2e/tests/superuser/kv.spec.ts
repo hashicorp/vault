@@ -11,6 +11,11 @@ test('kvv2 workflow', async ({ page }) => {
   await page.goto('dashboard');
   // enable kv secrets engine
   await page.getByRole('link', { name: 'Secrets', exact: true }).click();
+  // skip if intro page is shown
+  const skipButton = page.getByRole('button', { name: 'Skip' });
+  if (await skipButton.isVisible()) {
+    await skipButton.click();
+  }
   await page.getByRole('link', { name: 'Enable new engine' }).click();
   await page.locator('div').filter({ hasText: 'KV' }).nth(4).click();
   await page.getByRole('textbox', { name: 'Path' }).click();

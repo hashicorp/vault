@@ -217,6 +217,35 @@ changed_files {
     }
   }
 
+  // The "hcp" group is for files that are unique to testing Vault in the
+  // HashiCorp Cloud Platform, i.e. HVD or Vault Cloud.
+  group "hcp" {
+    match {
+      file = [
+        joinpath(".github", "workflows", "build-hcp-image.yml"),
+        joinpath(".github", "workflows", "test-run-enos-scenario-cloud.yml"),
+        joinpath("enos", "enos-scenario-cloud-ent.hcl"),
+      ]
+    }
+
+    match {
+      base_dir = [
+        joinpath("enos", "modules", "cloud_docker_vault_cluster"),
+        joinpath("enos", "modules", "hcp"),
+        joinpath("tools", "pipeline", "internal", "pkg", "hcp"),
+      ]
+    }
+
+    match {
+      base_dir = [
+        joinpath("tools", "pipeline", "internal", "cmd"),
+      ]
+      contains = [
+        "hcp"
+      ]
+    }
+  }
+
   // The "pipeline" group matches directories where we house code and
   // configuration used in the CI/CD pipeline
   group "pipeline" {

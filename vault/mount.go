@@ -2001,6 +2001,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		BackendAwareUUID: identityBackendUUID,
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Authorization"},
+			AllowedResponseHeaders:    []string{"Location"},
 		},
 		RunningVersion: versions.DefaultBuiltinVersion,
 	}

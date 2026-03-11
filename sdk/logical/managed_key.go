@@ -22,6 +22,7 @@ const (
 	KeyUsageWrap
 	KeyUsageUnwrap
 	KeyUsageGenerateRandom
+	KeyUsageMAC
 )
 
 type ManagedKey interface {

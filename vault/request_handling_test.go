@@ -628,3 +628,16 @@ func TestRequestHandling_TokenRenewal(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_NilRequest tests that
+// fetchACLTokenEntryAndEntity returns an error when called with a nil request
+func TestRequestHandling_fetchACLTokenEntryAndEntity_NilRequest(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	// Call with nil request - should return ErrInternalError
+	_, _, _, _, err := core.fetchACLTokenEntryAndEntity(ctx, nil)
+
+	require.Error(t, err)
+	require.Equal(t, ErrInternalError, err)
+}

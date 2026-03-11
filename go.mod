@@ -41,7 +41,7 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.15.0
 	github.com/Azure/go-autorest/autorest v0.11.29
 	github.com/Azure/go-autorest/autorest/adal v0.9.24
-	github.com/ProtonMail/go-crypto v1.2.0
+	github.com/ProtonMail/go-crypto v1.3.0
 	github.com/ProtonMail/gopenpgp/v3 v3.2.1
 	github.com/SAP/go-hdb v1.10.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
@@ -79,7 +79,7 @@ require (
 	github.com/golang/protobuf v1.5.4
 	github.com/google/certificate-transparency-go v1.3.2
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-github v17.0.0+incompatible
+	github.com/google/go-github/v83 v83.0.0
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/cap v0.11.0
 	github.com/hashicorp/cap/ldap v0.0.0-20250911140431-44d01434c285
@@ -339,7 +339,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/circonus-labs/circonus-gometrics v2.3.1+incompatible // indirect
 	github.com/circonus-labs/circonusllhist v0.1.3 // indirect
-	github.com/cloudflare/circl v1.6.2-0.20250618153321-aa837fd1539d // indirect
+	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20220930021109-9c4e6c59ccf1 // indirect
 	github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
@@ -405,7 +405,7 @@ require (
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/flatbuffers v25.2.10+incompatible // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
-	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.6.0

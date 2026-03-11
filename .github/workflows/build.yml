@@ -319,7 +319,7 @@ jobs:
           package_json_file: './ui/package.json'
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Set up node and pnpm
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: ui/package.json
           cache: pnpm
@@ -392,23 +392,75 @@ jobs:
       web-ui-cache-key: ${{ needs.ui.outputs.cache-key }}
     secrets: inherit
 
+  # Setup HCP input parameters with proper validation
+  hcp-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      pull-request-number: ${{ steps.pr-logic.outputs.pull-request-number }}
+      branch-name: ${{ steps.branch-logic.outputs.branch-name }}
+    steps:
+      - id: pr-logic
+        name: Determine pull request number
+        run: |
+          echo "Analyzing PR context for event: ${{ github.event_name }}"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
+            if [[ -n "$PR_NUM" && "$PR_NUM" != "null" ]]; then
+              echo "PR context detected, using number: $PR_NUM"
+            else
+              echo "PR context but no valid number found, using 0"
+              PR_NUM="0"
+            fi
+          else
+            PR_NUM="0"
+            echo "Non-PR context, using fallback value: $PR_NUM"
+          fi
+          echo "pull-request-number=$PR_NUM" >> "$GITHUB_OUTPUT"
+
+      - id: branch-logic
+        name: Determine branch name
+        run: |
+          echo "Analyzing branch context for event: ${{ github.event_name }}"
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            BRANCH="main"
+            echo "Schedule context, using branch: $BRANCH"
+          else
+            BRANCH=""
+            echo "Non-schedule context, using empty branch"
+          fi
+          echo "branch-name=$BRANCH" >> "$GITHUB_OUTPUT"
+
   hcp-image:
+    # Logic: Run HCP image job if:
+    #   if needs.setup.outputs.is-ent-branch != 'true' then
+    #     false
+    #   elseif needs.setup.outputs.workflow-trigger == 'schedule' then
+    #     true
+    #   elseif needs.setup.outputs.workflow-trigger == 'pull_request' and (
+    #       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') or
+    #       contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') or
+    #       contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+    #     ) then
+    #     true
+    #   end
     if: |
-      needs.setup.outputs.is-ent-branch == 'true' &&
-      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      ( needs.setup.outputs.is-ent-branch != 'true' ) && false ||
+      ( needs.setup.outputs.workflow-trigger == 'schedule' ) && true ||
       ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
-        (
+        ( contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') ||
           contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') ||
           contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
         )
-      )
+      ) && true
     needs:
       - setup
       - artifacts-ent
+      - hcp-setup
     uses: ./.github/workflows/build-hcp-image.yml
     with:
-      pull-request: ${{ needs.setup.outputs.workflow-trigger == 'pull_request' && github.event.pull_request.number || '' }}
-      branch: ${{ needs.setup.outputs.workflow-trigger == 'schedule' && 'main' || '' }}
+      pull-request: ${{ fromJSON(needs.hcp-setup.outputs.pull-request-number) }}
+      branch: ${{ needs.hcp-setup.outputs.branch-name }}
       create-aws-image: true
       create-azure-image: false
       hcp-environment: int
@@ -473,16 +525,16 @@ jobs:
     # Test our custom HCP image if our image build was successful and we've
     # been configured with the correct label.
     if: |
-      needs.setup.outputs.is-ent-branch == 'true' &&
-      needs.setup.outputs.workflow-trigger == 'schedule' ||
-      ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
-        needs.artifacts-ent.result == 'success' &&
-        needs.hcp-image.result == 'success' &&
-        contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
-      ) ||
-      ( needs.setup.outputs.workflow-trigger == 'schedule' &&
-        needs.artifacts-ent.result == 'success' &&
-        needs.hcp-image.result == 'success'
+      needs.setup.outputs.is-ent-branch == 'true' && (
+        ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
+          needs.artifacts-ent.result == 'success' &&
+          needs.hcp-image.result == 'success' &&
+          ( contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') || contains(fromJSON(needs.setup.outputs.labels), 'hcp/test') )
+        ) || (
+          needs.setup.outputs.workflow-trigger == 'schedule' &&
+          needs.artifacts-ent.result == 'success' &&
+          needs.hcp-image.result == 'success'
+        )
       )
     needs:
       - setup
