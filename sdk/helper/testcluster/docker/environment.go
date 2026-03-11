@@ -1021,6 +1021,31 @@ func (n *DockerClusterNode) Restart(ctx context.Context) error {
 	return nil
 }
 
+func (n *DockerClusterNode) Signal(ctx context.Context, signal string) error {
+	return n.DockerAPI.ContainerKill(ctx, n.Container.ID, signal)
+}
+
+func (n *DockerClusterNode) UpdateConfig(ctx context.Context, config *testcluster.VaultNodeConfig) error {
+	// Marshal the config to JSON
+	configJSON, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	// Write the config to the work directory
+	configPath := filepath.Join(n.WorkDir, "user.json")
+	if err := os.WriteFile(configPath, configJSON, 0o644); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	// Copy the updated config to the container
+	if err := dockhelper.CopyToContainer(ctx, n.DockerAPI, n.Container.ID, configPath, "/vault/config/user.json"); err != nil {
+		return fmt.Errorf("failed to copy config to container: %w", err)
+	}
+
+	return nil
+}
+
 func (n *DockerClusterNode) AddNetworkDelay(ctx context.Context, delay time.Duration, targetIP string) error {
 	ip := net.ParseIP(targetIP)
 	if ip == nil {
