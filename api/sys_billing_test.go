@@ -33,7 +33,7 @@ func TestSys_BillingOverview(t *testing.T) {
 	currentMonth := resp.Months[0]
 	require.Equal(t, "2026-01", currentMonth.Month)
 	require.Equal(t, "2026-01-14T10:49:00Z", currentMonth.UpdatedAt)
-	require.Len(t, currentMonth.UsageMetrics, 8, "should have all 8 metrics")
+	require.Len(t, currentMonth.UsageMetrics, 9, "should have all 9 metrics")
 
 	// Create a map to verify all expected metrics are present
 	metricsMap := make(map[string]UsageMetric)
@@ -51,6 +51,7 @@ func TestSys_BillingOverview(t *testing.T) {
 		"data_protection_calls",
 		"pki_units",
 		"managed_keys",
+		"ssh_units",
 	}
 
 	for _, metricName := range expectedMetrics {
@@ -86,6 +87,10 @@ func TestSys_BillingOverview(t *testing.T) {
 	require.Equal(t, "external_plugins", externalPluginsMetric.MetricName)
 	require.NotNil(t, externalPluginsMetric.MetricData)
 	require.Contains(t, externalPluginsMetric.MetricData, "total")
+
+	sshMetric := metricsMap["ssh_units"]
+	require.Contains(t, sshMetric.MetricData, "total")
+	require.Contains(t, sshMetric.MetricData, "metric_details")
 }
 
 func mockVaultBillingHandler(w http.ResponseWriter, _ *http.Request) {
@@ -199,6 +204,22 @@ const billingOverviewResponse = `{
 				  "count": 5
 				}
               ]
+            }
+          },
+          {
+            "metric_name": "ssh_units",
+            "metric_data": {
+              "total": 8.4,
+              "metric_details": [
+                {
+                  "type": "otp_units",
+                  "count": 5
+                },
+				{
+				  "type": "certificate_units",
+				  "count": 3.4
+				}
+			  ]
             }
           }
         ]

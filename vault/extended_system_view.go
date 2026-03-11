@@ -13,7 +13,10 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var _ logical.ExtendedSystemView = (*extendedSystemViewImpl)(nil)
+var (
+	_ logical.ExtendedSystemView         = (*extendedSystemViewImpl)(nil)
+	_ logical.CertificateCountSystemView = (*extendedSystemViewImpl)(nil)
+)
 
 type extendedSystemViewImpl struct {
 	dynamicSystemView
@@ -151,4 +154,8 @@ func (e extendedSystemViewImpl) DeregisterWellKnownRedirect(ctx context.Context,
 // GetPinnedPluginVersion implements logical.ExtendedSystemView.
 func (e extendedSystemViewImpl) GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error) {
 	return e.core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
+}
+
+func (e extendedSystemViewImpl) GetCertificateCounter() logical.CertificateCounter {
+	return e.core.GetCertificateCounter()
 }

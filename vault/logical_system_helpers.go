@@ -332,6 +332,21 @@ func (c *Core) consumeCertCounts(inc logical.CertCount) {
 			unconsumed.PkiDurationAdjustedCerts = 0
 		}
 
+		c.logger.Info("storing SSH counts", "sshDurationAdjustedCount", inc.SSHIssuedCerts, "sshOTPCount", inc.SSHIssuedOTPs)
+		_, err = c.UpdateStoredSSHDurationAdjustedCertCount(c.activeContext, time.Now(), inc.SSHIssuedCerts)
+		if err != nil {
+			c.logger.Error("error storing SSH duration adjusted certificate count", "error", err)
+		} else {
+			unconsumed.SSHIssuedCerts = 0
+		}
+
+		_, err = c.UpdateStoredSSHOTPCount(c.activeContext, time.Now(), inc.SSHIssuedOTPs)
+		if err != nil {
+			c.logger.Error("error storing SSH OTP count", "error", err)
+		} else {
+			unconsumed.SSHIssuedOTPs = 0
+		}
+
 	default:
 		c.logger.Error("Unexpected HA state when consuming certificate counts", "ha_state", haState)
 	}

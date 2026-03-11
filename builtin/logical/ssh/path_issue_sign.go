@@ -129,6 +129,8 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 		return nil, nil, errors.New("error marshaling signed certificate")
 	}
 
+	b.sshCertificateCounter.Increment().AddSSHCertificate(ttl)
+
 	response := &logical.Response{
 		Data: map[string]interface{}{
 			"serial_number": strconv.FormatUint(certificate.Serial, 16),

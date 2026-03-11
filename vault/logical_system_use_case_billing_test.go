@@ -11,6 +11,7 @@ import (
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
 	logicalDatabase "github.com/hashicorp/vault/builtin/logical/database"
+	logicalSsh "github.com/hashicorp/vault/builtin/logical/ssh"
 	logicalTransit "github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
@@ -172,6 +173,7 @@ func TestSystemBackend_BillingOverview_MetricFormats(t *testing.T) {
 			pluginconsts.SecretEngineAWS:      logicalAws.Factory,
 			pluginconsts.SecretEngineDatabase: logicalDatabase.Factory,
 			pluginconsts.SecretEngineTransit:  logicalTransit.Factory,
+			pluginconsts.SecretEngineSsh:      logicalSsh.Factory,
 		},
 	})
 	b := c.systemBackend
@@ -233,6 +235,53 @@ func TestSystemBackend_BillingOverview_MetricFormats(t *testing.T) {
 	_, err = c.HandleRequest(ctx, req)
 	require.NoError(t, err)
 
+	// Create SSH certificate and OTP
+	req = logical.TestRequest(t, logical.CreateOperation, "sys/mounts/ssh")
+	req.Data["type"] = "ssh"
+	req.ClientToken = root
+	resp, err = c.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/config/ca")
+	req.ClientToken = root
+	resp, err = c.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/roles/test-cert")
+	req.ClientToken = root
+	req.Data["key_type"] = "ca"
+	req.Data["allow_user_certificates"] = true
+	req.Data["allow_empty_principals"] = true
+	req.Data["ttl"] = "1d"
+	_, err = c.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/issue/test-cert")
+	req.ClientToken = root
+	resp, err = c.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/roles/test-otp")
+	req.ClientToken = root
+	req.Data["key_type"] = "otp"
+	req.Data["default_user"] = "user"
+	_, err = c.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/config/zeroaddress")
+	req.ClientToken = root
+	req.Data["roles"] = "test-otp"
+	_, err = c.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/creds/test-otp")
+	req.ClientToken = root
+	req.Data["ip"] = "1.2.3.4"
+	resp, err = c.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
 	// Update all metrics
 	currentMonth := time.Now()
 	_, err = c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth)
@@ -242,6 +291,12 @@ func TestSystemBackend_BillingOverview_MetricFormats(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = c.UpdateTransitCallCounts(ctx, currentMonth)
+	require.NoError(t, err)
+
+	_, err = c.UpdateStoredSSHDurationAdjustedCertCount(ctx, currentMonth, c.certCountManager.GetCounts().SSHIssuedCerts)
+	require.NoError(t, err)
+
+	_, err = c.UpdateStoredSSHOTPCount(ctx, currentMonth, c.certCountManager.GetCounts().SSHIssuedOTPs)
 	require.NoError(t, err)
 
 	// Make a request to the billing overview endpoint
@@ -366,6 +421,24 @@ func TestSystemBackend_BillingOverview_MetricFormats(t *testing.T) {
 			require.True(t, ok, "managed_keys total should be int")
 			require.GreaterOrEqual(t, total, 0)
 			require.Contains(t, metricData, "metric_details")
+
+		case "ssh_units":
+			require.Contains(t, metricData, "total")
+			total, ok := metricData["total"].(float64)
+			require.True(t, ok, "ssh_units total should be float64")
+			require.GreaterOrEqual(t, total, float64(0))
+
+			require.Contains(t, metricData, "metric_details")
+			metricDetails, ok := metricData["metric_details"].([]map[string]interface{})
+			require.True(t, ok, "metric_details should be []map[string]interface{}")
+			require.NotEmpty(t, metricDetails)
+			require.Equal(t, len(metricDetails), 2)
+
+			require.Equal(t, metricDetails[0]["type"], "otp_units")
+			require.GreaterOrEqual(t, metricDetails[0]["count"], uint64(0))
+
+			require.Equal(t, metricDetails[1]["type"], "certificate_units")
+			require.GreaterOrEqual(t, metricDetails[1]["count"], float64(0))
 		}
 	}
 
@@ -469,6 +542,7 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 		"data_protection_calls": false,
 		"pki_units":             false,
 		"managed_keys":          false,
+		"ssh_units":             false,
 	}
 
 	for _, metric := range usageMetrics {
@@ -522,6 +596,10 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 			details, ok := metricData["metric_details"].([]map[string]interface{})
 			require.True(t, ok, "%s metric_details should be array", metricName)
 			require.Empty(t, details, "%s metric_details should be empty when total is 0", metricName)
+		case "ssh_units":
+			total, ok := metricData["total"].(float64)
+			require.True(t, ok, "ssh_units total should be float64")
+			require.Equal(t, float64(0), total, "ssh_units total should be 0")
 		}
 	}
 
