@@ -435,7 +435,7 @@ func TestSystemBackend_BillingOverview_MetricFormats(t *testing.T) {
 			require.Equal(t, len(metricDetails), 2)
 
 			require.Equal(t, metricDetails[0]["type"], "otp_units")
-			require.GreaterOrEqual(t, metricDetails[0]["count"], uint64(0))
+			require.GreaterOrEqual(t, metricDetails[0]["count"], float64(0))
 
 			require.Equal(t, metricDetails[1]["type"], "certificate_units")
 			require.GreaterOrEqual(t, metricDetails[1]["count"], float64(0))

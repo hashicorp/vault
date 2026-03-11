@@ -30,7 +30,7 @@ type CertCount struct {
 	// places.
 	PkiDurationAdjustedCerts float64
 	SSHIssuedCerts           float64
-	SSHIssuedOTPs            uint64
+	SSHIssuedOTPs            float64
 }
 
 func (i *CertCount) Add(other CertCount) {
@@ -108,7 +108,7 @@ func (c *certCountIncrementer) AddSSHCertificate(ttl time.Duration) CertCountInc
 
 func (c *certCountIncrementer) AddSSHOTP() CertCountIncrementer {
 	c.counter.AddCount(CertCount{
-		SSHIssuedOTPs: 1,
+		SSHIssuedOTPs: 0.0014,
 	})
 
 	return c

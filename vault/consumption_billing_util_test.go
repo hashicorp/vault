@@ -943,6 +943,8 @@ func TestSSHCertCounts(t *testing.T) {
 
 // TestSSHOTPCounts tests that we correctly store and track the SSH OTP counts
 func TestSSHOTPCounts(t *testing.T) {
+	expectedOTPUnit := 0.0014
+
 	t.Parallel()
 	coreConfig := &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -987,7 +989,7 @@ func TestSSHOTPCounts(t *testing.T) {
 	require.Nil(t, resp.Error())
 
 	// Verify that the SSH counter is incremented
-	require.Equal(t, uint64(1), core.certCountManager.GetCounts().SSHIssuedOTPs)
+	require.Equal(t, expectedOTPUnit, core.certCountManager.GetCounts().SSHIssuedOTPs)
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/creds/test")
 	req.ClientToken = root
@@ -997,7 +999,7 @@ func TestSSHOTPCounts(t *testing.T) {
 	require.Nil(t, resp.Error())
 
 	// Verify that the SSH counter is incremented
-	require.Equal(t, uint64(2), core.certCountManager.GetCounts().SSHIssuedOTPs)
+	require.Equal(t, expectedOTPUnit*2, core.certCountManager.GetCounts().SSHIssuedOTPs)
 
 	// Now test persisting the summed counts - store and retrieve counts
 	// First, update the SSH cert counts (this will sum current counter with stored value)
@@ -1007,7 +1009,7 @@ func TestSSHOTPCounts(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 
 	// Verify the counter was reset after update
-	require.Equal(t, uint64(0), core.certCountManager.GetCounts().SSHIssuedOTPs, "Counter should be reset after update")
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedOTPs, "Counter should be reset after update")
 
 	// Retrieve the stored counts
 	storedCounts, err := core.GetStoredSSHOTPCount(ctx, time.Now())
@@ -1024,21 +1026,21 @@ func TestSSHOTPCounts(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, resp.Error())
 
-	// Counter should now be 1
-	require.Equal(t, uint64(1), core.certCountManager.GetCounts().SSHIssuedOTPs)
+	// Counter should now be 1 unit
+	require.Equal(t, expectedOTPUnit, core.certCountManager.GetCounts().SSHIssuedOTPs)
 
 	// Update counts again - should sum the new count with the stored count
 	core.certCountManager.StopConsumerJob()
 	time.Sleep(20 * time.Millisecond)
 
 	// Verify the counter was reset after update
-	require.Equal(t, uint64(0), core.certCountManager.GetCounts().SSHIssuedOTPs, "Counter should be reset after update")
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedOTPs, "Counter should be reset after update")
 
 	// Verify stored counts are now the sum
 	summedCounts, err := core.GetStoredSSHOTPCount(ctx, time.Now())
 	require.NoError(t, err)
 
-	expectedSum := currentCount + 1
+	expectedSum := currentCount + expectedOTPUnit
 	require.Equal(t, expectedSum, summedCounts, "Count should be sum of stored and current")
 
 	core.certCountManager.StartConsumerJob(core.consumeCertCounts)
@@ -1053,20 +1055,20 @@ func TestSSHOTPCounts(t *testing.T) {
 		require.Nil(t, resp.Error())
 	}
 
-	// Counter should be 3
-	require.Equal(t, uint64(3), core.certCountManager.GetCounts().SSHIssuedOTPs)
+	// Counter should be 3 units
+	require.Equal(t, expectedOTPUnit*3, core.certCountManager.GetCounts().SSHIssuedOTPs)
 
 	// Update counts - should sum 3 with the previous stored sum
 	core.certCountManager.StopConsumerJob()
 	time.Sleep(20 * time.Millisecond)
 
 	// Verify the counter was reset after update
-	require.Equal(t, uint64(0), core.certCountManager.GetCounts().SSHIssuedOTPs, "Counter should be reset after update")
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedOTPs, "Counter should be reset after update")
 
 	// Verify stored counts
 	storedCounts, err = core.GetStoredSSHOTPCount(ctx, time.Now())
 	require.NoError(t, err)
-	expectedSum += 3
+	expectedSum += 3 * expectedOTPUnit
 	require.Equal(t, expectedSum, storedCounts)
 }
 
