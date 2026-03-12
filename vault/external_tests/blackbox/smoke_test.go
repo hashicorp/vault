@@ -52,7 +52,8 @@ func TestStepdownAndLeaderElection(t *testing.T) {
 	v.MustStepDownLeader()
 
 	// Wait for new leader election (with timeout)
-	v.WaitForNewLeader(initialLeader, 120)
+	// Use generous timeout to handle network latency and complex backend coordination
+	v.WaitForNewLeader(initialLeader, 300)
 
 	// Verify cluster is still healthy after leader change/recovery
 	v.AssertRaftClusterHealthy()

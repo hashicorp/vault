@@ -24,6 +24,7 @@ sample "release_ce_linux_amd64_deb" {
     }
   }
 
+
   subset "proxy" {
     matrix {
       arch            = ["amd64"]
@@ -67,6 +68,7 @@ sample "release_ce_linux_arm64_deb" {
       edition         = ["ce"]
     }
   }
+
 
   subset "proxy" {
     matrix {
@@ -112,6 +114,7 @@ sample "release_ce_linux_arm64_rpm" {
     }
   }
 
+
   subset "proxy" {
     matrix {
       arch            = ["arm64"]
@@ -155,6 +158,7 @@ sample "release_ce_linux_amd64_rpm" {
       edition         = ["ce"]
     }
   }
+
 
   subset "proxy" {
     matrix {
@@ -200,6 +204,7 @@ sample "release_ce_linux_amd64_zip" {
     }
   }
 
+
   subset "proxy" {
     matrix {
       arch            = ["amd64"]
@@ -243,6 +248,7 @@ sample "release_ce_linux_arm64_zip" {
       edition         = ["ce"]
     }
   }
+
 
   subset "proxy" {
     matrix {
