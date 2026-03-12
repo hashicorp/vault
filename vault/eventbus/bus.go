@@ -288,7 +288,9 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 		if err != nil {
 			return nil, nil, err
 		}
-		bus.filters.addPattern(bus.filters.self, namespacePathPatterns, pattern)
+		// use filterNodeID as the "subscription id" when storing a subscriber
+		// pattern
+		bus.filters.addPattern(bus.filters.self, namespacePathPatterns, pattern, filterNodeID)
 		bus.filters.addClusterWidePattern(namespacePathPatterns, pattern)
 	}
 	err = bus.broker.RegisterNode(eventlogger.NodeID(filterNodeID), filterNode)
@@ -304,8 +306,10 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 	ctx, cancel := context.WithCancel(ctx)
 	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker, func() {
 		if clusterNode == nil {
-			bus.filters.removePattern(bus.filters.self, namespacePathPatterns, pattern)
-			bus.filters.removeClusterWidePattern(namespacePathPatterns, pattern)
+			// use filterNodeID as the "subscription id" when removing a
+			// subscriber pattern
+			bus.filters.removePattern(bus.filters.self, namespacePathPatterns, pattern, filterNodeID)
+			bus.filters.makeClusterWideFilters()
 		}
 	})
 	err = bus.broker.RegisterNode(eventlogger.NodeID(sinkNodeID), asyncNode)
