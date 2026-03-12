@@ -6,15 +6,16 @@ package eventbus
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ryanuber/go-glob"
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // clusterWide is used to collect and keep track of subscriber patterns from all
@@ -48,9 +49,65 @@ func (p pattern) isEmpty() bool {
 	return p.namespacePatterns == "" && p.eventTypePattern == ""
 }
 
+// patternSet is a map of patterns to subscription id's
+type patternSet map[pattern][]string
+
+func newPatternSet() patternSet {
+	return make(patternSet)
+}
+
+// Insert a pattern into the pattern set for the given subscription ID,
+// maintaining subscription IDs in sorted order for search efficiency when
+// inserting.
+func (ps patternSet) Insert(p pattern, subscriptionID string) patternSet {
+	position, found := slices.BinarySearch(ps[p], subscriptionID)
+	if !found {
+		ps[p] = slices.Insert(ps[p], position, subscriptionID)
+	}
+	return ps
+}
+
+// Delete removes the given subscriptionID from the pattern, if that association
+// exists.
+func (ps patternSet) Delete(p pattern, subscriptionID string) patternSet {
+	if ps == nil {
+		return nil
+	}
+	if ids, ok := ps[p]; ok {
+		if i := slices.Index(ids, subscriptionID); i >= 0 {
+			ps[p] = append(ids[:i], ids[i+1:]...)
+		}
+		if len(ps[p]) == 0 {
+			delete(ps, p)
+		}
+	}
+	return ps
+}
+
+func (ps patternSet) Clear() {
+	clear(ps)
+}
+
+// Difference returns the set of patterns from ps not in check. The subscriber
+// ID slices are also considered when checking for differences.
+func (ps patternSet) Difference(check patternSet) patternSet {
+	diff := newPatternSet()
+	for p := range ps {
+		if _, ok := check[p]; !ok {
+			diff[p] = ps[p]
+		} else {
+			subIDdiff := strutil.Difference(ps[p], check[p], false)
+			if len(subIDdiff) > 0 {
+				diff[p] = subIDdiff
+			}
+		}
+	}
+	return diff
+}
+
 // ClusterNodeFilter keeps track of all patterns that a particular cluster node is interested in.
 type ClusterNodeFilter struct {
-	patterns sets.Set[pattern]
+	patterns patternSet
 }
 
 // match checks if the given ns and eventType matches any pattern in the cluster node's filter.
@@ -93,20 +150,19 @@ func (f *Filters) String() string {
 
 func (nf *ClusterNodeFilter) String() string {
 	var x []string
-	l := nf.patterns.UnsortedList()
-	for _, v := range l {
-		x = append(x, v.String())
+	for p, subscriberIDs := range nf.patterns {
+		x = append(x, fmt.Sprintf("%s: %v", p.String(), subscriberIDs))
 	}
 	slices.Sort(x)
 	return strings.Join(x, ",")
 }
 
 func (f *Filters) addClusterWidePattern(namespacePatterns []string, eventTypePattern string) {
-	f.addPattern(clusterWide, namespacePatterns, eventTypePattern)
+	f.addPattern(clusterWide, namespacePatterns, eventTypePattern, clusterWide)
 }
 
 func (f *Filters) removeClusterWidePattern(namespacePatterns []string, eventTypePattern string) {
-	f.removePattern(clusterWide, namespacePatterns, eventTypePattern)
+	f.removePattern(clusterWide, namespacePatterns, eventTypePattern, clusterWide)
 }
 
 func (f *Filters) clearClusterWidePatterns() {
@@ -155,9 +211,12 @@ func (f *Filters) clearClusterNodePatterns(c clusterNodeID) {
 func (f *Filters) copyPatternWithLock(c clusterNodeID) *ClusterNodeFilter {
 	filters := &ClusterNodeFilter{}
 	if got, ok := f.filters[c]; ok {
-		filters.patterns = got.patterns.Clone()
+		filters.patterns = maps.Clone(got.patterns)
+		for key, slice := range filters.patterns {
+			filters.patterns[key] = slices.Clone(slice)
+		}
 	} else {
-		filters.patterns = sets.New[pattern]()
+		filters.patterns = newPatternSet()
 	}
 	return filters
 }
@@ -166,13 +225,15 @@ func (f *Filters) makeClusterWideFilters() {
 	defer f.notify(clusterWide)
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	newPatterns := sets.New[pattern]()
+	newPatterns := newPatternSet()
 	for c, cf := range f.filters {
 		if c == clusterWide {
 			continue
 		}
 		for p := range cf.patterns {
-			newPatterns.Insert(p)
+			// The set of cluster-wide patterns doesn't need to keep track of all
+			// the subscription id's, so we just use the cluster-wide pattern uuid
+			newPatterns.Insert(p, clusterWide)
 		}
 	}
 	f.filters[clusterWide] = &ClusterNodeFilter{patterns: newPatterns}
@@ -183,11 +244,11 @@ func (f *Filters) applyChanges(c clusterNodeID, changes []FilterChange) {
 	defer f.notify(c)
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	var newPatterns sets.Set[pattern]
+	var newPatterns patternSet
 	if existing, ok := f.filters[c]; ok {
 		newPatterns = existing.patterns
 	} else {
-		newPatterns = sets.New[pattern]()
+		newPatterns = newPatternSet()
 	}
 	for _, change := range changes {
 		applyChange(newPatterns, &change)
@@ -196,18 +257,18 @@ func (f *Filters) applyChanges(c clusterNodeID, changes []FilterChange) {
 }
 
 // applyChange applies a single filter change to the given set.
-func applyChange(s sets.Set[pattern], change *FilterChange) {
+func applyChange(s patternSet, change *FilterChange) {
 	switch change.Operation {
 	case FilterChangeAdd:
 		nsPatterns := slices.Clone(change.NamespacePatterns)
 		sort.Strings(nsPatterns)
 		p := pattern{eventTypePattern: change.EventTypePattern, namespacePatterns: cleanJoinNamespaces(nsPatterns)}
-		s.Insert(p)
+		s.Insert(p, change.SubscriberID)
 	case FilterChangeRemove:
 		nsPatterns := slices.Clone(change.NamespacePatterns)
 		sort.Strings(nsPatterns)
 		check := pattern{eventTypePattern: change.EventTypePattern, namespacePatterns: cleanJoinNamespaces(nsPatterns)}
-		s.Delete(check)
+		s.Delete(check, change.SubscriberID)
 	case FilterChangeClear:
 		s.Clear()
 	}
@@ -219,28 +280,32 @@ func cleanJoinNamespaces(nsPatterns []string) string {
 		trimmed[i] = strings.TrimSpace(nsPatterns[i])
 	}
 	// sort and uniq
-	trimmed = sets.NewString(trimmed...).List()
+	sort.Strings(trimmed)
+	trimmed = slices.Compact(trimmed)
 	return strings.Join(trimmed, " ")
 }
 
 // addPattern adds a pattern to a cluster node's list.
-func (f *Filters) addPattern(c clusterNodeID, namespacePatterns []string, eventTypePattern string) {
+func (f *Filters) addPattern(c clusterNodeID, namespacePatterns []string, eventTypePattern string, subscriptionID string) {
 	defer f.notify(c)
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	if _, ok := f.filters[c]; !ok {
 		f.filters[c] = &ClusterNodeFilter{
-			patterns: sets.New[pattern](),
+			patterns: newPatternSet(),
 		}
 	}
 	nsPatterns := slices.Clone(namespacePatterns)
 	sort.Strings(nsPatterns)
-	p := pattern{eventTypePattern: eventTypePattern, namespacePatterns: cleanJoinNamespaces(namespacePatterns)}
-	f.filters[c].patterns.Insert(p)
+	p := pattern{
+		eventTypePattern:  eventTypePattern,
+		namespacePatterns: cleanJoinNamespaces(nsPatterns),
+	}
+	f.filters[c].patterns.Insert(p, subscriptionID)
 }
 
 // removePattern removes a pattern from a cluster node's list.
-func (f *Filters) removePattern(c clusterNodeID, namespacePatterns []string, eventTypePattern string) {
+func (f *Filters) removePattern(c clusterNodeID, namespacePatterns []string, eventTypePattern, subscriptionID string) {
 	defer f.notify(c)
 	nsPatterns := slices.Clone(namespacePatterns)
 	sort.Strings(nsPatterns)
@@ -251,7 +316,7 @@ func (f *Filters) removePattern(c clusterNodeID, namespacePatterns []string, eve
 	if !ok {
 		return
 	}
-	filters.patterns.Delete(check)
+	filters.patterns.Delete(check, subscriptionID)
 }
 
 // anyMatch returns true if any cluster node's pattern list matches the arguments.
@@ -338,6 +403,10 @@ func (f *Filters) watch(ctx context.Context, clusterNode clusterNodeID) (<-chan 
 				return
 			}
 			changes := calculateChanges(current, next)
+			if len(changes) == 0 {
+				// If there are no changes, don't notify
+				continue
+			}
 			current = next
 			// check if the context is finished before sending
 			select {
@@ -357,6 +426,7 @@ type FilterChange struct {
 	Operation         int
 	NamespacePatterns []string
 	EventTypePattern  string
+	SubscriberID      string
 }
 
 const (
@@ -376,34 +446,43 @@ func calculateChanges(from *ClusterNodeFilter, to *ClusterNodeFilter) []FilterCh
 		changes = append(changes, FilterChange{
 			Operation: FilterChangeClear,
 		})
-		for pattern := range to.patterns {
+		for pattern, subscriberIDs := range to.patterns {
 			if !pattern.isEmpty() {
-				changes = append(changes, FilterChange{
-					Operation:         FilterChangeAdd,
-					NamespacePatterns: strings.Split(pattern.namespacePatterns, " "),
-					EventTypePattern:  pattern.eventTypePattern,
-				})
+				for _, subscriberID := range subscriberIDs {
+					changes = append(changes, FilterChange{
+						Operation:         FilterChangeAdd,
+						NamespacePatterns: strings.Split(pattern.namespacePatterns, " "),
+						EventTypePattern:  pattern.eventTypePattern,
+						SubscriberID:      subscriberID,
+					})
+				}
 			}
 		}
 	} else {
 		additions := to.patterns.Difference(from.patterns)
 		subtractions := from.patterns.Difference(to.patterns)
-		for add := range additions {
+		for add, subscriberIDs := range additions {
 			if !add.isEmpty() {
-				changes = append(changes, FilterChange{
-					Operation:         FilterChangeAdd,
-					NamespacePatterns: strings.Split(add.namespacePatterns, " "),
-					EventTypePattern:  add.eventTypePattern,
-				})
+				for _, subscriberID := range subscriberIDs {
+					changes = append(changes, FilterChange{
+						Operation:         FilterChangeAdd,
+						NamespacePatterns: strings.Split(add.namespacePatterns, " "),
+						EventTypePattern:  add.eventTypePattern,
+						SubscriberID:      subscriberID,
+					})
+				}
 			}
 		}
-		for sub := range subtractions {
+		for sub, subscriberIDs := range subtractions {
 			if !sub.isEmpty() {
-				changes = append(changes, FilterChange{
-					Operation:         FilterChangeRemove,
-					NamespacePatterns: strings.Split(sub.namespacePatterns, " "),
-					EventTypePattern:  sub.eventTypePattern,
-				})
+				for _, subscriberID := range subscriberIDs {
+					changes = append(changes, FilterChange{
+						Operation:         FilterChangeRemove,
+						NamespacePatterns: strings.Split(sub.namespacePatterns, " "),
+						EventTypePattern:  sub.eventTypePattern,
+						SubscriberID:      subscriberID,
+					})
+				}
 			}
 		}
 	}
