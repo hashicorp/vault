@@ -40,7 +40,7 @@ var (
 )
 
 // loadArtifacts is responsible for loading entities, groups, and aliases from
-// storage into MemDB.
+// storage into MemDB. The caller should hold the identity store lock.
 func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error {
 	if i == nil {
 		return nil

@@ -1506,6 +1506,9 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
 		},
+		ActivityLogConfig: ActivityLogCoreConfig{
+			DisableTimers: true,
+		},
 	}
 
 	c, sealKeys, rootToken := TestCoreUnsealedWithConfig(t, cfg)
@@ -1681,12 +1684,14 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 	var prevErr error
 
 	for i := 0; i < 10; i++ {
+		c.identityStore.lock.Lock()
 		err := c.identityStore.resetDB()
+		if err == nil {
+			logger.Info(" ==> BEGIN LOAD ARTIFACTS", "i", i)
+			err = c.identityStore.loadArtifacts(ctx, true)
+		}
+		c.identityStore.lock.Unlock()
 		require.NoError(t, err)
-
-		logger.Info(" ==> BEGIN LOAD ARTIFACTS", "i", i)
-
-		err = c.identityStore.loadArtifacts(ctx, true)
 
 		if i > 0 {
 			require.Equal(t, prevErr, err)
@@ -1833,7 +1838,9 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	// Setup a logger we can use to capture unseal logs
 	logBuf, stopCapture := startLogCapture(t, logger)
 
+	c.identityStore.lock.Lock()
 	err = c.identityStore.loadArtifacts(ctx, true)
+	c.identityStore.lock.Unlock()
 	stopCapture()
 
 	require.NoError(t, err)
