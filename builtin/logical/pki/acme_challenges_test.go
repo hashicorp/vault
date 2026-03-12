@@ -265,6 +265,8 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 	}
 }
 
+// TestAcmeValidateHTTP01ChallengeRejectsLoopbackViaDNS verifies that hosts that
+// resolve to localhost are rejected.
 func TestAcmeValidateHTTP01ChallengeRejectsLoopbackViaDNS(t *testing.T) {
 	t.Parallel()
 
@@ -800,6 +802,8 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 	}
 }
 
+// TestAcmeValidateTLSALPN01ChallengeRejectsLoopbackViaDNS verifies that hosts
+// that resolve to localhost are rejected.
 func TestAcmeValidateTLSALPN01ChallengeRejectsLoopbackViaDNS(t *testing.T) {
 	host := "acme-ipfilter-tlsalpn01.example.test"
 	dnsAddr := startLocalDNSServer(t, map[string]net.IP{
@@ -830,6 +834,8 @@ func TestAcmeValidateTLSALPN01ChallengeRejectsLoopbackViaDNS(t *testing.T) {
 	require.ErrorIs(t, err, ErrRejectedIdentifier)
 }
 
+// TestDialACMEValidationTargetRejectsLoopbackLiteral verifies that localhost is
+// rejected as a valid validation target.
 func TestDialACMEValidationTargetRejectsLoopbackLiteral(t *testing.T) {
 	conn, err := dialACMEValidationTarget(context.Background(), &acmeConfigEntry{}, &net.Dialer{Timeout: time.Second}, "tcp", "127.0.0.1:1")
 	require.Nil(t, conn)
