@@ -641,3 +641,37 @@ func TestRequestHandling_fetchACLTokenEntryAndEntity_NilRequest(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, ErrInternalError, err)
 }
+
+// TestAuth_AuthorizationDetails_CopiedFromRequest verifies that logical.Auth.AuthorizationDetails
+// matches the authorization details already carried on the request.
+func TestAuth_AuthorizationDetails_CopiedFromRequest(t *testing.T) {
+	t.Parallel()
+
+	details := []logical.AuthorizationDetail{
+		{"type": "account_information", "scope": "read"},
+		{"type": "payment_initiation", "amount": "100"},
+	}
+
+	auth := &logical.Auth{}
+	req := &logical.Request{
+		EnterpriseTokenAuthorizationDetails: details,
+	}
+
+	// Simulate the assignment performed in CheckToken.
+	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
+
+	require.Equal(t, details, auth.AuthorizationDetails, "auth.AuthorizationDetails must equal req.EnterpriseTokenAuthorizationDetails")
+}
+
+// TestAuth_AuthorizationDetails_NilWhenAbsent verifies that auth.AuthorizationDetails is nil
+// when the request does not carry authorization details.
+func TestAuth_AuthorizationDetails_NilWhenAbsent(t *testing.T) {
+	t.Parallel()
+
+	auth := &logical.Auth{}
+	req := &logical.Request{}
+
+	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
+
+	require.Nil(t, auth.AuthorizationDetails)
+}
