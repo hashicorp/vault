@@ -256,6 +256,9 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		secondEntity = actorEntity
 		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity, actorEntity)
 		if err != nil {
+			if c.perfStandby && errors.Is(err, logical.ErrReadOnly) {
+				return nil, nil, nil, nil, logical.ErrPerfStandbyPleaseForward
+			}
 			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing enterprise token"))
 		}
 	}
@@ -587,6 +590,8 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		auth.ActorEntityID = req.Auth.ActorEntityID
 		auth.ActorEntityName = req.Auth.ActorEntityName
 	}
+	// Copy authorization details from the request to auth so plugins can access them.
+	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
 
 	twoStepRecover := req.Operation == logical.RecoverOperation && req.RecoverSourcePath != "" && req.RecoverSourcePath != req.Path
 	var alternateRecoverCapability *logical.Operation

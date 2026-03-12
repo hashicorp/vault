@@ -36,7 +36,7 @@ func TestCore_Rekey_Lifecycle(t *testing.T) {
 func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, recovery bool) {
 	min, _ := c.barrier.KeyLength()
 	// Verify update not allowed
-	_, err := c.RekeyUpdate(context.Background(), make([]byte, min), "", recovery)
+	_, err := c.RekeyUpdate(context.Background(), make([]byte, min), "", recovery, true)
 	expected := "no barrier rekey in progress"
 	if recovery {
 		expected = "no recovery rekey in progress"
@@ -46,12 +46,12 @@ func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, recovery bool) {
 	}
 
 	// Should be no progress
-	if _, _, err := c.RekeyProgress(recovery, false); err == nil {
+	if _, _, err := c.RekeyProgress(recovery, false, true); err == nil {
 		t.Fatal("expected error from RekeyProgress")
 	}
 
 	// Should be no config
-	conf, err := c.RekeyConfig(recovery)
+	conf, err := c.RekeyConfig(recovery, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -60,7 +60,7 @@ func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, recovery bool) {
 	}
 
 	// Cancel should be idempotent
-	err = c.RekeyCancel(false, "", 10*time.Minute)
+	err = c.RekeyCancel(false, "", 10*time.Minute, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -70,13 +70,13 @@ func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, recovery bool) {
 		SecretThreshold: 3,
 		SecretShares:    5,
 	}
-	err = c.RekeyInit(newConf, recovery)
+	err = c.RekeyInit(newConf, recovery, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should get config
-	conf, err = c.RekeyConfig(recovery)
+	conf, err = c.RekeyConfig(recovery, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -86,13 +86,13 @@ func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, recovery bool) {
 	}
 
 	// Cancel should be clear
-	err = c.RekeyCancel(recovery, conf.Nonce, 10*time.Minute)
+	err = c.RekeyCancel(recovery, conf.Nonce, 10*time.Minute, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should be no config
-	conf, err = c.RekeyConfig(recovery)
+	conf, err = c.RekeyConfig(recovery, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -114,7 +114,7 @@ func testCore_Rekey_Init_Common(t *testing.T, c *Core, recovery bool) {
 		SecretThreshold: 5,
 		SecretShares:    1,
 	}
-	err := c.RekeyInit(badConf, recovery)
+	err := c.RekeyInit(badConf, recovery, true)
 	if err == nil {
 		t.Fatalf("should fail")
 	}
@@ -131,13 +131,13 @@ func testCore_Rekey_Init_Common(t *testing.T, c *Core, recovery bool) {
 		newConf.Type = c.seal.RecoverySealConfigType().String()
 	}
 
-	err = c.RekeyInit(newConf, recovery)
+	err = c.RekeyInit(newConf, recovery, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Second should fail
-	err = c.RekeyInit(newConf, recovery)
+	err = c.RekeyInit(newConf, recovery, true)
 	if err == nil {
 		t.Fatalf("should fail")
 	}
@@ -171,13 +171,13 @@ func testCore_Rekey_Update_Common_Error(t *testing.T, c *Core, keys [][]byte, ro
 		SecretThreshold: 3,
 		SecretShares:    5,
 	}
-	hErr := c.RekeyInit(newConf, recovery)
+	hErr := c.RekeyInit(newConf, recovery, true)
 	if hErr != nil {
 		t.Fatalf("err: %v", hErr)
 	}
 
 	// Fetch new config with generated nonce
-	rkconf, hErr := c.RekeyConfig(recovery)
+	rkconf, hErr := c.RekeyConfig(recovery, true)
 	if hErr != nil {
 		t.Fatalf("err: %v", hErr)
 	}
@@ -188,7 +188,7 @@ func testCore_Rekey_Update_Common_Error(t *testing.T, c *Core, keys [][]byte, ro
 	// Provide the master/recovery keys
 	var result *RekeyResult
 	for _, key := range keys {
-		result, err = c.RekeyUpdate(context.Background(), key, rkconf.Nonce, recovery)
+		result, err = c.RekeyUpdate(context.Background(), key, rkconf.Nonce, recovery, true)
 		if err != nil {
 			if !wantRekeyUpdateError {
 				t.Fatalf("err: %v", err)
@@ -208,12 +208,12 @@ func testCore_Rekey_Update_Common_Error(t *testing.T, c *Core, keys [][]byte, ro
 	}
 
 	// Should be no progress
-	if _, _, err := c.RekeyProgress(recovery, false); err == nil {
+	if _, _, err := c.RekeyProgress(recovery, false, true); err == nil {
 		t.Fatal("expected error from RekeyProgress")
 	}
 
 	// Should be no config
-	conf, hErr := c.RekeyConfig(recovery)
+	conf, hErr := c.RekeyConfig(recovery, true)
 	if hErr != nil {
 		t.Fatalf("rekey config error: %v", hErr)
 	}
@@ -271,13 +271,13 @@ func testCore_Rekey_Update_Common_Error(t *testing.T, c *Core, keys [][]byte, ro
 		SecretThreshold: 1,
 		SecretShares:    1,
 	}
-	err = c.RekeyInit(newConf, recovery)
+	err = c.RekeyInit(newConf, recovery, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Fetch new config with generated nonce
-	rkconf, err = c.RekeyConfig(recovery)
+	rkconf, err = c.RekeyConfig(recovery, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -288,14 +288,14 @@ func testCore_Rekey_Update_Common_Error(t *testing.T, c *Core, keys [][]byte, ro
 	// Provide the parts master
 	oldResult := result
 	for i := 0; i < 3; i++ {
-		result, err = c.RekeyUpdate(context.Background(), TestKeyCopy(oldResult.SecretShares[i]), rkconf.Nonce, recovery)
+		result, err = c.RekeyUpdate(context.Background(), TestKeyCopy(oldResult.SecretShares[i]), rkconf.Nonce, recovery, true)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 
 		// Should be progress
 		if i < 2 {
-			_, num, err := c.RekeyProgress(recovery, false)
+			_, num, err := c.RekeyProgress(recovery, false, true)
 			if err != nil {
 				t.Fatalf("err: %v", err)
 			}
@@ -367,13 +367,13 @@ func testCore_Rekey_Invalid_Common(t *testing.T, c *Core, keys [][]byte, recover
 		SecretThreshold: 3,
 		SecretShares:    5,
 	}
-	err := c.RekeyInit(newConf, recovery)
+	err := c.RekeyInit(newConf, recovery, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Fetch new config with generated nonce
-	rkconf, err := c.RekeyConfig(recovery)
+	rkconf, err := c.RekeyConfig(recovery, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -382,7 +382,7 @@ func testCore_Rekey_Invalid_Common(t *testing.T, c *Core, keys [][]byte, recover
 	}
 
 	// Provide the nonce (invalid)
-	_, err = c.RekeyUpdate(context.Background(), keys[0], "abcd", recovery)
+	_, err = c.RekeyUpdate(context.Background(), keys[0], "abcd", recovery, true)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -392,13 +392,13 @@ func testCore_Rekey_Invalid_Common(t *testing.T, c *Core, keys [][]byte, recover
 	oldkeystr := fmt.Sprintf("%#v", key)
 	key[0]++
 	newkeystr := fmt.Sprintf("%#v", key)
-	ret, err := c.RekeyUpdate(context.Background(), key, rkconf.Nonce, recovery)
+	ret, err := c.RekeyUpdate(context.Background(), key, rkconf.Nonce, recovery, true)
 	if err == nil {
 		t.Fatalf("expected error, ret is %#v\noldkeystr: %s\nnewkeystr: %s", *ret, oldkeystr, newkeystr)
 	}
 
 	// Check progress has been reset
-	_, num, err := c.RekeyProgress(recovery, false)
+	_, num, err := c.RekeyProgress(recovery, false, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -466,12 +466,12 @@ func TestCore_Rekey_Standby(t *testing.T) {
 		SecretShares:    1,
 		SecretThreshold: 1,
 	}
-	err = core.RekeyInit(newConf, false)
+	err = core.RekeyInit(newConf, false, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	// Fetch new config with generated nonce
-	rkconf, err := core.RekeyConfig(false)
+	rkconf, err := core.RekeyConfig(false, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -480,7 +480,7 @@ func TestCore_Rekey_Standby(t *testing.T) {
 	}
 	var rekeyResult *RekeyResult
 	for _, key := range keys {
-		rekeyResult, err = core.RekeyUpdate(context.Background(), key, rkconf.Nonce, false)
+		rekeyResult, err = core.RekeyUpdate(context.Background(), key, rkconf.Nonce, false, true)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -499,12 +499,12 @@ func TestCore_Rekey_Standby(t *testing.T) {
 	TestWaitActive(t, core2)
 
 	// Rekey the master key again
-	err = core2.RekeyInit(newConf, false)
+	err = core2.RekeyInit(newConf, false, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	// Fetch new config with generated nonce
-	rkconf, err = core2.RekeyConfig(false)
+	rkconf, err = core2.RekeyConfig(false, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -513,7 +513,7 @@ func TestCore_Rekey_Standby(t *testing.T) {
 	}
 	var rekeyResult2 *RekeyResult
 	for _, key := range rekeyResult.SecretShares {
-		rekeyResult2, err = core2.RekeyUpdate(context.Background(), key, rkconf.Nonce, false)
+		rekeyResult2, err = core2.RekeyUpdate(context.Background(), key, rkconf.Nonce, false, true)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -542,7 +542,7 @@ func TestSysRekey_Verification_Invalid(t *testing.T) {
 	err := core.BarrierRekeyInit(&SealConfig{
 		VerificationRequired: true,
 		StoredShares:         1,
-	})
+	}, true)
 
 	if err == nil {
 		t.Fatal("expected error")
@@ -599,11 +599,11 @@ func TestCancelRekey_Nonce(t *testing.T) {
 				t.Skip(t, "recovery rekey not supported")
 			}
 
-			err := c.RekeyInit(tc.config, tc.recovery)
+			err := c.RekeyInit(tc.config, tc.recovery, true)
 			require.NoError(t, err, "rekey init failed")
 
 			// try to cancel without the nonce
-			err = c.RekeyCancel(tc.recovery, "", 10*time.Minute)
+			err = c.RekeyCancel(tc.recovery, "", 10*time.Minute, true)
 			require.Error(t, err, "cancel should have errored")
 
 			// retrieve the nonce
@@ -621,7 +621,7 @@ func TestCancelRekey_Nonce(t *testing.T) {
 			require.NotEmpty(t, nonce, "nonce missing")
 
 			// cancel successfully
-			err = c.RekeyCancel(tc.recovery, nonce, 10*time.Minute)
+			err = c.RekeyCancel(tc.recovery, nonce, 10*time.Minute, true)
 			require.NoError(t, err, "error on rekey cancel")
 		})
 	}
@@ -675,14 +675,14 @@ func TestCancelRekey_Regression(t *testing.T) {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					c.RekeyCancel(tc.recovery, "", 10*time.Minute)
+					c.RekeyCancel(tc.recovery, "", 10*time.Minute, true)
 				}()
 			}
-			err := c.RekeyInit(tc.config, tc.recovery)
+			err := c.RekeyInit(tc.config, tc.recovery, true)
 			require.NoError(t, err)
 
 			wg.Wait()
-			happening, keys, err := c.RekeyProgress(tc.recovery, false)
+			happening, keys, err := c.RekeyProgress(tc.recovery, false, true)
 			require.NoError(t, err)
 			require.True(t, happening)
 			require.Equal(t, 0, keys)
@@ -731,14 +731,14 @@ func TestCancelRekey_AfterDeadline(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.config.Type, func(t *testing.T) {
 			c := tc.core(t)
-			err := c.RekeyInit(tc.config, tc.recovery)
+			err := c.RekeyInit(tc.config, tc.recovery, true)
 			require.NoError(t, err)
 
 			// ensure that that 10 ms have passed before we cancel
 			time.Sleep(10 * time.Millisecond)
 			// set the deadline to a microsecond, which means we won't need a
 			// nonce to cancel the rekey
-			err = c.RekeyCancel(tc.recovery, "", time.Microsecond)
+			err = c.RekeyCancel(tc.recovery, "", time.Microsecond, true)
 			require.NoError(t, err)
 		})
 	}

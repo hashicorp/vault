@@ -64,6 +64,8 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      # Install additional tools like gotestsum that are required for Enos scenarios
+      - uses: ./.github/actions/install-tools
       - name: Configure Git
         run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}:@github.com".insteadOf "https://github.com"
       - name: Set up node

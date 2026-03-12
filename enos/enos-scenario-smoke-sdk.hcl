@@ -70,6 +70,11 @@ scenario "smoke_sdk" {
       ip_version = ["6"]
       backend    = ["consul"]
     }
+
+    // smoke_sdk scenario cannot be run in CE
+    exclude {
+      edition = ["ce"]
+    }
   }
 
   terraform_cli = terraform_cli.default
@@ -408,14 +413,16 @@ scenario "smoke_sdk" {
   // Define smoke test suite
   locals {
     smoke_tests = [
-      "TestStepdownAndLeaderElection",
       "TestSecretsEngineCreate",
+      "TestSecretsEngineExternalCreate",
       "TestUnsealedStatus",
       "TestVaultVersion",
       "TestSecretsEngineRead",
+      "TestSecretsEngineExternalRead",
       "TestReplicationStatus",
       "TestUIAssets",
-      "TestSecretsEngineDelete"
+      "TestSecretsEngineDelete",
+      "TestSecretsEngineExternalDelete"
     ]
 
     // Add backend-specific tests
@@ -432,18 +439,20 @@ scenario "smoke_sdk" {
   step "run_blackbox_tests" {
     description = "Run blackbox SDK smoke tests: ${join(", ", local.smoke_tests_with_backend)}"
     module      = module.vault_run_blackbox_test
-    depends_on  = [step.get_vault_cluster_ips]
+    depends_on  = [step.get_vault_cluster_ips, step.set_up_external_integration_target]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      leader_host      = step.get_vault_cluster_ips.leader_host
-      leader_public_ip = step.get_vault_cluster_ips.leader_public_ip
-      vault_root_token = step.create_vault_cluster.root_token
-      test_names       = local.smoke_tests_with_backend
-      test_package     = "./vault/external_tests/blackbox"
+      leader_host            = step.get_vault_cluster_ips.leader_host
+      leader_public_ip       = step.get_vault_cluster_ips.leader_public_ip
+      vault_root_token       = step.create_vault_cluster.root_token
+      test_names             = local.smoke_tests_with_backend
+      test_package           = "./vault/external_tests/blackbox"
+      integration_host_state = step.set_up_external_integration_target.state
+      vault_edition          = matrix.edition
     }
   }
 

@@ -200,6 +200,10 @@ jobs:
             echo 'ENOS_VAR_verify_ldap_secrets_engine=false'
             echo 'ENOS_VAR_verify_log_secrets=true'
           } | tee -a "$GITHUB_ENV"
+      - uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ steps.secrets.outputs.github-token }}
+      - uses: ./.github/actions/install-tools
       - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
         with:
           # the Terraform wrapper will break Terraform execution in Enos because
