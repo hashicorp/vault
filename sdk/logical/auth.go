@@ -124,6 +124,13 @@ type Auth struct {
 	// HTTPRequestPriority contains potential information about the request
 	// priority based on required path capabilities
 	HTTPRequestPriority *uint8 `json:"http_request_priority"`
+
+	// AuthorizationDetails holds fine-grained authorization constraints for the request.
+	// Each element is a JSON object with at minimum a "type" field.
+	// It is nil when the token does not carry authorization details.
+	// It is not included in plugin RPC serialization because it is only needed at request-routing
+	// time and not during plugin Renew or Revoke operations.
+	AuthorizationDetails []AuthorizationDetail `json:"authorization_details,omitempty"`
 }
 
 func (a *Auth) GoString() string {

@@ -587,6 +587,8 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		auth.ActorEntityID = req.Auth.ActorEntityID
 		auth.ActorEntityName = req.Auth.ActorEntityName
 	}
+	// Copy authorization details from the request to auth so plugins can access them.
+	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
 
 	twoStepRecover := req.Operation == logical.RecoverOperation && req.RecoverSourcePath != "" && req.RecoverSourcePath != req.Path
 	var alternateRecoverCapability *logical.Operation
