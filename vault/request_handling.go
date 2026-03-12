@@ -256,6 +256,9 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		secondEntity = actorEntity
 		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity, actorEntity)
 		if err != nil {
+			if c.perfStandby && errors.Is(err, logical.ErrReadOnly) {
+				return nil, nil, nil, nil, logical.ErrPerfStandbyPleaseForward
+			}
 			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing enterprise token"))
 		}
 	}
