@@ -204,7 +204,9 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 				defer ts.Close()
 
 				host := ts.URL[7:]
-				isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint, &acmeConfigEntry{})
+				isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint, &acmeConfigEntry{
+					AllowedCIDRList: []string{"127.0.0.1/32", "::1/128"},
+				})
 				if !isValid && err == nil {
 					t.Fatalf("[tc=%d/handler=%d] expected failure to give reason via err (%v / %v)", index, handlerIndex, isValid, err)
 				}
@@ -253,7 +255,9 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 			defer ts.Close()
 
 			host := ts.URL[7:]
-			isValid, err := ValidateHTTP01Challenge(host, "my-token", "my-thumbprint", &acmeConfigEntry{})
+			isValid, err := ValidateHTTP01Challenge(host, "my-token", "my-thumbprint", &acmeConfigEntry{
+				AllowedCIDRList: []string{"127.0.0.1/32", "::1/128"},
+			})
 			if isValid || err == nil {
 				t.Fatalf("[handler=%d] expected failure validating challenge (%v / %v)", handlerIndex, isValid, err)
 			}
@@ -320,7 +324,9 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 	// This test is not parallel because we modify ALPNPort to use a custom
 	// non-standard port _just for testing purposes_.
 	host := "localhost"
-	config := &acmeConfigEntry{}
+	config := &acmeConfigEntry{
+		AllowedCIDRList: []string{"127.0.0.1/32", "::1/128"},
+	}
 
 	log := hclog.L()
 
@@ -825,7 +831,7 @@ func TestAcmeValidateTLSALPN01ChallengeRejectsLoopbackViaDNS(t *testing.T) {
 }
 
 func TestDialACMEValidationTargetRejectsLoopbackLiteral(t *testing.T) {
-	conn, err := dialACMEValidationTarget(context.Background(), &net.Dialer{Timeout: time.Second}, "tcp", "127.0.0.1:1")
+	conn, err := dialACMEValidationTarget(context.Background(), &acmeConfigEntry{}, &net.Dialer{Timeout: time.Second}, "tcp", "127.0.0.1:1")
 	require.Nil(t, conn)
 	require.Error(t, err)
 	require.ErrorIs(t, err, ErrRejectedIdentifier)
@@ -858,7 +864,9 @@ func TestAcmeValidateHttp01TLSRedirect(t *testing.T) {
 			defer ts.Close()
 
 			host := ts.URL[len("http://"):]
-			isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint, &acmeConfigEntry{})
+			isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint, &acmeConfigEntry{
+				AllowedCIDRList: []string{"127.0.0.1/32", "::1/128"},
+			})
 			if !isValid && err == nil {
 				st.Fatalf("[tc=%d] expected failure to give reason via err (%v / %v)", index, isValid, err)
 			}

@@ -37,6 +37,7 @@ type acmeConfigEntry struct {
 	DNSResolver            string        `json:"dns_resolver"`
 	EabPolicyName          EabPolicyName `json:"eab_policy_name"`
 	MaxTTL                 time.Duration `json:"max_ttl"`
+	AllowedCIDRList        []string      `json:"allowed_cidr_list"`
 }
 
 var defaultAcmeConfig = acmeConfigEntry{
