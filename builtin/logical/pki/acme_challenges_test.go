@@ -17,6 +17,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/big"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/dnstest"
+	"github.com/miekg/dns"
 	"github.com/stretchr/testify/require"
 )
 
@@ -95,6 +97,59 @@ var keyAuthorizationTestCases = []keyAuthorizationTestCase{
 	},
 }
 
+func startLocalDNSServer(t *testing.T, records map[string]net.IP) string {
+	t.Helper()
+
+	handler := dns.NewServeMux()
+	handler.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) {
+		msg := new(dns.Msg)
+		msg.SetReply(r)
+
+		for _, q := range r.Question {
+			if q.Qtype != dns.TypeA {
+				continue
+			}
+
+			name := strings.TrimSuffix(strings.ToLower(q.Name), ".")
+			ip, ok := records[name]
+			if !ok {
+				continue
+			}
+
+			a := ip.To4()
+			if a == nil {
+				continue
+			}
+
+			msg.Answer = append(msg.Answer, &dns.A{
+				Hdr: dns.RR_Header{
+					Name:   q.Name,
+					Rrtype: dns.TypeA,
+					Class:  dns.ClassINET,
+					Ttl:    0,
+				},
+				A: a,
+			})
+		}
+
+		_ = w.WriteMsg(msg)
+	})
+
+	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	srv := &dns.Server{PacketConn: pc, Handler: handler}
+	go func() {
+		_ = srv.ActivateAndServe()
+	}()
+
+	t.Cleanup(func() {
+		_ = srv.Shutdown()
+	})
+
+	return pc.LocalAddr().String()
+}
+
 func TestAcmeValidateKeyAuthorization(t *testing.T) {
 	t.Parallel()
 
@@ -149,7 +204,9 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 				defer ts.Close()
 
 				host := ts.URL[7:]
-				isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint, &acmeConfigEntry{})
+				isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint, &acmeConfigEntry{
+					AllowedCIDRList: []string{"127.0.0.1/32", "::1/128"},
+				})
 				if !isValid && err == nil {
 					t.Fatalf("[tc=%d/handler=%d] expected failure to give reason via err (%v / %v)", index, handlerIndex, isValid, err)
 				}
@@ -198,12 +255,38 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 			defer ts.Close()
 
 			host := ts.URL[7:]
-			isValid, err := ValidateHTTP01Challenge(host, "my-token", "my-thumbprint", &acmeConfigEntry{})
+			isValid, err := ValidateHTTP01Challenge(host, "my-token", "my-thumbprint", &acmeConfigEntry{
+				AllowedCIDRList: []string{"127.0.0.1/32", "::1/128"},
+			})
 			if isValid || err == nil {
 				t.Fatalf("[handler=%d] expected failure validating challenge (%v / %v)", handlerIndex, isValid, err)
 			}
 		}()
 	}
+}
+
+// TestAcmeValidateHTTP01ChallengeRejectsLoopbackViaDNS verifies that hosts that
+// resolve to localhost are rejected.
+func TestAcmeValidateHTTP01ChallengeRejectsLoopbackViaDNS(t *testing.T) {
+	t.Parallel()
+
+	host := "acme-ipfilter-http01.example.test"
+	dnsAddr := startLocalDNSServer(t, map[string]net.IP{
+		host: net.IPv4(127, 0, 0, 1),
+	})
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("my-token.my-thumbprint"))
+	}))
+	defer ts.Close()
+
+	port := strconv.Itoa(ts.Listener.Addr().(*net.TCPAddr).Port)
+	config := &acmeConfigEntry{DNSResolver: dnsAddr}
+
+	isValid, err := ValidateHTTP01Challenge(net.JoinHostPort(host, port), "my-token", "my-thumbprint", config)
+	require.False(t, isValid)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrRejectedIdentifier)
 }
 
 func TestAcmeValidateDNS01Challenge(t *testing.T) {
@@ -243,7 +326,9 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 	// This test is not parallel because we modify ALPNPort to use a custom
 	// non-standard port _just for testing purposes_.
 	host := "localhost"
-	config := &acmeConfigEntry{}
+	config := &acmeConfigEntry{
+		AllowedCIDRList: []string{"127.0.0.1/32", "::1/128"},
+	}
 
 	log := hclog.L()
 
@@ -717,6 +802,47 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 	}
 }
 
+// TestAcmeValidateTLSALPN01ChallengeRejectsLoopbackViaDNS verifies that hosts
+// that resolve to localhost are rejected.
+func TestAcmeValidateTLSALPN01ChallengeRejectsLoopbackViaDNS(t *testing.T) {
+	host := "acme-ipfilter-tlsalpn01.example.test"
+	dnsAddr := startLocalDNSServer(t, map[string]net.IP{
+		host: net.IPv4(127, 0, 0, 1),
+	})
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer ln.Close()
+
+	go func() {
+		conn, err := ln.Accept()
+		if err == nil {
+			_ = conn.Close()
+		}
+	}()
+
+	oldPort := ALPNPort
+	ALPNPort = strconv.Itoa(ln.Addr().(*net.TCPAddr).Port)
+	defer func() {
+		ALPNPort = oldPort
+	}()
+
+	config := &acmeConfigEntry{DNSResolver: dnsAddr}
+	isValid, err := ValidateTLSALPN01Challenge(host, "my-token", "my-thumbprint", config)
+	require.False(t, isValid)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrRejectedIdentifier)
+}
+
+// TestDialACMEValidationTargetRejectsLoopbackLiteral verifies that localhost is
+// rejected as a valid validation target.
+func TestDialACMEValidationTargetRejectsLoopbackLiteral(t *testing.T) {
+	conn, err := dialACMEValidationTarget(context.Background(), &acmeConfigEntry{}, &net.Dialer{Timeout: time.Second}, "tcp", "127.0.0.1:1")
+	require.Nil(t, conn)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrRejectedIdentifier)
+}
+
 // TestAcmeValidateHttp01TLSRedirect verify that we allow a http-01 challenge to redirect
 // to a TLS server and not validate the certificate chain is valid. We don't validate the
 // TLS chain as we would have accepted the auth over a non-secured channel anyway had
@@ -744,7 +870,9 @@ func TestAcmeValidateHttp01TLSRedirect(t *testing.T) {
 			defer ts.Close()
 
 			host := ts.URL[len("http://"):]
-			isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint, &acmeConfigEntry{})
+			isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint, &acmeConfigEntry{
+				AllowedCIDRList: []string{"127.0.0.1/32", "::1/128"},
+			})
 			if !isValid && err == nil {
 				st.Fatalf("[tc=%d] expected failure to give reason via err (%v / %v)", index, isValid, err)
 			}

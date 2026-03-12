@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -118,6 +119,91 @@ func buildDialerConfig(config *acmeConfigEntry) (*net.Dialer, error) {
 	}, nil
 }
 
+func isIPInCIDRList(cidrList []string, ip net.IP) bool {
+	if len(cidrList) == 0 {
+		return false
+	}
+
+	for _, cidr := range cidrList {
+		_, ipNet, err := net.ParseCIDR(cidr)
+		if err == nil && ipNet.Contains(ip) {
+			return true
+		}
+
+		allowedIP := net.ParseIP(cidr)
+		if allowedIP != nil && allowedIP.Equal(ip) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isDisallowedACMEValidationIP(config *acmeConfigEntry, ip net.IP) bool {
+	if ip == nil {
+		return true
+	}
+
+	if isIPInCIDRList(config.AllowedCIDRList, ip) {
+		return false
+	}
+
+	// Vault is often deployed on private networks, so avoid a blanket private
+	// range denylist here and instead reject obviously unsafe targets.
+	if ip.IsLoopback() || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return true
+	}
+
+	return !ip.IsGlobalUnicast()
+}
+
+func dialACMEValidationTarget(ctx context.Context, config *acmeConfigEntry, dialer *net.Dialer, network string, address string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return dialer.DialContext(ctx, network, address)
+	}
+
+	if ip := net.ParseIP(host); ip != nil {
+		if isDisallowedACMEValidationIP(config, ip) {
+			return nil, fmt.Errorf("%w: validation target resolved to a disallowed ip range", ErrRejectedIdentifier)
+		}
+
+		return dialer.DialContext(ctx, network, address)
+	}
+
+	if dialer.Resolver == nil {
+		return dialer.DialContext(ctx, network, address)
+	}
+
+	ips, err := dialer.Resolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+
+	var lastErr error
+	var foundAllowed bool
+	for _, candidate := range ips {
+		if isDisallowedACMEValidationIP(config, candidate.IP) {
+			continue
+		}
+
+		foundAllowed = true
+
+		conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(candidate.IP.String(), port))
+		if err == nil {
+			return conn, nil
+		}
+
+		lastErr = err
+	}
+
+	if !foundAllowed {
+		return nil, fmt.Errorf("%w: validation target resolved to a disallowed ip range", ErrRejectedIdentifier)
+	}
+
+	return nil, lastErr
+}
+
 // Validates a given ACME http-01 challenge against the specified domain,
 // per RFC 8555.
 //
@@ -142,7 +228,9 @@ func ValidateHTTP01Challenge(domain string, token string, thumbprint string, con
 
 		// We'd rather timeout and re-attempt validation later than hang
 		// too many validators waiting for slow hosts.
-		DialContext:           dialer.DialContext,
+		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+			return dialACMEValidationTarget(ctx, config, dialer, network, address)
+		},
 		ResponseHeaderTimeout: 10 * time.Second,
 	}
 
@@ -167,6 +255,10 @@ func ValidateHTTP01Challenge(domain string, token string, thumbprint string, con
 
 	resp, err := client.Get(path)
 	if err != nil {
+		if errors.Is(err, ErrRejectedIdentifier) {
+			return false, fmt.Errorf("%w: http-01: validation target resolved to a disallowed ip range", ErrRejectedIdentifier)
+		}
+
 		return false, fmt.Errorf("%w: %s", ErrConnection, fmt.Errorf("http-01: failed to fetch path %v: %w", path, err).Error())
 	}
 
@@ -469,8 +561,12 @@ func ValidateTLSALPN01Challenge(domain string, token string, thumbprint string, 
 	// > 3. The ACME server initiates a TLS connection to the chosen IP
 	// >    address. This connection MUST use TCP port 443.
 	address := fmt.Sprintf("%v:"+ALPNPort, domain)
-	conn, err := dialer.Dial("tcp", address)
+	conn, err := dialACMEValidationTarget(context.Background(), config, dialer, "tcp", address)
 	if err != nil {
+		if errors.Is(err, ErrRejectedIdentifier) {
+			return false, fmt.Errorf("%w: tls-alpn-01: validation target resolved to a disallowed ip range", ErrRejectedIdentifier)
+		}
+
 		return false, fmt.Errorf("%w: %s", ErrConnection, fmt.Errorf("tls-alpn-01: failed to dial host: %w", err).Error())
 	}
 
