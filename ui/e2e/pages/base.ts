@@ -16,4 +16,61 @@ export class BasePage {
       await locator.first().click();
     }
   }
+
+  async goToSecrets() {
+    await this.page.getByRole('link', { name: 'Secrets', exact: true }).click();
+    const skipButton = this.page.getByRole('button', { name: 'Skip' });
+    if (await skipButton.isVisible()) {
+      await skipButton.click();
+    }
+  }
+
+  /**
+   * Enable a secrets engine with a dynamic path
+   * @param engineType - The type of engine to enable (e.g., 'KV', 'Transit', 'PKI Certificates')
+   * @param path - The mount path for the engine
+   * @param options - Optional configuration for the engine with variable key-value pairs
+   */
+  async enableEngine(
+    engineType: string,
+    path: string,
+    options?: {
+      defaultLeaseTtl?: { unit: number; option: string };
+      maxLeaseTtl?: { unit: number; option: string };
+    }
+  ) {
+    await this.page.goto('dashboard');
+    await this.goToSecrets();
+
+    // Click "Enable new engine"
+    await this.page.getByRole('link', { name: 'Enable new engine' }).click();
+    await this.page.getByRole('heading', { name: engineType }).click();
+
+    if (options?.defaultLeaseTtl) {
+      await this.page.locator('label').filter({ hasText: 'Default Lease TTL Vault will' }).click();
+      await this.page
+        .getByLabel('TTL unit for Default Lease TTL')
+        .selectOption(options.defaultLeaseTtl.option as string);
+      await this.page
+        .getByRole('group', { name: 'Default Lease TTL Lease will' })
+        .getByLabel('Number of units')
+        .fill(options.defaultLeaseTtl.unit.toString());
+    }
+
+    if (options?.maxLeaseTtl) {
+      await this.page
+        .getByLabel('TTL unit for Max Lease TTL')
+        .selectOption(options.maxLeaseTtl.option as string);
+      await this.page
+        .getByRole('group', { name: 'Max Lease TTL Lease will' })
+        .getByLabel('Number of units')
+        .fill(options.maxLeaseTtl.unit.toString());
+    }
+
+    // Fill in the path
+    await this.page.getByRole('textbox', { name: 'Path' }).fill(path);
+
+    // Enable the engine
+    await this.page.getByRole('button', { name: 'Enable engine' }).click();
+  }
 }

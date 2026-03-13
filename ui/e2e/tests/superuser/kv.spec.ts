@@ -8,19 +8,9 @@ import { BasePage } from '../../pages/base';
 
 test('kvv2 workflow', async ({ page }) => {
   const basePage = new BasePage(page);
-  await page.goto('dashboard');
   // enable kv secrets engine
-  await page.getByRole('link', { name: 'Secrets', exact: true }).click();
-  // skip if intro page is shown
-  const skipButton = page.getByRole('button', { name: 'Skip' });
-  if (await skipButton.isVisible()) {
-    await skipButton.click();
-  }
-  await page.getByRole('link', { name: 'Enable new engine' }).click();
-  await page.locator('div').filter({ hasText: 'KV' }).nth(4).click();
-  await page.getByRole('textbox', { name: 'Path' }).click();
-  await page.getByRole('textbox', { name: 'Path' }).fill('kv-test');
-  await page.getByRole('button', { name: 'Enable engine' }).click();
+  await basePage.enableEngine('KV', 'kv-test');
+
   // once enabled it should navigate to the secrets engine overview page
   await expect(page.locator('section')).toContainText('kv-test version 2');
   await expect(page.locator('section')).toContainText(
