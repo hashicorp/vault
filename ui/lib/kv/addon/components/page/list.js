@@ -28,9 +28,11 @@ export default class KvListPageComponent extends Component {
   @service flashMessages;
   @service('app-router') router;
   @service api;
+  @service version;
 
   @tracked secretPath;
   @tracked metadataToDelete = null; // set to the metadata intended to delete
+  @tracked showPolicyFlyout = false;
 
   // used for KV list and list-directory view
   // ex: beep/
