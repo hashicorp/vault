@@ -9,13 +9,8 @@ import { BasePage } from '../../pages/base';
 test('transit workflow', async ({ page }) => {
   const basePage = new BasePage(page);
 
-  await page.goto('dashboard');
   // enable Transit Engine
-  await page.getByRole('link', { name: 'Secrets', exact: true }).click();
-  await page.getByRole('link', { name: 'Enable new engine' }).click();
-  await page.getByRole('heading', { name: 'Transit' }).click();
-  await page.getByRole('textbox', { name: 'Path' }).fill('transit-workflow');
-  await page.getByRole('button', { name: 'Enable engine' }).click();
+  await basePage.enableEngine('Transit', 'transit-workflow');
 
   // create key
   await page.getByRole('link', { name: 'Create key' }).click();

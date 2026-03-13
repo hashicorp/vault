@@ -4,31 +4,16 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { BasePage } from '../../pages/base';
 
 test('pki workflow', async ({ page }) => {
-  await page.goto('dashboard');
-  // enable PKI Engine
-  await page.getByRole('link', { name: 'Secrets', exact: true }).click();
-  // skip if intro page is shown
-  const skipButton = page.getByRole('button', { name: 'Skip' });
-  if (await skipButton.isVisible()) {
-    await skipButton.click();
-  }
-  await page.getByRole('link', { name: 'Enable new engine' }).click();
-  await page.getByLabel('PKI Certificates - enabled').click();
-  await page.getByRole('textbox', { name: 'Path' }).fill('pki-engine');
-  await page.locator('label').filter({ hasText: 'Default Lease TTL Vault will' }).click();
-  await page.getByLabel('TTL unit for Default Lease TTL').selectOption('m');
-  await page
-    .getByRole('group', { name: 'Default Lease TTL Lease will' })
-    .getByLabel('Number of units')
-    .fill('5');
-  await page.getByLabel('TTL unit for Max Lease TTL').selectOption('m');
-  await page
-    .getByRole('group', { name: 'Max Lease TTL Lease will' })
-    .getByLabel('Number of units')
-    .fill('10');
-  await page.getByRole('button', { name: 'Enable engine' }).click();
+  const basePage = new BasePage(page);
+
+  // enable PKI secrets engine
+  await basePage.enableEngine('PKI Certificates', 'pki-engine', {
+    defaultLeaseTtl: { unit: 5, option: 'm' },
+    maxLeaseTtl: { unit: 10, option: 'm' },
+  });
 
   // configure PKI Engine
   await expect(page.getByRole('heading', { name: 'pki-engine' })).toContainText('pki-engine');
