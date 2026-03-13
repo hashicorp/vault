@@ -25,7 +25,10 @@
             {{yield B.data to="popupMenu"}}
           </B.Td>
         {{else}}
-          <B.Td data-test-table-data={{column.key}} class="is-inline text-overflow-ellipsis">
+          <B.Td
+            data-test-table-data={{column.key}}
+            class="is-inline {{if (eq column.key 'description') '' 'text-overflow-ellipsis'}}"
+          >
             {{#if column.customTableItem}}
               {{yield B.data to="customTableItem"}}
             {{else}}
