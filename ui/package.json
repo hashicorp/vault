@@ -198,7 +198,7 @@
       "minimatch@>=9.0.0 <9.0.6": "9.0.9",
       "prismjs": "1.30.0",
       "qs": "6.14.1",
-      "rollup": "2.79.2",
+      "rollup": "2.80.0",
       "serialize-javascript": "3.1.0",
       "socket.io": "4.8.1",
       "underscore": "1.13.7"
