@@ -39,12 +39,12 @@ declare -i tries=0
 while [ "$(date +%s)" -lt "$end_time" ]; do
   # Test connection
   tries+=1
-  test_conn_out=$(ldapsearch -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -b "${DOMAIN_DN}" -D "cn=admin,${DOMAIN_DN}" -w "${LDAP_ADMIN_PW}" -s base 2>&1)
-  test_conn_res=$?
-  if [ "$test_conn_res" -eq 0 ]; then
+  if test_conn_out=$(ldapsearch -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -b "${DOMAIN_DN}" -D "cn=admin,${DOMAIN_DN}" -w "${LDAP_ADMIN_PW}" -s base 2>&1); then
+    test_conn_res=0
     break
   fi
 
+  test_conn_res=$?
   echo "Unable to connect to ldap://${LDAP_SERVER}:${LDAP_PORT} cn=admin,${DOMAIN_DN}, attempt: ${tries}, exit code: ${test_conn_res}, error: ${test_conn_out}, retrying..."
   sleep "$RETRY_INTERVAL"
 done
