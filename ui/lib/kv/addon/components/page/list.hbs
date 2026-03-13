@@ -12,15 +12,16 @@
   </:badges>
   <:actions>
     <ManageDropdown @model={{@backendModel}} @configRoute="configuration" as |D|>
-      <CodeGenerator::Policy::Flyout @onClose={{D.close}}>
-        <:customTrigger as |openFlyout|>
-          <D.Interactive @icon="shield-check" {{on "click" openFlyout}} data-test-popup-menu="Generate policy">
-            Generate policy
-          </D.Interactive>
-        </:customTrigger>
-      </CodeGenerator::Policy::Flyout>
+      {{#unless this.version.isCommunity}}
+        <D.Interactive
+          @icon="shield-check"
+          {{on "click" (fn (mut this.showPolicyFlyout) true)}}
+          data-test-popup-menu="Generate policy"
+        >
+          Generate policy
+        </D.Interactive>
+      {{/unless}}
     </ManageDropdown>
-
     <Hds::Button
       @text="Create secret"
       @icon="plus"
@@ -31,6 +32,14 @@
     />
   </:actions>
 </Page::Header>
+
+<CodeGenerator::Policy::Flyout @onClose={{(fn (mut this.showPolicyFlyout) false)}}>
+  <:customTrigger as |openFlyout|>
+    {{#if this.showPolicyFlyout}}
+      <div {{did-insert openFlyout}} />
+    {{/if}}
+  </:customTrigger>
+</CodeGenerator::Policy::Flyout>
 
 <KvTabsToolbar>
   <:tabs>
