@@ -992,9 +992,9 @@ func (c *PluginCatalog) Set(ctx context.Context, plugin pluginutil.SetPluginInpu
 	}
 
 	switch {
-	case strings.Contains(plugin.Name, ".."):
+	case consts.PathContainsParentReferences(plugin.Name):
 		fallthrough
-	case strings.Contains(plugin.Command, ".."):
+	case consts.PathContainsParentReferences(plugin.Command):
 		return consts.ErrPathContainsParentReferences
 	}
 
