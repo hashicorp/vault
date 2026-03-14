@@ -7,11 +7,12 @@
   <div class="section is-flex-v-centered-tablet is-flex-grow-1 is-fullwidth">
     <div class="columns is-centered is-gapless is-fullwidth">
       <Hds::ApplicationState @align="center" as |A|>
-        <A.Header @title="License required" @titleTag="h2" @icon="skip" class="align-items-end" />
+        <A.Header @title="License required" @titleTag="h1" @icon="skip" data-test-empty-state-title />
         <A.Body
           @text="Your Vault license has terminated and Vault is sealed. To unseal, add a current license to your configuration and restart Vault."
+          data-test-empty-state-message
         />
-        <A.Footer as |F|>
+        <A.Footer data-test-empty-state-actions as |F|>
           <F.LinkStandalone
             @icon="learn-link"
             @iconPosition="trailing"
