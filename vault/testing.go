@@ -993,36 +993,36 @@ func (c *TestClusterCore) NetworkLayer() cluster.NetworkLayer {
 
 func (c *TestCluster) Cleanup() {
 	c.cleanupOnce.Do(func() {
-	c.Logger.Info("cleaning up vault cluster")
-	if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {
-		tl.StopLogging()
-	}
+		c.Logger.Info("cleaning up vault cluster")
+		if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {
+			tl.StopLogging()
+		}
 
-	wg := &sync.WaitGroup{}
-	for _, core := range c.Cores {
-		wg.Add(1)
-		lc := core
+		wg := &sync.WaitGroup{}
+		for _, core := range c.Cores {
+			wg.Add(1)
+			lc := core
 
-		go func() {
-			defer wg.Done()
-			if err := lc.stop(); err != nil {
-				// Note that this log won't be seen if using TestLogger, due to
-				// the above call to StopLogging.
-				lc.Logger().Error("error during cleanup", "error", err)
-			}
-		}()
-	}
+			go func() {
+				defer wg.Done()
+				if err := lc.stop(); err != nil {
+					// Note that this log won't be seen if using TestLogger, due to
+					// the above call to StopLogging.
+					lc.Logger().Error("error during cleanup", "error", err)
+				}
+			}()
+		}
 
-	wg.Wait()
+		wg.Wait()
 
-	// Remove any temp dir that exists
-	if c.TempDir != "" {
-		os.RemoveAll(c.TempDir)
-	}
+		// Remove any temp dir that exists
+		if c.TempDir != "" {
+			os.RemoveAll(c.TempDir)
+		}
 
-	if c.CleanupFunc != nil {
-		c.CleanupFunc()
-	}
+		if c.CleanupFunc != nil {
+			c.CleanupFunc()
+		}
 	})
 }
 
