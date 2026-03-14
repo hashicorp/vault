@@ -70,4 +70,33 @@ module('Unit | Utility | paginate-list', function (hooks) {
     const expected = [18, 19];
     assert.deepEqual(paginatedData, expected, 'returns correct items for last page');
   });
+
+  test('filteredTotal should reflect full filtered dataset, not page slice', function (assert) {
+    const data = Array.from({ length: 120 }, (_, i) => `item-${i}`);
+
+    const result = paginate(data, {
+      page: 1,
+      pageSize: 100,
+      filter: 'item-1',
+    });
+
+    // Count actual matches manually
+    const expectedFilteredCount = data.filter((item) => item.toLowerCase().includes('item-1')).length;
+
+    // total should always reflect full dataset
+    assert.strictEqual(result.meta.total, expectedFilteredCount, 'total reflects full dataset size');
+
+    assert.strictEqual(
+      result.meta.filteredTotal,
+      result.length,
+      'filteredTotal reflects full filtered dataset size'
+    );
+
+    const expectedLastPage = Math.ceil(expectedFilteredCount / 100);
+    assert.strictEqual(
+      result.meta.lastPage,
+      expectedLastPage,
+      'lastPage is calculated from full filtered dataset'
+    );
+  });
 });
