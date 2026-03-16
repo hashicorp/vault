@@ -4,10 +4,13 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { BasePage } from '../../pages/base';
 
 test('keymgmt workflow', async ({ page }) => {
+  const basePage = new BasePage(page);
+
   await test.step('mock the distribution response', async () => {
-    await page.route('**/v1/keymgmt-builtin/kms/test-provider/key/test-key', async (route) => {
+    await page.route('**/v1/keymgmt-test/kms/test-provider/key/test-key', async (route) => {
       if (route.request().method() === 'PUT') {
         await route.fulfill({
           status: 200,
@@ -19,21 +22,20 @@ test('keymgmt workflow', async ({ page }) => {
     });
   });
 
-  await page.goto('dashboard');
+  await test.step('enable Key Management secrets engine mount', async () => {
+    await basePage.enableEngine('Key Management', 'keymgmt-test', { skipEnable: true });
 
-  await test.step('enable Key Management secrets engine', async () => {
-    await page.getByRole('link', { name: 'Secrets', exact: true }).click();
-    await page.getByRole('link', { name: 'Enable new engine' }).click();
-    await page.getByLabel('Key Management - enabled').click();
-    await page.getByRole('textbox', { name: 'Path' }).fill('keymgmt-builtin');
-    await page.getByRole('button', { name: 'Method Options' }).click();
-    await page.getByRole('textbox', { name: 'Description' }).fill('This is a keymgmt mount.');
-    await page.getByRole('checkbox', { name: 'Local' }).check();
+    await expect(page.getByText('Built-in plugin Preregistered')).toBeVisible();
+    await expect(page.getByText('External plugin External')).toBeVisible();
+    await expect(page.getByText('Plugin version Required')).not.toBeVisible();
+
     await page.getByRole('button', { name: 'Enable engine' }).click();
+  });
 
+  await test.step('Key Management secrets engine mount saved successfully', async () => {
     await expect(page.getByText('Success', { exact: true })).toBeVisible();
     await expect(
-      page.getByText('Successfully mounted the keymgmt secrets engine at keymgmt-builtin')
+      page.getByText('Successfully mounted the keymgmt secrets engine at keymgmt-test')
     ).toBeVisible();
     await page.getByRole('button', { name: 'Dismiss' }).click();
   });

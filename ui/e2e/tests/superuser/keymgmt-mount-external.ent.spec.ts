@@ -4,6 +4,7 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { BasePage } from '../../pages/base';
 
 const PINNED_PLUGIN_DATA = {
   data: {
@@ -60,6 +61,8 @@ const PLUGIN_CATALOG_DATA = {
 };
 
 test('mount external keymgmt workflow', async ({ page }) => {
+  const basePage = new BasePage(page);
+
   await test.step('mock the keymgmt pinned version response', async () => {
     await page.route('**v1/sys/plugins/pins/secret/vault-plugin-secrets-keymgmt', async (route) => {
       if (route.request().method() === 'GET') {
@@ -91,21 +94,20 @@ test('mount external keymgmt workflow', async ({ page }) => {
   await page.goto('dashboard');
 
   await test.step('navigate to enable Key Management engine', async () => {
-    await page.getByRole('link', { name: 'Secrets', exact: true }).click();
-    await page.getByRole('link', { name: 'Enable new engine' }).click();
-    await page.getByLabel('Key Management - enabled').click();
-    await page.getByRole('textbox', { name: 'Path' }).fill('keymgmt-external');
+    await basePage.enableEngine('Key Management', 'keymgmt-external', {
+      external: true,
+      pluginVersion: 'v0.17.0+ent',
+      skipEnable: true,
+    });
   });
 
   await test.step('verify builtin and external plugin type options are visible', async () => {
     await expect(page.getByText('Built-in plugin Preregistered')).toBeVisible();
     await expect(page.getByText('External plugin External')).toBeVisible();
-    await expect(page.getByText('Plugin version Required')).not.toBeVisible();
+    await expect(page.getByText('Plugin version Required')).toBeVisible();
   });
 
   await test.step('selecting external plugin type shows plugin version dropdown', async () => {
-    await page.locator('label:nth-child(2) > .hds-form-radio-card__control-wrapper').click();
-    await expect(page.getByText('Plugin version Required')).toBeVisible();
     await expect(page.getByLabel('Plugin version Required')).toContainText(
       'v0.17.0+ent (pinned) v0.16.0+ent v0.18.0+ent'
     );
