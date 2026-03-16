@@ -110,6 +110,10 @@ func (c *Core) GetCurrentWALHeader() string {
 	return ""
 }
 
+func (c *Core) IsReplicated(secondaryID, namespacePath, mountPathRelative string) bool {
+	return false
+}
+
 func (c *Core) SecretsSyncLicensedActivated() bool { return false }
 
 func (c *Core) IsMultisealEnabled() bool { return false }
