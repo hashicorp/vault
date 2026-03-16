@@ -37,11 +37,10 @@
         <FormFieldGroups @model={{@model.form}} @groupName="formFieldGroups" @modelValidations={{this.modelValidations}} />
       </div>
     {{else}}
-      <EmptyState
-        class="is-shadowless has-top-margin-l"
-        @title="Choose an option"
-        @message="Pick an option above to see available configuration options"
-      />
+      <Hds::ApplicationState class="top-padding-32 bottom-padding-32 is-marginless" as |A|>
+        <A.Header @title="Choose an option" @titleTag="h2" data-test-empty-state-title />
+        <A.Body @text="Pick an option above to see available configuration options" data-test-empty-state-message />
+      </Hds::ApplicationState>
     {{/if}}
   </div>
 

@@ -622,16 +622,14 @@ module('Acceptance | pki workflow', function (hooks) {
       await login(this.mixedConfigCapabilities);
       await visit(`/vault/secrets-engines/${this.mountPath}/pki/configuration/edit`);
       assert
-        .dom(`${PKI_CONFIG_EDIT.configEditSection} [data-test-component="empty-state"]`)
-        .hasText(
-          `You do not have permission to set this mount's the cluster config Ask your administrator if you think you should have access to: POST /${this.mountPath}/config/cluster`
-        );
+        .dom(`${PKI_CONFIG_EDIT.configEditSection} ${GENERAL.emptyStateTitle}`)
+        .hasText("You do not have permission to set this mount's the cluster config");
       assert.dom(PKI_CONFIG_EDIT.acmeEditSection).exists();
       assert.dom(PKI_CONFIG_EDIT.urlsEditSection).exists();
       assert.dom(PKI_CONFIG_EDIT.crlEditSection).exists();
-      assert.dom(`${PKI_CONFIG_EDIT.acmeEditSection} [data-test-component="empty-state"]`).doesNotExist();
-      assert.dom(`${PKI_CONFIG_EDIT.urlsEditSection} [data-test-component="empty-state"]`).doesNotExist();
-      assert.dom(`${PKI_CONFIG_EDIT.crlEditSection} [data-test-component="empty-state"]`).doesNotExist();
+      assert.dom(`${PKI_CONFIG_EDIT.acmeEditSection} ${GENERAL.emptyStateTitle}`).doesNotExist();
+      assert.dom(`${PKI_CONFIG_EDIT.urlsEditSection} ${GENERAL.emptyStateTitle}`).doesNotExist();
+      assert.dom(`${PKI_CONFIG_EDIT.crlEditSection} ${GENERAL.emptyStateTitle}`).doesNotExist();
       await click(PKI_CONFIG_EDIT.crlToggleInput('expiry'));
       await click(PKI_CONFIG_EDIT.saveButton);
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/configuration`);

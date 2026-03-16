@@ -29,5 +29,8 @@
     @onChange={{this.setPolicyType}}
     @noDefault={{true}}
   />
-  <EmptyState @title="No policy type selected" @message="Select a policy type to continue creating." />
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No policy type selected" @titleTag="h2" data-test-empty-state-title />
+    <A.Body @text="Select a policy type to continue creating." data-test-empty-state-message />
+  </Hds::ApplicationState>
 {{/if}}

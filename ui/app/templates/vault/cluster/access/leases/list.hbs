@@ -96,8 +96,12 @@
       <span class="has-text-weight-semibold">{{or item.keyWithoutParent item.id}}</span>
     </LinkTo>
   {{else}}
-    <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-      <A.Header @title="There are no leases matching &quot;{{this.filter}}&quot;" @titleTag="h2" />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header
+        @title="There are no leases matching &quot;{{this.filter}}&quot;"
+        @titleTag="h2"
+        data-test-empty-state-title
+      />
     </Hds::ApplicationState>
   {{/each}}
   {{#unless this.filter}}
@@ -111,7 +115,7 @@
     />
   {{/unless}}
 {{else}}
-  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header @title={{this.emptyTitle}} @titleTag="h2" />
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title={{this.emptyTitle}} @titleTag="h2" data-test-empty-state-title />
   </Hds::ApplicationState>
 {{/if}}

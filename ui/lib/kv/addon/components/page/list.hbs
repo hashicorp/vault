@@ -184,13 +184,17 @@
     />
   {{else}}
     {{#if @filterValue}}
-      <EmptyState @title='There are no secrets matching "{{@filterValue}}".' />
+      <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+        <A.Header @title='There are no secrets matching "{{@filterValue}}".' @titleTag="h2" data-test-empty-state-title />
+      </Hds::ApplicationState>
     {{else}}
-      <EmptyState
-        data-test-secret-list-empty-state
-        @title="No secrets yet"
-        @message="When created, secrets will be listed here. Create a secret to get started."
-      />
+      <Hds::ApplicationState class="top-padding-32 is-marginless" data-test-secret-list-empty-state as |A|>
+        <A.Header @title="No secrets yet" @titleTag="h2" data-test-empty-state-title />
+        <A.Body
+          @text="When created, secrets will be listed here. Create a secret to get started."
+          data-test-empty-state-message
+        />
+      </Hds::ApplicationState>
     {{/if}}
   {{/if}}
 {{/if}}
