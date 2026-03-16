@@ -144,7 +144,7 @@ func (dc *DockerCluster) GetCACertPEMFile() string {
 
 func (dc *DockerCluster) Cleanup() {
 	dc.cleanupOnce.Do(func() {
-	dc.cleanup()
+		dc.cleanup()
 	})
 }
 
