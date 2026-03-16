@@ -37,6 +37,9 @@ export class BasePage {
     options?: {
       defaultLeaseTtl?: { unit: number; option: string };
       maxLeaseTtl?: { unit: number; option: string };
+      external?: boolean;
+      pluginVersion?: string;
+      skipEnable?: boolean;
     }
   ) {
     await this.page.goto('dashboard');
@@ -45,6 +48,12 @@ export class BasePage {
     // Click "Enable new engine"
     await this.page.getByRole('link', { name: 'Enable new engine' }).click();
     await this.page.getByRole('heading', { name: engineType }).click();
+
+    if (options?.external) {
+      // Prerequisite: mock plugin catalog endpoint in the test so the External plugin option is available.
+      await this.page.locator('label:nth-child(2) > .hds-form-radio-card__control-wrapper').click();
+      await this.page.getByLabel('Plugin version Required').selectOption(options.pluginVersion);
+    }
 
     if (options?.defaultLeaseTtl) {
       await this.page.locator('label').filter({ hasText: 'Default Lease TTL Vault will' }).click();
@@ -71,6 +80,8 @@ export class BasePage {
     await this.page.getByRole('textbox', { name: 'Path' }).fill(path);
 
     // Enable the engine
-    await this.page.getByRole('button', { name: 'Enable engine' }).click();
+    if (!options?.skipEnable) {
+      await this.page.getByRole('button', { name: 'Enable engine' }).click();
+    }
   }
 }

@@ -4,24 +4,18 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { BasePage } from '../../pages/base';
 
 test('kmip workflow', async ({ page }) => {
-  await page.goto('dashboard');
+  const basePage = new BasePage(page);
 
   await test.step('enable KMIP secrets engine', async () => {
-    await page.getByRole('link', { name: 'Secrets', exact: true }).click();
-    await page.getByRole('link', { name: 'Enable new engine' }).click();
-    await page.getByLabel('KMIP - enabled').click();
-    await page.getByRole('textbox', { name: 'Path' }).fill('kmip-builtin');
-    await page.getByRole('button', { name: 'Method Options' }).click();
-    await page.getByRole('textbox', { name: 'Description' }).fill('This is a kmip mount.');
-    await page.getByRole('checkbox', { name: 'Local' }).check();
-    await page.getByRole('button', { name: 'Enable engine' }).click();
+    await basePage.enableEngine('KMIP', 'kmip-test');
+  });
 
+  await test.step('KMIP secrets engine mount saved successfully', async () => {
     await expect(page.getByText('Success', { exact: true })).toBeVisible();
-    await expect(
-      page.getByText('Successfully mounted the kmip secrets engine at kmip-builtin')
-    ).toBeVisible();
+    await expect(page.getByText('Successfully mounted the kmip secrets engine at kmip-test')).toBeVisible();
     await page.getByRole('button', { name: 'Dismiss' }).click();
   });
 
@@ -123,7 +117,7 @@ test('kmip workflow', async ({ page }) => {
   });
 
   await test.step('delete scope', async () => {
-    await page.getByRole('link', { name: 'kmip-builtin' }).click();
+    await page.getByRole('link', { name: 'kmip-test' }).click();
     await page.getByRole('button', { name: 'More options' }).click();
     await page.getByRole('button', { name: 'Delete scope' }).click();
     await page.getByRole('button', { name: 'Confirm' }).click();
