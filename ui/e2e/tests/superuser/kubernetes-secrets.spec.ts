@@ -5,6 +5,7 @@
 
 import { test, expect } from '@playwright/test';
 import { BasePage } from '../../pages/base';
+import { ConfigurationSettingsPage } from '../../pages/configuration-settings';
 
 test('kubernetes secrets workflow', async ({ page }) => {
   const basePage = new BasePage(page);
@@ -49,29 +50,6 @@ test('kubernetes secrets workflow', async ({ page }) => {
     await expect(page.locator('section')).toContainText(
       'Generate credentials Quickly generate credentials by typing the role name. Type to find a role... Generate'
     );
-    await basePage.dismissFlashMessages();
-  });
-
-  await test.step('edit kubernetes configuration', async () => {
-    await page.getByRole('button', { name: 'Manage' }).click();
-    await page.getByRole('link', { name: 'Configure' }).click();
-    await page.getByRole('link', { name: 'Edit configuration' }).click();
-    await expect(page.getByRole('textbox', { name: 'Service account JWT' })).toBeEmpty();
-    await page.getByRole('textbox', { name: 'Kubernetes host' }).fill('https://127.0.0.1:8443');
-    await page.getByRole('textbox', { name: 'Kubernetes CA Certificate' }).fill('-----NEW CERT-----');
-    await page.getByRole('button', { name: 'Save' }).click();
-    await page.getByRole('button', { name: 'Confirm' }).click();
-    await expect(
-      page.locator('.info-table-row').filter({
-        hasText: 'Kubernetes host https://127.0.0.1:8443',
-      })
-    ).toBeVisible();
-    await expect(
-      page.locator('.info-table-row').filter({
-        hasText: 'Certificate PEM Format -----NEW CERT-----',
-      })
-    ).toBeVisible();
-    await page.getByRole('link', { name: 'Exit configuration' }).click();
     await basePage.dismissFlashMessages();
   });
 
@@ -205,5 +183,68 @@ test('kubernetes secrets workflow', async ({ page }) => {
     await expect(page.getByRole('paragraph')).toContainText(
       'This will generate credentials using the role test-role.'
     );
+  });
+  await test.step('clean up and disable engine', async () => {
+    await basePage.disableEngine('kubernetes');
+  });
+});
+
+test('kubernetes tune workflow', async ({ page }) => {
+  const basePage = new BasePage(page);
+  const configurationSettingsPage = new ConfigurationSettingsPage(page);
+
+  const path = 'kubernetes-tune';
+  const engineType = 'kubernetes';
+
+  await test.step('enable kubernetes secrets engine mount', async () => {
+    await basePage.enableEngine(engineType, path);
+  });
+
+  await test.step('navigate to configuration page from manage dropdown and ensure plugin settings tab is active', async () => {
+    await configurationSettingsPage.navigateToConfiguration(path);
+    await configurationSettingsPage.assertPluginSettingsTabActive(engineType);
+  });
+
+  await test.step('configure kubernetes plugin settings', async () => {
+    await page.locator('div').filter({ hasText: 'Manual configuration Generate' }).nth(4).click();
+    await page.getByRole('textbox', { name: 'Kubernetes host' }).fill('https://192.168.99.100:8443');
+    await page.getByRole('textbox', { name: 'Service account JWT' }).fill('test-jwt');
+    await page.getByRole('textbox', { name: 'Kubernetes CA Certificate' }).fill('-----CERTIFICATE-----');
+    await page.getByRole('button', { name: 'Save' }).click();
+  });
+
+  await test.step('ensure kubernetes plugin settings was saved', async () => {
+    await expect(page.locator('section')).toContainText('Kubernetes host https://192.168.99.100:8443');
+  });
+
+  await test.step('edit plugin settings configuration', async () => {
+    await page.getByRole('link', { name: 'Edit configuration' }).click();
+    await page.getByRole('textbox', { name: 'Kubernetes host' }).fill('https://192.168.99.100:8448');
+    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('button', { name: 'Confirm' }).click();
+    await expect(page.locator('section')).toContainText('Kubernetes host https://192.168.99.100:8448');
+  });
+
+  await test.step('navigate and verify general settings form', async () => {
+    await configurationSettingsPage.navigateToGeneralSettings(engineType);
+    await configurationSettingsPage.editAndVerifyGeneralSettings(path, engineType);
+    await page.getByRole('link', { name: 'Exit configuration' }).click();
+  });
+
+  await test.step('ensure that we navigate back to the kubernetes overview page when Exit configuration is clicked', async () => {
+    await expect(page.getByText(`Vault Secrets engines ${path} ${path} Kubernetes Manage`)).toBeVisible();
+  });
+
+  await test.step('verify unsaved changes modal works in general settings', async () => {
+    // Navigate back to general settings
+    await configurationSettingsPage.navigateToConfiguration(path);
+    await configurationSettingsPage.navigateToGeneralSettings(engineType);
+
+    // Test Unsaved changes modal
+    await configurationSettingsPage.verifyUnsavedChangesModalOnNavigateAway(path);
+  });
+
+  await test.step('clean up and disable engine', async () => {
+    await basePage.disableEngine(path);
   });
 });

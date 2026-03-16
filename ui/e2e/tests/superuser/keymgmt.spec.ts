@@ -5,6 +5,7 @@
 
 import { expect, test } from '@playwright/test';
 import { BasePage } from '../../pages/base';
+import { ConfigurationSettingsPage } from '../../pages/configuration-settings';
 
 test('keymgmt workflow', async ({ page }) => {
   const basePage = new BasePage(page);
@@ -84,5 +85,51 @@ test('keymgmt workflow', async ({ page }) => {
     await expect(page.getByText('Success', { exact: true })).toBeVisible();
     await expect(page.getByText('Successfully distributed key test-key to test-provider')).toBeVisible();
     await page.getByRole('button', { name: 'Dismiss' }).click();
+  });
+});
+
+test('keymgmt tune workflow', async ({ page }) => {
+  const basePage = new BasePage(page);
+  const configurationSettingsPage = new ConfigurationSettingsPage(page);
+
+  const path = 'keymgmt-tune';
+  const engineType = 'keymgmt';
+
+  await test.step('enable keymgmt secrets engine mount', async () => {
+    await basePage.enableEngine(engineType, path);
+  });
+
+  await test.step('navigate to configuration page from manage dropdown ', async () => {
+    await configurationSettingsPage.navigateToConfiguration(path);
+  });
+
+  // keymgmt does not have plugin settings, so we only need to test for general settings
+
+  await test.step('navigate and verify general settings form', async () => {
+    await configurationSettingsPage.navigateToGeneralSettings(engineType);
+    await configurationSettingsPage.editAndVerifyGeneralSettings(path, engineType);
+    await page.getByRole('link', { name: 'Exit configuration' }).click();
+  });
+
+  await test.step('ensure that we navigate back to the keymgmt overview page when Exit configuration is clicked', async () => {
+    await expect(
+      page
+        .locator('div')
+        .filter({ hasText: `${path} Manage Create provider` })
+        .nth(3)
+    ).toBeVisible();
+  });
+
+  await test.step('verify unsaved changes modal works in general settings', async () => {
+    // Navigate back to general settings
+    await configurationSettingsPage.navigateToConfiguration(path);
+    await configurationSettingsPage.navigateToGeneralSettings(engineType);
+
+    // Test Unsaved changes modal
+    await configurationSettingsPage.verifyUnsavedChangesModalOnNavigateAway(path);
+  });
+
+  await test.step('clean up and disable engine', async () => {
+    await basePage.disableEngine(path);
   });
 });

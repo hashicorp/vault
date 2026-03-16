@@ -4,6 +4,7 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { ConfigurationSettingsPage } from '../../pages/configuration-settings';
 
 const PINNED_PLUGIN_DATA = {
   data: {
@@ -100,6 +101,8 @@ const UPDATED_KEYMGMT_EXTERNAL_MOUNT_DATA = {
 };
 
 test('tune external keymgmt workflow', async ({ page }) => {
+  const configurationSettingsPage = new ConfigurationSettingsPage(page);
+
   await test.step('mock the keymgmt pinned version response', async () => {
     await page.route('**v1/sys/plugins/pins/secret/vault-plugin-secrets-keymgmt', async (route) => {
       if (route.request().method() === 'GET') {
@@ -142,7 +145,7 @@ test('tune external keymgmt workflow', async ({ page }) => {
     });
   });
 
-  await test.step('mock the initial keymgmt external tunde response', async () => {
+  await test.step('mock the initial keymgmt external tune response', async () => {
     await page.route('**/v1/sys/mounts/keymgmt-external/tune', async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
@@ -159,11 +162,10 @@ test('tune external keymgmt workflow', async ({ page }) => {
 
   await test.step("navigate to the external keymgmt mount's general settings page", async () => {
     await page.goto('secrets-engines/keymgmt-external/list');
-    await page.getByRole('button', { name: 'Manage' }).click();
-    await page.getByRole('link', { name: 'Configure' }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('keymgmt-external configuration');
-    await expect(page.getByRole('link', { name: 'General settings' })).toBeVisible();
-    await expect(page.getByRole('paragraph').nth(2)).toContainText('vault-plugin-secrets-keymgmt');
+    const path = 'keymgmt-external';
+    const engineType = 'vault-plugin-secrets-keymgmt';
+    await configurationSettingsPage.navigateToConfiguration(path);
+    await configurationSettingsPage.editAndVerifyGeneralSettings(path, engineType, true);
     await expect(page.getByRole('paragraph').nth(3)).toContainText('v0.17.0+ent (Pinned)');
   });
 

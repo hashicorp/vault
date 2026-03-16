@@ -5,6 +5,7 @@
 
 import { test, expect } from '@playwright/test';
 import { BasePage } from '../../pages/base';
+import { ConfigurationSettingsPage } from '../../pages/configuration-settings';
 
 test('kvv2 workflow', async ({ page }) => {
   const basePage = new BasePage(page);
@@ -133,4 +134,58 @@ test('kvv2 workflow', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click();
   await page.getByRole('link', { name: 'View policy' }).click();
   await expect(page.getByRole('heading', { name: 'foo-policy' })).toBeVisible();
+});
+
+test('kvv2 tune workflow', async ({ page }) => {
+  const basePage = new BasePage(page);
+  const configurationSettingsPage = new ConfigurationSettingsPage(page);
+
+  const path = 'kv-tune';
+  const engineType = 'kv';
+
+  await test.step('enable kvv2 secrets engine mount', async () => {
+    await basePage.enableEngine(engineType, path);
+  });
+
+  await test.step('navigate to configuration page from manage dropdown and ensure plugin settings tab is active', async () => {
+    await configurationSettingsPage.navigateToConfiguration(path);
+    await configurationSettingsPage.assertPluginSettingsTabActive(engineType);
+  });
+
+  await test.step('edit plugin settings configuration', async () => {
+    await page.getByRole('link', { name: 'Edit configuration' }).click();
+    await page.getByRole('link', { name: 'Edit configuration' }).click();
+    await page.locator('#max_versions').fill('2');
+    await page.locator('#label-cas_required').check();
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('Require check and set Yes')).toBeVisible();
+  });
+
+  await test.step('navigate and verify general settings form', async () => {
+    await configurationSettingsPage.navigateToGeneralSettings(engineType);
+    await configurationSettingsPage.editAndVerifyGeneralSettings(path, engineType);
+    await page.getByRole('link', { name: 'Exit configuration' }).click();
+  });
+
+  await test.step('ensure that we navigate back to the kv overview page when Exit configuration is clicked', async () => {
+    await expect(
+      page
+        .locator('div')
+        .filter({ hasText: `${path} version 2 KV Manage` })
+        .nth(3)
+    ).toBeVisible();
+  });
+
+  await test.step('verify unsaved changes modal works in general settings', async () => {
+    // Navigate back to general settings
+    await configurationSettingsPage.navigateToConfiguration(path);
+    await configurationSettingsPage.navigateToGeneralSettings(engineType);
+
+    // Test Unsaved changes modal
+    await configurationSettingsPage.verifyUnsavedChangesModalOnNavigateAway(path);
+  });
+
+  await test.step('clean up and disable engine', async () => {
+    await basePage.disableEngine(path);
+  });
 });

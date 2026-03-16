@@ -4,6 +4,7 @@
  */
 
 import { Page } from '@playwright/test';
+import { findEngineDisplayName } from './configuration-settings';
 
 export class BasePage {
   constructor(protected page: Page) {}
@@ -23,6 +24,16 @@ export class BasePage {
     if (await skipButton.isVisible()) {
       await skipButton.click();
     }
+  }
+
+  async disableEngine(path: string) {
+    await this.page.goto('secrets-engines');
+    await this.page
+      .getByRole('row', { name: `Type of backend ${path}` })
+      .getByLabel('supported secrets engine menu')
+      .click();
+    await this.page.getByRole('button', { name: 'Delete' }).click();
+    await this.page.getByRole('button', { name: 'Confirm' }).click();
   }
 
   /**
@@ -47,7 +58,7 @@ export class BasePage {
 
     // Click "Enable new engine"
     await this.page.getByRole('link', { name: 'Enable new engine' }).click();
-    await this.page.getByRole('heading', { name: engineType }).click();
+    await this.page.getByRole('heading', { name: findEngineDisplayName(engineType) }).click();
 
     if (options?.external) {
       // Prerequisite: mock plugin catalog endpoint in the test so the External plugin option is available.
