@@ -139,22 +139,33 @@ func isIPInCIDRList(cidrList []string, ip net.IP) bool {
 	return false
 }
 
-func isDisallowedACMEValidationIP(config *acmeConfigEntry, ip net.IP) bool {
+func isValidChallengeIP(config *acmeConfigEntry, ip net.IP) bool {
 	if ip == nil {
+		return false
+	}
+
+	// Check excluded list first - it takes precedence
+	if isIPInCIDRList(config.ChallengeExcludedIPRanges, ip) {
+		return false
+	}
+
+	// Check permitted list - if IP is in permitted list, allow it
+	if isIPInCIDRList(config.ChallengePermittedIPRanges, ip) {
 		return true
 	}
 
-	if isIPInCIDRList(config.AllowedCIDRList, ip) {
+	// If permitted list is configured but IP is not in it, reject it
+	if len(config.ChallengePermittedIPRanges) > 0 {
 		return false
 	}
 
 	// Vault is often deployed on private networks, so avoid a blanket private
 	// range denylist here and instead reject obviously unsafe targets.
 	if ip.IsLoopback() || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-		return true
+		return false
 	}
 
-	return !ip.IsGlobalUnicast()
+	return ip.IsGlobalUnicast()
 }
 
 func dialACMEValidationTarget(ctx context.Context, config *acmeConfigEntry, dialer *net.Dialer, network string, address string) (net.Conn, error) {
@@ -164,7 +175,7 @@ func dialACMEValidationTarget(ctx context.Context, config *acmeConfigEntry, dial
 	}
 
 	if ip := net.ParseIP(host); ip != nil {
-		if isDisallowedACMEValidationIP(config, ip) {
+		if !isValidChallengeIP(config, ip) {
 			return nil, fmt.Errorf("%w: validation target resolved to a disallowed ip range", ErrRejectedIdentifier)
 		}
 
@@ -183,7 +194,7 @@ func dialACMEValidationTarget(ctx context.Context, config *acmeConfigEntry, dial
 	var lastErr error
 	var foundAllowed bool
 	for _, candidate := range ips {
-		if isDisallowedACMEValidationIP(config, candidate.IP) {
+		if !isValidChallengeIP(config, candidate.IP) {
 			continue
 		}
 
