@@ -21,6 +21,10 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// ErrNoAliasFound is returned in some code paths to avoid returning nil, nil when an entity
+// is not found in memdb, and should be preferred in new code.
+var ErrNoAliasFound = errors.New("no alias found")
+
 // aliasPaths returns the API endpoints to operate on aliases.
 // Following are the paths supported:
 // entity-alias - To register/modify an alias
