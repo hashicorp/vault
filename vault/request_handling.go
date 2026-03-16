@@ -350,10 +350,16 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	if secondEntity != nil {
 		c.logger.Debug("building separate ACL for second entity", "entity_id", secondEntity.ID)
 		secondEntityPolicyNames = make(map[string][]string)
-		_, secondEntityIdentityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, secondEntity.ID, false)
+		secondEntityIdentityPolicies, err := c.fetchCeilingPolicies(ctx, secondEntity)
 		if err != nil {
-			c.logger.Error("failed to fetch second entity policies", "error", err)
+			return nil, nil, nil, nil, err
+		}
+		allowOnly, err := c.allPoliciesAllowOnly(ctx, secondEntityIdentityPolicies)
+		if err != nil {
 			return nil, nil, nil, nil, ErrInternalError
+		}
+		if !allowOnly {
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
 		// Store second entity policies separately - do NOT merge with primary entity's policies
 		for nsID, nsPolicies := range secondEntityIdentityPolicies {
@@ -401,7 +407,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, ErrInternalError
 	}
 
-	if secondEntity != nil && len(secondEntityPolicyNames) > 0 {
+	if secondEntity != nil {
 		newAcl, err := c.performSecondaryEntityTokenChecks(tokenCtx, acl, secondEntity, secondEntityPolicyNames)
 		if err != nil {
 			return nil, nil, nil, nil, err
@@ -2979,4 +2985,70 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	// In this case, the server side consistent token cannot be used on this node. We return the appropriate
 	// status code.
 	return "", logical.ErrMissingRequiredState
+}
+
+// allPoliciesAllowOnly is a helper function that checks if all policies in
+// a given set have only "allow" capabilities, and not "deny" or "sudo".
+//
+// Example of allow-only policy:
+//
+//	path "secret/data/team/public/*" {
+//	  capabilities = ["read"]
+//	}
+//
+// Example of a policy that is not allow-only:
+//
+//	path "secret/data/team/*" {
+//	  capabilities = ["read"]
+//	}
+//
+//	path "secret/data/team/private/*" {
+//	  capabilities = ["deny"]
+//	}
+func (c *Core) allPoliciesAllowOnly(ctx context.Context, policyNamesByNamespace map[string][]string) (bool, error) {
+	for nsID, policyNames := range policyNamesByNamespace {
+		policyNS, err := NamespaceByID(ctx, nsID, c)
+		if err != nil {
+			return false, err
+		}
+		if policyNS == nil {
+			return false, namespace.ErrNoNamespace
+		}
+
+		policyCtx := namespace.ContextWithNamespace(ctx, policyNS)
+		for _, policyName := range policyNames {
+			policy, err := c.policyStore.GetPolicy(policyCtx, policyName, PolicyTypeACL)
+			if err != nil {
+				return false, err
+			}
+			if policy == nil {
+				return false, fmt.Errorf("policy %q not found in namespace %q", policyName, policyNS.Path)
+			}
+			if !policyIsAllowOnly(policy) {
+				return false, nil
+			}
+		}
+	}
+
+	return true, nil
+}
+
+// policyIsAllowOnly is a helper function that checks if a policy has only "allow" capabilities, and not "deny" or "sudo".
+func policyIsAllowOnly(policy *Policy) bool {
+	if policy == nil || policy.Name == "root" {
+		return false
+	}
+
+	for _, pathRules := range policy.Paths {
+		if pathRules == nil || pathRules.Permissions == nil {
+			continue
+		}
+
+		capabilities := pathRules.Permissions.CapabilitiesBitmap
+		if capabilities&DenyCapabilityInt != 0 || capabilities&SudoCapabilityInt != 0 {
+			return false
+		}
+	}
+
+	return true
 }

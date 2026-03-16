@@ -40,3 +40,7 @@ func getEnterpriseTokenAuthorizationDetails(_ map[string]interface{}) []logical.
 func (c *Core) performSecondaryEntityTokenChecks(_ context.Context, _ *ACL, _ *identity.Entity, _ map[string][]string) (*ACL, error) {
 	return nil, errors.New("not implemented")
 }
+
+func (c *Core) fetchCeilingPolicies(ctx context.Context, entity *identity.Entity) (map[string][]string, error) {
+	return nil, errors.New("not implemented")
+}
