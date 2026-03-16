@@ -279,7 +279,7 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name
 		return nil, err
 	}
 
-	if err := i.scimResourceCheck(ctx, &identity.Alias{ScimClientID: scimClientID}, "", true); err != nil {
+	if err := i.scimResourceCheck(ctx, &identity.Alias{ScimClientID: scimClientID}, "", true, nil); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrPermissionDenied
 	}
 	var entity *identity.Entity
@@ -373,7 +373,23 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 		return nil, nil
 	}
 
-	if err := i.scimResourceCheck(ctx, alias, alias.ScimClientID, false); err != nil {
+	// Build the list of fields being modified by this request.
+	var modifiedFields []string
+	if name != alias.Name {
+		modifiedFields = append(modifiedFields, "name")
+	}
+	if mountAccessor != alias.MountAccessor {
+		modifiedFields = append(modifiedFields, "mount_accessor")
+	}
+	if canonicalID != "" && canonicalID != alias.CanonicalID {
+		modifiedFields = append(modifiedFields, "canonical_id")
+	}
+	if !strutil.EqualStringMaps(customMetadata, alias.CustomMetadata) {
+		modifiedFields = append(modifiedFields, "custom_metadata")
+	}
+
+	// Check that only non-SCIM-managed fields are being modified via the API.
+	if err := i.scimResourceCheck(ctx, alias, alias.ScimClientID, false, modifiedFields); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrPermissionDenied
 	}
 	alias.LastUpdateTime = timestamppb.Now()
