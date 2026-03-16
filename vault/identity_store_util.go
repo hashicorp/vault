@@ -1058,6 +1058,8 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 	alias.MountType = mountValidationResp.MountType
 	alias.Local = lAlias.Local
 	alias.CustomMetadata = lAlias.CustomMetadata
+	alias.Issuer = lAlias.Issuer
+	alias.ExternalID = lAlias.ExternalID
 
 	if err := i.sanitizeAlias(ctx, alias); err != nil {
 		return nil, err

@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -77,6 +78,14 @@ This field is deprecated, use canonical_id.`,
 				"custom_metadata": {
 					Type:        framework.TypeKVPairs,
 					Description: "User provided key-value pairs",
+				},
+				"external_id": {
+					Type:        framework.TypeString,
+					Description: "Unique external identifier from external IdP.",
+				},
+				"issuer": {
+					Type:        framework.TypeString,
+					Description: "Issuer name associated with this alias.",
 				},
 			},
 
@@ -151,6 +160,14 @@ This field is deprecated, use canonical_id.`,
 			Type:        framework.TypeKVPairs,
 			Description: "User provided key-value pairs",
 		},
+		"external_id": {
+			Type:        framework.TypeString,
+			Description: "Unique external identifier from external IdP.",
+		},
+		"issuer": {
+			Type:        framework.TypeString,
+			Description: "Issuer name associated with this alias.",
+		},
 	}
 }
 
@@ -194,6 +211,12 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 			}
 		}
 
+		// Get external_id if provided
+		externalID := d.Get("external_id").(string)
+
+		// Get issuer if provided
+		issuer := d.Get("issuer").(string)
+
 		i.lock.Lock()
 		defer i.lock.Unlock()
 
@@ -225,16 +248,24 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 					}
 					name = alias.Name
 					mountAccessor = alias.MountAccessor
+					// Issuer can't be modified after initial creation
+					issuer = alias.Issuer
+					// ExternalID can't be modified after initial creation
+					externalID = alias.ExternalID
 				case mountAccessor == "":
 					// No change to mount accessor
 					mountAccessor = alias.MountAccessor
 				case name == "":
 					// No change to mount name
 					name = alias.Name
+				case externalID == "":
+					externalID = alias.ExternalID
+				case issuer == "":
+					issuer = alias.Issuer
 				default:
 					// mountAccessor, name and customMetadata  provided
 				}
-				return i.handleAliasUpdate(ctx, canonicalID, name, mountAccessor, alias, customMetadata)
+				return i.handleAliasUpdate(ctx, canonicalID, name, mountAccessor, externalID, issuer, alias, customMetadata)
 			}
 		}
 
@@ -254,26 +285,33 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 		localMount := mountEntry.Local
 
 		// Look up the alias by factors; if it's found it's an update
-		return i.handleAliasCreateUpdateCommon(ctx, ns, mountAccessor, name, canonicalID, customMetadata, localMount, "")
+		return i.handleAliasCreateUpdateCommon(ctx, ns, mountAccessor, name, canonicalID, externalID, issuer, customMetadata, localMount, "")
 	}
 }
 
-func (i *IdentityStore) handleAliasCreateUpdateCommon(ctx context.Context, ns *namespace.Namespace, mountAccessor string, name string, canonicalID string, customMetadata map[string]string, localMount bool, scimClientID string) (*logical.Response, error) {
+func (i *IdentityStore) handleAliasCreateUpdateCommon(ctx context.Context, ns *namespace.Namespace, mountAccessor string, name string, canonicalID string, externalID string, issuer string, customMetadata map[string]string, localMount bool, scimClientID string) (*logical.Response, error) {
 	alias, err := i.MemDBAliasByFactors(mountAccessor, name, true, false)
 	if err != nil {
 		return nil, err
 	}
+
 	if alias != nil {
 		if alias.NamespaceID != ns.ID {
 			return logical.ErrorResponse("cannot modify aliases across namespaces"), logical.ErrPermissionDenied
 		}
-		return i.handleAliasUpdate(ctx, canonicalID, name, mountAccessor, alias, customMetadata)
+		return i.handleAliasUpdate(ctx, canonicalID, name, mountAccessor, externalID, issuer, alias, customMetadata)
 	}
 	// At this point we know it's a new creation request
-	return i.handleAliasCreate(ctx, canonicalID, name, mountAccessor, localMount, customMetadata, scimClientID)
+	return i.handleAliasCreate(ctx, canonicalID, name, mountAccessor, externalID, issuer, localMount, customMetadata, scimClientID)
 }
 
-func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name, mountAccessor string, local bool, customMetadata map[string]string, scimClientID string) (*logical.Response, error) {
+// doesAliasHaveExternalIdIssuerMountAccessor returns true if the given alias has
+// the given externalId, issuer,and mount accessor
+func (i *IdentityStore) doesAliasHaveExternalIdIssuerMountAccessor(alias *identity.Alias, externalId, issuer, mountAccessor string) bool {
+	return alias.MountAccessor == mountAccessor && alias.ExternalID == externalId && alias.Issuer == issuer
+}
+
+func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name, mountAccessor, externalID, issuer string, local bool, customMetadata map[string]string, scimClientID string) (*logical.Response, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -301,6 +339,17 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name
 		}
 	}
 
+	// Validate that an alias doesn't already exist with passed in issuer and external_id
+	if issuer != "" && externalID != "" {
+		existingAlias, err := i.MemDBAliasByIssuerAndExternalId(issuer, externalID, false)
+		if err != nil && !errors.Is(err, ErrNoAliasFound) {
+			return nil, err
+		}
+		if existingAlias != nil {
+			return logical.ErrorResponse("alias already exists for issuer and external_id"), nil
+		}
+	}
+
 	persist := false
 	// If the request was not forwarded, then this is the active node of the
 	// primary. Create the entity here itself.
@@ -314,12 +363,17 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name
 	}
 
 	for _, currentAlias := range entity.Aliases {
+		if i.doesAliasHaveExternalIdIssuerMountAccessor(currentAlias, externalID, issuer, mountAccessor) {
+			return logical.ErrorResponse("alias already exists for requested entity, external ID, and issuer"), nil
+		}
+
 		if currentAlias.MountAccessor == mountAccessor {
-			return logical.ErrorResponse("Alias already exists for requested entity and mount accessor"), nil
+			return logical.ErrorResponse("alias already exists for requested entity and mount accessor"), nil
 		}
 	}
 
 	var alias *identity.Alias
+
 	switch local {
 	case true:
 		alias, err = i.processLocalAlias(ctx, &logical.Alias{
@@ -327,6 +381,8 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name
 			Name:           name,
 			Local:          local,
 			CustomMetadata: customMetadata,
+			Issuer:         issuer,
+			ExternalID:     externalID,
 		}, entity, false)
 		if err != nil {
 			return nil, err
@@ -338,6 +394,8 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name
 			CustomMetadata: customMetadata,
 			CanonicalID:    entity.ID,
 			ScimClientID:   scimClientID,
+			Issuer:         issuer,
+			ExternalID:     externalID,
 		}
 		err = i.sanitizeAlias(ctx, alias)
 		if err != nil {
@@ -362,10 +420,14 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name
 	}, nil
 }
 
-func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name, mountAccessor string, alias *identity.Alias, customMetadata map[string]string) (*logical.Response, error) {
+func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name, mountAccessor, externalID, issuer string, alias *identity.Alias, customMetadata map[string]string) (*logical.Response, error) {
+	// Fast return if nothing to be updated
 	if name == alias.Name &&
 		mountAccessor == alias.MountAccessor &&
-		(canonicalID == alias.CanonicalID || canonicalID == "") && (strutil.EqualStringMaps(customMetadata, alias.CustomMetadata)) {
+		(canonicalID == alias.CanonicalID || canonicalID == "") &&
+		(strutil.EqualStringMaps(customMetadata, alias.CustomMetadata)) &&
+		(externalID == alias.ExternalID) &&
+		(issuer == alias.Issuer) {
 		// Nothing to do; return nil to be idempotent
 		return nil, nil
 	}
@@ -391,14 +453,15 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 	if mountAccessor != alias.MountAccessor && (canonicalID == "" || canonicalID == alias.CanonicalID) {
 		for _, currentAlias := range currentEntity.Aliases {
 			if currentAlias.MountAccessor == mountAccessor {
-				return logical.ErrorResponse("Alias cannot be updated as the entity already has an alias for the given 'mount_accessor' "), nil
+				return logical.ErrorResponse("alias cannot be updated as the entity already has an alias for the given 'mount_accessor' "), nil
 			}
 		}
 	}
-	// If we're changing one or the other or both of these, make sure that
-	// there isn't a matching alias already, and make sure it's in the same
-	// namespace.
-	if name != alias.Name || mountAccessor != alias.MountAccessor || !strutil.EqualStringMaps(customMetadata, alias.CustomMetadata) {
+	// If we're changing these, make sure that there isn't a matching alias already,
+	// and make sure it's in the same namespace.
+	if name != alias.Name || mountAccessor != alias.MountAccessor ||
+		!strutil.EqualStringMaps(customMetadata, alias.CustomMetadata) ||
+		issuer != alias.Issuer || externalID != alias.ExternalID {
 		// Check here to see if such an alias already exists, if so bail
 		mountEntry := i.router.MatchingMountByAccessor(mountAccessor)
 		if mountEntry == nil {
@@ -416,6 +479,13 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 		// Bail unless it's just a case change
 		if existingAlias != nil && existingAlias.ID != alias.ID {
 			return logical.ErrorResponse("alias with combination of mount accessor and name already exists"), nil
+		}
+
+		// Bail if issuer and/or external_id differ. These fields are not to be changed after alias creation.
+		if existingAlias != nil {
+			if existingAlias.Issuer != issuer || existingAlias.ExternalID != externalID {
+				return logical.ErrorResponse("changes to issuer and/or external_id prohibited"), nil
+			}
 		}
 
 		// Update the values in the alias
@@ -450,7 +520,7 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 		// Check if the entity the alias is being updated to, already has an alias for the mount
 		for _, alias := range newEntity.Aliases {
 			if alias.MountAccessor == mountAccessor {
-				return logical.ErrorResponse("Alias cannot be updated as the given entity already has an alias for this mount "), nil
+				return logical.ErrorResponse("alias cannot be updated as the given entity already has an alias for this mount "), nil
 			}
 		}
 
@@ -484,6 +554,8 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 			Name:           name,
 			Local:          mountValidationResp.MountLocal,
 			CustomMetadata: customMetadata,
+			Issuer:         issuer,
+			ExternalID:     externalID,
 		}, newEntity, true)
 		if err != nil {
 			return nil, err
@@ -555,6 +627,8 @@ func (i *IdentityStore) handleAliasReadCommon(ctx context.Context, alias *identi
 	respData["merged_from_canonical_ids"] = alias.MergedFromCanonicalIDs
 	respData["namespace_id"] = alias.NamespaceID
 	respData["local"] = alias.Local
+	respData["issuer"] = alias.Issuer
+	respData["external_id"] = alias.ExternalID
 
 	if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 		respData["mount_path"] = mountValidationResp.MountPath

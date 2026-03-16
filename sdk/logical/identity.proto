@@ -61,6 +61,14 @@ message Alias {
   // created. If true, the alias will be stored in a location that are ignored
   // by the performance replication subsystem.
   bool local = 8;
+
+  // external_id is the unique external identifier for an entity managed via
+  // an external IdP. This field does not always map 1:1 to a claim external_id.
+  // This mapping is done via configuration.
+  string external_id = 9;
+
+  // issuer is the issuer claim for this alias
+  string issuer = 10;
 }
 
 message Group {

@@ -10,12 +10,14 @@ import (
 )
 
 const (
-	entitiesTable      = "entities"
-	entityAliasesTable = "entity_aliases"
-	groupsTable        = "groups"
-	groupAliasesTable  = "group_aliases"
-	oidcClientsTable   = "oidc_clients"
-	scimClientsTable   = "scim_clients"
+	entitiesTable              = "entities"
+	entityAliasesTable         = "entity_aliases"
+	groupsTable                = "groups"
+	groupAliasesTable          = "group_aliases"
+	oidcClientsTable           = "oidc_clients"
+	scimClientsTable           = "scim_clients"
+	factorsIndex               = "factors"
+	issuerAndExternalIdFactors = "issuer_externalid_factors"
 )
 
 func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
@@ -54,8 +56,8 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Field: "ID",
 				},
 			},
-			"factors": {
-				Name:   "factors",
+			factorsIndex: {
+				Name:   factorsIndex,
 				Unique: true,
 				Indexer: &memdb.CompoundIndex{
 					Indexes: []memdb.Indexer{
@@ -68,6 +70,20 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 						},
 					},
 				},
+			},
+			issuerAndExternalIdFactors: {
+				Name: issuerAndExternalIdFactors,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{
+							Field: "Issuer",
+						},
+						&memdb.StringFieldIndex{
+							Field: "ExternalID",
+						},
+					},
+				},
+				AllowMissing: true,
 			},
 			"namespace_id": {
 				Name: "namespace_id",
