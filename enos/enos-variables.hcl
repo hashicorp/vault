@@ -190,7 +190,7 @@ variable "vault_revision" {
 variable "vault_upgrade_initial_version" {
   description = "The Vault release to deploy before upgrading"
   type        = string
-  default     = "1.13.13"
+  default     = "1.21.4"
 }
 
 variable "verify_aws_secrets_engine" {
