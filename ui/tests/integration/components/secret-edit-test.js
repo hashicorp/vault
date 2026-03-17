@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, settled, waitFor } from '@ember/test-helpers';
 import { resolve } from 'rsvp';
 import { run } from '@ember/runloop';

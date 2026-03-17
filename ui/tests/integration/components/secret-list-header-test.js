@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { getContext, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';

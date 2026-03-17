@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import EmberObject from '@ember/object';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 

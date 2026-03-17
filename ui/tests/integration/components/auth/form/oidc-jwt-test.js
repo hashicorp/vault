@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { click, fillIn, find, render, settled, waitUntil } from '@ember/test-helpers';
 import { _cancelTimers as cancelTimers } from '@ember/runloop';
@@ -19,9 +19,9 @@ import { RESPONSE_STUBS } from 'vault/tests/helpers/auth/response-stubs';
 import { DOMAIN_PROVIDER_MAP, ERROR_JWT_LOGIN } from 'vault/utils/auth-form-helpers';
 import { dasherize } from '@ember/string';
 
-/* 
+/*
 The OIDC and JWT mounts call the same endpoint (see docs https://developer.hashicorp.com/vault/docs/auth/jwt )
-because of this the same component is used to render both method types. 
+because of this the same component is used to render both method types.
 The module name refers to the selected auth type and there is test coverage in each to cover
 1. auth url request (fetching role) is made when expected
 2. JWT token login flow
@@ -266,20 +266,20 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
     this.renderComponent = ({ yieldBlock = false } = {}) => {
       if (yieldBlock) {
         return render(hbs`
-          <Auth::Form::OidcJwt 
-            @authType={{this.authType}} 
+          <Auth::Form::OidcJwt
+            @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}
             @handleAuthResponse={{this.handleAuthResponse}}
           >
             <:advancedSettings>
               <label for="path">Mount path</label>
-              <input data-test-input="path" id="path" name="path" type="text" /> 
+              <input data-test-input="path" id="path" name="path" type="text" />
             </:advancedSettings>
           </Auth::Form::OidcJwt>`);
       }
       return render(hbs`
-        <Auth::Form::OidcJwt       
+        <Auth::Form::OidcJwt
         @authType={{this.authType}}
         @cluster={{this.cluster}}
         @onError={{this.onError}}
