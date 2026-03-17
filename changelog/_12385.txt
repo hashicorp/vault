@@ -1,0 +1,3 @@
+```release-note:improvement
+**Secrets Engines UI improvement**: Updated configuration views and added tune support for configurations across all compatible secrets engines. 
+```

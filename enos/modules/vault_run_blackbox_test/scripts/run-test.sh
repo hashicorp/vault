@@ -19,12 +19,28 @@ echo "Checking required dependencies..."
 
 # Check if Go is installed
 if ! command -v go &> /dev/null; then
-    fail "Go is not installed or not in PATH. Please install Go to run tests."
+    echo "ERROR: Go is not installed or not found in PATH."
+    echo ""
+    echo "To resolve this issue:"
+    echo "  • On a developer machine: Install Go from https://golang.org/dl/"
+    echo "  • In CI: Ensure the setup-go action is configured properly"
+    echo "  • If Go is installed elsewhere, add it to your PATH environment variable"
+    echo ""
+    fail "Go is required to run blackbox tests."
 fi
+
+echo "Go version: $(go version)"
 
 # Check if gotestsum is installed (required)
 if ! command -v gotestsum &> /dev/null; then
-    fail "gotestsum is not installed or not in PATH. Please install gotestsum: go install gotest.tools/gotestsum@latest"
+    echo "ERROR: gotestsum is not installed or not found in PATH."
+    echo ""
+    echo "To resolve this issue:"
+    echo "  • Run 'make tools' to install required development tools"
+    echo "  • Ensure GOPATH/bin is in your PATH environment variable"
+    echo "  • Or manually install: go install gotest.tools/gotestsum@v1.13.0"
+    echo ""
+    fail "gotestsum is required to run blackbox tests."
 fi
 
 # Check if jq is available (needed for parsing test matrix)

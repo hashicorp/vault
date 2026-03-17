@@ -113,7 +113,7 @@ export default class ClusterRoute extends Route {
       }
       return this.version.fetchFeatures();
     } else {
-      return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
+      return reject({ httpStatus: 404, path: params.cluster_name });
     }
   }
 

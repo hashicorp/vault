@@ -41,13 +41,17 @@ func SetupResolver(t *testing.T, domain string) *TestServer {
 }
 
 func SetupResolverOnNetwork(t *testing.T, domain string, network string) *TestServer {
+	return SetupResolverOnNetworkWithLogger(t, domain, network, hclog.NewNullLogger())
+}
+
+func SetupResolverOnNetworkWithLogger(t *testing.T, domain string, network string, logger hclog.Logger) *TestServer {
 	var ts TestServer
 	ts.t = t
 	ts.ctx = context.Background()
 	ts.domains = []string{domain}
 	ts.records = map[string]map[string][]string{}
 	ts.network = network
-	ts.log = hclog.L()
+	ts.log = logger
 
 	ts.setupRunner(domain, network)
 	ts.startContainer(network)
@@ -65,9 +69,9 @@ func (ts *TestServer) setupRunner(domain string, network string) {
 		NetworkName:   network,
 		Ports:         []string{"53/udp"},
 		// DNS container logging was disabled to reduce content within CI logs.
-		//LogConsumer: func(s string) {
-		//	ts.log.Info(s)
-		//},
+		LogConsumer: func(s string) {
+			ts.log.Trace(s)
+		},
 	})
 	require.NoError(ts.t, err)
 }

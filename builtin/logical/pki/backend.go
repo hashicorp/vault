@@ -312,10 +312,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.acmeState = NewACMEState()
 	b.certificateCounter = NewCertificateCounter(b.backendUUID)
 
-	if pkiCertCounterSysView, ok := conf.System.(logical.PkiCertificateCountSystemView); ok {
-		b.pkiCertificateCounter = pkiCertCounterSysView.GetPkiCertificateCounter()
+	if pkiCertCounterSysView, ok := conf.System.(logical.CertificateCountSystemView); ok {
+		b.pkiCertificateCounter = pkiCertCounterSysView.GetCertificateCounter()
 	} else {
-		b.pkiCertificateCounter = logical.NewNullPkiCertificateCounter()
+		b.pkiCertificateCounter = logical.NewNullCertificateCounter()
 	}
 
 	b.pkiObserver = observe.NewPkiCeObserver(b.Logger(), b)

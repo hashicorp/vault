@@ -70,9 +70,12 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		}
 
 		b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
-		if _, err = b.System().RegisterRotationJob(ctx, cfgReq); err != nil {
+		resp, err := b.System().RegisterRotationJobWithResponse(ctx, cfgReq)
+		if err != nil {
 			return logical.ErrorResponse("error registering rotation job: %s", err), nil
 		}
+
+		conf.SetRotationInfo(resp)
 	}
 
 	entry, err := logical.StorageEntryJSON("config", conf)
@@ -97,18 +100,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 
 	configData := map[string]interface{}{}
 	conf.PopulateAutomatedRotationData(configData)
-
-	if conf.HasNonzeroRotationValues() {
-		resp, err := b.System().GetRotationInformation(ctx, &rotation.RotationInfoRequest{ReqPath: req.Path})
-		if err != nil {
-			return nil, err
-		}
-		if resp != nil {
-			configData["expire_time"] = resp.NextVaultRotation.Unix()
-			configData["creation_time"] = resp.LastVaultRotation.Unix()
-			configData["ttl"] = int64(resp.TTL)
-		}
-	}
+	conf.PopulateRotationInfo(configData)
+	configData["ttl"] = conf.GetTTL()
 
 	return &logical.Response{
 		Data: configData,
@@ -150,4 +143,5 @@ func (b *backend) configEntry(ctx context.Context, s logical.Storage) (*config, 
 type config struct {
 	FailRotate bool
 	automatedrotationutil.AutomatedRotationParams
+	automatedrotationutil.RotationInfoResponseParams
 }

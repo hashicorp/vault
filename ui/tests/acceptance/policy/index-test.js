@@ -21,6 +21,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
 import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import localStorage from 'vault/lib/local-storage';
 
 const SELECT = {
   policyByName: (name) => `[data-test-policy-link="${name}"]`,
@@ -33,9 +34,11 @@ const SELECT = {
 module('Acceptance | policies/acl', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    return login();
+    await login();
+    // dismiss wizard
+    localStorage.setItem('dismissed-wizards', ['acl-policy']);
   });
 
   test('it lists default and root acls', async function (assert) {

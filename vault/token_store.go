@@ -1107,9 +1107,11 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 	}
 
 	switch entry.Type {
-	case logical.TokenTypeDefault, logical.TokenTypeService:
+	case logical.TokenTypeDefault, logical.TokenTypeService, logical.TokenTypeEnt:
 		// In case it was default, force to service
-		entry.Type = logical.TokenTypeService
+		if entry.Type == logical.TokenTypeDefault {
+			entry.Type = logical.TokenTypeService
+		}
 
 		// Generate an ID if necessary
 		userSelectedID := true
@@ -1126,7 +1128,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			}
 		}
 
-		if userSelectedID {
+		if userSelectedID && entry.Type != logical.TokenTypeEnt {
 			switch {
 			case strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix):
 				return fmt.Errorf("custom token ID cannot have the 'hvs.' prefix")
@@ -1151,7 +1153,10 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
 		}
 
-		if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix) || strings.HasPrefix(entry.ID, consts.LegacyServiceTokenPrefix) {
+		if tokenNS.ID != namespace.RootNamespaceID ||
+			strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix) ||
+			strings.HasPrefix(entry.ID, consts.LegacyServiceTokenPrefix) ||
+			strings.HasPrefix(entry.ID, consts.GetEnterpriseTokenPrefix()) {
 			if entry.CubbyholeID == "" {
 				cubbyholeID, err := base62.Random(TokenLength)
 				if err != nil {
@@ -1163,7 +1168,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 		// If the user didn't specifically pick the ID, e.g. because they were
 		// sudo/root, check for collision; otherwise trust the process
-		if userSelectedID {
+		if userSelectedID || entry.Type == logical.TokenTypeEnt {
 			exist, _ := ts.lookupInternal(ctx, entry.ID, false, true)
 			if exist != nil {
 				return fmt.Errorf("cannot create a token with a duplicate ID")
@@ -1636,7 +1641,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 		// If possible, always use the token's namespace. If it doesn't match
 		// the request namespace, ensure the request namespace is a child
 		_, nsID := namespace.SplitIDFromString(id)
-		if nsID != "" {
+		if nsID != "" || strings.HasPrefix(id, consts.GetEnterpriseTokenPrefix()) {
 			tokenNS, err := NamespaceByID(ctx, nsID, ts.core)
 			if err != nil {
 				return nil, fmt.Errorf("failed to look up namespace from the token: %w", err)
@@ -1751,6 +1756,11 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 		default:
 			return nil, errors.New("expiration manager is nil on tokenstore")
 		}
+	}
+
+	// don't check for lease
+	if entry.Type == logical.TokenTypeEnt {
+		return entry, nil
 	}
 
 	le, err := ts.expiration.FetchLeaseTimesByToken(ctx, entry)
@@ -2264,6 +2274,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			cubbyholeKeys, err := bview.List(quitCtx, "")
 			if err != nil {
 				return fmt.Errorf("failed to fetch cubbyhole storage keys: %w", err)
+			}
+
+			err = ts.handleTidyEnterpriseTokens(quitCtx, ns, tidyErrors)
+			if err != nil {
+				return err
 			}
 
 			var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
@@ -3321,6 +3336,9 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 }
 
 func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, data *framework.FieldData, id string) (*logical.Response, error) {
+	if IsEnterpriseToken(id) {
+		return logical.ErrorResponse("cannot revoke ent token"), nil
+	}
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
 		return nil, err
@@ -3365,6 +3383,10 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
+	if IsEnterpriseToken(id) {
+		return logical.ErrorResponse("enterprise token cannot be revoked"), nil
+	}
+
 	// Do a lookup. Among other things, that will ensure that this is either
 	// running in the same namespace or a parent.
 	te, err := ts.Lookup(ctx, id)
@@ -3402,7 +3424,9 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
-
+	if IsEnterpriseToken(id) {
+		id = getEnterpriseTokenId(req.EnterpriseTokenMetadata)
+	}
 	lock := locksutil.LockForKey(ts.tokenLocks, id)
 	lock.RLock()
 	defer lock.RUnlock()
@@ -3513,6 +3537,9 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 	id := data.Get("token").(string)
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+	}
+	if IsEnterpriseToken(id) {
+		return logical.ErrorResponse("enterprise tokens cannot be renewed"), nil
 	}
 	incrementRaw := data.Get("increment").(int)
 

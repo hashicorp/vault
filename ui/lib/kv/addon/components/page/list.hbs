@@ -11,29 +11,17 @@
     <Hds::Badge @text="version 2" data-test-badge />
   </:badges>
   <:actions>
-    <Hds::Dropdown as |D|>
-      <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
-      <CodeGenerator::Policy::Flyout @onClose={{D.close}}>
-        <:customTrigger as |openFlyout|>
-          <D.Interactive @icon="shield-check" {{on "click" openFlyout}} data-test-popup-menu="Generate policy">
-            Generate policy
-          </D.Interactive>
-        </:customTrigger>
-      </CodeGenerator::Policy::Flyout>
-      <D.Interactive
-        @icon="settings"
-        @route="configuration"
-        @model={{@backendModel.id}}
-        data-test-popup-menu="Configure"
-      >Configure</D.Interactive>
-      <D.Interactive
-        {{on "click" (fn (mut this.engineToDisable) @backendModel)}}
-        @color="critical"
-        @icon="trash"
-        data-test-popup-menu="Delete"
-      >Delete</D.Interactive>
-    </Hds::Dropdown>
-
+    <ManageDropdown @model={{@backendModel}} @configRoute="configuration" as |D|>
+      {{#unless this.version.isCommunity}}
+        <D.Interactive
+          @icon="shield-check"
+          {{on "click" (fn (mut this.showPolicyFlyout) true)}}
+          data-test-popup-menu="Generate policy"
+        >
+          Generate policy
+        </D.Interactive>
+      {{/unless}}
+    </ManageDropdown>
     <Hds::Button
       @text="Create secret"
       @icon="plus"
@@ -44,6 +32,14 @@
     />
   </:actions>
 </Page::Header>
+
+<CodeGenerator::Policy::Flyout @onClose={{(fn (mut this.showPolicyFlyout) false)}}>
+  <:customTrigger as |openFlyout|>
+    {{#if this.showPolicyFlyout}}
+      <div {{did-insert openFlyout}} />
+    {{/if}}
+  </:customTrigger>
+</CodeGenerator::Policy::Flyout>
 
 <KvTabsToolbar>
   <:tabs>
@@ -188,23 +184,17 @@
     />
   {{else}}
     {{#if @filterValue}}
-      <EmptyState @title='There are no secrets matching "{{@filterValue}}".' />
+      <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+        <A.Header @title='There are no secrets matching "{{@filterValue}}".' @titleTag="h2" data-test-empty-state-title />
+      </Hds::ApplicationState>
     {{else}}
-      <EmptyState
-        data-test-secret-list-empty-state
-        @title="No secrets yet"
-        @message="When created, secrets will be listed here. Create a secret to get started."
-      />
+      <Hds::ApplicationState class="top-padding-32 is-marginless" data-test-secret-list-empty-state as |A|>
+        <A.Header @title="No secrets yet" @titleTag="h2" data-test-empty-state-title />
+        <A.Body
+          @text="When created, secrets will be listed here. Create a secret to get started."
+          data-test-empty-state-message
+        />
+      </Hds::ApplicationState>
     {{/if}}
   {{/if}}
-{{/if}}
-
-{{#if this.engineToDisable}}
-  <ConfirmModal
-    @color="critical"
-    @confirmMessage="Any data in this engine will be permanently deleted."
-    @confirmTitle="Disable engine?"
-    @onClose={{fn (mut this.engineToDisable) null}}
-    @onConfirm={{perform this.disableEngine this.engineToDisable}}
-  />
 {{/if}}

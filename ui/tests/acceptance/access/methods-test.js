@@ -13,6 +13,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountAuthCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { sanitizePath } from 'core/utils/sanitize-path';
+import localStorage from 'vault/lib/local-storage';
 
 const { searchSelect } = GENERAL;
 
@@ -20,9 +21,11 @@ module('Acceptance | auth-methods list view', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    return login();
+    await login();
+    // dismiss wizard
+    localStorage.setItem('dismissed-wizards', ['auth-methods']);
   });
 
   test('it navigates to auth method', async function (assert) {

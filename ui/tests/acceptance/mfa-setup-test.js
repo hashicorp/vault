@@ -58,6 +58,12 @@ module('Acceptance | mfa-setup', function (hooks) {
     await click('[data-test-user-menu-item="mfa"]');
   });
 
+  test('it closes the dropdown after navigating', async function (assert) {
+    assert
+      .dom(GENERAL.button('user-menu-trigger'))
+      .hasAttribute('aria-expanded', 'false', 'dropdown closes after navigating to MFA');
+  });
+
   test('it should login through MFA and post to generate and be able to restart the setup', async function (assert) {
     assert.expect(5);
     // the network requests required in this test

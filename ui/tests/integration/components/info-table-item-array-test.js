@@ -39,7 +39,7 @@ const storeService = Service.extend({
           ]);
           break;
         default:
-          reject({ httpStatus: 404, message: 'not found' });
+          reject({ httpStatus: 404 });
           break;
       }
     });

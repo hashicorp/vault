@@ -101,10 +101,13 @@
             />
           {{/each}}
         {{else}}
-          <EmptyState
-            @title="You do not have permissions to set URLs."
-            @message="These are not required but will need to be configured later. You can do this via the CLI or by changing your permissions and returning to this form."
-          />
+          <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+            <A.Header @title="You do not have permissions to set URLs." @titleTag="h2" data-test-empty-state-title />
+            <A.Body
+              @text="These are not required but will need to be configured later. You can do this via the CLI or by changing your permissions and returning to this form."
+              data-test-empty-state-message
+            />
+          </Hds::ApplicationState>
         {{/if}}
       </fieldset>
     {{/if}}

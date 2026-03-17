@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { KmipListClientCertificatesListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiKmipListClientCertificatesListEnum } from '@hashicorp/vault-client-typescript';
 import { paginate } from 'core/utils/paginate-list';
 
 import type Controller from '@ember/controller';
@@ -40,7 +40,7 @@ export default class KmipCredentialsRoute extends Route {
         role_name as string,
         scope_name as string,
         currentPath,
-        KmipListClientCertificatesListEnum.TRUE
+        SecretsApiKmipListClientCertificatesListEnum.TRUE
       );
       const credentials = keys ? paginate(keys, { page: Number(page) || 1, filter: pageFilter }) : [];
       // capabilities exist at root path, not for individual credentials

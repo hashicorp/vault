@@ -47,5 +47,5 @@
     <InfoTableRow @label={{this.label field}} @value={{get @model.config field}} @alwaysRender={{true}} />
   {{/each}}
 {{else if @model.configError}}
-  <Page::Error @error={{@model.configError}} />
+  <Page::Error @error={{@model.configError}} @titleTag="h2" />
 {{/if}}

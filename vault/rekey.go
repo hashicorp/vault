@@ -63,9 +63,11 @@ type RekeyBackup struct {
 // the recovery key threshold, depending on whether rekey is being
 // performed on the recovery key, or whether the seal supports
 // recovery keys.
-func (c *Core) RekeyThreshold(ctx context.Context, recovery bool) (int, logical.HTTPCodedError) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+func (c *Core) RekeyThreshold(ctx context.Context, recovery bool, grabLock bool) (int, logical.HTTPCodedError) {
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() {
 		return 0, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
@@ -97,9 +99,11 @@ func (c *Core) RekeyThreshold(ctx context.Context, recovery bool) (int, logical.
 }
 
 // RekeyProgress is used to return the rekey progress (num shares).
-func (c *Core) RekeyProgress(recovery, verification bool) (bool, int, logical.HTTPCodedError) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+func (c *Core) RekeyProgress(recovery, verification, grabLock bool) (bool, int, logical.HTTPCodedError) {
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() {
 		return false, 0, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
@@ -128,9 +132,11 @@ func (c *Core) RekeyProgress(recovery, verification bool) (bool, int, logical.HT
 }
 
 // RekeyConfig is used to read the rekey configuration
-func (c *Core) RekeyConfig(recovery bool) (*SealConfig, logical.HTTPCodedError) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+func (c *Core) RekeyConfig(recovery bool, grabLock bool) (*SealConfig, logical.HTTPCodedError) {
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() {
 		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
@@ -158,19 +164,19 @@ func (c *Core) RekeyConfig(recovery bool) (*SealConfig, logical.HTTPCodedError) 
 
 // RekeyInit will either initialize the rekey of barrier or recovery key.
 // recovery determines whether this is a rekey on the barrier or recovery key.
-func (c *Core) RekeyInit(config *SealConfig, recovery bool) logical.HTTPCodedError {
+func (c *Core) RekeyInit(config *SealConfig, recovery bool, grabLock bool) logical.HTTPCodedError {
 	if config.SecretThreshold > config.SecretShares {
 		return logical.CodedError(http.StatusBadRequest, "provided threshold greater than the total shares")
 	}
 
 	if recovery {
-		return c.RecoveryRekeyInit(config)
+		return c.RecoveryRekeyInit(config, grabLock)
 	}
-	return c.BarrierRekeyInit(config)
+	return c.BarrierRekeyInit(config, grabLock)
 }
 
 // BarrierRekeyInit is used to initialize the rekey settings for the barrier key
-func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
+func (c *Core) BarrierRekeyInit(config *SealConfig, grabLock bool) logical.HTTPCodedError {
 	switch c.seal.BarrierSealConfigType() {
 	case SealConfigTypeShamir:
 		// As of Vault 1.3 all seals use StoredShares==1.  The one exception is
@@ -210,8 +216,10 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
 		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("invalid rekey seal configuration: %w", err).Error())
 	}
 
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() {
 		return logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
@@ -239,14 +247,14 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
 	c.barrierRekeyConfig.Nonce = nonce
 	c.barrierRekeyConfig.Created = time.Now().UTC()
 
-	if c.logger.IsInfo() {
-		c.logger.Info("rekey initialized", "nonce", c.barrierRekeyConfig.Nonce, "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold, "validation_required", c.barrierRekeyConfig.VerificationRequired)
-	}
+	c.logger.Info("rekey initialized", "nonce", c.barrierRekeyConfig.Nonce,
+		"shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold,
+		"validation_required", c.barrierRekeyConfig.VerificationRequired, "backup", c.barrierRekeyConfig.Backup)
 	return nil
 }
 
 // RecoveryRekeyInit is used to initialize the rekey settings for the recovery key
-func (c *Core) RecoveryRekeyInit(config *SealConfig) logical.HTTPCodedError {
+func (c *Core) RecoveryRekeyInit(config *SealConfig, grabLock bool) logical.HTTPCodedError {
 	if config.StoredShares > 0 {
 		return logical.CodedError(http.StatusBadRequest, "stored shares not supported by recovery key")
 	}
@@ -261,8 +269,10 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) logical.HTTPCodedError {
 		return logical.CodedError(http.StatusBadRequest, "recovery keys not supported")
 	}
 
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() {
 		return logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
@@ -297,11 +307,11 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) logical.HTTPCodedError {
 }
 
 // RekeyUpdate is used to provide a new key part for the barrier or recovery key.
-func (c *Core) RekeyUpdate(ctx context.Context, key []byte, nonce string, recovery bool) (*RekeyResult, logical.HTTPCodedError) {
+func (c *Core) RekeyUpdate(ctx context.Context, key []byte, nonce string, recovery bool, grabLock bool) (*RekeyResult, logical.HTTPCodedError) {
 	if recovery {
-		return c.RecoveryRekeyUpdate(ctx, key, nonce)
+		return c.RecoveryRekeyUpdate(ctx, key, nonce, grabLock)
 	}
-	return c.BarrierRekeyUpdate(ctx, key, nonce)
+	return c.BarrierRekeyUpdate(ctx, key, nonce, grabLock)
 }
 
 // BarrierRekeyUpdate is used to provide a new key part. Barrier rekey can be done
@@ -309,10 +319,12 @@ func (c *Core) RekeyUpdate(ctx context.Context, key []byte, nonce string, recove
 // key.
 //
 // N.B.: If recovery keys are used to rekey, the new barrier key shares are not returned.
-func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string) (*RekeyResult, logical.HTTPCodedError) {
+func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string, grabLock bool) (*RekeyResult, logical.HTTPCodedError) {
 	// Ensure we are already unsealed
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() {
 		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
@@ -597,10 +609,12 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 }
 
 // RecoveryRekeyUpdate is used to provide a new key part
-func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string) (*RekeyResult, logical.HTTPCodedError) {
+func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string, grabLock bool) (*RekeyResult, logical.HTTPCodedError) {
 	// Ensure we are already unsealed
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() {
 		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
@@ -798,10 +812,12 @@ func (c *Core) performRecoveryRekey(ctx context.Context, newRootKey []byte) logi
 	return nil
 }
 
-func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recovery bool) (ret *RekeyVerifyResult, retErr logical.HTTPCodedError) {
+func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recovery bool, grabLock bool) (ret *RekeyVerifyResult, retErr logical.HTTPCodedError) {
 	// Ensure we are already unsealed
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() {
 		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
@@ -913,9 +929,11 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 }
 
 // RekeyCancel is used to cancel an in-progress rekey
-func (c *Core) RekeyCancel(recovery bool, nonce string, requiresNonceDeadline time.Duration) logical.HTTPCodedError {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+func (c *Core) RekeyCancel(recovery bool, nonce string, requiresNonceDeadline time.Duration, grabLock bool) logical.HTTPCodedError {
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() {
 		return logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
@@ -952,9 +970,11 @@ func (c *Core) RekeyCancel(recovery bool, nonce string, requiresNonceDeadline ti
 }
 
 // RekeyVerifyRestart is used to start the verification process over
-func (c *Core) RekeyVerifyRestart(recovery bool) logical.HTTPCodedError {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+func (c *Core) RekeyVerifyRestart(recovery bool, grabLock bool) logical.HTTPCodedError {
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() {
 		return logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}

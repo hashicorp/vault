@@ -279,6 +279,9 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name
 		return nil, err
 	}
 
+	if err := i.scimResourceCheck(ctx, &identity.Alias{ScimClientID: scimClientID}, "", true, nil); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrPermissionDenied
+	}
 	var entity *identity.Entity
 	if canonicalID != "" {
 		entity, err = i.MemDBEntityByID(canonicalID, true)
@@ -370,6 +373,25 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 		return nil, nil
 	}
 
+	// Build the list of fields being modified by this request.
+	var modifiedFields []string
+	if name != alias.Name {
+		modifiedFields = append(modifiedFields, "name")
+	}
+	if mountAccessor != alias.MountAccessor {
+		modifiedFields = append(modifiedFields, "mount_accessor")
+	}
+	if canonicalID != "" && canonicalID != alias.CanonicalID {
+		modifiedFields = append(modifiedFields, "canonical_id")
+	}
+	if !strutil.EqualStringMaps(customMetadata, alias.CustomMetadata) {
+		modifiedFields = append(modifiedFields, "custom_metadata")
+	}
+
+	// Check that only non-SCIM-managed fields are being modified via the API.
+	if err := i.scimResourceCheck(ctx, alias, alias.ScimClientID, false, modifiedFields); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrPermissionDenied
+	}
 	alias.LastUpdateTime = timestamppb.Now()
 
 	// Get our current entity, which may be the same as the new one if the
@@ -556,6 +578,10 @@ func (i *IdentityStore) handleAliasReadCommon(ctx context.Context, alias *identi
 	respData["namespace_id"] = alias.NamespaceID
 	respData["local"] = alias.Local
 
+	if i.scimEnabled {
+		respData["scim_client_id"] = alias.ScimClientID
+	}
+
 	if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 		respData["mount_path"] = mountValidationResp.MountPath
 		respData["mount_type"] = mountValidationResp.MountType
@@ -602,6 +628,11 @@ func (i *IdentityStore) pathAliasIDDelete() framework.OperationFunc {
 		}
 		if ns.ID != alias.NamespaceID {
 			return logical.ErrorResponse("request and alias are in different namespaces"), logical.ErrPermissionDenied
+		}
+
+		scimClientID := scimClientIDFromContext(ctx)
+		if alias.ScimClientID != scimClientID {
+			return logical.ErrorResponse("SCIM-managed resources must be modified through SCIM"), logical.ErrPermissionDenied
 		}
 
 		// Fetch the associated entity

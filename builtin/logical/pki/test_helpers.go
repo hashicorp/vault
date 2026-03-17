@@ -525,11 +525,21 @@ func (c *testingPkiCertificateCounter) Increment() logical.CertCountIncrementer 
 	return logical.NewCertCountIncrementer(c)
 }
 
-func (c *testingPkiCertificateCounter) RequireCount(t require.TestingT, issuedCerts, storedCerts uint64) {
+func (c *testingPkiCertificateCounter) RequireCount(t require.TestingT, issuedCerts, storedCerts uint64, pkiDurationAdjustedCerts float64) {
 	require.Equal(t, issuedCerts, c.count.IssuedCerts, "issued certificates count mismatch %s")
 	require.Equal(t, storedCerts, c.count.StoredCerts, "stored certificates count mismatch %s")
+	require.Equal(t, pkiDurationAdjustedCerts, c.count.PkiDurationAdjustedCerts, "pki duration adjusted certificates count mismatch %s")
 }
 
 func (c *testingPkiCertificateCounter) RequireZero(t require.TestingT) {
-	c.RequireCount(t, 0, 0)
+	c.RequireCount(t, 0, 0, 0)
+}
+
+// See logical.durationAdjustedCertificateCount for the billing specification and implementation details.
+func adjustedCertificateCountFromDuration(validity time.Duration) float64 {
+	const standardDuration = 730.0
+	validityHours := validity.Hours()
+	units := validityHours / standardDuration
+	// Round to 4 decimal places
+	return math.Round(units*10000) / 10000
 }

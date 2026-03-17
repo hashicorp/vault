@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -23,7 +22,7 @@ var createGithubBackportState struct {
 
 func newCreateGithubBackportCmd() *cobra.Command {
 	backportCmd := &cobra.Command{
-		Use:   "backport 1234",
+		Use:   "backport 1234 [--release.release/pipeline.hcl]",
 		Short: "Create a backport pull request from another pull request",
 		Long:  "Create a backport pull request from another pull request",
 		RunE:  runCreateGithubBackportCmd,
@@ -55,8 +54,6 @@ func newCreateGithubBackportCmd() *cobra.Command {
 	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.Owner, "owner", "o", "hashicorp", "The Github organization")
 	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.Repo, "repo", "r", "vault-enterprise", "The Github repository. Private repositories require auth via a GITHUB_TOKEN env var")
 	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.RepoDir, "repo-dir", "d", "", "The path to the vault repository dir. If not set a temporary directory will be used")
-	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.ReleaseVersionConfigPath, "releases-version-path", "m", "", "The path to .release/versions.hcl")
-	backportCmd.PersistentFlags().UintVar(&createGithubBackportState.req.ReleaseRecurseDepth, "recurse", 3, "If no path to a config file is given, recursively search backwards for it and stop at root or until we've his the configured depth.")
 
 	// NOTE: The following are technically flags but they only for testing testing
 	// the command before we cut over to new utility.
@@ -79,6 +76,11 @@ func newCreateGithubBackportCmd() *cobra.Command {
 func runCreateGithubBackportCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
+	// Pass along our configuration decode responses. The request will handle
+	// scenarios as necessary.
+	createGithubBackportState.req.ConfigDecodeRes = rootCfg.configDecodeRes
+	createGithubBackportState.req.VersionsDecodeRes = rootCfg.versionsDecodeRes
+
 	if createGithubBackportState.req.CEAllowInactiveGroups == nil {
 		createGithubBackportState.req.CEAllowInactiveGroups = changed.FileGroups{}
 	}
@@ -93,7 +95,7 @@ func runCreateGithubBackportCmd(cmd *cobra.Command, args []string) error {
 		createGithubBackportState.req.CEExclude = createGithubBackportState.req.CEExclude.Add(changed.FileGroup(eg))
 	}
 
-	res := createGithubBackportState.req.Run(context.TODO(), githubCmdState.GithubV3, githubCmdState.Git)
+	res := createGithubBackportState.req.Run(cmd.Context(), githubCmdState.GithubV3, rootCfg.git)
 	if res == nil {
 		res = &github.CreateBackportRes{}
 	}

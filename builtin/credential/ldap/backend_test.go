@@ -1543,6 +1543,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			UsernameAsAlias:          false,
 			DerefAliases:             "never",
 			MaximumPageSize:          1000,
+			Schema:                   ldaputil.SchemaOpenLDAP, // Default schema when not specified
 		},
 	}
 

@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -31,7 +30,7 @@ func newSyncGithubBranchCmd() *cobra.Command {
 	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.ToRepo, "to-repo", "vault", "The Github repository to sync to")
 	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.ToBranch, "to-branch", "", "The name of the branch we want to sync to")
 	syncBranchCmd.PersistentFlags().StringVarP(&syncGithubBranchReq.RepoDir, "repo-dir", "d", "", "The path to the vault repository dir. If not set a temporary directory will be used")
-	syncBranchCmd.PersistentFlags().StringSliceVarP(&syncGithubBranchReq.CheckGroups, "disallowed-groups", "g", nil, "Enable changed file group and disallow if any files match the given groups")
+	syncBranchCmd.PersistentFlags().StringSliceVarP(&syncGithubBranchReq.DisallowedGroups, "disallowed-groups", "g", nil, "Enable changed file group and disallow if any files match the given groups")
 
 	err := syncBranchCmd.MarkPersistentFlagRequired("from-branch")
 	if err != nil {
@@ -48,7 +47,8 @@ func newSyncGithubBranchCmd() *cobra.Command {
 func runSyncGithubBranchCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := syncGithubBranchReq.Run(context.TODO(), githubCmdState.GithubV3, githubCmdState.Git)
+	syncGithubBranchReq.DecodeRes = rootCfg.configDecodeRes
+	res, err := syncGithubBranchReq.Run(cmd.Context(), githubCmdState.GithubV3, rootCfg.git)
 
 	switch rootCfg.format {
 	case "json":

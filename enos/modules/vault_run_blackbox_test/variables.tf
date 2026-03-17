@@ -41,3 +41,15 @@ variable "vault_namespace" {
   description = "The Vault namespace to operate in (for HCP environments). Optional."
   default     = null
 }
+
+variable "integration_host_state" {
+  type        = any
+  description = "The state from the external integration setup"
+  default     = null
+}
+
+variable "vault_edition" {
+  type        = string
+  description = "The Vault edition (ce, ent, ent.hsm, ent.fips1402, ent.hsm.fips1402)"
+  default     = "ent"
+}

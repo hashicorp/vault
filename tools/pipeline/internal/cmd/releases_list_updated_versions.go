@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
@@ -16,7 +15,7 @@ var listReleaseUpdatedVersionsReq = &releases.ListUpdatedVersionsReq{}
 
 func newReleasesListUpdatedVersionsCmd() *cobra.Command {
 	updatedVersionsCmd := &cobra.Command{
-		Use:   "updated-versions \"input_versions\"",
+		Use:   "updated-versions [input_versions]",
 		Short: "String of input versions separated by spaces",
 		Long:  "String of input versions separated by spaces",
 		RunE:  runListUpdatedVersionsReq,
@@ -29,7 +28,8 @@ func newReleasesListUpdatedVersionsCmd() *cobra.Command {
 func runListUpdatedVersionsReq(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := listReleaseUpdatedVersionsReq.Run(context.TODO(), args)
+	listReleaseUpdatedVersionsReq.VersionsDecodeRes = rootCfg.versionsDecodeRes
+	res, err := listReleaseUpdatedVersionsReq.Run(cmd.Context(), rootCfg.git, args)
 	if err != nil {
 		return err
 	}

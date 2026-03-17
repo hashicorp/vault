@@ -8,6 +8,8 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import Component from '@glimmer/component';
 import keys from 'core/utils/keys';
+import { WIZARD_ID } from 'vault/components/wizard/namespaces/namespace-wizard';
+import errorMessage from 'vault/utils/error-message';
 
 import type ApiService from 'vault/services/api';
 import type FlagsService from 'vault/services/flags';
@@ -16,6 +18,7 @@ import type NamespaceService from 'vault/services/namespace';
 import type RouterService from '@ember/routing/router-service';
 import type WizardService from 'vault/services/wizard';
 import type { HTMLElementEvent } from 'vault/forms';
+import type { PaginatedMetadata } from 'core/utils/paginate-list';
 
 /**
  * @module PageNamespaces
@@ -30,7 +33,7 @@ import type { HTMLElementEvent } from 'vault/forms';
 
 interface Args {
   model: {
-    namespaces: NamespaceModel[];
+    namespaces: NamespaceModel[] & PaginatedMetadata;
     pageFilter: string | null;
   };
   onFilterChange: CallableFunction;
@@ -57,9 +60,7 @@ export default class PageNamespacesComponent extends Component<Args> {
   @tracked query;
   @tracked nsToDelete = null;
   @tracked showSetupAlert = false;
-  @tracked isIntroModal = false;
-
-  wizardId = 'namespace';
+  @tracked shouldRenderIntroModal = false;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -81,15 +82,31 @@ export default class PageNamespacesComponent extends Component<Args> {
     return this.namespace.path;
   }
 
+  // Use a getter here as total is undefined instead of 0, but checking for > 0 will cover both cases.
+  get hasNamespaces() {
+    const { namespaces } = this.args.model;
+    return namespaces.meta?.total > 0;
+  }
+
   // Show header and breadcrumbs when viewing the intro page or during the list view.
   // Do not show during Guided Start as that has its own header
   get showPageHeader() {
-    return !this.showWizard || this.wizard.isIntroVisible(this.wizardId);
+    return !this.showWizard || this.wizard.isIntroVisible(WIZARD_ID);
+  }
+
+  get showContent() {
+    // Show when the 1) wizard is not shown OR 2) wizard intro modal is shown
+    // This ensures the wizard intro modal is shown on top of the list view and the background content is not blank behind the modal
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(WIZARD_ID));
+  }
+
+  get showIntroButton() {
+    return this.showContent && !this.hasNamespaces;
   }
 
   get showWizard() {
     // Show when there are no existing namespaces and it is not in a dismissed state
-    return !this.wizard.isDismissed(this.wizardId) && !this.args.model.namespaces?.length;
+    return !this.wizard.isDismissed(WIZARD_ID) && !this.hasNamespaces;
   }
 
   @action
@@ -125,8 +142,8 @@ export default class PageNamespacesComponent extends Component<Args> {
       // Call the refresh method to update the list
       this.refreshNamespaceList();
     } catch (error) {
-      const { message } = await this.api.parseError(error);
-      this.flashMessages.danger(`There was an error deleting this namespace: ${message}`);
+      const message = errorMessage(error);
+      this.flashMessages.danger(message);
     }
     this.nsToDelete = null;
   }
@@ -145,8 +162,8 @@ export default class PageNamespacesComponent extends Component<Args> {
   @action
   showIntroPage() {
     // Reset the wizard dismissal state to allow re-entering the wizard
-    this.wizard.reset(this.wizardId);
-    this.isIntroModal = true;
+    this.wizard.reset(WIZARD_ID);
+    this.shouldRenderIntroModal = true;
   }
 
   @action handlePageChange() {

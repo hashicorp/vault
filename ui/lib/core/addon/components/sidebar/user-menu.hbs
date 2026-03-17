@@ -17,13 +17,17 @@
   {{/if}}
 
   {{#if this.hasEntityId}}
-    <D.Interactive @route="vault.cluster.mfa-setup" data-test-user-menu-item="mfa">
+    <D.Interactive @route="vault.cluster.mfa-setup" {{on "click" D.close}} data-test-user-menu-item="mfa">
       Multi-factor authentication
     </D.Interactive>
   {{/if}}
 
   {{#if this.isUserpass}}
-    <D.Interactive @route="vault.cluster.access.reset-password" data-test-user-menu-item="reset-password">Reset password</D.Interactive>
+    <D.Interactive
+      @route="vault.cluster.access.reset-password"
+      {{on "click" D.close}}
+      data-test-user-menu-item="reset-password"
+    >Reset password</D.Interactive>
   {{/if}}
 
   <D.Generic id="container">

@@ -1359,7 +1359,9 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		for _, ext := range data.CSR.Extensions {
 			switch {
 			case ext.Id.Equal(ExtensionBasicConstraintsOID):
-				if data.Params.UseCSRValues {
+				// For now only copy basic constraint extensions for non-ca use-cases,
+				// we don't properly handle max path length constraints otherwise
+				if data.Params.UseCSRValues && !data.Params.IsCA {
 					isCa, _, err := ParseBasicConstraintExtension(ext)
 					if err != nil {
 						return nil, errutil.UserError{Err: fmt.Sprintf("refusing to accept CSR with invalid Basic Constraints extension: %s", err.Error())}

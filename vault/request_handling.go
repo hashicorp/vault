@@ -101,8 +101,6 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 
 	policies := make(map[string][]string)
 	if !skipDeriveEntityPolicies {
-		// c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
-
 		// Attach the policies on the entity
 		if len(entity.Policies) != 0 {
 			policies[entity.NamespaceID] = append(policies[entity.NamespaceID], entity.Policies...)
@@ -228,7 +226,10 @@ func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespac
 
 func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Request) (*ACL, *logical.TokenEntry, *identity.Entity, map[string][]string, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
-
+	if req == nil {
+		c.logger.Error("fetchACLTokenEntryAndEntity called with nil request")
+		return nil, nil, nil, nil, ErrInternalError
+	}
 	// Ensure there is a client token
 	if req.ClientToken == "" {
 		return nil, nil, nil, nil, logical.ErrPermissionDenied
@@ -239,12 +240,39 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, ErrInternalError
 	}
 
+	var secondEntity *identity.Entity
+	if IsEnterpriseToken(req.ClientToken) {
+		isValidEnterpriseToken, tokenMetadataContainer, entity, actorEntity, err := c.validateEnterpriseTokenAndFetchEntity(ctx, req.ClientToken)
+		if err != nil {
+			c.logger.Error("failed to validate enterprise token", "error", err)
+		}
+		if !isValidEnterpriseToken {
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
+		}
+		req.EnterpriseTokenMetadata = getEnterpriseTokenMetadata(tokenMetadataContainer)
+		req.EnterpriseTokenIssuer = getEnterpriseTokenIssuer(tokenMetadataContainer)
+		req.EnterpriseTokenAudience = getEnterpriseTokenAudience(tokenMetadataContainer)
+		req.EnterpriseTokenAuthorizationDetails = getEnterpriseTokenAuthorizationDetails(tokenMetadataContainer)
+		secondEntity = actorEntity
+		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity, actorEntity)
+		if err != nil {
+			if c.perfStandby && errors.Is(err, logical.ErrReadOnly) {
+				return nil, nil, nil, nil, logical.ErrPerfStandbyPleaseForward
+			}
+			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing enterprise token"))
+		}
+	}
+
 	// Resolve the token policy
 	var te *logical.TokenEntry
 	switch req.TokenEntry() {
 	case nil:
 		var err error
-		te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
+		if IsEnterpriseToken(req.ClientToken) {
+			te, err = c.tokenStore.Lookup(ctx, getEnterpriseTokenId(req.EnterpriseTokenMetadata))
+		} else {
+			te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
+		}
 		if err != nil {
 			c.logger.Error("failed to lookup acl token", "error", err)
 			return nil, nil, nil, nil, ErrInternalError
@@ -260,9 +288,23 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, multierror.Append(logical.ErrPermissionDenied, logical.ErrInvalidToken)
 	}
 
+	if secondEntity != nil {
+		if req.Auth == nil {
+			req.Auth = &logical.Auth{}
+		}
+		req.Auth.ActorEntityID = secondEntity.ID
+		req.Auth.ActorEntityName = secondEntity.Name
+	}
+
 	// CIDR checks bind all tokens except non-expiring root tokens
 	if te.TTL != 0 && len(te.BoundCIDRs) > 0 {
 		var valid bool
+
+		// Validate req for connection on CIDR
+		if req.Connection == nil || req.Connection.RemoteAddr == "" {
+			c.logger.Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
+		}
 		remoteSockAddr, err := sockaddr.NewSockAddr(req.Connection.RemoteAddr)
 		if err != nil {
 			if c.Logger().IsDebug() {
@@ -304,6 +346,27 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		policyNames[nsID] = policyutil.SanitizePolicies(append(policyNames[nsID], nsPolicies...), false)
 	}
 
+	var secondEntityPolicyNames map[string][]string
+	if secondEntity != nil {
+		c.logger.Debug("building separate ACL for second entity", "entity_id", secondEntity.ID)
+		secondEntityPolicyNames = make(map[string][]string)
+		secondEntityIdentityPolicies, err := c.fetchCeilingPolicies(ctx, secondEntity)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		allowOnly, err := c.allPoliciesAllowOnly(ctx, secondEntityIdentityPolicies)
+		if err != nil {
+			return nil, nil, nil, nil, ErrInternalError
+		}
+		if !allowOnly {
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
+		}
+		// Store second entity policies separately - do NOT merge with primary entity's policies
+		for nsID, nsPolicies := range secondEntityIdentityPolicies {
+			secondEntityPolicyNames[nsID] = policyutil.SanitizePolicies(nsPolicies, false)
+		}
+	}
+
 	// Attach token's namespace information to the context. Wrapping tokens by
 	// should be able to be used anywhere, so we also special case behavior.
 	var tokenCtx context.Context
@@ -342,6 +405,14 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	if err != nil {
 		c.logger.Error("failed to construct ACL", "error", err)
 		return nil, nil, nil, nil, ErrInternalError
+	}
+
+	if secondEntity != nil {
+		newAcl, err := c.performSecondaryEntityTokenChecks(tokenCtx, acl, secondEntity, secondEntityPolicyNames)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		acl = newAcl
 	}
 
 	return acl, te, entity, identityPolicies, nil
@@ -520,6 +591,13 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		clientID, isTWE = te.CreateClientID()
 		req.ClientID = clientID
 	}
+
+	if req.Auth != nil {
+		auth.ActorEntityID = req.Auth.ActorEntityID
+		auth.ActorEntityName = req.Auth.ActorEntityName
+	}
+	// Copy authorization details from the request to auth so plugins can access them.
+	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
 
 	twoStepRecover := req.Operation == logical.RecoverOperation && req.RecoverSourcePath != "" && req.RecoverSourcePath != req.Path
 	var alternateRecoverCapability *logical.Operation
@@ -804,7 +882,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			// We don't care if the token is a server side consistent token or not. Either way, we're going
 			// to be returning it for these paths instead of the short token stored in vault.
 			requestBodyToken = token.(string)
-			if IsSSCToken(token.(string)) {
+			if IsSSCToken(token.(string)) && !IsEnterpriseToken(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
 				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
 				// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
@@ -1096,12 +1174,15 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		return
 	}
 
+	var auth *logical.Auth
+	var te *logical.TokenEntry
+	var ctErr error
 	// Validate the token
-	auth, te, ctErr := c.CheckToken(ctx, req, false)
-	if ctErr == logical.ErrRelativePath {
+	auth, te, ctErr = c.CheckToken(ctx, req, false)
+	if errors.Is(ctErr, logical.ErrRelativePath) {
 		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
 	}
-	if ctErr == logical.ErrPerfStandbyPleaseForward {
+	if errors.Is(ctErr, logical.ErrPerfStandbyPleaseForward) {
 		return nil, nil, ctErr
 	}
 
@@ -2693,7 +2774,7 @@ func (c *Core) LocalUpdateUserFailedLoginInfo(ctx context.Context, userKey Faile
 
 // PopulateTokenEntry looks up req.ClientToken in the token store and uses
 // it to set other fields in req.  Does nothing if ClientToken is empty
-// or a JWT token, or for service tokens that don't exist in the token store.
+// or an Enterprise token, or for service tokens that don't exist in the token store.
 // Should be called with read stateLock held.
 func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) error {
 	if req.ClientToken == "" {
@@ -2704,7 +2785,7 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	// doesn't exist because the request may be to an unauthenticated
 	// endpoint/login endpoint where a bad current token doesn't matter, or
 	// a token from a Vault version pre-accessors. We ignore errors for
-	// JWTs.
+	// Enterprise tokens.
 	token := req.ClientToken
 	var err error
 	req.InboundSSCToken = token
@@ -2754,8 +2835,6 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 		if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
 			return err
 		}
-		// If we have two dots but the second char is a dot it's a vault
-		// token of the form s.SOMETHING.nsid, not a JWT
 		if !IsJWT(token) {
 			return fmt.Errorf("error performing token check: %w", err)
 		}
@@ -2906,4 +2985,70 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	// In this case, the server side consistent token cannot be used on this node. We return the appropriate
 	// status code.
 	return "", logical.ErrMissingRequiredState
+}
+
+// allPoliciesAllowOnly is a helper function that checks if all policies in
+// a given set have only "allow" capabilities, and not "deny" or "sudo".
+//
+// Example of allow-only policy:
+//
+//	path "secret/data/team/public/*" {
+//	  capabilities = ["read"]
+//	}
+//
+// Example of a policy that is not allow-only:
+//
+//	path "secret/data/team/*" {
+//	  capabilities = ["read"]
+//	}
+//
+//	path "secret/data/team/private/*" {
+//	  capabilities = ["deny"]
+//	}
+func (c *Core) allPoliciesAllowOnly(ctx context.Context, policyNamesByNamespace map[string][]string) (bool, error) {
+	for nsID, policyNames := range policyNamesByNamespace {
+		policyNS, err := NamespaceByID(ctx, nsID, c)
+		if err != nil {
+			return false, err
+		}
+		if policyNS == nil {
+			return false, namespace.ErrNoNamespace
+		}
+
+		policyCtx := namespace.ContextWithNamespace(ctx, policyNS)
+		for _, policyName := range policyNames {
+			policy, err := c.policyStore.GetPolicy(policyCtx, policyName, PolicyTypeACL)
+			if err != nil {
+				return false, err
+			}
+			if policy == nil {
+				return false, fmt.Errorf("policy %q not found in namespace %q", policyName, policyNS.Path)
+			}
+			if !policyIsAllowOnly(policy) {
+				return false, nil
+			}
+		}
+	}
+
+	return true, nil
+}
+
+// policyIsAllowOnly is a helper function that checks if a policy has only "allow" capabilities, and not "deny" or "sudo".
+func policyIsAllowOnly(policy *Policy) bool {
+	if policy == nil || policy.Name == "root" {
+		return false
+	}
+
+	for _, pathRules := range policy.Paths {
+		if pathRules == nil || pathRules.Permissions == nil {
+			continue
+		}
+
+		capabilities := pathRules.Permissions.CapabilitiesBitmap
+		if capabilities&DenyCapabilityInt != 0 || capabilities&SudoCapabilityInt != 0 {
+			return false
+		}
+	}
+
+	return true
 }

@@ -3,6 +3,10 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<EmptyState @title="LDAP not configured" @message="Get started by setting up the connection with your existing LDAP system.">
-  <Hds::Link::Standalone @icon="chevron-right" @iconPosition="trailing" @text="Configure LDAP" @route="configure" />
-</EmptyState>
+<Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+  <A.Header @title="LDAP not configured" @titleTag="h2" data-test-empty-state-title />
+  <A.Body @text="Get started by setting up the connection with your existing LDAP system." data-test-empty-state-message />
+  <A.Footer data-test-empty-state-actions as |F|>
+    <F.LinkStandalone @icon="chevron-right" @iconPosition="trailing" @text="Configure LDAP" @route="configure" />
+  </A.Footer>
+</Hds::ApplicationState>

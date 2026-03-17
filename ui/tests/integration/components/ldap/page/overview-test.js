@@ -200,7 +200,7 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
 
   test('it should display "None" when library request returns a 404', async function (assert) {
     // Override server to return empty 404 response for library requests
-    this.apiLibraryStub.rejects(getErrorResponse({}, 404));
+    this.apiLibraryStub.rejects(getErrorResponse());
     await this.renderComponent();
     assert.dom('[data-test-libraries-error]').doesNotExist();
     assert.dom('[data-test-libraries-count]').hasText('None');

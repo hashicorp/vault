@@ -41,7 +41,7 @@ const newConnection = async (
 
 const navToConnection = async (backend, connection) => {
   await visit('/vault/secrets-engines');
-  await click(`${GENERAL.tableData(`${backend}/`, 'path')} a`);
+  await click(GENERAL.linkTo(`${backend}/`));
   await click(GENERAL.secretTab('Connections'));
   await click(SES.secretLink(connection));
   return;
@@ -536,7 +536,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     // Check with restricted permissions
     await login(token);
     await click(GENERAL.navLink('Secrets'));
-    assert.dom(GENERAL.tableData(`${backend}/`, 'path')).exists('Shows backend on secret list page');
+    assert.dom(GENERAL.listItem(`${backend}/`)).exists('Shows backend on secret list page');
     await navToConnection(backend, connection);
     assert.strictEqual(
       currentURL(),

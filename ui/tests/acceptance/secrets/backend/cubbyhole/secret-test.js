@@ -61,6 +61,16 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
     assert.dom(GENERAL.tab('plugin-settings')).doesNotExist('does not show the configure button');
     // try to force it by visiting the URL
     await visit(`/vault/secrets-engines/cubbyhole/configuration/edit`);
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('404 Not Found', 'shows 404 error');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.error',
+      'it redirects to error route'
+    );
+    assert.dom(GENERAL.pageError.title(404)).hasText('ERROR 404 Not found');
+    assert
+      .dom(GENERAL.pageError.message)
+      .hasText(
+        'Sorry, we were unable to find any content at /vault/secrets-engines/cubbyhole/configuration/edit.'
+      );
   });
 });

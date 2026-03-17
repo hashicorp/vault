@@ -15,6 +15,7 @@ const (
 	groupsTable        = "groups"
 	groupAliasesTable  = "group_aliases"
 	oidcClientsTable   = "oidc_clients"
+	scimClientsTable   = "scim_clients"
 )
 
 func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
@@ -28,7 +29,7 @@ func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
 		groupsTableSchema,
 		groupAliasesTableSchema,
 		oidcClientsTableSchema,
-		scimConfigSchema,
+		scimClientSchema,
 	}
 
 	for _, schemaFunc := range schemas {
@@ -79,6 +80,16 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 				AllowMissing: true,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "LocalBucketKey",
+				},
+			},
+			"scim_client_id": {
+				Name:         "scim_client_id",
+				AllowMissing: true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{Field: "NamespaceID"},
+						&memdb.StringFieldIndex{Field: "ScimClientID"},
+					},
 				},
 			},
 		},

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
@@ -19,21 +20,26 @@ import (
 
 // CheckChangedFilesReq holds the state and configuration for checking changed files
 type CheckChangedFilesReq struct {
+	// DecodeRes is the result of decoding the pipeline configuration.
+	DecodeRes *config.DecodeRes
+
 	// Branch specifies the branch to compare against
 	Branch string
 	// Range specifies the commit range to compare (e.g., HEAD~5..HEAD)
 	Range string
 	// Commit specifies a specific commit SHA to analyze
 	Commit string
+
 	// Write a specially formatted response to $GITHUB_OUTPUT
 	WriteToGithubOutput bool
-	// CheckGroups specifies the file groups that must not have changed
-	CheckGroups []string
+	// DisallowedGroups specifies the file groups that must not have changed
+	DisallowedGroups []string
 }
 
 // CheckChangedFilesRes represents the response from checking changed files
 type CheckChangedFilesRes struct {
 	// Inputs
+	ChangedConfig *changed.Config    `json:"changed_config,omitempty"`
 	ChangedFiles  changed.Files      `json:"changed_files,omitempty"`
 	ChangedGroups changed.FileGroups `json:"changed_groups,omitempty"`
 	CheckedGroups changed.FileGroups `json:"checked_groups,omitempty"`
@@ -46,15 +52,12 @@ type CheckChangedFilesRes struct {
 func (g *CheckChangedFilesReq) Run(ctx context.Context, client *libgit.Client) (*CheckChangedFilesRes, error) {
 	slog.Default().DebugContext(ctx, "checking changed files from git for disallowed groups")
 
-	if g == nil {
-		return nil, fmt.Errorf("uninitialized")
-	}
-
-	if len(g.CheckGroups) < 1 {
-		return nil, fmt.Errorf("no disallowed groups have been configured")
+	if err := g.validate(ctx); err != nil {
+		return nil, err
 	}
 
 	listReq := &ListChangedFilesReq{
+		DecodeRes:  g.DecodeRes,
 		Branch:     g.Branch,
 		Range:      g.Range,
 		Commit:     g.Commit,
@@ -67,7 +70,7 @@ func (g *CheckChangedFilesReq) Run(ctx context.Context, client *libgit.Client) (
 	}
 
 	disallowdGroups := changed.FileGroups{}
-	for _, g := range g.CheckGroups {
+	for _, g := range g.DisallowedGroups {
 		disallowdGroups = disallowdGroups.Add(changed.FileGroup(g))
 	}
 
@@ -76,6 +79,7 @@ func (g *CheckChangedFilesReq) Run(ctx context.Context, client *libgit.Client) (
 	)
 
 	res := &CheckChangedFilesRes{
+		ChangedConfig: listRes.ChangedConfig,
 		ChangedFiles:  listRes.Files,
 		ChangedGroups: listRes.Groups,
 		CheckedGroups: disallowdGroups,
@@ -98,6 +102,26 @@ func (g *CheckChangedFilesReq) Run(ctx context.Context, client *libgit.Client) (
 	}
 
 	return res, nil
+}
+
+func (g *CheckChangedFilesReq) validate(ctx context.Context) error {
+	if g == nil {
+		return errors.New("uninitialized")
+	}
+
+	if len(g.DisallowedGroups) < 1 {
+		return fmt.Errorf("no disallowed groups have been configured")
+	}
+
+	if err := g.DecodeRes.Validate(ctx); err != nil {
+		return err
+	}
+
+	if g.DecodeRes.Config.ChangedFiles == nil {
+		return errors.New("no changed file grouping config was found in pipeline.hcl")
+	}
+
+	return nil
 }
 
 // ToJSON marshals the response to JSON.

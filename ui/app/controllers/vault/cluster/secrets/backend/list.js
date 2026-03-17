@@ -3,14 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { or } from '@ember/object/computed';
-import { computed } from '@ember/object';
-import { service } from '@ember/service';
 import Controller from '@ember/controller';
-import BackendCrumbMixin from 'vault/mixins/backend-crumb';
+import { computed } from '@ember/object';
+import { or } from '@ember/object/computed';
+import { service } from '@ember/service';
 import ListController from 'core/mixins/list-controller';
 import { keyIsFolder } from 'core/utils/key-utils';
-import { task } from 'ember-concurrency';
+import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 
 export default Controller.extend(ListController, BackendCrumbMixin, {
   flashMessages: service(),
@@ -68,20 +67,4 @@ export default Controller.extend(ListController, BackendCrumbMixin, {
         });
     },
   },
-
-  disableEngine: task(function* (engine) {
-    const { engineType, id, path } = engine;
-    try {
-      yield this.api.sys.mountsDisableSecretsEngine(id);
-      this.flashMessages.success(`The ${engineType} Secrets Engine at ${path} has been disabled.`);
-      this.router.transitionTo('vault.cluster.secrets.backends');
-    } catch (err) {
-      const { message } = yield this.api.parseError(err);
-      this.flashMessages.danger(
-        `There was an error disabling the ${engineType} Secrets Engines at ${path}: ${message}.`
-      );
-    } finally {
-      this.engineToDisable = null;
-    }
-  }).drop(),
 });

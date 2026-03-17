@@ -6,7 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { ModelFrom } from 'vault/route';
-import { KubernetesListRolesListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiKubernetesListRolesListEnum } from '@hashicorp/vault-client-typescript';
 
 import type { KubernetesApplicationModel } from './application';
 import type SecretMountPath from 'vault/services/secret-mount-path';
@@ -30,7 +30,7 @@ export default class KubernetesOverviewRoute extends Route {
     const { promptConfig, secretsEngine } = this.modelFor('application') as KubernetesApplicationModel;
 
     const { keys } = await this.api.secrets
-      .kubernetesListRoles(currentPath, KubernetesListRolesListEnum.TRUE)
+      .kubernetesListRoles(currentPath, SecretsApiKubernetesListRolesListEnum.TRUE)
       .catch(() => ({ keys: [] }));
 
     return {

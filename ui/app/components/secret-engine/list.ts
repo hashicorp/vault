@@ -3,21 +3,22 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
+import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { dropTask } from 'ember-concurrency';
 import engineDisplayData from 'vault/helpers/engines-display-data';
-import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import { WIZARD_ID } from '../wizard/secret-engines/secret-engines-wizard';
 
+import type RouterService from '@ember/routing/router-service';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type NamespaceService from 'vault/services/namespace';
-import type RouterService from '@ember/routing/router-service';
-import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type VersionService from 'vault/services/version';
+import type WizardService from 'vault/services/wizard';
 
 /**
  * @module SecretEngineList handles the display of the list of secret engines, including the filtering.
@@ -35,15 +36,12 @@ interface Args {
 }
 
 export default class SecretEngineList extends Component<Args> {
-  @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;
+  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly namespace: NamespaceService;
   @service declare readonly router: RouterService;
   @service declare readonly version: VersionService;
-  @service declare readonly namespace: NamespaceService;
-
-  @tracked secretEngineOptions: Array<string> | [] = [];
-  @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
-  @tracked enginesToDisable: Array<SecretsEngineResource> | null = null;
+  @service declare readonly wizard: WizardService;
 
   @tracked engineTypeFilters: Array<string> = [];
   @tracked engineVersionFilters: Array<string> = [];
@@ -53,7 +51,8 @@ export default class SecretEngineList extends Component<Args> {
   @tracked typeSearchText = '';
   @tracked versionSearchText = '';
 
-  @tracked selectedItems = Array<string>();
+  @tracked shouldRenderIntroModal = false;
+  wizardId = WIZARD_ID;
 
   tableColumns = [
     {
@@ -189,6 +188,43 @@ export default class SecretEngineList extends Component<Args> {
     }));
   }
 
+  // The backend does not directly indicate which engines were mounted by default and which have been mounted by the user
+  // Currently the cubbyhole/, sys/, identity/ engines are mounted by default. (secret/ is mounted in dev mode as well)
+  // The sys/ and identity/ engines are non-displayable engines.
+  // While not ideal, we can check whether there are other engines than the default cubbyhole/ engine
+  // to determine whether we should show the intro page
+  get hasOnlyDefaultEngines() {
+    // use displayableBackends to check against unfiltered results to avoid flashing intro page when a filter has no results
+    const listedEngines = this.displayableBackends;
+    return !listedEngines.length || (listedEngines.length === 1 && listedEngines[0]?.path === 'cubbyhole/');
+  }
+
+  get showContent() {
+    // Show when the 1) wizard is not shown OR 2) wizard intro modal is shown
+    // This ensures the wizard intro modal is shown on top of the list view and the background content is not blank behind the modal
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(WIZARD_ID));
+  }
+
+  get showIntroButton() {
+    return this.showContent && this.hasOnlyDefaultEngines;
+  }
+
+  get showWizard() {
+    return !this.wizard.isDismissed(this.wizardId) && this.hasOnlyDefaultEngines;
+  }
+
+  @action
+  showIntroPage() {
+    // Reset the wizard dismissal state to allow re-entering the wizard
+    this.wizard.reset(this.wizardId);
+    this.shouldRenderIntroModal = true;
+  }
+
+  @action
+  refreshSecretEngineList() {
+    this.router.refresh('vault.cluster.secrets.backends');
+  }
+
   // Returns engine resource data for a given engine path, needed to get icon and other metadata from SecretEnginesResource
   getEngineResourceData = (enginePath: string) => {
     return this.displayableBackends.find((backend) => backend.path === enginePath);
@@ -250,50 +286,5 @@ export default class SecretEngineList extends Component<Args> {
   clearAllFilters() {
     this.engineTypeFilters = [];
     this.engineVersionFilters = [];
-  }
-
-  @action
-  updateSelectedItems(tableData: { selectedRowsKeys: string[] }) {
-    this.selectedItems = tableData.selectedRowsKeys;
-  }
-
-  async disableSingleEngine(engine: SecretsEngineResource) {
-    const { engineType, id, path } = engine;
-    try {
-      await this.api.sys.mountsDisableSecretsEngine(id);
-      this.flashMessages.success(`The ${engineType} Secrets Engine at ${path} has been disabled.`);
-    } catch (err) {
-      const { message } = await this.api.parseError(err);
-      this.flashMessages.danger(
-        `There was an error disabling the ${engineType} Secrets Engine at ${path}: ${message}.`
-      );
-    }
-  }
-
-  @dropTask
-  *disableMultipleEngines(enginePathsToDisable: Array<string>) {
-    const enginesToDisable = this.displayableBackends.filter((engine: SecretsEngineResource) =>
-      enginePathsToDisable.includes(engine.path)
-    );
-    try {
-      for (const engine of enginesToDisable) {
-        yield this.disableSingleEngine(engine);
-      }
-
-      // Navigate once all operations are complete
-      this.router.transitionTo('vault.cluster.secrets.backends');
-    } finally {
-      this.enginesToDisable = null;
-    }
-  }
-
-  @dropTask
-  *disableEngine(engine: SecretsEngineResource) {
-    try {
-      yield this.disableSingleEngine(engine);
-      this.router.transitionTo('vault.cluster.secrets.backends');
-    } finally {
-      this.engineToDisable = undefined;
-    }
   }
 }

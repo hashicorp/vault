@@ -81,8 +81,8 @@ func (c *Core) setupHeaderHMACKey(ctx context.Context, isPerfStandby bool) error
 	return nil
 }
 
-func (c *Core) GetPkiCertificateCounter() logical.CertificateCounter {
-	return c.pkiCertCountManager
+func (c *Core) GetCertificateCounter() logical.CertificateCounter {
+	return c.certCountManager
 }
 
 func (c *Core) GetConsumptionBillingManager() logical.ConsumptionBillingManager {

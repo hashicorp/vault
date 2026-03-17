@@ -56,4 +56,9 @@ runs:
       shell: bash
       run: |
         # Make sure that any branch specific dynamic config has been generated
-        pipeline generate enos-dynamic-config -d ./enos --file enos-dynamic-config.hcl -v ${{ inputs.vault-version }} -e ${{ inputs.vault-edition }} -n 3 --log debug
+        pipeline generate enos-dynamic-config ${{ runner.debug && '--log debug' }}\
+          -d ./enos \
+          --file enos-dynamic-config.hcl \
+          -v ${{ inputs.vault-version }} \
+          -e ${{ inputs.vault-edition }} \
+          -n 3

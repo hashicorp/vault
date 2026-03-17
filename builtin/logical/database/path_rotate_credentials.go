@@ -75,7 +75,7 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 }
 
 func (b *databaseBackend) rotateRootCredential(ctx context.Context, req *logical.Request) error {
-	name, err := b.getDatabaseConfigNameFromRotationID(req.RotationID)
+	name, err := b.getDatabaseConfigNameFromRotationID(req.RotationInfo.RotationID)
 	if err != nil {
 		return err
 	}

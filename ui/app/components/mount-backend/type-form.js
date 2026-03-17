@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@glimmer/component';
-import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { service } from '@ember/service';
+import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { filterEnginesByMountCategory } from 'core/utils/all-engines-metadata';
 import keys from 'core/utils/keys';
-import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import {
-  enhanceEnginesWithCatalogData,
   categorizeEnginesByStatus,
+  enhanceEnginesWithCatalogData,
   MOUNT_CATEGORIES,
-  PLUGIN_TYPES,
   PLUGIN_CATEGORIES,
+  PLUGIN_TYPES,
 } from 'vault/utils/plugin-catalog-helpers';
 
 /**

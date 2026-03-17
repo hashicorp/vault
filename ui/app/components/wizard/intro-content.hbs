@@ -4,7 +4,7 @@
 }}
 
 <Hds::Layout::Flex @align="start" @direction="column" as |LF|>
-  <LF.Item class="has-bottom-margin-xs has-top-margin-xs">
+  <LF.Item class="has-bottom-margin-xs">
     <Hds::Badge @text={{concat "Setup time: " @setupTime}} />
     {{#if @isOptional}}
       <Hds::Badge @text="Optional" @type="outlined" class="has-left-margin-xs" />

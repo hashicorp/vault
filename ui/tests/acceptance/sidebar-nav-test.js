@@ -11,6 +11,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import modifyPassthroughResponse from 'vault/mirage/helpers/modify-passthrough-response';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import localStorage from 'vault/lib/local-storage';
 
 const link = (label) => `[data-test-sidebar-nav-link="${label}"]`;
 const panel = (label) => `[data-test-sidebar-nav-panel="${label}"]`;
@@ -19,7 +20,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     // set storage_type to raft to test link
     this.server.get('/sys/seal-status', (schema, req) => {
       return modifyPassthroughResponse(req, { storage_type: 'raft' });
@@ -31,7 +32,9 @@ module('Acceptance | sidebar navigation', function (hooks) {
         'nested-interactive': { enabled: false },
       },
     });
-    return login();
+    await login();
+    // dismiss wizard
+    localStorage.setItem('dismissed-wizards', ['auth-methods']);
   });
 
   test('it should navigate back to the dashboard when logo is clicked in app header', async function (assert) {

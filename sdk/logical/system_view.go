@@ -110,6 +110,11 @@ type SystemView interface {
 	// NOTE: This method is intended for use only by HashiCorp Vault Enterprise plugins.
 	RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (rotationID string, err error)
 
+	// RegisterRotationJobWithResponse returns registers a rotation job for the requesting plugin
+	// and returns the full RotationInfo response.
+	// NOTE: This method is intended for use only by HashiCorp Vault Enterprise plugins
+	RegisterRotationJobWithResponse(ctx context.Context, req *rotation.RotationJobConfigureRequest) (*rotation.RotationInfo, error)
+
 	// DeregisterRotationJob returns any errors in de-registering a
 	// credential from the Rotation Manager.
 	// NOTE: This method is intended for use only by HashiCorp Vault Enterprise plugins.
@@ -311,8 +316,12 @@ func (d StaticSystemView) GetRotationInformation(ctx context.Context, req *rotat
 	return nil, errors.New("GetRotationInformation is not implemented in StaticSystemView")
 }
 
-func (d StaticSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJobConfigureRequest) (rotationID string, err error) {
+func (d StaticSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJobConfigureRequest) (string, error) {
 	return "", errors.New("RegisterRotationJob is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) RegisterRotationJobWithResponse(_ context.Context, _ *rotation.RotationJobConfigureRequest) (*rotation.RotationInfo, error) {
+	return nil, errors.New("RegisterRotationJob is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) (err error) {

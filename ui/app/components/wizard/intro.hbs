@@ -3,10 +3,10 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 {{#if @isModal}}
-  <Hds::Modal id={{@title "-intro-modal"}} @size="large" @onClose={{@onDismiss}} class="wizard intro" ...attributes as |M|>
+  <Hds::Modal id={{@title "-intro-modal"}} @size="large" @onClose={{@onDismiss}} class="modal" ...attributes as |M|>
     <M.Header>Welcome to {{@title}} </M.Header>
     <M.Body>
-      <Hds::Layout::Flex @align="start">
+      <Hds::Layout::Flex @align="start" @gap="48">
         {{yield to="body"}}
       </Hds::Layout::Flex>
     </M.Body>
@@ -15,8 +15,8 @@
     </M.Footer>
   </Hds::Modal>
 {{else}}
-  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="wizard intro has-padding-l" ...attributes>
-    <Hds::Text::Display @tag="h1" @size="400" @weight="bold">
+  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="full" ...attributes>
+    <Hds::Text::Display @tag="h1" @size="400" @weight="bold" class="has-bottom-margin-xs">
       Welcome to
       {{@title}}
     </Hds::Text::Display>

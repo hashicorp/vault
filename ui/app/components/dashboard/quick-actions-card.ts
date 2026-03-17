@@ -11,11 +11,11 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import {
-  DatabaseListStaticRolesListEnum,
-  DatabaseListRolesListEnum,
-  PkiListRolesListEnum,
-  PkiListCertsListEnum,
-  PkiListIssuersListEnum,
+  SecretsApiDatabaseListStaticRolesListEnum,
+  SecretsApiDatabaseListRolesListEnum,
+  SecretsApiPkiListRolesListEnum,
+  SecretsApiPkiListCertsListEnum,
+  SecretsApiPkiListIssuersListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 import type RouterService from '@ember/routing/router-service';
@@ -131,15 +131,15 @@ export default class DashboardQuickActionsCard extends Component<Args> {
 
     if (action === 'Generate credentials for database') {
       return [
-        secrets.databaseListStaticRoles(id, DatabaseListStaticRolesListEnum.TRUE),
-        secrets.databaseListRoles(id, DatabaseListRolesListEnum.TRUE),
+        secrets.databaseListStaticRoles(id, SecretsApiDatabaseListStaticRolesListEnum.TRUE),
+        secrets.databaseListRoles(id, SecretsApiDatabaseListRolesListEnum.TRUE),
       ];
     } else if (action === 'Issue certificate') {
-      return [secrets.pkiListRoles(id, PkiListRolesListEnum.TRUE)];
+      return [secrets.pkiListRoles(id, SecretsApiPkiListRolesListEnum.TRUE)];
     } else if (action === 'View certificate') {
-      return [secrets.pkiListCerts(id, PkiListCertsListEnum.TRUE)];
+      return [secrets.pkiListCerts(id, SecretsApiPkiListCertsListEnum.TRUE)];
     } else if (action === 'View issuer') {
-      return [secrets.pkiListIssuers(id, PkiListIssuersListEnum.TRUE)];
+      return [secrets.pkiListIssuers(id, SecretsApiPkiListIssuersListEnum.TRUE)];
     }
     return [];
   }

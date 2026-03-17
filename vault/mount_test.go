@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMount_ReadOnlyViewDuringMount(t *testing.T) {
@@ -60,8 +61,8 @@ func TestLogicalMountMetrics(t *testing.T) {
 	loadMetric, ok := mountMetrics.Load(mountKeyName)
 	var numEntriesMetric metricsutil.GaugeMetric = loadMetric.(metricsutil.GaugeMetric)
 
-	// 3 default nonlocal logical backends
-	if !ok || numEntriesMetric.Value != 3 {
+	// 4 default nonlocal logical backends
+	if !ok || numEntriesMetric.Value != 4 {
 		t.Fatalf("Auth values should be: %+v", numEntriesMetric)
 	}
 	me := &MountEntry{
@@ -76,9 +77,9 @@ func TestLogicalMountMetrics(t *testing.T) {
 	mountMetrics = &c.metricsHelper.LoopMetrics.Metrics
 	loadMetric, ok = mountMetrics.Load(mountKeyName)
 	numEntriesMetric = loadMetric.(metricsutil.GaugeMetric)
-	if !ok || numEntriesMetric.Value != 4 {
-		t.Fatalf("mount metrics for num entries do not match true values")
-	}
+	require.True(t, ok)
+	require.NotNil(t, numEntriesMetric)
+	require.Equal(t, float32(5), numEntriesMetric.Value)
 	if len(numEntriesMetric.Key) != 3 ||
 		numEntriesMetric.Key[0] != "core" ||
 		numEntriesMetric.Key[1] != "mount_table" ||
@@ -116,7 +117,7 @@ func TestLogicalMountMetrics(t *testing.T) {
 
 func TestCore_DefaultMountTable(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	verifyDefaultTable(t, c.mounts, 4, c.mountsLock)
+	verifyDefaultTable(t, c.mounts, 5, c.mountsLock)
 
 	// Start a second core with same physical
 	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
@@ -730,7 +731,7 @@ func TestCore_Remount_Protected(t *testing.T) {
 func TestDefaultMountTable(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	table := c.defaultMountTable()
-	verifyDefaultTable(t, table, 3, c.mountsLock)
+	verifyDefaultTable(t, table, 4, c.mountsLock)
 }
 
 func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
@@ -945,7 +946,7 @@ func TestSingletonMountTableFunc(t *testing.T) {
 
 	mounts, auth := c.singletonMountTables()
 
-	if len(mounts.Entries) != 2 {
+	if len(mounts.Entries) != 3 {
 		t.Fatalf("length of mounts is wrong; expected 2, got %d", len(mounts.Entries))
 	}
 
@@ -953,6 +954,7 @@ func TestSingletonMountTableFunc(t *testing.T) {
 		switch entry.Type {
 		case "system":
 		case "identity":
+		case "agent_registry":
 		default:
 			t.Fatalf("unknown type %s", entry.Type)
 		}

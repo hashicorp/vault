@@ -124,7 +124,7 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
   });
 
   test('it should show error messages', async function (assert) {
-    this.writeStub.rejects(getErrorResponse({ errors: ['Some error occurred'] }));
+    this.writeStub.rejects(getErrorResponse({ errors: ['Some error occurred'] }, 400));
 
     await this.renderComponent();
     await click(GENERAL.submitButton);

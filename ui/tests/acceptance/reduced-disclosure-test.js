@@ -10,12 +10,11 @@ import { click, currentRouteName, currentURL, fillIn, settled, visit } from '@em
 import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { createTokenCmd, deleteNS, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
-import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import reducedDisclosureHandlers from 'vault/mirage/handlers/reduced-disclosure';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-const { unsealKeys } = VAULT_KEYS;
+const unsealKeys = ['unseal-key-1', 'unseal-key-2', 'unseal-key-3'];
 const SELECTORS = {
   footerVersion: `[data-test-footer-version]`,
 };
@@ -24,7 +23,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     reducedDisclosureHandlers(this.server);
     this.unsealCount = 0;
     this.sealed = false;

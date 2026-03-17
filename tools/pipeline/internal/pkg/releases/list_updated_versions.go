@@ -5,41 +5,40 @@ package releases
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2/hclwrite"
+	libgitclient "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/zclconf/go-cty/cty"
 )
+
+// ListUpdatedVersionsReq represents the request for updating versions.
+type ListUpdatedVersionsReq struct {
+	VersionsDecodeRes *DecodeRes `json:"versions_decode_res,omitempty"`
+}
 
 // ListUpdatedVersionsRes is the response for updating versions.
 type ListUpdatedVersionsRes struct {
 	Versions string `json:"versions,omitempty"`
 }
 
-// ListUpdatedVersionsReq represents the request for updating versions.
-type ListUpdatedVersionsReq struct {
-	ReleaseVersionConfigPath string
-}
-
-// Run reads the existing versions.hcl file, updates versions from input, applies retention rules, and returns formatted HCL.
-func (req *ListUpdatedVersionsReq) Run(ctx context.Context, args []string) (*ListUpdatedVersionsRes, error) {
-	if req.ReleaseVersionConfigPath == "" {
-		req.ReleaseVersionConfigPath = ".release/versions.hcl"
+// Run reads the existing versions.hcl file, updates versions from input,
+// applies retention rules, and returns formatted HCL.
+func (r *ListUpdatedVersionsReq) Run(ctx context.Context, git *libgitclient.Client, args []string) (*ListUpdatedVersionsRes, error) {
+	if err := r.VersionsDecodeRes.Validate(ctx); err != nil {
+		return nil, err
 	}
 
+	if r.VersionsDecodeRes.Config == nil {
+		return nil, errors.New("no versions.hcl information was provided")
+	}
+
+	config := r.VersionsDecodeRes.Config
 	inputVersions := strings.Fields(strings.Join(args, " "))
-
-	// Load existing config
-	listReq := &ListActiveVersionsReq{ReleaseVersionConfigPath: req.ReleaseVersionConfigPath}
-	validated, err := listReq.Run(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read %s: %w", req.ReleaseVersionConfigPath, err)
-	}
-
-	config := validated.VersionsConfig
 	versionRegex := regexp.MustCompile(`^(\d+\.\d+)`)
 
 	// Parse and update versions from input
@@ -63,7 +62,7 @@ func (req *ListUpdatedVersionsReq) Run(ctx context.Context, args []string) (*Lis
 	}
 
 	// Apply new retention and CE activation policy
-	filtered := req.applyRetentionPolicy(config.ActiveVersion.Versions, updatedKeys)
+	filtered := r.applyRetentionPolicy(config.ActiveVersion.Versions, updatedKeys)
 
 	// Generate HCL output
 	hf := hclwrite.NewEmptyFile()
@@ -100,7 +99,7 @@ func (req *ListUpdatedVersionsReq) Run(ctx context.Context, args []string) (*Lis
 // - n (latest): ce_active = true
 // - n-2 and below: ce_active = false
 // - n-3 and below: removed unless lts
-func (req *ListUpdatedVersionsReq) applyRetentionPolicy(allVersions map[string]*Version, newInputVersions []string) map[string]*Version {
+func (r *ListUpdatedVersionsReq) applyRetentionPolicy(allVersions map[string]*Version, newInputVersions []string) map[string]*Version {
 	if len(allVersions) == 0 {
 		return make(map[string]*Version)
 	}

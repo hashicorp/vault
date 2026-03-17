@@ -150,21 +150,21 @@ func (lm *LockManager) InitCache(cacheSize int) error {
 
 // RestorePolicy acquires an exclusive lock on the policy name and restores the
 // given policy along with the archive.
-func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storage, name, backup string, force bool) error {
+func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storage, name, backup string, force bool) (string, error) {
 	backupBytes, err := base64.StdEncoding.DecodeString(backup)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	var keyData KeyData
 	err = jsonutil.DecodeJSON(backupBytes, &keyData)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Validate that the policy exists in the backup data
 	if keyData.Policy == nil {
-		return errors.New("backup data does not contain a valid policy")
+		return "", errors.New("backup data does not contain a valid policy")
 	}
 
 	// Set a different name if desired
@@ -188,7 +188,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	if lm.useCache {
 		pRaw, ok = lm.cache.Load(name)
 		if ok && !force {
-			return fmt.Errorf("key %q already exists", name)
+			return "", fmt.Errorf("key %q already exists", name)
 		}
 	}
 
@@ -207,10 +207,10 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	if pRaw == nil {
 		p, err = lm.getPolicyFromStorage(ctx, storage, name)
 		if err != nil {
-			return err
+			return "", err
 		}
 		if p != nil && !force {
-			return fmt.Errorf("key %q already exists", name)
+			return "", fmt.Errorf("key %q already exists", name)
 		}
 	}
 
@@ -230,7 +230,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	if keyData.ArchivedKeys != nil {
 		err = keyData.Policy.storeArchive(ctx, storage, keyData.ArchivedKeys)
 		if err != nil {
-			return errwrap.Wrapf(fmt.Sprintf("failed to restore archived keys for key %q: {{err}}", name), err)
+			return "", errwrap.Wrapf(fmt.Sprintf("failed to restore archived keys for key %q: {{err}}", name), err)
 		}
 	}
 
@@ -243,7 +243,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	// Restore the policy. This will also attempt to adjust the archive.
 	err = keyData.Policy.Persist(ctx, storage)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to restore the policy %q: {{err}}", name), err)
+		return "", errwrap.Wrapf(fmt.Sprintf("failed to restore the policy %q: {{err}}", name), err)
 	}
 
 	keyData.Policy.l = new(sync.RWMutex)
@@ -252,7 +252,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	if lm.useCache {
 		lm.cache.Store(name, keyData.Policy)
 	}
-	return nil
+	return name, nil
 }
 
 func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage, name string) (string, error) {

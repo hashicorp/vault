@@ -33,7 +33,6 @@ import (
 const (
 	groupBucketsPrefix        = "packer/group/buckets/"
 	localAliasesBucketsPrefix = "packer/local-aliases/buckets/"
-	scimBucketsPrefix         = "packer/scim/buckets/"
 )
 
 var (
@@ -52,6 +51,9 @@ func (i *IdentityStore) GetDisableLowerCasedNames() bool {
 	return i.disableLowerCasedNames
 }
 
+// resetDB callers must hold the write lock on i.lock before calling, to ensure
+// that no other goroutine is reading from or writing to the database while it
+// gets reset.
 func (i *IdentityStore) resetDB() error {
 	var err error
 
@@ -79,7 +81,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		mountLister:            core,
 		mfaBackend:             core.loginMFABackend,
 		aliasLocks:             locksutil.CreateLocks(),
-		renameDuplicates:       core.FeatureActivationFlags,
+		activationManager:      core.FeatureActivationFlags,
 		activationErrorHandler: core,
 	}
 
@@ -114,11 +116,14 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, fmt.Errorf("failed to create group packer: %w", err)
 	}
 
-	iStore.scimConfigPacker, err = storagepacker.NewStoragePacker(iStore.view, scimPackerLogger, scimBucketsPrefix)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create scim packer: %w", err)
+	unauthenticatedPaths := []string{
+		"oidc/.well-known/*",
+		"oidc/+/.well-known/*",
+		"oidc/provider/+/.well-known/*",
+		"oidc/provider/+/token",
 	}
-
+	unauthenticatedPaths = append(unauthenticatedPaths, identityStoreLoginMFAEntUnauthedPaths()...)
+	unauthenticatedPaths = append(unauthenticatedPaths, identityStoreSCIMUnauthedPaths()...)
 	iStore.Backend = &framework.Backend{
 		BackendType:    logical.TypeLogical,
 		Paths:          iStore.paths(),
@@ -126,12 +131,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		InitializeFunc: iStore.initialize,
 		ActivationFunc: iStore.activate,
 		PathsSpecial: &logical.Paths{
-			Unauthenticated: append([]string{
-				"oidc/.well-known/*",
-				"oidc/+/.well-known/*",
-				"oidc/provider/+/.well-known/*",
-				"oidc/provider/+/token",
-			}),
+			Unauthenticated: unauthenticatedPaths,
 			LocalStorage: []string{
 				localAliasesBucketsPrefix,
 			},
@@ -173,6 +173,8 @@ func (i *IdentityStore) paths() []*framework.Path {
 		mfaDuoPaths(i),
 		mfaPingIDPaths(i),
 		mfaLoginEnforcementPaths(i),
+		mfaLoginEnterprisePaths(i),
+		scimPaths(i),
 	)
 }
 
@@ -661,6 +663,8 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	case strings.HasPrefix(key, localAliasesBucketsPrefix):
 		// key is for a local alias bucket in storage.
 		i.invalidateLocalAliasesBucket(ctx, key)
+	case strings.HasPrefix(key, scimClientStoragePrefix):
+		i.invalidateSCIMClient(ctx, key)
 	}
 }
 
@@ -947,8 +951,8 @@ func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key st
 	//
 	// The logic iterates over every local alias stored at the invalidated key.
 	// For each local alias read from the storage entry, the set of local
-	// aliases read from MemDB is searched for the same local alias. If it can't
-	// be found, it means that it needs to be inserted into MemDB. However, if
+	// aliases read from MemDB is searched for the same local alias. If it can't be
+	// found, it means that it needs to be inserted into MemDB. However, if
 	// it's found, it must be compared with the local alias from the storage. If
 	// they don't match, it means that the local alias in MemDB needs to be
 	// updated. If they did match, it means that this particular local alias did

@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: allow glob-style DNS names in alt_names.
+```

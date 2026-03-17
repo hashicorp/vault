@@ -3,24 +3,31 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { settled, click, fillIn, visit, currentRouteName, waitUntil } from '@ember/test-helpers';
-import { module, test } from 'qunit';
+import { click, currentRouteName, fillIn, settled, visit, waitUntil } from '@ember/test-helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupApplicationTest } from 'ember-qunit';
+import { module, test } from 'qunit';
 
-import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
+import { create } from 'ember-cli-page-object';
+import secretsNavTestHelper from 'vault/tests/acceptance/secrets/secrets-nav-test-helper';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { create } from 'ember-cli-page-object';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import secretsNavTestHelper from 'vault/tests/acceptance/secrets/secrets-nav-test-helper';
+import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 
 const consoleComponent = create(consoleClass);
 
 module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    // Mock the plugins pins request for keymgmt
+    this.server.get('/sys/plugins/pins/secret/keymgmt', () => ({
+      data: null,
+    }));
+
     return login();
   });
 

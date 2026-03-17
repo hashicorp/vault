@@ -224,9 +224,10 @@ Router.map(function () {
         this.route('details');
       });
       this.mount('replication');
+      // Catch-all for unmatched routes within the cluster (e.g., /vault/fake-route)
+      // renders template: vault/cluster/not-found.hbs
       this.route('not-found', { path: '/*path' });
     });
-    this.route('not-found', { path: '/*path' });
   });
   if (config.environment !== 'production') {
     addDocfyRoutes(this);

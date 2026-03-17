@@ -8,7 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import clientsHandler, { STATIC_NOW } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
-import { visit, currentURL, click } from '@ember/test-helpers';
+import { visit, currentURL, click, currentRouteName } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
@@ -56,14 +56,20 @@ module('Acceptance | clients | counts', function (hooks) {
   });
 
   test('it should render empty state if no permission to query activity data', async function (assert) {
-    assert.expect(2);
+    assert.expect(4);
     server.get('/sys/internal/counters/activity', () => {
       return overrideResponse(403);
     });
     await visit('/vault/clients/counts/overview');
-    assert.dom(GENERAL.pageError.errorTitle('403')).hasText('Not authorized');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.clients.error',
+      'route transitions to clients error substate'
+    );
+    assert.dom('[data-test-sidebar-nav-panel="Client count"]').exists('sidebar nav panel still renders');
+    assert.dom(GENERAL.pageError.title('403')).hasText('ERROR 403 Not authorized');
     assert
-      .dom(GENERAL.pageError.errorSubtitle)
+      .dom(GENERAL.pageError.message)
       .hasText('You are not authorized to access content at /v1/sys/internal/counters/activity.');
   });
 

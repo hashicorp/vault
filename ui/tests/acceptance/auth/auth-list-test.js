@@ -13,6 +13,7 @@ import { MANAGED_AUTH_BACKENDS } from 'vault/helpers/supported-managed-auth-back
 import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+import localStorage from 'vault/lib/local-storage';
 
 const SELECTORS = {
   createUser: '[data-test-entity-create-link="user"]',
@@ -25,6 +26,8 @@ module('Acceptance | auth backend list', function (hooks) {
 
   hooks.beforeEach(async function () {
     await login();
+    // dismiss wizard
+    localStorage.setItem('dismissed-wizards', ['auth-methods']);
   });
 
   test('userpass secret backend', async function (assert) {
@@ -94,7 +97,7 @@ module('Acceptance | auth backend list', function (hooks) {
 
           // check popup menu for auth method
           const itemCount = isTokenType ? 2 : 3;
-          const triggerSelector = `${GENERAL.linkedBlock(path)} [data-test-popup-menu-trigger]`;
+          const triggerSelector = `${GENERAL.linkedBlock(path)} ${GENERAL.menuTrigger}`;
           const itemSelector = `${GENERAL.linkedBlock(path)} .hds-dropdown-list-item`;
 
           await click(triggerSelector);
@@ -155,6 +158,8 @@ module('Acceptance | auth backend list', function (hooks) {
       await runCmd(createNS(ns), false);
       await settled();
       await loginNs(ns);
+      localStorage.setItem('dismissed-wizards', ['auth-methods']);
+
       // go directly to token configure route
       await visit(`/vault/settings/auth/configure/token/options?namespace=${ns}`);
       await fillIn(GENERAL.inputByAttr('description'), 'My custom description');
@@ -166,7 +171,7 @@ module('Acceptance | auth backend list', function (hooks) {
       );
       await click(GENERAL.linkedBlock('token'));
       assert
-        .dom('[data-test-row-value="Description"]')
+        .dom(GENERAL.infoRowValue('Description'))
         .hasText('My custom description', 'description was saved');
       await login();
       await runCmd(`delete sys/namespaces/${ns}`);

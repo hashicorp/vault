@@ -45,6 +45,9 @@
 
 set -eou pipefail
 
+# We need extglob in order to parse remote_url_is_enterprise
+shopt -s extglob
+
 # fail takes two arguments. The first is the failure reasons and the second is
 # an explanation. Both will be written to STDERR. The script will then exit 1.
 fail() {
@@ -60,7 +63,7 @@ fail() {
 # that of hashicorp/vault-enterprise, otherwise it returns 1.
 remote_url_is_enterprise() {
   case "$1" in
-    git@github.com:hashicorp/vault-enterprise* | https://github.com/hashicorp/vault-enterprise*)
+    ?(ssh://)git@github.com@(:|/)hashicorp/vault-enterprise?(.git) | https://github.com/hashicorp/vault-enterprise?(.git))
       return 0
       ;;
     *)
@@ -131,7 +134,7 @@ main() {
     fi
   done
 
-  fail "git pre-push hook failed!" "git did not write expected commit information to STDIN! Please reach out to #team-vault-automation for help!"
+  fail "git pre-push hook failed!" "git did not write expected commit information to STDIN! This is likely because git could not push one-or-more refs to the remote repository. Did you change history with a rebase and need to force push? If that does not resolve the issue please reach out to #team-vault-automation for help!"
 }
 
 # Call the main function. We currently only care about the URL so we'll pass in

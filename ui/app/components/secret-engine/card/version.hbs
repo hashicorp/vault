@@ -11,40 +11,95 @@
 >
   <Hds::Text::Display @size="300" @tag="h2" class="has-bottom-margin-s hds-foreground-strong">Version</Hds::Text::Display>
 
-  <Hds::Layout::Grid @columnMinWidth="10%" @gap="12" {{style height="100%" grid-template-rows="min-content"}} as |LG|>
-    <LG.Item @colspan={{2}}>
-      <Hds::Text::Body @tag="h3" class="hds-font-weight-semibold has-bottom-margin-s hds-foreground-strong">Engine type</Hds::Text::Body>
-      <Hds::Text::Body @tag="h3" class="hds-font-weight-semibold has-bottom-margin-s hds-foreground-strong">Current version</Hds::Text::Body>
-    </LG.Item>
+  <Hds::Layout::Flex @direction="column" @gap="16" as |LF|>
+    <LF.Item>
+      <Hds::Layout::Flex @align="start" @gap="16">
+        <Hds::Text::Body @tag="h3" class="hds-font-weight-semibold hds-foreground-strong one-half-width">Engine type</Hds::Text::Body>
+        <Hds::Text::Body @tag="p" data-test-row-value="type">{{@model.secretsEngine.type}}</Hds::Text::Body>
+      </Hds::Layout::Flex>
+    </LF.Item>
 
-    <LG.Item @colspan={{3}}>
-      <Hds::Text::Body
-        @tag="p"
-        class="hds-border-strong has-side-padding-8 border-radius-small is-inline-block has-bottom-margin-s"
-        data-test-row-value="type"
-      >{{@model.secretsEngine.type}}</Hds::Text::Body>
-      {{! TODO: Verify if we want to display the full version or chop down ie. v0.17.1 vs v0.17.1-0.230942309423094... }}
-      <Hds::Text::Body
-        @tag="p"
-        data-test-row-value="running_plugin_version"
-      >{{@model.secretsEngine.running_plugin_version}}</Hds::Text::Body>
-    </LG.Item>
-  </Hds::Layout::Grid>
+    <LF.Item>
+      <Hds::Layout::Flex @align="start" @gap="16">
+        <Hds::Text::Body @tag="h3" class="hds-font-weight-semibold hds-foreground-strong one-half-width">Running version</Hds::Text::Body>
+        <Hds::Text::Body @tag="p" data-test-row-value="running-plugin-version">{{this.runningVersion}}{{if
+            (eq this.runningVersion this.pinnedVersion)
+            " (Pinned)"
+          }}</Hds::Text::Body>
+      </Hds::Layout::Flex>
+    </LF.Item>
+  </Hds::Layout::Flex>
 
-  {{! TODO need to support override_pinned_version and reload before making version updates }}
-  {{!-- {{#if (gt @model.versions.length 1)}}
+  {{#if this.infoMessage}}
+    <Hds::Alert
+      @type="compact"
+      @color="neutral"
+      @icon="info"
+      class="has-top-margin-s"
+      data-test-inline-alert="info-message"
+      as |A|
+    >
+      <A.Description>{{this.infoMessage}}</A.Description>
+    </Hds::Alert>
+  {{/if}}
+
+  {{#if this.versionMismatchAlert}}
+    <Hds::Alert
+      @type="inline"
+      @color="warning"
+      @icon="alert-triangle"
+      class="has-top-margin-s"
+      data-test-inline-alert="alert-message"
+      as |A|
+    >
+      <A.Title>{{this.versionMismatchAlert.title}}</A.Title>
+      <A.Description>{{this.versionMismatchAlert.description}}</A.Description>
+      {{#if this.versionMismatchAlert.showReloadButton}}
+        <A.Button
+          @text="Reload plugin"
+          @icon={{if this.reloadPlugin.isRunning "loading"}}
+          @isIconOnly={{false}}
+          @color="secondary"
+          {{on "click" (perform this.reloadPlugin)}}
+          disabled={{this.reloadPlugin.isRunning}}
+          data-test-button="reload-plugin"
+        />
+      {{/if}}
+    </Hds::Alert>
+  {{/if}}
+
+  {{#if this.filteredVersionOptions}}
     <Hds::Separator />
 
     <Hds::Layout::Flex @isInline="true">
-      <Hds::Form::Select::Field name="plugin-version" data-test-input="plugin_version" as |F|>
+      <Hds::Form::Select::Field
+        name="plugin-version"
+        {{on "change" this.onVersionSelect}}
+        data-test-input="plugin-version"
+        as |F|
+      >
         <F.Label>Update version to:</F.Label>
         <F.Options>
           <option value="">Select version</option>
-          {{#each @model.versions as |version|}}
+          {{#each this.filteredVersionOptions as |version|}}
             <option value={{version}}>{{version}}</option>
           {{/each}}
         </F.Options>
       </Hds::Form::Select::Field>
     </Hds::Layout::Flex>
-  {{/if}} --}}
+
+    {{#if this.overridePinnedAlert}}
+      <Hds::Alert
+        @type="inline"
+        @color="warning"
+        @icon="alert-triangle"
+        class="has-top-margin-s"
+        data-test-inline-alert="override-pinned-version"
+        as |A|
+      >
+        <A.Title>{{this.overridePinnedAlert.title}}</A.Title>
+        <A.Description>{{this.overridePinnedAlert.description}}</A.Description>
+      </Hds::Alert>
+    {{/if}}
+  {{/if}}
 </Hds::Card::Container>

@@ -7,12 +7,13 @@
 {{#if (gt this.model.length 0)}}
   <Oidc::ProviderList @model={{this.model}} />
 {{else}}
-  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header @title="No available providers" @titleTag="h2" />
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No available providers" @titleTag="h2" data-test-empty-state-title />
     <A.Body
       @text="Edit an existing provider or create a new one to allow this application access for authentication requests."
+      data-test-empty-state-message
     />
-    <A.Footer as |F|>
+    <A.Footer data-test-empty-state-actions as |F|>
       <F.LinkStandalone
         @icon="chevron-right"
         @iconPosition="trailing"

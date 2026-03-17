@@ -59,7 +59,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       .stub(this.api.sys, 'systemReadSyncAssociationsDestinations')
       .callsFake((initOverride) => {
         initOverride();
-        return Promise.reject(getErrorResponse({ errors: [] }, 404));
+        return Promise.reject(getErrorResponse());
       });
 
     this.renderComponent = () =>

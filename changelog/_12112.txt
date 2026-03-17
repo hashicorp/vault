@@ -1,0 +1,3 @@
+```release-note:bug
+core/identity (enterprise): Fix excessive logging when updating existing aliases
+```

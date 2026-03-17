@@ -204,11 +204,11 @@ module('Unit | Service | api', function (hooks) {
 
   module('Error parsing', function () {
     test('it should correctly parse message from error', async function (assert) {
-      let e = await this.apiService.parseError(getErrorResponse());
+      let e = await this.apiService.parseError(getErrorResponse(undefined, 400));
       assert.strictEqual(e.message, 'first error, second error', 'Builds message from errors');
 
       e = await this.apiService.parseError(
-        getErrorResponse({ errors: [], message: 'there were some errors' })
+        getErrorResponse({ errors: [], message: 'there were some errors' }, 400)
       );
       assert.strictEqual(e.message, 'there were some errors', 'Returns message when errors are empty');
 
@@ -239,7 +239,7 @@ module('Unit | Service | api', function (hooks) {
         errors: ['something bad happened', 'something else bad too'],
         message: 'all bad things occurred',
       };
-      const { response } = await this.apiService.parseError(getErrorResponse(error));
+      const { response } = await this.apiService.parseError(getErrorResponse(error, 400));
       assert.deepEqual(response, error, 'Returns the original error response');
     });
 

@@ -202,17 +202,17 @@ variable "verify_aws_secrets_engine" {
 variable "verify_kmip_secrets_engine" {
   description = "If true we'll verify KMIP secrets engines behavior"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "verify_ldap_secrets_engine" {
   description = "If true we'll verify LDAP secrets engines behavior"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "verify_log_secrets" {
   description = "If true and var.vault_enable_audit_devices is true we'll verify that the audit log does not contain unencrypted secrets. Requires var.vault_radar_license_path to be set to a valid license file."
   type        = bool
-  default     = false
+  default     = false // Only because it requires a Vault Radar license
 }

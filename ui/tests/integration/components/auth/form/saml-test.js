@@ -201,7 +201,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
   });
 
   test('it calls onError if polling token errors in status code that is NOT 401', async function (assert) {
-    this.authenticateStub.rejects(getErrorResponse({ errors: ['uh oh!'] }), 500);
+    this.authenticateStub.rejects(getErrorResponse({ errors: ['uh oh!'] }, 500));
     await this.renderComponent();
     await click(GENERAL.submitButton);
     const [actual] = this.onError.lastCall.args;

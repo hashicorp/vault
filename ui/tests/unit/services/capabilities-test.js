@@ -14,6 +14,7 @@ module('Unit | Service | capabilities', function (hooks) {
 
   hooks.beforeEach(function () {
     this.capabilities = this.owner.lookup('service:capabilities');
+    this.checkCachedPaths = (route) => this.capabilities.routePathCache.get(route);
     this.generateResponse = ({ path, paths, capabilities }) => {
       if (path) {
         // "capabilities" is an array
@@ -142,8 +143,9 @@ module('Unit | Service | capabilities', function (hooks) {
     assert.propEqual(actual, expected, `it returns expected response: ${JSON.stringify(actual)}`);
   });
 
-  test('fetch: it tracks the requested paths', async function (assert) {
+  test('fetch: it caches paths when routeForCache is provided', async function (assert) {
     const paths = ['/my/api/path', 'another/api/path'];
+    const route = 'vault.cluster.some-route';
 
     this.server.post('/sys/capabilities-self', () => {
       return this.generateResponse({
@@ -152,33 +154,110 @@ module('Unit | Service | capabilities', function (hooks) {
       });
     });
 
-    assert.strictEqual(this.capabilities.requestedPaths.size, 0, 'requestedPaths is empty before fetch');
-
-    await this.capabilities.fetch(paths);
-
-    assert.strictEqual(this.capabilities.requestedPaths.size, 2, 'requestedPaths contains 2 items');
-    assert.true(this.capabilities.requestedPaths.has('/my/api/path'), 'contains first path');
-    assert.true(this.capabilities.requestedPaths.has('another/api/path'), 'contains second path');
+    assert.strictEqual(this.capabilities.routePathCache.size, 0, 'cache is empty before fetch');
+    await this.capabilities.fetch(paths, { routeForCache: route });
+    assert.strictEqual(this.capabilities.routePathCache.size, 1, 'cache contains 1 route');
+    const cachedPaths = this.checkCachedPaths(route);
+    assert.deepEqual(Array.from(cachedPaths), paths, 'cached paths match fetched paths');
   });
 
-  test('fetch: it replaces requestedPaths on each call', async function (assert) {
-    const firstPaths = ['/path/one', '/path/two'];
-    const secondPaths = ['/path/three'];
-
+  test('fetch: it does not cache when routeForCache is not provided', async function (assert) {
+    const paths = ['/my/api/path'];
     this.server.post('/sys/capabilities-self', () => {
-      return this.generateResponse({
-        paths: firstPaths,
-        capabilities: { '/path/one': ['read'], '/path/two': ['read'], '/path/three': ['read'] },
-      });
+      return this.generateResponse({ paths, capabilities: { '/my/api/path': ['read'] } });
     });
+    await this.capabilities.fetch(paths);
+    assert.strictEqual(this.capabilities.routePathCache.size, 0, 'cache remains empty');
+  });
 
-    await this.capabilities.fetch(firstPaths);
-    assert.strictEqual(this.capabilities.requestedPaths.size, 2, 'initially has 2 paths');
+  test('cacheRoutePaths: it caches paths', async function (assert) {
+    const route = 'vault.cluster.some-route';
+    const apiPaths = ['/my/api/path', 'another/api/path'];
 
-    await this.capabilities.fetch(secondPaths);
-    assert.strictEqual(this.capabilities.requestedPaths.size, 1, 'updated to have 1 path');
-    assert.true(this.capabilities.requestedPaths.has('/path/three'), 'contains new path');
-    assert.false(this.capabilities.requestedPaths.has('/path/one'), 'no longer contains old path');
+    assert.strictEqual(this.capabilities.routePathCache.size, 0, 'routePathCache is empty before fetch');
+    this.capabilities.cacheRoutePaths(route, apiPaths);
+    assert.strictEqual(this.capabilities.routePathCache.size, 1, 'routePathCache contains 1 item');
+    const cachedPaths = this.checkCachedPaths(route);
+    assert.strictEqual(cachedPaths.size, 2, 'it stores 2 paths for the route');
+    assert.true(cachedPaths.has('/my/api/path'), 'contains first path');
+    assert.true(cachedPaths.has('another/api/path'), 'contains second path');
+  });
+
+  test('cacheRoutePaths: it caches the paths for multiple routes', async function (assert) {
+    const routeA = 'vault.cluster.route-A';
+    const pathsA = ['route/A/path'];
+    const routeB = 'vault.cluster.route-B';
+    const pathsB = ['route/B/path'];
+
+    this.capabilities.cacheRoutePaths(routeA, pathsA);
+    this.capabilities.cacheRoutePaths(routeB, pathsB);
+    assert.strictEqual(this.capabilities.routePathCache.size, 2, 'contains two items');
+    assert.true(this.checkCachedPaths(routeA).has(pathsA[0]), 'contains routeA path');
+    assert.true(this.checkCachedPaths(routeB).has(pathsB[0]), 'contains routeB path');
+  });
+
+  test('cacheRoutePaths: it replaces cached paths if called with the same route', async function (assert) {
+    const route = 'vault.cluster.some-route';
+    const firstCall = ['first/path'];
+
+    this.capabilities.cacheRoutePaths(route, firstCall);
+    const initialCache = this.checkCachedPaths(route);
+    assert.strictEqual(initialCache.size, 1, 'cached paths contains 1 path');
+    assert.true(initialCache.has(firstCall[0]), 'contains initial path');
+
+    const secondCall = ['second/path'];
+    this.capabilities.cacheRoutePaths(route, secondCall);
+    const secondCache = this.checkCachedPaths(route);
+    assert.strictEqual(secondCache.size, 1, 'second cache still contains 1 path');
+    assert.true(secondCache.has(secondCall[0]), 'path is from second call');
+  });
+
+  test('cacheRoutePaths: it deduplicates paths', async function (assert) {
+    const route = 'vault.cluster.some-route';
+    const paths = ['same/path', 'same/path', 'almost/same/path'];
+
+    this.capabilities.cacheRoutePaths(route, paths);
+    const cachedPaths = this.checkCachedPaths(route);
+    assert.strictEqual(cachedPaths.size, 2, 'routePathCache contains 2 items');
+    assert.true(cachedPaths.has('same/path'), 'contains first path');
+    assert.true(cachedPaths.has('almost/same/path'), 'contains second path');
+  });
+
+  test('lookupRoutePaths: it returns exact route match', async function (assert) {
+    const route = 'vault.cluster.some-route';
+    const pathSet = new Set(['apps/super-secret']);
+    this.capabilities.routePathCache.set(route, pathSet);
+
+    const returnedPaths = await this.capabilities.lookupRoutePaths(route);
+    assert.deepEqual(returnedPaths, pathSet, 'returned paths equal original set');
+  });
+
+  test('lookupRoutePaths: it returns longest matching route if multiple exist', async function (assert) {
+    const ancestor1 = 'vault.cluster.secrets';
+    const ancestor2 = 'vault.cluster.secrets.backend.kv';
+    const ancestor3 = 'vault.cluster.secrets.backend.kv.secret';
+    const pathSet1 = new Set(['apps/']);
+    const pathSet2 = new Set(['apps/github-creds/']);
+    const pathSet3 = new Set(['apps/github-creds/api-tokens']);
+    this.capabilities.routePathCache.set(ancestor1, pathSet1);
+    this.capabilities.routePathCache.set(ancestor2, pathSet2);
+    this.capabilities.routePathCache.set(ancestor3, pathSet3);
+
+    const returnedPaths = await this.capabilities.lookupRoutePaths(
+      'vault.cluster.secrets.backend.kv.secret.details'
+    );
+    assert.deepEqual(returnedPaths, pathSet3, 'it returns the paths that match the longest route');
+  });
+
+  test('lookupRoutePaths: it returns null when no routes are cached', async function (assert) {
+    const returnedPaths = await this.capabilities.lookupRoutePaths('vault.cluster.some-route');
+    assert.strictEqual(returnedPaths, null, 'returns null when cache is empty');
+  });
+
+  test('lookupRoutePaths: it returns null when no matching routes exist', async function (assert) {
+    this.capabilities.routePathCache.set('vault.cluster.secrets', new Set(['secret/']));
+    const returnedPaths = await this.capabilities.lookupRoutePaths('vault.cluster.settings.configure');
+    assert.strictEqual(returnedPaths, null, 'returns null when no routes match');
   });
 
   test('fetchPathCapabilities: it makes request to capabilities-self and returns capabilities for single path', async function (assert) {
@@ -219,6 +298,18 @@ module('Unit | Service | capabilities', function (hooks) {
       'sys/sync/destinations/aws-sm/foo',
       'pathFor returns expected path for syncDestination'
     );
+  });
+
+  test('pathsForList: it returns multiple PATH_MAP keys', async function (assert) {
+    const keys = ['kubernetesRole', 'kubernetesCreds'];
+    const params = { backend: 'k8', name: 'my-role' };
+    const paths = this.capabilities.pathsForList(keys, params);
+    assert.deepEqual(paths, ['k8/role/my-role', 'k8/creds/my-role'], 'computes all paths');
+  });
+
+  test('pathsForList: it handles an empty array', async function (assert) {
+    const paths = this.capabilities.pathsForList([], {});
+    assert.deepEqual(paths, [], 'returns empty array');
   });
 
   test('for: it should fetch capabilities for single path using pathFor and fetchPathCapabilities methods', async function (assert) {

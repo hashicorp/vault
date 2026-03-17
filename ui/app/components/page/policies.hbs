@@ -1,0 +1,220 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if (or (eq @policyType "acl") (has-feature "Sentinel"))}}
+  <Page::Header @title="{{uppercase @policyType}} policies">
+    <:badges>
+      {{#if (not-eq @policyType "acl")}}
+        <Hds::Badge @text="Sentinel" />
+      {{/if}}
+    </:badges>
+    <:breadcrumbs>
+      <Page::Breadcrumbs
+        @breadcrumbs={{array
+          (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+          (hash label=(concat (uppercase @policyType) " policies"))
+        }}
+      />
+    </:breadcrumbs>
+    <:actions>
+      {{#if this.showIntroButton}}
+        <Hds::Button
+          @color="secondary"
+          @icon="bulb"
+          @text="New to ACL policies?"
+          {{on "click" this.showIntroPage}}
+          data-test-button="intro"
+        />
+      {{/if}}
+    </:actions>
+  </Page::Header>
+
+  {{#if this.showWizard}}
+    <Wizard::AclPolicies::AclWizard @isIntroModal={{this.shouldRenderIntroModal}} @onRefresh={{this.refreshPolicyList}} />
+  {{/if}}
+
+  {{#if this.showContent}}
+    <Toolbar>
+      {{#if @model.meta.total}}
+        <ToolbarFilters>
+          <NavigateInput
+            @filterFocusDidChange={{this.setFilterFocus}}
+            @filterDidChange={{this.setFilter}}
+            @filter={{this.filter}}
+            @filterMatchesKey={{this.filterMatchesKey}}
+            @firstPartialMatch={{this.firstPartialMatch}}
+            @extraNavParams={{@policyType}}
+            @placeholder="Filter policies"
+            @mode="policy"
+          />
+          {{#if this.filterFocused}}
+            {{#if this.filterMatchesKey}}
+              <p class="input-hint">
+                <kbd>ENTER</kbd>
+                to go to
+                <code>{{this.filter}}</code>
+              </p>
+            {{/if}}
+            {{#if this.firstPartialMatch}}
+              <p class="input-hint">
+                <kbd>TAB</kbd>
+                to complete
+                <code>{{this.firstPartialMatch.id}}</code>
+              </p>
+            {{/if}}
+          {{/if}}
+        </ToolbarFilters>
+        {{#if this.filter}}
+          <div class="toolbar-separator"></div>
+          <div class="toolbar-filters-info">
+            <Hds::Badge @text="Filtered" @color="neutral" />
+            <span class="has-text-grey">
+              Showing
+              {{@model.length}}
+              of
+              {{@model.meta.total}}
+              policies
+            </span>
+          </div>
+        {{/if}}
+      {{/if}}
+      <ToolbarActions>
+        <ToolbarLink @route="vault.cluster.policies.create" @type="add" data-test-policy-create-link>
+          Create
+          {{uppercase @policyType}}
+          policy
+        </ToolbarLink>
+      </ToolbarActions>
+    </Toolbar>
+    {{#if @model.meta.total}}
+      {{#each @model as |item|}}
+        {{#if (eq item.id "root")}}
+          <div class="list-item-row is-flex" data-test-policy-item>
+            <Icon @name="file" class="has-text-grey-light" />
+            <div>
+              <span class="has-text-weight-semibold has-text-grey" data-test-policy-name>
+                {{item.id}}
+              </span>
+              <p class="help has-text-grey">
+                The
+                <code>root</code>
+                policy does not contain any rules but can do anything within Vault. It should be used with extreme care.
+              </p>
+            </div>
+          </div>
+        {{else}}
+          <LinkedBlock
+            @params={{array "vault.cluster.policy.show" @policyType item.id}}
+            class="list-item-row"
+            data-test-policy-link={{item.id}}
+          >
+            <div class="columns is-mobile">
+              <div class="column is-10">
+                <LinkTo
+                  @route="vault.cluster.policy.show"
+                  @models={{array @policyType item.id}}
+                  class="has-text-black has-text-weight-semibold"
+                  data-test-policy-item={{true}}
+                >
+                  <Icon @name="file" class="has-text-grey-light" />
+                  <span class="is-underline" data-test-policy-name>{{item.id}}</span>
+                </LinkTo>
+              </div>
+              <div class="column has-text-right">
+                <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                  <dd.ToggleIcon
+                    @icon="more-horizontal"
+                    @text="Policy nav menu"
+                    @hasChevron={{false}}
+                    data-test-popup-menu-trigger
+                  />
+                  {{#if item.updatePath.isPending}}
+                    <dd.Generic class="has-text-center">
+                      <LoadingDropdownOption />
+                    </dd.Generic>
+                  {{else}}
+                    {{#if item.canRead}}
+                      <dd.Interactive
+                        @route="vault.cluster.policy.show"
+                        @models={{array @policyType item.id}}
+                        data-test-policy-link="show"
+                      >Details</dd.Interactive>
+                    {{/if}}
+                    {{#if item.canEdit}}
+                      <dd.Interactive
+                        @route="vault.cluster.policy.edit"
+                        @models={{array @policyType item.id}}
+                        data-test-policy-link="edit"
+                      >Edit</dd.Interactive>
+                    {{/if}}
+                    {{#if (and item.canDelete (not-eq item.name "default"))}}
+                      <dd.Interactive
+                        @color="critical"
+                        data-test-confirm-action-trigger
+                        {{on "click" (fn (mut this.policyToDelete) item)}}
+                      >Delete</dd.Interactive>
+                    {{/if}}
+                  {{/if}}
+                </Hds::Dropdown>
+              </div>
+            </div>
+          </LinkedBlock>
+        {{/if}}
+      {{else}}
+        <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+          <A.Header @title="No policies matching &quot;{{this.filter}}&quot;" @titleTag="h2" data-test-empty-state-title />
+        </Hds::ApplicationState>
+      {{/each}}
+      {{#unless this.filter}}
+        <Hds::Pagination::Numbered
+          @currentPage={{@model.meta.currentPage}}
+          @currentPageSize={{@model.meta.pageSize}}
+          @route="vault.cluster.policies.index"
+          @showSizeSelector={{false}}
+          @totalItems={{@model.meta.filteredTotal}}
+          @queryFunction={{this.paginationQueryParams}}
+        />
+      {{/unless}}
+    {{else}}
+      <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+        <A.Header @title="No {{uppercase @policyType}} policies yet" @titleTag="h2" data-test-empty-state-title />
+        <A.Body
+          @text="A list of policies will be listed here. Create your first {{uppercase @policyType}} policy to get started."
+          data-test-empty-state-message
+        />
+        <A.Footer data-test-empty-state-actions as |F|>
+          {{#if (eq @policyType "acl")}}
+            <F.LinkStandalone
+              @iconPosition="trailing"
+              @icon="learn-link"
+              @text="Getting started with policies"
+              @href={{doc-link "/vault/tutorials/get-started/introduction-policies"}}
+            />
+          {{else}}
+            <F.LinkStandalone
+              @iconPosition="trailing"
+              @icon="learn-link"
+              @text="Sentinel policies tutorial"
+              @href={{doc-link "/vault/tutorials/policies/sentinel"}}
+            />
+          {{/if}}
+        </A.Footer>
+      </Hds::ApplicationState>
+    {{/if}}
+  {{/if}}
+
+{{else}}
+  <UpgradePage @title="Sentinel" @minimumEdition="Vault Enterprise Premium" />
+{{/if}}
+
+{{#if this.policyToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Delete this policy?"
+    @confirmMessage="This will permanently delete this policy and may affect access to some data."
+    @onClose={{fn (mut this.policyToDelete) null}}
+    @onConfirm={{fn this.deletePolicy this.policyToDelete}}
+  />
+{{/if}}

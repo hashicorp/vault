@@ -2,39 +2,39 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-{{#if (has-block "selectedItems")}}
-  {{yield to="selectedItems"}}
-{{/if}}
+
 <Hds::AdvancedTable
   @model={{this.paginatedTableData}}
   @columns={{@columns}}
-  @isSelectable={{if @selectionKey true false}}
+  @isSelectable={{if @selectionKeyField true false}}
   class="has-bottom-margin-s"
   @onSelectionChange={{@onSelectionChange}}
   {{did-update this.resetPagination @data}}
 >
   <:body as |B|>
     <B.Tr
-      @selectionKey={{get B.data @selectionKey}}
-      @selectionAriaLabelSuffix="row {{B.data.path}}"
-      data-test-table-row={{get B.data @selectionKey}}
+      {{! Pass value of selectionKeyField because it should be the unique identifier for that object }}
+      @selectionKey={{this.identifier B.data}}
+      @selectionAriaLabelSuffix="row {{this.identifier B.data}}"
+      data-test-table-row={{B.rowIndex}}
+      data-test-list-item={{this.identifier B.data}}
     >
-      {{#each this.columnKeys as |key index|}}
-        {{#if (and (eq key "popupMenu") (has-block "popupMenu"))}}
+      {{#each @columns as |column|}}
+        {{#if (and (eq column.key "popupMenu") (has-block "popupMenu"))}}
           <B.Td data-test-table-data="popupMenu">
             {{yield B.data to="popupMenu"}}
           </B.Td>
         {{else}}
-          {{#let (get B.data key) as |value|}}
-            <B.Td data-test-table-data={{key}} class="is-inline text-overflow-ellipsis">
-              {{#if (get (get @columns index) "customTableItem")}}
-                {{yield B.data to="customTableItem"}}
-              {{else}}
+          <B.Td data-test-table-data={{column.key}} class="is-inline text-overflow-ellipsis">
+            {{#if column.customTableItem}}
+              {{yield B.data to="customTableItem"}}
+            {{else}}
+              {{#let (get B.data column.key) as |value|}}
                 {{! stringify value if it is an array or object, otherwise render directly }}
                 {{if (this.isObject value) (stringify value) value}}
-              {{/if}}
-            </B.Td>
-          {{/let}}
+              {{/let}}
+            {{/if}}
+          </B.Td>
         {{/if}}
       {{/each}}
     </B.Tr>

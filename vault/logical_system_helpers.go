@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault/pki_cert_count"
+	"github.com/hashicorp/vault/vault/cert_count"
 )
 
 type enterprisePathStub struct {
@@ -291,41 +291,67 @@ func ceSysInitialize(b *SystemBackend) func(context.Context, *logical.Initializa
 			return fmt.Errorf("failed to initialize activation flags: %w", err)
 		}
 
-		b.Core.pkiCertCountManager.StartConsumerJob(func(increment logical.CertCount) {
-			b.Core.consumePkiCertCounts(increment)
+		b.Core.certCountManager.StartConsumerJob(func(increment logical.CertCount) {
+			b.Core.consumeCertCounts(increment)
 		})
 		return nil
 	}
 }
 
-// consumePkiCertCounts updates the PKI certificate counts in storage if we are
+// consumeCertCounts updates the certificate counts in storage if we are
 // running on the active node; otherwise it forwards them to the active node.
-func (c *Core) consumePkiCertCounts(inc logical.CertCount) {
-	var consumed bool
+func (c *Core) consumeCertCounts(inc logical.CertCount) {
 	haState := c.HAStateWithLock()
 	if inc.IsZero() {
 		return
 	}
 
+	unconsumed := inc
 	switch haState {
 	case consts.Standby:
-		consumed = true
+		// nothing to do
 	case consts.PerfStandby:
-		consumed = forwardPkiCertCounts(c, inc)
-	case consts.Active:
-		c.logger.Info("storing PKI certificate counts", "issuedCerts", inc.IssuedCerts, "storedCerts", inc.StoredCerts)
-		err := pki_cert_count.IncrementStoredCounts(c.activeContext, c.barrier, inc)
-		if err != nil {
-			c.logger.Error("error storing PKI certificate counts", "error", err)
-		} else {
-			consumed = true
+		if forwardCertCounts(c, inc) {
+			unconsumed = logical.CertCount{}
 		}
+	case consts.Active:
+		c.logger.Info("storing certificate counts", "pkiIssuedCerts", inc.IssuedCerts, "pkiStoredCerts", inc.StoredCerts)
+		err := cert_count.IncrementStoredCounts(c.activeContext, c.barrier, inc)
+		if err != nil {
+			c.logger.Error("error storing certificate counts", "error", err)
+		} else {
+			unconsumed.IssuedCerts = 0
+			unconsumed.StoredCerts = 0
+		}
+
+		c.logger.Info("storing duration adjusted count", "pkiDurationAdjustedCount", inc.PkiDurationAdjustedCerts)
+		err = c.UpdatePkiDurationAdjustedCount(c.activeContext, inc.PkiDurationAdjustedCerts, time.Now())
+		if err != nil {
+			c.logger.Error("error storing duration adjusted certificate counts", "error", err)
+		} else {
+			unconsumed.PkiDurationAdjustedCerts = 0
+		}
+
+		c.logger.Info("storing SSH counts", "sshDurationAdjustedCount", inc.SSHIssuedCerts, "sshOTPCount", inc.SSHIssuedOTPs)
+		_, err = c.UpdateStoredSSHDurationAdjustedCertCount(c.activeContext, time.Now(), inc.SSHIssuedCerts)
+		if err != nil {
+			c.logger.Error("error storing SSH duration adjusted certificate count", "error", err)
+		} else {
+			unconsumed.SSHIssuedCerts = 0
+		}
+
+		_, err = c.UpdateStoredSSHOTPCount(c.activeContext, time.Now(), inc.SSHIssuedOTPs)
+		if err != nil {
+			c.logger.Error("error storing SSH OTP count", "error", err)
+		} else {
+			unconsumed.SSHIssuedOTPs = 0
+		}
+
 	default:
-		c.logger.Error("Unexpected HA state when consuming PKI certificate counts", "ha_state", haState)
+		c.logger.Error("Unexpected HA state when consuming certificate counts", "ha_state", haState)
 	}
-	if !consumed {
-		c.pkiCertCountManager.AddCount(inc)
-	}
+	// Add any unconsumed counts to the in-memory count so they can be included in the next increment
+	c.certCountManager.AddCount(unconsumed)
 }
 
 // Contains the config for a global plugin reload

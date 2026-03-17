@@ -50,6 +50,12 @@ variable "vault_root_token" {
   default     = null
 }
 
+variable "vault_audit_log_path" {
+  type        = string
+  description = "The file path for the audit device"
+  default     = null
+}
+
 variable "aws_enabled" {
   type        = bool
   description = <<-EOF

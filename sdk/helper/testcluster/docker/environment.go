@@ -82,6 +82,7 @@ type DockerCluster struct {
 	storage      testcluster.ClusterStorage
 	disableMlock bool
 	disableTLS   bool
+	cleanupOnce  sync.Once
 }
 
 func (dc *DockerCluster) NamedLogger(s string) log.Logger {
@@ -144,7 +145,9 @@ func (dc *DockerCluster) GetCACertPEMFile() string {
 }
 
 func (dc *DockerCluster) Cleanup() {
-	dc.cleanup()
+	dc.cleanupOnce.Do(func() {
+		dc.cleanup()
+	})
 }
 
 func (dc *DockerCluster) cleanup() error {
@@ -432,6 +435,8 @@ func NewTestDockerClusterWithErr(t *testing.T, opts *DockerClusterOptions) (*Doc
 	dc, err := NewDockerCluster(ctx, opts)
 	if err == nil {
 		dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
+		// Register cleanup with t.Cleanup so it's automatically called when the test ends
+		t.Cleanup(dc.Cleanup)
 	}
 	return dc, err
 }
@@ -1012,6 +1017,31 @@ func (n *DockerClusterNode) Restart(ctx context.Context) error {
 	}
 	client.SetToken(n.Cluster.rootToken)
 	n.client = client
+
+	return nil
+}
+
+func (n *DockerClusterNode) Signal(ctx context.Context, signal string) error {
+	return n.DockerAPI.ContainerKill(ctx, n.Container.ID, signal)
+}
+
+func (n *DockerClusterNode) UpdateConfig(ctx context.Context, config *testcluster.VaultNodeConfig) error {
+	// Marshal the config to JSON
+	configJSON, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	// Write the config to the work directory
+	configPath := filepath.Join(n.WorkDir, "user.json")
+	if err := os.WriteFile(configPath, configJSON, 0o644); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	// Copy the updated config to the container
+	if err := dockhelper.CopyToContainer(ctx, n.DockerAPI, n.Container.ID, configPath, "/vault/config/user.json"); err != nil {
+		return fmt.Errorf("failed to copy config to container: %w", err)
+	}
 
 	return nil
 }

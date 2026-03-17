@@ -13,6 +13,11 @@ import (
 	"github.com/hashicorp/vault/vault/billing"
 )
 
+var (
+	ErrCouldNotGetBillingSubView        = fmt.Errorf("could not get billing sub view")
+	ErrConsumptionBillingNotInitialized = fmt.Errorf("consumption billing is not initialized")
+)
+
 func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 	// We need replication (post unseal) to start before we run the consumption billing metrics worker
 	// This is because there is primary/secondary cluster specific logic
@@ -27,7 +32,13 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 		},
 		Logger: logger,
 	}
+	if c.systemBarrierView != nil {
+		c.consumptionBillingSubView = c.systemBarrierView.SubView(billing.BillingSubPath)
+	} else {
+		c.consumptionBilling.Logger.Error("system barrier view is not initialized, consumption billing view is not initialized")
+	}
 	c.consumptionBillingLock.Unlock()
+
 	c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
 		c.consumptionBillingMetricsWorker(ctx)
 		// Start the perf standby plugin counts worker if this is a perf standby
@@ -44,39 +55,114 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 
 func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(10 * time.Minute)
 		c.consumptionBillingLock.RLock()
-		if c.consumptionBilling.BillingConfig.MetricsUpdateCadence > 0 {
-			// For testing purposes
-			ticker = time.NewTicker(c.consumptionBilling.BillingConfig.MetricsUpdateCadence)
-		}
+		// Check if the clock has been overridden for testing purposes
+		clock := c.consumptionBilling.BillingConfig.TestOverrideClock
+		metricsCadence := c.consumptionBilling.BillingConfig.MetricsUpdateCadence
 		c.consumptionBillingLock.RUnlock()
+		if clock == nil {
+			clock = timeutil.DefaultClock{}
+		}
+
+		ticker := clock.NewTicker(billing.BillingWriteInterval)
+		if metricsCadence > 0 {
+			// For testing purposes
+			ticker = clock.NewTicker(metricsCadence)
+		}
 		defer ticker.Stop()
 
-		endOfMonth := time.NewTimer(time.Until(timeutil.StartOfNextMonth(time.Now())))
+		untilNextMonth := func(now time.Time) time.Duration {
+			// IMPORTANT: Do not use time.Until() here; it uses the real clock.
+			// We need the injected clock (for tests) to control time math.
+			d := timeutil.StartOfNextMonth(now.UTC()).Sub(now.UTC())
+			if d < 0 {
+				return 0
+			}
+			return d
+		}
+		endOfMonth := clock.NewTimer(untilNextMonth(clock.Now().UTC()))
 		for {
 			select {
 			case <-ticker.C:
-				if err := c.updateBillingMetrics(ctx); err != nil {
+				if err := c.updateBillingMetrics(ctx, clock.Now().UTC()); err != nil {
 					c.logger.Error("error updating billing metrics", "error", err)
 				}
 			case <-ctx.Done():
 				return
 			case <-endOfMonth.C:
 				// Reset the timer for the next month
-				endOfMonth.Reset(time.Until(timeutil.StartOfNextMonth(time.Now())))
-				// Reset KMIP enabled flag for the new billing month
-				c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
+				currentMonth := clock.Now().UTC()
+				c.logger.Debug("reached end of month, resetting timer", "currentMonth", currentMonth)
+				previousMonth := timeutil.StartOfPreviousMonth(currentMonth)
 				// On month boundary, we need to flush the current in-memory counts to storage
-				if err := c.updateBillingMetrics(ctx); err != nil {
+				if err := c.updateBillingMetrics(ctx, previousMonth); err != nil {
 					c.logger.Error("error updating billing metrics at month boundary", "error", err)
 				}
+				c.HandleStartOfMonth(ctx, currentMonth)
+				endOfMonth.Reset(untilNextMonth(currentMonth))
+
 			}
 		}
 	}()
 }
 
-func (c *Core) updateBillingMetrics(ctx context.Context) error {
+// HandleStartOfMonth cleans up monthly billing data from
+// n-2 months ago, and also resets all in memory billing metrics when the start of the month is reached.
+func (c *Core) HandleStartOfMonth(ctx context.Context, currentMonth time.Time) {
+	c.logger.Info("handling start of month operations", "currentMonth", currentMonth)
+	// We only delete n-2 month billing metrics on the active node
+	if standby, _ := c.Standby(); !standby && !c.PerfStandby() {
+		if err := c.deletePreviousMonthBillingMetrics(ctx, currentMonth); err != nil {
+			c.logger.Error("error deleting historical month billing metrics", "error", err)
+		}
+	}
+	if err := c.resetInMemoryBillingMetrics(); err != nil {
+		c.logger.Error("error resetting in memory billing metrics", "error", err)
+	}
+	// Reset the metrics last update time to zero time to indicate new month data hasn't been updated yet
+	c.UpdateMetricsLastUpdateTime(ctx, currentMonth, time.Time{})
+}
+
+func (c *Core) deletePreviousMonthBillingMetrics(ctx context.Context, currentMonth time.Time) error {
+	twoMonthsAgo := timeutil.StartOfPreviousMonth(currentMonth).AddDate(0, -1, 0)
+	// Delete billing metrics from both replicated and local prefixes
+	for _, pathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
+		// If we are not the primary, then do not delete replicate metrics
+		if !c.isPrimary() && pathPrefix == billing.ReplicatedPrefix {
+			continue
+		}
+		billingPath := billing.GetMonthlyBillingPath(pathPrefix, twoMonthsAgo)
+		view, ok := c.GetBillingSubView()
+		if !ok {
+			return ErrCouldNotGetBillingSubView
+		}
+		metricPaths, err := view.List(ctx, billingPath)
+		if err != nil {
+			return err
+		}
+		for _, segment := range metricPaths {
+			err = view.Delete(ctx, billingPath+segment)
+			if err != nil {
+				c.logger.Error("error deleting previous month billing metric", "error", err, "metricPath", billingPath+segment)
+			}
+		}
+	}
+	return nil
+}
+
+func (c *Core) resetInMemoryBillingMetrics() error {
+	// Reset Transit/Tranform DP counts
+	c.logger.Info("resetting in memory billing metrics")
+	c.consumptionBillingLock.Lock()
+	defer c.consumptionBillingLock.Unlock()
+	c.consumptionBilling.DataProtectionCallCounts.Transit.Store(0)
+	c.consumptionBilling.DataProtectionCallCounts.Transform.Store(0)
+	c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
+	return nil
+}
+
+// updateBillingMetricsLocked must be called with stateLock already held.
+func (c *Core) updateBillingMetricsLocked(ctx context.Context, currentMonth time.Time) error {
 	// Check if systemBarrierView is initialized
 	c.mountsLock.RLock()
 	initialized := c.systemBarrierView != nil
@@ -85,16 +171,14 @@ func (c *Core) updateBillingMetrics(ctx context.Context) error {
 	if !initialized {
 		return nil
 	}
-
-	if c.PerfStandby() {
+	if c.perfStandby {
 		// We do not update billing metrics on performance standbys
 		// Instead we send any in memory counts to the primary. This doesn't apply
 		// to role counts, but will be used for other metrics
-	} else if standby, _ := c.Standby(); standby {
+	} else if c.standby {
 		// Do nothing if we are a standby. All requests get forwarded anyway
 	} else {
 		// The active node will need to flush max role counts to storage
-		currentMonth := time.Now()
 		if c.isPrimary() {
 			c.UpdateReplicatedHWMMetrics(ctx, currentMonth)
 		}
@@ -105,17 +189,28 @@ func (c *Core) updateBillingMetrics(ctx context.Context) error {
 			c.logger.Info("updated cluster data protection call counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
 		}
 
+		// Store the last metrics update time. This is used to determine the freshness of the billing data.
+		// We store this on the active node only, since this is the node that updates the billing metrics.
+		// The standby nodes will replicate this value, so it will be available on all nodes, but we avoid
+		// having all nodes write to this value to avoid write conflicts.
+		c.UpdateMetricsLastUpdateTime(ctx, currentMonth, time.Now().UTC())
 	}
 	return nil
 }
 
+func (c *Core) updateBillingMetrics(ctx context.Context, currentMonth time.Time) error {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	return c.updateBillingMetricsLocked(ctx, currentMonth)
+}
+
 func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time.Time) error {
-	_, err := c.UpdateMaxRoleCounts(ctx, billing.ReplicatedPrefix, currentMonth)
+	_, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, currentMonth)
 	if err != nil {
-		c.logger.Error("error updating replicated max role counts", "error", err)
+		c.logger.Error("error updating replicated max role and managed key counts", "error", err)
 		// We won't return an error. Instead we will log the errors and attempt to continue
 	} else {
-		c.logger.Info("updated replicated hwm role counts", "prefix", billing.ReplicatedPrefix, "currentMonth", currentMonth)
+		c.logger.Info("updated replicated hwm role and managed key counts", "prefix", billing.ReplicatedPrefix, "currentMonth", currentMonth)
 	}
 	if _, err = c.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, currentMonth); err != nil {
 		// We won't return an error. Instead we will log the errors and attempt to continue
@@ -127,10 +222,10 @@ func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time
 }
 
 func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time) error {
-	if _, err := c.UpdateMaxRoleCounts(ctx, billing.LocalPrefix, currentMonth); err != nil {
-		c.logger.Error("error updating local max role counts", "error", err)
+	if _, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.LocalPrefix, currentMonth); err != nil {
+		c.logger.Error("error updating local max role and managed key counts", "error", err)
 	} else {
-		c.logger.Info("updated local max role counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+		c.logger.Info("updated local max role and managed key counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
 	}
 	if _, err := c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth); err != nil {
 		c.logger.Error("error updating local max kv counts", "error", err)

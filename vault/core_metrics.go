@@ -424,7 +424,7 @@ type kvMount struct {
 // or externally compiled KV mounts that are still of type KV.
 // It's a simple function that's slightly reimplemented to prevent needing a context
 // in findKvMounts.
-func (c *Core) findOfficialKvMounts(ctx context.Context) []*kvMount {
+func (c *Core) findOfficialKvMounts(ctx context.Context, includeLocal, includeReplicated bool, kvVersion string) []*kvMount {
 	mounts := make([]*kvMount, 0)
 
 	c.mountsLock.RLock()
@@ -438,10 +438,21 @@ func (c *Core) findOfficialKvMounts(ctx context.Context) []*kvMount {
 	}
 
 	for _, entry := range c.mounts.Entries {
+		if !includeLocal && entry.Local {
+			continue
+		}
+		if !includeReplicated && !entry.Local {
+			continue
+		}
+
 		if entry.Type == pluginconsts.SecretEngineKV || entry.Type == pluginconsts.SecretEngineGeneric {
 			version, ok := entry.Options["version"]
 			if !ok || version == "" {
 				version = "1"
+			}
+
+			if kvVersion != "0" && version != kvVersion {
+				continue
 			}
 
 			pluginName := getAdjustedPluginType(entry)
@@ -473,7 +484,8 @@ func (c *Core) findOfficialKvMounts(ctx context.Context) []*kvMount {
 	return mounts
 }
 
-func (c *Core) findKvMounts() []*kvMount {
+// findKvMounts finds all KV mounts. If kvVersion is "0", all versions of KV are included.
+func (c *Core) findKvMounts(includeLocal, includeReplicated bool, kvVersion string) []*kvMount {
 	mounts := make([]*kvMount, 0)
 
 	c.mountsLock.RLock()
@@ -487,11 +499,24 @@ func (c *Core) findKvMounts() []*kvMount {
 	}
 
 	for _, entry := range c.mounts.Entries {
+		if !includeLocal && entry.Local {
+			continue
+		}
+		if !includeReplicated && !entry.Local {
+			continue
+		}
+
 		if entry.Type == pluginconsts.SecretEngineKV || entry.Type == pluginconsts.SecretEngineGeneric {
 			version, ok := entry.Options["version"]
 			if !ok || version == "" {
 				version = "1"
 			}
+
+			// If kvVersion is "0", all versions of KV are included.
+			if kvVersion != "0" && version != kvVersion {
+				continue
+			}
+
 			mounts = append(mounts, &kvMount{
 				Namespace:            entry.namespace,
 				MountPoint:           entry.Path,
@@ -658,7 +683,7 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 
 func (c *Core) kvSecretGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
 	// Find all KV mounts
-	mounts := c.findKvMounts()
+	mounts := c.findKvMounts(true, true, "0")
 	results := make([]metricsutil.GaugeLabelValues, len(mounts))
 
 	// Use a root namespace, so include namespace path
@@ -842,15 +867,19 @@ type RoleCounts struct {
 	TerraformCloudDynamicRoles int `json:"terraformcloud_dynamic_roles"`
 }
 
-// getRoleCountsInternal gets the role counts for plugins.
+type ManagedKeyCounts struct {
+	TotpKeys int `json:"totp_keys"`
+	KmseKeys int `json:"kmse_keys"`
+}
+
+// getRoleAndManagedKeyCountsInternal gets the role counts for plugins and managed key counts
 // includeLocal determines if local mounts are included
 // includeReplicated determines if replicated mounts are included
 // officialPluginsOnly determines if this function should include only plugins that are official,
 // which would exclude, for example, a custom built version of these plugins.
-func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool, officialPluginsOnly bool) *RoleCounts {
+func (c *Core) getRoleAndManagedKeyCountsInternal(includeLocal bool, includeReplicated bool, officialPluginsOnly bool) (*RoleCounts, *ManagedKeyCounts, error) {
 	if c.Sealed() {
-		c.logger.Debug("core is sealed, cannot access mounts table")
-		return nil
+		return nil, nil, fmt.Errorf("core is sealed, cannot access mounts table")
 	}
 
 	ctx := namespace.RootContext(c.activeContext)
@@ -879,6 +908,7 @@ func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool, 
 	defer c.mountsLock.RUnlock()
 
 	var roles RoleCounts
+	var keyCounts ManagedKeyCounts
 	for _, entry := range c.mounts.Entries {
 		if !entry.Local && !includeReplicated {
 			continue
@@ -971,18 +1001,28 @@ func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool, 
 		case pluginconsts.SecretEngineTerraform:
 			dynamicRoles := apiList(entry, "role")
 			roles.TerraformCloudDynamicRoles += len(dynamicRoles)
+
+		case pluginconsts.SecretEngineTOTP:
+			keyCountPerEntry := apiList(entry, "keys")
+			keyCounts.TotpKeys += len(keyCountPerEntry)
+
+		case pluginconsts.SecretEngineKeymgmt:
+			keyCountPerEntry := apiList(entry, "key")
+			keyCounts.KmseKeys += len(keyCountPerEntry)
 		}
 	}
 
-	return &roles
+	return &roles, &keyCounts, nil
 }
 
 func (c *Core) GetRoleCounts() *RoleCounts {
-	return c.getRoleCountsInternal(true, true, false)
+	roleCounts, _, _ := c.getRoleAndManagedKeyCountsInternal(true, true, false)
+	return roleCounts
 }
 
 func (c *Core) GetRoleCountsForCluster() *RoleCounts {
-	return c.getRoleCountsInternal(true, c.isPrimary(), false)
+	roleCounts, _, _ := c.getRoleAndManagedKeyCountsInternal(true, c.isPrimary(), false)
+	return roleCounts
 }
 
 // GetKvUsageMetrics returns a map of namespace paths to KV secret counts.
@@ -992,32 +1032,18 @@ func (c *Core) GetKvUsageMetrics(ctx context.Context, kvVersion string) (map[str
 
 // GetKvUsageMetricsByNamespace returns a map of namespace paths to KV secret counts within a specific namespace.
 func (c *Core) GetKvUsageMetricsByNamespace(ctx context.Context, kvVersion string, nsPath string, includeLocal bool, includeReplicated bool, includeUnofficial bool) (map[string]int, error) {
-	mounts := c.findKvMounts()
+	if kvVersion != "0" && kvVersion != "1" && kvVersion != "2" {
+		return nil, fmt.Errorf("kv version %s not supported, must be 0, 1, or 2", kvVersion)
+	}
+	var mounts []*kvMount
 	if !includeUnofficial {
-		mounts = c.findOfficialKvMounts(ctx)
+		mounts = c.findOfficialKvMounts(ctx, includeLocal, includeReplicated, kvVersion)
+	} else {
+		mounts = c.findKvMounts(includeLocal, includeReplicated, kvVersion)
 	}
 	results := make(map[string]int)
 
-	if kvVersion == "1" || kvVersion == "2" {
-		var newMounts []*kvMount
-		for _, mount := range mounts {
-			if mount.Version == kvVersion {
-				newMounts = append(newMounts, mount)
-			}
-		}
-		mounts = newMounts
-	} else if kvVersion != "0" {
-		return results, fmt.Errorf("kv version %s not supported, must be 0, 1, or 2", kvVersion)
-	}
-
 	for _, m := range mounts {
-		if !includeLocal && m.Local {
-			continue
-		}
-		if !includeReplicated && !m.Local {
-			continue
-		}
-
 		if nsPath != "" && !strings.HasPrefix(m.Namespace.Path, nsPath) {
 			continue
 		}

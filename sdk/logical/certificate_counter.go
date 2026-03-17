@@ -3,6 +3,12 @@
 
 package logical
 
+import (
+	"crypto/x509"
+	"math"
+	"time"
+)
+
 // CertificateCounter is an interface for incrementing the count of issued and stored
 // certificates.
 type CertificateCounter interface {
@@ -16,21 +22,54 @@ type CertificateCounter interface {
 
 // CertCount represents the parameters for incrementing certificate counts.
 type CertCount struct {
-	IssuedCerts uint64
+	IssuedCerts uint64 // TODO(victorr): Rename to PkiIssuedCerts
 	StoredCerts uint64
+
+	// PkiDurationAdjustedCerts tracks the normalized certificate duration units for billing
+	// purposes. Each certificate's billable units = (Validity Hours ÷ 730), rounded to 4 decimal
+	// places.
+	PkiDurationAdjustedCerts float64
+	SSHIssuedCerts           float64
+	SSHIssuedOTPs            float64
 }
 
 func (i *CertCount) Add(other CertCount) {
 	i.IssuedCerts += other.IssuedCerts
 	i.StoredCerts += other.StoredCerts
+	i.PkiDurationAdjustedCerts += other.PkiDurationAdjustedCerts
+	i.SSHIssuedCerts += other.SSHIssuedCerts
+	i.SSHIssuedOTPs += other.SSHIssuedOTPs
 }
 
 func (i *CertCount) IsZero() bool {
-	return i.IssuedCerts == 0 && i.StoredCerts == 0
+	return i.IssuedCerts == 0 && i.StoredCerts == 0 && i.PkiDurationAdjustedCerts == 0 && i.SSHIssuedCerts == 0 && i.SSHIssuedOTPs == 0
+}
+
+// durationAdjustedCertificateCount calculates the billable units for a certificate based on its
+// validity duration. WARNING: Beware the maximum value for time.Duration (approximately 290 years).
+//
+// The calculation follows the billing specification:
+// - Standard duration is 730 hours (1 month)
+// - Units = (Validity Hours ÷ 730), rounded to 4 decimal places
+// - Example: 1-year cert (8760 hours) = 12.0000 units
+// - Example: 1-day cert (24 hours) = 0.0329 units
+func durationAdjustedCertificateCount(validitySeconds int64) float64 {
+	const standardDuration = 730.0
+	validityHours := float64(validitySeconds) / 3600.0
+	units := validityHours / standardDuration
+	// Round to 4 decimal places
+	ret := math.Round(units*10000) / 10000
+	if ret == 0.0 && validitySeconds > 0 {
+		// Ensure we don't return 0.0, which would be interpreted as no billable units.
+		return 0.0001
+	}
+	return ret
 }
 
 type CertCountIncrementer interface {
-	AddIssuedCertificate(stored bool) CertCountIncrementer
+	AddIssuedCertificate(stored bool, cert *x509.Certificate) CertCountIncrementer
+	AddSSHCertificate(ttl time.Duration) CertCountIncrementer
+	AddSSHOTP() CertCountIncrementer
 }
 
 type certCountIncrementer struct {
@@ -44,14 +83,38 @@ func NewCertCountIncrementer(counter CertificateCounter) CertCountIncrementer {
 	return &certCountIncrementer{counter: counter}
 }
 
-// AddIssuedCertificate increments the issued certificate count by 1, and also the
-// stored certificate count if stored is true.
-func (c *certCountIncrementer) AddIssuedCertificate(stored bool) CertCountIncrementer {
-	count := CertCount{IssuedCerts: 1}
+// AddIssuedCertificate increments the issued certificate count by 1, the stored certificate
+// count if stored is true, and adds the calculated billable units based on the certificate's
+// validity duration.
+// cert: The X.509 certificate to extract validity duration from.
+func (c *certCountIncrementer) AddIssuedCertificate(stored bool, cert *x509.Certificate) CertCountIncrementer {
+	validity := int64(cert.NotAfter.Unix() - cert.NotBefore.Unix())
+	count := CertCount{
+		IssuedCerts:              1,
+		PkiDurationAdjustedCerts: durationAdjustedCertificateCount(validity),
+	}
 	if stored {
 		count.StoredCerts = 1
 	}
 	c.counter.AddCount(count)
+
+	return c
+}
+
+func (c *certCountIncrementer) AddSSHCertificate(ttl time.Duration) CertCountIncrementer {
+	count := CertCount{
+		SSHIssuedCerts: durationAdjustedCertificateCount(int64(ttl.Seconds())),
+	}
+
+	c.counter.AddCount(count)
+
+	return c
+}
+
+func (c *certCountIncrementer) AddSSHOTP() CertCountIncrementer {
+	c.counter.AddCount(CertCount{
+		SSHIssuedOTPs: 0.0014,
+	})
 
 	return c
 }

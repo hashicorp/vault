@@ -69,11 +69,11 @@ type acmeBillingSystemViewImpl struct {
 }
 
 var (
-	_ logical.ACMEBillingSystemView         = (*acmeBillingSystemViewImpl)(nil)
-	_ extendedSystemView                    = (*acmeBillingSystemViewImpl)(nil)
-	_ logical.ManagedKeySystemView          = (*acmeBillingSystemViewImpl)(nil)
-	_ entropy.Sourcer                       = (*acmeBillingSystemViewImpl)(nil)
-	_ logical.PkiCertificateCountSystemView = (*acmeBillingSystemViewImpl)(nil)
+	_ logical.ACMEBillingSystemView      = (*acmeBillingSystemViewImpl)(nil)
+	_ extendedSystemView                 = (*acmeBillingSystemViewImpl)(nil)
+	_ logical.ManagedKeySystemView       = (*acmeBillingSystemViewImpl)(nil)
+	_ entropy.Sourcer                    = (*acmeBillingSystemViewImpl)(nil)
+	_ logical.CertificateCountSystemView = (*acmeBillingSystemViewImpl)(nil)
 )
 
 // Scenario 2 above.
@@ -84,10 +84,10 @@ type acmeBillingSystemViewImplNoSourcer struct {
 }
 
 var (
-	_ logical.ACMEBillingSystemView         = (*acmeBillingSystemViewImplNoSourcer)(nil)
-	_ extendedSystemView                    = (*acmeBillingSystemViewImplNoSourcer)(nil)
-	_ logical.ManagedKeySystemView          = (*acmeBillingSystemViewImplNoSourcer)(nil)
-	_ logical.PkiCertificateCountSystemView = (*acmeBillingSystemViewImplNoSourcer)(nil)
+	_ logical.ACMEBillingSystemView      = (*acmeBillingSystemViewImplNoSourcer)(nil)
+	_ extendedSystemView                 = (*acmeBillingSystemViewImplNoSourcer)(nil)
+	_ logical.ManagedKeySystemView       = (*acmeBillingSystemViewImplNoSourcer)(nil)
+	_ logical.CertificateCountSystemView = (*acmeBillingSystemViewImplNoSourcer)(nil)
 )
 
 // Scenario 3 above.
@@ -97,9 +97,9 @@ type acmeBillingSystemViewImplNoManagedKeys struct {
 }
 
 var (
-	_ logical.ACMEBillingSystemView         = (*acmeBillingSystemViewImplNoManagedKeys)(nil)
-	_ extendedSystemView                    = (*acmeBillingSystemViewImplNoManagedKeys)(nil)
-	_ logical.PkiCertificateCountSystemView = (*acmeBillingSystemViewImplNoManagedKeys)(nil)
+	_ logical.ACMEBillingSystemView      = (*acmeBillingSystemViewImplNoManagedKeys)(nil)
+	_ extendedSystemView                 = (*acmeBillingSystemViewImplNoManagedKeys)(nil)
+	_ logical.CertificateCountSystemView = (*acmeBillingSystemViewImplNoManagedKeys)(nil)
 )
 
 // NewAcmeBillingSystemView creates the appropriate implementation based on
@@ -144,6 +144,6 @@ func (a *acmeBillingImpl) CreateActivityCountEventForIdentifiers(ctx context.Con
 	return nil
 }
 
-func (a *acmeBillingImpl) GetPkiCertificateCounter() logical.CertificateCounter {
-	return a.core.GetPkiCertificateCounter()
+func (a *acmeBillingImpl) GetCertificateCounter() logical.CertificateCounter {
+	return a.core.GetCertificateCounter()
 }
