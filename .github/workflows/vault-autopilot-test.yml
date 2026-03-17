@@ -1,0 +1,90 @@
+name: Enos Interactive Vault Autopilot Tests
+
+on:
+  # Allow this workflow to be triggered manually from GH Actions menu to test autopilot
+  workflow_dispatch:
+    inputs:
+      scenario_name:
+        description: "Enos scenario to run"
+        required: false
+        default: 'autopilot'
+        type: choice
+        options:
+        - autopilot
+        - upgrade_demo
+      artifact_source:
+        description: "The artifact source to test artifactory or local (use local for current branch)"
+        required: false
+        default: 'local' 
+        type: choice
+        options:
+        - local
+        - artifactory
+      product_version:
+        description: "Vault version to test replication (ENOS_VAR_vault_product_version)"
+        required: false
+      vault_revision:
+        description: "The git sha of Vault artifact we are testing (ENOS_VAR_vault_revision)"
+        required: false
+      distro:
+        description: "Linux distribution that Vault replication will be tested on"
+        required: false
+        default: 'ubuntu'
+        type: choice
+        options:
+        - ubuntu
+        - rhel
+      product_edition_to_test:
+        description: "Edition we want to test autopilot"
+        required: false
+        default: 'ce'
+        type: choice
+        options:
+        - ce
+      artifact_type:
+        description: "The Vault artifact type to test"
+        required: false
+        default: 'bundle'
+        type: choice
+        options:
+        - bundle
+        - package
+      architecture:
+        description: "The architecture to test [amd64|arm64]"
+        required: false
+        default: 'amd64'
+        type: choice
+        options:
+        - amd64
+        - arm64
+      seal_type:
+        description: "The seal type for Vault"
+        required: false
+        default: 'shamir'
+        type: choice
+        options:
+        - shamir
+        - awskms
+
+jobs:
+  get-test-scenario:
+    runs-on: [self-hosted, linux, small]
+    outputs:
+      scenario: ${{ steps.get-test-matrix.outputs.scenario }}
+    steps:
+      - name: Get test matrix
+        id: get-test-matrix
+        run: |
+          echo "scenario=${{ github.event.inputs.scenario_name }}  arch:${{ github.event.inputs.architecture }}  artifact_source:${{ github.event.inputs.artifact_source }} artifact_type:${{ github.event.inputs.artifact_type }} config_mode:file distro:${{ github.event.inputs.distro }} edition:${{ github.event.inputs.product_edition_to_test }} ip_version:4 seal:${{ github.event.inputs.seal_type }}" >> "$GITHUB_OUTPUT"
+
+  run-vault-autopilot-test:
+    uses: ./.github/workflows/test-run-enos-scenario.yml
+    needs: get-test-scenario
+    with:
+      artifact-source: ${{ github.event.inputs.artifact_source }}
+      artifact-type: ${{ github.event.inputs.artifact_type }}
+      distro: ${{ github.event.inputs.distro }}
+      product-version: ${{ github.event.inputs.product_version }}
+      scenario: ${{ needs.get-test-scenario.outputs.scenario }}
+      vault-revision: ${{ github.event.inputs.vault_revision }}
+    secrets: inherit
