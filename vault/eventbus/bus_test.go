@@ -832,7 +832,7 @@ func TestSubscribeClusterNode(t *testing.T) {
 
 	bus.Start()
 
-	bus.filters.addPattern("somecluster", []string{""}, "abc*")
+	bus.filters.addPattern("somecluster", []string{""}, "abc*", "uuid")
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	t.Cleanup(cancelFunc)
 	ch, cancel2, err := bus.NewClusterNodeSubscription(ctx, "somecluster")
