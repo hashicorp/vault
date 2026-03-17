@@ -228,6 +228,10 @@ func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespac
 
 func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Request) (*ACL, *logical.TokenEntry, *identity.Entity, map[string][]string, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
+	if req == nil {
+		c.logger.Error("fetchACLTokenEntryAndEntity called with nil request")
+		return nil, nil, nil, nil, ErrInternalError
+	}
 
 	// Ensure there is a client token
 	if req.ClientToken == "" {
@@ -263,6 +267,12 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	// CIDR checks bind all tokens except non-expiring root tokens
 	if te.TTL != 0 && len(te.BoundCIDRs) > 0 {
 		var valid bool
+
+		// Validate req for connection on CIDR
+		if req.Connection == nil || req.Connection.RemoteAddr == "" {
+			c.logger.Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
+		}
 		remoteSockAddr, err := sockaddr.NewSockAddr(req.Connection.RemoteAddr)
 		if err != nil {
 			if c.Logger().IsDebug() {
