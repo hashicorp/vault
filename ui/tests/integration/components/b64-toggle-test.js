@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, rerender, click, find } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 

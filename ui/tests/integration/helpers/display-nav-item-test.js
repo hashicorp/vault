@@ -4,7 +4,7 @@
  */
 
 import { computeNavBar, NavSection, RouteName } from 'core/helpers/display-nav-item';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { module, test } from 'qunit';
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';

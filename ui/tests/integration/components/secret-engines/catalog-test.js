@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
@@ -33,10 +33,10 @@ module('Integration | Component | secret-engines/catalog', function (hooks) {
     assert.expect(1 + expectedEngines.length);
 
     await render(
-      hbs`<SecretEngines::Catalog 
-        @setMountType={{this.setMountType}} 
-        @pluginCatalogData={{this.pluginCatalogData}} 
-        @pluginCatalogError={{this.pluginCatalogError}} 
+      hbs`<SecretEngines::Catalog
+        @setMountType={{this.setMountType}}
+        @pluginCatalogData={{this.pluginCatalogData}}
+        @pluginCatalogError={{this.pluginCatalogError}}
       />`
     );
 
@@ -49,10 +49,10 @@ module('Integration | Component | secret-engines/catalog', function (hooks) {
 
   test('it calls setMountType when engine is selected', async function (assert) {
     await render(
-      hbs`<SecretEngines::Catalog 
-        @setMountType={{this.setMountType}} 
-        @pluginCatalogData={{this.pluginCatalogData}} 
-        @pluginCatalogError={{this.pluginCatalogError}} 
+      hbs`<SecretEngines::Catalog
+        @setMountType={{this.setMountType}}
+        @pluginCatalogData={{this.pluginCatalogData}}
+        @pluginCatalogError={{this.pluginCatalogError}}
       />`
     );
 
@@ -66,10 +66,10 @@ module('Integration | Component | secret-engines/catalog', function (hooks) {
     this.pluginCatalogError = true;
 
     await render(
-      hbs`<SecretEngines::Catalog 
-        @setMountType={{this.setMountType}} 
-        @pluginCatalogData={{this.pluginCatalogData}} 
-        @pluginCatalogError={{this.pluginCatalogError}} 
+      hbs`<SecretEngines::Catalog
+        @setMountType={{this.setMountType}}
+        @pluginCatalogData={{this.pluginCatalogData}}
+        @pluginCatalogError={{this.pluginCatalogError}}
       />`
     );
 
@@ -100,10 +100,10 @@ module('Integration | Component | secret-engines/catalog', function (hooks) {
     };
 
     await render(
-      hbs`<SecretEngines::Catalog 
-        @setMountType={{this.setMountType}} 
-        @pluginCatalogData={{this.pluginCatalogData}} 
-        @pluginCatalogError={{this.pluginCatalogError}} 
+      hbs`<SecretEngines::Catalog
+        @setMountType={{this.setMountType}}
+        @pluginCatalogData={{this.pluginCatalogData}}
+        @pluginCatalogError={{this.pluginCatalogError}}
       />`
     );
 

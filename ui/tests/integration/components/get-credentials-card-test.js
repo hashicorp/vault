@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import Service from '@ember/service';
 import { click, render } from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';

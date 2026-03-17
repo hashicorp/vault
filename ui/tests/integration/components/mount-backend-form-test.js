@@ -5,7 +5,7 @@
 
 import { click, fillIn, render } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { module, test } from 'qunit';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';

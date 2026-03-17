@@ -5,7 +5,7 @@
 
 import { click, fillIn, render, typeIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { module, test } from 'qunit';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import {
@@ -272,9 +272,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
 
     test('it defaults to built-in plugin type', async function (assert) {
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -286,9 +286,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
 
     test('it shows plugin version field when external plugin is selected', async function (assert) {
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -307,9 +307,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
 
     test('it populates version dropdown with sorted options', async function (assert) {
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -325,9 +325,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       this.versionService.isEnterprise = false;
 
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -341,9 +341,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       this.model.availableVersions = [{ version: '', pluginName: 'keymgmt', isBuiltin: true }];
 
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -354,9 +354,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
 
     test('it updates plugin version when selection changes', async function (assert) {
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -372,9 +372,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
 
     test('it clears plugin version when switching back to built-in', async function (assert) {
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -394,9 +394,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       this.model.hasUnversionedPlugins = true;
 
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -414,9 +414,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       this.model.hasUnversionedPlugins = false;
 
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -429,9 +429,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
 
     test('it hides unversioned plugins warning when hasUnversionedPlugins is not provided', async function (assert) {
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -467,9 +467,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
 
     test('it shows pinned version first in dropdown', async function (assert) {
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -488,9 +488,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
 
     test('it shows pinned version in helper text', async function (assert) {
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -503,9 +503,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
 
     test('it shows warning when selecting non-pinned version', async function (assert) {
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -529,9 +529,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
 
     test('it does not show warning when using pinned version', async function (assert) {
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -546,9 +546,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       this.model.pinnedVersion = null;
 
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -599,9 +599,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       });
 
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -624,9 +624,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       });
 
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -653,9 +653,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       });
 
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -680,9 +680,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       });
 
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -706,9 +706,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       this.model.availableVersions = [];
 
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -742,9 +742,9 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       ];
 
       await render(
-        hbs`<Mount::SecretsEngineForm 
-          @model={{this.model}} 
-          @onMountSuccess={{this.onMountSuccess}} 
+        hbs`<Mount::SecretsEngineForm
+          @model={{this.model}}
+          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
