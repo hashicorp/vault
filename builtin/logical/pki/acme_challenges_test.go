@@ -205,7 +205,7 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 
 				host := ts.URL[7:]
 				isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint, &acmeConfigEntry{
-					AllowedCIDRList: []string{"127.0.0.1/32", "::1/128"},
+					ChallengePermittedIPRanges: []string{"127.0.0.1/32", "::1/128"},
 				})
 				if !isValid && err == nil {
 					t.Fatalf("[tc=%d/handler=%d] expected failure to give reason via err (%v / %v)", index, handlerIndex, isValid, err)
@@ -256,7 +256,7 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 
 			host := ts.URL[7:]
 			isValid, err := ValidateHTTP01Challenge(host, "my-token", "my-thumbprint", &acmeConfigEntry{
-				AllowedCIDRList: []string{"127.0.0.1/32", "::1/128"},
+				ChallengePermittedIPRanges: []string{"127.0.0.1/32", "::1/128"},
 			})
 			if isValid || err == nil {
 				t.Fatalf("[handler=%d] expected failure validating challenge (%v / %v)", handlerIndex, isValid, err)
@@ -327,7 +327,7 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 	// non-standard port _just for testing purposes_.
 	host := "localhost"
 	config := &acmeConfigEntry{
-		AllowedCIDRList: []string{"127.0.0.1/32", "::1/128"},
+		ChallengePermittedIPRanges: []string{"127.0.0.1/32", "::1/128"},
 	}
 
 	log := hclog.L()
@@ -871,7 +871,7 @@ func TestAcmeValidateHttp01TLSRedirect(t *testing.T) {
 
 			host := ts.URL[len("http://"):]
 			isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint, &acmeConfigEntry{
-				AllowedCIDRList: []string{"127.0.0.1/32", "::1/128"},
+				ChallengePermittedIPRanges: []string{"127.0.0.1/32", "::1/128"},
 			})
 			if !isValid && err == nil {
 				st.Fatalf("[tc=%d] expected failure to give reason via err (%v / %v)", index, isValid, err)
@@ -883,4 +883,183 @@ func TestAcmeValidateHttp01TLSRedirect(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestIsValidChallengeIP tests the excluded CIDR list functionality
+func TestIsValidChallengeIP(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name               string
+		permittedIPRanges  []string
+		excludedIPRanges   []string
+		testIP             string
+		shouldBeDisallowed bool
+	}{
+		{
+			name:               "nil IP should be disallowed",
+			permittedIPRanges:  []string{},
+			excludedIPRanges:   []string{},
+			testIP:             "",
+			shouldBeDisallowed: true,
+		},
+		{
+			name:               "loopback IP should be disallowed by default",
+			permittedIPRanges:  []string{},
+			excludedIPRanges:   []string{},
+			testIP:             "127.0.0.1",
+			shouldBeDisallowed: true,
+		},
+		{
+			name:               "public IP should be allowed by default",
+			permittedIPRanges:  []string{},
+			excludedIPRanges:   []string{},
+			testIP:             "8.8.8.8",
+			shouldBeDisallowed: false,
+		},
+		{
+			name:               "IP in excluded list should be rejected",
+			permittedIPRanges:  []string{},
+			excludedIPRanges:   []string{"8.8.8.0/24"},
+			testIP:             "8.8.8.8",
+			shouldBeDisallowed: true,
+		},
+		{
+			name:               "IP in excluded list (exact match) should be rejected",
+			permittedIPRanges:  []string{},
+			excludedIPRanges:   []string{"8.8.8.8"},
+			testIP:             "8.8.8.8",
+			shouldBeDisallowed: true,
+		},
+		{
+			name:               "excluded list takes precedence over permitted list",
+			permittedIPRanges:  []string{"8.8.8.0/24"},
+			excludedIPRanges:   []string{"8.8.8.8"},
+			testIP:             "8.8.8.8",
+			shouldBeDisallowed: true,
+		},
+		{
+			name:               "IP in permitted list but not excluded should be allowed",
+			permittedIPRanges:  []string{"8.8.8.0/24"},
+			excludedIPRanges:   []string{"8.8.4.0/24"},
+			testIP:             "8.8.8.8",
+			shouldBeDisallowed: false,
+		},
+		{
+			name:               "loopback in permitted list should be allowed",
+			permittedIPRanges:  []string{"127.0.0.1/32"},
+			excludedIPRanges:   []string{},
+			testIP:             "127.0.0.1",
+			shouldBeDisallowed: false,
+		},
+		{
+			name:               "private IP with permitted list should be rejected if not in list",
+			permittedIPRanges:  []string{"8.8.8.0/24"},
+			excludedIPRanges:   []string{},
+			testIP:             "192.168.1.1",
+			shouldBeDisallowed: true,
+		},
+		{
+			name:               "IPv6 loopback should be disallowed by default",
+			permittedIPRanges:  []string{},
+			excludedIPRanges:   []string{},
+			testIP:             "::1",
+			shouldBeDisallowed: true,
+		},
+		{
+			name:               "IPv6 in excluded list should be rejected",
+			permittedIPRanges:  []string{},
+			excludedIPRanges:   []string{"2001:db8::/32"},
+			testIP:             "2001:db8::1",
+			shouldBeDisallowed: true,
+		},
+		{
+			name:               "IPv6 in permitted list should be allowed",
+			permittedIPRanges:  []string{"2001:db8::/32"},
+			excludedIPRanges:   []string{},
+			testIP:             "2001:db8::1",
+			shouldBeDisallowed: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(st *testing.T) {
+			config := &acmeConfigEntry{
+				ChallengePermittedIPRanges: tc.permittedIPRanges,
+				ChallengeExcludedIPRanges:  tc.excludedIPRanges,
+			}
+
+			var ip net.IP
+			if tc.testIP != "" {
+				ip = net.ParseIP(tc.testIP)
+				if ip == nil {
+					st.Fatalf("failed to parse test IP: %s", tc.testIP)
+				}
+			}
+
+			result := !isValidChallengeIP(config, ip)
+			if result != tc.shouldBeDisallowed {
+				st.Fatalf("expected isDisallowed=%v, got %v for IP %s with permitted=%v, excluded=%v",
+					tc.shouldBeDisallowed, result, tc.testIP, tc.permittedIPRanges, tc.excludedIPRanges)
+			}
+		})
+	}
+}
+
+// TestAcmeValidateHTTP01ChallengeWithExcludedIPRange tests HTTP-01 validation with excluded CIDRs
+func TestAcmeValidateHTTP01ChallengeWithExcludedIPRange(t *testing.T) {
+	t.Parallel()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("my-token.my-thumbprint"))
+	}))
+	defer ts.Close()
+
+	host := ts.URL[7:] // Remove "http://"
+
+	// Test with excluded localhost
+	config := &acmeConfigEntry{
+		ChallengeExcludedIPRanges: []string{"127.0.0.0/8", "::1/128"},
+	}
+
+	isValid, err := ValidateHTTP01Challenge(host, "my-token", "my-thumbprint", config)
+	require.False(t, isValid)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrRejectedIdentifier)
+}
+
+// TestAcmeValidateTLSALPN01ChallengeWithExcludedIPRange tests TLS-ALPN-01 validation with excluded CIDRs
+func TestAcmeValidateTLSALPN01ChallengeWithExcludedIPRange(t *testing.T) {
+	host := "acme-excluded-cidr.example.test"
+	dnsAddr := startLocalDNSServer(t, map[string]net.IP{
+		host: net.IPv4(127, 0, 0, 1),
+	})
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer ln.Close()
+
+	go func() {
+		conn, err := ln.Accept()
+		if err == nil {
+			_ = conn.Close()
+		}
+	}()
+
+	oldPort := ALPNPort
+	ALPNPort = strconv.Itoa(ln.Addr().(*net.TCPAddr).Port)
+	defer func() {
+		ALPNPort = oldPort
+	}()
+
+	// Test with excluded 127.0.0.0/8 range
+	config := &acmeConfigEntry{
+		DNSResolver:               dnsAddr,
+		ChallengeExcludedIPRanges: []string{"127.0.0.0/8"},
+	}
+
+	isValid, err := ValidateTLSALPN01Challenge(host, "my-token", "my-thumbprint", config)
+	require.False(t, isValid)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrRejectedIdentifier)
 }
