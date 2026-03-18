@@ -73,6 +73,8 @@ EXPOSE 8200
 COPY .release/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]
 
+# Use the Vault user as the default user for starting this container.
+USER ${NAME}
 
 # # By default you'll get a single-node development server that stores everything
 # # in RAM and bootstraps itself. Don't use this configuration for production.
@@ -166,7 +168,7 @@ COPY .release/docker/ubi-docker-entrypoint.sh /usr/local/bin/docker-entrypoint.s
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Use the Vault user as the default user for starting this container.
-USER vault
+USER ${NAME}
 
 # # By default you'll get a single-node development server that stores everything
 # # in RAM and bootstraps itself. Don't use this configuration for production.
