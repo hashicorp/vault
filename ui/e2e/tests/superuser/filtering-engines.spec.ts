@@ -78,4 +78,8 @@ test('filtering secrets engines workflow', async ({ page }) => {
   await page.getByRole('button', { name: 'Clear all' }).click();
   await expect(page.getByRole('link', { name: 'kv/' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'transit/' })).toBeVisible();
+
+  await basePage.disableEngine('transit');
+  await basePage.disableEngine('kv');
+  await basePage.dismissFlashMessages();
 });
