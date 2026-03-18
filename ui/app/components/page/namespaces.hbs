@@ -127,12 +127,16 @@
             </Item.menu>
           </ListItem>
         {{else}}
-          <list.empty>
-            <Hds::Link::Standalone
-              @icon="learn-link"
-              @text="Secure multi-tenancy with namespaces tutorial"
-              @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
-            />
+          <list.empty class="top-padding-32 is-marginless" data-test-list-view-empty-state as |A|>
+            <A.Header @title={{list.emptyTitle}} @titleTag="h2" data-test-empty-state-title />
+            <A.Body @text={{list.emptyMessage}} data-test-empty-state-message />
+            <A.Footer data-test-empty-state-actions as |F|>
+              <F.LinkStandalone
+                @icon="learn-link"
+                @text="Secure multi-tenancy with namespaces tutorial"
+                @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
+              />
+            </A.Footer>
           </list.empty>
         {{/if}}
       </ListView>
