@@ -885,6 +885,30 @@ func TestAcmeValidateHttp01TLSRedirect(t *testing.T) {
 	}
 }
 
+// TestAcmeValidateHTTP01ChallengeRedirectHonorsPermittedIPRanges verifies that
+// redirected validation targets are still subject to the HTTP-01 IP allowlist.
+func TestAcmeValidateHTTP01ChallengeRedirectHonorsPermittedIPRanges(t *testing.T) {
+	t.Parallel()
+
+	for _, redirectScheme := range []string{"http", "https"} {
+		t.Run(redirectScheme, func(st *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, fmt.Sprintf("%s://10.0.0.1:12345%s", redirectScheme, r.URL.Path), http.StatusMovedPermanently)
+			}))
+			defer ts.Close()
+
+			host := ts.URL[7:] // Remove "http://"
+
+			isValid, err := ValidateHTTP01Challenge(host, "my-token", "my-thumbprint", &acmeConfigEntry{
+				ChallengePermittedIPRanges: []string{"127.0.0.1/32"},
+			})
+			require.False(st, isValid)
+			require.Error(st, err)
+			require.ErrorIs(st, err, ErrRejectedIdentifier)
+		})
+	}
+}
+
 // TestIsValidChallengeIP tests the excluded CIDR list functionality
 func TestIsValidChallengeIP(t *testing.T) {
 	t.Parallel()
