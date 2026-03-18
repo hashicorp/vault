@@ -214,6 +214,11 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
     await fillIn(`${SELECTORS.inputRow(0)} ${GENERAL.inputByAttr('org-1')}`, 'org2');
     assert.dom(SELECTORS.tree).exists('Tree chart shows with multiple orgs');
 
+    // Add empty global - tree show not show empty global
+    await click(GENERAL.button('add namespace'));
+    assert.dom(`${SELECTORS.tree} .nodes > g`).exists({ count: 5 }, 'Only renders non-empty input nodes');
+    await click(`${SELECTORS.inputRow(1)} ${GENERAL.button('delete namespace')}`);
+
     // Remove second org - tree is hidden again
     await click(`${SELECTORS.inputRow(0)} ${GENERAL.button('delete org')}`);
     assert.dom(SELECTORS.tree).doesNotExist('Tree chart hidden after removing second org');
@@ -222,5 +227,17 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
     await click(`${SELECTORS.inputRow(0)} ${GENERAL.button('add project')}`);
     await fillIn(`${SELECTORS.inputRow(0)} ${GENERAL.inputByAttr('project-1')}`, 'project2');
     assert.dom(SELECTORS.tree).exists('Tree chart shows with multiple projects');
+
+    // Clear global - tree is hidden
+    await fillIn(`${SELECTORS.inputRow(0)} ${GENERAL.inputByAttr('global-0')}`, '');
+    assert.dom(SELECTORS.tree).doesNotExist('Tree chart hidden after clearing parent global');
+    await fillIn(`${SELECTORS.inputRow(0)} ${GENERAL.inputByAttr('global-0')}`, 'global1');
+    assert.dom(SELECTORS.tree).exists('Tree chart is rendered');
+
+    // Clear org - tree is hidden
+    await fillIn(`${SELECTORS.inputRow(0)} ${GENERAL.inputByAttr('org-0')}`, '');
+    assert.dom(SELECTORS.tree).doesNotExist('Tree chart hidden after clearing parent org');
+    await fillIn(`${SELECTORS.inputRow(0)} ${GENERAL.inputByAttr('org-0')}`, 'org1');
+    assert.dom(SELECTORS.tree).exists('Tree chart is rendered');
   });
 });
