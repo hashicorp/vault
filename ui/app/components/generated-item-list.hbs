@@ -47,16 +47,20 @@
   as |list|
 >
   {{#if list.empty}}
-    <list.empty
-      @title="No {{pluralize @itemType}} yet"
-      @message="A list of {{pluralize @itemType}} will be listed here. Create your first {{@itemType}} to get started."
-    >
-      <Hds::Link::Standalone
-        @icon="plus"
-        @text="Create {{singularize @itemType}}"
-        @route="vault.cluster.access.method.item.create"
-        @models={{array @methodModel.id @itemType}}
+    <list.empty class="top-padding-32 is-marginless" data-test-list-view-empty-state as |A|>
+      <A.Header @title="No {{pluralize @itemType}} yet" @titleTag="h2" data-test-empty-state-title />
+      <A.Body
+        @text="A list of {{pluralize @itemType}} will be listed here. Create your first {{@itemType}} to get started."
+        data-test-empty-state-message
       />
+      <A.Footer data-test-empty-state-actions as |F|>
+        <F.LinkStandalone
+          @icon="plus"
+          @text="Create {{singularize @itemType}}"
+          @route="vault.cluster.access.method.item.create"
+          @models={{array @methodModel.id @itemType}}
+        />
+      </A.Footer>
     </list.empty>
   {{else if list.item}}
     <ListItem @linkParams={{array "vault.cluster.access.method.item.show" @methodModel.id @itemType list.item.id}} as |Item|>

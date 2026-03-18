@@ -4,8 +4,10 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { BasePage } from '../../pages/base';
 
 test('console workflow', async ({ page }) => {
+  const basePage = new BasePage(page);
   await page.goto('dashboard');
 
   await test.step('open console and verify content', async () => {
@@ -36,5 +38,7 @@ test('console workflow', async ({ page }) => {
     // navigate to the secrets page and verify the new mount is visible
     await page.getByRole('link', { name: 'Secrets', exact: true }).click();
     await expect(page.getByRole('link', { name: 'console-route-test/' })).toBeVisible();
+
+    await basePage.disableEngine('console-route-test');
   });
 });
