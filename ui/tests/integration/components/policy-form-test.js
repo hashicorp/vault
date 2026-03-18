@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render, settled, triggerEvent, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
@@ -285,7 +285,7 @@ path "second/path" {
       assert.dom(GENERAL.hdsTab('cli')).exists().hasAttribute('aria-selected', 'false');
       const expectedTfvp = `resource "vault_policy" "<local identifier>" {
       name = "<policy name>"
-    
+
       policy = <<EOT
       path "" {
         capabilities = []

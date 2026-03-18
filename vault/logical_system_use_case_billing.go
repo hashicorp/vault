@@ -210,6 +210,12 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 		},
 	})
 
+	sshCounts, err := b.buildSSHMetric(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+	usageMetrics = append(usageMetrics, sshCounts)
+
 	dataUpdatedAt := b.Core.computeUpdatedAt(ctx, month, currentMonth)
 
 	monthStr := month.Format("2006-01")
@@ -485,4 +491,33 @@ func (c *Core) getThirdPartyPluginCounts(ctx context.Context, month time.Time) (
 	}
 
 	return thirdPartyPluginCounts, nil
+}
+
+func (b *SystemBackend) buildSSHMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
+	certCounts, err := b.Core.GetStoredSSHDurationAdjustedCertCount(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving SSH duration-adjuested cert counts for current month: %w", err)
+	}
+
+	otpCounts, err := b.Core.GetStoredSSHOTPCount(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving SSH OTP counts for current month: %w", err)
+	}
+
+	return map[string]interface{}{
+		"metric_name": "ssh_units",
+		"metric_data": map[string]interface{}{
+			"total": certCounts + float64(otpCounts),
+			"metric_details": []map[string]interface{}{
+				{
+					"type":  "otp_units",
+					"count": otpCounts,
+				},
+				{
+					"type":  "certificate_units",
+					"count": certCounts,
+				},
+			},
+		},
+	}, nil
 }

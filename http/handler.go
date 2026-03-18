@@ -94,6 +94,12 @@ const (
 	// to pass the snapshot ID
 	VaultSnapshotRecoverHeader = "X-Vault-Recover-Snapshot-Id"
 
+	// DefaultMaxTokenHeaderSize is the default maximum size in bytes for an
+	// authentication token passed in the X-Vault-Token and Authorization: Bearer
+	// headers. This is to prevent a denial of service attack via unbounded
+	// header values. Can be overridden per listener.
+	DefaultMaxTokenHeaderSize = 8 * 1024 // 8 KB
+
 	// CustomMaxJSONDepth specifies the maximum nesting depth of a JSON object.
 	// This limit is designed to prevent stack exhaustion attacks from deeply
 	// nested JSON payloads, which could otherwise lead to a denial-of-service
@@ -181,6 +187,25 @@ var (
 	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
 )
 
+// TokenHeaderMaxBytes returns the http.Server.MaxHeaderBytes value for the
+// given listener configuration. A negative CustomMaxTokenHeaderSize disables
+// the limit; zero falls back to DefaultMaxTokenHeaderSize.
+func TokenHeaderMaxBytes(lnConfig *configutil.Listener) int {
+	if lnConfig == nil {
+		return DefaultMaxTokenHeaderSize
+	}
+	switch {
+	case lnConfig.CustomMaxTokenHeaderSize < 0:
+		// Limit explicitly disabled; leave http.Server.MaxHeaderBytes unset so
+		// the stdlib default (1 MB) applies.
+		return 0
+	case lnConfig.CustomMaxTokenHeaderSize > 0:
+		return int(lnConfig.CustomMaxTokenHeaderSize)
+	default:
+		return DefaultMaxTokenHeaderSize
+	}
+}
+
 func init() {
 	alwaysRedirectPaths.AddPaths([]string{
 		"sys/storage/raft/snapshot",
@@ -211,6 +236,19 @@ var _ vault.HandlerHandler = HandlerFunc(func(props *vault.HandlerProperties) ht
 // handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
 func handler(props *vault.HandlerProperties) http.Handler {
+	handlerUnauth := handlerWithUnauthRekey(props, true)
+	handlerAuth := handlerWithUnauthRekey(props, false)
+
+	return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+		if props.Core.GetEnableUnauthRekey() {
+			handlerUnauth.ServeHTTP(writer, req)
+		} else {
+			handlerAuth.ServeHTTP(writer, req)
+		}
+	})
+}
+
+func handlerWithUnauthRekey(props *vault.HandlerProperties, unauthRekey bool) http.Handler {
 	core := props.Core
 
 	// Create the muxer to handle the actual endpoints
@@ -250,12 +288,18 @@ func handler(props *vault.HandlerProperties) http.Handler {
 			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
 		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
 			handleAuditNonLogical(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy))))
-		mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
-		mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
-		mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
-		mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
-		mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
-		mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+
+		// Register rekey endpoints as unauthenticated handlers only if unauthRekey is true.
+		// When false (the default), these endpoints will be handled by the sys backend as authenticated endpoints.
+		if unauthRekey {
+			mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
+			mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
+			mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
+			mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
+			mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
+			mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+		}
+
 		mux.Handle("/v1/sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
 		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
 		mux.Handle("/v1/sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
@@ -313,6 +357,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
 	wrappedHandler = entWrapGenericHandler(core, wrappedHandler, props)
 	wrappedHandler = wrapMaxRequestSizeHandler(wrappedHandler, props)
+	wrappedHandler = wrapTokenHeaderSizeHandler(wrappedHandler, props)
 	wrappedHandler = priority.WrapRequestPriorityHandler(wrappedHandler)
 
 	// Add an extra wrapping handler if the DisablePrintableCheck listener
@@ -1454,6 +1499,23 @@ func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logic
 	if resp != nil {
 		if data := resp.Data["data"]; data != nil {
 			respondErrorAndData(w, statusCode, data, newErr)
+			return true
+		}
+		if body := resp.Data[logical.HTTPRawBodyError]; body != nil {
+			if code := resp.Data[logical.HTTPStatusCode]; code != nil {
+				if i, ok := code.(int); ok {
+					// Defensively ignore non-int status codes
+					statusCode = i
+				}
+			}
+			switch v := body.(type) {
+			case string:
+				logical.RespondWithBody(w, statusCode, v)
+			case []byte:
+				logical.RespondWithBody(w, statusCode, string(v))
+			default:
+				respondError(w, http.StatusInternalServerError, fmt.Errorf("unable to decode body: %w", newErr))
+			}
 			return true
 		}
 	}

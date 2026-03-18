@@ -153,6 +153,8 @@
       </:popupMenu>
     </ListTable>
   {{else}}
-    <EmptyState @title="No Secrets engines found" />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="No Secrets engines found" @titleTag="h2" data-test-empty-state-title />
+    </Hds::ApplicationState>
   {{/if}}
 {{/if}}

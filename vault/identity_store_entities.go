@@ -393,6 +393,10 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 		aliasMap["local"] = alias.Local
 		aliasMap["custom_metadata"] = alias.CustomMetadata
 
+		if i.scimEnabled {
+			aliasMap["scim_client_id"] = alias.ScimClientID
+		}
+
 		if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 			aliasMap["mount_type"] = mountValidationResp.MountType
 			aliasMap["mount_path"] = mountValidationResp.MountPath
@@ -404,6 +408,10 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 	// Add the aliases information to the response which has the correct time
 	// formats
 	respData["aliases"] = aliasesToReturn
+
+	if i.scimEnabled {
+		respData["scim_client_id"] = entity.ScimClientID
+	}
 
 	addExtraEntityDataToResponse(entity, respData)
 

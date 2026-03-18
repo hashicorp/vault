@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { CLUSTER_STATES } from 'core/helpers/cluster-states';

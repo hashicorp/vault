@@ -10,7 +10,7 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.25.3
+go 1.26.1
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -140,10 +140,10 @@ require (
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.22.0
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.23.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.22.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.22.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.22.0
+	github.com/hashicorp/vault-plugin-auth-gcp v0.22.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.25.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.16.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.23.1
@@ -233,7 +233,6 @@ require (
 	google.golang.org/grpc v1.75.1
 	google.golang.org/protobuf v1.36.10
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
-	k8s.io/apimachinery v0.34.1
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 )
@@ -255,6 +254,7 @@ require (
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/telemetry v0.0.0-20251203150158-8fff8a5912fc // indirect
+	k8s.io/apimachinery v0.34.1 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
 
@@ -480,7 +480,7 @@ require (
 	github.com/microsoft/kiota-serialization-text-go v1.1.2 // indirect
 	github.com/microsoftgraph/msgraph-sdk-go v1.86.0 // indirect
 	github.com/microsoftgraph/msgraph-sdk-go-core v1.4.0 // indirect
-	github.com/miekg/dns v1.1.50 // indirect
+	github.com/miekg/dns v1.1.50
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
 	github.com/mitchellh/pointerstructure v1.2.1 // indirect

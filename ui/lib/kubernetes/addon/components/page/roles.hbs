@@ -23,12 +23,21 @@
   <ConfigCta />
 {{else if (not @roles)}}
   {{#if @filterValue}}
-    <EmptyState @title="There are no roles matching &quot;{{@filterValue}}&quot;" />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header
+        @title="There are no roles matching &quot;{{@filterValue}}&quot;"
+        @titleTag="h2"
+        data-test-empty-state-title
+      />
+    </Hds::ApplicationState>
   {{else}}
-    <EmptyState
-      @title="No roles yet"
-      @message="When created, roles will be listed here. Create a role to start generating service account tokens."
-    />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="No roles yet" @titleTag="h2" data-test-empty-state-title />
+      <A.Body
+        @text="When created, roles will be listed here. Create a role to start generating service account tokens."
+        data-test-empty-state-message
+      />
+    </Hds::ApplicationState>
   {{/if}}
 {{else}}
   <div class="has-bottom-margin-s">

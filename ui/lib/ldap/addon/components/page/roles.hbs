@@ -27,12 +27,21 @@
   <ConfigCta />
 {{else if (not @roles.meta.filteredTotal)}}
   {{#if @pageFilter}}
-    <EmptyState @title="There are no roles matching &quot;{{@pageFilter}}&quot;" />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header
+        @title="There are no roles matching &quot;{{@pageFilter}}&quot;"
+        @titleTag="h2"
+        data-test-empty-state-title
+      />
+    </Hds::ApplicationState>
   {{else}}
-    <EmptyState
-      @title="No roles created yet"
-      @message="Roles in Vault will allow you to manage LDAP credentials. Create a role to get started."
-    />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="No roles created yet" @titleTag="h2" data-test-empty-state-title />
+      <A.Body
+        @text="Roles in Vault will allow you to manage LDAP credentials. Create a role to get started."
+        data-test-empty-state-message
+      />
+    </Hds::ApplicationState>
   {{/if}}
 {{else}}
   <div class="has-bottom-margin-s">

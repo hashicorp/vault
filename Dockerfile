@@ -37,7 +37,9 @@ ENV NAME=$NAME
 # Create a non-root user to run the software.
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 
-RUN apk add --no-cache libcap su-exec dumb-init tzdata
+# NOTE: zlib is only here to resolve ALPINE-CVE-2026-27171, it can be removed
+# when when our Alpine release is >= 3.23.4
+RUN apk update && apk add --upgrade --no-cache libcap su-exec dumb-init tzdata zlib
 
 COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/
 

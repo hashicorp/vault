@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import sinon from 'sinon';
 import EmberObject from '@ember/object';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';

@@ -14,6 +14,7 @@ import ControlGroupError from 'vault/lib/control-group-error';
 export default class ApplicationRoute extends Route {
   @service analytics;
   @service controlGroup;
+  @service intl;
   @service('router') routing;
   @service('namespace') namespaceService;
   @service('flags') flagsService;
@@ -72,6 +73,7 @@ export default class ApplicationRoute extends Route {
   }
 
   beforeModel() {
+    this.intl.setLocale(['en-us']);
     return this.flagsService.fetchFeatureFlags();
   }
 

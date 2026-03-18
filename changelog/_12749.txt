@@ -1,0 +1,3 @@
+```release-note:security
+http: Added configurable `max_token_header_size` listener option (default 8 KB) to bound the size of authentication token headers (`X-Vault-Token` and `Authorization: Bearer`), preventing a potential denial-of-service attack via oversized header contents. The stdlib-level `MaxHeaderBytes` backstop is also now set on the HTTP server. Set `max_token_header_size = -1` to disable the limit.
+```

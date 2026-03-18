@@ -8,15 +8,15 @@
     <ReplicationPage @model={{this.model}} as |Page|>
       <Page.header @showTabs={{true}} />
       {{#if Page.isDisabled}}
-        <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+        <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
           <A.Header
             @title="Disaster Recovery secondary not set up"
             @titleTag="h2"
             @icon="alert-circle"
-            class="align-items-end"
+            data-test-empty-state-title
           />
-          <A.Body @text={{Page.message}} />
-          <A.Footer as |F|>
+          <A.Body @text={{Page.message}} data-test-empty-state-message />
+          <A.Footer data-test-empty-state-actions as |F|>
             <F.LinkStandalone @icon="chevron-left" @text="Go back" @route="vault.cluster.secrets.backends" />
             <F.LinkStandalone
               @icon="learn-link"

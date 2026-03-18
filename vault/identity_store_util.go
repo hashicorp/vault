@@ -40,7 +40,7 @@ var (
 )
 
 // loadArtifacts is responsible for loading entities, groups, and aliases from
-// storage into MemDB.
+// storage into MemDB. The caller should hold the identity store lock.
 func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error {
 	if i == nil {
 		return nil
@@ -106,6 +106,8 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 			return fmt.Errorf("failed to load SCIM clients: %w", err)
 		}
 
+		i.startSCIMDeletingClientCleanup(ctx, isActive)
+
 		return nil
 	}
 
@@ -119,8 +121,17 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 	// If the identity deduplication cleanup flag is activated, instead
 	// deal with duplicate entities and groups by renaming with a -UUID
 	// suffix. N.B. *entity alias* duplicates will still be merged as before.
-	if i.renameDuplicates.IsActivationFlagEnabled(activationflags.IdentityDeduplication) {
+	if i.activationManager.IsActivationFlagEnabled(activationflags.IdentityDeduplication) {
 		i.conflictResolver = &renameResolver{i.logger}
+	}
+
+	// Restore the in-memory scimEnabled flag from the persisted activation
+	// flags. The ActivationFunc callback only fires on API writes and storage
+	// invalidations, not on startup, so we must explicitly check the flag here
+	// to ensure SCIM paths remain available after seal/unseal.
+	if i.activationManager.IsActivationFlagEnabled(activationflags.SCIMEnablement) {
+		i.logger.Info("restoring SCIM enablement from persisted activation flags")
+		i.scimEnabled = true
 	}
 
 	// Load everything when MemDB is set to operate on lower cased names.
@@ -1443,6 +1454,55 @@ func (i *IdentityStore) MemDBAliases(ws memdb.WatchSet, groupAlias bool) (memdb.
 	ws.Add(iter.WatchCh())
 
 	return iter, nil
+}
+
+// MemDBAliasesByScimClientIDInTxn returns all entity aliases belonging to the
+// given SCIM client within the namespace derived from ctx.
+func (i *IdentityStore) MemDBAliasesByScimClientIDInTxn(ctx context.Context, txn *memdb.Txn, scimClientID string) ([]*identity.Alias, error) {
+	if txn == nil {
+		return nil, fmt.Errorf("nil txn")
+	}
+	if scimClientID == "" {
+		return nil, fmt.Errorf("empty scim client id")
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	iter, err := txn.Get(entityAliasesTable, "scim_client_id", ns.ID, scimClientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup aliases using scim client id: %w", err)
+	}
+
+	var aliases []*identity.Alias
+	for raw := iter.Next(); raw != nil; raw = iter.Next() {
+		alias, ok := raw.(*identity.Alias)
+		if !ok {
+			return nil, fmt.Errorf("failed to declare the type of fetched alias")
+		}
+		cloned, err := alias.Clone()
+		if err != nil {
+			return nil, err
+		}
+		aliases = append(aliases, cloned)
+	}
+
+	return aliases, nil
+}
+
+// MemDBAliasesByScimClientID returns all entity aliases belonging to the given
+// SCIM client within the namespace derived from ctx.
+func (i *IdentityStore) MemDBAliasesByScimClientID(ctx context.Context, scimClientID string) ([]*identity.Alias, error) {
+	if scimClientID == "" {
+		return nil, fmt.Errorf("empty scim client id")
+	}
+
+	txn := i.db.Txn(false)
+	defer txn.Abort()
+
+	return i.MemDBAliasesByScimClientIDInTxn(ctx, txn, scimClientID)
 }
 
 func (i *IdentityStore) MemDBUpsertEntityInTxn(txn *memdb.Txn, entity *identity.Entity) error {

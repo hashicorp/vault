@@ -19,7 +19,7 @@
   {{! This center aligns error message on the page }}
   <div class="is-flex is-flex-grow-1">
     <Hds::ApplicationState @align="center" class="align-self-center" as |A|>
-      <A.Header @title="Tool not available" @titleTag="h2" />
+      <A.Header @title="Tool not available" @titleTag="h1" data-test-empty-state-title />
     </Hds::ApplicationState>
   </div>
 {{/if}}

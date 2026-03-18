@@ -489,10 +489,6 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 	if _, ok := d.Raw["schema"]; ok || !hadExisting {
 		rawSchema := d.Get("schema").(string)
 		cfg.Schema = NormalizedSchema(rawSchema)
-		// Validate the normalized schema, not the raw input string, to allow for case-insensitive input while still enforcing valid schema types.
-		if !strutil.StrListContains(SupportedSchemas(), cfg.Schema) {
-			return nil, fmt.Errorf("unsupported schema type %q: must be one of %v", rawSchema, SupportedSchemas())
-		}
 	}
 
 	return cfg, nil
@@ -591,7 +587,7 @@ func validateCertificate(pemBlock []byte) error {
 	return nil
 }
 
-func (c *ConfigEntry) Validate() error {
+func (c *ConfigEntry) Validate(schemas ...string) error {
 	if len(c.Url) == 0 {
 		return errors.New("at least one url must be provided")
 	}
@@ -622,8 +618,13 @@ func (c *ConfigEntry) Validate() error {
 		}
 	}
 	normalizedSchema := NormalizedSchema(c.Schema)
-	if !strutil.StrListContains(SupportedSchemas(), normalizedSchema) {
-		return fmt.Errorf("unsupported schema type %q: must be one of %v", c.Schema, SupportedSchemas())
+	// use the default schema list if none provided
+	supportedSchemas := SupportedSchemas()
+	if len(schemas) > 0 {
+		supportedSchemas = schemas
+	}
+	if !strutil.StrListContains(supportedSchemas, normalizedSchema) {
+		return fmt.Errorf("unsupported schema type %q: must be one of %v", c.Schema, supportedSchemas)
 	}
 	return nil
 }

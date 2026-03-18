@@ -197,10 +197,31 @@ func (g *Group) SCIMClientID() string {
 	return g.ScimClientID
 }
 
+// SCIMFields are fields that can only be modified via SCIM, if the resource
+// is SCIM-owned. `scim_client_id` cannot ever be modified, so it is not
+// included in this list.
+func (g *Group) SCIMFields() []string {
+	return []string{"name", "member_entity_ids"}
+}
+
 func (e *Entity) SCIMClientID() string {
 	return e.ScimClientID
 }
 
+// SCIMFields are fields that can only be modified via SCIM, if the resource
+// is SCIM-owned. `scim_client_id` cannot ever be modified, so it is not
+// included in this list.
+func (e *Entity) SCIMFields() []string {
+	return []string{"name", "disabled", "metadata", "external_id"}
+}
+
 func (a *Alias) SCIMClientID() string {
 	return a.ScimClientID
+}
+
+// SCIMFields are fields that can only be modified via SCIM, if the resource
+// is SCIM-owned. `scim_client_id` cannot ever be modified, so it is not
+// included in this list.
+func (a *Alias) SCIMFields() []string {
+	return []string{"name", "mount_accessor", "canonical_id"}
 }

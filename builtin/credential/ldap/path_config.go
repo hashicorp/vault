@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/rotation"
@@ -94,6 +95,13 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 		result, err := ldaputil.NewConfigEntry(nil, fd)
 		if err != nil {
 			return nil, err
+		}
+
+		// perform schema validation, as NewConfigEntry does not check supported schemas
+		if result.Schema != "" {
+			if !strutil.StrListContains(ldaputil.SupportedSchemas(), result.Schema) {
+				return nil, fmt.Errorf("unsupported schema type %q: must be one of %v", result.Schema, ldaputil.SupportedSchemas())
+			}
 		}
 
 		// No user overrides, return default configuration

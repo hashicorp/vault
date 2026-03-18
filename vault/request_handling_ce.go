@@ -17,7 +17,7 @@ func (c *Core) validateEnterpriseTokenAndFetchEntity(ctx context.Context, tokenS
 	return false, nil, nil, nil, errors.New("not implemented")
 }
 
-func (c *Core) createAndStoreEnterpriseTokenEntry(ctx context.Context, req *logical.Request, allClaims map[string]interface{}, entity *identity.Entity) error {
+func (c *Core) createAndStoreEnterpriseTokenEntry(ctx context.Context, req *logical.Request, allClaims map[string]interface{}, entity *identity.Entity, actorEntity *identity.Entity) error {
 	return nil
 }
 
@@ -25,6 +25,22 @@ func getEnterpriseTokenMetadata(_ map[string]interface{}) string {
 	return ""
 }
 
+func getEnterpriseTokenIssuer(_ map[string]interface{}) string {
+	return ""
+}
+
+func getEnterpriseTokenAudience(_ map[string]interface{}) []string {
+	return nil
+}
+
+func getEnterpriseTokenAuthorizationDetails(_ map[string]interface{}) []logical.AuthorizationDetail {
+	return nil
+}
+
 func (c *Core) performSecondaryEntityTokenChecks(_ context.Context, _ *ACL, _ *identity.Entity, _ map[string][]string) (*ACL, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (c *Core) fetchCeilingPolicies(ctx context.Context, entity *identity.Entity) (map[string][]string, error) {
 	return nil, errors.New("not implemented")
 }

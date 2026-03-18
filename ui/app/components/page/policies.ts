@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import Component from '@glimmer/component';
 import { WIZARD_ID } from 'vault/components/wizard/acl-policies/acl-wizard';
 import errorMessage from 'vault/utils/error-message';
+import { PolicyTypes } from 'core/utils/code-generators/policy';
 
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -88,7 +89,7 @@ export default class PagePoliciesComponent extends Component<Args> {
   }
 
   get showIntroButton() {
-    return this.showContent && this.hasOnlyDefaultPolicies;
+    return this.args.policyType === PolicyTypes.ACL && this.showContent && this.hasOnlyDefaultPolicies;
   }
 
   // Show when it is not in a dismissed state and there are no non-default policies and

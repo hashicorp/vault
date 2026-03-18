@@ -156,6 +156,7 @@ runs:
         if [ "$is_enterprise_repo" = 'true' ]; then
           base_ref='${{ github.event.pull_request.base.ref || github.event.base_ref || github.ref_name || github.event.branch || github.ref }}'
           is_ent_repo='true'
+          is_ent_branch='true'
           is_ce_in_enterprise=$([[ $base_ref == ce/* ]] && echo "true" || echo "false")
           if [ "$is_ce_in_enterprise" = 'true' ]; then
             is_enterprise="false"
@@ -192,7 +193,7 @@ runs:
           echo "compute-small=${compute_small}"
           echo "go-tags=${go_tags}"
           echo "is-ce-in-enterprise=${is_ce_in_enterprise}"
-          echo "is-ent-branch=${is_enterprise}"
+          echo "is-ent-branch=${is_ent_branch}"
           echo "is-ent-repo=${is_ent_repo}"
           echo "vault-version-metadata=${version_metadata}"
         } | tee -a "$GITHUB_OUTPUT"

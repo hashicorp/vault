@@ -25,20 +25,24 @@
     <A.Description>{{this.model.keyId}} is not a valid lease ID.</A.Description>
   </Hds::Alert>
 {{else if (eq this.model.httpStatus 404)}}
-  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header @title="No leases with that ID" @titleTag="h2" />
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No leases with that ID" @titleTag="h2" data-test-empty-state-title />
     <A.Body
       @text="Unable to find lease for the ID &quot;{{this.model.keyId}}&quot;. Try going back to the lookup and re-entering the ID."
+      data-test-empty-state-message
     />
-    <A.Footer as |F|>
+    <A.Footer data-test-empty-state-actions as |F|>
       <F.LinkStandalone @icon="chevron-left" @text="Back to lookup" @route="vault.cluster.access.leases" />
     </A.Footer>
   </Hds::ApplicationState>
 {{else if (eq this.model.httpStatus 403)}}
-  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header @title="You don't have access to a lease with that ID" @titleTag="h2" />
-    <A.Body @text="If you think you've reached this page in error, please contact your administrator." />
-    <A.Footer as |F|>
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="You don't have access to a lease with that ID" @titleTag="h2" data-test-empty-state-title />
+    <A.Body
+      @text="If you think you've reached this page in error, please contact your administrator."
+      data-test-empty-state-message
+    />
+    <A.Footer data-test-empty-state-actions as |F|>
       <F.LinkStandalone @icon="chevron-left" @text="Back to lookup" @route="vault.cluster.access.leases" />
     </A.Footer>
   </Hds::ApplicationState>

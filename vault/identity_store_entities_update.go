@@ -19,6 +19,7 @@ type EntityBuilder struct {
 	entity         *identity.Entity
 	isNew          bool
 	originalSCIMID string
+	modifiedFields []string
 	err            error
 }
 
@@ -83,6 +84,7 @@ func (b *EntityBuilder) WithExternalID(ctx context.Context, externalID string) *
 	} else {
 		// No entity found, so we're just setting the external ID on the current one.
 		b.entity.ExternalID = externalID
+		b.modifiedFields = append(b.modifiedFields, "external_id")
 	}
 
 	return b
@@ -116,6 +118,9 @@ func (b *EntityBuilder) WithName(ctx context.Context, name string) *EntityBuilde
 		return b
 	}
 
+	if b.entity.Name != name {
+		b.modifiedFields = append(b.modifiedFields, "name")
+	}
 	b.entity.Name = name
 	return b
 }
@@ -129,6 +134,10 @@ func (b *EntityBuilder) WithPolicies(policies []string) *EntityBuilder {
 		b.err = fmt.Errorf("policies cannot contain root")
 		return b
 	}
+	dedupedPolicies := strutil.RemoveDuplicates(policies, false)
+	if !strutil.EquivalentSlices(b.entity.Policies, dedupedPolicies) {
+		b.modifiedFields = append(b.modifiedFields, "policies")
+	}
 	b.entity.Policies = strutil.RemoveDuplicates(policies, false)
 	return b
 }
@@ -137,6 +146,9 @@ func (b *EntityBuilder) WithPolicies(policies []string) *EntityBuilder {
 func (b *EntityBuilder) WithDisabled(disabled bool) *EntityBuilder {
 	if b.err != nil {
 		return b
+	}
+	if b.entity.Disabled != disabled {
+		b.modifiedFields = append(b.modifiedFields, "disabled")
 	}
 	b.entity.Disabled = disabled
 	return b
@@ -150,6 +162,9 @@ func (b *EntityBuilder) WithMetadata(metadata map[string]string) *EntityBuilder 
 	}
 	if value, ok := b.entity.Metadata[duplicateCanonicalIDMetadataKey]; ok {
 		metadata[duplicateCanonicalIDMetadataKey] = value
+	}
+	if !strutil.EqualStringMaps(b.entity.Metadata, metadata) {
+		b.modifiedFields = append(b.modifiedFields, "metadata")
 	}
 	b.entity.Metadata = metadata
 	return b
@@ -171,7 +186,7 @@ func (b *EntityBuilder) Build(ctx context.Context) (*logical.Response, error) {
 		return logical.ErrorResponse(b.err.Error()), nil
 	}
 
-	if err := b.store.scimResourceCheck(ctx, b.entity, b.originalSCIMID, b.isNew); err != nil {
+	if err := b.store.scimResourceCheck(ctx, b.entity, b.originalSCIMID, b.isNew, b.modifiedFields); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrPermissionDenied
 	}
 

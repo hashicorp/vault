@@ -12,6 +12,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
@@ -640,4 +641,305 @@ func TestRequestHandling_fetchACLTokenEntryAndEntity_NilRequest(t *testing.T) {
 
 	require.Error(t, err)
 	require.Equal(t, ErrInternalError, err)
+}
+
+// Test_allPoliciesAllowOnly tests a helper function that checks if all policies in
+// a given set have only "allow" capabilities, and not "deny" or "sudo"
+func Test_allPoliciesAllowOnly(t *testing.T) {
+	t.Parallel()
+
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	allowPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "secret/data/*" {
+	capabilities = ["read", "list"]
+}
+`)
+	require.NoError(t, err)
+	allowPolicy.Name = "allow-only"
+	require.NoError(t, c.policyStore.SetPolicy(ctx, allowPolicy))
+
+	denyPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "secret/data/*" {
+	capabilities = ["deny"]
+}
+`)
+	require.NoError(t, err)
+	denyPolicy.Name = "deny-policy"
+	require.NoError(t, c.policyStore.SetPolicy(ctx, denyPolicy))
+
+	sudoPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "secret/data/*" {
+	capabilities = ["read", "sudo"]
+}
+`)
+	require.NoError(t, err)
+	sudoPolicy.Name = "sudo-policy"
+	require.NoError(t, c.policyStore.SetPolicy(ctx, sudoPolicy))
+
+	tests := map[string]struct {
+		policyNamesByNamespace map[string][]string
+		expected               bool
+		wantErr                string
+	}{
+		"all allow only": {
+			policyNamesByNamespace: map[string][]string{
+				namespace.RootNamespaceID: {"allow-only"},
+			},
+			expected: true,
+		},
+		"deny policy": {
+			policyNamesByNamespace: map[string][]string{
+				namespace.RootNamespaceID: {"deny-policy"},
+			},
+			expected: false,
+		},
+		"sudo policy": {
+			policyNamesByNamespace: map[string][]string{
+				namespace.RootNamespaceID: {"sudo-policy"},
+			},
+			expected: false,
+		},
+		"root policy": {
+			policyNamesByNamespace: map[string][]string{
+				namespace.RootNamespaceID: {"root"},
+			},
+			expected: false,
+		},
+		"missing policy": {
+			policyNamesByNamespace: map[string][]string{
+				namespace.RootNamespaceID: {"missing-policy"},
+			},
+			expected: false,
+			wantErr:  "policy \"missing-policy\" not found",
+		},
+		"missing namespace": {
+			policyNamesByNamespace: map[string][]string{
+				"missing-namespace": {"allow-only"},
+			},
+			expected: false,
+			wantErr:  namespace.ErrNoNamespace.Error(),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			actual, err := c.allPoliciesAllowOnly(ctx, tc.policyNamesByNamespace)
+			if tc.wantErr != "" {
+				require.ErrorContains(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+// TestAuth_AuthorizationDetails_CopiedFromRequest verifies that logical.Auth.AuthorizationDetails
+// matches the authorization details already carried on the request.
+func TestAuth_AuthorizationDetails_CopiedFromRequest(t *testing.T) {
+	t.Parallel()
+
+	details := []logical.AuthorizationDetail{
+		{"type": "account_information", "scope": "read"},
+		{"type": "payment_initiation", "amount": "100"},
+	}
+
+	auth := &logical.Auth{}
+	req := &logical.Request{
+		EnterpriseTokenAuthorizationDetails: details,
+	}
+
+	// Simulate the assignment performed in CheckToken.
+	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
+
+	require.Equal(t, details, auth.AuthorizationDetails, "auth.AuthorizationDetails must equal req.EnterpriseTokenAuthorizationDetails")
+}
+
+// TestAuth_AuthorizationDetails_NilWhenAbsent verifies that auth.AuthorizationDetails is nil
+// when the request does not carry authorization details.
+func TestAuth_AuthorizationDetails_NilWhenAbsent(t *testing.T) {
+	t.Parallel()
+
+	auth := &logical.Auth{}
+	req := &logical.Request{}
+
+	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
+
+	require.Nil(t, auth.AuthorizationDetails)
+}
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_EmptyToken verifies that a
+// request with an empty ClientToken is rejected with ErrPermissionDenied.
+func TestRequestHandling_fetchACLTokenEntryAndEntity_EmptyToken(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	req := &logical.Request{ClientToken: ""}
+	_, _, _, _, err := core.fetchACLTokenEntryAndEntity(ctx, req)
+
+	require.Error(t, err)
+	require.Equal(t, logical.ErrPermissionDenied, err)
+}
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_UnknownToken verifies that a
+// non-existent token returns ErrPermissionDenied combined with ErrInvalidToken.
+func TestRequestHandling_fetchACLTokenEntryAndEntity_UnknownToken(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	req := &logical.Request{ClientToken: "hvs.nonexistent-token-id"}
+	_, _, _, _, err := core.fetchACLTokenEntryAndEntity(ctx, req)
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, logical.ErrPermissionDenied)
+	require.ErrorIs(t, err, logical.ErrInvalidToken)
+}
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_ValidRootToken verifies the
+// happy path: a valid root token returns an ACL, the token entry, and no error.
+func TestRequestHandling_fetchACLTokenEntryAndEntity_ValidRootToken(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	req := &logical.Request{ClientToken: root}
+	acl, te, _, _, err := core.fetchACLTokenEntryAndEntity(ctx, req)
+
+	require.NoError(t, err)
+	require.NotNil(t, acl)
+	require.NotNil(t, te)
+	require.Equal(t, root, te.ID)
+	require.Contains(t, te.Policies, "root")
+}
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_CachedTokenEntry verifies
+// that when a token entry is already cached on the request, the function uses
+// the cached entry instead of performing a lookup.
+func TestRequestHandling_fetchACLTokenEntryAndEntity_CachedTokenEntry(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	// Look up the root token to get a valid entry
+	te, err := core.tokenStore.Lookup(ctx, root)
+	require.NoError(t, err)
+	require.NotNil(t, te)
+
+	// Pre-cache the entry on the request
+	req := &logical.Request{ClientToken: root}
+	req.SetTokenEntry(te)
+
+	acl, returnedTE, _, _, err := core.fetchACLTokenEntryAndEntity(ctx, req)
+
+	require.NoError(t, err)
+	require.NotNil(t, acl)
+	// The returned token entry should be the same object we cached
+	require.Same(t, te, returnedTE)
+}
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_BoundCIDR_NoConnection
+// verifies that a token with BoundCIDRs is rejected when the request has no
+// connection information. The token entry is pre-cached on the request to
+// isolate the CIDR check logic from token storage concerns.
+func TestRequestHandling_fetchACLTokenEntryAndEntity_BoundCIDR_NoConnection(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	boundCIDRs, err := parseutil.ParseAddrs([]string{"10.0.0.0/8"})
+	require.NoError(t, err)
+
+	// Look up the root token to get a valid base entry, then add BoundCIDRs
+	te, err := core.tokenStore.Lookup(ctx, root)
+	require.NoError(t, err)
+	te.TTL = time.Hour
+	te.BoundCIDRs = boundCIDRs
+
+	req := &logical.Request{
+		ClientToken: root,
+		// No Connection field set
+	}
+	req.SetTokenEntry(te)
+
+	_, _, _, _, err = core.fetchACLTokenEntryAndEntity(ctx, req)
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, logical.ErrPermissionDenied)
+}
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_BoundCIDR_OutOfRange
+// verifies that a token with BoundCIDRs is rejected when the request comes
+// from an IP outside the allowed range. The token entry is pre-cached on the
+// request to isolate the CIDR check logic from token storage concerns.
+func TestRequestHandling_fetchACLTokenEntryAndEntity_BoundCIDR_OutOfRange(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	boundCIDRs, err := parseutil.ParseAddrs([]string{"10.0.0.0/8"})
+	require.NoError(t, err)
+
+	te, err := core.tokenStore.Lookup(ctx, root)
+	require.NoError(t, err)
+	te.TTL = time.Hour
+	te.BoundCIDRs = boundCIDRs
+
+	req := &logical.Request{
+		ClientToken: root,
+		Connection:  &logical.Connection{RemoteAddr: "192.168.1.1"},
+	}
+	req.SetTokenEntry(te)
+
+	_, _, _, _, err = core.fetchACLTokenEntryAndEntity(ctx, req)
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, logical.ErrPermissionDenied)
+}
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_BoundCIDR_InRange verifies
+// that a token with BoundCIDRs succeeds when the request comes from an IP
+// within the allowed CIDR range. The token entry is pre-cached on the request
+// to isolate the CIDR check logic from token storage concerns.
+func TestRequestHandling_fetchACLTokenEntryAndEntity_BoundCIDR_InRange(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	boundCIDRs, err := parseutil.ParseAddrs([]string{"10.0.0.0/8"})
+	require.NoError(t, err)
+
+	te, err := core.tokenStore.Lookup(ctx, root)
+	require.NoError(t, err)
+	te.TTL = time.Hour
+	te.BoundCIDRs = boundCIDRs
+
+	req := &logical.Request{
+		ClientToken: root,
+		Connection:  &logical.Connection{RemoteAddr: "10.1.2.3"},
+	}
+	req.SetTokenEntry(te)
+
+	acl, returnedTE, _, _, err := core.fetchACLTokenEntryAndEntity(ctx, req)
+
+	require.NoError(t, err)
+	require.NotNil(t, acl)
+	require.NotNil(t, returnedTE)
+	require.Equal(t, root, returnedTE.ID)
+}
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_NonExpiring_RootIgnoresCIDR
+// verifies that a non-expiring root token (TTL == 0) bypasses CIDR checks even
+// if BoundCIDRs is set, since the CIDR check is gated on TTL != 0.
+func TestRequestHandling_fetchACLTokenEntryAndEntity_NonExpiring_RootIgnoresCIDR(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	// Root token has TTL == 0, so CIDR checks should not apply
+	req := &logical.Request{
+		ClientToken: root,
+		// No Connection, which would fail if CIDR checks ran
+	}
+	acl, te, _, _, err := core.fetchACLTokenEntryAndEntity(ctx, req)
+
+	require.NoError(t, err)
+	require.NotNil(t, acl)
+	require.NotNil(t, te)
+	require.Equal(t, time.Duration(0), te.TTL)
 }
