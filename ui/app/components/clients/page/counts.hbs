@@ -2,7 +2,7 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-<div class="has-border-bottom-light">
+<div>
   <Clients::PageHeader
     @billingStartTime={{@config.billing_start_timestamp}}
     @retentionMonths={{@config.retention_months}}
@@ -16,13 +16,6 @@
 </div>
 
 <div class="has-top-bottom-margin">
-  <Hds::Text::Body @tag="p" @size="100" class="has-bottom-margin-s">
-    This is the dashboard for your overall client count usage. Review Vault's
-    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}} @isHrefExternal={{true}}>
-      client counting documentation</Hds::Link::Inline>
-    for more information.
-  </Hds::Text::Body>
-
   {{#if this.trackingDisabled}}
     <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
       <A.Title data-test-counts-disabled>Tracking is disabled</A.Title>

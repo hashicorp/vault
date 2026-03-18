@@ -90,7 +90,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/settings/seal');
 
     // seal
-    await click('[data-test-seal]');
+    await click(GENERAL.button('Seal'));
     await click(GENERAL.confirmButton);
     await pollCluster(this.owner);
     await settled();

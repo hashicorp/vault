@@ -7,9 +7,15 @@
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
+  <:description>
+    Call Vault and plugin API endpoints directly from the browser to accelerate development and debugging.
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/api-docs"}}>
+      Learn more
+    </Hds::Link::Inline>
+  </:description>
 </Page::Header>
 
-<div class="box is-fullwidth is-sideless is-marginless">
+<div class="box is-fullwidth is-marginless">
   <NamespaceReminder as |R|>
     Requests use the header
     <code>X-Vault-Namespace: {{R.namespace.path}}</code>. You can also use

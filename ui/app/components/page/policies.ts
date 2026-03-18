@@ -44,6 +44,18 @@ export default class PagePoliciesComponent extends Component<Args> {
     this.filter = this.args.filter || '';
   }
 
+  get description() {
+    const policyType = this.args.policyType;
+    if (policyType === PolicyTypes.ACL) {
+      return 'Define fine-grained rules to explicitly grant or forbid access to specific paths and operations within your cluster. Because Vault is a “default deny” system, if a permission is not granted in a policy, an entity would not have permission.';
+    } else if (policyType === PolicyTypes.EGP) {
+      return 'Use Sentinel to specify policies as code that apply to discrete API paths and enforce organizational compliance standards.';
+    } else if (policyType === PolicyTypes.RGP) {
+      return 'Use Sentinel to specify policies as code that apply to tokens, entities, groups and enforce organizational compliance standards.';
+    }
+    return '';
+  }
+
   // Check if the filter exactly matches a policy ID
   get filterMatchesKey(): boolean {
     const filter = this.filter;
@@ -94,7 +106,7 @@ export default class PagePoliciesComponent extends Component<Args> {
 
   // Show when it is not in a dismissed state and there are no non-default policies and
   get showWizard() {
-    if (this.args.policyType !== 'acl') return false;
+    if (this.args.policyType !== PolicyTypes.ACL) return false;
     // Use total instead of filtered total to avoid flashing wizard when filtering with no results
     return !this.wizard.isDismissed(WIZARD_ID) && this.hasOnlyDefaultPolicies;
   }
@@ -106,9 +118,9 @@ export default class PagePoliciesComponent extends Component<Args> {
       const policyType = this.args.policyType;
 
       // Use the appropriate sys endpoint based on policy type
-      if (policyType === 'egp') {
+      if (policyType === PolicyTypes.EGP) {
         await this.api.sys.systemDeletePoliciesEgpName(policyName);
-      } else if (policyType === 'rgp') {
+      } else if (policyType === PolicyTypes.RGP) {
         await this.api.sys.systemDeletePoliciesRgpName(policyName);
       } else {
         await this.api.sys.policiesDeleteAclPolicy(policyName);

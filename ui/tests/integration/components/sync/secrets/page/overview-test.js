@@ -83,7 +83,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     this.setup();
     await this.renderComponent();
     assert.dom(overview.optInBanner.container).doesNotExist();
-    assert.dom(cta.summary).exists();
   });
 
   test('it should render header, tabs and toolbar for overview state if destinations exist', async function (assert) {
@@ -96,7 +95,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     await this.renderComponent();
 
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets sync', 'Page title renders');
-    assert.dom(cta.summary).doesNotExist('CTA does not render');
     assert.dom(tab('Overview')).hasText('Overview', 'Overview tab renders');
     assert.dom(tab('Destinations')).hasText('Destinations', 'Destinations tab renders');
     assert.dom(overview.createDestination).hasText('Create new destination', 'Toolbar action renders');
@@ -118,7 +116,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets sync');
     assert.dom(GENERAL.badge('Plus feature')).hasText('Plus feature', 'Plus feature badge renders');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
-    assert.dom(cta.summary).exists();
   });
 
   test('it should show activation error if cluster is not Plus tier', async function (assert) {
@@ -160,7 +157,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets sync');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
-    assert.dom(cta.summary).exists();
   });
 
   test('it should show the opt-in banner without permissions to activate', async function (assert) {

@@ -3,11 +3,22 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Recovery::Page::Header
-  @title="Secrets recovery"
-  @subtitle="Recover lost or deleted data from a raft snapshot. Supported data includes KV v1 and Cubbyhole secrets or Database static roles."
-  @breadcrumbs={{@breadcrumbs}}
-/>
+<Page::Header @title="Secrets recovery" class="bottom-margin-16">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+  <:badges>
+    {{#if @model.showCommunityMessage}}
+      <Hds::Badge @text="Enterprise" @color="highlight" data-test-badge="enterprise" />
+    {{/if}}
+  </:badges>
+  <:description>
+    Restore specific secrets from cluster snapshots without impacting the availability of the active Vault cluster.
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/recover-secrets"}}>
+      Learn more
+    </Hds::Link::Inline>
+  </:description>
+</Page::Header>
 
 {{#if @model.snapshots.showRaftStorageMessage}}
   <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
