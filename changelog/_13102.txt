@@ -1,0 +1,3 @@
+```release-note:bug
+auth/gcp: Fix intermittent context canceled failures for Workload Identity Federation (WIF) authentication
+```
