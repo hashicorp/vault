@@ -18,12 +18,14 @@
   </:breadcrumbs>
 
   <:actions>
-    <Hds::Button
-      @text="Back to Leases"
-      @color="secondary"
-      @route="vault.cluster.access.leases.list-root"
-      data-test-button="Back to Leases"
-    />
+    {{#if this.baseKey.id}}
+      <Hds::Button
+        @text="Back to Leases"
+        @color="secondary"
+        @route="vault.cluster.access.leases.list-root"
+        data-test-button="Back to Leases"
+      />
+    {{/if}}
   </:actions>
 </Page::Header>
 
