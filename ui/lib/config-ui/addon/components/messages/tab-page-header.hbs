@@ -7,6 +7,15 @@
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </:breadcrumbs>
+  <:description>
+    {{#if @showTabs}}
+      Configure global banners or modal notifications to display important system updates or compliance reminders to GUI
+      users.
+      <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/custom-msg"}}>
+        Learn more
+      </Hds::Link::Inline>
+    {{/if}}
+  </:description>
 </Page::Header>
 
 {{#if @showTabs}}

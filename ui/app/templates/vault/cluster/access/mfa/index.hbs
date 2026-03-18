@@ -5,12 +5,10 @@
 
 <Page::Header @title=" Multi-factor authentication">
   <:description>
-    <Hds::Text::Body>
-      Configure and enforce multi-factor authentication (MFA) for users logging into Vault, for any
-      <br />
-      authentication method.
-      <Hds::Link::Inline @href={{doc-link "/vault/tutorials/auth-methods/multi-factor-authentication"}}>Learn more</Hds::Link::Inline>
-    </Hds::Text::Body>
+    Enforce a secondary layer of identity verification (such as TOTP, Okta, or Duo) during the login process.
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/login-mfa"}}>
+      Learn more
+    </Hds::Link::Inline>
   </:description>
   <:actions>
     <Hds::Button @text="Configure MFA" @route="vault.cluster.access.mfa.methods.create" data-test-mfa-configure />

@@ -3,7 +3,10 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Leases">
+<Page::Header
+  @title="Leases"
+  @description="Monitor and manage the lifetime of dynamic secrets, including tracking time to live (TTL), renewals, and manual revocations."
+>
   <:breadcrumbs>
     <KeyValueHeader
       @baseKey={{this.baseKey}}
@@ -13,6 +16,7 @@
       @showCurrent={{true}}
     />
   </:breadcrumbs>
+
   <:actions>
     <Hds::Button
       @text="Back to Leases"

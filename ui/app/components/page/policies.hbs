@@ -18,6 +18,12 @@
         }}
       />
     </:breadcrumbs>
+    <:description>
+      {{this.description}}
+      <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/policies"}}>
+        Learn more
+      </Hds::Link::Inline>
+    </:description>
     <:actions>
       {{#if this.showIntroButton}}
         <Hds::Button

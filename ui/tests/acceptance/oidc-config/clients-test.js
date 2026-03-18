@@ -350,17 +350,12 @@ module('Acceptance | oidc-config clients', function (hooks) {
     });
 
     test('it renders empty state when no clients are configured', async function (assert) {
-      assert.expect(5);
+      assert.expect(4);
       this.server.get('/identity/oidc/client', () => overrideResponse(404));
 
       await visit(OIDC_BASE_URL);
       assert.strictEqual(currentURL(), '/vault/access/oidc');
       assert.dom(GENERAL.hdsPageHeaderTitle).hasText('OIDC provider');
-      assert.dom(SELECTORS.oidcHeader).hasText(
-        `Configure Vault to act as an OIDC identity provider, and offer Vault’s various authentication
-      methods and source of identity to any client applications. Learn more Create your first app`,
-        'renders call to action header when no clients are configured'
-      );
       assert.dom('[data-test-oidc-landing]').exists('landing page renders when no clients are configured');
       assert
         .dom(SELECTORS.oidcLandingImg)

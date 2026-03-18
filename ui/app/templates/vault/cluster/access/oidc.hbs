@@ -8,26 +8,22 @@
     <:breadcrumbs>
       <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
     </:breadcrumbs>
-  </Page::Header>
-  <div class="box is-fullwidth is-sideless is-flex-between is-shadowless is-marginless" data-test-oidc-header>
-    <p>
-      Configure Vault to act as an OIDC identity provider, and offer
-      {{"Vault’s"}}
-      various authentication
+    <:description>
+      Use Vault as an identity provider for external authentication methods that use the OpenID Connect (OIDC) protocol.
+      <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/oidc-provider"}}>
+        Learn more
+      </Hds::Link::Inline>
+    </:description>
+    <:actions>
       {{#if this.isCta}}
-        <br />
+        <Hds::Button
+          @text="Create your first app"
+          @route="vault.cluster.access.oidc.clients.create"
+          data-test-oidc-configure
+        />
       {{/if}}
-      methods and source of identity to any client applications.
-      <Hds::Link::Inline @href={{doc-link "/vault/tutorials/auth-methods/oidc-identity-provider"}}>Learn more</Hds::Link::Inline>
-    </p>
-    {{#if this.isCta}}
-      <Hds::Button
-        @text="Create your first app"
-        @route="vault.cluster.access.oidc.clients.create"
-        data-test-oidc-configure
-      />
-    {{/if}}
-  </div>
+    </:actions>
+  </Page::Header>
   {{#unless this.isCta}}
     {{! show tab links in list routes }}
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless" data-test-oidc-tabs>

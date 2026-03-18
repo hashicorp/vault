@@ -16,8 +16,6 @@ import type RouterService from '@ember/routing/router-service';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type NamespaceService from 'vault/services/namespace';
-import type VersionService from 'vault/services/version';
 import type WizardService from 'vault/services/wizard';
 
 /**
@@ -38,9 +36,7 @@ interface Args {
 export default class SecretEngineList extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly namespace: NamespaceService;
   @service declare readonly router: RouterService;
-  @service declare readonly version: VersionService;
   @service declare readonly wizard: WizardService;
 
   @tracked engineTypeFilters: Array<string> = [];

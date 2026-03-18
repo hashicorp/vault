@@ -8,6 +8,12 @@
     <:breadcrumbs>
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
     </:breadcrumbs>
+    <:description>
+      Configure authentication methods for accessing Vault.
+      <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/mfa"}}>
+        Learn more
+      </Hds::Link::Inline>
+    </:description>
     <:actions>
       {{#if this.showIntroButton}}
         <Hds::Button

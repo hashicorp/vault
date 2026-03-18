@@ -10,11 +10,21 @@
       @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="Seal Vault")}}
     />
   </:breadcrumbs>
+  <:description>
+    Stop Vault from responding to all access operations by discarding its in-memory root key. You must use the CLI or API to
+    unseal Vault and restore decryption capabilities.
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/seal-vault"}}>
+      Learn more
+    </Hds::Link::Inline>
+  </:description>
+  <:actions>
+    {{#if this.model.seal.canUpdate}}
+      <SealAction @onSeal={{action "seal"}} />
+    {{/if}}
+  </:actions>
 </Page::Header>
 
-{{#if this.model.seal.canUpdate}}
-  <SealAction @onSeal={{action "seal"}} />
-{{else}}
+{{#unless this.model.seal.canUpdate}}
   <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
     <A.Header
       @title="This token does not have sufficient capabilities to seal this vault"
@@ -22,4 +32,4 @@
       data-test-empty-state-title
     />
   </Hds::ApplicationState>
-{{/if}}
+{{/unless}}

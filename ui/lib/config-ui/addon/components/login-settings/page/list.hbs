@@ -7,9 +7,15 @@
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
+  <:description>
+    Set a default and backup authentication methods to customize GUI login behavior.
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/custom-login"}}>
+      Learn more
+    </Hds::Link::Inline>
+  </:description>
 </Page::Header>
 
-<Toolbar />
+<Toolbar class="top-margin-16" />
 
 {{#if @loginRules}}
   {{#each @loginRules as |rule|}}
