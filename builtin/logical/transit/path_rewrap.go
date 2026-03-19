@@ -101,6 +101,17 @@ Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
 			},
 
+			"associated_data": {
+				Type: framework.TypeString,
+				Description: `
+When using an AEAD cipher mode, such as AES-GCM, this parameter allows
+passing associated data (AD/AAD) into the encryption function; this data
+must be passed on subsequent decryption requests but can be transited in
+plaintext. On successful decryption, both the ciphertext and the associated
+data are attested not to have been tampered with.
+				`,
+			},
+
 			"batch_input": {
 				Type: framework.TypeSlice,
 				Description: `
@@ -140,10 +151,11 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 
 		batchInputItems = make([]RewrapBatchRequestItem, 1)
 		batchInputItems[0] = RewrapBatchRequestItem{
-			Ciphertext: ciphertext,
-			Context:    d.Get("context").(string),
-			Nonce:      d.Get("nonce").(string),
-			KeyVersion: d.Get("key_version").(int),
+			Ciphertext:     ciphertext,
+			Context:        d.Get("context").(string),
+			Nonce:          d.Get("nonce").(string),
+			KeyVersion:     d.Get("key_version").(int),
+			AssociatedData: d.Get("associated_data").(string),
 		}
 		if ps, ok := d.GetOk("decrypt_padding_scheme"); ok {
 			batchInputItems[0].DecryptPaddingScheme = ps.(string)
@@ -217,6 +229,14 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			}
 			factories = append(factories, paddingScheme)
 		}
+		if item.AssociatedData != "" {
+			if !p.Type.AssociatedDataSupported() {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].associated_data' provided for non-AEAD cipher suite %v", i, p.Type.String())
+				continue
+			}
+
+			factories = append(factories, AssocDataFactory{item.AssociatedData})
+		}
 		if item.Nonce != "" && !nonceAllowed(p) {
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
@@ -247,6 +267,9 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			}
 			factories = append(factories, paddingScheme)
 			factories = append(factories, keysutil.PaddingScheme(item.EncryptPaddingScheme))
+		}
+		if item.AssociatedData != "" {
+			factories = append(factories, AssocDataFactory{item.AssociatedData})
 		}
 		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
 			warnAboutNonceUsage = true
