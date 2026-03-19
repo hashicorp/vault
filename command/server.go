@@ -1707,10 +1707,14 @@ func (c *ServerCommand) Run(args []string) int {
 			// See the call to Core.SetSealReloadFunc above.
 			if reloaded, err := c.reloadSealsOnSigHup(ctx, core, config); err != nil {
 				c.UI.Error(fmt.Errorf("error reloading seal config: %s", err).Error())
-				config.Seals = core.GetCoreConfigInternal().Seals
+				if coreConfig := core.GetCoreConfigInternal(); coreConfig != nil {
+					config.Seals = coreConfig.Seals
+				}
 				goto RUNRELOADFUNCS
 			} else if !reloaded {
-				config.Seals = core.GetCoreConfigInternal().Seals
+				if coreConfig := core.GetCoreConfigInternal(); coreConfig != nil {
+					config.Seals = coreConfig.Seals
+				}
 			}
 
 			core.SetConfig(config)
