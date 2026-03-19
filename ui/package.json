@@ -204,7 +204,8 @@
     "minimatch@^5.0.1": "5.1.9",
     "minimatch@^7.4.3": "7.4.9",
     "minimatch@^8.0.2": "8.0.7",
-    "minimatch@^9.0.4": "9.0.9"
+    "minimatch@^9.0.4": "9.0.9",
+    "tar": "7.5.11"
   },
   "engines": {
     "node": "20"
