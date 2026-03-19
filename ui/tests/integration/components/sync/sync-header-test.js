@@ -53,10 +53,12 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
       this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
     });
 
-    test('it should render title and plus badge', async function (assert) {
+    test('it should render title and standard badge', async function (assert) {
       await this.renderComponent();
       assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets Sync');
-      assert.dom(GENERAL.badge('Plus feature')).hasText('Plus feature', 'Plus feature badge renders');
+      assert
+        .dom(GENERAL.badge('Standard feature'))
+        .hasText('Standard feature', 'Standard feature badge renders');
     });
   });
 });
