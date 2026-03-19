@@ -154,7 +154,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-couchbase v0.15.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.19.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.17.0
-	github.com/hashicorp/vault-plugin-database-redis v0.7.0
+	github.com/hashicorp/vault-plugin-database-redis v0.8.1-0.20260319223601-0ad9b5a0ab3b
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-ad v0.21.0
@@ -171,7 +171,7 @@ require (
 	github.com/hashicorp/vault/api v1.22.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.23.0
+	github.com/hashicorp/vault/sdk v0.24.0
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.18.3
