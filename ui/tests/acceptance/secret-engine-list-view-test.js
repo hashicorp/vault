@@ -61,7 +61,11 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await click(GENERAL.cardContainer('nomad'));
     await click(GENERAL.submitButton);
 
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'navigates to the list page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.configuration.general-settings',
+      'navigates to the configuration page'
+    );
     // cleanup
     await runCmd(deleteEngineCmd('nomad'));
   });

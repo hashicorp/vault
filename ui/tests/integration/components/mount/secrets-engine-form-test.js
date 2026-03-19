@@ -27,13 +27,15 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    this.router = this.owner.lookup('service:router');
     this.flashMessages = this.owner.lookup('service:flash-messages');
     this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
     this.flashWarningSpy = sinon.spy(this.flashMessages, 'warning');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.server.post('/sys/mounts/foo', noopStub());
-    this.onMountSuccess = sinon.spy();
-
+    sinon.stub(this.router, 'transitionTo').returns({
+      followRedirects: sinon.stub(),
+    });
     const defaults = {
       config: { listing_visibility: false },
       kv_config: {
@@ -53,9 +55,7 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
   });
 
   test('it renders secret engine form', async function (assert) {
-    await render(
-      hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
-    );
+    await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
     assert.dom(GENERAL.breadcrumbs).exists('renders breadcrumbs');
     assert.dom(GENERAL.submitButton).hasText('Enable engine', 'renders submit button');
     assert.dom(GENERAL.backButton).hasText('Back', 'renders back button');
@@ -64,45 +64,40 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
   test('it changes path when type is set', async function (assert) {
     this.form.type = 'azure';
     this.form.data.path = 'azure'; // Set path to match type as would happen in the route
-    await render(
-      hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
-    );
+    await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
     assert.dom(GENERAL.inputByAttr('path')).hasValue('azure', 'path matches type');
   });
 
   test('it keeps custom path value', async function (assert) {
     this.form.type = 'kv';
     this.form.data.path = 'custom-path';
-    await render(
-      hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
-    );
+    await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
     assert.dom(GENERAL.inputByAttr('path')).hasValue('custom-path', 'keeps custom path');
   });
 
   test('it calls mount success', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
 
     this.server.post('/sys/mounts/foo', () => {
       assert.ok(true, 'it calls enable on a secrets engine');
       return [204, { 'Content-Type': 'application/json' }];
     });
-    const spy = sinon.spy();
-    this.set('onMountSuccess', spy);
 
     this.form.type = 'ssh';
     this.form.data.path = 'foo';
 
-    await render(
-      hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
-    );
+    await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
 
     await click(GENERAL.submitButton);
 
-    assert.true(spy.calledOnce, 'calls the passed success method');
     assert.true(
       this.flashSuccessSpy.calledWith('Successfully mounted the ssh secrets engine at foo.'),
       'Renders correct flash message'
     );
+
+    const [route, path] = this.router.transitionTo.firstCall.args;
+    assert.strictEqual(route, 'vault.cluster.secrets.backend.index', 'transitions to expected route for ssh');
+    assert.strictEqual(path, 'foo', 'transitions with expected path');
   });
 
   module('KV engine', function (hooks) {
@@ -111,16 +106,14 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
     });
 
     test('it shows KV specific fields when type is kv', async function (assert) {
-      await render(
-        hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
-      );
+      await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
       assert.dom(GENERAL.inputByAttr('kv_config.max_versions')).exists('shows max versions field');
       assert.dom(GENERAL.inputByAttr('kv_config.cas_required')).exists('shows CAS required field');
       assert.dom(GENERAL.inputByAttr('kv_config.delete_version_after')).exists('shows delete after field');
     });
 
     test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
-      assert.expect(6);
+      assert.expect(5);
       this.server.post('/sys/capabilities-self', () => capabilitiesStub('my-kv-engine/config', ['deny']));
       this.server.post('/sys/mounts/my-kv-engine', (schema, req) => {
         assert.true(true, 'it makes request to mount engine');
@@ -134,9 +127,7 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
         return overrideResponse(204);
       });
 
-      await render(
-        hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
-      );
+      await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
       await fillIn(GENERAL.inputByAttr('path'), 'my-kv-engine');
       await fillIn(GENERAL.inputByAttr('kv_config.max_versions'), '101');
       await click(GENERAL.submitButton);
@@ -146,10 +137,10 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
         `You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.`,
         'it calls warning flash with expected message'
       );
-      const [type, enginePath, useEngineRoute] = this.onMountSuccess.lastCall.args;
-      assert.strictEqual(type, 'kv', 'onMountSuccess called with expected type');
-      assert.strictEqual(enginePath, 'my-kv-engine', 'onMountSuccess called with expected engine path');
-      assert.true(useEngineRoute, 'onMountSuccess called useEngineRoute: true');
+
+      const [route, path] = this.router.transitionTo.firstCall.args;
+      assert.strictEqual(route, 'vault.cluster.secrets.backend.kv.list', 'transitions to expected route');
+      assert.strictEqual(path, 'my-kv-engine', 'transitions with expected path');
     });
   });
 
@@ -164,9 +155,7 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
         this.form.data.config = {};
       }
 
-      await render(
-        hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
-      );
+      await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
 
       // First check if the Method Options group is being rendered at all
       assert.dom(GENERAL.button('Method Options')).exists('Method Options toggle button exists');
@@ -182,9 +171,7 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       this.form.type = 'kv';
       this.form.applyTypeSpecificDefaults();
 
-      await render(
-        hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
-      );
+      await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
 
       assert
         .dom(GENERAL.fieldByAttr('config.identity_token_key'))
@@ -198,9 +185,7 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       if (!this.form.data.config) {
         this.form.data.config = {};
       }
-      await render(
-        hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
-      );
+      await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
 
       // Expand Method Options section to show identity_token_key field
       await click(GENERAL.button('Method Options'));
@@ -256,9 +241,7 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
     });
 
     test('it renders plugin type selection radio cards', async function (assert) {
-      await render(
-        hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
-      );
+      await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
 
       assert.dom(`input${GENERAL.radioCardByAttr('builtin')}`).exists('shows built-in plugin radio card');
       assert.dom(`input${GENERAL.radioCardByAttr('external')}`).exists('shows external plugin radio card');
@@ -274,7 +257,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -288,7 +270,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -309,7 +290,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -327,7 +307,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -343,7 +322,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -356,7 +334,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -374,7 +351,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -396,7 +372,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -416,7 +391,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -431,7 +405,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -469,7 +442,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -490,7 +462,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -505,7 +476,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -531,7 +501,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -548,7 +517,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -601,7 +569,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -626,7 +593,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -655,7 +621,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -682,7 +647,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -708,7 +672,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 
@@ -722,9 +685,7 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
     });
 
     test('it handles missing availableVersions argument', async function (assert) {
-      await render(
-        hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
-      );
+      await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
 
       // External should be disabled
       assert
@@ -744,7 +705,6 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       await render(
         hbs`<Mount::SecretsEngineForm
           @model={{this.model}}
-          @onMountSuccess={{this.onMountSuccess}}
         />`
       );
 

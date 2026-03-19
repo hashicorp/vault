@@ -127,6 +127,13 @@ module('Integration | Component | mount backend form', function (hooks) {
     hooks.beforeEach(function () {
       // Get version service for mocking in individual tests
       this.version = this.owner.lookup('service:version');
+      this.router = this.owner.lookup('service:router');
+
+      sinon.stub(this.router, 'transitionTo').callsFake(() => {
+        return {
+          followRedirects: sinon.stub().resolves(),
+        };
+      });
 
       // Mock plugin pins API endpoint
       this.server.get('/sys/plugins/pins', () => {
@@ -174,7 +181,6 @@ module('Integration | Component | mount backend form', function (hooks) {
         render(hbs`
           <Mount::SecretsEngineForm
             @model={{this.model}}
-            @onMountSuccess={{this.onMountSuccess}}
           />
         `);
 
@@ -308,7 +314,7 @@ module('Integration | Component | mount backend form', function (hooks) {
             'plugin_version is not included in payload when default is selected'
           );
           assert.strictEqual(payload.type, 'kv', 'correct engine type is sent');
-          return {};
+          return [204, { 'Content-Type': 'application/json' }];
         });
 
         await this.renderComponent();
@@ -327,7 +333,7 @@ module('Integration | Component | mount backend form', function (hooks) {
             Object.prototype.hasOwnProperty.call(payload.config, 'plugin_version');
           assert.notOk(hasPluginVersion, 'plugin_version is not included for builtin selection');
           assert.strictEqual(payload.type, 'kv', 'type remains builtin type for builtin plugins');
-          return {};
+          return [204, { 'Content-Type': 'application/json' }];
         });
 
         await this.renderComponent();
@@ -350,7 +356,7 @@ module('Integration | Component | mount backend form', function (hooks) {
             'vault-plugin-secrets-kv',
             'type is external plugin name for external plugins'
           );
-          return {};
+          return [204, { 'Content-Type': 'application/json' }];
         });
 
         await this.renderComponent();
