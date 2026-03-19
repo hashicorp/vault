@@ -753,11 +753,16 @@ func Test_Import(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating test keys: %s", err)
 	}
+	nonPKCS8Keys, err := generateNonPKCS8FormatKeys()
+	if err != nil {
+		t.Fatalf("error generating non-PKCS#8 test keys: %s", err)
+	}
 
 	tests := map[string]struct {
 		policy      Policy
 		key         []byte
 		shouldError bool
+		wantErr     string
 	}{
 		"import AES key": {
 			policy: Policy{
@@ -799,15 +804,61 @@ func Test_Import(t *testing.T) {
 			key:         testKeys[KeyType_AES256_GCM96],
 			shouldError: true,
 		},
+		"import incorrect rsa key format": {
+			policy: Policy{
+				Name: "test-non-pkcs8-rsa-key",
+				Type: KeyType_RSA2048,
+			},
+			key:         nonPKCS8Keys[KeyType_RSA2048],
+			shouldError: true,
+			wantErr:     "error parsing asymmetric key: private key must be encoded as PKCS#8; detected key format: RSA PRIVATE KEY (PKCS#1)",
+		},
+		"import incorrect ecdsa key format": {
+			policy: Policy{
+				Name: "test-non-pkcs8-ecdsa-key",
+				Type: KeyType_ECDSA_P256,
+			},
+			key:         nonPKCS8Keys[KeyType_ECDSA_P256],
+			shouldError: true,
+			wantErr:     "error parsing asymmetric key: private key must be encoded as PKCS#8; detected key format: EC PRIVATE KEY (SEC1)",
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			if err := test.policy.Import(ctx, storage, test.key, rand.Reader); (err != nil) != test.shouldError {
+			err := test.policy.Import(ctx, storage, test.key, rand.Reader)
+			if (err != nil) != test.shouldError {
 				t.Fatalf("error importing key: %s", err)
+			}
+
+			if test.wantErr != "" && (err == nil || !strings.Contains(err.Error(), test.wantErr)) {
+				t.Fatalf("expected error containing: %q, got %q", test.wantErr, err)
 			}
 		})
 	}
+}
+
+func generateNonPKCS8FormatKeys() (map[KeyType][]byte, error) {
+	keyMap := make(map[KeyType][]byte)
+
+	rsaKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_RSA2048] = x509.MarshalPKCS1PrivateKey(rsaKey)
+
+	ecdsaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	sec1DER, err := x509.MarshalECPrivateKey(ecdsaKey)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_ECDSA_P256] = sec1DER
+
+	return keyMap, nil
 }
 
 func generateTestKeys() (map[KeyType][]byte, error) {
