@@ -127,7 +127,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
     if (this.flags.isHvdManaged) {
       errors.push(
-        'Secrets Sync is available for Plus tier clusters only. Please check the tier of your cluster to enable Secrets Sync.'
+        'Secrets Sync is available for Standard tier clusters only. Please check the tier of your cluster to enable Secrets Sync.'
       );
     }
     this.activationErrors = errors;

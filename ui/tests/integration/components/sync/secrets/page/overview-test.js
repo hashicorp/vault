@@ -114,7 +114,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     assert.dom(overview.optInBanner.container).doesNotExist('Opt-in banner is not shown');
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets sync');
-    assert.dom(GENERAL.badge('Plus feature')).hasText('Plus feature', 'Plus feature badge renders');
+    assert
+      .dom(GENERAL.badge('Standard feature'))
+      .hasText('Standard feature', 'Standard feature badge renders');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
   });
 
@@ -136,11 +138,10 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     const errorBanners = findAll(overview.optInError);
 
     assert.dom(errorBanners[0]).containsText('Something bad happened', 'shows the API error message');
-
     assert
       .dom(errorBanners[1])
       .containsText(
-        'Error Secrets Sync is available for Plus tier clusters only. Please check the tier of your cluster to enable Secrets Sync.',
+        'Error Secrets Sync is available for Standard tier clusters only. Please check the tier of your cluster to enable Secrets Sync.',
         'shows the custom tier-related error message'
       );
 
