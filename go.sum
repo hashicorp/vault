@@ -1497,8 +1497,8 @@ github.com/hashicorp/go-uuid v1.0.1/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/b
 github.com/hashicorp/go-uuid v1.0.2/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/hashicorp/go-uuid v1.0.3 h1:2gKiV6YVmrJ1i2CKKa9obLvRieoRGviZFL26PcT/Co8=
 github.com/hashicorp/go-uuid v1.0.3/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
-github.com/hashicorp/go-version v1.7.0 h1:5tqGy27NaOTB8yJKUZELlFAS/LTKJkrmONwQKeRZfjY=
-github.com/hashicorp/go-version v1.7.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
+github.com/hashicorp/go-version v1.8.0 h1:KAkNb1HAiZd1ukkxDFGmokVZe1Xy9HG6NUp+bPle2i4=
+github.com/hashicorp/go-version v1.8.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
@@ -1586,8 +1586,8 @@ github.com/hashicorp/vault-plugin-secrets-gcp v0.23.0 h1:hqZlxS4Ya0DBt+FutW6z6tS
 github.com/hashicorp/vault-plugin-secrets-gcp v0.23.0/go.mod h1:OmRHszxWAV9MTwFeQKDQmrpRw9q+RMp1vohCuhkkr1k=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.22.0 h1:z4loMjsAyTKiT4mYMmPNyVxQpetj9vD6dGEtTRxOV5A=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.22.0/go.mod h1:pPaA7AchrBQ2i62x33vPRTux7wKZiKSfU6jayuv9hLI=
-github.com/hashicorp/vault-plugin-secrets-kubernetes v0.12.0 h1:xYuLtQHKvaZtmr6JXPqC4tH9n7zXoOWnpXrHcVTLqbo=
-github.com/hashicorp/vault-plugin-secrets-kubernetes v0.12.0/go.mod h1:k8eNkBBNHJwWKVo+WP/iM5xrlvPt65oPNPGwbgQQf14=
+github.com/hashicorp/vault-plugin-secrets-kubernetes v0.13.1-0.20260319223355-477861e94fad h1:6HzVW3iuPgoGOQIqdrN1jsYiXi6XpwGJ3J7H3eo7jEI=
+github.com/hashicorp/vault-plugin-secrets-kubernetes v0.13.1-0.20260319223355-477861e94fad/go.mod h1:t34JjbPLaLrhvwb7iKmvW9y72o7ZhxGfN0Q3yClsV8Y=
 github.com/hashicorp/vault-plugin-secrets-kv v0.25.0 h1:5Xx8Hub0nAoFLIHZ4d9tMpPG+MACHXLzed5i7hViKTk=
 github.com/hashicorp/vault-plugin-secrets-kv v0.25.0/go.mod h1:Xy3wQwAJxhVZweR2DXBrEgk1erkWKNrhYcuD4Gy4ACo=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.16.0 h1:5/nin7vaRD0GyTCcXtX5cKa5JBuCAAs4e9zbmNbvTPY=
