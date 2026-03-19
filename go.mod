@@ -128,7 +128,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.7
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hashicorp/go-version v1.7.0
+	github.com/hashicorp/go-version v1.8.0
 	github.com/hashicorp/golang-lru v1.0.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/hashicorp/hcl v1.0.1-vault-7
@@ -166,12 +166,12 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.25.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.17.0
-	github.com/hashicorp/vault-plugin-secrets-terraform v0.13.0
+	github.com/hashicorp/vault-plugin-secrets-terraform v0.14.1-0.20260319212727-aa7d53dae2ba
 	github.com/hashicorp/vault-testing-stepwise v0.3.3
 	github.com/hashicorp/vault/api v1.22.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.23.0
+	github.com/hashicorp/vault/sdk v0.24.0
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.18.3
@@ -232,7 +232,7 @@ require (
 	golang.org/x/sys v0.42.0
 	golang.org/x/term v0.41.0
 	golang.org/x/text v0.35.0
-	golang.org/x/time v0.13.0
+	golang.org/x/time v0.14.0
 	golang.org/x/tools v0.42.0
 	google.golang.org/api v0.251.0
 	google.golang.org/grpc v1.79.3
@@ -413,8 +413,8 @@ require (
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.2 // indirect
-	github.com/hashicorp/go-slug v0.16.7 // indirect
-	github.com/hashicorp/go-tfe v1.93.0 // indirect
+	github.com/hashicorp/go-slug v0.16.8 // indirect
+	github.com/hashicorp/go-tfe v1.101.0 // indirect
 	github.com/hashicorp/jsonapi v1.4.3-0.20250220162346-81a76b606f3e // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/mdns v1.0.4 // indirect
