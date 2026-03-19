@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/transit: Improve import errors for non-PKCS#8 keys to clearly require PKCS#8.
+```

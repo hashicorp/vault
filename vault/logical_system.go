@@ -5709,9 +5709,9 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 		var uhMin time.Time
 		for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
 			b := SealBackendStatus{
-				Name:    sealWrapper.Name,
+				Name:       sealWrapper.Name,
 				Configured: sealWrapper.Configured,
-				Healthy: sealWrapper.IsHealthy(),
+				Healthy:    sealWrapper.IsHealthy(),
 				Disabled:   sealWrapper.Disabled,
 			}
 			if !sealWrapper.IsHealthy() {
@@ -5741,7 +5741,7 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 			{
 				Name:       "shamir",
 				Configured: true,
-				Healthy: true,
+				Healthy:    true,
 				Disabled:   false,
 			},
 		}

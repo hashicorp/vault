@@ -569,14 +569,14 @@ func ValidateNames(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo,
 					return name
 				}
 				if isWildcard {
-			// When a wildcard is specified, we additionally need to validate
-			// the label with the wildcard is correctly formed.
+					// When a wildcard is specified, we additionally need to validate
+					// the label with the wildcard is correctly formed.
 					converted = wildcardLabel + "." + converted
 				}
 				if !wildHostnameRegex.MatchString(converted) {
-				return name
+					return name
+				}
 			}
-		}
 		}
 
 		// Self-explanatory, but validations from EnforceHostnames and
