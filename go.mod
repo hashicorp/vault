@@ -159,7 +159,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-snowflake v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-ad v0.22.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.1
-	github.com/hashicorp/vault-plugin-secrets-azure v0.23.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.25.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.23.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.23.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.13.1
