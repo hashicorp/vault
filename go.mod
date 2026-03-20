@@ -158,7 +158,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-ad v0.21.0
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.0
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.23.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.23.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.22.0

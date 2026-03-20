@@ -1579,8 +1579,8 @@ github.com/hashicorp/vault-plugin-database-snowflake v0.15.0 h1:j1A0JaZvY1aQyxjP
 github.com/hashicorp/vault-plugin-database-snowflake v0.15.0/go.mod h1:Y1QSlXgGj5j7cYYG6I/h7P4kJPkW1pT9AoTuEH4Il4Y=
 github.com/hashicorp/vault-plugin-secrets-ad v0.21.0 h1:hQ3NmPvlfqjUJOFVPsmLKtVjJLgTGC6svkL2CGoo8zs=
 github.com/hashicorp/vault-plugin-secrets-ad v0.21.0/go.mod h1:+DVIGigIqw63QjP3/3tHQnB8EYzc1YfhKsTr+WJGZns=
-github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.0 h1:wffaiMxW1+OiVlOgLimlvMwL2QlxiCW+SMNRcQkBlXk=
-github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.0/go.mod h1:x83HGwE+BbAROGhnL9EWSwSsv+MO2Uy77K4DNgZdioU=
+github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.1 h1:6JvSoeYU+tRSnc0eGNz+1ttFK8gfIqw/sXHme4h6CRY=
+github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.1/go.mod h1:2tiBfbs4TXU1mHg7oJUThSac4mzRdnBOmt6ZBmfkV8o=
 github.com/hashicorp/vault-plugin-secrets-azure v0.23.0 h1:oetvEJqXP+2jGM9CfT/LjpJyuViNKdjPKFbDIkRdaPo=
 github.com/hashicorp/vault-plugin-secrets-azure v0.23.0/go.mod h1:QkmR0rnexjc330oUzoiuXFsA6OnxmI56h4jnDb1PKbY=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.23.0 h1:hqZlxS4Ya0DBt+FutW6z6tSEdnwHFusY49x7TLKVrAw=
