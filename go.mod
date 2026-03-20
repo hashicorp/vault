@@ -150,7 +150,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-jwt v0.25.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.17.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.24.0
-	github.com/hashicorp/vault-plugin-auth-oci v0.20.1
+	github.com/hashicorp/vault-plugin-auth-oci v0.21.1-0.20260320025042-aa4ca4b39923
 	github.com/hashicorp/vault-plugin-database-couchbase v0.15.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.19.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.17.1
@@ -495,7 +495,7 @@ require (
 	github.com/opencontainers/runc v1.2.8 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/oracle/oci-go-sdk/v60 v60.0.0 // indirect
-	github.com/oracle/oci-go-sdk/v65 v65.101.1 // indirect
+	github.com/oracle/oci-go-sdk/v65 v65.109.2 // indirect
 	github.com/packethost/packngo v0.1.1-0.20180711074735-b9cb5096f54c // indirect
 	github.com/petermattis/goid v0.0.0-20250721140440-ea1c0173183e // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
