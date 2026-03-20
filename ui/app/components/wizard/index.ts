@@ -5,13 +5,15 @@
 
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
+
 import type WizardService from 'vault/services/wizard';
+import type { WizardId } from 'vault/app-types';
 
 interface Args {
   /**
    * The unique identifier for the wizard used for handling wizard dismissal and intro visibility state
    */
-  wizardId: string;
+  wizardId: WizardId;
   /**
    * Whether the intro page is in the default view or in modal view depending on how it is triggered
    */

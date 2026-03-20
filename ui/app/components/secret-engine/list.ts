@@ -10,7 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
-import { WIZARD_ID } from '../wizard/secret-engines/secret-engines-wizard';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 import type RouterService from '@ember/routing/router-service';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
@@ -48,7 +48,8 @@ export default class SecretEngineList extends Component<Args> {
   @tracked versionSearchText = '';
 
   @tracked shouldRenderIntroModal = false;
-  wizardId = WIZARD_ID;
+
+  wizardId = WIZARD_ID_MAP.secretEngines;
 
   tableColumns = [
     {
@@ -198,7 +199,7 @@ export default class SecretEngineList extends Component<Args> {
   get showContent() {
     // Show when the 1) wizard is not shown OR 2) wizard intro modal is shown
     // This ensures the wizard intro modal is shown on top of the list view and the background content is not blank behind the modal
-    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(WIZARD_ID));
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(this.wizardId));
   }
 
   get showIntroButton() {
