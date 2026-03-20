@@ -411,8 +411,8 @@ importers:
         specifier: ~3.4.0
         version: 3.4.0
       sass:
-        specifier: ~1.88.0
-        version: 1.88.0
+        specifier: ^1.98.0
+        version: 1.98.0
       shell-quote:
         specifier: ~1.8.2
         version: 1.8.2
@@ -5414,8 +5414,8 @@ packages:
     resolution: {integrity: sha512-gJzzk+PQNznz8ysRrC0aOkBNVRBDtE1n53IqyqEf3PXrYwomFs5q4pGMizBMJF+ykh03insJ27hB8gSrD2Hn8A==}
     engines: {node: '>= 4'}
 
-  immutable@5.1.2:
-    resolution: {integrity: sha512-qHKXW1q6liAk1Oys6umoaZbDRqjcjgSrbnrifHsfsttza7zcvRAsL7mMV6xWcyhwQy7Xj5v4hhbr6b+iDYwlmQ==}
+  immutable@5.1.5:
+    resolution: {integrity: sha512-t7xcm2siw+hlUM68I+UEOK+z84RzmN59as9DZ7P1l0994DKUWV7UXBMQZVxaoMSRQ+PBZbHCOoBt7a2wxOMt+A==}
 
   import-fresh@3.3.1:
     resolution: {integrity: sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ==}
@@ -7303,13 +7303,8 @@ packages:
     engines: {node: 10.* || >= 12.*}
     hasBin: true
 
-  sass@1.88.0:
-    resolution: {integrity: sha512-sF6TWQqjFvr4JILXzG4ucGOLELkESHL+I5QJhh7CNaE+Yge0SI+ehCatsXhJ7ymU1hAFcIS3/PBpjdIbXoyVbg==}
-    engines: {node: '>=14.0.0'}
-    hasBin: true
-
-  sass@1.89.0:
-    resolution: {integrity: sha512-ld+kQU8YTdGNjOLfRWBzewJpU5cwEv/h5yyqlSeJcj6Yh8U4TDA9UA5FPicqDz/xgRPWRSYIQNiFks21TbA9KQ==}
+  sass@1.98.0:
+    resolution: {integrity: sha512-+4N/u9dZ4PrgzGgPlKnaaRQx64RO0JBKs9sDhQ2pLgN6JQZ25uPQZKQYaBJU48Kd5BxgXoJ4e09Dq7nMcOUW3A==}
     engines: {node: '>=14.0.0'}
     hasBin: true
 
@@ -11460,7 +11455,7 @@ snapshots:
       ember-truth-helpers: 4.0.3(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))
       luxon: 3.7.1
       prismjs: 1.30.0
-      sass: 1.89.0
+      sass: 1.98.0
       tabbable: 6.2.0
       tippy.js: 6.3.7
       tracked-built-ins: 4.0.0(@babel/core@7.26.10)
@@ -16949,7 +16944,7 @@ snapshots:
 
   ignore@7.0.4: {}
 
-  immutable@5.1.2: {}
+  immutable@5.1.5: {}
 
   import-fresh@3.3.1:
     dependencies:
@@ -18927,18 +18922,10 @@ snapshots:
       minimist: 1.2.8
       walker: 1.0.8
 
-  sass@1.88.0:
+  sass@1.98.0:
     dependencies:
       chokidar: 4.0.3
-      immutable: 5.1.2
-      source-map-js: 1.2.1
-    optionalDependencies:
-      '@parcel/watcher': 2.5.1
-
-  sass@1.89.0:
-    dependencies:
-      chokidar: 4.0.3
-      immutable: 5.1.2
+      immutable: 5.1.5
       source-map-js: 1.2.1
     optionalDependencies:
       '@parcel/watcher': 2.5.1
