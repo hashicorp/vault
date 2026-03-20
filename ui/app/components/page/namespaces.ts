@@ -64,9 +64,27 @@ export default class PageNamespacesComponent extends Component<Args> {
 
   wizardId = WIZARD_ID_MAP.namespace;
 
+  tableColumns = [
+    {
+      key: 'id',
+      label: 'Path',
+    },
+    {
+      key: 'popupMenu',
+      label: 'Action',
+      width: '75px',
+    },
+  ];
+
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     this.query = this.args.model.pageFilter || '';
+  }
+
+  get namespaceIds() {
+    return this.args.model.namespaces.map((namespace) => {
+      return { id: namespace.id };
+    });
   }
 
   // show the full available namespace path e.g. "root/ns1/child2", "admin/ns1/child2"
@@ -133,7 +151,8 @@ export default class PageNamespacesComponent extends Component<Args> {
   }
 
   @action
-  async deleteNamespace(nsToDelete: NamespaceModel) {
+  async deleteNamespace(namespaceId: string) {
+    const nsToDelete = this.args.model.namespaces.find((ns) => ns.id === namespaceId) as NamespaceModel;
     try {
       // Attempt to destroy the record
       await nsToDelete.destroyRecord();

@@ -55,7 +55,7 @@
   {{#if this.showContent}}
     {{! Show namespace list }}
     {{#if this.hasNamespaces}}
-      <Toolbar class="top-margin-16">
+      <Toolbar class="top-margin-16 has-bottom-margin-s">
         <ToolbarFilters>
           <FilterInputExplicit
             @query={{@model.pageFilter}}
@@ -81,65 +81,46 @@
         </ToolbarActions>
       </Toolbar>
 
-      <ListView
-        @items={{@model.namespaces}}
-        @itemNoun="namespace"
-        @paginationRouteName="vault.cluster.access.namespaces"
-        @onPageChange={{this.handlePageChange}}
-        as |list|
-      >
-        {{#if @model.namespaces.length}}
-          <ListItem as |Item|>
-            <Item.content>
-              {{list.item.id}}
-            </Item.content>
-            <Item.menu>
-              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-                <dd.ToggleIcon
-                  @icon="more-horizontal"
-                  @text="More options"
-                  @hasChevron={{false}}
-                  data-test-popup-menu-trigger
-                />
-                {{#let (concat this.namespace.path (if this.namespace.path "/") list.item.id) as |targetNamespace|}}
-                  {{#if (includes targetNamespace this.namespace.accessibleNamespaces)}}
-                    <dd.Interactive
-                      {{on "click" (fn this.switchNamespace targetNamespace)}}
-                      data-test-popup-menu="switch"
-                    >Switch to namespace</dd.Interactive>
-                  {{/if}}
-                {{/let}}
-                <dd.Interactive
-                  @color="critical"
-                  {{on "click" (fn (mut this.nsToDelete) list.item)}}
-                  data-test-popup-menu="delete"
-                >Delete</dd.Interactive>
-              </Hds::Dropdown>
-              {{#if (eq this.nsToDelete list.item)}}
-                <ConfirmModal
-                  @color="critical"
-                  @onClose={{fn (mut this.nsToDelete) null}}
-                  @onConfirm={{fn this.deleteNamespace list.item}}
-                  @confirmTitle="Delete this namespace?"
-                  @confirmMessage="Any engines or mounts in this namespace will also be removed."
-                />
-              {{/if}}
-            </Item.menu>
-          </ListItem>
-        {{else}}
-          <list.empty class="top-padding-32 is-marginless" data-test-list-view-empty-state as |A|>
-            <A.Header @title={{list.emptyTitle}} @titleTag="h2" data-test-empty-state-title />
-            <A.Body @text={{list.emptyMessage}} data-test-empty-state-message />
-            <A.Footer data-test-empty-state-actions as |F|>
-              <F.LinkStandalone
-                @icon="learn-link"
-                @text="Secure multi-tenancy with namespaces tutorial"
-                @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
+      {{#if @model.namespaces.length}}
+        <ListTable @columns={{this.tableColumns}} @data={{this.namespaceIds}}>
+          <:popupMenu as |rowData|>
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="More options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
               />
-            </A.Footer>
-          </list.empty>
-        {{/if}}
-      </ListView>
+              {{#let (concat this.namespace.path (if this.namespace.path "/") rowData.id) as |targetNamespace|}}
+                {{#if (includes targetNamespace this.namespace.accessibleNamespaces)}}
+                  <dd.Interactive
+                    {{on "click" (fn this.switchNamespace targetNamespace)}}
+                    data-test-popup-menu="switch"
+                  >Switch to namespace</dd.Interactive>
+                {{/if}}
+              {{/let}}
+              <dd.Interactive
+                @color="critical"
+                {{on "click" (fn (mut this.nsToDelete) rowData.id)}}
+                data-test-popup-menu="delete"
+              >Delete</dd.Interactive>
+            </Hds::Dropdown>
+            {{#if (eq this.nsToDelete rowData.id)}}
+              <ConfirmModal
+                @color="critical"
+                @onClose={{fn (mut this.nsToDelete) null}}
+                @onConfirm={{fn this.deleteNamespace rowData.id}}
+                @confirmTitle="Delete this namespace?"
+                @confirmMessage="Any engines or mounts in this namespace will also be removed."
+              />
+            {{/if}}
+          </:popupMenu>
+        </ListTable>
+      {{else}}
+        <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+          <A.Header @title="No Namespaces found" @titleTag="h2" data-test-empty-state-title />
+        </Hds::ApplicationState>
+      {{/if}}
     {{else}}
       {{! Show empty state }}
       {{#if this.showSetupAlert}}
