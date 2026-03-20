@@ -6,8 +6,9 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import localStorage from 'vault/lib/local-storage';
+import { DISMISSED_WIZARD_KEY } from 'vault/utils/constants/wizard';
 
-const DISMISSED_WIZARD_KEY = 'dismissed-wizards';
+import type { WizardId } from 'vault/app-types';
 
 /**
  * WizardService manages the state of wizards across the application,
@@ -31,7 +32,7 @@ export default class WizardService extends Service {
    * @param wizardId - The unique identifier for the wizard
    * @returns true if the wizard has been dismissed, false otherwise
    */
-  isDismissed(wizardId: string): boolean {
+  isDismissed(wizardId: WizardId): boolean {
     return this.dismissedWizards.includes(wizardId);
   }
 
@@ -39,7 +40,7 @@ export default class WizardService extends Service {
    * Mark a wizard as dismissed
    * @param wizardId - The unique identifier for the wizard to dismiss
    */
-  dismiss(wizardId: string): void {
+  dismiss(wizardId: WizardId): void {
     // Only add if not already dismissed
     if (!this.dismissedWizards.includes(wizardId)) {
       this.dismissedWizards = [...this.dismissedWizards, wizardId];
@@ -51,7 +52,7 @@ export default class WizardService extends Service {
    * Clear the dismissed state for a specific wizard
    * @param wizardId - The unique identifier for the wizard to reset
    */
-  reset(wizardId: string): void {
+  reset(wizardId: WizardId): void {
     this.dismissedWizards = this.dismissedWizards.filter((id: string) => id !== wizardId);
     localStorage.setItem(DISMISSED_WIZARD_KEY, this.dismissedWizards);
     // Reset intro visibility when wizard is reset
@@ -72,7 +73,7 @@ export default class WizardService extends Service {
    * @param wizardId - The unique identifier for the wizard
    * @returns true if the intro is visible, false otherwise (defaults to true if wizard not dismissed, false if dismissed)
    */
-  isIntroVisible(wizardId: string): boolean {
+  isIntroVisible(wizardId: WizardId): boolean {
     // If intro visibility has been explicitly set, use that value
     if (this.introVisibleState[wizardId] !== undefined) {
       return this.introVisibleState[wizardId];
@@ -87,7 +88,7 @@ export default class WizardService extends Service {
    * @param wizardId - The unique identifier for the wizard
    * @param visible - Whether the intro should be visible
    */
-  setIntroVisible(wizardId: string, visible: boolean): void {
+  setIntroVisible(wizardId: WizardId, visible: boolean): void {
     this.introVisibleState = {
       ...this.introVisibleState,
       [wizardId]: visible,

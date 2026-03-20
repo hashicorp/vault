@@ -12,11 +12,6 @@ test('filtering secrets engines workflow', async ({ page }) => {
   await page.goto('dashboard');
   await page.getByRole('link', { name: 'Secrets', exact: true }).click();
 
-  // skip intro page if it appears
-  if (await page.getByRole('button', { name: 'Skip' }).isVisible()) {
-    await page.getByRole('button', { name: 'Skip' }).click();
-  }
-
   // enable transit
   await page.getByRole('link', { name: 'Enable new engine' }).click();
   await page.getByLabel('Transit - enabled engine type').click();

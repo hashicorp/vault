@@ -10,9 +10,6 @@ test('namespace workflow', async ({ page }) => {
   // nav to namespaces and create a new namespace
   await page.getByRole('link', { name: 'Access control' }).click();
   await page.getByRole('link', { name: 'Namespaces' }).click();
-  // skip guided tour if it appears
-  await page.getByRole('button', { name: 'Skip' }).click();
-
   await page.getByRole('link', { name: 'Create namespace' }).click();
   await page.getByRole('textbox', { name: 'Path' }).fill('testNamespace');
   await page.getByRole('button', { name: 'Save' }).click();

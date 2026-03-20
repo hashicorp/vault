@@ -13,8 +13,8 @@ import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engin
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
-import localStorage from 'vault/lib/local-storage';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
@@ -33,7 +33,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     this.uid = uuidv4();
     await login();
     // dismiss wizard
-    localStorage.setItem('dismissed-wizards', ['secret-engines']);
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.secretEngines);
   });
 
   // the new API service camelizes response keys, so this tests is to assert that does NOT happen when we re-implement it
@@ -210,7 +210,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       await runCmd([`write sys/namespaces/${this.namespace} -force`]);
       await loginNs(this.namespace); // log into namespace with root token
       // dismiss wizard
-      localStorage.setItem('dismissed-wizards', ['secret-engines']);
+      this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.secretEngines);
     });
 
     // Ember route models won't refresh within a namespace when this.router.transitionTo() is called
