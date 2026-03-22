@@ -3366,7 +3366,7 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 		}
 	}
 
-	// Flush and error check the encoder. This is neccessary for buffered
+	// Flush and error check the encoder. This is necessary for buffered
 	// encoders like csv.
 	encoder.Flush()
 	if err := encoder.Error(); err != nil {
