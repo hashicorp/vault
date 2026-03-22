@@ -3194,7 +3194,7 @@ defined on the role, can access the role.`,
 		`If a SecretID is generated/assigned against a role using the
 'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoint,
 then the number of times this SecretID can be used is defined by this option.
-However, this option may be overriden by the request's 'num_uses' field.`,
+However, this option may be overridden by the request's 'num_uses' field.`,
 	},
 	"role-secret-id-ttl": {
 		"Duration in seconds of the SecretID generated against the role.",

@@ -642,7 +642,7 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 				errBytes, err = io.ReadAll(resp.Body)
 				resp.Body.Close()
 				if err != nil {
-					return nil, fmt.Errorf("error occured when attempting to read error response from Vault server")
+					return nil, fmt.Errorf("error occurred when attempting to read error response from Vault server")
 				}
 				errMessage = string(errBytes)
 			}
