@@ -131,13 +131,7 @@
       {{/if}}
 
       <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
-        <A.Header
-          @title="No namespaces yet"
-          @titleTag="h2"
-          @icon="skip"
-          class="align-items-end"
-          data-test-empty-state-title
-        />
+        <A.Header @title="No namespaces yet" @titleTag="h2" @icon="skip" data-test-empty-state-title />
         <A.Body @text="Your namespaces will be listed here. Add a namespace to get started." />
         <A.Footer as |F|>
           <F.Button

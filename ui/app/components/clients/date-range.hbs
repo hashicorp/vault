@@ -4,7 +4,7 @@
 }}
 
 <div ...attributes>
-  <div class="is-flex-column align-items-end">
+  <div class="is-flex-column">
     {{! Enterprise should always have a @billingStartTime but as a fallback allow the user to query dates manually }}
     {{#if (and @billingStartTime this.version.isEnterprise)}}
       <Hds::Dropdown class="has-left-margin-xs" as |D|>
