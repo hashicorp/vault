@@ -6,6 +6,9 @@ scenario "plugin" {
     The plugin scenario deploys a Vault cluster with external integration services and runs comprehensive
     plugin blackbox tests. This scenario validates plugin functionality including:
 
+    - LDAP secrets engine: Static/dynamic roles, password policies, rotation, rollback scenarios
+    - Future plugins: Database, SSH, PKI, and other secrets engines
+
     The scenario creates dedicated external services (LDAP, databases, etc.) using containers and
     configures them with test data required for comprehensive plugin testing.
 
@@ -92,7 +95,12 @@ scenario "plugin" {
       ubuntu = provider.enos.ubuntu
     }
     manage_service = matrix.artifact_type == "bundle"
-    test_names     = ["TestAlwaysPass"]
+    test_names = {
+      ldap = ["TestLDAPSecretsEngineComprehensive"]
+      // database = ["TestDatabaseSecretsEngineComprehensive"] // Future
+      // ssh      = ["TestSSHSecretsEngineComprehensive"]      // Future
+      // pki      = ["TestPKISecretsEngineComprehensive"]      // Future
+    }
   }
 
   step "build_vault" {
@@ -477,8 +485,8 @@ scenario "plugin" {
       leader_host            = step.get_vault_cluster_ips.leader_host
       leader_public_ip       = step.get_vault_cluster_ips.leader_public_ip
       vault_root_token       = step.create_vault_cluster.root_token
-      test_names             = local.test_names
-      test_package           = "./vault/external_tests/blackbox/plugin"
+      test_names             = local.test_names["ldap"] // Update this to select different plugin tests based on scenario configuration
+      test_package           = "./vault/external_tests/blackbox/ldap"
       integration_host_state = step.set_up_plugin_services.state
       vault_edition          = matrix.edition
     }

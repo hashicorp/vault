@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/require"
@@ -37,6 +38,7 @@ func New(t *testing.T) *Session {
 
 	config := api.DefaultConfig()
 	config.Address = addr
+	config.Timeout = 120 * time.Second // Increase timeout for LDAP operations that verify service accounts
 
 	privClient, err := api.NewClient(config)
 	require.NoError(t, err)

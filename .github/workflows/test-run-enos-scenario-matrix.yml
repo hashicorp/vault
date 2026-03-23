@@ -203,6 +203,10 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ steps.secrets.outputs.github-token }}
+      - name: Install LDAP client tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ldap-utils
       - uses: ./.github/actions/install-tools
       - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
         with:
