@@ -40,6 +40,13 @@
   }
 }
 
+// Added because we're currently using <LinkTo> in conjunction with Hds::Icon within <ToolbarLink>.
+// This fixes alignment issues between the hds icon and the link text in <ToolbarLink>.
+// TODO: Remove this when all usage of <ToolbarLink> is deprecated and replaced with hds components
+.toolbar-icon {
+  vertical-align: text-bottom;
+}
+
 .toolbar-label {
   padding: size_variables.$spacing-8;
   color: var(--token-color-palette-neutral-400);

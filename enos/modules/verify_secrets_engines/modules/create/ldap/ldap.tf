@@ -35,6 +35,11 @@ variable "vault_root_token" {
   default     = null
 }
 
+variable "vault_audit_log_path" {
+  type        = string
+  description = "The file path for the audit device (passed from vault_cluster module)"
+}
+
 variable "ldap_password" {
   type        = string
   description = "The LDAP Server admin password"
@@ -185,7 +190,7 @@ resource "enos_remote_exec" "ldap_library_set_update" {
   environment = {
     REQPATH = "${local.ldap_output.ldap_mount}/library/test-set"
     PAYLOAD = jsonencode({
-      service_account_names        = "fizz,buzz"
+      service_account_names        = "fizz,buzz,john,candy,sam,alex,pat,kim,robin"
       ttl                          = "12h"
       max_ttl                      = "15h"
       disable_check_in_enforcement = true
@@ -253,9 +258,8 @@ resource "enos_remote_exec" "ldap_library_checkout_custom_ttl" {
   }
 }
 
-# Self Check-in (Explicit)
-# Test Case: Self Check-in (Explicit) - Return your checked-out account
-resource "enos_remote_exec" "ldap_library_self_checkin" {
+# Check in buzz to make it available for read tests
+resource "enos_remote_exec" "ldap_library_checkin_buzz" {
   depends_on = [
     enos_remote_exec.ldap_library_checkout_custom_ttl,
   ]
@@ -263,8 +267,78 @@ resource "enos_remote_exec" "ldap_library_self_checkin" {
   environment = {
     REQPATH = "${local.ldap_output.ldap_mount}/library/test-set/check-in"
     PAYLOAD = jsonencode({
-      service_account_names = "fizz,buzz"
+      service_account_names = ["buzz"]
     })
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/write.sh")]
+
+  transport = {
+    ssh = {
+      host = var.leader_host.public_ip
+    }
+  }
+}
+
+resource "enos_remote_exec" "ldap_library_checkin_fizz" {
+  depends_on = [
+    enos_remote_exec.ldap_library_checkin_buzz,
+  ]
+
+  environment = {
+    REQPATH = "${local.ldap_output.ldap_mount}/library/test-set/check-in"
+    PAYLOAD = jsonencode({
+      service_account_names = ["fizz"]
+    })
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/write.sh")]
+
+  transport = {
+    ssh = {
+      host = var.leader_host.public_ip
+    }
+  }
+}
+
+# Check-out another account for self check-in test
+# Test Case #9 (Part 1): Check-out a third account for explicit self check-in test
+resource "enos_remote_exec" "ldap_library_checkout_for_self_checkin" {
+  depends_on = [
+    enos_remote_exec.ldap_library_checkin_fizz,
+  ]
+
+  environment = {
+    REQPATH           = "${local.ldap_output.ldap_mount}/library/test-set/check-out"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/write.sh")]
+
+  transport = {
+    ssh = {
+      host = var.leader_host.public_ip
+    }
+  }
+}
+
+# Self Check-in (Explicit)
+# Test Case #9 (Part 2): Self Check-in (Explicit) - Return your checked-out account
+resource "enos_remote_exec" "ldap_library_self_checkin" {
+  depends_on = [
+    enos_remote_exec.ldap_library_checkout_for_self_checkin,
+  ]
+
+  environment = {
+    REQPATH           = "${local.ldap_output.ldap_mount}/library/test-set/check-in"
     VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token
