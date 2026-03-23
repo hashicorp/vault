@@ -15,6 +15,7 @@ variable "plugin_config" {
   }
 }
 
+
 # Local variables for plugin environment setup
 locals {
   plugin_environment = var.plugin_config.enabled ? {

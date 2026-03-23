@@ -52,10 +52,14 @@ locals {
   domain_dn = try(local.ldap_config.domain, "") != "" ? join(",", [for part in split(".", local.ldap_config.domain) : "dc=${part}"]) : ""
 
   # Set up LDAP environment variables when LDAP integration is available
+  # LDAP_SERVER uses private_ip for Vault operations (runs on Vault leader host)
+  # LDAP_SERVER_PUBLIC uses public_ip for test setup operations (runs from GitHub runner)
   ldap_environment = try(local.ldap_config.domain, "") != "" ? {
-    LDAP_SERVER    = "ldap://${local.ldap_config.host.private_ip}:${local.ldap_config.port}"
-    LDAP_BIND_DN   = "cn=admin,${local.domain_dn}"
-    LDAP_BIND_PASS = local.ldap_config.admin_pw
+    LDAP_SERVER        = local.ldap_config.host.private_ip
+    LDAP_SERVER_PUBLIC = local.ldap_config.host.public_ip
+    LDAP_PORT          = tostring(local.ldap_config.port)
+    LDAP_BIND_DN       = "cn=admin,${local.domain_dn}"
+    LDAP_BIND_PASS     = local.ldap_config.admin_pw
   } : {}
 }
 
