@@ -6,11 +6,11 @@
 <Toolbar>
   <ToolbarActions>
     <div class="toolbar-separator"></div>
-    {{#if @autoTidyConfig.enabled}}
-      <ToolbarLink @route="tidy.auto" @model={{@autoTidyConfig.id}} data-test-pki-auto-tidy-config>
+    {{#if @enabled}}
+      <ToolbarLink @route="tidy.auto" @model={{this.secretMountPath.currentPath}} data-test-pki-auto-tidy-config>
         Auto-tidy configuration
       </ToolbarLink>
-      <ToolbarLink @route="tidy.manual" @model={{@autoTidyConfig.id}} data-test-pki-manual-tidy-config>
+      <ToolbarLink @route="tidy.manual" @model={{this.secretMountPath.currentPath}} data-test-pki-manual-tidy-config>
         Perform manual tidy
       </ToolbarLink>
     {{else}}
@@ -97,19 +97,23 @@
     {{/each}}
   {{/if}}
 {{else}}
-  <EmptyState
-    @title="Tidy status unavailable"
-    @message="After the next tidy operation has been performed, information about the current or most recent tidy operation will display here."
-  >
-    <Hds::Button
-      @color="tertiary"
-      @icon="chevron-right"
-      @iconPosition="trailing"
-      {{on "click" (fn (mut this.tidyOptionsModal) true)}}
-      data-test-tidy-empty-state-configure
-      @text="Tidy"
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="Tidy status unavailable" @titleTag="h2" data-test-empty-state-title />
+    <A.Body
+      @text="After the next tidy operation has been performed, information about the current or most recent tidy operation will display here."
+      data-test-empty-state-message
     />
-  </EmptyState>
+    <A.Footer data-test-empty-state-actions as |F|>
+      <F.Button
+        @color="tertiary"
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        {{on "click" (fn (mut this.tidyOptionsModal) true)}}
+        data-test-tidy-empty-state-configure
+        @text="Tidy"
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
 {{/if}}
 
 {{! TIDY OPTIONS MODAL }}
@@ -149,13 +153,13 @@
         <Hds::Button
           @text="Automatic tidy"
           @route="tidy.auto.configure"
-          @model={{@autoTidyConfig.id}}
+          @model={{this.secretMountPath.currentPath}}
           data-test-tidy-modal-auto-button
         />
         <Hds::Button
           @text="Manual tidy"
           @route="tidy.manual"
-          @model={{@autoTidyConfig.id}}
+          @model={{this.secretMountPath.currentPath}}
           data-test-tidy-modal-manual-button
         />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-tidy-modal-cancel-button />

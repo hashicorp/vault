@@ -15,6 +15,7 @@ const (
 	groupsTable        = "groups"
 	groupAliasesTable  = "group_aliases"
 	oidcClientsTable   = "oidc_clients"
+	scimClientsTable   = "scim_clients"
 )
 
 func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
@@ -28,6 +29,7 @@ func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
 		groupsTableSchema,
 		groupAliasesTableSchema,
 		oidcClientsTableSchema,
+		scimClientSchema,
 	}
 
 	for _, schemaFunc := range schemas {
@@ -80,6 +82,16 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Field: "LocalBucketKey",
 				},
 			},
+			"scim_client_id": {
+				Name:         "scim_client_id",
+				AllowMissing: true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{Field: "NamespaceID"},
+						&memdb.StringFieldIndex{Field: "ScimClientID"},
+					},
+				},
+			},
 		},
 	}
 }
@@ -128,6 +140,33 @@ func entitiesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 				Name: "namespace_id",
 				Indexer: &memdb.StringFieldIndex{
 					Field: "NamespaceID",
+				},
+			},
+			// SCIM-related indexes
+			"external_id": {
+				Name:   "external_id",
+				Unique: true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{
+							Field: "NamespaceID",
+						},
+						&memdb.StringFieldIndex{
+							Field: "ExternalID",
+						},
+					},
+				},
+				AllowMissing: true,
+			},
+
+			"scim_client_id": {
+				Name:         "scim_client_id",
+				AllowMissing: true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{Field: "NamespaceID"},
+						&memdb.StringFieldIndex{Field: "ScimClientID"},
+					},
 				},
 			},
 		},
@@ -185,6 +224,13 @@ func groupsTableSchema(lowerCaseName bool) *memdb.TableSchema {
 				Indexer: &memdb.StringFieldIndex{
 					Field: "NamespaceID",
 				},
+			},
+			"scim_client_id": {
+				Name: "scim_client_id",
+				Indexer: &memdb.StringFieldIndex{
+					Field: "ScimClientID",
+				},
+				AllowMissing: true,
 			},
 		},
 	}

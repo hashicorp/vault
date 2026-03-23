@@ -89,6 +89,19 @@ export default class GenerateCredentials extends Component<Args> {
     return undefined;
   }
 
+  get breadcrumbs() {
+    return [
+      {
+        label: this.args.backendPath,
+        route: 'vault.cluster.secrets.backend',
+        model: this.args.backendPath,
+      },
+      { label: 'Credentials', route: 'vault.cluster.secrets.backend', model: this.args.backendPath },
+      { label: this.args.roleName, route: 'vault.cluster.secrets.backend.show', model: this.args.roleName },
+      { label: this.options.title },
+    ];
+  }
+
   get helpText(): string {
     let message = '';
     if (this.cannotReadAwsRole) {

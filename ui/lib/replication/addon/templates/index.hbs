@@ -4,27 +4,41 @@
 }}
 
 <section class="section">
-  <div class="container is-widescreen">
+  <div class="is-widescreen">
     {{#if (eq this.model.mode "unsupported")}}
       {{! Replication is unsupported in non-enterprise or when using non-transactional storage (eg inmem) }}
-      <PageHeader as |p|>
-        <p.levelLeft>
-          <h1 class="title is-3 has-text-grey" data-test-replication-title="Replication unsupported">
-            Replication unsupported
-          </h1>
-        </p.levelLeft>
-      </PageHeader>
-      <EmptyState @title="The current cluster configuration does not support replication" />
+      <Page::Header @title="Replication unsupported">
+        <:breadcrumbs>
+          <Page::Breadcrumbs
+            @breadcrumbs={{array
+              (hash label="Vault" route="vault" icon="vault" linkExternal=true)
+              (hash label="Replication unsupported")
+            }}
+          />
+        </:breadcrumbs>
+      </Page::Header>
+
+      <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+        <A.Header
+          @title="The current cluster configuration does not support replication"
+          @titleTag="h2"
+          data-test-empty-state-title
+        />
+      </Hds::ApplicationState>
     {{else if this.model.replicationIsInitializing}}
       <LayoutLoading />
     {{else if this.model.allReplicationDisabled}}
-      <PageHeader as |p|>
-        <p.levelLeft>
-          <h1 class="title is-3" data-test-replication-title="Enable Replication">
-            Enable Replication
-          </h1>
-        </p.levelLeft>
-      </PageHeader>
+      <Page::Header @title="Enable replication">
+        <:breadcrumbs>
+          <Page::Breadcrumbs
+            @breadcrumbs={{array
+              (hash label="Vault" route="vault" icon="vault" linkExternal=true)
+              (hash label="Enable replication")
+            }}
+          />
+        </:breadcrumbs>
+      </Page::Header>
+
       <div class="box is-sideless is-fullwidth is-marginless">
         <p class="has-text-grey-dark box is-shadowless is-fullwidth has-slim-padding">
           <label for="replication-mode" class="is-label is-block">
@@ -112,13 +126,16 @@
       </ReplicationPage>
     {{else}}
       {{! Renders when at least one mode is not enabled }}
-      <PageHeader as |p|>
-        <p.levelLeft>
-          <h1 class="title is-3" data-test-replication-title="Replication">
-            Replication
-          </h1>
-        </p.levelLeft>
-      </PageHeader>
+      <Page::Header @title="Replication">
+        <:breadcrumbs>
+          <Page::Breadcrumbs
+            @breadcrumbs={{array
+              (hash label="Vault" route="vault" icon="vault" linkExternal=true)
+              (hash label="Replication")
+            }}
+          />
+        </:breadcrumbs>
+      </Page::Header>
 
       <div class="box is-sideless is-fullwidth is-marginless flex-col">
         <ReplicationOverviewMode

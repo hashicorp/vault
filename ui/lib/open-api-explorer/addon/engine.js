@@ -15,6 +15,7 @@ const Eng = Engine.extend({
   Resolver,
   dependencies: {
     services: ['auth', 'flash-messages', 'namespace', 'app-router', 'version'],
+    externalRoutes: ['vault'],
   },
 });
 

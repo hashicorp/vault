@@ -9,6 +9,7 @@ import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 
+import type { TaskGenerator } from 'ember-concurrency';
 import type FlagsService from 'vault/services/flags';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
@@ -30,7 +31,7 @@ export default class SyncActivationModal extends Component<Args> {
 
   @task
   @waitFor
-  *onFeatureConfirm() {
+  *onFeatureConfirm(): TaskGenerator<void> {
     // clear any previous errors in the parent component
     this.args.onConfirm();
 
@@ -38,7 +39,7 @@ export default class SyncActivationModal extends Component<Args> {
     // for non-managed clusters the root namespace path is technically an empty string, otherwise we pass 'admin' if HVD managed.
     const namespace = this.flags.hvdManagedNamespaceRoot || '';
     try {
-      yield this.api.sys.activationFlagsActivate_3(this.api.buildHeaders({ namespace }));
+      yield this.api.sys.activationFlagsActivate_4(this.api.buildHeaders({ namespace }));
       // must refresh and not transition because transition does not refresh the model from within a namespace
       yield this.router.refresh('vault.cluster');
     } catch (error) {

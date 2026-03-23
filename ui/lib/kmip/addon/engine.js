@@ -14,18 +14,18 @@ export default class KmipEngine extends Engine {
   Resolver = Resolver;
   dependencies = {
     services: [
+      'api',
       'auth',
+      'capabilities',
       'download',
       'flash-messages',
       'namespace',
       'path-help',
       'app-router',
-      'store',
-      'pagination',
       'version',
       'secret-mount-path',
     ],
-    externalRoutes: ['secrets'],
+    externalRoutes: ['secrets', 'secretsGeneralSettingsConfiguration', 'vault'],
   };
 }
 

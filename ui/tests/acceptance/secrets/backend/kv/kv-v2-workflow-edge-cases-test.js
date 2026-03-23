@@ -40,7 +40,6 @@ import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { selectChoose } from 'ember-power-select/test-support';
-import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -86,7 +85,6 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     });
 
     test('it can navigate to secrets within a secret directory', async function (assert) {
-      assert.expect(23);
       const backend = this.backend;
       const [root, subdirectory, secret] = this.fullSecretPath.split('/');
 
@@ -116,14 +114,16 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       );
 
       // Title correct
-      assert.dom(PAGE.title).hasText(`${backend} version 2`);
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${backend}`);
       // Tabs correct
-      assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
-      assert.dom(PAGE.secretTab('Secrets')).hasClass('active');
-      assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
-      assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
+      assert.dom(GENERAL.tab('Secrets')).hasText('Secrets');
+
+      assert.dom(GENERAL.dropdownToggle('Manage')).exists('renders manage dropdown');
+      await click(GENERAL.dropdownToggle('Manage'));
+      assert.dom(GENERAL.menuItem('Configure')).exists('renders configure option');
+      // Create button correct
+      assert.dom(GENERAL.button('create secret')).exists('renders create secret button');
       // Toolbar correct
-      assert.dom(PAGE.toolbarAction).exists({ count: 1 }, 'toolbar only renders create secret action');
       assert.dom(PAGE.list.filter).hasValue(`${root}/`);
       // List content correct
       assert.dom(GENERAL.listItem(`${subdirectory}/`)).exists('renders linked block for subdirectory');
@@ -135,7 +135,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         .hasText(`Current version The current version of this secret. 1`);
       // Secret details visible
       await click(PAGE.secretTab('Secret'));
-      assert.dom(PAGE.title).hasText(this.fullSecretPath);
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText(this.fullSecretPath);
       assert.dom(PAGE.secretTab('Secret')).hasText('Secret');
       assert.dom(PAGE.secretTab('Secret')).hasClass('active');
       assert.dom(PAGE.secretTab('Metadata')).hasText('Metadata');
@@ -186,7 +186,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     });
 
     test('it handles errors when attempting to view details of a secret that is a directory', async function (assert) {
-      assert.expect(7);
+      assert.expect(8);
       const backend = this.backend;
       const [root, subdirectory] = this.fullSecretPath.split('/');
       setupOnerror((error) => assert.strictEqual(error.response.status, 404), '404 error is thrown'); // catches error so qunit test doesn't fail
@@ -194,15 +194,17 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await visit(`/vault/secrets-engines/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/${subdirectory}`); // intentionally leave out trailing slash
       await click(GENERAL.submitButton);
-      assert.dom(PAGE.error.title).hasText('404 Not Found');
+      assert.dom(GENERAL.pageError.title(404)).hasText('ERROR 404 Not found');
       assert
-        .dom(PAGE.error.message)
+        .dom(GENERAL.pageError.message)
         .hasText(
           `Sorry, we were unable to find any content at /v1/${backend}/metadata/${root}/${subdirectory}.`
         );
-
-      assert.dom(GENERAL.breadcrumbAtIdx(0)).hasText('Secrets');
-      assert.dom(GENERAL.breadcrumbAtIdx(1)).hasText(backend);
+      assert
+        .dom(GENERAL.pageError.error)
+        .doesNotContainText('Double check the URL or return to the dashboard. Go to dashboard');
+      assert.dom(GENERAL.breadcrumbAtIdx(1)).hasText('Secrets engines');
+      assert.dom(GENERAL.breadcrumbAtIdx(2)).hasText(backend);
       assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('is-active');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('is-active');
     });
@@ -275,8 +277,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       const [root, subdirectory] = this.fullSecretPath.split('/');
 
       await visit(`/vault`);
-      await selectChoose(DASHBOARD.searchSelect('secrets-engines'), backend);
-      await fillIn(DASHBOARD.selectEl, 'Find KV secrets');
+      await selectChoose(GENERAL.superSelect('secrets-engines'), backend);
+      await selectChoose(GENERAL.superSelect('actions'), 'Find KV secrets');
       await typeIn(GENERAL.kvSuggestion.input, `${root}/`);
       await click(GENERAL.kvSuggestion.input);
       assert
@@ -573,8 +575,8 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
   setupApplicationTest(hooks);
 
   const navToEngine = async (backend) => {
-    await click(GENERAL.navLink('Secrets Engines'));
-    return await click(`${GENERAL.tableData(`${backend}/`, 'path')} a`);
+    await click(GENERAL.navLink('Secrets'));
+    return await click(GENERAL.linkTo(`${backend}/`));
   };
 
   const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
@@ -732,6 +734,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
 
       // undelete flow
       await click(PAGE.detail.undelete);
+      await waitFor(GENERAL.overviewCard.container('Current version'));
       assert
         .dom(GENERAL.overviewCard.container('Current version'))
         .hasTextContaining('Current version Create new The current version of this secret.');
@@ -746,6 +749,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await click(PAGE.detail.deleteConfirm);
       await click(PAGE.secretTab('Secret'));
       assertDeleteActions(assert, []);
+      await waitFor(GENERAL.emptyStateTitle);
       assert
         .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been permanently destroyed', 'Shows destroyed message');

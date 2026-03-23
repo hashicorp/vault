@@ -1493,9 +1493,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				roleVals.KeyBits = plan.roleKeyBits
 				issueTestStep.ErrorOk = plan.errorOk
 
-				addTests(getCnCheck(issueVals.CommonName, roleVals, plan.privKey, x509.KeyUsage(parsedKeyUsage), extUsage, validity))
+				addTests(getCnCheck(issueVals.CommonName, roleVals, plan.privKey, parsedKeyUsage, extUsage, validity))
 			} else {
-				addTests(getCnCheck(issueVals.CommonName, roleVals, nil, x509.KeyUsage(parsedKeyUsage), extUsage, validity))
+				addTests(getCnCheck(issueVals.CommonName, roleVals, nil, parsedKeyUsage, extUsage, validity))
 			}
 		}
 	}
@@ -7896,6 +7896,438 @@ func TestIssuance_ValidityPeriodContainedByCA(t *testing.T) {
 				})
 				requireResponse(t, tc.expectErr, resp, err)
 			})
+		})
+	}
+}
+
+// TestBackend_SignIntermediate_IgnoresCSR_BasicConstraint verifies that when signing an intermediate CSR,
+// with use_csr_values set to true, we ignore the CSR's Basic constraint extension as we do
+// not properly support max_path_length.
+func TestBackend_SignIntermediate_IgnoresCSR_BasicConstraint(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Generate root CA with max_path_length of 2
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name":     "Root CA",
+		"ttl":             "180h",
+		"max_path_length": 2,
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	// Generate private key for CSR
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed to generate private key")
+
+	bcExt, err := certutil.CreateBasicConstraintExtension(true, 5)
+	require.NoError(t, err, "failed to create basic constraint extension")
+
+	// Create CSR template
+	csrTemplate := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: "Intermediate CA",
+		},
+		ExtraExtensions: []pkix.Extension{bcExt},
+	}
+
+	// Create the CSR
+	csrDER, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, privateKey)
+	require.NoError(t, err, "failed to create CSR")
+
+	csrPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csrDER,
+	})
+
+	// Sign the intermediate CSR
+	signParams := map[string]interface{}{
+		"csr":            string(csrPEM),
+		"common_name":    "Intermediate CA",
+		"use_csr_values": true,
+		"ttl":            "87600h",
+	}
+
+	resp, err = CBWrite(b, s, "root/sign-intermediate", signParams)
+	require.NoError(t, err, "failed to sign intermediate")
+	require.NotNil(t, resp, "expected response")
+	require.NotEmpty(t, resp.Data["certificate"], "expected certificate in response")
+
+	// Parse the signed certificate
+	certPEM := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(certPEM))
+	require.NotNil(t, block, "failed to decode certificate PEM")
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	require.NoError(t, err, "failed to parse certificate")
+
+	// Verify Basic Constraints extension exists and is critical
+	hasBasicConstraints := false
+	for _, ext := range cert.Extensions {
+		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+			hasBasicConstraints = true
+			require.True(t, ext.Critical, "Basic Constraints should be marked as critical")
+			isCA, maxPathLen, err := certutil.ParseBasicConstraintExtension(ext)
+			require.NoError(t, err, "failed to parse Basic Constraints extension")
+			require.True(t, isCA, "Basic Constraints should be marked as CA")
+			require.Equal(t, 1, maxPathLen, "max_path_length should be set to 1, root of 2-1")
+			break
+		}
+	}
+	require.True(t, hasBasicConstraints, "certificate should have Basic Constraints extension")
+}
+
+// TestBackend_IDNWithWildcards_CommonName tests IDNA conversion and wildcard validation
+// in the Common Name (CN) field using both /issue and /sign endpoints.
+func TestBackend_IDNWithWildcards_CommonName(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Generate root CA
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root CA",
+		"ttl":         "40h",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	// Create a role that allows wildcards and any name
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+		"allow_any_name":              true,
+		"allow_wildcard_certificates": true,
+		"enforce_hostnames":           true,
+		"max_ttl":                     "2h",
+		"key_type":                    "ec",
+	})
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name           string
+		commonName     string
+		expectDNSNames []string
+		expectError    bool
+	}{
+		{
+			name:           "ASCII wildcard in CN",
+			commonName:     "*.example.com",
+			expectDNSNames: []string{"*.example.com"},
+		},
+		{
+			name:           "IDN with wildcard in CN - German umlaut",
+			commonName:     "*.müller.com",
+			expectDNSNames: []string{"*.xn--mller-kva.com"},
+		},
+		{
+			name:           "IDN with wildcard in CN - Japanese",
+			commonName:     "*.日本.com",
+			expectDNSNames: []string{"*.xn--wgv71a.com"},
+		},
+		{
+			name:           "IDN with wildcard in CN - Chinese",
+			commonName:     "*.中国.com",
+			expectDNSNames: []string{"*.xn--fiqs8s.com"},
+		},
+		{
+			name:           "IDN with wildcard in CN - Arabic",
+			commonName:     "*.مثال.com",
+			expectDNSNames: []string{"*.xn--mgbh0fb.com"},
+		},
+		{
+			name:           "IDN with multiple labels and wildcard",
+			commonName:     "*.subdomain.müller.com",
+			expectDNSNames: []string{"*.subdomain.xn--mller-kva.com"},
+		},
+		// Invalid hostname test cases
+		{
+			name:        "Invalid - wildcard not in leftmost position",
+			commonName:  "sub.*.example.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - multiple wildcards",
+			commonName:  "*.*.example.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - wildcard in IDN not in leftmost position",
+			commonName:  "sub.*.müller.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - empty label in hostname",
+			commonName:  "example..com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - label starting with hyphen",
+			commonName:  "-example.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - label ending with hyphen",
+			commonName:  "example-.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - label too long (>63 chars)",
+			commonName:  "*.verylonglabelverylonglabelverylonglabelverylonglabelverylonglabel.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - hostname starting with dot",
+			commonName:  ".example.com",
+			expectError: true,
+		},
+	}
+
+	for _, useCSR := range []bool{false, true} {
+		testType := "issue"
+		if useCSR {
+			testType = "sign"
+		}
+		t.Run(testType, func(t *testing.T) {
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					var resp *logical.Response
+					var err error
+
+					if useCSR {
+						// Generate a CSR with the test common name
+						csrTemplate := &x509.CertificateRequest{
+							Subject: pkix.Name{
+								CommonName: tc.commonName,
+							},
+						}
+						_, _, csrPem := generateCSR(t, csrTemplate, "ec", 256)
+
+						resp, err = CBWrite(b, s, "sign/test", map[string]interface{}{
+							"csr": csrPem,
+						})
+					} else {
+						// Use direct issue
+						resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+							"common_name": tc.commonName,
+						})
+					}
+
+					if tc.expectError {
+						require.Error(t, err, "expected error for test case: %s", tc.name)
+						return
+					}
+
+					require.NoError(t, err, "unexpected error for test case: %s", tc.name)
+					require.NotNil(t, resp, "response should not be nil for test case: %s", tc.name)
+					require.NotNil(t, resp.Data["certificate"], "certificate should be present for test case: %s", tc.name)
+
+					// Parse the certificate to verify DNS names
+					certPEM := resp.Data["certificate"].(string)
+					block, _ := pem.Decode([]byte(certPEM))
+					require.NotNil(t, block, "failed to decode PEM for test case: %s", tc.name)
+
+					cert, err := x509.ParseCertificate(block.Bytes)
+					require.NoError(t, err, "failed to parse certificate for test case: %s", tc.name)
+
+					// Verify DNS names match expected (order may vary, so use ElementsMatch)
+					require.ElementsMatch(t, tc.expectDNSNames, cert.DNSNames,
+						"DNS names mismatch for test case: %s\nExpected: %v\nGot: %v",
+						tc.name, tc.expectDNSNames, cert.DNSNames)
+				})
+			}
+		})
+	}
+}
+
+// TestBackend_IDNWithWildcards_AltNames tests IDNA conversion and wildcard validation
+// in the alternative names field using both /issue and /sign endpoints.
+func TestBackend_IDNWithWildcards_AltNames(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Generate root CA
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root CA",
+		"ttl":         "40h",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	// Create a role that allows wildcards and any name
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+		"allow_any_name":              true,
+		"allow_subdomains":            true,
+		"allow_glob_domains":          true,
+		"allow_wildcard_certificates": true,
+		"enforce_hostnames":           true,
+		"max_ttl":                     "2h",
+		"key_type":                    "ec",
+	})
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name           string
+		commonName     string
+		altNames       string
+		expectDNSNames []string
+		expectError    bool
+	}{
+		{
+			name:           "ASCII wildcard in alt_names",
+			commonName:     "example.com",
+			altNames:       "*.test.com",
+			expectDNSNames: []string{"example.com", "*.test.com"},
+		},
+		{
+			name:           "Mixed ASCII and IDN with wildcards in alt_names",
+			commonName:     "example.com",
+			altNames:       "*.example.com,*.müller.de",
+			expectDNSNames: []string{"example.com", "*.example.com", "*.xn--mller-kva.de"},
+		},
+		{
+			name:           "Multiple IDN domains with wildcards in alt_names",
+			commonName:     "example.com",
+			altNames:       "*.日本.com,*.中国.cn",
+			expectDNSNames: []string{"example.com", "*.xn--wgv71a.com", "*.xn--fiqs8s.cn"},
+		},
+		{
+			name:           "Complex IDN with multiple subdomains and wildcard",
+			commonName:     "example.com",
+			altNames:       "*.api.v2.müller.com",
+			expectDNSNames: []string{"example.com", "*.api.v2.xn--mller-kva.com"},
+		},
+		{
+			name:           "IDN with trailing dot and wildcard",
+			commonName:     "example.com",
+			altNames:       "*.müller.com.",
+			expectDNSNames: []string{"example.com", "*.xn--mller-kva.com."},
+		},
+		{
+			name:           "Invalid - wildcard in alt_names not in leftmost position",
+			commonName:     "example.com",
+			altNames:       "sub*.test.com",
+			expectDNSNames: []string{"example.com", "sub*.test.com"},
+		},
+		// Invalid hostname test cases
+		{
+			name:        "Invalid - wildcard in alt_names not in leftmost position",
+			commonName:  "example.com",
+			altNames:    "sub*.test.com,sub.*.test.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - multiple wildcards in alt_names",
+			commonName:  "example.com",
+			altNames:    "*.*.müller.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - wildcard in IDN not in leftmost position",
+			commonName:  "example.com",
+			altNames:    "sub.*.müller.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - empty label in hostname",
+			commonName:  "example.com",
+			altNames:    "example..com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - label starting with hyphen",
+			commonName:  "example.com",
+			altNames:    "-example.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - label ending with hyphen",
+			commonName:  "example.com",
+			altNames:    "example-.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - label too long (>63 chars)",
+			commonName:  "example.com",
+			altNames:    "*.verylonglabelverylonglabelverylonglabelverylonglabelverylonglabel.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - hostname starting with dot",
+			commonName:  "example.com",
+			altNames:    ".example.com",
+			expectError: true,
+		},
+	}
+
+	for _, useCSR := range []bool{false, true} {
+		testType := "issue"
+		if useCSR {
+			testType = "sign"
+		}
+		t.Run(testType, func(t *testing.T) {
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					var resp *logical.Response
+					var err error
+
+					if useCSR {
+						// Generate a CSR with the test common name and alt names
+						// Note: CSRs include DNS SANs in the request, and they must be in Punycode (ASCII)
+						var dnsNames []string
+						if tc.altNames != "" {
+							// Split alt names by comma and convert to Punycode
+							altNamesList := strings.Split(tc.altNames, ",")
+							for _, name := range altNamesList {
+								// Convert IDN to Punycode for CSR (CSRs only support ASCII)
+								punycoded, err := idna.ToASCII(name)
+								if err != nil {
+									// If conversion fails, use original (will fail validation as expected)
+									dnsNames = append(dnsNames, name)
+								} else {
+									dnsNames = append(dnsNames, punycoded)
+								}
+							}
+						}
+
+						csrTemplate := &x509.CertificateRequest{
+							Subject: pkix.Name{
+								CommonName: tc.commonName,
+							},
+							DNSNames: dnsNames,
+						}
+						_, _, csrPem := generateCSR(t, csrTemplate, "ec", 256)
+
+						resp, err = CBWrite(b, s, "sign/test", map[string]interface{}{
+							"csr": csrPem,
+						})
+					} else {
+						// Use direct issue
+						resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+							"common_name": tc.commonName,
+							"alt_names":   tc.altNames,
+						})
+					}
+
+					if tc.expectError {
+						require.Error(t, err, "expected error for test case: %s", tc.name)
+						return
+					}
+
+					require.NoError(t, err, "unexpected error for test case: %s", tc.name)
+					require.NotNil(t, resp, "response should not be nil for test case: %s", tc.name)
+					require.NotNil(t, resp.Data["certificate"], "certificate should be present for test case: %s", tc.name)
+
+					// Parse the certificate to verify DNS names
+					certPEM := resp.Data["certificate"].(string)
+					block, _ := pem.Decode([]byte(certPEM))
+					require.NotNil(t, block, "failed to decode PEM for test case: %s", tc.name)
+
+					cert, err := x509.ParseCertificate(block.Bytes)
+					require.NoError(t, err, "failed to parse certificate for test case: %s", tc.name)
+
+					// Verify DNS names match expected (order may vary, so use ElementsMatch)
+					require.ElementsMatch(t, tc.expectDNSNames, cert.DNSNames,
+						"DNS names mismatch for test case: %s\nExpected: %v\nGot: %v",
+						tc.name, tc.expectDNSNames, cert.DNSNames)
+				})
+			}
 		})
 	}
 }

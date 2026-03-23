@@ -58,17 +58,6 @@ import type { Task } from 'ember-concurrency';
  *   🔀 Multiple visible mounts:
  *     ▸ Path dropdown is shown.
  *
- * @example
- * <Auth::Page
- *  @cluster={{this.model.clusterModel}}
- *  @directLinkData={{this.model.directLinkData}}
- *  @loginSettings={{this.model.loginSettings}}
- *  @namespaceQueryParam={{this.namespaceQueryParam}}
- *  @oidcProviderQueryParam={{this.oidcProvider}}
- *  @loginAndTransition={{this.loginAndTransition}}
- *  @onNamespaceUpdate={{perform this.updateNamespace}}
- *  @visibleAuthMounts={{this.model.visibleAuthMounts}}
- * />
  *
  * @param {object} cluster - the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {object} directLinkData - mount data built from the "with" query param. If param is a mount path and maps to a visible mount, the login form defaults to this mount. Otherwise the form preselects the passed auth type.
@@ -161,10 +150,14 @@ export default class AuthPage extends Component<Args> {
   get directLinkViews() {
     const { directLinkData } = this.args;
 
-    // If "path" key exists we know the "with" query param references a mount with listing_visibility="unauth"
-    // Treat it as a preferred method and hide all other tabs.
+    // If "path" key exists then the "with" query param references a specific mount with listing_visibility="unauth".
+    // Show only this mount and hide any others for this auth type as well as any tabs for different auth types.
     if (directLinkData?.path) {
-      const tabData = this.filterVisibleMountsByType([directLinkData.type]);
+      const mounts = this.mountsByType(directLinkData.type);
+      const selectedMount = mounts?.find((m) => m.path === directLinkData?.path);
+      const tabData: UnauthMountsByType = {
+        [directLinkData.type]: selectedMount ? [selectedMount] : null,
+      };
       const defaultView = this.constructViews(FormView.TABS, tabData);
       const alternateView = this.constructViews(FormView.DROPDOWN, null);
 
@@ -263,9 +256,14 @@ export default class AuthPage extends Component<Args> {
     const tabs: UnauthMountsByType = {};
     for (const type of authTypes) {
       // adds visible mounts for each type, if they exist
-      tabs[type] = this.visibleMountsByType?.[type] || null;
+      tabs[type] = this.mountsByType(type);
     }
     return tabs;
+  }
+
+  private mountsByType(type: string) {
+    // Return null and not an empty array to distinguish between "dropdown mode" and "tabs with no mounts" in downstream components
+    return this.visibleMountsByType?.[type] || null;
   }
 
   private constructViews(view: FormView, tabData: UnauthMountsByType | null) {

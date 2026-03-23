@@ -33,6 +33,10 @@ export default class ToolsWrap extends Component {
   @tracked errorMessage = '';
   @tracked showJson = true;
 
+  get breadcrumbs() {
+    return [{ label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' }, { label: 'Wrap data' }];
+  }
+
   get startingValue() {
     // must pass the third param called "space" in JSON.stringify to structure object with whitespace
     // otherwise the following codemirror modifier check will pass `this._editor.getValue() !== namedArgs.content` and _setValue will be called.

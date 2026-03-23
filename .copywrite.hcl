@@ -11,6 +11,8 @@ project {
   header_ignore = [
     "helper/pkcs7/**",
     "ui/node_modules/**",
+    "ui/pnpm-lock.yaml",
+    "ui/pnpm-workspace.yaml",
     "enos/modules/k8s_deploy_vault/raft-config.hcl",
     "plugins/database/postgresql/scram/**",
     "enos/.enos/**",

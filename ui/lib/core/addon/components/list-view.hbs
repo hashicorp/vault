@@ -18,9 +18,10 @@
         @showSizeSelector={{false}}
         @totalItems={{@items.meta.total}}
         @queryFunction={{this.paginationQueryParams}}
+        @onPageChange={{@onPageChange}}
       />
     {{/if}}
   </div>
 {{else}}
-  {{yield (hash empty=(component "empty-state" title=this.emptyTitle message=this.emptyMessage))}}
+  {{yield (hash empty=(component "hds/application-state") emptyTitle=this.emptyTitle emptyMessage=this.emptyMessage)}}
 {{/if}}

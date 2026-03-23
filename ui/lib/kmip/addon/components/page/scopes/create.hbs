@@ -1,0 +1,46 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title="Create a Scope">
+  <:breadcrumbs>
+    <KmipBreadcrumb @showPath={{true}} @currentRoute="Create Scope" />
+  </:breadcrumbs>
+</Page::Header>
+
+<form {{on "submit" (perform this.save)}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <MessageError @errorMessage={{this.errorMessage}} />
+    <NamespaceReminder @mode="save" />
+
+    <Hds::Form::TextInput::Field
+      name="name"
+      @id="kmip-scope-name"
+      @value={{this.name}}
+      @isInvalid={{this.validationError}}
+      disabled={{this.save.isRunning}}
+      autocomplete="off"
+      spellcheck="false"
+      data-test-input="name"
+      {{on "input" (pipe (pick "target.value") (fn (mut this.name)))}}
+      as |F|
+    >
+      <F.Label data-test-form-field-label>Name</F.Label>
+      {{#if this.validationError}}
+        <F.Error data-test-validation-error="name">Name is required</F.Error>
+      {{/if}}
+    </Hds::Form::TextInput::Field>
+  </div>
+
+  <FormSaveButtons
+    @isSaving={{this.save.isRunning}}
+    @onCancel={{transition-to "vault.cluster.secrets.backend.kmip.scopes.index"}}
+  >
+    <:error>
+      {{#if this.invalidFormAlert}}
+        <AlertInline @type="danger" class="has-top-padding-s" @message={{this.invalidFormAlert}} />
+      {{/if}}
+    </:error>
+  </FormSaveButtons>
+</form>

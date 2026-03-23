@@ -4,6 +4,7 @@
  */
 import type EmberDataModel from 'ember-data/model'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 import type Owner from '@ember/owner';
+import type { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 // Type that comes back from expandAttributeMeta
 export interface FormField {
@@ -33,17 +34,15 @@ export type Validator =
   | 'containsWhiteSpace'
   | 'endsInSlash'
   | 'hasWhitespace'
-  | 'isNonString';
+  | 'isNonString'
+  | 'isNot';
 
-export type ValidatorOption =
-  | {
-      nullable?: boolean;
-    }
-  | {
-      nullable?: boolean;
-      min?: number;
-      max?: number;
-    };
+export type ValidatorOption = {
+  nullable?: boolean;
+  min?: number;
+  max?: number;
+  value?: string | number | boolean;
+};
 
 export type Validation =
   | {
@@ -155,3 +154,5 @@ export interface SearchSelectOption {
 export interface StringMap {
   [key: string]: string;
 }
+
+export type WizardId = (typeof WIZARD_ID_MAP)[keyof typeof WIZARD_ID_MAP];

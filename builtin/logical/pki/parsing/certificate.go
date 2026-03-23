@@ -68,30 +68,83 @@ func ParseCertificatesFromBytes(certBytes []byte) ([]*x509.Certificate, error) {
 	return cert, nil
 }
 
-func ParseKeyUsages(input []string) int {
+var (
+	// keyUsageToString maps a x509.KeyUsage bitmask to its name.
+	keyUsageToString = map[x509.KeyUsage]string{
+		x509.KeyUsageDigitalSignature:  "DigitalSignature",
+		x509.KeyUsageContentCommitment: "ContentCommitment",
+		x509.KeyUsageKeyEncipherment:   "KeyEncipherment",
+		x509.KeyUsageDataEncipherment:  "DataEncipherment",
+		x509.KeyUsageKeyAgreement:      "KeyAgreement",
+		x509.KeyUsageCertSign:          "CertSign",
+		x509.KeyUsageCRLSign:           "CRLSign",
+		x509.KeyUsageEncipherOnly:      "EncipherOnly",
+		x509.KeyUsageDecipherOnly:      "DecipherOnly",
+	}
+
+	lowerStringToKeyUsage = flipAndLowerCaseKeyUsageMap(keyUsageToString)
+)
+
+func flipAndLowerCaseKeyUsageMap(aMap map[x509.KeyUsage]string) map[string]x509.KeyUsage {
+	flipped := make(map[string]x509.KeyUsage, len(aMap))
+	for k, v := range aMap {
+		flipped[strings.ToLower(v)] = k
+	}
+	return flipped
+}
+
+// ParseKeyUsages returns a bitmap of all the key usage strings that we
+// can map back to a known key usages. Unknown values are ignored.
+func ParseKeyUsages(input []string) x509.KeyUsage {
 	var parsedKeyUsages x509.KeyUsage
+
 	for _, k := range input {
-		switch strings.ToLower(strings.TrimSpace(k)) {
-		case "digitalsignature":
-			parsedKeyUsages |= x509.KeyUsageDigitalSignature
-		case "contentcommitment":
-			parsedKeyUsages |= x509.KeyUsageContentCommitment
-		case "keyencipherment":
-			parsedKeyUsages |= x509.KeyUsageKeyEncipherment
-		case "dataencipherment":
-			parsedKeyUsages |= x509.KeyUsageDataEncipherment
-		case "keyagreement":
-			parsedKeyUsages |= x509.KeyUsageKeyAgreement
-		case "certsign":
-			parsedKeyUsages |= x509.KeyUsageCertSign
-		case "crlsign":
-			parsedKeyUsages |= x509.KeyUsageCRLSign
-		case "encipheronly":
-			parsedKeyUsages |= x509.KeyUsageEncipherOnly
-		case "decipheronly":
-			parsedKeyUsages |= x509.KeyUsageDecipherOnly
+		lk := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(k)), "keyusage")
+		if ku, ok := lowerStringToKeyUsage[lk]; ok {
+			parsedKeyUsages |= ku
 		}
 	}
 
-	return int(parsedKeyUsages)
+	return parsedKeyUsages
+}
+
+// KeyUsageIsPresent checks the provided bitmap (keyUsages) for presence of the provided x509.KeyUsage.
+func KeyUsageIsPresent(keyUsages x509.KeyUsage, usage x509.KeyUsage) bool {
+	if _, ok := keyUsageToString[usage]; !ok {
+		return false
+	}
+	return keyUsages&usage != 0
+}
+
+// KeyUsagesArePresent checks that all the requested key usages are present within the usages provided
+func KeyUsagesArePresent(usages x509.KeyUsage, reqUsages []x509.KeyUsage) bool {
+	for _, reqUsage := range reqUsages {
+		if !KeyUsageIsPresent(usages, reqUsage) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// KeyUsageStrings return all the known values represented by strings that are set
+// within the passed in keyUsages argument.
+func KeyUsageStrings(keyUsages x509.KeyUsage) []string {
+	var keyUsageStrings []string
+	for ku, name := range keyUsageToString {
+		if KeyUsageIsPresent(keyUsages, ku) {
+			keyUsageStrings = append(keyUsageStrings, name)
+		}
+	}
+	return keyUsageStrings
+}
+
+// KeyUsageToString convert the individual key usage value into a string. If unknown
+// a string saying the value is unknown is returned.
+func KeyUsageToString(keyUsage x509.KeyUsage) string {
+	if kuName, ok := keyUsageToString[keyUsage]; ok {
+		return kuName
+	}
+
+	return fmt.Sprintf("unknown key usage: %d", keyUsage)
 }

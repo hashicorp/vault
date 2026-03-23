@@ -23,17 +23,20 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
   hooks.beforeEach(function () {
     this.downloadStub = Sinon.stub(this.owner.lookup('service:download'), 'download');
-    this.startTimestamp = '2022-06-01T23:00:11.050Z';
-    this.endTimestamp = '2022-12-01T23:00:11.050Z';
+    this.startTimestamp = new Date('2022-06-01T23:00:11.050Z');
+    this.endTimestamp = new Date('2022-12-01T23:00:11.050Z');
+    this.billingStartTime = this.startTimestamp;
     this.upgradesDuringActivity = [];
     this.noData = undefined;
+
     this.server.post('/sys/capabilities-self', () =>
-      capabilitiesStub('sys/internal/counters/activity/export', ['sudo'])
+      capabilitiesStub('/sys/internal/counters/activity/export', ['sudo'])
     );
 
     this.renderComponent = async () => {
       return render(hbs`
         <Clients::PageHeader
+          @billingStartTime={{this.billingStartTime}}
           @startTimestamp={{this.startTimestamp}}
           @endTimestamp={{this.endTimestamp}}
           @upgradesDuringActivity={{this.upgradesDuringActivity}}
@@ -43,12 +46,12 @@ module('Integration | Component | clients/page-header', function (hooks) {
     };
   });
 
-  test('it shows the export button if user does has SUDO capabilities', async function (assert) {
+  test('it shows the export button if user does have SUDO capabilities', async function (assert) {
     await this.renderComponent();
     assert.dom(CLIENT_COUNT.exportButton).exists();
   });
 
-  test('it hides the export button if user does has SUDO capabilities but there is no data', async function (assert) {
+  test('it hides the export button if user does have SUDO capabilities but there is no data', async function (assert) {
     this.noData = true;
     await this.renderComponent();
     assert.dom(CLIENT_COUNT.exportButton).doesNotExist();
@@ -56,7 +59,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
   test('it hides the export button if user does not have SUDO capabilities', async function (assert) {
     this.server.post('/sys/capabilities-self', () =>
-      capabilitiesStub('sys/internal/counters/activity/export', ['read'])
+      capabilitiesStub('/sys/internal/counters/activity/export', ['read'])
     );
 
     await this.renderComponent();
@@ -131,7 +134,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
     const namespaceSvc = this.owner.lookup('service:namespace');
     namespaceSvc.path = 'foo';
     this.server.get('/sys/internal/counters/activity/export', function (_, req) {
-      assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'foo');
+      assert.strictEqual(req.requestHeaders['x-vault-namespace'], 'foo');
       return new Response(200, { 'Content-Type': 'text/csv' }, '');
     });
 
@@ -198,7 +201,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
     test('is correct for a single month', async function (assert) {
       assert.expect(2);
-      this.endTimestamp = '2022-06-21T23:00:11.050Z';
+      this.endTimestamp = new Date('2022-06-21T23:00:11.050Z');
       this.server.get('/sys/internal/counters/activity/export', function (_, req) {
         assert.deepEqual(req.queryParams, {
           format: 'csv',
@@ -257,6 +260,40 @@ module('Integration | Component | clients/page-header', function (hooks) {
       await waitUntil(() => this.downloadStub.calledOnce);
       const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_bar');
+    });
+  });
+
+  module('enterprise', function (hooks) {
+    hooks.beforeEach(function () {
+      this.version = this.owner.lookup('service:version');
+      this.version.type = 'enterprise';
+    });
+
+    test('it renders billing period text', async function (assert) {
+      await this.renderComponent();
+
+      assert
+        .dom(GENERAL.hdsPageHeaderTitle)
+        .hasTextContaining('Client usage', 'it renders page header title');
+      assert.dom(GENERAL.breadcrumbs).hasTextContaining('Vault Client usage', 'it renders breadcrumbs');
+    });
+
+    test('it renders data period text for HVD managed clusters', async function (assert) {
+      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+      await this.renderComponent();
+
+      assert
+        .dom(GENERAL.hdsPageHeaderTitle)
+        .hasTextContaining('Client usage', 'it renders page header title');
+      assert.dom(GENERAL.breadcrumbs).hasTextContaining('Vault Client usage', 'it renders breadcrumbs');
+    });
+
+    test('it allows date editing if no billing start time is provided', async function (assert) {
+      this.billingStartTime = '';
+      await this.renderComponent();
+      assert.dom(CLIENT_COUNT.dateRange.edit).exists('it renders edit button to open modal').hasText('Edit');
+      assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText('June 2022');
+      assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText('December 2022');
     });
   });
 });

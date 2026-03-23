@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupDataStubs } from 'vault/tests/helpers/sync/setup-hooks';
@@ -62,7 +62,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     assert.expect(2);
 
     await this.renderComponent();
-    assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Select Destination Create Destination');
+    assert.dom(GENERAL.breadcrumbs).hasText('Vault Secrets sync Select destination Create destination');
     await click(PAGE.cancelButton);
     const transition = this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations.create');
     assert.true(transition, 'transitions to vault.cluster.sync.secrets.destinations.create on cancel');
@@ -92,7 +92,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     assert.expect(2);
 
     await this.renderComponent();
-    assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Destinations Destination Edit Destination');
+    assert.dom(GENERAL.breadcrumbs).hasText('Vault Secrets sync Destinations Destination Edit destination');
 
     await click(PAGE.cancelButton);
     const transition = this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations.destination');
@@ -267,7 +267,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         await this.renderComponent();
 
-        assert.dom(PAGE.title).hasTextContaining(`Create Destination for ${name}`);
+        assert.dom(GENERAL.hdsPageHeaderTitle).hasTextContaining(`Create Destination for ${name}`);
 
         for (const field of this.formFields) {
           assert.dom(PAGE.fieldByAttr(field.name)).exists();
@@ -401,7 +401,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         await this.renderComponent(false, type);
 
-        assert.dom(PAGE.title).hasTextContaining(`Edit ${this.form.name}`);
+        assert.dom(GENERAL.hdsPageHeaderTitle).hasTextContaining(`Edit ${this.form.name}`);
 
         for (const field of this.formFields) {
           if (editable.includes(field.name)) {

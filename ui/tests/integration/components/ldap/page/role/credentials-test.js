@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
@@ -36,7 +36,7 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
       { owner: this.engine }
     );
 
-    assert.dom('[data-test-header-title]').hasText('Credentials', 'Page title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Credentials', 'Page title renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(1)')
       .containsText('ldap-test', 'Overview breadcrumb renders');

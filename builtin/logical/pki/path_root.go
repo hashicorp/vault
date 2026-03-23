@@ -141,7 +141,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 
-	exported, format, role, errorResp := getGenerationParams(sc, data)
+	// Tell getGenerationParams we are generating a root, so that we can validate signatureBits against KeyType
+	exported, format, role, errorResp := getGenerationParams(sc, data, true)
 	if errorResp != nil {
 		return errorResp, nil
 	}
@@ -149,6 +150,9 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	maxPathLengthIface, ok := data.GetOk("max_path_length")
 	if ok {
 		maxPathLength := maxPathLengthIface.(int)
+		if maxPathLength < -1 {
+			return logical.ErrorResponse("requested max_path_length %d is invalid: must be a non-negative integer or -1 for no constraint", maxPathLength), nil
+		}
 		role.MaxPathLength = &maxPathLength
 	}
 
@@ -176,6 +180,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		apiData: data,
 		role:    role,
 	}
+	b.adjustInputBundle(input)
 	parsedBundle, warnings, err := generateCert(sc, input, nil, true, b.Backend.GetRandomReader())
 	if err != nil {
 		switch err.(type) {
@@ -306,7 +311,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, err
 	}
-	b.pkiCertificateCounter.AddIssuedCertificate(true)
+	b.pkiCertificateCounter.Increment().AddIssuedCertificate(true, parsedBundle.Certificate)
 
 	// Build a fresh CRL
 	warnings, err = b.CrlBuilder().Rebuild(sc, true)
@@ -340,7 +345,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		observe.NewAdditionalPKIMetadata("key_name", myKey.Name),
 		observe.NewAdditionalPKIMetadata("key_type", myKey.PrivateKeyType),
 		observe.NewAdditionalPKIMetadata("role_name", role.Name),
-		observe.NewAdditionalPKIMetadata("serial_number", cb.SerialNumber),
+		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(parsedBundle.Certificate)),
 		observe.NewAdditionalPKIMetadata("type", format),
 		observe.NewAdditionalPKIMetadata("common_name", parsedBundle.Certificate.Subject.CommonName),
 		observe.NewAdditionalPKIMetadata("subject_key_id", parsedBundle.Certificate.SubjectKeyId),
@@ -399,7 +404,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, issuerId, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
+	signingBundle, issuer, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -424,9 +429,27 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	useCSRValues := data.Get("use_csr_values").(bool)
 
-	maxPathLengthIface, ok := data.GetOk("max_path_length")
-	if ok {
+	if maxPathLengthIface, ok := data.GetOk("max_path_length"); ok {
 		maxPathLength := maxPathLengthIface.(int)
+		if maxPathLength < -1 {
+			return logical.ErrorResponse("requested max_path_length %d is invalid: must be a non-negative integer or -1 for no constraint", maxPathLength), nil
+		}
+		// Validate the requested max_path_length against the signing CA's
+		// BasicConstraints path length constraint (RFC 5280 4.2.1.9).
+		// If the signing CA has a pathLenConstraint of N, any intermediate
+		// it signs may have a pathLenConstraint strictly less than N.
+		// An explicit -1 means "no constraint on the intermediate", which
+		// is also invalid when the CA already has a pathLenConstraint.
+		caMaxPathLen := signingBundle.Certificate.MaxPathLen
+		caHasConstraint := caMaxPathLen >= 0 || signingBundle.Certificate.MaxPathLenZero
+		if caHasConstraint {
+			if maxPathLength < 0 || maxPathLength >= caMaxPathLen {
+				return logical.ErrorResponse(
+					fmt.Sprintf("requested max_path_length %d is not allowed: the signing CA has a pathLenConstraint of %[2]d, so the intermediate's pathLenConstraint must be a non-negative value less than %[2]d",
+						maxPathLength, caMaxPathLen),
+				), nil
+			}
+		}
 		role.MaxPathLength = &maxPathLength
 	}
 
@@ -435,6 +458,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		apiData: data,
 		role:    role,
 	}
+	b.adjustInputBundle(input)
 	parsedBundle, warnings, err := signCert(b.System(), input, signingBundle, true, useCSRValues)
 	if err != nil {
 		switch err.(type) {
@@ -446,7 +470,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		}
 	}
 
-	if err := issuing.VerifyCertificate(sc.GetContext(), sc.GetStorage(), issuerId, parsedBundle); err != nil {
+	if err := issuing.VerifyCertificate(issuer, sc.System(), parsedBundle); err != nil {
 		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
@@ -459,11 +483,15 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
-	b.pkiCertificateCounter.AddIssuedCertificate(true)
+	b.pkiCertificateCounter.Increment().AddIssuedCertificate(true, parsedBundle.Certificate)
 
 	if warnAboutTruncate &&
 		signingBundle.Certificate.NotAfter.Equal(parsedBundle.Certificate.NotAfter) {
 		resp.AddWarning(intCaTruncatationWarning)
+	}
+
+	if parsedBundle.Certificate.MaxPathLen == 0 {
+		resp.AddWarning("Max path length of the generated certificate is zero. This CA certificate cannot be used to issue further intermediate CA certificates.")
 	}
 
 	if keyUsages, ok := data.GetOk("key_usage"); ok {
@@ -475,10 +503,11 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuerSignIntermediate,
 		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
-		observe.NewAdditionalPKIMetadata("issuer_id", issuerId),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuer.ID),
 		observe.NewAdditionalPKIMetadata("not_after", parsedBundle.Certificate.NotAfter.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("not_before", parsedBundle.Certificate.NotBefore.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("common_name", parsedBundle.Certificate.Subject.CommonName),
+		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(parsedBundle.Certificate)),
 		observe.NewAdditionalPKIMetadata("public_key_algorithm", parsedBundle.Certificate.PublicKeyAlgorithm.String()),
 		observe.NewAdditionalPKIMetadata("public_key_size", certutil.GetPublicKeySize(parsedBundle.Certificate.PublicKey)),
 		observe.NewAdditionalPKIMetadata("subject_key_id", parsedBundle.Certificate.SubjectKeyId),
@@ -567,7 +596,7 @@ func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle
 	}
 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
-		resp.AddWarning("Max path length of the signed certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
+		resp.AddWarning("Max path length of the signed certificate is zero. This CA certificate cannot be used to issue intermediate CA certificates.")
 	}
 
 	resp = addWarnings(resp, warnings)
@@ -598,7 +627,7 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 	}
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, issuerId, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
+	signingBundle, issuer, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -667,9 +696,9 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 
 	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIIssuerSignSelfIssued,
 		observe.NewAdditionalPKIMetadata("issuer_name", issuerName),
-		observe.NewAdditionalPKIMetadata("issuer_id", issuerId.String()),
+		observe.NewAdditionalPKIMetadata("issuer_id", issuer.ID.String()),
 		observe.NewAdditionalPKIMetadata("issuing_ca", signingCB.IssuingCA),
-		observe.NewAdditionalPKIMetadata("serial_number", cert.SerialNumber),
+		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(cert)),
 		observe.NewAdditionalPKIMetadata("not_after", cert.NotAfter.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("not_before", cert.NotBefore.Format(time.RFC3339)),
 		observe.NewAdditionalPKIMetadata("common_name", cert.Subject.CommonName),

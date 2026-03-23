@@ -31,4 +31,6 @@ export const DASHBOARD = {
   vaultConfigurationCard: {
     configDetailsField: (name) => `[data-test-vault-config-details="${name}"]`,
   },
+  paramInput: '[data-test-param-input] input',
+  paramInputLabel: '[data-test-param-input] label',
 };

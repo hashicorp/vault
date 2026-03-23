@@ -15,7 +15,6 @@ import (
 	"math/big"
 	"net"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -36,33 +35,6 @@ type inputBundle struct {
 	req     *logical.Request
 	apiData *framework.FieldData
 }
-
-var (
-	// labelRegex is a single label from a valid domain name and was extracted
-	// from hostnameRegex below for use in leftWildLabelRegex, without any
-	// label separators (`.`).
-	labelRegex = `([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])`
-
-	// A note on hostnameRegex: although we set the StrictDomainName option
-	// when doing the idna conversion, this appears to only affect output, not
-	// input, so it will allow e.g. host^123.example.com straight through. So
-	// we still need to use this to check the output.
-	hostnameRegex = regexp.MustCompile(`^(\*\.)?(` + labelRegex + `\.)*` + labelRegex + `\.?$`)
-
-	// Left Wildcard Label Regex is equivalent to a single domain label
-	// component from hostnameRegex above, but with additional wildcard
-	// characters added. There are four possibilities here:
-	//
-	//  1. Entire label is a wildcard,
-	//  2. Wildcard exists at the start,
-	//  3. Wildcard exists at the end,
-	//  4. Wildcard exists in the middle.
-	allWildRegex       = `\*`
-	startWildRegex     = `\*` + labelRegex
-	endWildRegex       = labelRegex + `\*`
-	middleWildRegex    = labelRegex + `\*` + labelRegex
-	leftWildLabelRegex = regexp.MustCompile(`^(` + allWildRegex + `|` + startWildRegex + `|` + endWildRegex + `|` + middleWildRegex + `)$`)
-)
 
 func doesPublicKeyAlgoMatchSignatureAlgo(pubKey x509.PublicKeyAlgorithm, algo x509.SignatureAlgorithm) bool {
 	return issuing.DoesPublicKeyAlgoMatchSignatureAlgo(pubKey, algo)
@@ -88,7 +60,7 @@ func (sc *storageContext) fetchCAInfo(issuerRef string, usage issuing.IssuerUsag
 	return bundle, err
 }
 
-func (sc *storageContext) fetchCAInfoWithIssuer(issuerRef string, usage issuing.IssuerUsage) (*certutil.CAInfoBundle, issuing.IssuerID, error) {
+func (sc *storageContext) fetchCAInfoWithIssuer(issuerRef string, usage issuing.IssuerUsage) (*certutil.CAInfoBundle, *issuing.IssuerEntry, error) {
 	var issuerId issuing.IssuerID
 
 	if sc.UseLegacyBundleCaStorage() {
@@ -100,21 +72,21 @@ func (sc *storageContext) fetchCAInfoWithIssuer(issuerRef string, usage issuing.
 		issuerId, err = sc.resolveIssuerReference(issuerRef)
 		if err != nil {
 			// Usually a bad label from the user or mis-configured default.
-			return nil, issuing.IssuerRefNotFound, errutil.UserError{Err: err.Error()}
+			return nil, nil, errutil.UserError{Err: err.Error()}
 		}
 	}
 
-	bundle, err := sc.fetchCAInfoByIssuerId(issuerId, usage)
+	bundle, issuer, err := sc.fetchCAInfoByIssuerId(issuerId, usage)
 	if err != nil {
-		return nil, issuing.IssuerRefNotFound, err
+		return nil, nil, err
 	}
 
-	return bundle, issuerId, nil
+	return bundle, issuer, nil
 }
 
 // fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
 // This does support the loading using the legacyBundleShimID
-func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuing.IssuerID, usage issuing.IssuerUsage) (*certutil.CAInfoBundle, error) {
+func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuing.IssuerID, usage issuing.IssuerUsage) (*certutil.CAInfoBundle, *issuing.IssuerEntry, error) {
 	return issuing.FetchCAInfoByIssuerId(sc.Context, sc.Storage, sc.GetPkiManagedView(), issuerId, usage)
 }
 
@@ -295,6 +267,7 @@ func generateCert(sc *storageContext,
 	if data.Params == nil {
 		return nil, nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
+	issuing.EntAdjustCreationBundle(sc.System(), data)
 
 	if isCA {
 		data.Params.IsCA = isCA

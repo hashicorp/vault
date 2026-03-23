@@ -3,19 +3,16 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <KmipBreadcrumb @scope={{this.scope}} @role={{this.role}} @currentRoute="Edit Role" />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Edit Role
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title="Edit Role">
+  <:breadcrumbs>
+    <KmipBreadcrumb @scope={{this.model.scopeName}} @role={{this.model.roleName}} @currentRoute="Edit Role" />
+  </:breadcrumbs>
+</Page::Header>
 
-<Kmip::RoleForm
-  @model={{this.model}}
-  @onSave={{transition-to "vault.cluster.secrets.backend.kmip.role" this.scope this.role}}
-  @onCancel={{transition-to "vault.cluster.secrets.backend.kmip.role" this.scope this.role}}
+<RoleForm
+  @form={{this.model.form}}
+  @roleName={{this.model.roleName}}
+  @scopeName={{this.model.scopeName}}
+  @onSave={{transition-to "vault.cluster.secrets.backend.kmip.role" this.model.scopeName this.model.roleName}}
+  @onCancel={{transition-to "vault.cluster.secrets.backend.kmip.role" this.model.scopeName this.model.roleName}}
 />

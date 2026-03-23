@@ -123,6 +123,7 @@ func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request
 		return nil, nil
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadConfigAccessRead, nil)
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"address":               conf.Address,
@@ -177,6 +178,7 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 
 	conf.MaxTokenNameLength = data.Get("max_token_name_length").(int)
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadConfigAccessWrite, nil)
 	entry, err := logical.StorageEntryJSON("config/access", conf)
 	if err != nil {
 		return nil, err
@@ -192,6 +194,7 @@ func (b *backend) pathConfigAccessDelete(ctx context.Context, req *logical.Reque
 	if err := req.Storage.Delete(ctx, configAccessKey); err != nil {
 		return nil, err
 	}
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadConfigAccessDelete, nil)
 	return nil, nil
 }
 

@@ -1,0 +1,17 @@
+autoInstallPeers: false
+strictPeerDependencies: true
+resolvePeersFromWorkspaceRoot: false
+
+peerDependencyRules:
+  allowedVersions:
+    # for @typescript-eslint/parser
+    eslint: '*'
+    # for ember-engines, which has a peer dep on ember-source
+    'ember-engines>ember-source': '5.8.0'
+    '@hashicorp/design-system-components>ember-engines': '0.8.23'
+
+dedupeInjectedDeps: true
+publicHoistPattern:
+  - ember-source
+
+verifyDepsBeforeRun: 'install'

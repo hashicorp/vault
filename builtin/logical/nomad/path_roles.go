@@ -132,6 +132,11 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 			"policies": role.Policies,
 		},
 	}
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadRoleRead, map[string]interface{}{
+		"role_name":  name,
+		"token_type": role.TokenType,
+		"global":     role.Global,
+	})
 	return resp, nil
 }
 
@@ -182,6 +187,12 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadRoleWrite, map[string]interface{}{
+		"role_name":  name,
+		"token_type": role.TokenType,
+		"global":     role.Global,
+	})
+
 	return nil, nil
 }
 
@@ -190,6 +201,9 @@ func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *
 	if err := req.Storage.Delete(ctx, "role/"+name); err != nil {
 		return nil, err
 	}
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadRoleDelete, map[string]interface{}{
+		"role_name": name,
+	})
 	return nil, nil
 }
 

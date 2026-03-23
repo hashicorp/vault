@@ -17,18 +17,24 @@ export default class PkiEngine extends Engine {
   Resolver = Resolver;
   dependencies = {
     services: [
+      'api',
       'auth',
+      'capabilities',
       'download',
       'flash-messages',
       'namespace',
       'path-help',
       'app-router',
       'secret-mount-path',
-      'store',
-      'pagination',
       'version',
     ],
-    externalRoutes: ['secrets', 'secretsListRootConfiguration', 'externalMountIssuer'],
+    externalRoutes: [
+      'vault',
+      'secrets',
+      'secretsListRootConfiguration',
+      'externalMountIssuer',
+      'secretsGeneralSettingsConfiguration',
+    ],
   };
 }
 

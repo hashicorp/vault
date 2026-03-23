@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncHandler from 'vault/mirage/handlers/sync';
@@ -15,6 +15,7 @@ import sinon from 'sinon';
 import { Response } from 'miragejs';
 
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module(
   'Integration | Component | sync | Secrets::Page::Destinations::Destination::Secrets',
@@ -41,7 +42,9 @@ module(
     });
 
     test('it should render DestinationHeader component', async function (assert) {
-      assert.dom(PAGE.title).includesText('destination-aws', 'DestinationHeader component renders');
+      assert
+        .dom(GENERAL.hdsPageHeaderTitle)
+        .includesText('destination-aws', 'DestinationHeader component renders');
     });
 
     test('it should render empty list state', async function (assert) {

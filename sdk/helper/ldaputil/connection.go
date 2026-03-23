@@ -28,3 +28,8 @@ type PagingConnection interface {
 	Connection
 	SearchWithPaging(searchRequest *ldap.SearchRequest, pagingSize uint32) (*ldap.SearchResult, error)
 }
+
+type PasswordModifyConnection interface {
+	Connection
+	PasswordModify(passwordModifyRequest *ldap.PasswordModifyRequest) (*ldap.PasswordModifyResult, error)
+}

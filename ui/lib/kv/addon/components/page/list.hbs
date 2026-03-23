@@ -3,39 +3,55 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@backend}}>
-  <:tabLinks>
-    <li>
-      <LinkTo
-        @route={{this.router.currentRoute.localName}}
-        @models={{@currentRouteParams}}
-        data-test-secrets-tab="Secrets"
-        @current-when={{true}}
-      >Secrets</LinkTo>
-    </li>
-    <li>
-      <LinkTo @route="configuration" @model={{@backend}} data-test-secrets-tab="Configuration">Configuration</LinkTo>
-    </li>
-  </:tabLinks>
+<Page::Header @description="KV" @icon={{@backendModel.icon}} @title={{@backendModel.id}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+  <:badges>
+    <Hds::Badge @text="version 2" data-test-badge />
+  </:badges>
+  <:actions>
+    <ManageDropdown @model={{@backendModel}} @configRoute="configuration" as |D|>
+      {{#unless this.version.isCommunity}}
+        <D.Interactive
+          @icon="shield-check"
+          {{on "click" (fn (mut this.showPolicyFlyout) true)}}
+          data-test-popup-menu="Generate policy"
+        >
+          Generate policy
+        </D.Interactive>
+      {{/unless}}
+    </ManageDropdown>
+    <Hds::Button
+      @text="Create secret"
+      @icon="plus"
+      @route="create"
+      @model={{@backendModel}}
+      @query={{hash initialKey=@filterValue}}
+      data-test-button="create secret"
+    />
+  </:actions>
+</Page::Header>
+
+<CodeGenerator::Policy::Flyout @onClose={{(fn (mut this.showPolicyFlyout) false)}}>
+  <:customTrigger as |openFlyout|>
+    {{#if this.showPolicyFlyout}}
+      <div {{did-insert openFlyout}} />
+    {{/if}}
+  </:customTrigger>
+</CodeGenerator::Policy::Flyout>
+
+<KvTabsToolbar>
+  <:tabs>
+    <li><LinkTo @route="list" data-test-tab="Secrets" @model={{@backend}}>Secrets</LinkTo></li>
+  </:tabs>
 
   <:toolbarFilters>
     {{#if (and (not-eq @secrets 403) (or @secrets @filterValue))}}
       <KvListFilter @mountPoint={{this.mountPoint}} @filterValue={{@filterValue}} />
     {{/if}}
   </:toolbarFilters>
-
-  <:toolbarActions>
-    <ToolbarLink
-      data-test-toolbar-create-secret
-      @route="create"
-      @model={{@backend}}
-      @query={{hash initialKey=@filterValue}}
-      @type="add"
-    >
-      Create secret
-    </ToolbarLink>
-  </:toolbarActions>
-</KvPageHeader>
+</KvTabsToolbar>
 
 {{#if (eq @secrets 403)}}
   <div class="box is-fullwidth is-shadowless has-tall-padding">
@@ -168,13 +184,17 @@
     />
   {{else}}
     {{#if @filterValue}}
-      <EmptyState @title='There are no secrets matching "{{@filterValue}}".' />
+      <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+        <A.Header @title='There are no secrets matching "{{@filterValue}}".' @titleTag="h2" data-test-empty-state-title />
+      </Hds::ApplicationState>
     {{else}}
-      <EmptyState
-        data-test-secret-list-empty-state
-        @title="No secrets yet"
-        @message="When created, secrets will be listed here. Create a secret to get started."
-      />
+      <Hds::ApplicationState class="top-padding-32 is-marginless" data-test-secret-list-empty-state as |A|>
+        <A.Header @title="No secrets yet" @titleTag="h2" data-test-empty-state-title />
+        <A.Body
+          @text="When created, secrets will be listed here. Create a secret to get started."
+          data-test-empty-state-message
+        />
+      </Hds::ApplicationState>
     {{/if}}
   {{/if}}
 {{/if}}

@@ -39,7 +39,7 @@ runs:
         } | tee -a "$GITHUB_ENV"
     - name: Try to restore dynamic config from cache
       id: dyn-cfg-cache
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
       with:
         path: ${{ env.DYNAMIC_CONFIG_PATH }}
         key: dyn-cfg-${{ env.DYNAMIC_CONFIG_KEY }}
@@ -56,4 +56,9 @@ runs:
       shell: bash
       run: |
         # Make sure that any branch specific dynamic config has been generated
-        pipeline generate enos-dynamic-config -d ./enos --file enos-dynamic-config.hcl -v ${{ inputs.vault-version }} -e ${{ inputs.vault-edition }} -n 3 --log debug
+        pipeline generate enos-dynamic-config ${{ runner.debug && '--log debug' }}\
+          -d ./enos \
+          --file enos-dynamic-config.hcl \
+          -v ${{ inputs.vault-version }} \
+          -e ${{ inputs.vault-edition }} \
+          -n 3

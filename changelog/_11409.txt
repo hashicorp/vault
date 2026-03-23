@@ -1,0 +1,3 @@
+```release-note:change
+packaging: UBI container images are now built on the UBI 10 minimal image.
+```

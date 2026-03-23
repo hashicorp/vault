@@ -5,7 +5,6 @@
 
 import { module, test } from 'qunit';
 import { render } from '@ember/test-helpers';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupRenderingTest } from 'vault/tests/helpers';
@@ -17,42 +16,43 @@ import { STANDARD_META } from 'vault/tests/helpers/pagination';
 module('Integration | Component | page/pki-issuer-list', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
-  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
-    this.secretMountPath.currentPath = 'pki-test';
+    this.backend = 'pki-test';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
     this.engineId = 'pki';
+
+    this.renderComponent = () =>
+      render(
+        hbs`<Page::PkiIssuerList @backend={{this.backend}} @issuers={{this.issuers}} @mountPoint={{this.engineId}} />`,
+        {
+          owner: this.engine,
+        }
+      );
   });
 
   test('it renders when issuer metadata tags when info is provided', async function (assert) {
-    this.store.createRecord('pki/issuer', {
-      issuerId: 'abcd-efgh',
-      issuerName: 'issuer-0',
-      common_name: 'common-name-issuer-0',
-      isRoot: true,
-      serialNumber: '74:2d:ed:f2:c4:3b:76:5e:6e:0d:f1:6a:c0:8b:6f:e3:3c:62:f9:03',
-    });
-    this.store.createRecord('pki/issuer', {
-      issuerId: 'ijkl-mnop',
-      issuerName: 'issuer-1',
-      isRoot: false,
-      parsedCertificate: {
-        common_name: 'common-name-issuer-1',
-      },
-      serialNumber: '74:2d:ed:f2:c4:3b:76:5e:6e:0d:f1:6a:c0:8b:6f:e3:3c:62:f9:03',
-    });
-    const issuers = this.store.peekAll('pki/issuer');
-    issuers.meta = STANDARD_META;
-    this.issuers = issuers;
-
-    await render(
-      hbs`<Page::PkiIssuerList @backend="pki-mount" @issuers={{this.issuers}} @mountPoint={{this.engineId}} />`,
+    this.issuers = [
       {
-        owner: this.engine,
-      }
-    );
+        issuer_id: 'abcd-efgh',
+        issuer_name: 'issuer-0',
+        common_name: 'common-name-issuer-0',
+        isRoot: true,
+        serial_number: '74:2d:ed:f2:c4:3b:76:5e:6e:0d:f1:6a:c0:8b:6f:e3:3c:62:f9:03',
+      },
+      {
+        issuer_id: 'ijkl-mnop',
+        issuer_name: 'issuer-1',
+        isRoot: false,
+        parsedCertificate: {
+          common_name: 'common-name-issuer-1',
+        },
+        serial_number: '74:2d:ed:f2:c4:3b:76:5e:6e:0d:f1:6a:c0:8b:6f:e3:3c:62:f9:03',
+      },
+    ];
+    this.issuers.meta = STANDARD_META;
+
+    await this.renderComponent();
 
     this.issuers.forEach(async (issuer, idx) => {
       assert
@@ -66,25 +66,21 @@ module('Integration | Component | page/pki-issuer-list', function (hooks) {
     });
   });
   test('it renders when issuer data even though issuer metadata isnt provided', async function (assert) {
-    this.store.createRecord('pki/issuer', {
-      issuerId: 'abcd-efgh',
-      issuerName: 'issuer-0',
-      isDefault: false,
-    });
-    this.store.createRecord('pki/issuer', {
-      issuerId: 'ijkl-mnop',
-      issuerName: 'issuer-1',
-      isDefault: true,
-    });
-    const issuers = this.store.peekAll('pki/issuer');
-    issuers.meta = STANDARD_META;
-    this.issuers = issuers;
-    await render(
-      hbs`<Page::PkiIssuerList @backend="pki-mount" @issuers={{this.issuers}} @mountPoint={{this.engineId}} />`,
+    this.issuers = [
       {
-        owner: this.engine,
-      }
-    );
+        issuer_id: 'abcd-efgh',
+        issuer_name: 'issuer-0',
+        is_default: false,
+      },
+      {
+        issuer_id: 'ijkl-mnop',
+        issuer_name: 'issuer-1',
+        is_default: true,
+      },
+    ];
+    this.issuers.meta = STANDARD_META;
+
+    await this.renderComponent();
     assert.dom(`[data-test-is-default="1"]`).hasText('default issuer');
   });
 });

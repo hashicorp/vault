@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, click, findAll, triggerEvent, fillIn, find } from '@ember/test-helpers';
+import { render, click, findAll, triggerEvent, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { v4 as uuidv4 } from 'uuid';
 import sinon from 'sinon';
@@ -14,6 +14,10 @@ import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { createSecretsEngine } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
+const SELECTORS = {
+  intro: '[data-test-intro]',
+};
 
 module('Integration | Component | secret-engine/list', function (hooks) {
   setupRenderingTest(hooks);
@@ -28,6 +32,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     this.version = this.owner.lookup('service:version');
     this.router = this.owner.lookup('service:router');
     this.router.transitionTo = sinon.stub();
+    this.router.refresh = sinon.stub();
     this.flashMessages = this.owner.lookup('service:flash-messages');
     this.flashMessages.registerTypes(['success', 'danger']);
     this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
@@ -44,6 +49,11 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     ];
   });
 
+  hooks.afterEach(async function () {
+    // ensure clean state
+    localStorage.clear();
+  });
+
   test('it allows you to disable an engine', async function (assert) {
     const enginePath = 'kv-test';
     this.server.delete(`sys/mounts/${enginePath}`, () => {
@@ -52,12 +62,9 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     });
     await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
 
-    assert
-      .dom(GENERAL.tableData(`${enginePath}/`, 'path'))
-      .exists('shows the link for the kvv2 secrets engine');
-    const row = GENERAL.tableRow(`${enginePath}/`);
-    await click(`${row} ${GENERAL.menuTrigger}`);
-    await click(GENERAL.menuItem('disable-engine'));
+    assert.dom(GENERAL.linkTo(`${enginePath}/`)).exists('shows the link for the kvv2 secrets engine');
+    await click(`${GENERAL.listItem(`${enginePath}/`)} ${GENERAL.menuTrigger}`);
+    await click(GENERAL.menuItem('Delete'));
     await click(GENERAL.confirmButton);
 
     assert.true(
@@ -119,13 +126,10 @@ module('Integration | Component | secret-engine/list', function (hooks) {
 
   test('path name does not render as link for unsupported secret engines', async function (assert) {
     await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
-    const unsupportedPath = find(`${GENERAL.tableData('nomad-test/', 'path')} a`);
     assert
-      .dom(unsupportedPath)
+      .dom(GENERAL.linkTo('nomad-test/'))
       .doesNotExist(`path text doesn't render as a link for unsupported nomad engine.`);
-
-    const supportedPath = find(`${GENERAL.tableData('aws-1/', 'path')} a`);
-    assert.dom(supportedPath).exists(`path text renders as a link for supported aws engines.`);
+    assert.dom(GENERAL.linkTo('aws-1/')).exists(`path text renders as a link for supported aws engines.`);
   });
 
   test('it filters by engine path and engine type', async function (assert) {
@@ -169,7 +173,46 @@ module('Integration | Component | secret-engine/list', function (hooks) {
   test('it applies overflow styling', async function (assert) {
     await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
     assert
-      .dom(GENERAL.tableData('aws-1/', 'path'))
-      .hasClass('text-overflow-ellipsis', 'secret engine name has text overflow class ');
+      .dom(GENERAL.tableData(0, 'path'))
+      .hasClass('text-overflow-ellipsis', 'secret engine path has text overflow class ');
+  });
+
+  test('it shows the intro page when only default engines are enabled', async function (assert) {
+    // Only cubbyhole engine exists (default engine)
+    const defaultEngines = [createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole')];
+    this.secretEngineModels = defaultEngines;
+
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+
+    assert.dom(SELECTORS.intro).exists('Intro page is shown');
+    assert.dom(GENERAL.button('enable')).exists('Shows enable button');
+    assert.dom(GENERAL.button('Skip')).exists('Shows skip button');
+  });
+
+  test('it does not show the intro page when other engines exist', async function (assert) {
+    // Has engines beyond the default cubbyhole
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+
+    assert.dom(SELECTORS.intro).doesNotExist('Intro modal is not shown when engines exist');
+    assert.dom(GENERAL.button('intro')).doesNotExist('Intro button is not shown');
+  });
+
+  test('it does not show the intro page when a filter has no results', async function (assert) {
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), `foobar`);
+    assert.dom(SELECTORS.intro).doesNotExist('Intro modal is not shown when engines exist');
+    assert.dom(GENERAL.button('intro')).doesNotExist('Intro button is not shown');
+  });
+
+  test('it can show the intro modal after dismissal', async function (assert) {
+    const defaultEngines = [createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole')];
+    this.secretEngineModels = defaultEngines;
+
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+    await click(GENERAL.button('Skip'));
+    assert.dom(SELECTORS.intro).doesNotExist('Intro is dismissed');
+
+    await click(GENERAL.button('intro'));
+    assert.dom(SELECTORS.intro).exists('Intro can be shown again after reset');
   });
 });

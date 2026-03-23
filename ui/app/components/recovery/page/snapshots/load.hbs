@@ -3,7 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Recovery::Page::Header @title="Upload Snapshot" @breadcrumbs={{@breadcrumbs}} />
+<Page::Header @title="Upload snapshot">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if this.bannerError}}
   <div class="has-top-padding-m has-bottom-padding-m">
@@ -69,6 +73,7 @@
             @selected={{this.selectedConfig}}
             @options={{this.automatedConfigs}}
             @isInvalid={{this.configError}}
+            @searchEnabled={{true}}
             data-test-select="config"
             as |F|
           >

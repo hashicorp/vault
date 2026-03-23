@@ -1,0 +1,3 @@
+```release-note:change
+auth/jwt: Update plugin to [v0.26.1](https://github.com/hashicorp/vault-plugin-auth-jwt/releases/tag/v0.26.1)
+```

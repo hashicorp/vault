@@ -5,12 +5,13 @@
 
 <Clients::Page::Counts
   @activity={{this.model.activity}}
-  @activityError={{this.model.activityError}}
   @config={{this.model.config}}
+  @canUpdateConfig={{this.model.canUpdateConfig}}
   @endTimestamp={{this.model.endTimestamp}}
   @onFilterChange={{this.updateQueryParams}}
   @startTimestamp={{this.model.startTimestamp}}
   @versionHistory={{this.model.versionHistory}}
+  @responseTimestamp={{this.model.responseTimestamp}}
 >
   {{outlet}}
 </Clients::Page::Counts>

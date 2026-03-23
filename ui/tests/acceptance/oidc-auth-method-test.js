@@ -52,10 +52,8 @@ module('Acceptance | oidc auth method', function (hooks) {
     triggerMessageEvent('oidc');
 
     await click(GENERAL.submitButton);
-    await waitFor('[data-test-dashboard-card-header="Vault version"]');
-    assert
-      .dom('[data-test-dashboard-card-header="Vault version"]')
-      .exists('Render the dashboard landing page.');
+    await waitFor(GENERAL.hdsPageHeaderTitle);
+    assert.dom(GENERAL.hdsPageHeaderTitle).exists('Render the dashboard landing page.');
 
     await logout();
     assert.dom(AUTH_FORM.selectMethod).hasValue('oidc', 'Previous auth method selected on logout');

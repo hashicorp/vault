@@ -291,7 +291,7 @@ module('Acceptance | auth login', function (hooks) {
       assert.expect(6);
       this.authType = 'oidc';
       this.expectedPayload = {
-        redirect_uri: 'http://localhost:7357/ui/vault/auth/custom-oidc/oidc/callback',
+        redirect_uri: `${window.location.origin}/ui/vault/auth/custom-oidc/oidc/callback`,
         role: 'some-dev',
       };
       this.server.post('/auth/custom-oidc/oidc/auth_url', (schema, req) => {

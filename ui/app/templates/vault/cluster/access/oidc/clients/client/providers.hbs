@@ -7,15 +7,19 @@
 {{#if (gt this.model.length 0)}}
   <Oidc::ProviderList @model={{this.model}} />
 {{else}}
-  <EmptyState
-    @title="No available providers"
-    @message="Edit an existing provider or create a new one to allow this application access for authentication requests."
-  >
-    <Hds::Link::Standalone
-      @icon="chevron-right"
-      @iconPosition="trailing"
-      @text="View providers"
-      @route="vault.cluster.access.oidc.providers"
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No available providers" @titleTag="h2" data-test-empty-state-title />
+    <A.Body
+      @text="Edit an existing provider or create a new one to allow this application access for authentication requests."
+      data-test-empty-state-message
     />
-  </EmptyState>
+    <A.Footer data-test-empty-state-actions as |F|>
+      <F.LinkStandalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="View providers"
+        @route="vault.cluster.access.oidc.providers"
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
 {{/if}}

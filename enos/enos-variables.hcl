@@ -68,26 +68,20 @@ variable "distro_version_amzn" {
   default     = "2023" // or "2", though pkcs11 has not been tested with 2
 }
 
-variable "distro_version_leap" {
-  description = "The version of openSUSE leap to use"
-  type        = string
-  default     = "15.6"
-}
-
 variable "distro_version_rhel" {
-  description = "The version of RHEL to use"
+  description = "The version of RedHat Enterprise Linux to use"
   type        = string
-  default     = "10.0" // or "8.10", "9.6"
+  default     = "10.1" // or "8.10", "9.7"
 }
 
 variable "distro_version_sles" {
-  description = "The version of SUSE SLES to use"
+  description = "The version of SUSE Enterprise Linux to use"
   type        = string
-  default     = "15.6"
+  default     = "16.0" // or "15.7"
 }
 
 variable "distro_version_ubuntu" {
-  description = "The version of ubuntu to use"
+  description = "The version of Ubuntu Linux to use"
   type        = string
   default     = "24.04" // or "22.04"
 }
@@ -208,17 +202,17 @@ variable "verify_aws_secrets_engine" {
 variable "verify_kmip_secrets_engine" {
   description = "If true we'll verify KMIP secrets engines behavior"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "verify_ldap_secrets_engine" {
   description = "If true we'll verify LDAP secrets engines behavior"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "verify_log_secrets" {
   description = "If true and var.vault_enable_audit_devices is true we'll verify that the audit log does not contain unencrypted secrets. Requires var.vault_radar_license_path to be set to a valid license file."
   type        = bool
-  default     = false
+  default     = false // Only because it requires a Vault Radar license
 }

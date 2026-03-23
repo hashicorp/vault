@@ -42,13 +42,13 @@ jobs:
       runs-on: ${{ steps.get-outputs.outputs.runs-on }}
       vault_edition: ${{ steps.get-outputs.outputs.vault_edition }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/metadata
         id: metadata
       - id: get-outputs
         run: |
           if [[ '${{ steps.metadata.outputs.is-ent-repo }}' == 'true' ]]; then
-            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m5d.4xlarge']" >> "$GITHUB_OUTPUT"
+            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m8a.4xlarge;m7a.4xlarge;m5d.4xlarge']" >> "$GITHUB_OUTPUT"
           else
             echo "runs-on=\"custom-linux-xl-vault-latest\"" >> "$GITHUB_OUTPUT"
           fi
@@ -78,21 +78,27 @@ jobs:
       GOPRIVATE: github.com/hashicorp
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - uses: hashicorp/action-setup-enos@dd06687d36a75db090d990790a8cf06cc0b238c3 # v1.39
+      - uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Set Up Git
         run: git config --global url."https://${{ secrets.elevated_github_token }}:@github.com".insteadOf "https://github.com"
       - name: Set Up Node
-        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: './ui/package.json'
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
+      - name: Install PNPM
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+        with:
+          package_json_file: './ui/package.json'
       - name: Set Up Terraform
-        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
         with:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
           terraform_wrapper: false
@@ -114,12 +120,12 @@ jobs:
           sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
       - name: Install Chrome
         if: steps.chrome-check.outputs.chrome-version == 'not-installed'
-        uses: browser-actions/setup-chrome@b94431e051d1c52dcbe9a7092a4f10f827795416 # v2.1.0
+        uses: browser-actions/setup-chrome@4f8e94349a351df0f048634f25fec36c3c91eded # v2.1.1
       - name: Installed Chrome Version
         run: |
           echo "Installed Chrome Version = [$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null)]"
       - name: Configure AWS credentials from Test account
-        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}

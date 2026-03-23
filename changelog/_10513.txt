@@ -1,0 +1,2 @@
+```release-note:improvement
+ui: Adds license banner indicating when cluster is operating in PKI-only mode and hides client counting dashboards for PKI-only clusters.

@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
@@ -24,6 +24,6 @@ module('Integration | Component | kubernetes | ConfigCta', function (hooks) {
         'Get started by establishing the URL of the Kubernetes API to connect to, along with some additional options.',
         'Message renders'
       );
-    assert.dom('[data-test-config-cta] a').hasText('Configure Kubernetes', 'Action renders');
+    assert.dom('a').hasText('Configure Kubernetes', 'Action link renders');
   });
 });

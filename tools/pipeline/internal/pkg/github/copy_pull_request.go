@@ -15,8 +15,8 @@ import (
 	"slices"
 	"strings"
 
-	libgithub "github.com/google/go-github/v74/github"
-	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
+	libgithub "github.com/google/go-github/v83/github"
+	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
 )
@@ -303,6 +303,7 @@ func (r *CopyPullRequestReq) Run(
 		err = fmt.Errorf("creating copy pull request body %w", err)
 		return res, errors.Join(cherryPickErr, err)
 	}
+	limitedPRBody := limitCharacters(prBody)
 
 	res.PullRequest, _, err = github.PullRequests.Create(
 		ctx, r.ToOwner, r.ToRepo, &libgithub.NewPullRequest{
@@ -310,7 +311,7 @@ func (r *CopyPullRequestReq) Run(
 			Head:     &branchName,
 			HeadRepo: &r.ToRepo,
 			Base:     &baseRef,
-			Body:     &prBody,
+			Body:     &limitedPRBody,
 		},
 	)
 	if err != nil {

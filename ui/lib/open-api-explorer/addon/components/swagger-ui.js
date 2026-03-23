@@ -25,6 +25,10 @@ export default class SwaggerUiComponent extends Component {
 
   inputId = `${guidFor(this)}-swagger`;
 
+  get breadcrumbs() {
+    return [{ label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true }, { label: 'API explorer' }];
+  }
+
   SearchFilterPlugin() {
     return {
       fn: {

@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 var ldapDerefAliasMap = map[string]int{
@@ -24,6 +25,18 @@ var ldapDerefAliasMap = map[string]int{
 	"finding":   ldap.DerefFindingBaseObj,
 	"searching": ldap.DerefInSearching,
 	"always":    ldap.DerefAlways,
+}
+
+const (
+	SchemaAD       = "ad"
+	SchemaOpenLDAP = "openldap"
+)
+
+// SupportedSchemas returns a slice of different LDAP schemas supported
+// by the plugin. This is used to change behavior when modifying
+// user passwords (for example, during root password rotation).
+func SupportedSchemas() []string {
+	return []string{SchemaOpenLDAP, SchemaAD}
 }
 
 // ConfigFields returns all the config fields that can potentially be used by the LDAP client.
@@ -232,6 +245,7 @@ Default: ({{.UserAttr}}={{.Username}})`,
 		"deny_null_bind": {
 			Type:        framework.TypeBool,
 			Default:     true,
+			Deprecated:  true,
 			Description: "Denies an unauthenticated LDAP bind request if the user's password is empty; defaults to true",
 			DisplayAttrs: &framework.DisplayAttributes{
 				Group: "LDAP Options",
@@ -285,6 +299,11 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Type:        framework.TypeBool,
 			Description: "If true, matching sAMAccountName attribute values will be allowed to login when upndomain is defined.",
 			Default:     false,
+		},
+		"schema": {
+			Type:        framework.TypeString,
+			Description: "LDAP schema type: 'ad' for Active Directory, 'openldap' for OpenLDAP. Determines root password rotation behavior.",
+			Default:     SchemaOpenLDAP,
 		},
 	}
 }
@@ -467,6 +486,10 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 	if _, ok := d.Raw["enable_samaccountname_login"]; ok || !hadExisting {
 		cfg.EnableSamaccountnameLogin = d.Get("enable_samaccountname_login").(bool)
 	}
+	if _, ok := d.Raw["schema"]; ok || !hadExisting {
+		rawSchema := d.Get("schema").(string)
+		cfg.Schema = NormalizedSchema(rawSchema)
+	}
 
 	return cfg, nil
 }
@@ -487,7 +510,7 @@ type ConfigEntry struct {
 	StartTLS                 bool   `json:"starttls"`
 	BindDN                   string `json:"binddn"`
 	BindPassword             string `json:"bindpass"`
-	DenyNullBind             bool   `json:"deny_null_bind"`
+	DenyNullBind             bool   `json:"deny_null_bind"` // deprecated
 	DiscoverDN               bool   `json:"discoverdn"`
 	TLSMinVersion            string `json:"tls_min_version"`
 	TLSMaxVersion            string `json:"tls_max_version"`
@@ -497,6 +520,7 @@ type ConfigEntry struct {
 	ConnectionTimeout        int    `json:"connection_timeout"` // deprecated: use RequestTimeout
 	DerefAliases             string `json:"dereference_aliases"`
 	MaximumPageSize          int    `json:"max_page_size"`
+	Schema                   string `json:"schema"`
 
 	// These json tags deviate from snake case because there was a past issue
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.
@@ -540,6 +564,7 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"dereference_aliases":         c.DerefAliases,
 		"max_page_size":               c.MaximumPageSize,
 		"enable_samaccountname_login": c.EnableSamaccountnameLogin,
+		"schema":                      NormalizedSchema(c.Schema), // LDAP schema type for password operations
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames
@@ -562,7 +587,7 @@ func validateCertificate(pemBlock []byte) error {
 	return nil
 }
 
-func (c *ConfigEntry) Validate() error {
+func (c *ConfigEntry) Validate(schemas ...string) error {
 	if len(c.Url) == 0 {
 		return errors.New("at least one url must be provided")
 	}
@@ -591,6 +616,15 @@ func (c *ConfigEntry) Validate() error {
 		if _, err := tls.X509KeyPair([]byte(c.ClientTLSCert), []byte(c.ClientTLSKey)); err != nil {
 			return errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
 		}
+	}
+	normalizedSchema := NormalizedSchema(c.Schema)
+	// use the default schema list if none provided
+	supportedSchemas := SupportedSchemas()
+	if len(schemas) > 0 {
+		supportedSchemas = schemas
+	}
+	if !strutil.StrListContains(supportedSchemas, normalizedSchema) {
+		return fmt.Errorf("unsupported schema type %q: must be one of %v", c.Schema, supportedSchemas)
 	}
 	return nil
 }
@@ -646,4 +680,12 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func NormalizedSchema(schema string) string {
+	normalizedSchema := strings.ToLower(strings.TrimSpace(schema))
+	if normalizedSchema == "" {
+		return SchemaOpenLDAP
+	}
+	return normalizedSchema
 }

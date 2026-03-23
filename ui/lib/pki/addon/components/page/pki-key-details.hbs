@@ -16,18 +16,18 @@
       />
       <div class="toolbar-separator"></div>
     {{/if}}
-    {{#if @key.privateKey}}
+    {{#if @key.private_key}}
       <DownloadButton
         class="toolbar-button"
         @color="secondary"
-        @filename="{{@key.backend}}-{{or @key.keyName 'private-key'}}"
-        @data={{@key.privateKey}}
+        @filename="{{this.backend}}-{{or @key.key_name 'private-key'}}"
+        @data={{@key.private_key}}
         @extension="pem"
         @text="Download private key"
       />
     {{/if}}
     {{#if @canEdit}}
-      <ToolbarLink @route="keys.key.edit" @models={{array @key.backend @key.keyId}} data-test-pki-key-edit>
+      <ToolbarLink @route="keys.key.edit" @models={{array this.backend @key.key_id}} data-test-pki-key-edit>
         Edit key
       </ToolbarLink>
     {{/if}}
@@ -35,7 +35,7 @@
 </Toolbar>
 
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{#if @key.privateKey}}
+  {{#if @key.private_key}}
     <div class="has-top-margin-m">
       <Hds::Alert data-test-pki-key-next-steps @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
         <A.Title>Next steps</A.Title>
@@ -43,16 +43,16 @@
       </Hds::Alert>
     </div>
   {{/if}}
-  {{#each @key.formFields as |attr|}}
+  {{#each this.displayFields as |field|}}
     <InfoTableRow
-      @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
-      @value={{get @key attr.name}}
-      @addCopyButton={{eq attr.name "keyId"}}
+      @label={{if (eq field "key_id") "Key ID" (capitalize (humanize field))}}
+      @value={{get @key field}}
+      @addCopyButton={{eq field "key_id"}}
     />
   {{/each}}
-  {{#if @key.privateKey}}
+  {{#if @key.private_key}}
     <InfoTableRow @label="Private key">
-      <CertificateCard @data={{@key.privateKey}} />
+      <CertificateCard @data={{@key.private_key}} />
     </InfoTableRow>
   {{/if}}
 </div>

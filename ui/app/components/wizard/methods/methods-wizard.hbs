@@ -1,0 +1,33 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Wizard @wizardId={{this.wizardId}} @isModal={{@isIntroModal}} @title="Authentication methods" @onDismiss={{this.onDismiss}}>
+  <:intro>
+    <Wizard::Methods::Intro />
+  </:intro>
+  <:introActions>
+    <Hds::ButtonSet>
+      <Hds::Button
+        @icon="plus"
+        @text="Enable a new method"
+        @route="vault.cluster.settings.auth.enable"
+        data-test-button="Enable a new method"
+      />
+      <Hds::Button
+        @color="secondary"
+        @text={{if @isIntroModal "Close" "Skip"}}
+        {{on "click" this.onDismiss}}
+        data-test-button="Skip"
+      />
+      <Hds::Link::Standalone
+        @icon="docs-link"
+        @iconPosition="trailing"
+        @text="View documentation"
+        @href={{doc-link "/vault/docs/auth"}}
+        class="margin-left-auto"
+      />
+    </Hds::ButtonSet>
+  </:introActions>
+</Wizard>

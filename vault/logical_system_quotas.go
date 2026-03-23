@@ -468,6 +468,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			}
 			// We will always error as we aren't supplying real data, but we're looking for "unsupported operation" in particular
 			_, err := authBackend.HandleRequest(ctx, &logical.Request{
+				Storage:   req.Storage,
 				Path:      "login",
 				Operation: logical.ResolveRoleOperation,
 			})

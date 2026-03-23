@@ -3,14 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::PageHeader class="page-header" as |PH|>
-  <PH.Breadcrumb>
-    <Hds::Breadcrumb data-test-breadcrumbs>
-      <Hds::Breadcrumb::Item @text="Secrets engines" @route="vault.cluster.secrets.backends" />
-      <Hds::Breadcrumb::Item @text="Enable secrets engine" @current={{true}} />
-    </Hds::Breadcrumb>
-  </PH.Breadcrumb>
-</Hds::PageHeader>
+<Page::Header>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if @pluginCatalogError}}
   <div class="has-bottom-padding-m">

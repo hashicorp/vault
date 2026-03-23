@@ -5,7 +5,7 @@
 
 <Page::PkiIssuerRotateRoot
   @oldRoot={{this.model.oldRoot}}
-  @newRootModel={{this.model.newRootModel}}
+  @certData={{this.model.certData}}
   @parsingErrors={{this.model.parsingErrors}}
   @breadcrumbs={{this.breadcrumbs}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details"}}

@@ -110,7 +110,7 @@ func Test_RegistryKeyCounts(t *testing.T) {
 			name:       "number of secrets plugins",
 			pluginType: consts.PluginTypeSecrets,
 			want:       19,
-			entWant:    3,
+			entWant:    5,
 		},
 	}
 	for _, tt := range tests {
@@ -257,10 +257,10 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 
 		var (
 			credentialBackends   []string
-			credentialBackendsRe = regexp.MustCompile(leading + `vault auth enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
+			credentialBackendsRe = regexp.MustCompile(leading + `vault auth enable (?:-.+ )*(?:"([a-zA-Z-]+)"|([a-zA-Z-]+))$`)
 
 			secretsBackends   []string
-			secretsBackendsRe = regexp.MustCompile(leading + `vault secrets enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
+			secretsBackendsRe = regexp.MustCompile(leading + `vault secrets enable (?:-.+ )*(?:"([a-zA-Z-]+)"|([a-zA-Z-]+))$`)
 		)
 
 		scanner := bufio.NewScanner(f)

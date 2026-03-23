@@ -3,24 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <Hds::Breadcrumb>
-      <Hds::Breadcrumb::Item @text="Keys" @route="vault.cluster.access.oidc.keys" />
-      <Hds::Breadcrumb::Item
-        @text="Details"
-        @route="vault.cluster.access.oidc.keys.key.details"
-        @model={{this.model.name}}
-      />
-      <Hds::Breadcrumb::Item @text="Edit Key" @current={{true}} />
-    </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Edit Key
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title="Edit Key">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Keys" route="vault.cluster.access.oidc.keys")
+        (hash label="Details" route="vault.cluster.access.oidc.keys.key.details" model=this.model.name)
+        (hash label="Edit Key")
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
 
 <Oidc::KeyForm
   @model={{this.model}}

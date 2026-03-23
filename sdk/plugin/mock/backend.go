@@ -149,5 +149,17 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 	}
 
 	b.internal = "rotated"
+
+	// Update rotation info to simulate rotation
+	cfg.SetRotationInfo(req.RotationInfo)
+
+	// Save updated config
+	entry, err := logical.StorageEntryJSON("config", cfg)
+	if err != nil {
+		return err
+	}
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return err
+	}
 	return nil
 }

@@ -62,10 +62,10 @@ scenario "smoke" {
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    // softhsm packages not available for leap/sles.
+    // softhsm packages not available for sles (at the time of development)
     exclude {
       seal   = ["pkcs11"]
-      distro = ["leap", "sles"]
+      distro = ["sles"]
     }
 
     // Testing in IPV6 mode is currently implemented for integrated Raft storage only
@@ -87,7 +87,6 @@ scenario "smoke" {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
       amzn   = provider.enos.ec2_user
-      leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
       ubuntu = provider.enos.ubuntu
@@ -179,6 +178,7 @@ scenario "smoke" {
       ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
       cluster_tag_key = global.vault_tag_key
       common_tags     = global.tags
+      instance_count  = 1
       vpc_id          = step.create_vpc.id
     }
   }
@@ -556,7 +556,7 @@ scenario "smoke" {
     description = <<-EOF
       Remove a follower and ensure that it's marked as removed and can be added back once its data has been deleted
     EOF
-    module      = semverconstraint(var.vault_product_version, ">=1.19.0-0") && matrix.backend == "raft" ? "vault_raft_remove_node_and_verify" : "vault_verify_removed_node_shim"
+    module      = matrix.backend == "raft" ? "vault_raft_remove_node_and_verify" : "vault_verify_removed_node_shim"
     depends_on = [
       step.create_vault_cluster,
       step.get_vault_cluster_ips,
@@ -683,13 +683,14 @@ scenario "smoke" {
     ]
 
     variables {
-      create_state      = step.verify_secrets_engines_create.state
-      hosts             = step.get_vault_cluster_ips.follower_hosts
-      ip_version        = matrix.ip_version
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_edition     = matrix.edition
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
+      create_state         = step.verify_secrets_engines_create.state
+      hosts                = step.get_vault_cluster_ips.follower_hosts
+      ip_version           = matrix.ip_version
+      vault_addr           = step.create_vault_cluster.api_addr_localhost
+      vault_edition        = matrix.edition
+      vault_install_dir    = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token     = step.create_vault_cluster.root_token
+      vault_audit_log_path = step.create_vault_cluster.audit_device_file_path
     }
   }
 

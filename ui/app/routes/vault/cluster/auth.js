@@ -4,13 +4,14 @@
  */
 
 import { service } from '@ember/service';
-import ClusterRouteBase from './cluster-route-base';
+import Route from '@ember/routing/route';
 import config from 'vault/config/environment';
 import { supportedTypes } from 'vault/utils/auth-form-helpers';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import AuthMethodResource from 'vault/resources/auth/method';
+import { REDIRECT } from 'vault/lib/route-paths';
 
-export default class AuthRoute extends ClusterRouteBase {
+export default class AuthRoute extends Route {
   queryParams = {
     authMount: { replace: true, refreshModel: true },
     wrapped_token: { refreshModel: true },
@@ -20,13 +21,15 @@ export default class AuthRoute extends ClusterRouteBase {
   @service auth;
   @service flashMessages;
   @service namespace;
+  @service router;
   @service store;
   @service version;
 
   beforeModel() {
-    return super.beforeModel().then(() => {
-      return this.version.fetchFeatures();
-    });
+    if (this.auth.currentToken) {
+      return this.router.replaceWith(REDIRECT);
+    }
+    return this.version.fetchFeatures();
   }
 
   async model(params) {
@@ -62,13 +65,14 @@ export default class AuthRoute extends ClusterRouteBase {
   redirect(model, transition) {
     if (model?.unwrapResponse) {
       // handles the transition
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       return this.controllerFor('vault.cluster.auth').loginAndTransition.perform(model.unwrapResponse);
     }
     const hasQueryParam = transition.to?.queryParams?.with;
     const isInvalid = !model.directLinkData;
     if (hasQueryParam && isInvalid) {
       // redirect user and clear out the query param if it's invalid
-      this.router.replaceWith(this.routeName, { queryParams: { authMount: null } });
+      return this.router.replaceWith(this.routeName, { queryParams: { authMount: '' } });
     }
   }
 
@@ -80,6 +84,7 @@ export default class AuthRoute extends ClusterRouteBase {
       return await this.auth.authSuccess(clusterId, authData);
     } catch (e) {
       const { message } = await this.api.parseError(e);
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       this.controllerFor('vault.cluster.auth').unwrapTokenError = message;
     }
   }
@@ -97,7 +102,6 @@ export default class AuthRoute extends ClusterRouteBase {
         const { default_auth_type, backup_auth_types } = response.data;
         return {
           defaultType: default_auth_type,
-          // TODO WIP backend PR consistently return empty array when no backup_auth_types
           backupTypes: backup_auth_types?.length ? backup_auth_types : null,
         };
       }
@@ -125,7 +129,7 @@ export default class AuthRoute extends ClusterRouteBase {
 
   /*
     In older versions of Vault, the "with" query param could refer to either the auth mount path or the type
-    (which may be the same, since the default mount path *is* the type). 
+    (which may be the same, since the default mount path *is* the type).
     For backward compatibility, we handle both scenarios.
     → If `authMount` matches a visible auth mount the method will assume that mount path to login and render as the default in the login form.
     → If `authMount` matches a supported auth type (and the mount does not have `listing_visibility="unauth"`), that type is preselected in the login form.

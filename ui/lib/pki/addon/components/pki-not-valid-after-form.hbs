@@ -22,9 +22,7 @@
         data-test-input="ttl"
         @onChange={{this.setAndBroadcastTtl}}
         @label="TTL"
-        @helperTextEnabled={{@attr.options.helperTextEnabled}}
-        @description={{@attr.helpText}}
-        @initialValue={{@model.ttl}}
+        @initialValue={{@form.data.ttl}}
         @hideToggle={{true}}
       >
         <label class="sr-only" for="ttl">Set relative certificate expiry with TTL</label>

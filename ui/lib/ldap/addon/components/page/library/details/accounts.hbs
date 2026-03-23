@@ -8,7 +8,14 @@
     <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l is-flex-half">
       <div class="is-flex-between">
         <h3 class="is-size-5 has-text-weight-semibold">All accounts</h3>
-        {{#if @library.canCheckOut}}
+        {{#if
+          (has-capability
+            @capabilities
+            "update"
+            pathKey="ldapLibraryCheckOut"
+            params=(hash backend=this.secretMountPath.currentPath name=@library.completeLibraryName)
+          )
+        }}
           <Hds::Button
             @text="Check-out"
             @color="tertiary"
@@ -42,6 +49,7 @@
   <div>
     <AccountsCheckedOut
       @libraries={{array @library}}
+      @capabilities={{@capabilities}}
       @statuses={{@statuses}}
       @onCheckInSuccess={{transition-to "vault.cluster.secrets.backend.ldap.libraries.library.details.accounts"}}
       data-test-checked-out-card

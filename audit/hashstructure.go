@@ -83,6 +83,13 @@ func hashRequest(ctx context.Context, salter Salter, req *request, hmacAccessor 
 		}
 	}
 
+	if req.SupplementalAuditData != nil {
+		err = hashMap(fn, req.SupplementalAuditData, nonHMACDataKeys)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -131,6 +138,13 @@ func hashResponse(ctx context.Context, salter Salter, resp *response, hmacAccess
 		}
 
 		err = hashMap(fn, resp.Data, nonHMACDataKeys)
+		if err != nil {
+			return err
+		}
+	}
+
+	if resp.SupplementalAuditData != nil {
+		err = hashMap(fn, resp.SupplementalAuditData, nonHMACDataKeys)
 		if err != nil {
 			return err
 		}

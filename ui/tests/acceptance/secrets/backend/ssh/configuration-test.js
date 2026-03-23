@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentURL, visit, waitFor } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, visit, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,7 +14,6 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { configUrl } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 
@@ -27,25 +26,18 @@ module('Acceptance | ssh | configuration', function (hooks) {
     return login();
   });
 
-  test('it should prompt configuration after mounting ssh engine', async function (assert) {
-    const sshPath = `ssh-${this.uid}`;
-    // in this test go through the full mount process. Bypass this step in later tests.
-    await visit('/vault/secrets-engines/enable');
-    await mountBackend('ssh', sshPath);
-    await click(SES.configTab);
-    assert.dom(GENERAL.emptyStateTitle).hasText('SSH not configured');
-    assert.dom(GENERAL.emptyStateActions).hasText('Configure SSH');
-    // cleanup
-    await runCmd(`delete sys/mounts/${sshPath}`);
-  });
-
   test('it should show error if old url is entered', async function (assert) {
     // we are intentionally not redirecting from the old url to the new one
     const sshPath = `ssh-${this.uid}`;
     await enablePage.enable('ssh', sshPath);
-    await click(SES.configTab);
     await visit(`/vault/settings/secrets/configure/${sshPath}`);
-    assert.dom(GENERAL.notFound).exists('shows page-error');
+    assert.dom(GENERAL.pageError.title(404)).hasText('ERROR 404 Not found');
+    assert
+      .dom(GENERAL.pageError.message)
+      .hasText(`Sorry, we were unable to find any content at settings/secrets/configure/${sshPath}.`);
+    assert
+      .dom(GENERAL.pageError.error)
+      .hasTextContaining('Double check the URL or return to the dashboard. Go to dashboard');
     // cleanup
     await runCmd(`delete sys/mounts/${sshPath}`);
   });
@@ -53,8 +45,8 @@ module('Acceptance | ssh | configuration', function (hooks) {
   test('it should show a public key after saving default configuration and allows you to delete public key', async function (assert) {
     const sshPath = `ssh-${this.uid}`;
     await enablePage.enable('ssh', sshPath);
-    await click(SES.configTab);
-    await click(SES.configure);
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Configure'));
     assert.strictEqual(
       currentURL(),
       `/vault/secrets-engines/${sshPath}/configuration/edit`,
@@ -64,7 +56,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets-engines/${sshPath}/configuration`,
+      `/vault/secrets-engines/${sshPath}/configuration/plugin-settings`,
       'navigates to the details page.'
     );
     // There is a delay in the backend for the public key to be generated, wait for it to complete by checking that the public key is displayed
@@ -88,10 +80,17 @@ module('Acceptance | ssh | configuration', function (hooks) {
     assert.dom(GENERAL.inputByAttr('public_key')).hasNoText('Public key is empty and reset');
     assert.dom(GENERAL.inputByAttr('generate_signing_key')).isChecked('Generate signing key is checked');
     await click(SES.viewBackend);
-    await click(SES.configTab);
-    assert
-      .dom(GENERAL.emptyStateTitle)
-      .hasText('SSH not configured', 'after deleting public key SSH is no longer configured');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Configure'));
+
+    await click(GENERAL.tabLink('general-settings'));
+    await click(GENERAL.tabLink('plugin-settings'));
+
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${sshPath}/configuration/edit`,
+      'should redirect to edit page since public key is no longer configured'
+    );
     // cleanup
     await runCmd(`delete sys/mounts/${sshPath}`);
   });
@@ -99,8 +98,8 @@ module('Acceptance | ssh | configuration', function (hooks) {
   test('it displays error if generate Signing key is not checked and no public and private keys', async function (assert) {
     const path = `ssh-configure-${this.uid}`;
     await enablePage.enable('ssh', path);
-    await click(SES.configTab);
-    await click(SES.configure);
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Configure'));
     assert
       .dom(GENERAL.inputByAttr('generate_signing_key'))
       .isChecked('generate_signing_key defaults to true');
@@ -110,15 +109,14 @@ module('Acceptance | ssh | configuration', function (hooks) {
       .dom(GENERAL.validationErrorByAttr('generate_signing_key'))
       .hasText('Provide a Public and Private key or set "Generate Signing Key" to true.');
     // visit the details page and confirm the public key is not shown
-    await visit(`/vault/secrets-engines/${path}/configuration`);
+    await visit(`/vault/secrets-engines/${path}/configuration/general-settings`);
+    await click(GENERAL.tabLink('plugin-settings'));
     assert.dom(GENERAL.infoRowLabel('Public key')).doesNotExist('Public key label does not exist');
-    assert.dom(GENERAL.emptyStateTitle).hasText('SSH not configured', 'SSH not configured');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
 
   test('it should show API error when SSH configuration read fails', async function (assert) {
-    assert.expect(1);
     const path = `ssh-${this.uid}`;
     const type = 'ssh';
     await enablePage.enable(type, path);
@@ -126,7 +124,17 @@ module('Acceptance | ssh | configuration', function (hooks) {
     this.server.get(configUrl(type, path), () => {
       return overrideResponse(400, { errors: ['bad request'] });
     });
-    await click(SES.configTab);
-    assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
+    await click(GENERAL.dropdownToggle('Manage'));
+    await click(GENERAL.menuItem('Configure'));
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.error',
+      'it redirects to the secrets backend error route'
+    );
+    assert.dom(GENERAL.pageError.title(400)).hasText('ERROR 400 Error');
+    assert
+      .dom(GENERAL.pageError.message)
+      .hasText('A problem has occurred. Check the Vault logs or console for more details.');
+    assert.dom(GENERAL.pageError.details).hasText('bad request');
   });
 });

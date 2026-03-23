@@ -54,7 +54,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(PAGE.breadcrumbAtIdx(1));
+      await click(PAGE.breadcrumbAtIdx(2));
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
     });
@@ -69,7 +69,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
-      await click(PAGE.breadcrumbAtIdx(3));
+      await click(PAGE.breadcrumbAtIdx(4));
       await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
     });
@@ -254,7 +254,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/new')}/details?version=1`,
         'Details url has version param'
       );
-      await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.breadcrumbAtIdx(3));
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(PAGE.list.item('new')).exists('Lists new secret in sub-dir');
     });
@@ -356,7 +356,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(PAGE.list.item()).doesNotExist('list view still has no items');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(PAGE.breadcrumbAtIdx(1));
+      await click(PAGE.breadcrumbAtIdx(2));
       assert.dom(PAGE.list.item()).doesNotExist('list view still has no items');
     });
     test('cancel on new version rolls back model (dr)', async function (assert) {
@@ -502,7 +502,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(PAGE.breadcrumbAtIdx(1));
+      await click(PAGE.breadcrumbAtIdx(2));
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
     });
@@ -649,7 +649,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(PAGE.breadcrumbAtIdx(1));
+      await click(PAGE.breadcrumbAtIdx(2));
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
     });
@@ -842,7 +842,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(PAGE.list.item()).doesNotExist('list view still has no items');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(PAGE.breadcrumbAtIdx(1));
+      await click(PAGE.breadcrumbAtIdx(2));
       assert.dom(PAGE.list.item()).doesNotExist('list view still has no items');
     });
     test('cancel on new version rolls back model (sc)', async function (assert) {
@@ -862,7 +862,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.secretTab('Secret'));
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
-      await click(PAGE.breadcrumbAtIdx(3));
+      await click(PAGE.breadcrumbAtIdx(4));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/first')}`,
@@ -1043,7 +1043,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/new')}/details`,
         'navigates to details'
       );
-      await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.breadcrumbAtIdx(3));
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
     });

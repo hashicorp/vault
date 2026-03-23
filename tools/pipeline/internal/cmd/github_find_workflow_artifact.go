@@ -15,7 +15,7 @@ var findWorkflowArtifact = &github.FindWorkflowArtifactReq{}
 
 func newGithubFindWorkflowArtifactCmd() *cobra.Command {
 	findWorkflowArtifactCmd := &cobra.Command{
-		Use:   "workflow-artifact [--pr 1234 --workflow build --pattern 'vault_[0-9]'",
+		Use:   "workflow-artifact [--pr 1234 | --branch main] [--workflow build --pattern 'vault_[0-9]' ]",
 		Short: "Find an artifact associated with a pull requests workflow run",
 		Long:  "Find an artifact associated with a pull requests workflow run",
 		RunE:  runFindGithubWorkflowArtifactCmd,
@@ -26,6 +26,7 @@ func newGithubFindWorkflowArtifactCmd() *cobra.Command {
 	findWorkflowArtifactCmd.PersistentFlags().StringVarP(&findWorkflowArtifact.Owner, "owner", "o", "hashicorp", "The Github organization")
 	findWorkflowArtifactCmd.PersistentFlags().StringVarP(&findWorkflowArtifact.Repo, "repo", "r", "vault", "The Github repository. Private repositories require auth via a GITHUB_TOKEN env var")
 	findWorkflowArtifactCmd.PersistentFlags().IntVarP(&findWorkflowArtifact.PullNumber, "pr", "p", 0, "The pull request to use as the trigger of the workflow")
+	findWorkflowArtifactCmd.PersistentFlags().StringVarP(&findWorkflowArtifact.Branch, "branch", "b", "", "The branch to use as the trigger of the workflow")
 	findWorkflowArtifactCmd.PersistentFlags().StringVarP(&findWorkflowArtifact.WorkflowName, "workflow", "w", "", "The name of the workflow the artifact will be associated with")
 	findWorkflowArtifactCmd.PersistentFlags().BoolVar(&findWorkflowArtifact.WriteToGithubOutput, "github-output", false, "Whether or not to write 'workflow-artifact' to $GITHUB_OUTPUT")
 

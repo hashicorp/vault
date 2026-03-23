@@ -1,0 +1,58 @@
+/**
+ * Copyright IBM Corp. 2016, 2025
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { action } from '@ember/object';
+import { getOwner } from '@ember/owner';
+import { service } from '@ember/service';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+
+import type RouterService from '@ember/routing/router-service';
+import type { CapabilitiesMap, EngineOwner } from 'vault/app-types';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import type ApiService from 'vault/services/api';
+import FlashMessageService from 'vault/services/flash-messages';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+
+interface Args {
+  secretsEngine: SecretsEngineResource;
+  scopes: string[];
+  capabilities: CapabilitiesMap;
+}
+
+export default class KmipScopesPageComponent extends Component<Args> {
+  @service('app-router') declare readonly router: RouterService;
+  @service declare readonly secretMountPath: SecretMountPath;
+  @service declare readonly api: ApiService;
+  @service declare readonly flashMessages: FlashMessageService;
+
+  @tracked scopeToDelete: string | null = null;
+
+  get mountPoint() {
+    return (getOwner(this) as EngineOwner).mountPoint;
+  }
+
+  get paginationQueryParams() {
+    return (page: number) => ({ page });
+  }
+
+  @action
+  onFilterChange(pageFilter: string) {
+    this.router.transitionTo({ queryParams: { pageFilter } });
+  }
+
+  @action
+  async deleteScope() {
+    try {
+      await this.api.secrets.kmipDeleteScope(this.scopeToDelete as string, this.secretMountPath.currentPath);
+      this.flashMessages.success(`Successfully deleted scope ${this.scopeToDelete}`);
+      this.scopeToDelete = null;
+      this.router.refresh();
+    } catch (error) {
+      const { message } = await this.api.parseError(error);
+      this.flashMessages.danger(`Error deleting scope ${this.scopeToDelete}: ${message}`);
+    }
+  }
+}

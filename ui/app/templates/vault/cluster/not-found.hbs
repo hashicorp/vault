@@ -3,4 +3,4 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<NotFound @model={{this.model}} />
+<Page::Error @error={{hash httpStatus=404 path=this.model.path}} @isFullPage={{true}} />

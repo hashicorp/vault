@@ -5,12 +5,14 @@ package issuing
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -27,19 +29,20 @@ const (
 )
 
 type RoleEntry struct {
-	LeaseMax                      string        `json:"lease_max"`
-	Lease                         string        `json:"lease"`
-	DeprecatedMaxTTL              string        `json:"max_ttl"`
-	DeprecatedTTL                 string        `json:"ttl"`
-	TTL                           time.Duration `json:"ttl_duration"`
-	MaxTTL                        time.Duration `json:"max_ttl_duration"`
-	AllowLocalhost                bool          `json:"allow_localhost"`
-	AllowedBaseDomain             string        `json:"allowed_base_domain"`
-	AllowedDomainsOld             string        `json:"allowed_domains,omitempty"`
-	AllowedDomains                []string      `json:"allowed_domains_list"`
-	AllowedDomainsTemplate        bool          `json:"allowed_domains_template"`
-	AllowBaseDomain               bool          `json:"allow_base_domain"`
-	AllowBareDomains              bool          `json:"allow_bare_domains"`
+	LeaseMax               string        `json:"lease_max"`
+	Lease                  string        `json:"lease"`
+	DeprecatedMaxTTL       string        `json:"max_ttl"`
+	DeprecatedTTL          string        `json:"ttl"`
+	TTL                    time.Duration `json:"ttl_duration"`
+	MaxTTL                 time.Duration `json:"max_ttl_duration"`
+	AllowLocalhost         bool          `json:"allow_localhost"`
+	AllowedBaseDomain      string        `json:"allowed_base_domain"`
+	AllowedDomainsOld      string        `json:"allowed_domains,omitempty"`
+	AllowedDomains         []string      `json:"allowed_domains_list"`
+	AllowedDomainsTemplate bool          `json:"allowed_domains_template"`
+	AllowBaseDomain        bool          `json:"allow_base_domain"`
+	AllowBareDomains       bool          `json:"allow_bare_domains"`
+	// Deprecated: AllowTokenDisplayName is retained for backward compatibility but has not been writeable since v0.4.0
 	AllowTokenDisplayName         bool          `json:"allow_token_displayname"`
 	AllowSubdomains               bool          `json:"allow_subdomains"`
 	AllowGlobDomains              bool          `json:"allow_glob_domains"`
@@ -289,6 +292,18 @@ func GetRole(ctx context.Context, s logical.Storage, n string) (*RoleEntry, erro
 	return &result, nil
 }
 
+// WriteRole persist a role to storage.
+func WriteRole(ctx context.Context, s logical.Storage, entry *RoleEntry) error {
+	jsonEntry, err := logical.StorageEntryJSON("role/"+entry.Name, entry)
+	if err != nil {
+		return err
+	}
+	if err := s.Put(ctx, jsonEntry); err != nil {
+		return err
+	}
+	return nil
+}
+
 type RoleModifier func(r *RoleEntry)
 
 func WithKeyUsage(keyUsages []string) RoleModifier {
@@ -405,6 +420,14 @@ func SignVerbatimRoleWithOpts(opts ...RoleModifier) *RoleEntry {
 	return entry
 }
 
+// ParseKeyUsagesFromRole returns a bitmap representation of the KeyUsages we'd set on a certificate
+// based on this role's configuration
+func ParseKeyUsagesFromRole(role *RoleEntry) x509.KeyUsage {
+	return parsing.ParseKeyUsages(role.KeyUsage)
+}
+
+// ParseExtKeyUsagesFromRole returns a bitmap representation of a certificate's ExtKeyUsages
+// using the certutil.CertExtKeyUsage based on the role's configuration
 func ParseExtKeyUsagesFromRole(role *RoleEntry) certutil.CertExtKeyUsage {
 	var parsedKeyUsages certutil.CertExtKeyUsage
 
@@ -425,31 +448,8 @@ func ParseExtKeyUsagesFromRole(role *RoleEntry) certutil.CertExtKeyUsage {
 	}
 
 	for _, k := range role.ExtKeyUsage {
-		switch strings.ToLower(strings.TrimSpace(k)) {
-		case "any":
-			parsedKeyUsages |= certutil.AnyExtKeyUsage
-		case "serverauth":
-			parsedKeyUsages |= certutil.ServerAuthExtKeyUsage
-		case "clientauth":
-			parsedKeyUsages |= certutil.ClientAuthExtKeyUsage
-		case "codesigning":
-			parsedKeyUsages |= certutil.CodeSigningExtKeyUsage
-		case "emailprotection":
-			parsedKeyUsages |= certutil.EmailProtectionExtKeyUsage
-		case "ipsecendsystem":
-			parsedKeyUsages |= certutil.IpsecEndSystemExtKeyUsage
-		case "ipsectunnel":
-			parsedKeyUsages |= certutil.IpsecTunnelExtKeyUsage
-		case "ipsecuser":
-			parsedKeyUsages |= certutil.IpsecUserExtKeyUsage
-		case "timestamping":
-			parsedKeyUsages |= certutil.TimeStampingExtKeyUsage
-		case "ocspsigning":
-			parsedKeyUsages |= certutil.OcspSigningExtKeyUsage
-		case "microsoftservergatedcrypto":
-			parsedKeyUsages |= certutil.MicrosoftServerGatedCryptoExtKeyUsage
-		case "netscapeservergatedcrypto":
-			parsedKeyUsages |= certutil.NetscapeServerGatedCryptoExtKeyUsage
+		if eku, ok := certutil.GetCertEKUFromString(k); ok {
+			parsedKeyUsages |= eku
 		}
 	}
 

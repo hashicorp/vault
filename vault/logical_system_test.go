@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	crand "crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -30,6 +31,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -240,6 +242,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":               resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Authorization"},
+				"allowed_response_headers":    []string{"Location"},
 			},
 			"local":                  false,
 			"seal_wrap":              false,
@@ -247,6 +250,25 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"plugin_version":         "",
 			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			"running_sha256":         "",
+		},
+		"agent-registry/": map[string]interface{}{
+			"description":             "agent registry",
+			"type":                    "agent_registry",
+			"external_entropy_access": false,
+			"accessor":                resp.Data["agent-registry/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["agent-registry/"].(map[string]interface{})["uuid"],
+			"config": map[string]interface{}{
+				"default_lease_ttl":           resp.Data["agent-registry/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["agent-registry/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Authorization"},
+			},
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -378,6 +400,7 @@ func TestSystemBackend_mount(t *testing.T) {
 				"max_lease_ttl":               resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Authorization"},
+				"allowed_response_headers":    []string{"Location"},
 			},
 			"local":                  false,
 			"seal_wrap":              false,
@@ -385,6 +408,25 @@ func TestSystemBackend_mount(t *testing.T) {
 			"plugin_version":         "",
 			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			"running_sha256":         "",
+		},
+		"agent-registry/": map[string]interface{}{
+			"description":             "agent registry",
+			"type":                    "agent_registry",
+			"external_entropy_access": false,
+			"accessor":                resp.Data["agent-registry/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["agent-registry/"].(map[string]interface{})["uuid"],
+			"config": map[string]interface{}{
+				"default_lease_ttl":           resp.Data["agent-registry/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["agent-registry/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Authorization"},
+			},
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
 		},
 		"prod/secret/": map[string]interface{}{
 			"description":             "",
@@ -4375,7 +4417,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 			}
 			if errExpected {
 				if !resp.IsError() {
-					t.Fatalf("bad: got error response: %#v", *resp)
+					t.Fatalf("bad: got no error response: %#v", *resp)
 				}
 				return nil
 			} else {
@@ -4433,6 +4475,13 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	req.Data["format"] = "hex"
 	doRequest(req, false, "hex", 24)
 
+	// Test PRNG with large output
+	req.Path = "tools/random/1024768"
+	req.Data["format"] = "hex"
+	req.Data["drbg"] = "hmacdrbg"
+	doRequest(req, false, "hex", 1024768)
+	delete(req.Data, "drbg")
+
 	// Test bad input/format
 	req.Path = "tools/random"
 	req.Data["format"] = "base92"
@@ -4443,7 +4492,12 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	doRequest(req, true, "", 0)
 
 	req.Data["format"] = "hex"
-	req.Data["bytes"] = maxBytes + 1
+	req.Data["bytes"] = random.APIMaxBytes + 1
+	doRequest(req, true, "", 0)
+
+	req.Path = "tools/random/seal"
+	req.Data["format"] = "hex"
+	req.Data["bytes"] = random.SealMaxBytes + 1
 	doRequest(req, true, "", 0)
 }
 
@@ -4555,6 +4609,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"max_lease_ttl":               resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 					"force_no_cache":              false,
 					"passthrough_request_headers": []string{"Authorization"},
+					"allowed_response_headers":    []string{"Location"},
 				},
 				"local":                  false,
 				"seal_wrap":              false,
@@ -4562,6 +4617,26 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"plugin_version":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 				"running_sha256":         "",
+			},
+			"agent-registry/": map[string]interface{}{
+				"description":             "agent registry",
+				"type":                    "agent_registry",
+				"external_entropy_access": false,
+
+				"accessor": resp.Data["secret"].(map[string]interface{})["agent-registry/"].(map[string]interface{})["accessor"],
+				"uuid":     resp.Data["secret"].(map[string]interface{})["agent-registry/"].(map[string]interface{})["uuid"],
+				"config": map[string]interface{}{
+					"default_lease_ttl":           resp.Data["secret"].(map[string]interface{})["agent-registry/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+					"max_lease_ttl":               resp.Data["secret"].(map[string]interface{})["agent-registry/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []string{"Authorization"},
+				},
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                map[string]string(nil),
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.DefaultBuiltinVersion,
 			},
 		},
 		"auth": map[string]interface{}{
@@ -5144,7 +5219,7 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			expectedStore: makeStorageMap(storageEntry(t, "testpolicy", "length = 20\n"+
 				"rule \"charset\" {\n"+
 				"	charset=\"abcdefghij\"\n"+
-				"}")),
+				"}", "")),
 		},
 		"base64 encoded": {
 			inputData: passwordPoliciesFieldData(map[string]interface{}{
@@ -5169,7 +5244,47 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 				"length = 20\n"+
 					"rule \"charset\" {\n"+
 					"	charset=\"abcdefghij\"\n"+
-					"}")),
+					"}", "")),
+		},
+		"invalid entropy source": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+				"policy": base64Encode(
+					"length = 20\n" +
+						"rule \"charset\" {\n" +
+						"	charset=\"abcdefghij\"\n" +
+						"}"),
+				"entropy_source": "bad",
+			}),
+
+			storage:       new(logical.InmemStorage),
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"seal source": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+				"policy": base64Encode(
+					"length = 20\n" +
+						"rule \"charset\" {\n" +
+						"	charset=\"abcdefghij\"\n" +
+						"}"),
+				"entropy_source": "seal",
+			}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					logical.HTTPContentType: "application/json",
+					logical.HTTPStatusCode:  http.StatusNoContent,
+				},
+			},
+			expectedStore: makeStorageMap(storageEntry(t, "testpolicy",
+				"length = 20\n"+
+					"rule \"charset\" {\n"+
+					"	charset=\"abcdefghij\"\n"+
+					"}", "seal")),
 		},
 	}
 
@@ -5255,7 +5370,7 @@ func TestHandlePoliciesPasswordGet(t *testing.T) {
 				"length = 20\n"+
 					"rule \"charset\" {\n"+
 					"	charset=\"abcdefghij\"\n"+
-					"}")),
+					"}", "")),
 
 			expectedResp: &logical.Response{
 				Data: map[string]interface{}{
@@ -5270,7 +5385,34 @@ func TestHandlePoliciesPasswordGet(t *testing.T) {
 				"length = 20\n"+
 					"rule \"charset\" {\n"+
 					"	charset=\"abcdefghij\"\n"+
-					"}")),
+					"}", "")),
+		},
+		"good value, seal source": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+
+			storage: makeStorage(t, storageEntry(t, "testpolicy",
+				"length = 20\n"+
+					"rule \"charset\" {\n"+
+					"	charset=\"abcdefghij\"\n"+
+					"}", "seal")),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"policy": "length = 20\n" +
+						"rule \"charset\" {\n" +
+						"	charset=\"abcdefghij\"\n" +
+						"}",
+					"entropy_source": "seal",
+				},
+			},
+			expectErr: false,
+			expectedStore: makeStorageMap(storageEntry(t, "testpolicy",
+				"length = 20\n"+
+					"rule \"charset\" {\n"+
+					"	charset=\"abcdefghij\"\n"+
+					"}", "seal")),
 		},
 	}
 
@@ -5370,7 +5512,7 @@ func TestHandlePoliciesPasswordDelete(t *testing.T) {
 				"length = 20\n"+
 					"rule \"charset\" {\n"+
 					"	charset=\"abcdefghij\"\n"+
-					"}")),
+					"}", "")),
 		},
 	}
 
@@ -5578,6 +5720,20 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 		}
 
 		tests := map[string]testCase{
+			"success via seal": {
+				expectErr: !constants.IsEnterprise, // Only works on ENT, CE seal is an unknown source
+				timeout:   1 * time.Second,         // Timeout immediately
+
+				inputData: passwordPoliciesFieldData(map[string]interface{}{
+					"name": "testpolicy",
+				}),
+
+				storage: makeStorage(t, storageEntry(t, "testpolicy",
+					"length = 20\n"+
+						"rule \"charset\" {\n"+
+						"	charset=\"abcdefghij\"\n"+
+						"}", "seal")),
+			},
 			"missing policy name": {
 				inputData: passwordPoliciesFieldData(map[string]interface{}{}),
 
@@ -5593,8 +5749,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 
 				storage: new(logical.InmemStorage).FailGet(true),
 
-				expectedResp: nil,
-				expectErr:    true,
+				expectErr: true,
 			},
 			"policy does not exist": {
 				inputData: passwordPoliciesFieldData(map[string]interface{}{
@@ -5603,18 +5758,16 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 
 				storage: new(logical.InmemStorage),
 
-				expectedResp: nil,
-				expectErr:    true,
+				expectErr: true,
 			},
 			"policy improperly saved": {
 				inputData: passwordPoliciesFieldData(map[string]interface{}{
 					"name": "testpolicy",
 				}),
 
-				storage: makeStorage(t, storageEntry(t, "testpolicy", "badpolicy")),
+				storage: makeStorage(t, storageEntry(t, "testpolicy", "badpolicy", "")),
 
-				expectedResp: nil,
-				expectErr:    true,
+				expectErr: true,
 			},
 			"failed to generate": {
 				timeout: 0 * time.Second, // Timeout immediately
@@ -5626,10 +5779,9 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 					"length = 20\n"+
 						"rule \"charset\" {\n"+
 						"	charset=\"abcdefghij\"\n"+
-						"}")),
+						"}", "")),
 
-				expectedResp: nil,
-				expectErr:    true,
+				expectErr: true,
 			},
 		}
 
@@ -5642,17 +5794,18 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 					Storage: test.storage,
 				}
 
-				b := &SystemBackend{}
+				b := &SystemBackend{
+					Core: &Core{
+						secureRandomReader: crand.Reader,
+					},
+				}
 
-				actualResp, err := b.handlePoliciesPasswordGenerate(ctx, req, test.inputData)
+				_, err := b.handlePoliciesPasswordGenerate(ctx, req, test.inputData)
 				if test.expectErr && err == nil {
 					t.Fatalf("err expected, got nil")
 				}
 				if !test.expectErr && err != nil {
 					t.Fatalf("no error expected, got: %s", err)
-				}
-				if !reflect.DeepEqual(actualResp, test.expectedResp) {
-					t.Fatalf("Actual response: %#v\nExpected response: %#v", actualResp, test.expectedResp)
 				}
 			})
 		}
@@ -5666,7 +5819,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 			"length = 20\n"+
 				"rule \"charset\" {\n"+
 				"	charset=\"abcdefghij\"\n"+
-				"}")
+				"}", "")
 		storage := makeStorage(t, policyEntry)
 
 		inputData := passwordPoliciesFieldData(map[string]interface{}{
@@ -5751,17 +5904,8 @@ func assertIsString(t *testing.T, val interface{}, f string, vals ...interface{}
 
 func passwordPoliciesFieldData(raw map[string]interface{}) *framework.FieldData {
 	return &framework.FieldData{
-		Raw: raw,
-		Schema: map[string]*framework.FieldSchema{
-			"name": {
-				Type:        framework.TypeString,
-				Description: "The name of the password policy.",
-			},
-			"policy": {
-				Type:        framework.TypeString,
-				Description: "The password policy",
-			},
-		},
+		Raw:    raw,
+		Schema: passwordPolicySchema,
 	}
 }
 
@@ -5779,11 +5923,12 @@ func toJson(t *testing.T, val interface{}) []byte {
 	return b
 }
 
-func storageEntry(t *testing.T, key string, policy string) *logical.StorageEntry {
+func storageEntry(t *testing.T, key string, policy string, entropySource string) *logical.StorageEntry {
 	return &logical.StorageEntry{
 		Key: getPasswordPolicyKey(key),
 		Value: toJson(t, passwordPolicyConfig{
-			HCLPolicy: policy,
+			HCLPolicy:     policy,
+			EntropySource: entropySource,
 		}),
 	}
 }

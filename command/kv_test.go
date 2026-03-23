@@ -88,7 +88,7 @@ func kvPatchWithRetry(t *testing.T, client *api.Client, args []string, stdin *io
 func TestKVPutCommand(t *testing.T) {
 	t.Parallel()
 
-	v2ExpectedFields := []string{"created_time", "custom_metadata", "deletion_time", "deletion_time", "version"}
+	v2ExpectedFields := []string{"created_time", "custom_metadata", "deletion_time", "version"}
 
 	cases := []struct {
 		name       string
@@ -744,7 +744,9 @@ func TestKVMetadataGetCommand(t *testing.T) {
 	}
 
 	expectedVersionFields := []string{
+		"created_by",
 		"created_time", // field is redundant
+		"deleted_by",
 		"deletion_time",
 		"destroyed",
 	}

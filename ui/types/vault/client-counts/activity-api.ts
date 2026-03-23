@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { CLIENT_TYPES, ClientFilters, EXPORT_CLIENT_TYPES } from 'core/utils/client-count-utils';
+import { CLIENT_TYPES, ClientFilters, EXPORT_CLIENT_TYPES } from 'core/utils/client-counts/helpers';
 
 // At time of writing ClientTypes are: 'acme_clients' | 'clients' | 'entity_clients' | 'non_entity_clients' | 'secret_syncs'
 export type ClientTypes = (typeof CLIENT_TYPES)[number];
@@ -45,7 +45,7 @@ export interface MountClients extends TotalClients {
   namespace_path: string;
 }
 
-export interface ByMonthClients extends TotalClients {
+export interface ByMonthClients extends TotalClientsSometimes {
   timestamp: string;
   namespaces: ByNamespaceClients[];
   new_clients: ByMonthNewClients;
@@ -125,3 +125,11 @@ export interface Counts {
   non_entity_clients: number;
   secret_syncs: number;
 }
+
+export type Activity = {
+  start_time?: Date;
+  end_time?: Date;
+  total: TotalClients;
+  by_month: ByMonthClients[];
+  by_namespace: ByNamespaceClients[];
+};

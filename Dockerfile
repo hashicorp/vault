@@ -33,12 +33,13 @@ COPY ${LICENSE_SOURCE} ${LICENSE_DEST}
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
-ENV VERSION=$VERSION
 
 # Create a non-root user to run the software.
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 
-RUN apk add --no-cache libcap su-exec dumb-init tzdata
+# NOTE: zlib is only here to resolve ALPINE-CVE-2026-27171, it can be removed
+# when when our Alpine release is >= 3.23.4
+RUN apk update && apk add --upgrade --no-cache libcap su-exec dumb-init tzdata zlib
 
 COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/
 
@@ -72,6 +73,8 @@ EXPOSE 8200
 COPY .release/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]
 
+# Use the Vault user as the default user for starting this container.
+USER ${NAME}
 
 # # By default you'll get a single-node development server that stores everything
 # # in RAM and bootstraps itself. Don't use this configuration for production.
@@ -79,7 +82,7 @@ CMD ["server", "-dev"]
 
 
 ## UBI DOCKERFILE ##
-FROM registry.access.redhat.com/ubi8/ubi-minimal AS ubi
+FROM registry.access.redhat.com/ubi10/ubi-minimal AS ubi
 
 ARG BIN_NAME
 # NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
@@ -107,7 +110,6 @@ LABEL name="Vault" \
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
-ENV VERSION=$VERSION
 
 # Copy the license file as per Legal requirement
 COPY ${LICENSE_SOURCE} ${LICENSE_DEST}/
@@ -166,7 +168,7 @@ COPY .release/docker/ubi-docker-entrypoint.sh /usr/local/bin/docker-entrypoint.s
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Use the Vault user as the default user for starting this container.
-USER vault
+USER ${NAME}
 
 # # By default you'll get a single-node development server that stores everything
 # # in RAM and bootstraps itself. Don't use this configuration for production.

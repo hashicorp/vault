@@ -34,7 +34,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 )
 
-const DockerAPIVersion = "1.40"
+const DockerAPIVersion = "1.44"
 
 type Runner struct {
 	DockerAPI  *client.Client
@@ -63,6 +63,8 @@ type RunOptions struct {
 	LogStderr              io.Writer
 	LogStdout              io.Writer
 	VolumeNameToMountPoint map[string]string
+	Resources              container.Resources
+	ExtraHosts             []string
 }
 
 func NewDockerAPI() (*client.Client, error) {
@@ -394,6 +396,8 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 	hostConfig := &container.HostConfig{
 		AutoRemove:      !d.RunOptions.DoNotAutoRemove,
 		PublishAllPorts: true,
+		Resources:       d.RunOptions.Resources,
+		ExtraHosts:      d.RunOptions.ExtraHosts,
 	}
 	if len(d.RunOptions.Capabilities) > 0 {
 		hostConfig.CapAdd = d.RunOptions.Capabilities
@@ -439,7 +443,7 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 	}
 
 	for from, to := range d.RunOptions.CopyFromTo {
-		if err := copyToContainer(ctx, d.DockerAPI, c.ID, from, to); err != nil {
+		if err := CopyToContainer(ctx, d.DockerAPI, c.ID, from, to); err != nil {
 			_ = d.DockerAPI.ContainerRemove(ctx, c.ID, container.RemoveOptions{})
 			return nil, err
 		}
@@ -496,7 +500,7 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 
 func (d *Runner) RefreshFiles(ctx context.Context, containerID string) error {
 	for from, to := range d.RunOptions.CopyFromTo {
-		if err := copyToContainer(ctx, d.DockerAPI, containerID, from, to); err != nil {
+		if err := CopyToContainer(ctx, d.DockerAPI, containerID, from, to); err != nil {
 			// TODO too drastic?
 			_ = d.DockerAPI.ContainerRemove(ctx, containerID, container.RemoveOptions{})
 			return err
@@ -551,7 +555,7 @@ func (d *Runner) Restart(ctx context.Context, containerID string) error {
 	return d.DockerAPI.NetworkConnect(ctx, d.RunOptions.NetworkID, containerID, ends)
 }
 
-func copyToContainer(ctx context.Context, dapi *client.Client, containerID, from, to string) error {
+func CopyToContainer(ctx context.Context, dapi *client.Client, containerID, from, to string) error {
 	srcInfo, err := archive.CopyInfoSourcePath(from, false)
 	if err != nil {
 		return fmt.Errorf("error copying from source %q: %v", from, err)

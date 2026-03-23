@@ -4,20 +4,16 @@
  */
 
 import Model, { attr, belongsTo } from '@ember-data/model';
-import { computed } from '@ember/object'; // eslint-disable-line
-import { equal } from '@ember/object/computed'; // eslint-disable-line
-import { withModelValidations } from 'vault/decorators/model-validations';
+import { ALL_ENGINES, isAddonEngine } from 'core/utils/all-engines-metadata';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
-import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
-import { ALL_ENGINES, isAddonEngine } from 'vault/utils/all-engines-metadata';
+import { withModelValidations } from 'vault/decorators/model-validations';
 import engineDisplayData from 'vault/helpers/engines-display-data';
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { INTERNAL_ENGINE_TYPES } from 'vault/utils/all-engines-metadata';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 
 const LINKED_BACKENDS = supportedSecretBackends();
-
-// identity will be managed separately and the inclusion
-// of the system backend is an implementation detail
-const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
 const validations = {
   path: [
@@ -110,7 +106,8 @@ export default class SecretEngineModel extends Model {
 
   /* GETTERS */
   get isV2KV() {
-    return this.version === 2 && (this.engineType === 'kv' || this.engineType === 'generic');
+    const effectiveType = getEffectiveEngineType(this.engineType);
+    return this.version === 2 && ['kv', 'generic'].includes(effectiveType);
   }
 
   get attrs() {
@@ -134,7 +131,7 @@ export default class SecretEngineModel extends Model {
   }
 
   get shouldIncludeInList() {
-    return !LIST_EXCLUDED_BACKENDS.includes(this.engineType);
+    return !INTERNAL_ENGINE_TYPES.includes(this.engineType);
   }
 
   get isSupportedBackend() {
@@ -142,11 +139,12 @@ export default class SecretEngineModel extends Model {
   }
 
   get backendLink() {
-    if (this.engineType === 'database') {
+    const effectiveType = getEffectiveEngineType(this.engineType);
+    if (effectiveType === 'database') {
       return 'vault.cluster.secrets.backend.overview';
     }
-    if (isAddonEngine(this.engineType, this.version)) {
-      return `vault.cluster.secrets.backend.${engineDisplayData(this.engineType).engineRoute}`;
+    if (isAddonEngine(effectiveType, this.version)) {
+      return `vault.cluster.secrets.backend.${engineDisplayData(effectiveType).engineRoute}`;
     }
     if (this.isV2KV) {
       // if it's KV v2 but not registered as an addon, it's type generic
@@ -156,10 +154,11 @@ export default class SecretEngineModel extends Model {
   }
 
   get backendConfigurationLink() {
-    if (isAddonEngine(this.engineType, this.version)) {
-      return `vault.cluster.secrets.backend.${this.engineType}.configuration`;
+    const effectiveType = getEffectiveEngineType(this.engineType);
+    if (isAddonEngine(effectiveType, this.version)) {
+      return `vault.cluster.secrets.backend.${effectiveType}.configuration`;
     }
-    return `vault.cluster.secrets.backend.configuration`;
+    return `vault.cluster.secrets.backend.configuration.general-settings`;
   }
 
   get localDisplay() {
@@ -203,6 +202,7 @@ export default class SecretEngineModel extends Model {
       'config.auditNonHmacResponseKeys',
       'config.passthroughRequestHeaders',
       'config.allowedResponseHeaders',
+      'config.plugin_version',
     ];
 
     switch (this.engineType) {

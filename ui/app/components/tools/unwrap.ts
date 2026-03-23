@@ -29,6 +29,10 @@ export default class ToolsUnwrap extends Component {
   @tracked unwrapDetails = {};
   @tracked errorMessage = '';
 
+  get breadcrumbs() {
+    return [{ label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' }, { label: 'Unwrap data' }];
+  }
+
   @action
   reset() {
     this.token = '';

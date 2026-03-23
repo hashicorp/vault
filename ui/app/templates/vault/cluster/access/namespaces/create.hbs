@@ -4,19 +4,13 @@
 }}
 
 {{#if (has-feature "Namespaces")}}
-  <PageHeader as |p|>
-    <p.top>
-      <Hds::Breadcrumb>
-        <Hds::Breadcrumb::Item @text="Namespaces" @route="vault.cluster.access.namespaces.index" />
-        <Hds::Breadcrumb::Item @text="Create" @current={{true}} />
-      </Hds::Breadcrumb>
-    </p.top>
-    <p.levelLeft>
-      <h1 class="title is-3">
-        Create a Namespace
-      </h1>
-    </p.levelLeft>
-  </PageHeader>
+  <Page::Header @title="Create a Namespace">
+    <:breadcrumbs>
+      <Page::Breadcrumbs
+        @breadcrumbs={{array (hash label="Namespaces" route="vault.cluster.access.namespaces.index") (hash label="Create")}}
+      />
+    </:breadcrumbs>
+  </Page::Header>
   <EditForm
     @model={{this.model}}
     @onSave={{action "onSave"}}

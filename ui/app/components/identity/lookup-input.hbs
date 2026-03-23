@@ -9,9 +9,8 @@
       <div class="select is-fullwidth">
         <select
           name="param"
-          id="param"
-          onchange={{action (mut this.param) value="target.value"}}
-          aria-label="lookup by alias name"
+          aria-label="Lookup parameter"
+          {{on "change" (action (mut this.param) value="target.value")}}
           data-test-select="lookup-param-select"
         >
           {{#each (array "alias name" "name" "id" "alias id") as |paramOption|}}
@@ -29,7 +28,13 @@
       {{/if}}
     </div>
     <div class="control is-expanded">
-      <Input class="input" @value={{this.paramValue}} placeholder={{capitalize this.param}} data-test-input="param-value" />
+      <Input
+        aria-label="Lookup value"
+        class="input"
+        @value={{this.paramValue}}
+        placeholder={{capitalize this.param}}
+        data-test-input="param-value"
+      />
     </div>
     <div class="control">
       <Hds::Button @text="Lookup" @color="secondary" class="is-hidden" type="submit" data-test-submit />

@@ -5,7 +5,6 @@
 
 import { debug } from '@ember/debug';
 import { action } from '@ember/object';
-import { guidFor } from '@ember/object/internals';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import autosize from 'autosize';
@@ -26,7 +25,6 @@ import autosize from 'autosize';
  *
  */
 export default class MaskedInputComponent extends Component {
-  textareaId = 'textarea-' + guidFor(this);
   @tracked showValue = false;
   @tracked modalOpen = false;
   @tracked stringifyDownload = false;
@@ -36,11 +34,10 @@ export default class MaskedInputComponent extends Component {
     if (!this.args.onChange && !this.args.displayOnly) {
       debug('onChange is required for editable Masked Input!');
     }
-    this.updateSize();
   }
 
-  updateSize() {
-    autosize(document.getElementById(this.textareaId));
+  updateSize(element) {
+    autosize(element);
   }
 
   @action onChange(evt) {

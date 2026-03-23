@@ -52,7 +52,7 @@ jobs:
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
       VAULT_METADATA: ent
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set product version and revision
         # If the Vault version and revision are not provided as workflow inputs, incase of
         # testing local artifact, the environment variables ENOS_VAR_vault_product_version
@@ -64,20 +64,28 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      # Install additional tools like gotestsum that are required for Enos scenarios
+      - uses: ./.github/actions/install-tools
       - name: Configure Git
         run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}:@github.com".insteadOf "https://github.com"
       - name: Set up node
-        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          node-version: 14
-          cache-dependency-path: ui/yarn.lock
-      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+          node-version-file: './ui/package.json'
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
+
+      - name: Install PNPM
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+        with:
+          package_json_file: './ui/package.json'
+      - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
         with:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
@@ -85,7 +93,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
-      - uses: hashicorp/action-setup-enos@dd06687d36a75db090d990790a8cf06cc0b238c3 # v1.39
+      - uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Prepare scenario dependencies
@@ -108,13 +116,13 @@ jobs:
         run: |
           bash -x ./scripts/gha_enos_logs.sh "${{ steps.scenario-deps.outputs.logsdir }}" "${{ inputs.scenario }}" "${{ inputs.distro }}" "${{ inputs.artifact-type }}" 2>/dev/null
           find "${{ steps.scenario-deps.outputs.logsdir }}" -maxdepth 0 -empty -exec rmdir {} \;
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ always() }}
         with:
           name: enos-scenario-logs
           path: ${{ steps.scenario-deps.outputs.logsdir }}
           retention-days: 1
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ always() }}
         with:
           name: enos-debug-data-logs

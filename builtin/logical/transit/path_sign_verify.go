@@ -409,6 +409,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 	batchInputRaw := d.Raw["batch_input"]
 	var batchInputItems []batchRequestSignItem
+	successfulRequests := 0
 	if batchInputRaw != nil {
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
@@ -458,6 +459,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			response[i].Signature = sig.Signature
 			response[i].PublicKey = sig.PublicKey
 			response[i].KeyVersion = keyVersion
+			successfulRequests++
 		}
 	}
 
@@ -488,6 +490,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		if len(response[0].PublicKey) > 0 {
 			resp.Data["public_key"] = response[0].PublicKey
 		}
+	}
+
+	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+		b.Logger().Error("failed to track transit sign request count", "error", err.Error())
 	}
 
 	return resp, nil
@@ -694,6 +700,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	response := make([]batchResponseVerifyItem, len(batchInputItems))
 
+	successfulRequests := 0
 	for i, item := range batchInputItems {
 		pva, err := b.getPolicyVerifyArgs(ctx, p, apiArgs, item)
 		if err != nil {
@@ -716,6 +723,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 			}
 		} else {
 			response[i].Valid = valid
+			successfulRequests++
 		}
 	}
 
@@ -741,6 +749,10 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		resp.Data = map[string]interface{}{
 			"valid": response[0].Valid,
 		}
+	}
+
+	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+		b.Logger().Error("failed to track transit sign verify request count", "error", err.Error())
 	}
 
 	return resp, nil

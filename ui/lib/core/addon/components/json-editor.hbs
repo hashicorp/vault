@@ -19,17 +19,18 @@
     </Hds::CodeBlock>
   {{else}}
     <Hds::CodeEditor
-      data-test-component="code-mirror-modifier"
       @ariaLabel={{this.ariaLabel}}
       @extraKeys={{@extraKeys}}
       @hasCopyButton={{true}}
-      @language={{this.mode}}
+      @hasFullScreenButton={{@hasFullScreenButton}}
       @isLintingEnabled={{eq this.mode "json"}}
-      @value={{or @value @example}}
+      @language={{this.mode}}
       @onBlur={{@onBlur}}
       @onInput={{@valueUpdated}}
       @onLint={{@onLint}}
       @onSetup={{this.onSetup}}
+      @value={{or @value @example}}
+      data-test-component="code-mirror-modifier"
       as |CE|
     >
       {{#if this.getShowToolbar}}
@@ -42,6 +43,12 @@
         {{#if @helpText}}
           <CE.Description>
             {{@helpText}}
+          </CE.Description>
+        {{/if}}
+
+        {{#if (has-block "description")}}
+          <CE.Description>
+            {{yield to="description"}}
           </CE.Description>
         {{/if}}
 

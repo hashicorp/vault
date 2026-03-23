@@ -3,19 +3,12 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <Hds::Breadcrumb>
-      <Hds::Breadcrumb::Item @text="Auth Methods" @route="vault.cluster.access.methods" data-test-access-methods />
-      <Hds::Breadcrumb::Item @text={{@methodModel.id}} @current={{true}} />
-    </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{@methodModel.id}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title={{@methodModel.id}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
+
 {{#let (tabs-for-auth-section @methodModel "authConfig" @paths) as |tabs|}}
   {{#if tabs.length}}
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
@@ -54,16 +47,20 @@
   as |list|
 >
   {{#if list.empty}}
-    <list.empty
-      @title="No {{pluralize @itemType}} yet"
-      @message="A list of {{pluralize @itemType}} will be listed here. Create your first {{@itemType}} to get started."
-    >
-      <Hds::Link::Standalone
-        @icon="plus"
-        @text="Create {{singularize @itemType}}"
-        @route="vault.cluster.access.method.item.create"
-        @models={{array @methodModel.id @itemType}}
+    <list.empty class="top-padding-32 is-marginless" data-test-list-view-empty-state as |A|>
+      <A.Header @title="No {{pluralize @itemType}} yet" @titleTag="h2" data-test-empty-state-title />
+      <A.Body
+        @text="A list of {{pluralize @itemType}} will be listed here. Create your first {{@itemType}} to get started."
+        data-test-empty-state-message
       />
+      <A.Footer data-test-empty-state-actions as |F|>
+        <F.LinkStandalone
+          @icon="plus"
+          @text="Create {{singularize @itemType}}"
+          @route="vault.cluster.access.method.item.create"
+          @models={{array @methodModel.id @itemType}}
+        />
+      </A.Footer>
     </list.empty>
   {{else if list.item}}
     <ListItem @linkParams={{array "vault.cluster.access.method.item.show" @methodModel.id @itemType list.item.id}} as |Item|>

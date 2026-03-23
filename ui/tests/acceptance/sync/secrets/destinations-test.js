@@ -41,7 +41,8 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
         },
       };
     });
-    await click(ts.navLink('Secrets Sync'));
+    await click(GENERAL.navLink('Secrets'));
+    await click(GENERAL.navLink('Secrets sync'));
     await click(ts.cta.button);
     await click(ts.selectType('aws-sm'));
     await fillIn(ts.inputByAttr('name'), 'foo');
@@ -71,7 +72,8 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
         };
       });
 
-      await click(ts.navLink('Secrets Sync'));
+      await click(GENERAL.navLink('Secrets'));
+      await click(GENERAL.navLink('Secrets sync'));
       await click(ts.cta.button);
       await click(ts.selectType(type));
 

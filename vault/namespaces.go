@@ -18,6 +18,13 @@ func namespaceByID(ctx context.Context, nsID string, c *Core) (*namespace.Namesp
 	return nil, namespace.ErrNoNamespace
 }
 
+func namespaceByPath(ctx context.Context, nsPath string, c *Core) (*namespace.Namespace, error) {
+	if nsPath == "" {
+		return namespace.RootNamespace, nil
+	}
+	return nil, namespace.ErrNoNamespace
+}
+
 var NamespaceRegister func(context.Context, *namespace.Namespace, *Core) error = namespaceRegister
 
 func namespaceRegister(ctx context.Context, ns *namespace.Namespace, c *Core) error {

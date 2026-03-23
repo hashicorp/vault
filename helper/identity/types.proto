@@ -75,6 +75,13 @@ message Group {
   // group.
   // @inject_tag: sentinel:"-"
   string namespace_id = 13;
+
+  // ScimClientId records the unique identifier of the SCIM client that
+  // originally created this Group. This establishes a strict ownership model,
+  // ensuring that authoritative lifecycle operations (like updates and deletes by
+  // an IGA) can only be performed by the client that owns the resource.
+  // @inject_tag: sentinel:"-"
+  string scim_client_id = 14;
 }
 
 // LocalAliases holds the aliases belonging to an entity that are local to the
@@ -155,6 +162,21 @@ message Entity {
   // entity.
   // @inject_tag: sentinel:"-"
   string namespace_id = 12;
+
+  // ExternalId stores the `externalId` provided by a SCIM client.
+  // This field serves as the canonical correlation key, linking this Vault Entity
+  // to its representation in the external identity management system. It is
+  // crucial for preventing the creation of duplicate entities when multiple
+  // SCIM clients provision the same user.
+  // @inject_tag: sentinel:"-"
+  string external_id = 13;
+
+  // ScimClientId records the unique identifier of the SCIM client that
+  // originally created this Entity. This establishes a strict ownership model,
+  // ensuring that authoritative lifecycle operations (like updates and deletes by
+  // an IGA) can only be performed by the client that owns the resource.
+  // @inject_tag: sentinel:"-"
+  string scim_client_id = 14;
 }
 
 // Alias represents the alias that gets stored inside of the
@@ -233,6 +255,61 @@ message Alias {
   // during invalidation of local aliases in performance standbys.
   // @inject_tag: sentinel:"-"
   string local_bucket_key = 14;
+
+  // ScimClientId records the unique identifier of the SCIM client that
+  // originally created this Alias. This establishes a strict ownership model,
+  // ensuring that authoritative lifecycle operations (like updates and deletes by
+  // an IGA) can only be performed by the client that owns the resource.
+  // @inject_tag: sentinel:"-"
+  string scim_client_id = 15;
+
+  // external_id is the unique external identifier for an entity managed via
+  // an external IdP. This field does not always map 1:1 to a claim external_id.
+  // This mapping is done via configuration.
+  string external_id = 16;
+
+  // issuer is the issuer claim for this alias
+  string issuer = 17;
+}
+
+// ScimClient defines the stored configuration for a single SCIM client.
+// This configuration links a client's identity within Vault to its
+// capabilities within the SCIM server.
+message ScimClient {
+  // ClientId is a unique identifier for this specific SCIM
+  // client configuration.
+  // @inject_tag: sentinel:"-"
+  string client_id = 1;
+
+  // AccessGrantPrincipal is the Vault Entity ID that represents the SCIM
+  // client application itself. This is the principal that will be granted the
+  // necessary permissions to perform SCIM operations.
+  // @inject_tag: sentinel:"-"
+  string access_grant_principal = 2;
+
+  // AliasMountAccessor is an optional field that specifies the mount accessor
+  // of an auth method where login aliases should be created for provisioned
+  // users. When set, the SCIM client will create both a Vault entity and an
+  // alias on the specified auth mount for each provisioned user. When empty,
+  // only entities are created.
+  // @inject_tag: sentinel:"-"
+  string alias_mount_accessor = 3;
+
+  // ClientName is a user-defined identifier for this specific SCIM
+  // client configuration. (e.g., 'Okta-Prod', 'SailPoint-Dev').
+  // @inject_tag: sentinel:"-"
+  string client_name = 4;
+
+  // NamespaceID is the identifier of the namespace to which this entity
+  // belongs to. Do not return this value over the API when reading the
+  // entity.
+  // @inject_tag: sentinel:"-"
+  string namespace_id = 5;
+
+  // Deleting indicates that the SCIM client is in the process of being deleted.
+  // This allows cascading cleanup to be eventually handled even if there are failures during the deletion process.
+  // @inject_tag: sentinel:"-"
+  bool deleting = 6;
 }
 
 // Deprecated. Retained for backwards compatibility.

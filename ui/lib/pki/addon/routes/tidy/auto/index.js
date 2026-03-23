@@ -8,20 +8,19 @@ import { service } from '@ember/service';
 
 export default class TidyAutoIndexRoute extends Route {
   @service secretMountPath;
-  @service store;
 
   // inherits model from tidy/auto
 
   setupController(controller, resolvedModel) {
-    // autoTidyConfig id is the backend path
-    const { id: backend } = resolvedModel;
-    super.setupController(...arguments);
+    const { currentPath } = this.secretMountPath;
+    super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview', model: backend },
-      { label: 'Tidy', route: 'tidy.index', model: backend },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
+      { label: currentPath, route: 'overview', model: currentPath },
+      { label: 'Tidy', route: 'tidy.index', model: currentPath },
       { label: 'Auto' },
     ];
-    controller.title = this.secretMountPath.currentPath;
+    controller.backend = currentPath;
   }
 }

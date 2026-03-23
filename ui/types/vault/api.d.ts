@@ -24,6 +24,13 @@ export interface ApiResponse {
   wrap_info: WrapInfo | null;
 }
 
+export type ApiParsedError = {
+  message: string;
+  status: number;
+  path: string;
+  response: unknown;
+};
+
 export type HeaderMap =
   | {
       namespace: string;

@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/limits"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -22,6 +23,8 @@ import (
 )
 
 var nonVotersAllowed = false
+
+const maxTokenHeaderSizeDefault = 0
 
 // ctxKeyRoleBasedQuota is used to signal that role-based quota resolution
 // is needed for the request.
@@ -43,6 +46,58 @@ func resetBodyIfRead(r *http.Request, buf *bytes.Buffer) *http.Request {
 		}
 	}
 	return r
+}
+
+// wrapTokenHeaderSizeHandler rejects requests whose authentication token header
+// exceeds the configured size limit.
+func wrapTokenHeaderSizeHandler(handler http.Handler, props *vault.HandlerProperties) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var maxTokenHeaderSize int64
+		if props.ListenerConfig != nil {
+			// Skip the check on the cluster listener. Forwarded requests have
+			// already been validated at the API listener on the originating node,
+			// so re-checking here would cause a regression when a custom limit
+			// larger than the default is configured.
+			if props.ListenerConfig.DisableTokenHeaderSizeParsing {
+				handler.ServeHTTP(w, r)
+				return
+			}
+			maxTokenHeaderSize = props.ListenerConfig.CustomMaxTokenHeaderSize
+		}
+		if maxTokenHeaderSize == maxTokenHeaderSizeDefault {
+			maxTokenHeaderSize = DefaultMaxTokenHeaderSize
+		}
+
+		if maxTokenHeaderSize > 0 {
+			bearerPrefix := "Bearer "
+			tokenLen := int64(len(r.Header.Get(consts.AuthHeaderName)))
+			if tokenLen > maxTokenHeaderSize {
+				respondError(w, http.StatusBadRequest,
+					fmt.Errorf("authentication token exceeds maximum allowed header size of %d bytes", maxTokenHeaderSize))
+				return
+			}
+
+			// Iterate all Authorization headers to mirror getTokenFromReq, which
+			// ranges over r.Header["Authorization"] to find the first Bearer value.
+			// Using r.Header.Get would only check the first header and could be
+			// bypassed by placing a non-Bearer Authorization header first.
+			for _, v := range r.Header["Authorization"] {
+				if !strings.HasPrefix(v, bearerPrefix) {
+					continue
+				}
+				bearerTokenLen := int64(len(strings.TrimSpace(v[len(bearerPrefix):])))
+				if bearerTokenLen > maxTokenHeaderSize {
+					respondError(w, http.StatusBadRequest,
+						fmt.Errorf("authentication token exceeds maximum allowed header size of %d bytes", maxTokenHeaderSize))
+					return
+				}
+				// Only the first Bearer value is used by getTokenFromReq; stop after checking it.
+				break
+			}
+		}
+
+		handler.ServeHTTP(w, r)
+	})
 }
 
 // wrapMaxRequestSizeHandler limits the size of the request body to the
@@ -74,6 +129,12 @@ func wrapJSONLimitsHandler(handler http.Handler, props *vault.HandlerProperties)
 		var maxRequestSize, maxJSONDepth, maxStringValueLength, maxObjectEntryCount, maxArrayElementCount, maxToken int64
 
 		if props.ListenerConfig != nil {
+			// Check to see if limits are disabled
+			if props.ListenerConfig.DisableJSONLimitParsing {
+				handler.ServeHTTP(w, r)
+				return
+			}
+
 			maxRequestSize = props.ListenerConfig.MaxRequestSize
 			maxJSONDepth = props.ListenerConfig.CustomMaxJSONDepth
 			maxStringValueLength = props.ListenerConfig.CustomMaxJSONStringValueLength

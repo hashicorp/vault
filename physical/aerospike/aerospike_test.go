@@ -6,12 +6,12 @@ package aerospike
 import (
 	"context"
 	"math/bits"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
 
-	aero "github.com/aerospike/aerospike-client-go/v5"
+	aero "github.com/aerospike/aerospike-client-go/v8"
+	"github.com/docker/docker/api/types/container"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -49,19 +49,26 @@ type aerospikeConfig struct {
 }
 
 func prepareAerospikeContainer(t *testing.T) (func(), *aerospikeConfig) {
-	// Skipping on ARM, as this image can't run on ARM architecture
-	if strings.Contains(runtime.GOARCH, "arm") {
-		t.Skip("Skipping, as this image is not supported on ARM architectures")
-	}
-
+	containerLogs := new(strings.Builder)
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo:     "docker.mirror.hashicorp.services/aerospike/aerospike-server",
 		ContainerName: "aerospikedb",
-		ImageTag:      "5.6.0.5",
+		ImageTag:      "6.4",
 		Ports:         []string{"3000/tcp", "3001/tcp", "3002/tcp", "3003/tcp"},
+		LogConsumer: func(s string) {
+			containerLogs.Write([]byte(s + "\n"))
+		},
+		Resources: container.Resources{
+			// 15,000 is the default in 6.4 and Docker >= 29 uses containerd >= v2.1.5,
+			// which uses systemd's default LimitNOFILE for containers, changing the
+			// open file descriptor limit (ulimit -n) from 1048576 to 1024. Here we
+			// explicitly allow more even though it certainly won't use them.
+			Ulimits: []*container.Ulimit{{Name: "nofile", Soft: 15_000, Hard: 15_000}},
+		},
 	})
 	if err != nil {
-		t.Fatalf("Could not start local Aerospike: %s", err)
+		time.Sleep(1 * time.Second) // Allow our log consumer to get all container logs
+		t.Fatalf("Could not start local Aerospike: %s, container logs: %s", err, containerLogs.String())
 	}
 
 	svc, err := runner.StartService(context.Background(),
@@ -88,7 +95,8 @@ func prepareAerospikeContainer(t *testing.T) (func(), *aerospikeConfig) {
 		},
 	)
 	if err != nil {
-		t.Fatalf("Could not start local Aerospike: %s", err)
+		time.Sleep(1 * time.Second) // Allow our log consumer to get all container logs
+		t.Fatalf("Could not start local Aerospike: %s, container logs: %s", err, containerLogs.String())
 	}
 
 	return svc.Cleanup, &aerospikeConfig{

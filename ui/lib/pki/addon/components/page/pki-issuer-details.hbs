@@ -19,7 +19,7 @@
       <ToolbarLink
         @route="issuers.issuer.cross-sign"
         @type="pen-tool"
-        @models={{array @backend @issuer.id}}
+        @models={{array @backend @issuer.issuer_id}}
         data-test-pki-issuer-cross-sign
       >
         Cross-sign issuers
@@ -29,7 +29,7 @@
       <ToolbarLink
         @route="issuers.issuer.sign"
         @type="pen-tool"
-        @models={{array @backend @issuer.id}}
+        @models={{array @backend @issuer.issuer_id}}
         data-test-pki-issuer-sign-int
       >
         Sign Intermediate
@@ -59,7 +59,7 @@
               <li>
                 <DownloadButton
                   class="link"
-                  @filename={{@issuer.id}}
+                  @filename={{@issuer.issuer_id}}
                   @data={{@pem}}
                   @extension="pem"
                   data-test-issuer-download-type="pem"
@@ -73,7 +73,7 @@
               <li>
                 <DownloadButton
                   class="link"
-                  @filename={{@issuer.id}}
+                  @filename={{@issuer.issuer_id}}
                   @data={{@der}}
                   @extension="der"
                   data-test-issuer-download-type="der"
@@ -88,14 +88,14 @@
     </BasicDropdown>
 
     {{#if @canConfigure}}
-      <ToolbarLink @route="issuers.issuer.edit" @models={{array @backend @issuer.id}} data-test-pki-issuer-configure>
+      <ToolbarLink @route="issuers.issuer.edit" @models={{array @backend @issuer.issuer_id}} data-test-pki-issuer-configure>
         Configure
       </ToolbarLink>
     {{/if}}
   </ToolbarActions>
 </Toolbar>
 
-{{#if @issuer.isDefault}}
+{{#if @issuer.is_default}}
   <p class="has-top-margin-m">
     This is your default issuer certificate. You will see it in your
     <LinkTo @route="issuers.index" @model={{@backend}}>
@@ -105,44 +105,48 @@
   </p>
 {{/if}}
 <main data-test-issuer-details>
-  {{#each @issuer.formFieldGroups as |fieldGroup|}}
-    {{#each-in fieldGroup as |group fields|}}
-      <div class="box is-sideless is-fullwidth is-shadowless" data-test-details-group={{group}}>
-        {{#if (not-eq group "default")}}
-          <h2 class="title is-5 has-margin-top" data-test-group-title>
-            {{group}}
-          </h2>
+  <div class="box is-sideless is-fullwidth is-shadowless" data-test-details-group="default">
+    {{#each this.defaultFields as |field|}}
+      {{#let (get @issuer field) as |value|}}
+        {{#if (includes field (array "ca_chain" "certificate"))}}
+          <InfoTableRow @label={{this.label field}} @value={{value}}>
+            <CertificateCard @data={{value}} />
+          </InfoTableRow>
+        {{else if (eq field "key_id")}}
+          <InfoTableRow @label={{this.label field}} @value={{value}}>
+            {{#if @issuer.key_id}}
+              <LinkTo @route="keys.key.details" @models={{array @backend @issuer.key_id}}>
+                {{@issuer.key_id}}
+              </LinkTo>
+            {{else}}
+              <Icon @name="minus" />
+            {{/if}}
+          </InfoTableRow>
+        {{else}}
+          <InfoTableRow
+            @label={{this.label field}}
+            @value={{value}}
+            @alwaysRender={{true}}
+            @addCopyButton={{eq field "issuer_id"}}
+          />
         {{/if}}
-        {{#each fields as |attr|}}
-          {{#if attr.options.isCertificate}}
-            <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
-              <CertificateCard @data={{get @issuer attr.name}} />
-            </InfoTableRow>
-          {{else if (eq attr.name "keyId")}}
-            <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
-              {{#if @issuer.keyId}}
-                <LinkTo @route="keys.key.details" @models={{array @backend @issuer.keyId}}>{{@issuer.keyId}}</LinkTo>
-              {{else}}
-                <Icon @name="minus" />
-              {{/if}}
-            </InfoTableRow>
-          {{else}}
-            <InfoTableRow
-              @label={{or attr.options.label (humanize (dasherize attr.name))}}
-              @value={{get @issuer attr.name}}
-              @formatDate={{if attr.options.formatDate "MMM d yyyy HH:mm:ss a zzzz"}}
-              @alwaysRender={{true}}
-              @addCopyButton={{eq attr.name "issuerId"}}
-            />
-          {{/if}}
-        {{/each}}
-        {{#if (eq group "default")}}
-          <ParsedCertificateInfoRows @model={{@issuer.parsedCertificate}} />
-        {{/if}}
-      </div>
-    {{/each-in}}
-  {{/each}}
+      {{/let}}
+    {{/each}}
+
+    <ParsedCertificateInfoRows @model={{@issuer.parsedCertificate}} />
+  </div>
+
+  <div class="box is-sideless is-fullwidth is-shadowless" data-test-details-group="Issuer URLs">
+    <h2 class="title is-5 has-margin-top" data-test-group-title>
+      Issuer URLs
+    </h2>
+
+    {{#each this.urlFields as |field|}}
+      <InfoTableRow @label={{this.label field}} @value={{get @issuer field}} @alwaysRender={{true}} />
+    {{/each}}
+  </div>
 </main>
+
 {{#if (or (eq @issuer.parsedCertificate.can_parse false) this.parsingErrors)}}
   <Hds::Alert
     data-test-parsing-error-alert-banner
@@ -194,7 +198,7 @@
         <Hds::Button
           @text="Generate new root"
           @route="issuers.issuer.rotate-root"
-          @models={{array @backend @issuer.id}}
+          @models={{array @backend @issuer.issuer_id}}
           data-test-root-rotate-step-one
         />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />

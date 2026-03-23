@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki (enterprise): Validate entire chain in common criteria mode; add field to enable time checks on validation
+```

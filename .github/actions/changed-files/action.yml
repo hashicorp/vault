@@ -32,13 +32,13 @@ runs:
       run: |
         # Get a list of changed files and write the "changed-files" output to $GITHUB_OUTPUT
         if [ '${{ github.event_name }}' = 'pull_request' ]; then
-          pipeline github list changed-files \
+          pipeline github list changed-files ${{ runner.debug && '--log debug' }} \
             --owner hashicorp \
             --repo '${{ github.event.pull_request.head.repo.name }}' \
             --pr '${{ github.event.pull_request.number }}' \
             --github-output
         else
-          pipeline github list changed-files \
+          pipeline github list changed-files ${{ runner.debug && '--log debug' }}\
             --owner hashicorp \
             --repo '${{ github.event.repository.name }}' \
             --commit '${{ github.event.after && github.event.after || github.event.push.after && github.event.push.after || github.sha }}' \

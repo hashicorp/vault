@@ -192,6 +192,14 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 		resp.Data["node_identities"] = roleConfigData.NodeIdentities
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeConsulRoleRead, map[string]interface{}{
+		"role_name":  name,
+		"ttl":        roleConfigData.TTL.String(),
+		"max_ttl":    roleConfigData.MaxTTL.String(),
+		"token_type": roleConfigData.TokenType,
+		"local":      roleConfigData.Local,
+	})
+
 	return resp, nil
 }
 
@@ -268,6 +276,14 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeConsulRoleWrite, map[string]interface{}{
+		"role_name":  name,
+		"ttl":        ttl.String(),
+		"max_ttl":    maxTTL.String(),
+		"local":      local,
+		"token_type": tokenType,
+	})
+
 	return nil, nil
 }
 
@@ -276,6 +292,11 @@ func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *
 	if err := req.Storage.Delete(ctx, "policy/"+name); err != nil {
 		return nil, err
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeConsulRoleDelete, map[string]interface{}{
+		"role_name": name,
+	})
+
 	return nil, nil
 }
 

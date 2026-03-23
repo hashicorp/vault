@@ -8,7 +8,7 @@
   @level="base"
   @background="neutral-secondary"
   @hasBorder={{false}}
-  @ariaLabel="{{@type.displayName}} - disabled engine type"
+  aria-label="{{@type.displayName}} - disabled engine type"
   tabindex="0"
   {{on "click" (fn @handleDisabledPluginClick @type)}}
   {{on "keydown" (fn @handleDisabledPluginKeyDown @type)}}

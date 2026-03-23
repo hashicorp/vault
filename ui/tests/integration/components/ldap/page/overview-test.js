@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
@@ -12,6 +12,8 @@ import hbs from 'htmlbars-inline-precompile';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Integration | Component | ldap | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -19,49 +21,24 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
+    this.backend = 'ldap-test';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
+    this.secretsEngine = createSecretsEngine();
+    this.breadcrumbs = generateBreadcrumbs(this.backend);
+    this.promptConfig = false;
 
-    this.backendModel = createSecretsEngine(this.store);
-    this.breadcrumbs = generateBreadcrumbs(this.backendModel.id);
+    const { secrets } = this.owner.lookup('service:api');
+    this.apiLibraryStub = sinon.stub(secrets, 'ldapLibraryList').resolves({ keys: ['test-library'] });
+    this.apiStatusStub = sinon.stub(secrets, 'ldapLibraryCheckStatus').resolves({ data: {} });
 
-    // Set up server endpoints for library operations
-    this.server.get('/ldap-test/library', () => {
-      return {
-        data: {
-          keys: ['test-library'],
-        },
-      };
-    });
-
-    this.server.get('/ldap-test/library/:name/status', () => {
-      return { data: {} };
-    });
-
-    const pushPayload = (type) => {
-      this.store.pushPayload(`ldap/${type}`, {
-        modelName: `ldap/${type}`,
-        backend: 'ldap-test',
-        ...this.server.create(`ldap-${type}`),
-      });
-    };
-
-    ['role', 'library'].forEach((type) => {
-      pushPayload(type);
-      if (type === 'role') {
-        pushPayload(type);
-      }
-      const key = type === 'role' ? 'roles' : 'libraries';
-      this[key] = this.store.peekAll(`ldap/${type}`);
-    });
+    this.roles = [this.server.create('ldap-role'), this.server.create('ldap-role')];
 
     this.renderComponent = () => {
       return render(
         hbs`<Page::Overview
           @promptConfig={{this.promptConfig}}
-          @backendModel={{this.backendModel}}
+          @secretsEngine={{this.secretsEngine}}
           @roles={{this.roles}}
-          @libraries={{this.libraries}}
-          @librariesStatus={{(array)}}
           @breadcrumbs={{this.breadcrumbs}}
         />`,
         {
@@ -80,15 +57,13 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
     });
   });
 
-  test('it should render tab page header and config cta', async function (assert) {
+  test('it should render tab page header', async function (assert) {
     this.promptConfig = true;
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
-    assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
-    assert.dom('[data-test-toolbar-action="config"]').hasText('Configure LDAP', 'Toolbar action renders');
-    assert.dom('[data-test-config-cta]').exists('Config cta renders');
+    assert.dom(GENERAL.icon('folder-users')).hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('ldap-test', 'Mount path renders in title');
   });
 
   test('it should render overview cards', async function (assert) {
@@ -205,10 +180,7 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
 
   test('it should show error message when library discovery fails', async function (assert) {
     // Override server to return error for library requests
-    this.server.handlers = [];
-    this.server.get('/ldap-test/library', () => {
-      return new Response(500, {}, { errors: ['Server error'] });
-    });
+    this.apiLibraryStub.rejects(getErrorResponse({ errors: ['Server error'] }, 500));
 
     await this.renderComponent();
 
@@ -224,5 +196,13 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
     assert
       .dom('[data-test-overview-card-container="Accounts checked-out"]')
       .exists('AccountsCheckedOut component still renders when library discovery fails');
+  });
+
+  test('it should display "None" when library request returns a 404', async function (assert) {
+    // Override server to return empty 404 response for library requests
+    this.apiLibraryStub.rejects(getErrorResponse());
+    await this.renderComponent();
+    assert.dom('[data-test-libraries-error]').doesNotExist();
+    assert.dom('[data-test-libraries-count]').hasText('None');
   });
 });

@@ -8,8 +8,10 @@ package vault
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/hashicorp/go-hclog"
+	cserver "github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/limits"
@@ -206,8 +208,12 @@ func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
 	return false
 }
 
-func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig, generate bool) (bool, []string) {
+func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig, generateInput DiagnoseCheckLicenseGeneration) (bool, []string) {
 	return false, nil
+}
+
+func SetDiagnoseCheckLicenseEntitlement(config *cserver.Config, coreConfig CoreConfig) CoreConfig {
+	return coreConfig
 }
 
 // createCustomMessageManager is a function implemented differently for the
@@ -228,3 +234,16 @@ func (c *Core) ReloadRequestLimiter() {}
 
 // createSnapshotManager is a no-op on CE.
 func (c *Core) createSnapshotManager() {}
+
+func (c *Core) GetConfigurableRNG(source string, defaultSource io.Reader) (io.Reader, error) {
+	var rng io.Reader
+	switch source {
+	case "platform":
+		rng = defaultSource
+	case "":
+		rng = defaultSource
+	default:
+		return nil, fmt.Errorf("unsupported entropy source: %s", source)
+	}
+	return rng, nil
+}

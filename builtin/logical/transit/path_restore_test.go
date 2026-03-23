@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransit_Restore(t *testing.T) {
@@ -25,7 +26,7 @@ func TestTransit_Restore(t *testing.T) {
 	// as if the key already existed
 
 	keyType := "aes256-gcm96"
-	b, s := createBackendWithStorage(t)
+	b, s, obsRecorder := createBackendWithObservationRecorder(t)
 	keyName := testhelpers.RandomWithPrefix("my-key")
 
 	// Create a key
@@ -227,6 +228,16 @@ func TestTransit_Restore(t *testing.T) {
 				readKeyName = tc.RestoreName
 			}
 
+			if tc.ExpectedErr == nil {
+				obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyRestore)
+				require.NotNil(t, obs)
+				require.Equal(t, obs.Data["key_name"], readKeyName)
+				force := false
+				if tc.Force != nil {
+					force = *tc.Force
+				}
+				require.Equal(t, obs.Data["force"], force)
+			}
 			// read the key and make sure it's there
 			readReq := &logical.Request{
 				Path:      "keys/" + readKeyName,

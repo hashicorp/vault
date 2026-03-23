@@ -9,7 +9,6 @@ import { pathIsDirectory, breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 import { paginate } from 'core/utils/paginate-list';
 
 export default class KvSecretsListRoute extends Route {
-  @service pagination;
   @service('app-router') router;
   @service secretMountPath;
   @service api;
@@ -58,9 +57,15 @@ export default class KvSecretsListRoute extends Route {
     const backend = this.secretMountPath.currentPath;
     const filterValue = pathToSecret ? (pageFilter ? pathToSecret + pageFilter : pathToSecret) : pageFilter;
     const secrets = await this.fetchMetadata(backend, pathToSecret, params);
-    const capabilities = await this.capabilities.for('kvMetadata', { backend, path: path_to_secret });
+    const capabilities = await this.capabilities.for(
+      'kvMetadata',
+      { backend, path: path_to_secret },
+      { routeForCache: 'vault.cluster.secrets.backend.kv' }
+    );
+    const backendModel = this.modelFor('application');
 
     return {
+      backendModel,
       secrets,
       backend,
       pathToSecret,
@@ -76,7 +81,10 @@ export default class KvSecretsListRoute extends Route {
     resolvedModel.failedDirectoryQuery =
       resolvedModel.secrets === 403 && pathIsDirectory(resolvedModel.pathToSecret);
 
-    let breadcrumbsArray = [{ label: 'Secrets', route: 'secrets', linkExternal: true }];
+    let breadcrumbsArray = [
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
+    ];
     // if on top level don't link the engine breadcrumb label, but if within a directory, do link back to top level.
     if (this.routeName === 'list') {
       breadcrumbsArray.push({ label: resolvedModel.backend });

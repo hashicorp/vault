@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, fillIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -39,7 +39,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-scope-title]').hasText('Create Scope', 'Form title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Scope', 'Form title renders');
     assert.dom(SELECTORS.scopeSaveButton).hasText('Create', 'Save button has correct label');
     await click(SELECTORS.scopeSaveButton);
 
@@ -88,7 +88,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-scope-title]').hasText('Edit Scope', 'Form title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Scope', 'Form title renders');
     assert.dom(SELECTORS.scopeSaveButton).hasText('Update', 'Save button has correct label');
     assert.dom(GENERAL.inputByAttr('name')).isDisabled('Name input is disabled when editing');
     assert.dom(GENERAL.inputByAttr('name')).hasValue('test', 'Name input is populated with model value');

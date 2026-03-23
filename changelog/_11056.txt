@@ -1,0 +1,3 @@
+```release-note:improvement
+go: update to golang/x/crypto to v0.45.0 to resolve GHSA-f6x5-jh6r-wrfv, GHSA-j5w8-q4qc-rx2x, GO-2025-4134 and GO-2025-4135.
+```

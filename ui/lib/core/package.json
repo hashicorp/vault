@@ -6,6 +6,7 @@
   "dependencies": {
     "autosize": "*",
     "date-fns": "*",
+    "date-fns-tz": "*",
     "@icholy/duration": "*",
     "base64-js": "*",
     "dompurify": "*",
@@ -15,7 +16,6 @@
     "ember-cli-clipboard": "*",
     "ember-cli-htmlbars": "*",
     "ember-cli-string-helpers": "*",
-    "ember-cli-typescript": "*",
     "ember-composable-helpers": "*",
     "ember-concurrency": "*",
     "@ember/render-modifiers": "*",

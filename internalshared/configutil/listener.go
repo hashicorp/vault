@@ -152,6 +152,11 @@ type Listener struct {
 
 	// JSON-specific limits
 
+	// DisableJSONLimitParsing disables the checking for JSON limits. This is only applicable to
+	// the listener config passed into the Cluster listener since this would impact forwarded
+	// requests that have already been checked via the API listener on the originating node.
+	DisableJSONLimitParsing bool `hcl:"-"`
+
 	// CustomMaxJSONDepth specifies the maximum nesting depth of a JSON object.
 	CustomMaxJSONDepthRaw interface{} `hcl:"max_json_depth"`
 	CustomMaxJSONDepth    int64       `hcl:"-"`
@@ -171,6 +176,15 @@ type Listener struct {
 	// CustomMaxJSONToken determines the maximum number of tokens in a JSON.
 	CustomMaxJSONTokenRaw interface{} `hcl:"max_json_token"`
 	CustomMaxJSONToken    int64       `hcl:"-"`
+
+	// DisableTokenHeaderSizeParsing disables the token header size check. This is only applicable
+	// to the listener config passed into the Cluster listener since forwarded requests have already
+	// been checked via the API listener on the originating node.
+	DisableTokenHeaderSizeParsing bool `hcl:"-"`
+
+	// CustomMaxTokenHeaderSize defines the maximum allowed size in bytes for an authentication token header.
+	CustomMaxTokenHeaderSizeRaw interface{} `hcl:"max_token_header_size"`
+	CustomMaxTokenHeaderSize    int64       `hcl:"-"`
 }
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
@@ -493,6 +507,13 @@ func (l *Listener) parseRequestSettings() error {
 	if err := l.parseJSONLimitsSettings(); err != nil {
 		return err
 	}
+
+	if err := parseAndClearInt(&l.CustomMaxTokenHeaderSizeRaw, &l.CustomMaxTokenHeaderSize); err != nil {
+		return fmt.Errorf("error parsing max_token_header_size: %w", err)
+	}
+	// A negative value disables the check entirely, matching the max_request_size
+	// convention. Unlike the CustomMaxJSON* fields, negative is intentionally
+	// allowed here (not an error).
 
 	return nil
 }

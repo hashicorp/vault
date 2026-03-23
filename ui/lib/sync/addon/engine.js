@@ -21,10 +21,13 @@ export default class SyncEngine extends Engine {
       'store',
       'api',
       'capabilities',
-      'pagination',
       'version',
+      '-portal',
+      'permissions',
+      'current-cluster',
+      'namespace',
     ],
-    externalRoutes: ['kvSecretOverview', 'clientCountOverview'],
+    externalRoutes: ['kvSecretOverview', 'clientCountOverview', 'vault', 'secrets', 'sync'],
   };
 }
 

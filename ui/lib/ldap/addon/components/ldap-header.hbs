@@ -1,0 +1,47 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header
+  @title={{if @configRoute (concat @model.id " configuration") @model.id}}
+  @description="LDAP"
+  @icon={{@model.icon}}
+>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+  <:actions>
+    {{#if @configRoute}}
+      <Hds::Button @color="secondary" @route="overview" @text="Exit configuration" data-test-button="Exit configuration" />
+    {{else}}
+      <ManageDropdown @model={{@model}} @configRoute={{if @promptConfig "configure" "configuration"}} />
+    {{/if}}
+  </:actions>
+</Page::Header>
+
+{{#if @configRoute}}
+  <Mount::ConfigureTabs
+    @configRoute={{@configRoute}}
+    @displayName="LDAP"
+    @path={{@model.id}}
+    @externalRoute="secretsGeneralSettingsConfiguration"
+  />
+{{else}}
+  <nav class="tabs" aria-label="ldap tabs">
+    <ul>
+      <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
+      <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
+      <li><LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo></li>
+    </ul>
+  </nav>
+{{/if}}
+
+<Toolbar aria-label="nav for managing LDAP">
+  <ToolbarFilters aria-label="filter for LDAP items">
+    {{yield to="toolbarFilters"}}
+  </ToolbarFilters>
+  <ToolbarActions aria-label="actions for LDAP items">
+    {{yield to="toolbarActions"}}
+  </ToolbarActions>
+</Toolbar>

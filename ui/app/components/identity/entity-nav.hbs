@@ -3,54 +3,57 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{titleize (pluralize this.identityType)}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-  <nav class="tabs" aria-label="navigation for entities">
-    <ul>
-      <li>
-        <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize this.identityType}}>
-          {{capitalize (pluralize this.identityType)}}
-        </LinkTo>
-      </li>
-      <li>
-        <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize this.identityType}}>
-          Aliases
-        </LinkTo>
-      </li>
-    </ul>
-  </nav>
-</div>
+<Page::Header @title={{titleize (pluralize @identityType)}} @description={{this.description}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label=(titleize (pluralize @identityType)))
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
+
+<nav class="tabs" aria-label="navigation for entities">
+  <ul>
+    <li>
+      <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize @identityType}}>
+        {{capitalize (pluralize @identityType)}}
+      </LinkTo>
+    </li>
+    <li>
+      <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize @identityType}}>
+        Aliases
+      </LinkTo>
+    </li>
+  </ul>
+</nav>
+
 <Toolbar>
-  {{#if this.model.meta.total}}
+  {{#if @model.meta.total}}
     <ToolbarFilters>
-      <Identity::LookupInput @type={{this.identityType}} />
+      <Identity::LookupInput @type={{@identityType}} />
     </ToolbarFilters>
   {{/if}}
   <ToolbarActions>
-    {{#if (eq this.identityType "entity")}}
+    {{#if (eq @identityType "entity")}}
       <ToolbarLink
         @route={{"vault.cluster.access.identity.merge"}}
-        @model={{pluralize this.identityType}}
+        @model={{pluralize @identityType}}
         data-test-entity-merge-link={{true}}
       >
         Merge
-        {{pluralize this.identityType}}
+        {{pluralize @identityType}}
       </ToolbarLink>
     {{/if}}
     <ToolbarLink
       @route="vault.cluster.access.identity.create"
-      @model={{pluralize this.identityType}}
+      @model={{pluralize @identityType}}
       @type="add"
       data-test-entity-create-link={{true}}
     >
       Create
-      {{this.identityType}}
+      {{@identityType}}
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>

@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { find, render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { formatTimeZone } from 'core/helpers/date-format';

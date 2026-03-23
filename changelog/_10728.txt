@@ -1,0 +1,3 @@
+```release-note:improvement
+ui/activity (enterprise): Allow manual querying of client usage if there is a problem retrieving the license start time.
+```

@@ -8,8 +8,9 @@ import (
 	"errors"
 	"testing"
 
-	libgithub "github.com/google/go-github/v74/github"
+	libgithub "github.com/google/go-github/v83/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
 	"github.com/stretchr/testify/require"
 )
@@ -18,45 +19,125 @@ import (
 func TestCreateBackportReq_Validate(t *testing.T) {
 	t.Parallel()
 
+	changedCfg := func() *changed.Config {
+		return &changed.Config{
+			Groups: []*changed.GroupConfig{
+				{
+					Name: "go",
+					Match: changed.Matchers{
+						{Extension: []string{".go"}},
+					},
+				},
+				{
+					Name: "python",
+					Match: changed.Matchers{
+						{Extension: []string{".py"}},
+					},
+				},
+			},
+		}
+	}
+
+	versionsCfg := func() *releases.VersionsConfig {
+		return &releases.VersionsConfig{
+			Schema: 1,
+			ActiveVersion: &releases.ActiveVersion{
+				Versions: map[string]*releases.Version{
+					"1.19.x": {CEActive: true, LTS: true},
+					"1.18.x": {CEActive: true, LTS: false},
+					"1.17.x": {CEActive: false, LTS: false},
+					"1.16.x": {CEActive: false, LTS: true},
+				},
+			},
+		}
+	}
+	configDecodeRes := func() *config.DecodeRes {
+		return &config.DecodeRes{
+			Config: &config.Config{
+				ChangedFiles: changedCfg(),
+			},
+		}
+	}
+	versionsDecodeRes := func() *releases.DecodeRes {
+		return &releases.DecodeRes{
+			Config: versionsCfg(),
+		}
+	}
+
 	for name, test := range map[string]struct {
 		req   *CreateBackportReq
 		valid bool
 	}{
 		"empty": {nil, false},
-		"valid": {NewCreateBackportReq(WithCreateBrackportReqPullNumber(1234)), true},
+		"valid": {
+			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBrackportReqPullNumber(1234),
+			), true,
+		},
+		"no changed file config": {
+			NewCreateBackportReq(
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBrackportReqPullNumber(1234),
+			), false,
+		},
+		"no versions config": {
+			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqPullNumber(1234),
+			), false,
+		},
 		"no owner": {
 			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
 				WithCreateBrackportReqPullNumber(1234),
 				WithCreateBackportReqOwner(""),
 			), false,
 		},
 		"no repo": {
 			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
 				WithCreateBrackportReqPullNumber(1234),
 				WithCreateBrackportReqRepo(""),
 			), false,
 		},
-		"no pull number": {NewCreateBackportReq(), false},
+		"no pull number": {
+			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
+			), false,
+		},
 		"no ce branch prefix": {
 			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
 				WithCreateBrackportReqPullNumber(1234),
 				WithCreateBrackportReqCEBranchPrefix(""),
 			), false,
 		},
 		"no base origin": {
 			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
 				WithCreateBrackportReqPullNumber(1234),
 				WithCreateBrackportReqBaseOrigin(""),
 			), false,
 		},
 		"uninitialized exclude groups": {
 			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
 				WithCreateBrackportReqPullNumber(1234),
 				WithCreateBrackportReqCEExclude(nil),
 			), false,
 		},
 		"uninitialized inactive groups": {
 			NewCreateBackportReq(
+				WithCreateBrackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBrackportReqVersionsDecodeRes(versionsDecodeRes()),
 				WithCreateBrackportReqPullNumber(1234),
 				WithCreateBrackportReqAllowInactiveGroups(nil),
 			), false,
@@ -290,7 +371,7 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	allowedInactiveCEChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr("changelog/_2837.md"),
 				},
@@ -305,14 +386,14 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	onlyEnterpriseChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr(".github/workflows/build-artifacts-ent.yml"),
 				},
 				Groups: changed.FileGroups{"enterprise", "pipeline"},
 			},
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr("vault/vault_ent/go.mod"),
 				},
@@ -327,14 +408,14 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	mixedCEAndEnterpriseChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("e1c10eae02e13f5a090b9c29b0b1a3003e8ca7f6"),
 					Filename: libgithub.Ptr("go.mod"),
 				},
 				Groups: changed.FileGroups{"app", "gotoolchain"},
 			},
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("a6397662ea1d5fdde744ff3e4246377cf369197a"),
 					Filename: libgithub.Ptr("vault_ent/go.mod"),
 				},
@@ -349,14 +430,14 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	allCEChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr(".github/workflows/build.yml"),
 				},
 				Groups: changed.FileGroups{"pipeline"},
 			},
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr("go.mod"),
 				},
@@ -566,7 +647,9 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			req := NewCreateBackportReq()
+			req := NewCreateBackportReq(
+				WithCreateBrackportReqAllowInactiveGroups(changed.FileGroups{changed.FileGroup("changelog")}),
+			)
 			msg, skip := req.shouldSkipRef(
 				context.Background(),
 				test.baseRefVersion,
@@ -660,6 +743,79 @@ func TestCreateBackportRes_Err(t *testing.T) {
 			} else {
 				require.Equal(t, test.failed.Error(), test.in.Err().Error())
 			}
+		})
+	}
+}
+
+// Test_filterNonBackportLabels tests the label filtering functionality
+func Test_filterNonBackportLabels(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		backportPrefix string
+		sourceLabels   Labels
+		expectedLabels []string
+	}{
+		"no labels": {
+			backportPrefix: "backport",
+			sourceLabels:   Labels{},
+			expectedLabels: nil,
+		},
+		"only backport labels": {
+			backportPrefix: "backport",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("backport/1.18.x")},
+				&libgithub.Label{Name: libgithub.Ptr("backport/1.19.x")},
+			},
+			expectedLabels: nil,
+		},
+		"mixed labels": {
+			backportPrefix: "backport",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("bug")},
+				&libgithub.Label{Name: libgithub.Ptr("backport/1.18.x")},
+				&libgithub.Label{Name: libgithub.Ptr("enhancement")},
+				&libgithub.Label{Name: libgithub.Ptr("backport/ce/main")},
+				&libgithub.Label{Name: libgithub.Ptr("docs")},
+			},
+			expectedLabels: []string{"bug", "enhancement", "docs"},
+		},
+		"no backport labels": {
+			backportPrefix: "backport",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("bug")},
+				&libgithub.Label{Name: libgithub.Ptr("enhancement")},
+				&libgithub.Label{Name: libgithub.Ptr("docs")},
+				&libgithub.Label{Name: libgithub.Ptr("priority/high")},
+			},
+			expectedLabels: []string{"bug", "enhancement", "docs", "priority/high"},
+		},
+		"custom backport prefix": {
+			backportPrefix: "cherry-pick",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("bug")},
+				&libgithub.Label{Name: libgithub.Ptr("cherry-pick/1.18.x")},
+				&libgithub.Label{Name: libgithub.Ptr("enhancement")},
+			},
+			expectedLabels: []string{"bug", "enhancement"},
+		},
+		"backport-like but different prefix": {
+			backportPrefix: "backport",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("backup/daily")},
+				&libgithub.Label{Name: libgithub.Ptr("backport/1.18.x")},
+				&libgithub.Label{Name: libgithub.Ptr("enhancement")},
+			},
+			expectedLabels: []string{"backup/daily", "enhancement"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			filteredLabels := filterNonBackportLabels(test.sourceLabels, test.backportPrefix)
+
+			require.Equal(t, test.expectedLabels, filteredLabels,
+				"filtered labels should match expected labels")
 		})
 	}
 }

@@ -6,6 +6,7 @@ package ssh
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -82,10 +83,10 @@ func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *fram
 		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", roleName)), nil
 	}
 
-	return b.pathSignCertificate(ctx, req, data, role)
+	return b.pathSignCertificate(ctx, req, data, role, roleName)
 }
 
-func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request, data *framework.FieldData, role *sshRole) (*logical.Response, error) {
+func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request, data *framework.FieldData, role *sshRole, roleName string) (*logical.Response, error) {
 	publicKey := data.Get("public_key").(string)
 	if publicKey == "" {
 		return logical.ErrorResponse("missing public_key"), nil
@@ -101,5 +102,18 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(fmt.Sprintf("public_key failed to meet the key requirements: %s", err)), nil
 	}
 
-	return b.pathSignIssueCertificateHelper(ctx, req, data, role, userPublicKey)
+	response, certMetadata, err := b.pathSignIssueCertificateHelper(ctx, req, data, role, userPublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.IsError() {
+		return response, nil
+	}
+
+	metadata := role.observationMetadata(roleName)
+	maps.Copy(metadata, certMetadata)
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHSign, metadata)
+
+	return response, nil
 }

@@ -769,7 +769,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 	respFields := map[string]*framework.FieldSchema{
 		"nonce": {
 			Type:     framework.TypeString,
-			Required: true,
+			Required: false,
 		},
 		"started": {
 			Type:     framework.TypeBool,
@@ -785,7 +785,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		},
 		"progress": {
 			Type:     framework.TypeInt,
-			Required: true,
+			Required: false,
 		},
 		"required": {
 			Type:     framework.TypeInt,
@@ -793,11 +793,11 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		},
 		"verification_required": {
 			Type:     framework.TypeBool,
-			Required: true,
+			Required: false,
 		},
 		"verification_nonce": {
 			Type:     framework.TypeString,
-			Required: true,
+			Required: false,
 		},
 		"backup": {
 			Type: framework.TypeBool,
@@ -815,6 +815,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				OperationPrefix: "rekey-attempt",
 			},
 
+			// Note that since we're a binary path we don't actually use these fields, they exist solely for the sake
+			// of populating the openapi schema.
 			Fields: map[string]*framework.FieldSchema{
 				"secret_shares": {
 					Type:        framework.TypeInt,
@@ -823,6 +825,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				"secret_threshold": {
 					Type:        framework.TypeInt,
 					Description: "Specifies the number of shares required to reconstruct the unseal key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as secret_shares.",
+				},
+				"stored_shares": {
+					Type:        framework.TypeInt,
+					Description: "Specifies the number of shares that should be encrypted by the HSM and stored for auto-unsealing. Currently must be the same as secret_shares.",
 				},
 				"pgp_keys": {
 					Type:        framework.TypeCommaStringSlice,
@@ -836,10 +842,16 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Description: "Turns on verification functionality",
 				},
+				"nonce": {
+					Type:        framework.TypeString,
+					Description: "Specifies the nonce of the rekey operation. If the rekey was initialized within the last 10 minutes, you must provide the nonce to cancel the operation.",
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyInitBarrier,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "read",
 						OperationSuffix: "progress",
@@ -853,6 +865,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Summary: "Reads the configuration and progress of the current rekey attempt.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyInitBarrier,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "initialize",
 					},
@@ -866,6 +880,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Description: "Only a single rekey attempt can take place at a time, and changing the parameters of a rekey requires canceling and starting a new rekey, which will also provide a new nonce.",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyInitBarrier,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "cancel",
 					},
@@ -991,6 +1007,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		{
 			Pattern: "rekey/update",
 
+			// Note that since we're a binary path we don't actually use these fields, they exist solely for the sake
+			// of populating the openapi schema.
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
@@ -1004,6 +1022,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyUpdateBarrier,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationPrefix: "rekey-attempt",
 						OperationVerb:   "update",
@@ -1068,6 +1088,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				OperationPrefix: "rekey-verification",
 			},
 
+			// Note that since we're a binary path we don't actually use these fields, they exist solely for the sake
+			// of populating the openapi schema.
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
@@ -1081,6 +1103,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyVerifyBarrier,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "read",
 						OperationSuffix: "progress",
@@ -1115,6 +1139,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Summary: "Read the configuration and progress of the current rekey verification attempt.",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyVerifyBarrier,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "cancel",
 					},
@@ -1149,6 +1175,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Description: "This clears any progress made and resets the nonce. Unlike a `DELETE` against `sys/rekey/init`, this only resets the current verification operation, not the entire rekey atttempt.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyVerifyBarrier,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "update",
 					},
@@ -1167,6 +1195,246 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						}},
 					},
 					Summary: "Enter a single new key share to progress the rekey verification operation.",
+				},
+			},
+		},
+		{
+			Pattern: "rekey-recovery-key/init",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rekey-recovery-key-attempt",
+			},
+
+			// Note that since we're a binary path we don't actually use these fields, they exist solely for the sake
+			// of populating the openapi schema.
+			Fields: map[string]*framework.FieldSchema{
+				"secret_shares": {
+					Type:        framework.TypeInt,
+					Description: "Specifies the number of shares to split the recovery key into.",
+				},
+				"stored_shares": {
+					Type:        framework.TypeInt,
+					Description: "Specifies the number of shares that should be encrypted by the HSM and stored for auto-unsealing. Currently must be the same as `secret_shares`.",
+				},
+				"secret_threshold": {
+					Type:        framework.TypeInt,
+					Description: "Specifies the number of shares required to reconstruct the recovery key.",
+				},
+				"pgp_keys": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "Specifies an array of PGP public keys used to encrypt the output recovery keys.",
+				},
+				"backup": {
+					Type:        framework.TypeBool,
+					Description: "Specifies if using PGP-encrypted keys, whether Vault should also store a plaintext backup of the PGP-encrypted keys.",
+				},
+				"require_verification": {
+					Type:        framework.TypeBool,
+					Description: "Turns on verification functionality",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyInitRecovery,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "progress",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields:      respFields,
+						}},
+					},
+					Summary: "Reads the configuration and progress of the current recovery key rekey attempt.",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyInitRecovery,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "initialize",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields:      respFields,
+						}},
+					},
+					Summary:     "Initializes a new recovery key rekey attempt.",
+					Description: "Only a single recovery key rekey attempt can take place at a time.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyInitRecovery,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "cancel",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+						}},
+					},
+					Summary:     "Cancels any in-progress recovery key rekey.",
+					Description: "This clears the recovery key rekey settings as well as any progress made.",
+				},
+			},
+		},
+		{
+			Pattern: "rekey-recovery-key/update",
+
+			// Note that since we're a binary path we don't actually use these fields, they exist solely for the sake
+			// of populating the openapi schema.
+			Fields: map[string]*framework.FieldSchema{
+				"key": {
+					Type:        framework.TypeString,
+					Description: "Specifies a single recovery key share.",
+				},
+				"nonce": {
+					Type:        framework.TypeString,
+					Description: "Specifies the nonce of the rekey attempt.",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyUpdateRecovery,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "rekey-recovery-key-attempt",
+						OperationVerb:   "update",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"complete": {
+									Type: framework.TypeBool,
+								},
+								"keys": {
+									Type: framework.TypeCommaStringSlice,
+								},
+								"keys_base64": {
+									Type: framework.TypeCommaStringSlice,
+								},
+								"verification_required": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"verification_nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"backup": {
+									Type: framework.TypeBool,
+								},
+								"pgp_fingerprints": {
+									Type: framework.TypeCommaStringSlice,
+								},
+							},
+						}},
+					},
+					Summary: "Enter a single recovery key share to progress the rekey of the Vault.",
+				},
+			},
+		},
+		{
+			Pattern: "rekey-recovery-key/verify",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rekey-recovery-key-verification",
+			},
+
+			// Note that since we're a binary path we don't actually use these fields, they exist solely for the sake
+			// of populating the openapi schema.
+			Fields: map[string]*framework.FieldSchema{
+				"key": {
+					Type:        framework.TypeString,
+					Description: "Specifies a single recovery key share from the new set of shares.",
+				},
+				"nonce": {
+					Type:        framework.TypeString,
+					Description: "Specifies the nonce of the rekey verification operation.",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyVerifyRecovery,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "progress",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"started": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"t": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"n": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"progress": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+							},
+						}},
+					},
+					Summary: "Read the configuration and progress of the current recovery key rekey verification attempt.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyVerifyRecovery,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "cancel",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+						}},
+					},
+					Summary:     "Cancel any in-progress recovery key rekey verification operation.",
+					Description: "This clears any progress made and resets the nonce.",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleRekeyVerifyRecovery,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"complete": {
+									Type: framework.TypeBool,
+								},
+							},
+						}},
+					},
+					Summary: "Enter a single new recovery key share to progress the rekey verification operation.",
 				},
 			},
 		},
@@ -2585,6 +2853,12 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Default:     "platform",
 					Description: `Which system to source random data from, ether "platform", "seal", or "all".`,
+				},
+				"drbg": {
+					Type:    framework.TypeString,
+					Default: "",
+					Description: "If set, seed a secure DRBG from the source and use it to generate the bytes.  This can be more performant when using the seal source." +
+						" Possible values are unset (don't use a DRBG), \"auto\" and \"hmacdrbg\" which are equivalent.",
 				},
 			},
 
@@ -4112,17 +4386,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 				OperationSuffix: "password-policy",
 			},
 
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: "The name of the password policy.",
-				},
-				"policy": {
-					Type:        framework.TypeString,
-					Description: "The password policy",
-				},
-			},
-
+			Fields: passwordPolicySchema,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesPasswordSet,
@@ -4143,6 +4407,10 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 								"policy": {
 									Type:     framework.TypeString,
 									Required: true,
+								},
+								"entropy_source": {
+									Type:     framework.TypeString,
+									Required: false,
 								},
 							},
 						}},

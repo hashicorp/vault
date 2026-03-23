@@ -433,6 +433,11 @@ func TestCheckMulti(fs ...TestCheckFunc) TestCheckFunc {
 
 // TestCheckAuth is a helper to check that a request generated an
 // auth token with the proper policies.
+//
+// Deprecated: As we externalize plugins, we move to use
+// github.com/hashicorp/vault-testing-stepwise as the vault plugin unit test
+// framework. We use NewAssertAuthPoliciesFunc in sdk/helper/testhelpers/stepwise
+// instead of this function.
 func TestCheckAuth(policies []string) TestCheckFunc {
 	return func(resp *logical.Response) error {
 		if resp == nil || resp.Auth == nil {

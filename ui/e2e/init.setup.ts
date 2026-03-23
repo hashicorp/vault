@@ -1,0 +1,82 @@
+/**
+ * Copyright IBM Corp. 2016, 2025
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { test as base } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
+import { USER_POLICY_MAP } from './policies';
+import { DISMISSED_WIZARD_KEY, WIZARD_ID_MAP } from '../app/utils/constants/wizard';
+
+export type UserSetupOptions = {
+  userType: string;
+};
+
+// use superuser as the default policy if not provided in the config for a project
+export const setup = base.extend<UserSetupOptions>({
+  userType: 'superuser',
+});
+
+// setup will run once before all tests
+setup('initialize vault and setup user for testing', async ({ page, userType }) => {
+  // on fresh app load navigating to the root will land us on the initialize page
+  await page.goto('./');
+  // manually update dismissed wizards so that they don't have to be skipped in tests before persisting storage state;
+  await page.evaluate(
+    ({ key, ids }) => {
+      localStorage.setItem(key, JSON.stringify(ids));
+    },
+    { key: DISMISSED_WIZARD_KEY, ids: Object.values(WIZARD_ID_MAP) }
+  );
+  // initialize vault
+  await page.getByRole('spinbutton', { name: 'Key shares' }).fill('1');
+  await page.getByRole('spinbutton', { name: 'Key threshold' }).fill('1');
+  await page.getByRole('button', { name: 'Initialize' }).click();
+  // listen for download event so we can get the unseal key and root token
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download keys' }).click();
+  const download = await downloadPromise;
+  const keysPath = path.join(__dirname, `/tmp/${userType}-keys.json`);
+  await download.saveAs(keysPath);
+  const { keys, root_token } = JSON.parse(fs.readFileSync(keysPath, 'utf-8'));
+  // unseal vault
+  await page.getByRole('link', { name: 'Continue to Unseal' }).click();
+  await page.getByRole('textbox', { name: 'Unseal Key Portion' }).fill(keys[0]);
+  await page.getByRole('button', { name: 'Unseal' }).click();
+  // use the root token to login
+  await page.getByRole('textbox', { name: 'Token' }).fill(root_token);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  // create a policy for a specific user persona
+  // defaults to superuser but should be passed in via the project config in playwright.config.ts
+  await page.getByRole('link', { name: 'Access control', exact: true }).click();
+  // if the intro page is shown, click the create policy link there, otherwise click the create policy link in the toolbar on main page
+  if (await page.getByRole('link', { name: 'Create a policy' }).isVisible()) {
+    await page.getByRole('link', { name: 'Create a policy' }).click();
+  } else {
+    await page.getByRole('link', { name: 'Create ACL policy' }).click();
+  }
+  await page.getByRole('textbox', { name: 'Policy name' }).fill(userType);
+  await page.getByRole('radio', { name: 'Code editor' }).check();
+  await page.getByRole('textbox', { name: 'Policy editor' }).fill(USER_POLICY_MAP[userType]);
+  await page.getByRole('button', { name: 'Create policy' }).click();
+  // there is no UI workflow for creating tokens with specific policies
+  // generate a token using the web REPL and assign the new policy to it
+  await page.getByRole('button', { name: 'Console toggle' }).click();
+  await page
+    .getByRole('textbox', { name: 'web R.E.P.L.' })
+    .fill(`write -field=client_token auth/token/create policies=${userType} ttl=1d`);
+  await page.getByRole('textbox', { name: 'web R.E.P.L.' }).press('Enter');
+  const newToken = await page.locator('.console-ui-output pre').innerText();
+  await page.getByRole('button', { name: 'Console toggle' }).click();
+  // log out with the root token and log in with the new token/policy
+  await page.getByRole('button', { name: 'User menu' }).click();
+  await page.getByRole('link', { name: 'Log out' }).click();
+  await page.getByRole('textbox', { name: 'Token' }).fill(newToken);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  // wait for the dashboard to load to ensure login was successful
+  await page.waitForURL('**/dashboard');
+  // save the localStorage state to file which includes the auth token and dismissed wizards
+  // subsequent tests can then reuse the session data
+  await page.context().storageState({ path: path.join(__dirname, `/tmp/${userType}-session.json`) });
+});

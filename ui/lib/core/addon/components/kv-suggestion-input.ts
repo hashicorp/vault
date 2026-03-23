@@ -10,7 +10,7 @@ import { action } from '@ember/object';
 import { guidFor } from '@ember/object/internals';
 import { run } from '@ember/runloop';
 import { keyIsFolder, parentKeyForKey, keyWithoutParentKey } from 'core/utils/key-utils';
-import { KvV2ListListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiKvV2ListListEnum } from '@hashicorp/vault-client-typescript';
 
 import type ApiService from 'vault/services/api';
 
@@ -78,7 +78,11 @@ export default class KvSuggestionInputComponent extends Component<Args> {
       // This request can either list secrets at the mount root or for a specified :secret_path.
       // Since :secret_path already contains a trailing slash, e.g. /metadata/my-secret//
       // the request URL is sanitized by the api service to remove duplicate slashes.
-      const { keys } = await this.api.secrets.kvV2List(this.pathToSecret, backend, KvV2ListListEnum.TRUE);
+      const { keys } = await this.api.secrets.kvV2List(
+        this.pathToSecret,
+        backend,
+        SecretsApiKvV2ListListEnum.TRUE
+      );
       // this will be used to filter the existing result set when the search term changes within the same path
       this._cachedSecrets = keys || [];
       return this._cachedSecrets;

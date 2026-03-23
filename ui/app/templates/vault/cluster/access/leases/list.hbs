@@ -3,8 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
+<Page::Header
+  @title="Leases"
+  @description="Monitor and manage the lifetime of dynamic secrets, including tracking time to live (TTL), renewals, and manual revocations."
+>
+  <:breadcrumbs>
     <KeyValueHeader
       @baseKey={{this.baseKey}}
       @path="vault.cluster.access.leases.list"
@@ -12,15 +15,19 @@
       @root={{this.backendCrumb}}
       @showCurrent={{true}}
     />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      <LinkTo @route="vault.cluster.access.leases.list-root">
-        Leases
-      </LinkTo>
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+  </:breadcrumbs>
+
+  <:actions>
+    {{#if this.baseKey.id}}
+      <Hds::Button
+        @text="Back to Leases"
+        @color="secondary"
+        @route="vault.cluster.access.leases.list-root"
+        data-test-button="Back to Leases"
+      />
+    {{/if}}
+  </:actions>
+</Page::Header>
 
 <Toolbar>
   <ToolbarFilters>
@@ -95,7 +102,13 @@
       <span class="has-text-weight-semibold">{{or item.keyWithoutParent item.id}}</span>
     </LinkTo>
   {{else}}
-    <EmptyState @title="There are no leases matching &quot;{{this.filter}}&quot;" />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header
+        @title="There are no leases matching &quot;{{this.filter}}&quot;"
+        @titleTag="h2"
+        data-test-empty-state-title
+      />
+    </Hds::ApplicationState>
   {{/each}}
   {{#unless this.filter}}
     <Hds::Pagination::Numbered
@@ -108,5 +121,7 @@
     />
   {{/unless}}
 {{else}}
-  <EmptyState @title={{this.emptyTitle}} />
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title={{this.emptyTitle}} @titleTag="h2" data-test-empty-state-title />
+  </Hds::ApplicationState>
 {{/if}}

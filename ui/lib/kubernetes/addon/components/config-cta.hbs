@@ -3,10 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<EmptyState
-  data-test-config-cta
-  @title="Kubernetes not configured"
-  @message="Get started by establishing the URL of the Kubernetes API to connect to, along with some additional options."
->
-  <Hds::Link::Standalone @icon="chevron-right" @iconPosition="trailing" @text="Configure Kubernetes" @route="configure" />
-</EmptyState>
+<Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+  <A.Header @title="Kubernetes not configured" @titleTag="h2" data-test-empty-state-title />
+  <A.Body
+    @text="Get started by establishing the URL of the Kubernetes API to connect to, along with some additional options."
+    data-test-empty-state-message
+  />
+  <A.Footer data-test-empty-state-actions as |F|>
+    <F.LinkStandalone @icon="chevron-right" @iconPosition="trailing" @text="Configure Kubernetes" @route="configure" />
+  </A.Footer>
+</Hds::ApplicationState>

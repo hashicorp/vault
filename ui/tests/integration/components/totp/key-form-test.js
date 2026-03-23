@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, fillIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -52,7 +52,7 @@ module('Integration | Component | totp/key-form', function (hooks) {
     />
     `);
 
-    assert.dom('[data-test-secret-header]').hasText('Create a TOTP key', 'Form title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a TOTP key', 'Form title renders');
 
     // check validation errors
     await click(GENERAL.submitButton);
@@ -110,7 +110,7 @@ module('Integration | Component | totp/key-form', function (hooks) {
     />
     `);
 
-    assert.dom('[data-test-secret-header]').hasText('Create a TOTP key', 'Form title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a TOTP key', 'Form title renders');
 
     // switch to non-generated form fields
     await click(GENERAL.radioByAttr('Other service'));

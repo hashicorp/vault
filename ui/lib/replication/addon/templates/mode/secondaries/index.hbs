@@ -57,17 +57,25 @@
       <hr class="is-marginless" />
     {{/each}}
   {{else}}
-    <EmptyState
-      @title="No known {{this.performanceMode}} secondary clusters associated with this cluster"
-      @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started."
-    >
-      <Hds::Link::Standalone
-        @icon="docs-link"
-        @iconPosition="trailing"
-        @text="Replication documentation"
-        @href={{doc-link "/vault/docs/internals/replication"}}
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header
+        @title="No known {{this.performanceMode}} secondary clusters associated with this cluster"
+        @titleTag="h2"
+        data-test-empty-state-title
       />
-    </EmptyState>
+      <A.Body
+        @text="Associated secondary clusters will be listed here. Add your first secondary cluster to get started."
+        data-test-empty-state-message
+      />
+      <A.Footer data-test-empty-state-actions as |F|>
+        <F.LinkStandalone
+          @icon="docs-link"
+          @iconPosition="trailing"
+          @text="Replication documentation"
+          @href={{doc-link "/vault/docs/internals/replication"}}
+        />
+      </A.Footer>
+    </Hds::ApplicationState>
   {{/if}}
 {{/if}}
 

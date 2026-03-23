@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@glimmer/component';
-import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { service } from '@ember/service';
+import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
-import {
-  enhanceEnginesWithCatalogData,
-  categorizeEnginesByStatus,
-  MOUNT_CATEGORIES,
-  PLUGIN_TYPES,
-  PLUGIN_CATEGORIES,
-} from 'vault/utils/plugin-catalog-helpers';
+import { filterEnginesByMountCategory } from 'core/utils/all-engines-metadata';
 import type { PluginCatalogData } from 'vault/services/plugin-catalog';
+import {
+  categorizeEnginesByStatus,
+  enhanceEnginesWithCatalogData,
+  MOUNT_CATEGORIES,
+  PLUGIN_CATEGORIES,
+  PLUGIN_TYPES,
+} from 'vault/utils/plugin-catalog-helpers';
 
 import type VersionService from 'vault/services/version';
 
@@ -42,6 +42,23 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
   @tracked showFlyout = false;
   @tracked flyoutPlugin: unknown = null;
   @tracked flyoutPluginType: string | null = null;
+
+  get breadcrumbs() {
+    return [
+      {
+        label: 'Vault',
+        icon: 'vault',
+        route: 'vault.cluster',
+      },
+      {
+        label: 'Secrets engines',
+        route: 'vault.cluster.secrets.backends',
+      },
+      {
+        label: 'Enable secrets engine',
+      },
+    ];
+  }
 
   get secretEngines() {
     // If an enterprise license is present, return all secret engines;

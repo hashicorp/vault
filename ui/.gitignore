@@ -43,4 +43,9 @@ package-lock.json
 vendor/jsondiffpatch.umd.js
 vendor/htmlformatter.umd.js
 
-
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

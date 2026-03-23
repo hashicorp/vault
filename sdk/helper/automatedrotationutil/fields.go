@@ -30,6 +30,20 @@ type AutomatedRotationParams struct {
 
 	// If set, will deregister all registered rotation jobs from the RotationManager for plugin.
 	DisableAutomatedRotation bool `json:"disable_automated_rotation"`
+
+	// RotationPolicy defines the policy to use when performing retries.
+	RotationPolicy string `json:"rotation_policy"`
+}
+
+type RotationInfoResponseParams struct {
+	// NextVaultRotation represents the next time Vault is expected to rotate the credential.
+	NextVaultRotation time.Time `json:"next_vault_rotation"`
+
+	// LastVaultRotation represents the time the credential was initially onboarded to the RM or last rotated.
+	LastVaultRotation time.Time `json:"last_vault_rotation"`
+
+	// RotationID represents the ID of this credential.
+	RotationID string `json:"rotation_id"`
 }
 
 // ParseAutomatedRotationFields provides common field parsing to embedding structs.
@@ -38,6 +52,7 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 	rotationWindowSecondsRaw, windowOk := d.GetOk("rotation_window")
 	rotationPeriodSecondsRaw, periodOk := d.GetOk("rotation_period")
 	disableRotation, disableRotationOk := d.GetOk("disable_automated_rotation")
+	rotationPolicyRaw, policyOk := d.GetOk("rotation_policy")
 
 	if scheduleOk {
 		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationScheduleRaw.(string) != "" {
@@ -75,15 +90,95 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 		p.DisableAutomatedRotation = disableRotation.(bool)
 	}
 
+	if policyOk {
+		p.RotationPolicy = rotationPolicyRaw.(string)
+	}
+
 	return nil
 }
 
+// Use PopulateSetAutomatedRotationData instead, *unless* all these
+// fields are necessary to maintain backwards compatibility with the plugin's pre-existing response API.
 // PopulateAutomatedRotationData adds PluginIdentityTokenParams info into the given map.
 func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]interface{}) {
 	m["rotation_schedule"] = p.RotationSchedule
 	m["rotation_window"] = p.RotationWindow.Seconds()
 	m["rotation_period"] = p.RotationPeriod.Seconds()
 	m["disable_automated_rotation"] = p.DisableAutomatedRotation
+	m["rotation_policy"] = p.RotationPolicy
+}
+
+// PopulateSetAutomatedRotationData adds PluginIdentityTokenParams info into the given map, based
+// on which fields were set for rotation. Setting a rotation schedule will not return a rotation
+// period, and setting a rotation period will not return a rotation schedule or rotation window.
+func (p *AutomatedRotationParams) PopulateSetAutomatedRotationData(m map[string]interface{}) {
+	// Always set these even if they are zero values, to avoid confusion.
+	m["disable_automated_rotation"] = p.DisableAutomatedRotation
+	m["rotation_policy"] = p.RotationPolicy
+
+	// Set both of these if a schedule is set.
+	if p.RotationSchedule != "" {
+		m["rotation_schedule"] = p.RotationSchedule
+		m["rotation_window"] = p.RotationWindow.Seconds()
+	}
+
+	// Set this if a period is set.
+	if p.RotationPeriod != 0 {
+		m["rotation_period"] = p.RotationPeriod.Seconds()
+	}
+}
+
+// PopulateRotationInfo adds RotationInfoResponseParams info into the given map.
+func (p *RotationInfoResponseParams) PopulateRotationInfo(m map[string]interface{}) {
+	// Only set last_vault_rotation and next_vault_rotation if they are non-zero
+	if !p.LastVaultRotation.IsZero() {
+		m["last_vault_rotation"] = p.LastVaultRotation.UTC()
+	} else {
+		m["last_vault_rotation"] = nil
+	}
+
+	if !p.NextVaultRotation.IsZero() {
+		m["next_vault_rotation"] = p.NextVaultRotation.UTC()
+	} else {
+		m["next_vault_rotation"] = nil
+	}
+}
+
+// SetRotationInfo sets the rotation info. It ensures a consistent format across different uses.
+// Plugins should use this when registering credentials or in the RotateCredential callback to keep rotation state up to date.
+func (p *RotationInfoResponseParams) SetRotationInfo(r *rotation.RotationInfo) {
+	if r != nil {
+		// LastVaultRotation is only provided by the RM on rotateCredential requests
+		// On a registration, we do not need to set this info on the credential.
+		if !r.LastVaultRotation.IsZero() {
+			// only set if provided
+			// only care about precision up until seconds, drop everything below
+			p.LastVaultRotation = r.LastVaultRotation.UTC().Truncate(time.Second)
+		}
+		p.NextVaultRotation = r.NextVaultRotation.UTC().Truncate(time.Second)
+		p.RotationID = r.RotationID
+	}
+}
+
+// SetLastVaultRotation sets the LastVaultRotation. It ensures a consistent format across different uses.
+// Plugins should only use this when manually rotating credentials to keep rotation state up to date.
+func (p *RotationInfoResponseParams) SetLastVaultRotation() {
+	p.LastVaultRotation = time.Now().UTC().Truncate(time.Second)
+}
+
+// GetTTL computes the TTL in seconds until expireTime from now.
+// This method should be used by plugins to compute TTL values for static credentials.
+func (p *RotationInfoResponseParams) GetTTL() int64 {
+	ttl := int64(p.NextVaultRotation.Sub(time.Now()).Seconds())
+	// a negative value here means the time has arrived, but the queue hasn't been checked yet. If the queue is checked
+	// every <n> seconds, we could get a value as low as -n. This can be a little confusing on the user end, so we clamp
+	// the value to zero. To quote another doc, "Users should not trust passwords with a zero ttl, as they are likely
+	// in the process of being rotated and will quickly become invalidated."
+	if ttl < 0 {
+		ttl = 0
+	}
+
+	return ttl
 }
 
 func (p *AutomatedRotationParams) ShouldRegisterRotationJob() bool {
@@ -128,6 +223,13 @@ func AddAutomatedRotationFieldsWithGroup(m map[string]*framework.FieldSchema, gr
 		"disable_automated_rotation": {
 			Type:        framework.TypeBool,
 			Description: "If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Group: group,
+			},
+		},
+		"rotation_policy": {
+			Type:        framework.TypeString,
+			Description: "Defines the rotation policy to use when performing automated rotations.",
 			DisplayAttrs: &framework.DisplayAttributes{
 				Group: group,
 			},

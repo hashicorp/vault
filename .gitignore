@@ -53,9 +53,11 @@ Vagrantfile
 *.hcl
 !.copywrite.hcl
 !.release/ci.hcl
+!.release/pipeline.hcl
 !.release/security-scan.hcl
 !.release/linux/package/etc/vault.d/vault.hcl
 !enos/**/*.hcl
+!**/fixtures/*.hcl
 !**/test-fixtures/**/*.hcl
 !**/testdata/*.hcl
 
@@ -136,3 +138,15 @@ tools/codechecker/.bin
 tools/pipeline/.bin
 tools/pipeline/pipeline
 .ci-bootstrap
+
+# Ignore stubmaker outputs on ent so they don't get checked in
+*_stubs_ent.go
+
+# scratch directory holding random stuff
+scratch
+
+# ignore Idea/Goland .run directory
+.run
+
+# bob
+.bob/notes

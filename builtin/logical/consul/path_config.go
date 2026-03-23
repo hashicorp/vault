@@ -107,6 +107,8 @@ func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request
 		return nil, fmt.Errorf("no user error reported but consul access configuration not found")
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeConsulConfigAccessRead, nil)
+
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"address": conf.Address,
@@ -148,6 +150,8 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeConsulConfigAccessWrite, nil)
 
 	return nil, nil
 }

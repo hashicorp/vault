@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAppRole_BoundCIDRLogin(t *testing.T) {
@@ -356,5 +357,92 @@ func TestAppRole_RoleDoesNotExist(t *testing.T) {
 
 	if !strings.Contains(errString, "invalid role or secret ID") {
 		t.Fatalf("Error was not due to invalid role ID. Error: %s", errString)
+	}
+}
+
+// TestAppRole_RoleLogin_AliasMetadata tests that the alias metadata is correctly set
+// in the role and that it is returned in the login response.
+func TestAppRole_RoleLogin_AliasMetadata(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+
+	metadata := map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+	}
+
+	// Create a role with token auth metadata
+	{
+		roleData := map[string]interface{}{
+			"policies":       "a,b,c",
+			"alias_metadata": metadata,
+		}
+		req := &logical.Request{
+			Operation: logical.CreateOperation,
+			Path:      "role/role1",
+			Storage:   storage,
+			Data:      roleData,
+		}
+		_ = b.requestNoErr(t, req)
+	}
+
+	// Assert that the role was created with the correct metadata
+	{
+		roleRoleIDReq := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "role/role1",
+			Storage:   storage,
+		}
+		resp := b.requestNoErr(t, roleRoleIDReq)
+		require.Equal(t, metadata, resp.Data["alias_metadata"])
+	}
+
+	// Get the role ID
+	var roleID any
+	{
+		roleRoleIDReq := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "role/role1/role-id",
+			Storage:   storage,
+		}
+		resp := b.requestNoErr(t, roleRoleIDReq)
+
+		roleID = resp.Data["role_id"]
+	}
+
+	// Get the secret ID
+	var secretID any
+	{
+		roleSecretIDReq := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "role/role1/secret-id",
+			Storage:   storage,
+		}
+		resp := b.requestNoErr(t, roleSecretIDReq)
+
+		secretID = resp.Data["secret_id"]
+	}
+
+	// Login
+	{
+		loginData := map[string]interface{}{
+			"role_id":   roleID,
+			"secret_id": secretID,
+		}
+		loginReq := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "login",
+			Storage:   storage,
+			Data:      loginData,
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+		}
+		loginResp, err := b.HandleRequest(context.Background(), loginReq)
+		require.NoError(t, err)
+		require.False(t, loginResp.IsError())
+
+		require.NotNil(t, loginResp.Auth, "expected a non-nil auth object in the response")
+
+		require.Equal(t, metadata, loginResp.Auth.Alias.CustomMetadata)
 	}
 }

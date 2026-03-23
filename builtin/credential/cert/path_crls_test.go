@@ -5,12 +5,16 @@ package cert
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"math/big"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -55,14 +59,87 @@ func TestCRLFetch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error: %s", err)
 	}
-	connState, err := testConnState("test-fixtures/keys/cert.pem",
-		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+
+	// Generate CA certificate
+	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
-	caPEM, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+
+	caTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: "Test CA",
+		},
+		NotBefore:             time.Now().Add(-1 * time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	caCertBytes, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &caKey.PublicKey, caKey)
 	require.NoError(t, err)
-	caKeyPEM, err := ioutil.ReadFile("test-fixtures/keys/key.pem")
+
+	caCert, err := x509.ParseCertificate(caCertBytes)
 	require.NoError(t, err)
-	certPEM, err := ioutil.ReadFile("test-fixtures/keys/cert.pem")
+
+	caPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caCertBytes,
+	})
+
+	caKeyBytes, err := x509.MarshalECPrivateKey(caKey)
+	require.NoError(t, err)
+
+	caKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: caKeyBytes,
+	})
+
+	// Generate client certificate
+	clientKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	clientTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject: pkix.Name{
+			CommonName: "test.example.com",
+		},
+		NotBefore:             time.Now().Add(-1 * time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              []string{"localhost", "test.example.com"},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+	}
+
+	clientCertBytes, err := x509.CreateCertificate(rand.Reader, clientTemplate, caCert, &clientKey.PublicKey, caKey)
+	require.NoError(t, err)
+
+	certPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: clientCertBytes,
+	})
+
+	clientKeyBytes, err := x509.MarshalECPrivateKey(clientKey)
+	require.NoError(t, err)
+
+	clientKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: clientKeyBytes,
+	})
+
+	// Create tls.Certificate from PEM data
+	tlsCert, err := tls.X509KeyPair(certPEM, clientKeyPEM)
+	require.NoError(t, err)
+
+	// Create CA cert pool
+	rootCAs := x509.NewCertPool()
+	rootCAs.AppendCertsFromPEM(caPEM)
+
+	// Create connection state with generated certificates
+	connState, err := testConnStateWithCert(tlsCert, rootCAs)
+	require.NoError(t, err)
 
 	caBundle, err := certutil.ParsePEMBundle(string(caPEM))
 	require.NoError(t, err)
@@ -80,7 +157,7 @@ func TestCRLFetch(t *testing.T) {
 		Number:             big.NewInt(1),
 		ThisUpdate:         time.Now(),
 		NextUpdate:         time.Now().Add(50 * time.Millisecond),
-		SignatureAlgorithm: x509.SHA1WithRSA,
+		SignatureAlgorithm: x509.ECDSAWithSHA256,
 	}
 
 	var crlBytesLock sync.Mutex

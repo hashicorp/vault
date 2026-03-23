@@ -27,5 +27,10 @@ export default class MfaMethodsRoute extends Route {
   }
   setupController(controller, model) {
     controller.set('model', model);
+
+    controller.breadcrumbs = [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
+      { label: 'Mfa' },
+    ];
   }
 }

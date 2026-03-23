@@ -17,6 +17,8 @@ import (
 
 var errDuplicateIdentityName = errors.New("duplicate identity name")
 
+const duplicateCanonicalIDMetadataKey = "duplicate_of_canonical_id"
+
 // ConflictResolver defines the interface for resolving conflicts between
 // entities, groups, and aliases. All methods should implement a check for
 // existing=nil. This is an intentional design choice to allow the caller to
@@ -45,6 +47,12 @@ func (r *errorResolver) ResolveEntities(ctx context.Context, existing, duplicate
 		return false, nil
 	}
 
+	// Uniqueness is enforced on the primary key in memdb, so if the IDs match
+	// this is an update.
+	if existing.ID == duplicate.ID {
+		return false, nil
+	}
+
 	r.logger.Warn(errDuplicateIdentityName.Error(),
 		"entity_name", duplicate.Name,
 		"duplicate_of_name", existing.Name,
@@ -62,6 +70,12 @@ func (r *errorResolver) ResolveGroups(ctx context.Context, existing, duplicate *
 		return false, nil
 	}
 
+	// Uniqueness is enforced on the primary key in memdb, so if the IDs match
+	// this is an update.
+	if existing.ID == duplicate.ID {
+		return false, nil
+	}
+
 	r.logger.Warn(errDuplicateIdentityName.Error(),
 		"group_name", duplicate.Name,
 		"duplicate_of_name", existing.Name,
@@ -76,6 +90,12 @@ func (r *errorResolver) ResolveGroups(ctx context.Context, existing, duplicate *
 // putting the system in case-sensitive mode.
 func (r *errorResolver) ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) (bool, error) {
 	if existing == nil {
+		return false, nil
+	}
+
+	// Uniqueness is enforced on the primary key in memdb, so if the IDs match
+	// this is an update.
+	if existing.ID == duplicate.ID {
 		return false, nil
 	}
 
@@ -391,11 +411,17 @@ func (r *renameResolver) ResolveEntities(ctx context.Context, existing, duplicat
 		return false, nil
 	}
 
+	// Uniqueness is enforced on the primary key in memdb, so if the IDs match
+	// this is an update.
+	if existing.ID == duplicate.ID {
+		return false, nil
+	}
+
 	duplicate.Name = duplicate.Name + "-" + duplicate.ID
 	if duplicate.Metadata == nil {
 		duplicate.Metadata = make(map[string]string)
 	}
-	duplicate.Metadata["duplicate_of_canonical_id"] = existing.ID
+	duplicate.Metadata[duplicateCanonicalIDMetadataKey] = existing.ID
 
 	r.logger.Warn("renaming entity with duplicate name",
 		"namespace_id", duplicate.NamespaceID,
@@ -419,11 +445,17 @@ func (r *renameResolver) ResolveGroups(ctx context.Context, existing, duplicate 
 		return false, nil
 	}
 
+	// Uniqueness is enforced on the primary key in memdb, so if the IDs match
+	// this is an update.
+	if existing.ID == duplicate.ID {
+		return false, nil
+	}
+
 	duplicate.Name = duplicate.Name + "-" + duplicate.ID
 	if duplicate.Metadata == nil {
 		duplicate.Metadata = make(map[string]string)
 	}
-	duplicate.Metadata["duplicate_of_canonical_id"] = existing.ID
+	duplicate.Metadata[duplicateCanonicalIDMetadataKey] = existing.ID
 	r.logger.Warn("renaming group with duplicate name",
 		"namespace_id", duplicate.NamespaceID,
 		"group_id", duplicate.ID,

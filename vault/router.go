@@ -209,25 +209,25 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	}
 	re.tainted.Store(mountEntry.Tainted)
 	re.rootPaths.Store(pathsToRadix(paths.Root))
-	loginPathsEntry, err := parseUnauthenticatedPaths(paths.Unauthenticated)
+	loginPathsEntry, err := parseSpecialPaths(paths.Unauthenticated)
 	if err != nil {
 		return err
 	}
 	re.loginPaths.Store(loginPathsEntry)
 
-	binaryPathsEntry, err := parseUnauthenticatedPaths(paths.Binary)
+	binaryPathsEntry, err := parseSpecialPaths(paths.Binary)
 	if err != nil {
 		return err
 	}
 	re.binaryPaths.Store(binaryPathsEntry)
 
-	limitedPathsEntry, err := parseUnauthenticatedPaths(paths.Limited)
+	limitedPathsEntry, err := parseSpecialPaths(paths.Limited)
 	if err != nil {
 		return err
 	}
 	re.limitedPaths.Store(limitedPathsEntry)
 
-	allowSnapshotReadPathsEntry, err := parseUnauthenticatedPaths(paths.AllowSnapshotRead)
+	allowSnapshotReadPathsEntry, err := parseSpecialPaths(paths.AllowSnapshotRead)
 	if err != nil {
 		return err
 	}
@@ -677,8 +677,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 			return nil, false, false, fmt.Errorf("nil token entry")
 		}
 
-		if te.Type != logical.TokenTypeService {
-			return logical.ErrorResponse(`cubbyhole operations are only supported by "service" type tokens`), false, false, nil
+		if te.Type != logical.TokenTypeService && te.Type != logical.TokenTypeEnt {
+			return logical.ErrorResponse(`cubbyhole operations are only supported by "service" or enterprise type tokens`), false, false, nil
 		}
 
 		switch {
@@ -1024,7 +1024,7 @@ func wildcardError(path, msg string) error {
 	return fmt.Errorf("path %q: invalid use of wildcards %s", path, msg)
 }
 
-func isValidUnauthenticatedPath(path string) (bool, error) {
+func isValidSpecialPath(path string) (bool, error) {
 	switch {
 	case strings.Count(path, "*") > 1:
 		return false, wildcardError(path, "(multiple '*' is forbidden)")
@@ -1038,13 +1038,13 @@ func isValidUnauthenticatedPath(path string) (bool, error) {
 	return true, nil
 }
 
-// parseUnauthenticatedPaths converts a list of special paths to a
+// parseSpecialPaths converts a list of special paths to a
 // specialPathsEntry
-func parseUnauthenticatedPaths(paths []string) (*specialPathsEntry, error) {
+func parseSpecialPaths(paths []string) (*specialPathsEntry, error) {
 	var tempPaths []string
 	tempWildcardPaths := make([]wildcardPath, 0)
 	for _, path := range paths {
-		if ok, err := isValidUnauthenticatedPath(path); !ok {
+		if ok, err := isValidSpecialPath(path); !ok {
 			return nil, err
 		}
 

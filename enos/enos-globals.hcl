@@ -18,26 +18,27 @@ globals {
   config_modes    = ["env", "file"]
   consul_editions = ["ce", "ent"]
   consul_versions = ["1.18.2", "1.19.2", "1.20.6", "1.21.1"]
-  distros         = ["amzn", "leap", "rhel", "sles", "ubuntu"]
+  distros         = ["amzn", "rhel", "sles", "ubuntu"]
   // Different distros may require different packages, or use different aliases for the same package
   distro_packages = {
+    // NOTE: These versions must always match the output of enos_host_info.target_distro. They are
+    // also used in various modules `artifact`, `ec2_info`, and `softhsm_install`. If you are adding
+    // or modifying keys you probably have to update those modules.
     amzn = {
       "2"    = ["nc", "openldap-clients"]
       "2023" = ["nc", "openldap-clients"]
     }
-    leap = {
-      "15.6" = ["netcat", "openssl", "openldap2-client"]
-    }
     rhel = {
       "8.10" = ["nc", "openldap-clients"]
-      "9.6"  = ["nc", "openldap-clients"]
-      "10.0" = ["nc", "openldap-clients"]
+      "9.7"  = ["nc", "openldap-clients"]
+      "10.1" = ["nc", "openldap-clients"]
     }
     sles = {
       // When installing Vault RPM packages on a SLES AMI, the openssl package provided
       // isn't named "openssl, which rpm doesn't know how to handle. Therefore we add the
       // "correctly" named one in our package installation before installing Vault.
-      "15.6" = ["netcat-openbsd", "openssl", "openldap2-client"]
+      "15.7" = ["netcat-openbsd", "openssl", "openldap2-client"]
+      "16.0" = ["netcat-openbsd", "openssl", "openldap2-client"]
     }
     ubuntu = {
       "22.04" = ["netcat", "ldap-utils"]
@@ -46,7 +47,6 @@ globals {
   }
   distro_version = {
     amzn   = var.distro_version_amzn
-    leap   = var.distro_version_leap
     rhel   = var.distro_version_rhel
     sles   = var.distro_version_sles
     ubuntu = var.distro_version_ubuntu
@@ -56,7 +56,6 @@ globals {
   ip_versions         = ["4", "6"]
   package_manager = {
     "amzn"   = "yum"
-    "leap"   = "zypper"
     "rhel"   = "yum"
     "sles"   = "zypper"
     "ubuntu" = "apt"

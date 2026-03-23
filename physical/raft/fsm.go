@@ -781,7 +781,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 							go f.restoreCb(context.Background())
 						}
 					default:
-						return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
+						return fmt.Errorf("%d is not a supported transaction operation", op.OpType)
 					}
 					if err != nil {
 						return err

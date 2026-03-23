@@ -69,21 +69,23 @@ const (
 	// ListingVisibilityUnauth is the unauth type for listing visibility
 	ListingVisibilityUnauth ListingVisibilityType = "unauth"
 
-	mountPathSystem    = "sys/"
-	mountPathIdentity  = "identity/"
-	mountPathCubbyhole = "cubbyhole/"
+	mountPathSystem        = "sys/"
+	mountPathIdentity      = "identity/"
+	mountPathCubbyhole     = "cubbyhole/"
+	mountPathAgentRegistry = "agent-registry/"
 
-	mountTypeSystem      = "system"
-	mountTypeNSSystem    = "ns_system"
-	mountTypeIdentity    = "identity"
-	mountTypeNSIdentity  = "ns_identity"
-	mountTypeCubbyhole   = "cubbyhole"
-	mountTypePlugin      = "plugin"
-	mountTypeKV          = "kv"
-	mountTypeNSCubbyhole = "ns_cubbyhole"
-	mountTypeToken       = "token"
-	mountTypeNSToken     = "ns_token"
-	mountTypeDatabase    = "database"
+	mountTypeSystem        = "system"
+	mountTypeNSSystem      = "ns_system"
+	mountTypeIdentity      = "identity"
+	mountTypeNSIdentity    = "ns_identity"
+	mountTypeCubbyhole     = "cubbyhole"
+	mountTypePlugin        = "plugin"
+	mountTypeKV            = "kv"
+	mountTypeNSCubbyhole   = "ns_cubbyhole"
+	mountTypeToken         = "token"
+	mountTypeNSToken       = "ns_token"
+	mountTypeDatabase      = "database"
+	mountTypeAgentRegistry = "agent_registry"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
@@ -107,11 +109,13 @@ var (
 		mountPathSystem,
 		mountPathCubbyhole,
 		mountPathIdentity,
+		mountPathAgentRegistry,
 	}
 
 	untunableMounts = []string{
 		mountPathCubbyhole,
 		mountPathSystem,
+		mountPathAgentRegistry,
 		"audit/",
 	}
 
@@ -122,6 +126,7 @@ var (
 		mountTypeSystem,
 		mountTypeToken,
 		mountTypeIdentity,
+		mountTypeAgentRegistry,
 	}
 
 	// mountAliases maps old backend names to new backend names, allowing us
@@ -572,8 +577,13 @@ func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, e
 	}, nil
 }
 
-// Mount is used to mount a new backend to the mount table.
+// mount is used to mount a new backend to the mount table.
 func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
+	return c.mountWithRequest(ctx, entry, nil)
+}
+
+// mountWithRequest is used to mount a new backend to the mount table with a request
+func (c *Core) mountWithRequest(ctx context.Context, entry *MountEntry, request *logical.Request) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(entry.Path, "/") {
 		entry.Path += "/"
@@ -594,7 +604,7 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 	}
 
 	// Mount internally
-	if err := c.mountInternal(ctx, entry, MountTableUpdateStorage); err != nil {
+	if err := c.mountInternalWithRequest(ctx, entry, MountTableUpdateStorage, request); err != nil {
 		return err
 	}
 
@@ -602,6 +612,10 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 }
 
 func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStorage bool) error {
+	return c.mountInternalWithRequest(ctx, entry, updateStorage, nil)
+}
+
+func (c *Core) mountInternalWithRequest(ctx context.Context, entry *MountEntry, updateStorage bool, request *logical.Request) error {
 	c.mountsLock.Lock()
 	c.authLock.Lock()
 	locked := true
@@ -789,14 +803,21 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type, "version", entry.RunningVersion)
 	}
 
-	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsEnable, ns, map[string]interface{}{
+	observationData := map[string]interface{}{
 		"path":                   entry.Path,
 		"local_mount":            entry.Local,
 		"type":                   entry.Type,
 		"accessor":               entry.Accessor,
 		"plugin_version":         entry.Version,
 		"running_plugin_version": entry.RunningVersion,
-	})
+	}
+	if request != nil {
+		observationData["entity_id"] = request.EntityID
+		observationData["request_id"] = request.ID
+		observationData["client_id"] = request.ClientID
+	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsEnable, ns, observationData)
 	if err != nil {
 		c.logger.Error("failed to record observation after enabling mount backend", "path", entry.Path, "error", err)
 	}
@@ -845,9 +866,15 @@ func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry)
 	return consts.PluginTypeUnknown
 }
 
-// Unmount is used to unmount a path. The boolean indicates whether the mount
+// unmount is used to unmount a path. The boolean indicates whether the mount
 // was found.
 func (c *Core) unmount(ctx context.Context, path string) error {
+	return c.unmountWithRequest(ctx, path, nil)
+}
+
+// unmountWithRequest is used to unmount a path with a request. The boolean
+// indicates whether the mount was found.
+func (c *Core) unmountWithRequest(ctx context.Context, path string, request *logical.Request) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -861,7 +888,7 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 	}
 
 	// Unmount mount internally
-	if err := c.unmountInternal(ctx, path, MountTableUpdateStorage); err != nil {
+	if err := c.unmountInternalWithRequest(ctx, path, MountTableUpdateStorage, request); err != nil {
 		return err
 	}
 
@@ -874,6 +901,10 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 }
 
 func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage bool) error {
+	return c.unmountInternalWithRequest(ctx, path, updateStorage, nil)
+}
+
+func (c *Core) unmountInternalWithRequest(ctx context.Context, path string, updateStorage bool, request *logical.Request) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
@@ -984,14 +1015,21 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 		c.logger.Info("successfully unmounted", "path", path, "namespace", ns.Path)
 	}
 
-	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsDisable, ns, map[string]interface{}{
-		"path":                   entry.Path,
+	observationData := map[string]interface{}{
+		"path":                   path,
 		"local_mount":            entry.Local,
 		"type":                   entry.Type,
 		"accessor":               entry.Accessor,
 		"plugin_version":         entry.Version,
 		"running_plugin_version": entry.RunningVersion,
-	})
+	}
+	if request != nil {
+		observationData["entity_id"] = request.EntityID
+		observationData["request_id"] = request.ID
+		observationData["client_id"] = request.ClientID
+	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsDisable, ns, observationData)
 	if err != nil {
 		c.logger.Error("failed to record observation after enabling mount backend", "path", entry.Path, "error", err)
 	}
@@ -1792,6 +1830,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		Plugin:        entry.Type,
 		PluginVersion: pluginVersion,
 		Version:       pluginOptionsVersion,
+		IsLocal:       entry.Local,
 	})
 	if err != nil {
 		return nil, err
@@ -1962,6 +2001,33 @@ func (c *Core) requiredMountTable() *MountTable {
 		BackendAwareUUID: identityBackendUUID,
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Authorization"},
+			AllowedResponseHeaders:    []string{"Location"},
+		},
+		RunningVersion: versions.DefaultBuiltinVersion,
+	}
+
+	agentRegistryUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity mount entry UUID: %v", err))
+	}
+	agentRegistryAccessor, err := c.generateMountAccessor("agent-registry")
+	if err != nil {
+		panic(fmt.Sprintf("could not generate identity accessor: %v", err))
+	}
+	agentRegistryBackendUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity backend UUID: %v", err))
+	}
+	agentRegistryMount := &MountEntry{
+		Table:            mountTableType,
+		Path:             "agent-registry/",
+		Type:             "agent_registry",
+		Description:      "agent registry",
+		UUID:             agentRegistryUUID,
+		Accessor:         agentRegistryAccessor,
+		BackendAwareUUID: agentRegistryBackendUUID,
+		Config: MountConfig{
+			PassthroughRequestHeaders: []string{"Authorization"},
 		},
 		RunningVersion: versions.DefaultBuiltinVersion,
 	}
@@ -1969,6 +2035,7 @@ func (c *Core) requiredMountTable() *MountTable {
 	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
 	table.Entries = append(table.Entries, identityMount)
+	table.Entries = append(table.Entries, agentRegistryMount)
 
 	return table
 }
@@ -2014,6 +2081,8 @@ func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *
 		c.cubbyholeBackend = ch
 	case mountTypeIdentity:
 		c.identityStore = backend.(*IdentityStore)
+	case mountTypeAgentRegistry:
+		c.agentRegistry = backend.(*AgentRegistry)
 	}
 }
 

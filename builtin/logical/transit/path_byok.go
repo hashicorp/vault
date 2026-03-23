@@ -103,6 +103,7 @@ func (b *backend) pathPolicyBYOKExportRead(ctx context.Context, req *logical.Req
 	}
 
 	retKeys := map[string]string{}
+	var exportVersion *int
 	switch version {
 	case "":
 		for k, v := range srcP.Keys {
@@ -139,7 +140,15 @@ func (b *backend) pathPolicyBYOKExportRead(ctx context.Context, req *logical.Req
 		}
 
 		retKeys[strconv.Itoa(versionValue)] = exportKey
+		exportVersion = &versionValue
 	}
+
+	metadata := b.keyPolicyObservationMetadata(srcP)
+	if exportVersion != nil {
+		metadata["export_version"] = *exportVersion
+	}
+	metadata["destination_key"] = dstP.Name
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyExportBYOK, metadata)
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{

@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { SystemListStorageRaftSnapshotLoadListEnum } from '@hashicorp/vault-client-typescript';
+import { SystemApiSystemListStorageRaftSnapshotLoadListEnum } from '@hashicorp/vault-client-typescript';
 
 import type ApiService from 'vault/services/api';
 import type Capabilities from 'vault/services/capabilities';
@@ -38,7 +38,7 @@ export default class RecoverySnapshotsRoute extends Route {
   }
 
   redirect(model: SnapshotsRouteModel) {
-    if (model.snapshots.length === 1) {
+    if (Array.isArray(model.snapshots) && model.snapshots.length === 1) {
       const snapshot_id = model.snapshots[0];
       this.router.transitionTo('vault.cluster.recovery.snapshots.snapshot.manage', snapshot_id);
     }
@@ -50,7 +50,7 @@ export default class RecoverySnapshotsRoute extends Route {
       // By default, the api service uses the current namespace context, so we'll need to specify otherwise.
       // Snapshot operations do not have this constraint.
       const { keys } = await this.api.sys.systemListStorageRaftSnapshotLoad(
-        SystemListStorageRaftSnapshotLoadListEnum.TRUE,
+        SystemApiSystemListStorageRaftSnapshotLoadListEnum.TRUE,
         this.api.buildHeaders({ namespace: '' })
       );
       return keys as string[];
@@ -59,10 +59,14 @@ export default class RecoverySnapshotsRoute extends Route {
       if (error.status === 404) {
         return [];
       }
-      throw {
-        httpStatus: error.status,
-        ...error,
-      };
+
+      if (error.message === 'raft storage is not in use') {
+        return {
+          showRaftStorageMessage: true,
+        };
+      }
+
+      throw error;
     }
   }
 }

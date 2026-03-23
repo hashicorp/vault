@@ -4,14 +4,11 @@
  */
 
 import { module, test } from 'qunit';
-
 import sinon from 'sinon';
-
 import { setupTest } from 'vault/tests/helpers';
 
 class ProviderStub {
   name = 'testing';
-
   start = sinon.stub();
   identify = sinon.stub();
   trackPageView = sinon.stub();
@@ -59,22 +56,37 @@ module('Unit | Service | analytics', function (hooks) {
 
   module('#log', function (hooks) {
     hooks.beforeEach(function () {
-      // eslint-disable-next-line no-console
-      console.log = sinon.stub(console, 'log');
+      sinon.stub(console, 'info');
     });
 
     hooks.afterEach(function () {
-      // eslint-disable-next-line no-console
-      console.log.restore();
+      console.info.restore();
     });
 
-    test('logging is not shown when inactive', function (assert) {
+    test('logging does not show outside of dev environment', function (assert) {
       this.service.debug = false;
-      // for the next few lines, console.log WILL NOT WORK AS EXPECTED
-      this.service.trackPageView('a', null);
+      this.service.trackPageView('test-route', { foo: 'bar' });
 
-      // eslint-disable-next-line no-console
-      assert.true(console.log.notCalled, 'console.log is called');
+      assert.true(console.info.notCalled, 'console.info is not called when debug is false');
+    });
+
+    test('logging shows in dev environments with correct format', function (assert) {
+      this.service.debug = true;
+      this.service.trackPageView('test-route', { foo: 'bar' });
+
+      assert.true(
+        console.info.calledOnceWith('[Analytics - dummy]', '$pageview', 'test-route', { foo: 'bar' }),
+        'console.info is called once with correctly formatted message'
+      );
+    });
+
+    test('logging works for all public methods', function (assert) {
+      this.service.debug = true;
+
+      this.service.identifyUser('user-123', { role: 'admin' });
+      this.service.trackEvent('button-click', { location: 'sidebar' });
+
+      assert.strictEqual(console.info.callCount, 2, 'log is called for each public method');
     });
   });
 });

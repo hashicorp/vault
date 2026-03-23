@@ -1,0 +1,28 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Wizard::IntroContent
+  @setupTime="30 min"
+  @description="Policies govern the behavior of all users, tokens, and entities by defining the rules (ACLs) that explicitly grant or forbid access to specific paths and operations within Vault."
+  @imageAlt="namespace hierarchy example"
+  @imageCaption="Policy works as a checkpoint to determine user’s privileges to access operations or secrets inside Vault."
+  @imageSrc={{img-path "~/acl-policies-intro.png"}}
+>
+  <:features>
+    <Wizard::IntroContent::Feature @icon="service">
+      Ensure the principle of
+      <strong>least privilege</strong>, so that users and applications can only access specific secrets and configuration
+      paths necessary for their core function.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="globe">
+      In multi-tenant environments, policies apply
+      <strong>hierarchically</strong>. A policy created in a child namespace manages paths only in that namespace.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="lock">
+      You'll need a
+      <strong>privileged token</strong>
+      (such as Root) to write the policy governing the whole cluster.
+    </Wizard::IntroContent::Feature>
+  </:features>
+</Wizard::IntroContent>

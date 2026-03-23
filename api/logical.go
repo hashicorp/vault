@@ -300,6 +300,18 @@ func (c *Logical) addExtraHeaders(r *Request, headers http.Header) error {
 	return nil
 }
 
+func (c *Logical) PatchRaw(path string, data []byte) (*Response, error) {
+	return c.PatchRawWithContext(context.Background(), path, data)
+}
+
+func (c *Logical) PatchRawWithContext(ctx context.Context, path string, data []byte) (*Response, error) {
+	r := c.c.NewRequest(http.MethodPatch, "/v1/"+path)
+	r.Headers.Set("Content-Type", "application/scim+json")
+	r.BodyBytes = data
+
+	return c.writeRaw(ctx, r)
+}
+
 // Recover recovers the data at the given Vault path from a loaded snapshot.
 // The snapshotID parameter is the ID of the loaded snapshot
 func (c *Logical) Recover(ctx context.Context, path string, snapshotID string) (*Secret, error) {
@@ -379,6 +391,15 @@ func (c *Logical) Delete(path string) (*Secret, error) {
 
 func (c *Logical) DeleteWithContext(ctx context.Context, path string) (*Secret, error) {
 	return c.DeleteWithDataWithContext(ctx, path, nil)
+}
+
+func (c *Logical) DeleteRaw(path string) (*Response, error) {
+	return c.DeleteRawWithContext(context.Background(), path)
+}
+
+func (c *Logical) DeleteRawWithContext(ctx context.Context, path string) (*Response, error) {
+	r := c.c.NewRequest(http.MethodDelete, "/v1/"+path)
+	return c.c.RawRequestWithContext(ctx, r)
 }
 
 func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret, error) {

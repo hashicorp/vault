@@ -760,14 +760,16 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 	// logical.Response. This will fail if logical.Response changes without a corresponding
 	// change to cleanResponse()
 	orig = &logical.Response{
-		Secret:    new(logical.Secret),
-		Auth:      new(logical.Auth),
-		Data:      map[string]interface{}{"foo": 42},
-		Redirect:  "foo",
-		Warnings:  []string{"foo"},
-		WrapInfo:  &wrapping.ResponseWrapInfo{Token: "foo"},
-		Headers:   map[string][]string{"foo": {"bar"}},
-		MountType: "mount",
+		Secret:                        new(logical.Secret),
+		Auth:                          new(logical.Auth),
+		Data:                          map[string]interface{}{"foo": 42},
+		Redirect:                      "foo",
+		Warnings:                      []string{"foo"},
+		WrapInfo:                      &wrapping.ResponseWrapInfo{Token: "foo"},
+		Headers:                       map[string][]string{"foo": {"bar"}},
+		MountType:                     "mount",
+		SupplementalAuditResponseData: map[string]any{"baz": "qux"},
+		SupplementalAuditRequestData:  map[string]any{"qux": "baz"},
 	}
 	origJSON := mustJSONMarshal(t, orig)
 

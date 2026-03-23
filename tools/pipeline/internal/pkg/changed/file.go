@@ -1,57 +1,50 @@
 // Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
-// Package changed is a package for inspecting and categorizing changed files into groups
+// Package changed provides functionality for inspecting and categorizing changed files into groups.
 package changed
 
 import (
 	"slices"
 	"strings"
 
-	gh "github.com/google/go-github/v74/github"
+	gh "github.com/google/go-github/v83/github"
 )
 
-type (
-	// File is a changed file in a PR or commit
-	File struct {
-		File   *gh.CommitFile `json:"file,omitempty"`
-		Groups FileGroups     `json:"groups,omitempty"`
-	}
-	// Files is a slice of changed files in a PR or commit
-	Files []*File
-	// FileGroup is group name describing a class of file the changed file belongs to
-	FileGroup string
-	// FileGroups is a set of groups a changed file belongs to. Use FileGroups.Add() instead of append()
-	// to ensure uniqueness and ordering
-	FileGroups []FileGroup
-)
+// File represents a changed file in a PR or commit.
+type File struct {
+	// When listing changed files directly from GitHub we'll have a commit file
+	GithubCommitFile *gh.CommitFile `json:"github_commit_file,omitempty"`
+	// When getting changed files directly from git we currently only use the filename
+	Filename string `json:"file,omitempty"`
+	// Groups are any changed file groups that are associated with the file
+	Groups FileGroups `json:"groups,omitempty"`
+}
 
-const (
-	FileGroupAutopilot   FileGroup = "autopilot"
-	FileGroupChangelog   FileGroup = "changelog"
-	FileGroupCommunity   FileGroup = "community"
-	FileGroupDocs        FileGroup = "docs"
-	FileGroupEnos        FileGroup = "enos"
-	FileGroupEnterprise  FileGroup = "enterprise"
-	FileGroupGithub      FileGroup = "github"
-	FileGroupGoApp       FileGroup = "app"
-	FileGroupGoToolchain FileGroup = "gotoolchain"
-	FileGroupPipeline    FileGroup = "pipeline"
-	FileGroupProto       FileGroup = "proto"
-	FileGroupTools       FileGroup = "tools"
-	FileGroupWebUI       FileGroup = "ui"
-)
+// Files is a slice of changed files in a PR or commit.
+type Files []*File
 
-// Name is the file name of the changed file
+// FileGroup is a group name describing a class of file the changed file belongs to.
+type FileGroup string
+
+// FileGroups is a set of groups a changed file belongs to. Use FileGroups.Add() instead of append()
+// to ensure uniqueness and ordering.
+type FileGroups []FileGroup
+
+// Name returns the file name of the changed file.
 func (f *File) Name() string {
-	if f == nil || f.File == nil {
+	if f == nil {
 		return ""
 	}
 
-	return f.File.GetFilename()
+	if f.GithubCommitFile != nil {
+		return f.GithubCommitFile.GetFilename()
+	}
+
+	return f.Filename
 }
 
-// Add takes a variadic set of groups and adds them to the ordered set of groups
+// Add takes a variadic set of groups and adds them to the ordered set of groups.
 func (g FileGroups) Add(groups ...FileGroup) FileGroups {
 	for _, group := range groups {
 		idx, in := g.In(group)
@@ -65,7 +58,7 @@ func (g FileGroups) Add(groups ...FileGroup) FileGroups {
 	return g
 }
 
-// In takes a group and determines the index and presence of the group in the group set
+// In takes a group and determines the index and presence of the group in the group set.
 func (g FileGroups) In(group FileGroup) (int, bool) {
 	return slices.BinarySearch(g, group)
 }
@@ -94,7 +87,25 @@ func (g FileGroups) Any(groups FileGroups) bool {
 	return false
 }
 
-// Groups returns the FileGroups as a slice of strings
+// Intersection takes another FileGroups and returns a new FileGroups containing only
+// the groups that are present in both FileGroups. If there is no intersection, the
+// result will be empty.
+func (g FileGroups) Intersection(groups FileGroups) FileGroups {
+	if g == nil || groups == nil {
+		return FileGroups{}
+	}
+
+	result := FileGroups{}
+	for _, group := range g {
+		if _, in := groups.In(group); in {
+			result = append(result, group)
+		}
+	}
+
+	return result
+}
+
+// Groups returns the FileGroups as a slice of strings.
 func (g FileGroups) Groups() []string {
 	groups := []string{}
 	for _, g := range g {
@@ -104,12 +115,12 @@ func (g FileGroups) Groups() []string {
 	return groups
 }
 
-// String is a string representation of all groups a file is in
+// String returns a string representation of all groups a file is in.
 func (g FileGroups) String() string {
 	return strings.Join(g.Groups(), ", ")
 }
 
-// Names returns a list of file names
+// Names returns a list of file names.
 func (f Files) Names() []string {
 	if len(f) < 1 {
 		return nil
@@ -122,7 +133,7 @@ func (f Files) Names() []string {
 	return files
 }
 
-// EachHasAnyGroup determines whether each file contains the any of the given groups
+// EachHasAnyGroup determines whether each file contains any of the given groups.
 func (f Files) EachHasAnyGroup(groups FileGroups) bool {
 	if f == nil {
 		return false

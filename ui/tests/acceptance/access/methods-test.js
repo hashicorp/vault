@@ -13,6 +13,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountAuthCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { sanitizePath } from 'core/utils/sanitize-path';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 const { searchSelect } = GENERAL;
 
@@ -20,15 +21,17 @@ module('Acceptance | auth-methods list view', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    return login();
+    await login();
+    // dismiss wizard
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.authMethods);
   });
 
   test('it navigates to auth method', async function (assert) {
     await visit('/vault/access/');
     assert.strictEqual(currentRouteName(), 'vault.cluster.access.methods', 'navigates to the correct route');
-    assert.dom('[data-test-sidebar-nav-link="Authentication Methods"]').hasClass('active');
+    assert.dom('[data-test-sidebar-nav-link="Authentication methods"]').hasClass('active');
   });
 
   test('it filters by name and auth type', async function (assert) {
@@ -83,12 +86,12 @@ module('Acceptance | auth-methods list view', function (hooks) {
         .exists({ count: 1 }, `auth method ${key} appears in list view`);
     }
     await visit('/vault/settings/auth/enable');
-    await click(GENERAL.navLink('OIDC Provider'));
+    await click(GENERAL.navLink('OIDC provider'));
     await visit('/vault/access/');
     for (const [key] of Object.entries(authPayload)) {
       assert
         .dom(GENERAL.linkedBlock(sanitizePath(key)))
-        .exists({ count: 1 }, `auth method ${key} appears in list view after navigating from OIDC Provider`);
+        .exists({ count: 1 }, `auth method ${key} appears in list view after navigating from OIDC provider`);
     }
   });
 

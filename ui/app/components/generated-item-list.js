@@ -29,6 +29,16 @@ export default class GeneratedItemList extends Component {
   @service pagination;
   @tracked itemToDelete = null;
 
+  get breadcrumbs() {
+    return [
+      {
+        label: 'Auth Methods',
+        route: 'vault.cluster.access.methods',
+      },
+      { label: this.args.methodModel.id },
+    ];
+  }
+
   @action
   refreshItemList() {
     const route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);

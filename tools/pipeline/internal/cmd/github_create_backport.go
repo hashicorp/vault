@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -23,7 +22,7 @@ var createGithubBackportState struct {
 
 func newCreateGithubBackportCmd() *cobra.Command {
 	backportCmd := &cobra.Command{
-		Use:   "backport 1234",
+		Use:   "backport 1234 [--release.release/pipeline.hcl]",
 		Short: "Create a backport pull request from another pull request",
 		Long:  "Create a backport pull request from another pull request",
 		RunE:  runCreateGithubBackportCmd,
@@ -48,15 +47,13 @@ func newCreateGithubBackportCmd() *cobra.Command {
 		},
 	}
 
-	backportCmd.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceAllowInactive, "ce-allow-inactive-groups", "a", []string{"docs", "changelog", "pipeline"}, "Change file groups that should be allowed to backport to inactive CE branches")
+	backportCmd.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceAllowInactive, "ce-allow-inactive-groups", "a", []string{}, "Change file groups that should be allowed to backport to inactive CE branches")
 	backportCmd.PersistentFlags().StringVar(&createGithubBackportState.req.CEBranchPrefix, "ce-branch-prefix", "ce", "The branch name prefix")
 	backportCmd.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceExclude, "ce-exclude-groups", "e", []string{"enterprise"}, "Change file groups that should be excluded from the backporting to CE branches")
 	backportCmd.PersistentFlags().StringVar(&createGithubBackportState.req.BaseOrigin, "base-origin", "origin", "The name to use for the base remote origin")
 	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.Owner, "owner", "o", "hashicorp", "The Github organization")
 	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.Repo, "repo", "r", "vault-enterprise", "The Github repository. Private repositories require auth via a GITHUB_TOKEN env var")
 	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.RepoDir, "repo-dir", "d", "", "The path to the vault repository dir. If not set a temporary directory will be used")
-	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.ReleaseVersionConfigPath, "releases-version-path", "m", "", "The path to .release/versions.hcl")
-	backportCmd.PersistentFlags().UintVar(&createGithubBackportState.req.ReleaseRecurseDepth, "recurse", 3, "If no path to a config file is given, recursively search backwards for it and stop at root or until we've his the configured depth.")
 
 	// NOTE: The following are technically flags but they only for testing testing
 	// the command before we cut over to new utility.
@@ -79,21 +76,26 @@ func newCreateGithubBackportCmd() *cobra.Command {
 func runCreateGithubBackportCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	for i, ig := range createGithubBackportState.ceAllowInactive {
-		if i == 0 && createGithubBackportState.req.CEAllowInactiveGroups == nil {
-			createGithubBackportState.req.CEAllowInactiveGroups = changed.FileGroups{}
-		}
+	// Pass along our configuration decode responses. The request will handle
+	// scenarios as necessary.
+	createGithubBackportState.req.ConfigDecodeRes = rootCfg.configDecodeRes
+	createGithubBackportState.req.VersionsDecodeRes = rootCfg.versionsDecodeRes
+
+	if createGithubBackportState.req.CEAllowInactiveGroups == nil {
+		createGithubBackportState.req.CEAllowInactiveGroups = changed.FileGroups{}
+	}
+	for _, ig := range createGithubBackportState.ceAllowInactive {
 		createGithubBackportState.req.CEAllowInactiveGroups = createGithubBackportState.req.CEAllowInactiveGroups.Add(changed.FileGroup(ig))
 	}
 
-	for i, eg := range createGithubBackportState.ceExclude {
-		if i == 0 && createGithubBackportState.req.CEExclude == nil {
-			createGithubBackportState.req.CEExclude = changed.FileGroups{}
-		}
+	if createGithubBackportState.req.CEExclude == nil {
+		createGithubBackportState.req.CEExclude = changed.FileGroups{}
+	}
+	for _, eg := range createGithubBackportState.ceExclude {
 		createGithubBackportState.req.CEExclude = createGithubBackportState.req.CEExclude.Add(changed.FileGroup(eg))
 	}
 
-	res := createGithubBackportState.req.Run(context.TODO(), githubCmdState.GithubV3, githubCmdState.Git)
+	res := createGithubBackportState.req.Run(cmd.Context(), githubCmdState.GithubV3, rootCfg.git)
 	if res == nil {
 		res = &github.CreateBackportRes{}
 	}

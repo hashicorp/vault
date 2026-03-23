@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
@@ -59,7 +59,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       .stub(this.api.sys, 'systemReadSyncAssociationsDestinations')
       .callsFake((initOverride) => {
         initOverride();
-        return Promise.reject(getErrorResponse({ errors: [] }, 404));
+        return Promise.reject(getErrorResponse());
       });
 
     this.renderComponent = () =>

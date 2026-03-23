@@ -5,7 +5,11 @@ package ldap
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
+	"fmt"
+	"strings"
+	"unicode/utf16"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -45,7 +49,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		b.Logger().Error("failed to rotate root credential on user request", "path", req.Path, "error", err.Error())
 	} else {
 		// err is nil in this case
-		b.Logger().Info("succesfully rotated root credential on user request", "path", req.Path)
+		b.Logger().Info("successfully rotated root credential on user request", "path", req.Path)
 	}
 	var responseError responseError
 	if errors.As(err, &responseError) {
@@ -83,6 +87,19 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 		return responseError{errors.New("auth is not using authenticated search, no root to rotate")}
 	}
 
+	// Validate TLS requirements for AD password rotation
+	schema := ldaputil.NormalizedSchema(cfg.Schema)
+	if schema == ldaputil.SchemaAD {
+		// Validate URL(s) which will actually be used for rotation
+		urlToValidate := cfg.Url
+		if cfg.RotationUrl != "" {
+			urlToValidate = cfg.RotationUrl
+		}
+		if err := validateADRotationURLs(urlToValidate, cfg.StartTLS); err != nil {
+			return responseError{err}
+		}
+	}
+
 	// grab our ldap client
 	client := ldaputil.Client{
 		Logger: b.Logger(),
@@ -98,14 +115,12 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 	if err != nil {
 		return err
 	}
+	// Close the connection when done to avoid leaking connections, especially during repeated rotation attempts.defer conn.Close()
+	defer conn.Close()
 
 	err = conn.Bind(u, p)
 	if err != nil {
 		return err
-	}
-
-	lreq := &ldap.ModifyRequest{
-		DN: cfg.BindDN,
 	}
 
 	var newPassword string
@@ -118,12 +133,38 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 		return err
 	}
 
-	lreq.Replace("userPassword", []string{newPassword})
+	switch schema {
+	case ldaputil.SchemaAD:
+		// AD root rotation requires:
+		// 1) Quoted password
+		// 2) UTF-16LE encoding
+		// 3) Encrypted connection (LDAPS/StartTLS)
+		// Without these, AD rejects password updates.
+		b.Logger().Debug("rotating root password using AD schema")
+		quotedPwd := fmt.Sprintf("\"%s\"", newPassword)
+		utf16Bytes := encodeUTF16LEBytes(quotedPwd)
 
-	err = conn.Modify(lreq)
-	if err != nil {
-		return err
+		modReq := ldap.NewModifyRequest(cfg.BindDN, nil)
+		modReq.Replace("unicodePwd", []string{string(utf16Bytes)})
+
+		if err := conn.Modify(modReq); err != nil {
+			return fmt.Errorf("failed to modify AD password for %q: %w", cfg.BindDN, err)
+		}
+
+	case ldaputil.SchemaOpenLDAP:
+		b.Logger().Debug("rotating root password using openldap schema")
+		lreq := &ldap.ModifyRequest{
+			DN: cfg.BindDN,
+		}
+		lreq.Replace("userPassword", []string{newPassword})
+
+		if err := conn.Modify(lreq); err != nil {
+			return fmt.Errorf("failed to modify OpenLDAP password: %w", err)
+		}
+	default:
+		return responseError{fmt.Errorf("unsupported schema type for password rotation: %s", schema)}
 	}
+
 	// update config with new password
 	cfg.BindPassword = newPassword
 	entry, err := logical.StorageEntryJSON("config", cfg)
@@ -135,6 +176,56 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 		return err
 	}
 
+	return nil
+}
+
+// encodeUTF16LEBytes encodes a string as UTF-16LE bytes for AD password changes.
+// This encoding is required for Active Directory password changes via the unicodePwd attribute.
+func encodeUTF16LEBytes(s string) []byte {
+	utf16Runes := utf16.Encode([]rune(s))
+	buf := make([]byte, len(utf16Runes)*2)
+	for i, r := range utf16Runes {
+		binary.LittleEndian.PutUint16(buf[i*2:], r)
+	}
+	return buf
+}
+
+// validateADRotationURLs validates that all URLs in the provided URL string
+// meet the security requirements for AD password rotation.
+func validateADRotationURLs(urlString string, startTLS bool) error {
+	// AD password rotation requires encrypted connections (LDAPS or StartTLS)
+	// Supported configurations:
+	// 1. ldaps:// with proper certificate validation (recommended)
+	// 2. ldaps:// with insecure_tls=true (skips certificate validation)
+	// 3. ldap:// with starttls=true (with or without explicit certificates)
+	if strings.TrimSpace(urlString) == "" {
+		return errors.New("AD password rotation requires a configured URL")
+	}
+	// Split on commas to handle multiple URLs
+	rawURLs := strings.Split(urlString, ",")
+	hasNonTLSURL := false
+	for _, rawURL := range rawURLs {
+		rawURL := strings.TrimSpace(rawURL)
+		if rawURL == "" {
+			continue
+		}
+		urlLower := strings.ToLower(rawURL)
+		isLDAPS := strings.HasPrefix(urlLower, "ldaps://")
+		isLDAP := strings.HasPrefix(urlLower, "ldap://")
+
+		// Validate that URL uses a supported protocol
+		if !isLDAPS && !isLDAP {
+			return fmt.Errorf("AD password rotation requires ldap:// or ldaps:// protocol, got: %s", rawURL)
+		}
+		// Track if any URL uses non-TLS ldap://
+		if isLDAP {
+			hasNonTLSURL = true
+		}
+	}
+	// If any URL uses ldap:// (non-TLS), require StartTLS to ensure encryption
+	if hasNonTLSURL && !startTLS {
+		return errors.New("AD password rotation with ldap:// requires starttls=true for encrypted connection")
+	}
 	return nil
 }
 

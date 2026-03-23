@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"maps"
 	"math/big"
 	mathrand "math/rand"
 	"net"
@@ -43,6 +44,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/stretchr/testify/require"
 	uberAtomic "go.uber.org/atomic"
 	"golang.org/x/net/http2"
 )
@@ -79,6 +82,7 @@ type DockerCluster struct {
 	storage      testcluster.ClusterStorage
 	disableMlock bool
 	disableTLS   bool
+	cleanupOnce  sync.Once
 }
 
 func (dc *DockerCluster) NamedLogger(s string) log.Logger {
@@ -141,7 +145,9 @@ func (dc *DockerCluster) GetCACertPEMFile() string {
 }
 
 func (dc *DockerCluster) Cleanup() {
-	dc.cleanup()
+	dc.cleanupOnce.Do(func() {
+		dc.cleanup()
+	})
 }
 
 func (dc *DockerCluster) cleanup() error {
@@ -404,6 +410,12 @@ func (n *DockerClusterNode) setupCert(ip string) error {
 }
 
 func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerCluster {
+	dc, err := NewTestDockerClusterWithErr(t, opts)
+	require.NoError(t, err)
+	return dc
+}
+
+func NewTestDockerClusterWithErr(t *testing.T, opts *DockerClusterOptions) (*DockerCluster, error) {
 	if opts == nil {
 		opts = &DockerClusterOptions{DisableMlock: true}
 	}
@@ -421,11 +433,12 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 	t.Cleanup(cancel)
 
 	dc, err := NewDockerCluster(ctx, opts)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil {
+		dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
+		// Register cleanup with t.Cleanup so it's automatically called when the test ends
+		t.Cleanup(dc.Cleanup)
 	}
-	dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
-	return dc
+	return dc, err
 }
 
 func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerCluster, error) {
@@ -491,6 +504,7 @@ type DockerClusterNode struct {
 	DataVolumeName       string
 	cleanupVolume        func()
 	AllClients           []*api.Client
+	ExtraAddrs           []string
 }
 
 func (n *DockerClusterNode) TLSConfig() *tls.Config {
@@ -661,11 +675,16 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		defaultListenerConfig = n.createDefaultListenerConfig()
 	}
 
+	// Merge custom listener config options to default config
+	if opts.VaultNodeConfig != nil && opts.VaultNodeConfig.CustomListenerConfigOpts != nil {
+		maps.Copy(defaultListenerConfig["tcp"].(map[string]interface{}), opts.VaultNodeConfig.CustomListenerConfigOpts)
+	}
+
 	listenerConfig = append(listenerConfig, defaultListenerConfig)
 	ports := []string{"8200/tcp", "8201/tcp"}
 
 	if opts.VaultNodeConfig != nil && opts.VaultNodeConfig.AdditionalListeners != nil {
-		for _, config := range opts.VaultNodeConfig.AdditionalListeners {
+		for i, config := range opts.VaultNodeConfig.AdditionalListeners {
 			cfg := n.createDefaultListenerConfig()
 			listener := cfg["tcp"].(map[string]interface{})
 			listener["address"] = fmt.Sprintf("%s:%d", "0.0.0.0", config.Port)
@@ -673,12 +692,28 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 			listener["redact_addresses"] = config.RedactAddresses
 			listener["redact_cluster_name"] = config.RedactClusterName
 			listener["redact_version"] = config.RedactVersion
+			if len(config.TLSCipherSuites) > 0 {
+				var suites []string
+				for _, suite := range config.TLSCipherSuites {
+					name, err := tlsutil.GetCipherName(suite)
+					if err != nil {
+						return fmt.Errorf("bad TLSCipherSuite %d on listener %d: %w", suite, i, err)
+					}
+					suites = append(suites, name)
+				}
+				listener["tls_cipher_suites"] = strings.Join(suites, ",")
+			}
 			listenerConfig = append(listenerConfig, cfg)
 			portStr := fmt.Sprintf("%d/tcp", config.Port)
 			if strutil.StrListContains(ports, portStr) {
 				return fmt.Errorf("duplicate port %d specified", config.Port)
 			}
 			ports = append(ports, portStr)
+		}
+	}
+	if opts.VaultNodeConfig != nil {
+		for _, portNo := range opts.VaultNodeConfig.AdditionalTCPPorts {
+			ports = append(ports, fmt.Sprintf("%d/tcp", portNo))
 		}
 	}
 	vaultCfg["listener"] = listenerConfig
@@ -916,7 +951,11 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 
 	n.AllClients = append(n.AllClients, client)
 
-	for _, addr := range svc.StartResult.Addrs[2:] {
+	end := len(svc.StartResult.Addrs)
+	if opts.VaultNodeConfig != nil {
+		end = 2 + len(opts.VaultNodeConfig.AdditionalListeners)
+	}
+	for _, addr := range svc.StartResult.Addrs[2:end] {
 		// The second element of this list of addresses is the cluster address
 		// We do not want to create a client for the cluster address mapping
 		client, err := n.newAPIClientForAddress(addr)
@@ -925,6 +964,9 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		}
 		client.SetToken(n.Cluster.rootToken)
 		n.AllClients = append(n.AllClients, client)
+	}
+	if len(svc.StartResult.Addrs) > end {
+		n.ExtraAddrs = svc.StartResult.Addrs[end:]
 	}
 	return nil
 }
@@ -975,6 +1017,31 @@ func (n *DockerClusterNode) Restart(ctx context.Context) error {
 	}
 	client.SetToken(n.Cluster.rootToken)
 	n.client = client
+
+	return nil
+}
+
+func (n *DockerClusterNode) Signal(ctx context.Context, signal string) error {
+	return n.DockerAPI.ContainerKill(ctx, n.Container.ID, signal)
+}
+
+func (n *DockerClusterNode) UpdateConfig(ctx context.Context, config *testcluster.VaultNodeConfig) error {
+	// Marshal the config to JSON
+	configJSON, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	// Write the config to the work directory
+	configPath := filepath.Join(n.WorkDir, "user.json")
+	if err := os.WriteFile(configPath, configJSON, 0o644); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	// Copy the updated config to the container
+	if err := dockhelper.CopyToContainer(ctx, n.DockerAPI, n.Container.ID, configPath, "/vault/config/user.json"); err != nil {
+		return fmt.Errorf("failed to copy config to container: %w", err)
+	}
 
 	return nil
 }
@@ -1216,11 +1283,9 @@ func (dc *DockerCluster) AddNode(ctx context.Context, opts *DockerClusterOptions
 	return dc.joinNode(ctx, len(dc.ClusterNodes)-1, leaderIdx)
 }
 
+const MaxContainerNameLen = 63
+
 func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions) error {
-	tag, err := dc.setupImage(ctx, opts)
-	if err != nil {
-		return err
-	}
 	i := len(dc.ClusterNodes)
 	nodeID := fmt.Sprintf("core-%d", i)
 	node := &DockerClusterNode{
@@ -1230,14 +1295,77 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 		WorkDir:   filepath.Join(dc.tmpDir, nodeID),
 		Logger:    dc.Logger.Named(nodeID),
 		ImageRepo: opts.ImageRepo,
-		ImageTag:  tag,
 	}
+	if len(node.Name()) > MaxContainerNameLen {
+		return fmt.Errorf("ClusterName too long, results in node name %q which exceeds max container name len of %d",
+			node.Name(), MaxContainerNameLen)
+	}
+
+	tag, err := dc.setupImage(ctx, opts)
+	if err != nil {
+		return err
+	}
+	node.ImageTag = tag
+
 	dc.ClusterNodes = append(dc.ClusterNodes, node)
 	if err := os.MkdirAll(node.WorkDir, 0o755); err != nil {
 		return err
 	}
+	if err := copyDirContents(node.WorkDir, dc.tmpDir); err != nil {
+		return err
+	}
 	if err := node.Start(ctx, opts); err != nil {
 		return err
+	}
+	return nil
+}
+
+func copyFile(to string, from string) error {
+	in, err := os.Open(from)
+	if err != nil {
+		return fmt.Errorf("failed to open source file %s: %w", from, err)
+	}
+	defer in.Close()
+
+	out, err := os.Create(to)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file %s: %w", to, err)
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return fmt.Errorf("failed to copy file content from %s to %s: %w", from, to, err)
+	}
+
+	// Copy file permissions
+	info, err := os.Stat(from)
+	if err != nil {
+		return fmt.Errorf("failed to get source file info %s: %w", from, err)
+	}
+	err = os.Chmod(to, info.Mode())
+	if err != nil {
+		return fmt.Errorf("failed to set destination file permissions %s: %w", to, err)
+	}
+
+	return nil
+}
+
+func copyDirContents(to string, from string) error {
+	entries, err := os.ReadDir(from)
+	if err != nil {
+		return fmt.Errorf("failed to read source directory %s: %w", from, err)
+	}
+
+	for _, entry := range entries {
+		fromPath := filepath.Join(from, entry.Name())
+		toPath := filepath.Join(to, entry.Name())
+
+		if !entry.IsDir() {
+			if err = copyFile(toPath, fromPath); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -1338,6 +1466,28 @@ func (dc *DockerCluster) GetActiveClusterNode() *DockerClusterNode {
 	}
 
 	return dc.ClusterNodes[node]
+}
+
+func (dc *DockerCluster) GetActiveAndStandbys() (*DockerClusterNode, []*DockerClusterNode) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	activeIndex, err := testcluster.WaitForActiveNode(ctx, dc)
+	if err != nil {
+		panic(fmt.Sprintf("no cluster node became active in timeout window: %v", err))
+	}
+
+	var leaderNode *DockerClusterNode
+	var standbyNodes []*DockerClusterNode
+	for i, node := range dc.ClusterNodes {
+		if i == activeIndex {
+			leaderNode = node
+			continue
+		}
+		standbyNodes = append(standbyNodes, node)
+	}
+
+	return leaderNode, standbyNodes
 }
 
 /* Notes on testing the non-bridge network case:

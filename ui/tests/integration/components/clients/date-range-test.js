@@ -9,7 +9,7 @@ import { click, fillIn, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
-import { format } from 'date-fns';
+import { format, subYears } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 
@@ -18,22 +18,36 @@ module('Integration | Component | clients/date-range', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
+    this.version = this.owner.lookup('service:version');
     Sinon.replace(timestamp, 'now', Sinon.fake.returns(new Date('2018-04-03T14:15:30')));
     this.now = timestamp.now();
-    this.startTimestamp = '2018-01-01T14:15:30';
-    this.endTimestamp = '2019-01-31T14:15:30';
+    this.startTimestamp = new Date('2018-01-01T14:15:30');
+    this.endTimestamp = new Date('2019-01-31T14:15:30');
     this.billingStartTime = '';
     this.retentionMonths = 48;
-    this.onChange = Sinon.spy();
+    this.onChange = Sinon.stub();
     this.setEditModalVisible = Sinon.stub().callsFake((visible) => {
       this.set('showEditModal', visible);
     });
     this.showEditModal = false;
     this.renderComponent = async () => {
       await render(
-        hbs`<Clients::DateRange @startTimestamp={{this.startTimestamp}} @endTimestamp={{this.endTimestamp}} @onChange={{this.onChange}} @billingStartTime={{this.billingStartTime}} @retentionMonths={{this.retentionMonths}} @setEditModalVisible={{this.setEditModalVisible}} @showEditModal={{this.showEditModal}}/>`
+        hbs`<Clients::DateRange
+          @startTimestamp={{this.startTimestamp}}
+          @endTimestamp={{this.endTimestamp}}
+          @onChange={{this.onChange}}
+          @billingStartTime={{this.billingStartTime}}
+          @retentionMonths={{this.retentionMonths}}
+          @setEditModalVisible={{this.setEditModalVisible}}
+          @showEditModal={{this.showEditModal}}
+        />`
       );
     };
+  });
+
+  test('it does not render if a start and end timestamp are already provided', async function (assert) {
+    await this.renderComponent();
+    assert.dom(DATE_RANGE.edit).doesNotExist('it does not render if timestamps are provided');
   });
 
   test('it formats modal inputs to ISO string timestamps', async function (assert) {
@@ -80,7 +94,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
   });
 
   test('it does not allow the current month to be selected as a start date or as an end date', async function (assert) {
-    this.owner.lookup('service:version').type = 'community';
+    this.version.type = 'community';
     this.endTimestamp = undefined;
     const currentMonth = format(timestamp.now(), 'yyyy-MM');
 
@@ -91,7 +105,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
 
     assert.dom(DATE_RANGE.validation).hasText('You cannot select the current month or beyond.');
     await click(GENERAL.submitButton);
-    assert.false(this.onChange.called);
+    assert.false(this.onChange.called, 'it does not call @onChange callback');
 
     //  This tests validation when the end date is the current month and start is valid.
     //  If start is current month and end is a valid prior selection, it will run into the validation error of start being after end date
@@ -99,17 +113,32 @@ module('Integration | Component | clients/date-range', function (hooks) {
     await fillIn(DATE_RANGE.editDate('start'), '2018-01');
     await fillIn(DATE_RANGE.editDate('end'), currentMonth);
     await click(GENERAL.submitButton);
-    assert.false(this.onChange.called);
+    assert.false(this.onChange.called, 'it does not call @onChange callback');
+  });
+
+  test('it allows the current month to be selected if enterprise and there is not a @billingStartTime', async function (assert) {
+    this.version.type = 'enterprise';
+    this.endTimestamp = undefined;
+    const currentMonth = format(timestamp.now(), 'yyyy-MM');
+
+    await this.renderComponent();
+    await click(DATE_RANGE.edit);
+    await fillIn(DATE_RANGE.editDate('start'), currentMonth);
+    await fillIn(DATE_RANGE.editDate('end'), currentMonth);
+
+    assert.dom(DATE_RANGE.validation).doesNotExist();
+    await click(GENERAL.submitButton);
+    assert.true(this.onChange.called, 'it calls @onChange callback');
   });
 
   module('enterprise', function (hooks) {
     hooks.beforeEach(function () {
       this.version = this.owner.lookup('service:version');
       this.version.type = 'enterprise';
-      this.billingStartTime = '2018-01-01T14:15:30';
+      this.billingStartTime = new Date('2018-01-01T14:15:30');
     });
 
-    test('it billing start date dropdown for enterprise', async function (assert) {
+    test('it renders billing start date dropdown for enterprise', async function (assert) {
       await this.renderComponent();
       await click(DATE_RANGE.edit);
       const expectedPeriods = [
@@ -124,6 +153,54 @@ module('Integration | Component | clients/date-range', function (hooks) {
         const month = expectedPeriods[idx];
         assert.dom(item).hasText(month, `dropdown index: ${idx} renders ${month}`);
       });
+    });
+
+    test('it renders date range modal if there are no timestamps provided', async function (assert) {
+      this.billingStartTime = '';
+      this.startTimestamp = '';
+      this.endTimestamp = '';
+      await this.renderComponent();
+      assert
+        .dom(DATE_RANGE.edit)
+        .exists('it renders button to open date range modal')
+        .hasText('Set date range');
+      await click(DATE_RANGE.edit);
+      assert.dom(DATE_RANGE.editModal).exists();
+    });
+
+    test('it updates toggle text when a new date is selected', async function (assert) {
+      this.onChange.callsFake(({ start_time }) => this.set('startTimestamp', new Date(start_time)));
+
+      await this.renderComponent();
+      assert.dom(DATE_RANGE.edit).hasText('January 2018').hasAttribute('aria-expanded', 'false');
+      await click(DATE_RANGE.edit);
+      assert.dom(DATE_RANGE.edit).hasAttribute('aria-expanded', 'true');
+      await click(DATE_RANGE.dropdownOption(1));
+      assert
+        .dom(DATE_RANGE.edit)
+        .hasText('January 2017')
+        .hasAttribute('aria-expanded', 'false', 'it closes dropdown after selection');
+    });
+
+    test('it should send an empty string for start_time when selecting current period', async function (assert) {
+      await this.renderComponent();
+
+      await click(DATE_RANGE.edit);
+      await click(DATE_RANGE.dropdownOption(1));
+      assert.true(
+        this.onChange.calledWith({
+          start_time: subYears(this.billingStartTime, 1).toISOString(),
+          end_time: '',
+        }),
+        'correct start_time sent on change for prior period'
+      );
+
+      await click(DATE_RANGE.edit);
+      await click(DATE_RANGE.dropdownOption(0));
+      assert.true(
+        this.onChange.calledWith({ start_time: '', end_time: '' }),
+        'start_time is empty string on current period change'
+      );
     });
   });
 });

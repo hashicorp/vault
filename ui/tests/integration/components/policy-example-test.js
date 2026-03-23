@@ -7,7 +7,6 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {
   policyText: '[data-test-modal-title]',
@@ -19,16 +18,7 @@ const SELECTORS = {
 module('Integration | Component | policy-example', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function () {
-    setRunOptions({
-      rules: {
-        // failing on .CodeMirror-scroll
-        'scrollable-region-focusable': { enabled: false },
-      },
-    });
-  });
-
-  test('it renders the correct paragraph for ACL policy', async function (assert) {
+  test('it renders the correct paragraph for ACL Policy', async function (assert) {
     await render(hbs`
     <PolicyExample
       @policyType="acl"

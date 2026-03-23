@@ -60,32 +60,6 @@ export default class NamespaceListRoute extends Route {
     });
   }
 
-  setupController(controller, model) {
-    const has404 = this.has404;
-    controller.setProperties({
-      model: model,
-      has404,
-      hasModel: true,
-    });
-    if (!has404) {
-      controller.setProperties({
-        page: Number(model?.meta?.currentPage) || 1,
-      });
-    }
-  }
-
-  @action
-  error(error, transition) {
-    /* eslint-disable-next-line ember/no-controller-access-in-routes */
-    const hasModel = this.controllerFor(this.routeName).hasModel;
-    if (hasModel && error.httpStatus === 404) {
-      this.has404 = true;
-      transition.abort();
-    } else {
-      return true;
-    }
-  }
-
   @action
   willTransition(transition) {
     window.scrollTo(0, 0);

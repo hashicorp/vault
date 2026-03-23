@@ -100,7 +100,7 @@ export default class ClusterModel extends Model {
     return this.rm.mode;
   }
   get replicationModeForDisplay() {
-    return this.replicationMode === 'dr' ? 'Disaster Recovery' : 'Performance';
+    return this.replicationMode === 'dr' ? 'Disaster recovery' : 'Performance';
   }
   get replicationIsInitializing() {
     // a mode of null only happens when a cluster is being initialized

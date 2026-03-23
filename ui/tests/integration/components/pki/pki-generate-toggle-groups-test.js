@@ -9,19 +9,24 @@ import { click, render, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import PkiConfigGenerateForm from 'vault/forms/secrets/pki/config/generate';
 
 module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(async function () {
-    this.model = this.owner
-      .lookup('service:store')
-      .createRecord('pki/action', { actionType: 'generate-root' });
+    this.form = new PkiConfigGenerateForm('PkiGenerateRootRequest', {}, { isNew: true });
+    this.actionType = 'generate-root';
+    this.renderComponent = () =>
+      render(
+        hbs`<PkiGenerateToggleGroups @form={{this.form}} @actionType={{this.actionType}} @groups={{this.groups}} @modelValidations={{this.modelValidations}} />`,
+        { owner: this.engine }
+      );
   });
 
   test('it should render key parameters', async function (assert) {
-    await render(hbs`<PkiGenerateToggleGroups @model={{this.model}} />`, { owner: this.engine });
+    await this.renderComponent();
 
     assert.dom(GENERAL.button('Key parameters')).hasText('Key parameters', 'Key parameters group renders');
 
@@ -34,13 +39,13 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
         'Placeholder renders for key params when type is not selected'
       );
     const fields = {
-      exported: ['keyName', 'keyType', 'keyBits', 'privateKeyFormat'],
-      internal: ['keyName', 'keyType', 'keyBits'],
-      existing: ['keyRef'],
-      kms: ['keyName', 'managedKeyName', 'managedKeyId'],
+      exported: ['key_name', 'key_type', 'key_bits', 'private_key_format'],
+      internal: ['key_name', 'key_type', 'key_bits'],
+      existing: ['key_ref'],
+      kms: ['key_name', 'managed_key_name', 'managed_key_id'],
     };
     for (const type in fields) {
-      this.model.type = type;
+      this.form.data.type = type;
       await settled();
       assert
         .dom('[data-test-field]')
@@ -52,7 +57,7 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
   });
 
   test('it should render SAN options', async function (assert) {
-    await render(hbs`<PkiGenerateToggleGroups @model={{this.model}} />`, { owner: this.engine });
+    await this.renderComponent();
 
     assert
       .dom(GENERAL.button('Subject Alternative Name (SAN) Options'))
@@ -60,29 +65,37 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
 
     await click(GENERAL.button('Subject Alternative Name (SAN) Options'));
 
-    const fields = ['excludeCnFromSans', 'subjectSerialNumber', 'altNames', 'ipSans', 'uriSans', 'otherSans'];
+    const fields = [
+      'exclude_cn_from_sans',
+      'serial_number',
+      'alt_names',
+      'ip_sans',
+      'uri_sans',
+      'other_sans',
+    ];
     assert.dom('[data-test-field]').exists({ count: 6 }, `Correct number of fields render`);
     fields.forEach((key) => {
       assert.dom(`[data-test-input="${key}"]`).exists(`${key} input renders for generate-root actionType`);
     });
 
-    this.model.actionType = 'generate-csr';
-    await settled();
+    this.actionType = 'generate-csr';
+    await this.renderComponent();
+    await click(GENERAL.button('Subject Alternative Name (SAN) Options'));
 
     assert
       .dom('[data-test-field]')
       .exists({ count: 4 }, 'Correct number of fields render for generate-csr actionType');
 
     assert
-      .dom('[data-test-input="excludeCnFromSans"]')
-      .doesNotExist('excludeCnFromSans field hidden for generate-csr actionType');
+      .dom('[data-test-input="exclude_cn_from_sans"]')
+      .doesNotExist('exclude_cn_from_sans field hidden for generate-csr actionType');
     assert
-      .dom('[data-test-input="serialNumber"]')
-      .doesNotExist('serialNumber field hidden for generate-csr actionType');
+      .dom('[data-test-input="serial_number"]')
+      .doesNotExist('serial_number field hidden for generate-csr actionType');
   });
 
   test('it should render additional subject fields', async function (assert) {
-    await render(hbs`<PkiGenerateToggleGroups @model={{this.model}} />`, { owner: this.engine });
+    await this.renderComponent();
 
     assert
       .dom(GENERAL.button('Additional subject fields'))
@@ -90,7 +103,7 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
 
     await click(GENERAL.button('Additional subject fields'));
 
-    const fields = ['ou', 'organization', 'country', 'locality', 'province', 'streetAddress', 'postalCode'];
+    const fields = ['ou', 'organization', 'country', 'locality', 'province', 'street_address', 'postal_code'];
     assert.dom('[data-test-field]').exists({ count: fields.length }, 'Correct number of fields render');
     fields.forEach((key) => {
       assert.dom(`[data-test-input="${key}"]`).exists(`${key} input renders`);
@@ -100,14 +113,12 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
   test('it should render groups according to the passed @groups', async function (assert) {
     assert.expect(11);
     const fieldsA = ['ou', 'organization'];
-    const fieldsZ = ['country', 'locality', 'province', 'streetAddress', 'postalCode'];
-    this.set('groups', {
+    const fieldsZ = ['country', 'locality', 'province', 'street_address', 'postal_code'];
+    this.groups = {
       'Group A': fieldsA,
       'Group Z': fieldsZ,
-    });
-    await render(hbs`<PkiGenerateToggleGroups @model={{this.model}} @groups={{this.groups}} />`, {
-      owner: this.engine,
-    });
+    };
+    await this.renderComponent();
 
     assert.dom(GENERAL.button('Group A')).hasText('Group A', 'First group renders');
     assert.dom(GENERAL.button('Group Z')).hasText('Group Z', 'Second group renders');

@@ -9,8 +9,10 @@ const (
 	VaultExperimentCoreAuditEventsAlpha1 = "core.audit.events.alpha1"
 	VaultExperimentSecretsImport         = "secrets.import.alpha1"
 
-	// Unused experiments. We keep them so that we don't break users who include them in their
-	// flags or configs, but they no longer have any effect.
+	// VaultExperimentKmipClientApi enables the experimental KMIP client
+	// and template API endpoints. See VAULT-41117.
+	VaultExperimentKmipClientApi = "kmip.client_api.alpha1"
+
 	VaultExperimentEventsAlpha1 = "events.alpha1"
 )
 
@@ -18,8 +20,11 @@ var validExperiments = []string{
 	VaultExperimentEventsAlpha1,
 	VaultExperimentCoreAuditEventsAlpha1,
 	VaultExperimentSecretsImport,
+	VaultExperimentKmipClientApi,
 }
 
+// Unused experiments. We keep them so that we don't break users who include them in their
+// flags or configs, but they no longer have any effect.
 var unusedExperiments = []string{
 	VaultExperimentEventsAlpha1,
 }

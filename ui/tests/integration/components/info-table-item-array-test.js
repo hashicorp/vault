@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import Service from '@ember/service';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { findAll, render } from '@ember/test-helpers';
 import { run } from '@ember/runloop';
 import hbs from 'htmlbars-inline-precompile';
@@ -39,7 +39,7 @@ const storeService = Service.extend({
           ]);
           break;
         default:
-          reject({ httpStatus: 404, message: 'not found' });
+          reject({ httpStatus: 404 });
           break;
       }
     });

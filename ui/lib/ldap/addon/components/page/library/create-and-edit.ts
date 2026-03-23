@@ -9,58 +9,67 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
 
-import type LdapLibraryModel from 'vault/models/ldap/library';
-import { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
+import type LdapLibraryForm from 'vault/forms/secrets/ldap/library';
+import type { Breadcrumb, ValidationMap } from 'vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
+import type ApiService from 'vault/services/api';
+import type SecretMountPath from 'vault/services/secret-mount-path';
 
 interface Args {
-  model: LdapLibraryModel;
+  form: LdapLibraryForm;
   breadcrumbs: Array<Breadcrumb>;
 }
 
 export default class LdapCreateAndEditLibraryPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service('app-router') declare readonly router: RouterService;
+  @service declare readonly api: ApiService;
+  @service declare readonly secretMountPath: SecretMountPath;
 
   @tracked modelValidations: ValidationMap | null = null;
   @tracked invalidFormMessage = '';
   @tracked error = '';
 
-  @task
-  @waitFor
-  *save(event: Event) {
-    event.preventDefault();
+  save = task(
+    waitFor(async (event: Event) => {
+      event.preventDefault();
 
-    const { model } = this.args;
-    const { isValid, state, invalidFormMessage } = model.validate();
+      const { currentPath } = this.secretMountPath;
+      const { form } = this.args;
+      const { isValid, state, invalidFormMessage, data } = form.toJSON();
 
-    this.modelValidations = isValid ? null : state;
-    this.invalidFormMessage = isValid ? '' : invalidFormMessage;
+      this.modelValidations = isValid ? null : state;
+      this.invalidFormMessage = isValid ? '' : invalidFormMessage;
 
-    if (isValid) {
-      try {
-        const action = model.isNew ? 'created' : 'updated';
-        yield model.save();
-        this.flashMessages.success(`Successfully ${action} the library ${model.name}.`);
-        const libraryParam = model.completeLibraryName.includes('/')
-          ? encodeURIComponent(model.completeLibraryName)
-          : model.name;
-        this.router.transitionTo(
-          'vault.cluster.secrets.backend.ldap.libraries.library.details',
-          libraryParam
-        );
-      } catch (error) {
-        this.error = errorMessage(error, 'Error saving library. Please try again or contact support.');
+      if (isValid) {
+        try {
+          const action = form.isNew ? 'created' : 'updated';
+          const { name, ...rest } = data;
+          // transform disable_check_in_enforcement back to boolean
+          const disable_check_in_enforcement = data.disable_check_in_enforcement === 'Enabled' ? false : true;
+          const payload = { ...rest, disable_check_in_enforcement };
+          await this.api.secrets.ldapLibraryConfigure(name, currentPath, payload);
+          this.flashMessages.success(`Successfully ${action} the library ${name}.`);
+          const libraryParam = name.includes('/') ? encodeURIComponent(name) : name;
+          this.router.transitionTo(
+            'vault.cluster.secrets.backend.ldap.libraries.library.details',
+            libraryParam
+          );
+        } catch (error) {
+          const { message } = await this.api.parseError(
+            error,
+            'Error saving library. Please try again or contact support.'
+          );
+          this.error = message;
+        }
       }
-    }
-  }
+    })
+  );
 
   @action
   cancel() {
-    this.args.model.rollbackAttributes();
     this.router.transitionTo('vault.cluster.secrets.backend.ldap.libraries');
   }
 }

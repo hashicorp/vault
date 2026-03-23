@@ -29,5 +29,11 @@
     </div>
   </LinkedBlock>
 {{else}}
-  <EmptyState @title="No {{@model.identityType}} aliases for {{@model.name}} yet" />
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header
+      data-test-empty-state-title
+      @title="No {{@model.identityType}} aliases for {{@model.name}} yet"
+      @titleTag="h2"
+    />
+  </Hds::ApplicationState>
 {{/each}}

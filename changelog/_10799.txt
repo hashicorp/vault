@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki (enterprise): When the common_criteria_mode feature flag is enabled, enforce a minimum set of key usages for each ext key usage set based on RFC 5280 Section 4.2.1.12 during PKI role updates.
+```

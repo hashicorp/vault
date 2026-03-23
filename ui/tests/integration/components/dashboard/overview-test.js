@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | dashboard/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -81,7 +82,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     this.replication = null;
     this.vaultConfiguration = null;
     await this.renderComponent();
-    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
+    assert.dom(GENERAL.hdsPageHeaderTitle).exists();
     assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
     assert.dom(DASHBOARD.emptyState('secrets-engines')).exists();
     assert.dom(DASHBOARD.cardName('learn-more')).exists();
@@ -115,7 +116,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       );
       await this.renderComponent();
 
-      assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
+      assert.dom(GENERAL.hdsPageHeaderTitle).exists();
       assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
       assert.dom(DASHBOARD.cardName('learn-more')).exists();
       assert.dom(DASHBOARD.cardName('quick-actions')).exists();
@@ -149,7 +150,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
         },
       };
       await this.renderComponent();
-      assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
+      assert.dom(GENERAL.hdsPageHeaderTitle).exists();
       assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
       assert.dom(DASHBOARD.cardName('learn-more')).exists();
       assert.dom(DASHBOARD.cardName('quick-actions')).exists();
@@ -178,7 +179,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       assert.dom(DASHBOARD.cardName('client-count')).exists();
     });
 
-    test('it should show not show client count on enterprise in child namespaces called "admin" when running a managed mode', async function (assert) {
+    test('it should hide client count on enterprise in child namespaces called "admin" when running a managed mode', async function (assert) {
       this.permissions.exactPaths = {
         'admin/sys/internal/counters/activity': {
           capabilities: ['read'],
@@ -215,6 +216,17 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       await this.renderComponent();
 
+      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    });
+
+    test('it should hide client count on PKI-only Secrets clusters', async function (assert) {
+      this.permissions.exactPaths = {
+        'sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+      };
+      this.version.features = ['PKI-only Secrets'];
+      await this.renderComponent();
       assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
     });
 

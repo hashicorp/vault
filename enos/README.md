@@ -39,7 +39,7 @@ the following cases as examples of when one might opt for an Enos scenario:
 ## Requirements
 - AWS access. HashiCorp Vault developers should use Doormat.
 - Terraform >= 1.7
-- Enos >= v0.0.28. You can [download a release](https://github.com/hashicorp/enos/releases/) or
+- Enos >= v0.0.34. You can [download a release](https://github.com/hashicorp/enos/releases/) or
   install it with Homebrew:
   ```shell
   brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
@@ -118,11 +118,11 @@ Refer to the [Enos documentation](https://github.com/hashicorp/Enos-Docs)
 for further information regarding installation, execution or composing scenarios.
 
 ## UI Tests
-The [`ui` scenario](./enos-scenario-ui.hcl) creates a Vault cluster (deployed to AWS) using a version 
+The [`ui` scenario](./enos-scenario-ui.hcl) creates a Vault cluster (deployed to AWS) using a version
 built from the current checkout of the project. Once the cluster is available the UI acceptance tests
 are run in a headless browser.
 ### Variables
-In addition to the required variables that must be set, as described in the [Scenario Variables](#Scenario Variables), 
+In addition to the required variables that must be set, as described in the [Scenario Variables](#Scenario Variables),
 the `ui` scenario has two optional variables:
 
 **ui_test_filter** - An optional test filter to limit the tests that are run, i.e. `'!enterprise'`.
@@ -130,15 +130,15 @@ To set a filter export the variable as follows:
 ```shell
 > export ENOS_VAR_ui_test_filter="some filter"
 ```
-**ui_run_tests** - An optional boolean variable to run or not run the tests. The default value is true. 
-Setting this value to false is useful in the case where you want to create a cluster, but run the tests 
+**ui_run_tests** - An optional boolean variable to run or not run the tests. The default value is true.
+Setting this value to false is useful in the case where you want to create a cluster, but run the tests
 manually. The section [Running the Tests](#Running the Tests) describes the different ways to run the
 'UI' acceptance tests.
 
 ### Running the Tests
 The UI tests can be run fully automated or manually.
 #### Fully Automated
-The following will deploy the cluster, run the tests, and subsequently tear down the cluster: 
+The following will deploy the cluster, run the tests, and subsequently tear down the cluster:
 ```shell
 > export ENOS_VAR_ui_test_filter="some filter" # <-- optional
 > cd enos
@@ -151,7 +151,7 @@ The UI tests can be run manually as follows:
 > export ENOS_VAR_ui_run_tests=false
 > cd enos
 > enos scenario ui launch edition:oss
-# once complete the scenario will output a set of environment variables that must be exported. The 
+# once complete the scenario will output a set of environment variables that must be exported. The
 # output will look as follows:
 export TEST_FILTER='some filter>' \
 export VAULT_ADDR='http://<some ip address>:8200' \
@@ -161,7 +161,7 @@ export VAULT_UNSEAL_KEYS='["<some key>","<some key>","<some key>"]'
 > cd ../ui
 > yarn test:enos # run headless
 # or
-> yarn test:enos -s # run manually in a web browser 
+> yarn test:enos -s # run manually in a web browser
 # once testing is complete
 > cd ../enos
 > enos scenario ui destroy edition:oss
@@ -191,33 +191,33 @@ This variant is for running the Enos scenario to test an artifact from Artifacto
 * `vault_revision`
 
 # CI Bootstrap
-In order to execute any of the scenarios in this repository, it is first necessary to bootstrap the 
-CI AWS account with the required permissions, service quotas and supporting AWS resources. There are 
-two Terraform modules which are used for this purpose, [service-user-iam](./ci/service-user-iam) for 
+In order to execute any of the scenarios in this repository, it is first necessary to bootstrap the
+CI AWS account with the required permissions, service quotas and supporting AWS resources. There are
+two Terraform modules which are used for this purpose, [service-user-iam](./ci/service-user-iam) for
 the account permissions, and service quotas and [bootstrap](./ci/bootstrap) for the supporting resources.
 
-**Supported Regions** - enos scenarios are supported in the following regions: 
+**Supported Regions** - enos scenarios are supported in the following regions:
 `"us-east-1", "us-east-2", "us-west-1", "us-west-2"`
 
 ## Bootstrap Process
 These steps should be followed to bootstrap this repo for enos scenario execution:
 
 ### Set up CI service user IAM role and Service Quotas
-The service user that is used when executing enos scenarios from any GitHub Action workflow must have 
+The service user that is used when executing enos scenarios from any GitHub Action workflow must have
 a properly configured IAM role granting the access required to create resources in AWS. Additionally,
 service quotas need to be adjusted to ensure that normal use of the ci account does not cause any
-service quotas to be exceeded. The [service-user-iam](./ci/service-user-iam) module contains the IAM 
-Policy and Role for that grants this access as well as the service quota increase requests to adjust 
-the service quotas. This module should be updated whenever a new AWS resource type is required for a 
-scenario or a service quota limit needs to be increased. Since this is persistent and cannot be created 
-and destroyed each time a scenario is run, the Terraform state will be managed by Terraform Cloud. 
+service quotas to be exceeded. The [service-user-iam](./ci/service-user-iam) module contains the IAM
+Policy and Role for that grants this access as well as the service quota increase requests to adjust
+the service quotas. This module should be updated whenever a new AWS resource type is required for a
+scenario or a service quota limit needs to be increased. Since this is persistent and cannot be created
+and destroyed each time a scenario is run, the Terraform state will be managed by Terraform Cloud.
 Here are the steps to configure the GitHub Actions service user:
 
 #### Pre-requisites
 - Full access to the CI AWS account is required.
 
 **Notes:**
-- For help with access to Terraform Cloud and the CI Account, contact the QT team on Slack (#team-quality) 
+- For help with access to Terraform Cloud and the CI Account, contact the QT team on Slack (#team-quality)
   for an invite. After receiving an invite to Terraform Cloud, a personal access token can be created
   by clicking `User Settings` --> `Tokens` --> `Create an API token`.
 - Access to the AWS account can be done via Doormat, at: https://doormat.hashicorp.services/.
@@ -225,9 +225,9 @@ Here are the steps to configure the GitHub Actions service user:
     `vault-enterprise_ci`.
   - Access can be requested by clicking: `Cloud Access` --> `AWS` --> `Request Account Access`.
 
-1. **Create the Terraform Cloud Workspace** - The name of the workspace to be created depends on the 
+1. **Create the Terraform Cloud Workspace** - The name of the workspace to be created depends on the
    repository for which it is being created, but the pattern is: `<repository>-ci-enos-service-user-iam`,
-   e.g. `vault-ci-enos-service-user-iam`. It is important that the execution mode for the workspace be set 
+   e.g. `vault-ci-enos-service-user-iam`. It is important that the execution mode for the workspace be set
    to `local`. For help on setting up the workspace, contact the QT team on Slack (#team-quality)
 
 
@@ -243,8 +243,8 @@ Here are the steps to configure the GitHub Actions service user:
 ```
 
 ### Bootstrap the CI resources
-Bootstrapping of the resources in the CI account is accomplished via the GitHub Actions workflow: 
-[enos-bootstrap-ci](../.github/workflows/enos-bootstrap-ci.yml). Before this workflow can be run a 
+Bootstrapping of the resources in the CI account is accomplished via the GitHub Actions workflow:
+[enos-bootstrap-ci](../.github/workflows/enos-bootstrap-ci.yml). Before this workflow can be run a
 workspace must be created as follows:
 
 1. **Create the Terraform Cloud Workspace** - The name workspace to be created depends on the repository

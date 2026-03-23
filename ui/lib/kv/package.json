@@ -11,7 +11,8 @@
     "ember-concurrency": "*",
     "@ember/test-waiters": "*",
     "ember-inflector": "*",
-    "ember-template-lint": "*"
+    "ember-template-lint": "*",
+    "ember-cli-typescript": "*"
   },
   "ember-addon": {
     "paths": [

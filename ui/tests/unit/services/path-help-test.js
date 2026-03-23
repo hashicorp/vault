@@ -103,16 +103,4 @@ module('Unit | Service | path-help', function (hooks) {
       });
     });
   });
-
-  module('hydrateModel', function () {
-    test('it should hydrate an existing model', async function (assert) {
-      this.server.get(`/pki2/roles/example`, () => openapiStub);
-
-      const modelType = 'pki/role';
-      await this.pathHelp.hydrateModel(modelType, 'pki2');
-      const model = this.store.createRecord(modelType);
-      model.set('username', 'foobar');
-      assert.strictEqual(model.username, 'foobar', 'sets value of key that only exists in openAPI response');
-    });
-  });
 });

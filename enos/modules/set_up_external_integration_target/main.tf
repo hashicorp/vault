@@ -66,6 +66,28 @@ resource "enos_remote_exec" "setup_openldap" {
   }
 }
 
+# Populate LDAP server with required users and organizational units
+resource "enos_remote_exec" "populate_ldap" {
+  depends_on = [enos_remote_exec.setup_openldap]
+
+  scripts = [abspath("${path.module}/scripts/populate-ldap.sh")]
+
+  environment = {
+    LDAP_SERVER     = local.ldap_server.host.private_ip
+    LDAP_PORT       = local.ldap_server.port
+    LDAP_ADMIN_PW   = local.ldap_server.admin_pw
+    LDAP_DOMAIN     = local.ldap_server.domain
+    RETRY_INTERVAL  = var.retry_interval
+    TIMEOUT_SECONDS = var.timeout
+  }
+
+  transport = {
+    ssh = {
+      host = local.ldap_server.host.public_ip
+    }
+  }
+}
+
 # Creating KMIP Server using generic container script
 resource "enos_remote_exec" "create_kmip" {
   depends_on = [module.install_packages]

@@ -34,17 +34,14 @@
 // resources.
 // project_name = "vault-enos-integration"
 
-// distro_version_amzn is the version of Amazon Linux 2 to use for "distro:amzn" variants
-// distro_version_amzn = "2"
-
-// distro_version_leap is the version of openSUSE Leap to use for "distro:leap" variants
-// distro_version_leap = "15.5"
+// distro_version_amzn is the version of Amazon Linux to use for "distro:amzn" variants
+// distro_version_amzn = "2023"
 
 // distro_version_rhel is the version of RHEL to use for "distro:rhel" variants.
-// distro_version_rhel = "9.3" // or "8.9"
+// distro_version_rhel = "10.1" // or "8.10" or "9.7"
 
 // distro_version_sles is the version of SUSE SLES to use for "distro:sles" variants.
-// distro_version_sles = "v15_sp5_standard"
+// distro_version_sles = "16.0" // or "15.7"
 
 // distro_version_ubuntu is the version of ubuntu to use for "distro:ubuntu" variants
 // distro_version_ubuntu = "22.04" // or "24.04"
@@ -116,3 +113,6 @@
 // vault_revision is the git sha of Vault artifact we are testing. Some validations will expect the vault
 // binary and cluster to report this revision.
 // vault_revision = "df733361af26f8bb29b63704168bbc5ab8d083de"
+
+// vault_radar_license_path is the path to a valid Vault Radar path.
+// vault_radar_license_path = "./support/vault-radar.hclic"

@@ -51,6 +51,9 @@ func (i *IdentityStore) GetDisableLowerCasedNames() bool {
 	return i.disableLowerCasedNames
 }
 
+// resetDB callers must hold the write lock on i.lock before calling, to ensure
+// that no other goroutine is reading from or writing to the database while it
+// gets reset.
 func (i *IdentityStore) resetDB() error {
 	var err error
 
@@ -78,7 +81,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		mountLister:            core,
 		mfaBackend:             core.loginMFABackend,
 		aliasLocks:             locksutil.CreateLocks(),
-		renameDuplicates:       core.FeatureActivationFlags,
+		activationManager:      core.FeatureActivationFlags,
 		activationErrorHandler: core,
 	}
 
@@ -95,6 +98,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	core.AddLogger(localAliasesPackerLogger)
 	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
 	core.AddLogger(groupsPackerLogger)
+	scimPackerLogger := iStore.logger.Named("storagepacker").Named("scim")
+	core.AddLogger(scimPackerLogger)
 
 	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, entitiesPackerLogger, "")
 	if err != nil {
@@ -111,6 +116,14 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, fmt.Errorf("failed to create group packer: %w", err)
 	}
 
+	unauthenticatedPaths := []string{
+		"oidc/.well-known/*",
+		"oidc/+/.well-known/*",
+		"oidc/provider/+/.well-known/*",
+		"oidc/provider/+/token",
+	}
+	unauthenticatedPaths = append(unauthenticatedPaths, identityStoreLoginMFAEntUnauthedPaths()...)
+	unauthenticatedPaths = append(unauthenticatedPaths, identityStoreSCIMUnauthedPaths()...)
 	iStore.Backend = &framework.Backend{
 		BackendType:    logical.TypeLogical,
 		Paths:          iStore.paths(),
@@ -118,12 +131,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		InitializeFunc: iStore.initialize,
 		ActivationFunc: iStore.activate,
 		PathsSpecial: &logical.Paths{
-			Unauthenticated: append([]string{
-				"oidc/.well-known/*",
-				"oidc/+/.well-known/*",
-				"oidc/provider/+/.well-known/*",
-				"oidc/provider/+/token",
-			}, identityStoreLoginMFAEntUnauthedPaths()...),
+			Unauthenticated: unauthenticatedPaths,
 			LocalStorage: []string{
 				localAliasesBucketsPrefix,
 			},
@@ -166,6 +174,7 @@ func (i *IdentityStore) paths() []*framework.Path {
 		mfaPingIDPaths(i),
 		mfaLoginEnforcementPaths(i),
 		mfaLoginEnterprisePaths(i),
+		scimPaths(i),
 	)
 }
 
@@ -654,6 +663,8 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	case strings.HasPrefix(key, localAliasesBucketsPrefix):
 		// key is for a local alias bucket in storage.
 		i.invalidateLocalAliasesBucket(ctx, key)
+	case strings.HasPrefix(key, scimClientStoragePrefix):
+		i.invalidateSCIMClient(ctx, key)
 	}
 }
 
@@ -940,8 +951,8 @@ func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key st
 	//
 	// The logic iterates over every local alias stored at the invalidated key.
 	// For each local alias read from the storage entry, the set of local
-	// aliases read from MemDB is searched for the same local alias. If it can't
-	// be found, it means that it needs to be inserted into MemDB. However, if
+	// aliases read from MemDB is searched for the same local alias. If it can't be
+	// found, it means that it needs to be inserted into MemDB. However, if
 	// it's found, it must be compared with the local alias from the storage. If
 	// they don't match, it means that the local alias in MemDB needs to be
 	// updated. If they did match, it means that this particular local alias did
@@ -1346,13 +1357,21 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		return nil, false, fmt.Errorf("mount accessor %q is not a mount of type %q", alias.MountAccessor, alias.MountType)
 	}
 
-	// Check if an entity already exists for the given alias
-	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, true)
+	// Check if an entity already exists for the given alias.
+	// We don't clone here to avoid unnecessary allocations - if we need to
+	// return early, we'll clone at that point.
+	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, false)
 	if err != nil {
 		return nil, false, err
 	}
 	if entity != nil && changedAliasIndex(entity, alias) == -1 {
-		return entity, false, nil
+		// Entity exists and no metadata changes - clone before returning
+		// to avoid exposing internal MemDB state to callers.
+		clonedEntity, err := entity.Clone()
+		if err != nil {
+			return nil, false, err
+		}
+		return clonedEntity, false, nil
 	}
 
 	i.lock.Lock()
@@ -1362,20 +1381,31 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
-	// Check if an entity was created before acquiring the lock
-	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, true)
+	// Check if an entity was created before acquiring the lock.
+	// We don't clone here because:
+	// 1. If no changes needed, we clone before returning
+	// 2. If changes needed, we'll modify and clone at the end anyway
+	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, false)
 	if err != nil {
 		return nil, false, err
 	}
 	if entity != nil {
+		// Clone immediately to avoid modifying MemDB state directly
+		entity, err = entity.Clone()
+		if err != nil {
+			return nil, false, err
+		}
+
 		idx := changedAliasIndex(entity, alias)
 		if idx == -1 {
+			// No changes needed, return the cloned entity
 			return entity, false, nil
 		}
+
+		// Safe to modify the cloned entity
 		a := entity.Aliases[idx]
 		a.Metadata = alias.Metadata
 		a.LastUpdateTime = timestamppb.Now()
-
 		update = true
 	}
 

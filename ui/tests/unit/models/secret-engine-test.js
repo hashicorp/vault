@@ -162,6 +162,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.auditNonHmacResponseKeys',
             'config.passthroughRequestHeaders',
             'config.allowedResponseHeaders',
+            'config.plugin_version',
           ],
         },
       ]);
@@ -188,6 +189,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.auditNonHmacResponseKeys',
             'config.passthroughRequestHeaders',
             'config.allowedResponseHeaders',
+            'config.plugin_version',
           ],
         },
       ]);
@@ -215,6 +217,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.auditNonHmacResponseKeys',
             'config.passthroughRequestHeaders',
             'config.allowedResponseHeaders',
+            'config.plugin_version',
           ],
         },
       ]);
@@ -239,6 +242,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.auditNonHmacResponseKeys',
             'config.passthroughRequestHeaders',
             'config.allowedResponseHeaders',
+            'config.plugin_version',
           ],
         },
       ]);
@@ -262,6 +266,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.auditNonHmacResponseKeys',
             'config.passthroughRequestHeaders',
             'config.allowedResponseHeaders',
+            'config.plugin_version',
           ],
         },
       ]);
@@ -286,6 +291,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.auditNonHmacResponseKeys',
             'config.passthroughRequestHeaders',
             'config.allowedResponseHeaders',
+            'config.plugin_version',
           ],
         },
       ]);
@@ -313,6 +319,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.auditNonHmacResponseKeys',
             'config.passthroughRequestHeaders',
             'config.allowedResponseHeaders',
+            'config.plugin_version',
           ],
         },
       ]);

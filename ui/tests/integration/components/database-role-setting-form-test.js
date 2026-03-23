@@ -5,10 +5,11 @@
 
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const testCases = [
   {
@@ -96,7 +97,7 @@ module('Integration | Component | database-role-setting-form', function (hooks) 
       },
     });
     await render(hbs`<DatabaseRoleSettingForm @attrs={{this.model.attrs}} @model={{this.model}}/>`);
-    assert.dom('[data-test-component="empty-state"]').exists({ count: 2 }, 'Two empty states exist');
+    assert.dom(GENERAL.emptyStateTitle).exists({ count: 2 }, 'Two empty states exist');
   });
 
   test('it shows appropriate fields based on roleType and db plugin', async function (assert) {

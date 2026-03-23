@@ -223,9 +223,7 @@ type DisplayAttributes struct {
 	// to UI inputs where only arrays are valid. For example params with Type: framework.TypeCommaStringSlice
 	Description string `json:"description,omitempty"`
 
-	// Value is a sample value to display for this field. This may be used
-	// to indicate a default value, but it is for display only and completely separate
-	// from any Default member handling.
+	// Value is used as the default value by the UI.
 	Value interface{} `json:"value,omitempty"`
 
 	// Sensitive indicates that the value should be masked by default in the UI.

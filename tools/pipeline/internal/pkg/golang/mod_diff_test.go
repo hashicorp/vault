@@ -14,10 +14,12 @@ import (
 func Test_DiffModFiles_Equal(t *testing.T) {
 	t.Parallel()
 
-	modA, err := os.ReadFile("./fixtures/moda/go.mod")
+	// We intentionally do not use the .mod suffix to avoid
+	// tooling from automatically tidying these files.
+	modA, err := os.ReadFile("./fixtures/go.moda")
 	require.NoError(t, err)
 
-	modB, err := os.ReadFile("./fixtures/modb/go.mod")
+	modB, err := os.ReadFile("./fixtures/go.modb")
 	require.NoError(t, err)
 
 	for desc, test := range map[string]struct {
@@ -78,10 +80,12 @@ func Test_DiffModFiles_Equal(t *testing.T) {
 func Test_DiffModFiles_Diff(t *testing.T) {
 	t.Parallel()
 
-	modA, err := os.ReadFile("./fixtures/moda/go.mod")
+	// We intentionally do not use the .mod suffix to avoid
+	// tooling from automatically tidying these files.
+	modA, err := os.ReadFile("./fixtures/go.moda")
 	require.NoError(t, err)
 
-	modB, err := os.ReadFile("./fixtures/modb/go.mod")
+	modB, err := os.ReadFile("./fixtures/go.modb")
 	require.NoError(t, err)
 
 	as := &ModSource{Name: "moda", Data: modA}

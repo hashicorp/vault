@@ -13,6 +13,6 @@ export default create({
     '/vault/secrets-engines/:backend/kmip/scopes/:scope/roles/:role/credentials/:serial'
   ),
   create: clickable('[data-test-role-create]'),
-  generateCredentialsLink: clickable('[data-test-kmip-link-generate-credentials]'),
-  backToRoleLink: clickable('[data-test-kmip-link-back-to-role]'),
+  generateCredentialsLink: clickable('[data-test-generate-credentials]'),
+  backToRoleLink: clickable('[data-test-back-to-role]'),
 });

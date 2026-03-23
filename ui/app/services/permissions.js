@@ -68,21 +68,28 @@ export const PERMISSIONS_BANNER_STATES = {
 
 export const RESULTANT_ACL_PATH = 'sys/internal/ui/resultant-acl'; // export for tests
 
+// API_PATHS is used to find the first accessible path for a given nav item, so it must be kept in order of the sidebar nav structure.
 const API_PATHS = {
-  access: {
-    methods: 'sys/auth',
-    mfa: 'identity/mfa/method',
-    oidc: 'identity/oidc/client',
-    entities: 'identity/entity/id',
-    groups: 'identity/group/id',
-    leases: 'sys/leases/lookup',
-    namespaces: 'sys/namespaces',
-    'control-groups': 'sys/control-group/',
+  sync: {
+    destinations: 'sys/sync/destinations',
+    associations: 'sys/sync/associations',
+    config: 'sys/sync/config',
+    github: 'sys/sync/github-apps',
   },
   policies: {
     acl: 'sys/policies/acl',
     rgp: 'sys/policies/rgp',
     egp: 'sys/policies/egp',
+  },
+  access: {
+    'control-groups': 'sys/control-group/',
+    leases: 'sys/leases/lookup',
+    methods: 'sys/auth',
+    mfa: 'identity/mfa/method',
+    oidc: 'identity/oidc/client',
+    namespaces: 'sys/namespaces',
+    groups: 'identity/group/id',
+    entities: 'identity/entity/id',
   },
   tools: {
     wrap: 'sys/wrapping/wrap',
@@ -92,39 +99,34 @@ const API_PATHS = {
     random: 'sys/tools/random',
     hash: 'sys/tools/hash',
   },
+  settings: {
+    customMessages: 'sys/config/ui/custom-messages',
+  },
   status: {
+    seal: 'sys/seal',
     replication: 'sys/replication',
     license: 'sys/license',
-    seal: 'sys/seal',
     raft: 'sys/storage/raft/configuration',
   },
   clients: {
     activity: 'sys/internal/counters/activity',
     config: 'sys/internal/counters/config',
   },
-  settings: {
-    customMessages: 'sys/config/ui/custom-messages',
-  },
-  sync: {
-    destinations: 'sys/sync/destinations',
-    associations: 'sys/sync/associations',
-    config: 'sys/sync/config',
-    github: 'sys/sync/github-apps',
-  },
   monitoring: {
     'utilization-report': 'sys/utilization-report',
   },
 };
 
+// API_PATHS_TO_ROUTE_PARAMS is used to resolve route params for that path when checking permissions for the nav item.
 const API_PATHS_TO_ROUTE_PARAMS = {
-  'sys/auth': { route: 'vault.cluster.access.methods', models: [] },
   'identity/entity/id': { route: 'vault.cluster.access.identity', models: ['entities'] },
   'identity/group/id': { route: 'vault.cluster.access.identity', models: ['groups'] },
-  'sys/leases/lookup': { route: 'vault.cluster.access.leases', models: [] },
-  'sys/namespaces': { route: 'vault.cluster.access.namespaces', models: [] },
-  'sys/control-group/': { route: 'vault.cluster.access.control-groups', models: [] },
   'identity/mfa/method': { route: 'vault.cluster.access.mfa', models: [] },
   'identity/oidc/client': { route: 'vault.cluster.access.oidc', models: [] },
+  'sys/auth': { route: 'vault.cluster.access.methods', models: [] },
+  'sys/control-group/': { route: 'vault.cluster.access.control-groups', models: [] },
+  'sys/leases/lookup': { route: 'vault.cluster.access.leases', models: [] },
+  'sys/namespaces': { route: 'vault.cluster.access.namespaces', models: [] },
 };
 
 // Canary endpoints: quick check for “meaningful UI access” in the *current* namespace.

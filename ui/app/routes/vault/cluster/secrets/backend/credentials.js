@@ -40,22 +40,7 @@ export default Route.extend({
       }
       // Unless it's a control group error, we want to pass back error info
       // so we can render it on the GenerateCredentialsDatabase component
-      const status = error?.httpStatus;
-      let title;
-      let message = `We ran into a problem and could not continue: ${
-        error?.errors ? error.errors[0] : 'See Vault logs for details.'
-      }`;
-      if (status === 403) {
-        // 403 is forbidden
-        title = 'You are not authorized';
-        message =
-          "Role wasn't found or you do not have permissions. Ask your administrator if you think you should have access.";
-      }
-      return {
-        errorHttpStatus: status,
-        errorTitle: title,
-        errorMessage: message,
-      };
+      return error;
     });
   },
 

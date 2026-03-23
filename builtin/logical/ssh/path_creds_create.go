@@ -133,6 +133,7 @@ func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request
 			return nil, err
 		}
 
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHOTPCreate, role.observationMetadata(roleName))
 		// Return the information relevant to user of OTP type and save
 		// the data required for later use in the internal section of secret.
 		// In this case, saving just the OTP is sufficient since there is
@@ -202,6 +203,8 @@ func (b *backend) GenerateOTPCredential(ctx context.Context, req *logical.Reques
 	if err := req.Storage.Put(ctx, newEntry); err != nil {
 		return "", err
 	}
+
+	b.sshCertificateCounter.Increment().AddSSHOTP()
 	return otp, nil
 }
 

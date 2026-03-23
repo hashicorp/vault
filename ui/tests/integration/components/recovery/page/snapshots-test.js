@@ -17,17 +17,36 @@ module('Integration | Component | recovery/snapshots', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    this.breadcrumbs = [{ label: 'Secrets Recovery', route: 'vault.cluster.recovery.snapshots' }];
+
     this.model = {
       snapshots: [],
       canLoadSnapshot: false,
     };
-    this.renderComponent = () => render(hbs`<Recovery::Page::Snapshots @model={{this.model}}/>`);
+    this.renderComponent = () =>
+      render(hbs`<Recovery::Page::Snapshots @breadcrumbs={{this.breadcrumbs}} @model={{this.model}}/>`);
+  });
+
+  test('it displays raft empty state if showRaftStorageMessage is passed into model', async function (assert) {
+    this.model = { snapshots: { showRaftStorageMessage: true } };
+    await this.renderComponent();
+
+    assert
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('Raft storage required ', ' Raft storage required empty state title renders');
+    assert
+      .dom(GENERAL.emptyStateMessage)
+      .hasText(
+        'Raft storage must be used in order to recover data from a snapshot.',
+        'Raft storage empty state message'
+      );
+    assert.dom(GENERAL.emptyStateActions).hasText('Snapshot management', 'Raft storage empty state action');
   });
 
   test('it displays empty state in CE', async function (assert) {
     this.model = { snapshots: [], showCommunityMessage: true };
+    await this.renderComponent();
 
-    await render(hbs`<Recovery::Page::Snapshots @model={{this.model}}/>`);
     assert
       .dom(GENERAL.emptyStateTitle)
       .hasText('Secrets Recovery is an enterprise feature', 'CE empty state title renders');
@@ -47,9 +66,7 @@ module('Integration | Component | recovery/snapshots', function (hooks) {
   test('it displays empty state in non root namespace', async function (assert) {
     const nsService = this.owner.lookup('service:namespace');
     nsService.setNamespace('test-ns');
-
     await this.renderComponent();
-
     assert
       .dom(GENERAL.emptyStateTitle)
       .hasText('Snapshot upload is restricted', 'non root namespace empty state title renders');

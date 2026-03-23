@@ -9,7 +9,7 @@
  * which includes all the methods that can be enabled and mounted.
  */
 
-const BASE_LOGIN_METHODS = ['github', 'jwt', 'ldap', 'oidc', 'okta', 'radius', 'token', 'userpass'];
+const BASE_LOGIN_METHODS = ['github', 'jwt', 'ldap', 'oidc', 'okta', 'radius', 'token', 'cert', 'userpass'];
 
 export const ENTERPRISE_LOGIN_METHODS = ['saml'];
 
@@ -19,7 +19,7 @@ export const supportedTypes = (isEnterprise: boolean) => {
 
 // this ensures no unexpected params are injected and submitted in the login form
 // 'namespace' and 'path' are intentionally omitted because they are handled explicitly
-export const POSSIBLE_FIELDS = ['role', 'jwt', 'password', 'token', 'username'];
+export const POSSIBLE_FIELDS = ['role', 'jwt', 'password', 'token', 'username', 'name'];
 
 // maps OIDC provider domain to display name for oidc-jwt auth form
 export const DOMAIN_PROVIDER_MAP = {

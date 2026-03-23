@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/observations"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
@@ -18,6 +19,8 @@ func TestBackend_RoleCreate_DefaultUsernameTemplate(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	config := logical.TestBackendConfig()
+	or := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = or
 	config.StorageView = &logical.InmemStorage{}
 	b := Backend()
 	if err = b.Setup(context.Background(), config); err != nil {
@@ -40,6 +43,16 @@ func TestBackend_RoleCreate_DefaultUsernameTemplate(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQConnectionConfigWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateFail))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateSuccess))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleWrite))
 	if resp != nil {
 		t.Fatal("expected a nil response")
 	}
@@ -58,6 +71,16 @@ func TestBackend_RoleCreate_DefaultUsernameTemplate(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQConnectionConfigWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateFail))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateSuccess))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQRoleWrite))
 	if resp != nil {
 		t.Fatal("expected a nil response")
 	}
@@ -72,6 +95,16 @@ func TestBackend_RoleCreate_DefaultUsernameTemplate(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQConnectionConfigWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateFail))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateSuccess))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQRoleWrite))
 	if resp == nil {
 		t.Fatal("missing creds response")
 	}
@@ -94,6 +127,8 @@ func TestBackend_RoleCreate_CustomUsernameTemplate(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	config := logical.TestBackendConfig()
+	or := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = or
 	config.StorageView = &logical.InmemStorage{}
 	b := Backend()
 	if err = b.Setup(context.Background(), config); err != nil {
@@ -116,6 +151,16 @@ func TestBackend_RoleCreate_CustomUsernameTemplate(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQConnectionConfigWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateFail))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateSuccess))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleWrite))
 	if resp != nil {
 		t.Fatal("expected a nil response")
 	}
@@ -134,6 +179,16 @@ func TestBackend_RoleCreate_CustomUsernameTemplate(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQConnectionConfigWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateFail))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateSuccess))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQRoleWrite))
 	if resp != nil {
 		t.Fatal("expected a nil response")
 	}
@@ -148,6 +203,16 @@ func TestBackend_RoleCreate_CustomUsernameTemplate(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQConnectionConfigWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateFail))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQCredentialCreateSuccess))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQLeaseConfigWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeRabbitMQRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeRabbitMQRoleWrite))
 	if resp == nil {
 		t.Fatal("missing creds response")
 	}

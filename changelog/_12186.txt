@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki (enterprise): Address issues using SCEP on performance standby nodes failing due to configuration invalidation issues along with errors writing to storage
+```
