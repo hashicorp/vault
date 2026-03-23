@@ -556,6 +556,7 @@ scenario "agent" {
       vault_edition          = matrix.edition
       vault_install_dir      = global.vault_install_dir[matrix.artifact_type]
       vault_root_token       = step.create_vault_cluster.root_token
+      vault_audit_log_path   = step.create_vault_cluster.audit_device_file_path
     }
   }
 

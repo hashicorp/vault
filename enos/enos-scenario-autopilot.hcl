@@ -421,6 +421,7 @@ scenario "autopilot" {
       vault_edition          = matrix.edition
       vault_install_dir      = local.vault_install_dir
       vault_root_token       = step.create_vault_cluster.root_token
+      vault_audit_log_path   = step.create_vault_cluster.audit_device_file_path
     }
   }
 
