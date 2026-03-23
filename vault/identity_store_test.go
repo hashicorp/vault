@@ -549,11 +549,13 @@ func TestIdentityStore_TokenEntityInheritance(t *testing.T) {
 }
 
 func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
-	err := AddTestCredentialBackend("github", credGithub.Factory)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	conf := &CoreConfig{
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		CredentialBackends: map[string]logical.Factory{
+			"github": credGithub.Factory,
+		},
 	}
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
 
 	meGH := &MountEntry{
 		Table:       credentialTableType,
@@ -562,7 +564,7 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 		Description: "github auth",
 	}
 
-	err = c.enableCredential(namespace.RootContext(nil), meGH)
+	err := c.enableCredential(namespace.RootContext(nil), meGH)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -666,13 +668,13 @@ func testIdentityStoreWithGithubAuth(ctx context.Context, t *testing.T) (*Identi
 // backend to assist with testing aliases and entities that require an valid
 // mount accessor of an auth backend.
 func testIdentityStoreWithGithubAuthRoot(ctx context.Context, t *testing.T) (*IdentityStore, string, *Core, string) {
-	// Add github credential factory to core config
-	err := AddTestCredentialBackend("github", credGithub.Factory)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	conf := &CoreConfig{
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		CredentialBackends: map[string]logical.Factory{
+			"github": credGithub.Factory,
+		},
 	}
-
-	c, _, root := TestCoreUnsealed(t)
+	c, _, root := TestCoreUnsealedWithConfig(t, conf)
 
 	meGH := &MountEntry{
 		Table:       credentialTableType,
@@ -681,27 +683,21 @@ func testIdentityStoreWithGithubAuthRoot(ctx context.Context, t *testing.T) (*Id
 		Description: "github auth",
 	}
 
-	err = c.enableCredential(ctx, meGH)
-	if err != nil {
-		t.Fatal(err)
-	}
+	err := c.enableCredential(ctx, meGH)
+	require.NoError(t, err)
 
 	return c.identityStore, meGH.Accessor, c, root
 }
 
 func testIdentityStoreWithGithubUserpassAuth(ctx context.Context, t *testing.T) (*IdentityStore, string, string, *Core) {
-	// Setup 2 auth backends, github and userpass
-	err := AddTestCredentialBackend("github", credGithub.Factory)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	conf := &CoreConfig{
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		CredentialBackends: map[string]logical.Factory{
+			"github":   credGithub.Factory,
+			"userpass": credUserpass.Factory,
+		},
 	}
-
-	err = AddTestCredentialBackend("userpass", credUserpass.Factory)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
 
 	githubMe := &MountEntry{
 		Table:       credentialTableType,
@@ -710,7 +706,7 @@ func testIdentityStoreWithGithubUserpassAuth(ctx context.Context, t *testing.T) 
 		Description: "github auth",
 	}
 
-	err = c.enableCredential(ctx, githubMe)
+	err := c.enableCredential(ctx, githubMe)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -774,13 +770,13 @@ func expectSingleCount(t *testing.T, sink *metrics.InmemSink, keyPrefix string) 
 }
 
 func TestIdentityStore_NewEntityCounter(t *testing.T) {
-	// Add github credential factory to core config
-	err := AddTestCredentialBackend("github", credGithub.Factory)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	conf := &CoreConfig{
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		CredentialBackends: map[string]logical.Factory{
+			"github": credGithub.Factory,
+		},
 	}
-
-	c, _, _, sink := TestCoreUnsealedWithMetrics(t)
+	c, _, _, sink := TestCoreUnsealedWithMetricsAndConfig(t, conf)
 
 	meGH := &MountEntry{
 		Table:       credentialTableType,
@@ -790,7 +786,7 @@ func TestIdentityStore_NewEntityCounter(t *testing.T) {
 	}
 
 	ctx := namespace.RootContext(nil)
-	err = c.enableCredential(ctx, meGH)
+	err := c.enableCredential(ctx, meGH)
 	if err != nil {
 		t.Fatal(err)
 	}
