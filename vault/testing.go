@@ -102,6 +102,9 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 )
 
 // TestCore returns a pure in-memory, uninitialized core for testing.
+//
+// NOTE: Writing your test using NewTestCluster in a new package is strongly
+// preferable to writing a test in the vault package utilizing the TestCore functions.
 func TestCore(t testing.TB) *Core {
 	return TestCoreWithSeal(t, nil, false)
 }
@@ -121,6 +124,9 @@ func TestCoreNewSeal(t testing.TB) *Core {
 
 // TestCoreWithConfig returns a pure in-memory, uninitialized core with the
 // specified core configurations overridden for testing.
+//
+// NOTE: Writing your test using NewTestCluster in a new package is strongly
+// preferable to writing a test in the vault package utilizing the TestCore functions.
 func TestCoreWithConfig(t testing.TB, conf *CoreConfig) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -387,6 +393,9 @@ func TestCoreSeal(core *Core) error {
 
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
+//
+// NOTE: Writing your test using NewTestCluster in a new package is strongly
+// preferable to writing a test in the vault package utilizing the TestCore functions.
 func TestCoreUnsealed(t testing.TB) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCore(t)
@@ -420,6 +429,9 @@ func TestCoreUnsealedWithMetricsAndConfig(t testing.TB, conf *CoreConfig) (*Core
 
 // TestCoreUnsealedRaw returns a pure in-memory core that is already
 // initialized, unsealed, and with raw endpoints enabled.
+//
+// NOTE: Writing your test using NewTestCluster in a new package is strongly
+// preferable to writing a test in the vault package utilizing the TestCore functions.
 func TestCoreUnsealedRaw(t testing.TB) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCoreRaw(t)
@@ -427,7 +439,10 @@ func TestCoreUnsealedRaw(t testing.TB) (*Core, [][]byte, string) {
 }
 
 // TestCoreUnsealedWithConfig returns a pure in-memory core that is already
-// initialized, unsealed, with the any provided core config values overridden.
+// initialized, unsealed, with any provided core config values overridden.
+//
+// NOTE: Writing your test using NewTestCluster in a new package is strongly
+// preferable to writing a test in the vault package utilizing the TestCore functions.
 func TestCoreUnsealedWithConfig(t testing.TB, conf *CoreConfig) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCoreWithConfig(t, conf)
@@ -559,8 +574,13 @@ var (
 	testCredentialBackends = map[string]logical.Factory{}
 )
 
-// This adds a credential backend for the test core. This needs to be
+// AddTestCredentialBackend adds a credential backend for the test core. This needs to be
 // invoked before the test core is created.
+//
+// Deprecated: Relies upon global test variables, and prone to race conditions,
+// and tests using this function cannot run in parallel.
+// A test utilizing NewTestCluster living outside the Vault package should
+// be strongly preferred instead.
 func AddTestCredentialBackend(name string, factory logical.Factory) error {
 	if name == "" {
 		return fmt.Errorf("missing backend name")
@@ -572,8 +592,13 @@ func AddTestCredentialBackend(name string, factory logical.Factory) error {
 	return nil
 }
 
-// This adds a logical backend for the test core. This needs to be
+// AddTestLogicalBackend adds a logical backend for the test core. This needs to be
 // invoked before the test core is created.
+//
+// Deprecated: Relies upon global test variables, and prone to race conditions,
+// and tests using this function cannot run in parallel.
+// A test utilizing NewTestCluster living outside the Vault package should
+// be strongly preferred instead.
 func AddTestLogicalBackend(name string, factory logical.Factory) error {
 	if name == "" {
 		return fmt.Errorf("missing backend name")

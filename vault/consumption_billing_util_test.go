@@ -566,7 +566,6 @@ func TestHWMTotpKeyCounts(t *testing.T) {
 
 // TestTransitDataProtectionCallCounts tests that we correctly store and track the transit data protection call counts
 func TestTransitDataProtectionCallCounts(t *testing.T) {
-	t.Parallel()
 	coreConfig := &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"transit": transit.Factory,
@@ -819,7 +818,6 @@ func TestSSHCertCounts(t *testing.T) {
 	// Round to 4 decimal places
 	expectedCertUnit := math.Round(units*10000) / 10000
 
-	t.Parallel()
 	coreConfig := &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"ssh": ssh.Factory,
@@ -945,7 +943,6 @@ func TestSSHCertCounts(t *testing.T) {
 func TestSSHOTPCounts(t *testing.T) {
 	expectedOTPUnit := 0.0014
 
-	t.Parallel()
 	coreConfig := &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"ssh": ssh.Factory,
