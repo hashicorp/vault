@@ -538,7 +538,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	switch {
 	case req.ClientTokenSource == logical.ClientTokenFromVaultHeader:
 		delete(req.Headers, consts.AuthHeaderName)
-	case req.ClientTokenSource == logical.ClientTokenFromAuthzHeader && !unauth && te == nil:
+	case req.ClientTokenSource == logical.ClientTokenFromAuthzHeader && (!unauth || te != nil):
 		if headers, ok := req.Headers["Authorization"]; ok {
 			retHeaders := make([]string, 0, len(headers))
 			for _, v := range headers {
