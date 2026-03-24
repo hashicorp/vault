@@ -1,12 +1,7 @@
 # Serializers & Adapters
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
 - [Guidelines](#guidelines)
 - [Gotchas](#gotchas)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Guidelines
 

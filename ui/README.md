@@ -1,8 +1,5 @@
 **Table of Contents**
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
 - [Vault UI](#vault-ui)
   - [Ember CLI Version Upgrade Matrix](#ember-cli-version-upgrade-matrix)
   - [Prerequisites](#prerequisites)
@@ -17,8 +14,6 @@
     - [Linting](#linting)
     - [Contributing / Best Practices](#contributing--best-practices)
   - [Further Reading / Useful Links](#further-reading--useful-links)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # Vault UI
 
