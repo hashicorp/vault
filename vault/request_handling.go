@@ -2707,7 +2707,11 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 				return err
 			}
 		}
+	case logical.TokenTypeEnt:
+		// Ensure it's not marked renewable since enterprise tokens are not renewable
+		auth.Renewable = false
 	}
+
 	return nil
 }
 

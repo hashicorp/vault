@@ -21,6 +21,10 @@ func (c *Core) createAndStoreEnterpriseTokenEntry(ctx context.Context, req *logi
 	return nil
 }
 
+func isActivationFlagEnabledForEnterpriseToken(c *Core) bool {
+	return false
+}
+
 func getEnterpriseTokenMetadata(_ map[string]interface{}) string {
 	return ""
 }
