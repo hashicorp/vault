@@ -199,6 +199,9 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 				// to declare them here so that the generated OpenAPI spec gets their sudo status correct.
 				"seal",
 				"step-down",
+				"activation-flags/oauth-resource-server/activate",
+				"activation-flags/oauth-resource-server/deactivate",
+				"config/oauth-resource-server/*",
 			},
 
 			Unauthenticated: unauthenticatedPaths,

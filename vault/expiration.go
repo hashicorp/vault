@@ -1094,7 +1094,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	// Delete the secondary index, but only if it's a leased secret (not auth)
 	if le.Secret != nil {
 		var indexToken string
-		// Maintain secondary index by token, except for orphan batch tokens
+		// Maintain secondary index by token, except for orphan batch tokens and ent tokens
 		switch le.ClientTokenType {
 		case logical.TokenTypeBatch:
 			te, err := m.tokenStore.lookupBatchTokenInternal(ctx, le.ClientToken)
@@ -1108,6 +1108,9 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 				// parent
 				indexToken = te.Parent
 			}
+		case logical.TokenTypeEnt:
+			// ent tokens don't maintain parent relationships; just use the token itself
+			indexToken = le.ClientToken
 		default:
 			indexToken = le.ClientToken
 		}
@@ -1656,6 +1659,15 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		}
 	}
 
+	// If the token is an ent token, derive TTL from the ent token
+	if te.Type == logical.TokenTypeEnt {
+		entTokenExpireTime := deriveExpireTimeFromEntToken(te)
+		if !entTokenExpireTime.IsZero() && le.ExpireTime.After(entTokenExpireTime) {
+			// Use the ent token's expiration time for the lease
+			le.ExpireTime = entTokenExpireTime
+		}
+	}
+
 	// Acquire the lock here so persistEntry and updatePending are atomic,
 	// although it is *very unlikely* that anybody could grab the lease ID
 	// before this function returns. (They could find it in an index, or
@@ -1713,6 +1725,14 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 	}
 
 	authExpirationTime := auth.ExpirationTime()
+
+	// For ent tokens, derive expiration from ent token
+	if te.Type == logical.TokenTypeEnt {
+		entTokenExpireTime := deriveExpireTimeFromEntToken(te)
+		if !entTokenExpireTime.IsZero() {
+			authExpirationTime = entTokenExpireTime
+		}
+	}
 
 	if te.TTL == 0 && authExpirationTime.IsZero() && (len(te.Policies) != 1 || te.Policies[0] != "root") {
 		return errors.New("refusing to register a lease for a non-root token with no TTL")
@@ -1813,6 +1833,19 @@ func (m *ExpirationManager) FetchLeaseTimesByToken(ctx context.Context, te *logi
 			ExpireTime:      issueTime.Add(te.TTL),
 			ClientTokenType: logical.TokenTypeBatch,
 		}, nil
+	}
+
+	if te.Type == logical.TokenTypeEnt {
+		entTokenExpireTime := deriveExpireTimeFromEntToken(te)
+		if !entTokenExpireTime.IsZero() {
+			issueTime := time.Unix(te.CreationTime, 0)
+			return &leaseEntry{
+				IssueTime:       issueTime,
+				ExpireTime:      entTokenExpireTime,
+				ClientTokenType: logical.TokenTypeEnt,
+			}, nil
+		}
+		return nil, errors.New("enterprise token has no valid expiration time")
 	}
 
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, m.core)
@@ -2109,6 +2142,11 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 			return errors.New("batch tokens cannot be revoked")
 		}
 
+		// ent tokens are managed by external IdPs and should not be revoked through Vault backends
+		if le.ClientTokenType == logical.TokenTypeEnt {
+			return errors.New("enterprise tokens are managed by external IdPs and cannot be revoked by Vault")
+		}
+
 		if err := m.tokenStore.revokeTree(ctx, le); err != nil {
 			return fmt.Errorf("failed to revoke token: %w", err)
 		}
@@ -2157,6 +2195,10 @@ func (m *ExpirationManager) renewEntry(ctx context.Context, le *leaseEntry, incr
 func (m *ExpirationManager) renewAuthEntry(ctx context.Context, req *logical.Request, le *leaseEntry, increment time.Duration) (*logical.Response, error) {
 	if le.ClientTokenType == logical.TokenTypeBatch {
 		return logical.ErrorResponse("batch tokens cannot be renewed"), nil
+	}
+
+	if le.ClientTokenType == logical.TokenTypeEnt {
+		return logical.ErrorResponse("enterprise tokens cannot be renewed"), nil
 	}
 
 	auth := *le.Auth
@@ -2297,28 +2339,31 @@ func (m *ExpirationManager) deleteEntry(ctx context.Context, le *leaseEntry) err
 
 // createIndexByToken creates a secondary index from the token to a lease entry
 func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEntry, token string) error {
-	tokenNS := namespace.RootNamespace
-	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
-	_, nsID := namespace.SplitIDFromString(token)
-	if nsID != "" && !IsEnterpriseToken(token) {
-		var err error
-		tokenNS, err = NamespaceByID(ctx, nsID, m.core)
-		if err != nil {
-			return err
-		}
-		if tokenNS != nil {
-			saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
-		}
-	}
+	var tokenNS *namespace.Namespace
+	var saltCtx context.Context
+	var err error
 
-	// If it's an enterprise token, we cannot get the ID from the token,
-	// so let's get it from the lease.
 	if IsEnterpriseToken(token) {
-		ns, err := m.getNamespaceFromLeaseID(ctx, le.LeaseID)
+		// fetch the namespace from the lease rather than the req context to allow for cross namespace access
+		tokenNS, err = m.getNamespaceFromLeaseID(ctx, le.LeaseID)
 		if err != nil {
 			return err
 		}
-		tokenNS = ns
+		saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
+	} else {
+		tokenNS = namespace.RootNamespace
+		saltCtx = namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
+		_, nsID := namespace.SplitIDFromString(token)
+		if nsID != "" {
+			var err error
+			tokenNS, err = NamespaceByID(ctx, nsID, m.core)
+			if err != nil {
+				return err
+			}
+			if tokenNS != nil {
+				saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
+			}
+		}
 	}
 
 	saltedID, err := m.tokenStore.SaltID(saltCtx, token)
@@ -2379,26 +2424,39 @@ func (m *ExpirationManager) indexByToken(ctx context.Context, le *leaseEntry) (*
 
 // removeIndexByToken removes the secondary index from the token to a lease entry
 func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEntry, token string) error {
-	tokenNS := namespace.RootNamespace
-	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
-	_, nsID := namespace.SplitIDFromString(token)
-	if nsID != "" {
-		var err error
-		tokenNS, err = NamespaceByID(ctx, nsID, m.core)
+	var tokenNS *namespace.Namespace
+	var saltCtx context.Context
+	var err error
+
+	if IsEnterpriseToken(token) {
+		tokenNS, err = namespace.FromContext(ctx)
 		if err != nil {
 			return err
 		}
-		if tokenNS != nil {
-			saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
-		}
 
-		// Downgrade logic for old-style (V0) namespace leases that had its
-		// secondary index live in the root namespace. This reverts to the old
-		// behavior of looking for the secondary index on these leases in the
-		// root namespace to be cleaned up properly. We set it here because the
-		// old behavior used the namespace's token store salt for its saltCtx.
-		if le.Version < 1 {
-			tokenNS = namespace.RootNamespace
+		saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
+	} else {
+		tokenNS = namespace.RootNamespace
+		saltCtx = namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
+		_, nsID := namespace.SplitIDFromString(token)
+		if nsID != "" {
+			var err error
+			tokenNS, err = NamespaceByID(ctx, nsID, m.core)
+			if err != nil {
+				return err
+			}
+			if tokenNS != nil {
+				saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
+			}
+
+			// Downgrade logic for old-style (V0) namespace leases that had its
+			// secondary index live in the root namespace. This reverts to the old
+			// behavior of looking for the secondary index on these leases in the
+			// root namespace to be cleaned up properly. We set it here because the
+			// old behavior used the namespace's token store salt for its saltCtx.
+			if le.Version < 1 {
+				tokenNS = namespace.RootNamespace
+			}
 		}
 	}
 
@@ -2983,6 +3041,9 @@ func (le *leaseEntry) renewable() (bool, error) {
 
 	case le.ClientTokenType == logical.TokenTypeBatch:
 		return false, nil
+
+	case le.ClientTokenType == logical.TokenTypeEnt:
+		return false, fmt.Errorf("enterprise tokens cannot be renewed")
 
 	// Determine if the lease is expired
 	case le.ExpireTime.Before(time.Now()):
