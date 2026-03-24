@@ -791,6 +791,143 @@ module('Integration | Component | form field', function (hooks) {
       .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
   });
 
+  test('it renders: editType=select / possibleValues - with grouped options (optgroups)', async function (assert) {
+    const groupedValues = [
+      {
+        group: 'Group A',
+        options: [
+          { value: 'a1', displayName: 'Option A1' },
+          { value: 'a2', displayName: 'Option A2' },
+        ],
+      },
+      {
+        group: 'Group B',
+        options: [
+          { value: 'b1', displayName: 'Option B1' },
+          { value: 'b2', displayName: 'Option B2' },
+        ],
+      },
+    ];
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('region', 'string', { editType: 'select', possibleValues: groupedValues })
+    );
+
+    assert.dom('select').exists('renders select element');
+    assert.dom('optgroup').exists({ count: 2 }, 'renders two optgroups');
+    assert.dom('optgroup[label="Group A"]').exists('renders first optgroup with correct label');
+    assert.dom('optgroup[label="Group B"]').exists('renders second optgroup with correct label');
+    assert.dom('optgroup[label="Group A"] option').exists({ count: 2 }, 'first optgroup has two options');
+    assert.dom('optgroup[label="Group B"] option').exists({ count: 2 }, 'second optgroup has two options');
+    assert
+      .dom('optgroup[label="Group A"] option[value="a1"]')
+      .hasText('Option A1', 'first option displays correct text');
+    assert
+      .dom('optgroup[label="Group A"] option[value="a2"]')
+      .hasText('Option A2', 'second option displays correct text');
+
+    assert.dom(GENERAL.inputByAttr('region')).hasValue('a1', 'has first option value selected by default');
+    await fillIn(GENERAL.inputByAttr('region'), 'b2');
+    assert.dom(GENERAL.inputByAttr('region')).hasValue('b2', 'has selected option value from second group');
+    assert.strictEqual(model.get('region'), 'b2');
+    assert.ok(spy.calledWith('region', 'b2'), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=select / possibleValues - with grouped options and noDefault', async function (assert) {
+    const groupedValues = [
+      {
+        group: 'US Regions',
+        options: [
+          { value: 'us-east-1', displayName: 'N. Virginia (us-east-1)' },
+          { value: 'us-west-2', displayName: 'Oregon (us-west-2)' },
+        ],
+      },
+      {
+        group: 'EU Regions',
+        options: [
+          { value: 'eu-west-1', displayName: 'Ireland (eu-west-1)' },
+          { value: 'eu-central-1', displayName: 'Frankfurt (eu-central-1)' },
+        ],
+      },
+    ];
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('region', 'string', { editType: 'select', possibleValues: groupedValues, noDefault: true })
+    );
+
+    assert.dom('select').exists('renders select element');
+    assert.dom('option[value=""]').exists('renders blank option when noDefault is true');
+    assert.dom('optgroup').exists({ count: 2 }, 'renders two optgroups');
+    assert.dom(GENERAL.inputByAttr('region')).hasValue('', 'has no initial value with noDefault');
+
+    await fillIn(GENERAL.inputByAttr('region'), 'eu-west-1');
+    assert.dom(GENERAL.inputByAttr('region')).hasValue('eu-west-1', 'can select option from second group');
+    assert.strictEqual(model.get('region'), 'eu-west-1');
+    assert.ok(spy.calledWith('region', 'eu-west-1'), 'onChange called with correct args');
+
+    await fillIn(GENERAL.inputByAttr('region'), '');
+    assert.dom(GENERAL.inputByAttr('region')).hasValue('', 'can select blank option');
+    assert.strictEqual(model.get('region'), '');
+    assert.ok(spy.calledWith('region', ''), 'onChange called with empty string');
+  });
+
+  test('it renders: editType=select / possibleValues - with grouped options and defaultValue', async function (assert) {
+    const groupedValues = [
+      {
+        group: 'Group A',
+        options: [
+          { value: 'a1', displayName: 'Option A1' },
+          { value: 'a2', displayName: 'Option A2' },
+        ],
+      },
+      {
+        group: 'Group B',
+        options: [
+          { value: 'b1', displayName: 'Option B1' },
+          { value: 'b2', displayName: 'Option B2' },
+        ],
+      },
+    ];
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('region', 'string', {
+        editType: 'select',
+        possibleValues: groupedValues,
+        defaultValue: 'b1',
+      })
+    );
+
+    assert.dom(GENERAL.inputByAttr('region')).hasValue('b1', 'has default value from second group selected');
+    await fillIn(GENERAL.inputByAttr('region'), 'a2');
+    assert.dom(GENERAL.inputByAttr('region')).hasValue('a2', 'can change to option from first group');
+    assert.strictEqual(model.get('region'), 'a2');
+    assert.ok(spy.calledWith('region', 'a2'), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=select / possibleValues - grouped options with simple string values', async function (assert) {
+    const groupedValues = [
+      {
+        group: 'Colors',
+        options: [{ value: 'red' }, { value: 'blue' }],
+      },
+      {
+        group: 'Sizes',
+        options: [{ value: 'small' }, { value: 'large' }],
+      },
+    ];
+    const [model] = await setup.call(
+      this,
+      createAttr('choice', 'string', { editType: 'select', possibleValues: groupedValues })
+    );
+
+    assert.dom('optgroup[label="Colors"] option[value="red"]').hasText('red', 'displays value as text');
+    assert.dom('optgroup[label="Sizes"] option[value="large"]').hasText('large', 'displays value as text');
+    assert.dom(GENERAL.inputByAttr('choice')).hasValue('red', 'has first option selected');
+
+    await fillIn(GENERAL.inputByAttr('choice'), 'large');
+    assert.strictEqual(model.get('choice'), 'large', 'model updated with selected value');
+  });
+
   // ––––– editType === 'datetime-local' –––––
 
   test('it renders: editType=dateTimeLocal - as Hds::Form::TextInput [@type=datetime-local]', async function (assert) {
