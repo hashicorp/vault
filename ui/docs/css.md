@@ -1,23 +1,20 @@
 # CSS/SCSS
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
 - [Guidelines](#guidelines)
   - [Helper classes](#helper-classes)
   - [Core class styles](#core-class-styles)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Guidelines
 
 - [**Helper classes**](#helper-classes) should be used if a styling block does not already exist and/or a reasonable number of helper classes can cover the desired style.
 - [**Core classes**](#core-class-styles) provide styling for any classes not associated with a component. The scope of each file is defined by the file name.
 - **Component specific styling** should only be added to, or created when you cannot achieve the styling with a helper class or core class.
-- **Utils'** files define mixins, and variables. 
+- **Utils'** files define mixins, and variables.
 
 > ### Known issues
+>
 > The following are known issues that we are working to address in conjunction with the adoption of HDS.
+>
 > 1. **Size variables** The UI does not follow a consistent size variable pattern. We use both px and rem to define font-size and we use px, rem, and ems to define margins, heights and widths. For accessibility reasons we _should_ define all font-sizing at the very least by rem, though this is not consistently done in the app.
 > 2. **Variable naming** The UI does not have a consistent pattern to variable naming. We use a mix of numbers and words (ex: `ui-gray-050` is the same as `ui-gray-lightest`).
 > 3. **Random variables** We have dieing but not dead variables. For example, we have some variables that define box-shadows and we have some variables to define animations, but we are missing many box-shadow definitions and we do not consistently use the animation variables.
@@ -26,7 +23,7 @@
 
 ### Helper classes
 
-A good portion of our class definitions have come from Bulma. Bulma has since been removed, but we still rely on many of its class definitions. Bulma class definitions, specifically their helper classes, always end in the keyword  `!important`. This use of `important!` and Bulma specific naming patterns has led to a mix of inconsistent helper class names. Moving forward, we have agreed as a team to pursue the following patterns. When it makes sense, please default to these instead of relying on existing helper names for guidance.
+A good portion of our class definitions have come from Bulma. Bulma has since been removed, but we still rely on many of its class definitions. Bulma class definitions, specifically their helper classes, always end in the keyword `!important`. This use of `important!` and Bulma specific naming patterns has led to a mix of inconsistent helper class names. Moving forward, we have agreed as a team to pursue the following patterns. When it makes sense, please default to these instead of relying on existing helper names for guidance.
 
 - Drop the starting verb. Many of our helper classes start with a verb `has` or `is`. Going forward we prefer to drop the verb. `margin-bottom` instead of `is-margin-bottom`.
 - Start your helper class name with what the class controls. `margin-bottom` instead of `bottom-margin`.

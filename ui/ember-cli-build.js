@@ -79,7 +79,6 @@ const appConfig = {
 module.exports = function (defaults) {
   const app = new EmberApp(defaults, appConfig);
 
-  app.import('node_modules/jsonlint/lib/jsonlint.js');
   app.import('node_modules/text-encoder-lite/text-encoder-lite.js');
   app.import('vendor/jsondiffpatch.umd.js');
   app.import('vendor/htmlformatter.umd.js');
