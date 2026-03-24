@@ -1,13 +1,8 @@
 # CSS/SCSS
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
 - [Guidelines](#guidelines)
   - [Helper classes](#helper-classes)
   - [Core class styles](#core-class-styles)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Guidelines
 
