@@ -2669,6 +2669,10 @@ func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d 
 
 // handleCreateCommon handles the auth/token/create path for creation of new tokens
 func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
+	if !orphan && IsEnterpriseToken(req.ClientToken) {
+		return logical.ErrorResponse("enterprise tokens cannot create child tokens"), logical.ErrInvalidRequest
+	}
+
 	// Read the parent policy
 	parent, err := ts.Lookup(ctx, req.ClientToken)
 	if err != nil {

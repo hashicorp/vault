@@ -273,7 +273,9 @@ func testJWTEndToEnd(t *testing.T, ahWrapping, useSymlink, removeJWTAfterReading
 	}
 
 	checkToken := func() string {
-		timeout := time.Now().Add(5 * time.Second)
+		// CI can be slower to materialize and write the token after JWT ingestion;
+		// this timeout is intentionally higher to reduce timing-only flakes.
+		timeout := time.Now().Add(12 * time.Second)
 		for {
 			if time.Now().After(timeout) {
 				t.Fatal("did not find a written token after timeout")

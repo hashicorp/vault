@@ -23,6 +23,37 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// TestRequiresMaterializedTokenState verifies token materialization path
+// requirements for enterprise token requests.
+func TestRequiresMaterializedTokenState(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		path string
+		want bool
+	}{
+		{name: "token lookup self", path: "auth/token/lookup-self", want: true},
+		{name: "token lookup", path: "auth/token/lookup", want: true},
+		{name: "leases lookup", path: "sys/leases/lookup", want: true},
+		{name: "leases lookup prefix", path: "sys/leases/lookup/secret/foo", want: true},
+		{name: "leases count", path: "sys/leases/count", want: true},
+		{name: "leases list", path: "sys/leases", want: true},
+		{name: "cubbyhole", path: "cubbyhole/test", want: true},
+		{name: "token renew self excluded", path: "auth/token/renew-self", want: false},
+		{name: "leases renew excluded", path: "sys/leases/renew", want: false},
+		{name: "unrelated", path: "secret/data/foo", want: false},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.want, requiresMaterializedTokenState(tc.path))
+		})
+	}
+}
+
 func TestRequestHandling_Wrapping(t *testing.T) {
 	core, _, root := TestCoreUnsealed(t)
 
