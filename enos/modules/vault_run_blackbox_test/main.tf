@@ -53,9 +53,10 @@ locals {
 
   # Set up LDAP environment variables when LDAP integration is available
   ldap_environment = try(local.ldap_config.domain, "") != "" ? {
-    LDAP_SERVER    = "ldap://${local.ldap_config.host.private_ip}:${local.ldap_config.port}"
-    LDAP_BIND_DN   = "cn=admin,${local.domain_dn}"
-    LDAP_BIND_PASS = local.ldap_config.admin_pw
+    LDAP_URL_PRIVATE = "ldap://${local.ldap_config.host.private_ip}:${local.ldap_config.port}"
+    LDAP_URL_PUBLIC  = "ldap://${local.ldap_config.host.public_ip}:${local.ldap_config.port}"
+    LDAP_BIND_DN     = "cn=admin,${local.domain_dn}"
+    LDAP_BIND_PASS   = local.ldap_config.admin_pw
   } : {}
 }
 
