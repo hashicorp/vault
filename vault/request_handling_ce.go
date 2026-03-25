@@ -41,6 +41,10 @@ func getEnterpriseTokenAuthorizationDetails(_ map[string]interface{}) []logical.
 	return nil
 }
 
+func (c *Core) materializeEnterpriseTokenForUsage(_ context.Context, req *logical.Request, _ *logical.Auth, _ bool) (*logical.Request, error) {
+	return req, nil
+}
+
 func (c *Core) performSecondaryEntityTokenChecks(_ context.Context, _ *ACL, _ *identity.Entity, _ map[string][]string) (*ACL, error) {
 	return nil, errors.New("not implemented")
 }
