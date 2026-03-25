@@ -38,6 +38,24 @@ export default class KeymgmtProviderEdit extends Component {
 
   @tracked modelValidations;
 
+  breadcrumbs = [
+    {
+      label: 'Vault',
+      icon: 'vault',
+      route: 'vault.cluster.dashboard',
+    },
+    {
+      label: 'Secrets engines',
+      route: 'vault.cluster.secrets.backends',
+    },
+    {
+      label: this.args.model.backend,
+      route: 'vault.cluster.secrets.backend.list-root',
+      model: this.args.model.backend,
+    },
+    { label: this.title },
+  ];
+
   get title() {
     if (this.isDistributing) {
       return 'Distribute Key to Provider';

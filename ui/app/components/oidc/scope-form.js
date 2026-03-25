@@ -40,18 +40,21 @@ export default class OidcScopeFormComponent extends Component {
 }`;
 
   get breadcrumbs() {
-    const scopesOrDetailsBreadcrumb = this.args.model.isNew
-      ? { label: 'Scopes', route: 'vault.cluster.access.oidc.scopes' }
-      : {
-          label: 'Details',
-          route: 'vault.cluster.access.oidc.scopes.scope.details',
-          model: this.args.model.name,
-        };
-    return [
+    const crumbs = [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
-      scopesOrDetailsBreadcrumb,
-      { label: this.args.model.isNew ? 'Create Scope' : 'Edit Scope' },
+      { label: 'OIDC provider: Scopes', route: 'vault.cluster.access.oidc.scopes' },
     ];
+
+    if (!this.args.model.isNew) {
+      crumbs.push({
+        label: this.args.model.name,
+        route: 'vault.cluster.access.oidc.scopes.scope.details',
+        model: this.args.model.name,
+      });
+    }
+
+    crumbs.push({ label: this.args.model.isNew ? 'Create scope' : 'Edit scope' });
+    return crumbs;
   }
 
   @task

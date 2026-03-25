@@ -100,7 +100,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
 
       // create a new key
-      await click(GENERAL.breadcrumbLink('Keys'));
+      await click(GENERAL.breadcrumbLink('OIDC provider: Keys'));
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.access.oidc.keys.index',

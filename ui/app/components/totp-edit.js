@@ -34,6 +34,13 @@ export default class TotpEdit extends Component {
 
   successCallback;
 
+  breadcrumbs = [
+    { label: 'Vault', text: 'Vault', icon: 'vault', path: 'vault.cluster.dashboard' },
+    { text: 'Secrets engines', path: 'vault.cluster.secrets.backends' },
+    this.args.root,
+    { label: this.title, text: this.title },
+  ];
+
   get title() {
     if (this.args.mode === 'create') {
       return 'Create a TOTP key';

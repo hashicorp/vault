@@ -37,18 +37,21 @@ export default class OidcProviderForm extends Component {
       : 'limited';
 
   get breadcrumbs() {
-    const providersOrDetailsBreadcrumb = this.args.model.isNew
-      ? { label: 'Providers', route: 'vault.cluster.access.oidc.providers' }
-      : {
-          label: 'Details',
-          route: 'vault.cluster.access.oidc.providers.provider.details',
-          model: this.args.model.name,
-        };
-    return [
+    const crumbs = [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
-      providersOrDetailsBreadcrumb,
-      { label: this.args.model.isNew ? 'Create Provider' : 'Edit Provider' },
+      { label: 'OIDC provider: Providers', route: 'vault.cluster.access.oidc.providers' },
     ];
+
+    if (!this.args.model.isNew) {
+      crumbs.push({
+        label: this.args.model.name,
+        route: 'vault.cluster.access.oidc.providers.provider.details',
+        model: this.args.model.name,
+      });
+    }
+
+    crumbs.push({ label: this.args.model.isNew ? 'Create provider' : 'Edit provider' });
+    return crumbs;
   }
 
   // function passed to search select

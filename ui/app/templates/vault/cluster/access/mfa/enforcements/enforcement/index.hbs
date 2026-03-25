@@ -8,6 +8,7 @@
     <Page::Breadcrumbs
       @breadcrumbs={{array
         (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label="Multi-factor authentication" route="vault.cluster.access.mfa.methods.index")
         (hash label="Enforcements" route="vault.cluster.access.mfa.enforcements.index")
         (hash label=this.model.name)
       }}

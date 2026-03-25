@@ -68,7 +68,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     this.set('model', model);
 
     await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} />`);
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Key', 'Shows edit header');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit key', 'Shows edit header');
     assert.dom('[data-test-keymgmt-key-toolbar]').doesNotExist('Subnav toolbar does not exist');
     assert.dom('[data-test-tab="Details"]').doesNotExist('Details tab does not exist');
     assert.dom('[data-test-tab="Versions"]').doesNotExist('Versions tab does not exist');
@@ -81,7 +81,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     this.set('model', model);
 
     await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} />`);
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Key', 'Shows edit header');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create key', 'Shows edit header');
     assert.dom('[data-test-keymgmt-key-toolbar]').doesNotExist('Subnav toolbar does not exist');
     assert.dom('[data-test-tab="Details"]').doesNotExist('Details tab does not exist');
     assert.dom('[data-test-tab="Versions"]').doesNotExist('Versions tab does not exist');
