@@ -16,6 +16,12 @@ variable "ip_version" {
   default     = "4"
 }
 
+variable "ldap_domain" {
+  type        = string
+  description = "The name of the domain"
+  default     = "enos.com"
+}
+
 variable "ldap_version" {
   type        = string
   description = "OpenLDAP Server Version to use"
@@ -34,16 +40,4 @@ variable "ports" {
     port        = string
     description = string
   }))
-}
-
-variable "retry_interval" {
-  type        = number
-  description = "How many seconds to wait between each retry"
-  default     = 2
-}
-
-variable "timeout" {
-  type        = number
-  description = "The max number of seconds to wait before timing out"
-  default     = 60
 }

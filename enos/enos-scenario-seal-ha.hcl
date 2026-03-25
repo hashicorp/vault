@@ -472,7 +472,8 @@ scenario "seal_ha" {
     depends_on = [
       step.create_vault_cluster,
       step.get_vault_cluster_ips,
-      step.verify_vault_unsealed
+      step.verify_vault_unsealed,
+      step.set_up_external_integration_target,
     ]
 
     providers = {
@@ -862,34 +863,6 @@ scenario "seal_ha" {
     }
   }
 
-  step "verify_log_secrets" {
-    skip_step = !var.vault_enable_audit_devices || !var.verify_log_secrets
-
-    description = global.description.verify_log_secrets
-    module      = module.verify_log_secrets
-    depends_on = [
-      step.verify_secrets_engines_read,
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_audit_log_secrets,
-      quality.vault_journal_secrets,
-      quality.vault_radar_index_create,
-      quality.vault_radar_scan_file,
-    ]
-
-    variables {
-      audit_log_file_path = step.create_vault_cluster.audit_device_file_path
-      leader_host         = step.get_updated_cluster_ips.leader_host
-      vault_addr          = step.create_vault_cluster.api_addr_localhost
-      vault_root_token    = step.create_vault_cluster.root_token
-    }
-  }
-
   step "verify_ui" {
     description = global.description.verify_ui
     module      = module.vault_verify_ui
@@ -937,7 +910,6 @@ scenario "seal_ha" {
     depends_on = [
       step.wait_for_seal_rewrap,
       step.verify_secrets_engines_read,
-      step.verify_log_secrets,
     ]
 
     providers = {
@@ -1137,6 +1109,34 @@ scenario "seal_ha" {
       seal_type         = matrix.secondary_seal
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+    }
+  }
+
+  step "verify_log_secrets" {
+    skip_step = !var.vault_enable_audit_devices || !var.verify_log_secrets
+
+    description = global.description.verify_log_secrets
+    module      = module.verify_log_secrets
+    depends_on = [
+      step.verify_secrets_engines_read_after_migration
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_audit_log_secrets,
+      quality.vault_journal_secrets,
+      quality.vault_radar_index_create,
+      quality.vault_radar_scan_file,
+    ]
+
+    variables {
+      audit_log_file_path = step.create_vault_cluster.audit_device_file_path
+      leader_host         = step.get_updated_cluster_ips.leader_host
+      vault_addr          = step.create_vault_cluster.api_addr_localhost
+      vault_root_token    = step.create_vault_cluster.root_token
     }
   }
 

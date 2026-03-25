@@ -4,23 +4,52 @@
 package blackbox
 
 import (
+	"net"
+	"net/url"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/blackbox"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+// requireLDAPAvailable verifies LDAP server connectivity using testify Eventually
+func requireLDAPAvailable(t *testing.T, timeout, interval time.Duration) {
+	t.Helper()
+
+	// Use public IP for external connectivity testing
+	ldapServerPublic := os.Getenv("LDAP_URL_PUBLIC")
+	require.NotEmpty(t, ldapServerPublic, "LDAP_URL_PUBLIC environment variable not set")
+
+	u, err := url.Parse(ldapServerPublic)
+	require.NoError(t, err, "Failed to parse LDAP URL: %s", ldapServerPublic)
+
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		d := &net.Dialer{}
+		conn, err := d.DialContext(t.Context(), "tcp", u.Host)
+		require.NoError(ct, err)
+		require.NoError(ct, conn.Close())
+	}, timeout, interval, "LDAP server not available at %s", u.Host)
+
+	t.Logf("LDAP server connectivity verified at %s", u.Host)
+}
 
 // testLDAPSecretsCreate tests LDAP secrets engine creation
 func testLDAPSecretsCreate(t *testing.T, v *blackbox.Session) {
 	// Check if LDAP server configuration is available from integration host
-	ldapServer := os.Getenv("LDAP_SERVER")
+	ldapServer := os.Getenv("LDAP_URL_PRIVATE")
 	ldapBindDN := os.Getenv("LDAP_BIND_DN")
 	ldapBindPass := os.Getenv("LDAP_BIND_PASS")
 
 	if ldapServer == "" || ldapBindDN == "" || ldapBindPass == "" {
 		t.Skip("LDAP server configuration not available - skipping LDAP secrets engine test")
 	}
+
+	// Verify LDAP server is ready before proceeding
+	requireLDAPAvailable(t, 1*time.Minute, 2*time.Second)
 
 	// Enable LDAP secrets engine
 	v.MustEnableSecretsEngine("ldap-create", &api.MountInput{Type: "ldap"})
@@ -53,13 +82,17 @@ func testLDAPSecretsCreate(t *testing.T, v *blackbox.Session) {
 // testLDAPSecretsRead tests LDAP secrets engine read operations
 func testLDAPSecretsRead(t *testing.T, v *blackbox.Session) {
 	// Check if LDAP server configuration is available from integration host
-	ldapServer := os.Getenv("LDAP_SERVER")
+	ldapServer := os.Getenv("LDAP_URL_PRIVATE")
 	ldapBindDN := os.Getenv("LDAP_BIND_DN")
 	ldapBindPass := os.Getenv("LDAP_BIND_PASS")
 
 	if ldapServer == "" || ldapBindDN == "" || ldapBindPass == "" {
 		t.Skip("LDAP server configuration not available - skipping LDAP secrets engine test")
 	}
+
+	// Verify LDAP server is ready before proceeding
+	requireLDAPAvailable(t, 1*time.Minute, 2*time.Second)
+	serviceAccounts := []string{"svc-account-1", "svc-account-2"}
 
 	// Enable LDAP secrets engine
 	v.MustEnableSecretsEngine("ldap-read", &api.MountInput{Type: "ldap"})
@@ -75,7 +108,7 @@ func testLDAPSecretsRead(t *testing.T, v *blackbox.Session) {
 
 	// Create a library set for service account management
 	v.MustWrite("ldap-read/library/test-set", map[string]any{
-		"service_account_names":        []string{"svc-account-1", "svc-account-2"},
+		"service_account_names":        serviceAccounts,
 		"ttl":                          "10h",
 		"max_ttl":                      "20h",
 		"disable_check_in_enforcement": false,
@@ -106,13 +139,17 @@ func testLDAPSecretsRead(t *testing.T, v *blackbox.Session) {
 // testLDAPSecretsDelete tests LDAP secrets engine delete operations
 func testLDAPSecretsDelete(t *testing.T, v *blackbox.Session) {
 	// Check if LDAP server configuration is available from integration host
-	ldapServer := os.Getenv("LDAP_SERVER")
+	ldapServer := os.Getenv("LDAP_URL_PRIVATE")
 	ldapBindDN := os.Getenv("LDAP_BIND_DN")
 	ldapBindPass := os.Getenv("LDAP_BIND_PASS")
 
 	if ldapServer == "" || ldapBindDN == "" || ldapBindPass == "" {
 		t.Skip("LDAP server configuration not available - skipping LDAP secrets engine test")
 	}
+
+	// Verify LDAP server is ready before proceeding
+	requireLDAPAvailable(t, 1*time.Minute, 2*time.Second)
+	serviceAccounts := []string{"svc-delete"}
 
 	// Enable LDAP secrets engine
 	v.MustEnableSecretsEngine("ldap-delete", &api.MountInput{Type: "ldap"})
@@ -128,7 +165,7 @@ func testLDAPSecretsDelete(t *testing.T, v *blackbox.Session) {
 
 	// Create a library set
 	v.MustWrite("ldap-delete/library/delete-set", map[string]any{
-		"service_account_names": []string{"svc-delete"},
+		"service_account_names": serviceAccounts,
 		"ttl":                   "1h",
 	})
 
