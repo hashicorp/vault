@@ -3,7 +3,18 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Configure {{this.model.method.name}} MFA" />
+<Page::Header @title="Configure {{this.model.method.name}} MFA">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label="Multi-factor authentication" route="vault.cluster.access.mfa.methods.index")
+        (hash label=this.model.method.id route="vault.cluster.access.method" model=this.model.method.id)
+        (hash label="Configure")
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
 
 <Mfa::MethodForm
   @model={{this.model.method}}

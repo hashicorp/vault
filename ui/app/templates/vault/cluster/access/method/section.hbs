@@ -6,7 +6,11 @@
 <Page::Header @title={{this.model.id}}>
   <:breadcrumbs>
     <Page::Breadcrumbs
-      @breadcrumbs={{array (hash label="Auth Methods" route="vault.cluster.access.methods") (hash label=this.model.id)}}
+      @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label="Auth Methods" route="vault.cluster.access.methods")
+        (hash label=this.model.id)
+      }}
     />
   </:breadcrumbs>
 </Page::Header>

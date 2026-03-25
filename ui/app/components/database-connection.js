@@ -33,11 +33,18 @@ export default class DatabaseConnectionEdit extends Component {
   @tracked
   showSaveModal = false; // used for create mode
 
+  breadcrumbs = [
+    { label: 'Vault', text: 'Vault', icon: 'vault', path: 'vault.cluster.dashboard' },
+    { text: 'Secrets engines', path: 'vault.cluster.secrets.backends' },
+    this.args.root,
+    { label: this.title, text: this.title },
+  ];
+
   get title() {
     if (this.args?.mode === 'create') {
-      return 'Create Connection';
+      return 'Create connection';
     } else if (this.args?.mode === 'edit') {
-      return 'Edit Connection';
+      return 'Edit connection';
     } else {
       return this.args?.model?.id;
     }

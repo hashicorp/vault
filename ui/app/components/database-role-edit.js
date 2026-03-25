@@ -44,6 +44,13 @@ export default class DatabaseRoleEdit extends Component {
     }
   }
 
+  breadcrumbs = [
+    { label: 'Vault', text: 'Vault', icon: 'vault', path: 'vault.cluster.dashboard' },
+    { text: 'Secrets engines', path: 'vault.cluster.secrets.backends' },
+    this.args.root,
+    { label: this.title, text: this.title },
+  ];
+
   isValid() {
     const { isValid, state } = this.args.model.validate();
     this.modelValidations = isValid ? null : state;
@@ -59,9 +66,9 @@ export default class DatabaseRoleEdit extends Component {
 
   get title() {
     if (this.args?.mode === 'create') {
-      return 'Create Role';
+      return 'Create role';
     } else if (this.args?.mode === 'edit') {
-      return 'Edit Role';
+      return 'Edit role';
     } else {
       return this.args?.model?.id;
     }

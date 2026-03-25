@@ -31,13 +31,31 @@ export default class KeymgmtKeyEdit extends Component {
   @service flashMessages;
   @tracked isDeleteModalOpen = false;
 
+  breadcrumbs = [
+    {
+      label: 'Vault',
+      icon: 'vault',
+      route: 'vault.cluster.dashboard',
+    },
+    {
+      label: 'Secrets engines',
+      route: 'vault.cluster.secrets.backends',
+    },
+    {
+      label: this.args.model.backend,
+      route: 'vault.cluster.secrets.backend.list-root',
+      model: this.args.model.backend,
+    },
+    { label: this.title },
+  ];
+
   get title() {
     if (this.isDistributing) {
-      return 'Distribute Key';
+      return 'Distribute key';
     } else if (this.args.mode === 'create') {
-      return 'Create Key';
+      return 'Create key';
     } else if (this.args.mode === 'edit') {
-      return 'Edit Key';
+      return 'Edit key';
     }
     return this.args.model.id;
   }

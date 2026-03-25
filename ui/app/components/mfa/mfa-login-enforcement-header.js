@@ -36,24 +36,26 @@ export default class MfaLoginEnforcementHeaderComponent extends Component {
     }
   }
 
-  @tracked enforcements = [];
+  breadcrumbs = [
+    {
+      label: 'Vault',
+      route: 'vault.cluster.dashboard',
+      icon: 'vault',
+    },
+    {
+      label: 'Multi-factor authentication',
+      route: 'vault.cluster.access.mfa.methods.index',
+    },
+    {
+      label: 'Enforcements',
+      route: 'vault.cluster.access.mfa.enforcements.index',
+    },
+    {
+      label: this.args.heading,
+    },
+  ];
 
-  get breadcrumbs() {
-    return [
-      {
-        label: 'Vault',
-        route: 'vault.cluster.dashboard',
-        icon: 'vault',
-      },
-      {
-        label: 'Enforcements',
-        route: 'vault.cluster.access.mfa.enforcements.index',
-      },
-      {
-        label: this.args.heading,
-      },
-    ];
-  }
+  @tracked enforcements = [];
 
   async fetchEnforcements() {
     try {

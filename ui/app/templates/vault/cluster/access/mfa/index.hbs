@@ -3,7 +3,15 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title=" Multi-factor authentication">
+<Page::Header @title="Multi-factor authentication">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label="Multi-factor authentication")
+      }}
+    />
+  </:breadcrumbs>
   <:description>
     Enforce a secondary layer of identity verification (such as TOTP, Okta, or Duo) during the login process.
     <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/login-mfa"}}>
