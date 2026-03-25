@@ -79,8 +79,25 @@ output "ldap" {
   value = local.ldap_output
 }
 
+# Ensure that our base DN is available on the LDAP server before we attempt to
+# to mount the engine.
+module "wait_for_ldap_base_dn" {
+  source = "../../../../ldap_wait_for_search"
+
+  hosts         = { 0 : var.leader_host }
+  ldap_base_dn  = var.integration_host_state.ldap.base_dn
+  ldap_bind_dn  = "cn=admin,${var.integration_host_state.ldap.base_dn}"
+  ldap_host     = var.integration_host_state.ldap.host
+  ldap_password = var.integration_host_state.ldap.admin_pw
+  ldap_port     = var.integration_host_state.ldap.port
+}
+
 # Enable LDAP secrets engine
 resource "enos_remote_exec" "secrets_enable_ldap_secret" {
+  depends_on = [
+    module.wait_for_ldap_base_dn,
+  ]
+
   environment = {
     ENGINE            = local.ldap_output.ldap_mount
     MOUNT             = local.ldap_output.ldap_mount
@@ -98,7 +115,7 @@ resource "enos_remote_exec" "secrets_enable_ldap_secret" {
   }
 }
 
-# Setup OpenLDAP infrastructure 
+# Setup OpenLDAP infrastructure
 resource "enos_remote_exec" "ldap_setup" {
   depends_on = [
     enos_remote_exec.secrets_enable_ldap_secret
@@ -151,11 +168,38 @@ resource "enos_remote_exec" "ldap_secrets_config" {
   }
 }
 
+resource "enos_remote_exec" "ldap_password_policy" {
+  depends_on = [
+    enos_remote_exec.secrets_enable_ldap_secret,
+    enos_remote_exec.ldap_setup
+  ]
+
+  environment = {
+    MOUNT             = local.ldap_output.ldap_mount
+    LDAP_SERVER       = local.ldap_output.host.private_ip
+    LDAP_PORT         = local.ldap_output.port
+    LDAP_USERNAME     = local.ldap_output.username
+    LDAP_ADMIN_PW     = local.ldap_output.pw
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/ldap/add-ldap-password-policy.sh")]
+
+  transport = {
+    ssh = {
+      host = var.leader_host.public_ip
+    }
+  }
+}
+
 # Create a new Library set of service accounts
 # Test Case: Service Account Library - Create a new Library set of service accounts
 resource "enos_remote_exec" "ldap_library_set_create" {
   depends_on = [
     enos_remote_exec.ldap_secrets_config,
+    enos_remote_exec.ldap_password_policy,
   ]
 
   environment = {
@@ -345,31 +389,6 @@ resource "enos_remote_exec" "ldap_library_self_checkin" {
   }
 
   scripts = [abspath("${path.module}/../../../scripts/write.sh")]
-
-  transport = {
-    ssh = {
-      host = var.leader_host.public_ip
-    }
-  }
-}
-
-resource "enos_remote_exec" "ldap_password_policy" {
-  depends_on = [
-    enos_remote_exec.secrets_enable_ldap_secret
-  ]
-
-  environment = {
-    MOUNT             = local.ldap_output.ldap_mount
-    LDAP_SERVER       = local.ldap_output.host.private_ip
-    LDAP_PORT         = local.ldap_output.port
-    LDAP_USERNAME     = local.ldap_output.username
-    LDAP_ADMIN_PW     = local.ldap_output.pw
-    VAULT_ADDR        = var.vault_addr
-    VAULT_INSTALL_DIR = var.vault_install_dir
-    VAULT_TOKEN       = var.vault_root_token
-  }
-
-  scripts = [abspath("${path.module}/../../../scripts/ldap/add-ldap-password-policy.sh")]
 
   transport = {
     ssh = {

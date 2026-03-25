@@ -13,6 +13,7 @@ fail() {
 [[ -z "${VAULT_TOKEN}" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "${VAULT_ADDR}" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "${VAULT_TEST_PACKAGE}" ]] && fail "VAULT_TEST_PACKAGE env variable has not been set"
+[[ -z "${VAULT_EDITION}" ]] && fail "VAULT_EDITION env variable has not been set"
 
 # Check required dependencies
 echo "Checking required dependencies..."
@@ -76,6 +77,18 @@ echo "Running tests..."
 echo "Vault environment variables:"
 env | grep VAULT | sed 's/VAULT_TOKEN=.*/VAULT_TOKEN=***REDACTED***/'
 
+case $VAULT_EDITION in
+  ent | ent.hsm | ent.hsm.fips1402 | ent.hsm.fips1403 | ent.fips1403 | ent.fips1402)
+    tags="-tags=ent,enterprise"
+    ;;
+  ce)
+    tags=""
+    ;;
+  *)
+    fail "unknown VAULT_EDITION: $VAULT_EDITION"
+    ;;
+esac
+
 # Build gotestsum command based on whether we have specific tests
 set -x # Show commands being executed
 set +e # Temporarily disable exit on error
@@ -84,10 +97,10 @@ if [ -n "$VAULT_TEST_MATRIX" ] && [ -f "$VAULT_TEST_MATRIX" ]; then
     # Extract test names from matrix and create regex pattern
     test_pattern=$(jq -r '.include[].test' "$VAULT_TEST_MATRIX" | paste -sd '|' -)
     echo "Running specific tests: $test_pattern"
-    gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -count=1 -run="$test_pattern" "$VAULT_TEST_PACKAGE"
+    gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -count=1 "${tags}" -run="$test_pattern" "$VAULT_TEST_PACKAGE"
 else
     echo "Running all tests in package"
-    gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -count=1 "$VAULT_TEST_PACKAGE"
+    gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -count=1 "${tags}" "$VAULT_TEST_PACKAGE"
 fi
 test_exit_code=$?
 set -e # Re-enable exit on error
