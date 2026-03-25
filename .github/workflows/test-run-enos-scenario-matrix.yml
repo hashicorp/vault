@@ -138,6 +138,7 @@ jobs:
             kv/data/github/${{ github.repository }}/slack feed-vault-enos-failures-webhook-url | SLACK_WEBHOOK_URL;
             kv/data/github/${{ github.repository }}/enos ssh-key | SSH_KEY_PRIVATE_CI;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE;
+            kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
       - id: secrets
         run: |
@@ -155,6 +156,7 @@ jobs:
               echo "${{ secrets.SSH_KEY_PRIVATE_CI }}"
               echo EOFSSHKEYCE
               echo 'vault-license=${{ secrets.VAULT_LICENSE }}'
+              echo 'vault-license-ibm=${{ secrets.VAULT_LICENSE_IBM }}'
            } | tee -a "$GITHUB_OUTPUT"
           else
             {
@@ -170,6 +172,7 @@ jobs:
               echo "${{ steps.vault-secrets.outputs.SSH_KEY_PRIVATE_CI }}"
               echo EOFSSHKEYENT
               echo 'vault-license=${{ steps.vault-secrets.outputs.VAULT_LICENSE }}'
+              echo 'vault-license-ibm=${{ steps.vault-secrets.outputs.VAULT_LICENSE_IBM }}'
             } | tee -a "$GITHUB_OUTPUT"
           fi
       - id: env
@@ -191,6 +194,7 @@ jobs:
             echo 'ENOS_VAR_vault_artifact_path=./support/downloads/${{ inputs.build-artifact-name }}'
             echo 'ENOS_VAR_vault_build_date=${{ needs.metadata.outputs.build-date }}'
             echo 'ENOS_VAR_vault_license_path=./support/vault.hclic'
+            echo 'ENOS_VAR_vault_ibm_license_path=./support/ibm-pao.lic'
             echo 'ENOS_VAR_vault_product_version=${{ needs.metadata.outputs.vault-version }}'
             echo 'ENOS_VAR_vault_radar_license_path=./support/vault-radar.hclic'
             echo 'ENOS_VAR_vault_revision=${{ inputs.vault-revision }}'
@@ -245,8 +249,10 @@ jobs:
           name: ${{ inputs.build-artifact-name }}
           path: ./enos/support/downloads
       - if: contains(inputs.sample-name, 'ent')
-        name: Configure Vault license
-        run: echo "${{ steps.secrets.outputs.vault-license }}" > ./enos/support/vault.hclic || true
+        name: Configure Vault licenses
+        run: |
+          echo "${{ steps.secrets.outputs.vault-license }}" > ./enos/support/vault.hclic || true
+          echo "${{ steps.secrets.outputs.vault-license-ibm }}" > ./enos/support/ibm-pao.lic || true
       - if: contains(matrix.scenario.id.filter, 'consul_edition:ent')
         name: Configure Consul license
         run: |
