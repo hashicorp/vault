@@ -1316,6 +1316,120 @@ func TestIdentityStore_MergeEntitiesByID_DuplicateFromEntityIDs(t *testing.T) {
 	}
 }
 
+// TestIdentityStore_ProcessLocalAliasWithSameIssuerAndExternalId tests that processLocalAlias doesn't
+// allow upserting an alias with the same issuer, external id, and namespace
+func TestIdentityStore_ProcessLocalAliasWithSameIssuerAndExternalId(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	is, githubAccessor, _, _ := testIdentityStoreWithLocalGithubAuth(ctx, t)
+
+	validateMountResp := is.router.ValidateMountByAccessor(githubAccessor)
+	require.NotNil(t, validateMountResp)
+
+	alias2 := &identity.Alias{
+		CanonicalID:   "testentityid",
+		ID:            "testaliasid2",
+		MountAccessor: validateMountResp.MountAccessor,
+		MountType:     validateMountResp.MountType,
+		Name:          "testaliasname2",
+		Metadata: map[string]string{
+			"testkey2": "testmetadatavalue2",
+			"testkey3": "testmetadatavalue3",
+		},
+		NamespaceID: "root",
+		Issuer:      "test-issuer",
+		ExternalID:  "test-external-id",
+	}
+
+	entity := &identity.Entity{
+		ID:   "testentityid",
+		Name: "testentityname",
+		Metadata: map[string]string{
+			"someusefulkey": "someusefulvalue",
+		},
+		Aliases: []*identity.Alias{
+			alias2,
+		},
+	}
+
+	entity.BucketKey = is.entityPacker.BucketKey(entity.ID)
+
+	localAlias := &logical.Alias{
+		ID:            "testaliasid",
+		MountAccessor: githubAccessor,
+		MountType:     validateMountResp.MountType,
+		Name:          "testaliasname",
+		Metadata: map[string]string{
+			"testkey1": "testmetadatavalue1",
+			"testkey2": "testmetadatavalue2",
+		},
+		NamespaceID: "root",
+		// NOTE: these are the same as in alias2!
+		Issuer:     "test-issuer",
+		ExternalID: "test-external-id",
+		Local:      true,
+	}
+
+	_, err := is.processLocalAlias(ctx, localAlias, entity, true)
+	// Should fail. Duplicates!
+	require.Error(t, err)
+
+	// Fetch the entity using its ID, expect nil
+	entityFetched, err := is.MemDBEntityByID(entity.ID, false)
+	require.NoError(t, err)
+	require.Nil(t, entityFetched)
+
+	// Upsert the initial entity:
+	txn := is.db.Txn(true)
+	defer txn.Abort()
+	err = is.MemDBUpsertEntityInTxn(txn, entity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txn.Commit()
+
+	// Ensure we still get an error trying to process the alias:
+	_, err = is.processLocalAlias(ctx, localAlias, entity, true)
+	// Should fail. Duplicates!
+	require.Error(t, err)
+
+	safeLocalAlias := &logical.Alias{
+		ID:            "testaliasid-safe",
+		MountAccessor: githubAccessor,
+		MountType:     validateMountResp.MountType,
+		Name:          "testaliasname",
+		Metadata: map[string]string{
+			"testkey1": "testmetadatavalue1",
+			"testkey2": "testmetadatavalue2",
+		},
+		NamespaceID: "root",
+		// NOTE: these are NOT the same as in alias2!
+		Issuer:     "test-issuer-2",
+		ExternalID: "test-external-id-2",
+		Local:      true,
+	}
+
+	// This one should be safe!
+	_, err = is.processLocalAlias(ctx, safeLocalAlias, entity, true)
+	require.NoError(t, err)
+
+	localAliasNoNamespaceId := &logical.Alias{
+		ID:            "testaliasid-no-nsid",
+		MountAccessor: githubAccessor,
+		MountType:     validateMountResp.MountType,
+		Name:          "testaliasname-no-nsid",
+		Metadata: map[string]string{
+			"testkey1": "testmetadatavalue1",
+			"testkey2": "testmetadatavalue2",
+		},
+		// NOTE: these are NOT the same as in alias2!
+		Issuer:     "test-issuer-3",
+		ExternalID: "test-external-id-3",
+		Local:      true,
+	}
+	_, err = is.processLocalAlias(ctx, localAliasNoNamespaceId, entity, true)
+	require.NoError(t, err)
+}
+
 // TestIdentityStore_checkAndRepairEntityIntegrity tests the
 // checkEntityIntegrity and entityIntegrityCheck's abiltiy to repair what it
 // found.

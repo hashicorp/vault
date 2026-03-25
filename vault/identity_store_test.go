@@ -690,6 +690,29 @@ func testIdentityStoreWithGithubAuthRoot(ctx context.Context, t *testing.T) (*Id
 	return c.identityStore, meGH.Accessor, c, root
 }
 
+// testIdentityStoreWithLocalGithubAuth returns an instance of identity store
+// which is mounted by default, and a mountedGitHub auth mount that is local.
+func testIdentityStoreWithLocalGithubAuth(ctx context.Context, t *testing.T) (*IdentityStore, string, *Core, string) {
+	// Add github credential factory to core config
+	err := AddTestCredentialBackend("github", credGithub.Factory)
+	require.NoError(t, err)
+
+	c, _, root := TestCoreUnsealed(t)
+
+	meGH := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "github/",
+		Type:        "github",
+		Description: "github auth",
+		Local:       true,
+	}
+
+	err = c.enableCredential(ctx, meGH)
+	require.NoError(t, err)
+
+	return c.identityStore, meGH.Accessor, c, root
+}
+
 func testIdentityStoreWithGithubUserpassAuth(ctx context.Context, t *testing.T) (*IdentityStore, string, string, *Core) {
 	conf := &CoreConfig{
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
