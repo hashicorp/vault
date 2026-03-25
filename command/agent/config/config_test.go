@@ -11,6 +11,9 @@ import (
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/hcl"
+	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
@@ -721,7 +724,7 @@ func TestLoadConfigFile_Bad_AgentCache_InconsisentAutoAuth(t *testing.T) {
 	if config == nil {
 		t.Fatal("config was nil")
 	}
-	err = config.ValidateConfig()
+	err = config.ValidateConfig(hclog.NewNullLogger())
 	if err == nil {
 		t.Fatal("ValidateConfig should return an error when use_auto_auth_token=true and no auto_auth section present")
 	}
@@ -735,7 +738,7 @@ func TestLoadConfigFile_Bad_AgentCache_ForceAutoAuthNoMethod(t *testing.T) {
 	if config == nil {
 		t.Fatal("config was nil")
 	}
-	err = config.ValidateConfig()
+	err = config.ValidateConfig(hclog.NewNullLogger())
 	if err == nil {
 		t.Fatal("ValidateConfig should return an error when use_auto_auth_token=force and no auto_auth section present")
 	}
@@ -763,7 +766,7 @@ func TestLoadConfigFile_Bad_AutoAuth_Nosinks_Nocache_Notemplates(t *testing.T) {
 	if config == nil {
 		t.Fatal("config was nil")
 	}
-	err = config.ValidateConfig()
+	err = config.ValidateConfig(hclog.NewNullLogger())
 	if err == nil {
 		t.Fatal("ValidateConfig should return an error when auto_auth configured and there are no sinks, caches or templates")
 	}
@@ -784,7 +787,7 @@ func TestLoadConfigFile_Bad_AgentCache_AutoAuth_Method_wrapping(t *testing.T) {
 	if config == nil {
 		t.Fatal("config was nil")
 	}
-	err = config.ValidateConfig()
+	err = config.ValidateConfig(hclog.NewNullLogger())
 	if err == nil {
 		t.Fatal("ValidateConfig should return an error when auth_auth.method.wrap_ttl nonzero and cache.use_auto_auth_token=true")
 	}
@@ -798,7 +801,7 @@ func TestLoadConfigFile_Bad_APIProxy_And_Cache_Same_Config(t *testing.T) {
 	if config == nil {
 		t.Fatal("config was nil")
 	}
-	err = config.ValidateConfig()
+	err = config.ValidateConfig(hclog.NewNullLogger())
 	if err == nil {
 		t.Fatal("ValidateConfig should return an error when cache and api_proxy try and configure the same value")
 	}
@@ -2366,7 +2369,7 @@ func TestLoadConfigFile_EnvTemplates_Simple(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if err := cfg.ValidateConfig(); err != nil {
+	if err := cfg.ValidateConfig(hclog.NewNullLogger()); err != nil {
 		t.Fatalf("validation error: %s", err)
 	}
 
@@ -2389,7 +2392,7 @@ func TestLoadConfigFile_EnvTemplates_Complex(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if err := cfg.ValidateConfig(); err != nil {
+	if err := cfg.ValidateConfig(hclog.NewNullLogger()); err != nil {
 		t.Fatalf("validation error: %s", err)
 	}
 
@@ -2422,7 +2425,7 @@ func TestLoadConfigFile_EnvTemplates_WithSource(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if err := cfg.ValidateConfig(); err != nil {
+	if err := cfg.ValidateConfig(hclog.NewNullLogger()); err != nil {
 		t.Fatalf("validation error: %s", err)
 	}
 }
@@ -2450,7 +2453,7 @@ func TestLoadConfigFile_EnvTemplates_ExecSimple(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if err := cfg.ValidateConfig(); err != nil {
+	if err := cfg.ValidateConfig(hclog.NewNullLogger()); err != nil {
 		t.Fatalf("validation error: %s", err)
 	}
 
@@ -2476,7 +2479,7 @@ func TestLoadConfigFile_EnvTemplates_ExecComplex(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if err := cfg.ValidateConfig(); err != nil {
+	if err := cfg.ValidateConfig(hclog.NewNullLogger()); err != nil {
 		t.Fatalf("validation error: %s", err)
 	}
 
@@ -2501,7 +2504,7 @@ func TestLoadConfigFile_Bad_EnvTemplates_MissingExec(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if err := config.ValidateConfig(); err == nil {
+	if err := config.ValidateConfig(hclog.NewNullLogger()); err == nil {
 		t.Fatal("expected an error from ValidateConfig: exec section is missing")
 	}
 }
@@ -2514,7 +2517,7 @@ func TestLoadConfigFile_Bad_EnvTemplates_WithProxy(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if err := config.ValidateConfig(); err == nil {
+	if err := config.ValidateConfig(hclog.NewNullLogger()); err == nil {
 		t.Fatal("expected an error from ValidateConfig: listener / api_proxy are not compatible with env_template")
 	}
 }
@@ -2527,7 +2530,7 @@ func TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if err := config.ValidateConfig(); err == nil {
+	if err := config.ValidateConfig(hclog.NewNullLogger()); err == nil {
 		t.Fatal("expected an error from ValidateConfig: file template stanza is not compatible with env_template")
 	}
 }
@@ -2540,7 +2543,19 @@ func TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if err := config.ValidateConfig(); err == nil {
+	if err := config.ValidateConfig(hclog.NewNullLogger()); err == nil {
 		t.Fatal("expected an error from ValidateConfig: disallowed fields specified in env_template")
 	}
+}
+
+func parseHCLObjectListForPKITemplateRef(t *testing.T, src string) *ast.ObjectList {
+	t.Helper()
+
+	file, err := hcl.Parse(src)
+	require.NoError(t, err)
+
+	list, ok := file.Node.(*ast.ObjectList)
+	require.True(t, ok)
+
+	return list
 }
