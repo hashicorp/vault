@@ -1,0 +1,51 @@
+# Cadence Template Test
+# Generated at {{ .GeneratedAt.Format "2006-01-02 15:04:05" }}
+
+## Current Version Context
+- Current Version: {{ .Version }}
+
+## Cadence Functions
+
+### VersionsNMinus - Minor Cadence
+Get last 3 versions with minor cadence:
+{{- $minorVersions := VersionsNMinus "vault" "enterprise" "1.18.0" 3 "minor" }}
+{{- range $minorVersions }}
+  - {{ . }}
+{{- end }}
+
+### VersionsNMinus - Major Cadence
+Get last 1 version with major cadence:
+{{- $majorVersions := VersionsNMinus "vault" "enterprise" "1.18.0" 1 "major" }}
+{{- range $majorVersions }}
+  - {{ . }}
+{{- end }}
+
+### VersionsNMinusTransition
+Get versions with cadence transition (major cadence, transitioned from minor at 1.15.2):
+{{- $transitionVersions := VersionsNMinusTransition "vault" "enterprise" "1.18.0" 2 "major" "1.15.2" "minor" }}
+{{- range $transitionVersions }}
+  - {{ . }}
+{{- end }}
+
+### VersionsBoundedTransition - With Transition
+Get versions with cadence transition (major cadence, transitioned from minor at 1.15.2):
+{{- $boundedTransition := VersionsBoundedTransition "vault" "enterprise" "1.18.0" "1.15.0" "major" "1.15.2" "minor" }}
+{{- range $boundedTransition }}
+  - {{ . }}
+{{- end }}
+
+## Comparison: Regular vs Cadence Functions
+
+### Regular VersionsNMinus (no cadence awareness)
+{{- $regular := VersionsNMinus "vault" "enterprise" "1.18.0" 3 "minor" }}
+Regular ({{ len $regular }} versions):
+{{- range $regular }}
+  - {{ . }}
+{{- end }}
+
+### Cadence-aware VersionsNMinusTransition (minor cadence)
+{{- $cadenceAware := VersionsNMinusTransition "vault" "enterprise" "1.18.0" 3 "minor" "" "" }}
+Cadence-aware ({{ len $cadenceAware }} versions):
+{{- range $cadenceAware }}
+  - {{ . }}
+{{- end }}

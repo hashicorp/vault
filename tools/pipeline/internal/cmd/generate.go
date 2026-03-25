@@ -3,16 +3,19 @@
 
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+)
 
 func newGenerateCmd() *cobra.Command {
 	generateCmd := &cobra.Command{
 		Use:   "generate",
-		Short: "Pipeline configuration generation tasks",
-		Long:  "Pipeline configuration generation tasks",
+		Short: "Generate code and dynamic configuration in the context of the pipeline",
+		Long:  "Generate code and dynamic configuration in the context of the pipeline",
 	}
 
-	generateCmd.AddCommand(newGenerateEnosDynamicConfigCmd())
+	// Add subcommands
+	generateCmd.AddCommand(newGenerateTemplateCmd())
 
 	return generateCmd
 }
