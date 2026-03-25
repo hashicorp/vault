@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
 	"testing"
 	"time"
 
@@ -19,11 +20,24 @@ import (
 // Session holds the test context and Vault client
 type Session struct {
 	t         *testing.T
+	NoCleanup bool
 	Client    *api.Client
 	Namespace string
 }
 
-func New(t *testing.T) *Session {
+func (s *Session) T() *testing.T {
+	return s.t
+}
+
+type SessionOpts func(s *Session)
+
+func WithNoCleanup() SessionOpts {
+	return func(s *Session) {
+		s.NoCleanup = true
+	}
+}
+
+func New(t *testing.T, opts ...SessionOpts) *Session {
 	t.Helper()
 
 	addr := os.Getenv("VAULT_ADDR")
@@ -50,12 +64,6 @@ func New(t *testing.T) *Session {
 	_, err = privClient.Logical().Write(nsURLPath, nil)
 	require.NoError(t, err)
 
-	t.Cleanup(func() {
-		_, err = privClient.Logical().Delete(nsURLPath)
-		require.NoError(t, err)
-		t.Logf("Cleaned up namespace %s", nsName)
-	})
-
 	// session client should get the full namespace of parent + test
 	fullNSPath := nsName
 	if parentNS != "" {
@@ -73,6 +81,20 @@ func New(t *testing.T) *Session {
 		Client:    sessionClient,
 		Namespace: nsName,
 	}
+
+	for opt := range slices.Values(opts) {
+		opt(session)
+	}
+
+	t.Cleanup(func() {
+		if session.NoCleanup {
+			t.Logf("WARN: NoDebug has been set, not cleaning up namespace")
+			return
+		}
+		_, err = privClient.Logical().Delete(nsURLPath)
+		require.NoError(t, err)
+		t.Logf("Cleaned up namespace %s", nsName)
+	})
 
 	// make sure the namespace has been created
 	session.Eventually(func() error {
