@@ -1085,6 +1085,13 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 		return nil, fmt.Errorf("alias is not local")
 	}
 
+	if lAlias.NamespaceID == "" {
+		ns, err := namespace.FromContext(ctx)
+		if err == nil {
+			lAlias.NamespaceID = ns.ID
+		}
+	}
+
 	mountValidationResp := i.router.ValidateMountByAccessor(lAlias.MountAccessor)
 	if mountValidationResp == nil {
 		return nil, fmt.Errorf("invalid mount accessor %q", lAlias.MountAccessor)
@@ -1099,6 +1106,37 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 		return nil, err
 	}
 
+	if alias != nil {
+		// If it exists, we cannot modify external id and issuer
+		if lAlias.ExternalID != alias.ExternalID || lAlias.Issuer != alias.Issuer {
+			return nil, fmt.Errorf("modifying external_id and issuer is forbidden (alias %s)", alias.ID)
+		}
+	}
+
+	// validate alias does not have same external ID and issuer as any existing entity alias's
+	if lAlias.Issuer != "" && lAlias.ExternalID != "" && lAlias.NamespaceID != "" {
+		extAlias, err := i.MemDBAliasByIssuerAndExternalId(lAlias.Issuer, lAlias.ExternalID, lAlias.NamespaceID, false)
+		if err != nil && !errors.Is(err, ErrNoAliasFound) {
+			return nil, err
+		}
+
+		// Validate an alias with these factors doesn't exist anywhere else
+		if extAlias != nil {
+			if extAlias.ID != lAlias.ID {
+				return nil, fmt.Errorf("cannot insert alias with this issuer, external_id and namespace, as one already exists")
+			}
+		}
+
+		// Validate none of the existing aliases on the entity have the same factors
+		for _, a := range entity.Aliases {
+			if a.ID != lAlias.ID {
+				if lAlias.ExternalID == a.ExternalID && lAlias.Issuer == a.Issuer && lAlias.NamespaceID == a.NamespaceID {
+					return nil, fmt.Errorf("alias with this external id, issuer, and namespace already present in entity (alias %s)", lAlias.ID)
+				}
+			}
+		}
+	}
+
 	if alias == nil {
 		alias = &identity.Alias{}
 	}
@@ -1111,6 +1149,9 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 	alias.MountType = mountValidationResp.MountType
 	alias.Local = lAlias.Local
 	alias.CustomMetadata = lAlias.CustomMetadata
+	alias.Issuer = lAlias.Issuer
+	alias.ExternalID = lAlias.ExternalID
+	alias.NamespaceID = lAlias.NamespaceID
 
 	if err := i.sanitizeAlias(ctx, alias); err != nil {
 		return nil, err
