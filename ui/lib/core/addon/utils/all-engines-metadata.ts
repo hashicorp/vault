@@ -69,6 +69,10 @@ export function isAddonEngine(type: string, version: number) {
 //  and should be filtered in some scenarios, such as listing secrets engines.
 export const INTERNAL_ENGINE_TYPES = ['system', 'identity', 'agent_registry'];
 
+// These engines rely on a specific version being set (eg. "kv version 1" or "kv version 2") via options parameter when being mounted in Vault.
+// If the engine to be mounted isn't specified here, we ignore the 'options' field.
+export const VERSIONED_ENGINE_TYPES = ['vault-plugin-secrets-kv', 'kv', 'generic'];
+
 export const ALL_ENGINES: EngineDisplayData[] = [
   {
     pluginCategory: 'cloud',
