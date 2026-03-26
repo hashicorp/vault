@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math/rand"
 	"os"
 	"regexp"
@@ -34,6 +35,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestIdentityStore_DeleteEntityAlias(t *testing.T) {
@@ -69,7 +71,7 @@ func TestIdentityStore_DeleteEntityAlias(t *testing.T) {
 		BucketKey:   c.identityStore.entityPacker.BucketKey("testEntityID"),
 	}
 
-	_, err := c.identityStore.upsertEntityInTxn(context.Background(), txn, entity, nil, false, false)
+	_, err := c.identityStore.upsertEntityInTxn(t.Context(), txn, entity, nil, false, false)
 	require.NoError(t, err)
 
 	err = c.identityStore.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias, alias2})
@@ -87,7 +89,6 @@ func TestIdentityStore_DeleteEntityAlias(t *testing.T) {
 
 	entity, err = c.identityStore.MemDBEntityByID("testEntityID", false)
 	require.NoError(t, err)
-
 	require.Len(t, entity.Aliases, 0)
 }
 
@@ -1806,7 +1807,6 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 			"userpass": credUserpass.Factory,
 		},
 	}
-
 	c, _, rootToken := TestCoreUnsealedWithConfig(t, cfg)
 
 	// Inject values into storage
@@ -1858,6 +1858,628 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	require.Equal(t, wantAliases, numDupes["different-case entity alias"])
 	require.Equal(t, wantEntities, numDupes["entity"])
 	require.Equal(t, wantGroups, numDupes["group"])
+}
+
+// TestIdentityStore_RepairEntityIntegrity tests repairing corrupted entities
+// during loading. The entity state in this test is derived from a pathological
+// case seen in the wild where an entity had 30+ duplicate aliases across two
+// different mounts, a dangling alias as the first in the list, and multiple
+// instances of the same entity somehow persisted in the list. We verify that
+// Vault is able to gracefully resolve integrity conflicts during load.
+//
+// When Vault encounters duplicate instances of the same alias it ougth to keep
+// a single reference.
+//
+// When Vault encounters the duplicate dangling alias now associate the dangling
+// alias with the correct alias and renames it to prevent it from becoming the
+// canonical source of the alias during reload.
+//
+// It's important to note that duplicate aliases are not actually resolved
+// automatically. Instead, we generate a report and log duplicate and renamed
+// dangling aliases and allow the caller to handle the duplicates in a way that
+// makes the most sense.
+func TestIdentityStore_RepairEntityIntegrity(t *testing.T) {
+	// Very the state of the cluster with and without forced deduplication
+	// enabled. While deduplication only matters for duplicate entities we still
+	// want to verify our aliases over this lifecycle.
+	ctx := namespace.RootContext(nil)
+	logger := corehelpers.NewTestLogger(t)
+	ims, err := inmem.NewTransactionalInmemHA(nil, logger)
+	require.NoError(t, err)
+	cfg := &CoreConfig{
+		Physical:        ims,
+		HAPhysical:      ims.(physical.HABackend),
+		Logger:          logger,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}
+	c, sealKeys, rootToken := TestCoreUnsealedWithConfig(t, cfg)
+
+	// Our test relies on writing many duplication aliases that exist on
+	// multiple mounts with at least one dangling entity alias.
+	mount1 := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "auth_mount_1/",
+		Type:        "userpass",
+		Description: "auth_mount_1",
+	}
+	require.NoError(t, c.enableCredential(ctx, mount1))
+	mount2 := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "auth_mount_2/",
+		Type:        "userpass",
+		Description: "auth_mount_2",
+	}
+	require.NoError(t, c.enableCredential(ctx, mount2))
+
+	// Write our very broken entity to storage
+	entityID := "06d30817-e137-c76f-78e5-1750b6b77ada"
+	aliasName := "system:serviceaccount:myservice:myuser"
+
+	// Dangling alias
+	danglingPriorCanonicalID := "9637a1e3-0b80-1139-357a-1ab66608f16a"
+	danglingAliasID := "72644fce-d03b-0ca5-3fde-1ec176a6849f"
+	priorCanonicalID := "5ff709c8-9147-e7e2-1937-842ecc7b255e"
+
+	// Aliase IDs
+	alias1Mount1ID := "6f0da6bf-f148-55fa-4e07-5290780de250"
+	alias1Mount2ID := "314fe666-e409-6d0d-2f37-5d568d1cd3d2"
+	alias2Mount2ID := "8c7e39b4-1b1b-d02c-f442-76b81c4624c0"
+	alias3Mount2ID := "48e71b42-d20a-cef4-36a8-94ace554db1a"
+
+	entity := &identity.Entity{
+		ID:          entityID,
+		Name:        "myuser",
+		Policies:    []string{"myservice", "admin"},
+		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("myuser"),
+	}
+
+	// These entity aliases and duplicates are nearly identical to a pathological
+	// case seen in the wild. That's why there are so many variations of the same
+	// duplicate alias enumerated here!
+	entity.Aliases = []*identity.Alias{
+		{
+			// This here is our dangling entity. It is the one we expect to be
+			// reassociated and renamed.
+			ID:                     danglingAliasID,
+			CanonicalID:            danglingPriorCanonicalID,
+			MountAccessor:          mount1.Accessor,
+			MountType:              mount1.Type,
+			Local:                  mount1.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697590310, 633394406)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1698014682, 763218270)),
+			MergedFromCanonicalIDs: []string{"9691a701-fb9d-e9db-4aa9-574d02a7b96b"},
+			NamespaceID:            mount1.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(danglingAliasID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{danglingPriorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{danglingPriorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias3Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1699849152, 946907725)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1699849152, 946907725)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias3Mount2ID),
+		},
+		{
+			ID:                     alias1Mount1ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount1.Accessor,
+			MountType:              mount1.Type,
+			Local:                  mount1.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1699845858, 939263738)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1699845858, 939263738)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount1.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount1ID),
+		},
+		{
+			ID:                     alias2Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1698105125, 809557511)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1698105125, 809557511)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias2Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     danglingAliasID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount1.Accessor,
+			MountType:              mount1.Type,
+			Local:                  mount1.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697590310, 633394406)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1698014682, 763218270)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount1.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(danglingAliasID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias3Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1699849152, 946907725)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1699849152, 946907725)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias3Mount2ID),
+		},
+		{
+			ID:                     alias2Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1698105125, 809557511)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1698105125, 809557511)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias2Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     danglingAliasID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount1.Accessor,
+			MountType:              mount1.Type,
+			Local:                  mount1.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697590310, 633394406)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1698014682, 763218270)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount1.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(danglingAliasID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias3Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1699849152, 946907725)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1699849152, 946907725)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias3Mount2ID),
+		},
+		{
+			ID:                     alias2Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1698105125, 809557511)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1698105125, 809557511)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias2Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias3Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1699849152, 946907725)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1699849152, 946907725)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias3Mount2ID),
+		},
+		{
+			ID:                     danglingAliasID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount1.Accessor,
+			MountType:              mount1.Type,
+			Local:                  mount1.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697590310, 633394406)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1698014682, 763218270)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount1.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(danglingAliasID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias2Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1698105125, 809557511)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1698105125, 809557511)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias2Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias3Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1699849152, 946907725)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1699849152, 946907725)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias3Mount2ID),
+		},
+		{
+			ID:                     danglingAliasID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount1.Accessor,
+			MountType:              mount1.Type,
+			Local:                  mount1.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697590310, 633394406)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1698014682, 763218270)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount1.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(danglingAliasID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias2Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1698105125, 809557511)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1698105125, 809557511)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+		{
+			ID:                     alias1Mount2ID,
+			CanonicalID:            entityID,
+			MountAccessor:          mount2.Accessor,
+			MountType:              mount2.Type,
+			Local:                  mount2.Local,
+			Name:                   aliasName,
+			CreationTime:           timestamppb.New(time.Unix(1697592308, 465326334)),
+			LastUpdateTime:         timestamppb.New(time.Unix(1697593548, 547367367)),
+			MergedFromCanonicalIDs: []string{priorCanonicalID},
+			NamespaceID:            mount2.NamespaceID,
+			LocalBucketKey:         c.identityStore.entityPacker.BucketKey(alias1Mount2ID),
+		},
+	}
+
+	// Persist the entity directly into storage, seal, and unseal to trigger
+	// our dangling alias resolver.
+	entityAny, err := anypb.New(entity)
+	require.NoError(t, err)
+	item := &storagepacker.Item{
+		ID:      entity.ID,
+		Message: entityAny,
+	}
+	require.NoError(t, c.identityStore.entityPacker.PutItem(ctx, item))
+
+	// Seal our cluster. During restore we'll verify our behavior.
+	require.NoError(t, c.Seal(rootToken))
+
+	var unsealed bool
+	for i := 0; i < 3; i++ {
+		unsealed, err = c.Unseal(sealKeys[i])
+		require.NoError(t, err)
+	}
+	require.Truef(t, unsealed, "expected clean unseal with complex duplicate entity aliases")
+
+	// Verify that the entity that we have in storage and membd matches a repaired
+	// copy of our entity.
+	expectedEntity, err := entity.Clone()
+	require.NoError(t, err)
+	integrityCheck, err := checkEntityIntegrity(expectedEntity)
+	require.Error(t, err)
+	require.NotNil(t, integrityCheck)
+	require.NoError(t, integrityCheck.repair(c.identityStore.logger))
+
+	// Make sure our expected entity is correct and that our entity matches it.
+	// We should have 5 total aliases by ID after repairing the integrity of the
+	// entity.
+	requireExpectedEntity := func(t *testing.T, expect, got *identity.Entity) {
+		require.Len(t, expect.Aliases, 5)
+		require.Len(t, got.Aliases, 5)
+		for entity := range slices.Values([]*identity.Entity{expect, got}) {
+			gotIDs := make([]string, 5)
+			for i, alias := range entity.Aliases {
+				gotIDs[i] = alias.ID
+			}
+			require.EqualValues(t, []string{
+				// NOTE: This order matters because repairing sorts the aliases by ID
+				alias1Mount2ID,  // "314fe666-e409-6d0d-2f37-5d568d1cd3d2"
+				alias3Mount2ID,  // "48e71b42-d20a-cef4-36a8-94ace554db1a"
+				alias1Mount1ID,  // "6f0da6bf-f148-55fa-4e07-5290780de250"
+				danglingAliasID, // "72644fce-d03b-0ca5-3fde-1ec176a6849f"
+				alias2Mount2ID,  // "8c7e39b4-1b1b-d02c-f442-76b81c4624c0"
+			}, gotIDs)
+		}
+
+		for i, ga := range got.Aliases {
+			oa := expect.Aliases[i]
+			require.Equal(t, oa.GetCanonicalID(), ga.GetCanonicalID())
+			require.Equal(t, oa.GetMountType(), ga.GetMountType())
+			require.Equal(t, oa.GetMountAccessor(), ga.GetMountAccessor())
+			require.Equal(t, oa.GetMountPath(), ga.GetMountPath())
+			require.True(t, oa.GetCreationTime().AsTime().Equal(ga.GetCreationTime().AsTime()))
+			require.Equal(t, oa.GetNamespaceID(), ga.GetNamespaceID())
+			require.EqualValues(t, oa.GetCustomMetadata(), ga.GetCustomMetadata())
+			require.Equal(t, oa.GetLocal(), ga.GetLocal())
+			require.Equal(t, oa.GetLocalBucketKey(), ga.GetLocalBucketKey())
+			require.Equal(t, oa.GetName(), ga.GetName())
+			require.EqualValues(t, oa.GetMetadata(), ga.GetMetadata())
+			require.EqualValues(t, oa.GetMergedFromCanonicalIDs(), ga.GetMergedFromCanonicalIDs())
+			require.EqualValues(t, slices.Sorted(maps.Keys(ga.GetMetadata())), slices.Sorted(maps.Keys(ga.GetMetadata())))
+			require.EqualValues(t, slices.Sorted(maps.Values(ga.GetMetadata())), slices.Sorted(maps.Values(ga.GetMetadata())))
+		}
+	}
+
+	// Check the entity from storage
+	packedEntity, err := c.identityStore.entityPacker.GetItem(entity.ID)
+	require.NoError(t, err)
+	newEntity := &identity.Entity{}
+	err = anypb.UnmarshalTo(packedEntity.GetMessage(), newEntity, proto.UnmarshalOptions{})
+	require.NoError(t, err)
+	requireExpectedEntity(t, expectedEntity, newEntity)
+
+	// Check the entity from memdb
+	newEntity, err = c.identityStore.MemDBEntityByID(entityID, false)
+	require.NoError(t, err)
+	requireExpectedEntity(t, expectedEntity, newEntity)
 }
 
 // logFn is a type we used to use here before concurrentLogBuffer was added.
