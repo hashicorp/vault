@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
+	"math/big"
 	"net"
 	"net/url"
 	"os"
@@ -858,6 +859,13 @@ func testParseCertificateToFields(t *testing.T, issueTime time.Time, tt *parseCe
 	delete(fields, "skid")
 	delete(tt.wantFields, "skid")
 	require.NotNil(t, fields["serial_number"])
+	// We don't test explicitly for a number as values prefixed with 00: get dropped.
+	require.Regexp(t, "^[a-fA-F0-9:]+$", fields["serial_number"], "invalid serial number")
+	serialBytes := certutil.ParseHexFormatted(fields["serial_number"].(string), ":")
+	actualBigInt := &big.Int{}
+	actualBigInt.SetBytes(serialBytes)
+	require.Equal(t, 0, cert.SerialNumber.Cmp(actualBigInt), "serial number mismatch")
+
 	delete(fields, "serial_number")
 	delete(tt.wantFields, "serial_number")
 
