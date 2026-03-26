@@ -183,7 +183,21 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 		p.passwordAuthentication = pwAuthentication
 	}
 
-	if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
+	scramIterationsRaw, err := strutil.GetString(req.Config, "scram_iterations")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve scram_iterations: %w", err)
+	}
+
+	if scramIterationsRaw != "" {
+		if p.passwordAuthentication != passwordAuthenticationSCRAMSHA256 {
+			return dbplugin.InitializeResponse{}, fmt.Errorf("scram_iterations requires password_authentication to be %q", passwordAuthenticationSCRAMSHA256)
+		}
+		scramIterations, err := strconv.Atoi(scramIterationsRaw)
+		if err != nil || scramIterations < 1 {
+			return dbplugin.InitializeResponse{}, fmt.Errorf("scram_iterations must be a positive integer, got: %s", scramIterationsRaw)
+		}
+		p.scramIterations = scramIterations
+	} else if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
 		if serverIterations, err := p.queryServerSCRAMIterations(ctx); err == nil {
 			p.scramIterations = serverIterations
 		}

@@ -880,6 +880,98 @@ func TestPostgreSQL_SCRAMIterations_FallbackOnOlderPG(t *testing.T) {
 	assert.Equal(t, scram.DefaultIterations, db.scramIterations)
 }
 
+// TestPostgreSQL_SCRAMIterations_ExplicitConfig tests that an explicit scram_iterations config
+// value overrides the server's setting.
+func TestPostgreSQL_SCRAMIterations_ExplicitConfig(t *testing.T) {
+	ctx := context.Background()
+	cleanup, connURL := postgresql.PrepareTestContainerWithSCRAMIterations(t, ctx, 100)
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":          dsnConnURL,
+		"password_authentication": string(passwordAuthenticationSCRAMSHA256),
+		"scram_iterations":        "200",
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	_ = dbtesting.AssertInitialize(t, db, req)
+
+	// Explicit config (200) should override server config (100)
+	assert.Equal(t, 200, db.scramIterations)
+}
+
+// TestPostgreSQL_SCRAMIterations_RequiresSCRAM tests that setting scram_iterations without
+// password_authentication=scram-sha-256 returns an error.
+func TestPostgreSQL_SCRAMIterations_RequiresSCRAM(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t)
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	assert.NoError(t, err)
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":   dsnConnURL,
+		"scram_iterations": "4096",
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	_, err = db.Initialize(context.Background(), req)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "scram_iterations requires password_authentication")
+}
+
+// TestPostgreSQL_SCRAMIterations_Invalid tests that invalid scram_iterations values are rejected.
+func TestPostgreSQL_SCRAMIterations_Invalid(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t)
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	assert.NoError(t, err)
+
+	tcs := map[string]struct {
+		value string
+	}{
+		"not-a-number": {value: "abc"},
+		"zero":         {value: "0"},
+		"negative":     {value: "-1"},
+	}
+
+	for name, tc := range tcs {
+		t.Run(name, func(t *testing.T) {
+			connectionDetails := map[string]interface{}{
+				"connection_url":          dsnConnURL,
+				"password_authentication": string(passwordAuthenticationSCRAMSHA256),
+				"scram_iterations":        tc.value,
+			}
+
+			req := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
+			}
+
+			db := new()
+			_, err := db.Initialize(context.Background(), req)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "scram_iterations must be a positive integer")
+		})
+	}
+}
+
 func TestPostgreSQL_NewUser(t *testing.T) {
 	type testCase struct {
 		req            dbplugin.NewUserRequest
