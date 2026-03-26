@@ -177,42 +177,49 @@ module('Integration | Component | secret-engine/list', function (hooks) {
       .hasClass('text-overflow-ellipsis', 'secret engine path has text overflow class ');
   });
 
-  test('it shows the intro page when only default engines are enabled', async function (assert) {
-    // Only cubbyhole engine exists (default engine)
-    const defaultEngines = [createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole')];
-    this.secretEngineModels = defaultEngines;
+  module('Intro page', function (hooks) {
+    hooks.beforeEach(function () {
+      // clear local storage to reset dismissed wizard state
+      localStorage.clear();
+    });
 
-    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+    test('it shows the intro page when only default engines are enabled', async function (assert) {
+      // Only cubbyhole engine exists (default engine)
+      const defaultEngines = [createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole')];
+      this.secretEngineModels = defaultEngines;
 
-    assert.dom(SELECTORS.intro).exists('Intro page is shown');
-    assert.dom(GENERAL.button('enable')).exists('Shows enable button');
-    assert.dom(GENERAL.button('Skip')).exists('Shows skip button');
-  });
+      await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
 
-  test('it does not show the intro page when other engines exist', async function (assert) {
-    // Has engines beyond the default cubbyhole
-    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+      assert.dom(SELECTORS.intro).exists('Intro page is shown');
+      assert.dom(GENERAL.button('enable')).exists('Shows enable button');
+      assert.dom(GENERAL.button('Skip')).exists('Shows skip button');
+    });
 
-    assert.dom(SELECTORS.intro).doesNotExist('Intro modal is not shown when engines exist');
-    assert.dom(GENERAL.button('intro')).doesNotExist('Intro button is not shown');
-  });
+    test('it does not show the intro page when other engines exist', async function (assert) {
+      // Has engines beyond the default cubbyhole
+      await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
 
-  test('it does not show the intro page when a filter has no results', async function (assert) {
-    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
-    await fillIn(GENERAL.inputSearch('secret-engine-path'), `foobar`);
-    assert.dom(SELECTORS.intro).doesNotExist('Intro modal is not shown when engines exist');
-    assert.dom(GENERAL.button('intro')).doesNotExist('Intro button is not shown');
-  });
+      assert.dom(SELECTORS.intro).doesNotExist('Intro modal is not shown when engines exist');
+      assert.dom(GENERAL.button('intro')).doesNotExist('Intro button is not shown');
+    });
 
-  test('it can show the intro modal after dismissal', async function (assert) {
-    const defaultEngines = [createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole')];
-    this.secretEngineModels = defaultEngines;
+    test('it does not show the intro page when a filter has no results', async function (assert) {
+      await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+      await fillIn(GENERAL.inputSearch('secret-engine-path'), `foobar`);
+      assert.dom(SELECTORS.intro).doesNotExist('Intro modal is not shown when engines exist');
+      assert.dom(GENERAL.button('intro')).doesNotExist('Intro button is not shown');
+    });
 
-    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
-    await click(GENERAL.button('Skip'));
-    assert.dom(SELECTORS.intro).doesNotExist('Intro is dismissed');
+    test('it can show the intro modal after dismissal', async function (assert) {
+      const defaultEngines = [createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole')];
+      this.secretEngineModels = defaultEngines;
 
-    await click(GENERAL.button('intro'));
-    assert.dom(SELECTORS.intro).exists('Intro can be shown again after reset');
+      await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+      await click(GENERAL.button('Skip'));
+      assert.dom(SELECTORS.intro).doesNotExist('Intro is dismissed');
+
+      await click(GENERAL.button('intro'));
+      assert.dom(SELECTORS.intro).exists('Intro can be shown again after reset');
+    });
   });
 });

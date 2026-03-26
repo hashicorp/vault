@@ -25,6 +25,9 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    // clear local storage to reset dismissed wizard state
+    localStorage.clear();
+
     this.refreshSpy = sinon.spy();
     this.flexiblePolicyCompleteSpy = sinon.spy();
     this.wizardService = this.owner.lookup('service:wizard');
@@ -38,11 +41,6 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
         />
       `);
     };
-  });
-
-  hooks.afterEach(async function () {
-    // ensure clean state
-    localStorage.clear();
   });
 
   test('it shows wizard when no namespaces exist', async function (assert) {

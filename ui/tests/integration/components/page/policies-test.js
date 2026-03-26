@@ -83,6 +83,9 @@ module('Integration | Component | page/policies', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    // clear local storage to reset dismissed wizard state
+    localStorage.clear();
+
     this.model = policiesMockModel;
     this.policyType = 'acl';
     this.store = this.owner.lookup('service:store');

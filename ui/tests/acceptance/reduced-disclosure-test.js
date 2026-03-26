@@ -28,6 +28,10 @@ module('Acceptance | reduced disclosure test', function (hooks) {
     this.unsealCount = 0;
     this.sealed = false;
     this.versionSvc = this.owner.lookup('service:version');
+    this.versionFor = {
+      header: () => `Vault v${this.versionSvc.version.replace('+ent', '')}`,
+      footer: () => `Vault ${this.versionSvc.version}`,
+    };
     return logout();
   });
 
@@ -37,22 +41,20 @@ module('Acceptance | reduced disclosure test', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/dashboard');
 
     // Ensure it shows version on dashboard
-    assert.dom(GENERAL.hdsPageHeaderTitle).includesText(`Vault v1.`);
-    assert
-      .dom(SELECTORS.footerVersion)
-      .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version after login');
+    assert.dom(GENERAL.hdsPageHeaderTitle).includesText(this.versionFor.header());
+    assert.dom(SELECTORS.footerVersion).hasText(this.versionFor.footer(), 'shows Vault version after login');
 
     const token = await runCmd(createTokenCmd('default'));
 
     await logout();
-    assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'no vault version after logout');
+    assert.dom(SELECTORS.footerVersion).hasText('Vault', 'no vault version after logout');
 
     await login(token);
     assert.strictEqual(currentURL(), '/vault/dashboard');
 
     assert
       .dom(SELECTORS.footerVersion)
-      .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
+      .hasText(this.versionFor.footer(), 'shows Vault version for default policy in namespace');
   });
 
   test('shows correct version on unseal flow', async function (assert) {
@@ -148,17 +150,14 @@ module('Acceptance | reduced disclosure test', function (hooks) {
       await login(token);
       assert
         .dom(SELECTORS.footerVersion)
-        .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
+        .hasText(this.versionFor.footer(), 'shows Vault version for default policy in namespace');
 
       // navigate to child namespace
       await visit(`/vault/dashboard?namespace=${namespace}`);
       assert
         .dom(SELECTORS.footerVersion)
-        .hasText(
-          `Vault ${this.versionSvc.version}`,
-          'shows Vault version for default policy in child namespace'
-        );
-      assert.dom(GENERAL.hdsPageHeaderTitle).includesText('Vault v1.');
+        .hasText(this.versionFor.footer(), 'shows Vault version for default policy in child namespace');
+      assert.dom(GENERAL.hdsPageHeaderTitle).includesText(this.versionFor.header());
 
       // log in to "root" before deleting
       await login();
@@ -172,17 +171,17 @@ module('Acceptance | reduced disclosure test', function (hooks) {
       assert.strictEqual(currentURL(), '/vault/dashboard');
 
       // Ensure it shows version on dashboard
-      assert.dom(GENERAL.hdsPageHeaderTitle).includesText(`Vault v1.`);
+      assert.dom(GENERAL.hdsPageHeaderTitle).includesText(this.versionFor.header());
       assert
         .dom(SELECTORS.footerVersion)
-        .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version after login');
+        .hasText(this.versionFor.footer(), 'shows Vault version after login');
 
       await runCmd(`write sys/namespaces/${namespace} -f`, false);
       await loginNs(namespace);
 
       assert
         .dom(SELECTORS.footerVersion)
-        .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version within namespace');
+        .hasText(this.versionFor.footer(), 'shows Vault version within namespace');
 
       const token = await runCmd(createTokenCmd('default'));
 
@@ -193,7 +192,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
       assert.strictEqual(currentURL(), '/vault/dashboard?namespace=reduced-disclosure');
       assert
         .dom(SELECTORS.footerVersion)
-        .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
+        .hasText(this.versionFor.footer(), 'shows Vault version for default policy in namespace');
 
       // log in to "root" before deleting
       await login();
