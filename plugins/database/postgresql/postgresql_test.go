@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/plugins/database/postgresql/scram"
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -822,6 +823,61 @@ func TestPostgreSQL_PasswordAuthentication_SCRAMSHA256(t *testing.T) {
 	newUserResponse, err := db.NewUser(ctx, newUserRequest)
 
 	assertCredsExist(t, db.ConnectionURL, newUserResponse.Username, newUserRequest.Password)
+}
+
+// TestPostgreSQL_SCRAMIterations_ServerConfig tests that when password_authentication is scram-sha-256
+// and the server supports scram_iterations (PG 16+), the iteration count is read from the server.
+func TestPostgreSQL_SCRAMIterations_ServerConfig(t *testing.T) {
+	ctx := context.Background()
+	cleanup, connURL := postgresql.PrepareTestContainerWithSCRAMIterations(t, ctx, 100)
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":          dsnConnURL,
+		"password_authentication": string(passwordAuthenticationSCRAMSHA256),
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	_ = dbtesting.AssertInitialize(t, db, req)
+
+	assert.Equal(t, 100, db.scramIterations)
+}
+
+// TestPostgreSQL_SCRAMIterations_FallbackOnOlderPG tests that when the server does not support
+// scram_iterations (PG < 16), the default iteration count is used.
+func TestPostgreSQL_SCRAMIterations_FallbackOnOlderPG(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainerWithVersion(t, postgresql.PGVersionWithoutSCRAMIterationsConfig)
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":          dsnConnURL,
+		"password_authentication": string(passwordAuthenticationSCRAMSHA256),
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	_ = dbtesting.AssertInitialize(t, db, req)
+
+	assert.Equal(t, scram.DefaultIterations, db.scramIterations)
 }
 
 func TestPostgreSQL_NewUser(t *testing.T) {
