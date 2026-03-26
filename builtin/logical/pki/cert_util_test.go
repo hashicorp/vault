@@ -123,7 +123,7 @@ func TestPki_MultipleOUs(t *testing.T) {
 	input := &inputBundle{
 		apiData: apiData,
 		role: &issuing.RoleEntry{
-			MaxTTL: 3600,
+			MaxTTL: time.Hour,
 			OU:     []string{"Z", "E", "V"},
 		},
 	}
