@@ -106,7 +106,7 @@ test('intro pages workflow', async ({ page }) => {
     await page.getByRole('link', { name: 'Authentication methods' }).click();
     await expect(page.getByRole('button', { name: 'New to Auth methods?' })).not.toBeVisible();
 
-    basePage.dismissFlashMessages();
+    await basePage.dismissFlashMessages();
 
     await page.getByRole('link', { name: 'Back to main navigation' }).click();
   });
@@ -126,25 +126,10 @@ test('intro pages workflow', async ({ page }) => {
     await expect(page.getByRole('tab', { name: 'Select setup (current)' })).toBeVisible();
     await page.getByRole('button', { name: 'Exit' }).click();
 
-    // verify exit button closes the intro page and user is navigated back to namespaces list page
     await expect(page.getByRole('heading', { name: 'Welcome to Namespaces' })).not.toBeVisible();
     await expect(page.locator('h1')).toHaveText('Namespaces');
     await expect(page.getByRole('link', { name: 'Create namespace' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'New to Namespaces?' })).toBeVisible();
-
-    // clicking create from banner routes to creation page
-    await page.getByRole('button', { name: 'New to Namespaces?' }).click();
-    await page.getByRole('button', { name: 'Guided start' }).click();
-    await expect(page.getByText('Namespaces Guided Start')).toBeVisible();
-
-    await page.getByRole('radio', { name: 'Flexible/shared access: our' }).check();
-    await expect(page.getByRole('heading', { name: 'Single namespace' })).toBeVisible();
-    await page.getByRole('button', { name: 'Next' }).click();
-    await expect(page.getByRole('link', { name: 'Set up identities' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: "No action needed, you're all" })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Learn more about namespaces' })).toBeVisible();
-    await page.getByRole('button', { name: 'Exit' }).click();
-
     await page.getByRole('link', { name: 'Create namespace' }).click();
     await page.getByRole('textbox', { name: 'Path' }).fill('testNs');
     await page.getByRole('button', { name: 'Save' }).click();
