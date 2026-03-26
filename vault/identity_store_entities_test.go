@@ -10,13 +10,17 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestIdentityStore_EntityDeleteGroupMembershipUpdate(t *testing.T) {
@@ -1309,5 +1313,381 @@ func TestIdentityStore_MergeEntitiesByID_DuplicateFromEntityIDs(t *testing.T) {
 
 	if len(entity1Lookup.Policies) != 2 {
 		t.Fatalf("invalid number of entity policies; expected: 2, actualL: %d", len(entity1Lookup.Policies))
+	}
+}
+
+// TestIdentityStore_checkAndRepairEntityIntegrity tests the
+// checkEntityIntegrity and entityIntegrityCheck's abiltiy to repair what it
+// found.
+func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
+	tests := map[string]struct {
+		setupEntity      func(t *testing.T) *identity.Entity
+		expectCheckError bool
+		expectNilAlias   bool
+		expectDangling   int
+		expectDuplicate  int
+	}{
+		"valid entity with no issues": {
+			setupEntity: func(t *testing.T) *identity.Entity {
+				entityID, err := uuid.GenerateUUID()
+				require.NoError(t, err)
+				return &identity.Entity{
+					ID:   entityID,
+					Name: "test-entity",
+					Aliases: []*identity.Alias{
+						{
+							ID:          "alias-1",
+							CanonicalID: entityID,
+							Name:        "test-alias",
+						},
+					},
+				}
+			},
+			expectCheckError: false,
+			expectNilAlias:   false,
+			expectDangling:   0,
+			expectDuplicate:  0,
+		},
+		"entity with nil alias": {
+			setupEntity: func(t *testing.T) *identity.Entity {
+				entityID, err := uuid.GenerateUUID()
+				require.NoError(t, err)
+				return &identity.Entity{
+					ID:   entityID,
+					Name: "test-entity",
+					Aliases: []*identity.Alias{
+						nil,
+						{
+							ID:          "alias-1",
+							CanonicalID: entityID,
+							Name:        "test-alias",
+						},
+					},
+				}
+			},
+			expectCheckError: true,
+			expectNilAlias:   true,
+			expectDangling:   0,
+			expectDuplicate:  0,
+		},
+		"entity with multiple nil aliases": {
+			setupEntity: func(t *testing.T) *identity.Entity {
+				entityID, err := uuid.GenerateUUID()
+				require.NoError(t, err)
+				return &identity.Entity{
+					ID:   entityID,
+					Name: "test-entity",
+					Aliases: []*identity.Alias{
+						nil,
+						{
+							ID:          "alias-1",
+							CanonicalID: entityID,
+							Name:        "test-alias",
+						},
+						nil,
+						nil,
+					},
+				}
+			},
+			expectCheckError: true,
+			expectNilAlias:   true,
+			expectDangling:   0,
+			expectDuplicate:  0,
+		},
+		"entity with dangling alias": {
+			setupEntity: func(t *testing.T) *identity.Entity {
+				entityID, err := uuid.GenerateUUID()
+				require.NoError(t, err)
+				return &identity.Entity{
+					ID:   entityID,
+					Name: "test-entity",
+					Aliases: []*identity.Alias{
+						{
+							ID:          "alias-1",
+							CanonicalID: "wrong-entity-id",
+							Name:        "dangling-alias",
+						},
+					},
+				}
+			},
+			expectCheckError: true,
+			expectNilAlias:   false,
+			expectDangling:   1,
+			expectDuplicate:  0,
+		},
+		"entity with multiple dangling aliases": {
+			setupEntity: func(t *testing.T) *identity.Entity {
+				entityID, err := uuid.GenerateUUID()
+				require.NoError(t, err)
+				return &identity.Entity{
+					ID:   entityID,
+					Name: "test-entity",
+					Aliases: []*identity.Alias{
+						{
+							ID:          "alias-1",
+							CanonicalID: "wrong-entity-id-1",
+							Name:        "dangling-alias-1",
+						},
+						{
+							ID:          "alias-2",
+							CanonicalID: "wrong-entity-id-2",
+							Name:        "dangling-alias-2",
+						},
+						{
+							ID:          "alias-3",
+							CanonicalID: "wrong-entity-id-3",
+							Name:        "dangling-alias-3",
+						},
+					},
+				}
+			},
+			expectCheckError: true,
+			expectNilAlias:   false,
+			expectDangling:   3,
+			expectDuplicate:  0,
+		},
+		"entity with duplicate alias instances same ID": {
+			setupEntity: func(t *testing.T) *identity.Entity {
+				entityID, err := uuid.GenerateUUID()
+				require.NoError(t, err)
+				now := time.Now()
+				return &identity.Entity{
+					ID:   entityID,
+					Name: "test-entity",
+					Aliases: []*identity.Alias{
+						{
+							ID:             "alias-1",
+							CanonicalID:    entityID,
+							Name:           "test-alias",
+							LastUpdateTime: timestamppb.New(now.Add(-1 * time.Hour)),
+						},
+						{
+							ID:             "alias-1",
+							CanonicalID:    entityID,
+							Name:           "test-alias",
+							LastUpdateTime: timestamppb.New(now),
+						},
+					},
+				}
+			},
+			expectCheckError: true,
+			expectNilAlias:   false,
+			expectDangling:   0,
+			expectDuplicate:  1,
+		},
+		"entity with multiple duplicate alias instances": {
+			setupEntity: func(t *testing.T) *identity.Entity {
+				entityID, err := uuid.GenerateUUID()
+				require.NoError(t, err)
+				now := time.Now()
+				return &identity.Entity{
+					ID:   entityID,
+					Name: "test-entity",
+					Aliases: []*identity.Alias{
+						{
+							ID:             "alias-1",
+							CanonicalID:    entityID,
+							Name:           "test-alias-1",
+							LastUpdateTime: timestamppb.New(now.Add(-3 * time.Hour)),
+						},
+						{
+							ID:             "alias-1",
+							CanonicalID:    entityID,
+							Name:           "test-alias-1",
+							LastUpdateTime: timestamppb.New(now.Add(-2 * time.Hour)),
+						},
+						{
+							ID:             "alias-1",
+							CanonicalID:    entityID,
+							Name:           "test-alias-1",
+							LastUpdateTime: timestamppb.New(now.Add(-1 * time.Hour)),
+						},
+					},
+				}
+			},
+			expectCheckError: true,
+			expectNilAlias:   false,
+			expectDangling:   0,
+			expectDuplicate:  1,
+		},
+		"entity with dangling and duplicate aliases": {
+			setupEntity: func(t *testing.T) *identity.Entity {
+				entityID, err := uuid.GenerateUUID()
+				require.NoError(t, err)
+				now := time.Now()
+				return &identity.Entity{
+					ID:   entityID,
+					Name: "test-entity",
+					Aliases: []*identity.Alias{
+						{
+							ID:             "alias-1",
+							CanonicalID:    "wrong-entity-id",
+							Name:           "dangling-alias",
+							LastUpdateTime: timestamppb.New(now.Add(-1 * time.Hour)),
+						},
+						{
+							ID:             "alias-2",
+							CanonicalID:    entityID,
+							Name:           "duplicate-alias",
+							LastUpdateTime: timestamppb.New(now.Add(-2 * time.Hour)),
+						},
+						{
+							ID:             "alias-2",
+							CanonicalID:    entityID,
+							Name:           "duplicate-alias",
+							LastUpdateTime: timestamppb.New(now),
+						},
+					},
+				}
+			},
+			expectCheckError: true,
+			expectNilAlias:   false,
+			expectDangling:   1,
+			expectDuplicate:  1,
+		},
+		"entity with nil, dangling, and duplicate aliases": {
+			setupEntity: func(t *testing.T) *identity.Entity {
+				entityID, err := uuid.GenerateUUID()
+				require.NoError(t, err)
+				now := time.Now()
+				return &identity.Entity{
+					ID:   entityID,
+					Name: "test-entity",
+					Aliases: []*identity.Alias{
+						nil,
+						{
+							ID:             "alias-1",
+							CanonicalID:    "wrong-entity-id",
+							Name:           "dangling-alias",
+							LastUpdateTime: timestamppb.New(now.Add(-1 * time.Hour)),
+						},
+						{
+							ID:             "alias-2",
+							CanonicalID:    entityID,
+							Name:           "duplicate-alias",
+							LastUpdateTime: timestamppb.New(now.Add(-2 * time.Hour)),
+						},
+						nil,
+						{
+							ID:             "alias-2",
+							CanonicalID:    entityID,
+							Name:           "duplicate-alias",
+							LastUpdateTime: timestamppb.New(now),
+						},
+					},
+				}
+			},
+			expectCheckError: true,
+			expectNilAlias:   true,
+			expectDangling:   1,
+			expectDuplicate:  1,
+		},
+		"entity with dangling duplicate aliases same mount and name": {
+			setupEntity: func(t *testing.T) *identity.Entity {
+				entityID, err := uuid.GenerateUUID()
+				require.NoError(t, err)
+				now := time.Now()
+				return &identity.Entity{
+					ID:   entityID,
+					Name: "test-entity",
+					Aliases: []*identity.Alias{
+						{
+							ID:             "alias-1",
+							CanonicalID:    "wrong-entity-id-1",
+							Name:           "test-alias",
+							MountAccessor:  "mount-1",
+							LastUpdateTime: timestamppb.New(now.Add(-2 * time.Hour)),
+						},
+						{
+							ID:             "alias-2",
+							CanonicalID:    "wrong-entity-id-2",
+							Name:           "test-alias",
+							MountAccessor:  "mount-1",
+							LastUpdateTime: timestamppb.New(now.Add(-1 * time.Hour)),
+						},
+					},
+				}
+			},
+			expectCheckError: true,
+			expectNilAlias:   false,
+			expectDangling:   2,
+			expectDuplicate:  0,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			entity := test.setupEntity(t)
+
+			// Run checkEntityIntegrity
+			check, err := checkEntityIntegrity(entity)
+
+			if test.expectCheckError {
+				require.Error(t, err, "expected checkEntityIntegrity to return an error")
+				require.NotNil(t, check, "expected check to be non-nil even with error")
+			} else {
+				require.NoError(t, err, "expected checkEntityIntegrity to succeed")
+				require.NotNil(t, check, "expected check to be non-nil")
+			}
+
+			// Verify the check results
+			require.Equal(t, entity, check.entity, "check should reference the correct entity")
+			require.Equal(t, test.expectNilAlias, check.hasNilAliases, "hasNilAliases mismatch")
+			require.Len(t, check.danglingAliases, test.expectDangling, "danglingAliases count mismatch")
+			require.Len(t, check.duplicateAliases, test.expectDuplicate, "duplicateAliases count mismatch")
+
+			// If there are issues, test repair
+			if test.expectCheckError {
+				logger := hclog.NewNullLogger()
+
+				// Track which aliases were dangling before repair with their original names
+				danglingAliasInfo := make(map[string]struct {
+					canonicalID string
+					name        string
+				})
+				for _, alias := range check.danglingAliases {
+					danglingAliasInfo[alias.ID] = struct {
+						canonicalID string
+						name        string
+					}{
+						canonicalID: alias.CanonicalID,
+						name:        alias.Name,
+					}
+				}
+
+				err := check.repair(logger)
+				require.NoError(t, err, "repair should succeed")
+
+				// Verify repair fixed the issues
+				postRepairCheck, err := checkEntityIntegrity(entity)
+				require.NoError(t, err, "entity should be valid after repair")
+				require.NotNil(t, postRepairCheck)
+				require.False(t, postRepairCheck.hasNilAliases, "nil aliases should be removed")
+				require.Empty(t, postRepairCheck.danglingAliases, "dangling aliases should be resolved")
+				require.Empty(t, postRepairCheck.duplicateAliases, "duplicate aliases should be removed")
+
+				// Verify all remaining aliases are properly associated
+				for _, alias := range entity.Aliases {
+					require.NotNil(t, alias, "no nil aliases should remain")
+					require.Equal(t, entity.ID, alias.CanonicalID, "all aliases should have correct CanonicalID")
+
+					// If this alias was dangling, verify it was properly resolved
+					if info, wasDangling := danglingAliasInfo[alias.ID]; wasDangling {
+						// All dangling aliases should have dangling_canonical_id in metadata
+						require.NotNil(t, alias.Metadata, "dangling alias should have metadata")
+						require.Equal(t, info.canonicalID, alias.Metadata["dangling_canonical_id"],
+							"metadata should contain old canonical ID",
+						)
+
+						// If the alias name was changed (indicating it was renamed due to conflict)
+						if alias.Name != info.name {
+							require.Equal(t, info.name, alias.Metadata["dangling_prior_name"],
+								"metadata should contain prior name for renamed alias",
+							)
+						}
+					}
+				}
+			}
+		})
 	}
 }

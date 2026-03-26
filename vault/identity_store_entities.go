@@ -4,12 +4,16 @@
 package vault
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -19,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func entityPathFields() map[string]*framework.FieldSchema {
@@ -1174,6 +1179,347 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	}
 
 	return nil, nil, nil
+}
+
+// entityIntegrityCheck is the result of running checkEntityIntegrity() on an
+// entity.
+type entityIntegrityCheck struct {
+	// The entity that check refers to
+	entity *identity.Entity
+	// The entity has nil aliases
+	hasNilAliases bool
+	// The entity has dangling aliases
+	danglingAliases []*identity.Alias
+	// The entity has duplicate aliases by ID. This is _not_ the same as same-case
+	// duplicates.
+	duplicateAliases map[string][]*identity.Alias
+}
+
+// checkEntityIntegrity inspects the internal state of the entity and any
+// associated aliases. It returns an entityIntegrityCheck which includes details
+// about any issues that may have been discovered. An error is return if any
+// integrity errors are discovered.
+//
+// NOTE: We currently only check the integrity of the aliases associated with
+// the entity itself.
+func checkEntityIntegrity(entity *identity.Entity) (*entityIntegrityCheck, error) {
+	if entity == nil {
+		return nil, errors.New("no entity provided")
+	}
+
+	results := &entityIntegrityCheck{
+		entity:          entity,
+		hasNilAliases:   false,
+		danglingAliases: []*identity.Alias{},
+	}
+
+	hasDuplicateAliases := false
+	hasDanglingAliases := false
+	seenAliases := map[string][]*identity.Alias{}
+
+	for alias := range slices.Values(entity.Aliases) {
+		if alias == nil {
+			results.hasNilAliases = true
+			continue
+		}
+
+		if alias.CanonicalID != entity.ID {
+			hasDanglingAliases = true
+			results.danglingAliases = append(results.danglingAliases, alias)
+		}
+
+		if seenAliases[alias.ID] != nil {
+			hasDuplicateAliases = true
+			seenAliases[alias.ID] = append(seenAliases[alias.ID], alias)
+		} else {
+			seenAliases[alias.ID] = []*identity.Alias{alias}
+		}
+	}
+
+	if hasDuplicateAliases {
+		// Delete any seen aliases that don't have duplicates instances
+		maps.DeleteFunc(seenAliases, func(k string, v []*identity.Alias) bool {
+			return len(v) < 2
+		})
+		results.duplicateAliases = seenAliases
+	}
+
+	if results.hasNilAliases || hasDanglingAliases || hasDuplicateAliases {
+		return results, errors.New("failed entity integrity check")
+	}
+
+	return results, nil
+}
+
+// repairEntityIntegrity attempts to repair any errors encountered when the
+// entityIntegrityCheck was created. The entityIntegrityCheck must have a
+// reference to an entity.
+func (i *entityIntegrityCheck) repair(log hclog.Logger) error {
+	if i == nil {
+		return errors.New("entity integrity check is uninitialized")
+	}
+
+	if i.entity == nil {
+		return errors.New("no entity provided")
+	}
+
+	// Remove any nil aliases
+	if i.hasNilAliases {
+		i.entity.Aliases = slices.DeleteFunc(i.entity.Aliases, func(alias *identity.Alias) bool {
+			return alias == nil
+		})
+	}
+
+	// Delete duplicate instances of the same alias. We do this to ensure that
+	// only the most recently updated instances of the alias win.
+	for duplicateInstances := range maps.Values(i.duplicateAliases) {
+		if err := i.deleteDuplicateAliasInstances(log, duplicateInstances); err != nil {
+			return fmt.Errorf("deleting duplicate identity alias instances: %w", err)
+		}
+	}
+
+	// Now associate any dangling aliases that we might have. As associating and
+	// and resolving duplicate updates our modified time we always do this after
+	// deleting duplicates instances as that may use the unaltered modified time
+	// in determining which instance wins.
+	//
+	// Our list of danglingAliases is not guaranteed to reflect the current state
+	// of our entity, as we may have duplicate alias instances which are also
+	// dangling. We only need to resolve those which are still in our updated
+	// entity list.
+	for dangling := range slices.Values(i.danglingAliases) {
+		if !slices.Contains(i.entity.Aliases, dangling) {
+			continue
+		}
+		if err := i.resolveAndAssociateDanglingEntityAlias(log, dangling); err != nil {
+			return fmt.Errorf("resolving and associating dangling identity alias: %w", err)
+		}
+	}
+
+	slices.SortFunc(i.entity.Aliases, func(a, b *identity.Alias) int {
+		return cmp.Compare(a.GetID(), b.GetID())
+	})
+
+	return nil
+}
+
+// deleteDuplicateAliasInstances deletes duplicate alias instances where the
+// more than one instance of an alias (Same ID) has somehow been persisted into
+// storage. The most-recently updated alias will win. Given a tie the first
+// found wins.
+func (i *entityIntegrityCheck) deleteDuplicateAliasInstances(log hclog.Logger, aliases []*identity.Alias) error {
+	switch {
+	case i == nil:
+		return errors.New("entity integrity check unitialized")
+	case aliases == nil:
+		return errors.New("no reference to aliases was given")
+	case len(aliases) < 2:
+		return errors.New("no duplicates were detected")
+	case i.entity == nil:
+		return errors.New("entity integrity check is not associated with an entity")
+	}
+
+	// Do a sanity check that all aliases have the same ID before we go and delete
+	// things.
+	id := aliases[0].ID
+	for a := range slices.Values(aliases) {
+		if a == nil {
+			continue
+		}
+
+		if a.ID != id {
+			return errors.New("deleting duplicate alias instances: instance list contains different IDs")
+		}
+	}
+
+	// Determine the instance of the alias that we want to keep. Given how
+	// UpsertAlias() works, this ought to be the first instance we run into, which
+	// we default to here. The only exception is if somehow a newer instance was
+	// appended below. It ought not be possible but we'll enforce most-recent wins
+	// anyway.
+	var aliasToKeep *identity.Alias
+	for _, alias := range aliases {
+		if alias == nil {
+			continue
+		}
+
+		if aliasToKeep == nil {
+			aliasToKeep = alias
+			continue
+		}
+
+		if t := alias.GetLastUpdateTime().AsTime(); t.After(aliasToKeep.GetLastUpdateTime().AsTime()) {
+			aliasToKeep = alias
+		}
+	}
+
+	if aliasToKeep == nil {
+		return errors.New("no identity aliases to keep in deduplication")
+	}
+	log.Trace("deleting all but one duplicate identity alias instance",
+		"num_to_delete", len(aliases)-1,
+		"alias_to_keep", aliasToKeep,
+	)
+
+	i.entity.Aliases = slices.DeleteFunc(i.entity.Aliases, func(a *identity.Alias) bool {
+		if a == nil {
+			return true
+		}
+		if aliasToKeep.ID == a.ID && a != aliasToKeep {
+			return true
+		}
+
+		return false
+	})
+
+	return nil
+}
+
+// resolveAndAssociateDanglingEntityAlias determines how best to resolve a
+// dangling entity alias. Depending on the context of the entities aliases there
+// are several different approaches to resolution and association. The entity
+// alias will be updated in-place when there are no errors in resolution.
+// The implementation must be deterministic so that integrity resolution is the
+// same on all nodes.
+func (i *entityIntegrityCheck) resolveAndAssociateDanglingEntityAlias(log hclog.Logger, alias *identity.Alias) error {
+	switch {
+	case i == nil:
+		return errors.New("entity integrity check uninitialized")
+	case alias == nil:
+		return errors.New("no reference to an identity alias was given")
+	case i.entity == nil:
+		return errors.New("entity integrity check is not associated with an entity")
+	}
+
+	if alias.CanonicalID == i.entity.ID {
+		// The alias is not actually dangling.
+		return nil
+	}
+
+	if i.entity.ID == "" {
+		// Our entity doesn't actually have an ID to associate it with.
+		return errors.New("entity does not have an ID")
+	}
+
+	now := timestamppb.Now()
+
+	// Update our entity ID with the correct entity ID while also including our
+	// prior ID in the aliases merged from field.
+	resolveAliasID := func() {
+		log.Warn("associating dangling identity alias with entity",
+			"alias_id", alias.ID,
+			"dangling_canonical_id", alias.CanonicalID,
+			"new_canonical_id", i.entity.ID,
+		)
+
+		if cid := alias.CanonicalID; cid != "" {
+			alias.MergedFromCanonicalIDs = append(alias.MergedFromCanonicalIDs, cid)
+			if alias.Metadata == nil {
+				alias.Metadata = make(map[string]string)
+			}
+			alias.Metadata["dangling_canonical_id"] = cid
+		}
+		alias.CanonicalID = i.entity.ID
+		alias.LastUpdateTime = now
+	}
+
+	// Update our alias name with our old name and create a new name by appending
+	// the name and entity UUID together. This will allow users to choose whether
+	// or not to delete the rename or merge the dangling alias.
+	renameAlias := func() {
+		oldName := alias.Name
+		alias.Name = alias.Name + "-" + alias.ID
+		if alias.Metadata == nil {
+			alias.Metadata = make(map[string]string)
+		}
+		alias.Metadata["dangling_prior_name"] = oldName
+		alias.LastUpdateTime = now
+
+		log.Warn("renamed dangling duplicate identity alias",
+			"alias_id", alias.ID,
+			"name", alias.Name,
+			"old_name", oldName,
+		)
+	}
+
+	if len(i.entity.Aliases) == 1 {
+		// The alias is dangling but there are no other aliases with the same alias
+		// name and mount accessor.
+		resolveAliasID()
+
+		return nil
+	}
+
+	duplicateAliases := make([]*identity.Alias, 0)
+	for _, ea := range i.entity.Aliases {
+		if ea == nil {
+			continue
+		}
+		if alias.Name+alias.MountAccessor == ea.Name+ea.MountAccessor {
+			duplicateAliases = append(duplicateAliases, ea)
+		}
+	}
+
+	if len(duplicateAliases) < 1 {
+		// The alias is dangling but there are no other aliases with the same alias
+		// name and mount accessor. We only need to resolve the alias ID.
+		resolveAliasID()
+
+		return nil
+	}
+
+	// We have duplicate dangling aliases.
+	log.Warn("DUPLICATE DETECTED, dangling duplicate identity alias detected, see following logs for details and refer to " +
+		identityDuplicateReportUrl + " for resolution.")
+
+	// Our dangling alias is a duplicate. Determine whether or not all of the
+	// duplicates are dangling or not as that will determine whether or not
+	// we need to rename the alias to avoid a clash.
+	allDangling := true
+	for _, da := range duplicateAliases {
+		if i.entity.ID == da.CanonicalID {
+			allDangling = false
+			break
+		}
+	}
+	if !allDangling {
+		// The alias is dangling, a duplicate, and there is a duplicate that is not
+		// dangling. We'll rename our dangling duplicate and allow any other aliases
+		// that are not dangling inherit the name.
+		renameAlias()
+		resolveAliasID()
+
+		return nil
+	}
+
+	// We have duplicate aliases and all of them are dangling. If we're the most
+	// recently updated alias in that set then we'll keep our name, otherwise
+	// we'll rename to allow the most recently updated to keep the name.
+	var mostRecentlyUpdatedAlias *identity.Alias
+	for _, de := range duplicateAliases {
+		if de == nil {
+			continue
+		}
+		if mostRecentlyUpdatedAlias == nil {
+			mostRecentlyUpdatedAlias = de
+			continue
+		}
+
+		if t := de.GetLastUpdateTime().AsTime(); t.After(mostRecentlyUpdatedAlias.GetLastUpdateTime().AsTime()) {
+			mostRecentlyUpdatedAlias = de
+		}
+	}
+
+	if alias.GetLastUpdateTime().AsTime().Before(mostRecentlyUpdatedAlias.GetLastUpdateTime().AsTime()) {
+		// The alias is dangling, a duplicate, and is not most recently updated
+		// dangling duplicate. We'll rename our dangling duplicate and allow the
+		// the most recently updated duplicate to inherit the name.
+		renameAlias()
+	}
+
+	resolveAliasID()
+
+	return nil
 }
 
 var entityHelp = map[string][2]string{
