@@ -279,7 +279,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 			}
 
 			if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
-				hashedPassword, err := scram.Hash(password)
+				hashedPassword, err := scram.Hash(password, scram.DefaultIterations)
 				if err != nil {
 					return fmt.Errorf("unable to scram-sha256 password: %w", err)
 				}
@@ -305,7 +305,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 			}
 
 			if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
-				hashedPassword, err := scram.Hash(password)
+				hashedPassword, err := scram.Hash(password, scram.DefaultIterations)
 				if err != nil {
 					return fmt.Errorf("unable to scram-sha256 password: %w", err)
 				}
@@ -426,7 +426,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	}
 
 	if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
-		hashedPassword, err := scram.Hash(req.Password)
+		hashedPassword, err := scram.Hash(req.Password, scram.DefaultIterations)
 		if err != nil {
 			return dbplugin.NewUserResponse{}, fmt.Errorf("unable to scram-sha256 password: %w", err)
 		}
