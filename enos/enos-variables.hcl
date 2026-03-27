@@ -157,6 +157,18 @@ variable "vault_license_path" {
   default     = null
 }
 
+variable "vault_ibm_license_path" {
+  description = "The path to a valid IBM PAO license. This is only required when testing a license update during the upgrade scenario"
+  type        = string
+  default     = null
+}
+
+variable "vault_ibm_license_edition" {
+  description = "The edition to select when using an IBM PAO license. This should match the edition of a valid Vault entitlement in the license located at var.vault_ibm_license_path."
+  type        = string
+  default     = null
+}
+
 variable "vault_local_build_tags" {
   description = "The build tags to pass to the Go compiler for builder:local variants"
   type        = list(string)

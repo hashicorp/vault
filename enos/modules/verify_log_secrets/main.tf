@@ -55,6 +55,12 @@ variable "vault_unit_name" {
   default     = "vault"
 }
 
+variable "vault_ibm_license_customer_id" {
+  type        = string
+  description = "The customer ID associated with the IBM license, if one is being used. This gets flagged by Radar in the logs, so we need to explicitly ignore it. The customer ID can be decoded from your license using the vault CLI: VAULT_LICENSE_PATH=<path>pao.lic vault license inspect"
+  default     = ""
+}
+
 resource "enos_bundle_install" "radar" {
   destination = var.radar_install_dir
 
@@ -78,12 +84,13 @@ resource "enos_remote_exec" "scan_logs_for_secrets" {
   ]
 
   environment = {
-    AUDIT_LOG_FILE_PATH     = var.audit_log_file_path
-    VAULT_ADDR              = var.vault_addr
-    VAULT_RADAR_INSTALL_DIR = var.radar_install_dir
-    VAULT_RADAR_LICENSE     = file(var.radar_license_path)
-    VAULT_TOKEN             = var.vault_root_token
-    VAULT_UNIT_NAME         = var.vault_unit_name
+    AUDIT_LOG_FILE_PATH           = var.audit_log_file_path
+    VAULT_ADDR                    = var.vault_addr
+    VAULT_RADAR_INSTALL_DIR       = var.radar_install_dir
+    VAULT_RADAR_LICENSE           = file(var.radar_license_path)
+    VAULT_TOKEN                   = var.vault_root_token
+    VAULT_UNIT_NAME               = var.vault_unit_name
+    VAULT_IBM_LICENSE_CUSTOMER_ID = var.vault_ibm_license_customer_id
   }
 
   scripts = [abspath("${path.module}/scripts/scan_logs_for_secrets.sh")]
