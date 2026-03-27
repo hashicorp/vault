@@ -87,7 +87,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
-      - uses: hashicorp/action-setup-enos@3a9f736b68564c957cefbfcfb3d16b68e581a5b2 # v1.51
+      - uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Prepare scenario dependencies
