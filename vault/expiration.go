@@ -1094,7 +1094,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	// Delete the secondary index, but only if it's a leased secret (not auth)
 	if le.Secret != nil {
 		var indexToken string
-		// Maintain secondary index by token, except for orphan batch tokens and ent tokens
+		// Maintain secondary index by token, except for orphan batch tokens and enterprise tokens
 		switch le.ClientTokenType {
 		case logical.TokenTypeBatch:
 			te, err := m.tokenStore.lookupBatchTokenInternal(ctx, le.ClientToken)
