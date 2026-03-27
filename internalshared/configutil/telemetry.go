@@ -420,6 +420,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	}
 
 	// Initialize the global sink
+	fanout = append(fanout, inm)
 	if len(fanout) > 1 {
 		// Hostname enabled will create poor quality metrics name for prometheus
 		if !opts.Config.DisableHostname {
@@ -428,7 +429,6 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	} else {
 		metricsConf.EnableHostname = false
 	}
-	fanout = append(fanout, inm)
 	globalMetrics, err := metrics.NewGlobal(metricsConf, fanout)
 	if err != nil {
 		return nil, nil, false, err
