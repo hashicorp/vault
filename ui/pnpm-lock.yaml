@@ -56,7 +56,7 @@ importers:
         version: 3.0.0
       '@hashicorp/vault-client-typescript':
         specifier: github:hashicorp/vault-client-typescript
-        version: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/5f320eb200ed107202eb3932f66cc9efb693204e
+        version: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/89117e7ceca84680eca76d6f99041140fa45ca1a
       ember-auto-import:
         specifier: 2.10.0
         version: 2.10.0(@glint/template@1.7.3)(webpack@5.105.4)
@@ -1610,8 +1610,8 @@ packages:
   '@hashicorp/flight-icons@3.14.0':
     resolution: {integrity: sha512-nyLDApaZsAHpAf2sRNwYX1MnJQU9UI3euiwE6wHPl2l/+Yt8wba1oXkmWL/Ptc4QgJxxnRUUhf66jGcB/AIOyQ==}
 
-  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/5f320eb200ed107202eb3932f66cc9efb693204e':
-    resolution: {tarball: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/5f320eb200ed107202eb3932f66cc9efb693204e}
+  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/89117e7ceca84680eca76d6f99041140fa45ca1a':
+    resolution: {tarball: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/89117e7ceca84680eca76d6f99041140fa45ca1a}
     version: 0.0.0
 
   '@humanwhocodes/config-array@0.13.0':
@@ -11155,7 +11155,7 @@ snapshots:
 
   '@hashicorp/flight-icons@3.14.0': {}
 
-  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/5f320eb200ed107202eb3932f66cc9efb693204e': {}
+  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/89117e7ceca84680eca76d6f99041140fa45ca1a': {}
 
   '@humanwhocodes/config-array@0.13.0':
     dependencies:
