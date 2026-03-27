@@ -1,0 +1,25 @@
+{
+	"name": "Vault UI Development",
+	"image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+	"forwardPorts": [4200, 8200],
+	"portsAttributes": {
+		"4200": {
+			"label": "Vault UI (Ember)",
+			"onAutoForward": "openBrowser"
+		},
+		"8200": {
+			"label": "Vault API",
+			"onAutoForward": "silent"
+		}
+	},
+	"postCreateCommand": ".devcontainer/setup.sh",
+	"postStartCommand": ".devcontainer/start.sh",
+	"customizations": {
+		"vscode": {
+			"extensions": ["emberjs.vscode-ember", "lifeart.vscode-glimmer-syntax"],
+			"settings": {
+				"terminal.integrated.cwd": "${workspaceFolder}/ui"
+			}
+		}
+	}
+}
