@@ -1,6 +1,6 @@
 # Multi-stage builder to avoid polluting users environment with wrong
 # architecture binaries. This file only currently works for linux/amd64.
-FROM debian:buster AS builder
+FROM debian:trixie AS builder
 
 ARG VERSION
 ARG CGO_ENABLED=0
@@ -20,16 +20,16 @@ RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          libltdl7
 
 RUN curl -sL https://deb.nodesource.com/setup_20.x | bash -
-RUN curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
-RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
 
-RUN apt-get update -y && apt-get install -y -q nodejs yarn
+RUN apt-get update -y \
+    && apt-get install -y -q nodejs \
+    && corepack enable
 
 RUN rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /goroot && mkdir /go
-RUN curl https://storage.googleapis.com/golang/go${VERSION}.linux-amd64.tar.gz \
-           | tar xvzf - -C /goroot --strip-components=1
+RUN curl https://dl.google.com/go/go${VERSION}.linux-amd64.tar.gz \
+    | tar xvzf - -C /goroot --strip-components=1
 ENV GOPATH /go
 ENV GOROOT /goroot
 ENV PATH $GOROOT/bin:$GOPATH/bin:$PATH
