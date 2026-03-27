@@ -16,7 +16,7 @@ import type SecretsEngineForm from 'vault/forms/secrets/engine';
 import type ApiService from 'vault/services/api';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type VersionService from 'vault/services/version';
-import { isAddonEngine } from 'vault/utils/all-engines-metadata';
+import { isAddonEngine, VERSIONED_ENGINE_TYPES } from 'vault/utils/all-engines-metadata';
 import {
   supportedSecretBackends,
   SupportedSecretBackendsEnum,
@@ -281,7 +281,8 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
   async saveKvConfig(path: string, formData: SecretsEngineForm['data']) {
     const { options, kv_config = {} } = formData;
     const { max_versions, cas_required, delete_version_after } = kv_config;
-    const isKvV2 = options?.version === 2 && ['kv', 'generic'].includes(this.args.model.form.normalizedType);
+    const isKvV2 =
+      options?.version === 2 && VERSIONED_ENGINE_TYPES.includes(this.args.model.form.normalizedType);
     const hasConfig = max_versions || cas_required || delete_version_after;
 
     if (isKvV2 && hasConfig) {
@@ -340,6 +341,13 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
     // Only submit form if validations pass
     const { isValid, state, invalidFormMessage, data } = mountModel.toJSON();
 
+    // hold options to tune external kv version after mounting
+    let options;
+    if (type === 'vault-plugin-secrets-kv') {
+      options = data.options;
+      delete data.options;
+    }
+
     if (!isValid) {
       this.formValidations = state;
       this.invalidFormAlert = invalidFormMessage;
@@ -359,8 +367,15 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
 
       this.flashMessages.success(`Successfully mounted the ${mountModel.type} secrets engine at ${path}.`);
 
+      // external versions of KV doesn't allow version to be set when mounting, so we need to tune to the selected version after
+      if (type === 'vault-plugin-secrets-kv') {
+        yield this.api.sys.mountsTuneConfigurationParameters(path, {
+          options,
+        });
+      }
+
       // Determine if we should use engine routes
-      const version = data.options?.version;
+      const version = options ? options.version : data.options?.version;
       const useEngineRoute = isAddonEngine(mountModel.normalizedType, Number(version));
 
       this.onMountSuccess(type, path, useEngineRoute);
