@@ -231,7 +231,7 @@
     "@hashicorp/design-system-tokens": "3.0.0",
     "@hashicorp/vault-client-typescript": "github:hashicorp/vault-client-typescript",
     "ember-auto-import": "2.10.0",
-    "handlebars": "4.7.8",
+    "handlebars": "4.7.9",
     "posthog-js": "1.236.1",
     "uuid": "9.0.1"
   },
