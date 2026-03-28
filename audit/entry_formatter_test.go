@@ -1328,6 +1328,10 @@ func TestEntryFormatter_Process_JSON(t *testing.T) {
 			t.Fatalf("no prefix: %s \n log: %s\nprefix: %s", name, expectedResultStr, tc.Prefix)
 		}
 
+		if !strings.Contains(string(jsonBytes), "{\"time\":") {
+			t.Fatalf("time not as first struct field: %s \n log: %q", name, string(jsonBytes))
+		}
+
 		expectedJSON := new(entry)
 
 		if err := jsonutil.DecodeJSON([]byte(tc.ExpectedStr), &expectedJSON); err != nil {
