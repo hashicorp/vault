@@ -563,7 +563,7 @@ func (b *backend) upgradeRole(ctx context.Context, s logical.Storage, roleEntry 
 		roleEntry.Version = currentRoleStorageVersion
 
 	default:
-		return false, fmt.Errorf("unrecognized role version: %q", roleEntry.Version)
+		return false, fmt.Errorf("unrecognized role version: %d", roleEntry.Version)
 	}
 
 	// Add tokenutil upgrades. These don't need to be persisted, they're fine

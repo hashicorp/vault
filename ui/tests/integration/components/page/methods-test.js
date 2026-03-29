@@ -56,6 +56,9 @@ module('Integration | Component | page/methods', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    // clear local storage to reset dismissed wizard state
+    localStorage.clear();
+
     this.breadcrumbs = [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
       { label: 'Auth Methods' },
@@ -73,11 +76,6 @@ module('Integration | Component | page/methods', function (hooks) {
         />
       `);
     };
-  });
-
-  hooks.afterEach(async function () {
-    // Ensure clean state
-    localStorage.clear();
   });
 
   test('it shows wizard intro page initially when only default method exists', async function (assert) {

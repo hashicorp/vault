@@ -3,12 +3,16 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Vault {{@version.versionDisplay}}">
+<Page::Header
+  @title="Vault {{@version.versionDisplay}}"
+  @description="Review the status of your Vault cluster, including: currently enabled secrets engines and authentication methods, and system configurations."
+>
   <:badges>
     {{#if @version.isEnterprise}}
       <Hds::Badge @text={{this.namespace.currentNamespace}} @icon="org" data-test-badge-namespace />
     {{/if}}
   </:badges>
+
 </Page::Header>
 
 <hr class="has-top-margin-xxs has-bottom-margin-l has-background-gray-200" />

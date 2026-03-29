@@ -1,0 +1,73 @@
+# Template Functions Test
+# Generated at {{ .GeneratedAt.Format "2006-01-02 15:04:05" }}
+
+## Current Version Context
+- Current Version: {{ .Version }}
+
+## Version Utilities
+
+### ParseVersion
+{{- $v1 := "1.16.0" }}
+{{- $v2 := "1.17.0" }}
+- ParseVersion {{ $v1 }}: {{ ParseVersion $v1 }}
+- ParseVersion {{ $v2 }}: {{ ParseVersion $v2 }}
+
+### CompareVersions
+- CompareVersions {{ $v1 }} vs {{ $v2 }}: {{ CompareVersions $v1 $v2 }}
+  (Returns: -1 if v1 < v2, 0 if equal, 1 if v1 > v2)
+
+## Version Listing Functions
+
+### VersionsNMinus
+{{- if .Version }}
+Get last 3 versions before current version ({{ .Version }}):
+{{- $nminus := VersionsNMinus "vault" "enterprise" .Version 3 "minor" }}
+{{- range $nminus }}
+  - {{ . }}
+{{- end }}
+{{- else }}
+Example: VersionsNMinus "vault" "enterprise" "1.18.0" 3
+{{- $nminus := VersionsNMinus "vault" "enterprise" "1.18.0" 3 "minor" }}
+{{- range $nminus }}
+  - {{ . }}
+{{- end }}
+{{- end }}
+
+### VersionsBounded
+Get versions between 1.17.0 and 1.18.0:
+{{- $bounded := VersionsBounded "vault" "enterprise" "1.18.0" "1.17.0" "minor" }}
+{{- range $bounded }}
+  - {{ . }}
+{{- end }}
+
+### FilterVersions
+{{- $allVersions := VersionsNMinus "vault" "enterprise" "1.18.0" 5 "minor" }}
+All versions (last 5):
+{{- range $allVersions }}
+  - {{ . }}
+{{- end }}
+
+Filtered to ~1.17.0:
+{{- $filtered := FilterVersions $allVersions "~1.17.0" }}
+{{- range $filtered }}
+  - {{ . }}
+{{- end }}
+
+### Skip Versions
+Get versions skipping 1.17.5:
+{{- $skipped := VersionsNMinus "vault" "enterprise" "1.18.0" 3 "minor" "1.17.5" }}
+{{- range $skipped }}
+  - {{ . }}
+{{- end }}
+
+### Version Comparison in Template Logic
+{{- $currentVer := "1.18.0" }}
+{{- $compareVer := "1.17.0" }}
+{{- $cmp := CompareVersions $currentVer $compareVer }}
+{{- if eq $cmp 1 }}
+{{ $currentVer }} is newer than {{ $compareVer }}
+{{- else if eq $cmp -1 }}
+{{ $currentVer }} is older than {{ $compareVer }}
+{{- else }}
+{{ $currentVer }} equals {{ $compareVer }}
+{{- end }}

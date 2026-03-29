@@ -50,8 +50,8 @@
     <MaskedInput @value={{@config.ca_pem}} @displayOnly={{true}} @allowCopy={{true}} />
   </InfoTableRow>
 {{else}}
-  <EmptyState
-    @title="No configuration for this secrets engine"
-    @message="We'll need to configure a few things before getting started."
-  />
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No configuration for this secrets engine" @titleTag="h2" data-test-empty-state-title />
+    <A.Body @text="We'll need to configure a few things before getting started." data-test-empty-state-message />
+  </Hds::ApplicationState>
 {{/if}}

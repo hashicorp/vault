@@ -8,7 +8,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import localStorage from 'vault/lib/local-storage';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 module('Acceptance | policies', function (hooks) {
   setupApplicationTest(hooks);
@@ -41,7 +41,7 @@ module('Acceptance | policies', function (hooks) {
 
   test('it navigates to and from policy show page from sidebar', async function (assert) {
     await visit('/vault/dashboard');
-    localStorage.setItem('dismissed-wizards', ['acl-policy']);
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.aclPolicy);
     await click(GENERAL.navLink('Access control'));
     assert.strictEqual(currentURL(), '/vault/policies/acl', 'currentURL is /vault/policies/acl');
     await waitFor('[data-test-component="navigate-input"]');

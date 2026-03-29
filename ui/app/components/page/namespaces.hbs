@@ -14,6 +14,13 @@
       <:badges>
         <Hds::Badge @icon="org" @text={{this.namespacePath}} data-test-badge="namespace-path" />
       </:badges>
+      <:description>
+        Create logically separated, multi-tenant environments so teams can manage secrets, policies, and authentication
+        methods independently.
+        <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/namespaces"}}>
+          Learn more
+        </Hds::Link::Inline>
+      </:description>
       <:actions>
         {{#if this.showIntroButton}}
           <Hds::Button
@@ -48,7 +55,7 @@
   {{#if this.showContent}}
     {{! Show namespace list }}
     {{#if this.hasNamespaces}}
-      <Toolbar>
+      <Toolbar class="top-margin-16 has-bottom-margin-s">
         <ToolbarFilters>
           <FilterInputExplicit
             @query={{@model.pageFilter}}
@@ -74,61 +81,46 @@
         </ToolbarActions>
       </Toolbar>
 
-      <ListView
-        @items={{@model.namespaces}}
-        @itemNoun="namespace"
-        @paginationRouteName="vault.cluster.access.namespaces"
-        @onPageChange={{this.handlePageChange}}
-        as |list|
-      >
-        {{#if @model.namespaces.length}}
-          <ListItem as |Item|>
-            <Item.content>
-              {{list.item.id}}
-            </Item.content>
-            <Item.menu>
-              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-                <dd.ToggleIcon
-                  @icon="more-horizontal"
-                  @text="More options"
-                  @hasChevron={{false}}
-                  data-test-popup-menu-trigger
-                />
-                {{#let (concat this.namespace.path (if this.namespace.path "/") list.item.id) as |targetNamespace|}}
-                  {{#if (includes targetNamespace this.namespace.accessibleNamespaces)}}
-                    <dd.Interactive
-                      {{on "click" (fn this.switchNamespace targetNamespace)}}
-                      data-test-popup-menu="switch"
-                    >Switch to namespace</dd.Interactive>
-                  {{/if}}
-                {{/let}}
-                <dd.Interactive
-                  @color="critical"
-                  {{on "click" (fn (mut this.nsToDelete) list.item)}}
-                  data-test-popup-menu="delete"
-                >Delete</dd.Interactive>
-              </Hds::Dropdown>
-              {{#if (eq this.nsToDelete list.item)}}
-                <ConfirmModal
-                  @color="critical"
-                  @onClose={{fn (mut this.nsToDelete) null}}
-                  @onConfirm={{fn this.deleteNamespace list.item}}
-                  @confirmTitle="Delete this namespace?"
-                  @confirmMessage="Any engines or mounts in this namespace will also be removed."
-                />
-              {{/if}}
-            </Item.menu>
-          </ListItem>
-        {{else}}
-          <list.empty>
-            <Hds::Link::Standalone
-              @icon="learn-link"
-              @text="Secure multi-tenancy with namespaces tutorial"
-              @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
-            />
-          </list.empty>
-        {{/if}}
-      </ListView>
+      {{#if @model.namespaces.length}}
+        <ListTable @columns={{this.tableColumns}} @data={{this.namespaceIds}}>
+          <:popupMenu as |rowData|>
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="More options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              {{#let (concat this.namespace.path (if this.namespace.path "/") rowData.id) as |targetNamespace|}}
+                {{#if (includes targetNamespace this.namespace.accessibleNamespaces)}}
+                  <dd.Interactive
+                    {{on "click" (fn this.switchNamespace targetNamespace)}}
+                    data-test-popup-menu="switch"
+                  >Switch to namespace</dd.Interactive>
+                {{/if}}
+              {{/let}}
+              <dd.Interactive
+                @color="critical"
+                {{on "click" (fn (mut this.nsToDelete) rowData.id)}}
+                data-test-popup-menu="delete"
+              >Delete</dd.Interactive>
+            </Hds::Dropdown>
+            {{#if (eq this.nsToDelete rowData.id)}}
+              <ConfirmModal
+                @color="critical"
+                @onClose={{fn (mut this.nsToDelete) null}}
+                @onConfirm={{fn this.deleteNamespace rowData.id}}
+                @confirmTitle="Delete this namespace?"
+                @confirmMessage="Any engines or mounts in this namespace will also be removed."
+              />
+            {{/if}}
+          </:popupMenu>
+        </ListTable>
+      {{else}}
+        <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+          <A.Header @title="No Namespaces found" @titleTag="h2" data-test-empty-state-title />
+        </Hds::ApplicationState>
+      {{/if}}
     {{else}}
       {{! Show empty state }}
       {{#if this.showSetupAlert}}
@@ -139,13 +131,7 @@
       {{/if}}
 
       <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
-        <A.Header
-          @title="No namespaces yet"
-          @titleTag="h2"
-          @icon="skip"
-          class="align-items-end"
-          data-test-empty-state-title
-        />
+        <A.Header @title="No namespaces yet" @titleTag="h2" @icon="skip" data-test-empty-state-title />
         <A.Body @text="Your namespaces will be listed here. Add a namespace to get started." />
         <A.Footer as |F|>
           <F.Button

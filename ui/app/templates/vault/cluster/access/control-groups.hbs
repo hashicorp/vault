@@ -4,7 +4,10 @@
 }}
 
 {{#if (has-feature "Control Groups")}}
-  <Page::Header @title="Approval workflow">
+  <Page::Header
+    @title="Approval workflow"
+    @description="Implement manual or automated checkpoints to require authorization before sensitive operations or accessing secrets."
+  >
     <:breadcrumbs>
       <Page::Breadcrumbs
         @breadcrumbs={{array
@@ -13,6 +16,7 @@
         }}
       />
     </:breadcrumbs>
+
   </Page::Header>
   {{#if this.model.canConfigure}}
     <Toolbar>

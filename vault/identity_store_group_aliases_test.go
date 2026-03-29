@@ -11,6 +11,7 @@ import (
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/kr/pretty"
 )
@@ -91,17 +92,14 @@ func TestIdentityStore_CaseInsensitiveGroupAliasName(t *testing.T) {
 }
 
 func TestIdentityStore_EnsureNoDanglingGroupAlias(t *testing.T) {
-	err := AddTestCredentialBackend("userpass", credUserpass.Factory)
-	if err != nil {
-		t.Fatal(err)
+	conf := &CoreConfig{
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		CredentialBackends: map[string]logical.Factory{
+			"ldap":     credLdap.Factory,
+			"userpass": credUserpass.Factory,
+		},
 	}
-
-	err = AddTestCredentialBackend("ldap", credLdap.Factory)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
 
 	ctx := namespace.RootContext(nil)
 
@@ -111,7 +109,7 @@ func TestIdentityStore_EnsureNoDanglingGroupAlias(t *testing.T) {
 		Type:        "userpass",
 		Description: "userpass",
 	}
-	err = c.enableCredential(ctx, userpassMe)
+	err := c.enableCredential(ctx, userpassMe)
 	if err != nil {
 		t.Fatal(err)
 	}

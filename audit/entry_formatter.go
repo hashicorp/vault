@@ -5,6 +5,7 @@ package audit
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -253,6 +254,46 @@ func clone[V any](s V) (V, error) {
 	return s2.(V), err
 }
 
+// mergeEnterpriseTokenMetadata injects enterprise token fields from a logical.Request
+// into the audit auth's Metadata map.
+func mergeEnterpriseTokenMetadata(a *auth, req *logical.Request) error {
+	if a == nil || req == nil {
+		return nil
+	}
+
+	if req.EnterpriseTokenMetadata == "" &&
+		req.EnterpriseTokenIssuer == "" &&
+		len(req.EnterpriseTokenAudience) == 0 &&
+		len(req.EnterpriseTokenAuthorizationDetails) == 0 {
+		return nil
+	}
+
+	if a.Metadata == nil {
+		a.Metadata = make(map[string]string)
+	}
+	if req.EnterpriseTokenMetadata != "" {
+		a.Metadata["enterprise_token_metadata"] = req.EnterpriseTokenMetadata
+	}
+	if req.EnterpriseTokenIssuer != "" {
+		a.Metadata["enterprise_token_issuer"] = req.EnterpriseTokenIssuer
+	}
+	if len(req.EnterpriseTokenAudience) > 0 {
+		audJSON, err := json.Marshal(req.EnterpriseTokenAudience)
+		if err != nil {
+			return fmt.Errorf("unable to marshal enterprise token audience for audit: %w", err)
+		}
+		a.Metadata["enterprise_token_audience"] = string(audJSON)
+	}
+	if len(req.EnterpriseTokenAuthorizationDetails) > 0 {
+		authzJSON, err := json.Marshal(req.EnterpriseTokenAuthorizationDetails)
+		if err != nil {
+			return fmt.Errorf("unable to marshal enterprise token authorization details for audit: %w", err)
+		}
+		a.Metadata["enterprise_token_authorization_details"] = string(authzJSON)
+	}
+	return nil
+}
+
 // newAuth takes a logical.Auth and the number of remaining client token uses
 // (which should be supplied from the logical.Request's client token), and creates
 // an audit auth.
@@ -279,6 +320,18 @@ func newAuth(input *logical.Auth, tokenRemainingUses int) (*auth, error) {
 	metadata, err := clone(input.Metadata)
 	if err != nil {
 		return nil, fmt.Errorf("unable to clone logical auth: metadata: %w", err)
+	}
+
+	if input.ActorEntityID != "" || input.ActorEntityName != "" {
+		if metadata == nil {
+			metadata = make(map[string]string)
+		}
+		if input.ActorEntityID != "" {
+			metadata["actor_entity_id"] = input.ActorEntityID
+		}
+		if input.ActorEntityName != "" {
+			metadata["actor_entity_name"] = input.ActorEntityName
+		}
 	}
 
 	policies, err := clone(input.Policies)
@@ -535,6 +588,10 @@ func (f *entryFormatter) createEntry(ctx context.Context, a *Event) (*entry, err
 		return nil, fmt.Errorf("cannot convert auth: %w", err)
 	}
 
+	if err := mergeEnterpriseTokenMetadata(auth, data.Request); err != nil {
+		return nil, err
+	}
+
 	req, err := newRequest(data.Request, ns)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert request: %w", err)
@@ -546,6 +603,12 @@ func (f *entryFormatter) createEntry(ctx context.Context, a *Event) (*entry, err
 		resp, err = newResponse(data.Response, data.Request, shouldElide)
 		if err != nil {
 			return nil, fmt.Errorf("cannot convert response: %w", err)
+		}
+
+		if resp != nil && resp.Auth != nil {
+			if err := mergeEnterpriseTokenMetadata(resp.Auth, data.Request); err != nil {
+				return nil, err
+			}
 		}
 
 		// If the plugin's response contained any additional audit request fields,

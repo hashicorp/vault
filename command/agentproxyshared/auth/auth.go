@@ -50,10 +50,21 @@ type AuthConfig struct {
 
 // AuthHandler is responsible for keeping a token alive and renewed and passing
 // new tokens to the sink server
+//
+// Each subsystem that needs a Vault token gets its own dedicated channel so that
+// a slow or idle consumer cannot starve another. The enable flags gate delivery:
+// a channel is only written to when the corresponding subsystem is configured,
+// preventing unnecessary blocking sends to unused channels.
 type AuthHandler struct {
-	OutputCh                     chan string
-	TemplateTokenCh              chan string
-	ExecTokenCh                  chan string
+	// OutputCh delivers every new token to sink writers (e.g. file sinks).
+	OutputCh chan string
+	// TemplateTokenCh delivers tokens to the consul-template rendering server.
+	TemplateTokenCh chan string
+	// ExecTokenCh delivers tokens to the exec/env-template server.
+	ExecTokenCh chan string
+	// PKIExternalCATokenCh delivers tokens to the PKI external CA server.
+	// Kept separate from TemplateTokenCh so that only one consumer receives each token.
+	PKIExternalCATokenCh         chan string
 	AuthInProgress               *atomic.Bool
 	InvalidToken                 chan error
 	token                        string
@@ -66,9 +77,12 @@ type AuthHandler struct {
 	maxBackoff                   time.Duration
 	minBackoff                   time.Duration
 	enableReauthOnNewCredentials bool
-	enableTemplateTokenCh        bool
-	enableExecTokenCh            bool
-	exitOnError                  bool
+	// enable* flags mirror whether the corresponding subsystem is configured.
+	// Only true channels receive token sends, preventing stalls on un-configured subsystems.
+	enableTemplateTokenCh      bool
+	enableExecTokenCh          bool
+	enablePKIExternalCATokenCh bool
+	exitOnError                bool
 }
 
 type AuthHandlerConfig struct {
@@ -87,6 +101,7 @@ type AuthHandlerConfig struct {
 	EnableReauthOnNewCredentials bool
 	EnableTemplateTokenCh        bool
 	EnableExecTokenCh            bool
+	EnablePKIExternalCATokenCh   bool
 	ExitOnError                  bool
 }
 
@@ -97,6 +112,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		OutputCh:                     make(chan string, 1),
 		TemplateTokenCh:              make(chan string, 1),
 		ExecTokenCh:                  make(chan string, 1),
+		PKIExternalCATokenCh:         make(chan string, 1),
 		InvalidToken:                 make(chan error, 1),
 		AuthInProgress:               &atomic.Bool{},
 		token:                        conf.Token,
@@ -109,6 +125,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
 		enableExecTokenCh:            conf.EnableExecTokenCh,
+		enablePKIExternalCATokenCh:   conf.EnablePKIExternalCATokenCh,
 		exitOnError:                  conf.ExitOnError,
 		userAgent:                    conf.UserAgent,
 		metricsSignifier:             conf.MetricsSignifier,
@@ -168,9 +185,13 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 	defer func() {
 		am.Shutdown()
+		// Closing the token channels signals downstream consumers (template server,
+		// exec server, PKI server) that no further tokens will arrive and they should
+		// stop waiting.
 		close(ah.OutputCh)
 		close(ah.TemplateTokenCh)
 		close(ah.ExecTokenCh)
+		close(ah.PKIExternalCATokenCh)
 		ah.logger.Info("auth handler stopped")
 		// Set unauthenticated when shutting down
 		metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
@@ -422,6 +443,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if ah.enableExecTokenCh {
 				ah.ExecTokenCh <- string(wrappedResp)
 			}
+			if ah.enablePKIExternalCATokenCh {
+				ah.PKIExternalCATokenCh <- string(wrappedResp)
+			}
 
 			am.CredSuccess()
 			backoffCfg.backoff.Reset()
@@ -485,6 +509,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				if ah.enableExecTokenCh {
 					ah.ExecTokenCh <- token
 				}
+				if ah.enablePKIExternalCATokenCh {
+					ah.PKIExternalCATokenCh <- token
+				}
 
 				tokenType := secret.Data["type"].(string)
 				if tokenType == "batch" {
@@ -522,6 +549,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				}
 				if ah.enableExecTokenCh {
 					ah.ExecTokenCh <- secret.Auth.ClientToken
+				}
+				if ah.enablePKIExternalCATokenCh {
+					ah.PKIExternalCATokenCh <- secret.Auth.ClientToken
 				}
 			}
 

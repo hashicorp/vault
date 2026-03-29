@@ -53,6 +53,11 @@
     .tree {
       border: 1px solid var(--token-color-border-primary);
       border-radius: var(--token-border-radius-medium);
+
+      // prevents last character of node labels from being cut off
+      svg {
+        overflow: visible;
+      }
     }
   }
 }

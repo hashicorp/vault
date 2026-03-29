@@ -36,7 +36,7 @@ type ACL struct {
 
 	segmentWildcardPaths map[string]interface{}
 
-	// root is enabled if the "root" named policy is present.
+	// root is enabled if the "root" named policy is present
 	root bool
 
 	// Stores policies that are actually RGPs for later fetching

@@ -38,11 +38,10 @@
         </:body>
       </Hds::Table>
     {{else}}
-      <EmptyState
-        @title="No accounts checked out yet"
-        @message="There is no account that is currently in use."
-        class="is-shadowless"
-      />
+      <Hds::ApplicationState class="top-padding-32 bottom-padding-32 is-marginless" as |A|>
+        <A.Header @title="No accounts checked out yet" @titleTag="h2" data-test-empty-state-title />
+        <A.Body @text="There is no account that is currently in use." data-test-empty-state-message />
+      </Hds::ApplicationState>
     {{/if}}
   </:content>
 </OverviewCard>

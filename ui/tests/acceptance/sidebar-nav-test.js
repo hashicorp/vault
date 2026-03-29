@@ -11,7 +11,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import modifyPassthroughResponse from 'vault/mirage/helpers/modify-passthrough-response';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import localStorage from 'vault/lib/local-storage';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 const link = (label) => `[data-test-sidebar-nav-link="${label}"]`;
 const panel = (label) => `[data-test-sidebar-nav-panel="${label}"]`;
@@ -34,7 +34,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
     });
     await login();
     // dismiss wizard
-    localStorage.setItem('dismissed-wizards', ['auth-methods']);
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.authMethods);
   });
 
   test('it should navigate back to the dashboard when logo is clicked in app header', async function (assert) {

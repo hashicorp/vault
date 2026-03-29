@@ -83,6 +83,7 @@ type VaultNodeConfig struct {
 	EnableResponseHeaderRaftNodeID bool          `json:"enable_response_header_raft_node_id"`
 	LicensePath                    string        `json:"license_path"`
 	FeatureFlags                   []string      `json:"feature_flags,omitempty"`
+	EnableUnauthenticatedAccess    []string      `json:"enable_unauthenticated_access,omitempty"`
 }
 
 type ClusterNode struct {

@@ -36,6 +36,11 @@ export default Component.extend(FocusOnInsertMixin, {
   get breadcrumbs() {
     const baseCrumbs = [
       {
+        label: 'Vault',
+        icon: 'vault',
+        route: 'vault.cluster.dashboard',
+      },
+      {
         label: 'Secrets',
         route: 'vault.cluster.secrets',
       },

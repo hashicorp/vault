@@ -7,6 +7,7 @@ import { test as base } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 import { USER_POLICY_MAP } from './policies';
+import { DISMISSED_WIZARD_KEY, WIZARD_ID_MAP } from '../app/utils/constants/wizard';
 
 export type UserSetupOptions = {
   userType: string;
@@ -21,6 +22,13 @@ export const setup = base.extend<UserSetupOptions>({
 setup('initialize vault and setup user for testing', async ({ page, userType }) => {
   // on fresh app load navigating to the root will land us on the initialize page
   await page.goto('./');
+  // manually update dismissed wizards so that they don't have to be skipped in tests before persisting storage state;
+  await page.evaluate(
+    ({ key, ids }) => {
+      localStorage.setItem(key, JSON.stringify(ids));
+    },
+    { key: DISMISSED_WIZARD_KEY, ids: Object.values(WIZARD_ID_MAP) }
+  );
   // initialize vault
   await page.getByRole('spinbutton', { name: 'Key shares' }).fill('1');
   await page.getByRole('spinbutton', { name: 'Key threshold' }).fill('1');
@@ -68,7 +76,7 @@ setup('initialize vault and setup user for testing', async ({ page, userType }) 
   await page.getByRole('button', { name: 'Sign in' }).click();
   // wait for the dashboard to load to ensure login was successful
   await page.waitForURL('**/dashboard');
-  // save the authenticated state to file
-  // subsequent tests can then reuse this session data
+  // save the localStorage state to file which includes the auth token and dismissed wizards
+  // subsequent tests can then reuse the session data
   await page.context().storageState({ path: path.join(__dirname, `/tmp/${userType}-session.json`) });
 });

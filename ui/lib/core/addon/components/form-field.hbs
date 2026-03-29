@@ -116,11 +116,26 @@
                 Select one
               </option>
             {{/if}}
-            {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
-              <option selected={{loose-equal (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
-                {{or val.displayName val}}
-              </option>
-            {{/each}}
+            {{#if (has-option-groups (path-or-array @attr.options.possibleValues @model))}}
+              {{#each (path-or-array @attr.options.possibleValues @model) as |groupData|}}
+                <optgroup label={{groupData.group}}>
+                  {{#each groupData.options as |val|}}
+                    <option
+                      selected={{loose-equal (get @model this.valuePath) (or val.value val)}}
+                      value={{or val.value val}}
+                    >
+                      {{or val.displayName val.value val}}
+                    </option>
+                  {{/each}}
+                </optgroup>
+              {{/each}}
+            {{else}}
+              {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
+                <option selected={{loose-equal (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
+                  {{or val.displayName val.value val}}
+                </option>
+              {{/each}}
+            {{/if}}
           </F.Options>
           {{#if this.validationError}}
             <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>

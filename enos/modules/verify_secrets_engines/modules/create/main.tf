@@ -94,6 +94,11 @@ variable "vault_root_token" {
   default     = null
 }
 
+variable "vault_audit_log_path" {
+  type        = string
+  description = "The file path for the audit device (passed from vault_cluster module)"
+}
+
 variable "vault_edition" {
   description = "The Vault binary edition (e.g., 'ce', 'ent', 'ent.fips1403', etc.)"
   type        = string

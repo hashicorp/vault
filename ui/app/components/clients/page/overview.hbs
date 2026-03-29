@@ -27,10 +27,10 @@
         @showPaginationSizeSelector={{true}}
       >
         <:emptyState>
-          <Hds::ApplicationState @align="center" as |A|>
-            <A.Header @title="No data found" @titleTag="h2" />
-            <A.Body @text="Clear or change filters to view client count data." />
-            <A.Footer as |F|>
+          <Hds::ApplicationState class="is-marginless" as |A|>
+            <A.Header @title="No data found" @titleTag="h2" data-test-empty-state-title />
+            <A.Body @text="Clear or change filters to view client count data." data-test-empty-state-message />
+            <A.Footer data-test-empty-state-actions as |F|>
               <F.LinkStandalone
                 @icon="file-text"
                 @text="Client count documentation"

@@ -260,11 +260,12 @@ export default class GeneralSettingsComponent extends Component<Args> {
        * TODO: Fast follow-up PR to update this to use proper client API methods once the
        * client version is bumped.
        */
-      await this.api.request.post(`/sys/mounts/${this.args?.model?.secretsEngine?.id}/tune`, tunePayload);
+      await this.api.sys.mountsTuneConfigurationParameters(this.args?.model?.secretsEngine?.id, tunePayload);
 
       // If plugin version changed, reload the mount to ensure the new version is active
       if (hasPluginVersionChanged) {
         await this.reloadMount();
+        await this.reloadPlugin();
       }
 
       this.flashMessages.success('Engine settings successfully updated.', { title: 'Configuration saved' });
@@ -294,6 +295,38 @@ export default class GeneralSettingsComponent extends Component<Args> {
       // The TUNE was successful, but the reload failed
       this.errorMessage =
         'Plugin version was updated successfully, but the mount could not be automatically reloaded. You may need to restart Vault or manually reload the plugin.';
+    }
+  }
+
+  // Handles reloading the plugin version after tuning and updating the model data with most recent plugin data
+  // without this the model data will be out of date and prevent the user from tuning back to the original plugin version
+  private async reloadPlugin(): Promise<void> {
+    try {
+      const mountPath = this.args.model.secretsEngine.id;
+      await this.api.sys.pluginsReloadBackends({ mounts: [mountPath] });
+
+      // Refresh version data after reload
+      const { secretsEngine } = this.args.model;
+      const pluginName = secretsEngine.type;
+
+      const [pinnedVersion, mountInfo] = await Promise.all([
+        this.api.sys.pluginsCatalogPinsReadPinnedVersion(pluginName, 'secret').catch(() => {
+          // Silently handle errors - pins are optional
+          return null;
+        }),
+        this.api.sys.internalUiReadMountInformation(mountPath),
+      ]);
+
+      this.handleVersionReload({
+        pinnedVersion: pinnedVersion?.version || null,
+        pluginVersion: mountInfo?.plugin_version || null,
+        runningVersion: mountInfo?.running_plugin_version || null,
+      });
+    } catch (error) {
+      const message = await this.api.parseError(error);
+      this.flashMessages.danger(`Failed to reload plugin: ${message.message}`, {
+        title: 'Reload Failed',
+      });
     }
   }
 

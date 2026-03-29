@@ -53,7 +53,7 @@ module('Acceptance | settings/auth/enable', function (hooks) {
     // check tune form (right after enabling)
     assert.dom(GENERAL.toggleInput('Default Lease TTL')).isNotChecked('default lease ttl is unset');
     assert.dom(GENERAL.toggleInput('Max Lease TTL')).isNotChecked('max lease ttl is unset');
-    await click(GENERAL.breadcrumbAtIdx(1));
+    await click(GENERAL.breadcrumbAtIdx(2));
     assert
       .dom(GENERAL.infoRowValue('Default Lease TTL'))
       .hasText('1 month 1 day', 'shows system default TTL');
@@ -76,7 +76,7 @@ module('Acceptance | settings/auth/enable', function (hooks) {
     const type = 'oidc';
     await visit('/vault/settings/auth/enable');
     await mountBackend(type, path);
-    await click(GENERAL.breadcrumbAtIdx(1));
+    await click(GENERAL.breadcrumbAtIdx(2));
     assert
       .dom(GENERAL.infoRowValue('UI login link'))
       .hasText(`${window.origin}/ui/vault/auth?with=${path}%2F`);

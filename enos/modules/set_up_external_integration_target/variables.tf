@@ -16,12 +16,10 @@ variable "ip_version" {
   default     = "4"
 }
 
-variable "ports" {
-  description = "Port configuration for services"
-  type = map(object({
-    port        = string
-    description = string
-  }))
+variable "ldap_domain" {
+  type        = string
+  description = "The name of the domain"
+  default     = "enos.com"
 }
 
 variable "ldap_version" {
@@ -34,4 +32,12 @@ variable "packages" {
   type        = list(string)
   description = "A list of packages to install via the target host package manager"
   default     = []
+}
+
+variable "ports" {
+  description = "Port configuration for services"
+  type = map(object({
+    port        = string
+    description = string
+  }))
 }

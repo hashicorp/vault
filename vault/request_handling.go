@@ -242,7 +242,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	var secondEntity *identity.Entity
 	if IsEnterpriseToken(req.ClientToken) {
-		isValidEnterpriseToken, tokenMetadataContainer, entity, entity2, err := c.validateEnterpriseTokenAndFetchEntity(ctx, req.ClientToken)
+		isValidEnterpriseToken, tokenMetadataContainer, entity, actorEntity, err := c.validateEnterpriseTokenAndFetchEntity(ctx, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to validate enterprise token", "error", err)
 		}
@@ -250,9 +250,15 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
 		req.EnterpriseTokenMetadata = getEnterpriseTokenMetadata(tokenMetadataContainer)
-		secondEntity = entity2
-		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity)
+		req.EnterpriseTokenIssuer = getEnterpriseTokenIssuer(tokenMetadataContainer)
+		req.EnterpriseTokenAudience = getEnterpriseTokenAudience(tokenMetadataContainer)
+		req.EnterpriseTokenAuthorizationDetails = getEnterpriseTokenAuthorizationDetails(tokenMetadataContainer)
+		secondEntity = actorEntity
+		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity, actorEntity)
 		if err != nil {
+			if c.perfStandby && errors.Is(err, logical.ErrReadOnly) {
+				return nil, nil, nil, nil, logical.ErrPerfStandbyPleaseForward
+			}
 			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing enterprise token"))
 		}
 	}
@@ -280,6 +286,14 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	// Ensure the token is valid
 	if te == nil {
 		return nil, nil, nil, nil, multierror.Append(logical.ErrPermissionDenied, logical.ErrInvalidToken)
+	}
+
+	if secondEntity != nil {
+		if req.Auth == nil {
+			req.Auth = &logical.Auth{}
+		}
+		req.Auth.ActorEntityID = secondEntity.ID
+		req.Auth.ActorEntityName = secondEntity.Name
 	}
 
 	// CIDR checks bind all tokens except non-expiring root tokens
@@ -336,10 +350,16 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	if secondEntity != nil {
 		c.logger.Debug("building separate ACL for second entity", "entity_id", secondEntity.ID)
 		secondEntityPolicyNames = make(map[string][]string)
-		_, secondEntityIdentityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, secondEntity.ID, false)
+		secondEntityIdentityPolicies, err := c.fetchCeilingPolicies(ctx, secondEntity)
 		if err != nil {
-			c.logger.Error("failed to fetch second entity policies", "error", err)
+			return nil, nil, nil, nil, err
+		}
+		allowOnly, err := c.allPoliciesAllowOnly(ctx, secondEntityIdentityPolicies)
+		if err != nil {
 			return nil, nil, nil, nil, ErrInternalError
+		}
+		if !allowOnly {
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
 		// Store second entity policies separately - do NOT merge with primary entity's policies
 		for nsID, nsPolicies := range secondEntityIdentityPolicies {
@@ -387,7 +407,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, ErrInternalError
 	}
 
-	if secondEntity != nil && len(secondEntityPolicyNames) > 0 {
+	if secondEntity != nil {
 		newAcl, err := c.performSecondaryEntityTokenChecks(tokenCtx, acl, secondEntity, secondEntityPolicyNames)
 		if err != nil {
 			return nil, nil, nil, nil, err
@@ -396,6 +416,40 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	}
 
 	return acl, te, entity, identityPolicies, nil
+}
+
+// restoreForwardingTokenHeaders restores client token headers so forwarded
+// requests preserve the original auth source on the active node.
+func restoreForwardingTokenHeaders(req *logical.Request) {
+	if req == nil || req.ClientToken == "" {
+		return
+	}
+	if req.Headers == nil {
+		req.Headers = make(map[string][]string)
+	}
+	switch req.ClientTokenSource {
+	case logical.ClientTokenFromVaultHeader:
+		req.Headers[consts.AuthHeaderName] = []string{req.ClientToken}
+	case logical.ClientTokenFromAuthzHeader:
+		req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", req.ClientToken))
+	}
+}
+
+// requiresMaterializedTokenState reports whether the request path needs a
+// storage-backed token entry for enterprise token authentication flows.
+//
+// Token renew/revoke paths are intentionally excluded because token store
+// handlers reject enterprise tokens for those operations.
+func requiresMaterializedTokenState(path string) bool {
+	if path == "sys/leases/count" || path == "sys/leases" ||
+		path == "sys/leases/lookup" || strings.HasPrefix(path, "sys/leases/lookup/") {
+		return true
+	}
+	switch path {
+	case "auth/token/lookup-self", "auth/token/lookup":
+		return true
+	}
+	return strings.HasPrefix(path, "cubbyhole/")
 }
 
 // CheckTokenWithLock calls CheckToken after grabbing the internal stateLock,
@@ -518,7 +572,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	switch {
 	case req.ClientTokenSource == logical.ClientTokenFromVaultHeader:
 		delete(req.Headers, consts.AuthHeaderName)
-	case req.ClientTokenSource == logical.ClientTokenFromAuthzHeader && !unauth && te == nil:
+	case req.ClientTokenSource == logical.ClientTokenFromAuthzHeader && (!unauth || te != nil):
 		if headers, ok := req.Headers["Authorization"]; ok {
 			retHeaders := make([]string, 0, len(headers))
 			for _, v := range headers {
@@ -571,6 +625,13 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		clientID, isTWE = te.CreateClientID()
 		req.ClientID = clientID
 	}
+
+	if req.Auth != nil {
+		auth.ActorEntityID = req.Auth.ActorEntityID
+		auth.ActorEntityName = req.Auth.ActorEntityName
+	}
+	// Copy authorization details from the request to auth so plugins can access them.
+	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
 
 	twoStepRecover := req.Operation == logical.RecoverOperation && req.RecoverSourcePath != "" && req.RecoverSourcePath != req.Path
 	var alternateRecoverCapability *logical.Operation
@@ -1172,46 +1233,73 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
 	}
 
+	// Some request paths require a token store entry (for example token lookup
+	// endpoints and cubbyhole paths). Materialize token state on-demand for
+	// these requests.
+	if ctErr == nil && te != nil && te.Type == logical.TokenTypeEnt && !te.IsStorageBacked() &&
+		requiresMaterializedTokenState(req.Path) {
+		materializedReq, matErr := c.materializeEnterpriseTokenForUsage(ctx, req, auth, c.perfStandby)
+		if matErr != nil {
+			if errors.Is(matErr, logical.ErrPerfStandbyPleaseForward) {
+				restoreForwardingTokenHeaders(req)
+				return nil, nil, matErr
+			}
+			c.logger.Error("failed to materialize enterprise token for token endpoint", "request_path", req.Path, "error", matErr)
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return nil, auth, retErr
+		}
+
+		// Preserve the returned request's token identity fields so downstream
+		// routing (notably cubbyhole) is keyed by the materialized token ID.
+		req.ClientToken = materializedReq.ClientToken
+		req.ClientTokenAccessor = materializedReq.ClientTokenAccessor
+		req.ClientTokenRemainingUses = materializedReq.ClientTokenRemainingUses
+		req.SetTokenEntry(materializedReq.TokenEntry())
+		te = req.TokenEntry()
+	}
+
 	// We run this logic first because we want to decrement the use count even
 	// in the case of an error (assuming we can successfully look up; if we
 	// need to forward, we exit before now)
 	if te != nil && !isControlGroupRun(req) {
-		// Attempt to use the token (decrement NumUses)
-		var err error
-		te, err = c.tokenStore.UseToken(ctx, te)
-		if err != nil {
-			c.logger.Error("failed to use token", "error", err)
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, nil, retErr
-		}
-		if te == nil {
-			// Token has been revoked by this point
-			retErr = multierror.Append(retErr, logical.ErrPermissionDenied, logical.ErrInvalidToken)
-			return nil, nil, retErr
-		}
-		if te.NumUses == tokenRevocationPending {
-			// We defer a revocation until after logic has run, since this is a
-			// valid request (this is the token's final use). We pass the ID in
-			// directly just to be safe in case something else modifies te later.
-			defer func(id string) {
-				nsActiveCtx := namespace.ContextWithNamespace(c.activeContext, ns)
-				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(nsActiveCtx, te)
-				if err == nil {
-					err = c.expiration.LazyRevoke(ctx, leaseID)
-				}
-				if err != nil {
-					c.logger.Error("failed to revoke token", "error", err)
-					retResp = nil
-					retAuth = nil
-					retErr = multierror.Append(retErr, ErrInternalError)
-				}
-				if retResp != nil && retResp.Secret != nil &&
-					// Some backends return a TTL even without a Lease ID
-					retResp.Secret.LeaseID != "" {
-					retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so leased credentials were immediately revoked.")
-					return
-				}
-			}(te.ID)
+		if te.IsStorageBacked() {
+			// Attempt to use the token (decrement NumUses)
+			var err error
+			te, err = c.tokenStore.UseToken(ctx, te)
+			if err != nil {
+				c.logger.Error("failed to use token", "request_path", req.Path, "error", err)
+				retErr = multierror.Append(retErr, ErrInternalError)
+				return nil, nil, retErr
+			}
+			if te == nil {
+				// Token has been revoked by this point
+				retErr = multierror.Append(retErr, logical.ErrPermissionDenied, logical.ErrInvalidToken)
+				return nil, nil, retErr
+			}
+			if te.NumUses == tokenRevocationPending {
+				// We defer a revocation until after logic has run, since this is a
+				// valid request (this is the token's final use). We pass the ID in
+				// directly just to be safe in case something else modifies te later.
+				defer func(id string) {
+					nsActiveCtx := namespace.ContextWithNamespace(c.activeContext, ns)
+					leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(nsActiveCtx, te)
+					if err == nil {
+						err = c.expiration.LazyRevoke(ctx, leaseID)
+					}
+					if err != nil {
+						c.logger.Error("failed to revoke token", "request_path", req.Path, "error", err)
+						retResp = nil
+						retAuth = nil
+						retErr = multierror.Append(retErr, ErrInternalError)
+					}
+					if retResp != nil && retResp.Secret != nil &&
+						// Some backends return a TTL even without a Lease ID
+						retResp.Secret.LeaseID != "" {
+						retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so leased credentials were immediately revoked.")
+						return
+					}
+				}(te.ID)
+			}
 		}
 	}
 
@@ -1445,6 +1533,20 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		if registerLease {
+			registerReq := req
+			if te := req.TokenEntry(); te != nil && !te.IsStorageBacked() {
+				registerReq, err = c.materializeEnterpriseTokenForUsage(ctx, req, auth, c.perfStandby)
+				if err != nil {
+					if errors.Is(err, logical.ErrPerfStandbyPleaseForward) {
+						restoreForwardingTokenHeaders(req)
+						return nil, nil, err
+					}
+					c.logger.Error("failed to materialize enterprise token for lease", "request_path", req.Path, "error", err)
+					retErr = multierror.Append(retErr, ErrInternalError)
+					return nil, auth, retErr
+				}
+			}
+
 			if req.IsSnapshotReadOrList() {
 				return logical.ErrorResponse("cannot register lease for snapshot read or list"), nil, ErrInternalError
 			}
@@ -1469,7 +1571,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				return nil, auth, retErr
 			}
 
-			leaseID, err := registerFunc(ctx, req, resp, "")
+			leaseID, err := registerFunc(ctx, registerReq, resp, "")
 			if err != nil {
 				c.logger.Error("failed to register lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
@@ -2680,7 +2782,11 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 				return err
 			}
 		}
+	case logical.TokenTypeEnt:
+		// Ensure it's not marked renewable since enterprise tokens are not renewable
+		auth.Renewable = false
 	}
+
 	return nil
 }
 
@@ -2958,4 +3064,70 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	// In this case, the server side consistent token cannot be used on this node. We return the appropriate
 	// status code.
 	return "", logical.ErrMissingRequiredState
+}
+
+// allPoliciesAllowOnly is a helper function that checks if all policies in
+// a given set have only "allow" capabilities, and not "deny" or "sudo".
+//
+// Example of allow-only policy:
+//
+//	path "secret/data/team/public/*" {
+//	  capabilities = ["read"]
+//	}
+//
+// Example of a policy that is not allow-only:
+//
+//	path "secret/data/team/*" {
+//	  capabilities = ["read"]
+//	}
+//
+//	path "secret/data/team/private/*" {
+//	  capabilities = ["deny"]
+//	}
+func (c *Core) allPoliciesAllowOnly(ctx context.Context, policyNamesByNamespace map[string][]string) (bool, error) {
+	for nsID, policyNames := range policyNamesByNamespace {
+		policyNS, err := NamespaceByID(ctx, nsID, c)
+		if err != nil {
+			return false, err
+		}
+		if policyNS == nil {
+			return false, namespace.ErrNoNamespace
+		}
+
+		policyCtx := namespace.ContextWithNamespace(ctx, policyNS)
+		for _, policyName := range policyNames {
+			policy, err := c.policyStore.GetPolicy(policyCtx, policyName, PolicyTypeACL)
+			if err != nil {
+				return false, err
+			}
+			if policy == nil {
+				return false, fmt.Errorf("policy %q not found in namespace %q", policyName, policyNS.Path)
+			}
+			if !policyIsAllowOnly(policy) {
+				return false, nil
+			}
+		}
+	}
+
+	return true, nil
+}
+
+// policyIsAllowOnly is a helper function that checks if a policy has only "allow" capabilities, and not "deny" or "sudo".
+func policyIsAllowOnly(policy *Policy) bool {
+	if policy == nil || policy.Name == "root" {
+		return false
+	}
+
+	for _, pathRules := range policy.Paths {
+		if pathRules == nil || pathRules.Permissions == nil {
+			continue
+		}
+
+		capabilities := pathRules.Permissions.CapabilitiesBitmap
+		if capabilities&DenyCapabilityInt != 0 || capabilities&SudoCapabilityInt != 0 {
+			return false
+		}
+	}
+
+	return true
 }

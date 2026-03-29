@@ -16,8 +16,16 @@ import type SecretsEngineForm from 'vault/forms/secrets/engine';
 import type ApiService from 'vault/services/api';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type VersionService from 'vault/services/version';
-import { isAddonEngine } from 'vault/utils/all-engines-metadata';
-import { getExternalPluginNameFromBuiltin } from 'vault/utils/external-plugin-helpers';
+import { isAddonEngine, VERSIONED_ENGINE_TYPES } from 'vault/utils/all-engines-metadata';
+import {
+  supportedSecretBackends,
+  SupportedSecretBackendsEnum,
+} from 'vault/helpers/supported-secret-backends';
+import engineDisplayData from 'vault/helpers/engines-display-data';
+import {
+  getEffectiveEngineType,
+  getExternalPluginNameFromBuiltin,
+} from 'vault/utils/external-plugin-helpers';
 import type { EngineVersionInfo } from 'vault/utils/plugin-catalog-helpers';
 import { sortVersions } from 'vault/utils/version-utils';
 import type { ValidationMap } from 'vault/vault/app-types';
@@ -41,8 +49,8 @@ interface Args {
     hasUnversionedPlugins?: boolean;
     pinnedVersion?: string | null;
   };
-  onMountSuccess?: (type: string, path: string, useEngineRoute: boolean) => void;
 }
+const SUPPORTED_BACKENDS = supportedSecretBackends();
 
 /**
  * @module Mount::SecretsEngineForm
@@ -56,7 +64,7 @@ interface Args {
  *
  * @example
  * ```hbs
- * <Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />
+ * <Mount::SecretsEngineForm @model={{this.model}} />
  * ```
  */
 export default class MountSecretsEngineFormComponent extends Component<Args> {
@@ -273,7 +281,8 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
   async saveKvConfig(path: string, formData: SecretsEngineForm['data']) {
     const { options, kv_config = {} } = formData;
     const { max_versions, cas_required, delete_version_after } = kv_config;
-    const isKvV2 = options?.version === 2 && ['kv', 'generic'].includes(this.args.model.form.normalizedType);
+    const isKvV2 =
+      options?.version === 2 && VERSIONED_ENGINE_TYPES.includes(this.args.model.form.normalizedType);
     const hasConfig = max_versions || cas_required || delete_version_after;
 
     if (isKvV2 && hasConfig) {
@@ -332,6 +341,13 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
     // Only submit form if validations pass
     const { isValid, state, invalidFormMessage, data } = mountModel.toJSON();
 
+    // hold options to tune external kv version after mounting
+    let options;
+    if (type === 'vault-plugin-secrets-kv') {
+      options = data.options;
+      delete data.options;
+    }
+
     if (!isValid) {
       this.formValidations = state;
       this.invalidFormAlert = invalidFormMessage;
@@ -351,21 +367,18 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
 
       this.flashMessages.success(`Successfully mounted the ${mountModel.type} secrets engine at ${path}.`);
 
+      // external versions of KV doesn't allow version to be set when mounting, so we need to tune to the selected version after
+      if (type === 'vault-plugin-secrets-kv') {
+        yield this.api.sys.mountsTuneConfigurationParameters(path, {
+          options,
+        });
+      }
+
       // Determine if we should use engine routes
-      const version = data.options?.version;
+      const version = options ? options.version : data.options?.version;
       const useEngineRoute = isAddonEngine(mountModel.normalizedType, Number(version));
 
-      // Call success callback or navigate
-      if (this.args.onMountSuccess) {
-        this.args.onMountSuccess(type, path, useEngineRoute);
-      } else {
-        // Default navigation
-        if (useEngineRoute) {
-          this.router.transitionTo('vault.cluster.secrets.backend.index', path);
-        } else {
-          this.router.transitionTo('vault.cluster.secrets.backend.list-root', path);
-        }
-      }
+      this.onMountSuccess(type, path, useEngineRoute);
     } catch (error) {
       const { status, response, message } = yield this.api.parseError(error);
       this.onMountError(status, response.errors, message);
@@ -448,5 +461,34 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
     if (this.args.model.availableVersions) {
       this.args.model.form.handlePluginVersionChange(this.args.model.availableVersions);
     }
+  }
+
+  @action
+  onMountSuccess(type: string, path: string, useEngineRoute = false) {
+    let transition;
+    const engineInfo = engineDisplayData(type);
+    const effectiveType = getEffectiveEngineType(type);
+
+    if (engineInfo && SUPPORTED_BACKENDS.includes(effectiveType as SupportedSecretBackendsEnum)) {
+      if (useEngineRoute && engineInfo.engineRoute) {
+        transition = this.router.transitionTo(
+          `vault.cluster.secrets.backend.${engineInfo.engineRoute}`,
+          path
+        );
+      } else {
+        // For keymgmt, we need to land on provider tab by default using query params
+        const queryParams = effectiveType === 'keymgmt' ? { tab: 'provider' } : {};
+        transition = this.router.transitionTo('vault.cluster.secrets.backend.index', path, { queryParams });
+      }
+    } else if (engineInfo) {
+      // transitions recognized but unsupported engines to general settings configuration page
+      transition = this.router.transitionTo(
+        'vault.cluster.secrets.backend.configuration.general-settings',
+        path
+      );
+    } else {
+      transition = this.router.transitionTo('vault.cluster.secrets.backends');
+    }
+    return transition?.followRedirects();
   }
 }

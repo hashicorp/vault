@@ -7,9 +7,15 @@
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
+  <:description>
+    Set a default and backup authentication methods to customize GUI login behavior.
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/custom-login"}}>
+      Learn more
+    </Hds::Link::Inline>
+  </:description>
 </Page::Header>
 
-<Toolbar />
+<Toolbar class="top-margin-16" />
 
 {{#if @loginRules}}
   {{#each @loginRules as |rule|}}
@@ -61,17 +67,21 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState
-    @title="No UI login settings yet"
-    @message="Login settings can be used to customize which methods display in the web UI login form by setting a default and back up login methods. Available to be created via the CLI or HTTP API."
-  >
-    <Hds::Link::Standalone
-      @icon="docs-link"
-      @iconPosition="trailing"
-      @text="UI login settings documentation"
-      @href={{doc-link "/vault/docs/ui/custom-login"}}
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No UI login settings yet" @titleTag="h2" data-test-empty-state-title />
+    <A.Body
+      @text="Login settings can be used to customize which methods display in the web UI login form by setting a default and back up login methods. Available to be created via the CLI or HTTP API."
+      data-test-empty-state-message
     />
-  </EmptyState>
+    <A.Footer data-test-empty-state-actions as |F|>
+      <F.LinkStandalone
+        @icon="docs-link"
+        @iconPosition="trailing"
+        @text="UI login settings documentation"
+        @href={{doc-link "/vault/docs/ui/custom-login"}}
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
 {{/if}}
 
 {{#if this.ruleToDelete}}

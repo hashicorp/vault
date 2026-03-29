@@ -134,6 +134,13 @@ var (
 			"config/group-policy-application$": {operations: []logical.Operation{logical.ReadOperation, logical.UpdateOperation}},
 		})...)
 
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string]enterprisePathStub{
+			"activation-flags/oauth-resource-server/activate":                    {operations: []logical.Operation{logical.UpdateOperation}},
+			"activation-flags/oauth-resource-server/deactivate":                  {operations: []logical.Operation{logical.UpdateOperation}},
+			"config/oauth-resource-server/":                                      {operations: []logical.Operation{logical.ListOperation}},
+			"config/oauth-resource-server/" + framework.GenericNameRegex("name"): {parameters: []string{"name"}, operations: []logical.Operation{logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation}},
+		})...)
+
 		// reporting paths
 		paths = append(paths, buildEnterpriseOnlyPaths(map[string]enterprisePathStub{
 			"reporting/scan$": {operations: []logical.Operation{logical.UpdateOperation}},
@@ -330,6 +337,21 @@ func (c *Core) consumeCertCounts(inc logical.CertCount) {
 			c.logger.Error("error storing duration adjusted certificate counts", "error", err)
 		} else {
 			unconsumed.PkiDurationAdjustedCerts = 0
+		}
+
+		c.logger.Info("storing SSH counts", "sshDurationAdjustedCount", inc.SSHIssuedCerts, "sshOTPCount", inc.SSHIssuedOTPs)
+		_, err = c.UpdateStoredSSHDurationAdjustedCertCount(c.activeContext, time.Now(), inc.SSHIssuedCerts)
+		if err != nil {
+			c.logger.Error("error storing SSH duration adjusted certificate count", "error", err)
+		} else {
+			unconsumed.SSHIssuedCerts = 0
+		}
+
+		_, err = c.UpdateStoredSSHOTPCount(c.activeContext, time.Now(), inc.SSHIssuedOTPs)
+		if err != nil {
+			c.logger.Error("error storing SSH OTP count", "error", err)
+		} else {
+			unconsumed.SSHIssuedOTPs = 0
 		}
 
 	default:

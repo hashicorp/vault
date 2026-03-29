@@ -6,6 +6,7 @@
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 import type WizardService from 'vault/services/wizard';
 
@@ -14,11 +15,10 @@ interface Args {
   onRefresh: CallableFunction;
 }
 
-export const WIZARD_ID = 'auth-methods';
 export default class WizardMethodsWizardComponent extends Component<Args> {
   @service declare readonly wizard: WizardService;
 
-  wizardId = WIZARD_ID;
+  wizardId = WIZARD_ID_MAP.authMethods;
 
   @action
   async onDismiss() {

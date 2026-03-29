@@ -18,6 +18,8 @@ module('Integration | Component | seal-action', function (hooks) {
   hooks.beforeEach(function () {
     this.sealSuccess = sinon.spy(() => new Promise((resolve) => resolve({})));
     this.sealError = sinon.stub().throws({ message: SEAL_WHEN_STANDBY_MSG });
+    this.flashMessages = this.owner.lookup('service:flash-messages');
+    this.flashSpy = sinon.spy(this.flashMessages, 'danger');
   });
 
   test('it handles success', async function (assert) {
@@ -25,11 +27,11 @@ module('Integration | Component | seal-action', function (hooks) {
     await render(hbs`<SealAction @onSeal={{action this.handleSeal}} />`);
 
     // attempt seal
-    await click('[data-test-seal]');
+    await click(GENERAL.button('Seal'));
     await click(GENERAL.confirmButton);
 
     assert.ok(this.sealSuccess.calledOnce, 'called onSeal action');
-    assert.dom('[data-test-seal-error]').doesNotExist('Does not show error when successful');
+    assert.false(this.flashSpy.calledWith(SEAL_WHEN_STANDBY_MSG), 'Does not show error when successful');
   });
 
   test('it handles error', async function (assert) {
@@ -37,10 +39,10 @@ module('Integration | Component | seal-action', function (hooks) {
     await render(hbs`<SealAction @onSeal={{action this.handleSeal}} />`);
 
     // attempt seal
-    await click('[data-test-seal]');
+    await click(GENERAL.button('Seal'));
     await click(GENERAL.confirmButton);
 
     assert.ok(this.sealError.calledOnce, 'called onSeal action');
-    assert.dom('[data-test-seal-error]').includesText(SEAL_WHEN_STANDBY_MSG, 'Shows error returned from API');
+    assert.true(this.flashSpy.calledWith(SEAL_WHEN_STANDBY_MSG), 'Shows error returned from API');
   });
 });

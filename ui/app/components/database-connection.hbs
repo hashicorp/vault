@@ -5,7 +5,12 @@
 
 <Page::Header @title={{this.title}}>
   <:breadcrumbs>
-    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
+    <KeyValueHeader
+      @path="vault.cluster.secrets.backend.show"
+      @mode={{this.mode}}
+      @root={{this.breadcrumbs}}
+      @showCurrent={{true}}
+    />
   </:breadcrumbs>
 </Page::Header>
 
@@ -143,7 +148,7 @@
             {{/each-in}}
           {{/each}}
         {{else}}
-          <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+          <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
             <A.Header data-test-empty-state-title @title="No plugin selected" @titleTag="h2" />
             <A.Body data-test-empty-state-message @text="Select a plugin type to be able to configure it." />
           </Hds::ApplicationState>
@@ -157,7 +162,7 @@
       <div class="form-section box is-shadowless is-fullwidth">
         <h3 class="title is-5">Statements</h3>
         {{#if (eq @model.statementFields null)}}
-          <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+          <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
             <A.Header data-test-empty-state-title @title="No plugin selected" @titleTag="h2" />
             <A.Body data-test-empty-state-message @text="Select a plugin type to be able to configure it." />
           </Hds::ApplicationState>
@@ -309,14 +314,8 @@
     </div>
   </form>
 {{else if (eq @model.isAvailablePlugin false)}}
-  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-    <A.Header
-      data-test-empty-state-title
-      @icon="skip"
-      class="align-items-end"
-      @title="Database type unavailable"
-      @titleTag="h2"
-    />
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header data-test-empty-state-title @icon="skip" @title="Database type unavailable" @titleTag="h2" />
     <A.Body
       data-test-empty-state-message
       @text="This database type cannot be viewed in the UI. You will have to use the API or CLI to perform actions here."

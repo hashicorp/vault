@@ -3,14 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header
-  @title="Secrets engines"
-  @subtitle="Secrets engines available in the {{this.namespace.currentNamespace}} namespace of the {{this.version.clusterName}} cluster."
-  @icon="key"
->
+<Page::Header @title="Secrets engines" @icon="key">
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
+  <:description>
+    View and manage your configured secrets engines in the current cluster, ranging from key value store (kv) to dynamic
+    database credentials and more.
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/secret-engines"}}>
+      Learn more
+    </Hds::Link::Inline>
+  </:description>
   <:actions>
     {{#if this.showIntroButton}}
       <Hds::Button
@@ -153,6 +156,8 @@
       </:popupMenu>
     </ListTable>
   {{else}}
-    <EmptyState @title="No Secrets engines found" />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="No Secrets engines found" @titleTag="h2" data-test-empty-state-title />
+    </Hds::ApplicationState>
   {{/if}}
 {{/if}}

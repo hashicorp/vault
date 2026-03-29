@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { click, fillIn, find, render } from '@ember/test-helpers';
 import sinon from 'sinon';
@@ -63,20 +63,20 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     this.renderComponent = ({ yieldBlock = false } = {}) => {
       if (yieldBlock) {
         return render(hbs`
-          <Auth::Form::Saml 
-            @authType={{this.authType}} 
+          <Auth::Form::Saml
+            @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}
             @handleAuthResponse={{this.handleAuthResponse}}
           >
             <:advancedSettings>
               <label for="path">Mount path</label>
-              <input data-test-input="path" id="path" name="path" type="text" /> 
+              <input data-test-input="path" id="path" name="path" type="text" />
             </:advancedSettings>
           </Auth::Form::Saml>`);
       }
       return render(hbs`
-      <Auth::Form::Saml       
+      <Auth::Form::Saml
         @authType={{this.authType}}
         @cluster={{this.cluster}}
         @onError={{this.onError}}

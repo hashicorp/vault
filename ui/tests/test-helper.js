@@ -14,6 +14,7 @@ import preloadAssets from 'ember-asset-loader/test-support/preload-assets';
 import { setupGlobalA11yHooks, setRunOptions } from 'ember-a11y-testing/test-support';
 import manifest from 'vault/config/asset-manifest';
 import setupSinon from 'ember-sinon-qunit';
+import { DISMISSED_WIZARD_KEY, WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 preloadAssets(manifest).then(() => {
   setup(QUnit.assert);
@@ -28,6 +29,11 @@ preloadAssets(manifest).then(() => {
     },
   });
   setupSinon();
+  // dismiss all wizards before each test to have a consistent state
+  // this can be overridden in individual tests when needed
+  QUnit.hooks.beforeEach(function () {
+    window.localStorage.setItem(DISMISSED_WIZARD_KEY, JSON.stringify(Object.values(WIZARD_ID_MAP)));
+  });
   start({
     setupTestIsolationValidation: true,
   });

@@ -17,6 +17,7 @@ import (
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	ctsignals "github.com/hashicorp/consul-template/signals"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
@@ -32,25 +33,45 @@ import (
 
 // Config is the configuration for Vault Agent.
 type Config struct {
+	// SharedConfig carries listener, telemetry, and other shared agent settings.
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
-	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
-	Cache                       *Cache                     `hcl:"cache"`
-	APIProxy                    *APIProxy                  `hcl:"api_proxy"`
-	Vault                       *Vault                     `hcl:"vault"`
-	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
-	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
-	DisableIdleConns            []string                   `hcl:"disable_idle_connections"`
-	DisableIdleConnsAPIProxy    bool                       `hcl:"-"`
-	DisableIdleConnsTemplating  bool                       `hcl:"-"`
-	DisableIdleConnsAutoAuth    bool                       `hcl:"-"`
-	DisableKeepAlives           []string                   `hcl:"disable_keep_alives"`
-	DisableKeepAlivesAPIProxy   bool                       `hcl:"-"`
-	DisableKeepAlivesTemplating bool                       `hcl:"-"`
-	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
-	Exec                        *ExecConfig                `hcl:"exec,optional"`
-	EnvTemplates                []*ctconfig.TemplateConfig `hcl:"env_template,optional"`
+	// AutoAuth configures the agent auth method and token sinks.
+	AutoAuth *AutoAuth `hcl:"auto_auth"`
+	// ExitAfterAuth exits the agent after the first successful authentication.
+	ExitAfterAuth bool `hcl:"exit_after_auth"`
+	// Cache configures the local caching mode for proxied Vault requests.
+	Cache *Cache `hcl:"cache"`
+	// APIProxy configures the agent's API proxy mode.
+	APIProxy *APIProxy `hcl:"api_proxy"`
+	// Vault configures how the agent connects to upstream Vault servers.
+	Vault *Vault `hcl:"vault"`
+	// TemplateConfig defines defaults shared by all template stanzas.
+	TemplateConfig *TemplateConfig `hcl:"template_config"`
+	// Templates lists file-rendering template stanzas.
+	Templates []*ctconfig.TemplateConfig `hcl:"templates"`
+	// PKIExternalCAs stores parsed pki_external_ca blocks available to templates.
+	PKIExternalCAs []*PKIExternalCA `hcl:"-"`
+	// DisableIdleConns holds the raw disable_idle_connections subsystem names from HCL.
+	DisableIdleConns []string `hcl:"disable_idle_connections"`
+	// DisableIdleConnsAPIProxy is true when idle HTTP connections are disabled for caching or proxying.
+	DisableIdleConnsAPIProxy bool `hcl:"-"`
+	// DisableIdleConnsTemplating is true when idle HTTP connections are disabled for templating.
+	DisableIdleConnsTemplating bool `hcl:"-"`
+	// DisableIdleConnsAutoAuth is true when idle HTTP connections are disabled for auto-auth.
+	DisableIdleConnsAutoAuth bool `hcl:"-"`
+	// DisableKeepAlives holds the raw disable_keep_alives subsystem names from HCL.
+	DisableKeepAlives []string `hcl:"disable_keep_alives"`
+	// DisableKeepAlivesAPIProxy is true when HTTP keep-alives are disabled for caching or proxying.
+	DisableKeepAlivesAPIProxy bool `hcl:"-"`
+	// DisableKeepAlivesTemplating is true when HTTP keep-alives are disabled for templating.
+	DisableKeepAlivesTemplating bool `hcl:"-"`
+	// DisableKeepAlivesAutoAuth is true when HTTP keep-alives are disabled for auto-auth.
+	DisableKeepAlivesAutoAuth bool `hcl:"-"`
+	// Exec defines the child process used with env_template mode.
+	Exec *ExecConfig `hcl:"exec,optional"`
+	// EnvTemplates lists env_template stanzas rendered into the exec environment.
+	EnvTemplates []*ctconfig.TemplateConfig `hcl:"env_template,optional"`
 }
 
 const (
@@ -297,6 +318,14 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.EnvTemplates = append(result.EnvTemplates, envTmpl)
 	}
 
+	for _, pkiExternalCA := range c.PKIExternalCAs {
+		result.PKIExternalCAs = append(result.PKIExternalCAs, pkiExternalCA)
+	}
+
+	for _, pkiExternalCA := range c2.PKIExternalCAs {
+		result.PKIExternalCAs = append(result.PKIExternalCAs, pkiExternalCA)
+	}
+
 	return result
 }
 
@@ -313,7 +342,7 @@ func (c *Config) IsDefaultListerDefined() bool {
 
 // ValidateConfig validates an Agent configuration after it has been fully merged together, to
 // ensure that required combinations of configs are there
-func (c *Config) ValidateConfig() error {
+func (c *Config) ValidateConfig(logger hclog.Logger) error {
 	if c.APIProxy != nil && c.Cache != nil {
 		if c.Cache.UseAutoAuthTokenRaw != nil {
 			if c.APIProxy.UseAutoAuthTokenRaw != nil {
@@ -365,6 +394,10 @@ func (c *Config) ValidateConfig() error {
 
 	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
 		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
+	}
+
+	if err := c.validatePKIExternalCAConfig(logger); err != nil {
+		return err
 	}
 
 	return c.validateEnvTemplateConfig()
@@ -684,6 +717,10 @@ func LoadConfigFileCheckDuplicates(path string) (cfg *Config, duplicate bool, er
 
 	if err := parseEnvTemplates(result, list); err != nil {
 		return nil, duplicate, fmt.Errorf("error parsing 'env_template': %w", err)
+	}
+
+	if err := parsePKIExternalCA(result, list); err != nil {
+		return nil, duplicate, fmt.Errorf("error parsing 'pki_external_ca': %w", err)
 	}
 
 	if result.Cache != nil && result.APIProxy == nil && (result.Cache.UseAutoAuthToken || result.Cache.ForceAutoAuthToken) {

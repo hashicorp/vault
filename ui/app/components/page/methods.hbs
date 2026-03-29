@@ -8,6 +8,12 @@
     <:breadcrumbs>
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
     </:breadcrumbs>
+    <:description>
+      Configure authentication methods for accessing Vault.
+      <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/mfa"}}>
+        Learn more
+      </Hds::Link::Inline>
+    </:description>
     <:actions>
       {{#if this.showIntroButton}}
         <Hds::Button
@@ -133,8 +139,8 @@
       </div>
     </LinkedBlock>
   {{else}}
-    <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
-      <A.Header @title="No Authentication Methods found" @titleTag="h2" />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="No Authentication Methods found" @titleTag="h2" data-test-empty-state-title />
     </Hds::ApplicationState>
   {{/each}}
 
