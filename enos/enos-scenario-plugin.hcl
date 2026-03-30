@@ -95,12 +95,6 @@ scenario "plugin" {
       ubuntu = provider.enos.ubuntu
     }
     manage_service = matrix.artifact_type == "bundle"
-    test_names = {
-      ldap = ["TestLDAPSecretsEngineComprehensive"]
-      // database = ["TestDatabaseSecretsEngineComprehensive"] // Future
-      // ssh      = ["TestSSHSecretsEngineComprehensive"]      // Future
-      // pki      = ["TestPKISecretsEngineComprehensive"]      // Future
-    }
   }
 
   step "build_vault" {
@@ -467,9 +461,19 @@ scenario "plugin" {
     }
   }
 
+  locals {
+    // Determine if filter contains test names (starts with "Test") or package names
+    is_test_name_filter = length(var.blackbox_test_filter) > 0 && length([for t in var.blackbox_test_filter : t if can(regex("^Test", t))]) > 0
+
+    // For plugins, if package filter is provided, convert to paths, otherwise use default plugins path
+    plugin_test_packages = length(var.blackbox_test_filter) > 0 && !local.is_test_name_filter ? [
+      for pkg in var.blackbox_test_filter : "./vault/external_tests/blackbox/plugins/${pkg}/..."
+    ] : ["./vault/external_tests/blackbox/plugins/..."]
+  }
+
   // Run comprehensive plugin blackbox tests
   step "run_plugin_blackbox_tests" {
-    description = "Run comprehensive plugin blackbox tests"
+    description = local.is_test_name_filter ? "Run specific plugin tests: ${join(", ", var.blackbox_test_filter)}" : "Run plugin blackbox tests from: ${join(", ", length(var.blackbox_test_filter) > 0 && !local.is_test_name_filter ? var.blackbox_test_filter : ["plugins"])}"
     module      = module.vault_run_blackbox_test
     depends_on  = [step.get_vault_cluster_ips, step.set_up_plugin_services, step.verify_vault_version]
 
@@ -485,8 +489,8 @@ scenario "plugin" {
       leader_host            = step.get_vault_cluster_ips.leader_host
       leader_public_ip       = step.get_vault_cluster_ips.leader_public_ip
       vault_root_token       = step.create_vault_cluster.root_token
-      test_names             = local.test_names["ldap"] // Update this to select different plugin tests based on scenario configuration
-      test_package           = "./vault/external_tests/blackbox/ldap"
+      test_names             = local.is_test_name_filter ? var.blackbox_test_filter : null
+      test_package           = local.is_test_name_filter ? "./vault/external_tests/blackbox" : join(" ", local.plugin_test_packages)
       integration_host_state = step.set_up_plugin_services.state
       vault_edition          = matrix.edition
     }

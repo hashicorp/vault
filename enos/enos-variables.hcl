@@ -62,6 +62,12 @@ variable "backend_log_level" {
   default     = "trace"
 }
 
+variable "blackbox_test_filter" {
+  type        = list(string)
+  description = "Override list of specific blackbox test packages (e.g., ['core', 'secrets']) or test names (e.g., ['TestUnsealedStatus']). Empty list uses scenario defaults. Package names are converted to directory paths automatically."
+  default     = []
+}
+
 variable "distro_version_amzn" {
   description = "The version of Amazon Linux 2 to use"
   type        = string

@@ -1,0 +1,191 @@
+// Copyright IBM Corp. 2025, 2026
+// SPDX-License-Identifier: BUSL-1.1
+
+package secrets
+
+import (
+	"net"
+	"net/url"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/testcluster/blackbox"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// requireLDAPAvailable verifies LDAP server connectivity using testify Eventually
+func requireLDAPAvailable(t *testing.T, timeout, interval time.Duration) {
+	t.Helper()
+
+	// Use public IP for external connectivity testing
+	ldapServerPublic := os.Getenv("LDAP_URL_PUBLIC")
+	require.NotEmpty(t, ldapServerPublic, "LDAP_URL_PUBLIC environment variable not set")
+
+	u, err := url.Parse(ldapServerPublic)
+	require.NoError(t, err, "Failed to parse LDAP URL: %s", ldapServerPublic)
+
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		d := &net.Dialer{}
+		conn, err := d.DialContext(t.Context(), "tcp", u.Host)
+		require.NoError(ct, err)
+		require.NoError(ct, conn.Close())
+	}, timeout, interval, "LDAP server not available at %s", u.Host)
+
+	t.Logf("LDAP server connectivity verified at %s", u.Host)
+}
+
+// testLDAPSecretsCreate tests LDAP secrets engine creation
+func testLDAPSecretsCreate(t *testing.T, v *blackbox.Session) {
+	// Check if LDAP server configuration is available from integration host
+	ldapServer := os.Getenv("LDAP_URL_PRIVATE")
+	ldapBindDN := os.Getenv("LDAP_BIND_DN")
+	ldapBindPass := os.Getenv("LDAP_BIND_PASS")
+
+	if ldapServer == "" || ldapBindDN == "" || ldapBindPass == "" {
+		t.Skip("LDAP server configuration not available - skipping LDAP secrets engine test")
+	}
+
+	// Verify LDAP server is ready before proceeding
+	requireLDAPAvailable(t, 1*time.Minute, 2*time.Second)
+
+	// Enable LDAP secrets engine
+	v.MustEnableSecretsEngine("ldap-create", &api.MountInput{Type: "ldap"})
+
+	// Configure LDAP secrets engine with integration server details
+	v.MustWrite("ldap-create/config", map[string]any{
+		"binddn":   ldapBindDN,
+		"bindpass": ldapBindPass,
+		"url":      ldapServer,
+		"userdn":   "ou=users,dc=enos,dc=com",
+		"userattr": "uid",
+	})
+
+	// Create a static role for password rotation using the user created by the integration setup
+	v.MustWrite("ldap-create/static-role/test-role", map[string]any{
+		"username":        "enos",
+		"dn":              "uid=enos,ou=users,dc=enos,dc=com",
+		"rotation_period": "24h",
+	})
+
+	// Verify role was created by reading it
+	roleResp := v.MustRead("ldap-create/static-role/test-role")
+	if roleResp.Data == nil {
+		t.Fatal("Expected to read LDAP static role configuration")
+	}
+
+	t.Log("Successfully created LDAP secrets engine with static role")
+}
+
+// testLDAPSecretsRead tests LDAP secrets engine read operations
+func testLDAPSecretsRead(t *testing.T, v *blackbox.Session) {
+	// Check if LDAP server configuration is available from integration host
+	ldapServer := os.Getenv("LDAP_URL_PRIVATE")
+	ldapBindDN := os.Getenv("LDAP_BIND_DN")
+	ldapBindPass := os.Getenv("LDAP_BIND_PASS")
+
+	if ldapServer == "" || ldapBindDN == "" || ldapBindPass == "" {
+		t.Skip("LDAP server configuration not available - skipping LDAP secrets engine test")
+	}
+
+	// Verify LDAP server is ready before proceeding
+	requireLDAPAvailable(t, 1*time.Minute, 2*time.Second)
+	serviceAccounts := []string{"svc-account-1", "svc-account-2"}
+
+	// Enable LDAP secrets engine
+	v.MustEnableSecretsEngine("ldap-read", &api.MountInput{Type: "ldap"})
+
+	// Configure LDAP secrets engine with integration server details
+	v.MustWrite("ldap-read/config", map[string]any{
+		"binddn":   ldapBindDN,
+		"bindpass": ldapBindPass,
+		"url":      ldapServer,
+		"userdn":   "ou=users,dc=enos,dc=com",
+		"userattr": "uid",
+	})
+
+	// Create a library set for service account management
+	v.MustWrite("ldap-read/library/test-set", map[string]any{
+		"service_account_names":        serviceAccounts,
+		"ttl":                          "10h",
+		"max_ttl":                      "20h",
+		"disable_check_in_enforcement": false,
+	})
+
+	// Read the library set configuration
+	libraryResp := v.MustRead("ldap-read/library/test-set")
+	if libraryResp.Data == nil {
+		t.Fatal("Expected to read LDAP library set configuration")
+	}
+
+	// Verify library set properties
+	assertions := v.AssertSecret(libraryResp)
+	assertions.Data().
+		HasKeyExists("service_account_names").
+		HasKeyExists("ttl").
+		HasKeyExists("max_ttl")
+
+	// Read configuration (should not expose bind password)
+	configResp := v.MustRead("ldap-read/config")
+	if configResp.Data == nil {
+		t.Fatal("Expected to read LDAP configuration")
+	}
+
+	t.Log("Successfully read LDAP secrets engine configuration")
+}
+
+// testLDAPSecretsDelete tests LDAP secrets engine delete operations
+func testLDAPSecretsDelete(t *testing.T, v *blackbox.Session) {
+	// Check if LDAP server configuration is available from integration host
+	ldapServer := os.Getenv("LDAP_URL_PRIVATE")
+	ldapBindDN := os.Getenv("LDAP_BIND_DN")
+	ldapBindPass := os.Getenv("LDAP_BIND_PASS")
+
+	if ldapServer == "" || ldapBindDN == "" || ldapBindPass == "" {
+		t.Skip("LDAP server configuration not available - skipping LDAP secrets engine test")
+	}
+
+	// Verify LDAP server is ready before proceeding
+	requireLDAPAvailable(t, 1*time.Minute, 2*time.Second)
+	serviceAccounts := []string{"svc-delete"}
+
+	// Enable LDAP secrets engine
+	v.MustEnableSecretsEngine("ldap-delete", &api.MountInput{Type: "ldap"})
+
+	// Configure LDAP secrets engine with integration server details
+	v.MustWrite("ldap-delete/config", map[string]any{
+		"binddn":   ldapBindDN,
+		"bindpass": ldapBindPass,
+		"url":      ldapServer,
+		"userdn":   "ou=users,dc=enos,dc=com",
+		"userattr": "uid",
+	})
+
+	// Create a library set
+	v.MustWrite("ldap-delete/library/delete-set", map[string]any{
+		"service_account_names": serviceAccounts,
+		"ttl":                   "1h",
+	})
+
+	// Verify library set exists
+	libraryResp := v.MustRead("ldap-delete/library/delete-set")
+	if libraryResp.Data == nil {
+		t.Fatal("Expected library set to exist before deletion")
+	}
+
+	// Delete the library set
+	_, err := v.Client.Logical().Delete("ldap-delete/library/delete-set")
+	if err != nil {
+		t.Fatalf("Failed to delete LDAP library set: %v", err)
+	}
+
+	// Verify library set is deleted
+	deletedResp, err := v.Client.Logical().Read("ldap-delete/library/delete-set")
+	if err == nil && deletedResp != nil {
+		t.Fatal("Expected library set to be deleted, but it still exists")
+	}
+
+	t.Log("Successfully deleted LDAP library set")
+}
