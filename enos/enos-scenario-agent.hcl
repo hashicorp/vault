@@ -517,7 +517,8 @@ scenario "agent" {
     module      = module.vault_verify_secrets_engines_create
     depends_on = [
       step.verify_vault_unsealed,
-      step.get_vault_cluster_ips
+      step.get_vault_cluster_ips,
+      step.set_up_external_integration_target,
     ]
 
     providers = {
@@ -556,6 +557,7 @@ scenario "agent" {
       vault_edition          = matrix.edition
       vault_install_dir      = global.vault_install_dir[matrix.artifact_type]
       vault_root_token       = step.create_vault_cluster.root_token
+      vault_audit_log_path   = step.create_vault_cluster.audit_device_file_path
     }
   }
 

@@ -271,17 +271,17 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 		paths := backend.SpecialPaths()
 		if paths != nil {
 			re.rootPaths.Store(pathsToRadix(paths.Root))
-			loginPathsEntry, err := parseUnauthenticatedPaths(paths.Unauthenticated)
+			loginPathsEntry, err := parseSpecialPaths(paths.Unauthenticated)
 			if err != nil {
 				return err
 			}
 			re.loginPaths.Store(loginPathsEntry)
-			binaryPathsEntry, err := parseUnauthenticatedPaths(paths.Binary)
+			binaryPathsEntry, err := parseSpecialPaths(paths.Binary)
 			if err != nil {
 				return err
 			}
 			re.binaryPaths.Store(binaryPathsEntry)
-			allowSnapshotReadPathsEntry, err := parseUnauthenticatedPaths(paths.AllowSnapshotRead)
+			allowSnapshotReadPathsEntry, err := parseSpecialPaths(paths.AllowSnapshotRead)
 			if err != nil {
 				return err
 			}

@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
+	"math/big"
 	"net"
 	"net/url"
 	"os"
@@ -123,7 +124,7 @@ func TestPki_MultipleOUs(t *testing.T) {
 	input := &inputBundle{
 		apiData: apiData,
 		role: &issuing.RoleEntry{
-			MaxTTL: 3600,
+			MaxTTL: time.Hour,
 			OU:     []string{"Z", "E", "V"},
 		},
 	}
@@ -453,7 +454,7 @@ func TestParseCertificate(t *testing.T) {
 				"province":                  "",
 				"street_address":            "",
 				"postal_code":               "",
-				"serial_number":             "",
+				"serial_number":             "We'll assert that it is not nil as an special case",
 				"ttl":                       "1h0m30s",
 				"max_path_length":           -1,
 				"permitted_dns_domains":     "",
@@ -562,7 +563,7 @@ func TestParseCertificate(t *testing.T) {
 				"province":                  "province1,province2",
 				"street_address":            "street_address1,street_address2",
 				"postal_code":               "postal_code1,postal_code2",
-				"serial_number":             "",
+				"serial_number":             "We'll assert that it is not nil as an special case",
 				"ttl":                       "2h0m45s",
 				"max_path_length":           2,
 				"permitted_dns_domains":     "example.com,.example.com,.www.example.com",
@@ -657,7 +658,7 @@ func TestParseCertificate(t *testing.T) {
 				"province":                  "",
 				"street_address":            "",
 				"postal_code":               "",
-				"serial_number":             "",
+				"serial_number":             "We'll assert that it is not nil as an special case",
 				"ttl":                       "2h0m45s",
 				"max_path_length":           0,
 				"permitted_dns_domains":     "",
@@ -857,6 +858,16 @@ func testParseCertificateToFields(t *testing.T, issueTime time.Time, tt *parseCe
 	require.NotNil(t, fields["skid"])
 	delete(fields, "skid")
 	delete(tt.wantFields, "skid")
+	require.NotNil(t, fields["serial_number"])
+	// We don't test explicitly for a number as values prefixed with 00: get dropped.
+	require.Regexp(t, "^[a-fA-F0-9:]+$", fields["serial_number"], "invalid serial number")
+	serialBytes := certutil.ParseHexFormatted(fields["serial_number"].(string), ":")
+	actualBigInt := &big.Int{}
+	actualBigInt.SetBytes(serialBytes)
+	require.Equal(t, 0, cert.SerialNumber.Cmp(actualBigInt), "serial number mismatch")
+
+	delete(fields, "serial_number")
+	delete(tt.wantFields, "serial_number")
 
 	{
 		// Sometimes TTL comes back as 1s off, so we'll allow that

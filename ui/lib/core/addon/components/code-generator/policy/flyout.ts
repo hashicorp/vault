@@ -93,7 +93,7 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
           models: ['acl', this.policyName],
         },
       });
-      this.showFlyout = false;
+      this.closeFlyout();
       this.resetFlyoutState();
     } catch (e) {
       const { message } = yield this.api.parseError(e);

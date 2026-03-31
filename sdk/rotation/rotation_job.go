@@ -38,13 +38,16 @@ type RotationJob struct {
 }
 
 type RotationJobConfigureRequest struct {
-	Name                           string
-	MountPoint                     string
-	ReqPath                        string
-	RotationSchedule               string
-	RotationWindow                 time.Duration
-	RotationPeriod                 time.Duration
-	RotationPolicy                 string
+	Name             string
+	MountPoint       string
+	ReqPath          string
+	RotationSchedule string
+	RotationWindow   time.Duration
+	RotationPeriod   time.Duration
+	RotationPolicy   string
+	// MigratedLegacyNextRotationTime is an optional field that will override the calculated NextVaultRotation time for
+	// only the *first* rotation of the job. This is intended for migrating any existing scheduled rotations from a
+	// plugin-managed rotation queue onto the Rotation Manager, without skipping its next scheduled rotation.
 	MigratedLegacyNextRotationTime time.Time
 }
 

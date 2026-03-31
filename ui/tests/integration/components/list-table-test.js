@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -41,7 +41,7 @@ module('Integration | Component | list-table', function (hooks) {
             @onSelectionChange={{this.onSelectionChange}}
           >
             <:customTableItem as |itemData|>
-              <Hds::BadgeCount @text={{itemData.visit_length}} @type="outlined" />            
+              <Hds::BadgeCount @text={{itemData.visit_length}} @type="outlined" />
             </:customTableItem>
 
             <:popupMenu as |rowData|>

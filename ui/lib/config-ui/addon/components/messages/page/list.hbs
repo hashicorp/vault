@@ -143,10 +143,13 @@
     @queryFunction={{this.paginationQueryParams}}
   />
 {{else}}
-  <EmptyState
-    @title="No messages yet"
-    @message="Add a custom message for all users after they log into Vault. Create message to get started."
-  />
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No messages yet" @titleTag="h2" data-test-empty-state-title />
+    <A.Body
+      @text="Add a custom message for all users after they log into Vault. Create message to get started."
+      data-test-empty-state-message
+    />
+  </Hds::ApplicationState>
 {{/if}}
 
 {{#if this.showMaxMessageModal}}

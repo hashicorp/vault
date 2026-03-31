@@ -150,6 +150,9 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	maxPathLengthIface, ok := data.GetOk("max_path_length")
 	if ok {
 		maxPathLength := maxPathLengthIface.(int)
+		if maxPathLength < -1 {
+			return logical.ErrorResponse("requested max_path_length %d is invalid: must be a non-negative integer or -1 for no constraint", maxPathLength), nil
+		}
 		role.MaxPathLength = &maxPathLength
 	}
 
@@ -426,9 +429,27 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	useCSRValues := data.Get("use_csr_values").(bool)
 
-	maxPathLengthIface, ok := data.GetOk("max_path_length")
-	if ok {
+	if maxPathLengthIface, ok := data.GetOk("max_path_length"); ok {
 		maxPathLength := maxPathLengthIface.(int)
+		if maxPathLength < -1 {
+			return logical.ErrorResponse("requested max_path_length %d is invalid: must be a non-negative integer or -1 for no constraint", maxPathLength), nil
+		}
+		// Validate the requested max_path_length against the signing CA's
+		// BasicConstraints path length constraint (RFC 5280 4.2.1.9).
+		// If the signing CA has a pathLenConstraint of N, any intermediate
+		// it signs may have a pathLenConstraint strictly less than N.
+		// An explicit -1 means "no constraint on the intermediate", which
+		// is also invalid when the CA already has a pathLenConstraint.
+		caMaxPathLen := signingBundle.Certificate.MaxPathLen
+		caHasConstraint := caMaxPathLen >= 0 || signingBundle.Certificate.MaxPathLenZero
+		if caHasConstraint {
+			if maxPathLength < 0 || maxPathLength >= caMaxPathLen {
+				return logical.ErrorResponse(
+					fmt.Sprintf("requested max_path_length %d is not allowed: the signing CA has a pathLenConstraint of %[2]d, so the intermediate's pathLenConstraint must be a non-negative value less than %[2]d",
+						maxPathLength, caMaxPathLen),
+				), nil
+			}
+		}
 		role.MaxPathLength = &maxPathLength
 	}
 
@@ -467,6 +488,10 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	if warnAboutTruncate &&
 		signingBundle.Certificate.NotAfter.Equal(parsedBundle.Certificate.NotAfter) {
 		resp.AddWarning(intCaTruncatationWarning)
+	}
+
+	if parsedBundle.Certificate.MaxPathLen == 0 {
+		resp.AddWarning("Max path length of the generated certificate is zero. This CA certificate cannot be used to issue further intermediate CA certificates.")
 	}
 
 	if keyUsages, ok := data.GetOk("key_usage"); ok {
@@ -571,7 +596,7 @@ func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle
 	}
 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
-		resp.AddWarning("Max path length of the signed certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
+		resp.AddWarning("Max path length of the signed certificate is zero. This CA certificate cannot be used to issue intermediate CA certificates.")
 	}
 
 	resp = addWarnings(resp, warnings)

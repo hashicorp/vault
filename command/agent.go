@@ -31,6 +31,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/exec"
+	"github.com/hashicorp/vault/command/agent/pkiexternalca"
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
@@ -555,9 +556,11 @@ func (c *AgentCommand) Run(args []string) int {
 	var ss *sink.SinkServer
 	var ts *template.Server
 	var es *exec.Server
+	var ps *pkiexternalca.Server
 	if method != nil {
 		enableTemplateTokenCh := len(config.Templates) > 0
 		enableEnvTemplateTokenCh := len(config.EnvTemplates) > 0
+		enablePKIExternalCATokenCh := len(config.PKIExternalCAs) > 0
 
 		// Auth Handler is going to set its own retry values, so we want to
 		// work on a copy of the client to not affect other subsystems.
@@ -589,6 +592,7 @@ func (c *AgentCommand) Run(args []string) int {
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTemplateTokenCh,
 			EnableExecTokenCh:            enableEnvTemplateTokenCh,
+			EnablePKIExternalCATokenCh:   enablePKIExternalCATokenCh,
 			Token:                        previousToken,
 			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
 			UserAgent:                    useragent.AgentAutoAuthString(),
@@ -601,13 +605,30 @@ func (c *AgentCommand) Run(args []string) int {
 			ExitAfterAuth: config.ExitAfterAuth,
 		})
 
+		// Create PKI External CA server if any pki_external_ca blocks are configured
+		var pkiProvider template.PKIExternalCAProvider
+		if len(config.PKIExternalCAs) > 0 {
+			ps, err = pkiexternalca.NewServer(&pkiexternalca.ServerConfig{
+				Logger:      c.logger.Named("pkiexternalca.server"),
+				AgentConfig: c.config,
+				LogLevel:    c.logger.GetLevel(),
+				LogWriter:   c.logWriter,
+			})
+			if err != nil {
+				c.logger.Error("could not create pki external ca server", "error", err)
+				return 1
+			}
+			pkiProvider = ps
+		}
+
 		ts = template.NewServer(&template.ServerConfig{
-			Logger:        c.logger.Named("template.server"),
-			LogLevel:      c.logger.GetLevel(),
-			LogWriter:     c.logWriter,
-			AgentConfig:   c.config,
-			Namespace:     templateNamespace,
-			ExitAfterAuth: config.ExitAfterAuth,
+			Logger:              c.logger.Named("template.server"),
+			LogLevel:            c.logger.GetLevel(),
+			LogWriter:           c.logWriter,
+			AgentConfig:         c.config,
+			PKIExternalCAServer: pkiProvider,
+			Namespace:           templateNamespace,
+			ExitAfterAuth:       config.ExitAfterAuth,
 		})
 
 		es, err = exec.NewServer(&exec.ServerConfig{
@@ -843,8 +864,41 @@ func (c *AgentCommand) Run(args []string) int {
 			cancelFunc()
 		})
 
+		// ah.TemplateTokenCh is a buffered channel of size 1 — each token sent by
+		// the auth handler is consumed by exactly one reader. When a PKI external CA
+		// server is also running, both it and the template server need every token.
+		// Without a fan-out, they race and one silently misses tokens, leaving the
+		// template runner never started and templates never rendered.
+		// The fan-out goroutine reads each token once and forwards it to a separate
+		// channel for each consumer.
+		templateTokenCh := ah.TemplateTokenCh
+		var pkiTokenCh chan string
+		if ps != nil {
+			templateTokenCh = make(chan string, 1)
+			pkiTokenCh = make(chan string, 1)
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case token, ok := <-ah.TemplateTokenCh:
+						if !ok {
+							return
+						}
+						for _, ch := range []chan string{templateTokenCh, pkiTokenCh} {
+							select {
+							case ch <- token:
+							case <-ctx.Done():
+								return
+							}
+						}
+					}
+				}
+			}()
+		}
+
 		g.Add(func() error {
-			return ts.Run(ctx, ah.TemplateTokenCh, config.Templates, ah.AuthInProgress, ah.InvalidToken)
+			return ts.Run(ctx, templateTokenCh, config.Templates, ah.AuthInProgress, ah.InvalidToken)
 		}, func(error) {
 			// Let the lease cache know this is a shutdown; no need to evict
 			// everything
@@ -866,6 +920,21 @@ func (c *AgentCommand) Run(args []string) int {
 			cancelFunc()
 			es.Close()
 		})
+
+		// Start PKI External CA server if configured
+		if ps != nil {
+			g.Add(func() error {
+				return ps.Run(ctx, pkiTokenCh, c.client)
+			}, func(err error) {
+				// Let the lease cache know this is a shutdown; no need to evict
+				// everything
+				if leaseCache != nil {
+					leaseCache.SetShuttingDown(true)
+				}
+				cancelFunc()
+				ps.Stop()
+			})
+		}
 
 	}
 
@@ -1228,7 +1297,7 @@ func (c *AgentCommand) loadConfig(paths []string) (*agentConfig.Config, error) {
 		return nil, errs
 	}
 
-	if err := cfg.ValidateConfig(); err != nil {
+	if err := cfg.ValidateConfig(c.logger); err != nil {
 		return nil, fmt.Errorf("error validating configuration: %w", err)
 	}
 

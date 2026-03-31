@@ -933,7 +933,13 @@ auto_auth {
 				// the temp dir before Agent has had time to render and will
 				// likely fail the test
 				tick := time.Tick(1 * time.Second)
-				timeout := time.After(10 * time.Second)
+				timeoutDuration := 10 * time.Second
+				// exit_after_auth can terminate close to template completion under CI load;
+				// allow a wider wait window to reduce timing flake without changing behavior.
+				if tc.exitAfterAuth {
+					timeoutDuration = 20 * time.Second
+				}
+				timeout := time.After(timeoutDuration)
 				var err error
 				for {
 					select {

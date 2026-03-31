@@ -31,6 +31,8 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
       namespaces = [];
     }
 
+    this.breadcrumbs = [{ label: 'Secrets Recovery', route: 'vault.cluster.recovery.snapshots' }];
+
     this.model = {
       snapshot,
       namespaces,
@@ -40,7 +42,9 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
     this.version.type = 'enterprise';
 
     this.renderComponent = () =>
-      render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
+      render(
+        hbs`<Recovery::Page::Snapshots::SnapshotManage @breadcrumbs={{this.breadcrumbs}} @model={{this.model}}/>`
+      );
   });
   const scenarios = [
     {
@@ -119,7 +123,7 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
       // have values if the request was successful, but handling just in case.
       data: { secret: {} },
     }));
-    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
+    await this.renderComponent();
     assert.dom(GENERAL.inputByAttr('manual-mount-path')).exists();
     assert.dom(GENERAL.selectByAttr('mount')).doesNotExist();
   });
@@ -127,7 +131,7 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
   test('it renders manual input if mounts request errors', async function (assert) {
     assert.expect(14);
     this.server.get('/sys/internal/ui/mounts', () => overrideResponse(403));
-    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
+    await this.renderComponent();
     assert.dom(GENERAL.button('Type')).exists().hasText('Type');
     assert.dom(GENERAL.inputByAttr('manual-mount-path')).exists().isDisabled();
     assert.dom(GENERAL.selectByAttr('mount')).doesNotExist();
@@ -161,18 +165,19 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
   });
 
   test('it displays loaded snapshot card', async function (assert) {
-    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
+    await this.renderComponent();
+
     assert.dom(GENERAL.badge('status')).hasText('Ready', 'status badge renders');
   });
 
   test('it displays namespace selector for root namespace', async function (assert) {
-    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
+    await this.renderComponent();
 
     assert.dom(GENERAL.selectByAttr('namespace')).exists('namespace selector is visible in root namespace');
   });
 
   test('it validates form fields before read/recover operations', async function (assert) {
-    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
+    await this.renderComponent();
     // Try to read without selecting mount or resource path
     await click(GENERAL.button('read'));
 
@@ -181,14 +186,12 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
   });
 
   test('it clears form selections', async function (assert) {
-    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
-
+    await this.renderComponent();
     await click(GENERAL.selectByAttr('namespace'));
     await click('[data-option-index="1"]');
     await click(GENERAL.selectByAttr('mount'));
     await click('[data-option-index]');
     await fillIn(GENERAL.inputByAttr('resourcePath'), 'test-path');
-
     await click(GENERAL.button('clear'));
 
     const nsSelect = find(GENERAL.selectByAttr('namespace'));
@@ -201,8 +204,7 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
   });
 
   test('it displays error alert when read operation fails', async function (assert) {
-    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
-
+    await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('resourcePath'), 'nonexistent-secret');
     await click(GENERAL.selectByAttr('mount'));
     await click('[data-option-index="1.0"]');
@@ -212,8 +214,7 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
   });
 
   test('it toggles JSON view in read modal', async function (assert) {
-    await render(hbs`<Recovery::Page::Snapshots::SnapshotManage @model={{this.model}}/>`);
-
+    await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('resourcePath'), 'test-secret');
     await click(GENERAL.selectByAttr('mount'));
     await click('[data-option-index]');

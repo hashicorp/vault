@@ -37,6 +37,23 @@ export default class SecretEdit extends Component {
   @tracked secretData = null;
   @tracked editorString = null;
 
+  breadcrumbs = [
+    { label: 'Vault', text: 'Vault', icon: 'vault', path: 'vault.cluster.dashboard' },
+    { text: 'Secrets engines', path: 'vault.cluster.secrets.backends' },
+    this.args.root,
+    { label: this.title, text: this.title },
+  ];
+
+  get title() {
+    if (this.args.mode === 'create') {
+      return 'Create secret';
+    } else if (this.args.mode === 'edit') {
+      return 'Edit secret';
+    } else {
+      return this.args.key.id;
+    }
+  }
+
   // fired on did-insert from render modifier
   @action
   createKvData(elem, [model]) {

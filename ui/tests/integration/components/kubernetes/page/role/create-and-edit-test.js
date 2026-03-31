@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn, waitFor, settled } from '@ember/test-helpers';
@@ -34,6 +34,14 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
 
     this.writeStub = sinon.stub(this.owner.lookup('service:api').secrets, 'kubernetesWriteRole').resolves();
 
+    this.basicPayload = {
+      kubernetes_role_type: '',
+      kubernetes_role_name: '',
+      generated_role_rules: '',
+      name_template: '',
+      service_account_name: 'default',
+    };
+
     this.setupEdit = (trait) => {
       const role = this.server.create('kubernetes-role', trait);
       this.form = new KubernetesRoleForm(role);
@@ -47,6 +55,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { label: 'Roles', route: 'roles' },
       { label: 'Create' },
     ];
+
     setRunOptions({
       rules: {
         // TODO: fix RadioCard component (replace with HDS)
@@ -109,7 +118,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await click('[data-test-radio-card="expanded"]');
     assert.strictEqual(
       this.form.data.service_account_name,
-      undefined,
+      '',
       'Service account name cleared when switching from basic to expanded'
     );
 
@@ -117,7 +126,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await click('[data-test-radio-card="full"]');
     assert.strictEqual(
       this.form.data.kubernetes_role_name,
-      undefined,
+      '',
       'Kubernetes role name cleared when switching from expanded to full'
     );
 
@@ -128,25 +137,41 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await click('[data-test-radio-card="expanded"]');
     assert.strictEqual(
       this.form.data.generated_role_rules,
-      undefined,
+      '',
       'Role rules cleared when switching from full to expanded'
     );
 
     await click('[data-test-radio-card="basic"]');
     assert.strictEqual(
       this.form.data.kubernetes_role_type,
-      undefined,
+      '',
       'Kubernetes role type cleared when switching from expanded to basic'
     );
     assert.strictEqual(
       this.form.data.kubernetes_role_name,
-      undefined,
+      '',
       'Kubernetes role name cleared when switching from expanded to basic'
     );
     assert.strictEqual(
       this.form.data.name_template,
-      undefined,
+      '',
       'Name template cleared when switching from expanded to basic'
+    );
+  });
+
+  test('it should send cleared fields in payload when editing role and change generation preference', async function (assert) {
+    this.role = this.setupEdit();
+    await this.renderComponent();
+
+    await click('[data-test-radio-card="expanded"]');
+    await fillIn(GENERAL.inputByAttr('kubernetes_role_name'), 'test');
+    await click(GENERAL.submitButton);
+
+    const payload = this.writeStub.lastCall.args[2];
+    assert.propContains(
+      payload,
+      { service_account_name: '', kubernetes_role_name: 'test' },
+      'Payload contains cleared and updated fields when switching generation preference on edit'
     );
   });
 
@@ -204,7 +229,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await click(GENERAL.submitButton);
 
     assert.true(
-      this.writeStub.calledWith(name, this.backend, { ...this.payload, service_account_name: 'default' }),
+      this.writeStub.calledWith(name, this.backend, this.basicPayload),
       'Write role request made with correct params'
     );
     assert.true(
@@ -314,19 +339,15 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await click(GENERAL.submitButton);
 
     const { rules } = getRules().find((r) => r.id === '5');
+    const payload = { kubernetes_role_name: '', service_account_name: '', generated_role_rules: rules };
     assert.true(
-      this.writeStub.calledWith('role-1', this.backend, { generated_role_rules: rules }),
+      this.writeStub.calledWith('role-1', this.backend, payload),
       'Generated roles rules are passed in save request'
     );
   });
 
   test('it should unset selectedTemplateId when switching from full generation preference', async function (assert) {
     assert.expect(1);
-
-    this.server.post('/kubernetes-test/roles/role-1', (schema, req) => {
-      const payload = JSON.parse(req.requestBody);
-      assert.strictEqual(payload.generated_role_rules, null, 'Generated roles rules are not set');
-    });
 
     await this.renderComponent();
     await click('[data-test-radio-card="full"]');
@@ -336,7 +357,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await fillIn(GENERAL.inputByAttr('service_account_name'), 'default');
     await click(GENERAL.submitButton);
     assert.true(
-      this.writeStub.calledWith('role-1', this.backend, { service_account_name: 'default' }),
+      this.writeStub.calledWith('role-1', this.backend, this.basicPayload),
       'Save request made successfully without generated role rules'
     );
   });

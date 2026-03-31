@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { create } from 'ember-cli-page-object';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 import Service from '@ember/service';

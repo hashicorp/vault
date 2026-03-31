@@ -4,31 +4,17 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { BasePage } from '../../pages/base';
+import { ConfigurationSettingsPage } from '../../pages/configuration-settings';
 
 test('pki workflow', async ({ page }) => {
-  await page.goto('dashboard');
-  // enable PKI Engine
-  await page.getByRole('link', { name: 'Secrets', exact: true }).click();
-  // skip if intro page is shown
-  const skipButton = page.getByRole('button', { name: 'Skip' });
-  if (await skipButton.isVisible()) {
-    await skipButton.click();
-  }
-  await page.getByRole('link', { name: 'Enable new engine' }).click();
-  await page.getByLabel('PKI Certificates - enabled').click();
-  await page.getByRole('textbox', { name: 'Path' }).fill('pki-engine');
-  await page.locator('label').filter({ hasText: 'Default Lease TTL Vault will' }).click();
-  await page.getByLabel('TTL unit for Default Lease TTL').selectOption('m');
-  await page
-    .getByRole('group', { name: 'Default Lease TTL Lease will' })
-    .getByLabel('Number of units')
-    .fill('5');
-  await page.getByLabel('TTL unit for Max Lease TTL').selectOption('m');
-  await page
-    .getByRole('group', { name: 'Max Lease TTL Lease will' })
-    .getByLabel('Number of units')
-    .fill('10');
-  await page.getByRole('button', { name: 'Enable engine' }).click();
+  const basePage = new BasePage(page);
+
+  // enable PKI secrets engine
+  await basePage.enableEngine('PKI Certificates', 'pki-engine', {
+    defaultLeaseTtl: { unit: 5, option: 'm' },
+    maxLeaseTtl: { unit: 10, option: 'm' },
+  });
 
   // configure PKI Engine
   await expect(page.getByRole('heading', { name: 'pki-engine' })).toContainText('pki-engine');
@@ -158,4 +144,79 @@ test('pki workflow', async ({ page }) => {
   await expect(page.getByText('View issuer Choose or type an')).toBeVisible();
   await page.getByText('Type to find an issuer...').click();
   await expect(page.getByRole('option').first()).toBeVisible();
+});
+
+test('pki tune workflow', async ({ page }) => {
+  const basePage = new BasePage(page);
+  const configurationSettingsPage = new ConfigurationSettingsPage(page);
+
+  const path = 'pki-tune';
+  const engineType = 'pki';
+
+  await test.step('enable pki secrets engine mount', async () => {
+    await basePage.enableEngine(engineType, path, {
+      defaultLeaseTtl: { unit: 5, option: 'm' },
+      maxLeaseTtl: { unit: 10, option: 'm' },
+    });
+  });
+
+  await test.step('navigate to configuration page from manage dropdown and ensure plugin settings tab is active', async () => {
+    await configurationSettingsPage.navigateToConfiguration(path);
+    await configurationSettingsPage.assertPluginSettingsTabActive(engineType);
+  });
+
+  await test.step('configure pki plugin settings', async () => {
+    await page.locator('label').filter({ hasText: 'Generate root Generates a new' }).click();
+    await page.getByLabel('Type').selectOption('exported');
+    await page.getByRole('textbox', { name: 'Common name' }).click();
+    await page.getByRole('textbox', { name: 'Common name' }).fill('common-name-1');
+    await page.getByRole('textbox', { name: 'Issuer name' }).click();
+    await page.getByRole('textbox', { name: 'Issuer name' }).fill('issue-name-1');
+    await page.getByRole('button', { name: 'Done' }).click();
+  });
+
+  await test.step('ensure pki plugin settings was saved', async () => {
+    await expect(page.getByLabel('Next steps')).toContainText(
+      'Next steps The private_key is only available once. Make sure you copy and save it now.'
+    );
+    await expect(page.locator('section')).toContainText('Common name common-name-1');
+    await expect(page.locator('section')).toContainText('Issuer name issue-name-1');
+    await page.getByRole('button', { name: 'Done' }).click();
+  });
+
+  // Navigate back to plugin settings page
+  await configurationSettingsPage.navigateToConfiguration(path);
+
+  await test.step('edit plugin settings configuration', async () => {
+    await page.getByRole('link', { name: 'Edit configuration' }).click();
+    await expect(page.locator('form')).toContainText('Cluster Config');
+    await expect(page.getByText("Mount's API path Specifies")).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+  });
+
+  await test.step('navigate and verify general settings form', async () => {
+    // General settings
+    await configurationSettingsPage.navigateToGeneralSettings(engineType);
+    await configurationSettingsPage.editAndVerifyGeneralSettings(path, engineType);
+    await page.getByRole('link', { name: 'Exit configuration' }).click();
+  });
+
+  await test.step('ensure that we navigate back to the pki overview page when Exit configuration is clicked', async () => {
+    await expect(
+      page.getByText(`Vault Secrets engines ${path} ${path} Generate policy Manage`)
+    ).toBeVisible();
+  });
+
+  await test.step('verify unsaved changes modal works in general settings', async () => {
+    // Navigate back to general settings
+    await configurationSettingsPage.navigateToConfiguration(path);
+    await configurationSettingsPage.navigateToGeneralSettings(engineType);
+
+    // Test Unsaved changes modal
+    await configurationSettingsPage.verifyUnsavedChangesModalOnNavigateAway(path);
+  });
+
+  await test.step('clean up and disable engine', async () => {
+    await basePage.disableEngine(path);
+  });
 });

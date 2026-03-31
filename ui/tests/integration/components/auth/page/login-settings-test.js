@@ -7,17 +7,17 @@ import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { click } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { formatAuthMounts, SYS_INTERNAL_UI_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
 import setupTestContext from './setup-test-context';
 import sinon from 'sinon';
 import AuthMethodResource from 'vault/resources/auth/method';
 
-/* 
-  Login settings are an enterprise only feature but the component is version agnostic (and subsequently so are these tests) 
+/*
+  Login settings are an enterprise only feature but the component is version agnostic (and subsequently so are these tests)
   because fetching login settings happens in the route only for enterprise versions.
   Each combination must be tested with and without visible mounts (i.e. tuned with listing_visibility="unauth")
-  1. default+backups: default type set, backup types set 
+  1. default+backups: default type set, backup types set
   2. default only: no backup types
   3. backup only: backup types set without a default
    */

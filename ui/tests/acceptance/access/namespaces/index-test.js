@@ -9,15 +9,15 @@ import { setupApplicationTest } from 'ember-qunit';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { createNS, deleteNS, runCmd } from 'vault/tests/helpers/commands';
-import localStorage from 'vault/lib/local-storage';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(async () => {
+  hooks.beforeEach(async function () {
     await login();
     // dismiss the wizard
-    localStorage.setItem('dismissed-wizards', ['namespace']);
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.namespace);
     // Go to the manage namespaces page
     await visit('/vault/access/namespaces');
   });

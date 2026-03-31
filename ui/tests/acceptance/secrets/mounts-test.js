@@ -196,7 +196,7 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
     }
   });
 
-  test('it should transition back to backend list for unsupported backends', async function (assert) {
+  test('it should transition to general settings configuration page for unsupported backends', async function (assert) {
     const unsupported = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false }).filter(
       (e) => !supportedSecretBackends().includes(e.type)
     );
@@ -212,7 +212,7 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
 
       assert.strictEqual(
         currentRouteName(),
-        `vault.cluster.secrets.backends`,
+        `vault.cluster.secrets.backend.configuration.general-settings`,
         `${engine.type} returns to backends list`
       );
     }
@@ -262,11 +262,12 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
 
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.secrets.backends',
-      'redirects to the backends page'
+      'vault.cluster.secrets.backend.configuration.general-settings',
+      'redirects to the configuration page'
     );
-    await fillIn(GENERAL.inputSearch('secret-engine-path'), enginePath);
-    assert.dom(GENERAL.listItem(`${enginePath}/`)).exists();
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText(`${enginePath} configuration`, 'shows the correct page header title');
 
     // cleanup
     await runCmd(`delete sys/mounts/${enginePath}`);
@@ -279,11 +280,12 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
 
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.secrets.backends',
-      'redirects to the backends page'
+      'vault.cluster.secrets.backend.configuration.general-settings',
+      'redirects to the configuration page'
     );
-    await fillIn(GENERAL.inputSearch('secret-engine-path'), enginePath);
-    assert.dom(GENERAL.listItem(`${enginePath}/`)).exists();
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText(`${enginePath} configuration`, 'shows the correct page header title');
     // cleanup
     await runCmd(`delete sys/mounts/${enginePath}`);
   });

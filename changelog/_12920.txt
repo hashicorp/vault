@@ -1,0 +1,3 @@
+```release-note:improvement
+dockerfile: container will now run as vault user by default
+```

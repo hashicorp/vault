@@ -36,6 +36,8 @@ scenario "upgrade" {
       - vault_artifact_path (the path to where you have a Vault artifact already downloaded,
       if using `artifact_source:crt` in your filter)
       - vault_license_path (if using an ENT edition of Vault)
+      - vault_ibm_license_path (if wanting to test a license update, which requires an IBM PAO license file to be provided as a variable.
+      Note: to obtain a test IBM license, please see https://github.com/hashicorp/vault-enterprise/pull/12661#discussion_r2914617420)
       - vault_upgrade_initial_version (if the version you want to start with differs
       from the default value defined in enos-variables.hcl)
   EOF
@@ -52,6 +54,7 @@ scenario "upgrade" {
     edition         = global.editions
     ip_version      = global.ip_versions
     seal            = global.seals
+    license_update  = ["ibm", "none"]
 
     // Our local builder always creates bundles
     exclude {
@@ -101,7 +104,9 @@ scenario "upgrade" {
       sles   = provider.enos.ec2_user
       ubuntu = provider.enos.ubuntu
     }
-    manage_service = matrix.artifact_type == "bundle"
+    manage_service            = matrix.artifact_type == "bundle"
+    vault_ibm_license_path    = abspath(var.vault_ibm_license_path != null ? var.vault_ibm_license_path : joinpath(path.root, "./support/ibm-pao.lic"))
+    vault_ibm_license_edition = var.vault_ibm_license_edition != null ? var.vault_ibm_license_edition : "premium"
   }
 
   step "build_vault" {
@@ -470,8 +475,39 @@ scenario "upgrade" {
       vault_addr             = step.create_vault_cluster.api_addr_localhost
       vault_edition          = matrix.edition
       // Use the install dir for our initial version, which always comes from a zip bundle
-      vault_install_dir = global.vault_install_dir["bundle"]
-      vault_root_token  = step.create_vault_cluster.root_token
+      vault_install_dir    = global.vault_install_dir["bundle"]
+      vault_root_token     = step.create_vault_cluster.root_token
+      vault_audit_log_path = step.create_vault_cluster.audit_device_file_path
+    }
+  }
+
+  step "update_license_ibm" {
+    description = <<-EOF
+      If the matrix is configured to test a license update and the Vault version supports it, perform a license update
+      from a HashiCorp Vault license to an IBM PAO license. This step only updates the license file on disk, the
+      new license won't be in effect until after the upgrade_vault step restarts the Vault service.
+    EOF
+    # TODO: the semverconstraint should actually be for 2.0.0, but it is tagged as 1.22.0 for now
+    skip_step = matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<1.22.0-0") || matrix.edition == "ce"
+    module    = module.vault_update_license_ibm
+    depends_on = [
+      step.read_vault_license,
+      step.create_vault_cluster,
+      step.verify_secrets_engines_create,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_license_update_ibm
+    ]
+
+    variables {
+      hosts                     = step.create_vault_cluster_targets.hosts
+      vault_ibm_license_path    = local.vault_ibm_license_path
+      vault_ibm_license_edition = local.vault_ibm_license_edition
     }
   }
 
@@ -485,7 +521,8 @@ scenario "upgrade" {
     module      = module.vault_upgrade
     depends_on = [
       step.create_vault_cluster,
-      step.verify_secrets_engines_create,
+      # TODO: the semverconstraint should actually be for 2.0.0, but it is tagged as 1.22.0 for now
+      (matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<1.22.0-0") || matrix.edition == "ce") ? step.verify_secrets_engines_create : step.update_license_ibm,
     ]
 
     providers = {
@@ -722,6 +759,36 @@ scenario "upgrade" {
     }
   }
 
+  step "verify_ibm_license_update" {
+    description = <<-EOF
+      If the update_license_ibm step was executed, verify that the new IBM license is now being used.
+    EOF
+    # TODO: the semverconstraint should actually be for 2.0.0, but it is tagged as 1.22.0 for now
+    skip_step = matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<1.22.0-0") || matrix.edition == "ce"
+    module    = module.vault_verify_ibm_license_update
+    depends_on = [
+      step.update_license_ibm,
+      step.upgrade_vault,
+      step.verify_secrets_engines_read,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_license_update_ibm,
+    ]
+
+    variables {
+      hosts                     = step.create_vault_cluster_targets.hosts
+      vault_addr                = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir         = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token          = step.create_vault_cluster.root_token
+      vault_ibm_license_edition = local.vault_ibm_license_edition
+    }
+  }
+
   step "verify_log_secrets" {
     // Only verify log secrets if the audit devices are turned on and we've enabled the check (as
     // it requires a radar license). Some older versions have known issues so we'll skip this step
@@ -731,7 +798,8 @@ scenario "upgrade" {
     description = global.description.verify_log_secrets
     module      = module.verify_log_secrets
     depends_on = [
-      step.verify_secrets_engines_read,
+      # TODO: the semverconstraint should actually be for 2.0.0, but it is tagged as 1.22.0 for now
+      (matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<1.22.0-0") || matrix.edition == "ce") ? step.verify_secrets_engines_read : step.verify_ibm_license_update,
     ]
 
     providers = {
@@ -750,6 +818,8 @@ scenario "upgrade" {
       leader_host         = step.get_updated_vault_cluster_ips.leader_host
       vault_addr          = step.create_vault_cluster.api_addr_localhost
       vault_root_token    = step.create_vault_cluster.root_token
+      # TODO: the semverconstraint should actually be for 2.0.0, but it is tagged as 1.22.0 for now
+      vault_ibm_license_customer_id = (matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<1.22.0-0") || matrix.edition == "ce") ? "" : step.verify_ibm_license_update.customer_id
     }
   }
 

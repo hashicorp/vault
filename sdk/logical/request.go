@@ -86,6 +86,10 @@ func IndexStateFromContext(ctx context.Context) *WALState {
 	return s
 }
 
+// AuthorizationDetail stores one enterprise token authorization detail object.
+// The "type" field is required.
+type AuthorizationDetail map[string]any
+
 // Request is a struct that stores the parameters and context of a request
 // being made to Vault. It is used to abstract the details of the higher level
 // request protocol from the handlers.
@@ -137,8 +141,17 @@ type Request struct {
 	// hashed.
 	ClientToken string `json:"client_token" structs:"client_token" mapstructure:"client_token" sentinel:""`
 
-	// EnterpriseTokenMetadata is used to store metadata related to enterprise token based requests.
+	// EnterpriseTokenMetadata stores enterprise token metadata.
 	EnterpriseTokenMetadata string `json:"enterprise_token_metadata" structs:"enterprise_token_metadata" mapstructure:"enterprise_token_metadata" sentinel:""`
+
+	// EnterpriseTokenIssuer stores the enterprise token issuer.
+	EnterpriseTokenIssuer string `json:"enterprise_token_issuer,omitempty" structs:"enterprise_token_issuer" mapstructure:"enterprise_token_issuer"`
+
+	// EnterpriseTokenAudience stores enterprise token audience values.
+	EnterpriseTokenAudience []string `json:"enterprise_token_audience,omitempty" structs:"enterprise_token_audience" mapstructure:"enterprise_token_audience"`
+
+	// EnterpriseTokenAuthorizationDetails stores enterprise token authorization details.
+	EnterpriseTokenAuthorizationDetails []AuthorizationDetail `json:"enterprise_token_authorization_details,omitempty" structs:"enterprise_token_authorization_details" mapstructure:"enterprise_token_authorization_details"`
 
 	// ClientTokenAccessor is provided to the core so that the it can get
 	// logged as part of request audit logging.
@@ -189,6 +202,12 @@ type Request struct {
 	// EntityID is the identity of the caller extracted out of the token used
 	// to make this request
 	EntityID string `json:"entity_id" structs:"entity_id" mapstructure:"entity_id" sentinel:""`
+
+	// ActorEntityID is the entity ID of the actor in a request.
+	ActorEntityID string `json:"actor_entity_id" structs:"actor_entity_id" mapstructure:"actor_entity_id" sentinel:""`
+
+	// ActorEntityName is the name of the actor entity in a request.
+	ActorEntityName string `json:"actor_entity_name" structs:"actor_entity_name" mapstructure:"actor_entity_name" sentinel:""`
 
 	// PolicyOverride indicates that the requestor wishes to override
 	// soft-mandatory Sentinel policies

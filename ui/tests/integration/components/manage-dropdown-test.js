@@ -4,7 +4,7 @@
  */
 
 import { click, render } from '@ember/test-helpers';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { module, test } from 'qunit';
 import sinon from 'sinon';

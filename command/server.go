@@ -691,6 +691,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 			ReadTimeout:       30 * time.Second,
 			IdleTimeout:       5 * time.Minute,
 			ErrorLog:          c.logger.StandardLogger(nil),
+			MaxHeaderBytes:    vaulthttp.TokenHeaderMaxBytes(ln.Config),
 		}
 
 		go server.Serve(ln.Listener)
@@ -1516,7 +1517,8 @@ func (c *ServerCommand) Run(args []string) int {
 	core.SetClusterHandler(vaulthttp.Handler.Handler(&vault.HandlerProperties{
 		Core: core,
 		ListenerConfig: &configutil.Listener{
-			DisableJSONLimitParsing: true,
+			DisableJSONLimitParsing:       true,
+			DisableTokenHeaderSizeParsing: true,
 		},
 	}))
 
@@ -2348,6 +2350,9 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 	// Set Introspection Endpoint to enabled with new value in the config after reload
 	core.ReloadIntrospectionEndpointEnabled()
 
+	// Reload unauthenticated endpoints override configuration
+	core.ReloadEnableUnauthenticatedAccess()
+
 	// Send a message that we reloaded. This prevents "guessing" sleep times
 	// in tests.
 	select {
@@ -3000,6 +3005,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
 		ObservationSystemConfig:        config.Observations,
 		ReportingScanDirectory:         config.ReportingScanDirectory,
+		EnableUnauthenticatedAccess:    config.EnableUnauthenticatedAccess,
 	}
 
 	if c.flagDev {
@@ -3194,6 +3200,7 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 			ReadTimeout:       30 * time.Second,
 			IdleTimeout:       5 * time.Minute,
 			ErrorLog:          c.logger.StandardLogger(nil),
+			MaxHeaderBytes:    vaulthttp.TokenHeaderMaxBytes(ln.Config),
 		}
 
 		// override server defaults with config values for read/write/idle timeouts if configured

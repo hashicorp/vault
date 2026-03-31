@@ -29,13 +29,17 @@
           <FormField @attr={{field}} @model={{@clusterForm}} @showHelpText={{false}} />
         {{/each}}
       {{else}}
-        <EmptyState
-          class="is-shadowless"
-          @title="You do not have permission to set this mount's the cluster config"
-          @message="Ask your administrator if you think you should have access to:"
-        >
-          <code>POST /{{@backend}}/config/cluster</code>
-        </EmptyState>
+        <Hds::ApplicationState class="top-padding-32 bottom-padding-32 is-marginless" as |A|>
+          <A.Header
+            @title="You do not have permission to set this mount's the cluster config"
+            @titleTag="h2"
+            data-test-empty-state-title
+          />
+          <A.Body @text="Ask your administrator if you think you should have access to:" data-test-empty-state-message />
+          <A.Footer data-test-empty-state-actions>
+            <code>POST /{{@backend}}/config/cluster</code>
+          </A.Footer>
+        </Hds::ApplicationState>
       {{/if}}
     </fieldset>
 
@@ -48,13 +52,17 @@
           <FormField @attr={{field}} @model={{@acmeForm}} @showHelpText={{false}} />
         {{/each}}
       {{else}}
-        <EmptyState
-          class="is-shadowless"
-          @title="You do not have permission to set this mount's ACME config"
-          @message="Ask your administrator if you think you should have access to:"
-        >
-          <code>POST /{{@backend}}/config/acme</code>
-        </EmptyState>
+        <Hds::ApplicationState class="top-padding-32 bottom-padding-32 is-marginless" as |A|>
+          <A.Header
+            @title="You do not have permission to set this mount's ACME config"
+            @titleTag="h2"
+            data-test-empty-state-title
+          />
+          <A.Body @text="Ask your administrator if you think you should have access to:" data-test-empty-state-message />
+          <A.Footer data-test-empty-state-actions>
+            <code>POST /{{@backend}}/config/acme</code>
+          </A.Footer>
+        </Hds::ApplicationState>
       {{/if}}
     </fieldset>
 
@@ -67,13 +75,17 @@
           <FormField @attr={{field}} @model={{@urlsForm}} @showHelpText={{false}} />
         {{/each}}
       {{else}}
-        <EmptyState
-          class="is-shadowless"
-          @title="You do not have permission to set this mount's URLs"
-          @message="Ask your administrator if you think you should have access to:"
-        >
-          <code>POST /{{@backend}}/config/urls</code>
-        </EmptyState>
+        <Hds::ApplicationState class="top-padding-32 bottom-padding-32 is-marginless" as |A|>
+          <A.Header
+            @title="You do not have permission to set this mount's URLs"
+            @titleTag="h2"
+            data-test-empty-state-title
+          />
+          <A.Body @text="Ask your administrator if you think you should have access to:" data-test-empty-state-message />
+          <A.Footer data-test-empty-state-actions>
+            <code>POST /{{@backend}}/config/urls</code>
+          </A.Footer>
+        </Hds::ApplicationState>
       {{/if}}
     </fieldset>
 
@@ -114,12 +126,17 @@
           {{/each-in}}
         {{/each}}
       {{else}}
-        <EmptyState
-          @title="You do not have permission to set this mount's revocation configuration"
-          @message="Ask your administrator if you think you should have access to:"
-        >
-          <code>POST /{{@backend}}/config/crl</code>
-        </EmptyState>
+        <Hds::ApplicationState class="top-padding-32 bottom-padding-32 is-marginless" as |A|>
+          <A.Header
+            @title="You do not have permission to set this mount's revocation configuration"
+            @titleTag="h2"
+            data-test-empty-state-title
+          />
+          <A.Body @text="Ask your administrator if you think you should have access to:" data-test-empty-state-message />
+          <A.Footer data-test-empty-state-actions>
+            <code>POST /{{@backend}}/config/crl</code>
+          </A.Footer>
+        </Hds::ApplicationState>
       {{/if}}
     </fieldset>
 

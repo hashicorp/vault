@@ -1,0 +1,3 @@
+```release-note:bug
+secret-sync (enterprise): Fix race condition in secretsSetRemoveHandler by serializing MemDB transaction access.
+```

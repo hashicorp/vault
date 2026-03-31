@@ -3,14 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Random bytes">
+<Page::Header
+  @title="Random bytes"
+  @description="Use Vault as a cryptographically secure entropy source to generate high-quality random bytes for external applications."
+>
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
 </Page::Header>
 
 {{#if this.randomBytes}}
-  <div class="box is-sideless is-fullwidth is-marginless">
+  <div class="box is-fullwidth is-marginless">
     <label for="rand" class="is-label">Random bytes</label>
     <Hds::Copy::Snippet
       @textToCopy={{this.randomBytes}}
@@ -24,7 +27,7 @@
   </div>
 {{else}}
   <form {{on "submit" this.handleSubmit}}>
-    <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="box is-fullwidth is-marginless">
       <MessageError @errorMessage={{this.errorMessage}} />
       <div class="field is-horizontal">
         <div class="field-body">

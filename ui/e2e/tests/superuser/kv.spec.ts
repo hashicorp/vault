@@ -5,22 +5,13 @@
 
 import { test, expect } from '@playwright/test';
 import { BasePage } from '../../pages/base';
+import { ConfigurationSettingsPage } from '../../pages/configuration-settings';
 
 test('kvv2 workflow', async ({ page }) => {
   const basePage = new BasePage(page);
-  await page.goto('dashboard');
   // enable kv secrets engine
-  await page.getByRole('link', { name: 'Secrets', exact: true }).click();
-  // skip if intro page is shown
-  const skipButton = page.getByRole('button', { name: 'Skip' });
-  if (await skipButton.isVisible()) {
-    await skipButton.click();
-  }
-  await page.getByRole('link', { name: 'Enable new engine' }).click();
-  await page.locator('div').filter({ hasText: 'KV' }).nth(4).click();
-  await page.getByRole('textbox', { name: 'Path' }).click();
-  await page.getByRole('textbox', { name: 'Path' }).fill('kv-test');
-  await page.getByRole('button', { name: 'Enable engine' }).click();
+  await basePage.enableEngine('KV', 'kv-test');
+
   // once enabled it should navigate to the secrets engine overview page
   await expect(page.locator('section')).toContainText('kv-test version 2');
   await expect(page.locator('section')).toContainText(
@@ -126,4 +117,75 @@ test('kvv2 workflow', async ({ page }) => {
   await expect(page.locator('section')).toContainText(
     'Version 1 of this secret has been permanently destroyed A version that has been permanently deleted cannot be restored. You can view other versions of this secret in the Version History tab above. KV v2 API docs'
   );
+  // generate policy
+  await page.getByRole('button', { name: 'Generate policy' }).click();
+  await page.getByRole('textbox', { name: 'Policy name' }).fill('foo-policy');
+  await page.getByRole('checkbox', { name: 'sudo' }).nth(0).check();
+  await page.getByRole('checkbox', { name: 'read' }).nth(1).check();
+  await page.getByRole('checkbox', { name: 'list' }).nth(2).check();
+  await page.getByRole('button', { name: 'Delete' }).nth(3).click();
+  await page.getByRole('button', { name: 'Add rule' }).click();
+  await page.getByRole('textbox', { name: 'Resource path' }).nth(5).fill('kv-test/nomatch');
+  await page.getByRole('checkbox', { name: 'create' }).nth(5).check();
+  await page.getByRole('button', { name: 'Automation snippets' }).click();
+  await expect(page.getByRole('code')).toContainText(
+    'resource "vault_policy" "<local identifier>" { name = "foo-policy" policy = <<EOT path "kv-test/metadata/foo" { capabilities = ["sudo"] } path "kv-test/data/foo" { capabilities = ["read"] } path "kv-test/subkeys/foo" { capabilities = ["list"] } path "kv-test/undelete/foo" { capabilities = [] } path "kv-test/destroy/foo" { capabilities = [] } path "kv-test/nomatch" { capabilities = ["create"] } EOT }'
+  );
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('link', { name: 'View policy' }).click();
+  await expect(page.getByRole('heading', { name: 'foo-policy' })).toBeVisible();
+});
+
+test('kvv2 tune workflow', async ({ page }) => {
+  const basePage = new BasePage(page);
+  const configurationSettingsPage = new ConfigurationSettingsPage(page);
+
+  const path = 'kv-tune';
+  const engineType = 'kv';
+
+  await test.step('enable kvv2 secrets engine mount', async () => {
+    await basePage.enableEngine(engineType, path);
+  });
+
+  await test.step('navigate to configuration page from manage dropdown and ensure plugin settings tab is active', async () => {
+    await configurationSettingsPage.navigateToConfiguration(path);
+    await configurationSettingsPage.assertPluginSettingsTabActive(engineType);
+  });
+
+  await test.step('edit plugin settings configuration', async () => {
+    await page.getByRole('link', { name: 'Edit configuration' }).click();
+    await page.getByRole('link', { name: 'Edit configuration' }).click();
+    await page.locator('#max_versions').fill('2');
+    await page.locator('#label-cas_required').check();
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('Require check and set Yes')).toBeVisible();
+  });
+
+  await test.step('navigate and verify general settings form', async () => {
+    await configurationSettingsPage.navigateToGeneralSettings(engineType);
+    await configurationSettingsPage.editAndVerifyGeneralSettings(path, engineType);
+    await page.getByRole('link', { name: 'Exit configuration' }).click();
+  });
+
+  await test.step('ensure that we navigate back to the kv overview page when Exit configuration is clicked', async () => {
+    await expect(
+      page
+        .locator('div')
+        .filter({ hasText: `${path} version 2 KV Manage` })
+        .nth(3)
+    ).toBeVisible();
+  });
+
+  await test.step('verify unsaved changes modal works in general settings', async () => {
+    // Navigate back to general settings
+    await configurationSettingsPage.navigateToConfiguration(path);
+    await configurationSettingsPage.navigateToGeneralSettings(engineType);
+
+    // Test Unsaved changes modal
+    await configurationSettingsPage.verifyUnsavedChangesModalOnNavigateAway(path);
+  });
+
+  await test.step('clean up and disable engine', async () => {
+    await basePage.disableEngine(path);
+  });
 });

@@ -262,11 +262,15 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		group = new(identity.Group)
 		newGroup = true
 	}
-
+	var modifiedFields []string
 	// Update the policies if supplied
 	policiesRaw, ok := d.GetOk("policies")
 	if ok {
-		group.Policies = strutil.RemoveDuplicatesStable(policiesRaw.([]string), true)
+		dedupedPolicies := strutil.RemoveDuplicatesStable(policiesRaw.([]string), true)
+		if !strutil.EquivalentSlices(dedupedPolicies, group.Policies) {
+			modifiedFields = append(modifiedFields, "policies")
+		}
+		group.Policies = dedupedPolicies
 	}
 
 	if strutil.StrListContainsCaseInsensitive(group.Policies, "root") {
@@ -310,6 +314,9 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		case groupByName.ID != group.ID:
 			return logical.ErrorResponse("group name is already in use"), nil
 		}
+		if group.Name != groupName {
+			modifiedFields = append(modifiedFields, "name")
+		}
 		group.Name = groupName
 	}
 
@@ -319,14 +326,15 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		group.ScimClientID = scimClientID.(string)
 	}
 
-	if err := i.scimResourceCheck(ctx, group, originalSCIMID, newGroup); err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
 	metadata, ok, err := d.GetOkErr("metadata")
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
 	}
 	if ok {
+		metadataMap := metadata.(map[string]string)
+		if !strutil.EqualStringMaps(group.Metadata, metadataMap) {
+			modifiedFields = append(modifiedFields, "metadata")
+		}
 		group.Metadata = metadata.(map[string]string)
 	}
 
@@ -334,6 +342,9 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 	if ok {
 		if group.Type == groupTypeExternal {
 			return logical.ErrorResponse("member entities can't be set manually for external groups"), nil
+		}
+		if !strutil.EquivalentSlices(group.MemberEntityIDs, memberEntityIDsRaw.([]string)) {
+			modifiedFields = append(modifiedFields, "member_entity_ids")
 		}
 		group.MemberEntityIDs = memberEntityIDsRaw.([]string)
 	}
@@ -345,8 +356,14 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 			return logical.ErrorResponse("member groups can't be set for external groups"), nil
 		}
 		memberGroupIDs = memberGroupIDsRaw.([]string)
+		modifiedFields = append(modifiedFields, "member_group_ids")
 	}
 
+	// Build the list of fields being modified by this request.
+
+	if err := i.scimResourceCheck(ctx, group, originalSCIMID, newGroup, modifiedFields); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
 	err = i.sanitizeAndUpsertGroup(ctx, group, nil, memberGroupIDs)
 	if err != nil {
 		if errStr := err.Error(); strings.HasPrefix(errStr, errCycleDetectedPrefix) {
@@ -432,6 +449,10 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 	respData["modify_index"] = group.ModifyIndex
 	respData["type"] = group.Type
 	respData["namespace_id"] = group.NamespaceID
+
+	if i.scimEnabled {
+		respData["scim_client_id"] = group.ScimClientID
+	}
 
 	aliasMap := map[string]interface{}{}
 	if group.Alias != nil {

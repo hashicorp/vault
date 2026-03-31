@@ -59,10 +59,11 @@ value or the value of max_ttl, whichever is shorter.`,
 set, defaults to the system maximum lease TTL.`,
 		},
 		"allow_token_displayname": {
-			Type:     framework.TypeBool,
-			Required: true,
-			Description: `Whether to allow "localhost" and "localdomain"
-as a valid common name in a request, independent of allowed_domains value.`,
+			Type: framework.TypeBool,
+			Description: `Deprecated. If set, clients can request certificates matching 
+the value of Display Name from the requesting token. Remember, this stacks with 
+the other CN options, including allow_subdomains. Defaults to false.`,
+			Deprecated: true,
 		},
 
 		"allow_localhost": {

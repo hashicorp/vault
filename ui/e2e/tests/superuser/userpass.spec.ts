@@ -10,9 +10,6 @@ test('userpass workflow', async ({ page }) => {
   await page.goto('dashboard');
   await page.getByRole('link', { name: 'Access control' }).click();
   await page.getByRole('link', { name: 'Authentication methods' }).click();
-
-  // dismiss intro page and click enable method in toolbar
-  await page.getByRole('button', { name: 'Skip' }).click();
   await page.getByRole('link', { name: 'Enable new method' }).click();
 
   // enable userpass auth method

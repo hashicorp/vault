@@ -8,6 +8,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import type NamespaceService from 'vault/services/namespace';
+import { isEmpty } from '@ember/utils';
 
 interface Project {
   name: string;
@@ -40,7 +41,8 @@ class Block {
   // briefly and then remains blank.
   get hasMultipleNodes() {
     const hasMultipleOrgs = this.hasMultipleItems(this.orgs);
-    const orgHasMultipleProjects = this.orgs.some((org) => this.hasMultipleItems(org.projects));
+    const filledOrgs = this.orgs.filter((org) => !isEmpty(org.name));
+    const orgHasMultipleProjects = filledOrgs.some((org) => this.hasMultipleItems(org.projects));
     return hasMultipleOrgs || orgHasMultipleProjects;
   }
 
@@ -110,7 +112,7 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   }
 
   checkForDuplicateGlobals() {
-    const globals = this.blocks.map((block) => block.global).filter((global) => global !== '');
+    const globals = this.blocks.map((block) => block.global).filter((global) => !isEmpty(global));
     const globalCounts = new Map();
 
     globals.forEach((global) => {
@@ -167,7 +169,9 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   updateOrgValue(block: Block, orgToUpdate: Org, event: Event) {
     const target = event.target as HTMLInputElement;
     const value = target.value.trim();
-    const isDuplicate = block.orgs.some((org) => org !== orgToUpdate && org.name === value);
+    const isDuplicate = isEmpty(value)
+      ? false
+      : block.orgs.some((org) => org !== orgToUpdate && org.name === value);
 
     const updatedOrgs = block.orgs.map((org) => {
       if (org === orgToUpdate) {
@@ -203,7 +207,9 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   updateProjectValue(block: Block, org: Org, projectToUpdate: Project, event: Event) {
     const target = event.target as HTMLInputElement;
     const value = target.value.trim();
-    const isDuplicate = org.projects.some((project) => project !== projectToUpdate && project.name === value);
+    const isDuplicate = isEmpty(value)
+      ? false
+      : org.projects.some((project) => project !== projectToUpdate && project.name === value);
 
     const updatedOrgs = block.orgs.map((currentOrg) => {
       if (currentOrg === org) {
@@ -263,25 +269,27 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   }
 
   get treeData() {
-    const parsed = this.blocks.map((block) => {
-      return {
-        name: block.global,
-        children: block.orgs
-          .filter((org) => org.name !== '')
-          .map((org) => {
-            return {
-              name: org.name,
-              children: org.projects
-                .filter((project) => project.name !== '')
-                .map((project) => {
-                  return {
-                    name: project.name,
-                  };
-                }),
-            };
-          }),
-      };
-    });
+    const parsed = this.blocks
+      .filter((block) => !isEmpty(block.global))
+      .map((block) => {
+        return {
+          name: block.global,
+          children: block.orgs
+            .filter((org) => !isEmpty(org.name))
+            .map((org) => {
+              return {
+                name: org.name,
+                children: org.projects
+                  .filter((project) => !isEmpty(project.name))
+                  .map((project) => {
+                    return {
+                      name: project.name,
+                    };
+                  }),
+              };
+            }),
+        };
+      });
 
     return parsed;
   }
@@ -289,15 +297,15 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   // The Carbon tree chart only supports displaying nodes with at least 1 "fork" i.e. at least 2 globals, 2 orgs or 2 projects
   get shouldShowTreeChart(): boolean {
     // Count total globals across blocks
-    const globalsCount = this.blocks.filter((block) => block.global !== '').length;
+    const filledBlocks = this.blocks.filter((block) => !isEmpty(block.global));
 
     // Check if there are multiple globals
-    if (globalsCount > 1) {
+    if (filledBlocks.length > 1) {
       return true;
     }
 
     // Check for multiple projects or orgs within a block
-    return this.blocks.some((block) => block.hasMultipleNodes);
+    return filledBlocks.some((block) => block.hasMultipleNodes);
   }
 
   // Store namespace paths to be used for code snippets in the format "global", "global/org", "global/org/project"
@@ -307,23 +315,23 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
         const results: string[] = [];
 
         // Add global namespace if it exists
-        if (block.global !== '') {
+        if (!isEmpty(block.global)) {
           results.push(block.global);
         }
 
         block.orgs.forEach((org) => {
-          if (org.name !== '') {
+          if (!isEmpty(org.name)) {
             // Add global/org namespace
-            const globalOrg = [block.global, org.name].filter((value) => value !== '').join('/');
+            const globalOrg = [block.global, org.name].filter((value) => !isEmpty(value)).join('/');
             if (globalOrg && !results.includes(globalOrg)) {
               results.push(globalOrg);
             }
 
             org.projects.forEach((project) => {
-              if (project.name !== '') {
+              if (!isEmpty(project.name)) {
                 // Add global/org/project namespace
                 const fullNamespace = [block.global, org.name, project.name]
-                  .filter((value) => value !== '')
+                  .filter((value) => !isEmpty(value))
                   .join('/');
                 if (fullNamespace && !results.includes(fullNamespace)) {
                   results.push(fullNamespace);
@@ -335,6 +343,6 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
         return results;
       })
       .flat()
-      .filter((namespace) => namespace !== '');
+      .filter((namespace) => !isEmpty(namespace));
   }
 }

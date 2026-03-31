@@ -35,6 +35,11 @@ variable "vault_root_token" {
   default     = null
 }
 
+variable "vault_audit_log_path" {
+  type        = string
+  description = "The file path for the audit device (passed from vault_cluster module)"
+}
+
 variable "ldap_password" {
   type        = string
   description = "The LDAP Server admin password"
@@ -74,8 +79,25 @@ output "ldap" {
   value = local.ldap_output
 }
 
+# Ensure that our base DN is available on the LDAP server before we attempt to
+# to mount the engine.
+module "wait_for_ldap_base_dn" {
+  source = "../../../../ldap_wait_for_search"
+
+  hosts         = { 0 : var.leader_host }
+  ldap_base_dn  = var.integration_host_state.ldap.base_dn
+  ldap_bind_dn  = "cn=admin,${var.integration_host_state.ldap.base_dn}"
+  ldap_host     = var.integration_host_state.ldap.host
+  ldap_password = var.integration_host_state.ldap.admin_pw
+  ldap_port     = var.integration_host_state.ldap.port
+}
+
 # Enable LDAP secrets engine
 resource "enos_remote_exec" "secrets_enable_ldap_secret" {
+  depends_on = [
+    module.wait_for_ldap_base_dn,
+  ]
+
   environment = {
     ENGINE            = local.ldap_output.ldap_mount
     MOUNT             = local.ldap_output.ldap_mount
@@ -93,7 +115,7 @@ resource "enos_remote_exec" "secrets_enable_ldap_secret" {
   }
 }
 
-# Setup OpenLDAP infrastructure 
+# Setup OpenLDAP infrastructure
 resource "enos_remote_exec" "ldap_setup" {
   depends_on = [
     enos_remote_exec.secrets_enable_ldap_secret
@@ -146,11 +168,38 @@ resource "enos_remote_exec" "ldap_secrets_config" {
   }
 }
 
+resource "enos_remote_exec" "ldap_password_policy" {
+  depends_on = [
+    enos_remote_exec.secrets_enable_ldap_secret,
+    enos_remote_exec.ldap_setup
+  ]
+
+  environment = {
+    MOUNT             = local.ldap_output.ldap_mount
+    LDAP_SERVER       = local.ldap_output.host.private_ip
+    LDAP_PORT         = local.ldap_output.port
+    LDAP_USERNAME     = local.ldap_output.username
+    LDAP_ADMIN_PW     = local.ldap_output.pw
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/ldap/add-ldap-password-policy.sh")]
+
+  transport = {
+    ssh = {
+      host = var.leader_host.public_ip
+    }
+  }
+}
+
 # Create a new Library set of service accounts
 # Test Case: Service Account Library - Create a new Library set of service accounts
 resource "enos_remote_exec" "ldap_library_set_create" {
   depends_on = [
     enos_remote_exec.ldap_secrets_config,
+    enos_remote_exec.ldap_password_policy,
   ]
 
   environment = {
@@ -185,7 +234,7 @@ resource "enos_remote_exec" "ldap_library_set_update" {
   environment = {
     REQPATH = "${local.ldap_output.ldap_mount}/library/test-set"
     PAYLOAD = jsonencode({
-      service_account_names        = "fizz,buzz"
+      service_account_names        = "fizz,buzz,john,candy,sam,alex,pat,kim,robin"
       ttl                          = "12h"
       max_ttl                      = "15h"
       disable_check_in_enforcement = true
@@ -253,9 +302,8 @@ resource "enos_remote_exec" "ldap_library_checkout_custom_ttl" {
   }
 }
 
-# Self Check-in (Explicit)
-# Test Case: Self Check-in (Explicit) - Return your checked-out account
-resource "enos_remote_exec" "ldap_library_self_checkin" {
+# Check in buzz to make it available for read tests
+resource "enos_remote_exec" "ldap_library_checkin_buzz" {
   depends_on = [
     enos_remote_exec.ldap_library_checkout_custom_ttl,
   ]
@@ -263,7 +311,7 @@ resource "enos_remote_exec" "ldap_library_self_checkin" {
   environment = {
     REQPATH = "${local.ldap_output.ldap_mount}/library/test-set/check-in"
     PAYLOAD = jsonencode({
-      service_account_names = "fizz,buzz"
+      service_account_names = ["buzz"]
     })
     VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
@@ -279,23 +327,68 @@ resource "enos_remote_exec" "ldap_library_self_checkin" {
   }
 }
 
-resource "enos_remote_exec" "ldap_password_policy" {
+resource "enos_remote_exec" "ldap_library_checkin_fizz" {
   depends_on = [
-    enos_remote_exec.secrets_enable_ldap_secret
+    enos_remote_exec.ldap_library_checkin_buzz,
   ]
 
   environment = {
-    MOUNT             = local.ldap_output.ldap_mount
-    LDAP_SERVER       = local.ldap_output.host.private_ip
-    LDAP_PORT         = local.ldap_output.port
-    LDAP_USERNAME     = local.ldap_output.username
-    LDAP_ADMIN_PW     = local.ldap_output.pw
+    REQPATH = "${local.ldap_output.ldap_mount}/library/test-set/check-in"
+    PAYLOAD = jsonencode({
+      service_account_names = ["fizz"]
+    })
     VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token
   }
 
-  scripts = [abspath("${path.module}/../../../scripts/ldap/add-ldap-password-policy.sh")]
+  scripts = [abspath("${path.module}/../../../scripts/write.sh")]
+
+  transport = {
+    ssh = {
+      host = var.leader_host.public_ip
+    }
+  }
+}
+
+# Check-out another account for self check-in test
+# Test Case #9 (Part 1): Check-out a third account for explicit self check-in test
+resource "enos_remote_exec" "ldap_library_checkout_for_self_checkin" {
+  depends_on = [
+    enos_remote_exec.ldap_library_checkin_fizz,
+  ]
+
+  environment = {
+    REQPATH           = "${local.ldap_output.ldap_mount}/library/test-set/check-out"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/write.sh")]
+
+  transport = {
+    ssh = {
+      host = var.leader_host.public_ip
+    }
+  }
+}
+
+# Self Check-in (Explicit)
+# Test Case #9 (Part 2): Self Check-in (Explicit) - Return your checked-out account
+resource "enos_remote_exec" "ldap_library_self_checkin" {
+  depends_on = [
+    enos_remote_exec.ldap_library_checkout_for_self_checkin,
+  ]
+
+  environment = {
+    REQPATH           = "${local.ldap_output.ldap_mount}/library/test-set/check-in"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/write.sh")]
 
   transport = {
     ssh = {

@@ -624,6 +624,7 @@ func ValidateNames(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo,
 			}
 		}
 
+		// Deprecated: AllowTokenDisplayName is retained for backward compatibility but has not been writeable since v0.4.0
 		if role.AllowTokenDisplayName {
 			if name == entityInfo.DisplayName {
 				continue

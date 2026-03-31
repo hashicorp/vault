@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::PageHeader class="page-header" as |PH|>
+<Hds::PageHeader class="page-header" ...attributes as |PH|>
   <PH.Title>{{@title}}</PH.Title>
   {{#if (has-block "breadcrumbs")}}
     <PH.Breadcrumb>

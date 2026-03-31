@@ -8,3 +8,9 @@ package logical
 type (
 	EntToken struct{}
 )
+
+// IsStorageBacked reports whether this token has backing token storage.
+// Community edition tokens always use token storage.
+func (te *TokenEntry) IsStorageBacked() bool {
+	return te != nil
+}

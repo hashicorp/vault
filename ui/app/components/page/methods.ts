@@ -9,7 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import Component from '@glimmer/component';
 import { dropTask } from 'ember-concurrency';
 import sortObjects from 'vault/utils/sort-objects';
-import { WIZARD_ID } from '../wizard/methods/methods-wizard';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -46,7 +46,7 @@ export default class PageAuthMethodsComponent extends Component<Args> {
   @tracked methodToDisable: AuthMethodResource | null = null;
   @tracked shouldRenderIntroModal = false;
 
-  wizardId = WIZARD_ID;
+  wizardId = WIZARD_ID_MAP.authMethods;
 
   // list returned by getter is sorted in template
   get authMethodList() {
@@ -95,7 +95,7 @@ export default class PageAuthMethodsComponent extends Component<Args> {
   get showContent() {
     // Show when the 1) wizard is not shown OR 2) wizard intro modal is shown
     // This ensures the wizard intro modal is shown on top of the list view and the background content is not blank behind the modal
-    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(WIZARD_ID));
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(this.wizardId));
   }
 
   get showIntroButton() {

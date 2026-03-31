@@ -342,12 +342,13 @@ func TestSchemaValidation(t *testing.T) {
 			Schema: schema,
 		}
 
-		// NewConfigEntry should fail because schema validation happens during creation
-		_, err := NewConfigEntry(nil, data)
-		if err == nil {
-			t.Error("expected error from NewConfigEntry for unsupported schema, got nil")
+		config, err := NewConfigEntry(nil, data)
+		if err != nil {
+			t.Errorf("expected config entry to be created: %s", err)
 		}
 
+		// should fail schema validation even after normalization
+		err = config.Validate()
 		// Verify the error message is helpful
 		if err != nil {
 			if !strings.Contains(err.Error(), "unsupported schema") {

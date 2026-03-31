@@ -42,5 +42,7 @@
     @backend={{this.backend}}
   />
 {{else}}
-  <EmptyState @title="No Transit mode selected" />
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No Transit mode selected" @titleTag="h2" data-test-empty-state-title />
+  </Hds::ApplicationState>
 {{/if}}

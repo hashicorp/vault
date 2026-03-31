@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	logicalDatabase "github.com/hashicorp/vault/builtin/logical/database"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
 	logicalRabbitMQ "github.com/hashicorp/vault/builtin/logical/rabbitmq"
+	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/totp"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -564,7 +566,6 @@ func TestHWMTotpKeyCounts(t *testing.T) {
 
 // TestTransitDataProtectionCallCounts tests that we correctly store and track the transit data protection call counts
 func TestTransitDataProtectionCallCounts(t *testing.T) {
-	t.Parallel()
 	coreConfig := &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"transit": transit.Factory,
@@ -807,6 +808,265 @@ func TestTransitDataProtectionCallCounts(t *testing.T) {
 
 	// Verify counter is still at 0
 	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts(), "Counter should still be 0")
+}
+
+// TestSSHCertCounts tests that we correctly store and track the SSH certificate counts
+func TestSSHCertCounts(t *testing.T) {
+	standardDuration := 730.0
+	validityHours := float64(60*60*24) / 3600.0
+	units := validityHours / standardDuration
+	// Round to 4 decimal places
+	expectedCertUnit := math.Round(units*10000) / 10000
+
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"ssh": ssh.Factory,
+		},
+	}
+
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	// Mount SSH backend
+	req := logical.TestRequest(t, logical.CreateOperation, "sys/mounts/ssh")
+	req.Data["type"] = "ssh"
+	req.ClientToken = root
+	ctx := namespace.RootContext(context.Background())
+	_, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Create a certificate
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/config/ca")
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/roles/test")
+	req.ClientToken = root
+	req.Data["key_type"] = "ca"
+	req.Data["allow_user_certificates"] = true
+	req.Data["allow_empty_principals"] = true
+	req.Data["ttl"] = "1d"
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/issue/test")
+	req.ClientToken = root
+	resp, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	// Verify that the SSH counter is incremented
+	require.Equal(t, expectedCertUnit, core.certCountManager.GetCounts().SSHIssuedCerts)
+
+	// Test sign endpoint
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/sign/test")
+	req.Data["public_key"] = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJBp4mozY/snvG/+pkgv4xYifIFB2ov3gAvAqXgFqNpj vault-enterprise-key"
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	// Verify that the SSH counter is incremented
+	require.Equal(t, expectedCertUnit*2, core.certCountManager.GetCounts().SSHIssuedCerts)
+
+	// Now test persisting the summed counts - store and retrieve counts
+	// First, update the SSH cert counts (this will sum current counter with stored value)
+	currentCount := core.certCountManager.GetCounts().SSHIssuedCerts
+	core.certCountManager.StopConsumerJob()
+
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify the counter was reset after update
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedCerts, "Counter should be reset after update")
+
+	// Retrieve the stored counts
+	storedCounts, err := core.GetStoredSSHDurationAdjustedCertCount(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, currentCount, storedCounts)
+
+	core.certCountManager.StartConsumerJob(core.consumeCertCounts)
+
+	// Perform more operations to increase the counter
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/issue/test")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	// Counter should now be 1 cert
+	require.Equal(t, expectedCertUnit, core.certCountManager.GetCounts().SSHIssuedCerts)
+
+	// Update counts again - should sum the new count with the stored count
+	core.certCountManager.StopConsumerJob()
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify the counter was reset after update
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedCerts, "Counter should be reset after update")
+
+	// Verify stored counts are now the sum
+	summedCounts, err := core.GetStoredSSHDurationAdjustedCertCount(ctx, time.Now())
+	require.NoError(t, err)
+
+	expectedSum := currentCount + expectedCertUnit
+	require.Equal(t, expectedSum, summedCounts, "Count should be sum of stored and current")
+
+	core.certCountManager.StartConsumerJob(core.consumeCertCounts)
+
+	// Add more operations without manually resetting
+	for i := 0; i < 3; i++ {
+		req = logical.TestRequest(t, logical.UpdateOperation, "ssh/sign/test")
+		req.Data["public_key"] = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJBp4mozY/snvG/+pkgv4xYifIFB2ov3gAvAqXgFqNpj vault-enterprise-key"
+		req.ClientToken = root
+		resp, err = core.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.Nil(t, resp.Error())
+	}
+
+	// Counter should be 3 certs
+	require.Equal(t, expectedCertUnit*3, core.certCountManager.GetCounts().SSHIssuedCerts)
+
+	// Update counts - should sum 3 with the previous stored sum
+	core.certCountManager.StopConsumerJob()
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify the counter was reset after update
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedCerts, "Counter should be reset after update")
+
+	// Verify stored counts
+	storedCounts, err = core.GetStoredSSHDurationAdjustedCertCount(ctx, time.Now())
+	require.NoError(t, err)
+	expectedSum += expectedCertUnit * 3
+	require.Equal(t, expectedSum, storedCounts)
+}
+
+// TestSSHOTPCounts tests that we correctly store and track the SSH OTP counts
+func TestSSHOTPCounts(t *testing.T) {
+	expectedOTPUnit := 0.0014
+
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"ssh": ssh.Factory,
+		},
+	}
+
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	// Mount SSH backend
+	req := logical.TestRequest(t, logical.CreateOperation, "sys/mounts/ssh")
+	req.Data["type"] = "ssh"
+	req.ClientToken = root
+	ctx := namespace.RootContext(context.Background())
+	_, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Create a certificate
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/config/ca")
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/roles/test")
+	req.ClientToken = root
+	req.Data["key_type"] = "otp"
+	req.Data["default_user"] = "user"
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/config/zeroaddress")
+	req.ClientToken = root
+	req.Data["roles"] = "test"
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/creds/test")
+	req.ClientToken = root
+	req.Data["ip"] = "1.2.3.4"
+	resp, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	// Verify that the SSH counter is incremented
+	require.Equal(t, expectedOTPUnit, core.certCountManager.GetCounts().SSHIssuedOTPs)
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/creds/test")
+	req.ClientToken = root
+	req.Data["ip"] = "1.2.3.4"
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	// Verify that the SSH counter is incremented
+	require.Equal(t, expectedOTPUnit*2, core.certCountManager.GetCounts().SSHIssuedOTPs)
+
+	// Now test persisting the summed counts - store and retrieve counts
+	// First, update the SSH cert counts (this will sum current counter with stored value)
+	currentCount := core.certCountManager.GetCounts().SSHIssuedOTPs
+	core.certCountManager.StopConsumerJob()
+
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify the counter was reset after update
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedOTPs, "Counter should be reset after update")
+
+	// Retrieve the stored counts
+	storedCounts, err := core.GetStoredSSHOTPCount(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, currentCount, storedCounts)
+
+	core.certCountManager.StartConsumerJob(core.consumeCertCounts)
+
+	// Perform more operations to increase the counter
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/creds/test")
+	req.ClientToken = root
+	req.Data["ip"] = "1.2.3.4"
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	// Counter should now be 1 unit
+	require.Equal(t, expectedOTPUnit, core.certCountManager.GetCounts().SSHIssuedOTPs)
+
+	// Update counts again - should sum the new count with the stored count
+	core.certCountManager.StopConsumerJob()
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify the counter was reset after update
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedOTPs, "Counter should be reset after update")
+
+	// Verify stored counts are now the sum
+	summedCounts, err := core.GetStoredSSHOTPCount(ctx, time.Now())
+	require.NoError(t, err)
+
+	expectedSum := currentCount + expectedOTPUnit
+	require.Equal(t, expectedSum, summedCounts, "Count should be sum of stored and current")
+
+	core.certCountManager.StartConsumerJob(core.consumeCertCounts)
+
+	// Add more operations without manually resetting
+	for i := 0; i < 3; i++ {
+		req = logical.TestRequest(t, logical.UpdateOperation, "ssh/creds/test")
+		req.ClientToken = root
+		req.Data["ip"] = "1.2.3.4"
+		resp, err = core.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.Nil(t, resp.Error())
+	}
+
+	// Counter should be 3 units
+	require.Equal(t, expectedOTPUnit*3, core.certCountManager.GetCounts().SSHIssuedOTPs)
+
+	// Update counts - should sum 3 with the previous stored sum
+	core.certCountManager.StopConsumerJob()
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify the counter was reset after update
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedOTPs, "Counter should be reset after update")
+
+	// Verify stored counts
+	storedCounts, err = core.GetStoredSSHOTPCount(ctx, time.Now())
+	require.NoError(t, err)
+	expectedSum += 3 * expectedOTPUnit
+	require.Equal(t, expectedSum, storedCounts)
 }
 
 func addRoleToStorage(t *testing.T, core *Core, mount string, key string, numberOfKeys int) {

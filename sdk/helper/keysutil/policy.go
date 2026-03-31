@@ -35,6 +35,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -1662,6 +1663,25 @@ func (p *Policy) verifyEd25519WithPublicKey(input []byte, sigBytes []byte, pub e
 	return true, nil
 }
 
+// When x509.ParsePKCS8PrivateKey fails it suggests alternative parser functions (e.g.,
+// "failed to parse private key (use ParsePKCS1PrivateKey instead for this key format)"
+// Instead, return an error that clearly states private keys must be PKCS#8.
+func formatPKCS8ParsingError(key []byte, err error) error {
+	if err == nil {
+		return nil
+	}
+	const message = "error parsing asymmetric key: private key must be encoded as PKCS#8"
+	_, format, _ := certutil.ParseDERKey(key)
+	switch format {
+	case certutil.ECBlock:
+		return fmt.Errorf("%s; detected key format: EC PRIVATE KEY (SEC1)\n - original error: %w", message, err)
+	case certutil.PKCS1Block:
+		return fmt.Errorf("%s; detected key format: RSA PRIVATE KEY (PKCS#1)\n - original error: %w", message, err)
+	default:
+		return fmt.Errorf("%s: %w", message, err)
+	}
+}
+
 func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte, randReader io.Reader) error {
 	return p.ImportPublicOrPrivate(ctx, storage, key, true, randReader)
 }
@@ -1720,7 +1740,7 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 					var edErr error
 					parsedKey, edErr = ParsePKCS8Ed25519PrivateKey(key)
 					if edErr != nil {
-						return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an ed25519 private key: %s\n - original error: %v", edErr, err)
+						return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an ed25519 private key: %s\n - original error: %w", edErr, err)
 					}
 
 					// Parsing as Ed25519-in-PKCS8-ECPrivateKey succeeded!
@@ -1733,7 +1753,7 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 
 					// Parsing as RSA-PSS in PKCS8 succeeded!
 				} else {
-					return fmt.Errorf("error parsing asymmetric key: %s", err)
+					return formatPKCS8ParsingError(key, err)
 				}
 			}
 		} else {
@@ -2408,7 +2428,7 @@ func (p *Policy) ImportPrivateKeyForVersion(ctx context.Context, storage logical
 			var edErr error
 			parsedPrivateKey, edErr = ParsePKCS8Ed25519PrivateKey(key)
 			if edErr != nil {
-				return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an ed25519 private key: %s\n - original error: %v", edErr, err)
+				return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an ed25519 private key: %s\n - original error: %w", edErr, err)
 			}
 
 			// Parsing as Ed25519-in-PKCS8-ECPrivateKey succeeded!
@@ -2421,7 +2441,7 @@ func (p *Policy) ImportPrivateKeyForVersion(ctx context.Context, storage logical
 
 			// Parsing as RSA-PSS in PKCS8 succeeded!
 		} else {
-			return fmt.Errorf("error parsing asymmetric key: %s", err)
+			return formatPKCS8ParsingError(key, err)
 		}
 	}
 

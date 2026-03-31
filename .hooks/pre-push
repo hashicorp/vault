@@ -45,6 +45,9 @@
 
 set -eou pipefail
 
+# We need extglob in order to parse remote_url_is_enterprise
+shopt -s extglob
+
 # fail takes two arguments. The first is the failure reasons and the second is
 # an explanation. Both will be written to STDERR. The script will then exit 1.
 fail() {
@@ -60,7 +63,7 @@ fail() {
 # that of hashicorp/vault-enterprise, otherwise it returns 1.
 remote_url_is_enterprise() {
   case "$1" in
-    git@github.com:hashicorp/vault-enterprise* | https://github.com/hashicorp/vault-enterprise*)
+    ?(ssh://)git@github.com@(:|/)hashicorp/vault-enterprise?(.git) | https://github.com/hashicorp/vault-enterprise?(.git))
       return 0
       ;;
     *)

@@ -4,9 +4,11 @@
 package blackbox
 
 import (
+	"errors"
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/backoff"
 	"github.com/stretchr/testify/require"
 )
 
@@ -182,147 +184,129 @@ func (s *Session) GetClusterNodeCount() int {
 
 // WaitForNewLeader waits for a new leader to be elected that is different from initialLeader
 // and for the cluster to become healthy. For single-node clusters, it just waits for the
-// cluster to become healthy again after stepdown.
+// cluster to become healthy again after stepdown. Uses reasonable timeouts to detect race conditions early.
 func (s *Session) WaitForNewLeader(initialLeader string, timeoutSeconds int) {
 	s.t.Helper()
+
+	// Use reasonable timeout - if it takes more than a few seconds, there's likely a race condition
+	if timeoutSeconds > 10 {
+		s.t.Logf("Warning: timeout of %d seconds is quite high, consider investigating potential race conditions", timeoutSeconds)
+	}
 
 	// Check cluster size to handle single-node case
 	nodeCount := s.GetClusterNodeCount()
 	if nodeCount <= 1 {
 		s.t.Logf("Single-node cluster detected, waiting for cluster to recover after stepdown...")
 
-		// For single-node clusters, just wait for the same leader to come back and be healthy
-		timeout := time.After(time.Duration(timeoutSeconds) * time.Second)
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
+		// Use backoff helper for single-node recovery
+		b := backoff.NewBackoff(20, 100*time.Millisecond, 1*time.Second) // Max ~10 seconds with backoff
 
-		for {
-			select {
-			case <-timeout:
-				s.t.Fatalf("Timeout waiting for single-node cluster to recover after %d seconds", timeoutSeconds)
-			case <-ticker.C:
-				// Check if cluster is healthy again
-				secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
-					return s.Client.Logical().Read("sys/storage/raft/autopilot/state")
-				})
-				if err != nil {
-					s.t.Logf("Error reading autopilot state: %v, retrying...", err)
-					continue
-				}
-
-				if secret == nil {
-					s.t.Logf("No autopilot state returned, retrying...")
-					continue
-				}
-
-				healthy, ok := secret.Data["healthy"].(bool)
-				if !ok {
-					s.t.Logf("Autopilot healthy status not found, retrying...")
-					continue
-				}
-
-				if healthy {
-					s.t.Log("Single-node cluster has recovered and is healthy")
-					return
-				} else {
-					s.t.Logf("Single-node cluster not yet healthy, waiting...")
-				}
+		err := b.Retry(func() error {
+			secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
+				return s.Client.Logical().Read("sys/storage/raft/autopilot/state")
+			})
+			if err != nil {
+				return err
 			}
+			if secret == nil {
+				return errors.New("no autopilot state returned")
+			}
+
+			healthy, ok := secret.Data["healthy"].(bool)
+			if !ok {
+				return errors.New("autopilot healthy status not found")
+			}
+			if !healthy {
+				return errors.New("cluster not yet healthy")
+			}
+
+			return nil
+		})
+		if err != nil {
+			s.t.Fatalf("Single-node cluster failed to recover: %v", err)
 		}
+
+		s.t.Log("Single-node cluster has recovered and is healthy")
+		return
 	}
 
 	// Multi-node cluster logic - wait for actual leader change
-	timeout := time.After(time.Duration(timeoutSeconds) * time.Second)
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
+	s.t.Logf("Multi-node cluster detected, waiting for new leader election...")
 
-	newLeaderFound := false
+	// Phase 1: Wait for new leader (should be fast)
+	leaderBackoff := backoff.NewBackoff(20, 100*time.Millisecond, 500*time.Millisecond) // Max ~5 seconds
 	var currentLeader string
 
-	for {
-		select {
-		case <-timeout:
-			if newLeaderFound {
-				s.t.Fatalf("Timeout waiting for cluster to become healthy after %d seconds (new leader: %s)", timeoutSeconds, currentLeader)
-			} else {
-				s.t.Fatalf("Timeout waiting for new leader election after %d seconds", timeoutSeconds)
-			}
-		case <-ticker.C:
-			// First, check if a new leader has been elected
-			if !newLeaderFound {
-				secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
-					return s.Client.Logical().Read("sys/leader")
-				})
-				if err != nil {
-					s.t.Logf("Error reading leader status: %v, retrying...", err)
-					continue
-				}
-
-				if secret == nil {
-					s.t.Logf("No leader data returned, retrying...")
-					continue
-				}
-
-				leaderAddress, ok := secret.Data["leader_address"].(string)
-				if !ok || leaderAddress == "" {
-					s.t.Logf("No leader address found, retrying...")
-					continue
-				}
-
-				if leaderAddress != initialLeader {
-					s.t.Logf("New leader elected: %s (was: %s)", leaderAddress, initialLeader)
-					currentLeader = leaderAddress
-					newLeaderFound = true
-				} else {
-					s.t.Logf("Still waiting for new leader, current: %s", leaderAddress)
-					continue
-				}
-			}
-
-			// Once we have a new leader, wait for cluster to be healthy
-			if newLeaderFound {
-				secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
-					return s.Client.Logical().Read("sys/storage/raft/autopilot/state")
-				})
-				if err != nil {
-					s.t.Logf("Error reading autopilot state: %v, retrying...", err)
-					continue
-				}
-
-				if secret == nil {
-					s.t.Logf("No autopilot state returned, retrying...")
-					continue
-				}
-
-				healthy, ok := secret.Data["healthy"].(bool)
-				if !ok {
-					s.t.Logf("Autopilot healthy status not found, retrying...")
-					continue
-				}
-
-				if healthy {
-					s.t.Logf("Cluster is now healthy with new leader: %s", currentLeader)
-					return
-				} else {
-					s.t.Logf("Cluster not yet healthy, waiting...")
-				}
-			}
+	err := leaderBackoff.Retry(func() error {
+		secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
+			return s.Client.Logical().Read("sys/leader")
+		})
+		if err != nil {
+			return err
 		}
+		if secret == nil {
+			return errors.New("no leader data returned")
+		}
+
+		leaderAddress, ok := secret.Data["leader_address"].(string)
+		if !ok || leaderAddress == "" {
+			return errors.New("no leader address found")
+		}
+
+		if leaderAddress == initialLeader {
+			return errors.New("still waiting for new leader")
+		}
+
+		currentLeader = leaderAddress
+		return nil
+	})
+	if err != nil {
+		s.t.Fatalf("Failed to elect new leader: %v", err)
 	}
+
+	s.t.Logf("New leader elected: %s (was: %s)", currentLeader, initialLeader)
+
+	// Phase 2: Wait for cluster health (should also be fast)
+	healthBackoff := backoff.NewBackoff(20, 100*time.Millisecond, 500*time.Millisecond) // Max ~5 seconds
+
+	err = healthBackoff.Retry(func() error {
+		secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
+			return s.Client.Logical().Read("sys/storage/raft/autopilot/state")
+		})
+		if err != nil {
+			return err
+		}
+		if secret == nil {
+			return errors.New("no autopilot state returned")
+		}
+
+		healthy, ok := secret.Data["healthy"].(bool)
+		if !ok {
+			return errors.New("autopilot healthy status not found")
+		}
+		if !healthy {
+			return errors.New("cluster not yet healthy")
+		}
+
+		return nil
+	})
+	if err != nil {
+		s.t.Fatalf("Cluster failed to become healthy with new leader: %v", err)
+	}
+
+	s.t.Logf("Cluster is now healthy with new leader: %s", currentLeader)
 }
 
 // AssertClusterHealthy verifies that the cluster is healthy, with fallback for managed environments
 // like HCP where raft APIs may not be accessible. This is the recommended method for general
-// cluster health checks in blackbox tests. It includes retry logic for Docker environments
-// where the cluster may not be immediately ready.
+// cluster health checks in blackbox tests. Uses backoff helper for reasonable retry logic.
 func (s *Session) AssertClusterHealthy() {
 	s.t.Helper()
 
-	// For Docker environments, wait for the cluster to be ready with retry logic
-	maxRetries := 30
-	retryDelay := 2 * time.Second
+	// Use backoff helper for cluster readiness checks
+	b := backoff.NewBackoff(15, 200*time.Millisecond, 2*time.Second) // Max ~15 seconds with backoff
 
-	for attempt := 1; attempt <= maxRetries; attempt++ {
+	err := b.Retry(func() error {
 		// Try raft-based health check first (works for self-managed clusters)
 		secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
 			return s.Client.Logical().Read("sys/storage/raft/autopilot/state")
@@ -333,16 +317,9 @@ func (s *Session) AssertClusterHealthy() {
 			if healthy, ok := secret.Data["healthy"].(bool); ok && healthy {
 				// Raft API is available and healthy, use full raft health check
 				s.AssertRaftClusterHealthy()
-				return
+				return nil
 			} else if ok && !healthy {
-				// Raft API available but not healthy yet, retry if we have attempts left
-				if attempt < maxRetries {
-					s.t.Logf("Cluster not yet healthy (attempt %d/%d), waiting %v...", attempt, maxRetries, retryDelay)
-					time.Sleep(retryDelay)
-					continue
-				} else {
-					s.t.Fatalf("Cluster failed to become healthy after %d attempts", maxRetries)
-				}
+				return errors.New("cluster not yet healthy according to autopilot")
 			}
 		}
 
@@ -351,41 +328,21 @@ func (s *Session) AssertClusterHealthy() {
 			return s.Client.Logical().Read("sys/seal-status")
 		})
 		if err != nil {
-			if attempt < maxRetries {
-				s.t.Logf("Failed to read seal status (attempt %d/%d): %v, retrying in %v...", attempt, maxRetries, err, retryDelay)
-				time.Sleep(retryDelay)
-				continue
-			}
-			require.NoError(s.t, err, "Failed to read seal status - cluster may be unreachable")
+			return err
 		}
 
 		if sealStatus == nil {
-			if attempt < maxRetries {
-				s.t.Logf("Seal status response was nil (attempt %d/%d), retrying in %v...", attempt, maxRetries, retryDelay)
-				time.Sleep(retryDelay)
-				continue
-			}
-			require.NotNil(s.t, sealStatus, "Seal status response was nil")
+			return errors.New("seal status response was nil")
 		}
 
 		// Verify cluster is unsealed
 		sealed, ok := sealStatus.Data["sealed"].(bool)
 		if !ok {
-			if attempt < maxRetries {
-				s.t.Logf("Could not determine seal status (attempt %d/%d), retrying in %v...", attempt, maxRetries, retryDelay)
-				time.Sleep(retryDelay)
-				continue
-			}
-			require.True(s.t, ok, "Could not determine seal status")
+			return errors.New("could not determine seal status")
 		}
 
 		if sealed {
-			if attempt < maxRetries {
-				s.t.Logf("Cluster is sealed (attempt %d/%d), retrying in %v...", attempt, maxRetries, retryDelay)
-				time.Sleep(retryDelay)
-				continue
-			}
-			require.False(s.t, sealed, "Cluster is sealed")
+			return errors.New("cluster is sealed")
 		}
 
 		// If we get here, cluster is unsealed and responsive
@@ -394,6 +351,9 @@ func (s *Session) AssertClusterHealthy() {
 		} else {
 			s.t.Log("Cluster health verified (managed environment - raft APIs not accessible)")
 		}
-		return
+		return nil
+	})
+	if err != nil {
+		s.t.Fatalf("Cluster health check failed: %v", err)
 	}
 }

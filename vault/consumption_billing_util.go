@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
 )
@@ -757,4 +758,170 @@ func (c *Core) UpdateMetricsLastUpdateTime(ctx context.Context, currentMonth, up
 	defer cb.BillingStorageLock.Unlock()
 
 	return c.storeMetricsLastUpdateTimeLocked(ctx, billing.LocalPrefix, normalizedMonth, updateTime)
+}
+
+// GetStoredSSHDurationAdjustedCertCount retrieves the stored SSH duration-adjusted certificate count
+// for the specified month. The count is stored as a float64.
+// Returns 0 if no count has been stored for the given month.
+func (c *Core) GetStoredSSHDurationAdjustedCertCount(ctx context.Context, currentMonth time.Time) (float64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, errors.New("consumption billing is not initialized")
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+
+	return c.getStoredSSHDurationAdjustedCertCountLocked(ctx, billing.LocalPrefix, currentMonth)
+}
+
+func (c *Core) getStoredSSHDurationAdjustedCertCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (float64, error) {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHCertificateMetric)
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, errors.New("error reading SSH duration-adjusted count: billing subview not available")
+	}
+
+	se, err := view.Get(ctx, billingPath)
+	if se == nil || err != nil {
+		return 0, err
+	}
+
+	var certCount float64
+	err = se.DecodeJSON(&certCount)
+	if err != nil {
+		return 0, fmt.Errorf("error decoding current SSH duration adjusted cert count: %w", err)
+	}
+
+	return certCount, nil
+}
+
+func (c *Core) UpdateStoredSSHDurationAdjustedCertCount(ctx context.Context, currentMonth time.Time, certCount float64) (float64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
+	storedCertCount, err := c.getStoredSSHDurationAdjustedCertCountLocked(ctx, billing.LocalPrefix, currentMonth)
+	if err != nil {
+		return 0, err
+	}
+
+	err = c.storeSSHDurationAdjustedCertCountLocked(ctx, billing.LocalPrefix, currentMonth, certCount+storedCertCount)
+	if err != nil {
+		return 0, err
+	}
+
+	return certCount, nil
+}
+
+func (c *Core) storeSSHDurationAdjustedCertCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, certCount float64) error {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHCertificateMetric)
+
+	countBytes, err := jsonutil.EncodeJSON(certCount)
+	if err != nil {
+		return err
+	}
+
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: countBytes,
+	}
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
+}
+
+// GetStoredSSHOTPCount retrieves the stored SSH OTP count
+// for the specified month. The count is stored as a uint64.
+// Returns 0 if no count has been stored for the given month.
+func (c *Core) GetStoredSSHOTPCount(ctx context.Context, currentMonth time.Time) (float64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, errors.New("consumption billing is not initialized")
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+
+	return c.getStoredSSHOTPCountLocked(ctx, billing.LocalPrefix, currentMonth)
+}
+
+func (c *Core) getStoredSSHOTPCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (float64, error) {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHOTPMetric)
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, errors.New("error reading SSH OTP count: billing subview not available")
+	}
+
+	se, err := view.Get(ctx, billingPath)
+	if se == nil || err != nil {
+		return 0, err
+	}
+
+	var otpCount float64
+	err = se.DecodeJSON(&otpCount)
+	if err != nil {
+		return 0, fmt.Errorf("error decoding current OTP cert count: %w", err)
+	}
+
+	return otpCount, nil
+}
+
+func (c *Core) UpdateStoredSSHOTPCount(ctx context.Context, currentMonth time.Time, otpCount float64) (float64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
+	storedOTPCount, err := c.getStoredSSHOTPCountLocked(ctx, billing.LocalPrefix, currentMonth)
+	if err != nil {
+		return 0, err
+	}
+
+	err = c.storeSSHOTPCountLocked(ctx, billing.LocalPrefix, currentMonth, otpCount+storedOTPCount)
+	if err != nil {
+		return 0, err
+	}
+
+	return otpCount, nil
+}
+
+func (c *Core) storeSSHOTPCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, otpCount float64) error {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHOTPMetric)
+
+	countBytes, err := jsonutil.EncodeJSON(otpCount)
+	if err != nil {
+		return err
+	}
+
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: countBytes,
+	}
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
 }

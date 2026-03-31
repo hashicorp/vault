@@ -29,6 +29,12 @@ const (
 	// avoided like the HTTPContentType. The value must be a byte slice.
 	HTTPRawBody = "http_raw_body"
 
+	// HTTPRawBodyError is similar to HTTPRawBody.  The difference is that
+	// HTTPRawBodyError is specifically intended for endpoints that want to manage
+	// their error response directly.  This was added to mitigate the risk of
+	// causing regressions in the error responses of existing HTTPRawBody users.
+	HTTPRawBodyError = "http_raw_body_error"
+
 	// HTTPStatusCode is the response code of the HTTP body that goes with the HTTPContentType.
 	// This can only be specified for non-secrets, and should should be similarly
 	// avoided like the HTTPContentType. The value must be an integer.

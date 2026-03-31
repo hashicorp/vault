@@ -7,7 +7,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"math/rand"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -40,7 +42,7 @@ var (
 )
 
 // loadArtifacts is responsible for loading entities, groups, and aliases from
-// storage into MemDB.
+// storage into MemDB. The caller should hold the identity store lock.
 func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error {
 	if i == nil {
 		return nil
@@ -106,6 +108,8 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 			return fmt.Errorf("failed to load SCIM clients: %w", err)
 		}
 
+		i.startSCIMDeletingClientCleanup(ctx, isActive)
+
 		return nil
 	}
 
@@ -119,8 +123,17 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 	// If the identity deduplication cleanup flag is activated, instead
 	// deal with duplicate entities and groups by renaming with a -UUID
 	// suffix. N.B. *entity alias* duplicates will still be merged as before.
-	if i.renameDuplicates.IsActivationFlagEnabled(activationflags.IdentityDeduplication) {
+	if i.activationManager.IsActivationFlagEnabled(activationflags.IdentityDeduplication) {
 		i.conflictResolver = &renameResolver{i.logger}
+	}
+
+	// Restore the in-memory scimEnabled flag from the persisted activation
+	// flags. The ActivationFunc callback only fires on API writes and storage
+	// invalidations, not on startup, so we must explicitly check the flag here
+	// to ensure SCIM paths remain available after seal/unseal.
+	if i.activationManager.IsActivationFlagEnabled(activationflags.SCIMEnablement) {
+		i.logger.Info("restoring SCIM enablement from persisted activation flags")
+		i.scimEnabled = true
 	}
 
 	// Load everything when MemDB is set to operate on lower cased names.
@@ -636,6 +649,45 @@ LOOP:
 						}
 						continue
 					}
+
+					// Check and repair any integrity issues in the entity. Issues here
+					// ought to be extremely rare but have been seen in clusters where
+					// where bugs in older versions of Vault might have persisted
+					// corrupted entities. These corrupted entities may have duplicate
+					// and/or dangling aliases that need to be cleaned up before we
+					// proceed.
+					// NOTE: This only repairs the integrity of the persisted entity. Any
+					// duplicate aliases will still require resolution either by the
+					// operator via delete or merge.
+					integrityCheck, err := checkEntityIntegrity(entity)
+					if err != nil {
+						i.logger.Warn("identity entity integrity check failed; attempting to repair",
+							"entity_id", entity.ID,
+							"has_nil_aliases", integrityCheck.hasNilAliases,
+							"dangling_aliases", integrityCheck.danglingAliases,
+							"aliases_with_duplicate_instances", slices.Sorted(maps.Keys(integrityCheck.duplicateAliases)),
+						)
+
+						if integrityCheck == nil {
+							return fmt.Errorf("identity entity integrity check failed; no plan to repair was generated: %w", err)
+						}
+
+						if err = integrityCheck.repair(i.logger); err != nil {
+							return fmt.Errorf("repairing identity entity integrity: %w", err)
+						}
+
+						if !(i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.localNode.HAState() == consts.PerfStandby) {
+							i.logger.Warn("persisting repaired identity entity",
+								"name", entity.Name,
+								"id", entity.ID,
+								"namespace_id", entity.NamespaceID,
+							)
+							if err = i.persistEntity(ctx, entity); err != nil {
+								return err
+							}
+						}
+					}
+
 					nsCtx := namespace.ContextWithNamespace(ctx, ns)
 
 					// Ensure that there are no entities with duplicate names
@@ -643,6 +695,7 @@ LOOP:
 					if err != nil {
 						return nil
 					}
+
 					modified, err := i.conflictResolver.ResolveEntities(ctx, entityByName, entity)
 					if err != nil && !i.disableLowerCasedNames {
 						return err
@@ -913,7 +966,6 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			// into merging. We don't need a namespace check here as existing
 			// checks when creating the aliases should ensure that all line up.
 			fallthrough
-
 		default:
 			// Though this is technically a conflict that should be resolved by the
 			// ConflictResolver implementation, the behavior here is a bit nuanced.
@@ -923,7 +975,8 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 				"alias_id", alias.ID,
 				"other_entity_id", aliasByFactors.CanonicalID,
 				"entity_aliases", entity.Aliases,
-				"alias_by_factors", aliasByFactors)
+				"alias_by_factors", aliasByFactors,
+			)
 
 			persistMerge := persist || persistMerges
 			respErr, intErr := i.mergeEntityAsPartOfUpsert(ctx, txn, entity, aliasByFactors.CanonicalID, persistMerge)
@@ -1032,6 +1085,13 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 		return nil, fmt.Errorf("alias is not local")
 	}
 
+	if lAlias.NamespaceID == "" {
+		ns, err := namespace.FromContext(ctx)
+		if err == nil {
+			lAlias.NamespaceID = ns.ID
+		}
+	}
+
 	mountValidationResp := i.router.ValidateMountByAccessor(lAlias.MountAccessor)
 	if mountValidationResp == nil {
 		return nil, fmt.Errorf("invalid mount accessor %q", lAlias.MountAccessor)
@@ -1046,6 +1106,37 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 		return nil, err
 	}
 
+	if alias != nil {
+		// If it exists, we cannot modify external id and issuer
+		if lAlias.ExternalID != alias.ExternalID || lAlias.Issuer != alias.Issuer {
+			return nil, fmt.Errorf("modifying external_id and issuer is forbidden (alias %s)", alias.ID)
+		}
+	}
+
+	// validate alias does not have same external ID and issuer as any existing entity alias's
+	if lAlias.Issuer != "" && lAlias.ExternalID != "" && lAlias.NamespaceID != "" {
+		extAlias, err := i.MemDBAliasByIssuerAndExternalId(lAlias.Issuer, lAlias.ExternalID, lAlias.NamespaceID, false)
+		if err != nil && !errors.Is(err, ErrNoAliasFound) {
+			return nil, err
+		}
+
+		// Validate an alias with these factors doesn't exist anywhere else
+		if extAlias != nil {
+			if extAlias.ID != lAlias.ID {
+				return nil, fmt.Errorf("cannot insert alias with this issuer, external_id and namespace, as one already exists")
+			}
+		}
+
+		// Validate none of the existing aliases on the entity have the same factors
+		for _, a := range entity.Aliases {
+			if a.ID != lAlias.ID {
+				if lAlias.ExternalID == a.ExternalID && lAlias.Issuer == a.Issuer && lAlias.NamespaceID == a.NamespaceID {
+					return nil, fmt.Errorf("alias with this external id, issuer, and namespace already present in entity (alias %s)", lAlias.ID)
+				}
+			}
+		}
+	}
+
 	if alias == nil {
 		alias = &identity.Alias{}
 	}
@@ -1058,6 +1149,9 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 	alias.MountType = mountValidationResp.MountType
 	alias.Local = lAlias.Local
 	alias.CustomMetadata = lAlias.CustomMetadata
+	alias.Issuer = lAlias.Issuer
+	alias.ExternalID = lAlias.ExternalID
+	alias.NamespaceID = lAlias.NamespaceID
 
 	if err := i.sanitizeAlias(ctx, alias); err != nil {
 		return nil, err
@@ -1443,6 +1537,55 @@ func (i *IdentityStore) MemDBAliases(ws memdb.WatchSet, groupAlias bool) (memdb.
 	ws.Add(iter.WatchCh())
 
 	return iter, nil
+}
+
+// MemDBAliasesByScimClientIDInTxn returns all entity aliases belonging to the
+// given SCIM client within the namespace derived from ctx.
+func (i *IdentityStore) MemDBAliasesByScimClientIDInTxn(ctx context.Context, txn *memdb.Txn, scimClientID string) ([]*identity.Alias, error) {
+	if txn == nil {
+		return nil, fmt.Errorf("nil txn")
+	}
+	if scimClientID == "" {
+		return nil, fmt.Errorf("empty scim client id")
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	iter, err := txn.Get(entityAliasesTable, "scim_client_id", ns.ID, scimClientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup aliases using scim client id: %w", err)
+	}
+
+	var aliases []*identity.Alias
+	for raw := iter.Next(); raw != nil; raw = iter.Next() {
+		alias, ok := raw.(*identity.Alias)
+		if !ok {
+			return nil, fmt.Errorf("failed to declare the type of fetched alias")
+		}
+		cloned, err := alias.Clone()
+		if err != nil {
+			return nil, err
+		}
+		aliases = append(aliases, cloned)
+	}
+
+	return aliases, nil
+}
+
+// MemDBAliasesByScimClientID returns all entity aliases belonging to the given
+// SCIM client within the namespace derived from ctx.
+func (i *IdentityStore) MemDBAliasesByScimClientID(ctx context.Context, scimClientID string) ([]*identity.Alias, error) {
+	if scimClientID == "" {
+		return nil, fmt.Errorf("empty scim client id")
+	}
+
+	txn := i.db.Txn(false)
+	defer txn.Abort()
+
+	return i.MemDBAliasesByScimClientIDInTxn(ctx, txn, scimClientID)
 }
 
 func (i *IdentityStore) MemDBUpsertEntityInTxn(txn *memdb.Txn, entity *identity.Entity) error {

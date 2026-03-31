@@ -70,6 +70,11 @@ scenario "smoke_sdk" {
       ip_version = ["6"]
       backend    = ["consul"]
     }
+
+    // smoke_sdk scenario cannot be run in CE
+    exclude {
+      edition = ["ce"]
+    }
   }
 
   terraform_cli = terraform_cli.default
@@ -405,45 +410,39 @@ scenario "smoke_sdk" {
     }
   }
 
-  // Define smoke test suite
   locals {
-    smoke_tests = [
-      "TestStepdownAndLeaderElection",
-      "TestSecretsEngineCreate",
-      "TestUnsealedStatus",
-      "TestVaultVersion",
-      "TestSecretsEngineRead",
-      "TestReplicationStatus",
-      "TestUIAssets",
-      "TestSecretsEngineDelete"
-    ]
+    // Default test packages for smoke_sdk scenario
+    default_test_packages = ["core", "secrets", "replication", "raft", "integration"]
 
-    // Add backend-specific tests
-    smoke_tests_with_backend = concat(
-      local.smoke_tests,
-      matrix.backend == "raft" ? [
-        "TestRaftVoters",
-        "TestNodeRemovalAndRejoin"
-      ] : []
-    )
+    // Determine if filter contains test names (starts with "Test") or package names
+    is_test_name_filter = length(var.blackbox_test_filter) > 0 && length([for t in var.blackbox_test_filter : t if can(regex("^Test", t))]) > 0
+
+    // Convert package names to directory paths, or use defaults
+    test_packages = length(var.blackbox_test_filter) > 0 && !local.is_test_name_filter ? [
+      for pkg in var.blackbox_test_filter : "./vault/external_tests/blackbox/${pkg}/..."
+      ] : [
+      for pkg in local.default_test_packages : "./vault/external_tests/blackbox/${pkg}/..."
+    ]
   }
 
-  // Run all blackbox SDK smoke tests
+  // Run all blackbox SDK smoke tests using directory-based organization
   step "run_blackbox_tests" {
-    description = "Run blackbox SDK smoke tests: ${join(", ", local.smoke_tests_with_backend)}"
+    description = local.is_test_name_filter ? "Run specific blackbox tests: ${join(", ", var.blackbox_test_filter)}" : "Run blackbox SDK tests from packages: ${join(", ", length(var.blackbox_test_filter) > 0 ? var.blackbox_test_filter : local.default_test_packages)}"
     module      = module.vault_run_blackbox_test
-    depends_on  = [step.get_vault_cluster_ips]
+    depends_on  = [step.get_vault_cluster_ips, step.set_up_external_integration_target]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      leader_host      = step.get_vault_cluster_ips.leader_host
-      leader_public_ip = step.get_vault_cluster_ips.leader_public_ip
-      vault_root_token = step.create_vault_cluster.root_token
-      test_names       = local.smoke_tests_with_backend
-      test_package     = "./vault/external_tests/blackbox"
+      leader_host            = step.get_vault_cluster_ips.leader_host
+      leader_public_ip       = step.get_vault_cluster_ips.leader_public_ip
+      vault_root_token       = step.create_vault_cluster.root_token
+      test_names             = local.is_test_name_filter ? var.blackbox_test_filter : null
+      test_package           = local.is_test_name_filter ? "./vault/external_tests/blackbox" : join(" ", local.test_packages)
+      integration_host_state = step.set_up_external_integration_target.state
+      vault_edition          = matrix.edition
     }
   }
 

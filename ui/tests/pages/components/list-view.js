@@ -4,9 +4,10 @@
  */
 
 import { text, isPresent, collection, clickable } from 'ember-cli-page-object';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 export default {
-  isEmpty: isPresent('[data-test-component="empty-state"]'),
+  isEmpty: isPresent(GENERAL.emptyStateTitle),
   listItemLinks: collection('[data-test-list-item-link]', {
     text: text(),
     click: clickable(),

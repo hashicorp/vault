@@ -276,9 +276,6 @@ module('Integration | Component | clients/page-header', function (hooks) {
         .dom(GENERAL.hdsPageHeaderTitle)
         .hasTextContaining('Client usage', 'it renders page header title');
       assert.dom(GENERAL.breadcrumbs).hasTextContaining('Vault Client usage', 'it renders breadcrumbs');
-      assert
-        .dom(GENERAL.textDisplay('change-billing-data'))
-        .hasTextContaining('Change billing period', 'it renders change billing period text');
     });
 
     test('it renders data period text for HVD managed clusters', async function (assert) {
@@ -289,9 +286,6 @@ module('Integration | Component | clients/page-header', function (hooks) {
         .dom(GENERAL.hdsPageHeaderTitle)
         .hasTextContaining('Client usage', 'it renders page header title');
       assert.dom(GENERAL.breadcrumbs).hasTextContaining('Vault Client usage', 'it renders breadcrumbs');
-      assert
-        .dom(GENERAL.textDisplay('change-billing-data'))
-        .hasTextContaining('Change data period', 'it renders change data period text');
     });
 
     test('it allows date editing if no billing start time is provided', async function (assert) {

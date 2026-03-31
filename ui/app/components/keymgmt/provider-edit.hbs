@@ -5,7 +5,7 @@
 
 <Page::Header @title={{this.title}} @subtitle={{this.subtitle}}>
   <:breadcrumbs>
-    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
 </Page::Header>
 
@@ -98,9 +98,9 @@
                 {{! Only show last field if provider selected }}
                 <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
               {{else}}
-                <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
-                  <A.Header @title="No provider selected" @titleTag="h2" />
-                  <A.Body @text="Select a provider in order to configure it." />
+                <Hds::ApplicationState class="top-padding-32 bottom-padding-32 is-marginless" as |A|>
+                  <A.Header @title="No provider selected" @titleTag="h2" data-test-empty-state-title />
+                  <A.Body @text="Select a provider in order to configure it." data-test-empty-state-message />
                 </Hds::ApplicationState>
               {{/if}}
             {{else}}
@@ -170,7 +170,7 @@
             />
 
           {{else}}
-            <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
+            <Hds::ApplicationState class="top-padding-32 bottom-padding-32 is-marginless" as |A|>
               <A.Header @title="No keys for this provider" @titleTag="h2" />
               <A.Body @text="Keys for this provider will be listed here. Add a key to get started." />
               <A.Footer as |F|>

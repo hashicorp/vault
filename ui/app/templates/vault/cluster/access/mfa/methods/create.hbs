@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title={{if this.method (concat "Configure " this.method.name " MFA") "Multi-Factor Authentication"}}>
+<Page::Header @title={{if this.method (concat "Configure " this.method.name " MFA") "Multi-factor authentication"}}>
   <:breadcrumbs>
     <Page::Breadcrumbs
       @breadcrumbs={{array
@@ -13,14 +13,25 @@
       }}
     />
   </:breadcrumbs>
+  <:description>
+    Enforce a secondary layer of identity verification (such as TOTP, Okta, or Duo) during the login process.
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/login-mfa"}}>
+      Learn more
+    </Hds::Link::Inline>
+  </:description>
 </Page::Header>
 
-<div class="has-border-top-light has-top-padding-l">
+<div class="has-top-padding-l">
   {{#if this.showForms}}
     <h3 class="is-size-4 has-text-weight-semibold">Settings</h3>
     <p class="has-border-top-light has-top-padding-l">
       {{this.description}}
-      <DocLink @path={{concat "/vault/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
+      <Hds::Link::Inline
+        @isHrefExternal={{true}}
+        @href={{doc-link (concat "/vault/api-docs/secret/identity/mfa/" this.type)}}
+      >
+        Learn more
+      </Hds::Link::Inline>
     </p>
     <Mfa::MethodForm @model={{this.method}} @validations={{this.methodErrors}} class="is-shadowless" />
     <Mfa::MfaLoginEnforcementHeader
@@ -38,12 +49,7 @@
       />
     {{/if}}
   {{else}}
-    <p>
-      Multi-factor authentication (MFA) allows you to set up another layer of security on top of existing authentication
-      methods. Vault has four available methods.
-      <DocLink @path="/vault/api-docs/secret/identity/mfa">Learn more.</DocLink>
-    </p>
-    <div class="is-flex-row has-top-margin-xl">
+    <div class="is-flex-row">
       {{#each this.methods as |method|}}
         <RadioCard
           @value={{lowercase method.name}}

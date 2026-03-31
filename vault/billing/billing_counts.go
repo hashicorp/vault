@@ -29,6 +29,8 @@ const (
 	KmipEnabledPrefix                       = "kmipEnabled/"
 	PkiDurationAdjustedCountPrefix          = "normalizedCertsIssued/"
 	MetricsLastUpdatedAtPrefix              = "metricsLastUpdatedAt/"
+	SSHCertificateMetric                    = "ssh/normalized-certs-issued"
+	SSHOTPMetric                            = "ssh/credential-count"
 
 	BillingWriteInterval = 10 * time.Minute
 	// pluginCountsSendTimeout is the timeout for sending plugin counts to the active node

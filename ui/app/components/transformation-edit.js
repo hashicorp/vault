@@ -18,6 +18,15 @@ export default TransformBase.extend({
     this.set('initialRoles', this.model.allowed_roles);
   },
 
+  breadcrumbs: computed('root', 'title', function () {
+    return [
+      { label: 'Vault', text: 'Vault', icon: 'vault', path: 'vault.cluster.dashboard' },
+      { text: 'Secrets engines', path: 'vault.cluster.secrets.backends' },
+      this.root,
+      { label: this.title, text: this.title },
+    ];
+  }),
+
   title: computed('mode', function () {
     if (this.mode === 'create') {
       return 'Create Transformation';

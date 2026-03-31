@@ -4,14 +4,16 @@
 }}
 
 {{#if this.unwrapTokenError}}
-  <Hds::ApplicationState @align="center" class="has-top-margin-xxl" data-test-page-error as |A|>
-    <A.Header @title="Authentication error" @titleTag="h2" />
-    <A.Body @text="Token unwrap failed" />
-    <A.Body @text="Error: {{this.unwrapTokenError}}" />
-    <A.Footer as |F|>
-      <F.Button @icon="arrow-left" @color="tertiary" @text="Go back" {{on "click" (action "backToLogin")}} />
-    </A.Footer>
-  </Hds::ApplicationState>
+  <div class="flex is-flex-grow-1">
+    <Hds::ApplicationState @align="center" class="align-self-center" data-test-page-error as |A|>
+      <A.Header @title="Authentication error" @titleTag="h1" data-test-empty-state-title />
+      <A.Body @text="Token unwrap failed" data-test-empty-state-message />
+      <A.Body @text="Error: {{this.unwrapTokenError}}" />
+      <A.Footer data-test-empty-state-actions as |F|>
+        <F.Button @icon="arrow-left" @color="tertiary" @text="Go back" {{on "click" (action "backToLogin")}} />
+      </A.Footer>
+    </Hds::ApplicationState>
+  </div>
 {{else}}
   <Auth::Page
     @cluster={{this.model.clusterModel}}

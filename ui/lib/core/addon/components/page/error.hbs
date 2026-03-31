@@ -7,7 +7,7 @@
   {{! Full page errors should be vertically and horizontally centered on the page with text @align="center" }}
   {{! Otherwise text alignment should be "left" and top-padding: 32px }}
   <Hds::ApplicationState
-    class={{if @isFullPage "align-self-center" "top-padding-32"}}
+    class={{if @isFullPage "align-self-center" "top-padding-32 is-marginless"}}
     @align={{if @isFullPage "center" "left"}}
     as |AppState|
   >

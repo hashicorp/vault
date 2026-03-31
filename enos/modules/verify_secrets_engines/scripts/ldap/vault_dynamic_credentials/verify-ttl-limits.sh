@@ -25,10 +25,31 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_FORMAT=json
 
+# Generate dynamic credentials with retry to handle transient LDAP
+# connection timeouts (e.g. context deadline exceeded after root rotation)
+generate_creds_with_retry() {
+  local max_attempts=4
+  local count=0
+  local result
+
+  while [ "$count" -lt "$max_attempts" ]; do
+    if result=$("$binpath" read "${MOUNT}/creds/dynamic-role" 2>&1); then
+      echo "$result"
+      return 0
+    fi
+    count=$((count + 1))
+    if [ "$count" -lt "$max_attempts" ]; then
+      local wait=$((2 ** (count - 1)))
+      echo "Credential generation failed, retrying in ${wait}s... (attempt $((count + 1))/$max_attempts)" >&2
+      sleep "$wait"
+    fi
+  done
+
+  fail "Failed to generate credentials after $max_attempts attempts: ${result}"
+}
+
 echo "Test: Default TTL Verification"
-if ! creds=$("$binpath" read "${MOUNT}/creds/dynamic-role" 2>&1); then
-  fail "Failed to generate credentials: ${creds}"
-fi
+creds=$(generate_creds_with_retry)
 initial_duration=$(jq -r '.lease_duration' <<< "$creds")
 dn=$(jq -r '.data.distinguished_names[0]' <<< "$creds")
 password=$(jq -r '.data.password' <<< "$creds")
@@ -52,9 +73,7 @@ else
 fi
 
 echo "Test: Max TTL Enforcement"
-if ! creds=$("$binpath" read "${MOUNT}/creds/dynamic-role" 2>&1); then
-  fail "Failed to generate credentials: ${creds}"
-fi
+creds=$(generate_creds_with_retry)
 lease_id=$(jq -r '.lease_id' <<< "$creds")
 
 [[ -z "$lease_id" || "$lease_id" == "null" ]] && fail "No lease_id found"

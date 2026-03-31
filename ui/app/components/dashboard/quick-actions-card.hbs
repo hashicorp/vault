@@ -85,13 +85,13 @@
         </div>
       {{/if}}
     {{else}}
-      <Hds::ApplicationState @align="center" data-test-empty-state="no-mount-selected" as |A|>
+      <Hds::ApplicationState class="is-marginless" data-test-empty-state="no-mount-selected" as |A|>
         <A.Header data-test-empty-state-title @title="No mount selected" @titleTag="h2" />
         <A.Body data-test-empty-state-message @text="Select a mount above to get started." />
       </Hds::ApplicationState>
     {{/if}}
   {{else}}
-    <Hds::ApplicationState @align="center" data-test-empty-state="quick-actions" as |A|>
+    <Hds::ApplicationState class="is-marginless" data-test-empty-state="quick-actions" as |A|>
       <A.Header data-test-empty-state-title @title="Welcome to quick actions" @titleTag="h2" />
       <A.Body
         data-test-empty-state-message

@@ -310,6 +310,23 @@ func TestPopulateSetAutomatedRotationData(t *testing.T) {
 			},
 		},
 		{
+			name: "only schedule set",
+			expected: map[string]interface{}{
+				"rotation_schedule":          "*/15 * * * *",
+				"rotation_window":            time.Duration(0).Seconds(),
+				"rotation_policy":            "",
+				"disable_automated_rotation": false,
+			},
+			unexpected: map[string]interface{}{
+				"rotation_period": "",
+			},
+			inputParams: &AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+			},
+		},
+		{
 			name: "only period set",
 			expected: map[string]interface{}{
 				"rotation_period":            time.Duration(120).Seconds(),
