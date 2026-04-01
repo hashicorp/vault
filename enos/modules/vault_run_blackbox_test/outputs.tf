@@ -15,7 +15,7 @@ output "test_results_summary" {
     exit_code    = local.test_exit_code
     timestamp    = timestamp()
     json_file    = local.json_file_path
-    test_filter  = length(var.test_names) > 0 ? join(", ", var.test_names) : "all tests"
+    test_filter  = length(local.test_names) > 0 ? join(", ", local.test_names) : "all tests"
     test_package = var.test_package
   }
 }

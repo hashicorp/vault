@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2025, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
-package blackbox
+package auth
 
 import (
 	"testing"

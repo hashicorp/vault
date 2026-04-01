@@ -1,13 +1,14 @@
 // Copyright IBM Corp. 2025, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
-package blackbox
+package auth
 
 import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/blackbox"
+	helpers "github.com/hashicorp/vault/vault/external_tests/blackbox"
 )
 
 // testUserpassAuthCreate tests userpass auth engine creation
@@ -20,7 +21,7 @@ func testUserpassAuthCreate(t *testing.T, v *blackbox.Session) {
 	`
 
 	// Use common utility to setup userpass auth
-	userClient := SetupUserpassAuth(v, "testuser", "passtestuser1", "reguser", userPolicy)
+	userClient := helpers.SetupUserpassAuth(v, "testuser", "passtestuser1", "reguser", userPolicy)
 
 	// Verify the auth method was enabled by reading auth mounts
 	authMounts := v.MustRead("sys/auth")
@@ -56,7 +57,7 @@ func testUserpassAuthCreate(t *testing.T, v *blackbox.Session) {
 // testUserpassAuthRead tests userpass auth engine read operations
 func testUserpassAuthRead(t *testing.T, v *blackbox.Session) {
 	// Use common utility to setup userpass auth with default policy
-	userClient := SetupUserpassAuth(v, "readuser", "readpass123", "default", "")
+	userClient := helpers.SetupUserpassAuth(v, "readuser", "readpass123", "default", "")
 
 	// Read the user configuration
 	userConfig := v.MustRead("auth/userpass/users/readuser")

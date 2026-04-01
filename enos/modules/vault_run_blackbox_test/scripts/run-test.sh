@@ -90,6 +90,9 @@ case $VAULT_EDITION in
 esac
 
 # Build gotestsum command based on whether we have specific tests
+# Convert VAULT_TEST_PACKAGE to array to handle multiple package paths properly
+IFS=$' ' read -r -d '' -a packages <<< "$VAULT_TEST_PACKAGE" || true
+
 set -x # Show commands being executed
 set +e # Temporarily disable exit on error
 if [ -n "$VAULT_TEST_MATRIX" ] && [ -f "$VAULT_TEST_MATRIX" ]; then
@@ -97,10 +100,10 @@ if [ -n "$VAULT_TEST_MATRIX" ] && [ -f "$VAULT_TEST_MATRIX" ]; then
     # Extract test names from matrix and create regex pattern
     test_pattern=$(jq -r '.include[].test' "$VAULT_TEST_MATRIX" | paste -sd '|' -)
     echo "Running specific tests: $test_pattern"
-    gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -count=1 "${tags}" -run="$test_pattern" "$VAULT_TEST_PACKAGE"
+    gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -count=1 "${tags}" -run="$test_pattern" "${packages[@]}"
 else
     echo "Running all tests in package"
-    gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -count=1 "${tags}" "$VAULT_TEST_PACKAGE"
+    gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -count=1 "${tags}" "${packages[@]}"
 fi
 test_exit_code=$?
 set -e # Re-enable exit on error
