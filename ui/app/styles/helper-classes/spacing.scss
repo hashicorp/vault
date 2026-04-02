@@ -171,6 +171,10 @@
   margin-bottom: size_variables.$spacing-8 !important;
 }
 
+.bottom-margin-8 {
+  margin-bottom: size_variables.$spacing-8;
+}
+
 .has-bottom-margin-s {
   margin-bottom: size_variables.$spacing-12;
 }
@@ -200,6 +204,10 @@
 }
 
 .has-top-margin-s {
+  margin-top: size_variables.$spacing-12;
+}
+
+.top-margin-12 {
   margin-top: size_variables.$spacing-12;
 }
 

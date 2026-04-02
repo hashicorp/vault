@@ -359,6 +359,10 @@ type Core struct {
 	keepHALockOnStepDown *uint32
 	heldHALock           physical.Lock
 
+	// enterpriseTokenGetAuthRegisterFunc is an optional per-core test seam for
+	// enterprise token auth registration lookup.
+	enterpriseTokenGetAuthRegisterFunc func(*Core) (RegisterAuthFunc, error)
+
 	// shutdownDoneCh is used to notify when core.Shutdown() completes.
 	// core.Shutdown() is typically issued in a goroutine to allow Vault to
 	// release the stateLock. This channel is marked atomic to prevent race
