@@ -86,7 +86,9 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Set Up Git
-        run: git config --global url."https://${{ secrets.elevated_github_token }}:@github.com".insteadOf "https://github.com"
+        run: git config --global url."https://${ELEVATED_GITHUB_TOKEN}:@github.com".insteadOf "https://github.com"
+        env:
+          ELEVATED_GITHUB_TOKEN: ${{ secrets.elevated_github_token }}
       - name: Set Up Node
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
@@ -105,11 +107,15 @@ jobs:
       - name: Prepare scenario dependencies
         run: |
           mkdir -p ./enos/support/terraform-plugin-cache
-          echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > ./enos/support/private_key.pem
+          echo "${SSH_KEY_PRIVATE_CI}" > ./enos/support/private_key.pem
           chmod 600 ./enos/support/private_key.pem
+        env:
+          SSH_KEY_PRIVATE_CI: ${{ secrets.SSH_KEY_PRIVATE_CI }}
       - name: Set Up Vault Enterprise License
         if: ${{ needs.get-metadata.outputs.is-ent-branch == 'true' }}
-        run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
+        run: echo "${VAULT_LICENSE}" > ./enos/support/vault.hclic || true
+        env:
+          VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
       - name: Check Chrome Installed
         id: chrome-check
         run: echo "chrome-version=$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null || echo 'not-installed')" >> "$GITHUB_OUTPUT"

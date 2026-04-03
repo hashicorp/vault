@@ -39,8 +39,10 @@ jobs:
       - id: github-token
         run: |
           {
-            echo 'elevated=${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}'
+            echo 'elevated='"${ELEVATED_GITHUB_TOKEN}"''
           } | tee -a "$GITHUB_OUTPUT"
+        env:
+          ELEVATED_GITHUB_TOKEN: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - name: Set up go
         uses: ./.github/actions/set-up-go
         with:

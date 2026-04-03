@@ -67,7 +67,9 @@ jobs:
       # Install additional tools like gotestsum that are required for Enos scenarios
       - uses: ./.github/actions/install-tools
       - name: Configure Git
-        run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}:@github.com".insteadOf "https://github.com"
+        run: git config --global url."https://${ELEVATED_GITHUB_TOKEN}:@github.com".insteadOf "https://github.com"
+        env:
+          ELEVATED_GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Set up node
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
@@ -102,11 +104,15 @@ jobs:
           mkdir -p ./enos/support/terraform-plugin-cache
           mkdir -p /tmp/enos-scenario-logs
           echo logsdir="/tmp/enos-scenario-logs" >> "$GITHUB_OUTPUT"
-          echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > ./enos/support/private_key.pem
+          echo "${SSH_KEY_PRIVATE_CI}" > ./enos/support/private_key.pem
           chmod 600 ./enos/support/private_key.pem
+        env:
+          SSH_KEY_PRIVATE_CI: ${{ secrets.SSH_KEY_PRIVATE_CI }}
       - name: Setup Vault Enterprise License
         id: license
-        run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic
+        run: echo "${VAULT_LICENSE}" > ./enos/support/vault.hclic
+        env:
+          VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
       - name: Run Enos scenario
         id: run
         run: enos scenario run --timeout 60m0s --chdir ./enos ${{ inputs.scenario }}
