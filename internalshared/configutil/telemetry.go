@@ -420,7 +420,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	}
 
 	// Initialize the global sink
-	if len(fanout) > 1 {
+	if len(fanout) > 0 {
 		// Hostname enabled will create poor quality metrics name for prometheus
 		if !opts.Config.DisableHostname {
 			opts.Ui.Warn("telemetry.disable_hostname has been set to false. Recommended setting is true for Prometheus to avoid poorly named metrics.")
