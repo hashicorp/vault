@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/tools/pipeline
 
-go 1.24.0
+go 1.25.0
 
 // We have test modules in here but they ought to be completely ignored
 ignore internal/pkg/golang/fixtures
@@ -52,6 +52,7 @@ require (
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/jackc/pgx/v5 v5.9.1 // indirect
 	github.com/jessevdk/go-flags v1.6.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect

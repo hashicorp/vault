@@ -11,10 +11,10 @@ import (
 	"os"
 	"path"
 
-	"github.com/docker/docker/api/types/container"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
+	client "github.com/moby/moby/client"
 )
 
 const (
@@ -311,7 +311,10 @@ func copyConfigToContainer(containerID string, bCtx dockhelper.BuildContext, run
 		return fmt.Errorf("error creating config tarball: %w", err)
 	}
 
-	err = runner.DockerAPI.CopyToContainer(context.Background(), containerID, "/vault/config", tar, container.CopyToContainerOptions{})
+	_, err = runner.DockerAPI.CopyToContainer(context.Background(), containerID, client.CopyToContainerOptions{
+		DestinationPath: "/vault/config",
+		Content:         tar,
+	})
 	if err != nil {
 		return fmt.Errorf("error copying config to container: %w", err)
 	}
@@ -330,7 +333,10 @@ func copyRecoveryModeTriggerToContainer(containerID string, runner *dockhelper.R
 		return fmt.Errorf("error creating config tarball: %w", err)
 	}
 
-	err = runner.DockerAPI.CopyToContainer(context.Background(), containerID, recoveryModeFileDir, tar, container.CopyToContainerOptions{})
+	_, err = runner.DockerAPI.CopyToContainer(context.Background(), containerID, client.CopyToContainerOptions{
+		DestinationPath: recoveryModeFileDir,
+		Content:         tar,
+	})
 	if err != nil {
 		return fmt.Errorf("error copying revovery mode trigger file to container: %w", err)
 	}

@@ -11,11 +11,11 @@ import (
 	"time"
 
 	aero "github.com/aerospike/aerospike-client-go/v8"
-	"github.com/docker/docker/api/types/container"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/moby/moby/api/types/container"
 )
 
 func TestAerospikeBackend(t *testing.T) {
