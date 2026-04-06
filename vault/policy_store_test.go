@@ -117,7 +117,8 @@ func testPolicyStoreCRUD(t *testing.T, ps *PolicyStore, ns *namespace.Namespace)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(out) != 1 {
+	expected := []string{defaultPolicyName, defaultCeilingPolicyName}
+	if !reflect.DeepEqual(expected, out) {
 		t.Fatalf("bad: %v", out)
 	}
 
@@ -139,17 +140,17 @@ func testPolicyStoreCRUD(t *testing.T, ps *PolicyStore, ns *namespace.Namespace)
 		t.Fatalf("bad: %v", p)
 	}
 
-	// List should contain two elements
+	// List should contain the two built-in assignable policies plus the new policy.
 	ctx = namespace.ContextWithNamespace(context.Background(), ns)
 	out, err = ps.ListPolicies(ctx, PolicyTypeACL)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(out) != 2 {
+	if len(out) != 3 {
 		t.Fatalf("bad: %v", out)
 	}
 
-	expected := []string{"default", "dev"}
+	expected = []string{defaultPolicyName, defaultCeilingPolicyName, "dev"}
 	if !reflect.DeepEqual(expected, out) {
 		t.Fatalf("expected: %v\ngot: %v", expected, out)
 	}
@@ -167,7 +168,8 @@ func testPolicyStoreCRUD(t *testing.T, ps *PolicyStore, ns *namespace.Namespace)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(out) != 1 || out[0] != "default" {
+	expected = []string{defaultPolicyName, defaultCeilingPolicyName}
+	if !reflect.DeepEqual(expected, out) {
 		t.Fatalf("bad: %v", out)
 	}
 
@@ -191,15 +193,55 @@ func TestPolicyStore_Predefined(t *testing.T) {
 
 // Test predefined policy handling
 func testPolicyStorePredefined(t *testing.T, ps *PolicyStore, ns *namespace.Namespace) {
-	// List should be two elements
+	// List should contain the built-in assignable ACL policies.
 	ctx := namespace.ContextWithNamespace(context.Background(), ns)
 	out, err := ps.ListPolicies(ctx, PolicyTypeACL)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	// This shouldn't contain response-wrapping since it's non-assignable
-	if len(out) != 1 || out[0] != "default" {
+	// This shouldn't contain response-wrapping since it's non-assignable.
+	expected := []string{defaultPolicyName, defaultCeilingPolicyName}
+	if !reflect.DeepEqual(expected, out) {
 		t.Fatalf("bad: %v", out)
+	}
+
+	ctx = namespace.ContextWithNamespace(context.Background(), ns)
+	pDefaultCeiling, err := ps.GetPolicy(ctx, defaultCeilingPolicyName, PolicyTypeToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if pDefaultCeiling == nil {
+		t.Fatal("nil default ceiling policy")
+	}
+	if pDefaultCeiling.Raw != defaultCeilingPolicy {
+		t.Fatalf("bad: expected\n%s\ngot\n%s\n", defaultCeilingPolicy, pDefaultCeiling.Raw)
+	}
+	ctx = namespace.ContextWithNamespace(context.Background(), ns)
+	err = ps.DeletePolicy(ctx, pDefaultCeiling.Name, PolicyTypeACL)
+	if err == nil {
+		t.Fatalf("expected err deleting %s", pDefaultCeiling.Name)
+	}
+
+	ctx = namespace.ContextWithNamespace(context.Background(), ns)
+	updatedDefaultCeiling, err := ParseACLPolicy(ns, aclPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	updatedDefaultCeiling.Name = defaultCeilingPolicyName
+	err = ps.SetPolicy(ctx, updatedDefaultCeiling)
+	if err != nil {
+		t.Fatalf("expected err to be nil updating %s: %v", updatedDefaultCeiling.Name, err)
+	}
+	ctx = namespace.ContextWithNamespace(context.Background(), ns)
+	pDefaultCeiling, err = ps.GetPolicy(ctx, defaultCeilingPolicyName, PolicyTypeToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if pDefaultCeiling == nil {
+		t.Fatal("nil updated default ceiling policy")
+	}
+	if pDefaultCeiling.Raw != updatedDefaultCeiling.Raw {
+		t.Fatalf("bad: expected\n%s\ngot\n%s\n", updatedDefaultCeiling.Raw, pDefaultCeiling.Raw)
 	}
 
 	// Response-wrapping policy checks
@@ -353,7 +395,7 @@ func TestPolicyStore_PoliciesByNamespaces(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	expectedResult := []string{"default", "dev"}
+	expectedResult := []string{defaultPolicyName, defaultCeilingPolicyName, "dev"}
 	if !reflect.DeepEqual(expectedResult, out) {
 		t.Fatalf("expected: %v\ngot: %v", expectedResult, out)
 	}

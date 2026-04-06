@@ -455,7 +455,7 @@ func TestPredict_Policies(t *testing.T) {
 		{
 			"good_path",
 			client,
-			[]string{"default", "root"},
+			[]string{"default", "default-ceiling", "root"},
 		},
 	}
 
