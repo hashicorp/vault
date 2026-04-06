@@ -21,6 +21,7 @@ import (
 	"net/textproto"
 	"net/url"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -476,7 +477,36 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 		// Extract the namespace from the header before we modify it
 		ns := r.Header.Get(consts.NamespaceHeaderName)
+
+		originalPath := r.URL.Path
+		// cleanPath is copied directly from net/http/server.go
+		// it returns the canonical path for p, eliminating . and .. elements.
+		cleanPath := func(p string) string {
+			if p == "" {
+				return "/"
+			}
+			if p[0] != '/' {
+				p = "/" + p
+			}
+			np := path.Clean(p)
+			// path.Clean removes trailing slash except for root;
+			// put the trailing slash back if necessary.
+			if p[len(p)-1] == '/' && np != "/" {
+				// Fast path for common case of p being the string we want:
+				if len(p) == len(np)+1 && strings.HasPrefix(p, np) {
+					np = p
+				} else {
+					np += "/"
+				}
+			}
+			return np
+		}
+		cleanedPath := cleanPath(originalPath)
 		switch {
+		case originalPath != cleanedPath:
+			respondError(nw, http.StatusBadRequest, errors.New("vault request paths must be canonical and not relative"))
+			cancelFunc()
+			return
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
 			// Setting the namespace in the header to be included in the error message
 			newR, status, err := adjustRequest(core, props.ListenerConfig, r)
