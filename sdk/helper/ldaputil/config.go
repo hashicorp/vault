@@ -20,12 +20,16 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
-var ldapDerefAliasMap = map[string]int{
+var (
+	ldapDerefAliasMap = map[string]int{
 	"never":     ldap.NeverDerefAliases,
 	"finding":   ldap.DerefFindingBaseObj,
 	"searching": ldap.DerefInSearching,
 	"always":    ldap.DerefAlways,
-}
+	}
+
+	cannotDeriveUserBindDNError = errors.New("cannot derive UserBindDN")
+)
 
 const (
 	SchemaAD       = "ad"
@@ -587,6 +591,16 @@ func validateCertificate(pemBlock []byte) error {
 	return nil
 }
 
+// Validates self-managed configs without requiring changing the delicate preexisting validation logic.
+func (c *ConfigEntry) ValidateSelfManaged(schemas ...string) error {
+	err := c.Validate(schemas...)
+	if err != nil && errors.Is(err, cannotDeriveUserBindDNError) {
+		// Do not enforce UserBindDN for self-managed LDAP configurations.
+		return nil
+	}
+	return err
+}
+
 func (c *ConfigEntry) Validate(schemas ...string) error {
 	if len(c.Url) == 0 {
 		return errors.New("at least one url must be provided")
@@ -594,7 +608,7 @@ func (c *ConfigEntry) Validate(schemas ...string) error {
 	// Note: This logic is driven by the logic in GetUserBindDN.
 	// If updating this, please also update the logic there.
 	if !c.DiscoverDN && (c.BindDN == "" || c.BindPassword == "") && c.UPNDomain == "" && c.UserDN == "" {
-		return errors.New("cannot derive UserBindDN")
+		return cannotDeriveUserBindDNError
 	}
 	tlsMinVersion, ok := tlsutil.TLSLookup[c.TLSMinVersion]
 	if !ok {

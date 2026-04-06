@@ -1,0 +1,40 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container class="has-padding-m" @level="mid" @hasBorder={{true}} data-test-card-container={{@title}}>
+  <Hds::Text::Display @tag="h2" @size="300" @weight="medium" class="has-bottom-margin-xxs">
+    {{@title}}
+  </Hds::Text::Display>
+  <Hds::Text::Body @tag="p" @color="foreground-faint" class="has-bottom-margin-m">
+    {{this.description}}
+  </Hds::Text::Body>
+  <Hds::Layout::Flex @direction="row" @gap="16" @wrap="wrap">
+    <Hds::Layout::Flex::Item @basis="15%" @grow={{true}} @shrink={{true}}>
+      <Hds::Text::Display @tag="h3" @color="foreground-primary">
+        Total
+      </Hds::Text::Display>
+      <Hds::Text::Body @tag="p">{{or this.total "0"}}</Hds::Text::Body>
+    </Hds::Layout::Flex::Item>
+    {{#each-in @metrics as |metricKey metricValue|}}
+      {{#let (this.metricDetails metricKey) as |display|}}
+        <Hds::Layout::Flex::Item @basis="15%" @grow={{true}} @shrink={{true}} data-test-metric-detail={{metricKey}}>
+          {{#if display.tooltipText}}
+            <Hds::Text::Display @tag="h3" @color="foreground-primary">
+              {{display.label}}
+              <Hds::TooltipButton @text={{display.tooltipText}} aria-label={{display.label}}>
+                <Hds::Icon @name="info" />
+              </Hds::TooltipButton>
+            </Hds::Text::Display>
+          {{else}}
+            <Hds::Text::Display @tag="h3" @color="foreground-primary">
+              {{display.label}}
+            </Hds::Text::Display>
+          {{/if}}
+          <Hds::Text::Body @tag="p" data-test-metric-detail-value={{metricKey}}>{{or metricValue "0"}}</Hds::Text::Body>
+        </Hds::Layout::Flex::Item>
+      {{/let}}
+    {{/each-in}}
+  </Hds::Layout::Flex>
+</Hds::Card::Container>

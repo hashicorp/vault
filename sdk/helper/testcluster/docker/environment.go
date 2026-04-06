@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"maps"
 	"math/big"
 	mathrand "math/rand"
@@ -33,9 +32,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/volume"
-	docker "github.com/docker/docker/client"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
@@ -45,6 +41,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/moby/moby/api/types/container"
+	docker "github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 	uberAtomic "go.uber.org/atomic"
 	"golang.org/x/net/http2"
@@ -229,6 +227,9 @@ func (dc *DockerCluster) setupNode0(ctx context.Context) error {
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	status, err := client.Sys().SealStatusWithContext(ctx)
 	if err != nil {
@@ -491,7 +492,7 @@ type DockerClusterNode struct {
 	tlsConfig            *tls.Config
 	WorkDir              string
 	Cluster              *DockerCluster
-	Container            *types.ContainerJSON
+	Container            *container.InspectResponse
 	DockerAPI            *docker.Client
 	runner               *dockhelper.Runner
 	Logger               log.Logger
@@ -656,13 +657,13 @@ func (n *DockerClusterNode) createTLSDisabledListenerConfig() map[string]interfa
 
 func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
 	if n.DataVolumeName == "" {
-		vol, err := n.DockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
+		vol, err := n.DockerAPI.VolumeCreate(ctx, docker.VolumeCreateOptions{})
 		if err != nil {
 			return err
 		}
-		n.DataVolumeName = vol.Name
+		n.DataVolumeName = vol.Volume.Name
 		n.cleanupVolume = func() {
-			_ = n.DockerAPI.VolumeRemove(ctx, vol.Name, false)
+			_, _ = n.DockerAPI.VolumeRemove(ctx, vol.Volume.Name, docker.VolumeRemoveOptions{})
 		}
 	}
 	vaultCfg := map[string]interface{}{}
@@ -812,7 +813,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	wg.Add(1)
 	var seenLogs uberAtomic.Bool
 	logConsumer := func(s string) {
-		if seenLogs.CAS(false, true) {
+		if seenLogs.CompareAndSwap(false, true) {
 			wg.Done()
 		}
 		n.Logger.Trace(s)
@@ -823,7 +824,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	lastTS := ""
 	logStdout := &LogConsumerWriter{logConsumer}
 	logStderr := &LogConsumerWriter{func(s string) {
-		if seenLogs.CAS(false, true) {
+		if seenLogs.CompareAndSwap(false, true) {
 			wg.Done()
 		}
 		d := json.NewDecoder(strings.NewReader(s))
@@ -929,7 +930,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	netName := opts.NetworkName
 	if netName == "" {
 		if len(svc.Container.NetworkSettings.Networks) > 1 {
-			return fmt.Errorf("Set d.RunOptions.NetworkName instead for container with multiple networks: %v", svc.Container.NetworkSettings.Networks)
+			return fmt.Errorf("set d.RunOptions.NetworkName instead for container with multiple networks: %v", svc.Container.NetworkSettings.Networks)
 		}
 		for netName = range svc.Container.NetworkSettings.Networks {
 			// Networks above is a map; we just need to find the first and
@@ -938,7 +939,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		}
 	}
 	n.ContainerNetworkName = netName
-	n.ContainerIPAddress = svc.Container.NetworkSettings.Networks[netName].IPAddress
+	n.ContainerIPAddress = svc.Container.NetworkSettings.Networks[netName].IPAddress.String()
 	n.RealAPIAddr = protocol + "://" + n.ContainerIPAddress + ":8200"
 	n.cleanupContainer = svc.Cleanup
 
@@ -972,7 +973,8 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 }
 
 func (n *DockerClusterNode) Pause(ctx context.Context) error {
-	return n.DockerAPI.ContainerPause(ctx, n.Container.ID)
+	_, err := n.DockerAPI.ContainerPause(ctx, n.Container.ID, docker.ContainerPauseOptions{})
+	return err
 }
 
 func (n *DockerClusterNode) Restart(ctx context.Context) error {
@@ -982,20 +984,23 @@ func (n *DockerClusterNode) Restart(ctx context.Context) error {
 		return err
 	}
 
-	resp, err := n.DockerAPI.ContainerInspect(ctx, n.Container.ID)
+	resp, err := n.DockerAPI.ContainerInspect(ctx, n.Container.ID, docker.ContainerInspectOptions{})
 	if err != nil {
 		return fmt.Errorf("error inspecting container after restart: %s", err)
 	}
 
 	var port int
-	if len(resp.NetworkSettings.Ports) > 0 {
-		for key, binding := range resp.NetworkSettings.Ports {
+	if len(resp.Container.NetworkSettings.Ports) > 0 {
+		for key, binding := range resp.Container.NetworkSettings.Ports {
 			if len(binding) < 1 {
 				continue
 			}
 
-			if key == "8200/tcp" {
+			if key.String() == "8200/tcp" {
 				port, err = strconv.Atoi(binding[0].HostPort)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -1022,7 +1027,10 @@ func (n *DockerClusterNode) Restart(ctx context.Context) error {
 }
 
 func (n *DockerClusterNode) Signal(ctx context.Context, signal string) error {
-	return n.DockerAPI.ContainerKill(ctx, n.Container.ID, signal)
+	_, err := n.DockerAPI.ContainerKill(ctx, n.Container.ID, docker.ContainerKillOptions{
+		Signal: signal,
+	})
+	return err
 }
 
 func (n *DockerClusterNode) UpdateConfig(ctx context.Context, config *testcluster.VaultNodeConfig) error {
@@ -1094,7 +1102,7 @@ func (n *DockerClusterNode) PartitionFromCluster(ctx context.Context) error {
 	stdout, stderr, exitCode, err := n.runner.RunCmdWithOutput(ctx, n.Container.ID, []string{
 		"/bin/sh",
 		"-xec", strings.Join([]string{
-			fmt.Sprintf("echo partitioning container from network"),
+			"echo partitioning container from network",
 			"apk add iproute2",
 			"apk add iptables",
 			// Get the gateway address for the bridge so we can allow host to
@@ -1129,7 +1137,7 @@ func (n *DockerClusterNode) UnpartitionFromCluster(ctx context.Context) error {
 	stdout, stderr, exitCode, err := n.runner.RunCmdWithOutput(ctx, n.Container.ID, []string{
 		"/bin/sh",
 		"-xec", strings.Join([]string{
-			fmt.Sprintf("echo un-partitioning container from network"),
+			"echo un-partitioning container from network",
 			// Get the gateway address for the bridge so we can allow host to
 			// container traffic still.
 			"GW=$(ip r | grep default | grep eth0 | cut -f 3 -d' ')",
@@ -1216,7 +1224,7 @@ func (dc *DockerCluster) setupDockerCluster(ctx context.Context, opts *DockerClu
 		}
 		dc.tmpDir = opts.TmpDir
 	} else {
-		tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
+		tempDir, err := os.MkdirTemp("", "vault-test-cluster-")
 		if err != nil {
 			return err
 		}

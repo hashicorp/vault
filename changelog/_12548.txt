@@ -1,0 +1,3 @@
+```release-note:feature
+**Billing metrics dashboard**: Create a new billing dashboard with responsive layout to display metric data. 
+```

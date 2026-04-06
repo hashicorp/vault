@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -20,18 +21,14 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/api/types/strslice"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/docker/go-connections/nat"
+	"github.com/containerd/errdefs"
 	"github.com/hashicorp/go-uuid"
+	"github.com/moby/go-archive"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 )
 
 const DockerAPIVersion = "1.44"
@@ -68,7 +65,7 @@ type RunOptions struct {
 }
 
 func NewDockerAPI() (*client.Client, error) {
-	return client.NewClientWithOpts(client.FromEnv, client.WithVersion(DockerAPIVersion))
+	return client.New(client.FromEnv, client.WithVersion(DockerAPIVersion))
 }
 
 func NewServiceRunner(opts RunOptions) (*Runner, error) {
@@ -81,16 +78,16 @@ func NewServiceRunner(opts RunOptions) (*Runner, error) {
 		opts.NetworkName = os.Getenv("TEST_DOCKER_NETWORK_NAME")
 	}
 	if opts.NetworkName != "" {
-		nets, err := dapi.NetworkList(context.TODO(), network.ListOptions{
-			Filters: filters.NewArgs(filters.Arg("name", opts.NetworkName)),
+		nets, err := dapi.NetworkList(context.TODO(), client.NetworkListOptions{
+			Filters: make(client.Filters).Add("name", opts.NetworkName),
 		})
 		if err != nil {
 			return nil, err
 		}
-		if len(nets) != 1 {
-			return nil, fmt.Errorf("expected exactly one docker network named %q, got %d", opts.NetworkName, len(nets))
+		if len(nets.Items) != 1 {
+			return nil, fmt.Errorf("expected exactly one docker network named %q, got %d", opts.NetworkName, len(nets.Items))
 		}
-		opts.NetworkID = nets[0].ID
+		opts.NetworkID = nets.Items[0].ID
 	}
 	if opts.NetworkID == "" {
 		opts.NetworkID = os.Getenv("TEST_DOCKER_NETWORK_ID")
@@ -209,18 +206,16 @@ var _ io.Writer = &LogConsumerWriter{}
 func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr bool, connect ServiceAdapter) (*Service, string, error) {
 	if d.RunOptions.PreDelete {
 		name := d.RunOptions.ContainerName
-		matches, err := d.DockerAPI.ContainerList(ctx, container.ListOptions{
+		matches, err := d.DockerAPI.ContainerList(ctx, client.ContainerListOptions{
 			All: true,
 			// TODO use labels to ensure we don't delete anything we shouldn't
-			Filters: filters.NewArgs(
-				filters.Arg("name", name),
-			),
+			Filters: make(client.Filters).Add("name", name),
 		})
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to list containers named %q", name)
 		}
-		for _, cont := range matches {
-			err = d.DockerAPI.ContainerRemove(ctx, cont.ID, container.RemoveOptions{Force: true})
+		for _, cont := range matches.Items {
+			_, err = d.DockerAPI.ContainerRemove(ctx, cont.ID, client.ContainerRemoveOptions{Force: true})
 			if err != nil {
 				return nil, "", fmt.Errorf("failed to pre-delete container named %q", name)
 			}
@@ -258,8 +253,8 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 
 	cleanup := func() {
 		for i := 0; i < 10; i++ {
-			err := d.DockerAPI.ContainerRemove(ctx, result.Container.ID, container.RemoveOptions{Force: true})
-			if err == nil || client.IsErrNotFound(err) {
+			_, err := d.DockerAPI.ContainerRemove(ctx, result.Container.ID, client.ContainerRemoveOptions{Force: true})
+			if err == nil || errdefs.IsNotFound(err) {
 				return
 			}
 			time.Sleep(1 * time.Second)
@@ -278,8 +273,8 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 
 	var config ServiceConfig
 	err = backoff.Retry(func() error {
-		container, err := d.DockerAPI.ContainerInspect(ctx, result.Container.ID)
-		if err != nil || !container.State.Running {
+		inspectRes, err := d.DockerAPI.ContainerInspect(ctx, result.Container.ID, client.ContainerInspectOptions{})
+		if err != nil || !inspectRes.Container.State.Running {
 			return backoff.Permanent(fmt.Errorf("failed inspect or container %q not running: %w", result.Container.ID, err))
 		}
 
@@ -330,7 +325,7 @@ func (d *Runner) createLogConsumer(containerId string, wg *sync.WaitGroup) func(
 func (d *Runner) consumeLogs(containerId string, wg *sync.WaitGroup, logStdout, logStderr io.Writer) {
 	// We must run inside a goroutine because we're using Follow:true,
 	// and StdCopy will block until the log stream is closed.
-	stream, err := d.DockerAPI.ContainerLogs(context.Background(), containerId, container.LogsOptions{
+	stream, err := d.DockerAPI.ContainerLogs(context.Background(), containerId, client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: !d.RunOptions.OmitLogTimestamps,
@@ -351,12 +346,12 @@ func (d *Runner) consumeLogs(containerId string, wg *sync.WaitGroup, logStdout, 
 type Service struct {
 	Config      ServiceConfig
 	Cleanup     func()
-	Container   *types.ContainerJSON
+	Container   *container.InspectResponse
 	StartResult *StartResult
 }
 
 type StartResult struct {
-	Container *types.ContainerJSON
+	Container *container.InspectResponse
 	Addrs     []string
 	RealIP    string
 }
@@ -384,13 +379,17 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 		Cmd:      d.RunOptions.Cmd,
 	}
 	if len(d.RunOptions.Ports) > 0 {
-		cfg.ExposedPorts = make(map[nat.Port]struct{})
+		cfg.ExposedPorts = network.PortSet{}
 		for _, p := range d.RunOptions.Ports {
-			cfg.ExposedPorts[nat.Port(p)] = struct{}{}
+			port, err := network.ParsePort(p)
+			if err != nil {
+				return nil, err
+			}
+			cfg.ExposedPorts[port] = struct{}{}
 		}
 	}
 	if len(d.RunOptions.Entrypoint) > 0 {
-		cfg.Entrypoint = strslice.StrSlice(d.RunOptions.Entrypoint)
+		cfg.Entrypoint = d.RunOptions.Entrypoint
 	}
 
 	hostConfig := &container.HostConfig{
@@ -411,7 +410,7 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 	}
 
 	// best-effort pull
-	var opts image.CreateOptions
+	var opts client.ImagePullOptions
 	if d.RunOptions.AuthUsername != "" && d.RunOptions.AuthPassword != "" {
 		var buf bytes.Buffer
 		auth := map[string]string{
@@ -423,7 +422,7 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 		}
 		opts.RegistryAuth = base64.URLEncoding.EncodeToString(buf.Bytes())
 	}
-	resp, _ := d.DockerAPI.ImageCreate(ctx, cfg.Image, opts)
+	resp, _ := d.DockerAPI.ImagePull(ctx, cfg.Image, opts)
 	if resp != nil {
 		_, _ = io.ReadAll(resp)
 	}
@@ -437,40 +436,45 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 		})
 	}
 
-	c, err := d.DockerAPI.ContainerCreate(ctx, cfg, hostConfig, netConfig, nil, cfg.Hostname)
+	c, err := d.DockerAPI.ContainerCreate(ctx, client.ContainerCreateOptions{
+		Config:           cfg,
+		HostConfig:       hostConfig,
+		NetworkingConfig: netConfig,
+		Name:             cfg.Hostname,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("container create failed: %v", err)
 	}
 
 	for from, to := range d.RunOptions.CopyFromTo {
 		if err := CopyToContainer(ctx, d.DockerAPI, c.ID, from, to); err != nil {
-			_ = d.DockerAPI.ContainerRemove(ctx, c.ID, container.RemoveOptions{})
-			return nil, err
+			_, err1 := d.DockerAPI.ContainerRemove(ctx, c.ID, client.ContainerRemoveOptions{})
+			return nil, errors.Join(err, err1)
 		}
 	}
 
-	err = d.DockerAPI.ContainerStart(ctx, c.ID, container.StartOptions{})
+	_, err = d.DockerAPI.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 	if err != nil {
-		_ = d.DockerAPI.ContainerRemove(ctx, c.ID, container.RemoveOptions{})
-		return nil, fmt.Errorf("container start failed: %v", err)
+		_, err1 := d.DockerAPI.ContainerRemove(ctx, c.ID, client.ContainerRemoveOptions{})
+		return nil, fmt.Errorf("container start failed: %v", errors.Join(err, err1))
 	}
 
-	inspect, err := d.DockerAPI.ContainerInspect(ctx, c.ID)
+	inspect, err := d.DockerAPI.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
 	if err != nil {
-		_ = d.DockerAPI.ContainerRemove(ctx, c.ID, container.RemoveOptions{})
-		return nil, err
+		_, err1 := d.DockerAPI.ContainerRemove(ctx, c.ID, client.ContainerRemoveOptions{})
+		return nil, errors.Join(err, err1)
 	}
 
 	var addrs []string
-	for _, port := range d.RunOptions.Ports {
-		pieces := strings.Split(port, "/")
-		if len(pieces) < 2 {
-			return nil, fmt.Errorf("expected port of the form 1234/tcp, got: %s", port)
+	for _, portS := range d.RunOptions.Ports {
+		port, err := network.ParsePort(portS)
+		if err != nil {
+			return nil, err
 		}
 		if d.RunOptions.NetworkID != "" && !forceLocalAddr {
-			addrs = append(addrs, fmt.Sprintf("%s:%s", cfg.Hostname, pieces[0]))
+			addrs = append(addrs, fmt.Sprintf("%s:%d", cfg.Hostname, port.Num()))
 		} else {
-			mapped, ok := inspect.NetworkSettings.Ports[nat.Port(port)]
+			mapped, ok := inspect.Container.NetworkSettings.Ports[port]
 			if !ok || len(mapped) == 0 {
 				return nil, fmt.Errorf("no port mapping found for %s", port)
 			}
@@ -480,19 +484,19 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 
 	var realIP string
 	if d.RunOptions.NetworkID == "" {
-		if len(inspect.NetworkSettings.Networks) > 1 {
-			return nil, fmt.Errorf("Set d.RunOptions.NetworkName instead for container with multiple networks: %v", inspect.NetworkSettings.Networks)
+		if len(inspect.Container.NetworkSettings.Networks) > 1 {
+			return nil, fmt.Errorf("Set d.RunOptions.NetworkName instead for container with multiple networks: %v", inspect.Container.NetworkSettings.Networks)
 		}
-		for _, network := range inspect.NetworkSettings.Networks {
-			realIP = network.IPAddress
+		for _, ntwrk := range inspect.Container.NetworkSettings.Networks {
+			realIP = ntwrk.IPAddress.String()
 			break
 		}
 	} else {
-		realIP = inspect.NetworkSettings.Networks[d.RunOptions.NetworkName].IPAddress
+		realIP = inspect.Container.NetworkSettings.Networks[d.RunOptions.NetworkName].IPAddress.String()
 	}
 
 	return &StartResult{
-		Container: &inspect,
+		Container: &inspect.Container,
 		Addrs:     addrs,
 		RealIP:    realIP,
 	}, nil
@@ -502,26 +506,33 @@ func (d *Runner) RefreshFiles(ctx context.Context, containerID string) error {
 	for from, to := range d.RunOptions.CopyFromTo {
 		if err := CopyToContainer(ctx, d.DockerAPI, containerID, from, to); err != nil {
 			// TODO too drastic?
-			_ = d.DockerAPI.ContainerRemove(ctx, containerID, container.RemoveOptions{})
-			return err
+			_, err1 := d.DockerAPI.ContainerRemove(ctx, containerID, client.ContainerRemoveOptions{})
+			return errors.Join(err, err1)
 		}
 	}
-	return d.DockerAPI.ContainerKill(ctx, containerID, "SIGHUP")
+
+	_, err := d.DockerAPI.ContainerKill(ctx, containerID, client.ContainerKillOptions{
+		Signal: "SIGHUP",
+	})
+	return err
 }
 
 func (d *Runner) Stop(ctx context.Context, containerID string) error {
 	if d.RunOptions.NetworkID != "" {
-		if err := d.DockerAPI.NetworkDisconnect(ctx, d.RunOptions.NetworkID, containerID, true); err != nil {
+		if _, err := d.DockerAPI.NetworkDisconnect(ctx, d.RunOptions.NetworkID, client.NetworkDisconnectOptions{
+			Container: containerID,
+			Force:     true,
+		}); err != nil {
 			return fmt.Errorf("error disconnecting network (%v): %v", d.RunOptions.NetworkID, err)
 		}
 	}
 
 	// timeout in seconds
 	timeout := 5
-	options := container.StopOptions{
+	options := client.ContainerStopOptions{
 		Timeout: &timeout,
 	}
-	if err := d.DockerAPI.ContainerStop(ctx, containerID, options); err != nil {
+	if _, err := d.DockerAPI.ContainerStop(ctx, containerID, options); err != nil {
 		return fmt.Errorf("error stopping container: %v", err)
 	}
 
@@ -529,7 +540,7 @@ func (d *Runner) Stop(ctx context.Context, containerID string) error {
 }
 
 func (d *Runner) RestartContainerWithTimeout(ctx context.Context, containerID string, timeout int) error {
-	err := d.DockerAPI.ContainerRestart(ctx, containerID, container.StopOptions{Timeout: &timeout})
+	_, err := d.DockerAPI.ContainerRestart(ctx, containerID, client.ContainerRestartOptions{Timeout: &timeout})
 	if err != nil {
 		return fmt.Errorf("failed to restart container: %s", err)
 	}
@@ -544,7 +555,7 @@ func (d *Runner) RestartContainerWithTimeout(ctx context.Context, containerID st
 }
 
 func (d *Runner) Restart(ctx context.Context, containerID string) error {
-	if err := d.DockerAPI.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
+	if _, err := d.DockerAPI.ContainerStart(ctx, containerID, client.ContainerStartOptions{}); err != nil {
 		return err
 	}
 
@@ -552,7 +563,11 @@ func (d *Runner) Restart(ctx context.Context, containerID string) error {
 		NetworkID: d.RunOptions.NetworkID,
 	}
 
-	return d.DockerAPI.NetworkConnect(ctx, d.RunOptions.NetworkID, containerID, ends)
+	_, err := d.DockerAPI.NetworkConnect(ctx, d.RunOptions.NetworkID, client.NetworkConnectOptions{
+		Container:      containerID,
+		EndpointConfig: ends,
+	})
+	return err
 }
 
 func CopyToContainer(ctx context.Context, dapi *client.Client, containerID, from, to string) error {
@@ -574,7 +589,10 @@ func CopyToContainer(ctx context.Context, dapi *client.Client, containerID, from
 		return fmt.Errorf("error preparing copy from %q -> %q: %v", from, to, err)
 	}
 	defer content.Close()
-	err = dapi.CopyToContainer(ctx, containerID, dstDir, content, container.CopyToContainerOptions{})
+	_, err = dapi.CopyToContainer(ctx, containerID, client.CopyToContainerOptions{
+		DestinationPath: dstDir,
+		Content:         content,
+	})
 	if err != nil {
 		return fmt.Errorf("error copying from %q -> %q: %v", from, to, err)
 	}
@@ -583,14 +601,14 @@ func CopyToContainer(ctx context.Context, dapi *client.Client, containerID, from
 }
 
 type RunCmdOpt interface {
-	Apply(cfg *container.ExecOptions) error
+	Apply(cfg *client.ExecCreateOptions) error
 }
 
 type RunCmdUser string
 
 var _ RunCmdOpt = (*RunCmdUser)(nil)
 
-func (u RunCmdUser) Apply(cfg *container.ExecOptions) error {
+func (u RunCmdUser) Apply(cfg *client.ExecCreateOptions) error {
 	cfg.User = string(u)
 	return nil
 }
@@ -600,7 +618,7 @@ func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []s
 }
 
 func RunCmdWithOutput(api *client.Client, ctx context.Context, containerID string, cmd []string, opts ...RunCmdOpt) ([]byte, []byte, int, error) {
-	runCfg := container.ExecOptions{
+	runCfg := client.ExecCreateOptions{
 		AttachStdout: true,
 		AttachStderr: true,
 		Cmd:          cmd,
@@ -612,12 +630,12 @@ func RunCmdWithOutput(api *client.Client, ctx context.Context, containerID strin
 		}
 	}
 
-	ret, err := api.ContainerExecCreate(ctx, containerID, runCfg)
+	ret, err := api.ExecCreate(ctx, containerID, runCfg)
 	if err != nil {
 		return nil, nil, -1, fmt.Errorf("error creating execution environment: %v\ncfg: %v\n", err, runCfg)
 	}
 
-	resp, err := api.ContainerExecAttach(ctx, ret.ID, container.ExecAttachOptions{})
+	resp, err := api.ExecAttach(ctx, ret.ID, client.ExecAttachOptions{})
 	if err != nil {
 		return nil, nil, -1, fmt.Errorf("error attaching to command execution: %v\ncfg: %v\nret: %v\n", err, runCfg, ret)
 	}
@@ -633,7 +651,7 @@ func RunCmdWithOutput(api *client.Client, ctx context.Context, containerID strin
 	stderr := stderrB.Bytes()
 
 	// Fetch return code.
-	info, err := api.ContainerExecInspect(ctx, ret.ID)
+	info, err := api.ExecInspect(ctx, ret.ID, client.ExecInspectOptions{})
 	if err != nil {
 		return stdout, stderr, -1, fmt.Errorf("error reading command exit code: %v", err)
 	}
@@ -646,7 +664,7 @@ func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd [
 }
 
 func RunCmdInBackground(api *client.Client, ctx context.Context, containerID string, cmd []string, opts ...RunCmdOpt) (string, error) {
-	runCfg := container.ExecOptions{
+	runCfg := client.ExecCreateOptions{
 		AttachStdout: true,
 		AttachStderr: true,
 		Cmd:          cmd,
@@ -658,12 +676,12 @@ func RunCmdInBackground(api *client.Client, ctx context.Context, containerID str
 		}
 	}
 
-	ret, err := api.ContainerExecCreate(ctx, containerID, runCfg)
+	ret, err := api.ExecCreate(ctx, containerID, runCfg)
 	if err != nil {
 		return "", fmt.Errorf("error creating execution environment: %w\ncfg: %v\n", err, runCfg)
 	}
 
-	err = api.ContainerExecStart(ctx, ret.ID, container.ExecStartOptions{})
+	_, err = api.ExecStart(ctx, ret.ID, client.ExecStartOptions{})
 	if err != nil {
 		return "", fmt.Errorf("error starting command execution: %w\ncfg: %v\nret: %v\n", err, runCfg, ret)
 	}
@@ -805,14 +823,14 @@ func (bCtx *BuildContext) ToTarball() (io.Reader, error) {
 }
 
 type BuildOpt interface {
-	Apply(cfg *types.ImageBuildOptions) error
+	Apply(cfg *client.ImageBuildOptions) error
 }
 
 type BuildRemove bool
 
 var _ BuildOpt = (*BuildRemove)(nil)
 
-func (u BuildRemove) Apply(cfg *types.ImageBuildOptions) error {
+func (u BuildRemove) Apply(cfg *client.ImageBuildOptions) error {
 	cfg.Remove = bool(u)
 	return nil
 }
@@ -821,7 +839,7 @@ type BuildForceRemove bool
 
 var _ BuildOpt = (*BuildForceRemove)(nil)
 
-func (u BuildForceRemove) Apply(cfg *types.ImageBuildOptions) error {
+func (u BuildForceRemove) Apply(cfg *client.ImageBuildOptions) error {
 	cfg.ForceRemove = bool(u)
 	return nil
 }
@@ -830,7 +848,7 @@ type BuildPullParent bool
 
 var _ BuildOpt = (*BuildPullParent)(nil)
 
-func (u BuildPullParent) Apply(cfg *types.ImageBuildOptions) error {
+func (u BuildPullParent) Apply(cfg *client.ImageBuildOptions) error {
 	cfg.PullParent = bool(u)
 	return nil
 }
@@ -839,7 +857,7 @@ type BuildArgs map[string]*string
 
 var _ BuildOpt = (*BuildArgs)(nil)
 
-func (u BuildArgs) Apply(cfg *types.ImageBuildOptions) error {
+func (u BuildArgs) Apply(cfg *client.ImageBuildOptions) error {
 	cfg.BuildArgs = u
 	return nil
 }
@@ -848,7 +866,7 @@ type BuildTags []string
 
 var _ BuildOpt = (*BuildTags)(nil)
 
-func (u BuildTags) Apply(cfg *types.ImageBuildOptions) error {
+func (u BuildTags) Apply(cfg *client.ImageBuildOptions) error {
 	cfg.Tags = u
 	return nil
 }
@@ -860,7 +878,7 @@ func (d *Runner) BuildImage(ctx context.Context, containerfile string, container
 }
 
 func BuildImage(ctx context.Context, api *client.Client, containerfile string, containerContext BuildContext, opts ...BuildOpt) ([]byte, error) {
-	var cfg types.ImageBuildOptions
+	var cfg client.ImageBuildOptions
 
 	// Build container context tarball, provisioning containerfile in.
 	containerContext[containerfilePath] = PathContentsFromBytes([]byte(containerfile))
@@ -891,51 +909,53 @@ func BuildImage(ctx context.Context, api *client.Client, containerfile string, c
 }
 
 func (d *Runner) CopyTo(containerID string, destination string, contents BuildContext) error {
-	// XXX: currently we use the default options but we might want to allow
-	// modifying cfg.CopyUIDGID in the future.
-	var cfg container.CopyToContainerOptions
-
 	// Convert our provided contents to a tarball to ship up.
 	tar, err := contents.ToTarball()
 	if err != nil {
 		return fmt.Errorf("failed to build contents into tarball: %v", err)
 	}
 
-	return d.DockerAPI.CopyToContainer(context.Background(), containerID, destination, tar, cfg)
+	_, err = d.DockerAPI.CopyToContainer(context.Background(), containerID, client.CopyToContainerOptions{
+		DestinationPath: destination,
+		Content:         tar,
+	})
+	return err
 }
 
 func (d *Runner) CopyFrom(container string, source string) (BuildContext, *container.PathStat, error) {
-	reader, stat, err := d.DockerAPI.CopyFromContainer(context.Background(), container, source)
+	res, err := d.DockerAPI.CopyFromContainer(context.Background(), container, client.CopyFromContainerOptions{
+		SourcePath: source,
+	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read %v from container: %v", source, err)
 	}
 
-	result, err := BuildContextFromTarball(reader)
+	result, err := BuildContextFromTarball(res.Content)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build archive from result: %v", err)
 	}
 
-	return result, &stat, nil
+	return result, &res.Stat, nil
 }
 
 func (d *Runner) GetNetworkAndAddresses(container string) (map[string]string, error) {
-	response, err := d.DockerAPI.ContainerInspect(context.Background(), container)
+	response, err := d.DockerAPI.ContainerInspect(context.Background(), container, client.ContainerInspectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch container inspection data: %v", err)
 	}
 
-	if response.NetworkSettings == nil || len(response.NetworkSettings.Networks) == 0 {
+	if response.Container.NetworkSettings == nil || len(response.Container.NetworkSettings.Networks) == 0 {
 		return nil, fmt.Errorf("container (%v) had no associated network settings: %v", container, response)
 	}
 
 	ret := make(map[string]string)
-	ns := response.NetworkSettings.Networks
+	ns := response.Container.NetworkSettings.Networks
 	for network, data := range ns {
 		if data == nil {
 			continue
 		}
 
-		ret[network] = data.IPAddress
+		ret[network] = data.IPAddress.String()
 	}
 
 	if len(ret) == 0 {

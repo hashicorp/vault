@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -246,7 +247,7 @@ func (ts *TestServer) PushConfig() {
 				return
 			}
 		}
-		ts.runner.DockerAPI.ContainerKill(ts.ctx, ts.startup.Container.ID, "SIGHUP")
+		ts.runner.DockerAPI.ContainerKill(ts.ctx, ts.startup.Container.ID, client.ContainerKillOptions{Signal: "SIGHUP"})
 
 		// Connect to our bind resolver.
 		resolver := &net.Resolver{

@@ -356,6 +356,38 @@ func TestSchemaValidation(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("self_managed_schema_validation_does_not_require_userbinddn", func(t *testing.T) {
+		config := &ConfigEntry{
+			Url:           "ldap://127.0.0.1",
+			Schema:        SchemaOpenLDAP,
+			TLSMinVersion: "tls12",
+			TLSMaxVersion: "tls12",
+		}
+
+		// The original validation logic should receive an error for failing to derive UserBindDN.
+		if err := config.Validate(); err == nil {
+			t.Error("expected Validate() to return an error when UserBindDN cannot be derived, got nil")
+		}
+
+		// The self-managed validation should discard only the UserBindDN derivation error and pass successfully.
+		if err := config.ValidateSelfManaged(); err != nil {
+			t.Errorf("expected ValidateSelfManaged() to succeed without UserBindDN fields, got: %v", err)
+		}
+
+		config = &ConfigEntry{
+			Url:           "ldap://127.0.0.1",
+			UserDN:        "ou=users,dc=example,dc=com",
+			Schema:        "unsupported_schema",
+			TLSMinVersion: "tls12",
+			TLSMaxVersion: "tls12",
+		}
+
+		// The self-managed validation should still fail on other validation errors like unsupported schema, even if userdn is set.
+		if err := config.ValidateSelfManaged(); err == nil {
+			t.Error("expected ValidateSelfManaged() to return an error for unsupported schema, got nil")
+		}
+	})
 }
 
 func testConfig(t *testing.T) *ConfigEntry {
