@@ -68,8 +68,8 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.5.1
 	github.com/go-git/go-git/v5 v5.14.0
-	github.com/go-jose/go-jose/v3 v3.0.4
-	github.com/go-ldap/ldap/v3 v3.4.12
+	github.com/go-jose/go-jose/v3 v3.0.5
+	github.com/go-ldap/ldap/v3 v3.4.13
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/go-test/deep v1.1.1
 	github.com/go-zookeeper/zk v1.0.3
@@ -295,7 +295,7 @@ require (
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
-	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
+	github.com/Azure/go-ntlmssp v0.1.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.5.0 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/DataDog/datadog-go v3.2.0+incompatible // indirect
@@ -380,7 +380,7 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-ldap/ldif v0.0.0-20250910174327-aa3bc3095c92 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
