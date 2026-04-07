@@ -677,7 +677,6 @@ func (r *CreateBackportReq) backportRef(
 			Strategy: libgit.MergeStrategyORT,
 			StrategyOptions: []libgit.MergeStrategyOption{
 				libgit.MergeStrategyOptionTheirs,
-				libgit.MergeStrategyOptionIgnoreSpaceChange,
 			},
 		})
 		if err != nil {
