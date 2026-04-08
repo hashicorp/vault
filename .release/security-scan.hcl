@@ -23,6 +23,7 @@ binary {
         // that it ought to be rescinded:
         // https://github.com/golang/vulndb/issues/4923#issuecomment-4200230182
         "GO-2026-4923",
+        "GHSA-6jwv-w5xf-7j27",
         // These two are false positives that have been fixed as of
         // github.com/jackc/pgx/v5 @ >= v5.0.9
         // I've (ryan) opened requests to have the vulndb updated as such:
@@ -59,6 +60,7 @@ container {
         // that it ought to be rescinded:
         // https://github.com/golang/vulndb/issues/4923#issuecomment-4200230182
         "GO-2026-4923",
+        "GHSA-6jwv-w5xf-7j27",
         // These two are false positives that have been fixed as of
         // github.com/jackc/pgx/v5 @ >= v5.0.9
         // I've (ryan) opened requests to have the vulndb updated as such:
