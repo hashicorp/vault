@@ -226,7 +226,7 @@ scenario "plugin" {
     description = "Set up external plugin services (LDAP server, databases, etc.) for plugin testing"
     module      = module.set_up_external_integration_target
     depends_on = [
-      step.create_plugin_integration_target
+      step.create_vault_cluster_targets
     ]
 
     providers = {
@@ -466,7 +466,7 @@ scenario "plugin" {
     // Determine if filter contains test names (starts with "Test") or package names
     is_test_name_filter = length(var.blackbox_test_filter) > 0 && length([for t in var.blackbox_test_filter : t if can(regex("^Test", t))]) > 0
 
-    // For plugins, if package filter is provided, convert to paths, otherwise use default plugins path
+    // For plugins, if package filter is provided, convert to plugin paths, otherwise run default plugin tests
     plugin_test_packages = length(var.blackbox_test_filter) > 0 && !local.is_test_name_filter ? [
       for pkg in var.blackbox_test_filter : "./vault/external_tests/blackbox/plugins/${pkg}/..."
     ] : ["./vault/external_tests/blackbox/plugins/..."]
