@@ -42,7 +42,7 @@ resource "enos_local_exec" "run_blackbox_test" {
     # PATH and Go-related environment variables are inherited from the calling process
     }, var.vault_namespace != null ? {
     VAULT_NAMESPACE = var.vault_namespace
-    } : {}, local.ldap_environment
+    } : {}, local.ldap_environment, local.postgres_environment
   )
   depends_on = [local_file.test_matrix]
 }
@@ -61,6 +61,22 @@ locals {
     LDAP_URL_PUBLIC  = "ldap://${local.ldap_config.host.public_ip}:${local.ldap_config.port}"
     LDAP_BIND_DN     = "cn=admin,${local.domain_dn}"
     LDAP_BIND_PASS   = local.ldap_config.admin_pw
+  } : {}
+
+  # Extract PostgreSQL configuration safely, defaulting to empty map if not available
+  postgres_config = try(var.integration_host_state.postgres, {})
+
+  # Set up PostgreSQL environment variables when PostgreSQL integration is available
+  postgres_environment = try(local.postgres_config.host.private_ip, "") != "" ? {
+    PG_URL            = "postgres://${local.postgres_config.username}:${local.postgres_config.password}@${local.postgres_config.host.private_ip}:${local.postgres_config.port}/${local.postgres_config.database}?sslmode=disable"
+    POSTGRES_USER     = local.postgres_config.username
+    POSTGRES_PASSWORD = local.postgres_config.password
+    POSTGRES_DB       = local.postgres_config.database
+    PGHOST            = local.postgres_config.host.private_ip
+    PGPORT            = local.postgres_config.port
+    PGUSER            = local.postgres_config.username
+    PGPASSWORD        = local.postgres_config.password
+    PGDATABASE        = local.postgres_config.database
   } : {}
 }
 
