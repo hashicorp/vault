@@ -317,10 +317,10 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
 
       // Right now there is a bug in HDS where the ping-identity icon name has a trailing whitespace.
       // This test should fail when upgrading to an HDS version with the corrected icon name and then we can remove this conditional.
-      const iconName = domain === 'ping.com' ? 'ping-identity ' : dasherize(provider.toLowerCase());
+      const iconName = domain === 'ping.com' ? 'ping-identity' : dasherize(provider.toLowerCase());
       // convenience message for HDS upgrade failure, can be removed when we upgrade
       const message =
-        iconName === 'ping-identity '
+        iconName === 'ping-identity'
           ? `If you are attempting to upgrade @hashicorp/design-system-components and this test is failing, please remove the icon override for Ping Identity in oidc-jwt.ts`
           : `it renders icon for ${domain}`;
       assert.dom(GENERAL.icon(iconName)).exists(message);
