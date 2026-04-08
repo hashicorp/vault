@@ -36,8 +36,8 @@ importers:
         specifier: 6.1.1-rc-20260408210649
         version: 6.1.1-rc-20260408210649(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-basic-dropdown@8.7.0(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4)))(ember-intl@7.4.1(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glint/template@1.7.3)(typescript@5.6.3)(webpack@5.105.4))(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))
       '@hashicorp/design-system-tokens':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 5.0.0-rc-20260408210649
+        version: 5.0.0-rc-20260408210649
       '@hashicorp/vault-client-typescript':
         specifier: github:hashicorp/vault-client-typescript
         version: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/89117e7ceca84680eca76d6f99041140fa45ca1a
@@ -1588,9 +1588,6 @@ packages:
     peerDependenciesMeta:
       ember-intl:
         optional: true
-
-  '@hashicorp/design-system-tokens@3.0.0':
-    resolution: {integrity: sha512-ODOtuwDvOdAHQNnhVgqi43enCVWjXTnweYrxHDi3QkVUY1ysLkGrfAySnr4hVwd3UHmzT5HkQQbjN5zgr8l94w==}
 
   '@hashicorp/design-system-tokens@5.0.0-rc-20260408210649':
     resolution: {integrity: sha512-mYwXqBetZtgvidscdfwN9XLxwHGKSI7fGZzoLyOuRb/UF5eatqm3oWiXHHem/XwFEq85Q9uN721//ZLwoB/r9Q==}
@@ -11134,8 +11131,6 @@ snapshots:
       - '@glint/template'
       - ember-source
       - supports-color
-
-  '@hashicorp/design-system-tokens@3.0.0': {}
 
   '@hashicorp/design-system-tokens@5.0.0-rc-20260408210649': {}
 

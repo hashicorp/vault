@@ -212,7 +212,7 @@
     "@carbon/charts": "^1.27.3",
     "@hashicorp-internal/vault-reporting": "file:vault-reporting/0.21.0.tgz",
     "@hashicorp/design-system-components": "6.1.1-rc-20260408210649",
-    "@hashicorp/design-system-tokens": "3.0.0",
+    "@hashicorp/design-system-tokens": "5.0.0-rc-20260408210649",
     "@hashicorp/vault-client-typescript": "github:hashicorp/vault-client-typescript",
     "ember-auto-import": "2.10.0",
     "handlebars": "4.7.8",
