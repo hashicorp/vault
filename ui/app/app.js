@@ -8,10 +8,14 @@ import Resolver from 'ember-resolver';
 import loadInitializers from 'ember-load-initializers';
 import config from 'vault/config/environment';
 
+import LinkToExternal from 'ember-engines/components/link-to-external';
+import { setLinkToExternal } from '@hashicorp/design-system-components/utils/hds-link-to-external';
 export default class App extends Application {
   modulePrefix = config.modulePrefix;
   podModulePrefix = config.podModulePrefix;
   Resolver = Resolver;
+  hdsExternalLink = setLinkToExternal(LinkToExternal);
+
   engines = {
     'config-ui': {
       dependencies: {
