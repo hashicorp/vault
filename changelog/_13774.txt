@@ -1,0 +1,3 @@
+```release-note:security
+core: Update github.com/aws/aws-sdk-go-v2/ to fix security vulnerability GHSA-xmrv-pmrh-hhx2.
+```
