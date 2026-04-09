@@ -10,7 +10,7 @@ self-hosted-runner:
     - xlarge
     - ondemand
     - disk_gb=64
-    - os=linux
+    - os=ubuntu
     - os=ubuntu-arm
     - type=m5.2xlarge
     - type=c6a.xlarge
