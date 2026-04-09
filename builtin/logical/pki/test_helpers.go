@@ -489,6 +489,22 @@ func writeToTmpDir(t *testing.T, tmpDir string, filename string, contents string
 	return filePath
 }
 
+func findExtension(oid asn1.ObjectIdentifier, extensions []pkix.Extension) (bool, pkix.Extension, []string) {
+	var oidsInExtensions []string
+
+	isFound := false
+	var extension pkix.Extension
+	for _, ext := range extensions {
+		oidsInExtensions = append(oidsInExtensions, ext.Id.String())
+		if ext.Id.Equal(oid) {
+			extension = ext
+			isFound = true
+			break
+		}
+	}
+	return isFound, extension, oidsInExtensions
+}
+
 // Openssl is a good reference implementation for x509 and CMPv2
 func findOpenSSL() (string, string, bool) {
 	paths := os.Getenv("PATH")

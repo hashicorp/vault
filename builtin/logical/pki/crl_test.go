@@ -8,6 +8,7 @@ import (
 	"encoding/asn1"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -18,7 +19,9 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -1548,4 +1551,217 @@ func TestCRLIssuerRemoval(t *testing.T) {
 		require.Contains(t, afterUnifiedCRLList, entry)
 	}
 	require.Equal(t, len(afterUnifiedCRLList), len(unifiedCRLList))
+}
+
+// TestCRLFreshestCRLExtension verifies when the Freshest CRL extension is
+// present on the base CRL and that it never appears on the delta CRL.
+func TestCRLFreshestCRLExtension(t *testing.T) {
+	t.Parallel()
+
+	b, s := CreateBackendWithStorage(t)
+
+	// Create a root CA
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name              string
+		enableDelta       bool
+		expectedDeltaCDPs []string // If this is nil there should be no Freshest CRL
+		mountUrl          []string
+		issuerUrl         []string
+	}{
+		{
+			name:              "issuer URL takes precedence over mount URL",
+			enableDelta:       true,
+			expectedDeltaCDPs: []string{"http://example.com/issuer"},
+			mountUrl:          []string{"http://example.com/mount"},
+			issuerUrl:         []string{"http://example.com/issuer"},
+		},
+		{
+			name:              "uses issuer URL when mount URL not set",
+			enableDelta:       true,
+			expectedDeltaCDPs: []string{"http://example.com/issuer"},
+			mountUrl:          nil,
+			issuerUrl:         []string{"http://example.com/issuer"},
+		},
+		{
+			name:              "falls back to mount URL when issuer URL not set",
+			enableDelta:       true,
+			expectedDeltaCDPs: []string{"http://example.com/mount"},
+			mountUrl:          []string{"http://example.com/mount"},
+			issuerUrl:         nil,
+		},
+		{
+			name:              "supports multiple delta CRL distribution points and LDAP urls",
+			enableDelta:       true,
+			expectedDeltaCDPs: []string{"http://example.com/primary", "ldap://ldap.example.com/"},
+			mountUrl:          []string{"http://example.com/primary", "ldap://ldap.example.com/"},
+			issuerUrl:         nil,
+		},
+		{
+			name:              "no extension when delta CRL enabled and no URLs",
+			enableDelta:       true,
+			expectedDeltaCDPs: nil,
+			mountUrl:          nil,
+			issuerUrl:         nil,
+		},
+		{
+			name:              "no extension when URLs are empty slices",
+			enableDelta:       true,
+			expectedDeltaCDPs: nil,
+			mountUrl:          []string{},
+			issuerUrl:         []string{},
+		},
+		{
+			name:              "no extension when delta CRL disabled despite URLs configured",
+			enableDelta:       false,
+			expectedDeltaCDPs: nil,
+			mountUrl:          []string{"http://127.0.0.1:8200/v1/pki/mount"},
+			issuerUrl:         []string{"http://127.0.0.1:8200/v1/pki/issuer"},
+		},
+		{
+			name:              "no extension when delta CRL disabled and no URLs",
+			enableDelta:       false,
+			expectedDeltaCDPs: nil,
+			mountUrl:          nil,
+			issuerUrl:         nil,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Configure mount's delta CDP
+			_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
+				"delta_crl_distribution_points": tc.mountUrl,
+			})
+			require.NoError(t, err)
+
+			// Update issuer's delta CDP
+			_, err = CBPatch(b, s, "issuer/root", map[string]interface{}{
+				"delta_crl_distribution_points": tc.issuerUrl,
+			})
+			require.NoError(t, err)
+
+			// Enable delta CRL
+			_, err = CBWrite(b, s, "config/crl", map[string]interface{}{
+				"enable_delta": tc.enableDelta,
+				"auto_rebuild": tc.enableDelta,
+			})
+			require.NoError(t, err)
+
+			// Rotate CRL to apply updates
+			_, err = CBRead(b, s, "crl/rotate")
+			require.NoError(t, err)
+
+			// There should only be a Freshest CRL extension if expectedDeltaCDPs != nil
+			var expectedExtValue []byte
+			if len(tc.expectedDeltaCDPs) > 0 {
+				// Encode expected extension to compare to actual
+				ext, err := certutil.CreateDeltaCRLExtension(tc.expectedDeltaCDPs)
+				require.NoError(t, err)
+				expectedExtValue = ext.Value
+			}
+
+			resp := requestCrlFromBackend(t, s, b)
+			crl := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
+
+			foundFreshestExt, ext, _ := findExtension(certutil.FreshestCrlOid, crl.Extensions)
+
+			// Verify base CRL has Freshest CRL Extension (if expected)
+			if len(tc.expectedDeltaCDPs) > 0 {
+				require.True(t, foundFreshestExt, "freshest CRL extension not found in base CRL")
+				require.Equal(t, expectedExtValue, ext.Value, "freshest CRL value does not match expected")
+			} else {
+				require.False(t, foundFreshestExt, "freshest CRL extension exists in base CRL")
+			}
+
+			// Verify delta CRL does not have Freshest CRL extension (only base CRL should)
+			if tc.enableDelta {
+				deltaCrl := getParsedCrlFromBackend(t, b, s, "crl/delta").TBSCertList
+				foundFreshestInDelta, _, _ := findExtension(certutil.FreshestCrlOid, deltaCrl.Extensions)
+				require.False(t, foundFreshestInDelta, "freshest CRL extension exists in CRL")
+			}
+		})
+	}
+}
+
+// TestCRLOpenSSLVerifyFreshestExtension verifies OpenSSL output for Freshest
+// CRL on the base CRL and confirms the extension is absent on the delta CRL.
+func TestCRLOpenSSLVerifyFreshestExtension(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+	// Configure mount's delta CDP
+	resp, err := CBWrite(b, s, "config/urls", map[string]interface{}{
+		"delta_crl_distribution_points": []string{"http://example.com/crl/delta", "ldap://ldap.example.com"},
+	})
+	require.NoError(t, err)
+
+	// Create a root CA.
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+
+	// Enable delta CRL
+	_, err = CBWrite(b, s, "config/crl", map[string]interface{}{
+		"enable_delta": true,
+		"auto_rebuild": true,
+	})
+	require.NoError(t, err)
+
+	// Rotate CRL to apply updates
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+
+	// Fetch base CRL
+	resp, err = CBRead(b, s, "crl/pem")
+	require.NoError(t, err)
+	baseCRLpem := resp.Data["http_raw_body"].([]byte)
+
+	// Write to temp file for OpenSSL
+	tmpDir := t.TempDir()
+	filePath := writeToTmpDir(t, tmpDir, "base_crl.pem", string(baseCRLpem))
+
+	opensslCmd, output, found := findOpenSSL()
+	if !found {
+		t.Skipf("no appropriate OpenSSL version found")
+	}
+
+	log := corehelpers.NewTestLogger(t)
+	log.Info("Using OpenSSL", "path", opensslCmd, "version", output)
+
+	// The open ssl test:
+	args := []string{
+		"crl",
+		"-noout",
+		"-text",
+		"-in", filePath,
+	}
+
+	out, err := exec.Command(opensslCmd, args...).CombinedOutput()
+	require.NoError(t, err, "failed running command %s with args: %v\n%s", opensslCmd, args, string(out))
+	require.Regexp(t, `\s+X509v3 Freshest CRL:\s+Full Name:\s+URI:http://example.com/crl/delta\s+Full Name:\s+URI:ldap://ldap.example.com`, string(out))
+
+	// Confirm Freshest CRL is NOT in delta CRL
+	resp, err = CBRead(b, s, "crl/delta/pem")
+	requireSuccessNonNilResponse(t, resp, err)
+	deltaCRLPem := resp.Data["http_raw_body"].([]byte)
+	filePath = writeToTmpDir(t, tmpDir, "delta_crl.pem", string(deltaCRLPem))
+
+	args = []string{
+		"crl",
+		"-noout",
+		"-text",
+		"-in", filePath,
+	}
+
+	out, err = exec.Command(opensslCmd, args...).CombinedOutput()
+	require.NoError(t, err, "failed running command %s with args: %v\n%s", opensslCmd, args, string(out))
+	require.NotContains(t, string(out), "X509v3 Freshest CRL")
 }
