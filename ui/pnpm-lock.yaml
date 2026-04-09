@@ -31,13 +31,13 @@ importers:
         version: 1.27.3
       '@hashicorp-internal/vault-reporting':
         specifier: file:vault-reporting/0.21.0.tgz
-        version: file:vault-reporting/0.21.0.tgz(ec33f28947f5e1a648f7b2c564c82668)
+        version: file:vault-reporting/0.21.0.tgz(850fa3327b6c290aa862207205672953)
       '@hashicorp/design-system-components':
-        specifier: 6.1.1-rc-20260408210649
-        version: 6.1.1-rc-20260408210649(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-basic-dropdown@8.7.0(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4)))(ember-intl@7.4.1(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glint/template@1.7.3)(typescript@5.6.3)(webpack@5.105.4))(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))
+        specifier: 6.1.1-rc-20260409201302
+        version: 6.1.1-rc-20260409201302(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-basic-dropdown@8.7.0(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4)))(ember-intl@7.4.1(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glint/template@1.7.3)(typescript@5.6.3)(webpack@5.105.4))(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))
       '@hashicorp/design-system-tokens':
-        specifier: 5.0.0-rc-20260408210649
-        version: 5.0.0-rc-20260408210649
+        specifier: 5.0.0-rc-20260409201302
+        version: 5.0.0-rc-20260409201302
       '@hashicorp/vault-client-typescript':
         specifier: github:hashicorp/vault-client-typescript
         version: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/89117e7ceca84680eca76d6f99041140fa45ca1a
@@ -1578,8 +1578,8 @@ packages:
     peerDependencies:
       '@hashicorp/design-system-components': 4.23.0 - 6
 
-  '@hashicorp/design-system-components@6.1.1-rc-20260408210649':
-    resolution: {integrity: sha512-s3/aaOkeiIWh0fzmFXhgSxKt4edeOYBlGlm22mXTEC5XY+dIa3YS1+84qjcvPjBdTAUj00UbQDhUsqmEZYlLyg==}
+  '@hashicorp/design-system-components@6.1.1-rc-20260409201302':
+    resolution: {integrity: sha512-UKn1yBB2wIMNCpvUKr98VrOj5LJ0zC3l8QPdTmUwGIFRZhw2DupvRSbeXChGZ48RicIa57hCHl2gNAqLvLF6aQ==}
     engines: {node: '>= 18'}
     peerDependencies:
       '@ember/string': ^3.1.1 || ^4.0.0
@@ -1589,11 +1589,11 @@ packages:
       ember-intl:
         optional: true
 
-  '@hashicorp/design-system-tokens@5.0.0-rc-20260408210649':
-    resolution: {integrity: sha512-mYwXqBetZtgvidscdfwN9XLxwHGKSI7fGZzoLyOuRb/UF5eatqm3oWiXHHem/XwFEq85Q9uN721//ZLwoB/r9Q==}
+  '@hashicorp/design-system-tokens@5.0.0-rc-20260409201302':
+    resolution: {integrity: sha512-v/EdPEMNxORPEC9ZvycWUHkFVO/4FYY+rg3r8GzpuQVZ3mzuYhekVwBUQHvdx+MSQ/TDmR4DX909+SEtB/EsIA==}
 
-  '@hashicorp/flight-icons@5.0.0-rc-20260408210649':
-    resolution: {integrity: sha512-hYG7+MC1o9p2gfkbFNGfkeEbvcwj7HIWCeAfOwLaCtXFHFwqHJ+NdkinoZuC9+SNn9ffoCEh33yuhIx87cOnfg==}
+  '@hashicorp/flight-icons@5.0.0-rc-20260409201302':
+    resolution: {integrity: sha512-pQ/YnPfnJW4EGLww+V+TEpaXCiVlly21XZqKTtBdPk9L1CihDM6QJ53LSRl1V8DCLos1/Hl2mZZPdC5sE2W4yA==}
 
   '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/89117e7ceca84680eca76d6f99041140fa45ca1a':
     resolution: {tarball: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/89117e7ceca84680eca76d6f99041140fa45ca1a}
@@ -10647,7 +10647,7 @@ snapshots:
 
   '@ember/test-waiters@4.1.1(@glint/template@1.7.3)':
     dependencies:
-      '@embroider/addon-shim': 1.10.0
+      '@embroider/addon-shim': 1.10.2
       '@embroider/macros': 1.20.2(@glint/template@1.7.3)
     transitivePeerDependencies:
       - '@glint/template'
@@ -11057,11 +11057,11 @@ snapshots:
 
   '@handlebars/parser@2.0.0': {}
 
-  '@hashicorp-internal/vault-reporting@file:vault-reporting/0.21.0.tgz(ec33f28947f5e1a648f7b2c564c82668)':
+  '@hashicorp-internal/vault-reporting@file:vault-reporting/0.21.0.tgz(850fa3327b6c290aa862207205672953)':
     dependencies:
       '@embroider/macros': 1.20.2(@glint/template@1.7.3)
       '@faker-js/faker': 8.4.1
-      '@hashicorp/design-system-components': 6.1.1-rc-20260408210649(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-basic-dropdown@8.7.0(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4)))(ember-intl@7.4.1(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glint/template@1.7.3)(typescript@5.6.3)(webpack@5.105.4))(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))
+      '@hashicorp/design-system-components': 6.1.1-rc-20260409201302(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-basic-dropdown@8.7.0(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4)))(ember-intl@7.4.1(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glint/template@1.7.3)(typescript@5.6.3)(webpack@5.105.4))(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))
       '@lineal-viz/lineal': 0.5.1(@babel/core@7.26.10)(@glint/template@1.7.3)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))
       decorator-transforms: 2.3.0(@babel/core@7.26.10)
       ember-intl: 7.4.1(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glint/template@1.7.3)(typescript@5.6.3)(webpack@5.105.4)
@@ -11077,7 +11077,7 @@ snapshots:
       - typescript
       - webpack
 
-  '@hashicorp/design-system-components@6.1.1-rc-20260408210649(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-basic-dropdown@8.7.0(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4)))(ember-intl@7.4.1(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glint/template@1.7.3)(typescript@5.6.3)(webpack@5.105.4))(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))':
+  '@hashicorp/design-system-components@6.1.1-rc-20260409201302(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-basic-dropdown@8.7.0(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4)))(ember-intl@7.4.1(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glint/template@1.7.3)(typescript@5.6.3)(webpack@5.105.4))(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))':
     dependencies:
       '@codemirror/autocomplete': 6.20.1
       '@codemirror/commands': 6.8.1
@@ -11095,17 +11095,17 @@ snapshots:
       '@ember/render-modifiers': 3.0.0(@glint/template@1.7.3)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))
       '@ember/string': 4.0.1
       '@ember/test-waiters': 4.1.1(@glint/template@1.7.3)
-      '@embroider/addon-shim': 1.10.0
+      '@embroider/addon-shim': 1.10.2
       '@embroider/macros': 1.20.2(@glint/template@1.7.3)
       '@embroider/util': 1.13.4(@glint/template@1.7.3)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))
       '@floating-ui/dom': 1.7.0
-      '@hashicorp/design-system-tokens': 5.0.0-rc-20260408210649
-      '@hashicorp/flight-icons': 5.0.0-rc-20260408210649
+      '@hashicorp/design-system-tokens': 5.0.0-rc-20260409201302
+      '@hashicorp/flight-icons': 5.0.0-rc-20260409201302
       '@lezer/highlight': 1.2.1
       '@nullvoxpopuli/ember-composable-helpers': 5.3.0(@babel/core@7.26.10)
       clipboard-polyfill: 4.1.1
       codemirror-lang-hcl: 0.0.0-beta.2
-      decorator-transforms: 2.3.0(@babel/core@7.26.10)
+      decorator-transforms: 2.3.1(@babel/core@7.26.10)
       ember-a11y-refocus: 5.2.1(@babel/core@7.26.10)
       ember-basic-dropdown: 8.7.0(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))
       ember-concurrency: 4.0.6(@babel/core@7.26.10)(@glint/template@1.7.3)
@@ -11132,9 +11132,9 @@ snapshots:
       - ember-source
       - supports-color
 
-  '@hashicorp/design-system-tokens@5.0.0-rc-20260408210649': {}
+  '@hashicorp/design-system-tokens@5.0.0-rc-20260409201302': {}
 
-  '@hashicorp/flight-icons@5.0.0-rc-20260408210649': {}
+  '@hashicorp/flight-icons@5.0.0-rc-20260409201302': {}
 
   '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/89117e7ceca84680eca76d6f99041140fa45ca1a': {}
 
@@ -11330,8 +11330,8 @@ snapshots:
 
   '@nullvoxpopuli/ember-composable-helpers@5.3.0(@babel/core@7.26.10)':
     dependencies:
-      '@embroider/addon-shim': 1.10.0
-      decorator-transforms: 2.3.0(@babel/core@7.26.10)
+      '@embroider/addon-shim': 1.10.2
+      decorator-transforms: 2.3.1(@babel/core@7.26.10)
     transitivePeerDependencies:
       - '@babel/core'
       - supports-color
@@ -14825,7 +14825,7 @@ snapshots:
 
   ember-focus-trap@1.1.1(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4)):
     dependencies:
-      '@embroider/addon-shim': 1.10.0
+      '@embroider/addon-shim': 1.10.2
       ember-source: 5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4)
       focus-trap: 6.9.4
     transitivePeerDependencies:
@@ -14987,7 +14987,7 @@ snapshots:
 
   ember-resources@7.0.7(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3):
     dependencies:
-      '@embroider/addon-shim': 1.10.0
+      '@embroider/addon-shim': 1.10.2
       '@embroider/macros': 1.20.2(@glint/template@1.7.3)
       '@glint/template': 1.7.3
     optionalDependencies:
@@ -15098,9 +15098,9 @@ snapshots:
 
   ember-stargate@1.0.2(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3):
     dependencies:
-      '@embroider/addon-shim': 1.10.0
+      '@embroider/addon-shim': 1.10.2
       '@glimmer/component': 1.1.2(@babel/core@7.26.10)
-      decorator-transforms: 2.3.0(@babel/core@7.26.10)
+      decorator-transforms: 2.3.1(@babel/core@7.26.10)
       ember-modifier: 4.2.2(@babel/core@7.26.10)
       ember-resources: 7.0.7(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)
       tracked-built-ins: 4.0.0(@babel/core@7.26.10)
@@ -15221,7 +15221,7 @@ snapshots:
 
   ember-truth-helpers@5.0.0:
     dependencies:
-      '@embroider/addon-shim': 1.10.0
+      '@embroider/addon-shim': 1.10.2
     transitivePeerDependencies:
       - supports-color
 
@@ -19007,8 +19007,8 @@ snapshots:
 
   tracked-built-ins@4.0.0(@babel/core@7.26.10):
     dependencies:
-      '@embroider/addon-shim': 1.10.0
-      decorator-transforms: 2.3.0(@babel/core@7.26.10)
+      '@embroider/addon-shim': 1.10.2
+      decorator-transforms: 2.3.1(@babel/core@7.26.10)
       ember-tracked-storage-polyfill: 1.0.0
     transitivePeerDependencies:
       - '@babel/core'
