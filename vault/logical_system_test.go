@@ -2722,8 +2722,8 @@ func TestSystemBackend_policyList(t *testing.T) {
 	)
 
 	exp := map[string]interface{}{
-		"keys":     []string{"default", "root"},
-		"policies": []string{"default", "root"},
+		"keys":     []string{"default", "default-ceiling", "root"},
+		"policies": []string{"default", "default-ceiling", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -2801,8 +2801,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"keys":     []string{"default", "foo", "root"},
-		"policies": []string{"default", "foo", "root"},
+		"keys":     []string{"default", "default-ceiling", "foo", "root"},
+		"policies": []string{"default", "default-ceiling", "foo", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -2844,8 +2844,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"keys":     []string{"default", "root"},
-		"policies": []string{"default", "root"},
+		"keys":     []string{"default", "default-ceiling", "root"},
+		"policies": []string{"default", "default-ceiling", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)

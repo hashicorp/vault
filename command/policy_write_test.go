@@ -131,7 +131,7 @@ func TestPolicyWriteCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		list := []string{"default", "my-policy", "root"}
+		list := []string{"default", "default-ceiling", "my-policy", "root"}
 		if !reflect.DeepEqual(policies, list) {
 			t.Errorf("expected %q to be %q", policies, list)
 		}
@@ -172,7 +172,7 @@ func TestPolicyWriteCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		list := []string{"default", "my-policy", "root"}
+		list := []string{"default", "default-ceiling", "my-policy", "root"}
 		if !reflect.DeepEqual(policies, list) {
 			t.Errorf("expected %q to be %q", policies, list)
 		}

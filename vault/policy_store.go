@@ -36,6 +36,9 @@ const (
 	// defaultPolicyName is the name of the default policy
 	defaultPolicyName = "default"
 
+	// defaultCeilingPolicyName is the name of the default ceiling policy.
+	defaultCeilingPolicyName = "default-ceiling"
+
 	// responseWrappingPolicyName is the name of the fixed policy
 	responseWrappingPolicyName = "response-wrapping"
 
@@ -160,6 +163,82 @@ path "identity/oidc/provider/+/authorize" {
     capabilities = ["read", "update"]
 }
 `
+
+	// defaultCeilingPolicy is the default ceiling policy.
+	defaultCeilingPolicy = `
+# Allow an entity to look up its own capabilities on a path
+path "sys/capabilities-self" {
+    capabilities = ["update"]
+}
+
+# Allow an entity to look up its own entity by id or name
+path "identity/entity/id/{{identity.entity.id}}" {
+  capabilities = ["read"]
+}
+path "identity/entity/name/{{identity.entity.name}}" {
+  capabilities = ["read"]
+}
+
+
+# Allow an entity to look up its resultant ACL from all policies. This is useful
+# for UIs. It is an internal path because the format may change at any time
+# based on how the internal ACL features and capabilities change.
+path "sys/internal/ui/resultant-acl" {
+    capabilities = ["read"]
+}
+
+# Allow an entity to manage its own cubbyhole
+path "cubbyhole/*" {
+    capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+# Allow an entity to wrap arbitrary values in a response-wrapping token
+path "sys/wrapping/wrap" {
+    capabilities = ["update"]
+}
+
+# Allow an entity to look up the creation time and TTL of a given
+# response-wrapping token
+path "sys/wrapping/lookup" {
+    capabilities = ["update"]
+}
+
+# Allow an entity to unwrap a response-wrapping token. This is a convenience to
+# avoid client token swapping since this is also part of the response wrapping
+# policy.
+path "sys/wrapping/unwrap" {
+    capabilities = ["update"]
+}
+
+# Allow general purpose tools
+path "sys/tools/hash" {
+    capabilities = ["update"]
+}
+path "sys/tools/hash/*" {
+    capabilities = ["update"]
+}
+
+# Allow checking the status of a Control Group request if the user has the
+# accessor
+path "sys/control-group/request" {
+    capabilities = ["update"]
+}
+
+# Allow an entity to make requests to the Authorization Endpoint for OIDC providers.
+path "identity/oidc/provider/+/authorize" {
+    capabilities = ["read", "update"]
+}
+
+# Allow an entity to inspect its own registration information
+path "agent-registry/registration/entity_id/{{identity.entity.id}}" {
+  capabilities = ["read"]
+}
+
+# Allow an entity to read the default ceiling policy
+path "policy/default-ceiling" {
+  capabilities = ["read"]
+}
+`
 )
 
 var (
@@ -278,6 +357,10 @@ func (c *Core) setupPolicyStore(ctx context.Context) error {
 
 	// Ensure that the default policy exists, and if not, create it
 	if err := c.policyStore.loadACLPolicy(ctx, defaultPolicyName, defaultPolicy); err != nil {
+		return err
+	}
+	// Ensure that the default ceiling policy exists, and if not, create it
+	if err := c.policyStore.loadACLPolicy(ctx, defaultCeilingPolicyName, defaultCeilingPolicy); err != nil {
 		return err
 	}
 	// Ensure that the response wrapping policy exists
@@ -835,8 +918,8 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 			if strutil.StrListContains(immutablePolicies, name) {
 				return fmt.Errorf("cannot delete %q policy", name)
 			}
-			if name == "default" {
-				return fmt.Errorf("cannot delete default policy")
+			if name == defaultPolicyName || name == defaultCeilingPolicyName {
+				return fmt.Errorf("cannot delete %s policy", name)
 			}
 		}
 
