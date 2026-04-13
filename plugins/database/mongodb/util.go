@@ -3,7 +3,11 @@
 
 package mongodb
 
-import "go.mongodb.org/mongo-driver/mongo/writeconcern"
+import (
+	"encoding/json"
+
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
+)
 
 type createUserCommand struct {
 	Username string        `bson:"createUser"`
@@ -31,6 +35,12 @@ type mongodbRoles []mongodbRole
 type mongoDBStatement struct {
 	DB    string       `json:"db"`
 	Roles mongodbRoles `json:"roles"`
+}
+
+type mongoDBRotationStatement struct {
+	DB           string          `json:"db"`
+	Command      json.RawMessage `json:"command"`
+	IgnoreErrors []string        `json:"ignore_errors,omitempty"`
 }
 
 // Convert array of role documents like:
