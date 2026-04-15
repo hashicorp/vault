@@ -58,13 +58,12 @@ export default class MessagesList extends Component {
           })}`;
           badgeColor = 'highlight';
         } else {
-          badgeDisplayText = `Inactive:  ${dateFormat([message.start_time, 'MMM d, yyyy hh:mm aaa'], {
+          badgeDisplayText = `Inactive: ${dateFormat([message.end_time, 'MMM d, yyyy hh:mm aaa'], {
             withTimeZone: true,
           })}`;
           badgeColor = 'neutral';
         }
       }
-
       message.badgeDisplayText = badgeDisplayText;
       message.badgeColor = badgeColor;
       return message;
