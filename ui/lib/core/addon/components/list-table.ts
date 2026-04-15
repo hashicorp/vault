@@ -73,7 +73,10 @@ export default class ListTable extends Component<Args> {
   }
 
   @action
-  handlePaginationChange(action: 'currentPage' | 'pageSize', value: number) {
+  async handlePaginationChange(action: 'currentPage' | 'pageSize', value: number) {
+    if (action === 'pageSize') {
+      await this.resetPagination();
+    }
     this[action] = value;
   }
 
@@ -88,9 +91,9 @@ export default class ListTable extends Component<Args> {
   }
 
   // TEMPLATE HELPERS
-  isObject = (value: any) => typeof value === 'object' && value !== null;
+  isObject = (value: unknown) => typeof value === 'object' && value !== null;
 
-  identifier = (cellData: Record<string, any>) => {
+  identifier = (cellData: Record<string, unknown>) => {
     const firstColumn = this.args.columns[0]?.key;
     // Use selectionKeyField if provided, otherwise default to value of the first column
     const identifier = this.args.selectionKeyField || firstColumn;
