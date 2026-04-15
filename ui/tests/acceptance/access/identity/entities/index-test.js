@@ -12,6 +12,8 @@ import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { v4 as uuidv4 } from 'uuid';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { Response } from 'miragejs';
+import sinon from 'sinon';
 
 const SELECTORS = {
   listItem: (name) => `[data-test-identity-row="${name}"]`,
@@ -110,5 +112,28 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .hasText('Details Edit Delete', 'no "Create alias" option for internal groups');
     await click(`${SELECTORS.listItem(name)} ${GENERAL.menuItem('delete')}`);
     await click(GENERAL.confirmButton);
+  });
+
+  test('it should render correct flash message on entity delete failure', async function (assert) {
+    server.get('/identity/entity/id', () => ({
+      data: {
+        key_info: { test: { name: 'foo' } },
+        keys: ['test'],
+      },
+    }));
+    server.get('/identity/entity/id/test', () => ({ data: { name: 'foo' } }));
+
+    const error = 'The entity could not be deleted';
+    server.delete('/identity/entity/id/test', () => new Response(500, {}, { errors: [error] }));
+
+    const flashSpy = sinon.spy(this.owner.lookup('service:flashMessages'), 'danger');
+
+    await page.visit({ item_type: 'entities' });
+    await click(`${SELECTORS.listItem('foo')} ${GENERAL.menuTrigger}`);
+    await click(`${SELECTORS.listItem('foo')} ${GENERAL.menuItem('delete')}`);
+    await click(GENERAL.confirmButton);
+
+    const message = `There was a problem deleting entity: test - ${error}`;
+    assert.true(flashSpy.calledWith(message), 'Correct flash message is shown');
   });
 });
