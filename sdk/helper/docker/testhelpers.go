@@ -592,6 +592,7 @@ func CopyToContainer(ctx context.Context, dapi *client.Client, containerID, from
 	_, err = dapi.CopyToContainer(ctx, containerID, client.CopyToContainerOptions{
 		DestinationPath: dstDir,
 		Content:         content,
+		CopyUIDGID:      true,
 	})
 	if err != nil {
 		return fmt.Errorf("error copying from %q -> %q: %v", from, to, err)

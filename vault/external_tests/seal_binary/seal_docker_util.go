@@ -128,8 +128,12 @@ func createContainerWithConfig(config string, imageRepo, imageTag string, logCon
 		Cmd: []string{
 			"server", "-log-level=trace",
 		},
-		Ports:           []string{"8200/tcp"},
-		Env:             []string{fmt.Sprintf("VAULT_LICENSE=%s", os.Getenv("VAULT_LICENSE")), fmt.Sprintf("VAULT_LOCAL_CONFIG=%s", config)},
+		Ports: []string{"8200/tcp"},
+		Env: []string{
+			fmt.Sprintf("VAULT_LICENSE=%s", os.Getenv("VAULT_LICENSE")),
+			fmt.Sprintf("VAULT_LOCAL_CONFIG=%s", config),
+			"SKIP_SETCAP=true",
+		},
 		LogConsumer:     logConsumer,
 		DoNotAutoRemove: true,
 	})
@@ -180,7 +184,7 @@ func createTransitTestContainer(imageRepo, imageTag string, numKeys int) (*dockh
 			"server", "-log-level=trace", "-dev", fmt.Sprintf("-dev-root-token-id=%s", rootToken),
 			"-dev-listen-address=0.0.0.0:8200",
 		},
-		Env:   []string{fmt.Sprintf("VAULT_LICENSE=%s", os.Getenv("VAULT_LICENSE"))},
+		Env:   []string{fmt.Sprintf("VAULT_LICENSE=%s", os.Getenv("VAULT_LICENSE")), "SKIP_SETCAP=true"},
 		Ports: []string{"8200/tcp"},
 	})
 	if err != nil {
