@@ -59,6 +59,14 @@
       data-test-sidebar-nav-link="Client count"
     />
   {{/if}}
+  {{#if this.version.hasConsumptionBilling}}
+    <Nav.Link
+      @route="vault.cluster.billing.overview"
+      @text="Billing metrics"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Billing metrics"
+    />
+  {{/if}}
   {{#if (and this.cluster.usingRaft this.isRootNamespace (has-permission "status" routeParams="raft"))}}
     <Nav.Link
       @route="vault.cluster.storage"
