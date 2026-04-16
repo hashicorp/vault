@@ -1079,7 +1079,7 @@ func (n *DockerClusterNode) AddNetworkDelay(ctx context.Context, delay time.Dura
 			// Its handle must be unique, so we base it on targetIP
 			fmt.Sprintf("tc filter add dev eth0 parent 1:0 protocol ip pref 55 handle ::%x u32 match ip dst %s flowid 2:1", lastOctet, targetIP),
 		}, "; "),
-	})
+	}, dockhelper.RunCmdUser("root"))
 	if err != nil {
 		return err
 	}
@@ -1118,7 +1118,7 @@ func (n *DockerClusterNode) PartitionFromCluster(ctx context.Context) error {
 			"iptables -I INPUT -i eth0 ! -s \"$GW\" -j DROP",
 			"iptables -I OUTPUT -o eth0 ! -d \"$GW\" -j DROP",
 		}, "; "),
-	})
+	}, dockhelper.RunCmdUser("root"))
 	if err != nil {
 		return err
 	}
@@ -1146,7 +1146,7 @@ func (n *DockerClusterNode) UnpartitionFromCluster(ctx context.Context) error {
 			"iptables -D INPUT -i eth0 ! -s \"$GW\" -j DROP | true",
 			"iptables -D OUTPUT -o eth0 ! -d \"$GW\" -j DROP | true",
 		}, "; "),
-	})
+	}, dockhelper.RunCmdUser("root"))
 	if err != nil {
 		return err
 	}
