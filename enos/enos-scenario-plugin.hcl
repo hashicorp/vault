@@ -234,10 +234,11 @@ scenario "plugin" {
     }
 
     variables {
-      hosts      = step.create_plugin_integration_target.hosts
-      ip_version = matrix.ip_version
-      packages   = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
-      ports      = global.integration_host_ports
+      hosts            = step.create_plugin_integration_target.hosts
+      ip_version       = matrix.ip_version
+      packages         = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
+      ports            = global.integration_host_ports
+      database_configs = global.database_configs
     }
   }
 
