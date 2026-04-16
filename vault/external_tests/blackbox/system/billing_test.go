@@ -15,7 +15,7 @@ import (
 // TestBillingOverviewNamespaceRestrictions verifies that sys/billing/overview
 // returns appropriate errors when called from different namespace levels in HVD.
 // In HVD, tests run in admin/bbsdk-xxxxx, and this test verifies:
-// - Calling from base namespace (admin) returns "unsupported path"
+// - Calling from base namespace (admin) works
 // - Calling from root namespace (empty) returns "permission denied"
 func TestBillingOverviewNamespaceRestrictions(t *testing.T) {
 	v := blackbox.New(t)
@@ -35,9 +35,8 @@ func TestBillingOverviewNamespaceRestrictions(t *testing.T) {
 		expectedError     string
 	}{
 		{
-			name:              "base_namespace_unsupported",
+			name:              "base_namespace_supported",
 			namespaceSwitcher: v.WithParentNamespace,
-			expectedError:     "unsupported path",
 		},
 		{
 			name:              "root_namespace_permission_denied",
@@ -59,7 +58,11 @@ func TestBillingOverviewNamespaceRestrictions(t *testing.T) {
 				// Parse the raw response to get the error
 				return v.Client.Logical().ParseRawResponseAndCloseBody(rawResp, nil)
 			})
-			require.ErrorContains(t, err, tc.expectedError)
+			if tc.expectedError != "" {
+				require.ErrorContains(t, err, tc.expectedError)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
