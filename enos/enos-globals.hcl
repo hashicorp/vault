@@ -152,29 +152,60 @@ globals {
       protocol    = "tcp"
     }
   }
-  // Ports that we'll open up for ingress in the security group for all external integration target machines.
-  integration_host_ports = {
-    ldap : {
-      description = "LDAP"
-      port        = 389
-      protocol    = "tcp"
+  // Database configurations for Vault database secrets engine testing
+  database_configs = {
+    postgres : {
+      port        = 5432
+      version     = "16-alpine"
+      username    = "postgres"
+      password    = "secret"
+      database    = "postgres"
+      description = "PostgreSQL Server"
     },
-    ldaps : {
-      description = "LDAPS"
-      port        = 636
-      protocol    = "tcp"
+    mongodb : {
+      port        = 27017
+      version     = "7.0"
+      username    = "admin"
+      password    = "secret"
+      database    = "admin"
+      description = "MongoDB Server"
     },
     mysql : {
-      description = "MySQL Server"
       port        = 3306
-      protocol    = "tcp"
-    },
-    kmip : {
-      description = "KMIP Server"
-      port        = 5696
-      protocol    = "tcp"
-    },
+      version     = "8.0"
+      username    = "root"
+      password    = "secret"
+      database    = "mysql"
+      description = "MySQL Server"
+    }
   }
+
+  // Ports that we'll open up for ingress in the security group for all external integration target machines.
+  integration_host_ports = merge(
+    {
+      ldap : {
+        description = "LDAP"
+        port        = 389
+        protocol    = "tcp"
+      },
+      ldaps : {
+        description = "LDAPS"
+        port        = 636
+        protocol    = "tcp"
+      },
+      kmip : {
+        description = "KMIP Server"
+        port        = 5696
+        protocol    = "tcp"
+      }
+    },
+    // Add database ports dynamically from database_configs
+    { for db_name, db_config in global.database_configs : db_name => {
+      description = db_config.description
+      port        = db_config.port
+      protocol    = "tcp"
+    } }
+  )
 
   // Combine all ports into a single map
   ports = merge(
