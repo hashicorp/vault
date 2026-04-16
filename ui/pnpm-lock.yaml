@@ -45,8 +45,8 @@ importers:
         specifier: 2.10.0
         version: 2.10.0(@glint/template@1.7.3)(webpack@5.105.4)
       handlebars:
-        specifier: 4.7.8
-        version: 4.7.8
+        specifier: 4.7.9
+        version: 4.7.9
       posthog-js:
         specifier: 1.236.1
         version: 1.236.1
@@ -209,7 +209,7 @@ importers:
         version: 8.7.0(@babel/core@7.26.10)(@ember/string@4.0.1)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.3))(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))
       ember-cli:
         specifier: ~5.8.0
-        version: 5.8.1(handlebars@4.7.8)(underscore@1.13.8)
+        version: 5.8.1(handlebars@4.7.9)(underscore@1.13.8)
       ember-cli-babel:
         specifier: ~8.2.0
         version: 8.2.0(@babel/core@7.26.10)
@@ -221,7 +221,7 @@ importers:
         version: 2.0.3
       ember-cli-dependency-checker:
         specifier: ~3.3.3
-        version: 3.3.3(ember-cli@5.8.1(handlebars@4.7.8)(underscore@1.13.8))
+        version: 3.3.3(ember-cli@5.8.1(handlebars@4.7.9)(underscore@1.13.8))
       ember-cli-deprecation-workflow:
         specifier: ~3.3.0
         version: 3.3.0(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.3)(rsvp@4.8.5)(webpack@5.105.4))
@@ -5082,8 +5082,8 @@ packages:
   growly@1.3.0:
     resolution: {integrity: sha512-+xGQY0YyAWCnqy7Cd++hc2JqMYzlm0dG30Jd0beaA64sROr8C4nt8Yc9V5Ro3avlSUDTN0ulqP/VBKi1/lLygw==}
 
-  handlebars@4.7.8:
-    resolution: {integrity: sha512-vafaFqs8MZkRrSX7sFVUdo3ap/eNiLnb4IakshzvP56X5Nr1iGKAIqdX6tMlm6HcNRIkr6AxO5jFEoJzzpT8aQ==}
+  handlebars@4.7.9:
+    resolution: {integrity: sha512-4E71E0rpOaQuJR2A3xDZ+GM1HyWYv1clR58tC8emQNeQe3RH7MAzSbat+V0wG78LQBo6m6bzSG/L4pBuCsgnUQ==}
     engines: {node: '>=0.4.7'}
     hasBin: true
 
@@ -12883,7 +12883,7 @@ snapshots:
   broccoli-middleware@2.1.1:
     dependencies:
       ansi-html: 0.0.8
-      handlebars: 4.7.8
+      handlebars: 4.7.9
       has-ansi: 3.0.0
       mime-types: 2.1.35
 
@@ -13112,7 +13112,7 @@ snapshots:
       connect: 3.7.0
       esm: 3.2.25
       findup-sync: 2.0.0
-      handlebars: 4.7.8
+      handlebars: 4.7.9
       heimdalljs: 0.2.6
       heimdalljs-logger: 0.1.10
       mime-types: 2.1.35
@@ -13141,7 +13141,7 @@ snapshots:
       console-ui: 3.1.2
       esm: 3.2.25
       findup-sync: 4.0.0
-      handlebars: 4.7.8
+      handlebars: 4.7.9
       heimdalljs: 0.2.6
       heimdalljs-logger: 0.1.10
       https: 1.0.0
@@ -13516,11 +13516,11 @@ snapshots:
       ora: 3.4.0
       through2: 3.0.2
 
-  consolidate@0.16.0(handlebars@4.7.8)(lodash@4.17.23)(mustache@4.2.0)(underscore@1.13.8):
+  consolidate@0.16.0(handlebars@4.7.9)(lodash@4.17.23)(mustache@4.2.0)(underscore@1.13.8):
     dependencies:
       bluebird: 3.7.2
     optionalDependencies:
-      handlebars: 4.7.8
+      handlebars: 4.7.9
       lodash: 4.17.23
       mustache: 4.2.0
       underscore: 1.13.8
@@ -14034,7 +14034,7 @@ snapshots:
       debug: 4.4.1
       fs-extra: 10.1.0
       fs-tree-diff: 2.0.1
-      handlebars: 4.7.8
+      handlebars: 4.7.9
       is-subdir: 1.2.0
       js-string-escape: 1.0.1
       lodash: 4.17.23
@@ -14078,7 +14078,7 @@ snapshots:
       debug: 4.4.3
       fs-extra: 10.1.0
       fs-tree-diff: 2.0.1
-      handlebars: 4.7.8
+      handlebars: 4.7.9
       is-subdir: 1.2.0
       js-string-escape: 1.0.1
       lodash: 4.17.23
@@ -14295,10 +14295,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  ember-cli-dependency-checker@3.3.3(ember-cli@5.8.1(handlebars@4.7.8)(underscore@1.13.8)):
+  ember-cli-dependency-checker@3.3.3(ember-cli@5.8.1(handlebars@4.7.9)(underscore@1.13.8)):
     dependencies:
       chalk: 2.4.2
-      ember-cli: 5.8.1(handlebars@4.7.8)(underscore@1.13.8)
+      ember-cli: 5.8.1(handlebars@4.7.9)(underscore@1.13.8)
       find-yarn-workspace-root: 2.0.0
       is-git-url: 1.0.0
       resolve: 1.22.10
@@ -14557,7 +14557,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  ember-cli@5.8.1(handlebars@4.7.8)(underscore@1.13.8):
+  ember-cli@5.8.1(handlebars@4.7.9)(underscore@1.13.8):
     dependencies:
       '@pnpm/find-workspace-dir': 6.0.3
       broccoli: 3.5.2
@@ -14636,7 +14636,7 @@ snapshots:
       sort-package-json: 1.57.0
       symlink-or-copy: 1.3.1
       temp: 0.9.4
-      testem: 3.16.0(handlebars@4.7.8)(underscore@1.13.8)
+      testem: 3.16.0(handlebars@4.7.9)(underscore@1.13.8)
       tiny-lr: 2.0.0
       tree-sync: 2.1.0
       walk-sync: 3.0.0
@@ -16265,7 +16265,7 @@ snapshots:
 
   growly@1.3.0: {}
 
-  handlebars@4.7.8:
+  handlebars@4.7.9:
     dependencies:
       minimist: 1.2.8
       neo-async: 2.6.2
@@ -18853,7 +18853,7 @@ snapshots:
       commander: 2.20.3
       source-map-support: 0.5.21
 
-  testem@3.16.0(handlebars@4.7.8)(underscore@1.13.8):
+  testem@3.16.0(handlebars@4.7.9)(underscore@1.13.8):
     dependencies:
       '@xmldom/xmldom': 0.8.10
       backbone: 1.6.1
@@ -18861,7 +18861,7 @@ snapshots:
       charm: 1.0.2
       commander: 2.20.3
       compression: 1.8.0
-      consolidate: 0.16.0(handlebars@4.7.8)(lodash@4.17.23)(mustache@4.2.0)(underscore@1.13.8)
+      consolidate: 0.16.0(handlebars@4.7.9)(lodash@4.17.23)(mustache@4.2.0)(underscore@1.13.8)
       execa: 1.0.0
       express: 4.22.1
       fireworm: 0.7.2
