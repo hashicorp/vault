@@ -20,6 +20,7 @@ func DefaultOptions(t *testing.T) *DockerClusterOptions {
 		ImageRepo:   "hashicorp/vault",
 		ImageTag:    "latest",
 		VaultBinary: os.Getenv("VAULT_BINARY"),
+		Envs:        []string{"SKIP_SETCAP=true"},
 		ClusterOptions: testcluster.ClusterOptions{
 			NumCores:    3,
 			ClusterName: strings.ReplaceAll(t.Name(), "/", "-"),
