@@ -23,4 +23,91 @@ jobs:
   create-image:
     runs-on: ubuntu-latest
     steps:
-      - run: exit 0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: vault-auth
+        run: vault-auth
+      - id: vault-secrets
+        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+            kv/data/github/${{ github.repository }}/hcp username | hcp-username;
+            kv/data/github/${{ github.repository }}/hcp password | hcp-password;
+      - id: set-up-pipeline
+        uses: ./.github/actions/set-up-pipeline
+        with:
+          github-token: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - id: find-artifact
+        name: Find the artifact that contains the vault enterprise binary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+        run: |
+          pipeline github find workflow-artifact ${{ runner.debug && '--log debug' }} \
+            --repo vault-enterprise \
+            --workflow build \
+            ${{ inputs.pull-request != '' && '--pr' || '--branch' }} ${{ inputs.pull-request || inputs.branch }} \
+            --pattern 'vault_[1-9]+\.[0-9]+\.[0-9]+(\-[a-zA-Z0-9]+)?\+ent_linux_amd64.zip' \
+            --github-output
+      - id: payload
+        name: Create our repository_dispatch payload
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+        run: |
+          pattern='^vault_(([0-9]+\.[0-9]+\.[0-9]+(\-[a-z0-9]+)?)\+ent)_linux_amd64\.zip$'
+          name='${{ fromJSON(steps.find-artifact.outputs.workflow-artifact).name }}'
+          if ! [[ $name =~ $pattern ]]; then
+            echo "::error:: The artifact name (${name}) does not match the pattern (${pattern})"
+            exit 1
+          fi
+          vault_version_edition="${BASH_REMATCH[1]}"
+          vault_version="${BASH_REMATCH[2]}"
+          short_sha=$(echo '${{ fromJSON(steps.find-artifact.outputs.workflow-artifact).workflow_run.head_sha }}' | head -c 7)
+          image_version_constraint="v${vault_version_edition}-${short_sha}"
+          if ! payload=$(jq -Mrc <<-EOF
+            {
+              "vault_version":  "${vault_version}",
+              "commit_hash":     "${{ fromJSON(steps.find-artifact.outputs.workflow-artifact).workflow_run.head_sha }}",
+              "gh_artifact_id": "${{ fromJSON(steps.find-artifact.outputs.workflow-artifact).id }}",
+              "gh_art_run_id":  "${{ fromJSON(steps.find-artifact.outputs.workflow-artifact).workflow_run.id }}",
+              "do_azure":       ${{ inputs.create-azure-image }},
+              "do_aws":         ${{ inputs.create-aws-image }},
+              "environment":    "${{ inputs.hcp-environment }}"
+            }
+          EOF
+          ); then
+            echo "::error:: Invalid payload: ${payload}"
+          fi
+
+          {
+            echo "image-version-constraint=${image_version_constraint}"
+            echo "payload=${payload}"
+          } | tee -a "$GITHUB_OUTPUT"
+      - name: Trigger image build
+        uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4.0.1
+        with:
+          token: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+          repository: hashicorp/cloud-vault-host-manager
+          event-type: custom-image-build
+          client-payload: ${{ steps.payload.outputs.payload }}
+      - id: wait-for-image
+        name: Wait for the image to be available
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+          HCP_USERNAME: ${{ steps.vault-secrets.outputs.hcp-username }}
+          HCP_PASSWORD: ${{ steps.vault-secrets.outputs.hcp-password }}
+        run: |
+          pipeline hcp wait image ${{ runner.debug && '--log debug' }} \
+            --product-name vault \
+            --environment '${{ inputs.hcp-environment }}' \
+            --cloud aws \
+            --timeout 45m0s \
+            --delay 15s \
+            --product-version-constraint '${{ steps.payload.outputs.image-version-constraint }}' \
+            --format markdown \
+            --github-output | tee -a "$GITHUB_STEP_SUMMARY"
