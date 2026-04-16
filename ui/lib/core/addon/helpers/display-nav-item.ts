@@ -133,7 +133,8 @@ export default class NavBar extends Helper {
       this.permissions.hasNavPermission('clients', 'activity') &&
       !this.cluster?.dr?.isSecondary &&
       !this.hasChrootNamespace &&
-      !this.version.hasPKIOnly
+      !this.version.hasPKIOnly &&
+      !this.version.hasConsumptionBilling
     );
   }
 

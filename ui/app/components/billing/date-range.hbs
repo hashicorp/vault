@@ -1,0 +1,21 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Layout::Flex class="has-top-margin-l" @align="center">
+  <Hds::Dropdown @isInline={{true}} as |D|>
+    <D.ToggleButton @text="From start of {{date-format this.selectedDate.month 'MMMM yyyy'}}" @color="secondary" />
+    {{#each this.dateDropdownOptions as |option|}}
+      <D.Checkmark
+        @selected={{eq option.value this.selectedDate.month}}
+        {{on "click" (fn this.updateSelectedDropdownOption option.value)}}
+      >
+        {{option.label}}
+      </D.Checkmark>
+    {{/each}}
+  </Hds::Dropdown>
+  <Hds::Text::Body @tag="p" @size="200" @color="foreground-primary" class="has-left-margin-s">Values update every 10 minutes.
+    Last updated:
+    {{date-format @selectedDateOption.updated_at "hh:mm:ss a"}}</Hds::Text::Body>
+</Hds::Layout::Flex>

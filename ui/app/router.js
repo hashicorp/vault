@@ -219,6 +219,9 @@ Router.map(function () {
         this.route('show', { path: '/:policy_name' });
         this.route('edit', { path: '/:policy_name/edit' });
       });
+      this.route('billing', function () {
+        this.route('overview');
+      });
       this.route('resilience-recovery');
       this.route('replication-dr-promote', function () {
         this.route('details');

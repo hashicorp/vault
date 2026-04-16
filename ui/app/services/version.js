@@ -52,6 +52,11 @@ export default class VersionService extends Service {
     return this.features.includes('Control Groups');
   }
 
+  // Consumption Billing will only be present on the platform-standard module introduced in 2.0.0.
+  get hasConsumptionBilling() {
+    return this.features.includes('Consumption Billing');
+  }
+
   get hasSecretsSync() {
     const isEnterprise = this.isEnterprise;
     const isHvdManaged = this.flags.isHvdManaged;
