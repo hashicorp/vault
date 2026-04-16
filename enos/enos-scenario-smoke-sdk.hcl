@@ -501,4 +501,9 @@ scenario "smoke_sdk" {
     description = "The Vault cluster unseal keys hex"
     value       = step.create_vault_cluster.unseal_keys_hex
   }
+
+  output "smoke_test_results" {
+    description = "Results from smoke blackbox tests"
+    value       = step.run_blackbox_tests.test_results_summary
+  }
 }

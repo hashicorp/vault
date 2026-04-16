@@ -544,7 +544,6 @@ scenario "plugin" {
 
   output "plugin_test_results" {
     description = "Results from plugin blackbox tests"
-    sensitive   = true
     value       = step.run_plugin_blackbox_tests.test_results_summary
   }
 }
