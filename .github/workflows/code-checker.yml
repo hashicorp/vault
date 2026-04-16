@@ -41,7 +41,9 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/install-tools # for staticcheck
-      - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
+      - run: git config --global url."https://${ELEVATED_GITHUB_TOKEN}@github.com".insteadOf https://github.com
+        env:
+          ELEVATED_GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN}}
       - run: make ci-deprecations
         name: Check deprecations
 
@@ -58,7 +60,9 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/install-tools # for buf
-      - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
+      - run: git config --global url."https://${ELEVATED_GITHUB_TOKEN}@github.com".insteadOf https://github.com
+        env:
+          ELEVATED_GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN}}
         # Note: if there is a function we want to ignore the nilnil check for,
         # You can add 'ignore-nil-nil-function-check' somewhere in the
         # godoc for the function.
@@ -77,7 +81,9 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/install-tools # for buf and protoc-*
-      - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
+      - run: git config --global url."https://${ELEVATED_GITHUB_TOKEN}@github.com".insteadOf https://github.com
+        env:
+          ELEVATED_GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN}}
       - name: Check generate delta
         run: make prep check-proto-delta
 
@@ -91,7 +97,9 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/install-tools # for buf and gofumpt
-      - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
+      - run: git config --global url."https://${ELEVATED_GITHUB_TOKEN}@github.com".insteadOf https://github.com
+        env:
+          ELEVATED_GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN}}
       - name: Go format
         run: make prep check-go-fmt
       - name: Protobuf format

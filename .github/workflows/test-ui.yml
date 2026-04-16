@@ -61,7 +61,9 @@ jobs:
             kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
       - if: inputs.is-ent-repo == 'true'
         name: Set up Git
-        run: git config --global url."https://${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
+        run: git config --global url."https://${OUTPUTS_PRIVATE_REPO_GITHUB_TOKEN}@github.com".insteadOf https://github.com
+        env:
+          OUTPUTS_PRIVATE_REPO_GITHUB_TOKEN: ${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}
       - uses: ./.github/actions/install-tools
       - name: build-go-dev
         run: |
@@ -200,9 +202,10 @@ jobs:
         continue-on-error: true
         env:
           DD_ENV: ci
+          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
         run: |
           if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
-            export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
+            export DATADOG_API_KEY="${DATADOG_API_KEY}"
           fi
           datadog-ci junit upload --service "$GITHUB_REPOSITORY" 'ui/test-results/qunit/results.xml'
       - if: always() && strategy.job-index != 0

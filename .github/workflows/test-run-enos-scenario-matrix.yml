@@ -144,44 +144,67 @@ jobs:
         run: |
           if [[ "${{ needs.metadata.outputs.is-ent-repo }}" != 'true' ]]; then
             {
-              echo 'artifactory-token=${{ secrets.ARTIFACTORY_BEARER_TOKEN }}'
-              echo 'aws-access-key-id=${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}'
-              echo 'aws-secret-access-key=${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}'
-              echo 'aws-role-arn=${{ secrets.AWS_ROLE_ARN_CI }}'
-              echo 'consul-license=${{ secrets.CONSUL_LICENSE }}'
-              echo 'github-token=${{ secrets.ELEVATED_GITHUB_TOKEN }}'
-              echo 'radar-license=${{ secrets.RADAR_LICENSE }}'
-              echo 'slack-webhook-url=${{ secrets.FEED_VAULT_ENOS_FAILURES_WEBHOOK_URL }}'
+              echo 'artifactory-token='"${ARTIFACTORY_BEARER_TOKEN}"''
+              echo 'aws-access-key-id='"${AWS_ACCESS_KEY_ID_CI_09042025}"''
+              echo 'aws-secret-access-key='"${AWS_SECRET_ACCESS_KEY_CI_09042025}"''
+              echo 'aws-role-arn='"${AWS_ROLE_ARN_CI}"''
+              echo 'consul-license='"${CONSUL_LICENSE}"''
+              echo 'github-token='"${ELEVATED_GITHUB_TOKEN}"''
+              echo 'radar-license='"${RADAR_LICENSE}"''
+              echo 'slack-webhook-url='"${FEED_VAULT_ENOS_FAILURES_WEBHOOK_URL}"''
               echo 'ssh-key<<EOFSSHKEYCE'
-              echo "${{ secrets.SSH_KEY_PRIVATE_CI }}"
+              echo "${SSH_KEY_PRIVATE_CI}"
               echo EOFSSHKEYCE
-              echo 'vault-license=${{ secrets.VAULT_LICENSE }}'
-              echo 'vault-license-ibm=${{ secrets.VAULT_LICENSE_IBM }}'
+              echo 'vault-license='"${VAULT_LICENSE}"''
+              echo 'vault-license-ibm='"${VAULT_LICENSE_IBM}"''
            } | tee -a "$GITHUB_OUTPUT"
           else
             {
-              echo 'artifactory-token=${{ steps.vault-secrets.outputs.ARTIFACTORY_BEARER_TOKEN }}'
-              echo 'aws-access-key-id=${{ steps.vault-secrets.outputs.AWS_ACCESS_KEY_ID_CI_09042025 }}'
-              echo 'aws-secret-access-key=${{ steps.vault-secrets.outputs.AWS_SECRET_ACCESS_KEY_CI_09042025 }}'
-              echo 'aws-role-arn=${{ steps.vault-secrets.outputs.AWS_ROLE_ARN_CI }}'
-              echo 'consul-license=${{ steps.vault-secrets.outputs.CONSUL_LICENSE }}'
-              echo 'github-token=${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}'
-              echo 'radar-license=${{ steps.vault-secrets.outputs.RADAR_LICENSE }}'
-              echo 'slack-webhook-url=${{ steps.vault-secrets.outputs.SLACK_WEBHOOK_URL }}'
+              echo 'artifactory-token='"${OUTPUTS_ARTIFACTORY_BEARER_TOKEN}"''
+              echo 'aws-access-key-id='"${OUTPUTS_AWS_ACCESS_KEY_ID_CI_09042025}"''
+              echo 'aws-secret-access-key='"${OUTPUTS_AWS_SECRET_ACCESS_KEY_CI_09042025}"''
+              echo 'aws-role-arn='"${OUTPUTS_AWS_ROLE_ARN_CI}"''
+              echo 'consul-license='"${OUTPUTS_CONSUL_LICENSE}"''
+              echo 'github-token='"${OUTPUTS_ELEVATED_GITHUB_TOKEN}"''
+              echo 'radar-license='"${OUTPUTS_RADAR_LICENSE}"''
+              echo 'slack-webhook-url='"${OUTPUTS_SLACK_WEBHOOK_URL}"''
               echo 'ssh-key<<EOFSSHKEYENT'
-              echo "${{ steps.vault-secrets.outputs.SSH_KEY_PRIVATE_CI }}"
+              echo "${OUTPUTS_SSH_KEY_PRIVATE_CI}"
               echo EOFSSHKEYENT
-              echo 'vault-license=${{ steps.vault-secrets.outputs.VAULT_LICENSE }}'
-              echo 'vault-license-ibm=${{ steps.vault-secrets.outputs.VAULT_LICENSE_IBM }}'
+              echo 'vault-license='"${OUTPUTS_VAULT_LICENSE}"''
+              echo 'vault-license-ibm='"${OUTPUTS_VAULT_LICENSE_IBM}"''
             } | tee -a "$GITHUB_OUTPUT"
           fi
+        env:
+          ARTIFACTORY_BEARER_TOKEN: ${{ secrets.ARTIFACTORY_BEARER_TOKEN }}
+          AWS_ACCESS_KEY_ID_CI_09042025: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
+          AWS_SECRET_ACCESS_KEY_CI_09042025: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
+          AWS_ROLE_ARN_CI: ${{ secrets.AWS_ROLE_ARN_CI }}
+          CONSUL_LICENSE: ${{ secrets.CONSUL_LICENSE }}
+          ELEVATED_GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          RADAR_LICENSE: ${{ secrets.RADAR_LICENSE }}
+          FEED_VAULT_ENOS_FAILURES_WEBHOOK_URL: ${{ secrets.FEED_VAULT_ENOS_FAILURES_WEBHOOK_URL }}
+          SSH_KEY_PRIVATE_CI: ${{ secrets.SSH_KEY_PRIVATE_CI }}
+          VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
+          VAULT_LICENSE_IBM: ${{ secrets.VAULT_LICENSE_IBM }}
+          OUTPUTS_ARTIFACTORY_BEARER_TOKEN: ${{ steps.vault-secrets.outputs.ARTIFACTORY_BEARER_TOKEN }}
+          OUTPUTS_AWS_ACCESS_KEY_ID_CI_09042025: ${{ steps.vault-secrets.outputs.AWS_ACCESS_KEY_ID_CI_09042025 }}
+          OUTPUTS_AWS_SECRET_ACCESS_KEY_CI_09042025: ${{ steps.vault-secrets.outputs.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
+          OUTPUTS_AWS_ROLE_ARN_CI: ${{ steps.vault-secrets.outputs.AWS_ROLE_ARN_CI }}
+          OUTPUTS_CONSUL_LICENSE: ${{ steps.vault-secrets.outputs.CONSUL_LICENSE }}
+          OUTPUTS_ELEVATED_GITHUB_TOKEN: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+          OUTPUTS_RADAR_LICENSE: ${{ steps.vault-secrets.outputs.RADAR_LICENSE }}
+          OUTPUTS_SLACK_WEBHOOK_URL: ${{ steps.vault-secrets.outputs.SLACK_WEBHOOK_URL }}
+          OUTPUTS_SSH_KEY_PRIVATE_CI: ${{ steps.vault-secrets.outputs.SSH_KEY_PRIVATE_CI }}
+          OUTPUTS_VAULT_LICENSE: ${{ steps.vault-secrets.outputs.VAULT_LICENSE }}
+          OUTPUTS_VAULT_LICENSE_IBM: ${{ steps.vault-secrets.outputs.VAULT_LICENSE_IBM }}
       - id: env
         run: |
           # Configure input environment variables.
           {
-            echo 'GITHUB_TOKEN=${{ steps.secrets.outputs.github-token }}'
+            echo 'GITHUB_TOKEN='"${OUTPUTS_GITHUB_TOKEN}"''
             echo 'ENOS_DEBUG_DATA_ROOT_DIR=/tmp/enos-debug-data'
-            echo 'ENOS_VAR_artifactory_token=${{ steps.secrets.outputs.artifactory-token }}'
+            echo 'ENOS_VAR_artifactory_token='"${OUTPUTS_ARTIFACTORY_TOKEN}"''
             echo 'ENOS_VAR_aws_region=${{ matrix.attributes.aws_region }}'
             echo 'ENOS_VAR_aws_ssh_keypair_name=${{ inputs.ssh-key-name }}'
             echo 'ENOS_VAR_aws_ssh_private_key_path=./support/private_key.pem'
@@ -204,6 +227,9 @@ jobs:
             echo 'ENOS_VAR_verify_ldap_secrets_engine=false'
             echo 'ENOS_VAR_verify_log_secrets=true'
           } | tee -a "$GITHUB_ENV"
+        env:
+          OUTPUTS_GITHUB_TOKEN: ${{ steps.secrets.outputs.github-token }}
+          OUTPUTS_ARTIFACTORY_TOKEN: ${{ steps.secrets.outputs.artifactory-token }}
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ steps.secrets.outputs.github-token }}
@@ -238,11 +264,13 @@ jobs:
         id: prepare_scenario
         run: |
           mkdir -p "./enos/support/terraform-plugin-cache"
-          echo "${{ steps.secrets.outputs.ssh-key }}" > "./enos/support/private_key.pem"
+          echo "${OUTPUTS_SSH_KEY}" > "./enos/support/private_key.pem"
           chmod 600 "./enos/support/private_key.pem"
           sha256sum "./enos/support/private_key.pem"
           du -h "./enos/support/private_key.pem"
           echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
+        env:
+          OUTPUTS_SSH_KEY: ${{ steps.secrets.outputs.ssh-key }}
       - if: contains(inputs.sample-name, 'build')
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -251,15 +279,22 @@ jobs:
       - if: contains(inputs.sample-name, 'ent')
         name: Configure Vault licenses
         run: |
-          echo "${{ steps.secrets.outputs.vault-license }}" > ./enos/support/vault.hclic || true
-          echo "${{ steps.secrets.outputs.vault-license-ibm }}" > ./enos/support/ibm-pao.lic || true
+          echo "${OUTPUTS_VAULT_LICENSE}" > ./enos/support/vault.hclic || true
+          echo "${OUTPUTS_VAULT_LICENSE_IBM}" > ./enos/support/ibm-pao.lic || true
+        env:
+          OUTPUTS_VAULT_LICENSE: ${{ steps.secrets.outputs.vault-license }}
+          OUTPUTS_VAULT_LICENSE_IBM: ${{ steps.secrets.outputs.vault-license-ibm }}
       - if: contains(matrix.scenario.id.filter, 'consul_edition:ent')
         name: Configure Consul license
         run: |
-          echo "${{ steps.secrets.outputs.consul-license }}" > ./enos/support/consul.hclic || true
+          echo "${OUTPUTS_CONSUL_LICENSE}" > ./enos/support/consul.hclic || true
+        env:
+          OUTPUTS_CONSUL_LICENSE: ${{ steps.secrets.outputs.consul-license }}
       - name: Configure Vault Radar license
         run: |
-          echo "${{ steps.secrets.outputs.radar-license }}" > ./enos/support/vault-radar.hclic || true
+          echo "${OUTPUTS_RADAR_LICENSE}" > ./enos/support/vault-radar.hclic || true
+        env:
+          OUTPUTS_RADAR_LICENSE: ${{ steps.secrets.outputs.radar-license }}
       - id: launch
         name: enos scenario launch ${{ matrix.scenario.id.filter }}
         # Continue once and retry to handle occasional blips when creating infrastructure.

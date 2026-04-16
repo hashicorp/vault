@@ -334,7 +334,9 @@ jobs:
           secrets: |
             kv/data/github/${{ github.repository }}/slack feed-vault-ci-official-webhook-url | slackbot-webhook-url;
       - id: slackbot-webhook-url
-        run: echo "slackbot-webhook-url=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL || steps.secrets.outputs.slackbot-webhook-url }}" >> "$GITHUB_OUTPUT"
+        run: echo "slackbot-webhook-url=${FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL}" >> "$GITHUB_OUTPUT"
+        env:
+          FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL: ${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL || steps.secrets.outputs.slackbot-webhook-url }}
       - if: |
           always() &&
           needs.setup.outputs.workflow-trigger == 'push' &&

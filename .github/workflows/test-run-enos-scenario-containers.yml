@@ -99,7 +99,9 @@ jobs:
       - if: inputs.vault-edition != 'ce'
         name: Configure license
         run: |
-          echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
+          echo "${VAULT_LICENSE}" > ./enos/support/vault.hclic || true
+        env:
+          VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
       - name: Run Enos scenario
         id: run
         # Continue once and retry to handle occasional blips when creating

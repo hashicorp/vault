@@ -57,10 +57,12 @@ jobs:
       - id: configure-git
         name: Configure git
         run: |
-          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://${ELEVATED_GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
           git config user.name hc-github-team-secure-vault-ecosystem
           git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
 
+        env:
+          ELEVATED_GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Update plugin
         run: |
           go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}"
