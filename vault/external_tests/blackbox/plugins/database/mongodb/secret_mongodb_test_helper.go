@@ -5,9 +5,12 @@ package mongodb
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -28,7 +31,7 @@ const (
 // Uses test name to ensure unique container names for parallel execution
 func defaultRunOpts(t *testing.T) docker.RunOptions {
 	return docker.RunOptions{
-		ContainerName: fmt.Sprintf("mongodb-%s", sanitize(t.Name())),
+		ContainerName: fmt.Sprintf("mongo-%s", sanitize(t.Name())),
 		ImageRepo:     defaultMongoImage,
 		ImageTag:      defaultMongoVersion,
 		Env: []string{
@@ -38,6 +41,7 @@ func defaultRunOpts(t *testing.T) docker.RunOptions {
 		},
 		Ports:             []string{"27017/tcp"},
 		DoNotAutoRemove:   false,
+		PreDelete:         true,
 		OmitLogTimestamps: true,
 		LogConsumer: func(s string) {
 			if t.Failed() {
@@ -56,28 +60,37 @@ func requireVaultEnv(t *testing.T) {
 	}
 }
 
-// sanitize converts test name to a valid container name
-// Removes special characters and converts to lowercase
+var sanitizeRegex = regexp.MustCompile(`[^a-z0-9]+`)
+
+// sanitize converts test name to a valid identifier with smart truncation
+// Replaces non-alphanumeric characters with dashes and truncates long names
+// with a hash suffix for uniqueness
 func sanitize(name string) string {
-	name = strings.ToLower(name)
-	name = strings.ReplaceAll(name, "/", "-")
-	name = strings.ReplaceAll(name, "_", "-")
-	name = strings.ReplaceAll(name, " ", "-")
-	// Remove any remaining special characters
-	var result strings.Builder
-	for _, r := range name {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
-			result.WriteRune(r)
-		}
+	lower := strings.ToLower(name)
+	out := sanitizeRegex.ReplaceAllString(lower, "-")
+	out = strings.Trim(out, "-")
+
+	if out == "" {
+		return "test"
 	}
-	return result.String()
+
+	// Truncate long names with hash suffix for uniqueness
+	if len(out) > 54 {
+		const hashLen = 8
+		sum := sha256.Sum256([]byte(out))
+		hash := hex.EncodeToString(sum[:])[:hashLen]
+		prefixLen := 54 - 1 - hashLen
+		out = out[:prefixLen] + "-" + hash
+	}
+
+	return out
 }
 
 // PrepareTestContainer starts a MongoDB container for testing
 // Returns cleanup function and connection URL
 // If MONGO_URL environment variable is set, uses that instead of starting a container
 func PrepareTestContainer(t *testing.T) (func(), string) {
-	_, cleanup, connURL, _ := prepareTestContainer(t, defaultRunOpts(t), defaultMongoPass, true, false)
+	_, cleanup, connURL, _ := prepareTestContainer(t, defaultRunOpts(t), defaultMongoPass, false, true)
 	return cleanup, connURL
 }
 
@@ -96,11 +109,17 @@ func prepareTestContainer(
 	if os.Getenv("MONGO_URL") != "" {
 		envMongoURL := os.Getenv("MONGO_URL")
 
+		// Use private URL for Vault, fall back to public
+		vaultMongoURL := os.Getenv("MONGO_URL_PRIVATE")
+		if vaultMongoURL == "" {
+			vaultMongoURL = envMongoURL
+		}
+
 		// Create unique database for this test
 		dbName := fmt.Sprintf("test_%s_%d", sanitize(t.Name()), time.Now().Unix())
-		testURL := replaceDatabase(envMongoURL, dbName)
+		testURL := replaceDatabase(vaultMongoURL, dbName)
 
-		// Create the database
+		// Create the database (test runner uses public URL)
 		if err := createDatabase(t, envMongoURL, dbName); err != nil {
 			t.Fatalf("Failed to create test database: %v", err)
 		}
@@ -115,25 +134,33 @@ func prepareTestContainer(
 	// Start Docker container
 	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {
-		errStr := strings.ToLower(err.Error())
-		if strings.Contains(errStr, "docker") &&
-			(strings.Contains(errStr, "daemon") || strings.Contains(errStr, "connect")) {
-			t.Skipf("skipping blackbox test: docker not available: %v", err)
+		if strings.Contains(err.Error(), "Cannot connect to the Docker daemon") {
+			t.Fatalf("skipping blackbox test: docker daemon not available: %v", err)
 		}
 		t.Fatalf("Could not start docker MongoDB: %s", err)
 	}
 
-	svc, containerID, err := runner.StartNewService(
-		context.Background(),
-		addSuffix,
-		forceLocalAddr,
-		connectMongoDB(password),
-	)
+	// Retry StartNewService with small delays to handle port mapping timing
+	var svc *docker.Service
+	var containerID string
+	for attempt := 0; attempt < 5; attempt++ {
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
+		}
+
+		svc, containerID, err = runner.StartNewService(context.Background(), addSuffix, forceLocalAddr, connectMongoDB(password))
+		if err == nil {
+			break
+		}
+
+		if !strings.Contains(err.Error(), "no port mapping found") {
+			break
+		}
+	}
+
 	if err != nil {
-		errStr := strings.ToLower(err.Error())
-		if strings.Contains(errStr, "docker") &&
-			(strings.Contains(errStr, "daemon") || strings.Contains(errStr, "connect")) {
-			t.Skipf("skipping blackbox test: docker not available: %v", err)
+		if strings.Contains(err.Error(), "Cannot connect to the Docker daemon") {
+			t.Fatalf("skipping blackbox test: docker daemon not available: %v", err)
 		}
 		t.Fatalf("Could not start docker MongoDB: %s", err)
 	}
