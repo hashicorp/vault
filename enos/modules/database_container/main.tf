@@ -27,6 +27,7 @@ locals {
         MONGO_INITDB_ROOT_PASSWORD = var.password
         MONGO_INITDB_DATABASE      = var.database
       }
+      args = "--bind_ip_all"
     }
     mysql = {
       image_template = "docker.io/mysql:${var.db_version}"
@@ -43,6 +44,7 @@ locals {
   image        = local.config.image_template
   env_vars_map = local.config.env_vars
   env_vars     = join(",", [for k, v in local.env_vars_map : "${k}=${v}"])
+  args         = try(local.config.args, "")
 }
 
 # Creating Database Server using generic container script
@@ -56,6 +58,7 @@ resource "enos_remote_exec" "create_database" {
     CONTAINER_NAME  = "${var.database_type}-${var.instance_name}"
     CONTAINER_PORTS = var.port
     CONTAINER_ENVS  = local.env_vars
+    CONTAINER_ARGS  = local.args
   }
 
   transport = {
