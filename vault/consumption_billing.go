@@ -29,6 +29,7 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 		DataProtectionCallCounts: billing.DataProtectionCallCounts{
 			Transit:   &atomic.Uint64{},
 			Transform: &atomic.Uint64{},
+			GcpKms:    &atomic.Uint64{},
 		},
 		Logger: logger,
 	}
@@ -157,6 +158,7 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	defer c.consumptionBillingLock.Unlock()
 	c.consumptionBilling.DataProtectionCallCounts.Transit.Store(0)
 	c.consumptionBilling.DataProtectionCallCounts.Transform.Store(0)
+	c.consumptionBilling.DataProtectionCallCounts.GcpKms.Store(0)
 	c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
 	return nil
 }
@@ -256,6 +258,9 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	}
 	if _, err := c.UpdateTransformCallCounts(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store transform data protection call counts: %w", err)
+	}
+	if _, err := c.UpdateGcpKmsCallCounts(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store GCP KMS data protection call counts: %w", err)
 	}
 	return nil
 }

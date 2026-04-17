@@ -523,6 +523,83 @@ func (c *Core) UpdateTransitCallCounts(ctx context.Context, currentMonth time.Ti
 	return transitCount, nil
 }
 
+func (c *Core) UpdateGcpKmsCallCounts(ctx context.Context, currentMonth time.Time) (uint64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
+	storedGcpKmsCount, err := c.getStoredGcpKmsCallCountsLocked(ctx, billing.LocalPrefix, currentMonth)
+	if err != nil {
+		return 0, err
+	}
+
+	// Sum the current count with the stored count
+	gcpKmsCount := cb.DataProtectionCallCounts.GcpKms.Swap(0) + storedGcpKmsCount
+
+	err = c.storeGcpKmsCallCountsLocked(ctx, gcpKmsCount, billing.LocalPrefix, currentMonth)
+	if err != nil {
+		return 0, err
+	}
+
+	return gcpKmsCount, nil
+}
+
+// storeGcpKmsCallCountsLocked must be called with BillingStorageLock held
+func (c *Core) storeGcpKmsCallCountsLocked(ctx context.Context, gcpKmsCount uint64, localPathPrefix string, month time.Time) error {
+	// Store count for each data protection type separately because they are atomic counters
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.GcpKmsDataProtectionCallCountsPrefix)
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(strconv.FormatUint(gcpKmsCount, 10)),
+	}
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
+}
+
+// getStoredGcpKmsCallCountsLocked must be called with BillingStorageLock held
+func (c *Core) getStoredGcpKmsCallCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (uint64, error) {
+	// Retrieve count for each data protection type separately because they are atomic counters
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.GcpKmsDataProtectionCallCountsPrefix)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, nil
+	}
+	entry, err := view.Get(ctx, billingPath)
+	if err != nil {
+		return 0, err
+	}
+	if entry == nil {
+		return 0, nil
+	}
+	gcpKmsCount, err := strconv.ParseUint(string(entry.Value), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return gcpKmsCount, nil
+}
+
+func (c *Core) GetStoredGcpKmsCallCounts(ctx context.Context, month time.Time) (uint64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+	return c.getStoredGcpKmsCallCountsLocked(ctx, billing.LocalPrefix, month)
+}
+
 func (c *Core) storeKmipEnabledLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, kmipEnabled bool) error {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.KmipEnabledPrefix)
 	entry, err := logical.StorageEntryJSON(billingPath, kmipEnabled)

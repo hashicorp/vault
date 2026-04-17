@@ -24,6 +24,7 @@ const (
 	KmseHWMCountsHWM                        = "maxKmseCounts/"
 	TransitDataProtectionCallCountsPrefix   = "transitDataProtectionCallCounts/"
 	TransformDataProtectionCallCountsPrefix = "transformDataProtectionCallCounts/"
+	GcpKmsDataProtectionCallCountsPrefix    = "gcpKmsDataProtectionCallCounts/"
 	LocalPrefix                             = "local/"
 	ThirdPartyPluginsPrefix                 = "thirdPartyPluginCounts/"
 	KmipEnabledPrefix                       = "kmipEnabled/"
@@ -80,6 +81,7 @@ func GetMonthlyBillingPath(localPrefix string, now time.Time) string {
 type DataProtectionCallCounts struct {
 	Transit   *atomic.Uint64 `json:"transit,omitempty"`
 	Transform *atomic.Uint64 `json:"transform,omitempty"`
+	GcpKms    *atomic.Uint64 `json:"gcpkms,omitempty"`
 }
 
 var _ logical.ConsumptionBillingManager = (*ConsumptionBilling)(nil)
@@ -106,6 +108,14 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.DataProtectionCallCounts.Transform.Add(val)
+	case "gcpkms":
+		val, ok := data["count"].(uint64)
+		if !ok {
+			err := fmt.Errorf("invalid value type for gcp kms")
+			return err
+		}
+
+		s.DataProtectionCallCounts.GcpKms.Add(val)
 	default:
 		err := fmt.Errorf("unknown metric type: %s", mountType)
 		return err
