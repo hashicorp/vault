@@ -42,7 +42,7 @@ resource "enos_local_exec" "run_blackbox_test" {
     # PATH and Go-related environment variables are inherited from the calling process
     }, var.vault_namespace != null ? {
     VAULT_NAMESPACE = var.vault_namespace
-    } : {}, local.ldap_environment, local.postgres_environment
+    } : {}, local.ldap_environment, local.postgres_environment, local.mongodb_environment
   )
   depends_on = [local_file.test_matrix]
 }
@@ -77,6 +77,15 @@ locals {
     PGUSER            = local.postgres_config.username
     PGPASSWORD        = local.postgres_config.password
     PGDATABASE        = local.postgres_config.database
+  } : {}
+
+  # Extract MongoDB configuration safely, defaulting to empty map if not available
+  mongodb_config = try(var.integration_host_state.mongodb, {})
+
+  # Set up MongoDB environment variables when MongoDB integration is available
+  mongodb_environment = try(local.mongodb_config.host.public_ip, "") != "" ? {
+    MONGO_URL         = "mongodb://${local.mongodb_config.username}:${local.mongodb_config.password}@${local.mongodb_config.host.public_ip}:${local.mongodb_config.port}/${local.mongodb_config.database}?directConnection=true"
+    MONGO_URL_PRIVATE = "mongodb://${local.mongodb_config.username}:${local.mongodb_config.password}@${local.mongodb_config.host.private_ip}:${local.mongodb_config.port}/${local.mongodb_config.database}?directConnection=true"
   } : {}
 }
 
