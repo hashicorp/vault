@@ -242,7 +242,12 @@ jobs:
           chmod 600 "./enos/support/private_key.pem"
           sha256sum "./enos/support/private_key.pem"
           du -h "./enos/support/private_key.pem"
-          echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
+          {
+            echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
+            echo "test_results_artifact_name=test-results_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
+            echo "junit_results_artifact_name=junit-results_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
+            echo "failure_summary_artifact_name=failure-summary-enos_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g').md"
+          } >> "$GITHUB_OUTPUT"
       - if: contains(inputs.sample-name, 'build')
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -288,6 +293,89 @@ jobs:
         name: Retry enos scenario destroy ${{ matrix.scenario.id.filter }}
         continue-on-error: true
         run: enos scenario destroy --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+      - name: Upload Test Results
+        if: always()
+        id: upload_test_results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ${{ steps.prepare_scenario.outputs.test_results_artifact_name }}
+          path: /tmp/vault_test_results_*.json
+          retention-days: 7
+          if-no-files-found: ignore
+        continue-on-error: true
+      - name: Upload JUnit Test Results
+        if: always()
+        id: upload_junit_results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ${{ steps.prepare_scenario.outputs.junit_results_artifact_name }}
+          path: /tmp/vault_test_results_*.xml
+          retention-days: 7
+          if-no-files-found: ignore
+        continue-on-error: true
+      - name: Check for test results
+        if: always()
+        id: check_test_results
+        continue-on-error: true
+        run: |
+          if find /tmp -maxdepth 1 -name 'vault_test_results_*.json' -type f -print -quit 2>/dev/null | grep -q .; then
+            echo "has_results=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_results=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Prepare Test Results Summary
+        if: always() && steps.check_test_results.outputs.has_results == 'true'
+        continue-on-error: true
+        run: |
+          # Find the most recent JSON test results file
+          json_file=$(find /tmp -maxdepth 1 -name 'vault_test_results_*.json' -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)
+
+          if [ -n "$json_file" ] && [ -f "$json_file" ]; then
+            # Create failure summary file for aggregation in build.yml
+            failure_summary_file="${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}"
+
+            # Extract failed tests and format as table rows matching ci.yml format
+            # Format: | Test Type | Package | Test | Elapsed | Runner Index | Logs |
+            jq -r 'select(.Action == "fail") | select(.Test != null) | "| enos | \(.Package) | \(.Test) | \(.Elapsed // "N/A") | ${{ matrix.scenario.id.filter }} | [view test results :scroll:](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |"' \
+              "$json_file" > "$failure_summary_file"
+
+            # Count total tests, passes, and failures
+            total_tests=$(jq -r 'select(.Action == "pass" or .Action == "fail") | select(.Test != null)' "$json_file" | jq -s 'length')
+            passed_tests=$(jq -r 'select(.Action == "pass") | select(.Test != null)' "$json_file" | jq -s 'length')
+            failed_tests=$(jq -r 'select(.Action == "fail") | select(.Test != null)' "$json_file" | jq -s 'length')
+
+            # Create step summary for this specific scenario
+            {
+              echo "## Test Results for ${{ matrix.scenario.id.filter }}"
+              echo ""
+              echo "- **Total Tests:** $total_tests"
+              echo "- **Passed:** ✅ $passed_tests"
+              echo "- **Failed:** ❌ $failed_tests"
+              echo ""
+
+              # If there are failures, create a table with details
+              if [ "$failed_tests" -gt 0 ]; then
+                echo "### Failed Tests"
+                echo ""
+                echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |"
+                echo "| --------- | ------- | ---- | ------- | ------------ | ---- |"
+                cat "${failure_summary_file}"
+                echo ""
+              fi
+
+              echo "📊 Full test results available in artifacts: \`${{ steps.prepare_scenario.outputs.test_results_artifact_name }}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⚠️ No test results found in /tmp/vault_test_results_*.json" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload Failure Summary
+        if: always() && steps.check_test_results.outputs.has_results == 'true'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}
+          path: ${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}
+          if-no-files-found: ignore
+        continue-on-error: true
       - name: Clean up Enos runtime directories
         id: cleanup
         if: ${{ always() }}
