@@ -205,9 +205,9 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 				return nil, fmt.Errorf("invalid 'tls_min_version' in config")
 			}
 		} else {
-			// MinVersion was not being set earlier. Reset it to
-			// zero to gracefully handle upgrades.
-			tlsConfig.MinVersion = 0
+			// MinVersion was not being set earlier. Default to a secure
+			// minimum TLS version (TLS 1.2) to gracefully handle upgrades.
+			tlsConfig.MinVersion = tls.VersionTLS12
 		}
 
 		clientConfig.TLSConfig = tlsConfig
