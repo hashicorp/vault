@@ -15,13 +15,6 @@ import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { encodeString } from 'core/utils/b64';
 
-const MESSAGES_LIST = {
-  listItem: '.linked-block',
-  filterBy: (name) => `[data-test-filter-by="${name}"]`,
-  filterSubmit: '[data-test-filter-submit]',
-  filterReset: '[data-test-filter-reset]',
-};
-
 module('Acceptance | Community | config-ui/messages', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
@@ -171,27 +164,27 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     });
     await visit('vault/config-ui/messages?pageFilter=foobar&status=inactive&type=banner');
     // check that filters inherit param values
-    assert.dom(MESSAGES_LIST.filterBy('pageFilter')).hasValue('foobar');
-    assert.dom(MESSAGES_LIST.filterBy('status')).hasValue('inactive');
-    assert.dom(MESSAGES_LIST.filterBy('type')).hasValue('banner');
+    assert.dom(GENERAL.filter('pageFilter')).hasValue('foobar');
+    assert.dom(GENERAL.filter('status')).hasValue('inactive');
+    assert.dom(GENERAL.filter('type')).hasValue('banner');
     assert.dom(GENERAL.emptyStateTitle).exists();
 
     // clear filters works
-    await click(MESSAGES_LIST.filterReset);
-    assert.dom(MESSAGES_LIST.listItem).exists({ count: 2 });
+    await click(GENERAL.button('reset'));
+    assert.dom(GENERAL.listItem()).exists({ count: 2 });
 
     // check number of messages with status filters
-    await fillIn(MESSAGES_LIST.filterBy('status'), 'active');
+    await fillIn(GENERAL.filter('status'), 'active');
     await click(GENERAL.submitButton);
-    assert.dom(MESSAGES_LIST.listItem).exists({ count: 1 }, 'list filters by status');
+    assert.dom(GENERAL.listItem()).exists({ count: 1 }, 'list filters by status');
 
     // check number of messages with type filters
-    await click(MESSAGES_LIST.filterReset);
-    await fillIn(MESSAGES_LIST.filterBy('type'), 'modal');
+    await click(GENERAL.button('reset'));
+    await fillIn(GENERAL.filter('type'), 'modal');
     await click(GENERAL.submitButton);
     // because of test pollution, we cannot guarantee that the list will be empty
     // make sure only modal messages or no messages are shown
-    const messages = findAll(MESSAGES_LIST.listItem);
+    const messages = findAll(GENERAL.listItem());
     const allMessages = Array.from(messages || []);
     const modalMessages = allMessages.filter((node) => node.querySelector('[data-test-badge="modal"]'));
 
@@ -203,10 +196,10 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       'if there are items in the list, they are modal messages'
     );
     // unsetting a filter will reset that item in the query
-    await fillIn(MESSAGES_LIST.filterBy('type'), '');
-    await fillIn(MESSAGES_LIST.filterBy('status'), 'inactive');
+    await fillIn(GENERAL.filter('type'), '');
+    await fillIn(GENERAL.filter('status'), 'inactive');
     await click(GENERAL.submitButton);
-    assert.dom(MESSAGES_LIST.listItem).exists({ count: 1 }, 'list filters by status again');
+    assert.dom(GENERAL.listItem()).exists({ count: 1 }, 'list filters by status again');
 
     // delete the created messages
     await this.deleteMessages();
