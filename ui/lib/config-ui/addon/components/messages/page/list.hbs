@@ -17,8 +17,9 @@
           @icon="trash"
           @isIconOnly={{true}}
           type="reset"
+          disabled={{not this.hasFiltersSelected}}
           {{on "click" this.resetFilters}}
-          data-test-filter-reset
+          data-test-button="reset"
         />
         <S.TextInput
           @value={{@params.pageFilter}}
@@ -28,13 +29,15 @@
           placeholder="Search by message title"
           aria-label="Search by message title"
           size="32"
-          data-test-filter-by="pageFilter"
+          {{on "input" this.updatePageFilter}}
+          data-test-filter="pageFilter"
         />
         <S.Select
           aria-label="Filter by message status"
           name="status"
           class="segment-filter {{unless @params.status 'has-text-grey'}}"
-          data-test-filter-by="status"
+          {{on "change" this.updateStatus}}
+          data-test-filter="status"
           as |S|
         >
           <S.Options>
@@ -48,7 +51,8 @@
           aria-label="Filter by type"
           name="type"
           class="segment-filter {{unless @params.status 'has-text-grey'}}"
-          data-test-filter-by="type"
+          {{on "change" this.updateType}}
+          data-test-filter="type"
           as |S|
         >
           <S.Options>
@@ -59,9 +63,9 @@
           </S.Options>
         </S.Select>
         <S.Button
-          @color="secondary"
           @text="Apply filters"
           @icon={{if this.handleSearch.isRunning "loading" "filter"}}
+          disabled={{not this.hasFiltersSelected}}
           type="submit"
           data-test-submit
         />
@@ -141,6 +145,7 @@
     @showSizeSelector={{false}}
     @totalItems={{@messages.meta.total}}
     @queryFunction={{this.paginationQueryParams}}
+    data-test-pagination
   />
 {{else}}
   <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>

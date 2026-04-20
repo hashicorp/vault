@@ -32,6 +32,9 @@ export default class MessagesList extends Component {
 
   @tracked showMaxMessageModal = false;
   @tracked messageToDelete = null;
+  @tracked pageFilterValue = this.args.params?.pageFilter || '';
+  @tracked statusValue = this.args.params?.status || '';
+  @tracked typeValue = this.args.params?.type || '';
 
   isStartTimeAfterToday = (message) => {
     return isAfter(message.start_time, timestamp.now());
@@ -86,6 +89,25 @@ export default class MessagesList extends Component {
     };
   }
 
+  get hasFiltersSelected() {
+    return !!(this.pageFilterValue || this.statusValue || this.typeValue);
+  }
+
+  @action
+  updatePageFilter(event) {
+    this.pageFilterValue = event.target.value;
+  }
+
+  @action
+  updateStatus(event) {
+    this.statusValue = event.target.value;
+  }
+
+  @action
+  updateType(event) {
+    this.typeValue = event.target.value;
+  }
+
   transitionToMessagesWithParams(queryParams) {
     this.router.transitionTo('vault.cluster.config-ui.messages', {
       // always reset back to page 1 when changing filters
@@ -125,6 +147,9 @@ export default class MessagesList extends Component {
 
   @action
   resetFilters() {
+    this.pageFilterValue = '';
+    this.statusValue = '';
+    this.typeValue = '';
     this.transitionToMessagesWithParams({ pageFilter: '', status: null, type: null });
   }
 

@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupEngine } from 'ember-engines/test-support';
-import { render, click } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -174,7 +174,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
 
     const activeMessage = this.messages[0];
     assert
-      .dom(` ${GENERAL.listItem(activeMessage.title)} ${GENERAL.badge()}`)
+      .dom(`${GENERAL.listItem(activeMessage.title)} ${GENERAL.badge()}`)
       .hasText('Active')
       .hasClass('hds-badge--color-success');
   });
@@ -184,7 +184,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
 
     const activeMessageWithTimeZone = this.messages[3];
     assert
-      .dom(` ${GENERAL.listItem(activeMessageWithTimeZone.title)} ${GENERAL.badge()}`)
+      .dom(`${GENERAL.listItem(activeMessageWithTimeZone.title)} ${GENERAL.badge()}`)
       .hasText(`Active until ${this.formatTime(activeMessageWithTimeZone.end_time)}`)
       .hasClass('hds-badge--color-success');
   });
@@ -194,7 +194,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
 
     const scheduledMessage = this.messages[4];
     assert
-      .dom(` ${GENERAL.listItem(scheduledMessage.title)} ${GENERAL.badge()}`)
+      .dom(`${GENERAL.listItem(scheduledMessage.title)} ${GENERAL.badge()}`)
       .hasText(`Scheduled: ${this.formatTime(scheduledMessage.start_time)}`)
       .hasClass('hds-badge--color-highlight');
   });
@@ -204,8 +204,28 @@ module('Integration | Component | messages/page/list', function (hooks) {
 
     const inactiveMessage = this.messages[1];
     assert
-      .dom(` ${GENERAL.listItem(inactiveMessage.title)} ${GENERAL.badge()}`)
+      .dom(`${GENERAL.listItem(inactiveMessage.title)} ${GENERAL.badge()}`)
       .hasText(`Inactive: ${this.formatTime(inactiveMessage.end_time)}`)
       .hasClass('hds-badge--color-neutral');
+  });
+
+  test('it should conditionally display filtering and disable state upon filter selection', async function (assert) {
+    for (let i = 0; i < 12; i++) {
+      this.messages.push({
+        id: `${i}-a`,
+        active: true,
+        type: 'banner',
+        authenticated: false,
+        title: `Message title ${i}`,
+        message: 'Some long long long message',
+        link: { title: 'here', href: 'www.example.com' },
+        start_time: new Date('2021-08-01T00:00:00Z'),
+      });
+    }
+
+    await this.renderComponent();
+    assert.dom(GENERAL.submitButton).hasAttribute('disabled');
+    await fillIn(GENERAL.filter('pageFilter'), '1');
+    assert.dom(GENERAL.submitButton).doesNotHaveAttribute('disabled');
   });
 });
