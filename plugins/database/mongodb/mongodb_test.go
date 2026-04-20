@@ -314,6 +314,79 @@ func TestMongoDB_UpdateUser_Password(t *testing.T) {
 	assertCredsExist(t, dbUser, newPassword, connURL)
 }
 
+func TestMongoDB_UpdateUser_Password_RotationStatements_UpdateUser(t *testing.T) {
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	connURL = connURL + "/test"
+	db := new()
+	defer dbtesting.AssertClose(t, db)
+
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+		},
+		VerifyConnection: true,
+	}
+	dbtesting.AssertInitialize(t, db, initReq)
+
+	dbUser := "testmongouser"
+	startingPassword := "password"
+	createDBUser(t, connURL, "test", dbUser, startingPassword)
+
+	newPassword := "myreallysecurecredentials"
+
+	updateReq := dbplugin.UpdateUserRequest{
+		Username: dbUser,
+		Password: &dbplugin.ChangePassword{
+			NewPassword: newPassword,
+			Statements: dbplugin.Statements{
+				Commands: []string{
+					`{"db":"admin","command":{"updateUser":"{{username}}","pwd":"{{password}}"}}`,
+				},
+			},
+		},
+	}
+	dbtesting.AssertUpdateUser(t, db, updateReq)
+
+	assertCredsExist(t, dbUser, newPassword, connURL)
+}
+
+func TestMongoDB_UpdateUser_Password_RotationStatements_CreateUserIfMissing(t *testing.T) {
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	// Use admin as auth DB (no /test), to match provided statement db:"admin"
+	db := new()
+	defer dbtesting.AssertClose(t, db)
+
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+		},
+		VerifyConnection: true,
+	}
+	dbtesting.AssertInitialize(t, db, initReq)
+
+	dbUser := "user-does-not-exist-yet"
+	newPassword := "myreallysecurecredentials"
+
+	updateReq := dbplugin.UpdateUserRequest{
+		Username: dbUser,
+		Password: &dbplugin.ChangePassword{
+			NewPassword: newPassword,
+			Statements: dbplugin.Statements{
+				Commands: []string{
+					`{"db":"admin","command":{"createUser":"{{username}}","pwd":"{{password}}","roles":[{"role":"readWrite","db":"app"}]}}`,
+				},
+			},
+		},
+	}
+	dbtesting.AssertUpdateUser(t, db, updateReq)
+
+	assertCredsExist(t, dbUser, newPassword, connURL)
+}
+
 func TestMongoDB_RotateRoot_NonAdminDB(t *testing.T) {
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
