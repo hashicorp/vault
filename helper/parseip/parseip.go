@@ -60,6 +60,9 @@ func trimLeadingZeroesIP(s string) string {
 			return s[:i+1] + trimLeadingZeroesIPv4(s[i+1:])
 		}
 	}
+	if strings.Contains(s, ":") {
+		return s
+	}
 	return trimLeadingZeroesIPv4(s)
 }
 
