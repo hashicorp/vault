@@ -77,7 +77,6 @@ module('Unit | Utility | metric utils', function () {
       data_protection_calls_total: 0,
       data_protection_calls_transform: 0,
       data_protection_calls_transit: 0,
-      dynamic_roles: 0,
       dynamic_roles_total: 0,
       external_plugins_total: 0,
       kmip_used_in_month: false,
@@ -89,7 +88,7 @@ module('Unit | Utility | metric utils', function () {
       ssh_units: 0,
       ssh_units_certificate_units: 0,
       ssh_units_otp_units: 0,
-      static_roles: 0,
+      ssh_units_total: 0,
       static_secrets_kv: 0,
       static_secrets_total: 0,
     };
