@@ -557,6 +557,7 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 		"pki_units":             false,
 		"managed_keys":          false,
 		"ssh_units":             false,
+		"id_token_units":        false,
 	}
 
 	for _, metric := range usageMetrics {
@@ -610,10 +611,16 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 			details, ok := metricData["metric_details"].([]map[string]interface{})
 			require.True(t, ok, "%s metric_details should be array", metricName)
 			require.Empty(t, details, "%s metric_details should be empty when total is 0", metricName)
+
 		case "ssh_units":
 			total, ok := metricData["total"].(float64)
 			require.True(t, ok, "ssh_units total should be float64")
 			require.Equal(t, float64(0), total, "ssh_units total should be 0")
+
+		case "id_token_units":
+			total, ok := metricData["total"].(float64)
+			require.True(t, ok, "id_token_units total should be float64")
+			require.Equal(t, float64(0), total, "id_token_units total should be 0")
 		}
 	}
 

@@ -85,3 +85,34 @@ func (c *Core) GetInMemoryGcpKmsDataProtectionCallCounts() uint64 {
 	}
 	return 0
 }
+
+func (c *Core) ResetInMemoryJwtSpiffeIdentityCounts() {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.IdentityTokenUnits.SpiffeJwt.Store(0)
+	}
+}
+
+func (c *Core) GetInMemoryJwtSpiffeIdentityCounts() float64 {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		return cb.IdentityTokenUnits.SpiffeJwt.Load()
+	}
+	return 0
+}
+
+func (c *Core) SetInMemoryJwtSpiffeIdentityCounts(count float64) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.IdentityTokenUnits.SpiffeJwt.Store(count)
+	}
+}
