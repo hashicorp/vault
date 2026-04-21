@@ -173,6 +173,7 @@ func Test_BillingOverview_EmptyCluster(t *testing.T) {
 		"pki_units":             false,
 		"managed_keys":          false,
 		"ssh_units":             false,
+		"id_token_units":        false,
 	}
 
 	for _, metric := range currentMonth.UsageMetrics {

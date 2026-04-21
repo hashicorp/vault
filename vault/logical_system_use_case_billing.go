@@ -219,6 +219,12 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 	}
 	usageMetrics = append(usageMetrics, sshCounts)
 
+	idTokenUnitsMetric, err := b.buildIdTokenUnitsBillingMetric(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+	usageMetrics = append(usageMetrics, idTokenUnitsMetric)
+
 	dataUpdatedAt := b.Core.computeUpdatedAt(ctx, month, currentMonth)
 
 	monthStr := month.Format("2006-01")
@@ -393,6 +399,31 @@ func (b *SystemBackend) buildPkiBillingMetric(ctx context.Context, month time.Ti
 		"metric_name": "pki_units",
 		"metric_data": map[string]interface{}{
 			"total": count,
+		},
+	}, nil
+}
+
+// buildIdTokenUnitsBillingMetric creates the billing metric for id token counts.
+func (b *SystemBackend) buildIdTokenUnitsBillingMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
+	var totalTokens float64
+
+	idTokenDetails := []map[string]interface{}{}
+	spiffeJwtUnits, err := b.Core.GetStoredSpiffeJwtTokenUnits(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving JWT Spiffe duration-adjusted token count for month: %w", err)
+	}
+
+	if spiffeJwtUnits > 0 {
+		idTokenDetails = append(idTokenDetails, map[string]interface{}{"type": "spiffe", "count": spiffeJwtUnits})
+	}
+
+	totalTokens += spiffeJwtUnits
+
+	return map[string]interface{}{
+		"metric_name": "id_token_units",
+		"metric_data": map[string]interface{}{
+			"total":          totalTokens,
+			"metric_details": idTokenDetails,
 		},
 	}, nil
 }

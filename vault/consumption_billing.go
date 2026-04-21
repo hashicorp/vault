@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/vault/billing"
+	uberatomic "go.uber.org/atomic"
 )
 
 var (
@@ -30,6 +31,9 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 			Transit:   &atomic.Uint64{},
 			Transform: &atomic.Uint64{},
 			GcpKms:    &atomic.Uint64{},
+		},
+		IdentityTokenUnits: billing.IdentityTokenUnits{
+			SpiffeJwt: uberatomic.NewFloat64(0),
 		},
 		Logger: logger,
 	}
@@ -152,12 +156,13 @@ func (c *Core) deletePreviousMonthBillingMetrics(ctx context.Context, currentMon
 }
 
 func (c *Core) resetInMemoryBillingMetrics() error {
-	// Reset Transit/Tranform DP counts
+	// Reset Transit/Transform DP counts and SPIFFE JWT identity counts
 	c.logger.Info("resetting in memory billing metrics")
 	c.consumptionBillingLock.Lock()
 	defer c.consumptionBillingLock.Unlock()
 	c.consumptionBilling.DataProtectionCallCounts.Transit.Store(0)
 	c.consumptionBilling.DataProtectionCallCounts.Transform.Store(0)
+	c.consumptionBilling.IdentityTokenUnits.SpiffeJwt.Store(0)
 	c.consumptionBilling.DataProtectionCallCounts.GcpKms.Store(0)
 	c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
 	return nil
@@ -258,6 +263,9 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	}
 	if _, err := c.UpdateTransformCallCounts(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store transform data protection call counts: %w", err)
+	}
+	if _, err := c.UpdateSpiffeJwtTokenUnits(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store SPIFFE JWT token units: %w", err)
 	}
 	if _, err := c.UpdateGcpKmsCallCounts(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store GCP KMS data protection call counts: %w", err)

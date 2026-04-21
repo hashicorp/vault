@@ -18,3 +18,13 @@ func (c *Core) UpdateTransformCallCounts(ctx context.Context, currentMonth time.
 func (c *Core) GetStoredTransformCallCounts(ctx context.Context, month time.Time) (uint64, error) {
 	return 0, nil
 }
+
+func (c *Core) GetStoredSpiffeJwtTokenUnits(ctx context.Context, currentMonth time.Time) (float64, error) {
+	// No-op in OSS
+	return 0, nil
+}
+
+func (c *Core) UpdateSpiffeJwtTokenUnits(ctx context.Context, currentMonth time.Time) (float64, error) {
+	// No-op in OSS
+	return 0, nil
+}
