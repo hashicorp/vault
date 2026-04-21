@@ -38,11 +38,11 @@ export default class MetricCard extends Component<Args> {
     [NormalizedBillingMetrics.STATIC_SECRETS_KV]: {
       label: 'KV Secrets',
     },
-    [NormalizedBillingMetrics.DYNAMIC_ROLES]: {
+    [NormalizedBillingMetrics.DYNAMIC_ROLES_TOTAL]: {
       label: 'Dynamic roles',
       tooltipText: 'Highest number of dynamic roles for the month',
     },
-    [NormalizedBillingMetrics.STATIC_ROLES]: {
+    [NormalizedBillingMetrics.AUTO_ROTATED_ROLES_TOTAL]: {
       label: 'Static roles',
       tooltipText: 'Highest number of static roles for the month',
     },
