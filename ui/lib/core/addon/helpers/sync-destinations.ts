@@ -4,8 +4,7 @@
  */
 
 import { helper as buildHelper } from '@ember/component/helper';
-
-import type { DestinationType } from 'vault/sync';
+import { DestinationType, CredentialType } from 'sync/utils/constants';
 import type { SyncDestination } from 'vault/helpers/sync-destinations';
 
 /* 
@@ -16,40 +15,83 @@ maskedParams: attributes for sensitive data, the API returns these values as '**
 const SYNC_DESTINATIONS: Array<SyncDestination> = [
   {
     name: 'AWS Secrets Manager',
-    type: 'aws-sm',
+    type: DestinationType.AwsSm,
     icon: 'aws-color',
     category: 'cloud',
-    maskedParams: ['access_key_id', 'secret_access_key'],
+    maskedParams: ['access_key_id', 'secret_access_key', 'identity_token_audience', 'identity_token_key'],
     readonlyParams: ['name', 'region'],
     defaultValues: {
       granularity: 'secret-path',
+      credential_type: CredentialType.ACCOUNT,
     },
+    roleTypeOptions: [
+      {
+        title: 'IAM Credentials',
+        description:
+          'Use an AWS Access Key ID and Secret Access Key to allow Vault to interact directly with your AWS resources.',
+        value: CredentialType.ACCOUNT,
+      },
+      {
+        title: 'Workload Identity Federation',
+        description:
+          'Leverages OIDC or AWS IAM Roles for Service Accounts (IRSA) for more secure, keyless authentication.',
+        value: CredentialType.WIF,
+      },
+    ],
   },
   {
     name: 'Azure Key Vault',
-    type: 'azure-kv',
+    type: DestinationType.AzureKv,
     icon: 'azure-color',
     category: 'cloud',
-    maskedParams: ['client_secret'],
+    maskedParams: ['client_secret', 'identity_token_audience', 'identity_token_key'],
     readonlyParams: ['name', 'key_vault_uri', 'tenant_id', 'cloud'],
     defaultValues: {
       granularity: 'secret-path',
+      credential_type: CredentialType.ACCOUNT,
     },
+    roleTypeOptions: [
+      {
+        title: 'Client Secret',
+        description: 'Use client secret of an Azure app registration to authenticate.',
+        value: CredentialType.ACCOUNT,
+      },
+      {
+        title: 'Workload Identity Federation',
+        description:
+          'Leverages OIDC with Azure workload identity pools and providers for more secure, keyless authentication.',
+        value: CredentialType.WIF,
+      },
+    ],
   },
   {
     name: 'Google Secret Manager',
-    type: 'gcp-sm',
+    type: DestinationType.GcpSm,
     icon: 'gcp-color',
     category: 'cloud',
-    maskedParams: ['credentials'],
+    maskedParams: ['credentials', 'identity_token_audience', 'identity_token_key'],
     readonlyParams: ['name'],
     defaultValues: {
       granularity: 'secret-path',
+      credential_type: CredentialType.ACCOUNT,
     },
+    roleTypeOptions: [
+      {
+        title: 'JSON Credentials',
+        description: 'Use a JSON file from your computer to authenticate.',
+        value: CredentialType.ACCOUNT,
+      },
+      {
+        title: 'Workload Identity Federation',
+        description:
+          'Leverages OIDC with GCP workload identity pools and providers for more secure, keyless authentication.',
+        value: CredentialType.WIF,
+      },
+    ],
   },
   {
     name: 'Github Actions',
-    type: 'gh',
+    type: DestinationType.Gh,
     icon: 'github-color',
     category: 'dev-tools',
     maskedParams: ['access_token'],
@@ -60,7 +102,7 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
   },
   {
     name: 'Vercel Project',
-    type: 'vercel-project',
+    type: DestinationType.VercelProject,
     icon: 'vercel-color',
     category: 'dev-tools',
     maskedParams: ['access_token'],
