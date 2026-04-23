@@ -263,6 +263,7 @@ func mergeEnterpriseTokenMetadata(a *auth, req *logical.Request) error {
 
 	if req.EnterpriseTokenMetadata == "" &&
 		req.EnterpriseTokenIssuer == "" &&
+		req.EnterpriseTokenTransaction == "" &&
 		len(req.EnterpriseTokenAudience) == 0 &&
 		len(req.EnterpriseTokenAuthorizationDetails) == 0 {
 		return nil
@@ -276,6 +277,9 @@ func mergeEnterpriseTokenMetadata(a *auth, req *logical.Request) error {
 	}
 	if req.EnterpriseTokenIssuer != "" {
 		a.Metadata["enterprise_token_issuer"] = req.EnterpriseTokenIssuer
+	}
+	if req.EnterpriseTokenTransaction != "" {
+		a.Metadata["enterprise_token_transaction"] = req.EnterpriseTokenTransaction
 	}
 	if len(req.EnterpriseTokenAudience) > 0 {
 		audJSON, err := json.Marshal(req.EnterpriseTokenAudience)

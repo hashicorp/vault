@@ -3,21 +3,21 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Form from 'vault/forms/form';
 import FormField from 'vault/utils/forms/field';
 import FormFieldGroup from 'vault/utils/forms/field-group';
-import { commonFields, getPayload } from './shared';
+import { DestinationType } from 'sync/utils/constants';
 
 import type { SystemWriteSyncDestinationsVercelProjectNameRequest } from '@hashicorp/vault-client-typescript';
+import CreateDestinationForm from './create-destination';
 
 type VercelProjectFormData = SystemWriteSyncDestinationsVercelProjectNameRequest & {
   name: string;
 };
 
-export default class VercelProjectForm extends Form<VercelProjectFormData> {
+export default class VercelProjectForm extends CreateDestinationForm<VercelProjectFormData> {
   formFieldGroups = [
     new FormFieldGroup('default', [
-      commonFields.name,
+      this.commonFields.name,
       new FormField('project_id', 'string', {
         label: 'Project ID',
         subText: 'Project ID where to manage environment variables.',
@@ -40,12 +40,15 @@ export default class VercelProjectForm extends Form<VercelProjectFormData> {
         noCopy: true,
       }),
     ]),
-    new FormFieldGroup('Advanced configuration', [commonFields.granularity, commonFields.secretNameTemplate]),
+    new FormFieldGroup('Advanced configuration', [
+      this.commonFields.granularity,
+      this.commonFields.secretNameTemplate,
+    ]),
   ];
 
   toJSON() {
     const formState = super.toJSON();
-    const data = getPayload<VercelProjectFormData>('vercel-project', this.data, this.isNew);
+    const data = this.getPayload<VercelProjectFormData>(DestinationType.VercelProject, this.data, this.isNew);
     return { ...formState, data };
   }
 }

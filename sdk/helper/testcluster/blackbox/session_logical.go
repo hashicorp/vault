@@ -26,6 +26,14 @@ func (s *Session) MustRead(path string) *api.Secret {
 	return secret
 }
 
+func (s *Session) MustList(path string) *api.Secret {
+	s.t.Helper()
+
+	secret, err := s.Client.Logical().List(path)
+	require.NoError(s.t, err)
+	return secret
+}
+
 // MustReadRequired is a stricter version of MustRead that fails if a 404/nil is returned
 func (s *Session) MustReadRequired(path string) *api.Secret {
 	s.t.Helper()

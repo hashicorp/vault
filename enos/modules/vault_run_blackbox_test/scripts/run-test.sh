@@ -77,6 +77,12 @@ echo "Running tests..."
 echo "Vault environment variables:"
 env | grep VAULT | sed 's/VAULT_TOKEN=.*/VAULT_TOKEN=***REDACTED***/'
 
+# For HTTP Vault addresses, inherited TLS CA settings can point to stale temp files.
+# TODO: Investigate why TLS CA env vars persist for HTTP Vault connections and remove this workaround after fixing root cause.
+if [[ "${VAULT_ADDR}" == http://* ]]; then
+    unset VAULT_CACERT VAULT_CAPATH
+fi
+
 case $VAULT_EDITION in
   ent | ent.hsm | ent.hsm.fips1402 | ent.hsm.fips1403 | ent.fips1403 | ent.fips1402)
     tags="-tags=ent,enterprise"
@@ -91,14 +97,15 @@ esac
 
 # Build gotestsum command based on whether we have specific tests
 # Convert VAULT_TEST_PACKAGE to array to handle multiple package paths properly
-IFS=$' ' read -r -d '' -a packages <<< "$VAULT_TEST_PACKAGE" || true
+VAULT_TEST_PACKAGE=$(printf "%s" "$VAULT_TEST_PACKAGE")
+IFS=' ' read -r -a packages <<< "$VAULT_TEST_PACKAGE"
 
 set -x # Show commands being executed
 set +e # Temporarily disable exit on error
 if [ -n "$VAULT_TEST_MATRIX" ] && [ -f "$VAULT_TEST_MATRIX" ]; then
     echo "Using test matrix from: $VAULT_TEST_MATRIX"
     # Extract test names from matrix and create regex pattern
-    test_pattern=$(jq -r '.include[].test' "$VAULT_TEST_MATRIX" | paste -sd '|' -)
+    test_pattern=$(jq -r '[.include[].test] | join("|")' "$VAULT_TEST_MATRIX")
     echo "Running specific tests: $test_pattern"
     gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -count=1 "${tags}" -run="$test_pattern" "${packages[@]}"
 else

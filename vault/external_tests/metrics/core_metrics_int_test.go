@@ -30,13 +30,7 @@ func TestMountTableMetrics(t *testing.T) {
 		NumCores:               2,
 		CoreMetricSinkProvider: testhelpers.TestMetricSinkProvider(time.Minute),
 	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	// Wait for core to become active
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
 
 	client := cores[0].Client
 
@@ -120,13 +114,7 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 		NumCores:               2,
 		CoreMetricSinkProvider: testhelpers.TestMetricSinkProvider(time.Minute),
 	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	// Wait for core to become active
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
 
 	client := cores[0].Client
 	standbyClient := cores[1].Client

@@ -442,9 +442,10 @@ func TestCopy_request_EnterpriseTokenFields(t *testing.T) {
 		Data: map[string]interface{}{
 			"foo": "bar",
 		},
-		EnterpriseTokenMetadata: "test-token-abc",
-		EnterpriseTokenIssuer:   "https://issuer.example.com",
-		EnterpriseTokenAudience: []string{"vault", "api"},
+		EnterpriseTokenMetadata:    "test-token-abc",
+		EnterpriseTokenIssuer:      "https://issuer.example.com",
+		EnterpriseTokenTransaction: "txn-copy-1",
+		EnterpriseTokenAudience:    []string{"vault", "api"},
 		EnterpriseTokenAuthorizationDetails: []logical.AuthorizationDetail{
 			{
 				"type":            "vault:path_access",
@@ -476,10 +477,11 @@ func TestHashRequest_EnterpriseTokenFieldsInMetadata(t *testing.T) {
 	auditAuth := &auth{
 		ClientToken: "secret-token",
 		Metadata: map[string]string{
-			"enterprise_token_metadata": "test-token-xyz",
-			"enterprise_token_issuer":   "https://issuer.example.com",
-			"actor_entity_id":           "actor-123",
-			"actor_entity_name":         "actor-service",
+			"enterprise_token_metadata":    "test-token-xyz",
+			"enterprise_token_issuer":      "https://issuer.example.com",
+			"enterprise_token_transaction": "txn-hash-1",
+			"actor_entity_id":              "actor-123",
+			"actor_entity_name":            "actor-service",
 		},
 	}
 
@@ -494,6 +496,7 @@ func TestHashRequest_EnterpriseTokenFieldsInMetadata(t *testing.T) {
 	// Metadata values must pass through unchanged — they are not secrets.
 	require.Equal(t, "test-token-xyz", auditAuth.Metadata["enterprise_token_metadata"])
 	require.Equal(t, "https://issuer.example.com", auditAuth.Metadata["enterprise_token_issuer"])
+	require.Equal(t, "txn-hash-1", auditAuth.Metadata["enterprise_token_transaction"])
 	require.Equal(t, "actor-123", auditAuth.Metadata["actor_entity_id"])
 	require.Equal(t, "actor-service", auditAuth.Metadata["actor_entity_name"])
 }

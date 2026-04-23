@@ -73,8 +73,8 @@ customPoliciesMockModel.meta = {
   lastPage: 1,
   nextPage: 1,
   prevPage: 0,
-  total: 3,
-  filteredTotal: 3,
+  total: 4,
+  filteredTotal: 4,
   pageSize: 15,
 };
 

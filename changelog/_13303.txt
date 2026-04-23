@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: `unsafe-inline` is no longer included in the `style-src` CSP directive.
+```

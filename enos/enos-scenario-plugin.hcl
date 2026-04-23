@@ -226,7 +226,7 @@ scenario "plugin" {
     description = "Set up external plugin services (LDAP server, databases, etc.) for plugin testing"
     module      = module.set_up_external_integration_target
     depends_on = [
-      step.create_plugin_integration_target
+      step.create_vault_cluster_targets
     ]
 
     providers = {
@@ -234,10 +234,11 @@ scenario "plugin" {
     }
 
     variables {
-      hosts      = step.create_plugin_integration_target.hosts
-      ip_version = matrix.ip_version
-      packages   = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
-      ports      = global.integration_host_ports
+      hosts            = step.create_plugin_integration_target.hosts
+      ip_version       = matrix.ip_version
+      packages         = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
+      ports            = global.integration_host_ports
+      database_configs = global.database_configs
     }
   }
 
@@ -465,7 +466,7 @@ scenario "plugin" {
     // Determine if filter contains test names (starts with "Test") or package names
     is_test_name_filter = length(var.blackbox_test_filter) > 0 && length([for t in var.blackbox_test_filter : t if can(regex("^Test", t))]) > 0
 
-    // For plugins, if package filter is provided, convert to paths, otherwise use default plugins path
+    // For plugins, if package filter is provided, convert to plugin paths, otherwise run default plugin tests
     plugin_test_packages = length(var.blackbox_test_filter) > 0 && !local.is_test_name_filter ? [
       for pkg in var.blackbox_test_filter : "./vault/external_tests/blackbox/plugins/${pkg}/..."
     ] : ["./vault/external_tests/blackbox/plugins/..."]
@@ -543,7 +544,6 @@ scenario "plugin" {
 
   output "plugin_test_results" {
     description = "Results from plugin blackbox tests"
-    sensitive   = true
     value       = step.run_plugin_blackbox_tests.test_results_summary
   }
 }

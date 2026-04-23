@@ -31,8 +31,8 @@ export default class BillingPageOverview extends Component {
   detailsByMetric = {
     Secrets: [
       NormalizedBillingMetrics.STATIC_SECRETS_KV,
-      NormalizedBillingMetrics.DYNAMIC_ROLES,
-      NormalizedBillingMetrics.STATIC_ROLES,
+      NormalizedBillingMetrics.DYNAMIC_ROLES_TOTAL,
+      NormalizedBillingMetrics.AUTO_ROTATED_ROLES_TOTAL,
     ],
     'Credential units': [
       NormalizedBillingMetrics.PKI_UNITS_TOTAL,

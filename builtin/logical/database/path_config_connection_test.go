@@ -15,8 +15,7 @@ import (
 )
 
 func TestWriteConfig_PluginVersionInStorage(t *testing.T) {
-	cluster, sys := getCluster(t)
-	t.Cleanup(cluster.Cleanup)
+	_, sys := getCluster(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -127,8 +126,7 @@ func TestWriteConfig_PluginVersionInStorage(t *testing.T) {
 }
 
 func TestWriteConfig_HelpfulErrorMessageWhenBuiltinOverridden(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	t.Cleanup(cluster.Cleanup)
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}

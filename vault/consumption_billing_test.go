@@ -179,6 +179,7 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 			}, localPathPrefix, month)
 			core.storeMaxKvCountsLocked(context.Background(), 10, localPathPrefix, month)
 			core.storeTransitCallCountsLocked(context.Background(), 10, localPathPrefix, month)
+			core.storeGcpKmsCallCountsLocked(context.Background(), 10, localPathPrefix, month)
 			core.storeThirdPartyPluginCountsLocked(context.Background(), localPathPrefix, month, 10)
 
 			// List the data paths to verify that the billing metrics have been stored
@@ -186,7 +187,7 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 			require.True(t, ok)
 			paths, err := view.List(context.Background(), billing.GetMonthlyBillingPath(localPathPrefix, month))
 			require.NoError(t, err)
-			require.Equal(t, 4, len(paths))
+			require.Equal(t, 5, len(paths))
 		}
 	}
 
@@ -206,11 +207,12 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 		require.True(t, ok)
 		paths, err = view.List(context.Background(), billing.GetMonthlyBillingPath(localPathPrefix, previousMonth))
 		require.NoError(t, err)
-		require.Equal(t, 4, len(paths))
+		require.Equal(t, 5, len(paths))
 	}
 
 	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts())
 	require.Equal(t, uint64(0), core.GetInMemoryTransformDataProtectionCallCounts())
+	require.Equal(t, uint64(0), core.GetInMemoryGcpKmsDataProtectionCallCounts())
 	require.False(t, core.consumptionBilling.KmipSeenEnabledThisMonth.Load())
 }
 
@@ -268,6 +270,9 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 			transitCounts, err := core.GetStoredTransitCallCounts(context.Background(), month)
 			require.NoError(t, err)
 			require.Equal(t, uint64(10), transitCounts)
+			gcpKmsCounts, err := core.GetStoredGcpKmsCallCounts(context.Background(), month)
+			require.NoError(t, err)
+			require.Equal(t, uint64(10), gcpKmsCounts)
 			thirdPartyPluginCounts, err := core.GetStoredThirdPartyPluginCounts(context.Background(), month)
 			require.NoError(t, err)
 			require.Equal(t, 10, thirdPartyPluginCounts)
@@ -277,6 +282,7 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 	for _, month := range []time.Time{twoMonthsAgo, previousMonth} {
 
 		core.storeTransitCallCountsLocked(context.Background(), uint64(10), billing.LocalPrefix, month)
+		core.storeGcpKmsCallCountsLocked(context.Background(), uint64(10), billing.LocalPrefix, month)
 		core.storeThirdPartyPluginCountsLocked(context.Background(), billing.LocalPrefix, month, 10)
 
 		for _, localPathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
@@ -303,6 +309,8 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 		if localPathPrefix == billing.LocalPrefix {
 			transitCounts, _ := core.GetStoredTransitCallCounts(context.Background(), twoMonthsAgo)
 			require.Equal(t, uint64(0), transitCounts)
+			gcpKmsCounts, _ := core.GetStoredGcpKmsCallCounts(context.Background(), twoMonthsAgo)
+			require.Equal(t, uint64(0), gcpKmsCounts)
 			thirdPartyPluginCounts, _ := core.GetStoredThirdPartyPluginCounts(context.Background(), twoMonthsAgo)
 			require.Equal(t, 0, thirdPartyPluginCounts)
 		}
@@ -313,5 +321,6 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 
 	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts())
 	require.Equal(t, uint64(0), core.GetInMemoryTransformDataProtectionCallCounts())
+	require.Equal(t, uint64(0), core.GetInMemoryGcpKmsDataProtectionCallCounts())
 	require.False(t, core.consumptionBilling.KmipSeenEnabledThisMonth.Load())
 }

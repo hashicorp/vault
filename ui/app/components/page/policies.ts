@@ -81,9 +81,9 @@ export default class PagePoliciesComponent extends Component<Args> {
         });
   }
 
-  // starting policies are 'default' and if in the root namespace, 'root' or 'hcp-root'
+  // starting policies are 'default', 'default-ceiling' and if in the root namespace, 'root' or 'hcp-root'
   get hasOnlyDefaultPolicies() {
-    const expectedLength = this.namespace.inRootNamespace ? 2 : 1;
+    const expectedLength = this.namespace.inRootNamespace ? 3 : 2;
     return this.args.model.meta?.total <= expectedLength;
   }
 

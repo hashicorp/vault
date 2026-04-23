@@ -487,9 +487,8 @@ scenario "upgrade" {
       from a HashiCorp Vault license to an IBM PAO license. This step only updates the license file on disk, the
       new license won't be in effect until after the upgrade_vault step restarts the Vault service.
     EOF
-    # TODO: the semverconstraint should actually be for 2.0.0, but it is tagged as 1.22.0 for now
-    skip_step = matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<1.22.0-0") || matrix.edition == "ce"
-    module    = module.vault_update_license_ibm
+    skip_step   = matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<2.0.0-0") || matrix.edition == "ce"
+    module      = module.vault_update_license_ibm
     depends_on = [
       step.read_vault_license,
       step.create_vault_cluster,
@@ -521,8 +520,7 @@ scenario "upgrade" {
     module      = module.vault_upgrade
     depends_on = [
       step.create_vault_cluster,
-      # TODO: the semverconstraint should actually be for 2.0.0, but it is tagged as 1.22.0 for now
-      (matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<1.22.0-0") || matrix.edition == "ce") ? step.verify_secrets_engines_create : step.update_license_ibm,
+      (matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<2.0.0-0") || matrix.edition == "ce") ? step.verify_secrets_engines_create : step.update_license_ibm,
     ]
 
     providers = {
@@ -763,9 +761,8 @@ scenario "upgrade" {
     description = <<-EOF
       If the update_license_ibm step was executed, verify that the new IBM license is now being used.
     EOF
-    # TODO: the semverconstraint should actually be for 2.0.0, but it is tagged as 1.22.0 for now
-    skip_step = matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<1.22.0-0") || matrix.edition == "ce"
-    module    = module.vault_verify_ibm_license_update
+    skip_step   = matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<2.0.0-0") || matrix.edition == "ce"
+    module      = module.vault_verify_ibm_license_update
     depends_on = [
       step.update_license_ibm,
       step.upgrade_vault,
@@ -798,8 +795,7 @@ scenario "upgrade" {
     description = global.description.verify_log_secrets
     module      = module.verify_log_secrets
     depends_on = [
-      # TODO: the semverconstraint should actually be for 2.0.0, but it is tagged as 1.22.0 for now
-      (matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<1.22.0-0") || matrix.edition == "ce") ? step.verify_secrets_engines_read : step.verify_ibm_license_update,
+      (matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<2.0.0-0") || matrix.edition == "ce") ? step.verify_secrets_engines_read : step.verify_ibm_license_update,
     ]
 
     providers = {
@@ -814,12 +810,11 @@ scenario "upgrade" {
     ]
 
     variables {
-      audit_log_file_path = step.create_vault_cluster.audit_device_file_path
-      leader_host         = step.get_updated_vault_cluster_ips.leader_host
-      vault_addr          = step.create_vault_cluster.api_addr_localhost
-      vault_root_token    = step.create_vault_cluster.root_token
-      # TODO: the semverconstraint should actually be for 2.0.0, but it is tagged as 1.22.0 for now
-      vault_ibm_license_customer_id = (matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<1.22.0-0") || matrix.edition == "ce") ? "" : step.verify_ibm_license_update.customer_id
+      audit_log_file_path           = step.create_vault_cluster.audit_device_file_path
+      leader_host                   = step.get_updated_vault_cluster_ips.leader_host
+      vault_addr                    = step.create_vault_cluster.api_addr_localhost
+      vault_root_token              = step.create_vault_cluster.root_token
+      vault_ibm_license_customer_id = (matrix.license_update == "none" || semverconstraint(var.vault_product_version, "<2.0.0-0") || matrix.edition == "ce") ? "" : step.verify_ibm_license_update.customer_id
     }
   }
 

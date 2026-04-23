@@ -59,9 +59,6 @@ func getCluster(t *testing.T, numCores int, types ...consts.PluginType) *vault.T
 		HandlerFunc: vaulthttp.Handler,
 	})
 
-	cluster.Start()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
-
 	return cluster
 }
 
@@ -87,9 +84,6 @@ func TestExternalPlugin_RollbackAndReload(t *testing.T) {
 		},
 		HandlerFunc: vaulthttp.Handler,
 	})
-
-	cluster.Start()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 
 	core := cluster.Cores[0]
 	plugin := cluster.Plugins[0]
@@ -183,7 +177,6 @@ func TestExternalPlugin_ContinueOnError(t *testing.T) {
 
 func testExternalPlugin_ContinueOnError(t *testing.T, mismatch bool, pluginType consts.PluginType) {
 	cluster := getCluster(t, 1, pluginType)
-	t.Cleanup(cluster.Cleanup)
 
 	core := cluster.Cores[0]
 	plugin := cluster.Plugins[0]
@@ -293,7 +286,6 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 	// getCluster calls pluginhelper.CompilePlugin which builds the approle
 	// auth method as a stand-in for the PluginTypeCredential
 	cluster := getCluster(t, 5, consts.PluginTypeCredential)
-	t.Cleanup(cluster.Cleanup)
 
 	plugin := cluster.Plugins[0]
 	client := cluster.Cores[0].Client
@@ -412,7 +404,6 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 // method after reload
 func TestExternalPlugin_AuthMethodReload(t *testing.T) {
 	cluster := getCluster(t, 1, consts.PluginTypeCredential)
-	t.Cleanup(cluster.Cleanup)
 
 	plugin := cluster.Plugins[0]
 	client := cluster.Cores[0].Client
@@ -494,7 +485,6 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 	// getCluster calls pluginhelper.CompilePlugin which builds the consul
 	// secrets engine as a stand-in for the PluginTypeSecrets
 	cluster := getCluster(t, 1, consts.PluginTypeSecrets)
-	t.Cleanup(cluster.Cleanup)
 
 	plugin := cluster.Plugins[0]
 	client := cluster.Cores[0].Client
@@ -598,7 +588,6 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 func TestExternalPlugin_SecretsEngineReload(t *testing.T) {
 	t.Parallel()
 	cluster := getCluster(t, 1, consts.PluginTypeSecrets)
-	t.Cleanup(cluster.Cleanup)
 
 	plugin := cluster.Plugins[0]
 	client := cluster.Cores[0].Client
@@ -671,7 +660,6 @@ func TestExternalPlugin_Database(t *testing.T) {
 	// getCluster calls pluginhelper.CompilePlugin which builds the postgres
 	// database engine as a stand-in for the PluginTypeSecrets
 	cluster := getCluster(t, 1, consts.PluginTypeDatabase)
-	t.Cleanup(cluster.Cleanup)
 
 	plugin := cluster.Plugins[0]
 	client := cluster.Cores[0].Client
@@ -805,7 +793,6 @@ func TestExternalPlugin_Database(t *testing.T) {
 func TestExternalPlugin_DatabaseReload(t *testing.T) {
 	t.Parallel()
 	cluster := getCluster(t, 1, consts.PluginTypeDatabase)
-	t.Cleanup(cluster.Cleanup)
 
 	plugin := cluster.Plugins[0]
 	client := cluster.Cores[0].Client
@@ -940,7 +927,6 @@ func testExternalPluginMetadataAuditLog(t *testing.T, log map[string]interface{}
 // in audit log when it is enabled
 func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) {
 	cluster := getCluster(t, 1, consts.PluginTypeCredential)
-	t.Cleanup(cluster.Cleanup)
 
 	plugin := cluster.Plugins[0]
 	client := cluster.Cores[0].Client
@@ -1018,7 +1004,6 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) 
 // in audit log when it is enabled
 func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
 	cluster := getCluster(t, 1, consts.PluginTypeSecrets)
-	t.Cleanup(cluster.Cleanup)
 
 	plugin := cluster.Plugins[0]
 	client := cluster.Cores[0].Client
@@ -1174,7 +1159,6 @@ func expectRunningVersion(t *testing.T, client *api.Client, plugin pluginhelpers
 // of upgrading an external plugin gated by pinned versions.
 func TestCore_UpgradePluginUsingPinnedVersion_AuthAndSecret(t *testing.T) {
 	cluster := getCluster(t, 1, consts.PluginTypeCredential, consts.PluginTypeSecrets)
-	t.Cleanup(cluster.Cleanup)
 
 	client := cluster.Cores[0].Client
 
@@ -1226,7 +1210,6 @@ func TestCore_UpgradePluginUsingPinnedVersion_AuthAndSecret(t *testing.T) {
 // of upgrading an external database plugin gated by pinned versions.
 func TestCore_UpgradePluginUsingPinnedVersion_Database(t *testing.T) {
 	cluster := getCluster(t, 3, consts.PluginTypeDatabase)
-	t.Cleanup(cluster.Cleanup)
 
 	client := cluster.Cores[0].Client
 	plugin := cluster.Plugins[0]

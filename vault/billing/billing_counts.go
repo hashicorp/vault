@@ -13,6 +13,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	uberatomic "go.uber.org/atomic"
 )
 
 const (
@@ -24,10 +25,12 @@ const (
 	KmseHWMCountsHWM                        = "maxKmseCounts/"
 	TransitDataProtectionCallCountsPrefix   = "transitDataProtectionCallCounts/"
 	TransformDataProtectionCallCountsPrefix = "transformDataProtectionCallCounts/"
+	GcpKmsDataProtectionCallCountsPrefix    = "gcpKmsDataProtectionCallCounts/"
 	LocalPrefix                             = "local/"
 	ThirdPartyPluginsPrefix                 = "thirdPartyPluginCounts/"
 	KmipEnabledPrefix                       = "kmipEnabled/"
 	PkiDurationAdjustedCountPrefix          = "normalizedCertsIssued/"
+	SpiffeJwtNormalizedTokenUnits           = "spiffeJwtNormalizedTokenUnits/"
 	MetricsLastUpdatedAtPrefix              = "metricsLastUpdatedAt/"
 	SSHCertificateMetric                    = "ssh/normalized-certs-issued"
 	SSHOTPMetric                            = "ssh/credential-count"
@@ -47,6 +50,7 @@ type ConsumptionBilling struct {
 
 	BillingConfig            BillingConfig
 	DataProtectionCallCounts DataProtectionCallCounts
+	IdentityTokenUnits       IdentityTokenUnits
 	Logger                   log.Logger
 
 	// KmipSeenEnabledThisMonth tracks whether KMIP has been enabled during the current billing month.
@@ -80,6 +84,14 @@ func GetMonthlyBillingPath(localPrefix string, now time.Time) string {
 type DataProtectionCallCounts struct {
 	Transit   *atomic.Uint64 `json:"transit,omitempty"`
 	Transform *atomic.Uint64 `json:"transform,omitempty"`
+	GcpKms    *atomic.Uint64 `json:"gcpkms,omitempty"`
+}
+
+// IdentityTokenUnits tracks billing metrics for identity and authentication services
+type IdentityTokenUnits struct {
+	// SpiffeJwt stores duration-adjusted JWT token units as float64
+	// We need to use the uberAtomic package to store atomic float64 values
+	SpiffeJwt *uberatomic.Float64 `json:"spiffe_jwt,omitempty"`
 }
 
 var _ logical.ConsumptionBillingManager = (*ConsumptionBilling)(nil)
@@ -106,6 +118,23 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.DataProtectionCallCounts.Transform.Add(val)
+	case "spiffe":
+		// SPIFFE JWT uses float64 for duration-adjusted units
+		val, ok := data["units"].(float64)
+		if !ok {
+			err := fmt.Errorf("invalid value type for spiffe")
+			return err
+		}
+
+		s.IdentityTokenUnits.SpiffeJwt.Add(val)
+	case "gcpkms":
+		val, ok := data["count"].(uint64)
+		if !ok {
+			err := fmt.Errorf("invalid value type for gcp kms")
+			return err
+		}
+
+		s.DataProtectionCallCounts.GcpKms.Add(val)
 	default:
 		err := fmt.Errorf("unknown metric type: %s", mountType)
 		return err

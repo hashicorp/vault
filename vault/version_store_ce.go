@@ -8,3 +8,7 @@ package vault
 func IsEnterpriseToken(token string) bool {
 	return false
 }
+
+func IsEnterpriseTokenId(tokenID string) bool {
+	return false
+}

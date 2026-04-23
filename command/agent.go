@@ -864,13 +864,10 @@ func (c *AgentCommand) Run(args []string) int {
 			cancelFunc()
 		})
 
-		// ah.TemplateTokenCh is a buffered channel of size 1 — each token sent by
-		// the auth handler is consumed by exactly one reader. When a PKI external CA
-		// server is also running, both it and the template server need every token.
-		// Without a fan-out, they race and one silently misses tokens, leaving the
-		// template runner never started and templates never rendered.
-		// The fan-out goroutine reads each token once and forwards it to a separate
-		// channel for each consumer.
+		// When a PKI external CA server is running, both it and the template server
+		// need every token. The auth handler sends tokens to ah.PKIExternalCATokenCh
+		// when PKI is configured. This fan-out goroutine reads each token once from
+		// ah.PKIExternalCATokenCh and forwards it to separate channels for each consumer.
 		templateTokenCh := ah.TemplateTokenCh
 		var pkiTokenCh chan string
 		if ps != nil {
@@ -881,7 +878,7 @@ func (c *AgentCommand) Run(args []string) int {
 					select {
 					case <-ctx.Done():
 						return
-					case token, ok := <-ah.TemplateTokenCh:
+					case token, ok := <-ah.PKIExternalCATokenCh:
 						if !ok {
 							return
 						}

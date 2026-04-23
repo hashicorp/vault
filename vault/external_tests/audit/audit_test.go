@@ -356,7 +356,6 @@ func TestAudit_BeforePostUnseal(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1,
 	})
-	defer cluster.Cleanup()
 
 	testhelpers.WaitForActiveNode(t, cluster)
 	err := cluster.Cores[0].Client.Sys().Mount("test", &api.MountInput{

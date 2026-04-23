@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Add Freshest CRL extension (Delta CRL Distribution Points) to base CRLs
+```

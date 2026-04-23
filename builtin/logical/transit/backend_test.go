@@ -2024,8 +2024,6 @@ func TestTransitPKICSR(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	cores := cluster.Cores
 

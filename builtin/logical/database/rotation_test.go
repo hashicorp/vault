@@ -44,8 +44,7 @@ const (
 )
 
 func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -253,8 +252,7 @@ func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
 // rotations can successfully recover and that they do not occur outside of a
 // rotation window.
 func TestBackend_StaticRole_Rotation_Schedule_ErrorRecover(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	t.Cleanup(cluster.Cleanup)
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -441,8 +439,7 @@ func TestBackend_StaticRole_Rotation_Schedule_ErrorRecover(t *testing.T) {
 // for non-static accounts, which doesn't make sense anyway, but doesn't hurt to
 // verify we return an error
 func TestBackend_StaticRole_Rotation_NonStaticError(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -545,8 +542,7 @@ func TestBackend_StaticRole_Rotation_NonStaticError(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotation_Revoke_user(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -723,8 +719,7 @@ func verifyPgConn(t *testing.T, username, password, connURL string) {
 //
 // First scenario, WAL contains a role name that does not exist.
 func TestBackend_StaticRole_Rotation_QueueWAL_discard_role_not_found(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	ctx := context.Background()
 
@@ -764,8 +759,7 @@ func TestBackend_StaticRole_Rotation_QueueWAL_discard_role_not_found(t *testing.
 // Second scenario, WAL contains a role name that does exist, but the role's
 // LastVaultRotation is greater than the WAL has
 func TestBackend_StaticRole_Rotation_QueueWAL_discard_role_newer_rotation_date(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	ctx := context.Background()
 
@@ -1029,8 +1023,7 @@ func TestBackend_StaticRole_Rotation_MongoDBAtlas(t *testing.T) {
 // does not break on invalid values.
 func TestQueueTickIntervalKeyConfig(t *testing.T) {
 	t.Parallel()
-	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
+	_, sys := getCluster(t)
 
 	values := []string{"1", "0", "-1"}
 	for _, v := range values {
@@ -1060,8 +1053,7 @@ func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts
 		}
 	}()
 
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -1224,8 +1216,7 @@ type createUserCommand struct {
 
 // Demonstrates a bug fix for the credential rotation not releasing locks
 func TestBackend_StaticRole_Rotation_LockRegression(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -1303,8 +1294,7 @@ func TestBackend_StaticRole_Rotation_LockRegression(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotation_Invalid_Role(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}

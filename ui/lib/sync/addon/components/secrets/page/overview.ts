@@ -11,13 +11,14 @@ import { action } from '@ember/object';
 import Ember from 'ember';
 import { macroCondition, isDevelopingApp } from '@embroider/macros';
 import { findDestination } from 'core/helpers/sync-destinations';
+import { DestinationType } from 'sync/utils/constants';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type VersionService from 'vault/services/version';
 import type FlagsService from 'vault/services/flags';
 import type ApiService from 'vault/services/api';
 import type { SystemReadSyncDestinationsTypeNameAssociationsResponse } from '@hashicorp/vault-client-typescript';
-import type { ListDestination, DestinationMetrics, AssociatedSecret, DestinationType } from 'vault/sync';
+import type { ListDestination, DestinationMetrics, AssociatedSecret } from 'vault/sync';
 
 interface Args {
   destinations: ListDestination[];

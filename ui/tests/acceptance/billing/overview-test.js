@@ -193,10 +193,10 @@ module('Acceptance | billing/overview', function (hooks) {
 
     assert.dom(SELECTORS.metricDetail(NormalizedBillingMetrics.STATIC_SECRETS_KV)).exists();
     assert.dom(SELECTORS.metricDetailValue(NormalizedBillingMetrics.STATIC_SECRETS_KV)).hasText('10');
-    assert.dom(SELECTORS.metricDetail(NormalizedBillingMetrics.DYNAMIC_ROLES)).exists();
-    assert.dom(SELECTORS.metricDetailValue(NormalizedBillingMetrics.DYNAMIC_ROLES)).hasText('0');
-    assert.dom(SELECTORS.metricDetail(NormalizedBillingMetrics.STATIC_ROLES)).exists();
-    assert.dom(SELECTORS.metricDetailValue(NormalizedBillingMetrics.STATIC_ROLES)).hasText('0');
+    assert.dom(SELECTORS.metricDetail(NormalizedBillingMetrics.DYNAMIC_ROLES_TOTAL)).exists();
+    assert.dom(SELECTORS.metricDetailValue(NormalizedBillingMetrics.DYNAMIC_ROLES_TOTAL)).hasText('60');
+    assert.dom(SELECTORS.metricDetail(NormalizedBillingMetrics.AUTO_ROTATED_ROLES_TOTAL)).exists();
+    assert.dom(SELECTORS.metricDetailValue(NormalizedBillingMetrics.AUTO_ROTATED_ROLES_TOTAL)).hasText('30');
 
     assert.dom(GENERAL.cardContainer('Credential units')).exists();
     assert.dom(SELECTORS.metricDetail(NormalizedBillingMetrics.PKI_UNITS_TOTAL)).exists();

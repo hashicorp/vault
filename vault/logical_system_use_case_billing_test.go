@@ -21,11 +21,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestSystemBackend_BillingOverview verifies that the billing overview endpoint
+// TestSystemBackend_BillingOverviewMonthFormat verifies that the billing overview endpoint
 // returns the correct response structure with current and previous month data.
 // It validates the response format, month strings (YYYY-MM), RFC3339 timestamps,
 // and ensures both months are present in the response.
-func TestSystemBackend_BillingOverview(t *testing.T) {
+func TestSystemBackend_BillingOverviewMonthFormat(t *testing.T) {
 	_, b, _ := testCoreSystemBackend(t)
 	ctx := namespace.RootContext(nil)
 
@@ -164,9 +164,9 @@ func TestSystemBackend_BillingOverview_WithMetrics(t *testing.T) {
 	require.True(t, foundStaticSecrets, "static_secrets metric should be present")
 }
 
-// TestSystemBackend_BillingOverview_MetricFormats validates that different metric types
+// TestSystemBackend_BillingOverview_MetricTypeFormat validates that different metric types
 // in the billing overview response have the correct data structure.
-func TestSystemBackend_BillingOverview_MetricFormats(t *testing.T) {
+func TestSystemBackend_BillingOverview_MetricTypeFormat(t *testing.T) {
 	c, _, root, _ := TestCoreUnsealedWithMetricsAndConfig(t, &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			pluginconsts.SecretEngineKV:       logicalKv.Factory,
@@ -299,6 +299,12 @@ func TestSystemBackend_BillingOverview_MetricFormats(t *testing.T) {
 	_, err = c.UpdateStoredSSHOTPCount(ctx, currentMonth, c.certCountManager.GetCounts().SSHIssuedOTPs)
 	require.NoError(t, err)
 
+	// Write GCP KMS count directly to storage
+	c.consumptionBilling.BillingStorageLock.Lock()
+	err = c.storeGcpKmsCallCountsLocked(ctx, uint64(5), billing.LocalPrefix, currentMonth)
+	c.consumptionBilling.BillingStorageLock.Unlock()
+	require.NoError(t, err)
+
 	// Make a request to the billing overview endpoint
 	req = logical.TestRequest(t, logical.ReadOperation, "billing/overview")
 	req.Data["refresh_data"] = true
@@ -391,7 +397,7 @@ func TestSystemBackend_BillingOverview_MetricFormats(t *testing.T) {
 			require.Contains(t, metricData, "total")
 			total, ok := metricData["total"].(uint64)
 			require.True(t, ok)
-			require.Equal(t, total, uint64(1))
+			require.Equal(t, total, uint64(6)) // 1 transit + 5 gcpkms
 
 			require.Contains(t, metricData, "metric_details")
 			metricDetails, ok := metricData["metric_details"].([]map[string]interface{})
@@ -399,6 +405,7 @@ func TestSystemBackend_BillingOverview_MetricFormats(t *testing.T) {
 			require.NotEmpty(t, metricDetails)
 
 			foundTransit := false
+			foundGcpKms := false
 			for _, detail := range metricDetails {
 				if detail["type"] == "transit" {
 					foundTransit = true
@@ -406,8 +413,15 @@ func TestSystemBackend_BillingOverview_MetricFormats(t *testing.T) {
 					require.True(t, ok)
 					require.Equal(t, count, uint64(1))
 				}
+				if detail["type"] == "gcpkms" {
+					foundGcpKms = true
+					count, ok := detail["count"].(uint64)
+					require.True(t, ok)
+					require.Equal(t, count, uint64(5))
+				}
 			}
 			require.True(t, foundTransit, "should have transit type in metric_details")
+			require.True(t, foundGcpKms, "should have gcpkms type in metric_details")
 
 		case "pki_units":
 			require.Contains(t, metricData, "total")
@@ -543,6 +557,7 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 		"pki_units":             false,
 		"managed_keys":          false,
 		"ssh_units":             false,
+		"id_token_units":        false,
 	}
 
 	for _, metric := range usageMetrics {
@@ -596,10 +611,16 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 			details, ok := metricData["metric_details"].([]map[string]interface{})
 			require.True(t, ok, "%s metric_details should be array", metricName)
 			require.Empty(t, details, "%s metric_details should be empty when total is 0", metricName)
+
 		case "ssh_units":
 			total, ok := metricData["total"].(float64)
 			require.True(t, ok, "ssh_units total should be float64")
 			require.Equal(t, float64(0), total, "ssh_units total should be 0")
+
+		case "id_token_units":
+			total, ok := metricData["total"].(float64)
+			require.True(t, ok, "id_token_units total should be float64")
+			require.Equal(t, float64(0), total, "id_token_units total should be 0")
 		}
 	}
 

@@ -33,6 +33,10 @@ func getEnterpriseTokenIssuer(_ map[string]interface{}) string {
 	return ""
 }
 
+func getEnterpriseTokenTransaction(_ map[string]interface{}) string {
+	return ""
+}
+
 func getEnterpriseTokenAudience(_ map[string]interface{}) []string {
 	return nil
 }

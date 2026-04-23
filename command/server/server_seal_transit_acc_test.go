@@ -137,6 +137,7 @@ func prepareTestContainer(t *testing.T) (func(), *DockerVaultConfig) {
 		ContainerName: "vault",
 		ImageRepo:     "docker.mirror.hashicorp.services/hashicorp/vault",
 		ImageTag:      "latest",
+		Env:           []string{"SKIP_SETCAP=true"},
 		Cmd: []string{
 			"server", "-log-level=trace", "-dev", fmt.Sprintf("-dev-root-token-id=%s", rootToken),
 			"-dev-listen-address=0.0.0.0:8200",

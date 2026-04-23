@@ -380,6 +380,108 @@ func TestPopulate_Basic(t *testing.T) {
 			aliasCustomMetadata: map[string]string{"foo": "abc", "bar": "123"},
 			output:              `{}`,
 		},
+
+		// wildcard templating tests
+		{
+			name:       "wildcard_glob_entity_injection",
+			input:      "path {{identity.entity.name}} {",
+			entityName: "admin*",
+			err:        ErrTemplatedWildcard,
+		},
+		{
+			name:                "wildcard_glob_alias_injection",
+			input:               `path "data/{{identity.entity.aliases.foomount.custom_metadata.dept}}/*" {`,
+			aliasAccessor:       "foomount",
+			aliasCustomMetadata: map[string]string{"dept": "*"},
+			err:                 ErrTemplatedWildcard,
+		},
+		{
+			name:       "wildcard_glob_group_injection",
+			input:      `path "{{identity.groups.ids.groupID.name}}" {\n\tval = {{identity.entity.name}}\n}`,
+			entityName: "entityName",
+			groupName:  "groupName*",
+			err:        ErrTemplatedWildcard,
+		},
+		{
+			name:       "wildcard_glob_outside_of_template",
+			input:      `path "{{identity.entity.name}}*" {`,
+			entityName: "admin",
+			output:     `path "admin*" {`,
+		},
+		{
+			name:     "wildcard_segment_injection",
+			input:    `path "secret/data/teams/{{identity.entity.metadata.team}}/config" {`,
+			metadata: map[string]string{"team": "+"},
+			err:      ErrTemplatedWildcard,
+		},
+		{
+			name: "wildcard_full_example",
+			input: `path "secret/data/{{identity.entity.name}}/*" {
+    capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+path"secret/metadata/{{identity.entity.metadata.team}}/*" {
+    capabilities = ["read", "list"]
+}`,
+			entityName: "*",
+			metadata:   map[string]string{"team": "admin"},
+			err:        ErrTemplatedWildcard,
+		},
+
+		// json templating versions of the wildcard tests
+		{
+			mode:       JSONTemplating,
+			name:       "json_wildcard_glob_entity_injection",
+			input:      "{{identity.entity.name}}",
+			entityName: "admin*",
+			err:        ErrTemplatedWildcard,
+		},
+		{
+			mode:                JSONTemplating,
+			name:                "json_wildcard_glob_alias_injection",
+			input:               "data/{{identity.entity.aliases.foomount.custom_metadata.dept}}/*",
+			aliasAccessor:       "foomount",
+			aliasCustomMetadata: map[string]string{"dept": "*"},
+			err:                 ErrTemplatedWildcard,
+		},
+		{
+			mode:      JSONTemplating,
+			name:      "json_wildcard_glob_group_injection",
+			input:     "{{identity.groups.ids.groupID.name}}",
+			groupName: "groupName*",
+			err:       ErrTemplatedWildcard,
+		},
+		{
+			mode:       JSONTemplating,
+			name:       "json_wildcard_glob_outside_of_template",
+			input:      "secret/data/{{identity.entity.name}}/*",
+			entityName: "admin",
+			output:     `secret/data/"admin"/*`,
+		},
+		{
+			mode:     JSONTemplating,
+			name:     "json_wildcard_segment_injection",
+			input:    "secret/data/teams/{{identity.entity.metadata.team}}/config",
+			metadata: map[string]string{"team": "+"},
+			err:      ErrTemplatedWildcard,
+		},
+		{
+			mode: JSONTemplating,
+			name: "json_wildcard_full_example",
+			input: `{
+  "path": {
+    "secret/data/{{identity.entity.name}}/*": {
+      "capabilities": ["create", "read", "update", "delete", "list"]
+    },
+    "secret/metadata/{{identity.entity.metadata.team}}/*": {
+      "capabilities": ["read", "list"]
+    }
+  }
+}`,
+			entityName: "*",
+			metadata:   map[string]string{"team": "admin"},
+			err:        ErrTemplatedWildcard,
+		},
 	}
 
 	for _, test := range tests {

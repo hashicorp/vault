@@ -64,3 +64,55 @@ func (c *Core) SetInMemoryTransformDataProtectionCallCounts(count uint64) {
 		cb.DataProtectionCallCounts.Transform.Store(count)
 	}
 }
+
+func (c *Core) SetInMemoryGcpKmsDataProtectionCallCounts(count uint64) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.DataProtectionCallCounts.GcpKms.Store(count)
+	}
+}
+
+func (c *Core) GetInMemoryGcpKmsDataProtectionCallCounts() uint64 {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		return cb.DataProtectionCallCounts.GcpKms.Load()
+	}
+	return 0
+}
+
+func (c *Core) ResetInMemoryJwtSpiffeIdentityCounts() {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.IdentityTokenUnits.SpiffeJwt.Store(0)
+	}
+}
+
+func (c *Core) GetInMemoryJwtSpiffeIdentityCounts() float64 {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		return cb.IdentityTokenUnits.SpiffeJwt.Load()
+	}
+	return 0
+}
+
+func (c *Core) SetInMemoryJwtSpiffeIdentityCounts(count float64) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.IdentityTokenUnits.SpiffeJwt.Store(count)
+	}
+}

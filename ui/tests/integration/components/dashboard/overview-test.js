@@ -230,6 +230,18 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
     });
 
+    test('it should hide client count on enterprise when Consumption Billing is enabled', async function (assert) {
+      this.permissions.exactPaths = {
+        'sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+      };
+      this.version.features = ['Consumption Billing'];
+
+      await this.renderComponent();
+      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    });
+
     test('it should hide cards on enterprise in root namespace but no permission', async function (assert) {
       await this.renderComponent();
       assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();

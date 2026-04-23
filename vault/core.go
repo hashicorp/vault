@@ -279,6 +279,16 @@ type Core struct {
 	// endpoints (false, default).
 	enableUnauthRekey *atomic.Bool
 
+	// enableUnauthGenerateRoot controls whether generate-root endpoints are registered as
+	// unauthenticated endpoints (true) or as authenticated sys backend
+	// endpoints (false, default).
+	enableUnauthGenerateRoot *atomic.Bool
+
+	// enableUnauthDROperationToken controls whether DR operation token endpoints are registered as
+	// unauthenticated endpoints (true) or as authenticated sys backend
+	// endpoints (false, default).
+	enableUnauthDROperationToken *atomic.Bool
+
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
@@ -1171,6 +1181,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		rpcLastSuccessfulHeartbeat:     new(atomic.Value),
 		reportingScanDirectory:         conf.ReportingScanDirectory,
 		enableUnauthRekey:              new(atomic.Bool),
+		enableUnauthGenerateRoot:       new(atomic.Bool),
+		enableUnauthDROperationToken:   new(atomic.Bool),
 	}
 
 	c.certCountManager = cert_count.InitCertificateCountManager(c.logger)
@@ -1454,11 +1466,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.clusterAddrBridge = conf.ClusterAddrBridge
 	c.licenseReloadCh = conf.LicenseReload
 
-	// Check if "rekey" is in the EnableUnauthenticatedAccess list
+	// Check if endpoints are in the EnableUnauthenticatedAccess list
 	for _, endpoint := range conf.EnableUnauthenticatedAccess {
-		if endpoint == "rekey" {
+		switch endpoint {
+		case "rekey":
 			c.enableUnauthRekey.Store(true)
-			break
+		case "generate-root":
+			c.enableUnauthGenerateRoot.Store(true)
+		case "generate-operation-token":
+			c.enableUnauthDROperationToken.Store(true)
 		}
 	}
 
@@ -4465,16 +4481,24 @@ func (c *Core) ReloadEnableUnauthenticatedAccess() {
 		return
 	}
 
-	// Check if "rekey" is in the EnableUnauthenticatedAccess list
+	// Check which endpoints are in the EnableUnauthenticatedAccess list
 	enableRekey := false
+	enableGenerateRoot := false
+	enableDROperationToken := false
 	for _, endpoint := range conf.(*server.Config).EnableUnauthenticatedAccess {
-		if endpoint == "rekey" {
+		switch endpoint {
+		case "rekey":
 			enableRekey = true
-			break
+		case "generate-root":
+			enableGenerateRoot = true
+		case "generate-operation-token":
+			enableDROperationToken = true
 		}
 	}
 
 	c.enableUnauthRekey.Store(enableRekey)
+	c.enableUnauthGenerateRoot.Store(enableGenerateRoot)
+	c.enableUnauthDROperationToken.Store(enableDROperationToken)
 }
 
 type PeerNode struct {
@@ -4968,4 +4992,20 @@ func (c *Core) GetEnableUnauthRekey() bool {
 
 func (c *Core) SetEnableUnauthRekey(val bool) {
 	c.enableUnauthRekey.Store(val)
+}
+
+func (c *Core) GetEnableUnauthGenerateRoot() bool {
+	return c.enableUnauthGenerateRoot.Load()
+}
+
+func (c *Core) SetEnableUnauthGenerateRoot(val bool) {
+	c.enableUnauthGenerateRoot.Store(val)
+}
+
+func (c *Core) GetEnableUnauthDROperationToken() bool {
+	return c.enableUnauthDROperationToken.Load()
+}
+
+func (c *Core) SetEnableUnauthDROperationToken(val bool) {
+	c.enableUnauthDROperationToken.Store(val)
 }

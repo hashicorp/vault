@@ -155,7 +155,7 @@
                         data-test-policy-link="edit"
                       >Edit</dd.Interactive>
                     {{/if}}
-                    {{#if (and item.canDelete (not-eq item.name "default"))}}
+                    {{#if (and item.canDelete (not-eq item.name "default") (not-eq item.name "default-ceiling"))}}
                       <dd.Interactive
                         @color="critical"
                         data-test-confirm-action-trigger

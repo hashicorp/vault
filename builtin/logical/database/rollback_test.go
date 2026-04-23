@@ -27,8 +27,7 @@ const (
 //   - Password has been altered on the database
 //   - Password has not been updated in storage
 func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -165,8 +164,7 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 //   - Password has not been altered on the database
 //   - Password has not been updated in storage
 func TestBackend_RotateRootCredentials_WAL_no_rollback_1(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -264,8 +262,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_1(t *testing.T) {
 //   - Password has been altered on the database
 //   - Password has been updated in storage
 func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}

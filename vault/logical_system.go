@@ -109,8 +109,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 		raftChallengeLimiter: rate.NewLimiter(rate.Limit(RaftChallengesPerSecond), RaftInitialChallengeLimit),
 	}
 
-	// Build the unauthenticated paths list. Rekey paths are conditionally added based on
-	// the enableUnauthRekey configuration (retrieved from Core).
+	// Build the unauthenticated paths list.
 	unauthenticatedPaths := []string{
 		"wrapping/lookup",
 		"wrapping/pubkey",
@@ -140,16 +139,14 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 		"unseal",
 		"leader",
 		"health",
-		"generate-root/attempt",
-		"generate-root/update",
 		"decode-token",
 		"mfa/validate",
 	}
 
-	// Note that while rekeyPaths are not part of unauthenticatedPaths, that's
+	// Note that while rekeyPaths and generateRootPaths are not part of unauthenticatedPaths, that's
 	// because they are defined both here and in http.handler.  The latter ones
 	// are unauthenticated and don't use the logical framework.  They are enabled
-	// only when Core.enableUnauthRekey is true, and being more specific paths
+	// only when Core.enableUnauthRekey or Core.enableUnauthGenerateRoot is true, and being more specific paths
 	// than the v1/sys mux path they take precedence when enabled.
 	rekeyPaths := []string{
 		"rekey/init",
@@ -160,6 +157,11 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 		"rekey-recovery-key/verify",
 	}
 
+	generateRootPaths := []string{
+		"generate-root/attempt",
+		"generate-root/update",
+	}
+
 	b.Backend = &framework.Backend{
 		RunningVersion: versions.DefaultBuiltinVersion,
 		Help:           strings.TrimSpace(sysHelpRoot),
@@ -167,6 +169,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"auth/*",
+				"mounts/auth/+/tune",
 				"remount",
 				"audit",
 				"audit/*",
@@ -218,7 +221,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 				managedKeyRegistrySubPath,
 			},
 
-			Binary: rekeyPaths,
+			Binary: append(append(rekeyPaths, generateRootPaths...), entBinaryPaths()...),
 		},
 	}
 	b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, entUnauthenticatedPaths()...)
@@ -1786,6 +1789,62 @@ func (b *SystemBackend) handleRekeyUpdateBarrier(ctx context.Context, req *logic
 
 func (b *SystemBackend) handleRekeyUpdateRecovery(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	return b.handleRekeyUpdate(ctx, true)
+}
+
+// handleGenerateRootAttempt handles the generate-root/attempt endpoint
+func (b *SystemBackend) handleGenerateRootAttempt(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	switch req.Operation {
+	case logical.ReadOperation:
+		return b.handleGenerateRootAttemptGet(ctx)
+	case logical.UpdateOperation:
+		return b.handleGenerateRootAttemptPut(ctx)
+	case logical.DeleteOperation:
+		return b.handleGenerateRootAttemptDelete(ctx)
+	default:
+		return nil, logical.ErrUnsupportedOperation
+	}
+}
+
+func (b *SystemBackend) handleGenerateRootAttemptGet(ctx context.Context) (*logical.Response, error) {
+	status, code, err := HandleSysGenerateRootAttemptGet(ctx, b.Core, "", false)
+	return nonLogicalResponse(status, code, err)
+}
+
+func (b *SystemBackend) handleGenerateRootAttemptPut(ctx context.Context) (*logical.Response, error) {
+	var req GenerateRootInitRequest
+	resp, err := getJSONBody(ctx, &req)
+	if err != nil {
+		return resp, err
+	}
+
+	otp, code, err := HandleSysGenerateRootAttemptPut(b.Core, GenerateStandardRootTokenStrategy, &req, false)
+	if err != nil {
+		return nonLogicalError(code, err)
+	}
+
+	// Return status with OTP if generated
+	status, code, err := HandleSysGenerateRootAttemptGet(ctx, b.Core, otp, false)
+	return nonLogicalResponse(status, code, err)
+}
+
+func (b *SystemBackend) handleGenerateRootAttemptDelete(ctx context.Context) (*logical.Response, error) {
+	code, err := HandleSysGenerateRootAttemptDelete(b.Core, false)
+	if err != nil {
+		return nonLogicalError(code, err)
+	}
+	return nil, nil
+}
+
+// handleGenerateRootUpdate handles the generate-root/update endpoint
+func (b *SystemBackend) handleGenerateRootUpdate(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	var updateReq GenerateRootUpdateRequest
+	resp, err := getJSONBody(ctx, &updateReq)
+	if err != nil {
+		return resp, err
+	}
+
+	result, code, err := HandleSysGenerateRootUpdate(ctx, b.Core, GenerateStandardRootTokenStrategy, &updateReq, false)
+	return nonLogicalResponse(result, code, err)
 }
 
 // handleRekeyVerify handles the rekey/verify endpoint for both barrier and recovery keys

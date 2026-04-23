@@ -180,6 +180,10 @@ const billingOverviewResponse = `{
                 {
                   "type": "transform",
                   "count": 50
+                },
+                {
+                  "type": "gcpkms",
+                  "count": 50
                 }
               ]
             }

@@ -43,7 +43,7 @@ func NewUIConfig(enabled bool, physicalStorage physical.Backend, barrierStorage 
 	if isHVD != "" && isHVD != "0" {                  // only if HVD, set connect-src to include posthog
 		connectSrcHeader = "connect-src 'self' https://eu.i.posthog.com;"
 	}
-	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; "+connectSrcHeader+" img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'")
+	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; "+connectSrcHeader+" img-src 'self' data:; script-src 'self'; style-src 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'")
 	return &UIConfig{
 		physicalStorage: physicalStorage,
 		barrierStorage:  barrierStorage,

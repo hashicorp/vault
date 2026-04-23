@@ -1185,3 +1185,69 @@ func deleteTotpKeyFromStorage(t *testing.T, ctx context.Context, core *Core, mou
 	_, err := core.HandleRequest(ctx, req)
 	require.NoError(t, err)
 }
+
+// TestGcpKmsDataProtectionCallCounts tests that we correctly store and track the GCP KMS data protection call counts
+func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
+	t.Parallel()
+
+	coreConfig := &CoreConfig{
+		BillingConfig: billing.BillingConfig{
+			MetricsUpdateCadence: 3 * time.Second,
+		},
+	}
+	core, _, _, _ := TestCoreUnsealedWithMetricsAndConfig(t, coreConfig)
+
+	ctx := context.Background()
+	currentMonth := time.Now()
+
+	// Simulate GCP KMS plugin writing billing data (this is what the plugin does when operations occur)
+	// In a real scenario, this would be triggered by actual encrypt/decrypt/sign/verify operations
+	err := core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
+		"count": uint64(1),
+	})
+	require.NoError(t, err)
+
+	// Verify that the GCP KMS counter is incremented
+	require.Equal(t, uint64(1), core.GetInMemoryGcpKmsDataProtectionCallCounts())
+
+	// Wait until the data protection calls are updated and verify that the value in storage is correct
+	require.Eventually(t, func() bool {
+		counts, err := core.GetStoredGcpKmsCallCounts(ctx, currentMonth)
+		return err == nil && counts == 1
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// The in memory counter should be reset after the update
+	require.Equal(t, uint64(0), core.GetInMemoryGcpKmsDataProtectionCallCounts())
+
+	// Simulate more operations
+	err = core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
+		"count": uint64(1),
+	})
+	require.NoError(t, err)
+	err = core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
+		"count": uint64(1),
+	})
+	require.NoError(t, err)
+
+	// Verify that the GCP KMS counter is incremented
+	require.Equal(t, uint64(2), core.GetInMemoryGcpKmsDataProtectionCallCounts())
+
+	// Wait until the data protection calls are updated and verify that the value in storage is correct
+	require.Eventually(t, func() bool {
+		counts, err := core.GetStoredGcpKmsCallCounts(ctx, currentMonth)
+		return err == nil && counts == 3
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// The in memory counter should be reset after the update
+	require.Equal(t, uint64(0), core.GetInMemoryGcpKmsDataProtectionCallCounts())
+
+	// Run update again and make sure the value in storage is still 3
+	counts, err := core.UpdateGcpKmsCallCounts(ctx, currentMonth)
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), counts)
+
+	// Verify the value in storage is still 3
+	counts, err = core.GetStoredGcpKmsCallCounts(ctx, currentMonth)
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), counts)
+}

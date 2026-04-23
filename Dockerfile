@@ -41,7 +41,10 @@ RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 # when when our Alpine release is >= 3.23.4
 RUN apk update && apk add --upgrade --no-cache libcap su-exec dumb-init tzdata zlib
 
-COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/
+COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/${BIN_NAME}
+
+# Set IPC_LOCK at build time because the container runs as an unprivileged user
+RUN setcap cap_ipc_lock=+ep /bin/${BIN_NAME}
 
 # /vault/logs is made available to use as a location to store audit logs, if
 # desired; /vault/file is made available to use as a location with the file
@@ -131,7 +134,10 @@ RUN groupadd --gid 1000 vault && \
 
 # Copy in the new Vault from CRT pipeline, rather than fetching it from our
 # public releases.
-COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/
+COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/${BIN_NAME}
+
+# Set IPC_LOCK at build time because the container runs as an unprivileged user
+RUN setcap cap_ipc_lock=+ep /bin/${BIN_NAME}
 
 # /vault/logs is made available to use as a location to store audit logs, if
 # desired; /vault/file is made available to use as a location with the file

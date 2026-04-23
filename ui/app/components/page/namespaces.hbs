@@ -82,7 +82,14 @@
       </Toolbar>
 
       {{#if @model.namespaces.length}}
-        <ListTable @columns={{this.tableColumns}} @data={{this.namespaceIds}}>
+        <ListTable
+          @columns={{this.tableColumns}}
+          @data={{this.namespaceIds}}
+          @pageSize={{@model.pageSize}}
+          @page={{@model.page}}
+          @onPageChange={{this.handlePageChange}}
+          @onPageSizeChange={{this.handlePageSizeChange}}
+        >
           <:popupMenu as |rowData|>
             <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
               <dd.ToggleIcon

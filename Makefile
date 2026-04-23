@@ -244,10 +244,10 @@ proto: check-tools-external
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
 importfmt: check-tools-external
-	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gosimports -w
+	find . -name '*.go' -not -path './.git/*' | grep -v pb.go | grep -v vendor | xargs gosimports -w
 
 fmt: importfmt
-	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
+	find . -name '*.go' -not -path './.git/*' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
 fmtcheck: check-go-fmt
 

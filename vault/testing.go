@@ -700,6 +700,8 @@ func TestWaitPerfStandby(t testing.TB, core *Core) {
 	}
 }
 
+// TestWaitActive waits for a given core to become the active node.
+// This function is NOT required on a new cluster returned by NewTestCluster.
 func TestWaitActive(t testing.TB, core *Core) {
 	t.Helper()
 	if err := TestWaitActiveWithError(core); err != nil {
@@ -772,9 +774,6 @@ func (c *TestCluster) SetRootToken(token string) {
 	for _, c := range c.Cores {
 		c.Client.SetToken(token)
 	}
-}
-
-func (c *TestCluster) Start() {
 }
 
 func (c *TestCluster) start(t testing.TB) {
@@ -1017,6 +1016,12 @@ func (c *TestClusterCore) NetworkLayer() cluster.NetworkLayer {
 	return c.Core.clusterNetworkLayer
 }
 
+// Cleanup cleans up the Vault cluster. It's called automatically and tied to t.Cleanup().
+// This remains for now to satisfy the VaultCluster interface. Changing that could be breaking
+// for users of the SDK.
+//
+// Deprecated: This should almost never be called directly for clusters resulting from
+// NewTestCluster.
 func (c *TestCluster) Cleanup() {
 	c.cleanupOnce.Do(func() {
 		c.Logger.Info("cleaning up vault cluster")

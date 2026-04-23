@@ -61,7 +61,7 @@
     "@ember/string": "~4.0.1",
     "@ember/test-helpers": "~5.2.1",
     "@ember/test-waiters": "~4.1.0",
-    "@embroider/macros": "1.15.0",
+    "@embroider/macros": "~1.20.2",
     "@glimmer/component": "~1.1.2",
     "@glimmer/tracking": "~1.1.2",
     "@glint/template": "^1.7.3",
@@ -94,7 +94,7 @@
     "d3-shape": "~3.2.0",
     "date-fns": "~2.30.0",
     "date-fns-tz": "~1.3.8",
-    "dompurify": "~3.2.5",
+    "dompurify": "~3.3.3",
     "ember-a11y-testing": "~7.1.2",
     "ember-basic-dropdown": "~8.7.0",
     "ember-cli": "~5.8.0",
@@ -172,35 +172,28 @@
   "pnpm": {
     "overrides": {
       "@babel/runtime": "7.27.0",
-      "@embroider/macros": "1.15.0",
-      "@messageformat/runtime": "3.0.2",
-      "ajv@6.12.6": "6.14.0",
-      "ajv@8.17.1": "8.18.0",
+      "@xmldom/xmldom": "0.9.10",
       "ansi-html": "0.0.8",
       "async": "2.6.4",
       "braces": "3.0.3",
-      "eslint-utils": "1.4.3",
-      "express": "4.22.1",
-      "https-proxy-agent": "2.2.4",
-      "ini": "1.3.8",
       "json5": "1.0.2",
       "kind-of": "6.0.3",
       "markdown-it": "14.1.1",
       "micromatch": "4.0.8",
-      "minimatch@<3.1.3": "3.1.5",
-      "minimatch@>=5.0.0 <5.1.7": "5.1.9",
-      "minimatch@>=7.0.0 <7.4.7": "7.4.9",
-      "minimatch@>=8.0.0 <8.0.5": "8.0.7",
-      "minimatch@>=9.0.0 <9.0.6": "9.0.9",
-      "prismjs": "1.30.0",
+      "path-to-regexp": "0.1.13",
       "qs": "6.14.1",
-      "rollup": "2.80.0",
-      "serialize-javascript": "3.1.0",
-      "socket.io": "4.8.1"
+      "rollup": "2.80.0"
     }
   },
   "engines": {
     "node": "20"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "20.20.2",
+      "onFail": "download"
+    }
   },
   "ember": {
     "edition": "octane"
@@ -225,13 +218,13 @@
   "dependencies": {
     "@babel/core": "7.26.10",
     "@babel/eslint-parser": "^7.28.5",
-    "@carbon/charts": "^1.27.2",
+    "@carbon/charts": "^1.27.3",
     "@hashicorp-internal/vault-reporting": "file:vault-reporting/0.21.0.tgz",
     "@hashicorp/design-system-components": "4.24.1",
     "@hashicorp/design-system-tokens": "3.0.0",
     "@hashicorp/vault-client-typescript": "github:hashicorp/vault-client-typescript",
     "ember-auto-import": "2.10.0",
-    "handlebars": "4.7.8",
+    "handlebars": "4.7.9",
     "posthog-js": "1.236.1",
     "uuid": "9.0.1"
   },

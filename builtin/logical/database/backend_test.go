@@ -69,7 +69,6 @@ func getClusterWithFactory(t *testing.T, factory logical.Factory) (*vault.TestCl
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 
@@ -157,8 +156,7 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 // TestBackend_BadConnectionString tests that an error response resulting from
 // a failed connection does not expose the URL. The middleware should sanitize it.
 func TestBackend_BadConnectionString(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -206,8 +204,7 @@ func TestBackend_BadConnectionString(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -472,7 +469,6 @@ func TestBackend_connectionSanitizePrivateKey(t *testing.T) {
 	t.Parallel()
 	dbFactory := &singletonDBFactory{}
 	cluster, sys := getClusterPostgresDBWithFactory(t, dbFactory.factory)
-	defer cluster.Cleanup()
 
 	dbFactory.sys = sys
 	client := cluster.Cores[0].Client.Logical()
@@ -520,8 +516,7 @@ func TestBackend_connectionSanitizePrivateKey(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -773,8 +768,7 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 
 func TestBackend_allowedRoles(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -784,7 +778,6 @@ func TestBackend_allowedRoles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer b.Cleanup(context.Background())
 
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
@@ -970,8 +963,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 }
 
 func TestBackend_RotateRootCredentials(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -1071,8 +1063,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 }
 
 func TestBackend_ConnectionURL_redacted(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	t.Cleanup(cluster.Cleanup)
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -1185,7 +1176,6 @@ func TestBackend_ConnectionURL_redacted(t *testing.T) {
 // for each plugin type.
 func TestBackend_GetConnectionMetrics(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
 
 	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "cassandra-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_CassandraMultiplexed",
 		[]string{fmt.Sprintf("%s=%s", pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)})
@@ -1350,7 +1340,6 @@ func TestBackend_AsyncClose(t *testing.T) {
 	// longer than 750ms.
 	cluster, sys := getCluster(t)
 	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Hanging", []string{})
-	t.Cleanup(cluster.Cleanup)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -1393,8 +1382,8 @@ func TestBackend_AsyncClose(t *testing.T) {
 }
 
 func TestNewDatabaseWrapper_IgnoresBuiltinVersion(t *testing.T) {
-	cluster, sys := getCluster(t)
-	t.Cleanup(cluster.Cleanup)
+	_, sys := getCluster(t)
+
 	_, err := newDatabaseWrapper(context.Background(), "hana-database-plugin", "v1.0.0+builtin", sys, hclog.Default())
 	if err != nil {
 		t.Fatal(err)

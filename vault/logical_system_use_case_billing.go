@@ -125,7 +125,7 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 		return nil, err
 	}
 
-	transitCounts, transformCounts, err := b.Core.getDataProtectionCounts(ctx, month)
+	transitCounts, transformCounts, gcpKmsCounts, err := b.Core.getDataProtectionCounts(ctx, month)
 	if err != nil {
 		return nil, err
 	}
@@ -180,11 +180,14 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 	if transformCounts > 0 {
 		dataProtectionDetails = append(dataProtectionDetails, map[string]interface{}{"type": "transform", "count": transformCounts})
 	}
+	if gcpKmsCounts > 0 {
+		dataProtectionDetails = append(dataProtectionDetails, map[string]interface{}{"type": "gcpkms", "count": gcpKmsCounts})
+	}
 
 	usageMetrics = append(usageMetrics, map[string]interface{}{
 		"metric_name": "data_protection_calls",
 		"metric_data": map[string]interface{}{
-			"total":          transitCounts + transformCounts,
+			"total":          transitCounts + transformCounts + gcpKmsCounts,
 			"metric_details": dataProtectionDetails,
 		},
 	})
@@ -215,6 +218,12 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 		return nil, err
 	}
 	usageMetrics = append(usageMetrics, sshCounts)
+
+	idTokenUnitsMetric, err := b.buildIdTokenUnitsBillingMetric(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+	usageMetrics = append(usageMetrics, idTokenUnitsMetric)
 
 	dataUpdatedAt := b.Core.computeUpdatedAt(ctx, month, currentMonth)
 
@@ -394,6 +403,31 @@ func (b *SystemBackend) buildPkiBillingMetric(ctx context.Context, month time.Ti
 	}, nil
 }
 
+// buildIdTokenUnitsBillingMetric creates the billing metric for id token counts.
+func (b *SystemBackend) buildIdTokenUnitsBillingMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
+	var totalTokens float64
+
+	idTokenDetails := []map[string]interface{}{}
+	spiffeJwtUnits, err := b.Core.GetStoredSpiffeJwtTokenUnits(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving JWT Spiffe duration-adjusted token count for month: %w", err)
+	}
+
+	if spiffeJwtUnits > 0 {
+		idTokenDetails = append(idTokenDetails, map[string]interface{}{"type": "spiffe", "count": spiffeJwtUnits})
+	}
+
+	totalTokens += spiffeJwtUnits
+
+	return map[string]interface{}{
+		"metric_name": "id_token_units",
+		"metric_data": map[string]interface{}{
+			"total":          totalTokens,
+			"metric_details": idTokenDetails,
+		},
+	}, nil
+}
+
 // getRoleCounts retrieves and combines role and managed key counts from replicated and local storage
 func (c *Core) getRoleAndManagedKeyCounts(ctx context.Context, month time.Time) (*RoleCounts, *ManagedKeyCounts, error) {
 	var replicatedRoleCounts *RoleCounts
@@ -457,20 +491,24 @@ func (c *Core) getKvCounts(ctx context.Context, month time.Time) (int, error) {
 	return replicatedKvCounts + localKvCounts, nil
 }
 
-// getDataProtectionCounts retrieves Transit and Transform call counts
+// getDataProtectionCounts retrieves Transit, Transform, and GCP KMS call counts
 // Data protection call counts are stored at local path only
 // Each cluster tracks its own total requests to avoid double counting
-func (c *Core) getDataProtectionCounts(ctx context.Context, month time.Time) (uint64, uint64, error) {
+func (c *Core) getDataProtectionCounts(ctx context.Context, month time.Time) (uint64, uint64, uint64, error) {
 	transitCounts, err := c.GetStoredTransitCallCounts(ctx, month)
 	if err != nil {
-		return 0, 0, fmt.Errorf("error retrieving local transit call counts: %w", err)
+		return 0, 0, 0, fmt.Errorf("error retrieving local transit call counts: %w", err)
 	}
 	transformCounts, err := c.GetStoredTransformCallCounts(ctx, month)
 	if err != nil {
-		return 0, 0, fmt.Errorf("error retrieving local transform call counts: %w", err)
+		return 0, 0, 0, fmt.Errorf("error retrieving local transform call counts: %w", err)
+	}
+	gcpKmsCounts, err := c.GetStoredGcpKmsCallCounts(ctx, month)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("error retrieving local GCP KMS call counts: %w", err)
 	}
 
-	return transitCounts, transformCounts, nil
+	return transitCounts, transformCounts, gcpKmsCounts, nil
 }
 
 // getKmipStatus retrieves KMIP enabled status (always stored at local path)

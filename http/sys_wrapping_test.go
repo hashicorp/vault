@@ -20,15 +20,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	cores := cluster.Cores
-
-	// make it easy to get access to the active
-	core := cores[0].Core
-	vault.TestWaitActive(t, core)
-
 	client := cores[0].Client
 	client.SetToken(cluster.RootToken)
 
