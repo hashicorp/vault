@@ -514,7 +514,7 @@ func TestSystemBackend_BillingOverview_PreviousMonth(t *testing.T) {
 	require.NoError(t, err)
 
 	// The updated_at for previous month should be at the end of that month
-	expectedEndOfMonth := timeutil.EndOfMonth(previousMonth).UTC()
+	expectedEndOfMonth := timeutil.EndOfMonth(previousMonth.UTC())
 	require.Equal(t, expectedEndOfMonth, parsedTime)
 }
 

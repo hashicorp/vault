@@ -116,3 +116,24 @@ func (c *Core) SetInMemoryJwtSpiffeIdentityCounts(count float64) {
 		cb.IdentityTokenUnits.SpiffeJwt.Store(count)
 	}
 }
+
+func (c *Core) GetInMemoryOidcCounts() float64 {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		return cb.IdentityTokenUnits.OidcTokenDuration.Load()
+	}
+	return 0
+}
+
+func (c *Core) SetInMemoryOidcCounts(tokenDuration float64) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.IdentityTokenUnits.OidcTokenDuration.Store(tokenDuration)
+	}
+}

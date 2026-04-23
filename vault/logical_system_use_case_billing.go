@@ -264,7 +264,7 @@ func (c *Core) computeUpdatedAt(ctx context.Context, month, currentMonth time.Ti
 		}
 
 		// Use requested month's canonical end-of-month.
-		dataUpdatedAt = timeutil.EndOfMonth(month.UTC())
+		dataUpdatedAt = timeutil.EndOfMonth(month).UTC()
 	}
 
 	return dataUpdatedAt
@@ -408,6 +408,17 @@ func (b *SystemBackend) buildIdTokenUnitsBillingMetric(ctx context.Context, mont
 	var totalTokens float64
 
 	idTokenDetails := []map[string]interface{}{}
+	oidcTokenCount, err := b.Core.GetStoredOidcDurationAdjustedCount(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving OIDC duration-adjusted token count for month: %w", err)
+	}
+
+	if oidcTokenCount > 0 {
+		idTokenDetails = append(idTokenDetails, map[string]interface{}{"type": "oidc", "count": oidcTokenCount})
+	}
+
+	totalTokens += oidcTokenCount
+
 	spiffeJwtUnits, err := b.Core.GetStoredSpiffeJwtTokenUnits(ctx, month)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving JWT Spiffe duration-adjusted token count for month: %w", err)

@@ -34,6 +34,7 @@ const (
 	MetricsLastUpdatedAtPrefix              = "metricsLastUpdatedAt/"
 	SSHCertificateMetric                    = "ssh/normalized-certs-issued"
 	SSHOTPMetric                            = "ssh/credential-count"
+	OidcDurationAdjustedCountPrefix         = "oidcNormalizedTokenUnits/"
 
 	BillingWriteInterval = 10 * time.Minute
 	// pluginCountsSendTimeout is the timeout for sending plugin counts to the active node
@@ -50,12 +51,13 @@ type ConsumptionBilling struct {
 
 	BillingConfig            BillingConfig
 	DataProtectionCallCounts DataProtectionCallCounts
-	IdentityTokenUnits       IdentityTokenUnits
 	Logger                   log.Logger
 
 	// KmipSeenEnabledThisMonth tracks whether KMIP has been enabled during the current billing month.
 	// This is used to avoid scanning all mounts every 10 minutes for KMIP billing detection.
 	KmipSeenEnabledThisMonth atomic.Bool
+
+	IdentityTokenUnits IdentityTokenUnits
 }
 
 type BillingConfig struct {
@@ -89,6 +91,10 @@ type DataProtectionCallCounts struct {
 
 // IdentityTokenUnits tracks billing metrics for identity and authentication services
 type IdentityTokenUnits struct {
+	// OidcTokenDuration tracks the token duration units (seconds, not duration-adjusted) for billing purposes in memory.
+	// This value is normalized before flushing to storage and is reset to 0 after flush in UpdateOidcDurationAdjustedCount.
+	OidcTokenDuration *uberatomic.Float64 `json:"oidc,omitempty"`
+
 	// SpiffeJwt stores duration-adjusted JWT token units as float64
 	// We need to use the uberAtomic package to store atomic float64 values
 	SpiffeJwt *uberatomic.Float64 `json:"spiffe_jwt,omitempty"`

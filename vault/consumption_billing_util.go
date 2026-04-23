@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -14,6 +15,13 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
+)
+
+const (
+	// standard duration in hours for calculation of duration adjusted units (approx 1 month)
+	DurationAdjustedStandardDuration = 730.0
+	DecimalPrecisionMultiplier       = 10000 // Multiplier for rounding to 4 decimal places (10^4)
+	MinBillableUnits                 = 0.0001
 )
 
 func (c *Core) storeThirdPartyPluginCountsLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, thirdPartyPluginCounts int) error {
@@ -1001,4 +1009,140 @@ func (c *Core) storeSSHOTPCountLocked(ctx context.Context, localPathPrefix strin
 		return nil
 	}
 	return view.Put(ctx, entry)
+}
+
+// GetStoredOidcDurationAdjustedCount retrieves the stored OIDC duration-adjusted token count
+// for the specified month. The count is stored as a float64 string with 4 decimal places of precision.
+// Returns 0 if no count has been stored for the given month.
+func (c *Core) GetStoredOidcDurationAdjustedCount(ctx context.Context, currentMonth time.Time) (float64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, errors.New("consumption billing is not initialized")
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+
+	return c.getStoredOidcDurationAdjustedCountLocked(ctx, currentMonth)
+}
+
+func (c *Core) getStoredOidcDurationAdjustedCountLocked(ctx context.Context, currentMonth time.Time) (float64, error) {
+	billingPath := billing.GetMonthlyBillingMetricPath(billing.LocalPrefix, currentMonth, billing.OidcDurationAdjustedCountPrefix)
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, errors.New("error reading OIDC duration-adjusted token count: billing subview not available")
+	}
+
+	se, err := view.Get(ctx, billingPath)
+	if se == nil || err != nil {
+		return 0, err
+	}
+
+	currentCount, err := strconv.ParseFloat(string(se.Value), 64)
+	if err != nil {
+		return 0, fmt.Errorf("error decoding current OIDC duration-adjusted token count: %w", err)
+	}
+
+	return currentCount, nil
+}
+
+// IncrementOidcTokenCount increments the in-memory OIDC token count and total duration hours.
+// This is called each time an OIDC token is created. The counts are flushed to storage
+// periodically by the consumption billing metrics worker.
+// Note: OidcTokenDuration is not normalized and is duration-adjusted during flush to storage in UpdateOidcDurationAdjustedCount.
+func (c *Core) IncrementOidcTokenCount(durationSeconds float64) {
+	c.consumptionBillingLock.Lock()
+	defer c.consumptionBillingLock.Unlock()
+
+	cb := c.consumptionBilling
+
+	if cb == nil {
+		return
+	}
+
+	// Update raw token duration
+	cb.IdentityTokenUnits.OidcTokenDuration.Add(durationSeconds)
+}
+
+// UpdateOidcDurationAdjustedCountFromMemory reads the in-memory OIDC token counts and duration,
+// normalizes them to duration-adjusted counts, and flushes them to storage.
+// This is called periodically by the consumption billing metrics worker.
+func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth time.Time) error {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
+
+	// Get in-memory raw token duration and reset value in memory
+	// Using Swap to atomically reset the value. If Vault crashes after a successful storage update but before reset, this prevents double counting.
+	totalTokenDurationSecondsFromMemory := cb.IdentityTokenUnits.OidcTokenDuration.Swap(0)
+
+	// Calculate duration-adjusted count from raw data
+	durationAdjustedCountMemory := DurationAdjustedTokenCount(totalTokenDurationSecondsFromMemory)
+
+	return c.storeOidcDurationAdjustedCountLocked(ctx, currentMonth, durationAdjustedCountMemory)
+}
+
+func (c *Core) storeOidcDurationAdjustedCountLocked(ctx context.Context, currentMonth time.Time, inc float64) error {
+	if inc < 0 {
+		return fmt.Errorf("OIDC duration-adjusted increment must be non-negative, got %f", inc)
+	}
+
+	// Get stored count from previous flush
+	// this is duration-adjusted token count from storage
+	currentCount, err := c.getStoredOidcDurationAdjustedCountLocked(ctx, currentMonth)
+	if err != nil {
+		return err
+	}
+
+	// Sum the inc with the stored count which is the updated count
+	newCount := inc + currentCount
+
+	billingPath := billing.GetMonthlyBillingMetricPath(billing.LocalPrefix, currentMonth, billing.OidcDurationAdjustedCountPrefix)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return errors.New("error storing OIDC duration-adjusted token count: billing subview not available")
+	}
+
+	// Write new value
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(strconv.FormatFloat(newCount, 'f', 4, 64)),
+	}
+
+	if err := view.Put(ctx, entry); err != nil {
+		return fmt.Errorf("error writing OIDC duration-adjusted token count: %w", err)
+	}
+
+	return nil
+}
+
+// DurationAdjustedTokenCount calculates the billable units for a token based on its
+// validity duration.
+// WARNING: Beware the maximum value for time.Duration (approximately 290 years).
+// The calculation follows the billing specification:
+// - Standard duration is 730 hours (1 month)
+// - Units = (Validity Hours ÷ 730), rounded to 4 decimal places
+// - Example: 1-year cert (8760 hours) = 12.0000 units
+// - Example: 1-day cert (24 hours) = 0.0329 units
+func DurationAdjustedTokenCount(tokenDurationSeconds float64) float64 {
+	validityHours := tokenDurationSeconds / (time.Hour.Seconds())
+	units := validityHours / DurationAdjustedStandardDuration
+	// Round to 4 decimal places
+	ret := math.Round(units*DecimalPrecisionMultiplier) / DecimalPrecisionMultiplier
+	if ret == 0.0 && tokenDurationSeconds > 0 {
+		// Ensure we don't return 0.0, which would be interpreted as no billable units.
+		return MinBillableUnits
+	}
+	return ret
 }
