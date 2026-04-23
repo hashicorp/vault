@@ -104,17 +104,18 @@ type IdentityStore struct {
 	// operated case insensitively
 	disableLowerCasedNames bool
 
-	router        *Router
-	redirectAddr  string
-	localNode     LocalNode
-	namespacer    Namespacer
-	metrics       metricsutil.Metrics
-	totpPersister TOTPPersister
-	groupUpdater  GroupUpdater
-	tokenStorer   TokenStorer
-	entityCreator EntityCreator
-	mountLister   MountLister
-	mfaBackend    *LoginMFABackend
+	router         *Router
+	redirectAddr   string
+	localNode      LocalNode
+	namespacer     Namespacer
+	metrics        metricsutil.Metrics
+	totpPersister  TOTPPersister
+	groupUpdater   GroupUpdater
+	tokenStorer    TokenStorer
+	entityCreator  EntityCreator
+	mountLister    MountLister
+	mfaBackend     *LoginMFABackend
+	billingCounter BillingCounter
 
 	// aliasLocks is used to protect modifications to alias entries based on the uniqueness factor
 	// which is name + accessor
@@ -156,6 +157,12 @@ type LocalNode interface {
 }
 
 var _ LocalNode = &Core{}
+
+type BillingCounter interface {
+	IncrementOidcTokenCount(validitySeconds float64)
+}
+
+var _ BillingCounter = &Core{}
 
 type Namespacer interface {
 	NamespaceByID(context.Context, string) (*namespace.Namespace, error)

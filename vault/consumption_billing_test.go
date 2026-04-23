@@ -178,16 +178,27 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 				DatabaseStaticRoles:  7,
 			}, localPathPrefix, month)
 			core.storeMaxKvCountsLocked(context.Background(), 10, localPathPrefix, month)
-			core.storeTransitCallCountsLocked(context.Background(), 10, localPathPrefix, month)
-			core.storeGcpKmsCallCountsLocked(context.Background(), 10, localPathPrefix, month)
-			core.storeThirdPartyPluginCountsLocked(context.Background(), localPathPrefix, month, 10)
+
+			// Transit, third-party plugins, ssh credential count and OIDC are local aggregated metrics
+			// and should only be stored under LocalPrefix
+			if localPathPrefix == billing.LocalPrefix {
+				core.storeTransitCallCountsLocked(context.Background(), 10, localPathPrefix, month)
+				core.storeGcpKmsCallCountsLocked(context.Background(), 10, localPathPrefix, month)
+				core.storeThirdPartyPluginCountsLocked(context.Background(), localPathPrefix, month, 10)
+				core.storeOidcDurationAdjustedCountLocked(context.Background(), month, 10)
+				core.storeSSHOTPCountLocked(context.Background(), localPathPrefix, month, 10)
+			}
 
 			// List the data paths to verify that the billing metrics have been stored
 			view, ok := core.GetBillingSubView()
 			require.True(t, ok)
 			paths, err := view.List(context.Background(), billing.GetMonthlyBillingPath(localPathPrefix, month))
 			require.NoError(t, err)
-			require.Equal(t, 5, len(paths))
+			expectedPaths := 2 // ReplicatedPrefix has roles and kv
+			if localPathPrefix == billing.LocalPrefix {
+				expectedPaths = 7 // LocalPrefix has roles, kv, transit, gcp kms, third-party plugins, ssh and OIDC
+			}
+			require.Equal(t, expectedPaths, len(paths))
 		}
 	}
 
@@ -207,12 +218,17 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 		require.True(t, ok)
 		paths, err = view.List(context.Background(), billing.GetMonthlyBillingPath(localPathPrefix, previousMonth))
 		require.NoError(t, err)
-		require.Equal(t, 5, len(paths))
+		expectedPaths := 2 // ReplicatedPrefix has roles and kv
+		if localPathPrefix == billing.LocalPrefix {
+			expectedPaths = 7 // LocalPrefix has roles, kv, transit, gcp kms, third-party plugins, ssh and OIDC
+		}
+		require.Equal(t, expectedPaths, len(paths))
 	}
 
 	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts())
 	require.Equal(t, uint64(0), core.GetInMemoryTransformDataProtectionCallCounts())
 	require.Equal(t, uint64(0), core.GetInMemoryGcpKmsDataProtectionCallCounts())
+	require.Equal(t, float64(0), core.GetInMemoryOidcCounts())
 	require.False(t, core.consumptionBilling.KmipSeenEnabledThisMonth.Load())
 }
 

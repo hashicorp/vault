@@ -1186,6 +1186,372 @@ func deleteTotpKeyFromStorage(t *testing.T, ctx context.Context, core *Core, mou
 	require.NoError(t, err)
 }
 
+// TestGetStoredOidcDurationAdjustedCount tests reading OIDC duration-adjusted token counts from storage
+func TestGetStoredOidcDurationAdjustedCount(t *testing.T) {
+	tests := []struct {
+		name          string
+		storedData    map[time.Time]float64 // month -> duration-adjusted token count to store before test
+		queryMonth    time.Time
+		expectedCount float64
+	}{
+		{
+			name:          "returns zero when no data exists",
+			storedData:    nil,
+			queryMonth:    time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC),
+			expectedCount: 0,
+		},
+		{
+			name: "returns stored count when data exists",
+			storedData: map[time.Time]float64{
+				time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC): 42.5,
+			},
+			queryMonth:    time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC),
+			expectedCount: 42.5,
+		},
+		{
+			name: "returns correct count for first month when multiple months exist",
+			storedData: map[time.Time]float64{
+				time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC): 10.5,
+				time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC): 20.5,
+			},
+			queryMonth:    time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			expectedCount: 10.5,
+		},
+		{
+			name: "returns correct count for second month when multiple months exist",
+			storedData: map[time.Time]float64{
+				time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC): 10.5,
+				time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC): 20.5,
+			},
+			queryMonth:    time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC),
+			expectedCount: 20.5,
+		},
+		{
+			name:          "returns zero for non-existent month",
+			storedData:    nil,
+			queryMonth:    time.Date(2027, 12, 1, 0, 0, 0, 0, time.UTC),
+			expectedCount: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Create fresh core instance for test isolation
+			core, _, _ := TestCoreUnsealed(t)
+			ctx := context.Background()
+
+			// Store test data if provided
+			for month, count := range tt.storedData {
+				err := core.storeOidcDurationAdjustedCountLocked(ctx, month, count)
+				require.NoError(t, err)
+			}
+
+			// Execute test and verify
+			count, err := core.GetStoredOidcDurationAdjustedCount(ctx, tt.queryMonth)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedCount, count)
+		})
+	}
+}
+
+// TestUpdateOidcDurationAdjustedCount tests storing and incrementing OIDC duration-adjusted token counts
+func TestUpdateOidcDurationAdjustedCount(t *testing.T) {
+	tests := []struct {
+		name          string
+		month         time.Time
+		increments    []float64 // sequence of increments to apply
+		expectedCount float64   // expected final duration-adjusted token count
+		errorContains string
+		delta         float64 // delta value for InDelta
+	}{
+		{
+			name:          "stores initial count",
+			month:         time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{15.5},
+			expectedCount: 15.5,
+		},
+		{
+			name:          "increments existing count",
+			month:         time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{10.0, 5.5},
+			expectedCount: 15.5,
+		},
+		{
+			name:          "handles multiple increments",
+			month:         time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{1.5, 2.5, 3.0, 4.5},
+			expectedCount: 11.5,
+		},
+		{
+			name:          "rejects negative increments",
+			month:         time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{100.0, -25.5},
+			expectedCount: 100.0,
+			errorContains: "must be non-negative",
+		},
+		{
+			name:          "handles zero increment",
+			month:         time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{30.0, 0.0},
+			expectedCount: 30.0,
+		},
+		{
+			name:          "handles fractional increments accurately",
+			month:         time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{0.1, 0.2, 0.3},
+			expectedCount: 0.6,
+			// This uses a larger delta because adding small decimals like 0.1, 0.2, 0.3 can introduce floating-point rounding errors
+			// The expected result is 0.6, but due to binary floating-point representation, the actual sum might be 0.5999999999999999 or 0.6000000000000001
+			delta: 0.0001,
+		},
+		{
+			name:          "updates count through public method",
+			month:         time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{25.5},
+			expectedCount: 25.5,
+		},
+		{
+			name:          "handles minimum increment of 0.0001",
+			month:         time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{1.0, 0.0001},
+			expectedCount: 1.0001,
+			// This uses a smaller, more precise delta because:
+			// 1.0 is exactly representable in binary floating-point
+			// 0.0001 is the minimum precision we support (4 decimal places)
+			// The sum 1.0001 should be very close to exact
+			// We need to verify that the 4-decimal precision is maintained, so we use a tighter tolerance (0.00001)
+			delta: 0.00001,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			core, _, _ := TestCoreUnsealed(t)
+			ctx := context.Background()
+
+			// Apply increments sequentially
+			var lastErr error
+			for _, increment := range tt.increments {
+				err := core.storeOidcDurationAdjustedCountLocked(ctx, tt.month, increment)
+				if err != nil {
+					lastErr = err
+					break
+				}
+			}
+
+			// Verify error expectations
+			if tt.errorContains != "" {
+				require.ErrorContains(t, lastErr, tt.errorContains)
+			} else {
+				require.NoError(t, lastErr)
+			}
+
+			// Verify the final count
+			count, err := core.GetStoredOidcDurationAdjustedCount(ctx, tt.month)
+			require.NoError(t, err)
+
+			if tt.delta > 0 {
+				require.InDelta(t, tt.expectedCount, count, tt.delta)
+			} else {
+				require.Equal(t, tt.expectedCount, count)
+			}
+		})
+	}
+}
+
+// TestIncrementOidcTokenCount tests incrementing in-memory OIDC token counts
+func TestIncrementOidcTokenCount(t *testing.T) {
+	tests := []struct {
+		name                       string
+		durations                  []float64 // sequence of token durations in seconds to increment
+		expectedInMemTokenCount    uint64
+		expectedInMemTotalDuration float64
+	}{
+		{
+			name:                       "increments single token",
+			durations:                  []float64{3600.0}, // 1 hour
+			expectedInMemTokenCount:    1,
+			expectedInMemTotalDuration: 3600.0,
+		},
+		{
+			name:                       "increments multiple tokens",
+			durations:                  []float64{3600.0, 7200.0, 1800.0}, // 1h, 2h, 30m
+			expectedInMemTokenCount:    3,
+			expectedInMemTotalDuration: 12600.0,
+		},
+		{
+			name:                       "handles zero duration",
+			durations:                  []float64{3600.0, 0.0, 1800.0},
+			expectedInMemTokenCount:    3,
+			expectedInMemTotalDuration: 5400.0,
+		},
+		{
+			name:                       "handles fractional durations",
+			durations:                  []float64{100.5, 200.3, 300.7},
+			expectedInMemTokenCount:    3,
+			expectedInMemTotalDuration: 601.5,
+		},
+		{
+			name:                       "handles very small durations",
+			durations:                  []float64{0.001, 0.002, 0.003},
+			expectedInMemTokenCount:    3,
+			expectedInMemTotalDuration: 0.006,
+		},
+		{
+			name:                       "handles large number of increments",
+			durations:                  []float64{60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0}, // 10 tokens of 1 min each
+			expectedInMemTokenCount:    10,
+			expectedInMemTotalDuration: 600.0,
+		},
+		{
+			name:                       "handles mixed duration values",
+			durations:                  []float64{1.5, 3600.5, 0.5, 7200.25, 86400.75}, // mix of small and large
+			expectedInMemTokenCount:    5,
+			expectedInMemTotalDuration: 97203.5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Create fresh core instance for test isolation
+			core, _, _ := TestCoreUnsealed(t)
+
+			// Apply increments sequentially
+			for _, duration := range tt.durations {
+				core.IncrementOidcTokenCount(duration)
+			}
+
+			// Verify in-memory counters
+			core.consumptionBillingLock.RLock()
+			actualTotalDuration := core.consumptionBilling.IdentityTokenUnits.OidcTokenDuration.Load()
+			core.consumptionBillingLock.RUnlock()
+			require.Equal(t, tt.expectedInMemTotalDuration, actualTotalDuration)
+		})
+	}
+}
+
+// TestDurationAdjustedTokenCount tests the duration-adjusted token count calculation
+func TestDurationAdjustedTokenCount(t *testing.T) {
+	tests := []struct {
+		name          string
+		tokenDuration float64 // duration in seconds
+		expectedUnits float64 // expected billing units
+	}{
+		{
+			name:          "zero duration returns zero",
+			tokenDuration: 0.0,
+			expectedUnits: 0.0,
+		},
+		{
+			name:          "very small duration returns minimum 0.0001 (MinBillableUnits)",
+			tokenDuration: 1.0, // 1 second
+			expectedUnits: MinBillableUnits,
+		},
+		{
+			name:          "one hour token",
+			tokenDuration: time.Hour.Seconds(), // 1 hour
+			expectedUnits: 0.0014,              // 1/730 rounded to 4 decimals
+		},
+		{
+			name:          "one day token",
+			tokenDuration: 24 * time.Hour.Seconds(), // 24 hours
+			expectedUnits: 0.0329,                   // 24/730 rounded to 4 decimals
+		},
+		{
+			name:          "one week token",
+			tokenDuration: 7 * 24 * time.Hour.Seconds(), // 168 hours
+			expectedUnits: 0.2301,                       // 168/730 rounded to 4 decimals
+		},
+		{
+			name:          "30 day token",
+			tokenDuration: 30 * 24 * time.Hour.Seconds(), // 720 hours
+			expectedUnits: 0.9863,                        // 720/730 rounded to 4 decimals
+		},
+		{
+			name:          "standard duration token (730 hours)",
+			tokenDuration: DurationAdjustedStandardDuration * time.Hour.Seconds(), // 730 hours in seconds
+			expectedUnits: 1.0,
+		},
+		{
+			name:          "90 day token",
+			tokenDuration: 90 * 24 * time.Hour.Seconds(), // 2160 hours
+			expectedUnits: 2.9589,                        // 2160/730 rounded to 4 decimals
+		},
+		{
+			name:          "one year token",
+			tokenDuration: 365 * 24 * time.Hour.Seconds(), // 8760 hours
+			expectedUnits: 12.0,                           // 8760/730 = 12
+		},
+		{
+			name:          "fractional hour token",
+			tokenDuration: 1800.0, // 0.5 hours
+			expectedUnits: 0.0007, // 0.5/730 rounded to 4 decimals
+		},
+		{
+			name:          "rounds to 4 decimal places",
+			tokenDuration: 3650.0, // ~1.014 hours
+			expectedUnits: 0.0014, // 1.014/730 = 0.00138904... rounds to 0.0014
+		},
+		{
+			name:          "minimum non-zero value",
+			tokenDuration: 100.0,  // very small duration
+			expectedUnits: 0.0001, // rounds to 0 but returns minimum 0.0001
+		},
+		{
+			name:          "large duration value",
+			tokenDuration: 315360000.0, // 10 years in seconds
+			expectedUnits: 120.0,       // 87600/730 = 120
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := DurationAdjustedTokenCount(tt.tokenDuration)
+			require.Equal(t, tt.expectedUnits, result)
+		})
+	}
+}
+
+// TestConcurrentOidcDurationAdjustedCount tests concurrent updates to OIDC duration-adjusted counts
+func TestConcurrentOidcDurationAdjustedCount(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := context.Background()
+
+	month := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	numGoroutines := 10
+	incrementPerGoroutine := 1.0
+
+	// Launch concurrent updates
+	done := make(chan bool, numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			// Acquire lock before calling the locked function
+			core.consumptionBilling.BillingStorageLock.Lock()
+			err := core.storeOidcDurationAdjustedCountLocked(ctx, month, incrementPerGoroutine)
+			core.consumptionBilling.BillingStorageLock.Unlock()
+			require.NoError(t, err)
+			done <- true
+		}()
+	}
+
+	// Wait for all goroutines to complete
+	for i := 0; i < numGoroutines; i++ {
+		<-done
+	}
+
+	// Verify the total count
+	count, err := core.GetStoredOidcDurationAdjustedCount(ctx, month)
+	require.NoError(t, err)
+	require.Equal(t, float64(numGoroutines)*incrementPerGoroutine, count)
+}
+
 // TestGcpKmsDataProtectionCallCounts tests that we correctly store and track the GCP KMS data protection call counts
 func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 	t.Parallel()

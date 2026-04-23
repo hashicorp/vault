@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/vault/billing"
-	uberatomic "go.uber.org/atomic"
+	uberAtomic "go.uber.org/atomic"
 )
 
 var (
@@ -33,7 +33,8 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 			GcpKms:    &atomic.Uint64{},
 		},
 		IdentityTokenUnits: billing.IdentityTokenUnits{
-			SpiffeJwt: uberatomic.NewFloat64(0),
+			OidcTokenDuration: uberAtomic.NewFloat64(0),
+			SpiffeJwt:         uberAtomic.NewFloat64(0),
 		},
 		Logger: logger,
 	}
@@ -146,9 +147,27 @@ func (c *Core) deletePreviousMonthBillingMetrics(ctx context.Context, currentMon
 			return err
 		}
 		for _, segment := range metricPaths {
-			err = view.Delete(ctx, billingPath+segment)
-			if err != nil {
-				c.logger.Error("error deleting previous month billing metric", "error", err, "metricPath", billingPath+segment)
+			fullPath := billingPath + segment
+			// If the segment ends with / - recursively delete its contents
+			// For example: ssh/normalized-certs-issued, ssh/credential-count
+			if len(segment) > 0 && segment[len(segment)-1] == '/' {
+				subPaths, err := view.List(ctx, fullPath)
+				if err != nil {
+					c.logger.Error("error listing path for deletion", "error", err, "path", fullPath)
+					continue
+				}
+				for _, subSegment := range subPaths {
+					err = view.Delete(ctx, fullPath+subSegment)
+					if err != nil {
+						c.logger.Error("error deleting previous month billing metric", "error", err, "metricPath", fullPath+subSegment)
+					}
+				}
+			} else {
+				// full path, delete it directly
+				err = view.Delete(ctx, fullPath)
+				if err != nil {
+					c.logger.Error("error deleting previous month billing metric", "error", err, "metricPath", fullPath)
+				}
 			}
 		}
 	}
@@ -165,6 +184,7 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	c.consumptionBilling.IdentityTokenUnits.SpiffeJwt.Store(0)
 	c.consumptionBilling.DataProtectionCallCounts.GcpKms.Store(0)
 	c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
+	c.consumptionBilling.IdentityTokenUnits.OidcTokenDuration.Store(0)
 	return nil
 }
 
@@ -263,6 +283,9 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	}
 	if _, err := c.UpdateTransformCallCounts(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store transform data protection call counts: %w", err)
+	}
+	if err := c.UpdateOidcDurationAdjustedCount(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store OIDC duration-adjusted token count: %w", err)
 	}
 	if _, err := c.UpdateSpiffeJwtTokenUnits(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store SPIFFE JWT token units: %w", err)
