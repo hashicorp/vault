@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix entities page to show success message after successfully editing an entity.  
+```
