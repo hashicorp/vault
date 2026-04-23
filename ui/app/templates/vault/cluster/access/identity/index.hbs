@@ -60,7 +60,11 @@
                 {{/if}}
               {{/if}}
               {{#if item.canEdit}}
-                <dd.Interactive @route="vault.cluster.access.identity.edit" @model={{item.id}}>Edit</dd.Interactive>
+                <dd.Interactive
+                  data-test-popup-menu="edit"
+                  @route="vault.cluster.access.identity.edit"
+                  @model={{item.id}}
+                >Edit</dd.Interactive>
                 {{#if item.disabled}}
                   <dd.Interactive {{on "click" (action "toggleDisabled" item)}}>Enable</dd.Interactive>
                 {{else if (eq this.identityType "entity")}}
