@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -1658,4 +1659,15 @@ func TestRaft_SnapshotLargerMaxRequestSize(t *testing.T) {
 	err = client.Sys().RaftSnapshotRestore(bytes.NewReader(snap), false)
 	require.NoError(t, err)
 	testhelpers.WaitForActiveNode(t, cluster)
+}
+
+// TestRaft_BootstrapWhenSealed ensures raft does not attempt to bootstrap when sealed.
+func TestRaft_BootstrapWhenSealed(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	cluster.EnsureCoresSealed(t)
+
+	_, err := client.Logical().Write("sys/storage/raft/bootstrap", nil)
+	require.ErrorContains(t, err, "node must be unsealed to bootstrap")
 }
