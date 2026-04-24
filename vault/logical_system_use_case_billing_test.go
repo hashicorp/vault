@@ -22,9 +22,9 @@ import (
 )
 
 // TestSystemBackend_BillingOverviewMonthFormat verifies that the billing overview endpoint
-// returns the correct response structure with current and previous month data.
+// returns the correct response structure with billing.BillingRetentionMonths of data.
 // It validates the response format, month strings (YYYY-MM), RFC3339 timestamps,
-// and ensures both months are present in the response.
+// and ensures all months are present in the response with correct formatting.
 func TestSystemBackend_BillingOverviewMonthFormat(t *testing.T) {
 	_, b, _ := testCoreSystemBackend(t)
 	ctx := namespace.RootContext(nil)
@@ -39,47 +39,41 @@ func TestSystemBackend_BillingOverviewMonthFormat(t *testing.T) {
 	// Verify the response structure
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok, "months should be a slice")
-	require.Len(t, months, 2, "should have current and previous month")
+	require.Len(t, months, billing.BillingRetentionMonths, "should have billing.BillingRetentionMonths months")
 
-	// Verify current month structure
-	currentMonth, ok := months[0].(map[string]interface{})
-	require.True(t, ok, "current month should be a map")
-	require.Contains(t, currentMonth, "month")
-	require.Contains(t, currentMonth, "updated_at")
-	require.Contains(t, currentMonth, "usage_metrics")
-
-	// Verify month format (YYYY-MM)
-	monthStr, ok := currentMonth["month"].(string)
-	require.True(t, ok)
-	require.Regexp(t, `^\d{4}-\d{2}$`, monthStr)
-
-	// Verify updated_at format (RFC3339)
-	updatedAt, ok := currentMonth["updated_at"].(string)
-	require.True(t, ok)
-	_, err = time.Parse(time.RFC3339, updatedAt)
-	require.NoError(t, err, "updated_at should be valid RFC3339 timestamp")
-
-	// Verify usage_metrics is a slice
-	_, ok = currentMonth["usage_metrics"].([]map[string]interface{})
-	require.True(t, ok, "usage_metrics should be a slice of maps")
-
-	// Verify previous month structure
-	previousMonth, ok := months[1].(map[string]interface{})
-	require.True(t, ok, "previous month should be a map")
-	require.Contains(t, previousMonth, "month")
-	require.Contains(t, previousMonth, "updated_at")
-	require.Contains(t, previousMonth, "usage_metrics")
-
-	// Verify that current month is actually current
 	now := time.Now()
-	expectedCurrentMonth := now.Format("2006-01")
-	require.Equal(t, expectedCurrentMonth, monthStr)
+	currentMonthStart := timeutil.StartOfMonth(now)
 
-	// Verify that previous month is actually previous
-	prevMonthStr, ok := previousMonth["month"].(string)
-	require.True(t, ok)
-	expectedPreviousMonth := timeutil.StartOfPreviousMonth(now).Format("2006-01")
-	require.Equal(t, expectedPreviousMonth, prevMonthStr)
+	// Loop through all months and verify format
+	for i := 0; i < billing.BillingRetentionMonths; i++ {
+		monthData, ok := months[i].(map[string]interface{})
+		require.True(t, ok, "month %d should be a map", i)
+
+		// Verify all required fields are present
+		require.Contains(t, monthData, "month", "month %d should have 'month' field", i)
+		require.Contains(t, monthData, "updated_at", "month %d should have 'updated_at' field", i)
+		require.Contains(t, monthData, "usage_metrics", "month %d should have 'usage_metrics' field", i)
+
+		// Verify month format (YYYY-MM)
+		monthStr, ok := monthData["month"].(string)
+		require.True(t, ok, "month %d 'month' should be a string", i)
+		require.Regexp(t, `^\d{4}-\d{2}$`, monthStr, "month %d should match YYYY-MM format", i)
+
+		// Verify the month string matches expected value
+		expectedMonthTime := currentMonthStart.AddDate(0, -i, 0)
+		expectedMonth := expectedMonthTime.Format("2006-01")
+		require.Equal(t, expectedMonth, monthStr, "month %d should match expected format", i)
+
+		// Verify updated_at format
+		updatedAt, ok := monthData["updated_at"].(string)
+		require.True(t, ok, "month %d 'updated_at' should be a string", i)
+		_, err = time.Parse(time.RFC3339, updatedAt)
+		require.NoError(t, err, "month %d updated_at should be valid RFC3339 timestamp", i)
+
+		// Verify usage_metrics is a slice
+		_, ok = monthData["usage_metrics"].([]map[string]interface{})
+		require.True(t, ok, "month %d usage_metrics should be a slice of maps", i)
+	}
 }
 
 // TestSystemBackend_BillingOverview_WithMetrics tests the billing overview endpoint
@@ -122,7 +116,7 @@ func TestSystemBackend_BillingOverview_WithMetrics(t *testing.T) {
 	// Verify the response contains metrics
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, 2)
+	require.Len(t, months, billing.BillingRetentionMonths)
 
 	currentMonthData, ok := months[0].(map[string]interface{})
 	require.True(t, ok)
@@ -162,6 +156,37 @@ func TestSystemBackend_BillingOverview_WithMetrics(t *testing.T) {
 		}
 	}
 	require.True(t, foundStaticSecrets, "static_secrets metric should be present")
+
+	// Verify that all previous months (without data) have empty usage_metrics
+	currentMonthStart := timeutil.StartOfMonth(currentMonth)
+	for i := 1; i < billing.BillingRetentionMonths; i++ {
+		monthData, ok := months[i].(map[string]interface{})
+		require.True(t, ok, "month %d should be a map", i)
+
+		// Verify month string format
+		monthStr, ok := monthData["month"].(string)
+		require.True(t, ok, "month %d should have month string", i)
+		expectedMonthTime := currentMonthStart.AddDate(0, -i, 0)
+		expectedMonth := expectedMonthTime.Format("2006-01")
+		require.Equal(t, expectedMonth, monthStr, "month %d should match expected format", i)
+
+		usageMetrics, ok := monthData["usage_metrics"].([]map[string]interface{})
+		require.True(t, ok, "month %d should have usage_metrics", i)
+
+		// Previous months without data should have empty metrics or all zeros
+		if len(usageMetrics) > 0 {
+			// If metrics exist, verify they are all zero
+			for _, metric := range usageMetrics {
+				metricData, ok := metric["metric_data"].(map[string]interface{})
+				if ok {
+					total, ok := metricData["total"].(int)
+					if ok {
+						require.Equal(t, 0, total, "month %d metric total should be 0", i)
+					}
+				}
+			}
+		}
+	}
 }
 
 // TestSystemBackend_BillingOverview_MetricTypeFormat validates that different metric types
@@ -314,7 +339,7 @@ func TestSystemBackend_BillingOverview_MetricTypeFormat(t *testing.T) {
 
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, 2)
+	require.Len(t, months, billing.BillingRetentionMonths)
 
 	currentMonthData, ok := months[0].(map[string]interface{})
 	require.True(t, ok)
@@ -463,19 +488,22 @@ func TestSystemBackend_BillingOverview_MetricTypeFormat(t *testing.T) {
 	require.True(t, metricsFound["data_protection_calls"], "should have data_protection_calls metric")
 	require.True(t, metricsFound["pki_units"], "should have pki_units metric")
 	require.True(t, metricsFound["managed_keys"], "should have managed_keys metric")
+	require.True(t, metricsFound["ssh_units"], "should have ssh_units metric")
 }
 
-// TestSystemBackend_BillingOverview_PreviousMonth verifies that the billing overview
-// endpoint correctly retrieves and formats data for the previous month. It stores
-// billing data for the previous month, validates the previous month string format,
-// enures the updated_at timestamp is set to the end of the previous month, and confirms
-// the previous month data is included in the response.
-func TestSystemBackend_BillingOverview_PreviousMonth(t *testing.T) {
+// TestSystemBackend_BillingOverview_HistoricalMonths verifies that the billing overview
+// endpoint correctly retrieves and formats data for all months. It stores
+// billing data for the previous month, validates month string formats,
+// ensures the updated_at timestamp is set correctly for each month, and confirms
+// all month data is included in the response.
+func TestSystemBackend_BillingOverview_HistoricalMonths(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
 	ctx := namespace.RootContext(nil)
+	now := time.Now().UTC()
+	currentMonth := timeutil.StartOfMonth(now)
 
 	// Store some data for previous month
-	previousMonth := timeutil.StartOfPreviousMonth(time.Now())
+	previousMonth := timeutil.StartOfPreviousMonth(now)
 
 	// Manually store some counts for previous month
 	c.consumptionBilling.BillingStorageLock.Lock()
@@ -488,6 +516,11 @@ func TestSystemBackend_BillingOverview_PreviousMonth(t *testing.T) {
 	err = c.UpdateMetricsLastUpdateTime(ctx, previousMonth, testUpdateTime)
 	require.NoError(t, err)
 
+	// Store metrics last update timestamp for current month
+	currentMonthUpdateTime := time.Date(now.Year(), now.Month(), now.Day(), 10, 30, 0, 0, time.UTC)
+	err = c.UpdateMetricsLastUpdateTime(ctx, currentMonth, currentMonthUpdateTime)
+	require.NoError(t, err)
+
 	// Make a request to the billing overview endpoint
 	req := logical.TestRequest(t, logical.ReadOperation, "billing/overview")
 	resp, err := b.HandleRequest(ctx, req)
@@ -496,26 +529,40 @@ func TestSystemBackend_BillingOverview_PreviousMonth(t *testing.T) {
 
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, 2)
+	require.Len(t, months, billing.BillingRetentionMonths)
 
-	// Check previous month data
-	previousMonthData, ok := months[1].(map[string]interface{})
-	require.True(t, ok)
+	// Loop through all months and verify timestamps
+	for i := 0; i < billing.BillingRetentionMonths; i++ {
+		monthData, ok := months[i].(map[string]interface{})
+		require.True(t, ok, "month %d should be a map", i)
 
-	monthStr, ok := previousMonthData["month"].(string)
-	require.True(t, ok)
-	expectedMonth := previousMonth.Format("2006-01")
-	require.Equal(t, expectedMonth, monthStr)
+		// Verify month string format
+		monthStr, ok := monthData["month"].(string)
+		require.True(t, ok, "month %d should have month string", i)
+		expectedMonthTime := currentMonth.AddDate(0, -i, 0)
+		expectedMonth := expectedMonthTime.Format("2006-01")
+		require.Equal(t, expectedMonth, monthStr, "month %d should match expected format", i)
 
-	// Verify updated_at is end of previous month
-	updatedAt, ok := previousMonthData["updated_at"].(string)
-	require.True(t, ok)
-	parsedTime, err := time.Parse(time.RFC3339, updatedAt)
-	require.NoError(t, err)
+		// Verify updated_at timestamp
+		updatedAt, ok := monthData["updated_at"].(string)
+		require.True(t, ok, "month %d should have updated_at", i)
+		parsedTime, err := time.Parse(time.RFC3339, updatedAt)
+		require.NoError(t, err, "month %d updated_at should parse", i)
 
-	// The updated_at for previous month should be at the end of that month
-	expectedEndOfMonth := timeutil.EndOfMonth(previousMonth.UTC())
-	require.Equal(t, expectedEndOfMonth, parsedTime)
+		// Verify timestamps based on which month we're checking
+		if i == 0 {
+			// Current month should have the timestamp we set
+			require.Equal(t, currentMonthUpdateTime, parsedTime, "current month updated_at should match set time")
+		} else if i == 1 {
+			// Previous month should have timestamp at end of month
+			expectedEndOfMonth := timeutil.EndOfMonth(expectedMonthTime)
+			require.Equal(t, expectedEndOfMonth, parsedTime, "previous month updated_at should be end of month")
+		} else {
+			// Older months without data should have zero time
+			require.True(t, parsedTime.IsZero() || parsedTime.Equal(time.Time{}),
+				"month %d without data should have zero timestamp", i)
+		}
+	}
 }
 
 // TestSystemBackend_BillingOverview_EmptyMetrics verifies that the billing overview
@@ -534,7 +581,7 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 	// Verify the response structure exists
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, 2)
+	require.Len(t, months, billing.BillingRetentionMonths)
 
 	// Check current month has all metrics with zero values
 	currentMonth, ok := months[0].(map[string]interface{})
@@ -628,6 +675,64 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 	for metricName, found := range expectedMetrics {
 		require.True(t, found, "metric %s should be present", metricName)
 	}
+
+	// Verify all previous months also have zero values
+	for i := 1; i < billing.BillingRetentionMonths; i++ {
+		monthData, ok := months[i].(map[string]interface{})
+		require.True(t, ok, "month %d should be a map", i)
+		require.Contains(t, monthData, "usage_metrics", "month %d should have usage_metrics", i)
+
+		usageMetrics, ok := monthData["usage_metrics"].([]map[string]interface{})
+		require.True(t, ok, "month %d usage_metrics should be array", i)
+		require.NotNil(t, usageMetrics, "month %d usage_metrics should not be nil", i)
+
+		// Verify all metrics in previous months have zero values
+		for _, metric := range usageMetrics {
+			metricName, ok := metric["metric_name"].(string)
+			require.True(t, ok, "month %d metric_name should be a string", i)
+
+			metricData, ok := metric["metric_data"].(map[string]interface{})
+			require.True(t, ok, "month %d metric_data should be a map", i)
+
+			// Verify each metric has appropriate zero value
+			switch metricName {
+			case "static_secrets", "dynamic_roles", "auto_rotated_roles":
+				total, ok := metricData["total"].(int)
+				require.True(t, ok)
+				require.Equal(t, 0, total)
+
+			case "kmip":
+				used, ok := metricData["used_in_month"].(bool)
+				require.True(t, ok)
+				require.False(t, used)
+
+			case "external_plugins":
+				total, ok := metricData["total"].(int)
+				require.True(t, ok)
+				require.Equal(t, 0, total)
+
+			case "data_protection_calls":
+				total, ok := metricData["total"].(uint64)
+				require.True(t, ok)
+				require.Equal(t, uint64(0), total)
+
+			case "pki_units":
+				total, ok := metricData["total"].(float64)
+				require.True(t, ok)
+				require.Equal(t, float64(0), total)
+
+			case "managed_keys":
+				total, ok := metricData["total"].(int)
+				require.True(t, ok)
+				require.Equal(t, 0, total)
+
+			case "ssh_units":
+				total, ok := metricData["total"].(float64)
+				require.True(t, ok)
+				require.Equal(t, float64(0), total)
+			}
+		}
+	}
 }
 
 // TestSystemBackend_BillingOverview_MultipleMetricTypes tests the billing overview
@@ -665,7 +770,7 @@ func TestSystemBackend_BillingOverview_MultipleMetricTypes(t *testing.T) {
 
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, 2)
+	require.Len(t, months, billing.BillingRetentionMonths)
 
 	currentMonthData, ok := months[0].(map[string]interface{})
 	require.True(t, ok)
@@ -711,12 +816,9 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp(t *testing.T) {
 
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, 2)
+	require.Len(t, months, billing.BillingRetentionMonths)
 
 	currentMonth, ok := months[0].(map[string]interface{})
-	require.True(t, ok)
-
-	previousMonth, ok := months[1].(map[string]interface{})
 	require.True(t, ok)
 
 	// Get the updated_at timestamp from the first call (current month)
@@ -730,15 +832,20 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, firstTime, lastUpdate, "stored timestamp should match response timestamp")
 
-	// Verify previous month timestamp is zero time (no data stored for previous month)
-	prevMonthUpdatedAt, ok := previousMonth["updated_at"].(string)
-	require.True(t, ok)
-	prevMonthTime, err := time.Parse(time.RFC3339, prevMonthUpdatedAt)
-	require.NoError(t, err)
+	// Verify all previous months have zero timestamp (no data stored for them)
+	for i := 1; i < billing.BillingRetentionMonths; i++ {
+		prevMonth, ok := months[i].(map[string]interface{})
+		require.True(t, ok, "month %d should be a map", i)
 
-	// Previous month should be zero time since we haven't stored any data for it
-	require.True(t, prevMonthTime.IsZero(),
-		"previous month updated_at should be zero time when no data is stored")
+		prevMonthUpdatedAt, ok := prevMonth["updated_at"].(string)
+		require.True(t, ok, "month %d should have updated_at", i)
+		prevMonthTime, err := time.Parse(time.RFC3339, prevMonthUpdatedAt)
+		require.NoError(t, err, "month %d updated_at should parse", i)
+
+		// All previous months should be zero time since we haven't stored any data for them
+		require.True(t, prevMonthTime.IsZero(),
+			"month %d updated_at should be zero time when no data is stored", i)
+	}
 
 	// Wait a moment to ensure time difference
 	time.Sleep(100 * time.Millisecond)
@@ -752,12 +859,9 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp(t *testing.T) {
 
 	months, ok = resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, 2)
+	require.Len(t, months, billing.BillingRetentionMonths)
 
 	currentMonth, ok = months[0].(map[string]interface{})
-	require.True(t, ok)
-
-	previousMonth, ok = months[1].(map[string]interface{})
 	require.True(t, ok)
 
 	// Get the updated_at timestamp from the second call (current month)
@@ -774,11 +878,19 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp(t *testing.T) {
 	require.Equal(t, firstUpdatedAt, secondUpdatedAt,
 		"updated_at without refresh should be identical to the stored timestamp")
 
-	// Verify previous month timestamp remains the same (zero time)
-	secondPrevMonthUpdatedAt, ok := previousMonth["updated_at"].(string)
-	require.True(t, ok)
-	require.Equal(t, prevMonthUpdatedAt, secondPrevMonthUpdatedAt,
-		"previous month updated_at should remain zero time")
+	// Verify all previous months' timestamps remain the same (zero time)
+	for i := 1; i < billing.BillingRetentionMonths; i++ {
+		prevMonth, ok := months[i].(map[string]interface{})
+		require.True(t, ok, "month %d should be a map", i)
+
+		secondPrevMonthUpdatedAt, ok := prevMonth["updated_at"].(string)
+		require.True(t, ok, "month %d should have updated_at", i)
+		secondPrevMonthTime, err := time.Parse(time.RFC3339, secondPrevMonthUpdatedAt)
+		require.NoError(t, err, "month %d updated_at should parse", i)
+
+		require.True(t, secondPrevMonthTime.IsZero(),
+			"month %d updated_at should remain zero time", i)
+	}
 }
 
 // TestSystemBackend_BillingOverview_UpdatedAtTimestamp_NoStoredTimestamp tests the behavior
@@ -801,7 +913,7 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp_NoStoredTimestamp(t *t
 
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, 2)
+	require.Len(t, months, billing.BillingRetentionMonths)
 
 	currentMonth, ok := months[0].(map[string]interface{})
 	require.True(t, ok)
@@ -854,7 +966,7 @@ func TestSystemBackend_BillingOverview_PreviousMonth_WithError(t *testing.T) {
 
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, 2)
+	require.Len(t, months, billing.BillingRetentionMonths)
 
 	// Check previous month data
 	previousMonthData, ok := months[1].(map[string]interface{})

@@ -17,6 +17,10 @@ import (
 )
 
 const (
+	// BillingRetentionMonths is the number of months of billing data to retain.
+	// This includes the current month plus previous months (e.g., 37 = current + 36 previous months).
+	BillingRetentionMonths = 37
+
 	BillingSubPath                          = "billing/"
 	ReplicatedPrefix                        = "replicated/"
 	RoleHWMCountsHWM                        = "maxRoleCounts/"
