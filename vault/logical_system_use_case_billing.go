@@ -35,14 +35,14 @@ func (b *SystemBackend) useCaseConsumptionBillingPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleUseCaseConsumption,
-					Summary:  "Reports consumption billing metrics for the current and previous months.",
+					Summary:  fmt.Sprintf("Reports consumption billing metrics for %d months (current month + previous %d months).", billing.BillingRetentionMonths, billing.BillingRetentionMonths-1),
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: http.StatusText(http.StatusOK),
 							Fields: map[string]*framework.FieldSchema{
 								"months": {
 									Type:        framework.TypeSlice,
-									Description: "List of monthly billing data, including the current and previous months.",
+									Description: fmt.Sprintf("List of monthly billing data for %d months (current month + previous %d months).", billing.BillingRetentionMonths, billing.BillingRetentionMonths-1),
 								},
 							},
 						}},
@@ -66,7 +66,6 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 	refreshData := data.Get("refresh_data").(bool)
 
 	currentMonth := time.Now().UTC()
-	previousMonth := timeutil.StartOfPreviousMonth(currentMonth)
 
 	warnings := make([]string, 0)
 
@@ -78,22 +77,31 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 		refreshData = false
 	}
 
-	// Refresh data only if explicitly requested and for current month
-	currentMonthData, err := b.buildMonthBillingData(ctx, currentMonth, refreshData)
-	if err != nil {
-		return nil, fmt.Errorf("error building current month billing data: %w", err)
-	}
+	// Build billing data for BillingRetentionMonths (current month + previous months)
+	months := make([]interface{}, 0, billing.BillingRetentionMonths)
 
-	previousMonthData, err := b.buildMonthBillingData(ctx, previousMonth, false)
+	// Handle current month first (with optional refresh)
+	currentMonthTime := timeutil.StartOfMonth(currentMonth)
+	currentMonthData, err := b.buildMonthBillingData(ctx, currentMonthTime, refreshData)
 	if err != nil {
-		return nil, fmt.Errorf("error building previous month billing data: %w", err)
+		return nil, fmt.Errorf("error building billing data for month %s: %w", currentMonthTime.Format("2006-01"), err)
+	}
+	months = append(months, currentMonthData)
+
+	// Handle previous months (no refresh needed)
+	for i := 1; i < billing.BillingRetentionMonths; i++ {
+		monthTime := timeutil.StartOfMonth(currentMonth).AddDate(0, -i, 0)
+
+		monthData, err := b.buildMonthBillingData(ctx, monthTime, false)
+		if err != nil {
+			return nil, fmt.Errorf("error building billing data for month %s: %w", monthTime.Format("2006-01"), err)
+		}
+
+		months = append(months, monthData)
 	}
 
 	resp := map[string]interface{}{
-		"months": []interface{}{
-			currentMonthData,
-			previousMonthData,
-		},
+		"months": months,
 	}
 
 	return &logical.Response{
@@ -251,15 +259,15 @@ func (c *Core) computeUpdatedAt(ctx context.Context, month, currentMonth time.Ti
 		}
 		dataUpdatedAt = lastUpdate
 	} else {
-		// Check presence of a stored metrics timestamp for the previous month.
+		// Check presence of a stored metrics timestamp for the requested month.
 		// If present, return the canonical end-of-month for the requested
 		// `month`. The stored timestamp acts strictly as a
 		// presence indicator.
-		previousMonthStart := timeutil.StartOfPreviousMonth(currentMonth)
-		previousMonthTimestamp, err := c.GetMetricsLastUpdateTime(ctx, previousMonthStart)
+		requestedMonthStart := timeutil.StartOfMonth(month)
+		requestedMonthTimestamp, err := c.GetMetricsLastUpdateTime(ctx, requestedMonthStart)
 
-		// The previous month has not been updated yet.
-		if err != nil || previousMonthTimestamp.IsZero() {
+		// The requested month has not been updated yet.
+		if err != nil || requestedMonthTimestamp.IsZero() {
 			return time.Time{}
 		}
 

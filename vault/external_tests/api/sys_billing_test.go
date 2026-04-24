@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/billing"
 	"github.com/stretchr/testify/require"
 )
 
@@ -81,7 +83,7 @@ func Test_BillingOverview(t *testing.T) {
 
 	// Validate response structure
 	require.NotNil(t, resp.Months)
-	require.Len(t, resp.Months, 2, "should have current and previous month")
+	require.Len(t, resp.Months, billing.BillingRetentionMonths, "should have billing.BillingRetentionMonths months")
 
 	// Check current month data
 	currentMonth := resp.Months[0]
@@ -130,7 +132,7 @@ func Test_BillingOverview_WithoutUpdateCounts(t *testing.T) {
 
 	// Validate basic response structure
 	require.NotNil(t, resp.Months)
-	require.Len(t, resp.Months, 2, "should have current and previous month")
+	require.Len(t, resp.Months, billing.BillingRetentionMonths, "should have billing.BillingRetentionMonths months")
 
 	// Check that months are properly formatted
 	for _, month := range resp.Months {
@@ -153,7 +155,7 @@ func Test_BillingOverview_EmptyCluster(t *testing.T) {
 	require.NotNil(t, resp)
 
 	require.NotNil(t, resp.Months)
-	require.Len(t, resp.Months, 2)
+	require.Len(t, resp.Months, billing.BillingRetentionMonths)
 
 	currentMonth := resp.Months[0]
 	require.NotEmpty(t, currentMonth.Month)
@@ -206,6 +208,18 @@ func Test_BillingOverview_MonthFormat(t *testing.T) {
 		require.Regexp(t, `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}`, month.UpdatedAt, "updated_at should be in ISO 8601 format")
 	}
 
-	// Verify months are in descending order (current, then previous)
+	// Verify months are in descending order (current, then previous months)
 	require.Greater(t, resp.Months[0].Month, resp.Months[1].Month, "first month should be more recent than second")
+	// Verify we have billing.BillingRetentionMonths months
+	require.Len(t, resp.Months, billing.BillingRetentionMonths)
+
+	// Verify the oldest month is exactly (billing.BillingRetentionMonths - 1) months before the current month
+	currentMonthTime, err := time.Parse("2006-01", resp.Months[0].Month)
+	require.NoError(t, err, "should parse current month")
+	oldestMonthTime, err := time.Parse("2006-01", resp.Months[billing.BillingRetentionMonths-1].Month)
+	require.NoError(t, err, "should parse oldest month")
+
+	expectedOldestMonth := currentMonthTime.AddDate(0, -(billing.BillingRetentionMonths - 1), 0)
+	require.Equal(t, expectedOldestMonth.Format("2006-01"), oldestMonthTime.Format("2006-01"),
+		"oldest month should be exactly %d months before current month", billing.BillingRetentionMonths-1)
 }

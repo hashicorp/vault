@@ -153,8 +153,8 @@ func TestConsumptionBillingMetricsWorker(t *testing.T) {
 	verifyExpectedRoleCounts(t, counts, 5)
 }
 
-// TestHandleEndOfMonthMetrics tests that that HandleEndOfMonth cleans up
-// previous month billing metrics and resets the in memory billing metrics
+// TestHandleEndOfMonthMetrics tests that HandleEndOfMonth cleans up
+// billing metrics from billing.BillingRetentionMonths ago (keeping billing.BillingRetentionMonths of data) and resets the in memory billing metrics
 func TestHandleEndOfMonthMetrics(t *testing.T) {
 	coreConfig := &CoreConfig{
 		LogicalBackends: roleLogicalBackends,
@@ -163,11 +163,13 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 		},
 	}
 	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
-	// Add some billing metrics to storage for the previous two months
+	// Add some billing metrics to storage for (billing.BillingRetentionMonths - 1) and billing.BillingRetentionMonths months ago
 	// Use the util functions directly to avoid the need to mount the logical backends
-	previousMonth := timeutil.StartOfPreviousMonth(time.Now().UTC())
-	twoMonthsAgo := previousMonth.AddDate(0, -1, 0)
-	for _, month := range []time.Time{timeutil.StartOfPreviousMonth(time.Now().UTC()), timeutil.StartOfPreviousMonth(time.Now().UTC()).AddDate(0, -1, 0)} {
+	now := time.Now().UTC()
+	oldestRetainedMonth := timeutil.StartOfMonth(now).AddDate(0, -(billing.BillingRetentionMonths - 1), 0)
+	monthToDelete := timeutil.StartOfMonth(now).AddDate(0, -billing.BillingRetentionMonths, 0)
+
+	for _, month := range []time.Time{monthToDelete, oldestRetainedMonth} {
 		for _, localPathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
 			core.storeMaxRoleCountsLocked(context.Background(), &RoleCounts{
 				AWSDynamicRoles:      10,
@@ -203,20 +205,20 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 	}
 
 	// Handle the end of the month
-	core.HandleStartOfMonth(context.Background(), time.Now().UTC())
+	core.HandleStartOfMonth(context.Background(), now)
 
 	for _, localPathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
-		// Two months ago should have no billing metrics
+		// billing.BillingRetentionMonths ago should have no billing metrics (deleted)
 		view, ok := core.GetBillingSubView()
 		require.True(t, ok)
-		paths, err := view.List(context.Background(), billing.GetMonthlyBillingPath(localPathPrefix, twoMonthsAgo))
+		paths, err := view.List(context.Background(), billing.GetMonthlyBillingPath(localPathPrefix, monthToDelete))
 		require.NoError(t, err)
-		require.Equal(t, 0, len(paths))
+		require.Equal(t, 0, len(paths), "data from billing.BillingRetentionMonths ago should be deleted")
 
-		// Previous month should have the billing metrics
+		// (billing.BillingRetentionMonths - 1) months ago should still have the billing metrics (kept)
 		view, ok = core.GetBillingSubView()
 		require.True(t, ok)
-		paths, err = view.List(context.Background(), billing.GetMonthlyBillingPath(localPathPrefix, previousMonth))
+		paths, err = view.List(context.Background(), billing.GetMonthlyBillingPath(localPathPrefix, oldestRetainedMonth))
 		require.NoError(t, err)
 		expectedPaths := 2 // ReplicatedPrefix has roles and kv
 		if localPathPrefix == billing.LocalPrefix {
@@ -232,7 +234,139 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 	require.False(t, core.consumptionBilling.KmipSeenEnabledThisMonth.Load())
 }
 
-// TestConsumptionBillingMetricsWorkerWithCustomClock tests that we correctly delete n-2 month billing metrics
+// TestDeleteExpiredBillingMetrics specifically tests the deleteExpiredBillingMetrics method
+// to ensure it correctly deletes data from billing.BillingRetentionMonths ago while keeping
+// data from (billing.BillingRetentionMonths - 1) months ago.
+func TestDeleteExpiredBillingMetrics(t *testing.T) {
+	coreConfig := &CoreConfig{
+		LogicalBackends: roleLogicalBackends,
+	}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	now := time.Now().UTC()
+	currentMonth := timeutil.StartOfMonth(now)
+	oldestRetainedMonth := currentMonth.AddDate(0, -(billing.BillingRetentionMonths - 1), 0)
+	monthToDelete := currentMonth.AddDate(0, -billing.BillingRetentionMonths, 0)
+
+	// Write billing data for multiple months including the month to be deleted and the oldest retained month
+	for _, month := range []time.Time{monthToDelete, oldestRetainedMonth, currentMonth} {
+		for _, pathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
+			core.storeMaxRoleCountsLocked(context.Background(), &RoleCounts{
+				AWSDynamicRoles:  5,
+				AWSStaticRoles:   10,
+				LDAPDynamicRoles: 3,
+			}, pathPrefix, month)
+			core.storeMaxKvCountsLocked(context.Background(), 20, pathPrefix, month)
+			core.storeTransitCallCountsLocked(context.Background(), 15, pathPrefix, month)
+			// Add SSH metrics which use subdirectory paths (ssh/normalized-certs-issued, ssh/credential-count)
+			core.storeSSHDurationAdjustedCertCountLocked(context.Background(), pathPrefix, month, 10.5)
+			core.storeSSHOTPCountLocked(context.Background(), pathPrefix, month, 25.0)
+		}
+		// Store updatedAtTimestamp for each month
+		testUpdateTime := time.Date(month.Year(), month.Month(), 15, 12, 0, 0, 0, time.UTC)
+		err := core.UpdateMetricsLastUpdateTime(context.Background(), month, testUpdateTime)
+		require.NoError(t, err)
+	}
+
+	// Verify data exists before deletion
+	for _, pathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
+		view, ok := core.GetBillingSubView()
+		require.True(t, ok)
+
+		// Check month to be deleted has data
+		paths, err := view.List(context.Background(), billing.GetMonthlyBillingPath(pathPrefix, monthToDelete))
+		require.NoError(t, err)
+		require.Greater(t, len(paths), 0, "month to delete should have data before deletion")
+
+		// Check oldest retained month has data
+		paths, err = view.List(context.Background(), billing.GetMonthlyBillingPath(pathPrefix, oldestRetainedMonth))
+		require.NoError(t, err)
+		require.Greater(t, len(paths), 0, "oldest retained month should have data")
+
+		// Verify SSH metrics exist (they use subdirectory paths)
+		sshCertPath := billing.GetMonthlyBillingMetricPath(pathPrefix, monthToDelete, billing.SSHCertificateMetric)
+		entry, err := view.Get(context.Background(), sshCertPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "SSH cert metric should exist before deletion")
+
+		sshOTPPath := billing.GetMonthlyBillingMetricPath(pathPrefix, monthToDelete, billing.SSHOTPMetric)
+		entry, err = view.Get(context.Background(), sshOTPPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "SSH OTP metric should exist before deletion")
+	}
+
+	// Verify updatedAtTimestamp exists for all months before deletion
+	for _, month := range []time.Time{monthToDelete, oldestRetainedMonth, currentMonth} {
+		timestamp, err := core.GetMetricsLastUpdateTime(context.Background(), month)
+		require.NoError(t, err)
+		require.False(t, timestamp.IsZero(), "timestamp for month %s should exist before deletion", month.Format("2006-01"))
+	}
+
+	// Call deleteExpiredBillingMetrics directly
+	err := core.deleteExpiredBillingMetrics(context.Background(), currentMonth)
+	require.NoError(t, err)
+
+	// Verify deletion results
+	for _, pathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
+		view, ok := core.GetBillingSubView()
+		require.True(t, ok)
+
+		// Month to delete should have no data
+		paths, err := view.List(context.Background(), billing.GetMonthlyBillingPath(pathPrefix, monthToDelete))
+		require.NoError(t, err)
+		require.Equal(t, 0, len(paths), "data from billing.BillingRetentionMonths ago should be deleted")
+
+		// Verify SSH metrics are deleted (they use subdirectory paths)
+		sshCertPath := billing.GetMonthlyBillingMetricPath(pathPrefix, monthToDelete, billing.SSHCertificateMetric)
+		entry, err := view.Get(context.Background(), sshCertPath)
+		require.NoError(t, err)
+		require.Nil(t, entry, "SSH cert metric should be deleted")
+
+		sshOTPPath := billing.GetMonthlyBillingMetricPath(pathPrefix, monthToDelete, billing.SSHOTPMetric)
+		entry, err = view.Get(context.Background(), sshOTPPath)
+		require.NoError(t, err)
+		require.Nil(t, entry, "SSH OTP metric should be deleted")
+
+		// Oldest retained month should still have data
+		paths, err = view.List(context.Background(), billing.GetMonthlyBillingPath(pathPrefix, oldestRetainedMonth))
+		require.NoError(t, err)
+		require.Greater(t, len(paths), 0, "data from (billing.BillingRetentionMonths - 1) months ago should be kept")
+
+		// Verify SSH metrics are kept for oldest retained month
+		sshCertPath = billing.GetMonthlyBillingMetricPath(pathPrefix, oldestRetainedMonth, billing.SSHCertificateMetric)
+		entry, err = view.Get(context.Background(), sshCertPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "SSH cert metric should be kept for oldest retained month")
+
+		sshOTPPath = billing.GetMonthlyBillingMetricPath(pathPrefix, oldestRetainedMonth, billing.SSHOTPMetric)
+		entry, err = view.Get(context.Background(), sshOTPPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "SSH OTP metric should be kept for oldest retained month")
+
+		// Current month should still have data
+		paths, err = view.List(context.Background(), billing.GetMonthlyBillingPath(pathPrefix, currentMonth))
+		require.NoError(t, err)
+		require.Greater(t, len(paths), 0, "current month data should be kept")
+	}
+
+	// Verify updatedAtTimestamp deletion
+	// Month to delete should have zero timestamp
+	deletedTimestamp, err := core.GetMetricsLastUpdateTime(context.Background(), monthToDelete)
+	require.NoError(t, err)
+	require.True(t, deletedTimestamp.IsZero(), "timestamp for deleted month should be zero")
+
+	// Oldest retained month should still have timestamp
+	oldestTimestamp, err := core.GetMetricsLastUpdateTime(context.Background(), oldestRetainedMonth)
+	require.NoError(t, err)
+	require.False(t, oldestTimestamp.IsZero(), "timestamp for oldest retained month should exist")
+
+	// Current month should still have timestamp
+	currentTimestamp, err := core.GetMetricsLastUpdateTime(context.Background(), currentMonth)
+	require.NoError(t, err)
+	require.False(t, currentTimestamp.IsZero(), "timestamp for current month should exist")
+}
+
+// TestConsumptionBillingMetricsWorkerWithCustomClock tests that we correctly delete data older than billing.BillingRetentionMonths
 // and reset the in memory billing metrics when the clock is overridden for testing purposes
 func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 	// 10 seconds until a new month (leave buffer for require.Eventually timeout)
@@ -245,14 +379,14 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 	}
 	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
 
-	// Add some billing metrics to storage for the previous two months
+	// Add some billing metrics to storage for (billing.BillingRetentionMonths - 1) and billing.BillingRetentionMonths months ago
 	// Use the util functions directly to avoid the need to mount the logical backends
 	// The worker's "end of month" path calls HandleEndOfMonth with the *current* month,
-	// which will be the next month once we cross the boundary. So "previousMonth" and
-	// "twoMonthsAgo" should be calculated relative to that boundary.
+	// which will be the next month once we cross the boundary. So the months should be
+	// calculated relative to that boundary.
 	currentMonthAtBoundary := timeutil.StartOfNextMonth(now)
-	previousMonth := timeutil.StartOfPreviousMonth(currentMonthAtBoundary)
-	twoMonthsAgo := previousMonth.AddDate(0, -1, 0)
+	oldestRetainedMonth := timeutil.StartOfMonth(currentMonthAtBoundary).AddDate(0, -(billing.BillingRetentionMonths - 1), 0)
+	monthToDelete := timeutil.StartOfMonth(currentMonthAtBoundary).AddDate(0, -billing.BillingRetentionMonths, 0)
 	view, ok := core.GetBillingSubView()
 	require.True(t, ok)
 	roleCounts := &RoleCounts{
@@ -295,7 +429,7 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 		}
 	}
 
-	for _, month := range []time.Time{twoMonthsAgo, previousMonth} {
+	for _, month := range []time.Time{monthToDelete, oldestRetainedMonth} {
 
 		core.storeTransitCallCountsLocked(context.Background(), uint64(10), billing.LocalPrefix, month)
 		core.storeGcpKmsCallCountsLocked(context.Background(), uint64(10), billing.LocalPrefix, month)
@@ -311,28 +445,28 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 	}
 
 	for _, localPathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
-		// Two months ago should have no billing metricss should eventually should have no billing metrics
+		// billing.BillingRetentionMonths ago should eventually have no billing metrics (deleted)
 		require.Eventually(t, func() bool {
-			paths, err := view.List(context.Background(), billing.GetMonthlyBillingPath(localPathPrefix, twoMonthsAgo))
+			paths, err := view.List(context.Background(), billing.GetMonthlyBillingPath(localPathPrefix, monthToDelete))
 			return err == nil && len(paths) == 0
 		}, 20*time.Second, 100*time.Millisecond)
 
-		// All values n-2 months ago should be 0
-		maxRoleCounts, _ := core.GetStoredHWMRoleCounts(context.Background(), localPathPrefix, twoMonthsAgo)
+		// All values from billing.BillingRetentionMonths ago should be 0
+		maxRoleCounts, _ := core.GetStoredHWMRoleCounts(context.Background(), localPathPrefix, monthToDelete)
 		require.Equal(t, &RoleCounts{}, maxRoleCounts)
-		kvCounts, _ := core.GetStoredHWMKvCounts(context.Background(), localPathPrefix, twoMonthsAgo)
+		kvCounts, _ := core.GetStoredHWMKvCounts(context.Background(), localPathPrefix, monthToDelete)
 		require.Equal(t, 0, kvCounts)
 		if localPathPrefix == billing.LocalPrefix {
-			transitCounts, _ := core.GetStoredTransitCallCounts(context.Background(), twoMonthsAgo)
+			transitCounts, _ := core.GetStoredTransitCallCounts(context.Background(), monthToDelete)
 			require.Equal(t, uint64(0), transitCounts)
-			gcpKmsCounts, _ := core.GetStoredGcpKmsCallCounts(context.Background(), twoMonthsAgo)
+			gcpKmsCounts, _ := core.GetStoredGcpKmsCallCounts(context.Background(), monthToDelete)
 			require.Equal(t, uint64(0), gcpKmsCounts)
-			thirdPartyPluginCounts, _ := core.GetStoredThirdPartyPluginCounts(context.Background(), twoMonthsAgo)
+			thirdPartyPluginCounts, _ := core.GetStoredThirdPartyPluginCounts(context.Background(), monthToDelete)
 			require.Equal(t, 0, thirdPartyPluginCounts)
 		}
 
-		// Previous month should have the billing metrics
-		verifyMonthlyBillingMetrics(previousMonth, localPathPrefix)
+		// (billing.BillingRetentionMonths - 1) months ago should still have the billing metrics (kept)
+		verifyMonthlyBillingMetrics(oldestRetainedMonth, localPathPrefix)
 	}
 
 	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts())

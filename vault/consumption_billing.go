@@ -113,13 +113,13 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 }
 
 // HandleStartOfMonth cleans up monthly billing data from
-// n-2 months ago, and also resets all in memory billing metrics when the start of the month is reached.
+// n-BillingRetentionMonths ago (keeping BillingRetentionMonths of data), and also resets all in memory billing metrics when the start of the month is reached.
 func (c *Core) HandleStartOfMonth(ctx context.Context, currentMonth time.Time) {
 	c.logger.Info("handling start of month operations", "currentMonth", currentMonth)
-	// We only delete n-2 month billing metrics on the active node
+	// We only delete data older than BillingRetentionMonths on the active node
 	if standby, _ := c.Standby(); !standby && !c.PerfStandby() {
-		if err := c.deletePreviousMonthBillingMetrics(ctx, currentMonth); err != nil {
-			c.logger.Error("error deleting historical month billing metrics", "error", err)
+		if err := c.deleteExpiredBillingMetrics(ctx, currentMonth); err != nil {
+			c.logger.Error("error deleting expired billing metrics", "error", err)
 		}
 	}
 	if err := c.resetInMemoryBillingMetrics(); err != nil {
@@ -129,15 +129,16 @@ func (c *Core) HandleStartOfMonth(ctx context.Context, currentMonth time.Time) {
 	c.UpdateMetricsLastUpdateTime(ctx, currentMonth, time.Time{})
 }
 
-func (c *Core) deletePreviousMonthBillingMetrics(ctx context.Context, currentMonth time.Time) error {
-	twoMonthsAgo := timeutil.StartOfPreviousMonth(currentMonth).AddDate(0, -1, 0)
+func (c *Core) deleteExpiredBillingMetrics(ctx context.Context, currentMonth time.Time) error {
+	// Delete data from BillingRetentionMonths ago (keeping current month + previous (BillingRetentionMonths - 1) months = BillingRetentionMonths total)
+	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -billing.BillingRetentionMonths, 0)
 	// Delete billing metrics from both replicated and local prefixes
 	for _, pathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
 		// If we are not the primary, then do not delete replicate metrics
 		if !c.isPrimary() && pathPrefix == billing.ReplicatedPrefix {
 			continue
 		}
-		billingPath := billing.GetMonthlyBillingPath(pathPrefix, twoMonthsAgo)
+		billingPath := billing.GetMonthlyBillingPath(pathPrefix, monthToDelete)
 		view, ok := c.GetBillingSubView()
 		if !ok {
 			return ErrCouldNotGetBillingSubView
