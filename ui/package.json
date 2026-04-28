@@ -177,6 +177,7 @@
       "braces": "3.0.3",
       "json5": "1.0.2",
       "kind-of": "6.0.3",
+      "lodash": "4.18.0",
       "markdown-it": "14.1.1",
       "micromatch": "4.0.8",
       "path-to-regexp": "0.1.13",
