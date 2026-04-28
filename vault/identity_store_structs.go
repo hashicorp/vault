@@ -104,18 +104,19 @@ type IdentityStore struct {
 	// operated case insensitively
 	disableLowerCasedNames bool
 
-	router         *Router
-	redirectAddr   string
-	localNode      LocalNode
-	namespacer     Namespacer
-	metrics        metricsutil.Metrics
-	totpPersister  TOTPPersister
-	groupUpdater   GroupUpdater
-	tokenStorer    TokenStorer
-	entityCreator  EntityCreator
-	mountLister    MountLister
-	mfaBackend     *LoginMFABackend
-	billingCounter BillingCounter
+	router                          *Router
+	redirectAddr                    string
+	localNode                       LocalNode
+	namespacer                      Namespacer
+	metrics                         metricsutil.Metrics
+	totpPersister                   TOTPPersister
+	groupUpdater                    GroupUpdater
+	tokenStorer                     TokenStorer
+	entityCreator                   EntityCreator
+	mountLister                     MountLister
+	syntheticAliasAccessorValidator SyntheticAliasAccessorValidator
+	mfaBackend                      *LoginMFABackend
+	billingCounter                  BillingCounter
 
 	// aliasLocks is used to protect modifications to alias entries based on the uniqueness factor
 	// which is name + accessor
@@ -202,6 +203,13 @@ type MountLister interface {
 }
 
 var _ MountLister = &Core{}
+
+type SyntheticAliasAccessorValidator interface {
+	validateSyntheticAliasAccessor(context.Context, string) (bool, error)
+	generateSyntheticAliasAccessor(context.Context, string) (string, error)
+}
+
+var _ SyntheticAliasAccessorValidator = &Core{}
 
 type Sealer interface {
 	Shutdown() error

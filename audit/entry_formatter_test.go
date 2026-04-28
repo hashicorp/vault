@@ -593,9 +593,10 @@ func TestMergeEnterpriseTokenMetadata(t *testing.T) {
 	t.Parallel()
 
 	requestTests := map[string]struct {
-		Input            *logical.Request
-		ExpectedMetadata string
-		ExpectedIssuer   string
+		Input               *logical.Request
+		ExpectedMetadata    string
+		ExpectedIssuer      string
+		ExpectedTransaction string
 	}{
 		"metadata-present": {
 			Input:            &logical.Request{ID: "req-1", EnterpriseTokenMetadata: "token-abc"},
@@ -614,6 +615,15 @@ func TestMergeEnterpriseTokenMetadata(t *testing.T) {
 			ExpectedMetadata: "token-xyz",
 			ExpectedIssuer:   "https://issuer.example.com",
 		},
+		"transaction-present": {
+			Input: &logical.Request{
+				ID:                         "req-4",
+				EnterpriseTokenMetadata:    "token-txn",
+				EnterpriseTokenTransaction: "txn-123",
+			},
+			ExpectedMetadata:    "token-txn",
+			ExpectedTransaction: "txn-123",
+		},
 	}
 
 	for name, tc := range requestTests {
@@ -623,7 +633,7 @@ func TestMergeEnterpriseTokenMetadata(t *testing.T) {
 			a := &auth{}
 			err := mergeEnterpriseTokenMetadata(a, tc.Input)
 			require.NoError(t, err)
-			if tc.ExpectedMetadata == "" && tc.ExpectedIssuer == "" {
+			if tc.ExpectedMetadata == "" && tc.ExpectedIssuer == "" && tc.ExpectedTransaction == "" {
 				require.Nil(t, a.Metadata)
 			}
 
@@ -640,12 +650,14 @@ func TestMergeEnterpriseTokenMetadata(t *testing.T) {
 
 			assertMetadataField("enterprise_token_metadata", tc.ExpectedMetadata)
 			assertMetadataField("enterprise_token_issuer", tc.ExpectedIssuer)
+			assertMetadataField("enterprise_token_transaction", tc.ExpectedTransaction)
 		})
 	}
 }
 
 // TestEntryFormatter_Process_JSON_EnterpriseToken verifies that enterprise token fields
 // (actor_entity_id, actor_entity_name, enterprise_token_metadata, enterprise_token_issuer,
+// enterprise_token_transaction,
 // enterprise_token_audience, enterprise_token_authorization_details) are correctly
 // serialized into auth.metadata in the JSON audit output, and absent when not set.
 func TestEntryFormatter_Process_JSON_EnterpriseToken(t *testing.T) {
@@ -664,6 +676,7 @@ func TestEntryFormatter_Process_JSON_EnterpriseToken(t *testing.T) {
 		WantActorEntityName      string
 		WantMetadata             string
 		WantIssuer               string
+		WantTransaction          string
 		WantAudience             string
 		WantAuthorizationDetails string
 	}{
@@ -683,6 +696,7 @@ func TestEntryFormatter_Process_JSON_EnterpriseToken(t *testing.T) {
 				Path:                                "/cubbyhole/test",
 				EnterpriseTokenMetadata:             "test-token-abc",
 				EnterpriseTokenIssuer:               "https://issuer.example.com",
+				EnterpriseTokenTransaction:          "txn-actor-1",
 				EnterpriseTokenAudience:             []string{"vault"},
 				EnterpriseTokenAuthorizationDetails: authzDetails,
 				Connection: &logical.Connection{
@@ -693,6 +707,7 @@ func TestEntryFormatter_Process_JSON_EnterpriseToken(t *testing.T) {
 			WantActorEntityName:      "actor-service",
 			WantMetadata:             "test-token-abc",
 			WantIssuer:               "https://issuer.example.com",
+			WantTransaction:          "txn-actor-1",
 			WantAudience:             `["vault"]`,
 			WantAuthorizationDetails: `[{"currency":"USD","type":"payment_initiation"}]`,
 		},
@@ -706,18 +721,20 @@ func TestEntryFormatter_Process_JSON_EnterpriseToken(t *testing.T) {
 				TokenType:   logical.TokenTypeDefault,
 			},
 			Req: &logical.Request{
-				Operation:               logical.ReadOperation,
-				Path:                    "/cubbyhole/test",
-				EnterpriseTokenMetadata: "test-token-xyz",
-				EnterpriseTokenIssuer:   "https://issuer.example.com",
-				EnterpriseTokenAudience: []string{"vault"},
+				Operation:                  logical.ReadOperation,
+				Path:                       "/cubbyhole/test",
+				EnterpriseTokenMetadata:    "test-token-xyz",
+				EnterpriseTokenIssuer:      "https://issuer.example.com",
+				EnterpriseTokenTransaction: "txn-base-1",
+				EnterpriseTokenAudience:    []string{"vault"},
 				Connection: &logical.Connection{
 					RemoteAddr: "127.0.0.1",
 				},
 			},
-			WantMetadata: "test-token-xyz",
-			WantIssuer:   "https://issuer.example.com",
-			WantAudience: `["vault"]`,
+			WantMetadata:    "test-token-xyz",
+			WantIssuer:      "https://issuer.example.com",
+			WantTransaction: "txn-base-1",
+			WantAudience:    `["vault"]`,
 		},
 	}
 
@@ -766,6 +783,7 @@ func TestEntryFormatter_Process_JSON_EnterpriseToken(t *testing.T) {
 			require.NotNil(t, result.Request)
 			require.Equal(t, tc.WantMetadata, result.Auth.Metadata["enterprise_token_metadata"])
 			require.Equal(t, tc.WantIssuer, result.Auth.Metadata["enterprise_token_issuer"])
+			require.Equal(t, tc.WantTransaction, result.Auth.Metadata["enterprise_token_transaction"])
 			require.Equal(t, tc.WantAudience, result.Auth.Metadata["enterprise_token_audience"])
 			require.Equal(t, tc.WantAuthorizationDetails, result.Auth.Metadata["enterprise_token_authorization_details"])
 		})
@@ -798,11 +816,12 @@ func TestEntryFormatter_Process_Response_EnterpriseToken(t *testing.T) {
 			TokenType:       logical.TokenTypeDefault,
 		},
 		Request: &logical.Request{
-			Operation:               logical.ReadOperation,
-			Path:                    "/secret/data/test",
-			EnterpriseTokenMetadata: "resp-token-abc",
-			EnterpriseTokenIssuer:   "https://issuer.example.com",
-			EnterpriseTokenAudience: []string{"vault", "api"},
+			Operation:                  logical.ReadOperation,
+			Path:                       "/secret/data/test",
+			EnterpriseTokenMetadata:    "resp-token-abc",
+			EnterpriseTokenIssuer:      "https://issuer.example.com",
+			EnterpriseTokenTransaction: "txn-response-1",
+			EnterpriseTokenAudience:    []string{"vault", "api"},
 			Connection: &logical.Connection{
 				RemoteAddr: "127.0.0.1",
 			},
@@ -847,6 +866,7 @@ func TestEntryFormatter_Process_Response_EnterpriseToken(t *testing.T) {
 	require.Equal(t, "actor-service", result.Auth.Metadata["actor_entity_name"])
 	require.Equal(t, "resp-token-abc", result.Auth.Metadata["enterprise_token_metadata"])
 	require.Equal(t, "https://issuer.example.com", result.Auth.Metadata["enterprise_token_issuer"])
+	require.Equal(t, "txn-response-1", result.Auth.Metadata["enterprise_token_transaction"])
 	require.Equal(t, `["vault","api"]`, result.Auth.Metadata["enterprise_token_audience"])
 
 	// Response auth must also have enterprise token fields in metadata
@@ -854,6 +874,7 @@ func TestEntryFormatter_Process_Response_EnterpriseToken(t *testing.T) {
 	require.NotNil(t, result.Response.Auth)
 	require.Equal(t, "resp-token-abc", result.Response.Auth.Metadata["enterprise_token_metadata"])
 	require.Equal(t, "https://issuer.example.com", result.Response.Auth.Metadata["enterprise_token_issuer"])
+	require.Equal(t, "txn-response-1", result.Response.Auth.Metadata["enterprise_token_transaction"])
 	require.Equal(t, `["vault","api"]`, result.Response.Auth.Metadata["enterprise_token_audience"])
 }
 
@@ -888,6 +909,7 @@ func TestEntryFormatter_EnterpriseTokenFieldsNotOnRequestOrAuthTopLevel(t *testi
 			Path:                                "/secret/data/test",
 			EnterpriseTokenMetadata:             "test-token-123",
 			EnterpriseTokenIssuer:               "https://issuer.example.com",
+			EnterpriseTokenTransaction:          "txn-top-level-1",
 			EnterpriseTokenAudience:             []string{"vault"},
 			EnterpriseTokenAuthorizationDetails: []logical.AuthorizationDetail{{"type": "access"}},
 			Connection: &logical.Connection{
@@ -950,6 +972,10 @@ func TestEntryFormatter_EnterpriseTokenFieldsNotOnRequestOrAuthTopLevel(t *testi
 	tokenIssuer, ok := metadataMap["enterprise_token_issuer"]
 	require.True(t, ok)
 	require.Equal(t, "https://issuer.example.com", tokenIssuer)
+
+	tokenTransaction, ok := metadataMap["enterprise_token_transaction"]
+	require.True(t, ok)
+	require.Equal(t, "txn-top-level-1", tokenTransaction)
 
 	tokenAudience, ok := metadataMap["enterprise_token_audience"]
 	require.True(t, ok)

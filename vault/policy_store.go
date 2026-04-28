@@ -36,6 +36,9 @@ const (
 	// defaultPolicyName is the name of the default policy
 	defaultPolicyName = "default"
 
+	// defaultCeilingPolicyName is the name of the default ceiling policy.
+	defaultCeilingPolicyName = "default-ceiling"
+
 	// responseWrappingPolicyName is the name of the fixed policy
 	responseWrappingPolicyName = "response-wrapping"
 
@@ -160,6 +163,22 @@ path "identity/oidc/provider/+/authorize" {
     capabilities = ["read", "update"]
 }
 `
+
+	// defaultCeilingPolicy is the default ceiling policy.
+	defaultCeilingPolicy = `
+# Allow an entity to inspect its own registration information
+path "agent-registry/registration/entity_id/{{identity.entity.id}}" {
+  capabilities = ["read"]
+}
+
+# Allow an entity to read the default policies
+path "policy/default" {
+  capabilities = ["read"]
+}
+path "policy/default-ceiling" {
+  capabilities = ["read"]
+}
+`
 )
 
 var (
@@ -278,6 +297,10 @@ func (c *Core) setupPolicyStore(ctx context.Context) error {
 
 	// Ensure that the default policy exists, and if not, create it
 	if err := c.policyStore.loadACLPolicy(ctx, defaultPolicyName, defaultPolicy); err != nil {
+		return err
+	}
+	// Ensure that the default ceiling policy exists, and if not, create it
+	if err := c.policyStore.loadACLPolicy(ctx, defaultCeilingPolicyName, defaultCeilingPolicy); err != nil {
 		return err
 	}
 	// Ensure that the response wrapping policy exists
@@ -835,8 +858,8 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 			if strutil.StrListContains(immutablePolicies, name) {
 				return fmt.Errorf("cannot delete %q policy", name)
 			}
-			if name == "default" {
-				return fmt.Errorf("cannot delete default policy")
+			if name == defaultPolicyName || name == defaultCeilingPolicyName {
+				return fmt.Errorf("cannot delete %s policy", name)
 			}
 		}
 
