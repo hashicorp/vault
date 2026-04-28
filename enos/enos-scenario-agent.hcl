@@ -483,10 +483,10 @@ scenario "agent" {
     }
   }
 
-  step "verify_vault_version" {
-    description = global.description.verify_vault_version
-    module      = module.vault_verify_version
-    depends_on  = [step.verify_vault_unsealed]
+  step "run_verify_blackbox_tests" {
+    description = global.description.run_verify_blackbox_tests
+    module      = module.vault_run_blackbox_test
+    depends_on  = [step.verify_vault_unsealed, step.get_vault_cluster_ips]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -501,14 +501,45 @@ scenario "agent" {
     ]
 
     variables {
-      hosts                 = step.create_vault_cluster_targets.hosts
-      vault_addr            = step.create_vault_cluster.api_addr_localhost
+      leader_host           = step.get_vault_cluster_ips.leader_host
+      leader_public_ip      = step.get_vault_cluster_ips.leader_public_ip
+      vault_root_token      = step.create_vault_cluster.root_token
+      test_package          = "./vault/external_tests/blackbox/verify"
+      test_names            = ["TestVaultServerVersion"]
       vault_edition         = matrix.edition
-      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
       vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
+    }
+  }
+
+  step "run_verify_blackbox_tests_remote" {
+    description = global.description.run_verify_blackbox_tests_remote
+    module      = module.vault_run_blackbox_test
+    depends_on  = [step.run_verify_blackbox_tests]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_version_build_date,
+      quality.vault_version_edition,
+      quality.vault_version_release,
+    ]
+
+    variables {
+      leader_host           = step.get_vault_cluster_ips.leader_host
+      leader_public_ip      = step.get_vault_cluster_ips.leader_public_ip
       vault_root_token      = step.create_vault_cluster.root_token
+      test_package          = "./vault/external_tests/blackbox/verify"
+      test_names            = ["TestVaultCLIVersionLocal"]
+      vault_edition         = matrix.edition
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
     }
   }
 

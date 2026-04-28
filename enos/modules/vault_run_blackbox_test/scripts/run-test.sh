@@ -84,15 +84,15 @@ if [[ "${VAULT_ADDR}" == http://* ]]; then
 fi
 
 case $VAULT_EDITION in
-  ent | ent.hsm | ent.hsm.fips1402 | ent.hsm.fips1403 | ent.fips1403 | ent.fips1402)
-    tags="-tags=ent,enterprise"
-    ;;
-  ce)
-    tags=""
-    ;;
-  *)
-    fail "unknown VAULT_EDITION: $VAULT_EDITION"
-    ;;
+    ent | ent.hsm | ent.hsm.fips1402 | ent.hsm.fips1403 | ent.fips1403 | ent.fips1402)
+        tags="-tags=ent,enterprise"
+        ;;
+    ce)
+        tags=""
+        ;;
+    *)
+        fail "unknown VAULT_EDITION: $VAULT_EDITION"
+        ;;
 esac
 
 # Build gotestsum command based on whether we have specific tests
