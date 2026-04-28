@@ -6,7 +6,6 @@ output "test_result" {
   value       = enos_local_exec.run_blackbox_test.stdout
 }
 
-
 output "test_results_summary" {
   description = "Summary of test results for dashboards"
   value = {
