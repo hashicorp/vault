@@ -13,6 +13,7 @@ overrides:
   json5: 1.0.2
   kind-of: 6.0.3
   lodash: 4.18.0
+  lodash-es: 4.18.0
   markdown-it: 14.1.1
   micromatch: 4.0.8
   path-to-regexp: 0.1.13
@@ -5749,8 +5750,9 @@ packages:
     resolution: {integrity: sha512-gvVijfZvn7R+2qyPX8mAuKcFGDf6Nc61GdvGafQsHL0sBIxfKzA+usWn4GFC/bk+QdwPUD4kWFJLhElipq+0VA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
-  lodash-es@4.17.23:
-    resolution: {integrity: sha512-kVI48u3PZr38HdYz98UmfPnXl2DXrpdctLrFLCd3kOx1xUkOmpFPx7gCWWM5MPkL/fD8zb+Ph0QzjGFs4+hHWg==}
+  lodash-es@4.18.0:
+    resolution: {integrity: sha512-koAgswPPA+UTaPN64Etp+PGP+WT6oqOS2NMi5yDkMaiGw9qY4VxQbQF0mtKMyr4BlTznWyzePV5UpECTJQmSUA==}
+    deprecated: Bad release. Please use lodash-es@4.17.23 instead.
 
   lodash._baseflatten@3.1.4:
     resolution: {integrity: sha512-fESngZd+X4k+GbTxdMutf8ohQa0s3sJEHIcwtu4/LsIQ2JTDzdRxDCMQjW+ezzwRitLmHnacVVmosCbxifefbw==}
@@ -10220,7 +10222,7 @@ snapshots:
       date-fns: 4.1.0
       dompurify: 3.3.3
       html-to-image: 1.11.11
-      lodash-es: 4.17.23
+      lodash-es: 4.18.0
       topojson-client: 3.1.0
       tslib: 2.8.1
 
@@ -16956,7 +16958,7 @@ snapshots:
     dependencies:
       p-locate: 6.0.0
 
-  lodash-es@4.17.23: {}
+  lodash-es@4.18.0: {}
 
   lodash._baseflatten@3.1.4:
     dependencies:
