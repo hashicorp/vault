@@ -6,6 +6,7 @@ settings:
 
 overrides:
   '@babel/runtime': 7.27.0
+  '@xmldom/xmldom': 0.9.10
   ansi-html: 0.0.8
   async: 2.6.4
   braces: 3.0.3
@@ -2331,9 +2332,9 @@ packages:
       webpack-dev-server:
         optional: true
 
-  '@xmldom/xmldom@0.8.10':
-    resolution: {integrity: sha512-2WALfTl4xo2SkGCYRt6rDTFfk9R1czmBvUQy12gK2KuRKIpWEhcbbzy8EZXtz/jkRqHX8bFEc6FC1HjX4TUWYw==}
-    engines: {node: '>=10.0.0'}
+  '@xmldom/xmldom@0.9.10':
+    resolution: {integrity: sha512-A9gOqLdi6cV4ibazAjcQufGj0B1y/vDqYrcuP6d/6x8P27gRS8643Dj9o1dEKtB6O7fwxb2FgBmJS2mX7gpvdw==}
+    engines: {node: '>=14.6'}
 
   '@xtuc/ieee754@1.2.0':
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
@@ -12126,7 +12127,7 @@ snapshots:
       webpack: 5.105.4(webpack-cli@6.0.1)
       webpack-cli: 6.0.1(webpack@5.105.4)
 
-  '@xmldom/xmldom@0.8.10': {}
+  '@xmldom/xmldom@0.9.10': {}
 
   '@xtuc/ieee754@1.2.0': {}
 
@@ -18858,7 +18859,7 @@ snapshots:
 
   testem@3.16.0(handlebars@4.7.9)(underscore@1.13.8):
     dependencies:
-      '@xmldom/xmldom': 0.8.10
+      '@xmldom/xmldom': 0.9.10
       backbone: 1.6.1
       bluebird: 3.7.2
       charm: 1.0.2

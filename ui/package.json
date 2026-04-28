@@ -172,6 +172,7 @@
   "pnpm": {
     "overrides": {
       "@babel/runtime": "7.27.0",
+      "@xmldom/xmldom": "0.9.10",
       "ansi-html": "0.0.8",
       "async": "2.6.4",
       "braces": "3.0.3",
