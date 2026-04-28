@@ -148,6 +148,31 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     assert.dom(GENERAL.navHeading('Client Counts')).doesNotExist('Client count link is hidden.');
   });
 
+  test('it should show billing metrics link when in root namespace and Consumption Billing feature is enabled', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, true, false, ['Consumption Billing']);
+    const namespace = this.owner.lookup('service:namespace');
+    namespace.setNamespace('root');
+    await renderComponent();
+    assert.dom(GENERAL.navLink('Billing metrics')).exists('Billing metrics link is visible.');
+  });
+
+  test('it should show billing metrics link when in HVD admin namespace and Consumption Billing feature is enabled', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, true, false, ['Consumption Billing']);
+    this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    const namespace = this.owner.lookup('service:namespace');
+    namespace.setNamespace('admin');
+    await renderComponent();
+    assert.dom(GENERAL.navLink('Billing metrics')).exists('Billing metrics link is visible.');
+  });
+
+  test('it should hide billing metrics link when in namespace other than root or admin when Consumption Billing feature is enabled', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, true, false, ['Consumption Billing']);
+    const namespace = this.owner.lookup('service:namespace');
+    namespace.setNamespace('namespace-1');
+    await renderComponent();
+    assert.dom(GENERAL.navLink('Billing metrics')).doesNotExist('Billing metrics link is hidden.');
+  });
+
   test('it does NOT show Secrets Recovery when user is in HVD admin namespace', async function (assert) {
     this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 

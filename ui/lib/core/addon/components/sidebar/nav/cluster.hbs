@@ -59,7 +59,7 @@
       data-test-sidebar-nav-link="Client count"
     />
   {{/if}}
-  {{#if this.version.hasConsumptionBilling}}
+  {{#if (and this.version.hasConsumptionBilling (or this.isRootNamespace this.namespace.inHvdAdminNamespace))}}
     <Nav.Link
       @route="vault.cluster.billing.overview"
       @text="Billing metrics"
