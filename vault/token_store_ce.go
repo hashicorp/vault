@@ -16,6 +16,10 @@ func getEnterpriseTokenId(_ string) string {
 	return ""
 }
 
+func normalizeEnterpriseTokenToID(token string) string {
+	return token
+}
+
 func (ts *TokenStore) handleTidyEnterpriseTokens(_ context.Context, _ *namespace.Namespace, _ *multierror.Error) error {
 	return nil
 }

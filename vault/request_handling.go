@@ -242,7 +242,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	var secondEntity *identity.Entity
 	if IsEnterpriseToken(req.ClientToken) {
-		isValidEnterpriseToken, tokenMetadataContainer, entity, actorEntity, err := c.validateEnterpriseTokenAndFetchEntity(ctx, req.ClientToken)
+		isValidEnterpriseToken, tokenMetadataContainer, entity, actorEntity, chosenProfile, err := c.validateEnterpriseTokenAndFetchEntity(ctx, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to validate enterprise token", "error", err)
 		}
@@ -251,10 +251,12 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		}
 		req.EnterpriseTokenMetadata = getEnterpriseTokenMetadata(tokenMetadataContainer)
 		req.EnterpriseTokenIssuer = getEnterpriseTokenIssuer(tokenMetadataContainer)
+		req.EnterpriseTokenTransaction = getEnterpriseTokenTransaction(tokenMetadataContainer)
 		req.EnterpriseTokenAudience = getEnterpriseTokenAudience(tokenMetadataContainer)
+		_, req.EnterpriseTokenAuthorizationDetailsPresent = tokenMetadataContainer["authorization_details"]
 		req.EnterpriseTokenAuthorizationDetails = getEnterpriseTokenAuthorizationDetails(tokenMetadataContainer)
 		secondEntity = actorEntity
-		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity, actorEntity)
+		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity, actorEntity, chosenProfile)
 		if err != nil {
 			if c.perfStandby && errors.Is(err, logical.ErrReadOnly) {
 				return nil, nil, nil, nil, logical.ErrPerfStandbyPleaseForward
@@ -419,9 +421,19 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 }
 
 // restoreForwardingTokenHeaders restores client token headers so forwarded
-// requests preserve the original auth source on the active node.
+// requests preserve the caller's original token representation on the active
+// node. It prefers Request.InboundSSCToken (captured before any token
+// normalization) and falls back to Request.ClientToken when no inbound value is
+// available.
 func restoreForwardingTokenHeaders(req *logical.Request) {
-	if req == nil || req.ClientToken == "" {
+	if req == nil {
+		return
+	}
+	tokenToForward := req.InboundSSCToken
+	if tokenToForward == "" {
+		tokenToForward = req.ClientToken
+	}
+	if tokenToForward == "" {
 		return
 	}
 	if req.Headers == nil {
@@ -429,9 +441,9 @@ func restoreForwardingTokenHeaders(req *logical.Request) {
 	}
 	switch req.ClientTokenSource {
 	case logical.ClientTokenFromVaultHeader:
-		req.Headers[consts.AuthHeaderName] = []string{req.ClientToken}
+		req.Headers[consts.AuthHeaderName] = []string{tokenToForward}
 	case logical.ClientTokenFromAuthzHeader:
-		req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", req.ClientToken))
+		req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", tokenToForward))
 	}
 }
 
@@ -675,12 +687,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		// forward this request properly to the active node.
 		if retErr.ErrorOrNil() != nil && checkErrControlGroupTokenNeedsCreated(retErr) &&
 			c.perfStandby && len(req.ClientToken) != 0 {
-			switch req.ClientTokenSource {
-			case logical.ClientTokenFromVaultHeader:
-				req.Headers[consts.AuthHeaderName] = []string{req.ClientToken}
-			case logical.ClientTokenFromAuthzHeader:
-				req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", req.ClientToken))
-			}
+			restoreForwardingTokenHeaders(req)
 			// We also return the appropriate error so that the caller can forward the
 			// request to the active node
 			return auth, te, logical.ErrPerfStandbyPleaseForward
