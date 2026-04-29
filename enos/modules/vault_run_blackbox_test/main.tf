@@ -51,7 +51,8 @@ resource "enos_local_exec" "run_blackbox_test" {
     var.vault_install_dir != null ? { VAULT_INSTALL_DIR = var.vault_install_dir } : {},
     local.ldap_environment,
     local.postgres_environment,
-    local.mongodb_environment
+    local.mongodb_environment,
+    var.test_env_vars
   )
 }
 
