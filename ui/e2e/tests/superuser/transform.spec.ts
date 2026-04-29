@@ -24,15 +24,14 @@ test('transform workflow', async ({ page }) => {
     await page.getByRole('link', { name: 'Create transformation' }).click();
     await page.getByRole('textbox', { name: 'Name' }).fill('test-transformation');
     await page.getByRole('checkbox', { name: 'Allow deletion' }).check();
-    await page.getByRole('button', { name: 'Create transformation' }).click();
     await page.getByLabel('Template').getByText('Search').click();
     await page.getByRole('option', { name: 'builtin/socialsecuritynumber' }).click();
     await page.getByRole('button', { name: 'Create transformation' }).click();
+    await page.getByRole('link', { name: 'transform-test' }).click();
     await expect(page.getByText('test-transformation', { exact: true })).toBeVisible();
   });
 
   await test.step('Role can be created', async () => {
-    await page.getByRole('link', { name: 'transform-test' }).click();
     await page.getByRole('link', { name: 'Roles' }).click();
     await expect(page.getByRole('heading', { name: 'No roles in this backend' })).toBeVisible();
     await expect(page.getByText('Roles in this backend will be')).toBeVisible();

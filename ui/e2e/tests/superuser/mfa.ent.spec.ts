@@ -54,6 +54,7 @@ test('mfa workflow', async ({ page }) => {
 
   await test.step('verify mfa enforcement on login', async () => {
     await page.getByRole('button', { name: 'User menu' }).click();
+    await page.getByRole('button', { name: 'Copy token' }).click();
     await page.getByRole('link', { name: 'Log out' }).click();
 
     await page.getByLabel('Method').selectOption('userpass');
@@ -68,5 +69,34 @@ test('mfa workflow', async ({ page }) => {
     await expect(page.getByRole('alert', { name: 'Error' })).toBeVisible();
     await page.getByRole('button', { name: 'Cancel' }).click();
     await expect(page.getByRole('heading', { name: 'Sign in to Vault' })).toBeVisible();
+  });
+
+  await test.step('delete mfa method and userpass auth method', async () => {
+    await page.getByLabel('Method').selectOption('token');
+    // get token value from clipboard that we copied before logging out
+    const suToken = await page.evaluate(() => navigator.clipboard.readText());
+    await page.getByRole('textbox', { name: 'Token' }).fill(suToken);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await page.getByRole('link', { name: 'Access control' }).click();
+    await page.getByRole('link', { name: 'Multi-factor authentication' }).click();
+    await page.getByRole('link', { name: 'TOTP' }).click();
+    await page.getByRole('link', { name: 'Enforcements' }).click();
+    await page.getByRole('link', { name: 'mfa-totp-enforcement' }).click();
+    await page.getByRole('button', { name: 'Delete' }).click();
+    await page.getByRole('textbox', { name: 'Type mfa-totp-enforcement' }).fill('mfa-totp-enforcement');
+    await page.getByLabel('Delete enforcement?').getByRole('button', { name: 'Delete' }).click();
+    await page.getByRole('link', { name: 'Methods', exact: true }).click();
+    await page.getByRole('link', { name: 'TOTP' }).click();
+    await page.getByRole('link', { name: 'Configuration' }).click();
+    await page.getByRole('button', { name: 'Delete' }).click();
+    await page.getByRole('button', { name: 'Confirm' }).click();
+
+    await page.getByRole('link', { name: 'Authentication methods' }).click();
+    await page
+      .getByRole('link', { name: 'Type of auth mount userpass/' })
+      .getByLabel('Overflow options')
+      .click();
+    await page.getByRole('button', { name: 'Disable' }).click();
+    await page.getByRole('button', { name: 'Confirm' }).click();
   });
 });
