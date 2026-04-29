@@ -905,7 +905,7 @@ scenario "autopilot" {
 
   step "verify_undo_logs_enabled_on_primary" {
     skip_step   = semverconstraint(var.vault_product_version, "<1.13.0-0")
-    module      = module.vault_verify_undo_logs
+    module      = module.vault_run_blackbox_test
     description = <<-EOF
       Verifies that undo logs is correctly enabled on newly upgraded target hosts. For this it will
       query the metrics system backend for the vault.core.replication.write_undo_logs gauge.
@@ -925,18 +925,25 @@ scenario "autopilot" {
     }
 
     variables {
-      expected_state    = 1 # Enabled
-      hosts             = step.get_updated_vault_cluster_ips.leader_hosts
-      timeout           = 180 # Seconds
-      vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
-      vault_install_dir = local.vault_install_dir
+      leader_host       = step.get_updated_vault_cluster_ips.leader_host
+      leader_public_ip  = step.get_updated_vault_cluster_ips.leader_public_ip
       vault_root_token  = step.create_vault_cluster.root_token
+      test_package      = "./vault/external_tests/blackbox/verify"
+      test_names        = ["TestVaultUndoLogsMetric"]
+      vault_edition     = matrix.edition
+      vault_install_dir = local.vault_install_dir
+      vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
+      test_env_vars = {
+        EXPECTED_STATE  = "1"
+        TIMEOUT_SECONDS = "180"
+        RETRY_INTERVAL  = "5"
+      }
     }
   }
 
   step "verify_undo_logs_disabled_on_followers" {
     skip_step  = semverconstraint(var.vault_product_version, "<1.13.0-0")
-    module     = module.vault_verify_undo_logs
+    module     = module.vault_run_blackbox_test
     depends_on = [step.verify_undo_logs_enabled_on_primary]
 
     providers = {
@@ -944,12 +951,19 @@ scenario "autopilot" {
     }
 
     variables {
-      expected_state    = 0 # Disabled
-      hosts             = step.get_updated_vault_cluster_ips.follower_hosts
-      timeout           = 10 # Seconds
-      vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
-      vault_install_dir = local.vault_install_dir
+      leader_host       = step.get_updated_vault_cluster_ips.follower_hosts[0]
+      leader_public_ip  = step.get_updated_vault_cluster_ips.follower_hosts[0].public_ip
       vault_root_token  = step.create_vault_cluster.root_token
+      test_package      = "./vault/external_tests/blackbox/verify"
+      test_names        = ["TestVaultUndoLogsMetric"]
+      vault_edition     = matrix.edition
+      vault_install_dir = local.vault_install_dir
+      vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
+      test_env_vars = {
+        EXPECTED_STATE  = "0"
+        TIMEOUT_SECONDS = "10"
+        RETRY_INTERVAL  = "2"
+      }
     }
   }
 

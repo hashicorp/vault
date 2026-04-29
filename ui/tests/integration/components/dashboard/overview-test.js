@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
@@ -83,20 +82,19 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     this.vaultConfiguration = null;
     await this.renderComponent();
     assert.dom(GENERAL.hdsPageHeaderTitle).exists();
-    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-    assert.dom(DASHBOARD.emptyState('secrets-engines')).exists();
-    assert.dom(DASHBOARD.cardName('learn-more')).exists();
-    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-    assert.dom(DASHBOARD.emptyState('quick-actions')).exists();
-    assert.dom(DASHBOARD.cardName('configuration-details')).doesNotExist();
-    assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
-    assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    assert.dom(GENERAL.textDisplay('Secrets engines')).exists();
+    assert.dom(GENERAL.emptyState('secrets-engines')).exists();
+    assert.dom(GENERAL.textDisplay('Learn more')).exists();
+    assert.dom(GENERAL.textDisplay('Quick actions')).exists();
+    assert.dom(GENERAL.textDisplay('Cluster information')).doesNotExist();
+    assert.dom(GENERAL.textDisplay('Cluster replication')).doesNotExist();
+    assert.dom(GENERAL.textDisplay('Client count')).doesNotExist();
   });
 
   test('it renders the secrets engine card', async function (assert) {
     assert.expect(3);
     await this.renderComponent();
-    assert.dom(DASHBOARD.cardHeader('Secrets engines')).hasText('Secrets engines');
+    assert.dom(GENERAL.textDisplay('Secrets engines')).hasText('Secrets engines');
     assert.dom(SES.secretPath('kv-1/')).exists();
     assert.dom(SES.secretPath('kv-test/')).exists();
   });
@@ -117,12 +115,12 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       await this.renderComponent();
 
       assert.dom(GENERAL.hdsPageHeaderTitle).exists();
-      assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-      assert.dom(DASHBOARD.cardName('learn-more')).exists();
-      assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-      assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
-      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Secrets engines')).exists();
+      assert.dom(GENERAL.textDisplay('Learn more')).exists();
+      assert.dom(GENERAL.textDisplay('Quick actions')).exists();
+      assert.dom(GENERAL.textDisplay('Cluster information')).exists();
+      assert.dom(GENERAL.textDisplay('Replication')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Client count')).doesNotExist();
     });
 
     test('it should hide cards on enterprise if permission but not in root namespace', async function (assert) {
@@ -136,8 +134,8 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       };
       this.isRootNamespace = false;
       await this.renderComponent();
-      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
-      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Client count')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Replication')).doesNotExist();
     });
 
     test('it should show cards on enterprise if has permission and in root namespace', async function (assert) {
@@ -151,12 +149,12 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       };
       await this.renderComponent();
       assert.dom(GENERAL.hdsPageHeaderTitle).exists();
-      assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-      assert.dom(DASHBOARD.cardName('learn-more')).exists();
-      assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-      assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-      assert.dom(DASHBOARD.cardName('client-count')).exists();
-      assert.dom(DASHBOARD.cardName('replication')).exists();
+      assert.dom(GENERAL.textDisplay('Secrets engines')).exists();
+      assert.dom(GENERAL.textDisplay('Learn more')).exists();
+      assert.dom(GENERAL.textDisplay('Quick actions')).exists();
+      assert.dom(GENERAL.textDisplay('Cluster information')).exists();
+      assert.dom(GENERAL.textDisplay('Replication')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Client count')).exists();
     });
 
     test('it should show client count on enterprise in admin namespace when running a managed mode', async function (assert) {
@@ -176,7 +174,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       await this.renderComponent();
 
-      assert.dom(DASHBOARD.cardName('client-count')).exists();
+      assert.dom(GENERAL.textDisplay('Client count')).exists();
     });
 
     test('it should hide client count on enterprise in child namespaces called "admin" when running a managed mode', async function (assert) {
@@ -196,7 +194,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       await this.renderComponent();
 
-      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Client count')).doesNotExist();
     });
 
     test('it should hide client count on enterprise in any other namespace when running a managed mode', async function (assert) {
@@ -216,7 +214,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       await this.renderComponent();
 
-      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Client count')).doesNotExist();
     });
 
     test('it should hide client count on PKI-only Secrets clusters', async function (assert) {
@@ -227,7 +225,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       };
       this.version.features = ['PKI-only Secrets'];
       await this.renderComponent();
-      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Client count')).doesNotExist();
     });
 
     test('it should hide client count on enterprise when Consumption Billing is enabled', async function (assert) {
@@ -239,20 +237,20 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       this.version.features = ['Consumption Billing'];
 
       await this.renderComponent();
-      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+      assert.dom(GENERAL.widget('client count')).doesNotExist();
     });
 
     test('it should hide cards on enterprise in root namespace but no permission', async function (assert) {
       await this.renderComponent();
-      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
-      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Client count')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Replication')).doesNotExist();
     });
 
     test('it should hide cards on enterprise if no permission and not in root namespace', async function (assert) {
       this.isRootNamespace = false;
       await this.renderComponent();
-      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
-      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Client count')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Replication')).doesNotExist();
     });
 
     test('it should hide client count on enterprise in root namespace if no activity permission', async function (assert) {
@@ -266,8 +264,9 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       };
 
       await this.renderComponent();
-      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
-      assert.dom(DASHBOARD.cardName('replication')).exists();
+
+      assert.dom(GENERAL.textDisplay('Client count')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Cluster replication')).exists();
     });
 
     test('it should hide replication on enterprise in root namespace if no replication status permission', async function (assert) {
@@ -281,8 +280,8 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       };
 
       await this.renderComponent();
-      assert.dom(DASHBOARD.cardName('client-count')).exists();
-      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Client count')).exists();
+      assert.dom(GENERAL.textDisplay('Replication')).doesNotExist();
     });
 
     test('it should hide replication on enterprise if has permission and in root namespace but is empty', async function (assert) {
@@ -296,8 +295,8 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       };
       this.replication = {};
       await this.renderComponent();
-      assert.dom(DASHBOARD.cardName('client-count')).exists();
-      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+      assert.dom(GENERAL.textDisplay('Client count')).exists();
+      assert.dom(GENERAL.textDisplay('Replication')).doesNotExist();
     });
   });
 
@@ -306,9 +305,9 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     this.version.type = 'community';
     await this.renderComponent();
 
-    assert.dom('[data-test-learn-more-title]').hasText('Learn more');
+    assert.dom(GENERAL.textDisplay('Learn more')).hasText('Learn more');
     assert
-      .dom('[data-test-learn-more-subtext]')
+      .dom(GENERAL.textBody('Learn more description'))
       .hasText(
         'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
       );
@@ -324,9 +323,9 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       'Transform Secrets Engine',
     ];
     await this.renderComponent();
-    assert.dom('[data-test-learn-more-title]').hasText('Learn more');
+    assert.dom(GENERAL.textDisplay('Learn more')).hasText('Learn more');
     assert
-      .dom('[data-test-learn-more-subtext]')
+      .dom(GENERAL.textBody('Learn more description'))
       .hasText(
         'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
       );

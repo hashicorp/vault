@@ -6,16 +6,16 @@
 import Component from '@glimmer/component';
 
 /**
- * @module DashboardLearnMoreCard
- * DashboardLearnMoreCard component are used to display external links
+ * @module DashboardWidgetsLearnMore
+ * DashboardWidgetsLearnMore component are used to display external links
  *
  * @example
  * ```js
- * <DashboardLearnMoreCard  />
+ * <DashboardWidgetsLearnMore  />
  * ```
  */
 
-export default class DashboardLearnMoreCard extends Component {
+export default class DashboardWidgetsLearnMore extends Component {
   get learnMoreLinks() {
     return [
       {

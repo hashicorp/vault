@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, click } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
@@ -13,49 +13,39 @@ import sinon from 'sinon';
 import { STATIC_NOW } from 'vault/mirage/handlers/clients';
 import timestamp from 'core/utils/timestamp';
 import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients/client-count-helpers';
-import { formatNumber } from 'core/helpers/format-number';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { dateFormat } from 'core/helpers/date-format';
 
-module('Integration | Component | dashboard/client-count-card', function (hooks) {
+module('Integration | Component | dashboard/widgets/client-count', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   test('it should display client count information', async function (assert) {
-    assert.expect(6);
+    assert.expect(5);
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW)); // 1/25/24
-    const { months, total } = ACTIVITY_RESPONSE_STUB;
-    const [latestMonth] = months.slice(-1);
     this.server.get('sys/internal/counters/activity', () => {
       // this assertion should be hit twice, once initially and then again clicking 'refresh'
       assert.true(true, 'makes request to sys/internal/counters/activity');
       return { data: ACTIVITY_RESPONSE_STUB };
     });
 
-    await render(hbs`<Dashboard::ClientCountCard />`);
-    assert.dom('[data-test-client-count-title]').hasText('Client count');
+    await render(hbs`<Dashboard::Widgets::ClientCount />`);
+    assert.dom(GENERAL.textDisplay('Client count')).hasText('Client count');
     assert
-      .dom(CLIENT_COUNT.statText('Total'))
-      .hasText(
-        `Total The number of clients in this billing period (Jun 2023 - Sep 2023). ${formatNumber([
-          total.clients,
-        ])}`
-      );
+      .dom(GENERAL.textBody('Client count total'))
+      .hasText('Total: The number of clients in this billing period (Jun 2023 - Sep 2023).');
     assert
-      .dom(CLIENT_COUNT.statText('New'))
-      .hasText(
-        `New The number of clients new to Vault in the current month. ${formatNumber([
-          latestMonth.new_clients.counts.clients,
-        ])}`
-      );
-    assert.dom('[data-test-updated-timestamp]').hasTextContaining('Updated Jan 25 2024');
-
-    // fires second request to /activity
-    await click('[data-test-refresh]');
+      .dom(GENERAL.textBody('Client count new'))
+      .hasText('New: The number of clients new to Vault in the current month.');
+    assert.dom(GENERAL.textBody('Client count updated at')).hasTextContaining(
+      `Updated ${dateFormat([STATIC_NOW.toISOString(), 'MMMM d, yyyy, h:mm:ss aaa'], {
+        withTimeZone: true,
+      })}`
+    );
   });
 
   test('it shows no data subtext if no start or end timestamp', async function (assert) {
-    assert.expect(2);
+    assert.expect(4);
     // as far as I know, responses will always have a start/end time
     // stubbing this unrealistic response just to test component subtext logic
     this.server.get('sys/internal/counters/activity', () => {
@@ -64,9 +54,11 @@ module('Integration | Component | dashboard/client-count-card', function (hooks)
       };
     });
 
-    await render(hbs`<Dashboard::ClientCountCard />`);
-    assert.dom(CLIENT_COUNT.statText('Total')).hasText('Total No total client data available. -');
-    assert.dom(CLIENT_COUNT.statText('New')).hasText('New No new client data available. -');
+    await render(hbs`<Dashboard::Widgets::ClientCount />`);
+    assert.dom(GENERAL.textBody('Client count total')).hasText('Total: No total client data available.');
+    assert.dom(GENERAL.textBody('Client count new')).hasText('New: No new client data available.');
+    assert.dom(GENERAL.tableData(0, 'total value')).hasText('-');
+    assert.dom(GENERAL.tableData(1, 'new value')).hasText('-');
   });
 
   test('it shows empty state if no activity data and reporting is enabled', async function (assert) {
@@ -84,7 +76,7 @@ module('Integration | Component | dashboard/client-count-card', function (hooks)
         data: { reporting_enabled: true },
       };
     });
-    await render(hbs`<Dashboard::ClientCountCard />`);
+    await render(hbs`<Dashboard::Widgets::ClientCount />`);
     assert.dom(GENERAL.emptyStateTitle).hasText('No data received');
     assert
       .dom(GENERAL.emptyStateMessage)
@@ -105,7 +97,7 @@ module('Integration | Component | dashboard/client-count-card', function (hooks)
         JSON.stringify({ errors: ['permission denied'] })
       );
     });
-    await render(hbs`<Dashboard::ClientCountCard />`);
+    await render(hbs`<Dashboard::Widgets::ClientCount />`);
     assert.dom(GENERAL.emptyStateTitle).hasText('Activity configuration data is unavailable');
     assert
       .dom(GENERAL.emptyStateMessage)

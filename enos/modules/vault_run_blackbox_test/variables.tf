@@ -77,3 +77,9 @@ variable "vault_install_dir" {
   description = "The directory where Vault is installed"
   default     = null
 }
+
+variable "test_env_vars" {
+  type        = map(string)
+  description = "Additional environment variables to pass to the test"
+  default     = {}
+}

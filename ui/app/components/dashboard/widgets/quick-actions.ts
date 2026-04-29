@@ -25,13 +25,13 @@ import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type { StandardListResponse, PkiListIssuersResponse } from '@hashicorp/vault-client-typescript';
 
 /**
- * @module DashboardQuickActionsCard
- * DashboardQuickActionsCard component allows users to see a list of secrets engines filtered by
+ * @module Dashboard::Widgets::QuickActions
+ * Dashboard widget component that allows users to see a list of secrets engines filtered by
  * kv, pki and database and perform certain actions based on the type of secret engine selected
  *
  * @example
  * ```js
- *   <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
+ *   <Dashboard::Widgets::QuickActions @secretsEngines={{@model.secretsEngines}} />
  * ```
  */
 
@@ -39,7 +39,7 @@ interface Args {
   secretsEngines: SecretsEngineResource[];
 }
 
-export default class DashboardQuickActionsCard extends Component<Args> {
+export default class DashboardWidgetsQuickActions extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;

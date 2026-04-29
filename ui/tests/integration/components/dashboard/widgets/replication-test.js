@@ -9,9 +9,9 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import timestamp from 'core/utils/timestamp';
-import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Integration | Component | dashboard/replication-card', function (hooks) {
+module('Integration | Component | dashboard/widgets/replication', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
@@ -39,41 +39,39 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
   test('it should display replication information if both dr and performance replication are enabled as features', async function (assert) {
     await render(
       hbs`
-        <Dashboard::ReplicationCard
+        <Dashboard::Widgets::Replication
           @replication={{this.replication}}
           @version={{this.version}}
           @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom(DASHBOARD.title('DR primary')).hasText('DR primary');
-    assert.dom(DASHBOARD.tooltipTitle('DR primary')).hasText('running');
-    assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'DR primary', 'check-circle')).exists();
-    assert.dom(DASHBOARD.title('Performance primary')).hasText('Performance primary');
-    assert.dom(DASHBOARD.tooltipTitle('Performance primary')).hasText('running');
-    assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'Performance primary', 'check-circle')).exists();
+    assert.dom(GENERAL.tableData('0', 'DR')).hasText('Disaster recovery primary Known secondaries');
+    assert.dom(GENERAL.tableData('0', 'DR value')).hasText('Running 0');
+    assert.dom(GENERAL.badge('DR')).hasClass('hds-badge--color-success');
+    assert.dom(GENERAL.tableData('1', 'Performance')).hasText('Performance replication primary');
+    assert.dom(GENERAL.tableData('1', 'Performance value')).hasText('Running');
+    assert.dom(GENERAL.badge('Performance')).hasClass('hds-badge--color-success');
   });
 
   test('it should display replication information if both dr and performance replication are enabled as features and only dr is setup', async function (assert) {
     this.replication.performance = { mode: 'disabled' };
     await render(
       hbs`
-        <Dashboard::ReplicationCard
+        <Dashboard::Widgets::Replication
           @replication={{this.replication}}
           @version={{this.version}}
           @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom(DASHBOARD.title('DR primary')).hasText('DR primary');
-    assert.dom(DASHBOARD.tooltipTitle('DR primary')).hasText('running');
-    assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'DR primary', 'check-circle')).exists();
-    assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'DR primary', 'check-circle')).hasClass('has-text-success');
 
-    assert.dom(DASHBOARD.title('Performance')).hasText('Performance');
-    assert.dom(DASHBOARD.tooltipTitle('Performance')).hasText('not set up');
-    assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'Performance', 'x-circle')).exists();
-    assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'Performance', 'x-circle')).hasClass('has-text-danger');
+    assert.dom(GENERAL.tableData('0', 'DR')).hasText('Disaster recovery primary Known secondaries');
+    assert.dom(GENERAL.tableData('0', 'DR value')).hasText('Running 0');
+    assert.dom(GENERAL.badge('DR')).hasClass('hds-badge--color-success');
+    assert.dom(GENERAL.tableData('1', 'Performance')).hasText('Performance replication');
+    assert.dom(GENERAL.tableData('1', 'Performance value')).hasText('Not set up');
+    assert.dom(GENERAL.badge('Performance')).hasClass('hds-badge--color-warning');
   });
 
   test('it should display only dr replication information if vault version only has hasDRReplication', async function (assert) {
@@ -90,23 +88,17 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
     };
     await render(
       hbs`
-        <Dashboard::ReplicationCard
+        <Dashboard::Widgets::Replication
           @replication={{this.replication}}
           @version={{this.version}}
           @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom(DASHBOARD.title('state')).hasText('state');
-    assert.dom(DASHBOARD.subtext('state')).hasText('The current operating state of the cluster.');
-    assert.dom(DASHBOARD.tooltipTitle('state')).hasText('running');
-    assert.dom(DASHBOARD.tooltipIcon('dr', 'state', 'check-circle')).exists();
-    assert.dom(DASHBOARD.tooltipIcon('dr', 'state', 'check-circle')).hasClass('has-text-success');
-    assert.dom(DASHBOARD.statLabel('known secondaries')).hasText('known secondaries');
-    assert
-      .dom(DASHBOARD.statText('known secondaries'))
-      .hasText('Number of secondaries connected to this primary.');
-    assert.dom(DASHBOARD.statValue('known secondaries')).hasText('1');
+    assert.dom(GENERAL.tableData('0', 'DR')).hasText('Disaster recovery Known secondaries');
+    assert.dom(GENERAL.tableData('0', 'DR value')).hasText('Running 1');
+    assert.dom(GENERAL.badge('DR')).hasClass('hds-badge--color-success');
+    assert.dom(GENERAL.tableData('1', 'Performance')).doesNotExist();
   });
 
   test('it should show correct icons if dr and performance replication is idle or shutdown states', async function (assert) {
@@ -124,24 +116,21 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
     };
     await render(
       hbs`
-        <Dashboard::ReplicationCard
+        <Dashboard::Widgets::Replication
           @replication={{this.replication}}
           @version={{this.version}}
           @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom(DASHBOARD.title('DR primary')).hasText('DR primary');
-    assert.dom(DASHBOARD.tooltipTitle('DR primary')).hasText('idle');
-    assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'DR primary', 'x-square')).exists();
-    assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'DR primary', 'x-square')).hasClass('has-text-danger');
 
-    assert.dom(DASHBOARD.title('Performance primary')).hasText('Performance primary');
-    assert.dom(DASHBOARD.tooltipTitle('Performance primary')).hasText('shutdown');
-    assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'Performance primary', 'x-circle')).exists();
-    assert
-      .dom(DASHBOARD.tooltipIcon('dr-perf', 'Performance primary', 'x-circle'))
-      .hasClass('has-text-danger');
+    assert.dom(GENERAL.tableData('0', 'DR')).hasText('Disaster recovery primary Known secondaries');
+    assert.dom(GENERAL.tableData('0', 'DR value')).hasText('Idle 0');
+    assert.dom(GENERAL.badge('DR')).hasClass('hds-badge--color-critical');
+
+    assert.dom(GENERAL.tableData('1', 'Performance')).hasText('Performance replication primary');
+    assert.dom(GENERAL.tableData('1', 'Performance value')).hasText('Shutdown');
+    assert.dom(GENERAL.badge('Performance')).hasClass('hds-badge--color-critical');
   });
 
   test('it should show correct performance titles if primary vs secondary', async function (assert) {
@@ -158,30 +147,30 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
     };
     await render(
       hbs`
-        <Dashboard::ReplicationCard
+        <Dashboard::Widgets::Replication
           @replication={{this.replication}}
           @version={{this.version}}
           @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom(DASHBOARD.title('DR primary')).hasText('DR primary');
-    assert.dom(DASHBOARD.title('Performance primary')).hasText('Performance primary');
+    assert.dom(GENERAL.tableData('0', 'DR')).hasText('Disaster recovery primary Known secondaries');
+    assert.dom(GENERAL.tableData('1', 'Performance')).hasText('Performance replication primary');
 
     this.replication.performance.mode = 'secondary';
     await render(
       hbs`
-          <Dashboard::ReplicationCard
+          <Dashboard::Widgets::Replication
             @replication={{this.replication}}
             @version={{this.version}}
             @updatedAt={{this.updatedAt}}
             @refresh={{this.refresh}} />
             `
     );
-    assert.dom(DASHBOARD.title('Performance secondary')).hasText('Performance secondary');
+    assert.dom(GENERAL.tableData('1', 'Performance')).hasText('Performance replication secondary');
   });
 
-  test('it should show empty state', async function (assert) {
+  test('it should show replication card empty table and Enable replication button', async function (assert) {
     this.replication = {
       dr: {
         clusterId: '',
@@ -192,18 +181,19 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
     };
     await render(
       hbs`
-        <Dashboard::ReplicationCard
+        <Dashboard::Widgets::Replication
           @replication={{this.replication}}
           @version={{this.version}}
           @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom(DASHBOARD.emptyState('replication')).exists();
-    assert.dom(DASHBOARD.emptyStateTitle('replication')).hasText('Replication not set up');
-    assert
-      .dom(DASHBOARD.emptyStateMessage('replication'))
-      .hasText('Data will be listed here. Enable a primary replication cluster to get started.');
-    assert.dom(DASHBOARD.emptyStateActions('replication')).hasText('Enable replication');
+
+    assert.dom(GENERAL.tableData('0', 'DR')).hasText('Disaster recovery Known secondaries');
+    assert.dom(GENERAL.tableData('0', 'DR value')).hasText('Not set up 0');
+    assert.dom(GENERAL.badge('DR')).hasClass('hds-badge--color-warning');
+    assert.dom(GENERAL.tableData('1', 'Performance')).hasText('Performance replication');
+    assert.dom(GENERAL.tableData('1', 'Performance value')).hasText('Not set up');
+    assert.dom(GENERAL.badge('Performance')).hasClass('hds-badge--color-warning');
   });
 });

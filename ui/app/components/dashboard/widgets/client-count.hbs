@@ -1,0 +1,54 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div data-test-widget="client count" ...attributes>
+  <Hds::Layout::Flex @justify="space-between">
+    <Hds::Text::Display @size="300" data-test-text-display="Client count">Client count</Hds::Text::Display>
+    <Hds::Link::Standalone @icon="arrow-right" @text="Details" @iconPosition="trailing" @route="vault.cluster.clients" />
+  </Hds::Layout::Flex>
+
+  {{#if (and this.activityData (not this.fetchClientActivity.isRunning))}}
+    <div class="has-top-margin-s">
+      <Hds::Text::Body @tag="p" @size="100" @color="faint" data-test-text-body="Client count updated at">
+        Updated
+        {{date-format this.updatedAt "MMMM d, yyyy, h:mm:ss aaa" withTimeZone=true}}
+      </Hds::Text::Body>
+    </div>
+  {{/if}}
+
+  {{#if this.fetchClientActivity.isRunning}}
+    <VaultLogoSpinner />
+  {{else}}
+    {{#if this.activityData}}
+      <Hds::Table class="has-top-margin-s" @caption="Client count">
+        <:body as |B|>
+          <B.Tr data-test-table-row="0">
+            <B.Td class="one-half-width" data-test-table-data="total">Total</B.Td>
+            <B.Td class="one-half-width" data-test-table-data="total value">{{or this.activityData.total.clients "-"}}</B.Td>
+          </B.Tr>
+          <B.Tr data-test-table-row="1">
+            <B.Td class="one-half-width" data-test-table-data="new">New</B.Td>
+            <B.Td class="one-half-width" data-test-table-data="new value">
+              {{or this.currentMonthActivityTotalCount "-"}}
+            </B.Td>
+          </B.Tr>
+        </:body>
+      </Hds::Table>
+      <Hds::Text::Body
+        @tag="p"
+        @color="faint"
+        @size="100"
+        class="has-top-margin-xs has-bottom-margin-xs"
+        data-test-text-body="Client count total"
+      >Total:
+        {{this.statSubText.total}}</Hds::Text::Body>
+      <Hds::Text::Body @tag="p" @color="faint" @size="100" data-test-text-body="Client count new">New:
+        {{this.statSubText.new}}</Hds::Text::Body>
+
+    {{else}}
+      <Clients::NoData @config={{this.activityConfig}} @canUpdate={{this.canUpdateActivityConfig}} />
+    {{/if}}
+  {{/if}}
+</div>
