@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -21,11 +21,11 @@ module('Integration | Component | message-error', function (hooks) {
 
     this.renderComponent = () => {
       return render(hbs`
-        <MessageError 
-        @errorMessage={{this.errorMessage}} 
-        @errors={{this.errors}} 
-        @model={{this.model}} 
-        @onDismiss={{this.onDismiss}} 
+        <MessageError
+        @errorMessage={{this.errorMessage}}
+        @errors={{this.errors}}
+        @model={{this.model}}
+        @onDismiss={{this.onDismiss}}
         />`);
     };
   });

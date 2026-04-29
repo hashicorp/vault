@@ -23,6 +23,87 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// TestRequiresMaterializedTokenState verifies token materialization path
+// requirements for enterprise token requests.
+func TestRequiresMaterializedTokenState(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		path string
+		want bool
+	}{
+		{name: "token lookup self", path: "auth/token/lookup-self", want: true},
+		{name: "token lookup", path: "auth/token/lookup", want: true},
+		{name: "leases lookup", path: "sys/leases/lookup", want: true},
+		{name: "leases lookup prefix", path: "sys/leases/lookup/secret/foo", want: true},
+		{name: "leases count", path: "sys/leases/count", want: true},
+		{name: "leases list", path: "sys/leases", want: true},
+		{name: "cubbyhole", path: "cubbyhole/test", want: true},
+		{name: "token renew self excluded", path: "auth/token/renew-self", want: false},
+		{name: "leases renew excluded", path: "sys/leases/renew", want: false},
+		{name: "unrelated", path: "secret/data/foo", want: false},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.want, requiresMaterializedTokenState(tc.path))
+		})
+	}
+}
+
+// TestRestoreForwardingTokenHeaders_UsesInboundToken verifies Authorization
+// forwarding prefers the original inbound token when present.
+func TestRestoreForwardingTokenHeaders_UsesInboundToken(t *testing.T) {
+	t.Parallel()
+
+	req := &logical.Request{
+		ClientToken:       "jwt.internal-id",
+		InboundSSCToken:   "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig",
+		ClientTokenSource: logical.ClientTokenFromAuthzHeader,
+		Headers: map[string][]string{
+			"Authorization": {"Basic abc123"},
+		},
+	}
+
+	restoreForwardingTokenHeaders(req)
+
+	require.Equal(t, []string{"Basic abc123", "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig"}, req.Headers["Authorization"])
+}
+
+// TestRestoreForwardingTokenHeaders_FallsBackToClientToken verifies fallback to
+// req.ClientToken when no inbound token is present.
+func TestRestoreForwardingTokenHeaders_FallsBackToClientToken(t *testing.T) {
+	t.Parallel()
+
+	req := &logical.Request{
+		ClientToken:       "jwt.jti-value",
+		ClientTokenSource: logical.ClientTokenFromVaultHeader,
+	}
+
+	restoreForwardingTokenHeaders(req)
+
+	require.Equal(t, []string{"jwt.jti-value"}, req.Headers["X-Vault-Token"])
+}
+
+// TestRestoreForwardingTokenHeaders_UsesInboundTokenForVaultHeader verifies
+// X-Vault-Token forwarding prefers the original inbound token.
+func TestRestoreForwardingTokenHeaders_UsesInboundTokenForVaultHeader(t *testing.T) {
+	t.Parallel()
+
+	req := &logical.Request{
+		ClientToken:       "jwt.jti-value",
+		InboundSSCToken:   "jwt.raw.value",
+		ClientTokenSource: logical.ClientTokenFromVaultHeader,
+	}
+
+	restoreForwardingTokenHeaders(req)
+
+	require.Equal(t, []string{"jwt.raw.value"}, req.Headers["X-Vault-Token"])
+}
+
 func TestRequestHandling_Wrapping(t *testing.T) {
 	core, _, root := TestCoreUnsealed(t)
 

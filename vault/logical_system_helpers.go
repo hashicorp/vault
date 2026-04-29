@@ -134,6 +134,13 @@ var (
 			"config/group-policy-application$": {operations: []logical.Operation{logical.ReadOperation, logical.UpdateOperation}},
 		})...)
 
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string]enterprisePathStub{
+			"activation-flags/oauth-resource-server/activate":                    {operations: []logical.Operation{logical.UpdateOperation}},
+			"activation-flags/oauth-resource-server/deactivate":                  {operations: []logical.Operation{logical.UpdateOperation}},
+			"config/oauth-resource-server/":                                      {operations: []logical.Operation{logical.ListOperation}},
+			"config/oauth-resource-server/" + framework.GenericNameRegex("name"): {parameters: []string{"name"}, operations: []logical.Operation{logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation}},
+		})...)
+
 		// reporting paths
 		paths = append(paths, buildEnterpriseOnlyPaths(map[string]enterprisePathStub{
 			"reporting/scan$": {operations: []logical.Operation{logical.UpdateOperation}},

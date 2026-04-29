@@ -90,6 +90,16 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 			return nil
 		}
 
+		// An initialization timeout means the database was unreachable within
+		// Vault's deadline, not that the stored credentials are wrong. A timeout
+		// is not a reliable signal of credential state: the rotation may have
+		// already applied the new password before the database became slow.
+		// Returning the error here lets the WAL framework retry later rather
+		// than risking a rollback that reverts a successfully rotated credential.
+		if errors.Is(err, errDatabaseInitializeTimeout) {
+			return err
+		}
+
 		return b.rollbackDatabaseCredentials(ctx, config, entry)
 	}
 

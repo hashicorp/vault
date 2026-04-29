@@ -242,7 +242,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	var secondEntity *identity.Entity
 	if IsEnterpriseToken(req.ClientToken) {
-		isValidEnterpriseToken, tokenMetadataContainer, entity, actorEntity, err := c.validateEnterpriseTokenAndFetchEntity(ctx, req.ClientToken)
+		isValidEnterpriseToken, tokenMetadataContainer, entity, actorEntity, chosenProfile, err := c.validateEnterpriseTokenAndFetchEntity(ctx, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to validate enterprise token", "error", err)
 		}
@@ -251,10 +251,12 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		}
 		req.EnterpriseTokenMetadata = getEnterpriseTokenMetadata(tokenMetadataContainer)
 		req.EnterpriseTokenIssuer = getEnterpriseTokenIssuer(tokenMetadataContainer)
+		req.EnterpriseTokenTransaction = getEnterpriseTokenTransaction(tokenMetadataContainer)
 		req.EnterpriseTokenAudience = getEnterpriseTokenAudience(tokenMetadataContainer)
+		_, req.EnterpriseTokenAuthorizationDetailsPresent = tokenMetadataContainer["authorization_details"]
 		req.EnterpriseTokenAuthorizationDetails = getEnterpriseTokenAuthorizationDetails(tokenMetadataContainer)
 		secondEntity = actorEntity
-		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity, actorEntity)
+		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity, actorEntity, chosenProfile)
 		if err != nil {
 			if c.perfStandby && errors.Is(err, logical.ErrReadOnly) {
 				return nil, nil, nil, nil, logical.ErrPerfStandbyPleaseForward
@@ -418,6 +420,50 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	return acl, te, entity, identityPolicies, nil
 }
 
+// restoreForwardingTokenHeaders restores client token headers so forwarded
+// requests preserve the caller's original token representation on the active
+// node. It prefers Request.InboundSSCToken (captured before any token
+// normalization) and falls back to Request.ClientToken when no inbound value is
+// available.
+func restoreForwardingTokenHeaders(req *logical.Request) {
+	if req == nil {
+		return
+	}
+	tokenToForward := req.InboundSSCToken
+	if tokenToForward == "" {
+		tokenToForward = req.ClientToken
+	}
+	if tokenToForward == "" {
+		return
+	}
+	if req.Headers == nil {
+		req.Headers = make(map[string][]string)
+	}
+	switch req.ClientTokenSource {
+	case logical.ClientTokenFromVaultHeader:
+		req.Headers[consts.AuthHeaderName] = []string{tokenToForward}
+	case logical.ClientTokenFromAuthzHeader:
+		req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", tokenToForward))
+	}
+}
+
+// requiresMaterializedTokenState reports whether the request path needs a
+// storage-backed token entry for enterprise token authentication flows.
+//
+// Token renew/revoke paths are intentionally excluded because token store
+// handlers reject enterprise tokens for those operations.
+func requiresMaterializedTokenState(path string) bool {
+	if path == "sys/leases/count" || path == "sys/leases" ||
+		path == "sys/leases/lookup" || strings.HasPrefix(path, "sys/leases/lookup/") {
+		return true
+	}
+	switch path {
+	case "auth/token/lookup-self", "auth/token/lookup":
+		return true
+	}
+	return strings.HasPrefix(path, "cubbyhole/")
+}
+
 // CheckTokenWithLock calls CheckToken after grabbing the internal stateLock,
 // and also checking that we aren't in the process of shutting down.
 func (c *Core) CheckTokenWithLock(ctx context.Context, req *logical.Request) (*logical.Auth, *logical.TokenEntry, error) {
@@ -538,7 +584,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	switch {
 	case req.ClientTokenSource == logical.ClientTokenFromVaultHeader:
 		delete(req.Headers, consts.AuthHeaderName)
-	case req.ClientTokenSource == logical.ClientTokenFromAuthzHeader && !unauth && te == nil:
+	case req.ClientTokenSource == logical.ClientTokenFromAuthzHeader && (!unauth || te != nil):
 		if headers, ok := req.Headers["Authorization"]; ok {
 			retHeaders := make([]string, 0, len(headers))
 			for _, v := range headers {
@@ -641,12 +687,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		// forward this request properly to the active node.
 		if retErr.ErrorOrNil() != nil && checkErrControlGroupTokenNeedsCreated(retErr) &&
 			c.perfStandby && len(req.ClientToken) != 0 {
-			switch req.ClientTokenSource {
-			case logical.ClientTokenFromVaultHeader:
-				req.Headers[consts.AuthHeaderName] = []string{req.ClientToken}
-			case logical.ClientTokenFromAuthzHeader:
-				req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", req.ClientToken))
-			}
+			restoreForwardingTokenHeaders(req)
 			// We also return the appropriate error so that the caller can forward the
 			// request to the active node
 			return auth, te, logical.ErrPerfStandbyPleaseForward
@@ -1199,46 +1240,73 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
 	}
 
+	// Some request paths require a token store entry (for example token lookup
+	// endpoints and cubbyhole paths). Materialize token state on-demand for
+	// these requests.
+	if ctErr == nil && te != nil && te.Type == logical.TokenTypeEnt && !te.IsStorageBacked() &&
+		requiresMaterializedTokenState(req.Path) {
+		materializedReq, matErr := c.materializeEnterpriseTokenForUsage(ctx, req, auth, c.perfStandby)
+		if matErr != nil {
+			if errors.Is(matErr, logical.ErrPerfStandbyPleaseForward) {
+				restoreForwardingTokenHeaders(req)
+				return nil, nil, matErr
+			}
+			c.logger.Error("failed to materialize enterprise token for token endpoint", "request_path", req.Path, "error", matErr)
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return nil, auth, retErr
+		}
+
+		// Preserve the returned request's token identity fields so downstream
+		// routing (notably cubbyhole) is keyed by the materialized token ID.
+		req.ClientToken = materializedReq.ClientToken
+		req.ClientTokenAccessor = materializedReq.ClientTokenAccessor
+		req.ClientTokenRemainingUses = materializedReq.ClientTokenRemainingUses
+		req.SetTokenEntry(materializedReq.TokenEntry())
+		te = req.TokenEntry()
+	}
+
 	// We run this logic first because we want to decrement the use count even
 	// in the case of an error (assuming we can successfully look up; if we
 	// need to forward, we exit before now)
 	if te != nil && !isControlGroupRun(req) {
-		// Attempt to use the token (decrement NumUses)
-		var err error
-		te, err = c.tokenStore.UseToken(ctx, te)
-		if err != nil {
-			c.logger.Error("failed to use token", "error", err)
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, nil, retErr
-		}
-		if te == nil {
-			// Token has been revoked by this point
-			retErr = multierror.Append(retErr, logical.ErrPermissionDenied, logical.ErrInvalidToken)
-			return nil, nil, retErr
-		}
-		if te.NumUses == tokenRevocationPending {
-			// We defer a revocation until after logic has run, since this is a
-			// valid request (this is the token's final use). We pass the ID in
-			// directly just to be safe in case something else modifies te later.
-			defer func(id string) {
-				nsActiveCtx := namespace.ContextWithNamespace(c.activeContext, ns)
-				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(nsActiveCtx, te)
-				if err == nil {
-					err = c.expiration.LazyRevoke(ctx, leaseID)
-				}
-				if err != nil {
-					c.logger.Error("failed to revoke token", "error", err)
-					retResp = nil
-					retAuth = nil
-					retErr = multierror.Append(retErr, ErrInternalError)
-				}
-				if retResp != nil && retResp.Secret != nil &&
-					// Some backends return a TTL even without a Lease ID
-					retResp.Secret.LeaseID != "" {
-					retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so leased credentials were immediately revoked.")
-					return
-				}
-			}(te.ID)
+		if te.IsStorageBacked() {
+			// Attempt to use the token (decrement NumUses)
+			var err error
+			te, err = c.tokenStore.UseToken(ctx, te)
+			if err != nil {
+				c.logger.Error("failed to use token", "request_path", req.Path, "error", err)
+				retErr = multierror.Append(retErr, ErrInternalError)
+				return nil, nil, retErr
+			}
+			if te == nil {
+				// Token has been revoked by this point
+				retErr = multierror.Append(retErr, logical.ErrPermissionDenied, logical.ErrInvalidToken)
+				return nil, nil, retErr
+			}
+			if te.NumUses == tokenRevocationPending {
+				// We defer a revocation until after logic has run, since this is a
+				// valid request (this is the token's final use). We pass the ID in
+				// directly just to be safe in case something else modifies te later.
+				defer func(id string) {
+					nsActiveCtx := namespace.ContextWithNamespace(c.activeContext, ns)
+					leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(nsActiveCtx, te)
+					if err == nil {
+						err = c.expiration.LazyRevoke(ctx, leaseID)
+					}
+					if err != nil {
+						c.logger.Error("failed to revoke token", "request_path", req.Path, "error", err)
+						retResp = nil
+						retAuth = nil
+						retErr = multierror.Append(retErr, ErrInternalError)
+					}
+					if retResp != nil && retResp.Secret != nil &&
+						// Some backends return a TTL even without a Lease ID
+						retResp.Secret.LeaseID != "" {
+						retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so leased credentials were immediately revoked.")
+						return
+					}
+				}(te.ID)
+			}
 		}
 	}
 
@@ -1472,6 +1540,20 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		if registerLease {
+			registerReq := req
+			if te := req.TokenEntry(); te != nil && !te.IsStorageBacked() {
+				registerReq, err = c.materializeEnterpriseTokenForUsage(ctx, req, auth, c.perfStandby)
+				if err != nil {
+					if errors.Is(err, logical.ErrPerfStandbyPleaseForward) {
+						restoreForwardingTokenHeaders(req)
+						return nil, nil, err
+					}
+					c.logger.Error("failed to materialize enterprise token for lease", "request_path", req.Path, "error", err)
+					retErr = multierror.Append(retErr, ErrInternalError)
+					return nil, auth, retErr
+				}
+			}
+
 			if req.IsSnapshotReadOrList() {
 				return logical.ErrorResponse("cannot register lease for snapshot read or list"), nil, ErrInternalError
 			}
@@ -1496,7 +1578,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				return nil, auth, retErr
 			}
 
-			leaseID, err := registerFunc(ctx, req, resp, "")
+			leaseID, err := registerFunc(ctx, registerReq, resp, "")
 			if err != nil {
 				c.logger.Error("failed to register lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
@@ -2707,7 +2789,11 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 				return err
 			}
 		}
+	case logical.TokenTypeEnt:
+		// Ensure it's not marked renewable since enterprise tokens are not renewable
+		auth.Renewable = false
 	}
+
 	return nil
 }
 

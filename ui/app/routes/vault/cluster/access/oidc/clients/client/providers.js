@@ -10,10 +10,10 @@ export default class OidcClientProvidersRoute extends Route {
   @service store;
 
   model() {
-    const model = this.modelFor('vault.cluster.access.oidc.clients.client');
+    const { client } = this.modelFor('vault.cluster.access.oidc.clients.client');
     return this.store
       .query('oidc/provider', {
-        allowed_client_id: model.clientId,
+        allowed_client_id: client.client_id,
       })
       .catch((err) => {
         if (err.httpStatus === 404) {

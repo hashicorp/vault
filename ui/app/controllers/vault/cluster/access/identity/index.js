@@ -33,8 +33,8 @@ export default Controller.extend(ListController, {
           this.flashMessages.success(`Successfully deleted ${type}: ${id}`);
         })
         .catch((e) => {
-          this.flashMessages.success(
-            `There was a problem deleting ${type}: ${id} - ${e.errors.join(' ') || e.message}`
+          this.flashMessages.danger(
+            `There was a problem deleting ${type}: ${id} - ${e.errors?.join(' ') || e.message}`
           );
         })
         .finally(() => this.set('itemToDelete', null));

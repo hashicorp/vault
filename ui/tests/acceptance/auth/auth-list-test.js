@@ -13,7 +13,7 @@ import { MANAGED_AUTH_BACKENDS } from 'vault/helpers/supported-managed-auth-back
 import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
-import localStorage from 'vault/lib/local-storage';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 const SELECTORS = {
   createUser: '[data-test-entity-create-link="user"]',
@@ -27,7 +27,7 @@ module('Acceptance | auth backend list', function (hooks) {
   hooks.beforeEach(async function () {
     await login();
     // dismiss wizard
-    localStorage.setItem('dismissed-wizards', ['auth-methods']);
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.authMethods);
   });
 
   test('userpass secret backend', async function (assert) {
@@ -158,7 +158,7 @@ module('Acceptance | auth backend list', function (hooks) {
       await runCmd(createNS(ns), false);
       await settled();
       await loginNs(ns);
-      localStorage.setItem('dismissed-wizards', ['auth-methods']);
+      this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.authMethods);
 
       // go directly to token configure route
       await visit(`/vault/settings/auth/configure/token/options?namespace=${ns}`);

@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import Component from '@glimmer/component';
 import { SecurityPolicy } from 'vault/components/wizard/namespaces/step-1';
 import { CreationMethod } from 'vault/components/wizard/namespaces/step-3';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 import type ApiService from 'vault/services/api';
 import type Block from 'vault/components/wizard/namespaces/step-2';
@@ -37,8 +38,6 @@ interface WizardState {
   codeSnippet: string | null;
 }
 
-export const WIZARD_ID = 'namespace';
-
 export default class WizardNamespacesWizardComponent extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
@@ -59,7 +58,7 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
   methods = CreationMethod;
   policy = SecurityPolicy;
 
-  wizardId = WIZARD_ID;
+  wizardId = WIZARD_ID_MAP.namespace;
 
   // Whether the current step requirements have been met to proceed to the next step
   get canProceed() {

@@ -95,7 +95,6 @@ test('oidc workflow', async ({ page }) => {
     await page.getByRole('link', { name: 'Create assignment' }).click();
     await page.getByRole('textbox', { name: 'Name' }).fill('oidc-assignment');
     await page.getByLabel('Entities').getByText('Search').click();
-    await page.locator('div').filter({ hasText: 'Vault Assignments Create' }).nth(1).click();
     await page.getByRole('button', { name: 'Create' }).click();
     await expect(page.getByText('At least one entity or group')).toBeVisible();
     await page.getByLabel('Groups').getByText('Search').click();

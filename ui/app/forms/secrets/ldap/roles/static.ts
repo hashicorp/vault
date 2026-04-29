@@ -8,11 +8,11 @@ import FormField from 'vault/utils/forms/field';
 import type { Validations } from 'vault/app-types';
 import type { LdapWriteStaticRoleRequest } from '@hashicorp/vault-client-typescript';
 
-type LdapDynamicRoleFormData = LdapWriteStaticRoleRequest & {
+type LdapStaticRoleFormData = LdapWriteStaticRoleRequest & {
   name: string;
 };
 
-export default class LdapStaticRoleForm extends Form<LdapDynamicRoleFormData> {
+export default class LdapStaticRoleForm extends Form<LdapStaticRoleFormData> {
   formFields = [
     new FormField('name', 'string', {
       label: 'Role name',
@@ -38,7 +38,18 @@ export default class LdapStaticRoleForm extends Form<LdapDynamicRoleFormData> {
   ];
 
   validations: Validations = {
-    name: [{ type: 'presence', message: 'Name is required' }],
+    name: [
+      { type: 'presence', message: 'Name is required' },
+      {
+        validator: ({ name }: LdapStaticRoleFormData) => {
+          // Allow alphanumeric, hyphens, underscores, periods, and forward slashes
+          const validPattern = /^[a-z0-9\-_./]+$/;
+          return validPattern.test(name);
+        },
+        message:
+          'Name must be lowercase and can only contain alphanumeric characters, hyphens, underscores, periods, and forward slashes.',
+      },
+    ],
     username: [{ type: 'presence', message: 'Username is required.' }],
     rotation_period: [{ type: 'presence', message: 'Rotation Period is required.' }],
   };

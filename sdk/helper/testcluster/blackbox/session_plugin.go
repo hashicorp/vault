@@ -669,3 +669,18 @@ func isNotFoundError(err error) bool {
 	return fmt.Sprintf("%v", err) == "404 Not Found" ||
 		fmt.Sprintf("%v", err) == "405 Method Not Allowed"
 }
+
+// TestExpectedError tests that a write operation fails as expected
+func (ps *PluginSession) TestExpectedError(path string, data map[string]interface{}) error {
+	ps.t.Helper()
+
+	fullPath := ps.buildPath(path)
+	_, err := ps.Client.Logical().Write(fullPath, data)
+
+	if err == nil {
+		return fmt.Errorf("expected write to %s to fail, but it succeeded", fullPath)
+	}
+
+	// Return nil to indicate the error was expected
+	return nil
+}

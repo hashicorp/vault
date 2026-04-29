@@ -26,6 +26,14 @@ func (s *Session) MustRead(path string) *api.Secret {
 	return secret
 }
 
+func (s *Session) MustList(path string) *api.Secret {
+	s.t.Helper()
+
+	secret, err := s.Client.Logical().List(path)
+	require.NoError(s.t, err)
+	return secret
+}
+
 // MustReadRequired is a stricter version of MustRead that fails if a 404/nil is returned
 func (s *Session) MustReadRequired(path string) *api.Secret {
 	s.t.Helper()
@@ -50,4 +58,11 @@ func (s *Session) MustReadKV2(mountPath, secretPath string) *api.Secret {
 
 	fullPath := path.Join(mountPath, "data", secretPath)
 	return s.MustRead(fullPath)
+}
+
+func (s *Session) MustDelete(path string) {
+	s.t.Helper()
+
+	_, err := s.Client.Logical().Delete(path)
+	require.NoError(s.t, err)
 }

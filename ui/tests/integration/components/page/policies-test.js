@@ -73,8 +73,8 @@ customPoliciesMockModel.meta = {
   lastPage: 1,
   nextPage: 1,
   prevPage: 0,
-  total: 3,
-  filteredTotal: 3,
+  total: 4,
+  filteredTotal: 4,
   pageSize: 15,
 };
 
@@ -83,6 +83,9 @@ module('Integration | Component | page/policies', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    // clear local storage to reset dismissed wizard state
+    localStorage.clear();
+
     this.model = policiesMockModel;
     this.policyType = 'acl';
     this.store = this.owner.lookup('service:store');

@@ -105,7 +105,7 @@ func TestPolicyDeleteCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		list := []string{"default", "root"}
+		list := []string{"default", "default-ceiling", "root"}
 		if !reflect.DeepEqual(policies, list) {
 			t.Errorf("expected %q to be %q", policies, list)
 		}

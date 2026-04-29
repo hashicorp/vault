@@ -53,7 +53,7 @@ func TestRaft_Configuration_Docker(t *testing.T) {
 	defer cluster.Cleanup()
 	rafttest.Raft_Configuration_Test(t, cluster)
 
-	if err := cluster.AddNode(context.TODO(), opts); err != nil {
+	if err := cluster.AddNode(context.Background(), opts); err != nil {
 		t.Fatal(err)
 	}
 	rafttest.Raft_Configuration_Test(t, cluster)
@@ -405,6 +405,7 @@ func TestRaft_LogStore_Migration_Snapshot(t *testing.T) {
 
 	// caching the old cluster's barrier keys
 	oldBarrierKeys := cluster.GetBarrierKeys()
+	oldRootToken := cluster.GetRootToken()
 	// clean up the old cluster as there is no further use to it
 	cluster.Cleanup()
 
@@ -432,6 +433,7 @@ func TestRaft_LogStore_Migration_Snapshot(t *testing.T) {
 	testcluster.WaitForActiveNode(ctx, newCluster)
 
 	// generate a root token as the unseal keys have changed
+	newCluster.SetRootToken(oldRootToken)
 	rootToken, err := testcluster.GenerateRoot(newCluster, testcluster.GenerateRootRegular)
 	if err != nil {
 		t.Fatal(err)

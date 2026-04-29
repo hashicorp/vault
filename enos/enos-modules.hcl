@@ -408,12 +408,6 @@ module "vault_wait_for_cluster_unsealed" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_verify_version" {
-  source = "./modules/vault_verify_version"
-
-  vault_install_dir = var.vault_install_dir
-}
-
 module "vault_wait_for_leader" {
   source = "./modules/vault_wait_for_leader"
 
@@ -443,5 +437,16 @@ module "vault_verify_billing_start_date" {
 
   vault_install_dir       = var.vault_install_dir
   vault_instance_count    = var.vault_instance_count
+  vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
+}
+
+module "vault_update_license_ibm" {
+  source = "./modules/vault_update_license_ibm"
+}
+
+module "vault_verify_ibm_license_update" {
+  source = "./modules/vault_verify_ibm_license_update"
+
+  vault_install_dir       = var.vault_install_dir
   vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
 }

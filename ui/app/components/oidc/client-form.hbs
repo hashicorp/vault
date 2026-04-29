@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="{{if @model.isNew 'Create' 'Edit'}} Application">
+<Page::Header @title="{{if @form.isNew 'Create' 'Edit'}} Application">
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
@@ -12,12 +12,20 @@
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
     <MessageError @errorMessage={{this.errorBanner}} />
-    {{#each @model.formFields as |attr|}}
-      <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
-    {{/each}}
-
-    {{! MORE OPTIONS TOGGLE }}
-    <FormFieldGroups @renderGroup="More options" @model={{@model}} @modelValidations={{this.modelValidations}} />
+    <FormFieldGroups @model={{@form}} @groupName="formFieldGroups" @modelValidations={{this.modelValidations}}>
+      {{! keys are fetched in route and passed into select component }}
+      <SearchSelect
+        @id="oidc-client-form-key-select"
+        @options={{@keys}}
+        @selectLimit="1"
+        @disallowNewItems={{true}}
+        @fallbackComponent="input-search"
+        @onChange={{this.onKeyChange}}
+        @inputValue={{if @form.data.key (array @form.data.key)}}
+        @disabled={{not @form.isNew}}
+        class="is-marginless"
+      />
+    </FormFieldGroups>
   </div>
   {{! RADIO CARD + SEARCH SELECT }}
   <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">
@@ -60,7 +68,7 @@
   <div class="field box is-fullwidth is-bottomless">
     <div class="control">
       <Hds::Button
-        @text={{if @model.isNew "Create" "Update"}}
+        @text={{if @form.isNew "Create" "Update"}}
         @icon={{if this.save.isRunning "loading"}}
         type="submit"
         disabled={{this.save.isRunning}}
@@ -71,7 +79,7 @@
         @color="secondary"
         class="has-left-margin-s"
         disabled={{this.save.isRunning}}
-        {{on "click" this.cancel}}
+        {{on "click" @onCancel}}
         data-test-oidc-client-cancel
       />
     </div>

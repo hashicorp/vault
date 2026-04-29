@@ -270,7 +270,11 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 		// Set paths as well
 		paths := backend.SpecialPaths()
 		if paths != nil {
-			re.rootPaths.Store(pathsToRadix(paths.Root))
+			rootPathsEntry, err := parseSpecialPaths(paths.Root)
+			if err != nil {
+				return err
+			}
+			re.rootPaths.Store(rootPathsEntry)
 			loginPathsEntry, err := parseSpecialPaths(paths.Unauthenticated)
 			if err != nil {
 				return err

@@ -36,7 +36,6 @@ func NewTransitSealServer(t testing.TB, idx int) *TransitSealServer {
 	}
 	teststorage.InmemBackendSetup(conf, opts)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
 
 	if err := cluster.Cores[0].Client.Sys().Mount("transit", &api.MountInput{
 		Type: "transit",

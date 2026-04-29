@@ -3646,8 +3646,6 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// Write test policy for userpass auth method.
@@ -3771,8 +3769,6 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// Write test policy for userpass auth method.
@@ -3904,8 +3900,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// Mount PKI.
@@ -4152,8 +4147,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
@@ -5633,8 +5627,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		HandlerFunc:             vaulthttp.Handler,
 		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// Mount PKI.
@@ -6812,8 +6805,6 @@ func TestStandby_Operations(t *testing.T) {
 		},
 	}, nil, teststorage.InmemBackendSetup)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 	standbyCores := testhelpers.DeriveStandbyCores(t, cluster)
@@ -7042,8 +7033,7 @@ func TestProperAuthing(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 	token := client.Token()
 

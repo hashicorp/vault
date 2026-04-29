@@ -7,7 +7,7 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import Component from '@glimmer/component';
-import { WIZARD_ID } from 'vault/components/wizard/acl-policies/acl-wizard';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 import errorMessage from 'vault/utils/error-message';
 import { PolicyTypes } from 'core/utils/code-generators/policy';
 
@@ -39,9 +39,23 @@ export default class PagePoliciesComponent extends Component<Args> {
   @tracked policyToDelete = null;
   @tracked shouldRenderIntroModal = false;
 
+  wizardId = WIZARD_ID_MAP.aclPolicy;
+
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     this.filter = this.args.filter || '';
+  }
+
+  get description() {
+    const policyType = this.args.policyType;
+    if (policyType === PolicyTypes.ACL) {
+      return 'Define fine-grained rules to explicitly grant or forbid access to specific paths and operations within your cluster. Because Vault is a “default deny” system, if a permission is not granted in a policy, an entity would not have permission.';
+    } else if (policyType === PolicyTypes.EGP) {
+      return 'Use Sentinel to specify policies as code that apply to discrete API paths and enforce organizational compliance standards.';
+    } else if (policyType === PolicyTypes.RGP) {
+      return 'Use Sentinel to specify policies as code that apply to tokens, entities, groups and enforce organizational compliance standards.';
+    }
+    return '';
   }
 
   // Check if the filter exactly matches a policy ID
@@ -67,9 +81,9 @@ export default class PagePoliciesComponent extends Component<Args> {
         });
   }
 
-  // starting policies are 'default' and if in the root namespace, 'root' or 'hcp-root'
+  // starting policies are 'default', 'default-ceiling' and if in the root namespace, 'root' or 'hcp-root'
   get hasOnlyDefaultPolicies() {
-    const expectedLength = this.namespace.inRootNamespace ? 2 : 1;
+    const expectedLength = this.namespace.inRootNamespace ? 3 : 2;
     return this.args.model.meta?.total <= expectedLength;
   }
 
@@ -85,7 +99,7 @@ export default class PagePoliciesComponent extends Component<Args> {
   get showContent() {
     // Show when the 1) wizard is not shown OR 2) wizard intro modal is shown
     // This ensures the wizard intro modal is shown on top of the list view and the background content is not blank behind the modal
-    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(WIZARD_ID));
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(this.wizardId));
   }
 
   get showIntroButton() {
@@ -94,9 +108,9 @@ export default class PagePoliciesComponent extends Component<Args> {
 
   // Show when it is not in a dismissed state and there are no non-default policies and
   get showWizard() {
-    if (this.args.policyType !== 'acl') return false;
+    if (this.args.policyType !== PolicyTypes.ACL) return false;
     // Use total instead of filtered total to avoid flashing wizard when filtering with no results
-    return !this.wizard.isDismissed(WIZARD_ID) && this.hasOnlyDefaultPolicies;
+    return !this.wizard.isDismissed(this.wizardId) && this.hasOnlyDefaultPolicies;
   }
 
   @action
@@ -106,9 +120,9 @@ export default class PagePoliciesComponent extends Component<Args> {
       const policyType = this.args.policyType;
 
       // Use the appropriate sys endpoint based on policy type
-      if (policyType === 'egp') {
+      if (policyType === PolicyTypes.EGP) {
         await this.api.sys.systemDeletePoliciesEgpName(policyName);
-      } else if (policyType === 'rgp') {
+      } else if (policyType === PolicyTypes.RGP) {
         await this.api.sys.systemDeletePoliciesRgpName(policyName);
       } else {
         await this.api.sys.policiesDeleteAclPolicy(policyName);
@@ -139,7 +153,7 @@ export default class PagePoliciesComponent extends Component<Args> {
   @action
   showIntroPage() {
     // Reset the wizard dismissal state to allow re-entering the wizard
-    this.wizard.reset(WIZARD_ID);
+    this.wizard.reset(this.wizardId);
     this.shouldRenderIntroModal = true;
   }
 

@@ -23,7 +23,7 @@ export default class MfaEnforcementsRoute extends Route {
 
     controller.breadcrumbs = [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
-      { label: 'Mfa', route: 'vault.cluster.access.mfa' },
+      { label: 'Multi-factor authentication', route: 'vault.cluster.access.mfa' },
       { label: 'Enforcements' },
     ];
   }

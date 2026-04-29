@@ -7,8 +7,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import sinon from 'sinon';
 import localStorage from 'vault/lib/local-storage';
-
-const DISMISSED_WIZARD_KEY = 'dismissed-wizards';
+import { DISMISSED_WIZARD_KEY } from 'vault/utils/constants/wizard';
 
 module('Unit | Service | wizard', function (hooks) {
   setupTest(hooks);

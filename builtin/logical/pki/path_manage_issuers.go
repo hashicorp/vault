@@ -419,6 +419,11 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		}
 	}
 
+	err := enforceCommonCriteriaOnUploadedCAs(sc, issuerKeyMap, createdIssuers)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("Error validating trust chain of Certificate Authorities matching key material: %v", err)), nil
+	}
+
 	response := &logical.Response{
 		Data: map[string]interface{}{
 			"mapping":          issuerKeyMap,

@@ -100,7 +100,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
 
       // create a new key
-      await click(GENERAL.breadcrumbLink('Keys'));
+      await click(GENERAL.breadcrumbLink('OIDC provider: Keys'));
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.access.oidc.keys.index',
@@ -126,8 +126,8 @@ module('Acceptance | oidc-config clients', function (hooks) {
       await fillIn('[data-test-input="name"]', 'client-with-test-key');
       await click(GENERAL.button('More options'));
       await click('[data-test-component="search-select"] [data-test-icon="trash"]');
-      await clickTrigger('#key');
-      await selectChoose('[data-test-component="search-select"]#key', 'test-key');
+      await clickTrigger('#oidc-client-form-key-select');
+      await selectChoose('[data-test-component="search-select"]#oidc-client-form-key-select', 'test-key');
       await click(SELECTORS.clientSaveButton);
 
       // edit key and limit applications
@@ -287,9 +287,9 @@ module('Acceptance | oidc-config clients', function (hooks) {
       this.server.get('/identity/oidc/client/test-app', () =>
         overrideResponse(null, { data: CLIENT_DATA_RESPONSE })
       );
-      this.server.post('/sys/capabilities-self', () =>
-        capabilitiesStub(OIDC_BASE_URL + '/client/test-app', ['read'])
-      );
+      this.server.post('/sys/capabilities-self', () => {
+        return capabilitiesStub('identity/oidc/client/test-app', ['read']);
+      });
 
       await visit(OIDC_BASE_URL);
       await click('[data-test-oidc-client-linked-block]');
@@ -318,7 +318,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         })
       );
       this.server.post('/sys/capabilities-self', () =>
-        capabilitiesStub(OIDC_BASE_URL + '/key/test-key', ['read'])
+        capabilitiesStub('/identity/oidc/key/test-key', ['read'])
       );
 
       await visit(OIDC_BASE_URL + '/keys');
@@ -350,17 +350,12 @@ module('Acceptance | oidc-config clients', function (hooks) {
     });
 
     test('it renders empty state when no clients are configured', async function (assert) {
-      assert.expect(5);
+      assert.expect(4);
       this.server.get('/identity/oidc/client', () => overrideResponse(404));
 
       await visit(OIDC_BASE_URL);
       assert.strictEqual(currentURL(), '/vault/access/oidc');
       assert.dom(GENERAL.hdsPageHeaderTitle).hasText('OIDC provider');
-      assert.dom(SELECTORS.oidcHeader).hasText(
-        `Configure Vault to act as an OIDC identity provider, and offer Vault’s various authentication
-      methods and source of identity to any client applications. Learn more Create your first app`,
-        'renders call to action header when no clients are configured'
-      );
       assert.dom('[data-test-oidc-landing]').exists('landing page renders when no clients are configured');
       assert
         .dom(SELECTORS.oidcLandingImg)
@@ -385,8 +380,8 @@ module('Acceptance | oidc-config clients', function (hooks) {
       await fillIn('[data-test-input="name"]', 'test-app');
       await click(GENERAL.button('More options'));
       // toggle ttls to false, testing it sets correct default duration
-      await click('[data-test-input="idTokenTtl"]');
-      await click('[data-test-input="accessTokenTtl"]');
+      await click('[data-test-input="id_token_ttl"]');
+      await click('[data-test-input="access_token_ttl"]');
       await click(SELECTORS.clientSaveButton);
       assert.strictEqual(
         flashMessage.latestMessage,
@@ -425,7 +420,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'vault.cluster.access.oidc.clients.client.edit',
         'navigates to edit page from details'
       );
-      await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
+      await fillIn('[data-test-input="redirect_uris"] [data-test-string-list-input="0"]', 'some-url.com');
 
       // limit access & create new assignment inline
       await click('[data-test-oidc-radio="limited"]');
@@ -633,7 +628,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         overrideResponse(null, { data: ASSIGNMENT_DATA_RESPONSE })
       );
       this.server.post('/sys/capabilities-self', () =>
-        capabilitiesStub(OIDC_BASE_URL + '/assignment/test-assignment', ['read'])
+        capabilitiesStub('/identity/oidc/assignment/test-assignment', ['read'])
       );
 
       await visit(OIDC_BASE_URL + '/assignments');

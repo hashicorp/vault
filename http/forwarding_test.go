@@ -39,13 +39,7 @@ func TestHTTP_Fallback_Bad_Address(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	// make it easy to get access to the active
-	core := cores[0].Core
-	vault.TestWaitActive(t, core)
 
 	addrs := []string{
 		fmt.Sprintf("https://127.0.0.1:%d", cores[1].Listeners[0].Address.Port),
@@ -87,13 +81,7 @@ func TestHTTP_Fallback_Disabled(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	// make it easy to get access to the active
-	core := cores[0].Core
-	vault.TestWaitActive(t, core)
 
 	addrs := []string{
 		fmt.Sprintf("https://127.0.0.1:%d", cores[1].Listeners[0].Address.Port),
@@ -144,13 +132,8 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	// make it easy to get access to the active
 	core := cores[0].Core
-	vault.TestWaitActive(t, core)
 
 	wg := sync.WaitGroup{}
 
@@ -452,13 +435,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	// make it easy to get access to the active
-	core := cores[0].Core
-	vault.TestWaitActive(t, core)
 
 	transport := cleanhttp.DefaultTransport()
 	transport.TLSClientConfig = cores[0].TLSConfig()
@@ -565,11 +542,7 @@ func TestHTTP_Forwarding_HelpOperation(t *testing.T) {
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
 
 	testHelp := func(client *api.Client) {
 		help, err := client.Help("auth/token")
@@ -589,11 +562,7 @@ func TestHTTP_Forwarding_LocalOnly(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
 
 	testLocalOnly := func(client *api.Client) {
 		_, err := client.Logical().Read("sys/config/state/sanitized")

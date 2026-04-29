@@ -8,6 +8,7 @@
     <Page::Breadcrumbs
       @breadcrumbs={{array
         (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label="OIDC provider: Assignments" route="vault.cluster.access.oidc.assignments")
         (hash label="Details" route="vault.cluster.access.oidc.assignments.assignment.details" model=this.model.name)
         (hash label="Edit Assignment")
       }}

@@ -38,6 +38,7 @@ export const PATH_MAP = {
   ldapRotateStaticRole: apiPath`${'backend'}/rotate-role/${'name'}`,
   ldapStaticRole: apiPath`${'backend'}/static-role/${'name'}`,
   ldapStaticRoleCreds: apiPath`${'backend'}/static-cred/${'name'}`,
+  oidcClient: apiPath`identity/oidc/client/${'name'}`,
   pkiCertificates: apiPath`${'backend'}/certificates`,
   pkiConfigAcme: apiPath`${'backend'}/config/acme`,
   pkiConfigAutoTidy: apiPath`${'backend'}/config/auto-tidy`,

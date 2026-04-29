@@ -21,20 +21,18 @@
       />
 
       <FormFieldGroups @model={{this.mountForm}} @renderGroup="Method Options" @groupName="formFieldGroups">
-        <:identityTokenKey>
-          <SearchSelectWithModal
-            @id="key"
-            @fallbackComponent="input-search"
-            @inputValue={{this.mountForm.data.config.identity_token_key}}
-            @onChange={{this.handleIdentityTokenKeyChange}}
-            @models={{array "oidc/key"}}
-            @selectLimit="1"
-            @modalFormTemplate="modal-form/oidc-key-template"
-            @placeholder="Search for an existing OIDC key, or type a new key name to create it."
-            @fallbackComponentPlaceholder="Input a key name"
-            @modalSubtext="This key will be created in the OIDC key path."
-          />
-        </:identityTokenKey>
+        <SearchSelectWithModal
+          @id="key"
+          @fallbackComponent="input-search"
+          @inputValue={{this.mountForm.data.config.identity_token_key}}
+          @onChange={{this.handleIdentityTokenKeyChange}}
+          @models={{array "oidc/key"}}
+          @selectLimit="1"
+          @modalFormTemplate="modal-form/oidc-key-template"
+          @placeholder="Search for an existing OIDC key, or type a new key name to create it."
+          @fallbackComponentPlaceholder="Input a key name"
+          @modalSubtext="This key will be created in the OIDC key path."
+        />
       </FormFieldGroups>
 
       <div class="field is-grouped box is-fullwidth is-bottomless">

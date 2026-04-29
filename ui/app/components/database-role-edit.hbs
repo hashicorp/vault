@@ -5,7 +5,12 @@
 
 <Page::Header @title={{this.title}}>
   <:breadcrumbs>
-    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
+    <KeyValueHeader
+      @path="vault.cluster.secrets.backend.show"
+      @mode={{@mode}}
+      @root={{this.breadcrumbs}}
+      @showCurrent={{true}}
+    />
   </:breadcrumbs>
 </Page::Header>
 

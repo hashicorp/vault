@@ -62,6 +62,12 @@ variable "backend_log_level" {
   default     = "trace"
 }
 
+variable "blackbox_test_filter" {
+  type        = list(string)
+  description = "Override list of specific blackbox test packages (e.g., ['core', 'secrets']) or test names (e.g., ['TestUnsealedStatus']). Empty list uses scenario defaults. Package names are converted to directory paths automatically."
+  default     = []
+}
+
 variable "distro_version_amzn" {
   description = "The version of Amazon Linux 2 to use"
   type        = string
@@ -153,6 +159,18 @@ variable "vault_instance_count" {
 
 variable "vault_license_path" {
   description = "The path to a valid Vault enterprise edition license. This is only required for non-ce editions"
+  type        = string
+  default     = null
+}
+
+variable "vault_ibm_license_path" {
+  description = "The path to a valid IBM PAO license. This is only required when testing a license update during the upgrade scenario"
+  type        = string
+  default     = null
+}
+
+variable "vault_ibm_license_edition" {
+  description = "The edition to select when using an IBM PAO license. This should match the edition of a valid Vault entitlement in the license located at var.vault_ibm_license_path."
   type        = string
   default     = null
 }

@@ -44,7 +44,6 @@ func newTestClusterForTokenHeader(t *testing.T, opts *vault.TestClusterOptions) 
 	}
 	opts.HandlerFunc = Handler
 	cluster := vault.NewTestCluster(t, nil, opts)
-	cluster.Start()
 
 	core := cluster.Cores[0]
 	transport := cleanhttp.DefaultPooledTransport()

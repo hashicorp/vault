@@ -211,6 +211,18 @@ globals {
       the Vault version, edition, build date, and any special prerelease metadata.
     EOF
 
+    run_verify_blackbox_tests = <<-EOF
+      Run blackbox verification tests via the Vault API from the CI/GitHub runner. These tests
+      validate Vault functionality without requiring direct access to the Vault binary on the
+      target hosts.
+    EOF
+
+    run_verify_blackbox_tests_remote = <<-EOF
+      Run blackbox verification tests directly on the Vault leader host. These tests execute
+      the Vault CLI binary on the target machine to validate version metadata and other
+      functionality that requires local binary access.
+    EOF
+
     wait_for_cluster_to_have_leader = <<-EOF
       Wait for a leader election to occur before we proceed with any further quality verification.
     EOF

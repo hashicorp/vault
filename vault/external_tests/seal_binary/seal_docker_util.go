@@ -11,10 +11,10 @@ import (
 	"os"
 	"path"
 
-	"github.com/docker/docker/api/types/container"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
+	client "github.com/moby/moby/client"
 )
 
 const (
@@ -128,8 +128,12 @@ func createContainerWithConfig(config string, imageRepo, imageTag string, logCon
 		Cmd: []string{
 			"server", "-log-level=trace",
 		},
-		Ports:           []string{"8200/tcp"},
-		Env:             []string{fmt.Sprintf("VAULT_LICENSE=%s", os.Getenv("VAULT_LICENSE")), fmt.Sprintf("VAULT_LOCAL_CONFIG=%s", config)},
+		Ports: []string{"8200/tcp"},
+		Env: []string{
+			fmt.Sprintf("VAULT_LICENSE=%s", os.Getenv("VAULT_LICENSE")),
+			fmt.Sprintf("VAULT_LOCAL_CONFIG=%s", config),
+			"SKIP_SETCAP=true",
+		},
 		LogConsumer:     logConsumer,
 		DoNotAutoRemove: true,
 	})
@@ -180,7 +184,7 @@ func createTransitTestContainer(imageRepo, imageTag string, numKeys int) (*dockh
 			"server", "-log-level=trace", "-dev", fmt.Sprintf("-dev-root-token-id=%s", rootToken),
 			"-dev-listen-address=0.0.0.0:8200",
 		},
-		Env:   []string{fmt.Sprintf("VAULT_LICENSE=%s", os.Getenv("VAULT_LICENSE"))},
+		Env:   []string{fmt.Sprintf("VAULT_LICENSE=%s", os.Getenv("VAULT_LICENSE")), "SKIP_SETCAP=true"},
 		Ports: []string{"8200/tcp"},
 	})
 	if err != nil {
@@ -311,7 +315,10 @@ func copyConfigToContainer(containerID string, bCtx dockhelper.BuildContext, run
 		return fmt.Errorf("error creating config tarball: %w", err)
 	}
 
-	err = runner.DockerAPI.CopyToContainer(context.Background(), containerID, "/vault/config", tar, container.CopyToContainerOptions{})
+	_, err = runner.DockerAPI.CopyToContainer(context.Background(), containerID, client.CopyToContainerOptions{
+		DestinationPath: "/vault/config",
+		Content:         tar,
+	})
 	if err != nil {
 		return fmt.Errorf("error copying config to container: %w", err)
 	}
@@ -330,7 +337,10 @@ func copyRecoveryModeTriggerToContainer(containerID string, runner *dockhelper.R
 		return fmt.Errorf("error creating config tarball: %w", err)
 	}
 
-	err = runner.DockerAPI.CopyToContainer(context.Background(), containerID, recoveryModeFileDir, tar, container.CopyToContainerOptions{})
+	_, err = runner.DockerAPI.CopyToContainer(context.Background(), containerID, client.CopyToContainerOptions{
+		DestinationPath: recoveryModeFileDir,
+		Content:         tar,
+	})
 	if err != nil {
 		return fmt.Errorf("error copying revovery mode trigger file to container: %w", err)
 	}

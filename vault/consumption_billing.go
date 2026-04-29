@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/vault/billing"
+	uberAtomic "go.uber.org/atomic"
 )
 
 var (
@@ -29,6 +30,11 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 		DataProtectionCallCounts: billing.DataProtectionCallCounts{
 			Transit:   &atomic.Uint64{},
 			Transform: &atomic.Uint64{},
+			GcpKms:    &atomic.Uint64{},
+		},
+		IdentityTokenUnits: billing.IdentityTokenUnits{
+			OidcTokenDuration: uberAtomic.NewFloat64(0),
+			SpiffeJwt:         uberAtomic.NewFloat64(0),
 		},
 		Logger: logger,
 	}
@@ -107,13 +113,13 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 }
 
 // HandleStartOfMonth cleans up monthly billing data from
-// n-2 months ago, and also resets all in memory billing metrics when the start of the month is reached.
+// n-BillingRetentionMonths ago (keeping BillingRetentionMonths of data), and also resets all in memory billing metrics when the start of the month is reached.
 func (c *Core) HandleStartOfMonth(ctx context.Context, currentMonth time.Time) {
 	c.logger.Info("handling start of month operations", "currentMonth", currentMonth)
-	// We only delete n-2 month billing metrics on the active node
+	// We only delete data older than BillingRetentionMonths on the active node
 	if standby, _ := c.Standby(); !standby && !c.PerfStandby() {
-		if err := c.deletePreviousMonthBillingMetrics(ctx, currentMonth); err != nil {
-			c.logger.Error("error deleting historical month billing metrics", "error", err)
+		if err := c.deleteExpiredBillingMetrics(ctx, currentMonth); err != nil {
+			c.logger.Error("error deleting expired billing metrics", "error", err)
 		}
 	}
 	if err := c.resetInMemoryBillingMetrics(); err != nil {
@@ -123,15 +129,16 @@ func (c *Core) HandleStartOfMonth(ctx context.Context, currentMonth time.Time) {
 	c.UpdateMetricsLastUpdateTime(ctx, currentMonth, time.Time{})
 }
 
-func (c *Core) deletePreviousMonthBillingMetrics(ctx context.Context, currentMonth time.Time) error {
-	twoMonthsAgo := timeutil.StartOfPreviousMonth(currentMonth).AddDate(0, -1, 0)
+func (c *Core) deleteExpiredBillingMetrics(ctx context.Context, currentMonth time.Time) error {
+	// Delete data from BillingRetentionMonths ago (keeping current month + previous (BillingRetentionMonths - 1) months = BillingRetentionMonths total)
+	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -billing.BillingRetentionMonths, 0)
 	// Delete billing metrics from both replicated and local prefixes
 	for _, pathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
 		// If we are not the primary, then do not delete replicate metrics
 		if !c.isPrimary() && pathPrefix == billing.ReplicatedPrefix {
 			continue
 		}
-		billingPath := billing.GetMonthlyBillingPath(pathPrefix, twoMonthsAgo)
+		billingPath := billing.GetMonthlyBillingPath(pathPrefix, monthToDelete)
 		view, ok := c.GetBillingSubView()
 		if !ok {
 			return ErrCouldNotGetBillingSubView
@@ -141,9 +148,27 @@ func (c *Core) deletePreviousMonthBillingMetrics(ctx context.Context, currentMon
 			return err
 		}
 		for _, segment := range metricPaths {
-			err = view.Delete(ctx, billingPath+segment)
-			if err != nil {
-				c.logger.Error("error deleting previous month billing metric", "error", err, "metricPath", billingPath+segment)
+			fullPath := billingPath + segment
+			// If the segment ends with / - recursively delete its contents
+			// For example: ssh/normalized-certs-issued, ssh/credential-count
+			if len(segment) > 0 && segment[len(segment)-1] == '/' {
+				subPaths, err := view.List(ctx, fullPath)
+				if err != nil {
+					c.logger.Error("error listing path for deletion", "error", err, "path", fullPath)
+					continue
+				}
+				for _, subSegment := range subPaths {
+					err = view.Delete(ctx, fullPath+subSegment)
+					if err != nil {
+						c.logger.Error("error deleting previous month billing metric", "error", err, "metricPath", fullPath+subSegment)
+					}
+				}
+			} else {
+				// full path, delete it directly
+				err = view.Delete(ctx, fullPath)
+				if err != nil {
+					c.logger.Error("error deleting previous month billing metric", "error", err, "metricPath", fullPath)
+				}
 			}
 		}
 	}
@@ -151,13 +176,16 @@ func (c *Core) deletePreviousMonthBillingMetrics(ctx context.Context, currentMon
 }
 
 func (c *Core) resetInMemoryBillingMetrics() error {
-	// Reset Transit/Tranform DP counts
+	// Reset Transit/Transform DP counts and SPIFFE JWT identity counts
 	c.logger.Info("resetting in memory billing metrics")
 	c.consumptionBillingLock.Lock()
 	defer c.consumptionBillingLock.Unlock()
 	c.consumptionBilling.DataProtectionCallCounts.Transit.Store(0)
 	c.consumptionBilling.DataProtectionCallCounts.Transform.Store(0)
+	c.consumptionBilling.IdentityTokenUnits.SpiffeJwt.Store(0)
+	c.consumptionBilling.DataProtectionCallCounts.GcpKms.Store(0)
 	c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
+	c.consumptionBilling.IdentityTokenUnits.OidcTokenDuration.Store(0)
 	return nil
 }
 
@@ -256,6 +284,15 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	}
 	if _, err := c.UpdateTransformCallCounts(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store transform data protection call counts: %w", err)
+	}
+	if err := c.UpdateOidcDurationAdjustedCount(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store OIDC duration-adjusted token count: %w", err)
+	}
+	if _, err := c.UpdateSpiffeJwtTokenUnits(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store SPIFFE JWT token units: %w", err)
+	}
+	if _, err := c.UpdateGcpKmsCallCounts(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store GCP KMS data protection call counts: %w", err)
 	}
 	return nil
 }

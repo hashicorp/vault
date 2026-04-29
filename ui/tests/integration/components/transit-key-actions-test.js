@@ -7,7 +7,7 @@ import { run } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click, find, fillIn, blur, triggerEvent, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';

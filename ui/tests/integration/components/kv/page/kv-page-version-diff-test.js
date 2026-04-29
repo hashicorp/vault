@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, findAll, render } from '@ember/test-helpers';
@@ -99,7 +99,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::VersionDiff', 
     await render(
       hbs`
        <Page::Secret::Metadata::VersionDiff
-        @metadata={{this.metadata}} 
+        @metadata={{this.metadata}}
         @path={{this.path}}
         @backend={{this.backend}}
         @breadcrumbs={{this.breadcrumbs}}

@@ -3,7 +3,10 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Unwrap data">
+<Page::Header
+  @title="Unwrap data"
+  @description="Retrieve the original secret data from a wrapping token and automatically invalidate the token."
+>
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
@@ -40,7 +43,7 @@
   </Hds::ButtonSet>
 {{else}}
   <form {{on "submit" this.handleSubmit}}>
-    <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="box is-fullwidth is-marginless">
       <NamespaceReminder @mode="perform" @noun="unwrap" />
       <MessageError @errorMessage={{this.errorMessage}} />
       <div class="field">

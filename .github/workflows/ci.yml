@@ -348,7 +348,7 @@ jobs:
             needs.test-ui.result == 'failure'
           )
         name: Notify build failures in Slack
-        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
+        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
         with:
           errors: true # exit with an error if the payload is invalid
           retries: rapid # retry if we're being rated limited
@@ -390,7 +390,7 @@ jobs:
       # to secrets.
       - if: ${{ needs.setup.outputs.is-fork == 'false' }}
         name: Download failure summaries
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: failure-summary-*.md
           path: failure-summaries

@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, settled, waitFor } from '@ember/test-helpers';
 import { resolve } from 'rsvp';
 import { run } from '@ember/runloop';
@@ -25,6 +25,12 @@ module('Integration | Component | secret edit', function (hooks) {
   hooks.beforeEach(function () {
     capabilities = null;
     this.set('key', { id: 'Foobar' });
+    this.root = {
+      label: 'kv',
+      text: 'kv',
+      path: 'vault.cluster.secrets.backend.list-root',
+      model: 'kv',
+    };
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeService);
@@ -41,7 +47,9 @@ module('Integration | Component | secret edit', function (hooks) {
       },
     });
 
-    await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @key={{this.key}} />`);
+    await render(
+      hbs`<SecretEdit @mode={{this.mode}} @root={{this.root}} @model={{this.model}} @key={{this.key}} />`
+    );
     assert.dom(GENERAL.toggleInput('json')).isDisabled();
   });
 
@@ -55,7 +63,9 @@ module('Integration | Component | secret edit', function (hooks) {
       },
     });
 
-    await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @key={{this.key}} />`);
+    await render(
+      hbs`<SecretEdit @mode={{this.mode}} @root={{this.root}} @model={{this.model}} @key={{this.key}} />`
+    );
     assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
   });
 
@@ -66,7 +76,7 @@ module('Integration | Component | secret edit', function (hooks) {
     });
 
     await render(
-      hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @preferAdvancedEdit={{true}} @key={{this.key}} />`
+      hbs`<SecretEdit @mode={{this.mode}} @root={{this.root}} @model={{this.model}} @preferAdvancedEdit={{true}} @key={{this.key}} />`
     );
 
     await waitFor('.cm-editor');
@@ -86,7 +96,9 @@ module('Integration | Component | secret edit', function (hooks) {
         float: '1.234',
       },
     });
-    await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @key={{this.key}} />`);
+    await render(
+      hbs`<SecretEdit @mode={{this.mode}} @root={{this.root}} @model={{this.model}} @key={{this.key}} />`
+    );
     assert.dom(GENERAL.submitButton).isNotDisabled();
   });
 
@@ -105,7 +117,7 @@ module('Integration | Component | secret edit', function (hooks) {
     });
 
     await render(
-      hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @preferAdvancedEdit={{true}} @key={{this.key}} />`
+      hbs`<SecretEdit @mode={{this.mode}} @root={{this.root}} @model={{this.model}} @preferAdvancedEdit={{true}} @key={{this.key}} />`
     );
 
     await waitFor('.cm-editor');

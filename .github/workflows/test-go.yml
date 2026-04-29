@@ -147,7 +147,7 @@ jobs:
       - uses: ./.github/actions/install-tools # for gotestsum
       - run: mkdir -p ${{ steps.local-metadata.outputs.go-test-dir }}
       - if: inputs.test-timing-cache-restore || inputs.test-timing-cache-save
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ${{ steps.local-metadata.outputs.go-test-dir }}
           key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
@@ -609,7 +609,7 @@ jobs:
       data-race-output: ${{ steps.status.outputs.data-race-output }}
       data-race-result: ${{ steps.status.outputs.data-race-result }}
     steps:
-      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: ${{ needs.test-go.outputs.data-race-log-download-pattern }}
           path: data-race-logs
@@ -651,7 +651,7 @@ jobs:
           } | tee -a "$GITHUB_OUTPUT"
       # Aggregate, prune, and cache our timing data
       - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-save }}
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ${{ needs.test-matrix.outputs.go-test-dir }}
           key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
@@ -659,7 +659,7 @@ jobs:
             ${{ inputs.test-timing-cache-key }}-
             go-test-timing-
       - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-save }}
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: ${{ needs.test-matrix.outputs.go-test-dir }}
           pattern: ${{ needs.test-go.outputs.go-test-results-download-pattern }}

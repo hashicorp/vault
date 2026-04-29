@@ -196,6 +196,7 @@ func (b *backend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, 
 	}
 
 	if p != nil && p.Type.IsEnterpriseOnly() && !constants.IsEnterprise {
+		p.Unlock()
 		return nil, false, fmt.Errorf(ErrKeyTypeEntOnly, p.Type)
 	}
 
@@ -272,8 +273,9 @@ func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) erro
 
 	for _, key := range keys {
 		p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
-			Storage: req.Storage,
-			Name:    key,
+			Storage:     req.Storage,
+			Name:        key,
+			WriteLocked: true,
 		}, b.GetRandomReader())
 		if err != nil {
 			errs = multierror.Append(errs, err)
@@ -290,6 +292,8 @@ func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) erro
 		if err != nil {
 			errs = multierror.Append(errs, err)
 		}
+
+		p.Unlock()
 	}
 
 	return errs.ErrorOrNil()
@@ -297,11 +301,6 @@ func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) erro
 
 // rotateIfRequired rotates a key if it is due for autorotation.
 func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, key string, p *keysutil.Policy) error {
-	if !b.System().CachingDisabled() {
-		p.Lock(true)
-	}
-	defer p.Unlock()
-
 	// If the key is imported, it can only be rotated from within Vault if allowed.
 	if p.Imported && !p.AllowImportedKeyRotation {
 		return nil

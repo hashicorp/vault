@@ -26,6 +26,7 @@ const (
 var (
 	once     sync.Once
 	verifier crypto.PGPVerify
+	initErr  error
 
 	errExtractedArtifactDirNotFound = errors.New("extracted artifact directory not found")
 	errReadMetadata                 = errors.New("failed to read metadata")
@@ -37,13 +38,10 @@ var (
 	errVerifyPluginSig              = errors.New("failed to verify plugin binary PGP signature")
 )
 
-func load() error {
-	var errs error
-	once.Do(func() {
-		// hashiCorpPGPPubKey is HashiCorp's PGP public key
-		// at https://www.hashicorp.com/.well-known/pgp-key.txt.
-		// This key is used to verify the authenticity of HashiCorp plugins.
-		const hashiCorpPGPPubKey = `
+// hashiCorpPGPPubKey is HashiCorp's PGP public key
+// at https://www.hashicorp.com/.well-known/pgp-key.txt.
+// This key is used to verify the authenticity of HashiCorp plugins.
+var hashiCorpPGPPubKey = `
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQINBGB9+xkBEACabYZOWKmgZsHTdRDiyPJxhbuUiKX65GUWkyRMJKi/1dviVxOX
@@ -168,23 +166,78 @@ ZF5q4h4I33PSGDdSvGXn9UMY5Isjpg==
 -----END PGP PUBLIC KEY BLOCK-----
 `
 
+func load() error {
+	return loadWithKey("")
+}
+
+func loadWithKey(customKeyOrPath string) error {
+	once.Do(func() {
 		pgp := crypto.PGP()
-		key, err := crypto.NewKeyFromArmored(hashiCorpPGPPubKey)
+
+		// Start with the HashiCorp key as the base of the allowlist
+		hashiCorpKey, err := crypto.NewKeyFromArmored(hashiCorpPGPPubKey)
 		if err != nil {
-			errs = errors.Join(errs, err)
+			initErr = fmt.Errorf("failed to parse HashiCorp PGP key: %w", err)
+			return
 		}
 
-		verifier, err = pgp.Verify().VerificationKey(key).New()
+		// Create a keyring starting with the HashiCorp key
+		keyring, err := crypto.NewKeyRing(hashiCorpKey)
 		if err != nil {
-			errs = errors.Join(errs, err)
+			initErr = fmt.Errorf("failed to create keyring: %w", err)
+			return
 		}
+
+		// If a custom key or path is provided, add it to the allowlist
+		if customKeyOrPath != "" {
+			var customKeyData string
+
+			// Check if the input is a raw PGP key (starts with PGP header)
+			if strings.HasPrefix(strings.TrimSpace(customKeyOrPath), "-----BEGIN PGP PUBLIC KEY BLOCK-----") {
+				// It's a raw PGP key, use it directly
+				customKeyData = customKeyOrPath
+			} else {
+				// It's a file path, read the key from the file
+				keyBytes, err := os.ReadFile(customKeyOrPath)
+				if err != nil {
+					initErr = fmt.Errorf("failed to read custom PGP key from file: %w", err)
+					return
+				}
+				customKeyData = string(keyBytes)
+			}
+
+			// Parse and add the custom key to the keyring
+			customKey, err := crypto.NewKeyFromArmored(customKeyData)
+			if err != nil {
+				initErr = fmt.Errorf("failed to parse custom PGP key: %w", err)
+				return
+			}
+
+			err = keyring.AddKey(customKey)
+			if err != nil {
+				initErr = fmt.Errorf("failed to add custom key to keyring: %w", err)
+				return
+			}
+		}
+
+		// Create verifier with the keyring (allowlist of keys)
+		v, err := pgp.Verify().VerificationKeys(keyring).New()
+		if err != nil {
+			initErr = fmt.Errorf("failed to create verifier: %w", err)
+			return
+		}
+		verifier = v
 	})
 
+	// All callers (first or subsequent) check the result of the initialization
+	if initErr != nil {
+		return initErr
+	}
 	if verifier == nil {
-		errs = errors.Join(errs, errors.New("verifier is nil after initialization"))
+		return errors.New("verifier initialization failed unexpectedly")
 	}
 
-	return errs
+	return nil
 }
 
 func GetExtractedArtifactDir(pluginName, pluginVersion string) string {
@@ -197,8 +250,13 @@ func GetExtractedArtifactDir(pluginName, pluginVersion string) string {
 
 type verifyFunc func(data, sig []byte) error
 
-func verifyPGPSignatureDetached(data, sig []byte) error {
-	if err := load(); err != nil {
+// verifyPGPSignatureDetachedWithKey verifies a detached PGP signature using either
+// the default HashiCorp key (when customKeyPath is empty) or a custom key.
+func verifyPGPSignatureDetachedWithKey(data, sig []byte, customKeyPath string) error {
+	if err := loadWithKey(customKeyPath); err != nil {
+		if customKeyPath != "" {
+			return fmt.Errorf("failed to load verifier with custom key: %w", err)
+		}
 		return fmt.Errorf("failed to load verifier: %w", err)
 	}
 
@@ -207,10 +265,16 @@ func verifyPGPSignatureDetached(data, sig []byte) error {
 		return fmt.Errorf("failed to verify data: %w", err)
 	}
 	if sigErr := verifyResult.SignatureError(); sigErr != nil {
-		return fmt.Errorf("unexpected signature error: %w", sigErr)
+		fp := hex.EncodeToString(verifyResult.SignedByFingerprint())
+		return fmt.Errorf("signature verification failed for key with fingerprint %s: %w", fp, sigErr)
 	}
 
 	return nil
+}
+
+// verifyPGPSignatureDetached verifies a detached PGP signature using the default HashiCorp key.
+func verifyPGPSignatureDetached(data, sig []byte) error {
+	return verifyPGPSignatureDetachedWithKey(data, sig, "")
 }
 
 func VerifyPlugin(pluginDir string, pluginName string, verifyFunc verifyFunc) (*PluginMetadata, error) {

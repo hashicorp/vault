@@ -24,7 +24,7 @@
 {{#if (and (not-eq this.model.id "root") (or this.model.canUpdate this.model.canDelete))}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (and (not-eq this.model.id "default") this.model.canDelete)}}
+      {{#if (and (not-eq this.model.id "default") (not-eq this.model.id "default-ceiling") this.model.canDelete)}}
         <ConfirmAction
           @buttonText="Delete policy"
           class="toolbar-button"

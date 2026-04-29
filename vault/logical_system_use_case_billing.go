@@ -35,14 +35,14 @@ func (b *SystemBackend) useCaseConsumptionBillingPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleUseCaseConsumption,
-					Summary:  "Reports consumption billing metrics for the current and previous months.",
+					Summary:  fmt.Sprintf("Reports consumption billing metrics for %d months (current month + previous %d months).", billing.BillingRetentionMonths, billing.BillingRetentionMonths-1),
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: http.StatusText(http.StatusOK),
 							Fields: map[string]*framework.FieldSchema{
 								"months": {
 									Type:        framework.TypeSlice,
-									Description: "List of monthly billing data, including the current and previous months.",
+									Description: fmt.Sprintf("List of monthly billing data for %d months (current month + previous %d months).", billing.BillingRetentionMonths, billing.BillingRetentionMonths-1),
 								},
 							},
 						}},
@@ -66,7 +66,6 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 	refreshData := data.Get("refresh_data").(bool)
 
 	currentMonth := time.Now().UTC()
-	previousMonth := timeutil.StartOfPreviousMonth(currentMonth)
 
 	warnings := make([]string, 0)
 
@@ -78,22 +77,31 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 		refreshData = false
 	}
 
-	// Refresh data only if explicitly requested and for current month
-	currentMonthData, err := b.buildMonthBillingData(ctx, currentMonth, refreshData)
-	if err != nil {
-		return nil, fmt.Errorf("error building current month billing data: %w", err)
-	}
+	// Build billing data for BillingRetentionMonths (current month + previous months)
+	months := make([]interface{}, 0, billing.BillingRetentionMonths)
 
-	previousMonthData, err := b.buildMonthBillingData(ctx, previousMonth, false)
+	// Handle current month first (with optional refresh)
+	currentMonthTime := timeutil.StartOfMonth(currentMonth)
+	currentMonthData, err := b.buildMonthBillingData(ctx, currentMonthTime, refreshData)
 	if err != nil {
-		return nil, fmt.Errorf("error building previous month billing data: %w", err)
+		return nil, fmt.Errorf("error building billing data for month %s: %w", currentMonthTime.Format("2006-01"), err)
+	}
+	months = append(months, currentMonthData)
+
+	// Handle previous months (no refresh needed)
+	for i := 1; i < billing.BillingRetentionMonths; i++ {
+		monthTime := timeutil.StartOfMonth(currentMonth).AddDate(0, -i, 0)
+
+		monthData, err := b.buildMonthBillingData(ctx, monthTime, false)
+		if err != nil {
+			return nil, fmt.Errorf("error building billing data for month %s: %w", monthTime.Format("2006-01"), err)
+		}
+
+		months = append(months, monthData)
 	}
 
 	resp := map[string]interface{}{
-		"months": []interface{}{
-			currentMonthData,
-			previousMonthData,
-		},
+		"months": months,
 	}
 
 	return &logical.Response{
@@ -125,7 +133,7 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 		return nil, err
 	}
 
-	transitCounts, transformCounts, err := b.Core.getDataProtectionCounts(ctx, month)
+	transitCounts, transformCounts, gcpKmsCounts, err := b.Core.getDataProtectionCounts(ctx, month)
 	if err != nil {
 		return nil, err
 	}
@@ -180,11 +188,14 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 	if transformCounts > 0 {
 		dataProtectionDetails = append(dataProtectionDetails, map[string]interface{}{"type": "transform", "count": transformCounts})
 	}
+	if gcpKmsCounts > 0 {
+		dataProtectionDetails = append(dataProtectionDetails, map[string]interface{}{"type": "gcpkms", "count": gcpKmsCounts})
+	}
 
 	usageMetrics = append(usageMetrics, map[string]interface{}{
 		"metric_name": "data_protection_calls",
 		"metric_data": map[string]interface{}{
-			"total":          transitCounts + transformCounts,
+			"total":          transitCounts + transformCounts + gcpKmsCounts,
 			"metric_details": dataProtectionDetails,
 		},
 	})
@@ -216,6 +227,12 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 	}
 	usageMetrics = append(usageMetrics, sshCounts)
 
+	idTokenUnitsMetric, err := b.buildIdTokenUnitsBillingMetric(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+	usageMetrics = append(usageMetrics, idTokenUnitsMetric)
+
 	dataUpdatedAt := b.Core.computeUpdatedAt(ctx, month, currentMonth)
 
 	monthStr := month.Format("2006-01")
@@ -242,20 +259,20 @@ func (c *Core) computeUpdatedAt(ctx context.Context, month, currentMonth time.Ti
 		}
 		dataUpdatedAt = lastUpdate
 	} else {
-		// Check presence of a stored metrics timestamp for the previous month.
+		// Check presence of a stored metrics timestamp for the requested month.
 		// If present, return the canonical end-of-month for the requested
 		// `month`. The stored timestamp acts strictly as a
 		// presence indicator.
-		previousMonthStart := timeutil.StartOfPreviousMonth(currentMonth)
-		previousMonthTimestamp, err := c.GetMetricsLastUpdateTime(ctx, previousMonthStart)
+		requestedMonthStart := timeutil.StartOfMonth(month)
+		requestedMonthTimestamp, err := c.GetMetricsLastUpdateTime(ctx, requestedMonthStart)
 
-		// The previous month has not been updated yet.
-		if err != nil || previousMonthTimestamp.IsZero() {
+		// The requested month has not been updated yet.
+		if err != nil || requestedMonthTimestamp.IsZero() {
 			return time.Time{}
 		}
 
 		// Use requested month's canonical end-of-month.
-		dataUpdatedAt = timeutil.EndOfMonth(month.UTC())
+		dataUpdatedAt = timeutil.EndOfMonth(month).UTC()
 	}
 
 	return dataUpdatedAt
@@ -394,6 +411,42 @@ func (b *SystemBackend) buildPkiBillingMetric(ctx context.Context, month time.Ti
 	}, nil
 }
 
+// buildIdTokenUnitsBillingMetric creates the billing metric for id token counts.
+func (b *SystemBackend) buildIdTokenUnitsBillingMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
+	var totalTokens float64
+
+	idTokenDetails := []map[string]interface{}{}
+	oidcTokenCount, err := b.Core.GetStoredOidcDurationAdjustedCount(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving OIDC duration-adjusted token count for month: %w", err)
+	}
+
+	if oidcTokenCount > 0 {
+		idTokenDetails = append(idTokenDetails, map[string]interface{}{"type": "oidc", "count": oidcTokenCount})
+	}
+
+	totalTokens += oidcTokenCount
+
+	spiffeJwtUnits, err := b.Core.GetStoredSpiffeJwtTokenUnits(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving JWT Spiffe duration-adjusted token count for month: %w", err)
+	}
+
+	if spiffeJwtUnits > 0 {
+		idTokenDetails = append(idTokenDetails, map[string]interface{}{"type": "spiffe", "count": spiffeJwtUnits})
+	}
+
+	totalTokens += spiffeJwtUnits
+
+	return map[string]interface{}{
+		"metric_name": "id_token_units",
+		"metric_data": map[string]interface{}{
+			"total":          totalTokens,
+			"metric_details": idTokenDetails,
+		},
+	}, nil
+}
+
 // getRoleCounts retrieves and combines role and managed key counts from replicated and local storage
 func (c *Core) getRoleAndManagedKeyCounts(ctx context.Context, month time.Time) (*RoleCounts, *ManagedKeyCounts, error) {
 	var replicatedRoleCounts *RoleCounts
@@ -457,20 +510,24 @@ func (c *Core) getKvCounts(ctx context.Context, month time.Time) (int, error) {
 	return replicatedKvCounts + localKvCounts, nil
 }
 
-// getDataProtectionCounts retrieves Transit and Transform call counts
+// getDataProtectionCounts retrieves Transit, Transform, and GCP KMS call counts
 // Data protection call counts are stored at local path only
 // Each cluster tracks its own total requests to avoid double counting
-func (c *Core) getDataProtectionCounts(ctx context.Context, month time.Time) (uint64, uint64, error) {
+func (c *Core) getDataProtectionCounts(ctx context.Context, month time.Time) (uint64, uint64, uint64, error) {
 	transitCounts, err := c.GetStoredTransitCallCounts(ctx, month)
 	if err != nil {
-		return 0, 0, fmt.Errorf("error retrieving local transit call counts: %w", err)
+		return 0, 0, 0, fmt.Errorf("error retrieving local transit call counts: %w", err)
 	}
 	transformCounts, err := c.GetStoredTransformCallCounts(ctx, month)
 	if err != nil {
-		return 0, 0, fmt.Errorf("error retrieving local transform call counts: %w", err)
+		return 0, 0, 0, fmt.Errorf("error retrieving local transform call counts: %w", err)
+	}
+	gcpKmsCounts, err := c.GetStoredGcpKmsCallCounts(ctx, month)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("error retrieving local GCP KMS call counts: %w", err)
 	}
 
-	return transitCounts, transformCounts, nil
+	return transitCounts, transformCounts, gcpKmsCounts, nil
 }
 
 // getKmipStatus retrieves KMIP enabled status (always stored at local path)

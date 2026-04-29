@@ -70,7 +70,7 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
-      - uses: hashicorp/action-setup-enos@3a9f736b68564c957cefbfcfb3d16b68e581a5b2 # v1.51
+      - uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
         with:
           github-token: ${{ github.repository == 'hashicorp/vault' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/create-dynamic-config
@@ -112,6 +112,7 @@ jobs:
     permissions:
       id-token: write # vault-auth
       contents: read
+
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -138,7 +139,9 @@ jobs:
             kv/data/github/${{ github.repository }}/slack feed-vault-enos-failures-webhook-url | SLACK_WEBHOOK_URL;
             kv/data/github/${{ github.repository }}/enos ssh-key | SSH_KEY_PRIVATE_CI;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE;
+            kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+
       - id: secrets
         run: |
           if [[ "${{ needs.metadata.outputs.is-ent-repo }}" != 'true' ]]; then
@@ -155,6 +158,7 @@ jobs:
               echo "${{ secrets.SSH_KEY_PRIVATE_CI }}"
               echo EOFSSHKEYCE
               echo 'vault-license=${{ secrets.VAULT_LICENSE }}'
+              echo 'vault-license-ibm=${{ secrets.VAULT_LICENSE_IBM }}'
            } | tee -a "$GITHUB_OUTPUT"
           else
             {
@@ -170,8 +174,10 @@ jobs:
               echo "${{ steps.vault-secrets.outputs.SSH_KEY_PRIVATE_CI }}"
               echo EOFSSHKEYENT
               echo 'vault-license=${{ steps.vault-secrets.outputs.VAULT_LICENSE }}'
+              echo 'vault-license-ibm=${{ steps.vault-secrets.outputs.VAULT_LICENSE_IBM }}'
             } | tee -a "$GITHUB_OUTPUT"
           fi
+
       - id: env
         run: |
           # Configure input environment variables.
@@ -191,6 +197,7 @@ jobs:
             echo 'ENOS_VAR_vault_artifact_path=./support/downloads/${{ inputs.build-artifact-name }}'
             echo 'ENOS_VAR_vault_build_date=${{ needs.metadata.outputs.build-date }}'
             echo 'ENOS_VAR_vault_license_path=./support/vault.hclic'
+            echo 'ENOS_VAR_vault_ibm_license_path=./support/ibm-pao.lic'
             echo 'ENOS_VAR_vault_product_version=${{ needs.metadata.outputs.vault-version }}'
             echo 'ENOS_VAR_vault_radar_license_path=./support/vault-radar.hclic'
             echo 'ENOS_VAR_vault_revision=${{ inputs.vault-revision }}'
@@ -200,15 +207,24 @@ jobs:
             echo 'ENOS_VAR_verify_ldap_secrets_engine=false'
             echo 'ENOS_VAR_verify_log_secrets=true'
           } | tee -a "$GITHUB_ENV"
+
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ steps.secrets.outputs.github-token }}
+
+      - name: Install LDAP client tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ldap-utils
+
       - uses: ./.github/actions/install-tools
+
       - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
         with:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
         with:
@@ -218,14 +234,17 @@ jobs:
           role-to-assume: ${{ steps.secrets.outputs.aws-role-arn }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
-      - uses: hashicorp/action-setup-enos@3a9f736b68564c957cefbfcfb3d16b68e581a5b2 # v1.51
+
+      - uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
         with:
           github-token: ${{ steps.secrets.outputs.github-token }}
+
       - uses: ./.github/actions/create-dynamic-config
         with:
           github-token: ${{ steps.secrets.outputs.github-token }}
           vault-version: ${{ inputs.vault-version }}
           vault-edition: ${{ inputs.vault-edition }}
+
       - name: Prepare scenario dependencies
         id: prepare_scenario
         run: |
@@ -234,31 +253,57 @@ jobs:
           chmod 600 "./enos/support/private_key.pem"
           sha256sum "./enos/support/private_key.pem"
           du -h "./enos/support/private_key.pem"
-          echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
+          {
+            echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
+            echo "test_results_artifact_name=test-results_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
+            echo "junit_results_artifact_name=junit-results_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
+            echo "failure_summary_artifact_name=failure-summary-enos_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g').md"
+          } >> "$GITHUB_OUTPUT"
+
       - if: contains(inputs.sample-name, 'build')
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ inputs.build-artifact-name }}
           path: ./enos/support/downloads
+
       - if: contains(inputs.sample-name, 'ent')
-        name: Configure Vault license
-        run: echo "${{ steps.secrets.outputs.vault-license }}" > ./enos/support/vault.hclic || true
+        name: Configure Vault licenses
+        run: |
+          echo "${{ steps.secrets.outputs.vault-license }}" > ./enos/support/vault.hclic || true
+          echo "${{ steps.secrets.outputs.vault-license-ibm }}" > ./enos/support/ibm-pao.lic || true
+
       - if: contains(matrix.scenario.id.filter, 'consul_edition:ent')
         name: Configure Consul license
         run: |
           echo "${{ steps.secrets.outputs.consul-license }}" > ./enos/support/consul.hclic || true
+
       - name: Configure Vault Radar license
         run: |
           echo "${{ steps.secrets.outputs.radar-license }}" > ./enos/support/vault-radar.hclic || true
+
       - id: launch
         name: enos scenario launch ${{ matrix.scenario.id.filter }}
         # Continue once and retry to handle occasional blips when creating infrastructure.
         continue-on-error: true
         run: enos scenario launch --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+
       - if: steps.launch.outcome == 'failure'
         id: launch_retry
         name: Retry enos scenario launch ${{ matrix.scenario.id.filter }}
-        run: enos scenario launch --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+        run: |
+          # Output our state and plan so we can see where we're at before a retry
+          echo "Current state:"
+          enos scenario exec --cmd show --chdir ./enos ${{ matrix.scenario.id.filter }}
+          echo "Current plan:"
+          enos scenario exec --cmd plan --chdir ./enos ${{ matrix.scenario.id.filter }}
+          if ! enos scenario launch --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}; then
+            echo "Retry failed!"
+            echo "Current state:"
+            enos scenario exec --cmd show --chdir ./enos ${{ matrix.scenario.id.filter }}
+            echo "Current plan:"
+            enos scenario exec --cmd plan --chdir ./enos ${{ matrix.scenario.id.filter }}
+          fi
+
       - name: Upload Debug Data
         if: failure()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -268,16 +313,107 @@ jobs:
           path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
           retention-days: 30
         continue-on-error: true
+
       - if: ${{ always() }}
         id: destroy
         name: enos scenario destroy ${{ matrix.scenario.id.filter }}
         continue-on-error: true
         run: enos scenario destroy --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+
       - if: steps.destroy.outcome == 'failure'
         id: destroy_retry
         name: Retry enos scenario destroy ${{ matrix.scenario.id.filter }}
         continue-on-error: true
         run: enos scenario destroy --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+
+      - name: Upload Test Results
+        if: always()
+        id: upload_test_results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ${{ steps.prepare_scenario.outputs.test_results_artifact_name }}
+          path: /tmp/vault_test_results_*.json
+          retention-days: 7
+          if-no-files-found: ignore
+        continue-on-error: true
+
+      - name: Upload JUnit Test Results
+        if: always()
+        id: upload_junit_results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ${{ steps.prepare_scenario.outputs.junit_results_artifact_name }}
+          path: /tmp/vault_test_results_*.xml
+          retention-days: 7
+          if-no-files-found: ignore
+        continue-on-error: true
+
+      - name: Check for test results
+        if: always()
+        id: check_test_results
+        continue-on-error: true
+        run: |
+          if find /tmp -maxdepth 1 -name 'vault_test_results_*.json' -type f -print -quit 2>/dev/null | grep -q .; then
+            echo "has_results=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_results=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare Test Results Summary
+        if: always() && steps.check_test_results.outputs.has_results == 'true'
+        continue-on-error: true
+        run: |
+          # Find the most recent JSON test results file
+          json_file=$(find /tmp -maxdepth 1 -name 'vault_test_results_*.json' -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)
+
+          if [ -n "$json_file" ] && [ -f "$json_file" ]; then
+            # Create failure summary file for aggregation in build.yml
+            failure_summary_file="${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}"
+
+            # Extract failed tests and format as table rows matching ci.yml format
+            # Format: | Test Type | Package | Test | Elapsed | Runner Index | Logs |
+            jq -r 'select(.Action == "fail") | select(.Test != null) | "| enos | \(.Package) | \(.Test) | \(.Elapsed // "N/A") | ${{ matrix.scenario.id.filter }} | [view test results :scroll:](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |"' \
+              "$json_file" > "$failure_summary_file"
+
+            # Count total tests, passes, and failures
+            total_tests=$(jq -r 'select(.Action == "pass" or .Action == "fail") | select(.Test != null)' "$json_file" | jq -s 'length')
+            passed_tests=$(jq -r 'select(.Action == "pass") | select(.Test != null)' "$json_file" | jq -s 'length')
+            failed_tests=$(jq -r 'select(.Action == "fail") | select(.Test != null)' "$json_file" | jq -s 'length')
+
+            # Create step summary for this specific scenario
+            {
+              echo "## Test Results for ${{ matrix.scenario.id.filter }}"
+              echo ""
+              echo "- **Total Tests:** $total_tests"
+              echo "- **Passed:** ✅ $passed_tests"
+              echo "- **Failed:** ❌ $failed_tests"
+              echo ""
+
+              # If there are failures, create a table with details
+              if [ "$failed_tests" -gt 0 ]; then
+                echo "### Failed Tests"
+                echo ""
+                echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |"
+                echo "| --------- | ------- | ---- | ------- | ------------ | ---- |"
+                cat "${failure_summary_file}"
+                echo ""
+              fi
+
+              echo "📊 Full test results available in artifacts: \`${{ steps.prepare_scenario.outputs.test_results_artifact_name }}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⚠️ No test results found in /tmp/vault_test_results_*.json" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Failure Summary
+        if: always() && steps.check_test_results.outputs.has_results == 'true'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}
+          path: ${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}
+          if-no-files-found: ignore
+        continue-on-error: true
+
       - name: Clean up Enos runtime directories
         id: cleanup
         if: ${{ always() }}
@@ -286,9 +422,11 @@ jobs:
           rm -rf /tmp/enos*
           rm -rf ./enos/support
           rm -rf ./enos/.enos
+
       # Send slack notifications to #feed-vault-enos-failures any of our enos scenario commands fail.
       # There is an incoming webhook set up on the "Enos Vault Failure Bot" Slackbot:
       # https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
+
       - if: ${{ always() && ! cancelled() }}
         name: Notify launch failed
         uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
@@ -296,6 +434,7 @@ jobs:
           failure-message: "enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.launch.outcome }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
+
       - if: ${{ always() && ! cancelled() }}
         name: Notify retry launch failed
         uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
@@ -303,6 +442,7 @@ jobs:
           failure-message: "retry enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.launch_retry.outcome }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
+
       - if: ${{ always() && ! cancelled() }}
         name: Notify destroy failed
         uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
@@ -310,6 +450,7 @@ jobs:
           failure-message: "enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.destroy.outcome }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
+
       - if: ${{ always() && ! cancelled() }}
         name: Notify retry destroy failed
         uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1

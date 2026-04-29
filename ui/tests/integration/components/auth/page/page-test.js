@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, waitFor } from '@ember/test-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -14,7 +14,7 @@ import sinon from 'sinon';
 
 /*
 The AuthPage parents much of the authentication workflow and so it can be used to test lots of auth functionality.
-This file tests the base component functionality. The other files test method authentication, listing visibility, 
+This file tests the base component functionality. The other files test method authentication, listing visibility,
 login settings (enterprise feature), and mfa.
 */
 module('Integration | Component | auth | page', function (hooks) {

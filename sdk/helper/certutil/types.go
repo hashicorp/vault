@@ -728,8 +728,8 @@ func (b *CAInfoBundle) GetCAChain() []*CertBlock {
 func (b *CAInfoBundle) GetFullChain() []*CertBlock {
 	var chain []*CertBlock
 
-	// Some bundles already include the root included in the chain,
-	// so don't include it twice.
+	// Add the current CA certificate to the chain only if it is not already the first certificate.
+	// This prevents duplicate root (self-signed) certificates in the CA chain.
 	if len(b.CAChain) == 0 || !bytes.Equal(b.CAChain[0].Bytes, b.CertificateBytes) {
 		chain = append(chain, &CertBlock{
 			Certificate: b.Certificate,

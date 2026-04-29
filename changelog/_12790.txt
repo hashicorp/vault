@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets-pki (enterprise): Add response data in a parsed format to the audit log for enrollment protocols.
+```

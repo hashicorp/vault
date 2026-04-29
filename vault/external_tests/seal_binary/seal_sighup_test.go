@@ -13,6 +13,7 @@ import (
 	"time"
 
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
+	dockerclient "github.com/moby/moby/client"
 )
 
 func TestSealReloadSIGHUP(t *testing.T) {
@@ -161,7 +162,9 @@ COPY vault /bin/vault
 					t.Fatalf("error copying over config file: %s", err)
 				}
 
-				err = runner.DockerAPI.ContainerKill(context.Background(), svc.Container.ID, "SIGHUP")
+				_, err = runner.DockerAPI.ContainerKill(context.Background(), svc.Container.ID, dockerclient.ContainerKillOptions{
+					Signal: "SIGHUP",
+				})
 				if err != nil {
 					t.Fatalf("error sending SIGHUP: %s", err)
 				}
