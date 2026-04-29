@@ -618,14 +618,33 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 
 		// Verify each metric has appropriate zero value
 		switch metricName {
-		case "static_secrets", "dynamic_roles", "auto_rotated_roles":
+		case "static_secrets":
 			total, ok := metricData["total"].(int)
 			require.True(t, ok, "%s total should be int", metricName)
 			require.Equal(t, 0, total, "%s total should be 0", metricName)
 
 			details, ok := metricData["metric_details"].([]map[string]interface{})
 			require.True(t, ok, "%s metric_details should be array", metricName)
-			require.Empty(t, details, "%s metric_details should be empty when total is 0", metricName)
+			require.NotEmpty(t, details, "%s metric_details should always be present", metricName)
+			// Verify kv type is present with zero count
+			require.Len(t, details, 1)
+			require.Equal(t, "kv", details[0]["type"])
+			require.Equal(t, 0, details[0]["count"])
+
+		case "dynamic_roles", "auto_rotated_roles":
+			total, ok := metricData["total"].(int)
+			require.True(t, ok, "%s total should be int", metricName)
+			require.Equal(t, 0, total, "%s total should be 0", metricName)
+
+			details, ok := metricData["metric_details"].([]map[string]interface{})
+			require.True(t, ok, "%s metric_details should be array", metricName)
+			require.NotEmpty(t, details, "%s metric_details should always be present", metricName)
+			// Verify all role types are present with zero counts
+			for _, detail := range details {
+				require.Contains(t, detail, "type")
+				require.Contains(t, detail, "count")
+				require.Equal(t, 0, detail["count"])
+			}
 
 		case "kmip":
 			used, ok := metricData["used_in_month"].(bool)
@@ -644,7 +663,18 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 
 			details, ok := metricData["metric_details"].([]map[string]interface{})
 			require.True(t, ok, "data_protection_calls metric_details should be array")
-			require.Empty(t, details, "data_protection_calls metric_details should be empty when total is 0")
+			require.NotEmpty(t, details, "data_protection_calls metric_details should always be present")
+			// Verify all data protection types are present with zero counts
+			require.Len(t, details, 3)
+			expectedTypes := map[string]bool{"transit": false, "transform": false, "gcpkms": false}
+			for _, detail := range details {
+				detailType := detail["type"].(string)
+				expectedTypes[detailType] = true
+				require.Equal(t, uint64(0), detail["count"])
+			}
+			for typeName, found := range expectedTypes {
+				require.True(t, found, "type %s should be present", typeName)
+			}
 
 		case "pki_units":
 			total, ok := metricData["total"].(float64)
@@ -653,11 +683,22 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 
 		case "managed_keys":
 			total, ok := metricData["total"].(int)
-			require.True(t, ok, "managed_keys total should be float64")
+			require.True(t, ok, "managed_keys total should be int")
 			require.Equal(t, int(0), total, "managed keys total should be 0")
 			details, ok := metricData["metric_details"].([]map[string]interface{})
 			require.True(t, ok, "%s metric_details should be array", metricName)
-			require.Empty(t, details, "%s metric_details should be empty when total is 0", metricName)
+			require.NotEmpty(t, details, "%s metric_details should always be present", metricName)
+			// Verify both managed key types are present with zero counts
+			require.Len(t, details, 2)
+			expectedTypes := map[string]bool{"totp": false, "kmse": false}
+			for _, detail := range details {
+				detailType := detail["type"].(string)
+				expectedTypes[detailType] = true
+				require.Equal(t, 0, detail["count"])
+			}
+			for typeName, found := range expectedTypes {
+				require.True(t, found, "type %s should be present", typeName)
+			}
 
 		case "ssh_units":
 			total, ok := metricData["total"].(float64)
@@ -668,6 +709,21 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 			total, ok := metricData["total"].(float64)
 			require.True(t, ok, "id_token_units total should be float64")
 			require.Equal(t, float64(0), total, "id_token_units total should be 0")
+
+			details, ok := metricData["metric_details"].([]map[string]interface{})
+			require.True(t, ok, "id_token_units metric_details should be array")
+			require.NotEmpty(t, details, "id_token_units metric_details should always be present")
+			// Verify both token types are present with zero counts
+			require.Len(t, details, 2)
+			expectedTypes := map[string]bool{"oidc": false, "spiffe": false}
+			for _, detail := range details {
+				detailType := detail["type"].(string)
+				expectedTypes[detailType] = true
+				require.Equal(t, float64(0), detail["count"])
+			}
+			for typeName, found := range expectedTypes {
+				require.True(t, found, "type %s should be present", typeName)
+			}
 		}
 	}
 
@@ -939,6 +995,135 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp_NoStoredTimestamp(t *t
 	// Previous month should also be zero time since no timestamp is stored
 	require.True(t, prevMonthTime.IsZero(),
 		"previous month updated_at should be zero time when no stored timestamp exists")
+}
+
+// TestSystemBackend_BillingOverview_AllMetricTypesPresent verifies that all metric types
+// are always present in the response, even when their counts are zero. This test specifically
+// validates that metric_details arrays contain all expected types for each metric category.
+func TestSystemBackend_BillingOverview_AllMetricTypesPresent(t *testing.T) {
+	_, b, _ := testCoreSystemBackend(t)
+	ctx := namespace.RootContext(nil)
+
+	// Make a request without creating any billable resources
+	req := logical.TestRequest(t, logical.ReadOperation, "billing/overview")
+	resp, err := b.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// Verify the response structure exists
+	months, ok := resp.Data["months"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, months, billing.BillingRetentionMonths)
+
+	// Check current month has all metrics
+	currentMonth, ok := months[0].(map[string]interface{})
+	require.True(t, ok)
+	require.Contains(t, currentMonth, "usage_metrics")
+
+	usageMetrics, ok := currentMonth["usage_metrics"].([]map[string]interface{})
+	require.True(t, ok)
+	require.NotNil(t, usageMetrics)
+	require.NotEmpty(t, usageMetrics, "usage_metrics should contain all metrics even with zero values")
+
+	// Build a map of metrics for easy lookup
+	metricsMap := make(map[string]map[string]interface{})
+	for _, metric := range usageMetrics {
+		metricName, ok := metric["metric_name"].(string)
+		require.True(t, ok, "metric_name should be a string")
+		metricsMap[metricName] = metric
+	}
+
+	// Verify static_secrets has kv type
+	staticSecretsMetric, exists := metricsMap["static_secrets"]
+	require.True(t, exists, "static_secrets metric should be present")
+	staticSecretsData := staticSecretsMetric["metric_data"].(map[string]interface{})
+	staticSecretsDetails := staticSecretsData["metric_details"].([]map[string]interface{})
+	require.Len(t, staticSecretsDetails, 1, "static_secrets should have 1 type")
+	require.Equal(t, "kv", staticSecretsDetails[0]["type"])
+	require.Equal(t, 0, staticSecretsDetails[0]["count"])
+
+	// Verify dynamic_roles has all 13 types
+	dynamicRolesMetric, exists := metricsMap["dynamic_roles"]
+	require.True(t, exists, "dynamic_roles metric should be present")
+	dynamicRolesData := dynamicRolesMetric["metric_data"].(map[string]interface{})
+	dynamicRolesDetails := dynamicRolesData["metric_details"].([]map[string]interface{})
+	require.Len(t, dynamicRolesDetails, 13, "dynamic_roles should have 13 types")
+
+	expectedDynamicTypes := []string{
+		"aws_dynamic", "azure_dynamic", "database_dynamic", "gcp_dynamic",
+		"ldap_dynamic", "openldap_dynamic", "alicloud_dynamic", "rabbitmq_dynamic",
+		"consul_dynamic", "nomad_dynamic", "kubernetes_dynamic", "mongodbatlas_dynamic",
+		"terraform_dynamic",
+	}
+	for i, expectedType := range expectedDynamicTypes {
+		require.Equal(t, expectedType, dynamicRolesDetails[i]["type"], "dynamic role type at index %d should be %s", i, expectedType)
+		require.Equal(t, 0, dynamicRolesDetails[i]["count"], "dynamic role count at index %d should be 0", i)
+	}
+
+	// Verify auto_rotated_roles has all 7 types
+	autoRotatedMetric, exists := metricsMap["auto_rotated_roles"]
+	require.True(t, exists, "auto_rotated_roles metric should be present")
+	autoRotatedData := autoRotatedMetric["metric_data"].(map[string]interface{})
+	autoRotatedDetails := autoRotatedData["metric_details"].([]map[string]interface{})
+	require.Len(t, autoRotatedDetails, 7, "auto_rotated_roles should have 7 types")
+
+	expectedAutoRotatedTypes := []string{
+		"aws_static", "azure_static", "database_static", "gcp_static",
+		"gcp_impersonated", "ldap_static", "openldap_static",
+	}
+	for i, expectedType := range expectedAutoRotatedTypes {
+		require.Equal(t, expectedType, autoRotatedDetails[i]["type"], "auto-rotated role type at index %d should be %s", i, expectedType)
+		require.Equal(t, 0, autoRotatedDetails[i]["count"], "auto-rotated role count at index %d should be 0", i)
+	}
+
+	// Verify data_protection_calls has all 3 types
+	dataProtectionMetric, exists := metricsMap["data_protection_calls"]
+	require.True(t, exists, "data_protection_calls metric should be present")
+	dataProtectionData := dataProtectionMetric["metric_data"].(map[string]interface{})
+	dataProtectionDetails := dataProtectionData["metric_details"].([]map[string]interface{})
+	require.Len(t, dataProtectionDetails, 3, "data_protection_calls should have 3 types")
+
+	expectedDataProtectionTypes := []string{"transit", "transform", "gcpkms"}
+	for i, expectedType := range expectedDataProtectionTypes {
+		require.Equal(t, expectedType, dataProtectionDetails[i]["type"], "data protection type at index %d should be %s", i, expectedType)
+		require.Equal(t, uint64(0), dataProtectionDetails[i]["count"], "data protection count at index %d should be 0", i)
+	}
+
+	// Verify managed_keys has both types
+	managedKeysMetric, exists := metricsMap["managed_keys"]
+	require.True(t, exists, "managed_keys metric should be present")
+	managedKeysData := managedKeysMetric["metric_data"].(map[string]interface{})
+	managedKeysDetails := managedKeysData["metric_details"].([]map[string]interface{})
+	require.Len(t, managedKeysDetails, 2, "managed_keys should have 2 types")
+
+	expectedManagedKeyTypes := []string{"totp", "kmse"}
+	for i, expectedType := range expectedManagedKeyTypes {
+		require.Equal(t, expectedType, managedKeysDetails[i]["type"], "managed key type at index %d should be %s", i, expectedType)
+		require.Equal(t, 0, managedKeysDetails[i]["count"], "managed key count at index %d should be 0", i)
+	}
+
+	// Verify ssh_units has both types
+	sshMetric, exists := metricsMap["ssh_units"]
+	require.True(t, exists, "ssh_units metric should be present")
+	sshData := sshMetric["metric_data"].(map[string]interface{})
+	sshDetails := sshData["metric_details"].([]map[string]interface{})
+	require.Len(t, sshDetails, 2, "ssh_units should have 2 types")
+	require.Equal(t, "otp_units", sshDetails[0]["type"])
+	require.Equal(t, "certificate_units", sshDetails[1]["type"])
+
+	// Verify id_token_units has both types
+	idTokenMetric, exists := metricsMap["id_token_units"]
+	require.True(t, exists, "id_token_units metric should be present")
+	idTokenData := idTokenMetric["metric_data"].(map[string]interface{})
+	idTokenDetails := idTokenData["metric_details"].([]map[string]interface{})
+	require.Len(t, idTokenDetails, 2, "id_token_units should have 2 types")
+
+	expectedIdTokenTypes := []string{"oidc", "spiffe"}
+	for i, expectedType := range expectedIdTokenTypes {
+		require.Equal(t, expectedType, idTokenDetails[i]["type"], "id token type at index %d should be %s", i, expectedType)
+		require.Equal(t, float64(0), idTokenDetails[i]["count"], "id token count at index %d should be 0", i)
+	}
 }
 
 // TestSystemBackend_BillingOverview_PreviousMonth_WithError tests the behavior

@@ -151,9 +151,8 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 	// Build the usage metrics
 	usageMetrics := []map[string]interface{}{}
 
-	kvDetails := []map[string]interface{}{}
-	if combinedKvCounts > 0 {
-		kvDetails = append(kvDetails, map[string]interface{}{"type": "kv", "count": combinedKvCounts})
+	kvDetails := []map[string]interface{}{
+		{"type": "kv", "count": combinedKvCounts},
 	}
 	usageMetrics = append(usageMetrics, map[string]interface{}{
 		"metric_name": "static_secrets",
@@ -181,15 +180,10 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 		},
 	})
 
-	dataProtectionDetails := []map[string]interface{}{}
-	if transitCounts > 0 {
-		dataProtectionDetails = append(dataProtectionDetails, map[string]interface{}{"type": "transit", "count": transitCounts})
-	}
-	if transformCounts > 0 {
-		dataProtectionDetails = append(dataProtectionDetails, map[string]interface{}{"type": "transform", "count": transformCounts})
-	}
-	if gcpKmsCounts > 0 {
-		dataProtectionDetails = append(dataProtectionDetails, map[string]interface{}{"type": "gcpkms", "count": gcpKmsCounts})
+	dataProtectionDetails := []map[string]interface{}{
+		{"type": "transit", "count": transitCounts},
+		{"type": "transform", "count": transformCounts},
+		{"type": "gcpkms", "count": gcpKmsCounts},
 	}
 
 	usageMetrics = append(usageMetrics, map[string]interface{}{
@@ -206,12 +200,9 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 	}
 	usageMetrics = append(usageMetrics, pkiMetric)
 
-	managedKeysDetails := []map[string]interface{}{}
-	if combinedManagedKeyCounts.TotpKeys > 0 {
-		managedKeysDetails = append(managedKeysDetails, map[string]interface{}{"type": "totp", "count": combinedManagedKeyCounts.TotpKeys})
-	}
-	if combinedManagedKeyCounts.KmseKeys > 0 {
-		managedKeysDetails = append(managedKeysDetails, map[string]interface{}{"type": "kmse", "count": combinedManagedKeyCounts.KmseKeys})
+	managedKeysDetails := []map[string]interface{}{
+		{"type": "totp", "count": combinedManagedKeyCounts.TotpKeys},
+		{"type": "kmse", "count": combinedManagedKeyCounts.KmseKeys},
 	}
 	usageMetrics = append(usageMetrics, map[string]interface{}{
 		"metric_name": "managed_keys",
@@ -281,63 +272,54 @@ func (c *Core) computeUpdatedAt(ctx context.Context, month, currentMonth time.Ti
 // buildDynamicRolesMetric creates the dynamic_roles metric from role counts.
 func buildDynamicRolesMetric(counts *RoleCounts) map[string]interface{} {
 	total := 0
+	awsCount := 0
+	azureCount := 0
+	databaseCount := 0
+	gcpCount := 0
+	ldapCount := 0
+	openldapCount := 0
+	alicloudCount := 0
+	rabbitmqCount := 0
+	consulCount := 0
+	nomadCount := 0
+	kubernetesCount := 0
+	mongodbatlasCount := 0
+	terraformCount := 0
+
 	if counts != nil {
-		total = counts.AWSDynamicRoles +
-			counts.AzureDynamicRoles +
-			counts.DatabaseDynamicRoles +
-			counts.GCPRolesets +
-			counts.LDAPDynamicRoles +
-			counts.OpenLDAPDynamicRoles +
-			counts.AlicloudDynamicRoles +
-			counts.RabbitMQDynamicRoles +
-			counts.ConsulDynamicRoles +
-			counts.NomadDynamicRoles +
-			counts.KubernetesDynamicRoles +
-			counts.MongoDBAtlasDynamicRoles +
-			counts.TerraformCloudDynamicRoles
+		awsCount = counts.AWSDynamicRoles
+		azureCount = counts.AzureDynamicRoles
+		databaseCount = counts.DatabaseDynamicRoles
+		gcpCount = counts.GCPRolesets
+		ldapCount = counts.LDAPDynamicRoles
+		openldapCount = counts.OpenLDAPDynamicRoles
+		alicloudCount = counts.AlicloudDynamicRoles
+		rabbitmqCount = counts.RabbitMQDynamicRoles
+		consulCount = counts.ConsulDynamicRoles
+		nomadCount = counts.NomadDynamicRoles
+		kubernetesCount = counts.KubernetesDynamicRoles
+		mongodbatlasCount = counts.MongoDBAtlasDynamicRoles
+		terraformCount = counts.TerraformCloudDynamicRoles
+
+		total = awsCount + azureCount + databaseCount + gcpCount + ldapCount +
+			openldapCount + alicloudCount + rabbitmqCount + consulCount +
+			nomadCount + kubernetesCount + mongodbatlasCount + terraformCount
 	}
 
-	details := []map[string]interface{}{}
-	if counts != nil {
-		if counts.AWSDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "aws_dynamic", "count": counts.AWSDynamicRoles})
-		}
-		if counts.AzureDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "azure_dynamic", "count": counts.AzureDynamicRoles})
-		}
-		if counts.DatabaseDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "database_dynamic", "count": counts.DatabaseDynamicRoles})
-		}
-		if counts.GCPRolesets > 0 {
-			details = append(details, map[string]interface{}{"type": "gcp_dynamic", "count": counts.GCPRolesets})
-		}
-		if counts.LDAPDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "ldap_dynamic", "count": counts.LDAPDynamicRoles})
-		}
-		if counts.OpenLDAPDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "openldap_dynamic", "count": counts.OpenLDAPDynamicRoles})
-		}
-		if counts.AlicloudDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "alicloud_dynamic", "count": counts.AlicloudDynamicRoles})
-		}
-		if counts.RabbitMQDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "rabbitmq_dynamic", "count": counts.RabbitMQDynamicRoles})
-		}
-		if counts.ConsulDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "consul_dynamic", "count": counts.ConsulDynamicRoles})
-		}
-		if counts.NomadDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "nomad_dynamic", "count": counts.NomadDynamicRoles})
-		}
-		if counts.KubernetesDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "kubernetes_dynamic", "count": counts.KubernetesDynamicRoles})
-		}
-		if counts.MongoDBAtlasDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "mongodbatlas_dynamic", "count": counts.MongoDBAtlasDynamicRoles})
-		}
-		if counts.TerraformCloudDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "terraform_dynamic", "count": counts.TerraformCloudDynamicRoles})
-		}
+	details := []map[string]interface{}{
+		{"type": "aws_dynamic", "count": awsCount},
+		{"type": "azure_dynamic", "count": azureCount},
+		{"type": "database_dynamic", "count": databaseCount},
+		{"type": "gcp_dynamic", "count": gcpCount},
+		{"type": "ldap_dynamic", "count": ldapCount},
+		{"type": "openldap_dynamic", "count": openldapCount},
+		{"type": "alicloud_dynamic", "count": alicloudCount},
+		{"type": "rabbitmq_dynamic", "count": rabbitmqCount},
+		{"type": "consul_dynamic", "count": consulCount},
+		{"type": "nomad_dynamic", "count": nomadCount},
+		{"type": "kubernetes_dynamic", "count": kubernetesCount},
+		{"type": "mongodbatlas_dynamic", "count": mongodbatlasCount},
+		{"type": "terraform_dynamic", "count": terraformCount},
 	}
 
 	return map[string]interface{}{
@@ -352,39 +334,35 @@ func buildDynamicRolesMetric(counts *RoleCounts) map[string]interface{} {
 // buildAutoRotatedRolesMetric creates the auto_rotated_roles metric from role counts.
 func buildAutoRotatedRolesMetric(counts *RoleCounts) map[string]interface{} {
 	total := 0
+	awsCount := 0
+	azureCount := 0
+	databaseCount := 0
+	gcpStaticCount := 0
+	gcpImpersonatedCount := 0
+	ldapCount := 0
+	openldapCount := 0
+
 	if counts != nil {
-		total = counts.AWSStaticRoles +
-			counts.AzureStaticRoles +
-			counts.DatabaseStaticRoles +
-			counts.GCPStaticAccounts +
-			counts.GCPImpersonatedAccounts +
-			counts.LDAPStaticRoles +
-			counts.OpenLDAPStaticRoles
+		awsCount = counts.AWSStaticRoles
+		azureCount = counts.AzureStaticRoles
+		databaseCount = counts.DatabaseStaticRoles
+		gcpStaticCount = counts.GCPStaticAccounts
+		gcpImpersonatedCount = counts.GCPImpersonatedAccounts
+		ldapCount = counts.LDAPStaticRoles
+		openldapCount = counts.OpenLDAPStaticRoles
+
+		total = awsCount + azureCount + databaseCount + gcpStaticCount +
+			gcpImpersonatedCount + ldapCount + openldapCount
 	}
 
-	details := []map[string]interface{}{}
-	if counts != nil {
-		if counts.AWSStaticRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "aws_static", "count": counts.AWSStaticRoles})
-		}
-		if counts.AzureStaticRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "azure_static", "count": counts.AzureStaticRoles})
-		}
-		if counts.DatabaseStaticRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "database_static", "count": counts.DatabaseStaticRoles})
-		}
-		if counts.GCPStaticAccounts > 0 {
-			details = append(details, map[string]interface{}{"type": "gcp_static", "count": counts.GCPStaticAccounts})
-		}
-		if counts.GCPImpersonatedAccounts > 0 {
-			details = append(details, map[string]interface{}{"type": "gcp_impersonated", "count": counts.GCPImpersonatedAccounts})
-		}
-		if counts.LDAPStaticRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "ldap_static", "count": counts.LDAPStaticRoles})
-		}
-		if counts.OpenLDAPStaticRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "openldap_static", "count": counts.OpenLDAPStaticRoles})
-		}
+	details := []map[string]interface{}{
+		{"type": "aws_static", "count": awsCount},
+		{"type": "azure_static", "count": azureCount},
+		{"type": "database_static", "count": databaseCount},
+		{"type": "gcp_static", "count": gcpStaticCount},
+		{"type": "gcp_impersonated", "count": gcpImpersonatedCount},
+		{"type": "ldap_static", "count": ldapCount},
+		{"type": "openldap_static", "count": openldapCount},
 	}
 
 	return map[string]interface{}{
@@ -415,14 +393,9 @@ func (b *SystemBackend) buildPkiBillingMetric(ctx context.Context, month time.Ti
 func (b *SystemBackend) buildIdTokenUnitsBillingMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
 	var totalTokens float64
 
-	idTokenDetails := []map[string]interface{}{}
 	oidcTokenCount, err := b.Core.GetStoredOidcDurationAdjustedCount(ctx, month)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving OIDC duration-adjusted token count for month: %w", err)
-	}
-
-	if oidcTokenCount > 0 {
-		idTokenDetails = append(idTokenDetails, map[string]interface{}{"type": "oidc", "count": oidcTokenCount})
 	}
 
 	totalTokens += oidcTokenCount
@@ -432,11 +405,12 @@ func (b *SystemBackend) buildIdTokenUnitsBillingMetric(ctx context.Context, mont
 		return nil, fmt.Errorf("error retrieving JWT Spiffe duration-adjusted token count for month: %w", err)
 	}
 
-	if spiffeJwtUnits > 0 {
-		idTokenDetails = append(idTokenDetails, map[string]interface{}{"type": "spiffe", "count": spiffeJwtUnits})
-	}
-
 	totalTokens += spiffeJwtUnits
+
+	idTokenDetails := []map[string]interface{}{
+		{"type": "oidc", "count": oidcTokenCount},
+		{"type": "spiffe", "count": spiffeJwtUnits},
+	}
 
 	return map[string]interface{}{
 		"metric_name": "id_token_units",
