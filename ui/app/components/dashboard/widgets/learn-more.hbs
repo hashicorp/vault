@@ -3,12 +3,14 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="learn-more">
-  <h2 class="title is-4 has-bottom-margin-xxs" data-test-learn-more-title>Learn more</h2>
-  <div class="sub-text" data-test-learn-more-subtext>
+<div data-test-card="learn-more" ...attributes>
+  <Hds::Text::Display @size="300" data-test-text-display="Learn more">Learn more</Hds::Text::Display>
+
+  <Hds::Text::Body @tag="p" @size="100" @color="faint" class="has-top-margin-s" data-test-text-body="Learn more description">
     Explore the features of Vault and learn advance practices with the following tutorials and documentation.
-  </div>
-  <div class="has-top-margin-xs" data-test-learn-more-links>
+  </Hds::Text::Body>
+
+  <div class="has-top-margin-s" data-test-learn-more-links>
     {{#each this.learnMoreLinks as |learnMoreLink|}}
       {{#if
         (or
@@ -28,4 +30,4 @@
 
     {{/each}}
   </div>
-</Hds::Card::Container>
+</div>

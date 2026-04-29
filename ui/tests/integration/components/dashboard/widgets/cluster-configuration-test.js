@@ -7,9 +7,9 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Integration | Component | dashboard/vault-configuration-details-card', function (hooks) {
+module('Integration | Component | dashboard/widgets/cluster-configuration', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
@@ -103,22 +103,20 @@ module('Integration | Component | dashboard/vault-configuration-details-card', f
     };
 
     this.renderComponent = () => {
-      return render(hbs`<Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{this.data}} />`);
+      return render(hbs`<Dashboard::Widgets::ClusterConfiguration @vaultConfiguration={{this.data}} />`);
     };
   });
 
-  test('it renders configuration details', async function (assert) {
+  test('it renders cluster information', async function (assert) {
     await this.renderComponent();
-    assert.dom(DASHBOARD.cardHeader('configuration')).hasText('Configuration details');
-    assert
-      .dom(DASHBOARD.vaultConfigurationCard.configDetailsField('api_addr'))
-      .hasText('http://127.0.0.1:8200');
-    assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('default_lease_ttl')).hasText('0');
-    assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('max_lease_ttl')).hasText('2 days');
-    assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Disabled'); // tls_disable=true
-    assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('log_format')).hasText('None');
-    assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('log_level')).hasText('debug');
-    assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('type')).hasText('raft');
+    assert.dom(GENERAL.textDisplay('Cluster information')).hasText('Cluster information');
+    assert.dom(GENERAL.tableData('0', 'api_addr value')).hasText('http://127.0.0.1:8200');
+    assert.dom(GENERAL.tableData('1', 'default_lease_ttl value')).hasText('0');
+    assert.dom(GENERAL.tableData('2', 'max_lease_ttl value')).hasText('2 days');
+    assert.dom(GENERAL.tableData('3', 'tls value')).hasText('Disabled'); // tls_disable=true
+    assert.dom(GENERAL.tableData('4', 'log_format value')).hasText('None');
+    assert.dom(GENERAL.tableData('5', 'log_level value')).hasText('debug');
+    assert.dom(GENERAL.tableData('6', 'type value')).hasText('raft');
   });
 
   test('it should show tls as enabled if tls_disable, tls_cert_file and tls_key_file are in the config', async function (assert) {
@@ -127,7 +125,7 @@ module('Integration | Component | dashboard/vault-configuration-details-card', f
     this.data.listeners[0].config.tls_key_file = './key.pem';
 
     await this.renderComponent();
-    assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
+    assert.dom(GENERAL.tableData('3', 'tls value')).hasText('Enabled');
   });
 
   test('it should show tls as enabled if only cert and key exist in config', async function (assert) {
@@ -136,12 +134,12 @@ module('Integration | Component | dashboard/vault-configuration-details-card', f
     this.data.listeners[0].config.tls_key_file = './key.pem';
 
     await this.renderComponent();
-    assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
+    assert.dom(GENERAL.tableData('3', 'tls value')).hasText('Enabled');
   });
 
   test('it should show tls as disabled if there is no tls information in the config', async function (assert) {
     this.data.listeners = [];
     await this.renderComponent();
-    assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Disabled');
+    assert.dom(GENERAL.tableData('3', 'tls value')).hasText('Disabled');
   });
 });

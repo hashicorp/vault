@@ -30,11 +30,11 @@ import type {
 } from 'vault/client-counts/activity-api';
 
 /**
- * @module DashboardClientCountCard
- * DashboardClientCountCard component are used to display total and new client count information
+ * @module Dashboard::Widgets::ClientCount
+ * Dashboard widget component to display total and new client count information
  *
  * @example
- * <Dashboard::ClientCountCard />
+ * <Dashboard::Widgets::ClientCount />
  */
 
 export default class DashboardClientCountCard extends Component<object> {

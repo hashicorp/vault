@@ -7,10 +7,10 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Integration | Component | dashboard/secrets-engines-card', function (hooks) {
+module('Integration | Component | dashboard/widgets/secrets-engines', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
@@ -28,7 +28,7 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
   test('it should hide show all button', async function (assert) {
     this.secretsEngines = this.store.peekAll('secret-engine', {});
 
-    await render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
+    await render(hbs`<Dashboard::Widgets::SecretsEngines @secretsEngines={{this.secretsEngines}} />`);
 
     // verify truncate class style exists on secret engine path text
     assert
@@ -49,7 +49,7 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
     });
     this.secretsEngines = this.store.peekAll('secret-engine', {});
 
-    await render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
+    await render(hbs`<Dashboard::Widgets::SecretsEngines @secretsEngines={{this.secretsEngines}} />`);
     assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
     assert.dom(SES.secretPath('nomad-test/')).hasClass('has-text-grey');
   });
@@ -117,38 +117,25 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
       this.secretsEngines = this.store.peekAll('secret-engine', {});
 
       this.renderComponent = () => {
-        return render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
+        return render(hbs`<Dashboard::Widgets::SecretsEngines @secretsEngines={{this.secretsEngines}} />`);
       };
     });
 
     test('it should display only five secrets engines and show help text for more than 5 engines', async function (assert) {
       await this.renderComponent();
-      assert.dom(DASHBOARD.cardHeader('Secrets engines')).hasText('Secrets engines');
-      assert.dom(DASHBOARD.tableRow('Secrets engines')).exists({ count: 5 });
-      assert.dom('[data-test-secrets-engine-total-help-text]').exists();
-      assert
-        .dom('[data-test-secrets-engine-total-help-text]')
-        .hasText(
-          `Showing 5 out of ${this.secretsEngines.length} secret engines. Navigate to details to view more.`
-        );
+      assert.dom(GENERAL.textDisplay('Secrets engines')).hasText('Secrets engines');
+      assert.dom(`${GENERAL.table('Secrets engines')} tr`).exists({ count: 6 });
     });
 
     test('it should display the secrets engines accessor and path', async function (assert) {
       await this.renderComponent();
-      assert.dom(DASHBOARD.cardHeader('Secrets engines')).hasText('Secrets engines');
-      assert.dom(DASHBOARD.tableRow('Secrets engines')).exists({ count: 5 });
+      assert.dom(GENERAL.textDisplay('Secrets engines')).hasText('Secrets engines');
+      assert.dom(`${GENERAL.table('Secrets engines')} tr`).exists({ count: 6 });
 
       this.secretsEngines.slice(0, 5).forEach((engine) => {
-        assert.dom(DASHBOARD.secretsEnginesCard.secretEngineAccessorRow(engine.id)).hasText(engine.accessor);
-        if (engine.description) {
-          assert
-            .dom(DASHBOARD.secretsEnginesCard.secretEngineDescription(engine.id))
-            .hasText(engine.description);
-        } else {
-          assert
-            .dom(DASHBOARD.secretsEnginesCard.secretEngineDescription(engine.id))
-            .doesNotExist(engine.description);
-        }
+        assert
+          .dom(GENERAL.tableRow(engine.id))
+          .hasText(`${engine.type} type backend ${engine.path} ${engine.type} ${engine.accessor}`);
       });
     });
 

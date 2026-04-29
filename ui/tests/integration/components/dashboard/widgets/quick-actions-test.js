@@ -9,11 +9,10 @@ import { render, findAll, click, typeIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { selectChoose } from 'ember-power-select/test-support';
 import sinon from 'sinon';
-import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import SecretsEngineResource from 'vault/resources/secrets/engine';
 
-module('Integration | Component | dashboard/quick-actions-card', function (hooks) {
+module('Integration | Component | dashboard/widgets/quick-actions', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
@@ -53,7 +52,7 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
     ];
 
     this.renderComponent = () =>
-      render(hbs`<Dashboard::QuickActionsCard @secretsEngines={{this.secretsEngines}} />`);
+      render(hbs`<Dashboard::Widgets::QuickActions @secretsEngines={{this.secretsEngines}} />`);
   });
 
   hooks.afterEach(function () {
@@ -69,11 +68,11 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
     });
   });
 
-  test('it should show quick action empty state if no engine is selected', async function (assert) {
+  test('it should show quick action secrets engines super select if no engine is selected', async function (assert) {
     await this.renderComponent();
-    assert.dom('.title').hasText('Quick actions');
+    assert.dom(GENERAL.textDisplay('Quick actions')).hasText('Quick actions');
     assert.dom(GENERAL.superSelect('secrets-engines')).exists({ count: 1 });
-    assert.dom(DASHBOARD.emptyState('no-mount-selected')).exists({ count: 1 });
+    assert.dom(GENERAL.formLabel('Select secret engine mount')).hasText('Select secret engine mount');
   });
 
   test('it selects a pki role and issues a leaf certificate', async function (assert) {
@@ -85,13 +84,12 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
     await selectChoose(GENERAL.superSelect('actions'), 'Issue certificate');
 
     assert.true(this.apiStub.calledWith(backend, 'true'), 'Request made to fetch options');
-    assert.dom(DASHBOARD.emptyState('quick-actions')).doesNotExist();
-    assert.dom(DASHBOARD.subtitle('param')).hasText('Role to use');
+    assert.dom(GENERAL.formLabel('param')).hasText('Role to use');
 
     await selectChoose(GENERAL.superSelect('params'), 'some-role');
-    assert.dom(DASHBOARD.actionButton('Issue leaf certificate')).exists({ count: 1 });
+    assert.dom(GENERAL.button('Issue leaf certificate')).exists({ count: 1 });
 
-    await click(DASHBOARD.actionButton('Issue leaf certificate'));
+    await click(GENERAL.button('Issue leaf certificate'));
     const [route, backendParam, roleParam] = this.transitionStub.lastCall.args;
     assert.strictEqual(
       route,
@@ -111,12 +109,11 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
     await selectChoose(GENERAL.superSelect('actions'), 'View certificate');
 
     assert.true(this.apiStub.calledWith(backend, 'true'), 'Request made to fetch options');
-    assert.dom(DASHBOARD.emptyState('quick-actions')).doesNotExist();
-    assert.dom(DASHBOARD.subtitle('param')).hasText('Certificate serial number');
-    assert.dom(DASHBOARD.actionButton('View certificate')).exists({ count: 1 });
+    assert.dom(GENERAL.formLabel('param')).hasText('Certificate serial number');
+    assert.dom(GENERAL.button('View certificate')).exists({ count: 1 });
 
     await selectChoose(GENERAL.superSelect('params'), '.ember-power-select-option', 0);
-    await click(DASHBOARD.actionButton('View certificate'));
+    await click(GENERAL.button('View certificate'));
 
     const [route, backendParam, certParam] = this.transitionStub.lastCall.args;
     assert.strictEqual(
@@ -139,12 +136,11 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
     await selectChoose(GENERAL.superSelect('actions'), 'View issuer');
 
     assert.true(this.apiStub.calledWith(backend, 'true'), 'Request made to fetch options');
-    assert.dom(DASHBOARD.emptyState('quick-actions')).doesNotExist();
-    assert.dom(DASHBOARD.subtitle('param')).hasText('Issuer');
-    assert.dom(DASHBOARD.actionButton('View issuer')).exists({ count: 1 });
+    assert.dom(GENERAL.formLabel('param')).hasText('Issuer');
+    assert.dom(GENERAL.button('View issuer')).exists({ count: 1 });
 
     await selectChoose(GENERAL.superSelect('params'), '.ember-power-select-option', 0);
-    await click(DASHBOARD.actionButton('View issuer'));
+    await click(GENERAL.button('View issuer'));
 
     const [route, backendParam, issuerParam] = this.transitionStub.lastCall.args;
     assert.strictEqual(
@@ -168,16 +164,15 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
 
     assert.true(this.staticStub.calledWith(backend, 'true'), 'Request made to fetch static roles');
     assert.true(this.dynamicStub.calledWith(backend, 'true'), 'Request made to fetch dynamic roles');
-    assert.dom(DASHBOARD.emptyState('quick-actions')).doesNotExist();
-    assert.dom(DASHBOARD.subtitle('param')).hasText('Role to use');
-    assert.dom(DASHBOARD.actionButton('Generate credentials')).exists({ count: 1 });
+    assert.dom(GENERAL.formLabel('param')).hasText('Role to use');
+    assert.dom(GENERAL.button('Generate credentials')).exists({ count: 1 });
 
     await click(GENERAL.superSelect('params'));
     assert.dom(GENERAL.searchSelect.option(0)).hasText('static-role', 'Static roles render in dropdown');
     assert.dom(GENERAL.searchSelect.option(1)).hasText('dynamic-role', 'Dynamic roles render in dropdown');
 
     await selectChoose(GENERAL.superSelect('params'), '.ember-power-select-option', 1);
-    await click(DASHBOARD.actionButton('Generate credentials'));
+    await click(GENERAL.button('Generate credentials'));
 
     const [route, backendParam, issuerParam] = this.transitionStub.lastCall.args;
     assert.strictEqual(
@@ -198,10 +193,9 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
       'renders only kv v2, pki and db engines'
     );
     await selectChoose(GENERAL.superSelect('secrets-engines'), 'kv-v2-test');
-    assert.dom(DASHBOARD.emptyState('quick-actions')).doesNotExist();
     await selectChoose(GENERAL.superSelect('actions'), 'Find KV secrets');
-    assert.dom(DASHBOARD.kvSearchSelect).exists('Shows option to search fo KVv2 secret');
-    assert.dom(DASHBOARD.actionButton('Read secrets')).exists({ count: 1 });
+    assert.dom(GENERAL.kvSuggestion.input).exists('Shows option to search fo KVv2 secret');
+    assert.dom(GENERAL.button('Read secrets')).exists({ count: 1 });
   });
 
   test('it should render InputSearch when no items are returned for selected action', async function (assert) {
@@ -211,14 +205,13 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
     await this.renderComponent();
     await selectChoose(GENERAL.superSelect('secrets-engines'), backend);
     await selectChoose(GENERAL.superSelect('actions'), 'Issue certificate');
-
-    assert.dom(DASHBOARD.paramInputLabel).hasText('Role to use', 'Label renders in param input');
+    assert.dom(GENERAL.formLabel('Role to use')).hasText('Role to use', 'Label renders in param input');
     assert
-      .dom(DASHBOARD.paramInput)
+      .dom(GENERAL.inputSearch('Role to use'))
       .hasAttribute('placeholder', 'Enter role name', 'Placeholder renders in param input');
 
-    await typeIn(DASHBOARD.paramInput, 'my-role');
-    await click(DASHBOARD.actionButton('Issue leaf certificate'));
+    await typeIn(GENERAL.inputSearch('Role to use'), 'my-role');
+    await click(GENERAL.button('Issue leaf certificate'));
     assert.true(
       this.transitionStub.calledWith(
         'vault.cluster.secrets.backend.pki.roles.role.generate',

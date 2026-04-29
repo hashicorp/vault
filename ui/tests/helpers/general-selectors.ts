@@ -95,6 +95,7 @@ export const GENERAL = {
   textareaByAttr: (attr: string) => `textarea[name="${attr}"]`,
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
   superSelect: (name: string) => `[data-test-super-select="${name}"]`,
+  formLabel: (name: string) => `[data-test-form-label="${name}"]`,
 
   /* ────── Code Blocks / Editor ────── */
   codemirror: `[data-test-component="code-mirror-modifier"]`,
@@ -141,6 +142,7 @@ export const GENERAL = {
   emptyStateSubtitle: '[data-test-empty-state-subtitle]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
+  emptyState: (attr: string) => `[data-test-empty-state="${attr}"]`,
   flashMessage: '[data-test-flash-message]',
   latestFlashContent: '[data-test-flash-message]:last-of-type [data-test-flash-message-body]',
   inlineAlert: '[data-test-inline-alert]',
@@ -195,4 +197,6 @@ export const GENERAL = {
   tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
   tooltipText: '.hds-tooltip-container',
   textDisplay: (attr: string) => `[data-test-text-display="${attr}"]`,
+  textBody: (attr: string) => `[data-test-text-body="${attr}"]`,
+  widget: (name: string) => `[data-test-widget="${name}"]`,
 };

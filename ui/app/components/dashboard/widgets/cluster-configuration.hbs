@@ -1,0 +1,53 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div class="has-top-margin-xl" data-test-widget="cluster configuration">
+  <Hds::Text::Display data-test-text-display="Cluster information" @size="300">
+    Cluster information
+  </Hds::Text::Display>
+
+  <Hds::Table class="has-top-margin-m" @caption="Vault cluster configuration">
+    <:body as |B|>
+      <B.Tr data-test-table-row="0">
+        <B.Td class="one-half-width">API_ADDR</B.Td>
+        <B.Td class="one-half-width" data-test-table-data="api_addr value">{{or @vaultConfiguration.api_addr "None"}}</B.Td>
+      </B.Tr>
+      <B.Tr data-test-table-row="1">
+        <B.Td class="one-half-width">Default lease TTL</B.Td>
+        <B.Td class="one-half-width" data-test-table-data="default_lease_ttl value">{{format-duration
+            @vaultConfiguration.default_lease_ttl
+          }}</B.Td>
+      </B.Tr>
+      <B.Tr data-test-table-row="2">
+        <B.Td class="one-half-width">Max lease TTL</B.Td>
+        <B.Td class="one-half-width" data-test-table-data="max_lease_ttl value">{{format-duration
+            @vaultConfiguration.max_lease_ttl
+          }}</B.Td>
+      </B.Tr>
+      <B.Tr data-test-table-row="3">
+        <B.Td class="one-half-width">TLS</B.Td>
+        <B.Td class="one-half-width" data-test-table-data="tls value"><Hds::Badge
+            @text={{this.tls}}
+            @color={{if (eq this.tls "Enabled") "success" "critical"}}
+          /></B.Td>
+      </B.Tr>
+      <B.Tr data-test-table-row="4">
+        <B.Td class="one-half-width">Log format</B.Td>
+        <B.Td class="one-half-width" data-test-table-data="log_format value">{{or
+            @vaultConfiguration.log_format
+            "None"
+          }}</B.Td>
+      </B.Tr>
+      <B.Tr data-test-table-row="5">
+        <B.Td class="one-half-width">Log level</B.Td>
+        <B.Td class="one-half-width" data-test-table-data="log_level value">{{@vaultConfiguration.log_level}}</B.Td>
+      </B.Tr>
+      <B.Tr data-test-table-row="6">
+        <B.Td class="one-half-width">Storage type</B.Td>
+        <B.Td class="one-half-width" data-test-table-data="type value">{{@vaultConfiguration.storage.type}}</B.Td>
+      </B.Tr>
+    </:body>
+  </Hds::Table>
+</div>

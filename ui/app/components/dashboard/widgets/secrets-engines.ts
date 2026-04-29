@@ -8,12 +8,12 @@ import Component from '@glimmer/component';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 /**
- * @module DashboardSecretsEnginesCard
- * DashboardSecretsEnginesCard component are used to display 5 secrets engines to the user.
+ * @module DashboardWidgetsSecretsEngines
+ * DashboardWidgetsSecretsEngines component are used to display 5 secrets engines to the user.
  *
  * @example
  * ```js
- * <DashboardSecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
+ * <DashboardWidgetsSecretsEngines @secretsEngines={{@model.secretsEngines}} />
  * ```
  * @param {array} secretsEngines - list of secrets engines
  */
@@ -22,7 +22,7 @@ interface Args {
   secretsEngines: SecretsEngineResource[];
 }
 
-export default class DashboardSecretsEnginesCard extends Component<Args> {
+export default class DashboardWidgetsSecretsEngines extends Component<Args> {
   get filteredSecretsEngines() {
     return this.args.secretsEngines?.filter((secretEngine) => secretEngine.shouldIncludeInList);
   }
