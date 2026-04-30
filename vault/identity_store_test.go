@@ -437,6 +437,49 @@ func TestIdentityStore_EntityByAliasFactors(t *testing.T) {
 	}
 }
 
+// TestIdentityStore_EntityByAliasFactorsInTxnIf verifies the predicate-gated
+// lookup returns cloned entities on match and nil when the predicate rejects.
+func TestIdentityStore_EntityByAliasFactorsInTxnIf(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	is, ghAccessor, _, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
+
+	loginAlias := &logical.Alias{
+		MountType:     "github",
+		MountAccessor: ghAccessor,
+		Name:          "githubuser",
+		Metadata: map[string]string{
+			"foo": "a",
+		},
+	}
+
+	createdEntity, _, err := is.CreateOrFetchEntity(ctx, loginAlias)
+	require.NoError(t, err)
+	require.NotNil(t, createdEntity)
+
+	txn := is.db.Txn(false)
+	defer txn.Abort()
+
+	matchedEntity, err := is.entityByAliasFactorsInTxnIf(txn, ghAccessor, loginAlias.Name, func(existingAlias *identity.Alias) bool {
+		return maps.Equal(existingAlias.Metadata, loginAlias.Metadata)
+	})
+	require.NoError(t, err)
+	require.NotNil(t, matchedEntity)
+	require.Equal(t, createdEntity.ID, matchedEntity.ID)
+
+	// The conditional helper returns clones; mutating the result must not mutate MemDB state.
+	matchedEntity.Name = "mutated-name"
+	freshEntity, err := is.entityByAliasFactors(ghAccessor, loginAlias.Name, true)
+	require.NoError(t, err)
+	require.NotNil(t, freshEntity)
+	require.NotEqual(t, "mutated-name", freshEntity.Name)
+
+	notMatchedEntity, err := is.entityByAliasFactorsInTxnIf(txn, ghAccessor, loginAlias.Name, func(*identity.Alias) bool {
+		return false
+	})
+	require.NoError(t, err)
+	require.Nil(t, notMatchedEntity)
+}
+
 func TestIdentityStore_WrapInfoInheritance(t *testing.T) {
 	var err error
 	var resp *logical.Response

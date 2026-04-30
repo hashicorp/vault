@@ -4,7 +4,10 @@
 package identity
 
 import (
+	"context"
 	"fmt"
+	"maps"
+	"sync"
 	"testing"
 
 	"github.com/go-ldap/ldap/v3"
@@ -16,9 +19,34 @@ import (
 	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 )
+
+func testIdentityStoreWithGithubUserpassAuth(ctx context.Context, t *testing.T) (*vault.IdentityStore, string, string, *vault.TestClusterCore) {
+	t.Helper()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().EnableAuthWithOptions("github", &api.EnableAuthOptions{Type: "github"})
+	require.NoError(t, err)
+
+	err = client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{Type: "userpass"})
+	require.NoError(t, err)
+
+	auth, err := client.Sys().ListAuth()
+	require.NoError(t, err)
+
+	githubAccessor := auth["github/"].Accessor
+	require.NotEmpty(t, githubAccessor)
+
+	userpassAccessor := auth["userpass/"].Accessor
+	require.NotEmpty(t, userpassAccessor)
+
+	return cluster.Cores[0].IdentityStore(), githubAccessor, userpassAccessor, cluster.Cores[0]
+}
 
 func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 	t.Parallel()
@@ -664,4 +692,196 @@ func findEntityFromDuplicateSet(t *testing.T, c *vault.TestClusterCore, entityID
 	require.Equal(t, found, 1,
 		"node %s does not have exactly one duplicate from the set", c.NodeID)
 	return entity
+}
+
+// TestIdentityStore_CreateOrFetchEntity_ConcurrentFastPath verifies concurrent
+// callers on the fast path all read the existing entity without creating new
+// entities or mutating alias metadata.
+func TestIdentityStore_CreateOrFetchEntity_ConcurrentFastPath(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	is, ghAccessor, _, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
+
+	alias := &logical.Alias{
+		MountType:     "github",
+		MountAccessor: ghAccessor,
+		Name:          "githubuser",
+		Metadata: map[string]string{
+			"foo": "a",
+		},
+	}
+
+	entity, _, err := is.CreateOrFetchEntity(ctx, alias)
+	require.NoError(t, err)
+	require.NotNil(t, entity)
+
+	const workers = 16
+	var wg sync.WaitGroup
+	errCh := make(chan error, workers)
+
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			got, created, err := is.CreateOrFetchEntity(ctx, alias)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			if created {
+				errCh <- fmt.Errorf("unexpected entity creation on fast path")
+				return
+			}
+			if got == nil {
+				errCh <- fmt.Errorf("expected entity on fast path")
+				return
+			}
+			if len(got.Aliases) != 1 {
+				errCh <- fmt.Errorf("expected 1 alias, got %d", len(got.Aliases))
+				return
+			}
+			if !maps.Equal(got.Aliases[0].Metadata, alias.Metadata) {
+				errCh <- fmt.Errorf("unexpected alias metadata: %#v", got.Aliases[0].Metadata)
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		require.NoError(t, err)
+	}
+}
+
+// TestIdentityStore_CreateOrFetchEntity_ConcurrentMetadataUpdates verifies
+// concurrent readers and metadata updates for the same alias remain stable and
+// return a single-entity view.
+func TestIdentityStore_CreateOrFetchEntity_ConcurrentMetadataUpdates(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	is, ghAccessor, _, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
+
+	newAlias := func(metadataValue string) *logical.Alias {
+		return &logical.Alias{
+			MountType:     "github",
+			MountAccessor: ghAccessor,
+			Name:          "githubuser",
+			Metadata: map[string]string{
+				"foo": metadataValue,
+			},
+		}
+	}
+
+	entity, _, err := is.CreateOrFetchEntity(ctx, newAlias("a"))
+	require.NoError(t, err)
+	require.NotNil(t, entity)
+
+	const workers = 8
+	const iterations = 100
+
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	errCh := make(chan error, workers*2)
+
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+
+			for range iterations {
+				got, _, err := is.CreateOrFetchEntity(ctx, newAlias("a"))
+				if err != nil {
+					errCh <- err
+					return
+				}
+				if got == nil {
+					errCh <- fmt.Errorf("expected entity from read path")
+					return
+				}
+				if len(got.Aliases) != 1 {
+					errCh <- fmt.Errorf("expected 1 alias, got %d", len(got.Aliases))
+					return
+				}
+			}
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+
+			for i := range iterations {
+				metadataValue := "b"
+				if i%2 == 0 {
+					metadataValue = "a"
+				}
+
+				got, _, err := is.CreateOrFetchEntity(ctx, newAlias(metadataValue))
+				if err != nil {
+					errCh <- err
+					return
+				}
+				if got == nil {
+					errCh <- fmt.Errorf("expected entity from update path")
+					return
+				}
+				if len(got.Aliases) != 1 {
+					errCh <- fmt.Errorf("expected 1 alias, got %d", len(got.Aliases))
+					return
+				}
+			}
+		}()
+	}
+
+	close(start)
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		require.NoError(t, err)
+	}
+}
+
+// TestIdentityStore_EntityByAliasFactors_BlackBoxCloneBehavior verifies
+// alias-based lookup and clone behavior using only exported identity store APIs.
+func TestIdentityStore_EntityByAliasFactors_BlackBoxCloneBehavior(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	is, ghAccessor, _, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
+
+	loginAlias := &logical.Alias{
+		MountType:     "github",
+		MountAccessor: ghAccessor,
+		Name:          "githubuser",
+		Metadata: map[string]string{
+			"foo": "a",
+		},
+	}
+
+	createdEntity, _, err := is.CreateOrFetchEntity(ctx, loginAlias)
+	require.NoError(t, err)
+	require.NotNil(t, createdEntity)
+
+	matchedAlias, err := is.MemDBAliasByFactors(ghAccessor, loginAlias.Name, true, false)
+	require.NoError(t, err)
+	require.NotNil(t, matchedAlias)
+	require.True(t, maps.Equal(matchedAlias.Metadata, loginAlias.Metadata))
+
+	matchedEntity, err := is.MemDBEntityByID(matchedAlias.CanonicalID, true)
+	require.NoError(t, err)
+	require.NotNil(t, matchedEntity)
+	require.Equal(t, createdEntity.ID, matchedEntity.ID)
+
+	// Clone reads should not mutate MemDB state.
+	matchedEntity.Name = "mutated-name"
+	freshAlias, err := is.MemDBAliasByFactors(ghAccessor, loginAlias.Name, true, false)
+	require.NoError(t, err)
+	require.NotNil(t, freshAlias)
+
+	freshEntity, err := is.MemDBEntityByID(freshAlias.CanonicalID, true)
+	require.NoError(t, err)
+	require.NotNil(t, freshEntity)
+	require.NotEqual(t, "mutated-name", freshEntity.Name)
+
+	require.False(t, maps.Equal(freshAlias.Metadata, map[string]string{"foo": "does-not-match"}))
 }

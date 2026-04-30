@@ -1901,6 +1901,35 @@ func (i *IdentityStore) MemDBEntityByAliasIDInTxn(txn *memdb.Txn, aliasID string
 	return i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, clone)
 }
 
+// MemDBEntityByAliasIDInTxnClonePredicate fetches and clones an entity by alias
+// ID only when shouldClone evaluates to true for the alias.
+func (i *IdentityStore) MemDBEntityByAliasIDInTxnClonePredicate(txn *memdb.Txn, aliasID string, shouldClone func(*identity.Alias) bool) (*identity.Entity, error) {
+	var entity *identity.Entity
+
+	if aliasID == "" {
+		return nil, fmt.Errorf("missing alias ID")
+	}
+
+	if txn == nil {
+		return nil, fmt.Errorf("txn is nil")
+	}
+
+	alias, err := i.MemDBAliasByIDInTxn(txn, aliasID, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	if alias == nil {
+		return entity, nil
+	}
+
+	if shouldClone != nil && !shouldClone(alias) {
+		return entity, nil
+	}
+
+	return i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, true)
+}
+
 func (i *IdentityStore) MemDBEntityByAliasID(aliasID string, clone bool) (*identity.Entity, error) {
 	if aliasID == "" {
 		return nil, fmt.Errorf("missing alias ID")
