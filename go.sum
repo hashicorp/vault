@@ -470,8 +470,8 @@ github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2
 github.com/go-kit/log v0.1.0/go.mod h1:zbhenjAZHb184qTLMA9ZjW7ThYL0H2mk7Q6pNt4vbaY=
 github.com/go-ldap/ldap/v3 v3.4.13 h1:+x1nG9h+MZN7h/lUi5Q3UZ0fJ1GyDQYbPvbuH38baDQ=
 github.com/go-ldap/ldap/v3 v3.4.13/go.mod h1:LxsGZV6vbaK0sIvYfsv47rfh4ca0JXokCoKjZxsszv0=
-github.com/go-ldap/ldif v0.0.0-20250910174327-aa3bc3095c92 h1:Eu8/ko8bvygFvum/PWUg5JrGQuWYNahEph8r3SErkSM=
-github.com/go-ldap/ldif v0.0.0-20250910174327-aa3bc3095c92/go.mod h1:F640vUoSS6Qg4nmesnVfHeZSJ0ArdMJ9eb0xB7wcitU=
+github.com/go-ldap/ldif v0.0.0-20260409153546-6de1b99547b6 h1:hScuWYZQG3UjZjJGKT+9suvpyb6cPxzY6wBIqRJIG8I=
+github.com/go-ldap/ldif v0.0.0-20260409153546-6de1b99547b6/go.mod h1:F640vUoSS6Qg4nmesnVfHeZSJ0ArdMJ9eb0xB7wcitU=
 github.com/go-logfmt/logfmt v0.3.0/go.mod h1:Qt1PoO58o5twSAckw1HlFXLmHsOX5/0LbT9GBnD5lWE=
 github.com/go-logfmt/logfmt v0.4.0/go.mod h1:3RMwSq7FuexP4Kalkev3ejPJsZTpXXBr9+V4qmtdjCk=
 github.com/go-logfmt/logfmt v0.5.0/go.mod h1:wCYkCAKZfumFQihp8CzCvQ3paCTfi41vtzG1KdI/P7A=
@@ -903,8 +903,8 @@ github.com/hashicorp/vault-plugin-secrets-kv v0.26.2 h1:5ruO7aTfQqOKIuC+G6hXQbBK
 github.com/hashicorp/vault-plugin-secrets-kv v0.26.2/go.mod h1:VRZ9QtAibng01WsVj95vpF0oiEDuDTpBp2PSjxYyARI=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.17.1 h1:WezfLs6aH9MOWLux1XJ/8Z2kJncVQWRHJ1hKfXIjRKg=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.17.1/go.mod h1:3mLTbgTz8GShAf81IFT0WdKAUjJoIMg/qmucHJfHiD8=
-github.com/hashicorp/vault-plugin-secrets-openldap v0.18.0 h1:m2OlgzCKFlBP+/dpRMRsyu9gfwsWCWjJNRpU6UNgIE4=
-github.com/hashicorp/vault-plugin-secrets-openldap v0.18.0/go.mod h1:HO9g8SO9blk3ayPBaHA0dIo4YgpASSkY7fy2DEY57bI=
+github.com/hashicorp/vault-plugin-secrets-openldap v0.18.1-0.20260501001642-c73a470fc99c h1:uINKck6oL2ulq+CmWQFr7lhAVxmwdXUYRDyk93Tt/F8=
+github.com/hashicorp/vault-plugin-secrets-openldap v0.18.1-0.20260501001642-c73a470fc99c/go.mod h1:oXiTjkIT2sTqtoHnksA7l2S223zCbHGWPHg/o9tgrBs=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.14.1 h1:okWkXeDbTElc1tA2TzPsNV5yEa1fcttXZFMIKn2fVQk=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.14.1/go.mod h1:FjgfSW1exgLCnc2ALi6CKwux2NMuqiAzKf/hMPm6WWU=
 github.com/hashicorp/vault-testing-stepwise v0.3.3 h1:/PQhXpJln7UQf3NJmG61ucAxsvttd+a0kb5NKW01iIA=
