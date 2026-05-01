@@ -14,6 +14,7 @@ import type { Month, NormalizedMetricsData } from 'vault/vault/billing/overview'
 import type { SystemReadBillingOverviewResponse } from '@hashicorp/vault-client-typescript';
 
 const REFRESH_PERIOD_MS = 10 * 60 * 1000 + 30 * 1000; // 10 minutes 30 seconds
+export const INVALID_DATE_TIME = '0001-01-01T00:00:00Z';
 
 export default class BillingPageOverview extends Component {
   @service declare readonly api: ApiService;
@@ -27,6 +28,8 @@ export default class BillingPageOverview extends Component {
 
   /** Milliseconds to wait between each poll. Updated dynamically based on API response. */
   private _interval = 5000;
+
+  invalidDateTime = INVALID_DATE_TIME;
 
   detailsByMetric = {
     Secrets: [
@@ -53,6 +56,10 @@ export default class BillingPageOverview extends Component {
 
   get selectedDate() {
     return this.selectedDateOption ?? this.months[0] ?? null;
+  }
+
+  get isSelectedDateInvalid() {
+    return this.selectedDate?.updated_at === this.invalidDateTime;
   }
 
   /**
