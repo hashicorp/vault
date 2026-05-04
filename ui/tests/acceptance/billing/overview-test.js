@@ -27,6 +27,10 @@ module('Acceptance | billing/overview', function (hooks) {
   hooks.beforeEach(async function () {
     this.version = this.owner.lookup('service:version');
     this.mockMetrics = METRICS_DATA_RESPONSE.data;
+    this.todayDate = new Date();
+    this.currentMonth = this.todayDate.toISOString();
+    this.mockMetrics.months[0].month = dateFormat([this.todayDate, 'yyyy-MM'], {});
+    this.mockMetrics.months[0].updated_at = this.currentMonth;
     this.server.get('/sys/billing/overview', () => this.mockMetrics);
 
     // Stub the API service
@@ -52,14 +56,10 @@ module('Acceptance | billing/overview', function (hooks) {
       .hasText(
         'Data reflects usage across this Vault cluster. Billing metrics determine license utilization.'
       );
-    assert.dom(GENERAL.textBody('Last updated date time')).hasText(
-      `Values update every 10 minutes. Last updated: ${dateFormat(
-        [this.mockMetrics.months[0].updated_at, 'MMMM d, yyyy, hh:mm:ss aaa'],
-        {
-          withTimeZone: true,
-        }
-      )}`
-    );
+    // Vault update every 10 minute only shows if the current month is selected.
+    assert
+      .dom(GENERAL.textBody('Last updated date time'))
+      .hasTextContaining('Values update every 10 minutes.');
 
     assert.dom(GENERAL.cardContainer('Summary')).exists();
 
@@ -107,6 +107,17 @@ module('Acceptance | billing/overview', function (hooks) {
     assert.dom(SELECTORS.metricDetail(NormalizedBillingMetrics.MANAGED_KEYS_KMSE)).exists();
     assert.dom(SELECTORS.metricDetailValue(NormalizedBillingMetrics.MANAGED_KEYS_KMSE)).hasText('210');
     await logout();
+  });
+
+  test('should not display updated at text if current month is not selected', async function (assert) {
+    this.server.get('/sys/license/features', () => ({ features: ['Consumption Billing'] }));
+    await login();
+    assert.dom(GENERAL.navLink('Billing metrics')).hasText('Billing metrics');
+    await click(GENERAL.navLink('Billing metrics'));
+    assert.strictEqual(currentURL(), '/vault/billing/overview');
+    await click(GENERAL.dropdownToggle('Date range'));
+    await click(GENERAL.menuItem('2025-12'));
+    assert.dom(GENERAL.textBody('Last updated date time')).hasTextContaining('Last updated: January 14');
   });
 
   test('display no data available when updated_at is invalid', async function (assert) {
