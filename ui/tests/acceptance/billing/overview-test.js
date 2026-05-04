@@ -81,6 +81,12 @@ module('Acceptance | billing/overview', function (hooks) {
     assert
       .dom(SELECTORS.metricDetailValue(NormalizedBillingMetrics.SSH_UNITS_CERTIFICATE_UNITS))
       .hasText('50.1234');
+    assert.dom(SELECTORS.metricDetail(NormalizedBillingMetrics.ID_TOKEN_UNITS_OIDC)).exists();
+    assert.dom(SELECTORS.metricDetailValue(NormalizedBillingMetrics.ID_TOKEN_UNITS_OIDC)).hasText('52.1234');
+    assert.dom(SELECTORS.metricDetail(NormalizedBillingMetrics.ID_TOKEN_UNITS_SPIFFE)).exists();
+    assert
+      .dom(SELECTORS.metricDetailValue(NormalizedBillingMetrics.ID_TOKEN_UNITS_SPIFFE))
+      .hasText('51.1234');
 
     assert.dom(GENERAL.cardContainer('Data protection calls')).exists();
     assert.dom(SELECTORS.metricDetail(NormalizedBillingMetrics.DATA_PROTECTION_CALLS_TRANSFORM)).exists();
@@ -91,6 +97,9 @@ module('Acceptance | billing/overview', function (hooks) {
     assert
       .dom(SELECTORS.metricDetailValue(NormalizedBillingMetrics.DATA_PROTECTION_CALLS_TRANSIT))
       .hasText('200');
+    assert
+      .dom(SELECTORS.metricDetailValue(NormalizedBillingMetrics.DATA_PROTECTION_CALLS_GCPKMS))
+      .hasText('220');
 
     assert.dom(GENERAL.cardContainer('Managed keys')).exists();
     assert.dom(SELECTORS.metricDetail(NormalizedBillingMetrics.MANAGED_KEYS_TOTP)).exists();

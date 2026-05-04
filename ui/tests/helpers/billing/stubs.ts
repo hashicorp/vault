@@ -88,6 +88,7 @@ export const METRICS_DATA_RESPONSE = {
               metric_details: [
                 { type: 'transit', count: 200 },
                 { type: 'transform', count: 220 },
+                { type: 'gcpkms', count: 220 }, // Added for GCP KMS data protection calls
               ],
             },
           },
@@ -98,6 +99,16 @@ export const METRICS_DATA_RESPONSE = {
               metric_details: [
                 { type: 'kmse', count: 210 },
                 { type: 'totp', count: 220 },
+              ],
+            },
+          },
+          {
+            metric_name: 'id_token_units', // Added for ID token units (OIDC and SPIFFE)
+            metric_data: {
+              total: 103.2468,
+              metric_details: [
+                { type: 'oidc', count: 52.1234 },
+                { type: 'spiffe', count: 51.1234 },
               ],
             },
           },

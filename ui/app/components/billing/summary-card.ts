@@ -24,7 +24,7 @@ interface Args {
 export default class SummaryCard extends Component<Args> {
   summaryMetricKeys = [
     NormalizedBillingMetrics.STATIC_SECRETS_TOTAL,
-    NormalizedBillingMetrics.PKI_UNITS_TOTAL,
+    NormalizedBillingMetrics.CREDENTIAL_UNITS_TOTAL,
     NormalizedBillingMetrics.DATA_PROTECTION_CALLS_TOTAL,
     NormalizedBillingMetrics.MANAGED_KEYS_TOTAL,
     NormalizedBillingMetrics.KMIP_USED_IN_MONTH,
@@ -35,8 +35,8 @@ export default class SummaryCard extends Component<Args> {
     [NormalizedBillingMetrics.STATIC_SECRETS_TOTAL]: {
       label: 'Secrets',
     },
-    [NormalizedBillingMetrics.PKI_UNITS_TOTAL]: {
-      label: 'PKI units',
+    [NormalizedBillingMetrics.CREDENTIAL_UNITS_TOTAL]: {
+      label: 'Credential units',
     },
     [NormalizedBillingMetrics.DATA_PROTECTION_CALLS_TOTAL]: {
       label: 'Data protection calls',
