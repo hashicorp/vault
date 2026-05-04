@@ -168,6 +168,7 @@ Router.map(function () {
         });
       });
       this.route('secrets-redirect', { path: '/secrets' }); // legacy redirect
+      this.route('secrets-redirect-with-path', { path: '/secrets/*path' }); // legacy redirect with wildcard to capture full path
       this.route('secrets', { path: '/secrets-engines' }, function () {
         this.route('enable', function () {
           this.route('create', { path: '/:mount_type' });
