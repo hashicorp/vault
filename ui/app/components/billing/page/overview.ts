@@ -54,7 +54,18 @@ export default class BillingPageOverview extends Component {
 
   constructor(owner: unknown, args: object) {
     super(owner, args);
-    this.startPoll();
+    this.initializeBillingMetrics();
+  }
+
+  get isCurrentMonth() {
+    if (!this.selectedDateOption?.month) return false;
+    const selectedDate = new Date(`${this.selectedDateOption.month}-01T00:00:00Z`);
+    const currentDate = new Date();
+
+    return (
+      selectedDate.getUTCFullYear() === currentDate.getUTCFullYear() &&
+      selectedDate.getUTCMonth() === currentDate.getUTCMonth()
+    );
   }
 
   get selectedDate() {
@@ -78,7 +89,7 @@ export default class BillingPageOverview extends Component {
   fetchBillingMetrics = async () => {
     const response: SystemReadBillingOverviewResponse | null | undefined =
       await this.api.sys.systemReadBillingOverview();
-    this.months = (response?.months as Month[]) || [];
+    this.months = (response?.months?.slice(0, 2) as Month[]) || [];
     const updatedMonthFromSelectedMonth = this.months.find(
       (month: Month) => month.month === this.selectedDateOption?.month
     );
@@ -88,13 +99,26 @@ export default class BillingPageOverview extends Component {
       this._interval = this.calculatePollingInterval(updatedMonth.updated_at);
     }
 
-    this.onDateChange(updatedMonth ?? null);
+    this.selectedDateOption = updatedMonth ?? null;
+    this.normalizedMetricData = normalizeMetricData(updatedMonth);
     return this.months;
   };
 
+  async initializeBillingMetrics() {
+    await this.fetchBillingMetrics();
+    this.updatePollingState();
+  }
+
+  updatePollingState() {
+    if (this.isCurrentMonth) {
+      this.startPoll();
+    } else {
+      this.stopPoll();
+    }
+  }
+
   /**
-   * Starts the polling loop, invoking fetchBillingMetrics immediately and then
-   * repeatedly on each interval. No-ops if polling is already active.
+   * Starts the polling loop and repeatedly invokes fetchBillingMetrics on each interval.
    */
   startPoll() {
     if (this._timer) return;
@@ -111,7 +135,7 @@ export default class BillingPageOverview extends Component {
       }
     };
 
-    poll();
+    this._timer = setTimeout(poll, this._interval);
   }
 
   /**
@@ -136,10 +160,16 @@ export default class BillingPageOverview extends Component {
   };
 
   @action
-  onDateChange(dropdownOption: Month | null | undefined) {
+  async onDateChange(dropdownOption: Month | null | undefined) {
     this.selectedDateOption = dropdownOption;
-
     this.normalizedMetricData = normalizeMetricData(dropdownOption);
+
+    if (this.isCurrentMonth) {
+      this.stopPoll();
+      await this.fetchBillingMetrics();
+    }
+
+    this.updatePollingState();
   }
 
   willDestroy() {
