@@ -7,11 +7,16 @@ import type { Month, NormalizedMetricsData } from 'vault/vault/billing/overview'
 
 export enum NormalizedBillingMetrics {
   AUTO_ROTATED_ROLES_TOTAL = 'auto_rotated_roles_total',
+  CREDENTIAL_UNITS_TOTAL = 'credential_units_total',
   DATA_PROTECTION_CALLS_TOTAL = 'data_protection_calls_total',
   DATA_PROTECTION_CALLS_TRANSFORM = 'data_protection_calls_transform',
   DATA_PROTECTION_CALLS_TRANSIT = 'data_protection_calls_transit',
+  DATA_PROTECTION_CALLS_GCPKMS = 'data_protection_calls_gcpkms',
   DYNAMIC_ROLES_TOTAL = 'dynamic_roles_total',
   EXTERNAL_PLUGINS_TOTAL = 'external_plugins_total',
+  ID_TOKEN_UNITS_TOTAL = 'id_token_units_total',
+  ID_TOKEN_UNITS_OIDC = 'id_token_units_oidc',
+  ID_TOKEN_UNITS_SPIFFE = 'id_token_units_spiffe',
   KMIP_USED_IN_MONTH = 'kmip_used_in_month',
   MANAGED_KEYS = 'managed_keys',
   MANAGED_KEYS_KMSE = 'managed_keys_kmse',
@@ -68,6 +73,23 @@ export function normalizeMetricData(metric: Month | null | undefined) {
       normalized[detailName] = detail.count;
     }
   }
+
+  // Calculate credential_units_total as the sum of ssh_units, pki_units, and id_token_units
+  const sshUnitsTotal =
+    typeof normalized[NormalizedBillingMetrics.SSH_UNITS_TOTAL] === 'number'
+      ? normalized[NormalizedBillingMetrics.SSH_UNITS_TOTAL]
+      : 0;
+  const pkiUnitsTotal =
+    typeof normalized[NormalizedBillingMetrics.PKI_UNITS_TOTAL] === 'number'
+      ? normalized[NormalizedBillingMetrics.PKI_UNITS_TOTAL]
+      : 0;
+  const idTokenUnitsTotal =
+    typeof normalized[NormalizedBillingMetrics.ID_TOKEN_UNITS_TOTAL] === 'number'
+      ? normalized[NormalizedBillingMetrics.ID_TOKEN_UNITS_TOTAL]
+      : 0;
+  normalized[NormalizedBillingMetrics.CREDENTIAL_UNITS_TOTAL] =
+    sshUnitsTotal + pkiUnitsTotal + idTokenUnitsTotal;
+
   // The API omits metrics that have zero usage rather than returning them with a count of 0.
   // To avoid blank values in the UI, we explicitly set any missing metric keys to 0.
   for (const metricsKey of Object.values(NormalizedBillingMetrics)) {

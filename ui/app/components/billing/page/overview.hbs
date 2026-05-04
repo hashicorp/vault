@@ -12,9 +12,6 @@
       Data reflects usage across this Vault cluster. Billing metrics determine license utilization.
     </Hds::Text::Body>
   </:description>
-  <:actions>
-    <Hds::Link::Standalone @icon="docs-link" @text="Documentation" @href={{doc-link "/vault/gui/billing-metrics"}} />
-  </:actions>
 </Page::Header>
 
 <Billing::DateRange
@@ -42,7 +39,21 @@
   </Hds::Layout::Flex::Item>
 
   <Hds::Layout::Flex::Item @basis="60%" @grow={{true}} @shrink={{true}}>
-    <Hds::Text::Display @tag="h2" @weight="medium" @size="400" class="has-bottom-margin-s">Details by metric</Hds::Text::Display>
+    <Hds::Layout::Flex
+      @direction="row"
+      @gap="16"
+      @wrap={{true}}
+      @align="center"
+      @justify="space-between"
+      class="has-bottom-margin-s"
+    >
+      <Hds::Text::Display @tag="h2" @weight="medium" @size="400">Details by metric</Hds::Text::Display>
+      <Hds::Link::Standalone
+        @icon="docs-link"
+        @text="Learn more about metrics"
+        @href={{doc-link "/vault/gui/billing-metrics"}}
+      />
+    </Hds::Layout::Flex>
     <Hds::Layout::Flex @direction="column" @gap="16">
       {{#each-in this.detailsByMetric as |cardTitle cardKey|}}
         <Billing::MetricCard @title={{cardTitle}} @metrics={{this.metricsForCard cardKey}} />

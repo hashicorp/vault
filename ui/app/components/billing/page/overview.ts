@@ -41,10 +41,13 @@ export default class BillingPageOverview extends Component {
       NormalizedBillingMetrics.PKI_UNITS_TOTAL,
       NormalizedBillingMetrics.SSH_UNITS_OTP_UNITS,
       NormalizedBillingMetrics.SSH_UNITS_CERTIFICATE_UNITS,
+      NormalizedBillingMetrics.ID_TOKEN_UNITS_OIDC,
+      NormalizedBillingMetrics.ID_TOKEN_UNITS_SPIFFE,
     ],
     'Data protection calls': [
       NormalizedBillingMetrics.DATA_PROTECTION_CALLS_TRANSFORM,
       NormalizedBillingMetrics.DATA_PROTECTION_CALLS_TRANSIT,
+      NormalizedBillingMetrics.DATA_PROTECTION_CALLS_GCPKMS,
     ],
     'Managed keys': [NormalizedBillingMetrics.MANAGED_KEYS_TOTP, NormalizedBillingMetrics.MANAGED_KEYS_KMSE],
   };
@@ -135,6 +138,7 @@ export default class BillingPageOverview extends Component {
   @action
   onDateChange(dropdownOption: Month | null | undefined) {
     this.selectedDateOption = dropdownOption;
+
     this.normalizedMetricData = normalizeMetricData(dropdownOption);
   }
 
