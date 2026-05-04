@@ -76,6 +76,170 @@ func TestSystemBackend_BillingOverviewMonthFormat(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_BillingOverview_StartEndMonthParams tests the billing overview
+// endpoint with different combinations of start_month and end_month parameters. It
+// verifies that the correct range of months is returned along with any expected warnings
+// or errors.
+func TestSystemBackend_BillingOverview_StartEndMonthParams(t *testing.T) {
+	now := time.Now().UTC()
+	currentMonth := now.Format("2006-01")
+	previousMonth := timeutil.StartOfPreviousMonth(now).Format("2006-01")
+	nextMonth := timeutil.StartOfNextMonth(now).Format("2006-01")
+	twoMonthsAfterCurrent := timeutil.StartOfMonth(now).AddDate(0, 2, 0).Format("2006-01")
+	retentionStart := timeutil.StartOfMonth(now).AddDate(0, -billing.BillingRetentionMonths+1, 0).Format("2006-01")
+	beforeRetentionStart := timeutil.StartOfMonth(now).AddDate(0, -billing.BillingRetentionMonths, 0).Format("2006-01")
+	twoMonthsBeforeRetentionStart := timeutil.StartOfMonth(now).AddDate(0, -billing.BillingRetentionMonths-1, 0).Format("2006-01")
+
+	testCases := []struct {
+		name            string
+		startMonth      interface{}
+		endMonth        interface{}
+		expectedMonths  int
+		expectedWarning string
+		expectedError   string
+	}{
+		{
+			name:           "start and end in retention period",
+			startMonth:     previousMonth,
+			endMonth:       currentMonth,
+			expectedMonths: 2,
+		},
+		{
+			name:            "start before retention period, default end",
+			startMonth:      beforeRetentionStart,
+			expectedMonths:  billing.BillingRetentionMonths + 1,
+			expectedWarning: WarningStartEndMonthOutOfRetentionRange,
+		},
+		{
+			name:            "end after retention period, default start",
+			endMonth:        nextMonth,
+			expectedMonths:  billing.BillingRetentionMonths + 1,
+			expectedWarning: WarningStartEndMonthOutOfRetentionRange,
+		},
+		{
+			name:           "start is exactly start of retention period",
+			startMonth:     retentionStart,
+			endMonth:       previousMonth,
+			expectedMonths: billing.BillingRetentionMonths - 1,
+		},
+		{
+			name:            "start and end after retention period",
+			startMonth:      nextMonth,
+			endMonth:        twoMonthsAfterCurrent,
+			expectedMonths:  2,
+			expectedWarning: WarningStartEndMonthOutOfRetentionRange,
+		},
+		{
+			name:            "start and end before retention period",
+			startMonth:      twoMonthsBeforeRetentionStart,
+			endMonth:        beforeRetentionStart,
+			expectedMonths:  2,
+			expectedWarning: WarningStartEndMonthOutOfRetentionRange,
+		},
+		{
+			name:          "start after retention period, default end",
+			startMonth:    nextMonth,
+			expectedError: "start_month is later than end_month",
+		},
+		{
+			name:           "no parameters, default start and end",
+			expectedMonths: billing.BillingRetentionMonths,
+		},
+		{
+			name:          "start after end",
+			startMonth:    previousMonth,
+			endMonth:      retentionStart,
+			expectedError: "start_month is later than end_month",
+		},
+		{
+			name:           "same month",
+			startMonth:     currentMonth,
+			endMonth:       currentMonth,
+			expectedMonths: 1,
+		},
+		{
+			name:          "invalid date format",
+			startMonth:    "2023/01",
+			endMonth:      previousMonth,
+			expectedError: "invalid start_month format",
+		},
+		{
+			name:          "invalid month",
+			startMonth:    "2023-13",
+			endMonth:      previousMonth,
+			expectedError: "invalid start_month format",
+		},
+		{
+			name:          "invalid data type",
+			startMonth:    previousMonth,
+			endMonth:      45,
+			expectedError: "invalid end_month format",
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			_, b, _ := testCoreSystemBackend(t)
+			ctx := namespace.RootContext(nil)
+
+			req := logical.TestRequest(t, logical.ReadOperation, "billing/overview")
+			req.Data["start_month"] = test.startMonth
+			req.Data["end_month"] = test.endMonth
+			resp, err := b.HandleRequest(ctx, req)
+
+			if test.expectedError != "" {
+				require.Nil(t, resp)
+				require.Error(t, err)
+				require.Contains(t, err.Error(), test.expectedError)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+
+			if test.expectedWarning != "" {
+				require.NotEmpty(t, resp.Warnings)
+				require.Contains(t, resp.Warnings, test.expectedWarning)
+			} else {
+				require.Empty(t, resp.Warnings)
+			}
+
+			// Verify the correct number of months are returned
+			months := resp.Data["months"].([]interface{})
+			require.Len(t, months, test.expectedMonths)
+
+			// expected start and end months are the test parameters if specified,
+			// or default to the retention start and current month
+			var expectedStartMonth, expectedEndMonth string
+			if test.startMonth != nil {
+				expectedStartMonth = test.startMonth.(string)
+			} else {
+				expectedStartMonth = retentionStart
+			}
+			if test.endMonth != nil {
+				expectedEndMonth = test.endMonth.(string)
+			} else {
+				expectedEndMonth = currentMonth
+			}
+
+			// Months are ordered from most recent to oldest, so the first month returned
+			// should be the expected endMonth and the last month the expected startMonth
+			firstMonth, ok := months[0].(map[string]interface{})
+			require.True(t, ok)
+			firstMonthStr, ok := firstMonth["month"].(string)
+			require.True(t, ok)
+			require.Equal(t, expectedEndMonth, firstMonthStr)
+
+			lastMonth, ok := months[len(months)-1].(map[string]interface{})
+			require.True(t, ok)
+			lastMonthStr, ok := lastMonth["month"].(string)
+			require.True(t, ok)
+			require.Equal(t, expectedStartMonth, lastMonthStr)
+		})
+	}
+}
+
 // TestSystemBackend_BillingOverview_WithMetrics tests the billing overview endpoint
 // with actual KV secrets created to generate billing metrics. It verifies that KV v2
 // secrets are properly counted in billing, the static_secrets metric appears in the
