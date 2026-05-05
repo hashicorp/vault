@@ -26,10 +26,12 @@ export const length = (value, { nullable = false, min, max } = {}) => {
   return nullable;
 };
 
-export const number = (value, { nullable = false } = {}) => {
+export const number = (value, { nullable = false, min, max } = {}) => {
   // since 0 is falsy, !value returns true even though 0 is a valid number
   if (!value && value !== 0) return nullable;
-  return !isNaN(value);
+  const underMin = isPresent(min) ? value < min : false;
+  const overMax = isPresent(max) ? value > max : false;
+  return !isNaN(value) && !underMin && !overMax;
 };
 
 export const containsWhiteSpace = (value) => {
