@@ -189,20 +189,19 @@ func (m *MSSQL) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) 
 
 	merr := &multierror.Error{}
 
-	// Execute each query
+	// Execute each command string as a single batch rather than splitting on
+	// semicolons. Splitting on ";" destroys the batch boundary, causing subsequent
+	// statements (e.g. DROP USER) to run in the wrong database context and fail.
 	for _, stmt := range req.Statements.Commands {
-		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-			query = strings.TrimSpace(query)
-			if len(query) == 0 {
-				continue
-			}
+		if strings.TrimSpace(stmt) == "" {
+			continue
+		}
 
-			m := map[string]string{
-				"name": req.Username,
-			}
-			if err := dbtxn.ExecuteDBQueryDirect(ctx, db, m, query); err != nil {
-				merr = multierror.Append(merr, err)
-			}
+		m := map[string]string{
+			"name": req.Username,
+		}
+		if err := dbtxn.ExecuteDBQueryDirect(ctx, db, m, stmt); err != nil {
+			merr = multierror.Append(merr, err)
 		}
 	}
 
