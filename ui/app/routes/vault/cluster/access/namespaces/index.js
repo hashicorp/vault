@@ -23,6 +23,9 @@ export default class NamespaceListRoute extends Route {
     page: {
       refreshModel: true,
     },
+    pageSize: {
+      refreshModel: true,
+    },
   };
 
   beforeModel() {
@@ -56,6 +59,8 @@ export default class NamespaceListRoute extends Route {
     const { pageFilter } = params;
     return hash({
       namespaces: this.fetchNamespaces(params),
+      page: Number(params?.page) || 1,
+      pageSize: Number(params?.pageSize) || 10,
       pageFilter,
     });
   }
