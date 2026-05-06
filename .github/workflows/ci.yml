@@ -389,13 +389,16 @@ jobs:
       # Only create the PR summary if it's a pull request and it is not a fork as we need access
       # to secrets.
       - if: ${{ needs.setup.outputs.is-fork == 'false' }}
+        id: download-summaries
         name: Download failure summaries
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: failure-summary-*.md
           path: failure-summaries
           merge-multiple: true
-      - if: ${{ needs.setup.outputs.is-fork == 'false' }}
+        # Don't allow failure summary aggregation to fail this workflow
+        continue-on-error: true
+      - if: needs.setup.outputs.is-fork == 'false' && steps.download-summaries.outcome == 'success'
         id: prepare-failure-summary
         name: Prepare failure summary
         run: |
@@ -410,10 +413,10 @@ jobs:
               echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |"
               echo "| --------- | ------- | ---- | ------- | ------------ | ---- |"
               cat "$temp_file_name"
-            } >> "$GITHUB_STEP_SUMMARY"
+            } | tee -a "$GITHUB_STEP_SUMMARY"
           else
             if [ "${{ steps.status.outputs.result }}" == 'success' ]; then
-              echo "### All required Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+              echo "### All required Go tests passed! :white_check_mark:" | tee -a "$GITHUB_STEP_SUMMARY"
             fi
           fi
           {
@@ -422,7 +425,7 @@ jobs:
             echo EOFTABLE
           } | tee -a "$GITHUB_OUTPUT"
       - name: Create comment
-        if: github.head_ref != '' && needs.setup.outputs.is-fork == 'false'
+        if: github.head_ref != '' && needs.setup.outputs.is-fork == 'false' && steps.prepare-failure-summary.outcome == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
