@@ -5,6 +5,7 @@
 
 import { test, expect } from '@playwright/test';
 import { METRICS_DATA_RESPONSE } from '../../../tests/helpers/billing/stubs';
+import { formatInTimeZone } from 'date-fns-tz';
 
 test('billing metrics dashboard workflow', async ({ page }) => {
   await test.step('navigate to billing metrics page and mock data', async () => {
@@ -65,4 +66,37 @@ test('billing metrics dashboard workflow', async ({ page }) => {
       'From start of December 2025'
     );
   });
+});
+
+test('billing metrics dashboard api returns two months of data', async ({ page }) => {
+  await page.route('**/sys/license/features', async (route) =>
+    route.fulfill({ json: { features: ['Consumption Billing'] } })
+  );
+
+  await page.goto('dashboard');
+
+  // Set up response listener before clicking the link
+  const responsePromise = page.waitForResponse('**/sys/billing/overview**');
+  await page.getByRole('link', { name: 'Billing metrics' }).click();
+
+  // Wait for the API response and get the actual months returned
+  const response = await responsePromise;
+  const data = await response.json();
+  const months = data.data?.months || [];
+
+  // Verify we have at least 2 months of data
+  expect(months.length).toEqual(2);
+
+  // Verify both months appear in the dropdown options
+  const currentMonth = new Date(months[0].month);
+  const previousMonth = new Date(months[1].month);
+
+  // Click the date range dropdown to verify both months are available
+  await page.getByRole('button', { name: formatInTimeZone(currentMonth, 'UTC', 'MMMM') }).click();
+  await expect(page.getByRole('option', { name: formatInTimeZone(currentMonth, 'UTC', 'MMMM') })).toHaveText(
+    formatInTimeZone(currentMonth, 'UTC', 'MMMM yyyy')
+  );
+  await expect(page.getByRole('option', { name: formatInTimeZone(previousMonth, 'UTC', 'MMMM') })).toHaveText(
+    formatInTimeZone(previousMonth, 'UTC', 'MMMM yyyy')
+  );
 });

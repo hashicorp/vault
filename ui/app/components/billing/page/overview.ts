@@ -8,6 +8,8 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { normalizeMetricData, NormalizedBillingMetrics } from 'vault/utils/metrics-helpers';
+import { subMonths } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 
 import type ApiService from 'vault/services/api';
 import type { Month, NormalizedMetricsData } from 'vault/vault/billing/overview';
@@ -87,8 +89,13 @@ export default class BillingPageOverview extends Component {
   }
 
   fetchBillingMetrics = async () => {
+    const today = new Date();
+    const currentMonth = formatInTimeZone(today, 'UTC', 'yyyy-MM');
+    const previousMonth = formatInTimeZone(subMonths(today, 1), 'UTC', 'yyyy-MM');
+
     const response: SystemReadBillingOverviewResponse | null | undefined =
-      await this.api.sys.systemReadBillingOverview();
+      await this.api.sys.systemReadBillingOverview(currentMonth, undefined, previousMonth);
+
     this.months = (response?.months?.slice(0, 2) as Month[]) || [];
     const updatedMonthFromSelectedMonth = this.months.find(
       (month: Month) => month.month === this.selectedDateOption?.month
