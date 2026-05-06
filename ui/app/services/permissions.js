@@ -115,6 +115,9 @@ const API_PATHS = {
   monitoring: {
     'utilization-report': 'sys/utilization-report',
   },
+  billing: {
+    overview: 'sys/billing/overview',
+  },
 };
 
 // API_PATHS_TO_ROUTE_PARAMS is used to resolve route params for that path when checking permissions for the nav item.
