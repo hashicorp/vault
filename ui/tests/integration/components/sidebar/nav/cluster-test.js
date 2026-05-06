@@ -165,8 +165,17 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     assert.dom(GENERAL.navLink('Billing metrics')).exists('Billing metrics link is visible.');
   });
 
-  test('it should hide billing metrics link when in namespace other than root or admin when Consumption Billing feature is enabled', async function (assert) {
+  test('it should not show billing metrics link when in HVD admin namespace and Consumption Billing feature is enabled', async function (assert) {
     stubFeaturesAndPermissions(this.owner, true, false, ['Consumption Billing']);
+    this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    const namespace = this.owner.lookup('service:namespace');
+    namespace.setNamespace('admin');
+    await renderComponent();
+    assert.dom(GENERAL.navLink('Billing metrics')).exists('Billing metrics link is visible.');
+  });
+
+  test('it should hide billing metrics link when in namespace other than root or admin when Consumption Billing feature and does not have permission', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, true, false, ['Consumption Billing'], false);
     const namespace = this.owner.lookup('service:namespace');
     namespace.setNamespace('namespace-1');
     await renderComponent();
