@@ -8,21 +8,9 @@ self-hosted-runner:
     - medium
     - large
     - xlarge
-    - ondemand
-    - disk_gb=64
-    - os=ubuntu
-    - os=ubuntu-arm
-    - type=m5.2xlarge
-    - type=m6a.8xlarge
-    - type=c6a.xlarge
-    - type=c6g.2xlarge
-    - type=c6a.4xlarge
-    - type=c6g.2xlarge;c6g.4xlarge
-    - type=c6a.4xlarge;c6i.4xlarge;c5a.4xlarge;c5.4xlarge;m7a.4xlarge;m6i.4xlarge;m6a.4xlarge;m5a.4xlarge;m5.4xlarge
-    - type=c6a.2xlarge;c6i.2xlarge;c5a.2xlarge;c5.2xlarge;m7a.2xlarge;m6i.2xlarge;m6a.2xlarge;m5a.2xlarge;m5.2xlarge
-    - type=m7a.2xlarge;m6i.2xlarge;m6a.2xlarge;m5a.2xlarge;m5.2xlarge
-    - type=c7g.2xlarge;c6g.2xlarge;m7g.2xlarge;m6g.2xlarge
     - ubuntu-22.04-x64
     - ubuntu-latest-x64
+    - ubuntu-24.04-arm64
     - custom-linux-xl-vault-latest
     - stats
+    - type=m6a.8xlarge
