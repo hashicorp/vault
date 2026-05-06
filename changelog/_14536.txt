@@ -1,0 +1,3 @@
+```release-note:improvement
+consumption-billing: Added consumption billing metrics for OIDC tokens.
+```

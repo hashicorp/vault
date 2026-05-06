@@ -1081,7 +1081,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	}
 
 	// Track OIDC token generation for billing
-	// Store raw count and duration (seconds), normalize later during storage flush
+	// Store duration (seconds), normalize later during storage flush
 	validity := expiry.Seconds()
 	if i.billingCounter != nil {
 		i.billingCounter.IncrementOidcTokenCount(validity)
