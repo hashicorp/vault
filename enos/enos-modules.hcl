@@ -396,6 +396,12 @@ module "vault_verify_ui" {
   source = "./modules/vault_verify_ui"
 }
 
+module "vault_verify_undo_logs" {
+  source = "./modules/vault_verify_undo_logs"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_wait_for_cluster_unsealed" {
   source = "./modules/vault_wait_for_cluster_unsealed"
 

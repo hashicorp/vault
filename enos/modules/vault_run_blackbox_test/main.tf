@@ -32,27 +32,17 @@ resource "random_string" "test_id" {
 }
 
 resource "enos_local_exec" "run_blackbox_test" {
-  scripts    = [abspath("${path.module}/scripts/run-test.sh")]
-  depends_on = [local_file.test_matrix]
-
-  environment = merge(
-    {
-      VAULT_TOKEN        = var.vault_root_token
-      VAULT_ADDR         = var.vault_addr != null ? var.vault_addr : "http://${var.leader_public_ip}:8200"
-      VAULT_TEST_PACKAGE = var.test_package
-      VAULT_TEST_MATRIX  = length(local.test_names) > 0 ? local_file.test_matrix.filename : ""
-      VAULT_EDITION      = var.vault_edition
-      # PATH and Go-related environment variables are inherited from the calling process
-    },
-    var.vault_namespace != null ? { VAULT_NAMESPACE = var.vault_namespace } : {},
-    var.vault_product_version != null ? { VAULT_VERSION = var.vault_product_version } : {},
-    var.vault_revision != null ? { VAULT_REVISION = var.vault_revision } : {},
-    var.vault_build_date != null ? { VAULT_BUILD_DATE = var.vault_build_date } : {},
-    var.vault_install_dir != null ? { VAULT_INSTALL_DIR = var.vault_install_dir } : {},
-    local.ldap_environment,
-    local.postgres_environment,
-    local.mongodb_environment,
-    var.test_env_vars
+  scripts = [abspath("${path.module}/scripts/run-test.sh")]
+  environment = merge({
+    VAULT_TOKEN        = var.vault_root_token
+    VAULT_ADDR         = var.vault_addr != null ? var.vault_addr : "http://${var.leader_public_ip}:8200"
+    VAULT_TEST_PACKAGE = var.test_package
+    VAULT_TEST_MATRIX  = length(local.test_names) > 0 ? local_file.test_matrix.filename : ""
+    VAULT_EDITION      = var.vault_edition
+    # PATH and Go-related environment variables are inherited from the calling process
+    }, var.vault_namespace != null ? {
+    VAULT_NAMESPACE = var.vault_namespace
+    } : {}, local.ldap_environment, local.postgres_environment
   )
 }
 
