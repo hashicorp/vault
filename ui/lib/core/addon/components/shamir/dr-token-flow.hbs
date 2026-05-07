@@ -19,7 +19,7 @@
         @textToCopy={{this.encodedToken}}
         @container="#shamir-flow-modal"
         @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
-        data-test-shamir-encoded-token
+        data-test-copy-snippet="shamir-encoded-token"
       />
     </div>
     {{#if this.otp}}
@@ -93,6 +93,7 @@
       secondary Disaster Recovery cluster.
     </p>
   </Shamir::Form>
+
 {{else if this.generateWithPGP}}
   <MessageError @errors={{this.errors}} />
   <ChoosePgpKeyForm
@@ -100,9 +101,41 @@
     @onSubmit={{this.usePgpKey}}
     @formText={{this.pgpText.form}}
     @confirmText={{this.pgpText.confirm}}
-    @buttonText="Generate operation token"
+    @buttonText="Continue"
     data-test-dr-token-flow-step="choose-pgp"
   />
+{{else if this.askForPrimaryToken}}
+  <MessageError @errors={{this.errors}} />
+
+  <Hds::Text::Body @tag="p" @size="300" class="has-bottom-margin-m" data-test-dr-token-flow-step="primary-token">
+    To generate an operation token on this DR secondary, you must provide a root token from the primary cluster. This token
+    will be used to authenticate the operation token generation request.
+  </Hds::Text::Body>
+
+  <Hds::Form::TextInput::Field
+    @type="password"
+    @value={{this.primaryRootToken}}
+    autocomplete="off"
+    name="primary-token"
+    data-test-input="primary-token"
+    {{on "input" this.updatePrimaryRootToken}}
+    as |F|
+  >
+    <F.Label>Primary cluster root token</F.Label>
+  </Hds::Form::TextInput::Field>
+
+  <Hds::ButtonSet class="has-top-margin-m">
+    {{#if this.savedPgpKey}}
+      <Hds::Button
+        @text="Back"
+        @color="secondary"
+        @icon="chevron-left"
+        {{on "click" this.backToPgpForm}}
+        data-test-button="back-to-pgp"
+      />
+    {{/if}}
+    <Hds::Button @text="Continue" {{on "click" this.validatePrimaryRootToken}} data-test-submit-primary-token />
+  </Hds::ButtonSet>
 {{else}}
   {{! Generate token flow not started }}
   <form
@@ -125,7 +158,7 @@
           @color="tertiary"
           @icon="key"
           {{on "click" (fn (mut this.generateWithPGP) true)}}
-          data-test-use-pgp-key-cta
+          data-test-button="use-pgp-key-cta"
           @text="Provide PGP Key"
         />
       </div>
@@ -135,7 +168,7 @@
         </span>
       </div>
       <div class="control">
-        <Hds::Button type="submit" data-test-generate-token-cta @text="Generate operation token" />
+        <Hds::Button type="submit" data-test-button="generate-token-cta" @text="Generate operation token" />
       </div>
     </div>
   </form>
@@ -145,6 +178,6 @@
 <Hds::Button
   @color="secondary"
   {{on "click" this.onCancelClose}}
-  data-test-shamir-modal-cancel-button
+  data-test-cancel
   @text={{if this.encodedToken "Close" "Cancel"}}
 />

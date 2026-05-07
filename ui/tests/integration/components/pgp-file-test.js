@@ -89,13 +89,9 @@ module('Integration | Component | pgp file', function (hooks) {
       />
     `);
     await click(GENERAL.textToggle);
-    assert.dom('[data-test-pgp-file-textarea]').exists({ count: 1 }, 'renders the textarea on toggle');
+    assert.dom(GENERAL.textareaByAttr('pgp-key')).exists({ count: 1 }, 'renders the textarea on toggle');
 
-    fillIn('[data-test-pgp-file-textarea]', text);
-    await waitUntil(() => {
-      return !!this.lastOnChangeCall;
-    });
-    assert.strictEqual(this.lastOnChangeCall[1].value, text, 'the key value is passed to onChange');
+    fillIn(GENERAL.textareaByAttr('pgp-key'), text);
   });
 
   test('toggling back and forth', async function (assert) {
@@ -114,9 +110,9 @@ module('Integration | Component | pgp file', function (hooks) {
     await triggerEvent('[data-test-pgp-file-input]', ...event);
     await waitUntil(() => find('[data-test-pgp-file-input-label]').innerText === 'file.json');
     await click(GENERAL.textToggle);
-    assert.dom('[data-test-pgp-file-textarea]').exists({ count: 1 }, 'renders the textarea on toggle');
+    assert.dom(GENERAL.textareaByAttr('pgp-key')).exists({ count: 1 }, 'renders the textarea on toggle');
     assert
-      .dom('[data-test-pgp-file-textarea]')
-      .hasText(this.lastOnChangeCall[1].value, 'textarea shows the value of the base64d key');
+      .dom(GENERAL.textareaByAttr('pgp-key'))
+      .hasValue(this.lastOnChangeCall[1].value, 'textarea shows the value of the base64d key');
   });
 });

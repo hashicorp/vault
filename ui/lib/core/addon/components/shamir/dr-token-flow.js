@@ -23,17 +23,21 @@ export default class ShamirDrTokenFlowComponent extends ShamirFlowComponent {
   @tracked generateWithPGP = false; // controls which form shows
   @tracked savedPgpKey = null;
   @tracked otp = '';
+  @tracked askForPrimaryToken = false; // controls whether to show primary token input
+  @tracked primaryRootToken = null; // stores the primary root token
 
   constructor() {
     super(...arguments);
-    // Fetch status on init
-    this.attemptProgress();
+    // Don't fetch status on init - we'll check it after the user provides the primary token
+    // Fetching status here would start an unauthenticated generation attempt
   }
 
   reset() {
     this.generateWithPGP = false;
     this.savedPgpKey = null;
     this.otp = '';
+    this.askForPrimaryToken = false;
+    this.primaryRootToken = null;
     // tracked items on Shamir/Flow
     this.attemptResponse = null;
     this.errors = null;
@@ -57,7 +61,7 @@ export default class ShamirDrTokenFlowComponent extends ShamirFlowComponent {
   }
   get pgpText() {
     return {
-      confirm: `Below is the base-64 encoded PGP Key that will be used to encrypt the generated operation token. Next we'll enter portions of the root key to generate an operation token. Click the "Generate operation token" button to proceed.`,
+      confirm: `Below is the base-64 encoded PGP Key that will be used to encrypt the generated operation token.`,
       form: `Choose a PGP Key from your computer or paste the contents of one in the form below. This key will be used to Encrypt the generated operation token.`,
     };
   }
@@ -95,20 +99,77 @@ export default class ShamirDrTokenFlowComponent extends ShamirFlowComponent {
   @action
   usePgpKey(keyfile) {
     this.savedPgpKey = keyfile;
-    this.attemptProgress(this.extractData({ attempt: true }));
+    // Don't start generation yet - show primary token form first
+    this.generateWithPGP = false;
+    this.askForPrimaryToken = true;
+  }
+
+  @action
+  onSubmitKey(data) {
+    // Override parent to pass primaryToken
+    this.attemptProgress(this.extractData(data), this.primaryRootToken);
   }
 
   @action
   startGenerate(evt) {
     evt.preventDefault();
-    this.attemptProgress(this.extractData({ attempt: true }));
+    // Show the primary token input form first
+    this.askForPrimaryToken = true;
+  }
+
+  @action
+  updatePrimaryRootToken(evt) {
+    this.primaryRootToken = evt.target.value;
+  }
+
+  @action
+  async validatePrimaryRootToken() {
+    if (!this.primaryRootToken) {
+      this.errors = ['Primary root token is required'];
+      return;
+    }
+
+    this.errors = null;
+
+    try {
+      // First, check status to validate the token without starting a new generation
+      await this.attemptProgress(undefined, this.primaryRootToken);
+
+      if (!this.started) {
+        // No generation in progress, so start one
+        await this.attemptProgress(this.extractData({ attempt: true }), this.primaryRootToken);
+
+        // Check if there were errors from starting generation (e.g., invalid PGP key)
+        if (this.errors) {
+          return;
+        }
+      }
+
+      // Only hide the primary token form if there were no errors
+      this.askForPrimaryToken = false;
+    } catch (e) {
+      if (e.httpStatus === 403) {
+        this.errors = ['Invalid primary root token. Please check the token and try again.'];
+      } else {
+        this.errors = [e.message || 'An error occurred while validating the token'];
+      }
+    }
+  }
+
+  @action
+  backToPgpForm() {
+    // Go back to PGP form and clear the saved PGP key
+    this.askForPrimaryToken = false;
+    this.generateWithPGP = true;
+    this.savedPgpKey = null;
+    this.errors = null;
   }
 
   @action
   async onCancelClose() {
     if (!this.encodedToken && this.started) {
       const adapter = this.store.adapterFor('cluster');
-      await adapter.generateDrOperationToken({}, { cancel: true });
+      await adapter.generateDrOperationToken({}, { cancel: true, token: this.primaryRootToken });
     }
     this.reset();
     if (this.args.onCancel) {
