@@ -50,8 +50,9 @@ export default class SummaryCard extends Component<Args> {
       showBadge: true,
     },
     [NormalizedBillingMetrics.EXTERNAL_PLUGINS_TOTAL]: {
-      label: 'Plugins',
-      tooltipText: 'Highest number of plugins enabled on the cluster at any time during the month.',
+      label: 'Custom plugins',
+      tooltipText:
+        'Highest number of non-official plugins enabled on the cluster at any time during the month.',
     },
   };
 

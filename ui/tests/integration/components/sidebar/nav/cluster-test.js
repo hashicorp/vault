@@ -118,6 +118,31 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     });
   });
 
+  test('it should hide Monitoring heading if nav permissions is false', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, true, false);
+    this.owner.lookup('service:permissions').hasNavPermission.returns(false);
+
+    await renderComponent();
+
+    assert
+      .dom(GENERAL.navHeading('Monitoring'))
+      .doesNotExist(
+        'Monitoring heading is hidden when raft status, client count, and billing dashboard conditions are false.'
+      );
+  });
+
+  test('it should show Monitoring heading when consumption billing is true', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, true, false, ['Consumption Billing']);
+    const namespace = this.owner.lookup('service:namespace');
+    namespace.setNamespace('root');
+
+    await renderComponent();
+
+    assert
+      .dom(GENERAL.navHeading('Monitoring'))
+      .exists('Monitoring heading is visible when billing dashboard condition is true.');
+  });
+
   test('it should hide client counts link in chroot namespace', async function (assert) {
     this.owner.lookup('service:permissions').setPaths({
       data: {
