@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, currentURL } from '@ember/test-helpers';
+import { click, currentURL, visit } from '@ember/test-helpers';
 import sinon from 'sinon';
 
 import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
@@ -14,6 +14,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { NormalizedBillingMetrics } from 'vault/utils/metrics-helpers';
 import { dateFormat } from 'core/helpers/date-format';
 import { METRICS_DATA_RESPONSE } from 'vault/tests/helpers/billing/stubs';
+import { createNS, deleteNSFromPaths, runCmd } from 'vault/tests/helpers/commands';
 
 const SELECTORS = {
   metricDetail: (metricKey) => `[data-test-metric-detail="${metricKey}"]`,
@@ -140,5 +141,31 @@ module('Acceptance | billing/overview', function (hooks) {
 
     assert.dom(GENERAL.navLink('Billing metrics')).doesNotExist('Billing metrics nav link is not present');
     await logout();
+  });
+
+  test('should redirect to cluster dashboard when user switches namespace while on billing/overview route on enterprise', async function (assert) {
+    this.server.get('/sys/license/features', () => ({ features: ['Consumption Billing', 'Namespaces'] }));
+
+    // Login with root (no namespace)
+    await login();
+    const ns = 'namespace1';
+    await runCmd(createNS(ns), false);
+
+    assert.strictEqual(currentURL(), '/vault/dashboard', 'User is on dashboard after login');
+
+    // Navigate to billing/overview
+    await visit('/vault/billing/overview');
+    assert.strictEqual(currentURL(), '/vault/billing/overview', 'User navigated to billing overview');
+
+    // Trigger a route transition by visiting the current route again
+    await visit(`/vault/billing/overview?namespace=${ns}`);
+
+    // Should redirect back to cluster dashboard because namespace1 doesn't have billing permissions
+    assert.strictEqual(
+      currentURL(),
+      `/vault/dashboard?namespace=${ns}`,
+      'User is redirected to cluster dashboard after switching to namespace1'
+    );
+    await deleteNSFromPaths(ns);
   });
 });

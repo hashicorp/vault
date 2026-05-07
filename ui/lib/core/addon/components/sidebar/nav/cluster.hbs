@@ -38,7 +38,8 @@
   {{#if
     (or
       (and this.isRootNamespace (has-permission "status" routeParams="raft"))
-      (and (has-permission "clients" routeParams="activity") (not this.hasChrootNamespace))
+      (display-nav-item this.navSection.clientCount)
+      (display-nav-item this.routeName.billingDashboard)
     )
   }}
     <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
