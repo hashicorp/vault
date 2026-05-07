@@ -128,6 +128,7 @@ type ServerCommand struct {
 	flagDevNoStoreToken    bool
 	flagDevPluginDir       string
 	flagDevPluginInit      bool
+	flagDevPluginPGPKey    string
 	flagDevHA              bool
 	flagDevLatency         int
 	flagDevLatencyJitter   int
@@ -314,6 +315,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Name:    "dev-plugin-init",
 		Target:  &c.flagDevPluginInit,
 		Default: true,
+		Hidden:  true,
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "dev-plugin-pgp-key",
+		Target:  &c.flagDevPluginPGPKey,
+		Default: "",
 		Hidden:  true,
 	})
 
@@ -3017,6 +3025,9 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		}
 		if c.flagDevPluginDir != "" {
 			coreConfig.PluginDirectory = c.flagDevPluginDir
+		}
+		if c.flagDevPluginPGPKey != "" {
+			coreConfig.DevPluginPGPKey = c.flagDevPluginPGPKey
 		}
 		if c.flagDevLatency > 0 {
 			injectLatency := time.Duration(c.flagDevLatency) * time.Millisecond
