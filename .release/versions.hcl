@@ -18,6 +18,9 @@ active_versions {
     ce_active = false
   }
 
+   version "1.20.x" {
+    ce_active = false
+  }
 
   version "1.19.x" {
     ce_active = false
