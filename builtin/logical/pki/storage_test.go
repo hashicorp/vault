@@ -263,7 +263,7 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 		},
 	}
 	sc := b.makeStorageContext(ctx, s)
-	_, _, role, respErr := getGenerationParams(sc, apiData, true)
+	genParams, _, respErr := getGenerationParams(sc, apiData, true)
 	require.Nil(t, respErr)
 
 	input := &inputBundle{
@@ -273,7 +273,7 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 			Storage:   s,
 		},
 		apiData: apiData,
-		role:    role,
+		role:    genParams.role,
 	}
 	parsedCertBundle, _, err := generateCert(sc, input, nil, true, b.GetRandomReader())
 
