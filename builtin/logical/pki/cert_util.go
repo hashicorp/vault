@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
@@ -768,4 +769,19 @@ func (i CertNotAfterInputFromFieldData) GetTTL() int {
 
 func (i CertNotAfterInputFromFieldData) GetOptionalNotAfter() (interface{}, bool) {
 	return i.data.GetOk("not_after")
+}
+
+func validateCountry(country []string) error {
+	for _, c := range country {
+		if len(c) != 2 {
+			return fmt.Errorf("country must be a 2 character ISO 3166 code, have: %v", c)
+		}
+		for _, cc := range c {
+			cc = unicode.ToUpper(cc)
+			if cc < 'A' || cc > 'Z' {
+				return fmt.Errorf("country code characters must be between A and Z, have: %v", c)
+			}
+		}
+	}
+	return nil
 }

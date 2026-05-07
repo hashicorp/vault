@@ -936,7 +936,7 @@ func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int)
 
 	csrTemplate := x509.CertificateRequest{
 		Subject: pkix.Name{
-			Country:      []string{"MyCountry"},
+			Country:      []string{"MC"},
 			PostalCode:   []string{"MyPostalCode"},
 			SerialNumber: "MySerialNumber",
 			CommonName:   "my@example.com",
@@ -1561,10 +1561,10 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 	// Country tests
 	{
-		roleVals.Country = []string{"foo"}
+		roleVals.Country = []string{"jp"}
 		addTests(getCountryCheck(roleVals))
 
-		roleVals.Country = []string{"foo", "bar"}
+		roleVals.Country = []string{"us", "ca"}
 		addTests(getCountryCheck(roleVals))
 	}
 	// OU tests
@@ -8330,4 +8330,8 @@ func TestBackend_IDNWithWildcards_AltNames(t *testing.T) {
 			}
 		})
 	}
+}
+
+func stringSliceContainsAny(sl []string, substr string) bool {
+	return slices.ContainsFunc(sl, func(s string) bool { return strings.Contains(s, substr) })
 }

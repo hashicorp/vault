@@ -141,10 +141,17 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 
+	resp := &logical.Response{
+		Data: make(map[string]any),
+	}
+
 	// Tell getGenerationParams we are generating a root, so that we can validate signatureBits against KeyType
-	exported, format, role, errorResp := getGenerationParams(sc, data, true)
+	genParams, warnings, errorResp := getGenerationParams(sc, data, true)
 	if errorResp != nil {
 		return errorResp, nil
+	}
+	if len(warnings) > 0 {
+		resp.Warnings = append(resp.Warnings, warnings...)
 	}
 
 	maxPathLengthIface, ok := data.GetOk("max_path_length")
@@ -153,7 +160,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		if maxPathLength < -1 {
 			return logical.ErrorResponse("requested max_path_length %d is invalid: must be a non-negative integer or -1 for no constraint", maxPathLength), nil
 		}
-		role.MaxPathLength = &maxPathLength
+		genParams.role.MaxPathLength = &maxPathLength
 	}
 
 	issuerName, err := getIssuerName(sc, data)
@@ -178,7 +185,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	input := &inputBundle{
 		req:     req,
 		apiData: data,
-		role:    role,
+		role:    genParams.role,
 	}
 	b.adjustInputBundle(input)
 	parsedBundle, warnings, err := generateCert(sc, input, nil, true, b.Backend.GetRandomReader())
@@ -196,12 +203,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
 	}
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
-			"serial_number": cb.SerialNumber,
-		},
-	}
+	resp.Data["expiration"] = int64(parsedBundle.Certificate.NotAfter.Unix())
+	resp.Data["serial_number"] = cb.SerialNumber
 
 	if keyUsages, ok := data.GetOk("key_usage"); ok {
 		err = validateCaKeyUsages(keyUsages.([]string))
@@ -237,11 +240,12 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		resp.AddWarning("This mount has configured Delta CRL distribution points are set but no CRL Distribution Points.")
 	}
 
+	format := genParams.format
 	switch format {
 	case "pem":
 		resp.Data["certificate"] = cb.Certificate
 		resp.Data["issuing_ca"] = cb.Certificate
-		if exported {
+		if genParams.exported {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
 		}
@@ -249,7 +253,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	case "pem_bundle":
 		resp.Data["issuing_ca"] = cb.Certificate
 
-		if exported {
+		if genParams.exported {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
 			resp.Data["certificate"] = fmt.Sprintf("%s\n%s", cb.PrivateKey, cb.Certificate)
@@ -260,7 +264,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	case "der":
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
-		if exported {
+		if genParams.exported {
 			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			resp.Data["private_key_type"] = cb.PrivateKeyType
 		}
@@ -344,7 +348,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		observe.NewAdditionalPKIMetadata("key_id", myKey.ID),
 		observe.NewAdditionalPKIMetadata("key_name", myKey.Name),
 		observe.NewAdditionalPKIMetadata("key_type", myKey.PrivateKeyType),
-		observe.NewAdditionalPKIMetadata("role_name", role.Name),
+		observe.NewAdditionalPKIMetadata("role_name", genParams.role.Name),
 		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(parsedBundle.Certificate)),
 		observe.NewAdditionalPKIMetadata("type", format),
 		observe.NewAdditionalPKIMetadata("common_name", parsedBundle.Certificate.Subject.CommonName),

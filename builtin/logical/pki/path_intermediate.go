@@ -121,19 +121,25 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	}
 	data.Raw["use_pss"] = false
 
+	resp := &logical.Response{
+		Data: map[string]interface{}{},
+	}
+
 	sc := b.makeStorageContext(ctx, req.Storage)
-	exported, format, role, errorResp := getGenerationParams(sc, data, false)
+	genParams, warnings, errorResp := getGenerationParams(sc, data, false)
 	if errorResp != nil {
 		return errorResp, nil
+	}
+	if len(warnings) > 0 {
+		resp.Warnings = append(resp.Warnings, warnings...)
 	}
 
 	keyName, err := getKeyName(sc, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
-	var resp *logical.Response
 	input := &inputBundle{
-		role:    role,
+		role:    genParams.role,
 		req:     req,
 		apiData: data,
 	}
@@ -153,10 +159,6 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		return nil, fmt.Errorf("error converting raw CSR bundle to CSR bundle: %w", err)
 	}
 
-	resp = &logical.Response{
-		Data: map[string]interface{}{},
-	}
-
 	entries, err := getGlobalAIAURLs(ctx, req.Storage)
 	if err == nil && len(entries.OCSPServers) == 0 && len(entries.IssuingCertificates) == 0 &&
 		len(entries.CRLDistributionPoints) == 0 && len(entries.DeltaCRLDistributionPoints) == 0 {
@@ -170,17 +172,17 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		resp.AddWarning("This mount has configured delta crl distribution points but no base crl distribution points were set.")
 	}
 
-	switch format {
+	switch genParams.format {
 	case "pem":
 		resp.Data["csr"] = csrb.CSR
-		if exported {
+		if genParams.exported {
 			resp.Data["private_key"] = csrb.PrivateKey
 			resp.Data["private_key_type"] = csrb.PrivateKeyType
 		}
 
 	case "pem_bundle":
 		resp.Data["csr"] = csrb.CSR
-		if exported {
+		if genParams.exported {
 			resp.Data["csr"] = fmt.Sprintf("%s\n%s", csrb.PrivateKey, csrb.CSR)
 			resp.Data["private_key"] = csrb.PrivateKey
 			resp.Data["private_key_type"] = csrb.PrivateKeyType
@@ -188,12 +190,12 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 
 	case "der":
 		resp.Data["csr"] = base64.StdEncoding.EncodeToString(parsedBundle.CSRBytes)
-		if exported {
+		if genParams.exported {
 			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			resp.Data["private_key_type"] = csrb.PrivateKeyType
 		}
 	default:
-		return nil, fmt.Errorf("unsupported format argument: %s", format)
+		return nil, fmt.Errorf("unsupported format argument: %s", genParams.format)
 	}
 
 	if data.Get("private_key_format").(string) == "pkcs8" {
@@ -215,9 +217,9 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		observe.NewAdditionalPKIMetadata("key_id", myKey.ID),
 		observe.NewAdditionalPKIMetadata("key_name", myKey.Name),
 		observe.NewAdditionalPKIMetadata("key_type", myKey.PrivateKeyType),
-		observe.NewAdditionalPKIMetadata("role_name", role.Name),
-		observe.NewAdditionalPKIMetadata("exported", exported),
-		observe.NewAdditionalPKIMetadata("type", format))
+		observe.NewAdditionalPKIMetadata("role_name", genParams.role.Name),
+		observe.NewAdditionalPKIMetadata("exported", genParams.exported),
+		observe.NewAdditionalPKIMetadata("type", genParams.format))
 
 	return resp, nil
 }

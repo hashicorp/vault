@@ -21,11 +21,17 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
-func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot bool) (exported bool, format string, role *issuing.RoleEntry, errorResp *logical.Response) {
+type generationParams struct {
+	exported bool
+	format   string
+	role     *issuing.RoleEntry
+}
+
+func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot bool) (params generationParams, warnings []string, errorResp *logical.Response) {
 	exportedStr := data.Get("exported").(string)
 	switch exportedStr {
 	case "exported":
-		exported = true
+		params.exported = true
 	case "internal":
 	case "existing":
 	case "kms":
@@ -35,8 +41,8 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot b
 		return
 	}
 
-	format = getFormat(data)
-	if format == "" {
+	params.format = getFormat(data)
+	if params.format == "" {
 		errorResp = logical.ErrorResponse(
 			`the "format" path parameter must be "pem", "der", or "pem_bundle"`)
 		return
@@ -48,7 +54,12 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot b
 		return
 	}
 
-	role = &issuing.RoleEntry{
+	country := data.Get("country").([]string)
+	if err := validateCountry(country); err != nil {
+		warnings = append(warnings, err.Error())
+	}
+
+	role := &issuing.RoleEntry{
 		TTL:                       time.Duration(data.Get("ttl").(int)) * time.Second,
 		KeyType:                   keyType,
 		KeyBits:                   keyBits,
@@ -65,7 +76,7 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot b
 		AllowedUserIDs:            []string{"*"},
 		OU:                        data.Get("ou").([]string),
 		Organization:              data.Get("organization").([]string),
-		Country:                   data.Get("country").([]string),
+		Country:                   country,
 		Locality:                  data.Get("locality").([]string),
 		Province:                  data.Get("province").([]string),
 		StreetAddress:             data.Get("street_address").([]string),
@@ -74,6 +85,7 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot b
 		CNValidations:             []string{"disabled"},
 		KeyUsage:                  data.Get("key_usage").([]string),
 	}
+	params.role = role
 	*role.AllowWildcardCertificates = true
 
 	if role.KeyBits, err = certutil.ValidateDefaultOrValueKeyType(role.KeyType, role.KeyBits); err != nil {

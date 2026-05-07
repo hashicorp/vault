@@ -10,21 +10,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestGenerateRoot_MaxPathLengthValidation validates the behavior of the max_path_length
-// parameter on the POST /root/generate/:exported API handler.
-//
-// The handler logic (pathCAGenerateRoot in path_root.go) is:
-//   - If max_path_length is not provided in the request, the field is left
-//     unset on the role and the certificate generation code picks a default
-//     (no BasicConstraints pathLenConstraint, i.e. MaxPathLen == -1 in Go's
-//     x509 representation).
-//   - If max_path_length is provided and is < -1, the request is rejected with
-//     an error.
-//   - If max_path_length is provided and is >= -1, the generated certificate
-//     will carry that pathLenConstraint.
-//   - When the generated certificate has MaxPathLen == 0 (pathLenConstraint=0),
-//     Vault adds a warning that the certificate cannot be used to issue
-//     intermediate CAs.
+// TestGenerateRoot_InvalidCountry validates that ISO 3166 is followed for the Country field
+func TestGenerateRoot_InvalidCountry(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+	params := map[string]interface{}{
+		"common_name": "root.example.com",
+		"ttl":         "87600h",
+		"key_type":    "ec",
+		"country":     "Japan",
+	}
+
+	resp, err := CBWrite(b, s, "root/generate/internal", params)
+	require.NoError(t, err)
+
+	require.True(t, stringSliceContainsAny(resp.Warnings, "3166"))
+}
+
 func TestGenerateRoot_MaxPathLengthValidation(t *testing.T) {
 	t.Parallel()
 
