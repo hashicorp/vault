@@ -107,7 +107,7 @@ require (
 	github.com/hashicorp/go-memdb v1.3.5
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-pgmultiauth v1.0.0
-	github.com/hashicorp/go-plugin v1.7.0
+	github.com/hashicorp/go-plugin v1.8.0
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/hashicorp/go-rootcerts v1.0.2
@@ -181,7 +181,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/kr/text v0.2.0
 	github.com/mattn/go-colorable v0.1.14
-	github.com/mattn/go-isatty v0.0.21
+	github.com/mattn/go-isatty v0.0.22
 	github.com/michaelklishin/rabbit-hole/v2 v2.12.0
 	github.com/miekg/dns v1.1.50
 	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a
@@ -235,7 +235,7 @@ require (
 	golang.org/x/time v0.15.0
 	golang.org/x/tools v0.43.0
 	google.golang.org/api v0.275.0
-	google.golang.org/grpc v1.80.0
+	google.golang.org/grpc v1.81.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
@@ -572,7 +572,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20260406210006-6f92a3bedf2d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260406210006-6f92a3bedf2d // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260406210006-6f92a3bedf2d // indirect; indirect\
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260504160031-60b97b32f348 // indirect; indirect\
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
