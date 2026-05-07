@@ -605,6 +605,10 @@ type Core struct {
 	// pluginFilePermissions is the permissions of the plugin files and directory
 	pluginFilePermissions int
 
+	// devPluginPGPKey is either a raw PGP public key or a path to a PGP public
+	// key file to use for plugin signature verification in dev mode.
+	devPluginPGPKey string
+
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *plugincatalog.PluginCatalog
 
@@ -909,6 +913,11 @@ type CoreConfig struct {
 
 	PluginDirectory string
 	PluginTmpdir    string
+
+	// DevPluginPGPKey is either a raw PGP public key or a path to a PGP public
+	// key file to use for plugin signature verification in dev mode. This allows
+	// testing enterprise plugins with custom signatures without rebuilding Vault.
+	DevPluginPGPKey string
 
 	PluginFileUid int
 
@@ -1356,6 +1365,25 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	if conf.PluginFilePermissions != 0 {
 		c.pluginFilePermissions = conf.PluginFilePermissions
+	}
+
+	if conf.DevPluginPGPKey != "" {
+		// Check if it's a raw PGP key or a file path
+		if strings.HasPrefix(strings.TrimSpace(conf.DevPluginPGPKey), "-----BEGIN PGP PUBLIC KEY BLOCK-----") {
+			// It's a raw PGP key, use it directly
+			c.devPluginPGPKey = conf.DevPluginPGPKey
+		} else {
+			// It's a file path, validate and convert to absolute path
+			c.devPluginPGPKey, err = filepath.Abs(conf.DevPluginPGPKey)
+			if err != nil {
+				return nil, fmt.Errorf("core setup failed, could not verify dev plugin PGP key path: %w", err)
+			}
+
+			// Validate file exists at startup
+			if _, err := os.Stat(c.devPluginPGPKey); err != nil {
+				return nil, fmt.Errorf("core setup failed, dev plugin PGP key file does not exist: %w", err)
+			}
+		}
 	}
 
 	// Create secondaries (this will only impact Enterprise versions of Vault)
@@ -2749,6 +2777,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		Tmpdir:               c.containerPluginTmpdir,
 		EnableMlock:          c.enableMlock,
 		PluginRuntimeCatalog: c.pluginRuntimeCatalog,
+		PluginPGPKey:         c.devPluginPGPKey,
 	})
 	if err != nil {
 		return err

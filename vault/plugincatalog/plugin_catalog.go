@@ -69,6 +69,10 @@ type PluginCatalog struct {
 	wrapper pluginutil.RunnerUtil
 
 	runtimeCatalog *PluginRuntimeCatalog
+
+	// pluginPGPKey is the path to a PGP public key file to use for plugin
+	// signature verification.
+	pluginPGPKey string
 }
 
 // Only plugins running with identical PluginRunner config can be multiplexed,
@@ -151,6 +155,9 @@ type PluginCatalogInput struct {
 	Tmpdir               string
 	EnableMlock          bool
 	PluginRuntimeCatalog *PluginRuntimeCatalog
+	// PluginPGPKey is the path to a PGP public key file to use for plugin
+	// signature verification.
+	PluginPGPKey string
 }
 
 func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCatalog, error) {
@@ -164,6 +171,7 @@ func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCat
 		mlockPlugins:    in.EnableMlock,
 		wrapper:         logical.StaticSystemView{VersionString: version.GetVersion().Version},
 		runtimeCatalog:  in.PluginRuntimeCatalog,
+		pluginPGPKey:    in.PluginPGPKey,
 	}
 
 	// Run upgrade if untyped plugins exist
@@ -211,6 +219,14 @@ func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCat
 	}
 
 	return catalog, nil
+}
+
+// getVerifyFunc returns the appropriate verification function based on whether
+// a custom plugin PGP key is configured.
+func (c *PluginCatalog) getVerifyFunc() verifyFunc {
+	return func(data, sig []byte) error {
+		return verifyPGPSignatureDetachedWithKey(data, sig, c.pluginPGPKey)
+	}
 }
 
 func envKeys(env []string) map[string]struct{} {
@@ -891,7 +907,7 @@ func (c *PluginCatalog) verifyOfficialPlugins(ctx context.Context) error {
 
 		hasOfficialPlugins = true
 		pluginDir := path.Join(c.directory, path.Dir(plugin.Command))
-		if _, err = VerifyPlugin(pluginDir, plugin.Name, verifyPGPSignatureDetached); err != nil {
+		if _, err = VerifyPlugin(pluginDir, plugin.Name, c.getVerifyFunc()); err != nil {
 			return fmt.Errorf("failed to verify plugin %q version %q: %w", plugin.Name, plugin.Version, err)
 		}
 	}
@@ -1052,7 +1068,7 @@ func (c *PluginCatalog) set(ctx context.Context, plugin pluginutil.SetPluginInpu
 			// e.g., plugins/vault-plugin-secrets-kv_0.24.0_linux_amd64/vault-plugin-secrets-kv
 			plugin.Command = path.Join(extractedArtifactDir, plugin.Name)
 
-			metadata, err := VerifyPlugin(expectedPluginDir, plugin.Name, verifyPGPSignatureDetached)
+			metadata, err := VerifyPlugin(expectedPluginDir, plugin.Name, c.getVerifyFunc())
 			if err != nil {
 				return nil, fmt.Errorf("failed to verify plugin plugin %q version %q: %w",
 					plugin.Name, plugin.Version, err)
