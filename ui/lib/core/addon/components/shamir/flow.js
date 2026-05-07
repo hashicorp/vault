@@ -69,18 +69,24 @@ export default class ShamirFlowComponent extends Component {
    * 2. Attempt progress. This method assumes the correct data
    * has already been extracted (use this.extractData to customize)
    * @param {object} data arbitrary data which will be passed to adapter method
+   * @param {string} primaryToken optional primary root token for DR secondary operations
    * @returns Promise which should resolve unless throwing error to parent.
    */
-  async attemptProgress(data) {
+  async attemptProgress(data, primaryToken) {
     this.errors = null;
     const action = this.action;
     const adapter = this.store.adapterFor('cluster');
     const method = adapter[action];
+
     // Only used for DR token generate
     const checkStatus = data ? false : true;
+    const options = { checkStatus };
+    if (primaryToken) {
+      options.token = primaryToken;
+    }
 
     try {
-      const resp = await method.call(adapter, data, { checkStatus });
+      const resp = await method.call(adapter, data, options);
       this.updateProgress(resp);
       this.handleComplete(resp);
       return;

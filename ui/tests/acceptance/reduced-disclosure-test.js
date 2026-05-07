@@ -101,9 +101,9 @@ module('Acceptance | reduced disclosure test', function (hooks) {
 
     // unseal
     for (const key of unsealKeys) {
-      await fillIn('[data-test-shamir-key-input]', key);
+      await fillIn(GENERAL.inputByAttr('shamir-key'), key);
 
-      await click('button[type="submit"]');
+      await click(GENERAL.submitButton);
 
       await pollCluster(this.owner);
       await settled();
@@ -119,7 +119,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
   module('enterprise', function () {
     test('does not allow access to replication pages', async function (assert) {
       await login();
-      assert.dom('[data-test-sidebar-nav-link="Replication"]').doesNotExist('hides replication nav item');
+      assert.dom(GENERAL.navLink('Replication')).doesNotExist('hides replication nav item');
 
       await visit(`/vault/replication/dr`);
       assert.strictEqual(

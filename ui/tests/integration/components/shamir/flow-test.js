@@ -11,7 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import Service from '@ember/service';
 import { run } from '@ember/runloop';
 import { reject, resolve } from 'rsvp';
-import { SHAMIR_FORM } from 'vault/tests/helpers/components/shamir-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const licenseError = { httpStatus: 500, errors: ['failed because licensing is in an invalid state'] };
 const response = {
@@ -70,8 +70,8 @@ module('Integration | Component | shamir/flow', function (hooks) {
         @onShamirSuccess={{this.onSuccess}}
       />`);
 
-    await fillIn(SHAMIR_FORM.input, this.keyPart);
-    await click(SHAMIR_FORM.submitButton);
+    await fillIn(GENERAL.inputByAttr('shamir-key'), this.keyPart);
+    await click(GENERAL.submitButton);
 
     assert.ok(completeSpy.notCalled, 'onShamirSuccess was not called');
     assert.ok(updateSpy.calledOnce, 'updateProgress was called');
@@ -83,8 +83,8 @@ module('Integration | Component | shamir/flow', function (hooks) {
     this.set('checkComplete', () => true);
     await settled();
 
-    await fillIn(SHAMIR_FORM.input, this.keyPart);
-    await click(SHAMIR_FORM.submitButton);
+    await fillIn(GENERAL.inputByAttr('shamir-key'), this.keyPart);
+    await click(GENERAL.submitButton);
 
     assert.ok(completeSpy.calledOnce, 'onShamirSuccess was called');
     assert.ok(updateSpy.calledTwice, 'updateProgress was called again');
@@ -105,9 +105,9 @@ module('Integration | Component | shamir/flow', function (hooks) {
         @checkComplete={{this.checkComplete}}
       />`);
 
-    await fillIn(SHAMIR_FORM.input, this.keyPart);
-    await click(SHAMIR_FORM.submitButton);
-    assert.dom(SHAMIR_FORM.error).exists({ count: 2 }, 'renders errors');
+    await fillIn(GENERAL.inputByAttr('shamir-key'), this.keyPart);
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.messageError).exists({ count: 2 }, 'renders errors');
     assert.ok(completeSpy.notCalled, 'checkComplete was not called');
     assert.ok(updateSpy.notCalled, 'updateProgress was not called');
   });

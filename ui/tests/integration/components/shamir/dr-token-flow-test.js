@@ -11,15 +11,16 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SHAMIR_FORM } from 'vault/tests/helpers/components/shamir-selectors';
 
 module('Integration | Component | shamir/dr-token-flow', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   test('begin to middle flow works', async function (assert) {
-    assert.expect(15);
+    assert.expect(16);
     this.server.get('/sys/replication/dr/secondary/generate-operation-token/attempt', function () {
-      assert.ok('Check endpoint is queried on init');
+      assert.ok('Check endpoint is queried');
       return {};
     });
     this.server.post('/sys/replication/dr/secondary/generate-operation-token/attempt', function (_, req) {
@@ -52,40 +53,49 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
         complete: false,
       };
     });
+
     await render(hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" />`);
-    assert.dom('[data-test-dr-token-flow-step="begin"]').exists('First step shows');
-    assert.dom('[data-test-use-pgp-key-cta]').hasText('Provide PGP Key');
-    assert.dom('[data-test-generate-token-cta]').hasText('Generate operation token');
+    assert.dom(SHAMIR_FORM.flowStep('begin')).exists('First step shows');
+    assert.dom(GENERAL.button('use-pgp-key-cta')).hasText('Provide PGP Key');
+    assert.dom(GENERAL.button('generate-token-cta')).hasText('Generate operation token');
 
-    await click('[data-test-generate-token-cta]');
-
+    await click(GENERAL.button('generate-token-cta'));
     assert.ok(
-      await waitUntil(() => find('[data-test-dr-token-flow-step="shamir"]')),
-      'shows shamir step after start'
+      await waitUntil(() => find(SHAMIR_FORM.flowStep('primary-token'))),
+      'shows primary token step after start'
+    );
+
+    await fillIn(GENERAL.inputByAttr('primary-token'), 'some-token');
+    await click('[data-test-submit-primary-token]');
+    assert.ok(
+      await waitUntil(() => find(SHAMIR_FORM.flowStep('shamir'))),
+      'shows shamir step after primary token input'
     );
     assert
-      .dom('.shamir-progress')
+      .dom(SHAMIR_FORM.progress)
       .hasText('0/3 keys provided', 'progress shows reflecting checkStatus response with defaults');
-    assert.dom('[data-test-otp-info]').exists('OTP info banner shows');
-    assert.dom('[data-test-otp]').hasText('otp-9876', 'Shows OTP in copy banner');
+    assert.dom(SHAMIR_FORM.otpInfo).exists('OTP info banner shows');
+    assert.dom(SHAMIR_FORM.otpCode).hasText('otp-9876', 'Shows OTP in copy banner');
     // Fill in shamir key and submit
-    await fillIn('[data-test-shamir-key-input]', 'some-key');
-    await click('[data-test-shamir-submit]');
+    await fillIn(GENERAL.inputByAttr('shamir-key'), 'some-key');
+    await click(GENERAL.submitButton);
 
     assert.ok(
-      await waitUntil(() => find('[data-test-otp-info]')),
+      await waitUntil(() => find(SHAMIR_FORM.otpInfo)),
       'OTP info still banner shows even when attempt response does not include it'
     );
     assert
-      .dom('[data-test-otp]')
+      .dom(SHAMIR_FORM.otpCode)
       .hasText('otp-9876', 'Still shows OTP in copy banner when attempt response does not include it');
-    assert.dom('.shamir-progress').hasText('1/3 keys provided', 'progress shows reflecting attempt response');
+    assert
+      .dom(SHAMIR_FORM.progress)
+      .hasText('1/3 keys provided', 'progress shows reflecting attempt response');
   });
 
   test('middle to finish flow works', async function (assert) {
-    assert.expect(9);
+    assert.expect(10);
     this.server.get('/sys/replication/dr/secondary/generate-operation-token/attempt', function () {
-      assert.ok('Check endpoint is queried on init');
+      assert.ok('Check endpoint is queried');
       return {
         started: true,
         nonce: 'nonce-1234',
@@ -116,30 +126,37 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
       };
     });
     await render(hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" />`);
-
+    await click(GENERAL.button('generate-token-cta'));
     assert.ok(
-      await waitUntil(() => find('[data-test-dr-token-flow-step="shamir"]')),
-      'shows shamir step after start'
+      await waitUntil(() => find(SHAMIR_FORM.flowStep('primary-token'))),
+      'shows primary token step after start'
+    );
+
+    await fillIn(GENERAL.inputByAttr('primary-token'), 'some-token');
+    await click('[data-test-submit-primary-token]');
+    assert.ok(
+      await waitUntil(() => find(SHAMIR_FORM.flowStep('shamir'))),
+      'shows shamir step after primary token input'
     );
     assert
-      .dom('.shamir-progress')
+      .dom(SHAMIR_FORM.progress)
       .hasText('2/3 keys provided', 'progress shows reflecting checkStatus response');
-    assert.dom('[data-test-otp-info]').doesNotExist('OTP info banner not shown');
-    assert.dom('[data-test-otp]').doesNotExist('otp-9876', 'OTP copy banner not shown');
-    await fillIn('[data-test-shamir-key-input]', 'some-key');
-    await click('[data-test-shamir-submit]');
+    assert.dom(SHAMIR_FORM.otpInfo).doesNotExist('OTP info banner not shown');
+    assert.dom(SHAMIR_FORM.otpCode).doesNotExist('otp-9876', 'OTP copy banner not shown');
+    await fillIn(GENERAL.inputByAttr('shamir-key'), 'some-key');
+    await click(GENERAL.submitButton);
 
     assert.ok(
-      await waitUntil(() => find('[data-test-dr-token-flow-step="show-token"]')),
+      await waitUntil(() => find(SHAMIR_FORM.flowStep('show-token'))),
       'updates to show encoded token on complete'
     );
     assert
-      .dom('[data-test-shamir-encoded-token]')
+      .dom(GENERAL.copySnippet('shamir-encoded-token'))
       .hasText('encoded-token-here', 'shows encoded token from /update response');
   });
 
   test('it works correctly when pgp key chosen', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     this.server.get('/sys/replication/dr/secondary/generate-operation-token/attempt', function () {
       return {};
     });
@@ -157,20 +174,29 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
       }
     );
     await render(hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" />`);
-    await click('[data-test-use-pgp-key-cta]');
-    assert.dom('[data-test-choose-pgp-key-form="begin"]').exists('PGP form shows');
+    await click(GENERAL.button('use-pgp-key-cta'));
+
+    assert.ok(await waitUntil(() => find(SHAMIR_FORM.flowStep('choose-pgp-key'))), 'PGP form shows');
     await click(GENERAL.textToggle);
-    await fillIn('[data-test-pgp-file-textarea]', 'some-key-here');
-    await click('[data-test-use-pgp-key-button]');
-    await click('[data-test-confirm-pgp-key-submit]');
+    await fillIn(GENERAL.textareaByAttr('pgp-key'), 'some-key-here');
+    await click(GENERAL.button('use-pgp-key'));
+    await click(GENERAL.submitButton);
+
     assert.ok(
-      await waitUntil(() => find('[data-test-dr-token-flow-step="shamir"]')),
+      await waitUntil(() => find(SHAMIR_FORM.flowStep('primary-token'))),
+      'shows primary token input after start'
+    );
+    await fillIn(GENERAL.inputByAttr('primary-token'), 'some-token');
+    await click('[data-test-submit-primary-token]');
+
+    assert.ok(
+      await waitUntil(() => find(SHAMIR_FORM.flowStep('shamir'))),
       'Renders shamir step after PGP key chosen'
     );
   });
 
   test('it shows error with pgp key', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
     this.server.get('/sys/replication/dr/secondary/generate-operation-token/attempt', function () {
       return {};
     });
@@ -178,12 +204,21 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
       overrideResponse(400, { errors: ['error parsing PGP key'] })
     );
     await render(hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" />`);
-    await click('[data-test-use-pgp-key-cta]');
-    assert.dom('[data-test-choose-pgp-key-form="begin"]').exists('PGP form shows');
+    await click(GENERAL.button('use-pgp-key-cta'));
+
+    assert.ok(await waitUntil(() => find(SHAMIR_FORM.flowStep('choose-pgp-key'))), 'PGP form shows');
     await click(GENERAL.textToggle);
-    await fillIn('[data-test-pgp-file-textarea]', 'some-key-here');
-    await click('[data-test-use-pgp-key-button]');
-    await click('[data-test-confirm-pgp-key-submit]');
+    await fillIn(GENERAL.textareaByAttr('pgp-key'), 'some-key-here');
+    await click(GENERAL.button('use-pgp-key'));
+    await click(GENERAL.submitButton);
+
+    assert.ok(
+      await waitUntil(() => find(SHAMIR_FORM.flowStep('primary-token'))),
+      'shows primary token input after start'
+    );
+    await fillIn(GENERAL.inputByAttr('primary-token'), 'some-token');
+    await click('[data-test-submit-primary-token]');
+
     await waitFor(GENERAL.messageError);
     assert.dom(GENERAL.messageError).hasText('Error error parsing PGP key');
   });
@@ -199,12 +234,12 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
       assert.notOk('delete endpoint should not be queried');
       return {};
     });
+
     await render(
       hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" @onCancel={{this.onCancel}} />`
     );
-
-    assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Cancel', 'Close button has correct copy');
-    await click('[data-test-shamir-modal-cancel-button]');
+    assert.dom(GENERAL.cancelButton).hasText('Cancel', 'Close button has correct copy');
+    await click(GENERAL.cancelButton);
     assert.ok(cancelSpy.calledOnce, 'cancel spy called on click');
   });
 
@@ -229,16 +264,24 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
     await render(
       hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" @onCancel={{this.onCancel}} />`
     );
-    assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Cancel', 'Close button has correct copy');
-    assert.ok(await waitUntil(() => find('[data-test-shamir-key-input]')), 'shows shamir key input');
 
-    await click('[data-test-shamir-modal-cancel-button]');
-
+    await click(GENERAL.button('generate-token-cta'));
     assert.ok(
-      await waitUntil(() => find('[data-test-generate-token-cta]')),
+      await waitUntil(() => find(SHAMIR_FORM.flowStep('primary-token'))),
+      'shows primary token step after start'
+    );
+
+    await fillIn(GENERAL.inputByAttr('primary-token'), 'some-token');
+    await click('[data-test-submit-primary-token]');
+
+    assert.dom(GENERAL.cancelButton).hasText('Cancel', 'Close button has correct copy');
+    assert.ok(await waitUntil(() => find(GENERAL.inputByAttr('shamir-key'))), 'shows shamir key input');
+
+    await click(GENERAL.cancelButton);
+    assert.ok(
+      await waitUntil(() => find(GENERAL.button('generate-token-cta'))),
       'shows generate token button again'
     );
-    assert.dom('[data-test-shamir-key-input]').doesNotExist('Does not render input for shamir key');
   });
 
   test('it closes correctly when generation is completed', async function (assert) {
@@ -262,9 +305,13 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
       hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" @onCancel={{this.onCancel}} />`
     );
 
-    await waitUntil(() => find('[data-test-dr-token-flow-step="show-token"]'));
-    assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Close', 'Close button has correct copy');
-    await click('[data-test-shamir-modal-cancel-button]');
+    await click(GENERAL.button('generate-token-cta'));
+    await fillIn(GENERAL.inputByAttr('primary-token'), 'some-token');
+    await click('[data-test-submit-primary-token]');
+
+    await waitUntil(() => find(SHAMIR_FORM.flowStep('show-token')));
+    assert.dom(GENERAL.cancelButton).hasText('Close', 'Close button has correct copy');
+    await click(GENERAL.cancelButton);
     assert.ok(cancelSpy.calledOnce, 'cancel spy called on click');
   });
 });
