@@ -27,7 +27,7 @@
           <LinkTo
             class={{if @authenticated "active"}}
             @route="messages"
-            @query={{hash authenticated=true page=1}}
+            @query={{hash authenticated=true page=1 pageFilter=null status=null type=null}}
             data-test-custom-messages-tab="After user logs in"
           >
             After user logs in
@@ -37,7 +37,7 @@
           <LinkTo
             class={{unless @authenticated "active"}}
             @route="messages"
-            @query={{hash authenticated=false page=1}}
+            @query={{hash authenticated=false page=1 pageFilter=null status=null type=null}}
             data-test-custom-messages-tab="On login page"
           >
             On login page
