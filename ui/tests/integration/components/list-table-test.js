@@ -177,6 +177,36 @@ module('Integration | Component | list-table', function (hooks) {
       .hasText('5', 'custom table item renders yielded badge');
   });
 
+  test('it shows first page data and correct metadata when navigated page exceeds new data bounds', async function (assert) {
+    const moreData = [
+      { island: 'Tahiti', visit_length: 12, trip_date: '2025-05-10T00:00:00.000Z' },
+      { island: 'Barbados', visit_length: 6, trip_date: '2025-08-25T00:00:00.000Z' },
+      { island: 'Cyprus', visit_length: 9, trip_date: '2026-03-12T00:00:00.000Z' },
+      { island: 'Jamaica', visit_length: 7, trip_date: '2025-11-05T00:00:00.000Z' },
+    ];
+    this.data = [...MOCK_DATA, ...moreData];
+    await this.renderComponent();
+
+    await fillIn(GENERAL.paginationSizeSelector, '5');
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.paginationInfo).hasText(`6–10 of ${this.data.length}`, 'navigated to page 2');
+
+    // Replace data with fewer items than current page offset such that page 2 no longer exists
+    this.set('data', [
+      { island: 'Palawan', visit_length: 9, trip_date: '2025-11-14T00:00:00.000Z' },
+      { island: 'Mykonos', visit_length: 3, trip_date: '2026-02-28T00:00:00.000Z' },
+    ]);
+
+    await waitFor(GENERAL.paginationInfo);
+    assert
+      .dom(GENERAL.paginationInfo)
+      .hasText(
+        `1–2 of ${this.data.length}`,
+        'falls back to page 1 when current page exceeds new data bounds'
+      );
+    assert.dom(GENERAL.tableData(0, 'island')).hasText('Palawan', 'first page data is shown after fallback');
+  });
+
   test('it resets pagination when data changes', async function (assert) {
     const moreData = [
       { island: 'Tahiti', visit_length: 12, trip_date: '2025-05-10T00:00:00.000Z' },
