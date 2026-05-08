@@ -251,9 +251,15 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 		}
 	}
 
-	cleanup := func() {
+	cleanup := func(ctx context.Context) {
 		for i := 0; i < 10; i++ {
-			_, err := d.DockerAPI.ContainerRemove(ctx, result.Container.ID, client.ContainerRemoveOptions{Force: true})
+			// It seems podman does a STOP, then waits 10s, and then resorts to KILL.
+			// We don't have that patience, so we'll just start with a KILL.
+			_, _ = d.DockerAPI.ContainerKill(ctx, result.Container.ID, client.ContainerKillOptions{})
+			_, err := d.DockerAPI.ContainerRemove(ctx, result.Container.ID, client.ContainerRemoveOptions{
+				RemoveVolumes: true,
+				Force:         true,
+			})
 			if err == nil || errdefs.IsNotFound(err) {
 				return
 			}
@@ -290,14 +296,14 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 	}, bo)
 	if err != nil {
 		if !d.RunOptions.DoNotAutoRemove {
-			cleanup()
+			cleanup(ctx)
 		}
 		return nil, "", err
 	}
 
 	return &Service{
 		Config:      config,
-		Cleanup:     cleanup,
+		Cleanup:     func() { cleanup(context.TODO()) },
 		Container:   result.Container,
 		StartResult: result,
 	}, result.Container.ID, nil
@@ -781,7 +787,6 @@ func (bCtx *BuildContext) ToTarball() (io.Reader, error) {
 	var err error
 	buffer := new(bytes.Buffer)
 	tarBuilder := tar.NewWriter(buffer)
-	defer tarBuilder.Close()
 
 	now := time.Now()
 	for filepath, contents := range *bCtx {
@@ -820,6 +825,9 @@ func (bCtx *BuildContext) ToTarball() (io.Reader, error) {
 		}
 	}
 
+	if err := tarBuilder.Close(); err != nil {
+		return nil, err
+	}
 	return bytes.NewReader(buffer.Bytes()), nil
 }
 
@@ -900,6 +908,7 @@ func BuildImage(ctx context.Context, api *client.Client, containerfile string, c
 	if err != nil {
 		return nil, fmt.Errorf("failed to build image: %v", err)
 	}
+	defer resp.Body.Close()
 
 	output, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -1,0 +1,3 @@
+```release-note:bug
+sdk: Small bugfixes relating to docker test container cleanup and image building.
+```

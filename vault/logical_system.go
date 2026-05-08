@@ -6025,25 +6025,26 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 }
 
 type SealStatusResponse struct {
-	Type               string   `json:"type"`
-	Initialized        bool     `json:"initialized"`
-	Sealed             bool     `json:"sealed"`
-	T                  int      `json:"t"`
-	N                  int      `json:"n"`
-	Progress           int      `json:"progress"`
-	Nonce              string   `json:"nonce"`
-	Version            string   `json:"version"`
-	BuildDate          string   `json:"build_date"`
-	Migration          bool     `json:"migration"`
-	ClusterName        string   `json:"cluster_name,omitempty"`
-	ClusterID          string   `json:"cluster_id,omitempty"`
-	RecoverySeal       bool     `json:"recovery_seal"`
-	StorageType        string   `json:"storage_type,omitempty"`
-	HCPLinkStatus      string   `json:"hcp_link_status,omitempty"`
-	HCPLinkResourceID  string   `json:"hcp_link_resource_ID,omitempty"`
-	Warnings           []string `json:"warnings,omitempty"`
-	RecoverySealType   string   `json:"recovery_seal_type,omitempty"`
-	RemovedFromCluster *bool    `json:"removed_from_cluster,omitempty"`
+	Type                 string   `json:"type"`
+	Initialized          bool     `json:"initialized"`
+	Sealed               bool     `json:"sealed"`
+	T                    int      `json:"t"`
+	N                    int      `json:"n"`
+	Progress             int      `json:"progress"`
+	Nonce                string   `json:"nonce"`
+	Version              string   `json:"version"`
+	BuildDate            string   `json:"build_date"`
+	Migration            bool     `json:"migration"`
+	ClusterName          string   `json:"cluster_name,omitempty"`
+	ClusterID            string   `json:"cluster_id,omitempty"`
+	RecoverySeal         bool     `json:"recovery_seal"`
+	StorageType          string   `json:"storage_type,omitempty"`
+	HCPLinkStatus        string   `json:"hcp_link_status,omitempty"`
+	HCPLinkResourceID    string   `json:"hcp_link_resource_ID,omitempty"`
+	Warnings             []string `json:"warnings,omitempty"`
+	RecoverySealType     string   `json:"recovery_seal_type,omitempty"`
+	RemovedFromCluster   *bool    `json:"removed_from_cluster,omitempty"`
+	MigrationDoneAtEpoch int64    `json:"migration_done_at_epoch,omitempty"`
 }
 
 type SealBackendStatus struct {
@@ -6155,6 +6156,9 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 		RecoverySeal:       core.SealAccess().RecoveryKeySupported(),
 		RecoverySealType:   recoverySealType,
 		StorageType:        core.StorageType(),
+	}
+	if p := core.sealMigrationDone.Load(); p != nil {
+		s.MigrationDoneAtEpoch = p.Unix()
 	}
 
 	if resourceIDonHCP != "" {
