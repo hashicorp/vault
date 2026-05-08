@@ -5,6 +5,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -406,5 +407,131 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 	credResp, err = lb.HandleRequest(namespace.RootContext(nil), credReq)
 	if err != nil || (credResp != nil && credResp.IsError()) {
 		t.Fatalf("err:%s resp:%v\n", err, credResp)
+	}
+}
+
+// failingInitializeDatabase is a v5.Database mock whose Initialize always
+// returns a fixed error. Used to simulate a persistent connection failure
+// (wrong credentials, network refused) without a blocking timeout.
+type failingInitializeDatabase struct {
+	err error
+}
+
+func (d *failingInitializeDatabase) Initialize(_ context.Context, _ v5.InitializeRequest) (v5.InitializeResponse, error) {
+	return v5.InitializeResponse{}, d.err
+}
+
+func (d *failingInitializeDatabase) NewUser(_ context.Context, _ v5.NewUserRequest) (v5.NewUserResponse, error) {
+	return v5.NewUserResponse{}, nil
+}
+
+func (d *failingInitializeDatabase) UpdateUser(_ context.Context, _ v5.UpdateUserRequest) (v5.UpdateUserResponse, error) {
+	return v5.UpdateUserResponse{}, nil
+}
+
+func (d *failingInitializeDatabase) DeleteUser(_ context.Context, _ v5.DeleteUserRequest) (v5.DeleteUserResponse, error) {
+	return v5.DeleteUserResponse{}, nil
+}
+func (d *failingInitializeDatabase) Type() (string, error) { return mockV5Type, nil }
+func (d *failingInitializeDatabase) Close() error          { return nil }
+
+// TestWalRollback_InitializeTimeout_SkipsRollback verifies that a transient
+// errDatabaseInitializeTimeout from GetConnection does not trigger
+// rollbackDatabaseCredentials. The timeout only means the database was slow;
+// it says nothing about whether credentials were already rotated successfully.
+func TestWalRollback_InitializeTimeout_SkipsRollback(t *testing.T) {
+	oldTimeout := databaseInitTimeout
+	databaseInitTimeout = 25 * time.Millisecond
+	defer func() { databaseInitTimeout = oldTimeout }()
+
+	config := logical.TestBackendConfig()
+	config.System = &systemViewWrapper{
+		SystemView:     config.System,
+		builtinFactory: newBlockingInitializeDatabase,
+	}
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	entry, err := logical.StorageEntryJSON("config/mydb", &DatabaseConfig{
+		AllowedRoles:     []string{"*"},
+		VerifyConnection: true,
+		PluginName:       mockV5Type,
+		ConnectionDetails: map[string]interface{}{
+			"password": "original-pass",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.StorageView.Put(context.Background(), entry); err != nil {
+		t.Fatal(err)
+	}
+
+	walEntry := &rotateRootCredentialsWAL{
+		ConnectionName: "mydb",
+		UserName:       "root",
+		NewPassword:    "new-pass", // != "original-pass": enters the credential-verification branch
+		OldPassword:    "original-pass",
+	}
+	err = b.walRollback(context.Background(), &logical.Request{Storage: config.StorageView}, rotateRootWALKey, walEntry)
+	if !errors.Is(err, errDatabaseInitializeTimeout) {
+		t.Fatalf("expected errDatabaseInitializeTimeout to propagate, got: %v", err)
+	}
+}
+
+// TestWalRollback_ConnectionFailed_TriggersRollback verifies that a
+// non-timeout connection failure still reaches rollbackDatabaseCredentials,
+// preserving the existing behavior for genuine authentication failures.
+func TestWalRollback_ConnectionFailed_TriggersRollback(t *testing.T) {
+	connErr := errors.New("connection refused: invalid credentials")
+	config := logical.TestBackendConfig()
+	config.System = &systemViewWrapper{
+		SystemView: config.System,
+		builtinFactory: func() (interface{}, error) {
+			return &failingInitializeDatabase{err: connErr}, nil
+		},
+	}
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	entry, err := logical.StorageEntryJSON("config/mydb", &DatabaseConfig{
+		AllowedRoles:     []string{"*"},
+		VerifyConnection: true,
+		PluginName:       mockV5Type,
+		ConnectionDetails: map[string]interface{}{
+			"password": "original-pass",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.StorageView.Put(context.Background(), entry); err != nil {
+		t.Fatal(err)
+	}
+
+	walEntry := &rotateRootCredentialsWAL{
+		ConnectionName: "mydb",
+		UserName:       "root",
+		NewPassword:    "new-pass",
+		OldPassword:    "original-pass",
+	}
+	err = b.walRollback(context.Background(), &logical.Request{Storage: config.StorageView}, rotateRootWALKey, walEntry)
+	// A non-timeout failure must not be swallowed: rollbackDatabaseCredentials is
+	// called and its error (from a second failed GetConnectionWithConfig) propagates.
+	if errors.Is(err, errDatabaseInitializeTimeout) {
+		t.Fatal("timeout sentinel must not appear for a non-timeout connection failure")
+	}
+	if err == nil {
+		t.Fatal("expected rollbackDatabaseCredentials to return an error")
 	}
 }
