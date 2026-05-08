@@ -1,0 +1,3 @@
+```release-note:bugfix
+secrets/transit: added granular autorotation to transit keys, prevents a key missing it's scheduled autorotation by an hour.
+```
