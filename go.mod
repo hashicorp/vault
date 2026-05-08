@@ -81,7 +81,7 @@ require (
 	github.com/google/go-github/v83 v83.0.0
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/cap v0.12.1-0.20260327185353-2026dd0d9543
+	github.com/hashicorp/cap v0.13.0
 	github.com/hashicorp/cap/ldap v0.0.0-20250911140431-44d01434c285
 	github.com/hashicorp/cli v1.1.7
 	github.com/hashicorp/consul-template v0.41.1
