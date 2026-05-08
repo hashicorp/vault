@@ -1876,6 +1876,10 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 		return nil
 	}
 
+	if err := c.ValidateMultiSealConfig(ctx, false); err != nil {
+		return err
+	}
+
 	sealToUse := c.seal
 	if migrate {
 		c.logger.Info("unsealing using migration seal")
