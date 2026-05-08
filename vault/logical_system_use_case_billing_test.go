@@ -1331,3 +1331,256 @@ func TestSystemBackend_BillingOverview_PreviousMonth_WithError(t *testing.T) {
 	require.True(t, parsedTime.IsZero(),
 		"previous month updated_at should be zero time when timestamp is not stored")
 }
+
+// TestRoundToFour tests the roundToFour function
+func TestRoundToFour(t *testing.T) {
+	// Define test cases
+	tests := []struct {
+		name     string
+		input    float64
+		expected float64
+	}{
+		{"Round up", 1.23456, 1.2346},
+		{"Round down", 1.23454, 1.2345},
+		{"Exactly four decimals", 1.1111, 1.1111},
+		{"Fewer than four decimals", 1.2, 1.2000},
+		{"Zero value", 0.0, 0.0},
+		{"Large values", 0.189900000000, 0.1899},
+		{"Large values with round up", 0.189990000000, 0.1900},
+		{"Large values with round down", 0.189920000000, 0.1899},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := roundToFour(tt.input)
+			require.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+// TestRoundUsageMetrics tests the roundUsageMetrics function.
+func TestRoundUsageMetrics(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []map[string]interface{}
+		expected []map[string]interface{}
+	}{
+		{
+			name: "Round float64 totals and counts in metric_details",
+			input: []map[string]interface{}{
+				{
+					"metric_name": "pki_units",
+					"metric_data": map[string]interface{}{
+						"total": 123.456789,
+					},
+				},
+				{
+					"metric_name": "ssh_units",
+					"metric_data": map[string]interface{}{
+						"total": 98.765432,
+						"metric_details": []map[string]interface{}{
+							{"type": "otp_units", "count": 45.678901},
+							{"type": "certificate_units", "count": 53.086531},
+						},
+					},
+				},
+			},
+			expected: []map[string]interface{}{
+				{
+					"metric_name": "pki_units",
+					"metric_data": map[string]interface{}{
+						"total": 123.4568,
+					},
+				},
+				{
+					"metric_name": "ssh_units",
+					"metric_data": map[string]interface{}{
+						"total": 98.7654,
+						"metric_details": []map[string]interface{}{
+							{"type": "otp_units", "count": 45.6789},
+							{"type": "certificate_units", "count": 53.0865},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Handle integer counts (should not be modified)",
+			input: []map[string]interface{}{
+				{
+					"metric_name": "static_secrets",
+					"metric_data": map[string]interface{}{
+						"total": 100,
+						"metric_details": []map[string]interface{}{
+							{"type": "kv", "count": 100},
+						},
+					},
+				},
+			},
+			expected: []map[string]interface{}{
+				{
+					"metric_name": "static_secrets",
+					"metric_data": map[string]interface{}{
+						"total": 100,
+						"metric_details": []map[string]interface{}{
+							{"type": "kv", "count": 100},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Handle mixed float64 and integer values",
+			input: []map[string]interface{}{
+				{
+					"metric_name": "id_token_units",
+					"metric_data": map[string]interface{}{
+						"total": 150.123456,
+						"metric_details": []map[string]interface{}{
+							{"type": "oidc", "count": 100.987654},
+							{"type": "spiffe", "count": 49.135802},
+						},
+					},
+				},
+				{
+					"metric_name": "dynamic_roles",
+					"metric_data": map[string]interface{}{
+						"total": 50,
+						"metric_details": []map[string]interface{}{
+							{"type": "aws_dynamic", "count": 25},
+							{"type": "azure_dynamic", "count": 25},
+						},
+					},
+				},
+			},
+			expected: []map[string]interface{}{
+				{
+					"metric_name": "id_token_units",
+					"metric_data": map[string]interface{}{
+						"total": 150.1235,
+						"metric_details": []map[string]interface{}{
+							{"type": "oidc", "count": 100.9877},
+							{"type": "spiffe", "count": 49.1358},
+						},
+					},
+				},
+				{
+					"metric_name": "dynamic_roles",
+					"metric_data": map[string]interface{}{
+						"total": 50,
+						"metric_details": []map[string]interface{}{
+							{"type": "aws_dynamic", "count": 25},
+							{"type": "azure_dynamic", "count": 25},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Handle metrics without metric_details",
+			input: []map[string]interface{}{
+				{
+					"metric_name": "kmip",
+					"metric_data": map[string]interface{}{
+						"used_in_month": true,
+					},
+				},
+				{
+					"metric_name": "external_plugins",
+					"metric_data": map[string]interface{}{
+						"total": 5,
+					},
+				},
+			},
+			expected: []map[string]interface{}{
+				{
+					"metric_name": "kmip",
+					"metric_data": map[string]interface{}{
+						"used_in_month": true,
+					},
+				},
+				{
+					"metric_name": "external_plugins",
+					"metric_data": map[string]interface{}{
+						"total": 5,
+					},
+				},
+			},
+		},
+		{
+			name:     "Handle empty metrics slice",
+			input:    []map[string]interface{}{},
+			expected: []map[string]interface{}{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Make a deep copy of input to avoid modifying the test case
+			inputCopy := make([]map[string]interface{}, len(tt.input))
+			for i, metric := range tt.input {
+				inputCopy[i] = make(map[string]interface{})
+				for k, v := range metric {
+					if k == "metric_data" {
+						metricData := v.(map[string]interface{})
+						metricDataCopy := make(map[string]interface{})
+						for mk, mv := range metricData {
+							if mk == "metric_details" {
+								details := mv.([]map[string]interface{})
+								detailsCopy := make([]map[string]interface{}, len(details))
+								for di, detail := range details {
+									detailsCopy[di] = make(map[string]interface{})
+									for dk, dv := range detail {
+										detailsCopy[di][dk] = dv
+									}
+								}
+								metricDataCopy[mk] = detailsCopy
+							} else {
+								metricDataCopy[mk] = mv
+							}
+						}
+						inputCopy[i][k] = metricDataCopy
+					} else {
+						inputCopy[i][k] = v
+					}
+				}
+			}
+
+			// Apply rounding
+			roundUsageMetrics(inputCopy)
+
+			// Verify the results
+			require.Equal(t, len(tt.expected), len(inputCopy))
+			for i, expectedMetric := range tt.expected {
+				actualMetric := inputCopy[i]
+				require.Equal(t, expectedMetric["metric_name"], actualMetric["metric_name"])
+
+				expectedData := expectedMetric["metric_data"].(map[string]interface{})
+				actualData := actualMetric["metric_data"].(map[string]interface{})
+
+				// Check total
+				if expectedTotal, ok := expectedData["total"]; ok {
+					require.Equal(t, expectedTotal, actualData["total"])
+				}
+
+				// Check metric_details
+				if expectedDetails, ok := expectedData["metric_details"].([]map[string]interface{}); ok {
+					actualDetails := actualData["metric_details"].([]map[string]interface{})
+					require.Equal(t, len(expectedDetails), len(actualDetails))
+					for j, expectedDetail := range expectedDetails {
+						actualDetail := actualDetails[j]
+						require.Equal(t, expectedDetail["type"], actualDetail["type"])
+						require.Equal(t, expectedDetail["count"], actualDetail["count"])
+					}
+				}
+
+				// Check other fields (like used_in_month)
+				for key, expectedValue := range expectedData {
+					if key != "total" && key != "metric_details" {
+						require.Equal(t, expectedValue, actualData[key])
+					}
+				}
+			}
+		})
+	}
+}

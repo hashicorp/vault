@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"time"
 
@@ -286,6 +287,11 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 	}
 	usageMetrics = append(usageMetrics, idTokenUnitsMetric)
 
+	// Round all float64 values in usageMetrics to 4 decimal places.
+	// Rounding time for usage metrics is insignificant, so we can keep it centralized here.
+	// This prevents us from having to do it in each individual metric.
+	roundUsageMetrics(usageMetrics)
+
 	dataUpdatedAt := b.Core.computeUpdatedAt(ctx, month, currentMonth)
 
 	monthStr := month.Format("2006-01")
@@ -295,6 +301,33 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 		"updated_at":    dataUpdatedAt.Format(time.RFC3339),
 		"usage_metrics": usageMetrics,
 	}, nil
+}
+
+// roundUsageMetrics rounds all float64 values in the usage metrics to 4 decimal places
+func roundUsageMetrics(metrics []map[string]interface{}) {
+	for _, metric := range metrics {
+		if metricData, ok := metric["metric_data"].(map[string]interface{}); ok {
+			// Round the total if it's a float64
+			if total, ok := metricData["total"].(float64); ok {
+				metricData["total"] = roundToFour(total)
+			}
+
+			// Round values in metric_details if present
+			if details, ok := metricData["metric_details"].([]map[string]interface{}); ok {
+				for _, detail := range details {
+					if count, ok := detail["count"].(float64); ok {
+						detail["count"] = roundToFour(count)
+					}
+				}
+			}
+		}
+	}
+}
+
+// roundToFour takes a float64 and rounds it to 4 decimal places.
+func roundToFour(val float64) float64 {
+	ratio := math.Pow(10, 4)
+	return math.Round(val*ratio) / ratio
 }
 
 // computeUpdatedAt determines the appropriate updated_at timestamp for billing data
