@@ -675,8 +675,8 @@ github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 h1:X5VWvz21y3gzm9Nw/kaUeku/1+u
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1/go.mod h1:Zanoh4+gvIgluNqcfMVTJueD4wSS5hT7zTt4Mrutd90=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
-github.com/hashicorp/cap v0.12.1-0.20260327185353-2026dd0d9543 h1:XFBvacg1+BvS8eAGMxP9zt39p9RxvGbeWiqOlLS3Ays=
-github.com/hashicorp/cap v0.12.1-0.20260327185353-2026dd0d9543/go.mod h1:KmO21ZfHvXuAUZBc3Ycqu5NhwMahvfmfR4HlW4f+b3c=
+github.com/hashicorp/cap v0.13.0 h1:bzLS1er9am6hOiw//TEjmwZ3t975iFfRfvXY6VRLKEw=
+github.com/hashicorp/cap v0.13.0/go.mod h1:Kbu5owAOJzQ/HH4Ba/76wsIXN2tRiJgToJKBO2MAEFE=
 github.com/hashicorp/cap/ldap v0.0.0-20250911140431-44d01434c285 h1:vwg2CDaWTJJkr+5ivc2KUYx877gPAUEgq5QIPA/bKjw=
 github.com/hashicorp/cap/ldap v0.0.0-20250911140431-44d01434c285/go.mod h1:La1zaRmx2oqz79W9SpwQAPMfDUdBxZeoN2IaAQ8D4ow=
 github.com/hashicorp/cli v1.1.7 h1:/fZJ+hNdwfTSfsxMBa9WWMlfjUZbX8/LnUxgAd7lCVU=
