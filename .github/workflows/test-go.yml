@@ -338,7 +338,33 @@ jobs:
         # The dev mode binary has to exist for binary tests that are dispatched on the last runner.
         env:
           GOPRIVATE: github.com/hashicorp/*
-        run: time make prep dev
+        run: |
+          set -exo pipefail
+          time make prep dev
+          mv bin/vault vault-binary
+      - if: inputs.binary-tests && matrix.id == inputs.total-runners
+        id: build-docker-image
+        name: Build Docker image with custom vault binary
+        run: |
+          set -exo pipefail
+
+          if [ "${{ needs.test-matrix.outputs.is-ent-branch }}" == "true" ]; then
+            go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault-enterprise:latest -target=hashicorp/vault-enterprise-ci:latest -binary=./vault-binary
+            go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault-enterprise:2.0.0-ent.hsm -target=hashicorp/vault-enterprise-ci:latest-hsm -binary=./vault-hsm-binary -hsm
+
+            # Verify the images were built successfully
+            docker images hashicorp/vault-enterprise-ci:latest
+            echo "image=hashicorp/vault-enterprise-ci:latest" >> "$GITHUB_OUTPUT"
+
+            docker images hashicorp/vault-enterprise-ci:latest-hsm
+            echo "hsmimage=hashicorp/vault-enterprise-ci:latest-hsm" >> "$GITHUB_OUTPUT"
+          else
+            go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault:latest -target=hashicorp/vault-ci:latest -binary=./vault-binary
+
+            # Verify the images was built successfully
+            docker images hashicorp/vault-ci:latest
+            echo "image=hashicorp/vault-ci:latest" >> "$GITHUB_OUTPUT"
+          fi
       - if: needs.test-matrix.outputs.is-ent-repo != 'true'
         # Enterprise repo runners do not allow sudo, so can't install gVisor there yet.
         name: Install gVisor
@@ -402,17 +428,26 @@ jobs:
           # The docker/binary tests are more expensive, and we've had problems with timeouts when running at full
           # parallelism.  The default if -p isn't specified is to use NumCPUs, which seems fine for regular tests.
           package_parallelism=""
+          test_parallelism="${{ inputs.go-test-parallelism }}"
 
-          if [ -f vault-hsm-binary ]; then
-            VAULT_HSM_BINARY="$(pwd)/vault-hsm-binary"
-            export VAULT_HSM_BINARY
+          # The image will be preferred by most docker tests, since it doesn't require the extra
+          # overhead of mutating an image to add the current binary.  We still populate $VAULT_BINARY
+          # for the sake of exec tests like TestSysPprof_Exec.
+          if [ -f vault-binary ]; then
+            VAULT_BINARY=$(pwd)/vault-binary
+            export VAULT_BINARY
+            export VAULT_IMAGE=${{ steps.build-docker-image.outputs.image }}
           fi
 
-          if [ -f bin/vault ]; then
-            VAULT_BINARY="$(pwd)/bin/vault"
-            export VAULT_BINARY
+          if [ -f vault-hsm-binary ]; then
+            VAULT_HSM_BINARY=$(pwd)/vault-hsm-binary
+            export VAULT_HSM_BINARY
+            export VAULT_HSM_IMAGE=${{ steps.build-docker-image.outputs.hsmimage }}
+          fi
 
+          if [ -f vault-binary ] || [ -f vault-hsm-binary ]; then
             package_parallelism="-p 2"
+            test_parallelism=4
           fi
 
           # If running Go tests on the enterprise repo, add a flag to rerun failed tests.
@@ -436,7 +471,7 @@ jobs:
               $package_parallelism \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ inputs.go-test-timeout }} \
-              -parallel=${{ inputs.go-test-parallelism }} \
+              -parallel="$test_parallelism" \
               ${{ inputs.extra-flags }} \
       - if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
         name: Prepare datadog-ci
