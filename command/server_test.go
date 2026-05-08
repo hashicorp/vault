@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -328,7 +329,31 @@ func TestServer(t *testing.T) {
 // TestServer_DevTLS verifies that a vault server starts up correctly with the -dev-tls flag
 func TestServer_DevTLS(t *testing.T) {
 	ui, cmd := testServerCommand(t)
-	args := []string{"-dev-tls", "-dev-listen-address=127.0.0.1:0", "-test-server-config"}
+
+	// testConfig is used to disable prometheus to avoid issues with the
+	// global prometheus registry in tests
+	testConfig := `
+	storage "inmem" {}
+	listener "tcp" {
+		address = "127.0.0.1:0"
+		tls_disable = true
+	}
+	disable_mlock = true
+	telemetry {
+		prometheus_retention_time = "0s"
+		disable_hostname = true
+	}
+`
+	configPath := filepath.Join(t.TempDir(), "config.hcl")
+	err := os.WriteFile(configPath, []byte(testConfig), 0o644)
+	require.NoError(t, err)
+
+	args := []string{
+		"-dev-tls",
+		"-dev-listen-address=127.0.0.1:0",
+		"-test-server-config",
+		"-config=" + configPath,
+	}
 	retCode := cmd.Run(args)
 	output := ui.ErrorWriter.String() + ui.OutputWriter.String()
 	require.Equal(t, 0, retCode, output)
