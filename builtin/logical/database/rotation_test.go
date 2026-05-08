@@ -1706,6 +1706,47 @@ func TestRotationSchedulePriorityAfterRestart(t *testing.T) {
 	require.Equal(t, newPriority, firstPriority) // confirm that priority has not changed
 }
 
+// TestRotateRole_BlockedUpdateUser_TimesOut verifies rotate-role returns quickly
+// with a timeout error when UpdateUser blocks past Vault's timeout window.
+func TestRotateRole_BlockedUpdateUser_TimesOut(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	oldTimeout := staticUpdateUserTimeout
+	staticUpdateUserTimeout = 25 * time.Millisecond
+	defer func() { staticUpdateUserTimeout = oldTimeout }()
+
+	roleName := "hashicorp"
+	data := map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "10m",
+	}
+	createRoleWithData(t, b, storage, mockDB, roleName, data)
+
+	blockCh := make(chan struct{})
+	defer close(blockCh)
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			<-blockCh
+		}).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+
+	start := time.Now()
+	_, err := b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "rotate-role/" + roleName,
+		Storage:   storage,
+	})
+
+	require.Error(t, err)
+	require.ErrorContains(t, err, "timeout exceeded during UpdateUser")
+	require.Less(t, time.Since(start), time.Second, "rotate-role should return promptly on update timeout")
+}
+
 func generateWALFromFailedRotation(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
 	t.Helper()
 	mockDB.On("UpdateUser", mock.Anything, mock.Anything).

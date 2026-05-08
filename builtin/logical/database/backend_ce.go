@@ -56,9 +56,11 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		Config:           config.ConnectionDetails,
 		VerifyConnection: config.VerifyConnection,
 	}
-	_, err = dbw.Initialize(ctx, initReq)
+	// Bound cache-miss initialization so a blocked handshake cannot stall callers
+	// indefinitely while the connection creation lock is held.
+	_, err = b.initializeConnection(ctx, dbw, initReq)
 	if err != nil {
-		dbw.Close()
+		b.closeDatabaseWrapperAfterInitError(dbw, err)
 		return nil, err
 	}
 
