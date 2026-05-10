@@ -148,7 +148,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-cf v0.23.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.23.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.26.1
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.17.1
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.17.2-0.20260501005536-aac076366952
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.24.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.21.1
 	github.com/hashicorp/vault-plugin-database-couchbase v0.16.1
@@ -168,7 +168,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.14.1
 	github.com/hashicorp/vault-testing-stepwise v0.3.3
-	github.com/hashicorp/vault/api v1.22.0
+	github.com/hashicorp/vault/api v1.23.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
 	github.com/hashicorp/vault/sdk v0.25.1
