@@ -85,7 +85,7 @@ func newHCPWaitForImageCmd() *cobra.Command {
 	}
 
 	waitHCPImage.PersistentFlags().StringVarP(&waitForHCPImageReq.Req.ProductName, "product-name", "p", "vault", "The product or component of the image")
-	waitHCPImage.PersistentFlags().StringVarP(&waitForHCPImageReq.Req.ProductVersionConstraint, "product-version-constraint", "v", "", "A comma seperated list of constraints. If left unset the latest will be returned")
+	waitHCPImage.PersistentFlags().StringVarP(&waitForHCPImageReq.Req.ProductVersionConstraint, "product-version-constraint", "v", "", "A comma separated list of constraints. If left unset the latest will be returned")
 	waitHCPImage.PersistentFlags().StringVarP(&waitForHCPImageReq.Req.HostManagerVersionConstraint, "host-manager-version-constraint", "m", "", "A semver string. If left unset the latest will be used")
 	waitHCPImage.PersistentFlags().StringVarP(&waitForHCPImageReq.Req.CloudProvider, "cloud", "c", "aws", "The cloud provider you wish to search. E.g. aws, azure")
 	waitHCPImage.PersistentFlags().StringVarP(&waitForHCPImageReq.Req.CloudRegion, "region", "r", "us-west-2", "The cloud region you wish to search")

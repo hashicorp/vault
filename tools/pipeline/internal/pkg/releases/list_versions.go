@@ -310,7 +310,7 @@ func (req *ListVersionsReq) Run(ctx context.Context) (*ListVersionsRes, error) {
 			return nil, err
 		}
 
-		// The releases API will list all editions as seperate release versions, as it should. However,
+		// The releases API will list all editions as separate release versions, as it should. However,
 		// we don't make that distinction here. For our purposes we neeed a singular list of all versions
 		// on a license class basis. As such, we'll drop metadata and only focus on major, minor, patch,
 		// and prerelease.
