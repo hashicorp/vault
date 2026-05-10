@@ -308,7 +308,7 @@ func (r *ListWorkflowRunsReq) getWorkflowJobs(ctx context.Context, client *gh.Cl
 }
 
 // getUnsuccessfulWorkflowJobsLogs downloads the job log and parses out the
-// out failed entries for any unsuccesful jobs.
+// out failed entries for any unsuccessful jobs.
 func (r *ListWorkflowRunsReq) getUnsuccessfulWorkflowJobsLogs(ctx context.Context, client *gh.Client, wfrs []*WorkflowRun) error {
 	if len(wfrs) < 1 {
 		return nil
@@ -468,7 +468,7 @@ func (r *WorkflowRun) Summary() (string, error) {
 	return r.summary, err
 }
 
-// UnsuccessfulSteps returns any unsuccesful steps in the workflow job.
+// UnsuccessfulSteps returns any unsuccessful steps in the workflow job.
 func (j *WorkflowJob) UnsuccessfulSteps() []*gh.TaskStep {
 	if j == nil || j.Job == nil || len(j.Job.Steps) < 1 {
 		return nil
@@ -486,7 +486,7 @@ func (j *WorkflowJob) UnsuccessfulSteps() []*gh.TaskStep {
 	return res
 }
 
-// UnsuccessfulStepNames returns the names of any unsuccesful steps in the workflow job.
+// UnsuccessfulStepNames returns the names of any unsuccessful steps in the workflow job.
 func (j *WorkflowJob) UnsuccessfulStepNames() []string {
 	steps := j.UnsuccessfulSteps()
 	if len(steps) < 1 {
