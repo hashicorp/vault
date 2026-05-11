@@ -16,11 +16,12 @@ import {
   PolicyTypes,
 } from 'core/utils/code-generators/policy';
 import errorMessage from 'vault/utils/error-message';
+import { validate } from 'vault/utils/forms/validate';
 
 import type FlashMessageService from 'ember-cli-flash/services/flash-messages';
 import type { HTMLElementEvent } from 'vault/forms';
 import type { PolicyData } from 'core/components/code-generator/policy/builder';
-import type { FormField } from 'vault/vault/app-types';
+import type { FormField, ValidationMap, Validations } from 'vault/vault/app-types';
 
 /**
  * @module PolicyForm
@@ -67,13 +68,24 @@ export default class PolicyFormComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   editTypes = { [EditorTypes.VISUAL]: 'Visual editor', [EditorTypes.CODE]: 'Code editor' } as const;
+  validations: Validations = {
+    stanzas: [
+      {
+        validator: ({ stanzas }) =>
+          stanzas.length > 0 && stanzas.every((stanza: PolicyStanza) => stanza.isValid),
+        message: 'Invalid policy content.',
+      },
+    ],
+  };
 
   @tracked editType: EditorTypes = EditorTypes.VISUAL;
   @tracked errorBanner = '';
+  @tracked errorDetails: string[] = [];
   @tracked showFileUpload = false;
   @tracked showSwitchEditorsModal = false;
   @tracked showTemplateModal = false;
   @tracked stanzas: PolicyStanza[] = [new PolicyStanza()];
+  @tracked validationErrors: ValidationMap | null = null;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -81,19 +93,29 @@ export default class PolicyFormComponent extends Component<Args> {
     this.editType = this.args.model.policyType === PolicyTypes.ACL ? EditorTypes.VISUAL : EditorTypes.CODE;
   }
 
+  // Template helpers
   isActiveEditor = (type: string): boolean => type === this.editType;
+
+  validationError = (param: string) => {
+    const { isValid, errors } = this.validationErrors?.[param] ?? {};
+    return !isValid && errors ? errors.join(' ') : '';
+  };
+
+  get formattedStanzas() {
+    return formatStanzas(this.stanzas);
+  }
 
   get hasPolicyDiff() {
     const { policy } = this.args.model;
     // Make sure policy has a value (if it's undefined, neither editor has been used)
     // Return true if there is a difference between stanzas and policy arg
     // which means the user has made changes using the code editor
-    return policy && formatStanzas(this.stanzas) !== policy;
+    return policy && this.formattedStanzas !== policy;
   }
 
   get snippetArgs() {
     const policyName = this.args.model.name || '<policy name>';
-    const policy = formatStanzas(this.stanzas);
+    const policy = this.formattedStanzas;
     return policySnippetArgs(policyName, policy);
   }
 
@@ -108,7 +130,7 @@ export default class PolicyFormComponent extends Component<Args> {
     this.editType = EditorTypes.VISUAL;
     this.showSwitchEditorsModal = false;
     // Reset this.args.model.policy to match visual editor stanzas
-    this.setPolicy(formatStanzas(this.stanzas));
+    this.setPolicy(this.formattedStanzas);
   }
 
   @action
@@ -118,9 +140,10 @@ export default class PolicyFormComponent extends Component<Args> {
   }
 
   @action
-  handlePolicyChange({ policy, stanzas }: PolicyData) {
-    this.setPolicy(policy);
+  handlePolicyChange({ stanzas }: PolicyData) {
+    // Update tracked stanzas first, then pass formatted policy back to model
     this.stanzas = stanzas;
+    this.setPolicy(this.formattedStanzas);
   }
 
   @action
@@ -146,6 +169,23 @@ export default class PolicyFormComponent extends Component<Args> {
   @task
   *save(event: HTMLElementEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    // Name is intentionally not validated here because the input has @isRequired=true
+    // which prevents the submit event all together when it is empty.
+    const { isValid, state } = validate({ stanzas: this.stanzas }, this.validations);
+    // Only enforce stanza validations for the Visual Editor
+    const shouldValidate = this.visualEditorSupported && this.editType === EditorTypes.VISUAL;
+    if (!isValid && shouldValidate) {
+      this.validationErrors = state;
+      this.errorDetails = Object.values(state).flatMap((s) => s.errors);
+      // Render general error message instead of exact count from validate() because
+      // stanzas (which are validated as a single input) can have up to 2 errors each.
+      const msg = this.errorDetails.length > 1 ? 'are errors' : 'is an error';
+      this.errorBanner = `There ${msg} with this form.`;
+      // Abort saving
+      return;
+    }
+
     try {
       const { name, policyType, isNew } = this.args.model;
       yield this.args.model.save();

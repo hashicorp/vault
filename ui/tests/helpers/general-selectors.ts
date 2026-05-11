@@ -150,8 +150,8 @@ export const GENERAL = {
   inlineError: '[data-test-inline-error-message]',
   messageError: '[data-test-message-error]',
   messageDescription: '[data-test-message-error-description]',
-  validationErrorByAttr: (attr: string) => `[data-test-validation-error=${attr}]`,
-  validationWarningByAttr: (attr: string) => `[data-test-validation-warning=${attr}]`,
+  validationErrorByAttr: (attr: string) => `[data-test-validation-error="${attr}"]`,
+  validationWarningByAttr: (attr: string) => `[data-test-validation-warning="${attr}"]`,
 
   pageError: {
     error: '[data-test-page-error]',

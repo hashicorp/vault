@@ -26,6 +26,23 @@ export class PolicyStanza {
   get preview() {
     return aclTemplate(this.path, Array.from(this.capabilities));
   }
+
+  get isValid() {
+    // Stanza must have a non-empty path and capabilities selected to be valid
+    return !this.invalidCapabilities && !this.invalidPath;
+  }
+
+  // These getters return an error message when invalid and an empty string when valid.
+  // Negative naming is a little counterintuitive, but simplifies template logic
+  // so the message only renders when the value is truthy.
+  get invalidCapabilities() {
+    return this.capabilities.size > 0 ? '' : 'Rule must have at least one capability.';
+  }
+
+  get invalidPath() {
+    const isValid = typeof this.path === 'string' && this.path.trim().length > 0;
+    return isValid ? '' : 'Path cannot be empty.';
+  }
 }
 
 export const formatStanzas = (stanzas: PolicyStanza[]) => stanzas.map((s) => s.preview).join('\n');
