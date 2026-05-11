@@ -922,7 +922,10 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			}
 			// We don't care if the token is a server side consistent token or not. Either way, we're going
 			// to be returning it for these paths instead of the short token stored in vault.
-			requestBodyToken = token.(string)
+			requestBodyToken, ok = token.(string)
+			if !ok {
+				return logical.ErrorResponse("invalid token"), logical.ErrPermissionDenied
+			}
 			if IsSSCToken(token.(string)) && !IsEnterpriseToken(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
 				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
