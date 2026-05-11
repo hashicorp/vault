@@ -5,7 +5,12 @@ package database
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -17,6 +22,10 @@ import (
 
 // WAL storage key used for the rollback of root database credentials
 const rotateRootWALKey = "rotateRootWALKey"
+
+// snowflakeErrJWTTokenInvalid is the Snowflake server-side error code for JWT
+// authentication failure.
+const snowflakeErrJWTTokenInvalid = "390144"
 
 // WAL entry used for the rollback of root database credentials
 type rotateRootCredentialsWAL struct {
@@ -69,6 +78,25 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 	config, err := b.DatabaseConfig(ctx, req.Storage, entry.ConnectionName)
 	if err != nil {
 		return err
+	}
+
+	// Route based on credential type in the WAL entry.
+	if entry.NewPrivateKey != "" {
+		// Stored key matches WAL new key: rotation completed, WAL not yet deleted.
+		if config.ConnectionDetails["private_key"] == entry.NewPrivateKey {
+			b.Logger().Info("WAL rollback: private key already rotated, nothing to roll back",
+				"connection", entry.ConnectionName)
+			return nil
+		}
+
+		b.Logger().Warn("WAL rollback: private key out of sync, starting rollback",
+			"connection", entry.ConnectionName, "username", entry.UserName)
+
+		if err := b.ClearConnection(entry.ConnectionName); err != nil {
+			return err
+		}
+
+		return b.rollbackDatabasePrivateKey(ctx, config, entry)
 	}
 
 	// The password in storage doesn't match the new password
@@ -147,4 +175,85 @@ func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, confi
 		return nil
 	}
 	return err
+}
+
+// rollbackDatabasePrivateKey restores the old public key on Snowflake for key-pair
+// auth connections by connecting with the new private key and issuing ALTER USER.
+func (b *databaseBackend) rollbackDatabasePrivateKey(ctx context.Context, config *DatabaseConfig, entry rotateRootCredentialsWAL) error {
+	oldPublicKey, err := derivePublicKeyFromPrivateKeyPEM(entry.OldPrivateKey)
+	if err != nil {
+		return fmt.Errorf("failed to derive old public key for rollback: %w", err)
+	}
+
+	config.ConnectionDetails["private_key"] = entry.NewPrivateKey
+	dbi, err := b.GetConnectionWithConfig(ctx, entry.ConnectionName, config)
+	if err != nil {
+		b.Logger().Error("WAL rollback: failed to connect using new private key", "connection", entry.ConnectionName, "error", err.Error())
+		return err
+	}
+
+	defer func() {
+		if err := b.ClearConnection(entry.ConnectionName); err != nil {
+			b.Logger().Error("error closing database plugin connection", "error", err)
+		}
+	}()
+
+	b.Logger().Info("WAL rollback: restoring old public key on Snowflake", "connection", entry.ConnectionName, "username", entry.UserName)
+
+	updateReq := v5.UpdateUserRequest{
+		Username:       entry.UserName,
+		CredentialType: v5.CredentialTypeRSAPrivateKey,
+		PublicKey: &v5.ChangePublicKey{
+			NewPublicKey: oldPublicKey,
+			Statements: v5.Statements{
+				Commands: config.RootCredentialsRotateStatements,
+			},
+		},
+	}
+
+	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
+	if status.Code(err) == codes.Unimplemented || err == dbplugin.ErrPluginStaticUnsupported {
+		return nil
+	}
+	if err != nil {
+		// Snowflake error 390144 means JWT authentication failed. This occurs when
+		// the new private key was never registered with Snowflake (crash before UpdateUser),
+		// so the system is already consistent with the old key — delete the WAL cleanly.
+		if strings.Contains(err.Error(), snowflakeErrJWTTokenInvalid) {
+			b.Logger().Info("WAL rollback: new private key rejected by Snowflake (crash before UpdateUser), system already consistent",
+				"connection", entry.ConnectionName)
+			return nil
+		}
+		b.Logger().Error("WAL rollback: failed to restore old public key", "connection", entry.ConnectionName, "error", err.Error())
+		return err
+	}
+	b.Logger().Info("WAL rollback: successfully restored old public key", "connection", entry.ConnectionName, "username", entry.UserName)
+	return nil
+}
+
+func derivePublicKeyFromPrivateKeyPEM(privateKeyPEM string) ([]byte, error) {
+	block, _ := pem.Decode([]byte(privateKeyPEM))
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block from private key")
+	}
+
+	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse private key: %w", err)
+	}
+
+	rsaKey, ok := key.(*rsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("private key is not an RSA key")
+	}
+
+	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&rsaKey.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal public key: %w", err)
+	}
+
+	return pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubKeyBytes,
+	}), nil
 }
