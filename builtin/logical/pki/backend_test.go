@@ -51,6 +51,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
@@ -8334,4 +8335,23 @@ func TestBackend_IDNWithWildcards_AltNames(t *testing.T) {
 
 func stringSliceContainsAny(sl []string, substr string) bool {
 	return slices.ContainsFunc(sl, func(s string) bool { return strings.Contains(s, substr) })
+}
+
+func nilFunction(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry) (*logical.Response, error) {
+	return nil, nil
+}
+
+// TestBackend_MetricsWrapManagesNilResp validates that when wrapping a function that returns nil, nil (no error, no
+// response), we pass on the lack of error and lack of response (and don't panic).
+func TestBackend_MetricsWrapManagesNilResp(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	req := &logical.Request{Storage: s}
+	fieldData := &framework.FieldData{Schema: map[string]*framework.FieldSchema{}, Raw: map[string]interface{}{}}
+
+	wrappedFunc := b.metricsWrap("huh", roleOptional, nilFunction)
+	resp, err := wrappedFunc(context.Background(), req, fieldData)
+	require.NoError(t, err)
+	require.Nil(t, resp)
 }

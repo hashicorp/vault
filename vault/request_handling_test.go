@@ -1024,3 +1024,19 @@ func TestRequestHandling_fetchACLTokenEntryAndEntity_NonExpiring_RootIgnoresCIDR
 	require.NotNil(t, te)
 	require.Equal(t, time.Duration(0), te.TTL)
 }
+
+// TestRequestHandling_handleCancelableTestNumericToken tests that if a token
+// that is passed in, is somehow a number rather than a string (not currently
+// possible), then the handling will error, not panic.
+func TestRequestHandling_handleCancelableTestNumericToken(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	data := map[string]interface{}{"token": 5}
+	req := &logical.Request{Data: data, Path: "auth/token/lookup"}
+
+	resp, err := core.handleCancelableRequest(ctx, req)
+	require.True(t, resp != nil && err != nil)
+	require.ErrorContains(t, err, logical.ErrPermissionDenied.Error())
+	require.ErrorContains(t, resp.Error(), "invalid token")
+}
