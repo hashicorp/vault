@@ -208,15 +208,6 @@ EOT`;
     assert.dom(GENERAL.inputByAttr('name')).hasValue('mypolicy', 'name is converted to lowercase');
   });
 
-  test('it does not submit default stanza templates as policy payload', async function (assert) {
-    assert.expect(3);
-    const expectedPolicy = '';
-    this.assertSaveRequest(assert, expectedPolicy, 'policy payload is empty when visual editor is untouched');
-    await this.renderComponent();
-    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
-    await click(GENERAL.submitButton);
-  });
-
   test('it saves a policy', async function (assert) {
     assert.expect(7);
     const flashSuccessSpy = Sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
@@ -246,7 +237,7 @@ EOT`;
   });
 
   test('it resets after saving a policy', async function (assert) {
-    assert.expect(11);
+    assert.expect(8);
     const expectedPolicy = `path "secret/data/*" {\n    capabilities = ["read"]\n}`;
     this.assertSaveRequest(assert, expectedPolicy);
     await this.renderComponent();
@@ -277,20 +268,18 @@ EOT
 }
 EOT`;
     assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedCli);
-    // Fill in name and save again to make sure policyContent is reset
-    this.assertSaveRequest(assert, '', 'policy content is empty after a successful save');
-    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
-    await click(GENERAL.submitButton);
   });
 
-  test('it displays error message when save fails', async function (assert) {
+  test('it displays API error message when save fails', async function (assert) {
     this.server.post('/sys/policies/acl/:name', () => {
-      return overrideResponse(400, { errors: ["'policy' parameter not supplied or empty"] });
+      return overrideResponse(400, { errors: ['something went very wrong'] });
     });
     await this.renderComponent();
-    await fillIn(GENERAL.inputByAttr('name'), 'empty-policy');
+    await fillIn(GENERAL.inputByAttr('name'), 'failed-policy');
+    await fillIn(GENERAL.inputByAttr('path'), 'secret/data/*');
+    await click(GENERAL.checkboxByAttr('read'));
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.messageError).exists().hasText("Error 'policy' parameter not supplied or empty");
+    assert.dom(GENERAL.messageError).exists().hasText('Error something went very wrong');
     assert.dom(GENERAL.flyout).exists('flyout remains open after error');
   });
 
@@ -326,22 +315,85 @@ EOT`;
     await click(GENERAL.submitButton);
   });
 
-  test('it renders validation errors', async function (assert) {
+  test('it renders validation errors for invalid policy content', async function (assert) {
     await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+    // Submit without filling in path or capabilities (missing path AND no capabilities)
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.messageError).exists().hasText('Error There is an error with this form.');
+    assert
+      .dom(GENERAL.messageError)
+      .exists()
+      .hasText('Error There is an error with this form. Invalid policy content.');
+    assert.dom(SELECTORS.pathByContainer(0)).hasClass('hds-form-text-input--is-invalid');
+    assert.dom(GENERAL.validationErrorByAttr('path-0')).exists().hasText('Path cannot be empty.');
+    assert
+      .dom(GENERAL.validationErrorByAttr('capabilities-0'))
+      .exists()
+      .hasText('Rule must have at least one capability.');
+  });
+
+  test('it renders validation errors for missing path', async function (assert) {
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+    await fillIn(GENERAL.inputByAttr('path'), 'secret/*');
+    await click(GENERAL.checkboxByAttr('read'));
+    // Add a second rule and just select capabilities (leave path empty)
+    await click(GENERAL.button('Add rule'));
+    await click(SELECTORS.checkboxByContainer(1, 'update'));
+    await click(GENERAL.submitButton);
+    assert
+      .dom(GENERAL.messageError)
+      .exists()
+      .hasText('Error There is an error with this form. Invalid policy content.');
+    assert.dom(SELECTORS.pathByContainer(1)).hasClass('hds-form-text-input--is-invalid');
+    assert.dom(GENERAL.validationErrorByAttr('path-1')).hasText('Path cannot be empty.');
+    assert.dom('[data-test-validation-error]').exists({ count: 1 }, 'only one validation error renders');
+  });
+
+  test('it renders validation errors for missing capabilities', async function (assert) {
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+    await fillIn(GENERAL.inputByAttr('path'), 'secret/*');
+    await click(GENERAL.checkboxByAttr('read'));
+    // Add a second rule and just fill in path (no capabilities selected)
+    await click(GENERAL.button('Add rule'));
+    await fillIn(SELECTORS.pathByContainer(1), 'new/path/*');
+    await click(GENERAL.submitButton);
+    assert
+      .dom(GENERAL.messageError)
+      .exists()
+      .hasText('Error There is an error with this form. Invalid policy content.');
+    assert
+      .dom(GENERAL.validationErrorByAttr('capabilities-1'))
+      .exists()
+      .hasText('Rule must have at least one capability.');
+    assert.dom('[data-test-validation-error]').exists({ count: 1 }, 'only one validation error renders');
+  });
+
+  test('it renders validation error for empty policy name', async function (assert) {
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('path'), 'secret/*');
+    await click(GENERAL.checkboxByAttr('read'));
+    await click(GENERAL.submitButton);
+    assert
+      .dom(GENERAL.messageError)
+      .exists()
+      .hasText('Error There is an error with this form. Name is required.');
     assert.dom(GENERAL.inputByAttr('name')).hasClass('hds-form-text-input--is-invalid');
     assert.dom(GENERAL.validationErrorByAttr('name')).hasText('Name is required.');
   });
 
-  test('it resets errors after saving', async function (assert) {
+  test('it resets validation errors after saving', async function (assert) {
     const expectedPolicy = `path "secret/*" {\n    capabilities = ["read"]\n}`;
     this.assertSaveRequest(assert, expectedPolicy);
     await this.renderComponent();
 
-    // First attempt without name
+    // First attempt without name and policy content
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.messageError).exists().hasText('Error There is an error with this form.');
+    assert
+      .dom(GENERAL.messageError)
+      .exists()
+      .hasText('Error There are errors with this form. Name is required. Invalid policy content.');
     assert.dom(GENERAL.validationErrorByAttr('name')).exists('validation error shows');
 
     // Second attempt with name
@@ -356,11 +408,14 @@ EOT`;
     assert.dom(GENERAL.validationErrorByAttr('name')).doesNotExist('validation error is cleared');
   });
 
-  test('it resets errors if flyout is closed and policy is NOT saved', async function (assert) {
+  test('it resets validation errors if flyout is closed and policy is NOT saved', async function (assert) {
     await this.renderComponent();
     // Attempt to save
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.messageError).exists().hasText('Error There is an error with this form.');
+    assert
+      .dom(GENERAL.messageError)
+      .exists()
+      .hasText('Error There are errors with this form. Name is required. Invalid policy content.');
     assert.dom(GENERAL.validationErrorByAttr('name')).exists('validation error shows');
     // Cancel and close flyout
     await click(GENERAL.cancelButton);
@@ -493,14 +548,24 @@ EOT`;
         assert.dom(SELECTORS.pathByContainer(1)).hasValue('new/path/*', 'user added path still exists');
       });
 
-      test('it does not save prepopulated paths as policy content', async function (assert) {
-        assert.expect(3);
+      test('prepopulated paths trigger validation errors', async function (assert) {
         this.cacheCapabilityPaths('vault.cluster.secrets.secret', ['path/one', 'path/two']);
         await this.renderComponent();
-        // Fill in name and save to make sure policyContent is empty
-        this.assertSaveRequest(assert, '', 'policy content is empty despite pre-filled paths');
+        // Only fill in name to make sure capabilities validation triggers
         await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
         await click(GENERAL.submitButton);
+        assert
+          .dom(GENERAL.messageError)
+          .exists()
+          .hasText('Error There is an error with this form. Invalid policy content.');
+        assert
+          .dom(GENERAL.validationErrorByAttr('capabilities-0'))
+          .exists()
+          .hasText('Rule must have at least one capability.');
+        assert
+          .dom(GENERAL.validationErrorByAttr('capabilities-1'))
+          .exists()
+          .hasText('Rule must have at least one capability.');
       });
     });
   });

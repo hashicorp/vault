@@ -151,10 +151,12 @@ module('Integration | Component | policy-form', function (hooks) {
     );
   });
 
-  test('it shows the error message on form when save fails', async function (assert) {
+  test('it shows the error message on form when save returns API error', async function (assert) {
     this.model.name = 'bad-policy';
     this.model.policy = 'some policy content';
     await this.renderComponent();
+    // Change editors so we don't trigger visual editor validations
+    await click(GENERAL.radioByAttr('code'));
     await click(GENERAL.submitButton);
     assert.true(this.onSave.notCalled, 'onSave is not called yet');
     assert.dom(GENERAL.messageError).includesText('An error occurred');
@@ -231,7 +233,7 @@ module('Integration | Component | policy-form', function (hooks) {
       assert.dom(GENERAL.codemirror).doesNotExist('JSON editor does not render by default');
       assert
         .dom(GENERAL.fieldByAttr('visual editor'))
-        .hasTextContaining('Rule Show preview')
+        .hasTextContaining('Path Show preview')
         .exists('it renders visual policy editor by default');
       // Select Code editor
       await click(GENERAL.radioByAttr('code'));
@@ -246,7 +248,7 @@ module('Integration | Component | policy-form', function (hooks) {
       assert.dom(GENERAL.codemirror).doesNotExist();
       assert
         .dom(GENERAL.fieldByAttr('visual editor'))
-        .hasTextContaining('Rule Show preview')
+        .hasTextContaining('Path Show preview')
         .exists('Visual editor renders after selecting radio');
     });
 
@@ -274,6 +276,33 @@ path "second/path" {
       assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
       const [actual] = this.onSave.lastCall.args;
       assert.strictEqual(actual.policy, expectedPolicy, 'save is called with expected policy');
+    });
+
+    test('it shows validation errors for invalid policy stanzas', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+      await click(GENERAL.submitButton);
+
+      assert.true(this.onSave.notCalled, 'onSave is not called');
+      assert
+        .dom(GENERAL.messageError)
+        .exists()
+        .hasText('Error There is an error with this form. Invalid policy content.');
+      assert.dom(GENERAL.validationErrorByAttr('path-0')).hasText('Path cannot be empty.');
+      assert
+        .dom(GENERAL.validationErrorByAttr('capabilities-0'))
+        .hasText('Rule must have at least one capability.');
+    });
+
+    test('it still saves from the code editor when visual stanzas are invalid', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+      await click(GENERAL.radioByAttr('code'));
+      await setEditorValue(this.policy);
+      await click(GENERAL.submitButton);
+
+      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+      assert.dom(GENERAL.messageError).doesNotExist('validation banner does not render in code editor');
     });
 
     // Automation snippets are only supported for "ACL" policy types at this time
