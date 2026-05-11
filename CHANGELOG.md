@@ -177,6 +177,7 @@ usage accordingly.
 
 BUG FIXES:
 
+* api: fix response body leak in sys/* methods when rawRequestWithContext returns a non-nil response alongside an error ([#31901](https://github.com/hashicorp/vault/pull/31901))
 * activity (enterprise): sys/internal/counters/activity outputs the correct mount type when called from a non root namespace
 * agent: Fix Vault Agent discarding cached tokens on transient server errors instead of retrying
 * audit/file: The logic preventing setting of executable bits on audit devices
