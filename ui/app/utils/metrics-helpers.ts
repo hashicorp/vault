@@ -89,11 +89,8 @@ export function normalizeMetricData(metric: Month | null | undefined) {
     typeof normalized[NormalizedBillingMetrics.ID_TOKEN_UNITS_TOTAL] === 'number'
       ? normalized[NormalizedBillingMetrics.ID_TOKEN_UNITS_TOTAL]
       : 0;
-  normalized[NormalizedBillingMetrics.CREDENTIAL_UNITS_TOTAL] = calculateSum([
-    sshUnitsTotal,
-    pkiUnitsTotal,
-    idTokenUnitsTotal,
-  ]);
+  normalized[NormalizedBillingMetrics.CREDENTIAL_UNITS_TOTAL] =
+    calculateSum([sshUnitsTotal, pkiUnitsTotal, idTokenUnitsTotal], 4) ?? 0;
 
   // Explicitly set any missing metric keys to 0.
   for (const metricsKey of Object.values(NormalizedBillingMetrics)) {
