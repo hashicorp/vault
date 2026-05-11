@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { toLabel } from 'core/helpers/to-label';
-import { calculateSum } from 'vault/utils/chart-helpers';
+import { calculateSum, toFixedDisplay } from 'vault/utils/chart-helpers';
 import { NormalizedBillingMetrics } from 'vault/utils/metrics-helpers';
 
 interface Args {
@@ -18,6 +18,16 @@ export default class MetricCard extends Component<Args> {
 
   get total() {
     const sums = Object.values(this.args.metrics).filter((metric) => metric !== undefined);
+    if (this.args.title === 'Credential units') {
+      const totalCredentialUnits = calculateSum(sums, 4);
+
+      if (typeof totalCredentialUnits === 'number') {
+        return toFixedDisplay(totalCredentialUnits, 4);
+      }
+
+      return totalCredentialUnits;
+    }
+
     return calculateSum(sums);
   }
 

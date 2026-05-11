@@ -7,13 +7,14 @@ import Component from '@glimmer/component';
 import { toLabel } from 'core/helpers/to-label';
 import { NormalizedMetricsData } from 'vault/vault/billing/overview';
 import { NormalizedBillingMetrics } from 'vault/utils/metrics-helpers';
+import { toFixedDisplay } from 'vault/utils/chart-helpers';
 
 interface SummaryMetricInfo {
   label: string;
   tooltipText?: string;
   count?: number;
   showBadge?: boolean;
-  total?: number | boolean | undefined;
+  total?: number | string | boolean | undefined;
 }
 interface Args {
   title: string;
@@ -58,7 +59,13 @@ export default class SummaryCard extends Component<Args> {
 
   summaryMetric = (key: string): SummaryMetricInfo => {
     if (this.summaryMetricMap?.[key]) {
-      this.summaryMetricMap[key].total = this.args.normalizedMetricData[key];
+      const value = this.args.normalizedMetricData[key];
+      // Format CREDENTIAL_UNITS_TOTAL with 4 decimal places to preserve trailing zeros
+      if (key === NormalizedBillingMetrics.CREDENTIAL_UNITS_TOTAL && typeof value === 'number') {
+        this.summaryMetricMap[key].total = toFixedDisplay(value, 4);
+      } else {
+        this.summaryMetricMap[key].total = value;
+      }
     }
 
     return this.summaryMetricMap[key] || { label: toLabel([key]) };
