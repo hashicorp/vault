@@ -42,8 +42,8 @@ import (
 
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/jackc/pgconn"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/stdlib"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 // openPostgres parses the connection string and opens a connection to the database.
