@@ -1225,16 +1225,16 @@ func TestSystemBackend_BillingOverview_AllMetricTypesPresent(t *testing.T) {
 		require.Equal(t, 0, dynamicRolesDetails[i]["count"], "dynamic role count at index %d should be 0", i)
 	}
 
-	// Verify auto_rotated_roles has all 7 types
+	// Verify auto_rotated_roles has all 8 types
 	autoRotatedMetric, exists := metricsMap["auto_rotated_roles"]
 	require.True(t, exists, "auto_rotated_roles metric should be present")
 	autoRotatedData := autoRotatedMetric["metric_data"].(map[string]interface{})
 	autoRotatedDetails := autoRotatedData["metric_details"].([]map[string]interface{})
-	require.Len(t, autoRotatedDetails, 7, "auto_rotated_roles should have 7 types")
+	require.Len(t, autoRotatedDetails, 8, "auto_rotated_roles should have 8 types")
 
 	expectedAutoRotatedTypes := []string{
 		"aws_static", "azure_static", "database_static", "gcp_static",
-		"gcp_impersonated", "ldap_static", "openldap_static",
+		"gcp_impersonated", "ldap_static", "openldap_static", "os_local_account_static",
 	}
 	for i, expectedType := range expectedAutoRotatedTypes {
 		require.Equal(t, expectedType, autoRotatedDetails[i]["type"], "auto-rotated role type at index %d should be %s", i, expectedType)

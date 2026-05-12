@@ -143,7 +143,7 @@ const billingOverviewResponse = `{
           {
             "metric_name": "auto_rotated_roles",
             "metric_data": {
-              "total": 10,
+              "total": 15,
               "metric_details": [
                 {
                   "type": "aws_static",
@@ -151,6 +151,10 @@ const billingOverviewResponse = `{
                 },
                 {
                   "type": "azure_static",
+                  "count": 5
+                },
+                {
+                  "type": "os_local_account_static",
                   "count": 5
                 }
               ]
@@ -203,10 +207,10 @@ const billingOverviewResponse = `{
                   "type": "totp",
                   "count": 5
                 },
-				{
-				  "type": "kmse",
-				  "count": 5
-				}
+                {
+                  "type": "kmse",
+                  "count": 5
+                }
               ]
             }
           },

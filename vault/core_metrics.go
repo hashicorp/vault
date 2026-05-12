@@ -865,6 +865,7 @@ type RoleCounts struct {
 	KubernetesDynamicRoles     int `json:"kubernetes_dynamic_roles"`
 	MongoDBAtlasDynamicRoles   int `json:"mongodb_atlas_dynamic_roles"`
 	TerraformCloudDynamicRoles int `json:"terraformcloud_dynamic_roles"`
+	OSLocalAccountRoles        int `json:"os_local_account_static_roles"`
 }
 
 type ManagedKeyCounts struct {
@@ -890,18 +891,33 @@ func (c *Core) getRoleAndManagedKeyCountsInternal(includeLocal bool, includeRepl
 		}
 
 		resp, err := c.router.Route(ctx, listRequest)
-		if err != nil || resp == nil {
+		if err != nil || resp == nil || resp.Data == nil {
 			return nil
 		}
+
 		rawKeys, ok := resp.Data["keys"]
-		if !ok {
+		if !ok || rawKeys == nil {
 			return nil
 		}
-		keys, ok := rawKeys.([]string)
-		if !ok {
+
+		// Type switch handles both the 'official' behavior and the 'generic' behavior
+		switch kt := rawKeys.(type) {
+		case []string:
+			// Existing plugins likely hit this path
+			return kt
+		case []interface{}:
+			// External/RPC plugins likely hit this path
+			keys := make([]string, 0, len(kt))
+			for _, k := range kt {
+				if s, ok := k.(string); ok {
+					keys = append(keys, s)
+				}
+			}
+			return keys
+		default:
+			// If it's something totally weird, we still fail safely
 			return nil
 		}
-		return keys
 	}
 
 	c.mountsLock.RLock()
@@ -1009,6 +1025,21 @@ func (c *Core) getRoleAndManagedKeyCountsInternal(includeLocal bool, includeRepl
 		case pluginconsts.SecretEngineKeymgmt:
 			keyCountPerEntry := apiList(entry, "key")
 			keyCounts.KmseKeys += len(keyCountPerEntry)
+
+		case pluginconsts.SecretEngineOS:
+			// OS plugin stores all accounts within each host entry
+			// List all hosts, then list accounts for each host
+			hosts := apiList(entry, "hosts/")
+			accountCount := 0
+			for _, host := range hosts {
+				if host == "" {
+					continue
+				}
+				hostName := strings.TrimSuffix(host, "/")
+				accounts := apiList(entry, "hosts/"+hostName+"/accounts/")
+				accountCount += len(accounts)
+			}
+			roles.OSLocalAccountRoles += accountCount
 		}
 	}
 
