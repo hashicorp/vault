@@ -242,7 +242,6 @@ require (
 	github.com/apache/thrift v0.22.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/signin v1.0.9 // indirect
-	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
@@ -251,15 +250,12 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/gofrs/flock v0.10.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
-	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.72 // indirect
-	github.com/hashicorp/go-getter v1.8.6 // indirect
 	github.com/klauspost/asmfmt v1.3.2 // indirect
 	github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8 // indirect
 	github.com/minio/c2goasm v0.0.0-20190812172519-36a3d3bbc4f3 // indirect
 	github.com/moby/go-archive v0.1.0 // indirect
 	github.com/moby/sys/atomicwriter v0.1.0 // indirect
 	github.com/oracle/oci-go-sdk/v65 v65.101.1 // indirect
-	github.com/ulikunitz/xz v0.5.15 // indirect
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
@@ -444,7 +440,7 @@ require (
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/pgx/v5 v5.9.1
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
