@@ -133,6 +133,7 @@ func combineRoleCounts(a, b *RoleCounts) *RoleCounts {
 		a.KubernetesDynamicRoles + b.KubernetesDynamicRoles,
 		a.MongoDBAtlasDynamicRoles + b.MongoDBAtlasDynamicRoles,
 		a.TerraformCloudDynamicRoles + b.TerraformCloudDynamicRoles,
+		a.OSLocalAccountRoles + b.OSLocalAccountRoles,
 	}
 }
 
@@ -321,6 +322,7 @@ func (c *Core) updateMaxRoleCounts(ctx context.Context, currentRoleCounts *RoleC
 	maxRoleCounts.KubernetesDynamicRoles = c.compareCounts(currentRoleCounts.KubernetesDynamicRoles, maxRoleCounts.KubernetesDynamicRoles, "Kubernetes Dynamic Roles")
 	maxRoleCounts.MongoDBAtlasDynamicRoles = c.compareCounts(currentRoleCounts.MongoDBAtlasDynamicRoles, maxRoleCounts.MongoDBAtlasDynamicRoles, "MongoDB Atlas Dynamic Roles")
 	maxRoleCounts.TerraformCloudDynamicRoles = c.compareCounts(currentRoleCounts.TerraformCloudDynamicRoles, maxRoleCounts.TerraformCloudDynamicRoles, "Terraform Cloud Dynamic Roles")
+	maxRoleCounts.OSLocalAccountRoles = c.compareCounts(currentRoleCounts.OSLocalAccountRoles, maxRoleCounts.OSLocalAccountRoles, "OS Local Account Static Roles")
 
 	err = c.storeMaxRoleCountsLocked(ctx, maxRoleCounts, localPathPrefix, currentMonth)
 	if err != nil {

@@ -178,6 +178,7 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 				GCPRolesets:          3,
 				DatabaseDynamicRoles: 5,
 				DatabaseStaticRoles:  7,
+				OSLocalAccountRoles:  9,
 			}, localPathPrefix, month)
 			core.storeMaxKvCountsLocked(context.Background(), 10, localPathPrefix, month)
 
@@ -252,9 +253,10 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 	for _, month := range []time.Time{monthToDelete, oldestRetainedMonth, currentMonth} {
 		for _, pathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
 			core.storeMaxRoleCountsLocked(context.Background(), &RoleCounts{
-				AWSDynamicRoles:  5,
-				AWSStaticRoles:   10,
-				LDAPDynamicRoles: 3,
+				AWSDynamicRoles:     5,
+				AWSStaticRoles:      10,
+				LDAPDynamicRoles:    3,
+				OSLocalAccountRoles: 7,
 			}, pathPrefix, month)
 			core.storeMaxKvCountsLocked(context.Background(), 20, pathPrefix, month)
 			core.storeTransitCallCountsLocked(context.Background(), 15, pathPrefix, month)
@@ -407,6 +409,7 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 		KubernetesDynamicRoles:     5,
 		MongoDBAtlasDynamicRoles:   7,
 		TerraformCloudDynamicRoles: 10,
+		OSLocalAccountRoles:        11,
 	}
 
 	verifyMonthlyBillingMetrics := func(month time.Time, localPathPrefix string) {

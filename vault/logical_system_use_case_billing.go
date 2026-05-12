@@ -436,6 +436,7 @@ func buildAutoRotatedRolesMetric(counts *RoleCounts) map[string]interface{} {
 	gcpImpersonatedCount := 0
 	ldapCount := 0
 	openldapCount := 0
+	osLocalAccountCount := 0
 
 	if counts != nil {
 		awsCount = counts.AWSStaticRoles
@@ -445,9 +446,10 @@ func buildAutoRotatedRolesMetric(counts *RoleCounts) map[string]interface{} {
 		gcpImpersonatedCount = counts.GCPImpersonatedAccounts
 		ldapCount = counts.LDAPStaticRoles
 		openldapCount = counts.OpenLDAPStaticRoles
+		osLocalAccountCount = counts.OSLocalAccountRoles
 
 		total = awsCount + azureCount + databaseCount + gcpStaticCount +
-			gcpImpersonatedCount + ldapCount + openldapCount
+			gcpImpersonatedCount + ldapCount + openldapCount + osLocalAccountCount
 	}
 
 	details := []map[string]interface{}{
@@ -458,6 +460,7 @@ func buildAutoRotatedRolesMetric(counts *RoleCounts) map[string]interface{} {
 		{"type": "gcp_impersonated", "count": gcpImpersonatedCount},
 		{"type": "ldap_static", "count": ldapCount},
 		{"type": "openldap_static", "count": openldapCount},
+		{"type": "os_local_account_static", "count": osLocalAccountCount},
 	}
 
 	return map[string]interface{}{
