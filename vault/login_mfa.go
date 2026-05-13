@@ -1097,13 +1097,13 @@ func (c *Core) PersistTOTPKey(ctx context.Context, methodID, entityID, key strin
 	}
 	val, err := jsonutil.EncodeJSON(ks)
 	if err != nil {
-		return err
+		return fmt.Errorf("error encoding TOTP key: %w", err)
 	}
-	if c.barrier.Put(ctx, &logical.StorageEntry{
+	if err := c.barrier.Put(ctx, &logical.StorageEntry{
 		Key:   fmt.Sprintf("%s%s/%s", mfaTOTPKeysPrefix, methodID, entityID),
 		Value: val,
 	}); err != nil {
-		return err
+		return fmt.Errorf("error persisting TOTP key to storage: %w", err)
 	}
 	return nil
 }
