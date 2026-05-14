@@ -1715,10 +1715,18 @@ func (c *ServerCommand) Run(args []string) int {
 			// See the call to Core.SetSealReloadFunc above.
 			if reloaded, err := c.reloadSealsOnSigHup(ctx, core, config); err != nil {
 				c.UI.Error(fmt.Errorf("error reloading seal config: %s", err).Error())
-				config.Seals = core.GetCoreConfigInternal().Seals
+				if coreConfig := core.GetCoreConfigInternal(); coreConfig != nil {
+					config.Seals = coreConfig.Seals
+				} else {
+					c.logger.Warn("core config is nil, skipping seal reload")
+				}
 				goto RUNRELOADFUNCS
 			} else if !reloaded {
-				config.Seals = core.GetCoreConfigInternal().Seals
+				if coreConfig := core.GetCoreConfigInternal(); coreConfig != nil {
+					config.Seals = coreConfig.Seals
+				} else {
+					c.logger.Warn("core config is nil, skipping seal reload")
+				}
 			}
 
 			core.SetConfig(config)
