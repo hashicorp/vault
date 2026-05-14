@@ -4,13 +4,19 @@
 package configutil
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"os"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	sdkResource "github.com/hashicorp/hcp-sdk-go/resource"
+	"github.com/mitchellh/cli"
 )
 
 // HCPLinkConfig is the HCP Link configuration for the server.
@@ -23,6 +29,16 @@ type HCPLinkConfig struct {
 	EnablePassThroughCapability bool                  `hcl:"enable_passthrough_capability"`
 	ClientID                    string                `hcl:"client_id"`
 	ClientSecret                string                `hcl:"client_secret"`
+
+	TLSDisable    bool        `hcl:"-"`
+	TLSDisableRaw interface{} `hcl:"tls_disable"`
+	TLSCertFile   string      `hcl:"tls_cert_file"`
+	TLSKeyFile    string      `hcl:"tls_key_file"`
+}
+
+type HCPLinkTLSBundle struct {
+	Config     *tls.Config
+	ReloadFunc reloadutil.ReloadFunc
 }
 
 func parseCloud(result *SharedConfig, list *ast.ObjectList) error {
@@ -69,5 +85,56 @@ func parseCloud(result *SharedConfig, list *ast.ObjectList) error {
 		result.HCPLinkConf.EnablePassThroughCapability = true
 	}
 
+	if result.HCPLinkConf.TLSDisableRaw != nil {
+		if result.HCPLinkConf.TLSDisable, err = parseutil.ParseBool(result.HCPLinkConf.TLSDisableRaw); err != nil {
+			return multierror.Prefix(fmt.Errorf("invalid value for tls_disable: %w", err), "cloud:")
+		}
+
+		result.HCPLinkConf.TLSDisableRaw = nil
+	}
+
+	if !result.HCPLinkConf.TLSDisable && (result.HCPLinkConf.TLSCertFile == "" || result.HCPLinkConf.TLSKeyFile == "") {
+		return multierror.Prefix(fmt.Errorf("TLS is enabled but failed to find TLS cert and key file"), "cloud:")
+	}
+
 	return nil
+}
+
+func ParseCloudTLSConfig(config *HCPLinkConfig, ui cli.Ui) (*HCPLinkTLSBundle, error) {
+	if !config.TLSDisable {
+		// We try the key without a passphrase first and if we get an incorrect
+		// passphrase response, try again after prompting for a passphrase
+		cg := reloadutil.NewCertificateGetter(config.TLSCertFile, config.TLSKeyFile, "")
+		if err := cg.Reload(); err != nil {
+			if errwrap.Contains(err, x509.IncorrectPasswordError.Error()) {
+				var passphrase string
+				passphrase, err = ui.AskSecret(fmt.Sprintf("Enter passphrase for cloud TLS key file %s:", config.TLSKeyFile))
+
+				if err == nil {
+					cg = reloadutil.NewCertificateGetter(config.TLSCertFile, config.TLSKeyFile, passphrase)
+					if err = cg.Reload(); err != nil {
+						return nil, fmt.Errorf("error loading cloud config TLS cert with provided passphrase: %w", err)
+					}
+
+					tlsBundle := &HCPLinkTLSBundle{
+						Config: &tls.Config{
+							GetCertificate: cg.GetCertificate,
+
+							// Prefer sensible defaults based on the defaults we use for "tcp" listener config
+							MinVersion: tls.VersionTLS12,
+							MaxVersion: tls.VersionTLS13,
+							ClientAuth: tls.RequestClientCert,
+						},
+						ReloadFunc: cg.Reload,
+					}
+
+					return tlsBundle, nil
+				}
+			}
+
+			return nil, fmt.Errorf("error loading cloud config TLS cert: %w", err)
+		}
+	}
+
+	return nil, nil
 }
