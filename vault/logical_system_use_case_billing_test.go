@@ -769,6 +769,7 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 		"managed_keys":          false,
 		"ssh_units":             false,
 		"id_token_units":        false,
+		"external_ca_pki_units": false,
 	}
 
 	for _, metric := range usageMetrics {
@@ -888,6 +889,11 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 			for typeName, found := range expectedTypes {
 				require.True(t, found, "type %s should be present", typeName)
 			}
+
+		case "external_ca_pki_units":
+			total, ok := metricData["total"].(float64)
+			require.True(t, ok, "external_ca_pki_units total should be float64")
+			require.Equal(t, float64(0), total, "external_ca_pki_units total should be 0")
 		}
 	}
 

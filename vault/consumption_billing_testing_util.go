@@ -248,3 +248,34 @@ func CreateMockOSHost(ctx context.Context, storage logical.Storage, hostName str
 func DeleteMockOSHost(ctx context.Context, storage logical.Storage, hostName string) error {
 	return storage.Delete(ctx, "hosts/"+hostName)
 }
+
+func (c *Core) ResetInMemoryExternalCaCertUnits() {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.ExternalCaCertUnits.Store(0)
+	}
+}
+
+func (c *Core) GetInMemoryExternalCaCertUnits() float64 {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		return cb.ExternalCaCertUnits.Load()
+	}
+	return 0
+}
+
+func (c *Core) SetInMemoryExternalCaCertUnits(count float64) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.ExternalCaCertUnits.Store(count)
+	}
+}

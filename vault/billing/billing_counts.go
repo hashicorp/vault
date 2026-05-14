@@ -39,6 +39,7 @@ const (
 	SSHCertificateMetric                    = "ssh/normalized-certs-issued"
 	SSHOTPMetric                            = "ssh/credential-count"
 	OidcDurationAdjustedCountPrefix         = "oidcNormalizedTokenUnits/"
+	ExternalCaDurationAdjustedCountPrefix   = "externalCaNormalizedCertsIssued/"
 
 	BillingWriteInterval = 10 * time.Minute
 	// pluginCountsSendTimeout is the timeout for sending plugin counts to the active node
@@ -62,6 +63,9 @@ type ConsumptionBilling struct {
 	KmipSeenEnabledThisMonth atomic.Bool
 
 	IdentityTokenUnits IdentityTokenUnits
+
+	// ExternalCaCertUnits tracks duration-adjusted PKI external CA certificate units
+	ExternalCaCertUnits *uberatomic.Float64
 }
 
 type BillingConfig struct {
@@ -145,6 +149,15 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.DataProtectionCallCounts.GcpKms.Add(val)
+	case "external-ca":
+		// External CA uses float64 for duration-adjusted units
+		val, ok := data["units"].(float64)
+		if !ok {
+			err := fmt.Errorf("invalid value type for external-ca")
+			return err
+		}
+
+		s.ExternalCaCertUnits.Add(val)
 	default:
 		err := fmt.Errorf("unknown metric type: %s", mountType)
 		return err

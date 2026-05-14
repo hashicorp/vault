@@ -287,6 +287,12 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 	}
 	usageMetrics = append(usageMetrics, idTokenUnitsMetric)
 
+	externalCaMetric, err := b.buildExternalCaBillingMetric(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+	usageMetrics = append(usageMetrics, externalCaMetric)
+
 	// Round all float64 values in usageMetrics to 4 decimal places.
 	// Rounding time for usage metrics is insignificant, so we can keep it centralized here.
 	// This prevents us from having to do it in each individual metric.
@@ -515,6 +521,21 @@ func (b *SystemBackend) buildIdTokenUnitsBillingMetric(ctx context.Context, mont
 		"metric_data": map[string]interface{}{
 			"total":          totalTokens,
 			"metric_details": idTokenDetails,
+		},
+	}, nil
+}
+
+// buildExternalCaBillingMetric creates the billing metric for external CA certificate counts.
+func (b *SystemBackend) buildExternalCaBillingMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
+	count, err := b.Core.GetStoredExternalCaCertUnits(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving external CA certificate units for month: %w", err)
+	}
+
+	return map[string]interface{}{
+		"metric_name": "external_ca_pki_units",
+		"metric_data": map[string]interface{}{
+			"total": count,
 		},
 	}, nil
 }

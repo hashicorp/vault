@@ -28,3 +28,13 @@ func (c *Core) UpdateSpiffeJwtTokenUnits(ctx context.Context, currentMonth time.
 	// No-op in OSS
 	return 0, nil
 }
+
+func (c *Core) GetStoredExternalCaCertUnits(ctx context.Context, currentMonth time.Time) (float64, error) {
+	// No-op in OSS
+	return 0, nil
+}
+
+func (c *Core) UpdateExternalCaCertUnits(ctx context.Context, currentMonth time.Time) (float64, error) {
+	// No-op in OSS
+	return 0, nil
+}

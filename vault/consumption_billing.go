@@ -36,7 +36,8 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 			OidcTokenDuration: uberAtomic.NewFloat64(0),
 			SpiffeJwt:         uberAtomic.NewFloat64(0),
 		},
-		Logger: logger,
+		ExternalCaCertUnits: uberAtomic.NewFloat64(0),
+		Logger:              logger,
 	}
 	if c.systemBarrierView != nil {
 		c.consumptionBillingSubView = c.systemBarrierView.SubView(billing.BillingSubPath)
@@ -186,6 +187,7 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	c.consumptionBilling.DataProtectionCallCounts.GcpKms.Store(0)
 	c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
 	c.consumptionBilling.IdentityTokenUnits.OidcTokenDuration.Store(0)
+	c.consumptionBilling.ExternalCaCertUnits.Store(0)
 	return nil
 }
 
@@ -293,6 +295,9 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	}
 	if _, err := c.UpdateGcpKmsCallCounts(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store GCP KMS data protection call counts: %w", err)
+	}
+	if _, err := c.UpdateExternalCaCertUnits(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store external CA certificate units: %w", err)
 	}
 	return nil
 }
