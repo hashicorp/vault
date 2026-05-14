@@ -22,6 +22,11 @@ const (
 	defaultPGImage   = "docker.mirror.hashicorp.services/postgres"
 	defaultPGVersion = "13.4-buster"
 	defaultPGPass    = "secret"
+
+	// V13.4 predates the scram_iterations server parameter.
+	PGVersionWithoutSCRAMIterationsConfig = "13.4-buster"
+	// The scram_iterations server parameter was added in V16.
+	pgVersionWithSCRAMIterationsConfig = "16-alpine"
 )
 
 func defaultRunOpts(t *testing.T) docker.RunOptions {
@@ -46,6 +51,30 @@ func defaultRunOpts(t *testing.T) docker.RunOptions {
 
 func PrepareTestContainer(t *testing.T) (func(), string) {
 	_, cleanup, url, _ := prepareTestContainer(t, defaultRunOpts(t), defaultPGPass, true, false, false)
+
+	return cleanup, url
+}
+
+func PrepareTestContainerWithVersion(t *testing.T, version string) (func(), string) {
+	runOpts := defaultRunOpts(t)
+	runOpts.ImageTag = version
+	_, cleanup, url, _ := prepareTestContainer(t, runOpts, defaultPGPass, true, false, false)
+
+	return cleanup, url
+}
+
+// PrepareTestContainerWithSCRAMIterations starts a PostgreSQL 16+ container with a
+// custom scram_iterations setting, for testing that Vault reads the server's value.
+func PrepareTestContainerWithSCRAMIterations(t *testing.T, ctx context.Context, iterations int) (func(), string) {
+	runOpts := defaultRunOpts(t)
+	runOpts.ImageTag = pgVersionWithSCRAMIterationsConfig
+	runner, cleanup, url, id := prepareTestContainer(t, runOpts, defaultPGPass, true, false, false)
+
+	cmd := []string{"psql", "-U", "postgres", "-c", fmt.Sprintf("ALTER SYSTEM SET scram_iterations = %d", iterations)}
+	mustRunCommand(t, ctx, runner, id, cmd)
+
+	cmd = []string{"psql", "-U", "postgres", "-c", "SELECT pg_reload_conf()"}
+	mustRunCommand(t, ctx, runner, id, cmd)
 
 	return cleanup, url
 }
