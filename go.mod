@@ -165,7 +165,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.13.1
 	github.com/hashicorp/vault-plugin-secrets-kv v0.26.2
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.17.1
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.18.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.18.1-0.20260501001642-c73a470fc99c
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.14.1
 	github.com/hashicorp/vault-testing-stepwise v0.3.3
 	github.com/hashicorp/vault/api v1.23.0
@@ -405,7 +405,7 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
-	github.com/go-ldap/ldif v0.0.0-20250910174327-aa3bc3095c92 // indirect
+	github.com/go-ldap/ldif v0.0.0-20260409153546-6de1b99547b6 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
