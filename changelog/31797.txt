@@ -1,0 +1,3 @@
+```release-note:improvement
+physical/dynamodb: Allow configuring HTTP client timeout for DynamoDB backend
+```
