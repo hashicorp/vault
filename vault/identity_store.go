@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"time"
@@ -217,6 +218,23 @@ func mfaCommonPaths(i *IdentityStore) []*framework.Path {
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodListGlobal,
 					Summary:  "List MFA method configurations for all MFA methods",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of mfa method configurations keys`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `MFA method configurations details keyed by the id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
 				},
 			},
 		},
@@ -600,6 +618,23 @@ func mfaLoginEnforcementPaths(i *IdentityStore) []*framework.Path {
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.handleMFALoginEnforcementList,
 					Summary:  "List login enforcements",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of login enforcement keys`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `Login enforcement details keyed by the id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
 				},
 			},
 		},
