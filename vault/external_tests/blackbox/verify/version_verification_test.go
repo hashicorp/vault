@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/testcluster/blackbox"
+	"github.com/stretchr/testify/require"
 )
 
 // TestVaultServerVersion verifies the Vault server version via sys/version-history API
@@ -26,6 +27,14 @@ func TestVaultServerVersion(t *testing.T) {
 	}
 
 	v := blackbox.New(t)
-	v.AssertVersion(version)
-	v.AssertBuildDate(version, buildDate)
+	replicationMode, err := v.GetDRReplicationMode()
+	require.NoError(t, err)
+	t.Logf("Found DR Replication mode: %s", replicationMode)
+	switch replicationMode {
+	case "primary", "secondary":
+		t.Skip("Skipping server version check on DR cluster as path is not available in that mode")
+	default:
+		v.AssertVersion(version)
+		v.AssertBuildDate(version, buildDate)
+	}
 }

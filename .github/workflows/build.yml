@@ -293,40 +293,13 @@ jobs:
     needs: setup
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-build-ui) }}
     outputs:
-      cache-key: ui-${{ steps.ui-hash.outputs.ui-hash }}
+      cache-key: ${{ steps.build-ui.outputs.cache-key }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
-      - name: Get UI hash
-        id: ui-hash
-        run: echo "ui-hash=$(git ls-tree HEAD ui --object-only)" | tee -a "$GITHUB_OUTPUT"
-      - name: Set up UI asset cache
-        id: cache-ui-assets
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          enableCrossOsArchive: true
-          lookup-only: true
-          path: http/web_ui
-          # Only restore the UI asset cache if we haven't modified anything in the ui directory.
-          # Never do a partial restore of the web_ui if we don't get a cache hit.
-          key: ui-${{ steps.ui-hash.outputs.ui-hash }}
-      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Install PNPM
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
-        with:
-          run_install: false
-          package_json_file: './ui/package.json'
-      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Set up node and pnpm
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          node-version-file: ui/package.json
-          cache: pnpm
-          cache-dependency-path: ui/pnpm-lock.yaml
-      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Build UI
-        run: make ci-build-ui
+      - uses: ./.github/actions/build-ui
+        id: build-ui
 
   # Artifacts is where we'll build the various Vault binaries and package them into their respective
   # Zip bundles, RPM and Deb packages, and container images. After we've packaged them we upload

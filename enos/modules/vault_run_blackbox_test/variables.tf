@@ -53,3 +53,27 @@ variable "vault_edition" {
   description = "The Vault edition (ce, ent, ent.hsm, ent.fips1402, ent.hsm.fips1402)"
   default     = "ent"
 }
+
+variable "vault_product_version" {
+  type        = string
+  description = "The Vault product version (e.g., 1.15.0)"
+  default     = null
+}
+
+variable "vault_revision" {
+  type        = string
+  description = "The Vault git revision/commit SHA"
+  default     = null
+}
+
+variable "vault_build_date" {
+  type        = string
+  description = "The Vault build date"
+  default     = null
+}
+
+variable "vault_install_dir" {
+  type        = string
+  description = "The directory where Vault is installed"
+  default     = null
+}
