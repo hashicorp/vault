@@ -1,0 +1,3 @@
+```release-note:bug
+ui/transit: Fix key version dropdown selected state when editing a transit key.
+```
