@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Copyright IBM Corp. 2016, 2025
+# Copyright IBM Corp. 2026, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 set -e

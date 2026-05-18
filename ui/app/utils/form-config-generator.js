@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -161,7 +161,7 @@ export const prepFormConfig = (spec, methodName) => {
 export const generateConfigContent = (config) => {
   return `
     /**
-      * Copyright IBM Corp. 2016, 2025
+      * Copyright IBM Corp. 2026
       * SPDX-License-Identifier: BUSL-1.1
     */
 

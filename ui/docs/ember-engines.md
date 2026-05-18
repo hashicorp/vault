@@ -35,7 +35,7 @@ In the engine’s `index.js` file:
 
 ```js
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
