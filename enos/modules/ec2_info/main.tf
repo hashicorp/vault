@@ -27,6 +27,7 @@ locals {
       "ubuntu" = {
         "22.04" = data.aws_ami.ubuntu_2204["arm64"].id
         "24.04" = data.aws_ami.ubuntu_2404["arm64"].id
+        "26.04" = data.aws_ami.ubuntu_2604["arm64"].id
       }
     }
     "amd64" = {
@@ -46,6 +47,7 @@ locals {
       "ubuntu" = {
         "22.04" = data.aws_ami.ubuntu_2204["x86_64"].id
         "24.04" = data.aws_ami.ubuntu_2404["x86_64"].id
+        "26.04" = data.aws_ami.ubuntu_2604["x86_64"].id
       }
     }
   }
@@ -214,6 +216,28 @@ data "aws_ami" "ubuntu_2404" {
   filter {
     name   = "name"
     values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-*-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.canonical_owner_id]
+}
+
+data "aws_ami" "ubuntu_2604" {
+  most_recent = true
+  for_each    = local.architectures
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-resolute-26.04-*-server-*"]
   }
 
   filter {
