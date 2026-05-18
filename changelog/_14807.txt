@@ -1,0 +1,6 @@
+```release-note:security
+core: Resolve GHSA-j88v-2chj-qfwx by removing our dependency on github.com/jackc/pgx/v3 and github.com/jackc/pgx/v4
+```
+```release-note:security
+sdk: Resolve GHSA-j88v-2chj-qfwx by removing our dependency on github.com/jackc/pgx/v3 and github.com/jackc/pgx/v4
+```
