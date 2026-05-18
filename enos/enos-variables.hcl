@@ -89,7 +89,7 @@ variable "distro_version_sles" {
 variable "distro_version_ubuntu" {
   description = "The version of Ubuntu Linux to use"
   type        = string
-  default     = "24.04" // or "22.04"
+  default     = "26.04" // or "22.04" or "24.04"
 }
 
 variable "project_name" {

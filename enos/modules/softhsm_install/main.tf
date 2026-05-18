@@ -51,6 +51,7 @@ locals {
     ubuntu = {
       "22.04" = ["softhsm", "opensc"]
       "24.04" = ["softhsm2", "opensc"]
+      "26.04" = ["softhsm2", "opensc"]
     }
     } : {
     amzn = {
@@ -64,6 +65,7 @@ locals {
     ubuntu = {
       "22.04" = ["softhsm"]
       "24.04" = ["softhsm2"]
+      "26.04" = ["softhsm2"]
     }
   }
 }
